@@ -108,10 +108,8 @@ pub use self::{
     sys_native::*,
     value::*,
 };
-#[cfg(feature = "complex")]
+
 pub use complex::*;
-#[cfg(not(feature = "complex"))]
-use complex::*;
 
 /// The Uiua version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -68,7 +68,7 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             }
             _ => generic_table(f, Value::Byte(xs), Value::Byte(ys), env)?,
         },
-        #[cfg(feature = "complex")]
+
         (Some((prim, flipped)), Value::Complex(xs), Value::Complex(ys)) => {
             if let Err((xs, ys)) = table_coms(prim, flipped, xs, ys, env) {
                 return generic_table(f, Value::Complex(xs), Value::Complex(ys), env);
@@ -88,14 +88,14 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
                 return generic_table(f, Value::Num(xs), Value::Num(ys), env);
             }
         }
-        #[cfg(feature = "complex")]
+
         (Some((prim, flipped)), Value::Num(xs), Value::Complex(ys)) => {
             let xs = xs.convert();
             if let Err((xs, ys)) = table_coms(prim, flipped, xs, ys, env) {
                 return generic_table(f, Value::Complex(xs), Value::Complex(ys), env);
             }
         }
-        #[cfg(feature = "complex")]
+
         (Some((prim, flipped)), Value::Complex(xs), Value::Num(ys)) => {
             let ys = ys.convert();
             if let Err((xs, ys)) = table_coms(prim, flipped, xs, ys, env) {
@@ -151,9 +151,9 @@ macro_rules! table_math {
                 Primitive::Mod => env.push(fast_table(xs, ys, modulus::$f)),
                 Primitive::Atan if flipped => env.push(fast_table(xs, ys, flip(atan2::$f))),
                 Primitive::Atan => env.push(fast_table(xs, ys, atan2::$f)),
-                #[cfg(feature = "complex")]
+
                 Primitive::Complex if flipped => env.push(fast_table(xs, ys, flip(complex::$f))),
-                #[cfg(feature = "complex")]
+
                 Primitive::Complex => env.push(fast_table(xs, ys, complex::$f)),
                 Primitive::Min => env.push(fast_table(xs, ys, min::$f)),
                 Primitive::Max => env.push(fast_table(xs, ys, max::$f)),
@@ -168,7 +168,7 @@ macro_rules! table_math {
 }
 
 table_math!(table_nums, f64, num_num);
-#[cfg(feature = "complex")]
+
 table_math!(table_coms, crate::Complex, com_x);
 
 fn fast_table<A: ArrayValue, B: ArrayValue, C: ArrayValue>(

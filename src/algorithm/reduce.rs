@@ -36,7 +36,7 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
                 return generic_fold_right_1(f, Value::Num(nums), None, env);
             }
         }
-        #[cfg(feature = "complex")]
+
         (Some((prim, flipped)), Value::Complex(nums)) => {
             if let Err(nums) = reduce_coms(prim, flipped, nums, env) {
                 return generic_fold_right_1(f, Value::Complex(nums), None, env);
@@ -96,7 +96,7 @@ macro_rules! reduce_math {
 }
 
 reduce_math!(reduce_nums, f64, num_num);
-#[cfg(feature = "complex")]
+
 reduce_math!(reduce_coms, crate::Complex, com_x);
 
 pub fn fast_reduce<T>(mut arr: Array<T>, identity: T, f: impl Fn(T, T) -> T) -> Array<T>

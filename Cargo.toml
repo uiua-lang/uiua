@@ -76,13 +76,8 @@ binary = [
   "stand",
 ]
 bytes = []
-complex = []
 debug = []
-default = ["no_complex", "complex"]
-https = ["httparse", "rustls", "webpki-roots"]
-invoke = ["open"]
-lsp = ["tower-lsp", "tokio"]
-no_complex = [
+default = [
   "binary",
   "terminal_image",
   "https",
@@ -90,6 +85,9 @@ no_complex = [
   "trash",
   "raw_mode",
 ]
+https = ["httparse", "rustls", "webpki-roots"]
+invoke = ["open"]
+lsp = ["tower-lsp", "tokio"]
 profile = ["serde", "serde_yaml", "indexmap"]
 raw_mode = ["crossterm"]
 stand = ["serde", "serde_json"]

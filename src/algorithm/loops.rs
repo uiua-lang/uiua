@@ -233,7 +233,7 @@ impl Value {
                 .partition_groups(markers, env)?
                 .map(Into::into)
                 .collect(),
-            #[cfg(feature = "complex")]
+
             Value::Complex(arr) => arr
                 .partition_groups(markers, env)?
                 .map(Into::into)
@@ -294,7 +294,7 @@ impl Value {
             Value::Num(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
-            #[cfg(feature = "complex")]
+
             Value::Complex(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             Value::Char(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             Value::Box(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),

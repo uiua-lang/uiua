@@ -868,7 +868,7 @@ impl SysOp {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     #[cfg(feature = "bytes")]
                     Value::Byte(arr) => arr.data.into(),
-                    #[cfg(feature = "complex")]
+
                     Value::Complex(_) => {
                         return Err(env.error("Cannot write complex array to file"))
                     }
@@ -930,7 +930,7 @@ impl SysOp {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     #[cfg(feature = "bytes")]
                     Value::Byte(arr) => arr.data.into(),
-                    #[cfg(feature = "complex")]
+
                     Value::Complex(_) => {
                         return Err(env.error("Cannot write complex array to file"))
                     }
@@ -1327,7 +1327,7 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
                 value.type_name_plural()
             )))
         }
-        #[cfg(feature = "complex")]
+
         Value::Complex(_) => {
             return Err(env.error(format!(
                 "Command must be a string or box array, but it is {}",

@@ -126,7 +126,7 @@ impl GridFmt for Boxed {
             Value::Num(array) => array.fmt_grid(true),
             #[cfg(feature = "bytes")]
             Value::Byte(array) => array.fmt_grid(true),
-            #[cfg(feature = "complex")]
+
             Value::Complex(array) => array.fmt_grid(true),
             Value::Char(array) => array.fmt_grid(true),
             Value::Box(array) => array.fmt_grid(true),

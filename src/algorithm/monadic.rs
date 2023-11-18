@@ -45,7 +45,6 @@ impl Value {
             Value::Num(n) => n.deshape_depth(depth),
             #[cfg(feature = "bytes")]
             Value::Byte(b) => b.deshape_depth(depth),
-            #[cfg(feature = "complex")]
             Value::Complex(c) => c.deshape_depth(depth),
             Value::Char(c) => c.deshape_depth(depth),
             Value::Box(b) => {
@@ -243,7 +242,6 @@ impl Value {
             Value::Num(n) => n.reverse_depth(depth),
             #[cfg(feature = "bytes")]
             Value::Byte(b) => b.reverse_depth(depth),
-            #[cfg(feature = "complex")]
             Value::Complex(c) => c.reverse_depth(depth),
             Value::Char(c) => c.reverse_depth(depth),
             Value::Box(b) => {
@@ -309,7 +307,6 @@ impl Value {
             Value::Num(n) => n.transpose_depth(depth),
             #[cfg(feature = "bytes")]
             Value::Byte(b) => b.transpose_depth(depth),
-            #[cfg(feature = "complex")]
             Value::Complex(c) => c.transpose_depth(depth),
             Value::Char(c) => c.transpose_depth(depth),
             Value::Box(b) => {
@@ -340,7 +337,6 @@ impl Value {
             Value::Num(n) => n.inv_transpose_depth(depth),
             #[cfg(feature = "bytes")]
             Value::Byte(b) => b.inv_transpose_depth(depth),
-            #[cfg(feature = "complex")]
             Value::Complex(c) => c.inv_transpose_depth(depth),
             Value::Char(c) => c.inv_transpose_depth(depth),
             Value::Box(b) => {

@@ -47,7 +47,6 @@ constant!(
     /// Euler's constant
     ("e", std::f64::consts::E),
     /// The imaginary unit
-    #[cfg(feature = "complex")]
     ("i", crate::Complex::I),
     /// IEEE 754-2008's `NaN`
     ("NaN", std::f64::NAN),

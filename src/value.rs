@@ -29,7 +29,6 @@ pub enum Value {
     #[cfg(feature = "bytes")]
     Byte(Array<u8>),
     /// Complex number array
-    #[cfg(feature = "complex")]
     Complex(Array<Complex>),
     /// Common character array
     Char(Array<char>),
@@ -49,7 +48,6 @@ impl fmt::Debug for Value {
             Self::Num(array) => array.fmt(f),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => array.fmt(f),
-            #[cfg(feature = "complex")]
             Self::Complex(array) => array.fmt(f),
             Self::Char(array) => array.fmt(f),
             Self::Box(array) => array.fmt(f),
@@ -72,7 +70,6 @@ impl Value {
             Self::Byte(_) => 0,
             Self::Char(_) => 1,
             Self::Box(_) => 2,
-            #[cfg(feature = "complex")]
             Self::Complex(_) => 3,
         }
     }
@@ -115,7 +112,6 @@ impl Value {
             Self::Num(array) => Box::new(array.rows().map(Value::from)),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => Box::new(array.rows().map(Value::from)),
-            #[cfg(feature = "complex")]
             Self::Complex(array) => Box::new(array.rows().map(Value::from)),
             Self::Char(array) => Box::new(array.rows().map(Value::from)),
             Self::Box(array) => Box::new(array.rows().map(Value::from)),
@@ -130,7 +126,6 @@ impl Value {
             Self::Num(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
-            #[cfg(feature = "complex")]
             Self::Complex(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
             Self::Char(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
             Self::Box(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
@@ -145,7 +140,6 @@ impl Value {
             Self::Num(array) => Box::new(array.into_row_shaped_slices(row_shape).map(Value::from)),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => Box::new(array.into_row_shaped_slices(row_shape).map(Value::from)),
-            #[cfg(feature = "complex")]
             Self::Complex(array) => {
                 Box::new(array.into_row_shaped_slices(row_shape).map(Value::from))
             }
@@ -159,7 +153,6 @@ impl Value {
             Self::Num(array) => Box::new(array.into_rows().map(Value::from)),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => Box::new(array.into_rows().map(Value::from)),
-            #[cfg(feature = "complex")]
             Self::Complex(array) => Box::new(array.into_rows().map(Value::from)),
             Self::Char(array) => Box::new(array.into_rows().map(Value::from)),
             Self::Box(array) => Box::new(array.into_rows().map(Value::from)),
@@ -171,7 +164,6 @@ impl Value {
             Self::Num(array) => Box::new(array.data.into_iter().map(Value::from)),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => Box::new(array.data.into_iter().map(Value::from)),
-            #[cfg(feature = "complex")]
             Self::Complex(array) => Box::new(array.data.into_iter().map(Value::from)),
             Self::Char(array) => Box::new(array.data.into_iter().map(Value::from)),
             Self::Box(array) => Box::new(array.data.into_iter().map(Value::from)),
@@ -183,7 +175,6 @@ impl Value {
             Self::Num(_) => "number",
             #[cfg(feature = "bytes")]
             Self::Byte(_) => "number",
-            #[cfg(feature = "complex")]
             Self::Complex(_) => "complex",
             Self::Char(_) => "character",
             Self::Box(_) => "box",
@@ -195,7 +186,6 @@ impl Value {
             Self::Num(_) => "numbers",
             #[cfg(feature = "bytes")]
             Self::Byte(_) => "number",
-            #[cfg(feature = "complex")]
             Self::Complex(_) => "complexes",
             Self::Char(_) => "characters",
             Self::Box(_) => "boxes",
@@ -214,7 +204,6 @@ impl Value {
             Self::Num(array) => array.first_dim_zero().into(),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => array.first_dim_zero().into(),
-            #[cfg(feature = "complex")]
             Self::Complex(array) => array.first_dim_zero().into(),
             Self::Char(array) => array.first_dim_zero().into(),
             Self::Box(array) => array.first_dim_zero().into(),
@@ -283,7 +272,6 @@ impl Value {
             Self::Num(array) => n(array),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => _b(array),
-            #[cfg(feature = "complex")]
             Self::Complex(array) => _co(array),
             Self::Char(array) => ch(array),
             Self::Box(array) => match array.into_unboxed() {
@@ -304,7 +292,6 @@ impl Value {
             Self::Num(array) => n(array),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => _b(array),
-            #[cfg(feature = "complex")]
             Self::Complex(array) => _co(array),
             Self::Char(array) => ch(array),
             Self::Box(array) => f(array),
@@ -322,7 +309,6 @@ impl Value {
             Self::Num(array) => n(array),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => _b(array),
-            #[cfg(feature = "complex")]
             Self::Complex(array) => _co(array),
             Self::Char(array) => ch(array),
             Self::Box(array) => {
@@ -363,7 +349,6 @@ impl Value {
             Self::Num(array) => n(array),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => _b(array),
-            #[cfg(feature = "complex")]
             Self::Complex(array) => _co(array),
             Self::Char(array) => ch(array),
             Self::Box(array) => {
@@ -394,15 +379,12 @@ impl Value {
             (Self::Byte(a), Self::Num(b)) => n(a.convert(), b),
             #[cfg(feature = "bytes")]
             (Self::Num(a), Self::Byte(b)) => n(a, b.convert()),
-            #[cfg(feature = "complex")]
             (Self::Complex(a), Self::Complex(b)) => _co(a, b),
-            #[cfg(feature = "complex")]
             (Self::Complex(a), Self::Num(b)) => _co(a, b.convert()),
-            #[cfg(feature = "complex")]
             (Self::Num(a), Self::Complex(b)) => _co(a.convert(), b),
-            #[cfg(all(feature = "complex", feature = "bytes"))]
+            #[cfg(feature = "bytes")]
             (Self::Complex(a), Self::Byte(b)) => _co(a, b.convert()),
-            #[cfg(all(feature = "complex", feature = "bytes"))]
+            #[cfg(feature = "bytes")]
             (Self::Byte(a), Self::Complex(b)) => _co(a.convert(), b),
             (Self::Char(a), Self::Char(b)) => ch(a, b),
             (Self::Box(a), Self::Box(b)) => f(a, b),
@@ -430,15 +412,12 @@ impl Value {
             (Self::Byte(a), Self::Num(b)) => n(&a.convert_ref(), b),
             #[cfg(feature = "bytes")]
             (Self::Num(a), Self::Byte(b)) => n(a, &b.convert_ref()),
-            #[cfg(feature = "complex")]
             (Self::Complex(a), Self::Complex(b)) => _co(a, b),
-            #[cfg(feature = "complex")]
             (Self::Complex(a), Self::Num(b)) => _co(a, &b.convert_ref()),
-            #[cfg(feature = "complex")]
             (Self::Num(a), Self::Complex(b)) => _co(&a.convert_ref(), b),
-            #[cfg(all(feature = "complex", feature = "bytes"))]
+            #[cfg(feature = "bytes")]
             (Self::Complex(a), Self::Byte(b)) => _co(a, &b.convert_ref()),
-            #[cfg(all(feature = "complex", feature = "bytes"))]
+            #[cfg(feature = "bytes")]
             (Self::Byte(a), Self::Complex(b)) => _co(&a.convert_ref(), b),
             (Self::Char(a), Self::Char(b)) => ch(a, b),
             (Self::Box(a), Self::Box(b)) => f(a, b),
@@ -453,7 +432,6 @@ impl Value {
             Self::Num(arr) => arr.data.reserve_min(min),
             #[cfg(feature = "bytes")]
             Self::Byte(arr) => arr.data.reserve_min(min),
-            #[cfg(feature = "complex")]
             Self::Complex(arr) => arr.data.reserve_min(min),
             Self::Char(arr) => arr.data.reserve_min(min),
             Self::Box(arr) => arr.data.reserve_min(min),
@@ -465,7 +443,6 @@ impl Value {
             Self::Num(array) => array.grid_string(),
             #[cfg(feature = "bytes")]
             Self::Byte(array) => array.grid_string(),
-            #[cfg(feature = "complex")]
             Self::Complex(array) => array.grid_string(),
             Self::Char(array) => array.grid_string(),
             Self::Box(array) => array.grid_string(),
@@ -914,7 +891,7 @@ impl Value {
             Value::Num(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
-            #[cfg(feature = "complex")]
+
             Value::Complex(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Char(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Box(arr) => arr,
@@ -926,7 +903,7 @@ impl Value {
             Value::Num(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             #[cfg(feature = "bytes")]
             Value::Byte(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
-            #[cfg(feature = "complex")]
+
             Value::Complex(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Char(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Box(arr) => Cow::Borrowed(arr),
@@ -979,7 +956,6 @@ value_from!(f64, Num);
 value_from!(u8, Byte);
 value_from!(char, Char);
 value_from!(Boxed, Box);
-#[cfg(feature = "complex")]
 value_from!(Complex, Complex);
 
 #[cfg(not(feature = "bytes"))]
@@ -998,20 +974,6 @@ impl From<Array<u8>> for Value {
 impl FromIterator<u8> for Value {
     fn from_iter<I: IntoIterator<Item = u8>>(iter: I) -> Self {
         iter.into_iter().map(|b| b as f64).collect()
-    }
-}
-
-#[cfg(not(feature = "complex"))]
-impl From<Complex> for Value {
-    fn from(c: Complex) -> Self {
-        Self::from(c.abs())
-    }
-}
-
-#[cfg(not(feature = "complex"))]
-impl From<Array<Complex>> for Value {
-    fn from(array: Array<Complex>) -> Self {
-        array.convert_with(|c| c.abs()).into()
     }
 }
 
@@ -1088,90 +1050,30 @@ macro_rules! value_un_impl {
     }
 }
 
-value_un_impl!(
-    neg,
-    [Num, num],
-    ("bytes", Byte, byte),
-    ["complex", Complex, com]
-);
-value_un_impl!(
-    not,
-    [Num, num],
-    ("bytes", Byte, byte),
-    ["complex", Complex, com]
-);
-value_un_impl!(
-    abs,
-    [Num, num],
-    ("bytes", Byte, byte),
-    ("complex", Complex, com)
-);
-value_un_impl!(
-    sign,
-    [Num, num],
-    ["bytes", Byte, byte],
-    ["complex", Complex, com]
-);
-value_un_impl!(
-    sqrt,
-    [Num, num],
-    ("bytes", Byte, byte),
-    ["complex", Complex, com]
-);
-value_un_impl!(
-    sin,
-    [Num, num],
-    ("bytes", Byte, byte),
-    ["complex", Complex, com]
-);
-value_un_impl!(
-    cos,
-    [Num, num],
-    ("bytes", Byte, byte),
-    ["complex", Complex, com]
-);
-value_un_impl!(
-    asin,
-    [Num, num],
-    ("bytes", Byte, byte),
-    ["complex", Complex, com]
-);
-value_un_impl!(
-    acos,
-    [Num, num],
-    ("bytes", Byte, byte),
-    ["complex", Complex, com]
-);
-value_un_impl!(
-    floor,
-    [Num, num],
-    ["bytes", Byte, byte],
-    ["complex", Complex, com]
-);
-value_un_impl!(
-    ceil,
-    [Num, num],
-    ["bytes", Byte, byte],
-    ["complex", Complex, com]
-);
-value_un_impl!(
-    round,
-    [Num, num],
-    ["bytes", Byte, byte],
-    ["complex", Complex, com]
-);
+value_un_impl!(neg, [Num, num], ("bytes", Byte, byte), [Complex, com]);
+value_un_impl!(not, [Num, num], ("bytes", Byte, byte), [Complex, com]);
+value_un_impl!(abs, [Num, num], ("bytes", Byte, byte), (Complex, com));
+value_un_impl!(sign, [Num, num], ["bytes", Byte, byte], [Complex, com]);
+value_un_impl!(sqrt, [Num, num], ("bytes", Byte, byte), [Complex, com]);
+value_un_impl!(sin, [Num, num], ("bytes", Byte, byte), [Complex, com]);
+value_un_impl!(cos, [Num, num], ("bytes", Byte, byte), [Complex, com]);
+value_un_impl!(asin, [Num, num], ("bytes", Byte, byte), [Complex, com]);
+value_un_impl!(acos, [Num, num], ("bytes", Byte, byte), [Complex, com]);
+value_un_impl!(floor, [Num, num], ["bytes", Byte, byte], [Complex, com]);
+value_un_impl!(ceil, [Num, num], ["bytes", Byte, byte], [Complex, com]);
+value_un_impl!(round, [Num, num], ["bytes", Byte, byte], [Complex, com]);
 value_un_impl!(
     complex_re,
     [Num, generic],
     ["bytes", Byte, generic],
-    ("complex", Complex, com),
+    (Complex, com),
     [Char, generic]
 );
 value_un_impl!(
     complex_im,
     [Num, num],
     ["bytes", Byte, byte],
-    ("complex", Complex, com)
+    (Complex, com)
 );
 
 macro_rules! val_retry {
@@ -1266,11 +1168,11 @@ macro_rules! value_bin_math_impl {
             ("bytes", Byte, Byte, byte_byte, num_num),
             ("bytes", Byte, Num, byte_num, num_num),
             ("bytes", Num, Byte, num_byte, num_num),
-            ["complex", Complex, com_x],
-            ("complex", Complex, Num, com_x),
-            ("complex", Num, Complex, x_com),
-            ("byte", "complex", Complex, Byte, com_x, com_x),
-            ("byte", "complex", Byte, Complex, x_com, com_x),
+            [Complex, com_x],
+            (Complex, Num, com_x),
+            (Num, Complex, x_com),
+            ("byte", Complex, Byte, com_x, com_x),
+            ("byte", Byte, Complex, x_com, com_x),
             $($($tt)*)?
         );
     };
@@ -1300,15 +1202,15 @@ value_bin_math_impl!(max, [Char, char_char]);
 
 value_bin_impl!(
     complex,
-    ("complex", Num, Num, num_num),
-    ("bytes", "complex", Byte, Byte, byte_byte, num_num),
-    ("bytes", "complex", Byte, Num, byte_num, num_num),
-    ("bytes", "complex", Num, Byte, num_byte, num_num),
-    ["complex", Complex, com_x],
-    ("complex", Complex, Num, com_x),
-    ("complex", Num, Complex, x_com),
-    ("byte", "complex", Complex, Byte, com_x, com_x),
-    ("byte", "complex", Byte, Complex, x_com, com_x),
+    (Num, Num, num_num),
+    ("bytes", Byte, Byte, byte_byte, num_num),
+    ("bytes", Byte, Num, byte_num, num_num),
+    ("bytes", Num, Byte, num_byte, num_num),
+    [Complex, com_x],
+    (Complex, Num, com_x),
+    (Num, Complex, x_com),
+    ("byte", Complex, Byte, com_x, com_x),
+    ("byte", Byte, Complex, x_com, com_x),
 );
 
 macro_rules! cmp_impls {
@@ -1318,16 +1220,16 @@ macro_rules! cmp_impls {
                 $name,
                 // Value comparable
                 [Num, same_type],
-                ["complex", Complex, same_type],
+                [Complex, same_type],
                 ("bytes", Byte, Byte, same_type, num_num),
                 (Char, Char, generic),
                 (Box, Box, generic),
                 ("bytes", Num, Byte, num_byte, num_num),
                 ("bytes", Byte, Num, byte_num, num_num),
-                ("complex", Complex, Num, com_x),
-                ("complex", Num, Complex, x_com),
-                ("byte", "complex", Complex, Byte, com_x),
-                ("byte", "complex", Byte, Complex, x_com),
+                (Complex, Num, com_x),
+                (Num, Complex, x_com),
+                ("byte", Complex, Byte, com_x),
+                ("byte", Byte, Complex, x_com),
                 // Type comparable
                 (Num, Char, always_less),
                 ("bytes", Byte, Char, always_less),
@@ -1347,7 +1249,7 @@ impl PartialEq for Value {
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a == b,
             (Value::Char(a), Value::Char(b)) => a == b,
-            #[cfg(feature = "complex")]
+
             (Value::Complex(a), Value::Complex(b)) => a == b,
             (Value::Box(a), Value::Box(b)) => a == b,
             #[cfg(feature = "bytes")]
@@ -1377,7 +1279,7 @@ impl Ord for Value {
             (Value::Num(a), Value::Num(b)) => a.cmp(b),
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.cmp(b),
-            #[cfg(feature = "complex")]
+
             (Value::Complex(a), Value::Complex(b)) => a.cmp(b),
             (Value::Char(a), Value::Char(b)) => a.cmp(b),
             (Value::Box(a), Value::Box(b)) => a.cmp(b),
@@ -1391,9 +1293,9 @@ impl Ord for Value {
             (Value::Byte(_), _) => Ordering::Less,
             #[cfg(feature = "bytes")]
             (_, Value::Byte(_)) => Ordering::Greater,
-            #[cfg(feature = "complex")]
+
             (Value::Complex(_), _) => Ordering::Less,
-            #[cfg(feature = "complex")]
+
             (_, Value::Complex(_)) => Ordering::Greater,
             (Value::Char(_), _) => Ordering::Less,
             (_, Value::Char(_)) => Ordering::Greater,
@@ -1408,7 +1310,7 @@ impl Hash for Value {
             Value::Num(arr) => arr.hash(state),
             #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.hash(state),
-            #[cfg(feature = "complex")]
+
             Value::Complex(arr) => arr.hash(state),
             Value::Char(arr) => arr.hash(state),
             Value::Box(arr) => arr.hash(state),
@@ -1422,7 +1324,7 @@ impl fmt::Display for Value {
             Value::Num(n) => n.grid_string().fmt(f),
             #[cfg(feature = "bytes")]
             Value::Byte(b) => b.grid_string().fmt(f),
-            #[cfg(feature = "complex")]
+
             Value::Complex(c) => c.grid_string().fmt(f),
             Value::Box(v) => v.grid_string().fmt(f),
             Value::Char(c) if c.rank() < 2 => c.fmt(f),

@@ -548,7 +548,7 @@ fn TutorialTypes() -> impl IntoView {
         <p>"There are up to four types of arrays:"</p>
         <ul>
             <li><strong>"Number"</strong></li>
-            <li><strong>"Complex"</strong>" (optional)"</li>
+            <li><strong>"Complex"</strong></li>
             <li><strong>"Character"</strong></li>
             <li><strong>"Box"</strong></li>
         </ul>
@@ -564,7 +564,6 @@ fn TutorialTypes() -> impl IntoView {
         <p>"If you want to convert a number to a whole number, you can use "<Prim prim=Floor/>", "<Prim prim=Ceil/>", or "<Prim prim=Round/>"."</p>
 
         <h2 id="complex-numbers">"Complex Numbers"</h2>
-        <p>"Complex numbers are optional. They are available on this site and are enabled by default in the native interpreter."</p>
         <p>"Complex numbers can be created with the "<Prim prim=Complex/>" function."</p>
         <Editor example="ℂ 3 5"/>
         <Editor example="ℂ [1 2 3] [4 5 6]"/>

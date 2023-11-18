@@ -245,20 +245,17 @@ impl Value {
                 |a, b| Ok(a.join_impl(b, ctx)?.into()),
                 |a, b| Ok(a.join_impl(b, ctx)?.into()),
             )?,
-            #[cfg(feature = "complex")]
             (Value::Complex(a), Value::Complex(b)) => a.join_impl(b, ctx)?.into(),
             (Value::Char(a), Value::Char(b)) => a.join_impl(b, ctx)?.into(),
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => a.convert().join_impl(b, ctx)?.into(),
             #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.join_impl(b.convert(), ctx)?.into(),
-            #[cfg(feature = "complex")]
             (Value::Complex(a), Value::Num(b)) => a.join_impl(b.convert(), ctx)?.into(),
-            #[cfg(feature = "complex")]
             (Value::Num(a), Value::Complex(b)) => a.convert().join_impl(b, ctx)?.into(),
-            #[cfg(all(feature = "complex", feature = "bytes"))]
+            #[cfg(feature = "bytes")]
             (Value::Complex(a), Value::Byte(b)) => a.join_impl(b.convert(), ctx)?.into(),
-            #[cfg(all(feature = "complex", feature = "bytes"))]
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Complex(b)) => a.convert().join_impl(b, ctx)?.into(),
             (a, b) => a.coerce_to_functions(
                 b,
@@ -309,7 +306,6 @@ impl Value {
                     },
                 )?;
             }
-            #[cfg(feature = "complex")]
             (Value::Complex(a), Value::Complex(b)) => a.append(b, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.append(b, ctx)?,
             #[cfg(feature = "bytes")]
@@ -320,17 +316,15 @@ impl Value {
             }
             #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.append(b.convert(), ctx)?,
-            #[cfg(feature = "complex")]
             (Value::Complex(a), Value::Num(b)) => a.append(b.convert(), ctx)?,
-            #[cfg(feature = "complex")]
             (Value::Num(a), Value::Complex(b)) => {
                 let mut a = a.convert_ref();
                 a.append(b, ctx)?;
                 *self = a.into();
             }
-            #[cfg(all(feature = "complex", feature = "bytes"))]
+            #[cfg(feature = "bytes")]
             (Value::Complex(a), Value::Byte(b)) => a.append(b.convert(), ctx)?,
-            #[cfg(all(feature = "complex", feature = "bytes"))]
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Complex(b)) => {
                 let mut a = a.convert_ref();
                 a.append(b, ctx)?;
@@ -521,7 +515,6 @@ impl Value {
                     },
                 )?
             }
-            #[cfg(feature = "complex")]
             (Value::Complex(a), Value::Complex(b)) => a.couple_impl(b, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.couple_impl(b, ctx)?,
             (Value::Box(a), Value::Box(b)) => a.couple_impl(b, ctx)?,
@@ -533,17 +526,15 @@ impl Value {
                 a.couple_impl(b, ctx)?;
                 *self = a.into();
             }
-            #[cfg(feature = "complex")]
             (Value::Complex(a), Value::Num(b)) => a.couple_impl(b.convert(), ctx)?,
-            #[cfg(feature = "complex")]
             (Value::Num(a), Value::Complex(b)) => {
                 let mut a = a.convert_ref();
                 a.couple_impl(b, ctx)?;
                 *self = a.into();
             }
-            #[cfg(all(feature = "complex", feature = "bytes"))]
+            #[cfg(feature = "bytes")]
             (Value::Complex(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?,
-            #[cfg(all(feature = "complex", feature = "bytes"))]
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Complex(b)) => {
                 let mut a = a.convert_ref();
                 a.couple_impl(b, ctx)?;
@@ -569,7 +560,6 @@ impl Value {
             Value::Num(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
             #[cfg(feature = "bytes")]
             Value::Byte(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
-            #[cfg(feature = "complex")]
             Value::Complex(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
             Value::Char(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
             Value::Box(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
@@ -726,7 +716,6 @@ impl Value {
                 Value::Num(a) => a.reshape_scalar(n),
                 #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.reshape_scalar(n),
-                #[cfg(feature = "complex")]
                 Value::Complex(a) => a.reshape_scalar(n),
                 Value::Char(a) => a.reshape_scalar(n),
                 Value::Box(a) => a.reshape_scalar(n),
@@ -741,7 +730,6 @@ impl Value {
                 Value::Num(a) => a.reshape(&target_shape, env),
                 #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.reshape(&target_shape, env),
-                #[cfg(feature = "complex")]
                 Value::Complex(a) => a.reshape(&target_shape, env),
                 Value::Char(a) => a.reshape(&target_shape, env),
                 Value::Box(a) => a.reshape(&target_shape, env),
@@ -925,7 +913,6 @@ impl Value {
                 Value::Num(a) => a.scalar_keep(counts[0]).into(),
                 #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.scalar_keep(counts[0]).into(),
-                #[cfg(feature = "complex")]
                 Value::Complex(a) => a.scalar_keep(counts[0]).into(),
                 Value::Char(a) => a.scalar_keep(counts[0]).into(),
                 Value::Box(a) => a.scalar_keep(counts[0]).into(),
@@ -935,7 +922,6 @@ impl Value {
                 Value::Num(a) => a.list_keep(&counts, env)?.into(),
                 #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.list_keep(&counts, env)?.into(),
-                #[cfg(feature = "complex")]
                 Value::Complex(a) => a.list_keep(&counts, env)?.into(),
                 Value::Char(a) => a.list_keep(&counts, env)?.into(),
                 Value::Box(a) => a.list_keep(&counts, env)?.into(),
@@ -1180,7 +1166,6 @@ impl Value {
                 |a| Ok(a.pick(index_shape, &index_data, env)?.into()),
                 |a| Ok(a.pick(index_shape, &index_data, env)?.into()),
             )?,
-            #[cfg(feature = "complex")]
             Value::Complex(a) => Value::Complex(a.pick(index_shape, &index_data, env)?),
             Value::Char(a) => Value::Char(a.pick(index_shape, &index_data, env)?),
             Value::Box(a) => Value::Box(a.pick(index_shape, &index_data, env)?),
@@ -1375,7 +1360,6 @@ impl Value {
                 |a| Ok(a.take(&index, env)?.into()),
                 |a| Ok(a.take(&index, env)?.into()),
             )?,
-            #[cfg(feature = "complex")]
             Value::Complex(a) => Value::Complex(a.take(&index, env)?),
             Value::Char(a) => Value::Char(a.take(&index, env)?),
             Value::Box(a) => Value::Box(a.take(&index, env)?),
@@ -1391,7 +1375,6 @@ impl Value {
             Value::Num(a) => Value::Num(a.drop(&index, env)?),
             #[cfg(feature = "bytes")]
             Value::Byte(a) => Value::Byte(a.drop(&index, env)?),
-            #[cfg(feature = "complex")]
             Value::Complex(a) => Value::Complex(a.drop(&index, env)?),
             Value::Char(a) => Value::Char(a.drop(&index, env)?),
             Value::Box(a) => Value::Box(a.drop(&index, env)?),
@@ -1734,7 +1717,6 @@ impl Value {
             Value::Num(a) => a.rotate(&by, env)?,
             #[cfg(feature = "bytes")]
             Value::Byte(a) => a.rotate(&by, env)?,
-            #[cfg(feature = "complex")]
             Value::Complex(a) => a.rotate(&by, env)?,
             Value::Char(a) => a.rotate(&by, env)?,
             Value::Box(a) => a.rotate(&by, env)?,
@@ -1759,7 +1741,6 @@ impl Value {
             Value::Num(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
             #[cfg(feature = "bytes")]
             Value::Byte(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
-            #[cfg(feature = "complex")]
             Value::Complex(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
             Value::Char(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
             Value::Box(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
@@ -1872,7 +1853,6 @@ impl Value {
                 |a| Ok(a.select_impl(indices_shape, &indices_data, env)?.into()),
                 |a| Ok(a.select_impl(indices_shape, &indices_data, env)?.into()),
             )?,
-            #[cfg(feature = "complex")]
             Value::Complex(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
             Value::Char(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
             Value::Box(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
@@ -2054,7 +2034,6 @@ impl Value {
             Value::Num(a) => a.windows(&size_spec, env)?.into(),
             #[cfg(feature = "bytes")]
             Value::Byte(a) => a.windows(&size_spec, env)?.into(),
-            #[cfg(feature = "complex")]
             Value::Complex(a) => a.windows(&size_spec, env)?.into(),
             Value::Char(a) => a.windows(&size_spec, env)?.into(),
             Value::Box(a) => a.windows(&size_spec, env)?.into(),

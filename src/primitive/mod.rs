@@ -266,15 +266,15 @@ impl Primitive {
                 Primitive::Fix.format()
             )),
             Primitive::Level => Some(format!(
-                "try using {}, {}, or {} instead, possible with {}",
+                "try using {} with {} or {} instead",
                 Primitive::Rows.format(),
-                Primitive::Distribute.format(),
-                Primitive::Tribute.format(),
+                Primitive::Fix.format(),
                 Primitive::Rerank.format()
             )),
             Primitive::Combinate => Some(format!(
-                "try using {} instead, possibly with {}",
+                "try using {} with {} or {} instead",
                 Primitive::Cross.format(),
+                Primitive::Fix.format(),
                 Primitive::Rerank.format()
             )),
             prim if prim.is_ocean() => Some(String::new()),

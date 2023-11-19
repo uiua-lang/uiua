@@ -1011,13 +1011,13 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <p>"Notice that the second argument here is a 2D array with 1 row of 2 elements. It will be repeated just like the scalars above."</p>
         <Editor example="≡⊟ [1_2 3_4 5_6] [¯1_0]"/>
         <p>"If we want to combine each row of one array with copies of another, we can turn one of the arrays into a single row array with "<Prim prim=Fix/>". "<Prim prim=Fix/>" adds a 1 to the front of the shape of an array."</p>
-        <Editor example="⌀.1_2_3"/>
+        <Editor example="¤.1_2_3"/>
         <p>"Here, we "<Prim prim=Fix/>" "<code>"1_2_3"</code>" so that it is reused for each row of "<code>"4_5_6"</code>"."</p>
-        <Editor example="≡⊂ ⌀ 1_2_3 4_5_6"/>
+        <Editor example="≡⊂ ¤ 1_2_3 4_5_6"/>
         <p>"If we have a bunch of arrays and want to choose which ones are fixed and which are not, be can use planet notation."</p>
-        <Editor example="≡⊂ ⊙⌀ 1_2_3 4_5_6"/>
-        <Editor example="≡(⊂⊂⊂) ⊓⊓⊓∘⌀⌀∘ 1_2_3 4_5_6 7_8_9 10_11_12"/>
-        <Editor example="≡(⊂⊂⊂) ⊙∩⌀     1_2_3 4_5_6 7_8_9 10_11_12"/>
+        <Editor example="≡⊂ ⊙¤ 1_2_3 4_5_6"/>
+        <Editor example="≡(⊂⊂⊂) ⊓⊓⊓∘¤¤∘ 1_2_3 4_5_6 7_8_9 10_11_12"/>
+        <Editor example="≡(⊂⊂⊂) ⊙∩¤     1_2_3 4_5_6 7_8_9 10_11_12"/>
 
         <h2 id="rerank"><Prim prim=Rerank/></h2>
         <p>"The above examples dig into an array from the top down. But what if you want to think about the array from the "<em>"bottom up"</em>"?"</p>
@@ -1058,7 +1058,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
             number=1
             prompt="adds the first argument list to each row of the second argument matrix"
             example="1_2_3 [4_5_6 7_8_9]"
-            answer="≡+⌀"
+            answer="≡+¤"
             tests={&["10_20 10_20 ↯4_2⇡8", "\"Wow\" ¯[10_0_10 19_14_19]"]}
             hidden="1_2 [3_4]"/>
 

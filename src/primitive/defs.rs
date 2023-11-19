@@ -538,15 +538,15 @@ primitive!(
     /// See also: [reshape]
     (1, Deshape, MonadicArray, ("deshape", '♭')),
     /// Add a length-1 axis to an array
-    /// ex: ⌀5
-    /// ex: ⌀⌀5
-    /// ex: ⌀[1 2 3]
-    /// ex: ⌀⌀[1 2 3]
+    /// ex: ¤5
+    /// ex: ¤¤5
+    /// ex: ¤[1 2 3]
+    /// ex: ¤¤[1 2 3]
     /// This is useful when combine with [rows] or [cross] to re-use an entire array for each row of others.
-    /// ex: ≡⊂ ⌀ 1_2_3 4_5_6
+    /// ex: ≡⊂ ¤ 1_2_3 4_5_6
     /// [fix]'s name come from the way it "fixes" an array in this way.
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) for more information on this use case.
-    (1, Fix, MonadicArray, ("fix", '⌀')),
+    (1, Fix, MonadicArray, ("fix", '¤')),
     /// Encode an array as bits (big-endian)
     ///
     /// The result will always be 1 rank higher than the input.
@@ -1046,8 +1046,8 @@ primitive!(
     /// ex: ≡⊂ 1 2_3_4
     /// ex: ≡(⊂⊂) 1 2_3_4 5
     /// You can use [fix] to take advantage of this functionailty and re-use an entire array for each row of another.
-    /// ex: ≡⊂ ⌀  1_2_3 4_5_6
-    /// ex: ≡⊂ ⊙⌀ 1_2_3 4_5_6
+    /// ex: ≡⊂ ¤  1_2_3 4_5_6
+    /// ex: ≡⊂ ⊙¤ 1_2_3 4_5_6
     ([1], Rows, IteratingModifier, ("rows", '≡')),
     /// Apply a function to a fixed value and each row of an array
     ///

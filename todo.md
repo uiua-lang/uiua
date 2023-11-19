@@ -1,11 +1,10 @@
 # Uiua Todo
 Within each section, items are ordered (roughly) by decreasing priority.
 
-## Next Version
-- Join any scalar
-- Update fix glyph
-
 ## Features
+- Update fix glyph
+- Join any scalar
+- Negative windows
 - Multimedia
   - Sound input
   - Webcam input

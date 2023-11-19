@@ -23,7 +23,7 @@ Xy ← ⍘⍉⊞⊟. ÷÷2: -÷2,⇡.200
 Rgb ← [:⍘⊟×.Xy ↯△⊢Xy0.5]
 u ← ↥<0.2:>0.7.+×2 ×.:⍘⊟Xy
 c ← <:⍜⍘√/+ Xy
-⍉⊂:-¬u c1 +0.1 ≡↧⌀c0.95Rgb";
+⍉⊂:-¬u c1 +0.1 ≡↧¤c0.95Rgb";
 const CHORD: &str = "\
 [0 4 7 10]       # Notes
 ×220 ⁿ:2÷12      # Freqs
@@ -32,7 +32,7 @@ const CHORD: &str = "\
 const SPIRAL: &str = "\
 ⇌×τ÷⊃∘⇡20            # Frame times
 ⍉.↯:×20-1×2÷:⇡..300  # x and y
-≡(-⊃∠(-π◿τ+⍜∩⍘√+))∩⌀ # Generate
+≡(-⊃∠(-π◿τ+⍜∩⍘√+))∩¤ # Generate
 <0.2⌵                # Threshold";
 const QUADRATIC: &str = "\
 Disc ← +×.⊙(××¯4):
@@ -56,7 +56,7 @@ const MANDELBROT: &str = "\
 ×2 ⊞ℂ∶-1/4. ÷⊙-⊃⊃∘(÷2)⇡ 300 # Init
 >2 ⌵ ⊙;⍥⊃(+×.)⋅∘ 50 0       # Run";
 const LIFE: &str = "\
-Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3⌀.
+Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3¤.
 ⁅×0.6∵⋅⚂↯⊟.30 0       # Init
 ⇌;⍥(⊃∘⊂Life)100⊃∘(↯1) # Run
 ≡(▽↯⧻,:⍉▽↯⧻,,:5)    # Upscale";

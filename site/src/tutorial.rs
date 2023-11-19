@@ -1014,7 +1014,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="¤.1_2_3"/>
         <p>"Here, we "<Prim prim=Fix/>" "<code>"1_2_3"</code>" so that it is reused for each row of "<code>"4_5_6"</code>"."</p>
         <Editor example="≡⊂ ¤ 1_2_3 4_5_6"/>
-        <p>"If we have a bunch of arrays and want to choose which ones are fixed and which are not, be can use planet notation."</p>
+        <p>"If we have a bunch of arrays and want to choose which ones are fixed and which are not, we can use planet notation."</p>
         <Editor example="≡⊂ ⊙¤ 1_2_3 4_5_6"/>
         <Editor example="≡(⊂⊂⊂) ⊓⊓⊓∘¤¤∘ 1_2_3 4_5_6 7_8_9 10_11_12"/>
         <Editor example="≡(⊂⊂⊂) ⊙∩¤     1_2_3 4_5_6 7_8_9 10_11_12"/>

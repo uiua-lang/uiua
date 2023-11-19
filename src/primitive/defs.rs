@@ -538,6 +538,7 @@ primitive!(
     /// See also: [reshape]
     (1, Deshape, MonadicArray, ("deshape", '♭')),
     /// Add a length-1 axis to an array
+    ///
     /// ex: ¤5
     /// ex: ¤¤5
     /// ex: ¤[1 2 3]

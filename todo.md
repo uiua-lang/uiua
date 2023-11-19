@@ -1,6 +1,10 @@
 # Uiua Todo
 Within each section, items are ordered (roughly) by decreasing priority.
 
+## Next Version
+- Join any scalar
+- Update fix glyph
+
 ## Features
 - Multimedia
   - Sound input

@@ -1002,6 +1002,9 @@ primitive!(
     /// Here, we accumulate the first array with [add] and the second with [multiply].
     /// ex: ∧⊃⟜+⋅⟜× 1_2_3 4_5_6 0 1
     ///
+    /// Like [rows], [fold] will repeat the row of arrays that have exactly one row.
+    /// ex: ∧(⊂⊂) 1_2_3 4 []
+    ///
     /// Here is a reimplementation of [scan] using [fold].
     /// ex: ⇌∧(⊂+⊙(⊢.)) ⊃↘↙1 [1 2 3 4]
     ([1], Fold, AggregatingModifier, ("fold", '∧')),
@@ -1048,6 +1051,7 @@ primitive!(
     /// You can use [fix] to take advantage of this functionailty and re-use an entire array for each row of another.
     /// ex: ≡⊂ ¤  1_2_3 4_5_6
     /// ex: ≡⊂ ⊙¤ 1_2_3 4_5_6
+    /// [fold] also has this behavior.
     ([1], Rows, IteratingModifier, ("rows", '≡')),
     /// Apply a function to a fixed value and each row of an array
     ///

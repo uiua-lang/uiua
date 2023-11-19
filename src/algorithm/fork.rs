@@ -83,7 +83,7 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
     // Get selector
     let selector = env
         .pop("switch index")?
-        .as_natural_array(env, "Switch index must naturals")?;
+        .as_natural_array(env, "Switch index must be an array of naturals")?;
     if let Some(i) = selector.data.iter().find(|&&i| i >= count) {
         return Err(env.error(format!(
             "Switch index {i} is out of bounds for switch of size {count}"

@@ -2,7 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Update fix glyph
 - Join any scalar
 - Negative windows
 - Multimedia

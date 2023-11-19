@@ -1066,7 +1066,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
             number=2
             prompt="rotates all rank 2 arrays in the second argument by all rank 1 arrays in the first"
             example="[¯1_¯2 0_1] ↯3_4⇡12"
-            answer="/⊂ ⊠↻ ∩☇1⊙2"
+            answer="⊠↻ ∩☇1⊙2"
             tests={&["[0_2 2_1 1_1] ⊞×⊞×.↘1.+1⇡3"]}
             hidden="1 [1 2 3]"/>
     }

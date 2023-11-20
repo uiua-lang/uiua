@@ -2073,10 +2073,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Use this array to `windows` another
     pub fn windows(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let size_spec = self.as_nats(env, "Window size must be a list of natural numbers")?;
-        if size_spec.iter().any(|&s| s == 0) {
-            return Err(env.error("Window size cannot be zero"));
-        }
+        let size_spec = self.as_ints(env, "Window size must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => a.windows(&size_spec, env)?.into(),
             #[cfg(feature = "bytes")]
@@ -2090,22 +2087,33 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     /// Get the `windows` of this array
-    pub fn windows(&self, size_spec: &[usize], env: &Uiua) -> UiuaResult<Self> {
-        if size_spec.len() > self.shape.len() {
+    pub fn windows(&self, isize_spec: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        if isize_spec.iter().any(|&s| s == 0) {
+            return Err(env.error("Window size cannot be zero"));
+        }
+        if isize_spec.len() > self.shape.len() {
             return Err(env.error(format!(
-                "Window size {size_spec:?} has too many axes for shape {}",
+                "Window size {isize_spec:?} has too many axes for shape {}",
                 self.format_shape()
             )));
         }
+        let mut size_spec = Vec::with_capacity(isize_spec.len());
+        for (d, s) in self.shape.iter().zip(isize_spec) {
+            if s.unsigned_abs() > *d {
+                return Err(env.error(format!(
+                    "Window size {s} is too large for axis of length {d}",
+                )));
+            }
+            size_spec.push(if *s >= 0 {
+                *s as usize
+            } else {
+                (*d as isize + 1 + *s).max(0) as usize
+            });
+        }
         // Determine the shape of the windows array
         let mut new_shape = Shape::with_capacity(self.shape.len() + size_spec.len());
-        new_shape.extend(
-            self.shape
-                .iter()
-                .zip(size_spec)
-                .map(|(a, b)| (a + 1).saturating_sub(*b)),
-        );
-        new_shape.extend_from_slice(size_spec);
+        new_shape.extend(self.shape.iter().zip(&size_spec).map(|(a, b)| a + 1 - *b));
+        new_shape.extend_from_slice(&size_spec);
         new_shape.extend_from_slice(&self.shape[size_spec.len()..]);
         // Check if the window size is too large
         for (size, sh) in size_spec.iter().zip(&self.shape) {

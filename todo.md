@@ -2,8 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Join any scalar
-- Negative windows
 - Multimedia
   - Sound input
   - Webcam input

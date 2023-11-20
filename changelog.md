@@ -2,8 +2,11 @@
 
 Uiua is not yet stable.
 
-<!-- This version is not yet released.
-If you are reading this on the website, then these changes are live here. -->
+## 0.4.0 - 2023-11-??
+This version is not yet released.
+If you are reading this on the website, then these changes are live here.
+### Language
+- [`join` `⊂`](https://uiua.org/docs/join) now always works with a scalar regardless of the shape of the other array
 
 ## 0.3.0 - 2023-11-19
 ### Language

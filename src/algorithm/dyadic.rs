@@ -371,6 +371,10 @@ impl<T: ArrayValue> Array<T> {
                     self.fill_to_shape(row_shape, fill.clone());
                     other.fill_to_shape(&target_shape, fill);
                     target_shape
+                } else if self.rank() == 0 {
+                    let val = self.data.into_iter().next().unwrap();
+                    self.data = cowslice![val; other.shape().iter().skip(1).product()];
+                    other.shape
                 } else {
                     if other.rank() - self.rank() > 1 {
                         return Err(C::fill_error(ctx.error(format!(
@@ -440,6 +444,10 @@ impl<T: ArrayValue> Array<T> {
             self.fill_to_shape(&target_shape, fill.clone());
             other.fill_to_shape(row_shape, fill);
             target_shape
+        } else if other.rank() == 0 {
+            let val = other.data.into_iter().next().unwrap();
+            other.data = cowslice![val; self.shape().iter().skip(1).product()];
+            take(&mut self.shape)
         } else {
             if self.rank() <= other.rank() || self.rank() - other.rank() > 1 {
                 return Err(C::fill_error(ctx.error(format!(

@@ -3522,7 +3522,7 @@ dependencies = [
 
 [[package]]
 name = "uiua"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "bufreaderwriter",
  "clap",

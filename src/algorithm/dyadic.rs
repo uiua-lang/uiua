@@ -898,6 +898,45 @@ impl Value {
         self.validate_shape();
         Ok(())
     }
+    pub(crate) fn unrerank(&mut self, rank: &Self, orig_shape: &Self, env: &Uiua) -> UiuaResult {
+        if self.rank() == 0 {
+            if let Value::Box(arr) = self {
+                arr.data.as_mut_slice()[0]
+                    .0
+                    .unrerank(rank, orig_shape, env)?;
+            }
+            return Ok(());
+        }
+        let irank = rank.as_int(env, "Rank must be a natural number")?;
+        let orig_shape = orig_shape.as_nats(env, "Shape must be a list of natural numbers")?;
+        let rank = irank.unsigned_abs();
+        let shape = self.shape_mut();
+        if irank >= 0 {
+            // Positive rank
+            let new_shape: Shape = orig_shape
+                .iter()
+                .take(orig_shape.len().saturating_sub(rank))
+                .chain(
+                    shape
+                        .iter()
+                        .skip((rank + 1).saturating_sub(orig_shape.len()).max(1)),
+                )
+                .copied()
+                .collect();
+            *shape = new_shape;
+        } else {
+            // Negative rank
+            let new_shape: Shape = orig_shape
+                .iter()
+                .take(rank)
+                .chain(shape.iter().skip(1))
+                .copied()
+                .collect();
+            *shape = new_shape;
+        }
+        self.validate_shape();
+        Ok(())
+    }
 }
 
 impl Value {

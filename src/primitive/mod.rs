@@ -761,6 +761,13 @@ impl ImplPrimitive {
                 let from = env.pop(3)?;
                 env.push(from.unselect(index, into, env)?);
             }
+            ImplPrimitive::Unrerank => {
+                let rank = env.pop(1)?;
+                let shape = env.pop(2)?;
+                let mut array = env.pop(3)?;
+                array.unrerank(&rank, &shape, env)?;
+                env.push(array);
+            }
             ImplPrimitive::InvWhere => env.monadic_ref_env(Value::inverse_where)?,
             ImplPrimitive::InvUtf => env.monadic_ref_env(Value::inv_utf8)?,
             ImplPrimitive::InverseBits => env.monadic_ref_env(Value::inv_bits)?,

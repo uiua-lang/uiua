@@ -377,13 +377,14 @@ fn rowsn(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             }
         }
     }
-    let row_count = args.iter().map(|v| v.row_count()).max().unwrap();
+    let mut row_count = 0;
     let mut arg_elems: Vec<_> = args
         .into_iter()
         .map(|v| {
             if v.row_count() == 1 {
                 Err(v.into_rows().next().unwrap())
             } else {
+                row_count = row_count.max(v.row_count());
                 Ok(v.into_rows())
             }
         })

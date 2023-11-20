@@ -2145,9 +2145,12 @@ impl<T: ArrayValue> Array<T> {
     pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
         let mut searched = searched;
         let mut local_searched: Self;
-        if self.rank() > searched.rank() || self.row_count() > searched.row_count() {
+        let any_dim_greater = (self.shape().iter().rev())
+            .zip(searched.shape().iter().rev())
+            .any(|(a, b)| a > b);
+        if self.rank() > searched.rank() || any_dim_greater {
             let mut filled = false;
-            if self.row_count() > searched.row_count() {
+            if any_dim_greater {
                 // Fill
                 if let Some(fill) = env.fill() {
                     let mut target_shape = searched.shape.clone();
@@ -2178,7 +2181,7 @@ impl<T: ArrayValue> Array<T> {
             .shape
             .iter()
             .zip(&searched_for_shape)
-            .map(|(a, b)| a + 1 - b)
+            .map(|(s, f)| s + 1 - f)
             .collect();
 
         let mut data = EcoVec::from_elem(0, temp_output_shape.iter().product());

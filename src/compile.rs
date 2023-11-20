@@ -1136,7 +1136,7 @@ impl Uiua {
             };
             self.diagnostics.insert(Diagnostic::new(
                 format!(
-                    "Warning: {} is deprecated and will be removed in a future version{}",
+                    "{} is deprecated and will be removed in a future version{}",
                     prim.format(),
                     suggestion
                 ),

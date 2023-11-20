@@ -378,17 +378,24 @@ fn rowsn(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         }
     }
     let mut row_count = 0;
+    let mut all_scalar = true;
+    let mut all_1 = true;
     let mut arg_elems: Vec<_> = args
         .into_iter()
         .map(|v| {
+            all_scalar = all_scalar && v.rank() == 0;
             if v.row_count() == 1 {
                 Err(v.into_rows().next().unwrap())
             } else {
                 row_count = row_count.max(v.row_count());
+                all_1 = false;
                 Ok(v.into_rows())
             }
         })
         .collect();
+    if all_1 {
+        row_count = 1;
+    }
     let outputs = f.signature().outputs;
     let mut new_values = multi_output(outputs, Vec::new());
     for _ in 0..row_count {
@@ -404,7 +411,11 @@ fn rowsn(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         }
     }
     for new_values in new_values.into_iter().rev() {
-        let eached = Value::from_row_values(new_values, env)?;
+        let mut eached = Value::from_row_values(new_values, env)?;
+        if all_scalar {
+            eached.shape_mut().remove(0);
+        }
+        eached.validate_shape();
         env.push(eached);
     }
     Ok(())

@@ -918,30 +918,31 @@ impl Value {
         let irank = rank.as_int(env, "Rank must be a natural number")?;
         let orig_shape = orig_shape.as_nats(env, "Shape must be a list of natural numbers")?;
         let rank = irank.unsigned_abs();
-        let shape = self.shape_mut();
-        if irank >= 0 {
+        let new_shape: Shape = if irank >= 0 {
             // Positive rank
-            let new_shape: Shape = orig_shape
+            orig_shape
                 .iter()
                 .take(orig_shape.len().saturating_sub(rank))
                 .chain(
-                    shape
+                    self.shape()
                         .iter()
                         .skip((rank + 1).saturating_sub(orig_shape.len()).max(1)),
                 )
                 .copied()
-                .collect();
-            *shape = new_shape;
+                .collect()
         } else {
             // Negative rank
-            let new_shape: Shape = orig_shape
+            orig_shape
                 .iter()
                 .take(rank)
-                .chain(shape.iter().skip(1))
+                .chain(self.shape().iter().skip(1))
                 .copied()
-                .collect();
-            *shape = new_shape;
+                .collect()
+        };
+        if new_shape.iter().product::<usize>() != self.element_count() {
+            return Ok(());
         }
+        *self.shape_mut() = new_shape;
         self.validate_shape();
         Ok(())
     }

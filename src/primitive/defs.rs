@@ -1716,6 +1716,17 @@ primitive!(
     /// ex: ↧5 ∞
     /// ex: ↥5 ∞
     (0, Infinity, Constant, ("infinity", '∞')),
+    /// Set a function as its own inverse
+    ///
+    /// ex: F ← ⌅⧻
+    ///   : F   1_2_4
+    ///   : ⍘F  1_2_4
+    ///   : ⍜F∘ 1_2_4
+    /// This is useful when combined with [under]. It allows you to call a function twice with another function in between.
+    /// Finding the standard deviation of a list of numbers requires finding the mean twice. Here, we only need to write the mean code once.
+    /// ex: StdDev ← √⍜⌅(÷⊃⧻/+)(×.-).
+    ///   : StdDev [1 2 5 8 9]
+    ([1], Rectify, OtherModifier, ("rectify", '⌅')),
     /// Set the inverse of a function
     ///
     /// The first function is the uninverted function, and the second function is the inverse.

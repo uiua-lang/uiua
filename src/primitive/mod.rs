@@ -674,6 +674,10 @@ impl Primitive {
                 env.try_recv(id)?;
             }
             Primitive::Now => env.push(instant::now() / 1000.0),
+            Primitive::Rectify => {
+                let f = env.pop_function()?;
+                env.call(f)?;
+            }
             Primitive::SetInverse => {
                 let f = env.pop_function()?;
                 let _inv = env.pop_function()?;

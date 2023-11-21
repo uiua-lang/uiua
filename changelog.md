@@ -8,6 +8,7 @@ If you are reading this on the website, then these changes are live here.
 ### Language
 - [`join` `⊂`](https://uiua.org/docs/join) now always works with a scalar regardless of the shape of the other array
 - [`windows` `◫`](https://uiua.org/docs/windows) can now take negative window sizes
+- Add the [`rectify` `⌅`](https://uiua.org/docs/rectify) function, which sets a function's inverse to itself
 - Add the [`setinv`](https://uiua.org/docs/setinv) modifier, which sets the inverse of a function
 
 ## 0.3.1 - 2023-11-20

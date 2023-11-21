@@ -762,6 +762,28 @@ impl Uiua {
                 } = modified.operands.first().cloned().unwrap()
                 {
                     match prim {
+                        Primitive::Dip => {
+                            let mut branches = sw.branches.into_iter().rev();
+                            let mut new = Modified {
+                                modifier: modified.modifier.clone(),
+                                operands: vec![branches.next().unwrap().map(Word::Func)],
+                            };
+                            for branch in branches {
+                                let mut lines = branch.value.lines;
+                                (lines.last_mut().unwrap())
+                                    .push(span.clone().sp(Word::Modified(Box::new(new))));
+                                new = Modified {
+                                    modifier: modified.modifier.clone(),
+                                    operands: vec![branch.span.clone().sp(Word::Func(Func {
+                                        id: FunctionId::Anonymous(branch.span.clone()),
+                                        signature: None,
+                                        lines,
+                                        closed: true,
+                                    }))],
+                                };
+                            }
+                            return self.modified(new, call);
+                        }
                         Primitive::Fork | Primitive::Bracket => {
                             let mut branches = sw.branches.into_iter().rev();
                             let mut new = Modified {

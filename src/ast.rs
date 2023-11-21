@@ -171,7 +171,7 @@ pub struct Func {
 impl fmt::Debug for Func {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut d = f.debug_tuple("func");
-        d.field(&self.id);
+        // d.field(&self.id);
         for line in &self.lines {
             for word in line {
                 d.field(&word.value);

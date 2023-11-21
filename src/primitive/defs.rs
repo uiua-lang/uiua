@@ -1292,6 +1292,11 @@ primitive!(
     /// ex: [⊃⊙⋅∘(++) 3 5 10]
     /// ex: [⊃⋅⊙∘(++) 3 5 10]
     /// ex: [⊃⊙∘(++) 3 5 10]
+    ///
+    /// [dip] is compatible with switch functions.
+    /// It is equivalent to nesting [dip]s.
+    /// ex: +⊙(×⊙(↙⊙↘)) 2 10 3 1 [1 2 3 4 5]
+    /// ex: +⊙(×|↙|↘)   2 10 3 1 [1 2 3 4 5]
     ([1], Dip, Planet, ("dip", '⊙')),
     /// Call a function on two sets of values
     ///

@@ -1219,6 +1219,29 @@ primitive!(
     /// While more inverses exists, most of them are not useful on their own.
     /// They are usually used within [under].
     ([1], Invert, OtherModifier, ("invert", '⍘')),
+    /// Set a function as its own inverse
+    ///
+    /// ex: F ← ⌅⧻
+    ///   : F   1_2_4
+    ///   : ⍘F  1_2_4
+    ///   : ⍜F∘ 1_2_4 # Calls ⧻ twice
+    /// This is useful when combined with [under]. It allows you to call a function twice with another function in between.
+    /// Finding the standard deviation of a list of numbers requires finding the mean twice. Here, we only need to write the mean code once.
+    /// ex: StdDev ← √⍜⌅(÷⊃⧻/+)(×.-).
+    ///   : StdDev [1 2 5 8 9]
+    ([1], Rectify, OtherModifier, ("rectify", '⌅')),
+    /// Set the inverse of a function
+    ///
+    /// The first function is the uninverted function, and the second function is the inverse.
+    /// ex: F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
+    ///   : ;F   @A
+    ///   : ;⍘F  @B
+    ///   : ;⍜F∘ @C
+    /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
+    /// This can lead to errors if you are unaware of it.
+    /// ex! F ← setinv+-
+    ///   : ⍜F∘ 3 5
+    ([2], SetInverse, OtherModifier, "setinv"),
     /// Pop the second stack value then call a function
     ///
     /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [reach] is useful.
@@ -1716,29 +1739,6 @@ primitive!(
     /// ex: ↧5 ∞
     /// ex: ↥5 ∞
     (0, Infinity, Constant, ("infinity", '∞')),
-    /// Set a function as its own inverse
-    ///
-    /// ex: F ← ⌅⧻
-    ///   : F   1_2_4
-    ///   : ⍘F  1_2_4
-    ///   : ⍜F∘ 1_2_4
-    /// This is useful when combined with [under]. It allows you to call a function twice with another function in between.
-    /// Finding the standard deviation of a list of numbers requires finding the mean twice. Here, we only need to write the mean code once.
-    /// ex: StdDev ← √⍜⌅(÷⊃⧻/+)(×.-).
-    ///   : StdDev [1 2 5 8 9]
-    ([1], Rectify, OtherModifier, ("rectify", '⌅')),
-    /// Set the inverse of a function
-    ///
-    /// The first function is the uninverted function, and the second function is the inverse.
-    /// ex: F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
-    ///   : ;F   @A
-    ///   : ;⍘F  @B
-    ///   : ;⍜F∘ @C
-    /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
-    /// This can lead to errors if you are unaware of it.
-    /// ex! F ← setinv+-
-    ///   : ⍜F∘ 3 5
-    ([2], SetInverse, OtherModifier, "setinv"),
     /// Debug print the top value on the stack without popping it
     ///
     /// ex: ⸮[1 2 3]

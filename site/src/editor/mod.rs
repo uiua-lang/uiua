@@ -651,6 +651,9 @@ pub fn Editor<'a>(
                 set_glyph_doc.set(
                     view! {
                         <Prim prim=prim/>
+                        { prim.is_experimental().then(|| 
+                            view!(<span class="experimental" style="font-size: 0.8em;">"⚠️ Experimental"</span>)
+                        ) }
                         <br/>
                         { doc.short_text().into_owned() }
                     }

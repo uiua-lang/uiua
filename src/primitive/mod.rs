@@ -281,6 +281,11 @@ impl Primitive {
             _ => None,
         }
     }
+    /// Check if this primitive is experimental
+    pub fn is_experimental(&self) -> bool {
+        use Primitive::*;
+        matches!(self, Rectify)
+    }
     /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {
         self.deprecation_suggestion().is_some()

@@ -979,3 +979,7 @@ input[type=text] {
 a.clean {
     text-decoration: none;
 }
+
+.experimental {
+    color: #db2;
+}

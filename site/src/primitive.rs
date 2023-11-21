@@ -97,10 +97,17 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
 
     let id = prim.name();
 
+    let experimental = prim.is_experimental().then(|| {
+        view! {
+            <span class="experimental">"⚠️ Warning: This "{if prim.is_modifier() { "modifier" }else{ "function" }}" is experimental and may be removed in the future."</span>
+        }
+    });
+
     view! {
         <div>
             <h1 id=id><Prim prim=prim hide_docs=true/>{ long_name }</h1>
             <p><h3>{ sig }</h3></p>
+            <p>{ experimental }</p>
             { body }
         </div>
     }

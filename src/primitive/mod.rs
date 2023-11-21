@@ -674,9 +674,13 @@ impl Primitive {
                 env.try_recv(id)?;
             }
             Primitive::Now => env.push(instant::now() / 1000.0),
+            Primitive::SetInverse => {
+                let f = env.pop_function()?;
+                let _inv = env.pop_function()?;
+                env.call(f)?;
+            }
             Primitive::Trace => trace(env, false)?,
             Primitive::Dump => dump(env)?,
-            Primitive::Sys(io) => io.run(env)?,
             Primitive::Regex => {
                 thread_local! {
                     pub static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
@@ -714,6 +718,7 @@ impl Primitive {
                     Ok(())
                 })?
             }
+            Primitive::Sys(io) => io.run(env)?,
         }
         Ok(())
     }

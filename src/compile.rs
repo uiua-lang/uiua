@@ -660,6 +660,10 @@ impl Uiua {
             }
         };
 
+        if let [Instr::PushFunc(f), Instr::Call(_)] = instrs.as_slice() {
+            return Ok(Function::clone(f));
+        }
+
         Ok(Function::new(func.id, instrs, sig))
     }
     fn switch(&mut self, sw: Switch, span: CodeSpan, call: bool) -> UiuaResult {

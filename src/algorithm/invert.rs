@@ -153,6 +153,7 @@ fn invert_instr_impl(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
         &([Dup, Mul], [Sqrt]),
         &(Val, pat!(Pow, (1, Flip, Div, Pow))),
         &(Val, ([Log], [Flip, Pow])),
+        &invert_setinverse_pattern,
     ];
 
     let mut inverted = Vec::new();
@@ -478,6 +479,15 @@ fn invert_invert_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
         return None;
     };
     Some((input, func.instrs.clone()))
+}
+
+fn invert_setinverse_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
+    let [Instr::PushFunc(inv), Instr::PushFunc(_), Instr::Prim(Primitive::SetInverse, _), input @ ..] =
+        input
+    else {
+        return None;
+    };
+    Some((input, inv.instrs.clone()))
 }
 
 fn under_from_inverse_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Under)> {

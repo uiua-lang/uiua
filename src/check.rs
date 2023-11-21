@@ -394,6 +394,11 @@ impl<'a> VirtualEnv<'a> {
                         }
                     }
                 }
+                SetInverse => {
+                    let f = self.pop_func()?;
+                    let _inv = self.pop_func()?;
+                    self.handle_sig(f.signature())?;
+                }
                 Dump => {
                     self.pop_func()?;
                 }

@@ -1716,6 +1716,18 @@ primitive!(
     /// ex: ↧5 ∞
     /// ex: ↥5 ∞
     (0, Infinity, Constant, ("infinity", '∞')),
+    /// Set the inverse of a function
+    ///
+    /// The first function is the uninverted function, and the second function is the inverse.
+    /// ex: F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
+    ///   : ;F   @A
+    ///   : ;⍘F  @B
+    ///   : ;⍜F∘ @C
+    /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
+    /// This can lead to errors if you are unaware of it.
+    /// ex! F ← setinv+-
+    ///   : ⍜F∘ 3 5
+    ([2], SetInverse, OtherModifier, "setinv"),
     /// Debug print the top value on the stack without popping it
     ///
     /// ex: ⸮[1 2 3]

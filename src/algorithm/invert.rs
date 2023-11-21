@@ -114,32 +114,13 @@ pub(crate) fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
 }
 
 fn invert_instr_impl(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
-    use Instr::*;
     use Primitive::*;
-    match instrs {
-        [Prim(prim, span)] => {
-            if let Some(inv) = prim_inverse(*prim, *span) {
-                return Some(vec![inv]);
-            }
-        }
-        [ImplPrim(prim, span)] => {
-            if let Some(inv) = impl_prim_inverse(*prim, *span).map(|instr| vec![instr]) {
-                return Some(inv);
-            }
-        }
-        [PushFunc(val)] => {
-            if let Some((prim, span)) = val.as_primitive() {
-                return Some(vec![prim_inverse(prim, span)?]);
-            }
-            if let Some((prim, span)) = val.as_impl_primitive() {
-                return Some(vec![impl_prim_inverse(prim, span)?]);
-            }
-        }
-        _ => {}
-    }
 
     let patterns: &[&dyn InvertPattern] = &[
         &invert_invert_pattern,
+        &invert_rectify_pattern,
+        &invert_setinverse_pattern,
+        &ivnert_trivial_pattern,
         &(Val, ([Rotate], [Neg, Rotate])),
         &([Rotate], [Neg, Rotate]),
         &pat!(Sqrt, (2, Pow)),
@@ -153,8 +134,6 @@ fn invert_instr_impl(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
         &([Dup, Mul], [Sqrt]),
         &(Val, pat!(Pow, (1, Flip, Div, Pow))),
         &(Val, ([Log], [Flip, Pow])),
-        &invert_rectify_pattern,
-        &invert_setinverse_pattern,
     ];
 
     let mut inverted = Vec::new();
@@ -473,6 +452,32 @@ trait UnderPattern: fmt::Debug {
         input: &'a [Instr],
         g_sig: Signature,
     ) -> Option<(&'a [Instr], Under)>;
+}
+
+fn ivnert_trivial_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
+    use Instr::*;
+    match input {
+        [Prim(prim, span), input @ ..] => {
+            if let Some(inv) = prim_inverse(*prim, *span) {
+                return Some((input, vec![inv]));
+            }
+        }
+        [ImplPrim(prim, span), input @ ..] => {
+            if let Some(inv) = impl_prim_inverse(*prim, *span).map(|instr| vec![instr]) {
+                return Some((input, inv));
+            }
+        }
+        [PushFunc(val), input @ ..] => {
+            if let Some((prim, span)) = val.as_primitive() {
+                return Some((input, vec![prim_inverse(prim, span)?]));
+            }
+            if let Some((prim, span)) = val.as_impl_primitive() {
+                return Some((input, vec![impl_prim_inverse(prim, span)?]));
+            }
+        }
+        _ => {}
+    }
+    None
 }
 
 fn invert_invert_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {

@@ -365,7 +365,7 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() - depth < 2 {
             return;
         }
-        if self.shape[depth] == 0 {
+        if self.shape[depth..].iter().any(|&d| d == 0) {
             self.shape[depth..].rotate_left(1);
             return;
         }
@@ -398,7 +398,7 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() - depth < 2 {
             return;
         }
-        if self.shape[depth] == 0 {
+        if self.shape[depth..].iter().any(|&d| d == 0) {
             self.shape[depth..].rotate_right(1);
             return;
         }

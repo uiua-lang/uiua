@@ -25,8 +25,8 @@ use ecow::EcoVec;
 
 pub struct CowSlice<T> {
     data: EcoVec<T>,
-    start: u32,
-    end: u32,
+    start: usize,
+    end: usize,
 }
 
 impl<T> CowSlice<T> {
@@ -34,7 +34,7 @@ impl<T> CowSlice<T> {
         Self::default()
     }
     pub fn truncate(&mut self, len: usize) {
-        self.end = (self.start + len as u32).min(self.end);
+        self.end = (self.start + len).min(self.end);
     }
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
@@ -44,7 +44,7 @@ impl<T> CowSlice<T> {
         }
     }
     pub fn as_slice(&self) -> &[T] {
-        &self.data[self.start as usize..self.end as usize]
+        &self.data[self.start..self.end]
     }
     #[inline]
     pub fn is_unique(&mut self) -> bool {
@@ -64,9 +64,9 @@ impl<T: Clone> CowSlice<T> {
             new_data.extend_from_slice(&*self);
             self.data = new_data;
             self.start = 0;
-            self.end = self.data.len() as u32;
+            self.end = self.data.len();
         }
-        &mut self.data.make_mut()[self.start as usize..self.end as usize]
+        &mut self.data.make_mut()[self.start..self.end]
     }
     pub fn extend_from_slice(&mut self, other: &[T]) {
         self.modify(|vec| vec.extend_from_slice(other))
@@ -85,13 +85,13 @@ impl<T: Clone> CowSlice<T> {
         R: RangeBounds<usize>,
     {
         let start = match range.start_bound() {
-            Bound::Included(&start) => self.start + start as u32,
-            Bound::Excluded(&start) => self.start + start as u32 + 1,
+            Bound::Included(&start) => self.start + start,
+            Bound::Excluded(&start) => self.start + start + 1,
             Bound::Unbounded => self.start,
         };
         let end = match range.end_bound() {
-            Bound::Included(&end) => self.start + end as u32 + 1,
-            Bound::Excluded(&end) => self.start + end as u32,
+            Bound::Included(&end) => self.start + end + 1,
+            Bound::Excluded(&end) => self.start + end,
             Bound::Unbounded => self.end,
         };
         assert!(start <= end);
@@ -108,11 +108,11 @@ impl<T: Clone> CowSlice<T> {
     ) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator {
         assert!(self.len() % size == 0);
         (0..self.len() / size).map(move |i| {
-            let start = self.start + (i * size) as u32;
+            let start = self.start + (i * size);
             Self {
                 data: self.data.clone(),
                 start,
-                end: start + size as u32,
+                end: start + size,
             }
         })
     }
@@ -120,9 +120,9 @@ impl<T: Clone> CowSlice<T> {
     where
         F: FnOnce(&mut EcoVec<T>) -> R,
     {
-        if self.data.is_unique() && self.start == 0 && self.end == self.data.len() as u32 {
+        if self.data.is_unique() && self.start == 0 && self.end == self.data.len() {
             let res = f(&mut self.data);
-            self.end = self.data.len() as u32;
+            self.end = self.data.len();
             res
         } else {
             let mut vec = EcoVec::from(&**self);
@@ -192,7 +192,7 @@ fn cow_slice_deref_mut() {
 
 impl<T: Clone> From<CowSlice<T>> for Vec<T> {
     fn from(mut slice: CowSlice<T>) -> Self {
-        if slice.data.is_unique() && slice.start == 0 && slice.end == slice.data.len() as u32 {
+        if slice.data.is_unique() && slice.start == 0 && slice.end == slice.data.len() {
             slice.data.into_iter().collect()
         } else {
             slice.to_vec()
@@ -204,7 +204,7 @@ impl<T: Clone> From<EcoVec<T>> for CowSlice<T> {
     fn from(data: EcoVec<T>) -> Self {
         Self {
             start: 0,
-            end: data.len() as u32,
+            end: data.len(),
             data,
         }
     }
@@ -214,7 +214,7 @@ impl<'a, T: Clone> From<&'a [T]> for CowSlice<T> {
     fn from(slice: &'a [T]) -> Self {
         Self {
             start: 0,
-            end: slice.len() as u32,
+            end: slice.len(),
             data: slice.into(),
         }
     }
@@ -224,7 +224,7 @@ impl<T: Clone, const N: usize> From<[T; N]> for CowSlice<T> {
     fn from(array: [T; N]) -> Self {
         Self {
             start: 0,
-            end: N as u32,
+            end: N,
             data: array.into(),
         }
     }
@@ -298,8 +298,8 @@ impl<T: Clone> IntoIterator for CowSlice<T> {
     fn into_iter(self) -> Self::IntoIter {
         self.data
             .into_iter()
-            .skip(self.start as usize)
-            .take((self.end - self.start) as usize)
+            .skip(self.start)
+            .take(self.end - self.start)
     }
 }
 

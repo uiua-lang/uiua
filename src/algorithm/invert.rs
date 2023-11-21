@@ -139,8 +139,9 @@ fn invert_instr_impl(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
     let mut inverted = Vec::new();
     'find_pattern: loop {
         for pattern in patterns {
-            if let Some((input, inv)) = pattern.invert_extract(instrs) {
-                inverted.extend(inv);
+            if let Some((input, mut inv)) = pattern.invert_extract(instrs) {
+                inv.extend(inverted);
+                inverted = inv;
                 if input.is_empty() {
                     return Some(inverted);
                 }

@@ -782,9 +782,9 @@ fn repl(mut rt: Uiua, color: bool, config: FormatConfig) {
         }
         println!();
 
-        rt.load_str(&code)?;
+        let res = rt.load_str(&code);
         print_stack(&rt.take_stack(), color);
-        Ok(true)
+        res.map(|()| true)
     };
 
     println!("Uiua {} (end with ctrl+C)\n", env!("CARGO_PKG_VERSION"));

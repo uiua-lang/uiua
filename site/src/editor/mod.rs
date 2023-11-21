@@ -42,6 +42,7 @@ pub fn Editor<'a>(
     #[prop(optional)] challenge: Option<ChallengeDef>,
 ) -> impl IntoView {
     let no_run = no_run
+        || mode == EditorMode::Pad && !get_autorun()
         || ["&sl", "&httpsw", "send", "recv"]
             .iter()
             .any(|name| example.contains(name));
@@ -651,8 +652,12 @@ pub fn Editor<'a>(
                 set_glyph_doc.set(
                     view! {
                         <Prim prim=prim/>
-                        { prim.is_experimental().then(|| 
-                            view!(<span class="experimental" style="font-size: 0.8em;">"⚠️ Experimental"</span>)
+                        { prim.is_experimental().then(||
+                            view! {
+                                <span class="experimental" style="font-size: 0.8em;">
+                                    "⚠️ Experimental"
+                                </span>
+                            }
                         ) }
                         <br/>
                         { doc.short_text().into_owned() }
@@ -927,6 +932,9 @@ pub fn Editor<'a>(
     let toggle_right_to_left = move |_| {
         set_right_to_left(!get_right_to_left());
     };
+    let toggle_autorun = move |_| {
+        set_autorun(!get_autorun());
+    };
     let on_select_font = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         let name = input.value();
@@ -982,6 +990,13 @@ pub fn Editor<'a>(
                             type="checkbox"
                             checked=get_right_to_left
                             on:change=toggle_right_to_left/>
+                    </div>
+                    <div title="Automatically run pad links">
+                        "Autorun links:"
+                        <input
+                            type="checkbox"
+                            checked=get_autorun
+                            on:change=toggle_autorun/>
                     </div>
                     <div>
                         "Stack:"

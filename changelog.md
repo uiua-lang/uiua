@@ -12,6 +12,8 @@ If you are reading this on the website, then these changes are live here.
 - Add the [`setinv`](https://uiua.org/docs/setinv) modifier, which sets the inverse of a function
 ### Interpreter
 - Fix some bugs and crashes
+### Website
+- Allow disabling autorun for pad links
 
 ## 0.3.1 - 2023-11-20
 ### Interpreter

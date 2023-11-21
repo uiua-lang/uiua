@@ -210,6 +210,14 @@ pub fn set_font_size(size: &str) {
     update_style();
 }
 
+pub fn get_autorun() -> bool {
+    get_local_var("autorun", || true)
+}
+
+pub fn set_autorun(autorun: bool) {
+    set_local_var("autorun", autorun);
+}
+
 fn update_style() {
     let font_name = get_font_name();
     let font_size = get_font_size();

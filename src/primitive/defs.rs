@@ -870,6 +870,12 @@ primitive!(
     ///
     /// Multi-dimensional window sizes are supported.
     /// ex: ◫2_2 .[1_2_3 4_5_6 7_8_9]
+    ///
+    /// Negative window sizes gives the absolute value number of windows.
+    /// ex: ◫¯2 ↯4_4⇡16
+    /// ex: ◫¯3 ↯4_4⇡16
+    /// This can be useful when you want to get horizontal windows.
+    /// ex: ◫¯1_2 ↯4_4⇡16
     (2, Windows, DyadicArray, ("windows", '◫')),
     /// Discard or copy some rows of an array
     ///

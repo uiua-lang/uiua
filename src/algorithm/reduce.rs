@@ -324,9 +324,9 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let sig = f.signature();
-    if sig.args + 1 < sig.outputs {
+    if sig.args <= sig.outputs {
         return Err(env.error(format!(
-            "{}'s function must take at least 1 more value than it returns, \
+            "{}'s function must take more values than it returns, \
             but its signature is {}",
             Primitive::Fold.format(),
             sig

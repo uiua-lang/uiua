@@ -3,8 +3,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
 - Multi-accumulator `group`/`partition`
-- Style Diagnostics
-  - `reach` with monadic function
 - Multimedia
   - Sound input
   - Webcam input

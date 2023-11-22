@@ -1308,9 +1308,6 @@ primitive!(
     /// [both] can also be chained. Every additional [both] doubles the number of arguments taken from the stack.
     /// ex: [∩∩(□+2) 1 @a 2_3 5]
     /// ex: [∩∩∩± 1 ¯2 0 42 ¯5 6 7 8 99]
-    ///
-    /// If you have 3 values on the stack, `a`, `b`, and `c`, but you want to call the same function on `a c` and `b c`, you can combine [both] with [dip] and [over].
-    /// ex: ∩+⊙,2 5 10
     (2[1], Both, Stack, ("both", '∩')),
     /// Call two functions on the same values
     ///

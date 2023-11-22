@@ -889,6 +889,7 @@ impl Uiua {
         Ok(())
     }
     fn inline_modifier(&mut self, modified: &Modified, call: bool) -> UiuaResult<bool> {
+        use Primitive::*;
         let Modifier::Primitive(prim) = modified.modifier.value else {
             return Ok(false);
         };
@@ -900,12 +901,12 @@ impl Uiua {
             }
         }
         match prim {
-            Primitive::Dip | Primitive::Gap | Primitive::Reach => {
+            Dip | Gap | Reach => {
                 // Compile operands
                 let (mut instrs, sig) = self.compile_operand_words(modified.operands.clone())?;
-                // Dip () . diagnostic
-                if prim == Primitive::Dip && sig.is_ok_and(|sig| sig == (1, 1)) {
-                    if let Some(Instr::Prim(Primitive::Dup, dup_span)) =
+                // Dip (|1 …) . diagnostic
+                if prim == Dip && sig.as_ref().is_ok_and(|&sig| sig == (1, 1)) {
+                    if let Some(Instr::Prim(Dup, dup_span)) =
                         self.new_functions.last().and_then(|instrs| instrs.last())
                     {
                         let span = Span::Code(modified.modifier.span.clone())
@@ -917,16 +918,29 @@ impl Uiua {
                         );
                     }
                 }
+                // Reach (|1 …) . diagnostic
+                if prim == Reach
+                    && sig.is_ok_and(|sig| sig == (1, 1))
+                    && !matches!(instrs.as_slice(), [Instr::Prim(Identity, _)])
+                {
+                    self.diagnostic_with_span(
+                        format!(
+                            "{} with a monadic function is unnecessary and unclear. \
+                        Use `⊙;` instead.",
+                            Reach.format()
+                        ),
+                        DiagnosticKind::Style,
+                        modified.modifier.span.clone(),
+                    );
+                }
                 // Dip/reach flip/over diagnostic
-                if let (
-                    Primitive::Dip | Primitive::Reach,
-                    Some(Instr::Prim(end @ (Primitive::Flip | Primitive::Over), span)),
-                ) = (prim, instrs.last())
+                if let (Dip | Reach, Some(Instr::Prim(end @ (Flip | Over), span))) =
+                    (prim, instrs.last())
                 {
                     let span =
                         Span::Code(modified.modifier.span.clone()).merge(self.get_span(*span));
-                    let recommendation = if prim == Primitive::Dip {
-                        format!(", possibly with {}", Primitive::Reach.format())
+                    let recommendation = if prim == Dip {
+                        format!(", possibly with {}", Reach.format())
                     } else {
                         String::new()
                     };
@@ -936,7 +950,7 @@ impl Uiua {
                             Use {} instead{recommendation}.",
                             prim.format(),
                             end.format(),
-                            Primitive::Fork.format(),
+                            Fork.format(),
                         ),
                         DiagnosticKind::Style,
                         span,
@@ -945,7 +959,7 @@ impl Uiua {
 
                 let span = self.add_span(modified.modifier.span.clone());
                 match prim {
-                    Primitive::Dip => {
+                    Dip => {
                         instrs.insert(
                             0,
                             Instr::PushTemp {
@@ -960,15 +974,15 @@ impl Uiua {
                             span,
                         });
                     }
-                    Primitive::Gap => instrs.insert(0, Instr::Prim(Primitive::Pop, span)),
-                    Primitive::Reach => {
+                    Gap => instrs.insert(0, Instr::Prim(Pop, span)),
+                    Reach => {
                         let mut init = vec![
                             Instr::PushTemp {
                                 stack: TempStack::Inline,
                                 count: 1,
                                 span,
                             },
-                            Instr::Prim(Primitive::Pop, span),
+                            Instr::Prim(Pop, span),
                             Instr::PopTemp {
                                 stack: TempStack::Inline,
                                 count: 1,
@@ -1001,7 +1015,7 @@ impl Uiua {
                     }
                 };
             }
-            Primitive::Fork => {
+            Fork => {
                 let mut operands = modified
                     .operands
                     .clone()
@@ -1063,7 +1077,7 @@ impl Uiua {
                     };
                 }
             }
-            Primitive::Bracket => {
+            Bracket => {
                 let mut operands = modified
                     .operands
                     .clone()
@@ -1108,7 +1122,7 @@ impl Uiua {
                     };
                 }
             }
-            Primitive::Invert => {
+            Invert => {
                 let mut operands = modified
                     .operands
                     .clone()
@@ -1138,7 +1152,7 @@ impl Uiua {
                     };
                 }
             }
-            Primitive::Under => {
+            Under => {
                 let mut operands = modified
                     .operands
                     .clone()

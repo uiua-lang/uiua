@@ -627,7 +627,11 @@ impl<'a> Formatter<'a> {
                         self.output.push('|');
                     }
                     if let Some(sig) = &br.value.signature {
-                        self.format_signature('|', sig.value, br.value.lines.len() <= 1);
+                        self.format_signature(
+                            '|',
+                            sig.value,
+                            any_multiline || br.value.lines.len() <= 1,
+                        );
                         if br.value.lines.is_empty() {
                             self.output.pop();
                         }

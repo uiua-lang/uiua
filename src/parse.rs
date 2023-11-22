@@ -429,9 +429,6 @@ impl Parser {
                 lines.push(Vec::new());
             }
         }
-        if lines.last().is_some_and(|line| line.is_empty()) {
-            lines.pop();
-        }
         lines
     }
     fn try_word(&mut self) -> Option<Sp<Word>> {
@@ -764,9 +761,23 @@ impl Parser {
         })
     }
     fn func_contents(&mut self) -> FunctionContents {
-        while self.try_exact(Newline).is_some() || self.try_spaces().is_some() {}
+        let mut any_newlines = false;
+        loop {
+            if self.try_exact(Newline).is_some() {
+                any_newlines = true;
+                continue;
+            }
+            if self.try_spaces().is_some() {
+                continue;
+            }
+            break;
+        }
         let signature = self.try_signature(Bar);
-        let lines = self.multiline_words();
+        let mut lines = self.multiline_words();
+        any_newlines |= lines.len() > 1;
+        if any_newlines && !lines.last().is_some_and(|line| line.is_empty()) {
+            lines.push(Vec::new());
+        }
         let start = signature
             .as_ref()
             .map(|sig| sig.span.clone())

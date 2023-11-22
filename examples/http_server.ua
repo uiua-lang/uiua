@@ -22,7 +22,7 @@ GetExt ← |1 ⊔⊢⇌ ⊜□ ≠@. .
     {"wasm" "application/wasm"}]
 ExtMimeExt ←
 ExtMimeMime ←
-ExtMime ← |1 ⊔⊏∶⊂ExtMimeMime □⊂"text/"∶ ⊗∶ExtMimeExt□.
+ExtMime ← |1 ⊔⊏:⊂ExtMimeMime □⊂"text/": ⊗:ExtMimeExt□.
 
 # Convert string to bytes
 Bytes ← -@\0
@@ -40,12 +40,12 @@ Response ← (|3
 # Handlers
 NotFound ← Response "404 Not Found" "text/plain" Bytes"Not Found"
 ServerError ← Response "500 Internal Server Error" "text/plain"
-HandlePageLoadError ← ⋅⋅⋅(
+HandlePageLoadError ← ⋅(
   /↥⌕"The system cannot find the file specified".
-  ?ServerError(NotFound;)
+  (NotFound;|ServerError)
 )
 Page ← |1 ⍣(
-  ExtMime GetExt ∶&frab.
+  ExtMime GetExt :&frab.
   Response "200 OK"
 )HandlePageLoadError ⊂"docs"
 Home ← |0 Page "/index.html"
@@ -57,7 +57,7 @@ Respond ← ;spawn(
   &p.
 
   # Route to handler
-  ?(Home;)(Page) ≍"/".
+  (Page|Home;) ≍"/".
   &p "Response:"
   &pf⧻.
   &p " bytes"

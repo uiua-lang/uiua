@@ -578,7 +578,7 @@ impl<'a> Formatter<'a> {
                 } else {
                     self.output.push('[');
                 }
-                self.format_multiline_words(&arr.lines, true, depth + 1);
+                self.format_multiline_words(&arr.lines, true, true, depth + 1);
                 if arr.constant {
                     self.output.push('}');
                 } else {
@@ -596,22 +596,49 @@ impl<'a> Formatter<'a> {
                         self.output.pop();
                     }
                 }
-                self.format_multiline_words(&func.lines, false, depth + 1);
+                self.format_multiline_words(&func.lines, false, true, depth + 1);
                 self.output.push(')');
             }
             Word::Switch(sw) => {
                 self.output.push('(');
-                for (i, branch) in sw.branches.iter().enumerate() {
+                let any_multiline = sw.branches.iter().any(|br| {
+                    br.value.lines.len() > 1
+                        || (br.value.lines.iter())
+                            .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
+                });
+                for (i, br) in sw.branches.iter().enumerate() {
+                    let add_leading_newline = i == 0
+                        && any_multiline
+                        && !(br.value.lines.first()).is_some_and(|line| line.is_empty());
+                    if add_leading_newline {
+                        self.output.push('\n');
+                        for _ in 0..self.config.multiline_indent * (depth + 1) {
+                            self.output.push(' ');
+                        }
+                    }
                     if i > 0 {
+                        if any_multiline {
+                            for _ in
+                                0..(self.config.multiline_indent * depth.max(1)).saturating_sub(1)
+                            {
+                                self.output.push(' ');
+                            }
+                        }
                         self.output.push('|');
                     }
-                    if let Some(sig) = &branch.value.signature {
-                        self.format_signature('|', sig.value, branch.value.lines.len() <= 1);
-                        if branch.value.lines.is_empty() {
+                    if let Some(sig) = &br.value.signature {
+                        self.format_signature('|', sig.value, br.value.lines.len() <= 1);
+                        if br.value.lines.is_empty() {
                             self.output.pop();
                         }
                     }
-                    self.format_multiline_words(&branch.value.lines, false, depth + 1);
+                    self.format_multiline_words(&br.value.lines, false, false, depth + 1);
+                    if any_multiline && br.value.lines.last().is_some_and(|line| !line.is_empty()) {
+                        self.output.push('\n');
+                        for _ in 0..self.config.multiline_indent * depth {
+                            self.output.push(' ');
+                        }
+                    }
                 }
                 self.output.push(')');
             }
@@ -664,6 +691,7 @@ impl<'a> Formatter<'a> {
         &mut self,
         lines: &[Vec<Sp<Word>>],
         allow_compact: bool,
+        allow_leading_space: bool,
         depth: usize,
     ) {
         if lines.is_empty() {
@@ -704,7 +732,7 @@ impl<'a> Formatter<'a> {
             self.config.multiline_indent * depth
         };
         for (i, line) in lines.iter().enumerate() {
-            if i > 0 || !compact {
+            if i > 0 || (!compact && allow_leading_space) {
                 self.output.push('\n');
                 if !line.is_empty() {
                     for _ in 0..indent {
@@ -715,7 +743,9 @@ impl<'a> Formatter<'a> {
             self.format_words(line, true, depth);
         }
         if !compact {
-            self.output.push('\n');
+            if !lines.last().is_some_and(|line| line.is_empty()) {
+                self.output.push('\n');
+            }
             for _ in 0..self.config.multiline_indent * depth.saturating_sub(1) {
                 self.output.push(' ');
             }

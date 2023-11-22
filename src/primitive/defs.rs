@@ -1122,7 +1122,7 @@ primitive!(
     /// The function then processes each group in order. The result depends on what the function is.
     /// If the function takes 0 or 1 arguments, then [group] behaves like [rows].
     /// ex: ⊕∘ [0 2 2 1 0 1] [1 2 3 4 5 6]
-    /// If the function takes 2 arguments, then [group] requires and accumulator and behaves like [fold].
+    /// If the function takes 2 arguments, then [group] requires an accumulator and behaves like [fold].
     /// ex: ⊕⊂ [] [0 2 2 1 0 1] [1 2 3 4 5 6]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
     /// ex! ⊕∘ [0 1 0 2 1 1] [1 2 3 4 5 6]
@@ -1153,7 +1153,7 @@ primitive!(
     /// The function then processes each group in order. The result depends on what the function is.
     /// If the function takes 0 or 1 arguments, then [partition] behaves like [rows].
     /// ex: ⊜∘ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
-    /// If the function takes 2 arguments, then [partition] requires and accumulator and behaves like [fold].
+    /// If the function takes 2 arguments, then [partition] requires an accumulator and behaves like [fold].
     /// ex: ⊜⊂ [] [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
     /// ex! ⊜∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]

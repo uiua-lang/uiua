@@ -219,9 +219,6 @@ primitive!(
     /// ex: /∘ [1 2 3]
     /// However, doing this in a function prevents the signature from being inferred.
     ///
-    /// The formatter converts an empty `()` function into `identity`.
-    /// ex: /() [1 2] # Try running to format
-    ///
     /// While [identity]'s signature is `|1.1`, it will not throw an error if the stack is empty.
     /// ex: ∘
     (1, Identity, Planet, ("identity", '∘')),

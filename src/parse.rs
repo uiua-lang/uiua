@@ -576,13 +576,6 @@ impl Parser {
                 Modifier::Ident(ident) => Word::Ident(ident),
             })
         } else {
-            for arg in &mut args {
-                if let Word::Func(func) = &arg.value {
-                    if func.lines.is_empty() && func.signature.is_none() {
-                        arg.value = Word::Primitive(Primitive::Identity);
-                    }
-                }
-            }
             let span = mod_span.clone().merge(args.last().unwrap().span.clone());
             span.sp(Word::Modified(Box::new(Modified {
                 modifier: mod_span.sp(modifier),
@@ -653,12 +646,7 @@ impl Parser {
             }))
         } else if let Some(spaces) = self.try_spaces() {
             spaces
-        } else if let Some(mut word) = self.try_func() {
-            if let Word::Func(func) = &word.value {
-                if func.lines.is_empty() && func.signature.is_none() {
-                    word.value = Word::Primitive(Primitive::Identity);
-                }
-            }
+        } else if let Some(word) = self.try_func() {
             word
         } else if let Some(switch) = self.try_if() {
             switch

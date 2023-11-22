@@ -4,7 +4,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
 ## Features
 - Multi-accumulator `group`/`partition`
 - Style Diagnostics
-  - `:` or `,` at the front of `dip`
   - `reach` with monadic function
 - Multimedia
   - Sound input

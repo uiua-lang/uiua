@@ -901,6 +901,7 @@ impl Uiua {
         }
         match prim {
             Primitive::Dip | Primitive::Gap | Primitive::Reach => {
+                // Compile operands
                 let (mut instrs, sig) = self.compile_operand_words(modified.operands.clone())?;
                 // Dip () . diagnostic
                 if prim == Primitive::Dip && sig.is_ok_and(|sig| sig == (1, 1)) {
@@ -915,6 +916,31 @@ impl Uiua {
                             span,
                         );
                     }
+                }
+                // Dip/reach flip/over diagnostic
+                if let (
+                    Primitive::Dip | Primitive::Reach,
+                    Some(Instr::Prim(end @ (Primitive::Flip | Primitive::Over), span)),
+                ) = (prim, instrs.last())
+                {
+                    let span =
+                        Span::Code(modified.modifier.span.clone()).merge(self.get_span(*span));
+                    let recommendation = if prim == Primitive::Dip {
+                        format!(", possibly with {}", Primitive::Reach.format())
+                    } else {
+                        String::new()
+                    };
+                    self.diagnostic_with_span(
+                        format!(
+                            "Do not {} with {} as the last function. \
+                            Use {} instead{recommendation}.",
+                            prim.format(),
+                            end.format(),
+                            Primitive::Fork.format(),
+                        ),
+                        DiagnosticKind::Style,
+                        span,
+                    );
                 }
 
                 let span = self.add_span(modified.modifier.span.clone());

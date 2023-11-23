@@ -918,44 +918,6 @@ impl Uiua {
                         );
                     }
                 }
-                // Reach (|1 …) . diagnostic
-                if prim == Reach
-                    && sig.is_ok_and(|sig| sig == (1, 1))
-                    && !matches!(instrs.as_slice(), [Instr::Prim(Identity, _)])
-                {
-                    self.diagnostic_with_span(
-                        format!(
-                            "{} with a monadic function is unnecessary and unclear. \
-                        Use `⊙;` instead.",
-                            Reach.format()
-                        ),
-                        DiagnosticKind::Style,
-                        modified.modifier.span.clone(),
-                    );
-                }
-                // Dip/reach flip/over diagnostic
-                if let (Dip | Reach, Some(Instr::Prim(end @ (Flip | Over), span))) =
-                    (prim, instrs.last())
-                {
-                    let span =
-                        Span::Code(modified.modifier.span.clone()).merge(self.get_span(*span));
-                    let recommendation = if prim == Dip {
-                        format!(", possibly with {}", Reach.format())
-                    } else {
-                        String::new()
-                    };
-                    self.diagnostic_with_span(
-                        format!(
-                            "Do not {} with {} as the last function. \
-                            Use {} instead{recommendation}.",
-                            prim.format(),
-                            end.format(),
-                            Fork.format(),
-                        ),
-                        DiagnosticKind::Style,
-                        span,
-                    );
-                }
 
                 let span = self.add_span(modified.modifier.span.clone());
                 match prim {

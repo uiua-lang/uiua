@@ -1120,9 +1120,9 @@ primitive!(
     /// Rows in the second array will be grouped into buckets by the indices in the first array.
     /// Keys `less than``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.
-    /// If the function takes 0 or 1 arguments, then [group] behaves like [rows].
+    /// If the function takes 0 or 1 arguments, then [group] behaves like [rows]. This is called *iterating* [group].
     /// ex: ⊕∘ [0 2 2 1 0 1] [1 2 3 4 5 6]
-    /// If the function takes 2 arguments, then [group] requires an accumulator and behaves like [fold].
+    /// If the function takes 2 or more arguments, then [group] requires an accumulator and behaves like [fold]. This is called *accumulating* [group].
     /// ex: ⊕⊂ [] [0 2 2 1 0 1] [1 2 3 4 5 6]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
     /// ex! ⊕∘ [0 1 0 2 1 1] [1 2 3 4 5 6]
@@ -1151,9 +1151,9 @@ primitive!(
     /// Rows in the second array that line up with sequential keys in the first array will be grouped together.
     /// Keys `less or equal``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.
-    /// If the function takes 0 or 1 arguments, then [partition] behaves like [rows].
+    /// If the function takes 0 or 1 arguments, then [partition] behaves like [rows]. This is called *iterating* [partition].
     /// ex: ⊜∘ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
-    /// If the function takes 2 arguments, then [partition] requires an accumulator and behaves like [fold].
+    /// If the function takes 2 or more arguments, then [partition] requires an accumulator and behaves like [fold]. This is called *accumulating* [partition].
     /// ex: ⊜⊂ [] [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
     /// ex! ⊜∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]

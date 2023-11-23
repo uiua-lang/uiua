@@ -1565,7 +1565,7 @@ primitive!(
     /// [gap] can often look nicer.
     /// ex: ⍣parse⋅⋅0 "dog"
     /// ex: ⍣parse⋅⋅0 "5"
-    ([2], Try, Control, ("try", '⍣')),
+    ([2], Try, Misc, ("try", '⍣')),
     /// Throw an error if a condition is not met
     ///
     /// Expects a message and a test value.
@@ -1580,7 +1580,7 @@ primitive!(
     /// ex! ⍤. =8 9
     ///
     /// Errors thrown by [assert] can be caught with [try].
-    (2(0), Assert, Control, ("assert", '⍤')),
+    (2(0), Assert, Misc, ("assert", '⍤')),
     /// Spawn a thread
     ///
     /// Expects a function.

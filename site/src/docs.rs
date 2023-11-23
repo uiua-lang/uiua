@@ -316,7 +316,6 @@ impl Allowed {
         let mut function_classes: Vec<PrimClass> = system_classes.clone();
         function_classes.extend([
             PrimClass::Stack,
-            PrimClass::Control,
             PrimClass::MonadicPervasive,
             PrimClass::DyadicPervasive,
             PrimClass::MonadicArray,
@@ -350,7 +349,6 @@ impl Allowed {
                 ("aggregating", &[PrimClass::AggregatingModifier]),
                 ("iterating", &[PrimClass::IteratingModifier]),
                 ("other", &[PrimClass::OtherModifier]),
-                ("control", &[PrimClass::Control]),
                 ("misc", &[PrimClass::Misc]),
                 ("constant", &[PrimClass::Constant]),
                 ("system", &system_classes),
@@ -405,7 +403,6 @@ impl Allowed {
                 PrimClass::AggregatingModifier => "aggregating-modifiers",
                 PrimClass::IteratingModifier => "iterating-modifiers",
                 PrimClass::OtherModifier => "other-modifiers",
-                PrimClass::Control => "control-functions",
                 PrimClass::Planet => "planet-modifiers",
                 PrimClass::Ocean => "ocean-functions",
                 PrimClass::Misc => "misc-functions",
@@ -457,7 +454,6 @@ impl Allowed {
                     "Apply a function to aggregate an array",
                 ),
                 PrimClass::OtherModifier => ("Other Modifiers".into_view(), ""),
-                PrimClass::Control => ("Control".into_view(), "Control the flow of execution"),
                 PrimClass::Planet => (
                     view!(<a class="clean" href="/docs/advancedstack#planet-notation">"🌎 Planet 🪐"</a>).into_view(),
                     "Advanced stack manipulation",

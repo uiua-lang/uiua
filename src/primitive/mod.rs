@@ -49,7 +49,6 @@ pub enum PrimClass {
     IteratingModifier,
     AggregatingModifier,
     OtherModifier,
-    Control,
     Planet,
     Ocean,
     Misc,

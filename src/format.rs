@@ -619,12 +619,15 @@ impl<'a> Formatter<'a> {
                     if i > 0 {
                         if any_multiline {
                             for _ in
-                                0..(self.config.multiline_indent * depth.max(1)).saturating_sub(1)
+                                0..(self.config.multiline_indent * depth.max(1)).saturating_sub(2)
                             {
                                 self.output.push(' ');
                             }
                         }
                         self.output.push('|');
+                        if any_multiline {
+                            self.output.push(' ');
+                        }
                     }
                     if let Some(sig) = &br.value.signature {
                         self.format_signature(

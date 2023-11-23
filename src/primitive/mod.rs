@@ -276,6 +276,7 @@ impl Primitive {
                 Primitive::Fix.format(),
                 Primitive::Rerank.format()
             )),
+            Primitive::Reach => Some("try using `⊙⋅∘` instead".into()),
             prim if prim.is_ocean() => Some(String::new()),
             _ => None,
         }

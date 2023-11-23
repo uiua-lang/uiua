@@ -35,6 +35,7 @@ pub enum DocsPage {
     Changelog,
     RightToLeft,
     Constants,
+    StackIdioms,
     Optimizations,
     Test,
 }
@@ -58,6 +59,7 @@ impl IntoParam for DocsPage {
                 "changelog" => Some(Self::Changelog),
                 "rtl" => Some(Self::RightToLeft),
                 "constants" => Some(Self::Constants),
+                "stack-idioms" => Some(Self::StackIdioms),
                 "optimizations" => Some(Self::Optimizations),
                 "test" => Some(Self::Test),
                 value => Some(Self::Search(value.into())),
@@ -92,6 +94,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Changelog => Changelog().into_view(),
             DocsPage::RightToLeft => RightToLeft().into_view(),
             DocsPage::Constants => Constants().into_view(),
+            DocsPage::StackIdioms => StackIdioms().into_view(),
             DocsPage::Optimizations => Optimizations().into_view(),
             DocsPage::Test => view! {<Markdown src="/md/test.md"/>}.into_view(),
         };

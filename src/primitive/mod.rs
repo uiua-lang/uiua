@@ -179,7 +179,7 @@ impl fmt::Debug for FormatPrimitive {
 
 impl fmt::Display for FormatPrimitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "`{} {}`", self.0, self.0.name())
+        write!(f, "{} {}", self.0, self.0.name())
     }
 }
 

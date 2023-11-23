@@ -148,8 +148,6 @@ uiuisms!(
     r#"⍘⋯⇌-@0 "110""#,
     /// Parse a string as a base 3 <= X <= 9 number
     r#"/+×ⁿ⇌⇡⧻,⊙-:@0 3 "210""#,
-    /// Find the indices of all 1s
-    "⊚ [0 1 0 0 1]",
     /// Interleave two arrays
     "♭⍉⊟ [1 2 3 4] [5 6 7 8]",
     /// Intersperse an item between the rows of an array
@@ -190,7 +188,7 @@ uiuisms!(
     r#"▽\↥≠@ . "   ← remove these""#,
     /// Trim trailing whitespace
     r#"▽⍜⇌\↥≠@ . "remove these →   ""#,
-    /// Trim prefix-matching characters from a set/⊂⍉/⊂∵▽⊃∘(⍉∵▽)
+    /// Trim prefix-matching characters from a set
     r#"▽¬\×∊, "abc" "ccab ← remove this""#,
     /// Trim suffix-matching characters from a set
     r#"▽¬⍜⇌\×∊, "abc" "remove this → bcaa""#,
@@ -218,8 +216,6 @@ uiuisms!(
     "[7_8_9 10_11_12] [1_2 3_4 5_6]\n⍜⍉⊠(/+×)",
     /// Matrix power (Also works with scalars)
     "4 [1_2 3_4]\n⊙;⍥(⊠(/+×)⊙⍉,):⊞=.⇡⬚1⊢△,",
-    /// Add a leading axis of length 1 to an array
-    "△. ↯1 [1_2_3 4_5_6]",
     /// Repeat a function and collect intermediate results into an array
     "[⍥(×2.)] 10 1",
 );

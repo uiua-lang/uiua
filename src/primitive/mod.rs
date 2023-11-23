@@ -604,6 +604,11 @@ impl Primitive {
             }
             Primitive::Bracket => fork::bracket(env)?,
             Primitive::All => fork::all(env)?,
+            Primitive::With => {
+                let f = env.pop_function()?;
+                env.call_with(f)?;
+            }
+            Primitive::Recur => env.recur()?,
             Primitive::Try => {
                 let f = env.pop_function()?;
                 let handler = env.pop_function()?;

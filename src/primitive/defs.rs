@@ -1589,6 +1589,25 @@ primitive!(
     /// ex: ◳∸≃⊂.[1_2_3 4_5_6]
     /// *At the seabed, countless small scavengers feed on the detritus of the ocean above.*
     (1, Seabed, Ocean, ("seabed", '∸')),
+    /// Set a function to recur to
+    ///
+    /// A function must have been set with [with] before calling [recur].
+    /// Here is a recursive factorial function.
+    /// ex: ↬((|1 ×↫-1.|1)<2.) 5
+    /// This is only for demonstration purposes, as factorial can be implemented much more simply.
+    /// ex: /×+1⇡ 5
+    ([1], With, Misc, ("with", '↬')),
+    /// Call a function recursively
+    ///
+    /// A function must have been set with [with] before calling [recur].
+    /// Here is a recursive factorial function.
+    /// ex: ↬((|1 ×↫-1.|1)<2.) 5
+    /// This is only for demonstration purposes, as factorial can be implemented much more simply.
+    /// ex: /×+1⇡ 5
+    ///
+    /// The presence of a [recur] prevents the signature checker from working, so a signature must always be provided at the innermost function that contains a [recur].
+    /// ex: ↬((+∩(|2 ↫ -)1,2|1)<2.) 5
+    (0, Recur, Misc, ("recur", '↫')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the original arguments and the error value below.

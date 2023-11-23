@@ -418,6 +418,11 @@ impl<'a> VirtualEnv<'a> {
                     let _after = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }
+                With => {
+                    let f = self.pop_func()?;
+                    self.handle_sig(f.signature())?;
+                }
+                Recur => return Err("recur present".into()),
                 Dump => {
                     self.pop_func()?;
                 }

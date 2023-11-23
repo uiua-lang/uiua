@@ -82,6 +82,8 @@ pub(crate) struct Scope {
     array: Vec<usize>,
     /// The call stack
     call: Vec<StackFrame>,
+    /// The recur stack
+    with: Vec<usize>,
     /// Map local names to global indices
     pub names: HashMap<Ident, usize>,
     /// The current fill values
@@ -104,6 +106,7 @@ impl Default for Scope {
                 pc: 0,
                 spans: Vec::new(),
             }],
+            with: Vec::new(),
             names: HashMap::new(),
             fills: Fills::default(),
             pack_depth: 0,
@@ -114,7 +117,6 @@ impl Default for Scope {
 #[derive(Default, Clone)]
 struct Fills {
     nums: Vec<f64>,
-
     complexes: Vec<crate::Complex>,
     chars: Vec<char>,
     boxes: Vec<Boxed>,
@@ -1053,6 +1055,22 @@ code:
     }
     pub(crate) fn pack_boxes(&self) -> bool {
         self.scope.pack_depth > 0
+    }
+    pub(crate) fn call_with(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult {
+        let call_height = self.scope.call.len();
+        let with_height = self.scope.with.len();
+        self.scope.with.push(self.scope.call.len());
+        let res = self.call(f.into());
+        self.scope.call.truncate(call_height);
+        self.scope.with.truncate(with_height);
+        res
+    }
+    pub(crate) fn recur(&mut self) -> UiuaResult {
+        let Some(i) = self.scope.with.last().copied() else {
+            return Err(self.error("No recursion context set"));
+        };
+        let f = self.scope.call[i].function.clone();
+        self.call(f)
     }
     /// Spawn a thread
     pub(crate) fn spawn(

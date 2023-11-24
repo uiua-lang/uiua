@@ -814,10 +814,10 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p><Prim prim=Bracket/>" too can be chained. Each additional function is called on arguments deeper in the stack."</p>
         <Editor example="[⊓⊓⊓+¯×. 1 2 3 4 5 6]"/>
 
-        <h2 id="switch-notation">"Switch Notation"</h2>
-        <p>"All dyadic modifiers allow a special notation with a single set of "<code>"()"</code>"s with a "<code>"|"</code>" in the middle separating the functions. This is called "<em>"switch notation"</em>". It is called this because it shares syntax with "<A href="/docs/controlflow#switch">"switch functions"</A>", which will be discussed in a "<A href="/docs/controlflow">"later section"</A>"."</p>
+        <h2 id="function-packs">"Function Packs"</h2>
+        <p>"All dyadic modifiers allow a special notation with a single set of "<code>"()"</code>"s with a "<code>"|"</code>" in the middle separating the functions. This is called a "<em>"function pack"</em>". It shares syntax with "<A href="/docs/controlflow#switch">"switch functions"</A>", which will be discussed in a "<A href="/docs/controlflow">"later section"</A>"."</p>
         <Editor example="⊓(+|×) 1 2 3 4"/>
-        <p>"While all dyadic modifiers can use switch notation, "<Prim prim=Fork/>" and "<Prim prim=Bracket/>" allow more than 2 functions to be used. This can sometimes be shorter and/or more readable than chaining the modifier."</p>
+        <p>"While all dyadic modifiers can use function packs, "<Prim prim=Fork/>" and "<Prim prim=Bracket/>" allow more than 2 functions to be used. This can sometimes be shorter and/or more readable than chaining the modifier."</p>
         <Editor example="[⊃(+|-|×|÷) 5 8]"/>
         <Editor example="[⊓(+1|×|÷2) 5 10 12 22]"/>
 
@@ -952,11 +952,13 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="f ← ⍣parse⋅⋅0\nf \"5\"\nf \"dog\""/>
 
         <h2 id="switch">"Switch Functions"</h2>
-        <p>"Switch functions are inline functions that choose a branch based on an index. Like normal inline functions, they are surrounded by "<code>"()"</code>"s. Branches are separated by "<code>"|"</code>"s."</p>
-        <p>"Unlike normal inline functions, switch functions can appear anywhere in code and are called immediately."</p>
-        <Editor example="(3|5) 0"/>
-        <Editor example="(3|5) 1"/>
+        <p>"A "<A href="/docs/advancedstack#function-packs">"function pack"</A>" that is used outside a modifier becomes a "<em>"switch function"</em>". Switch functions take an array of natural numbers called the "<em>"selector"</em>" and call the function at the corresponding index in the pack."</p>
+        <Editor example="(3|5) 0\n(3|5) 1"/>
+        <Editor example="(+|-) 0 3 5\n(+|-) 1 3 5"/>
+        <p>"Non-scalar selectors are allowed. They allow the switch function to be evaluated for each row of the input arrays."</p>
+        <Editor example="(+|-) [1 0 1] [1 2 3] [4 5 6]"/>
         <p>"Switch functions can have as many branches as you want, and they can also be nested."</p>
+        <Editor example="(+|-|×|÷) [1 2 0 3] [...2] [...5]"/>
         <Editor example="≡((×10|+1|(∘|¯)=2.) ◿3.) [2 9 4 0 8 3]"/>
         <p>"Each branch can have a signature specified. For the overall switch function to have a valid signature, all branches must either change the height of the stack by the same amount "<em>"or"</em>" return the same number of outputs."</p>
         <Editor example="f ← (|2 ×||3.2 ⊃(++)×)\n[f 0 2 3 4]\n[f 1 2 3 4]"/>

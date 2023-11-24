@@ -30,7 +30,6 @@ use crate::{
     algorithm::{fork, loops, reduce, table, zip},
     array::Array,
     boxed::Boxed,
-    check::instrs_popped,
     lex::AsciiToken,
     sys::*,
     value::*,
@@ -551,25 +550,6 @@ impl Primitive {
                 let _y = env.pop(2)?;
                 env.push(x);
                 env.call(f)?;
-            }
-            Primitive::Above => {
-                // This should only run if Above is not inlined
-                let f = env.pop_function()?;
-                let popped = instrs_popped(&f.instrs).map_err(|e| env.error(e))?;
-                let values = env.select_values(&popped);
-                let height = f.signature().args.saturating_sub(f.signature().outputs);
-                env.call(f)?;
-                env.insert_values(height, values.into_iter().rev());
-            }
-            Primitive::Below => {
-                // This should only run if Below is not inlined
-                let f = env.pop_function()?;
-                let popped = instrs_popped(&f.instrs).map_err(|e| env.error(e))?;
-                let values = env.select_values(&popped);
-                env.call(f)?;
-                for value in values.into_iter().rev() {
-                    env.push(value);
-                }
             }
             Primitive::Rock => {
                 let x = env.pop(1)?;

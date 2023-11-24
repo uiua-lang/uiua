@@ -23,10 +23,6 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, String> {
     Ok(env.sig())
 }
 
-pub(crate) fn instrs_popped(instrs: &[Instr]) -> Result<Vec<usize>, String> {
-    VirtualEnv::from_instrs(instrs).map(|env| env.popped)
-}
-
 /// An environment that emulates the runtime but only keeps track of the stack.
 struct VirtualEnv<'a> {
     stack: Vec<BasicValue>,
@@ -395,11 +391,6 @@ impl<'a> VirtualEnv<'a> {
                     self.pop()?;
                     self.stack.push(x);
                     self.handle_sig(f.signature())?;
-                }
-                Above | Below => {
-                    let f = self.pop_func()?;
-                    let sig = f.signature();
-                    self.handle_args_outputs(sig.args, sig.args)?;
                 }
                 Join => {
                     let a = self.pop()?;

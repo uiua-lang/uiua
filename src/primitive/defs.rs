@@ -1320,10 +1320,6 @@ primitive!(
     /// ex: +⊙(×⊙(↙⊙↘)) 2 10 3 1 [1 2 3 4 5]
     /// ex: +⊙(×|↙|↘)   2 10 3 1 [1 2 3 4 5]
     ([1], Dip, Planet, ("dip", '⊙')),
-    /// Put a function's compliment above it on the stack
-    ([1], Above, Planet, ("above", '◐')),
-    /// Put a function's compliment below it on the stack
-    ([1], Below, Planet, ("below", '◑')),
     /// Call a function on two sets of values
     ///
     /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.

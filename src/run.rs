@@ -962,18 +962,6 @@ code:
     pub(crate) fn truncate_stack(&mut self, size: usize) {
         self.stack.truncate(size);
     }
-    pub(crate) fn select_values(&self, indices: &[usize]) -> Vec<Value> {
-        let mut values = Vec::with_capacity(indices.len());
-        for &i in indices {
-            values.push(self.stack[self.stack.len() - i - 1].clone());
-        }
-        values
-    }
-    pub(crate) fn insert_values(&mut self, depth: usize, values: impl IntoIterator<Item = Value>) {
-        for value in values {
-            self.stack.insert(self.stack.len() - depth, value);
-        }
-    }
     pub(crate) fn num_fill(&self) -> Option<f64> {
         self.scope.fills.nums.last().copied()
     }

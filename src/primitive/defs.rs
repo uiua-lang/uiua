@@ -1000,13 +1000,13 @@ primitive!(
     ///   : ∧+ [] 10
     ///
     /// Multiple accumulators can be used
-    /// ex: ∧(⊃+⟜×) +1⇡5 0 1
+    /// ex: ∧(⊃+(×⊙⋅∘)) +1⇡5 0 1
     /// If the iterated array is already on the stack, you can use [dip] to place the accumulators below it.
-    /// ex: ∧(⊃+⟜×)⊙(0 1) +1⇡5
+    /// ex: ∧(⊃+(×⊙⋅∘))⊙(0 1) +1⇡5
     ///
     /// Multiple iterated arrays are also fine.
     /// Here, we accumulate the first array with [add] and the second with [multiply].
-    /// ex: ∧⊃⟜+⋅⟜× 1_2_3 4_5_6 0 1
+    /// ex: ∧⊃(+⊙⋅∘)(×⋅⊙⋅∘) 1_2_3 4_5_6 0 1
     ///
     /// Like [rows], [fold] will repeat the row of arrays that have exactly one row.
     /// ex: ∧(⊂⊂) 1_2_3 4 []

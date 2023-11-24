@@ -35,7 +35,7 @@ const SPIRAL: &str = "\
 ≡(-⊃∠(-π◿τ+⍜∩⍘√+))∩¤ # Generate
 <0.2⌵                # Threshold";
 const QUADRATIC: &str = "\
-Disc ← ⊟¯.√ℂ0-⊃⟜(××4)⋅(×.)
+Disc ← ⊟¯.√ℂ0-⊃(××4⊙⋅∘)⋅(×.)
 Quad ← ÷⊙+⊃(×2|⋅¯|Disc)
 Quad 1 2 0";
 const STRIPES: &str = "\

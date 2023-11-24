@@ -1252,14 +1252,17 @@ mod tests {
         for prim in Primitive::non_deprecated() {
             assert_eq!(Primitive::from_name(prim.name()), Some(prim));
         }
-        for test in [
-            Primitive::from_format_name as fn(&str) -> Option<Primitive>,
-            |name| {
+        for (name, test) in [
+            (
+                "from_format_name",
+                Primitive::from_format_name as fn(&str) -> Option<Primitive>,
+            ),
+            ("from_format_name_multi", |name| {
                 Primitive::from_format_name_multi(name)
                     .unwrap()
                     .first()
                     .map(|(prim, _)| *prim)
-            },
+            }),
         ] {
             for prim in Primitive::non_deprecated() {
                 let char_test = match prim.glyph() {
@@ -1279,6 +1282,8 @@ mod tests {
                         | Primitive::Trace
                         | Primitive::Complex
                         | Primitive::Combinate
+                        | Primitive::Rectify
+                        | Primitive::Recur
                 ) {
                     continue;
                 }
@@ -1288,7 +1293,14 @@ mod tests {
                     Some(_) => 3,
                 };
                 let short: String = prim.name().chars().take(char_test).collect();
-                assert_eq!(test(&short), Some(prim));
+                assert_eq!(
+                    test(&short),
+                    Some(prim),
+                    "{} does not format from {:?} with {}",
+                    prim.format(),
+                    short,
+                    name
+                );
             }
         }
         assert_eq!(Primitive::from_format_name("id"), Some(Primitive::Identity));

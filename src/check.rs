@@ -7,7 +7,9 @@ use crate::{
     Primitive,
 };
 
-/// Count the number of arguments and the stack Δ of a function.
+const START_HEIGHT: usize = 16;
+
+/// Count the number of arguments and outputs of a function.
 pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, String> {
     if let [Instr::Prim(prim, _)] = instrs {
         if let Some((args, outputs)) = prim.args().zip(prim.outputs()) {
@@ -17,19 +19,12 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, String> {
             });
         }
     }
-    // println!("Checking {:?}", instrs);
-    const START_HEIGHT: usize = 16;
-    let mut env = VirtualEnv {
-        stack: vec![BasicValue::Unknown; START_HEIGHT],
-        function_stack: Vec::new(),
-        array_stack: Vec::new(),
-        min_height: START_HEIGHT,
-    };
-    env.instrs(instrs)?;
-    let args = START_HEIGHT.saturating_sub(env.min_height);
-    let outputs = env.stack.len() - env.min_height;
-    // println!("Checked {:?} -> {}/{}", instrs, args, outputs);
-    Ok(Signature { args, outputs })
+    let env = VirtualEnv::from_instrs(instrs)?;
+    Ok(env.sig())
+}
+
+pub(crate) fn instrs_popped(instrs: &[Instr]) -> Result<Vec<usize>, String> {
+    VirtualEnv::from_instrs(instrs).map(|env| env.popped)
 }
 
 /// An environment that emulates the runtime but only keeps track of the stack.
@@ -38,6 +33,7 @@ struct VirtualEnv<'a> {
     function_stack: Vec<Cow<'a, Function>>,
     array_stack: Vec<usize>,
     min_height: usize,
+    popped: Vec<usize>,
 }
 
 #[derive(Debug, Clone)]
@@ -45,7 +41,7 @@ enum BasicValue {
     Num(f64),
     Arr(Vec<Self>),
     Other,
-    Unknown,
+    Unknown(usize),
 }
 
 impl BasicValue {
@@ -80,7 +76,24 @@ impl FromIterator<f64> for BasicValue {
 }
 
 impl<'a> VirtualEnv<'a> {
-    pub fn instrs(&mut self, instrs: &'a [Instr]) -> Result<(), String> {
+    fn from_instrs(instrs: &'a [Instr]) -> Result<Self, String> {
+        let mut env = VirtualEnv {
+            stack: (0..START_HEIGHT).rev().map(BasicValue::Unknown).collect(),
+            function_stack: Vec::new(),
+            array_stack: Vec::new(),
+            min_height: START_HEIGHT,
+            popped: Vec::new(),
+        };
+        env.instrs(instrs)?;
+        Ok(env)
+    }
+    fn sig(&self) -> Signature {
+        Signature {
+            args: START_HEIGHT.saturating_sub(self.min_height),
+            outputs: self.stack.len() - self.min_height,
+        }
+    }
+    fn instrs(&mut self, instrs: &'a [Instr]) -> Result<(), String> {
         for instr in instrs {
             self.instr(instr)?;
         }
@@ -352,7 +365,9 @@ impl<'a> VirtualEnv<'a> {
                     self.stack.push(b);
                 }
                 Pop => {
-                    self.pop()?;
+                    if let BasicValue::Unknown(i) = self.pop()? {
+                        self.popped.push(i);
+                    }
                     self.set_min_height();
                 }
                 Over => {
@@ -380,6 +395,11 @@ impl<'a> VirtualEnv<'a> {
                     self.pop()?;
                     self.stack.push(x);
                     self.handle_sig(f.signature())?;
+                }
+                Above | Below => {
+                    let f = self.pop_func()?;
+                    let sig = f.signature();
+                    self.handle_args_outputs(sig.args, sig.args)?;
                 }
                 Join => {
                     let a = self.pop()?;

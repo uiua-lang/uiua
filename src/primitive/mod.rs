@@ -30,6 +30,7 @@ use crate::{
     algorithm::{fork, loops, reduce, table, zip},
     array::Array,
     boxed::Boxed,
+    check::instrs_popped,
     lex::AsciiToken,
     sys::*,
     value::*,
@@ -551,6 +552,25 @@ impl Primitive {
                 env.push(x);
                 env.call(f)?;
             }
+            Primitive::Above => {
+                // This should only run if Above is not inlined
+                let f = env.pop_function()?;
+                let popped = instrs_popped(&f.instrs).map_err(|e| env.error(e))?;
+                let values = env.select_values(&popped);
+                let height = f.signature().args.saturating_sub(f.signature().outputs);
+                env.call(f)?;
+                env.insert_values(height, values.into_iter().rev());
+            }
+            Primitive::Below => {
+                // This should only run if Below is not inlined
+                let f = env.pop_function()?;
+                let popped = instrs_popped(&f.instrs).map_err(|e| env.error(e))?;
+                let values = env.select_values(&popped);
+                env.call(f)?;
+                for value in values.into_iter().rev() {
+                    env.push(value);
+                }
+            }
             Primitive::Rock => {
                 let x = env.pop(1)?;
                 env.push(x.ocean(INFINITY, env)?);
@@ -614,7 +634,7 @@ impl Primitive {
                 let handler = env.pop_function()?;
                 let f_args = f.signature().args;
                 let backup = env.clone_stack_top(f_args);
-                let bottom = env.stack_size().saturating_sub(f_args);
+                let bottom = env.stack_height().saturating_sub(f_args);
                 if let Err(e) = env.call(f) {
                     env.truncate_stack(bottom);
                     env.backend.save_error_color(&e);
@@ -861,7 +881,7 @@ fn dump(env: &mut Uiua) -> UiuaResult {
         )));
     }
     let span = env.span().to_string();
-    let unprocessed = env.clone_stack_top(env.stack_size());
+    let unprocessed = env.clone_stack_top(env.stack_height());
     let mut items = Vec::new();
     for item in unprocessed {
         env.push(item);

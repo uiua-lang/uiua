@@ -766,7 +766,7 @@ X 5"/>
 
         <Challenge
             number=2
-            prompt="adds the each column of a matrix to the next"
+            prompt="adds each column of a matrix to the next"
             example="[1_2_3 4_5_6]"
             answer="≡/+"
             tests={&["[6_9_1_2 3_0_0_1 2_3_4_5]", "[2_2_2_2_5]"]}

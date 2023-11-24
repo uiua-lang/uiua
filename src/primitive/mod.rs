@@ -302,7 +302,6 @@ impl Primitive {
         match name {
             "id" => return Some(Primitive::Identity),
             "ga" => return Some(Primitive::Gap),
-            "re" => return Some(Primitive::Reach),
             "pi" => return Some(Primitive::Pi),
             _ => {}
         }
@@ -344,16 +343,17 @@ impl Primitive {
                     prims.push((p, sub_name));
                     start += len;
                     continue 'outer;
-                } else if !(sub_name.contains("rd") || sub_name.contains("rg"))
-                    && (sub_name.strip_suffix('i').unwrap_or(sub_name).chars())
-                        .all(|c| "gdr".contains(c))
+                } else if sub_name
+                    .strip_suffix('i')
+                    .unwrap_or(sub_name)
+                    .chars()
+                    .all(|c| "gd".contains(c))
                 {
                     // 1-letter planet notation
                     for (i, c) in sub_name.char_indices() {
                         match c {
                             'g' => prims.push((Primitive::Gap, &sub_name[i..i + 1])),
                             'd' => prims.push((Primitive::Dip, &sub_name[i..i + 1])),
-                            'r' => prims.push((Primitive::Reach, &sub_name[i..i + 1])),
                             'i' => prims.push((Primitive::Identity, &sub_name[i..i + 1])),
                             _ => unreachable!(),
                         }

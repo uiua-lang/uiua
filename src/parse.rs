@@ -525,51 +525,6 @@ impl Parser {
             self.errors.push(self.expected([Expectation::Term]));
         }
 
-        // Style diagnostics
-        match modifier {
-            Modifier::Primitive(Primitive::Reach) => {
-                for arg in &args {
-                    if let Word::Modified(m) = &arg.value {
-                        match &m.modifier.value {
-                            Modifier::Primitive(Primitive::Dip) => {
-                                let span = mod_span.clone().merge(m.modifier.span.clone());
-                                self.diagnostics.push(Diagnostic::new(
-                                    format!(
-                                        "`{reach}{dip}` is either unclear or not what you want. \
-                                    If you want the same behavior, prefer `{dip}{gap}` \
-                                    for clarity. If you mean to call a function on the \
-                                    first and third arguments, use `{reach}f`.",
-                                        reach = Primitive::Reach,
-                                        dip = Primitive::Dip,
-                                        gap = Primitive::Gap,
-                                    ),
-                                    span,
-                                    DiagnosticKind::Style,
-                                ));
-                            }
-                            Modifier::Primitive(Primitive::Gap) => {
-                                let span = mod_span.clone().merge(m.modifier.span.clone());
-                                self.diagnostics.push(Diagnostic::new(
-                                    format!(
-                                        "`{reach}{gap}` is either unclear or not what you want. \
-                                    If you want the same behavior, prefer `{gap}{gap}` \
-                                    for clarity. If you mean to call a function on the \
-                                    first and fourth arguments, use `{reach}{reach}f`.",
-                                        reach = Primitive::Reach,
-                                        gap = Primitive::Gap,
-                                    ),
-                                    span,
-                                    DiagnosticKind::Style,
-                                ));
-                            }
-                            _ => (),
-                        }
-                    }
-                }
-            }
-            _ => {}
-        }
-
         Some(if args.is_empty() {
             mod_span.sp(match modifier {
                 Modifier::Primitive(prim) => Word::Primitive(prim),

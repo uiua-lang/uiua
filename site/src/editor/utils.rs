@@ -684,15 +684,18 @@ impl State {
             let hidden_answer =
                 || just_values(&challenge_code(&chal.answer, &chal.hidden, chal.flip));
             let hidden_user_output = || just_values(&challenge_code(code, &chal.hidden, chal.flip));
-            correct = correct
-                && match (hidden_answer(), hidden_user_output()) {
-                    (Ok(answer), Ok(users)) => answer == users,
-                    (Err(answer), Err(users)) => answer.to_string() == users.to_string(),
-                    _ => false,
-                };
+            let hidden_correct = match (hidden_answer(), hidden_user_output()) {
+                (Ok(answer), Ok(users)) => answer == users,
+                (Err(answer), Err(users)) => answer.to_string() == users.to_string(),
+                _ => false,
+            };
             let mut output = if chal.did_init_run.get() {
                 vec![OutputItem::String(if correct {
-                    "✅ Correct!".into()
+                    if hidden_correct {
+                        "✅ Correct!".into()
+                    } else {
+                        "❌ Incorrect (on edge case)".into()
+                    }
                 } else {
                     "❌ Incorrect".into()
                 })]

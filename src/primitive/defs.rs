@@ -1591,15 +1591,15 @@ primitive!(
     (1, Seabed, Ocean, ("seabed", '∸')),
     /// Set a function to recur to
     ///
-    /// A function must have been set with [with] before calling [recur].
+    /// A function must have been set with [self] before calling [recur].
     /// Here is a recursive factorial function.
     /// ex: ↬((|1 ×↫-1.|1)<2.) 5
     /// This is only for demonstration purposes, as factorial can be implemented much more simply.
     /// ex: /×+1⇡ 5
-    ([1], With, Misc, ("with", '↬')),
+    ([1], Slf, Misc, ("self", '↬')),
     /// Call a function recursively
     ///
-    /// A function must have been set with [with] before calling [recur].
+    /// A function must have been set with [self] before calling [recur].
     /// Here is a recursive factorial function.
     /// ex: ↬((|1 ×↫-1.|1)<2.) 5
     /// This is only for demonstration purposes, as factorial can be implemented much more simply.

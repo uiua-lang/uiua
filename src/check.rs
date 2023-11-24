@@ -429,7 +429,7 @@ impl<'a> VirtualEnv<'a> {
                     let _after = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }
-                With => {
+                Slf => {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }

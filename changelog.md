@@ -10,6 +10,7 @@ If you are reading this on the website, then these changes are live here.
 - [`windows` `◫`](https://uiua.org/docs/windows) can now take negative window sizes
 - Add the [`rectify` `⌅`](https://uiua.org/docs/rectify) function, which sets a function's inverse to itself
 - Add the [`setinv`](https://uiua.org/docs/setinv) modifier, which sets the inverse of a function
+- Allow custom modifiers to use switch function syntax
 ### Interpreter
 - Fix some bugs and crashes
 - Improve some formatting with multiline functions and switch functions

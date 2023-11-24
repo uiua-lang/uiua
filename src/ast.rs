@@ -227,6 +227,15 @@ impl fmt::Debug for Modifier {
     }
 }
 
+impl fmt::Display for Modifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Modifier::Primitive(prim) => prim.format().fmt(f),
+            Modifier::Ident(ident) => write!(f, "{ident}"),
+        }
+    }
+}
+
 impl Modifier {
     /// Get the number of arguments this modifier takes
     pub fn args(&self) -> u8 {

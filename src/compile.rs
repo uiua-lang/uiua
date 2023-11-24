@@ -754,101 +754,101 @@ impl Uiua {
                 _ => {}
             }
 
-            // De-sugar switched
-            if modified.operands.len() == 1 {
-                if let Sp {
-                    value: Word::Switch(sw),
-                    span,
-                } = modified.operands.first().cloned().unwrap()
-                {
-                    match prim {
-                        Primitive::Dip => {
-                            let mut branches = sw.branches.into_iter().rev();
-                            let mut new = Modified {
-                                modifier: modified.modifier.clone(),
-                                operands: vec![branches.next().unwrap().map(Word::Func)],
-                            };
-                            for branch in branches {
-                                let mut lines = branch.value.lines;
-                                (lines.last_mut().unwrap())
-                                    .push(span.clone().sp(Word::Modified(Box::new(new))));
-                                new = Modified {
-                                    modifier: modified.modifier.clone(),
-                                    operands: vec![branch.span.clone().sp(Word::Func(Func {
-                                        id: FunctionId::Anonymous(branch.span.clone()),
-                                        signature: None,
-                                        lines,
-                                        closed: true,
-                                    }))],
-                                };
-                            }
-                            return self.modified(new, call);
-                        }
-                        Primitive::Fork | Primitive::Bracket => {
-                            let mut branches = sw.branches.into_iter().rev();
-                            let mut new = Modified {
-                                modifier: modified.modifier.clone(),
-                                operands: {
-                                    let mut ops: Vec<_> = branches
-                                        .by_ref()
-                                        .take(2)
-                                        .map(|w| w.map(Word::Func))
-                                        .collect();
-                                    ops.reverse();
-                                    ops
-                                },
-                            };
-                            for branch in branches {
-                                new = Modified {
-                                    modifier: modified.modifier.clone(),
-                                    operands: vec![
-                                        branch.map(Word::Func),
-                                        span.clone().sp(Word::Modified(Box::new(new))),
-                                    ],
-                                };
-                            }
-                            return self.modified(new, call);
-                        }
-                        prim => {
-                            if let Some(margs) = prim.modifier_args() {
-                                if margs >= 2 {
-                                    if sw.branches.len() != margs as usize {
-                                        return Err((modified.modifier.span.merge(span))
-                                            .sp(format!(
-                                                "{} requires {} function arguments, but the \
-                                                switch function has {} branches",
-                                                prim.format(),
-                                                margs,
-                                                sw.branches.len()
-                                            ))
-                                            .into());
-                                    }
-                                    let new = Modified {
-                                        modifier: modified.modifier.clone(),
-                                        operands: sw
-                                            .branches
-                                            .into_iter()
-                                            .map(|w| w.map(Word::Func))
-                                            .collect(),
-                                    };
-                                    return self.modified(new, call);
-                                }
-                            } else {
-                                return Err((modified.modifier.span.merge(span))
-                                    .sp(format!(
-                                        "{} cannot use switch function syntax",
-                                        prim.format()
-                                    ))
-                                    .into());
-                            }
-                        }
-                    }
-                }
-            }
-
             // Handle deprecation
             self.handle_primitive_deprecation(prim, &modified.modifier.span);
         }
+
+        // De-sugar switched
+        if modified.operands.len() == 1 {
+            if let Sp {
+                value: Word::Switch(sw),
+                span,
+            } = modified.operands.first().cloned().unwrap()
+            {
+                match &modified.modifier.value {
+                    Modifier::Primitive(Primitive::Dip) => {
+                        let mut branches = sw.branches.into_iter().rev();
+                        let mut new = Modified {
+                            modifier: modified.modifier.clone(),
+                            operands: vec![branches.next().unwrap().map(Word::Func)],
+                        };
+                        for branch in branches {
+                            let mut lines = branch.value.lines;
+                            (lines.last_mut().unwrap())
+                                .push(span.clone().sp(Word::Modified(Box::new(new))));
+                            new = Modified {
+                                modifier: modified.modifier.clone(),
+                                operands: vec![branch.span.clone().sp(Word::Func(Func {
+                                    id: FunctionId::Anonymous(branch.span.clone()),
+                                    signature: None,
+                                    lines,
+                                    closed: true,
+                                }))],
+                            };
+                        }
+                        return self.modified(new, call);
+                    }
+                    Modifier::Primitive(Primitive::Fork | Primitive::Bracket) => {
+                        let mut branches = sw.branches.into_iter().rev();
+                        let mut new = Modified {
+                            modifier: modified.modifier.clone(),
+                            operands: {
+                                let mut ops: Vec<_> = branches
+                                    .by_ref()
+                                    .take(2)
+                                    .map(|w| w.map(Word::Func))
+                                    .collect();
+                                ops.reverse();
+                                ops
+                            },
+                        };
+                        for branch in branches {
+                            new = Modified {
+                                modifier: modified.modifier.clone(),
+                                operands: vec![
+                                    branch.map(Word::Func),
+                                    span.clone().sp(Word::Modified(Box::new(new))),
+                                ],
+                            };
+                        }
+                        return self.modified(new, call);
+                    }
+                    modifier => {
+                        return if modifier.args() >= 2 {
+                            if sw.branches.len() != modifier.args() as usize {
+                                return Err((modified.modifier.span.merge(span))
+                                    .sp(format!(
+                                        "{} requires {} function arguments, but the \
+                                        switch function has {} branches",
+                                        modifier,
+                                        modifier.args(),
+                                        sw.branches.len()
+                                    ))
+                                    .into());
+                            }
+                            let new = Modified {
+                                modifier: modified.modifier.clone(),
+                                operands: sw
+                                    .branches
+                                    .into_iter()
+                                    .map(|w| w.map(Word::Func))
+                                    .collect(),
+                            };
+                            self.modified(new, call)
+                        } else {
+                            Err((modified.modifier.span.merge(span))
+                                .sp(format!(
+                                    "{} cannot use switch function syntax. \
+                                    To use a switch function here, add a layer of parentheses.",
+                                    modifier
+                                ))
+                                .into())
+                        };
+                    }
+                }
+            }
+        }
+
         // Inlining
         if self.inline_modifier(&modified, call)? {
             return Ok(());

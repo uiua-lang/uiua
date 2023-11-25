@@ -39,8 +39,8 @@ Disc ← ⊟¯.√ℂ0-⊃⟜(××4)⋅(×.)
 Quad ← ÷⊙+⊃(×2|⋅¯|Disc)
 Quad 1 2 0";
 const STRIPES: &str = "\
-[⊞⊃⊃+↥-].⇡300
-⍉ ÷2+1.2 ○÷10";
+[⊃⊃⊞+⊞↥⊞-].⇡300
+⍉ ÷2 +1.2 ○ ÷10";
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ⬚@ ⊜(⊂⊏:"❌✅" ≍⇌..)≠@ ."#;
 const AUTOMATA: &str = "\

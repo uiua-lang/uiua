@@ -494,12 +494,13 @@ pub fn Editor<'a>(
             "\"" => {
                 let (start, end) = get_code_cursor().unwrap();
                 let code = code_text();
-                if start != end
-                    || code
-                        .chars()
-                        .nth(start as usize)
-                        .map_or(true, |c| c.is_whitespace())
-                {
+                let can_couple = code
+                    .chars()
+                    .nth(start as usize)
+                    .map_or(true, |c| c.is_whitespace() || "(){}[]".contains(c));
+                let at_behind =
+                    code_text().chars().nth((start as usize).saturating_sub(1)) == Some('@');
+                if (start != end || can_couple) && !at_behind {
                     surround_code('"', '"');
                 } else if start == end && code_text().chars().nth(start as usize) == Some('"') {
                     state().set_cursor((start + 1, start + 1));
@@ -518,12 +519,13 @@ pub fn Editor<'a>(
                     _ => unreachable!(),
                 };
                 let (start, end) = get_code_cursor().unwrap();
-                if start != end
-                    || code_text()
-                        .chars()
-                        .nth(start as usize)
-                        .map_or(true, |c| c.is_whitespace())
-                {
+                let can_couple = code_text()
+                    .chars()
+                    .nth(start as usize)
+                    .map_or(true, |c| c.is_whitespace() || "(){}[]".contains(c));
+                let at_behind =
+                    code_text().chars().nth((start as usize).saturating_sub(1)) == Some('@');
+                if (start != end || can_couple) && !at_behind {
                     surround_code(open, close);
                 } else {
                     replace_code(key);

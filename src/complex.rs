@@ -70,24 +70,14 @@ impl Complex {
             (self.im * rhs.re - self.re * rhs.im) / denom,
         )
     }
-    /// Get the sign of a complex number
-    pub fn signum(self) -> Self {
-        Self::new(
-            if self.re.is_nan() {
-                f64::NAN
-            } else if self.re == 0.0 {
-                0.0
-            } else {
-                self.re.signum()
-            },
-            if self.im.is_nan() {
-                f64::NAN
-            } else if self.im == 0.0 {
-                0.0
-            } else {
-                self.im.signum()
-            },
-        )
+    /// Normalize a complex number
+    pub fn normalize(self) -> Self {
+        let len = self.abs();
+        if len == 0.0 {
+            Self::ZERO
+        } else {
+            self / len
+        }
     }
     /// Calculate the principal value of the complex number
     pub fn arg(self) -> f64 {

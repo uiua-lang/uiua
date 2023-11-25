@@ -280,7 +280,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
             (Dup, PushTempN(1), Rotate),
             (PopTempN(1), Neg, Rotate),
         ),
-        &pat!((Abs), (Dup, Sign, PushTempN(1), Abs), (PopTempN(1), Mul),),
+        &pat!(Abs, (Dup, Sign, PushTempN(1), Abs), (PopTempN(1), Mul),),
         &pat!(
             First,
             (Dup, PushTempN(1), First),

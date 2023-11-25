@@ -240,6 +240,8 @@ primitive!(
     /// ex: ± ¯5
     /// ex: ± 0
     /// ex: ± [¯2 ¯1 0 1 2]
+    /// [sign] on a complex number normalizes it to a magnitude of 1.
+    /// ex: ± ℂ3 4
     (1, Sign, MonadicPervasive, ("sign", '±')),
     /// Negate a number
     ///

@@ -463,7 +463,7 @@ pub mod sign {
     }
 
     pub fn com(a: Complex) -> Complex {
-        a.signum()
+        a.normalize()
     }
     pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the sign of {a}"))

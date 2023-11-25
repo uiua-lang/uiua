@@ -813,38 +813,25 @@ impl Uiua {
                         }
                         return self.modified(new, call);
                     }
-                    modifier => {
-                        return if modifier.args() >= 2 {
-                            if sw.branches.len() != modifier.args() as usize {
-                                return Err((modified.modifier.span.merge(span))
-                                    .sp(format!(
-                                        "{} requires {} function arguments, but the \
-                                        switch function has {} branches",
-                                        modifier,
-                                        modifier.args(),
-                                        sw.branches.len()
-                                    ))
-                                    .into());
-                            }
-                            let new = Modified {
-                                modifier: modified.modifier.clone(),
-                                operands: sw
-                                    .branches
-                                    .into_iter()
-                                    .map(|w| w.map(Word::Func))
-                                    .collect(),
-                            };
-                            self.modified(new, call)
-                        } else {
-                            Err((modified.modifier.span.merge(span))
+                    modifier if modifier.args() >= 2 => {
+                        if sw.branches.len() != modifier.args() as usize {
+                            return Err((modified.modifier.span.merge(span))
                                 .sp(format!(
-                                    "{} cannot use switch function syntax. \
-                                    To use a switch function here, add a layer of parentheses.",
-                                    modifier
+                                    "{} requires {} function arguments, but the \
+                                    switch function has {} branches",
+                                    modifier,
+                                    modifier.args(),
+                                    sw.branches.len()
                                 ))
-                                .into())
+                                .into());
+                        }
+                        let new = Modified {
+                            modifier: modified.modifier.clone(),
+                            operands: sw.branches.into_iter().map(|w| w.map(Word::Func)).collect(),
                         };
+                        return self.modified(new, call);
                     }
+                    _ => {}
                 }
             }
         }

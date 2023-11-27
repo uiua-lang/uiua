@@ -1189,7 +1189,7 @@ primitive!(
     ///   : ⊐[1 2_3]
     /// ex:  {1 2 3}
     ///   : ⊐[1 2 3]
-    /// Because [pack] only [box]es if necessary, it is often best to use [rows] instead or [each] to iterate over results.
+    /// Because [pack] only [box]es if necessary, it is often best to use [rows] instead of [each] to iterate over results.
     /// This can avoid potential inconsistencies with [pack]ed arrays.
     /// ex: A ← ⊐∵⇡ +1⇡4 # Pack boxes
     ///   : B ← ⊐∵⇡ ↯4 4 # Pack doesn't box

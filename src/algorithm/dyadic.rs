@@ -2027,7 +2027,7 @@ impl<T: ArrayValue> Array<T> {
     }
     fn unselect(&self, indices: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
         let shape_is_valid = self.row_count() == indices.len()
-            || indices.len() == 1 && &into.shape()[1..] == self.shape();
+            || indices.len() == 1 && !into.shape().is_empty() && &into.shape()[1..] == self.shape();
         if !shape_is_valid {
             return Err(env.error(
                 "Attempted to undo selection, but \

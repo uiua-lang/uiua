@@ -780,7 +780,6 @@ impl<T: ArrayValue> Array<T> {
             } else {
                 f32::floor
             }(data_len as f32 / other_len as f32) as usize)
-                .max(1)
         };
         let shape: Shape = match neg_count {
             0 => dims.iter().map(|&dim| dim as usize).collect(),
@@ -847,7 +846,9 @@ impl<T: ArrayValue> Array<T> {
                     data.extend(repeat(fill).take(target_len - start));
                 });
             } else if self.data.is_empty() {
-                return Err(env.error("Cannot reshape empty array without a fill value"));
+                if !shape.contains(&0) {
+                    return Err(env.error("Cannot reshape empty array without a fill value"));
+                }
             } else if self.rank() == 0 {
                 self.data = cowslice![self.data[0].clone(); target_len];
             } else {

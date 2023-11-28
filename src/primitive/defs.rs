@@ -786,7 +786,7 @@ primitive!(
     /// ex: ↯2_2_¯1 ⇡15
     /// ex: ↯¯1_2_2 ⇡15
     /// ex: ↯3_¯1_5 ⇡30
-    /// If [fill] is used, the total number of elements in the new shape will always be [equal] to the total number of elements in the original shape.
+    /// If [fill] is used, the total number of elements in the new shape will always be `greater or equal` the total number of elements in the original shape.
     /// ex: ⬚0↯ ¯1_5 ⇡12
     ///
     /// See also: [deshape]

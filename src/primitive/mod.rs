@@ -364,13 +364,13 @@ impl Primitive {
         }
         // Backward parsing
         prims.clear();
-        let mut end = indices.len();
+        let mut end = indices.len() - 1;
         'outer: loop {
             if end == 0 {
                 prims.reverse();
                 return Some(prims);
             }
-            let end_index = indices[end - 1];
+            let end_index = indices[end];
             for len in (2..=end).rev() {
                 let start_index = indices.get(end - len).copied().unwrap_or(0);
                 let sub_name = &name[start_index..end_index];

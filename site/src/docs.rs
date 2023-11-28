@@ -392,7 +392,7 @@ impl Allowed {
     }
     fn table(&self) -> impl IntoView {
         let mut table_cells = Vec::new();
-        for class in PrimClass::all() {
+        for class in PrimClass::all().filter(|c| c != &PrimClass::Ocean) {
             if !self.classes.contains(&class) {
                 continue;
             }
@@ -422,7 +422,12 @@ impl Allowed {
                     } else if p.is_deprecated() {
                         view!(<div style="text-decoration: line-through;"><Prim prim=p/></div>)
                             .into_view()
-                    } else {
+                    } else if p.is_experimental() {
+                        view!(<div style="display: flex; align-items: center;">
+                            <Prim prim=p/><span class="code-hover" data-title="Experimental">"🧪"</span>
+                        </div>).into_view()
+                    }
+                    else {
                         view!(<Prim prim=p/>).into_view()
                     }
                 })

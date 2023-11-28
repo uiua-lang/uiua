@@ -1654,6 +1654,16 @@ primitive!(
     /// ex: # Experimental!
     ///   : ↬((+∩(|2 ↫ -)1,2|1)<2.) 5
     (0(None), Recur, Misc, ("recur", '↫')),
+    /// Generate a random number in the range `[0, 1)`
+    ///
+    /// If you need a seeded random number, use [gen].
+    ///
+    /// ex: ⚂
+    /// ex: [⚂⚂⚂]
+    ///
+    /// Use [multiply] and [floor] to generate a random integer in a range.
+    /// ex: ⌊×10 [⍥⚂5]
+    (0, Rand, Misc, ("random", '⚂')),
     /// Spawn a thread
     ///
     /// Expects a function.
@@ -1711,16 +1721,6 @@ primitive!(
     /// If no value is available, then an error is thrown.
     /// The error can be caught with [try].
     (1, TryRecv, Misc, "tryrecv"),
-    /// Generate a random number in the range `[0, 1)`
-    ///
-    /// If you need a seeded random number, use [gen].
-    ///
-    /// ex: ⚂
-    /// ex: [⚂⚂⚂]
-    ///
-    /// Use [multiply] and [floor] to generate a random integer in a range.
-    /// ex: ⌊×10 [⍥⚂5]
-    (0, Rand, Misc, ("random", '⚂')),
     /// Generate a random number between 0 and 1 from a seed, as well as the next seed
     ///
     /// If you don't care about a seed, you can use [random].

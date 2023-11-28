@@ -284,7 +284,7 @@ impl Primitive {
     /// Check if this primitive is experimental
     pub fn is_experimental(&self) -> bool {
         use Primitive::*;
-        matches!(self, SetInverse | SetUnder | Rectify | All)
+        matches!(self, SetInverse | SetUnder | Rectify | Slf | Recur | All)
     }
     /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {

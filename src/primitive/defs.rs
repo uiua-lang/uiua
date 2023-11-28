@@ -1595,17 +1595,17 @@ primitive!(
     (1, Seabed, Ocean, ("seabed", '∸')),
     /// Set a function to recur to
     ///
-    /// A function must have been set with [self] before calling [recur].
+    /// A function must have been set with [this] before calling [recur].
     /// Here is a recursive factorial function.
     /// ex: # Experimental!
     ///   : ↬((|1 ×↫-1.|1)<2.) 5
     /// This is only for demonstration purposes, as factorial can be implemented much more simply.
     /// ex: # Experimental!
     ///   : /×+1⇡ 5
-    ([1], Slf, Misc, ("self", '↬')),
+    ([1], This, Misc, ("this", '↬')),
     /// Call a function recursively
     ///
-    /// A function must have been set with [self] before calling [recur].
+    /// A function must have been set with [this] before calling [recur].
     /// Here is a recursive factorial function.
     /// ex: # Experimental!
     ///   : ↬((|1 ×↫-1.|1)<2.) 5

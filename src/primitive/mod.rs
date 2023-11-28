@@ -284,7 +284,7 @@ impl Primitive {
     /// Check if this primitive is experimental
     pub fn is_experimental(&self) -> bool {
         use Primitive::*;
-        matches!(self, SetInverse | SetUnder | Rectify | Slf | Recur | All)
+        matches!(self, SetInverse | SetUnder | Rectify | This | Recur | All)
     }
     /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {
@@ -604,7 +604,7 @@ impl Primitive {
             }
             Primitive::Bracket => fork::bracket(env)?,
             Primitive::All => fork::all(env)?,
-            Primitive::Slf => {
+            Primitive::This => {
                 let f = env.pop_function()?;
                 env.call_with(f)?;
             }

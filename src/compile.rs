@@ -589,13 +589,8 @@ impl Uiua {
                         Signature::new(0, 1),
                     )));
                 }
-                Global::Func(f) => {
-                    self.push_instr(Instr::push_func(f));
-                    if call {
-                        let span = self.add_span(span);
-                        self.push_instr(Instr::Call(span));
-                    }
-                }
+                Global::Func(f) if call => self.extend_instrs(f.instrs.clone()),
+                Global::Func(f) => self.push_instr(Instr::push_func(f)),
             }
         } else {
             return Err(span.sp(format!("Unknown identifier `{ident}`")).into());

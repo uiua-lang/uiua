@@ -110,17 +110,17 @@ pub fn StackIdioms() -> impl IntoView {
         <Title text="Stack Idioms - Uiua Docs"/>
         <h1>"Common Stack Idioms"</h1>
         <p>"This page contains some common stack idioms that you may find useful."</p>
-        <p>"They are presented as rearrangements of numbers which are then grouped into an array so that you can see the result."</p>
-        <Editor example="[. 1]"/>
-        <Editor example="[: 1 2]"/>
-        <Editor example="[, 1 2]"/>
-        <Editor example="[; 1 2]"/>
-        <Editor example="[,, 1 2]"/>
-        <Editor example="[,: 1 2]"/>
-        <Editor example="[⊙. 1 2]"/>
-        <Editor example="[⊙; 1 2]"/>
-        <Editor example="[⊙: 1 2 3]"/>
-        <Editor example="[⊙, 1 2 3]"/>
+        <p>"They are presented as rearrangements of characters which are then grouped into an array so that you can see the result."</p>
+        <Editor example="[. @A]"/>
+        <Editor example="[: @A@B]"/>
+        <Editor example="[, @A@B]"/>
+        <Editor example="[; @A@B]"/>
+        <Editor example="[,, @A@B]"/>
+        <Editor example="[,: @A@B]"/>
+        <Editor example="[⊙. @A@B]"/>
+        <Editor example="[⊙; @A@B]"/>
+        <Editor example="[⊙: @A@B@C]"/>
+        <Editor example="[⊙, @A@B@C]"/>
     }
 }
 

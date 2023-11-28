@@ -492,8 +492,7 @@ impl Uiua {
                     self.push_instr(Instr::EndArray { span, boxed: false });
                     if !call {
                         let instrs = self.new_functions.pop().unwrap();
-                        let sig =
-                            instrs_signature(&instrs).unwrap_or_else(|_| Signature::new(0, 0));
+                        let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
                         let func = Function::new(FunctionId::Anonymous(word.span), instrs, sig);
                         self.push_instr(Instr::push_func(func));
                     }
@@ -541,8 +540,7 @@ impl Uiua {
                     });
                     if !call {
                         let instrs = self.new_functions.pop().unwrap();
-                        let sig =
-                            instrs_signature(&instrs).unwrap_or_else(|_| Signature::new(0, 0));
+                        let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
                         let func = Function::new(FunctionId::Anonymous(word.span), instrs, sig);
                         self.push_instr(Instr::push_func(func));
                     }

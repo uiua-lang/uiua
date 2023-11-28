@@ -90,6 +90,8 @@ pub(crate) struct Scope {
     fills: Fills,
     /// The current pack depth
     pack_depth: usize,
+    /// Whether to allow experimental features
+    pub experimental: bool,
 }
 
 impl Default for Scope {
@@ -110,6 +112,7 @@ impl Default for Scope {
             names: HashMap::new(),
             fills: Fills::default(),
             pack_depth: 0,
+            experimental: false,
         }
     }
 }

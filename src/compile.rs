@@ -562,7 +562,12 @@ impl Uiua {
                     self.push_instr(Instr::Call(span));
                 }
             }
-            Word::Spaces | Word::Comment(_) => {}
+            Word::Comment(comment) => {
+                if comment.trim() == "Experimental!" {
+                    self.scope.experimental = true;
+                }
+            }
+            Word::Spaces => {}
         }
         Ok(())
     }
@@ -752,7 +757,8 @@ impl Uiua {
                 _ => {}
             }
 
-            // Handle deprecation
+            // Handle deprecation and experimental
+            self.handle_primitive_experimental(prim, &modified.modifier.span)?;
             self.handle_primitive_deprecation(prim, &modified.modifier.span);
         }
 
@@ -1158,7 +1164,21 @@ impl Uiua {
             ));
         }
     }
+    fn handle_primitive_experimental(&self, prim: Primitive, span: &CodeSpan) -> UiuaResult {
+        if prim.is_experimental() && !self.scope.experimental {
+            return Err(span
+                .clone()
+                .sp(format!(
+                    "{} is experimental. To use it, add \
+                    `# Experimental!` to the top of the file.",
+                    prim.format()
+                ))
+                .into());
+        }
+        Ok(())
+    }
     fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
+        self.handle_primitive_experimental(prim, &span)?;
         self.handle_primitive_deprecation(prim, &span);
         let span_i = self.add_span(span.clone());
         if call {

@@ -1226,25 +1226,29 @@ primitive!(
     ([1], Invert, OtherModifier, ("invert", '⍘')),
     /// Set a function as its own inverse
     ///
-    /// ex: F ← ⌅⧻
+    /// ex: # Experimental!
+    ///   : F ← ⌅⧻
     ///   : F   1_2_4
     ///   : ⍘F  1_2_4
     ///   : ⍜F∘ 1_2_4 # Calls ⧻ twice
     /// This is useful when combined with [under]. It allows you to call a function twice with another function in between.
     /// Finding the standard deviation of a list of numbers requires finding the mean twice. Here, we only need to write the mean code once.
-    /// ex: StdDev ← √⍜⌅(÷⊃⧻/+)(×.-).
+    /// ex: # Experimental!
+    ///   : StdDev ← √⍜⌅(÷⊃⧻/+)(×.-).
     ///   : StdDev [1 2 5 8 9]
     ([1], Rectify, OtherModifier, ("rectify", '⌅')),
     /// Set the inverse of a function
     ///
     /// The first function is the uninverted function, and the second function is the inverse.
-    /// ex: F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
+    /// ex: # Experimental!
+    ///   : F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
     ///   : ;F   @A
     ///   : ;⍘F  @B
     ///   : ;⍜F∘ @C
     /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
     /// This can lead to errors if you are unaware of it.
-    /// ex! F ← setinv+-
+    /// ex! # Experimental!
+    ///   : F ← setinv+-
     ///   : ⍜F∘ 3 5
     ([2], SetInverse, OtherModifier, "setinv"),
     /// Set the [under]-compatible inverse of a function
@@ -1593,20 +1597,25 @@ primitive!(
     ///
     /// A function must have been set with [self] before calling [recur].
     /// Here is a recursive factorial function.
-    /// ex: ↬((|1 ×↫-1.|1)<2.) 5
+    /// ex: # Experimental!
+    ///   : ↬((|1 ×↫-1.|1)<2.) 5
     /// This is only for demonstration purposes, as factorial can be implemented much more simply.
-    /// ex: /×+1⇡ 5
+    /// ex: # Experimental!
+    ///   : /×+1⇡ 5
     ([1], Slf, Misc, ("self", '↬')),
     /// Call a function recursively
     ///
     /// A function must have been set with [self] before calling [recur].
     /// Here is a recursive factorial function.
-    /// ex: ↬((|1 ×↫-1.|1)<2.) 5
+    /// ex: # Experimental!
+    ///   : ↬((|1 ×↫-1.|1)<2.) 5
     /// This is only for demonstration purposes, as factorial can be implemented much more simply.
-    /// ex: /×+1⇡ 5
+    /// ex: # Experimental!
+    ///   : /×+1⇡ 5
     ///
     /// The presence of a [recur] prevents the signature checker from working, so a signature must always be provided at the innermost function that contains a [recur].
-    /// ex: ↬((+∩(|2 ↫ -)1,2|1)<2.) 5
+    /// ex: # Experimental!
+    ///   : ↬((+∩(|2 ↫ -)1,2|1)<2.) 5
     (0, Recur, Misc, ("recur", '↫')),
     /// Call a function and catch errors
     ///

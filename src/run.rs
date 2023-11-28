@@ -73,7 +73,10 @@ pub struct Uiua {
 #[derive(Clone)]
 pub(crate) enum Global {
     Val(Value),
-    Func(Arc<Function>),
+    Func {
+        f: Arc<Function>,
+        sig_declared: bool,
+    },
 }
 
 #[derive(Clone)]
@@ -423,7 +426,7 @@ code:
         drop(imports_gaurd);
         match global {
             Global::Val(val) => self.push(val),
-            Global::Func(f) => self.function_stack.push(f),
+            Global::Func { f, .. } => self.function_stack.push(f),
         }
         Ok(())
     }
@@ -816,7 +819,7 @@ code:
         name: impl Into<Arc<str>>,
         function: impl Into<Arc<Function>>,
     ) -> UiuaResult {
-        self.compile_bind_function(name.into(), function.into(), Span::Builtin)
+        self.compile_bind_function(name.into(), function.into(), true, Span::Builtin)
     }
     /// Create and bind a function in the current scope
     ///

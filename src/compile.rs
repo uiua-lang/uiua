@@ -76,7 +76,7 @@ impl Uiua {
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let name = binding.name.value;
         let span = &binding.name.span;
-
+        let sig_declared = binding.signature.is_some();
         let placeholder_count = count_placeholders(&binding.words);
 
         let make_fn = |mut instrs: Vec<Instr>, sig: Signature, env: &mut Self| {
@@ -131,7 +131,12 @@ impl Uiua {
                 if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
                     let func = make_fn(f.instrs.clone(), f.signature(), self);
-                    self.compile_bind_function(name, func.into(), span.clone().into())?;
+                    self.compile_bind_function(
+                        name,
+                        func.into(),
+                        sig_declared,
+                        span.clone().into(),
+                    )?;
                 } else if sig.args == 0
                     && (sig.outputs > 0 || instrs.is_empty())
                     && placeholder_count == 0
@@ -140,26 +145,41 @@ impl Uiua {
                     self.exec_global_instrs(instrs)?;
                     if let Some(f) = self.function_stack.pop() {
                         // Binding is an imported function
-                        self.compile_bind_function(name, f, span.clone().into())?;
+                        self.compile_bind_function(name, f, sig_declared, span.clone().into())?;
                     } else if let Some(value) = self.stack.pop() {
                         // Binding is a constant
                         self.compile_bind_value(name, value, span.clone().into())?;
                     } else {
                         // Binding is an empty function
                         let func = make_fn(Vec::new(), sig, self);
-                        self.compile_bind_function(name, func.into(), span.clone().into())?;
+                        self.compile_bind_function(
+                            name,
+                            func.into(),
+                            sig_declared,
+                            span.clone().into(),
+                        )?;
                     }
                 } else {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);
-                    self.compile_bind_function(name, func.into(), span.clone().into())?;
+                    self.compile_bind_function(
+                        name,
+                        func.into(),
+                        sig_declared,
+                        span.clone().into(),
+                    )?;
                 }
             }
             Err(e) => {
                 if let Some(sig) = binding.signature {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig.value, self);
-                    self.compile_bind_function(name, func.into(), span.clone().into())?;
+                    self.compile_bind_function(
+                        name,
+                        func.into(),
+                        sig_declared,
+                        span.clone().into(),
+                    )?;
                 } else {
                     return Err(UiuaError::Run(Span::Code(binding.name.span.clone()).sp(
                         format!("Cannot infer function signature: {e}. A signature can be declared after the `←`."),
@@ -187,12 +207,16 @@ impl Uiua {
         &mut self,
         name: Ident,
         function: Arc<Function>,
+        sig_declared: bool,
         span: Span,
     ) -> UiuaResult {
         self.validate_binding_name(&name, &function.instrs, span)?;
         let mut globals = self.globals.lock();
         let idx = globals.len();
-        globals.push(Global::Func(function));
+        globals.push(Global::Func {
+            f: function,
+            sig_declared,
+        });
         self.scope.names.insert(name, idx);
         Ok(())
     }
@@ -589,8 +613,16 @@ impl Uiua {
                         Signature::new(0, 1),
                     )));
                 }
-                Global::Func(f) if call => self.extend_instrs(f.instrs.clone()),
-                Global::Func(f) => self.push_instr(Instr::push_func(f)),
+                Global::Func { f, sig_declared } if call && !sig_declared => {
+                    self.extend_instrs(f.instrs.clone())
+                }
+                Global::Func { f, .. } => {
+                    self.push_instr(Instr::push_func(f));
+                    if call {
+                        let span = self.add_span(span);
+                        self.push_instr(Instr::Call(span));
+                    }
+                }
             }
         } else {
             return Err(span.sp(format!("Unknown identifier `{ident}`")).into());

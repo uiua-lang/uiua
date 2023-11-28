@@ -1236,6 +1236,8 @@ primitive!(
     /// ex: # Experimental!
     ///   : StdDev ← √⍜⌅(÷⊃⧻/+)(×.-).
     ///   : StdDev [1 2 5 8 9]
+    ///
+    /// See also: [setinv]
     ([1], Rectify, OtherModifier, ("rectify", '⌅')),
     /// Set the inverse of a function
     ///
@@ -1250,6 +1252,8 @@ primitive!(
     /// ex! # Experimental!
     ///   : F ← setinv+-
     ///   : ⍜F∘ 3 5
+    ///
+    /// See also: [rectify]
     ([2], SetInverse, OtherModifier, "setinv"),
     /// Set the [under]-compatible inverse of a function
     ///
@@ -1593,30 +1597,6 @@ primitive!(
     /// ex: ◳∸≃⊂.[1_2_3 4_5_6]
     /// *At the seabed, countless small scavengers feed on the detritus of the ocean above.*
     (1, Seabed, Ocean, ("seabed", '∸')),
-    /// Set a function to recur to
-    ///
-    /// A function must have been set with [this] before calling [recur].
-    /// Here is a recursive factorial function.
-    /// ex: # Experimental!
-    ///   : ↬((|1 ×↫-1.|1)<2.) 5
-    /// This is only for demonstration purposes, as factorial can be implemented much more simply.
-    /// ex: # Experimental!
-    ///   : /×+1⇡ 5
-    ([1], This, Misc, ("this", '↬')),
-    /// Call a function recursively
-    ///
-    /// A function must have been set with [this] before calling [recur].
-    /// Here is a recursive factorial function.
-    /// ex: # Experimental!
-    ///   : ↬((|1 ×↫-1.|1)<2.) 5
-    /// This is only for demonstration purposes, as factorial can be implemented much more simply.
-    /// ex: # Experimental!
-    ///   : /×+1⇡ 5
-    ///
-    /// The presence of a [recur] prevents the signature checker from working, so a signature must always be provided at the innermost function that contains a [recur].
-    /// ex: # Experimental!
-    ///   : ↬((+∩(|2 ↫ -)1,2|1)<2.) 5
-    (0, Recur, Misc, ("recur", '↫')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the original arguments and the error value below.
@@ -1651,6 +1631,29 @@ primitive!(
     ///
     /// Errors thrown by [assert] can be caught with [try].
     (2(0), Assert, Misc, ("assert", '⍤')),
+    /// Set a function to recur to
+    ///
+    /// A function must have been set with [this] before calling [recur].
+    /// Here is a recursive factorial function.
+    /// ex: # Experimental!
+    ///   : ↬((|1 ×↫-1.|1)<2.) 5
+    /// This is only for demonstration purposes, as factorial can be implemented much more simply.
+    /// ex: # Experimental!
+    ///   : /×+1⇡ 5
+    ([1], This, Misc, ("this", '↬')),
+    /// Call a function recursively
+    ///
+    /// A function must have been set with [this] before calling [recur].
+    /// Here is a recursive factorial function.
+    /// ex: # Experimental!
+    ///   : ↬((|1 ×↫-1.|1)<2.) 5
+    /// This is only for demonstration purposes, as factorial can be implemented much more simply.
+    /// ex: /×+1⇡ 5
+    ///
+    /// The presence of a [recur] prevents the signature checker from working, so a signature must always be provided at the innermost function that contains a [recur].
+    /// ex: # Experimental!
+    ///   : ↬((+∩(|2 ↫ -)1,2|1)<2.) 5
+    (0(None), Recur, Misc, ("recur", '↫')),
     /// Spawn a thread
     ///
     /// Expects a function.

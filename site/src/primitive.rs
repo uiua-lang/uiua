@@ -99,7 +99,7 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
 
     let experimental = prim.is_experimental().then(|| {
         view! {
-            <span class="experimental">"⚠️ Warning: This "{if prim.is_modifier() { "modifier" }else{ "function" }}" is experimental and may be removed in the future."</span>
+            <p><span class="experimental">"⚠️ Warning: This "{if prim.is_modifier() { "modifier" }else{ "function" }}" is experimental and may be removed in the future."</span>" Experimental features can be enabled by putting an "<code>"# Experimental!"</code>" comment at the top of a program."</p>
         }
     });
 

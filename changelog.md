@@ -16,6 +16,7 @@ If you are reading this on the website, then these changes are live here.
 - Fix some bugs and crashes
 - Improve some formatting with multiline functions and switch functions
 - [`identity` `∘`](https://uiua.org/docs/identity) no longer formats from `()`
+- Allow `uiua <file> [args]` as a shortcut for `uiua run <file> [args]`
 ### Website
 - Allow disabling autorun for pad links
 

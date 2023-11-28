@@ -252,6 +252,18 @@ fn run() -> UiuaResult {
                 }
             }
         },
+        Err(e)
+            if e.kind() == ErrorKind::InvalidSubcommand
+                && env::args().nth(1).is_some_and(|file| file.ends_with(".ua")) =>
+        {
+            let mut args: Vec<String> = env::args().collect();
+            args[0] = "run".into();
+            let status = Command::new(env::current_exe().unwrap())
+                .args(args)
+                .status()
+                .unwrap();
+            exit(status.code().unwrap_or(1));
+        }
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
             let res = match working_file_path() {
                 Ok(path) => watch(

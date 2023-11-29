@@ -6,7 +6,6 @@ Uiua is not yet stable.
 This version is not yet released.
 If you are reading this on the website, then these changes are live here.
 ### Language
-- [`join` `⊂`](https://uiua.org/docs/join) now always works with a scalar regardless of the shape of the other array
 - [`windows` `◫`](https://uiua.org/docs/windows) can now take negative window sizes
 - Add an *experimental* distinction for some functions/modifiers
   - Experimental features are opt-in and must be enabled by putting an `# Experimental` comment at the top of a file

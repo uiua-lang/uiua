@@ -1374,16 +1374,16 @@ primitive!(
     ///
     /// The first function will be called, then the second function will be called on groups of values.
     /// To do something similar to [both] on more than 2 sets of values, you can use [dip] and [identity] to select values.
-    /// ex: # Experimental
+    /// ex: # Experimental!
     ///   : ⋔(↯3)⊙⊙∘ 1 2 3
     /// If you wanted to use 3 different constants, you could put the constants in the second function.
-    /// ex: # Experimental
+    /// ex: # Experimental!
     ///   : ⋔↯(2 3 4) 1 2 3
     /// This can also be done if the constants are on the stack.
-    /// ex: # Experimental
+    /// ex: # Experimental!
     ///   : ⋔↯⊙⊙∘ 2 3 4 1 2 3
     /// This can also be an interesting way to reorder many values.
-    /// ex: # Experimental
+    /// ex: # Experimental!
     ///   : [⋔⊙∘⊙⊙∘ 1 2 3 4 5 6]
     ([2], All, Planet, ("all", '⋔')),
     /// Apply a function under another

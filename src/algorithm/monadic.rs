@@ -5,10 +5,11 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     f64::consts::{PI, TAU},
     iter::{once, repeat},
+    mem::size_of,
     ptr,
 };
 
-use ecow::EcoVec;
+use ecow::{eco_vec, EcoVec};
 use rayon::prelude::*;
 use tinyvec::tiny_vec;
 
@@ -130,7 +131,7 @@ fn range(shape: &[usize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
     let mut len = shape.len();
     for &item in shape {
         let (new, overflow) = len.overflowing_mul(item);
-        if overflow {
+        if overflow || new > 2usize.pow(30) / size_of::<f64>() {
             let len = shape.len() as f64 * shape.iter().map(|d| *d as f64).product::<f64>();
             return Err(env.error(format!(
                 "Attempting to make a range from shape {} would \
@@ -141,21 +142,24 @@ fn range(shape: &[usize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
         }
         len = new;
     }
-    let mut data: EcoVec<f64> = EcoVec::with_capacity(len);
+    let mut data: EcoVec<f64> = eco_vec![0.0; len];
+    let data_slice = data.make_mut();
     let mut curr = vec![0; shape.len()];
+    let mut i = 0;
     loop {
         for d in &curr {
-            data.push(*d as f64);
+            data_slice[i] = *d as f64;
+            i += 1;
         }
-        let mut i = shape.len() - 1;
+        let mut j = shape.len() - 1;
         loop {
-            curr[i] += 1;
-            if curr[i] == shape[i] {
-                curr[i] = 0;
-                if i == 0 {
+            curr[j] += 1;
+            if curr[j] == shape[j] {
+                curr[j] = 0;
+                if j == 0 {
                     return Ok(data.into());
                 }
-                i -= 1;
+                j -= 1;
             } else {
                 break;
             }

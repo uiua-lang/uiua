@@ -1237,7 +1237,7 @@ primitive!(
     ///   : StdDev ← √⍜⌅(÷⊃⧻/+)(×.-).
     ///   : StdDev [1 2 5 8 9]
     ///
-    /// See also: [setinv]
+    /// For more complex inverse defining, see [setinv] and [setund].
     ([1], Rectify, OtherModifier, ("rectify", '⌅')),
     /// Set the inverse of a function
     ///
@@ -1247,13 +1247,14 @@ primitive!(
     ///   : ;F   @A
     ///   : ;⍘F  @B
     ///   : ;⍜F∘ @C
+    ///
     /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
     /// This can lead to errors if you are unaware of it.
     /// ex! # Experimental!
     ///   : F ← setinv+-
     ///   : ⍜F∘ 3 5
     ///
-    /// See also: [rectify]
+    /// For [under]-compatible inverse defining, see [setund].
     ([2], SetInverse, OtherModifier, "setinv"),
     /// Set the [under]-compatible inverse of a function
     ///
@@ -1264,18 +1265,22 @@ primitive!(
     /// Any outputs of the second function that excede the number of outputs of the first function will be popped and saved as *context* after the "do" part of the [under]. On the "undo" part, the context will be pushed onto the stack before calling the third function.
     ///
     /// For example, here is a manual re-implementation of [add]'s [under] behavior. Note that the second function has 2 outputs. The extra output is saved as context.
-    /// ex: F ← setund(+|⊃∘+|-)
+    /// ex: # Experimental!
+    ///   : F ← setund(+|⊃∘+|-)
     ///   : ⍜+(×10) 1 2
     ///   : ⍜F(×10) 1 2
     ///
     /// This example demonstrates the flow of input, output, and context.
-    /// ex: F ← setund(
+    /// ex: # Experimental!
+    ///   : F ← setund(
     ///   :   &p$"Normal _".
     ///   : | &p$"Do:   set ctx = _, value = _" ,, +1.
     ///   : | &p$"Undo: get ctx = _, value = _" ⊙.
     ///   : )
     ///   : ;F 5
     ///   : ;⍜F(×10) 5
+    ///
+    /// Inverses set with [setund] cannot be used with [invert]. For simpler inverse defining, see [setinv].
     ([3], SetUnder, OtherModifier, "setund"),
     /// Pop the second stack value then call a function
     ///

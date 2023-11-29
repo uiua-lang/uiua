@@ -1372,7 +1372,7 @@ primitive!(
     ///
     /// For just 2 sets of values, prefer [both].
     ///
-    /// The first function will be called, then the second function will be called on groups of values.
+    /// The second function will be called, then the first function will be called on groups of values.
     /// To do something similar to [both] on more than 2 sets of values, you can use [dip] and [identity] to select values.
     /// ex: # Experimental!
     ///   : ⋔(↯3)⊙⊙∘ 1 2 3

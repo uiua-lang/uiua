@@ -138,9 +138,8 @@ impl<'a> VirtualEnv<'a> {
                 let sig = self.pop_func()?.signature();
                 self.handle_sig(sig)?
             }
-            Instr::PushTemp { count, .. } | Instr::CopyToTemp { count, .. } => {
-                self.handle_args_outputs(*count, 0)?
-            }
+            Instr::PushTemp { count, .. } => self.handle_args_outputs(*count, 0)?,
+            Instr::CopyToTemp { .. } => {}
             Instr::PushTempFunctions(_) | Instr::PopTempFunctions(_) => {}
             Instr::GetTempFunction { sig, .. } => {
                 self.function_stack.push(Cow::Owned(Function::new(

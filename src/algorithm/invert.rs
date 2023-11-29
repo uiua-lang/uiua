@@ -192,11 +192,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
 
     macro_rules! stash2 {
         ($before:expr, $after:expr) => {
-            pat!(
-                $before,
-                (Over, Over, PushTempN(2), $before),
-                (PopTempN(2), $after),
-            )
+            pat!($before, (CopyToTempN(2), $before), (PopTempN(2), $after),)
         };
     }
 
@@ -204,23 +200,19 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         (Flip, $before:expr, $after:expr) => {
             pat!(
                 (Flip, $before),
-                (Dup, PushTempN(1), Flip, $before),
+                (CopyToTempN(1), Flip, $before),
                 (PopTempN(1), $after),
             )
         };
         (Flip, $before:expr) => {
             pat!(
                 (Flip, $before),
-                (Dup, PushTempN(1), Flip, $before),
+                (CopyToTempN(1), Flip, $before),
                 (PopTempN(1), Flip, $before),
             )
         };
         ($before:expr, $after:expr) => {
-            pat!(
-                ($before),
-                (Dup, PushTempN(1), $before),
-                (PopTempN(1), $after),
-            )
+            pat!(($before), (CopyToTempN(1), $before), (PopTempN(1), $after),)
         };
     }
 
@@ -238,22 +230,14 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         &bin!(Sub, Add),
         &bin!(Mul, Div),
         &bin!(Div, Mul),
-        &pat!(
-            (Flip, Pow),
-            (Dup, PushTempN(1), Flip, Pow),
-            (PopTempN(1), Log)
-        ),
-        &pat!(
-            Pow,
-            (Dup, PushTempN(1), Pow),
-            (PopTempN(1), 1, Flip, Div, Pow)
-        ),
+        &pat!((Flip, Pow), (CopyToTempN(1), Flip, Pow), (PopTempN(1), Log)),
+        &pat!(Pow, (CopyToTempN(1), Pow), (PopTempN(1), 1, Flip, Div, Pow)),
         &pat!(
             (Flip, Log),
-            (Dup, PushTempN(1), Flip, Log),
+            (CopyToTempN(1), Flip, Log),
             (1, Flip, Div, PopTempN(1), Flip, Pow)
         ),
-        &pat!(Log, (Dup, PushTempN(1), Log), (PopTempN(1), Flip, Pow)),
+        &pat!(Log, (CopyToTempN(1), Log), (PopTempN(1), Flip, Pow)),
         &(Val, stash2!(Take, Untake)),
         &stash2!(Take, Untake),
         &(Val, stash2!(Drop, Undrop)),
@@ -266,36 +250,24 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
             Val,
             pat!(
                 Keep,
-                (Over, Over, PushTempN(2), Keep),
+                (CopyToTempN(2), Keep),
                 (PopTempN(1), Flip, PopTempN(1), Unkeep)
             ),
         ),
         &pat!(
             Keep,
-            (Over, Over, PushTempN(2), Keep),
+            (CopyToTempN(2), Keep),
             (PopTempN(1), Flip, PopTempN(1), Unkeep),
         ),
-        &pat!(
-            Rotate,
-            (Dup, PushTempN(1), Rotate),
-            (PopTempN(1), Neg, Rotate),
-        ),
-        &pat!(Abs, (Dup, Sign, PushTempN(1), Abs), (PopTempN(1), Mul),),
+        &pat!(Rotate, (CopyToTempN(1), Rotate), (PopTempN(1), Neg, Rotate),),
+        &pat!(Abs, (CopyToTempN(1), Abs), (PopTempN(1), Sign, Mul),),
         &pat!(
             First,
-            (Dup, PushTempN(1), First),
+            (CopyToTempN(1), First),
             (PopTempN(1), 1, Drop, Flip, Join),
         ),
-        &pat!(
-            Last,
-            (Dup, PushTempN(1), Last),
-            (PopTempN(1), -1, Drop, Join),
-        ),
-        &pat!(
-            Shape,
-            (Dup, PushTempN(1), Shape),
-            (PopTempN(1), Flip, Reshape),
-        ),
+        &pat!(Last, (CopyToTempN(1), Last), (PopTempN(1), -1, Drop, Join),),
+        &pat!(Shape, (CopyToTempN(1), Shape), (PopTempN(1), Flip, Reshape),),
         &pat!(
             Deshape,
             (Dup, Shape, PushTempN(1), Deshape),
@@ -341,11 +313,10 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         &pat!(Abyss, Abyss, (1, Drop)),
         &pat!(Seabed, Seabed, (1, Drop)),
         &UnderPatternFn(under_from_inverse_pattern, "from inverse"),
-        &UnderPatternFn(under_push_temp_pattern, "push temp"),
-        &UnderPatternFn(under_copy_to_temp_pattern, "copy to temp"),
+        &UnderPatternFn(under_temp_pattern, "temp"),
     ];
 
-    // println!("undering {:?}", instrs);
+    println!("undering {:?}", instrs);
 
     let mut befores = Vec::new();
     let mut afters = Vec::new();
@@ -353,15 +324,15 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
     'find_pattern: loop {
         for pattern in patterns {
             if let Some((input, (bef, aft))) = pattern.under_extract(instrs_sections, g_sig) {
-                // println!(
-                //     "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
-                //     pattern,
-                //     &instrs_sections[..instrs_sections.len() - input.len()],
-                // );
+                println!(
+                    "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
+                    pattern,
+                    &instrs_sections[..instrs_sections.len() - input.len()],
+                );
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
-                    // println!("under {:?} to {:?} {:?}", instrs, befores, afters);
+                    println!("under {:?} to {:?} {:?}", instrs, befores, afters);
                     return Some((befores, afters));
                 }
                 instrs_sections = input;
@@ -395,6 +366,18 @@ struct PushTempN(usize);
 impl AsInstr for PushTempN {
     fn as_instr(&self, span: usize) -> Instr {
         Instr::PushTemp {
+            stack: TempStack::Under,
+            count: self.0,
+            span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CopyToTempN(usize);
+impl AsInstr for CopyToTempN {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::CopyToTemp {
             stack: TempStack::Under,
             count: self.0,
             span,
@@ -554,12 +537,16 @@ fn under_setunder_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Un
     Some((input, (befores, afters)))
 }
 
-fn under_copy_to_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
+fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
     let (
-        instr @ Instr::CopyToTemp {
+        instr @ (Instr::PushTemp {
             stack: TempStack::Inline,
             ..
-        },
+        }
+        | Instr::CopyToTemp {
+            stack: TempStack::Inline,
+            ..
+        }),
         input,
     ) = input.split_first()?
     else {
@@ -594,99 +581,36 @@ fn under_copy_to_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[In
     let input = &input[1..];
     // Calcular inner functions and signatures
     let (inner_befores, inner_afters) = under_instrs(inner, g_sig)?;
-    let (befores, afters) = match (g_sig.args, g_sig.outputs) {
+    let inner_befores_sig = instrs_signature(&inner_befores).ok()?;
+    let inner_afters_sig = instrs_signature(&inner_afters).ok()?;
+    let mut befores = inner_befores;
+    befores.insert(0, instr.clone());
+    befores.push(end_instr.clone());
+    let afters = match (g_sig.args, g_sig.outputs) {
         (0, _) => return None,
         (_, 1) => {
-            let mut befores = inner_befores;
-            befores.insert(0, instr.clone());
-            befores.push(end_instr.clone());
-            (befores, Vec::new())
+            let both = inner.iter().zip(input).all(|(a, b)| a == b);
+            if both {
+                Vec::new()
+            } else {
+                let mut afters = inner_afters;
+                if inner_befores_sig.args <= inner_afters_sig.args && g_sig.args <= g_sig.outputs {
+                    afters.insert(0, instr.clone());
+                    afters.push(end_instr.clone());
+                }
+                afters
+            }
         }
         (2, 2) => {
-            let mut befores = inner_befores;
-            befores.insert(0, instr.clone());
-            befores.push(end_instr.clone());
             let mut afters = inner_afters;
-            afters.insert(0, instr.clone());
-            afters.push(end_instr.clone());
-            (befores, afters)
+            if inner_befores_sig.args <= inner_afters_sig.args && g_sig.args <= g_sig.outputs {
+                afters.insert(0, instr.clone());
+                afters.push(end_instr.clone());
+            }
+            afters
         }
         _ => return None,
     };
-    Some((input, (befores, afters)))
-}
-
-fn under_push_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
-    let (
-        &Instr::PushTemp {
-            stack: TempStack::Inline,
-            count,
-            span,
-        },
-        input,
-    ) = input.split_first()?
-    else {
-        return None;
-    };
-    // Find end
-    let mut depth = 1;
-    let mut end = 0;
-    for (i, instr) in input.iter().enumerate() {
-        match instr {
-            Instr::PushTemp {
-                stack: TempStack::Inline,
-                ..
-            }
-            | Instr::CopyToTemp {
-                stack: TempStack::Inline,
-                ..
-            } => depth += 1,
-            Instr::PopTemp {
-                stack: TempStack::Inline,
-                ..
-            } => depth -= 1,
-            _ => {}
-        }
-        if depth == 0 {
-            end = i;
-            break;
-        }
-    }
-    let (inner, input) = input.split_at(end);
-    let input = &input[1..];
-    // Calcular inner functions and signatures
-    let (inner_befores, inner_afters) = under_instrs(inner, g_sig)?;
-    let inner_befores_sig = instrs_signature(&inner_befores).ok()?;
-    let inner_afters_sig = instrs_signature(&inner_afters).ok()?;
-    // Create befores
-    let mut befores = vec![Instr::PushTemp {
-        stack: TempStack::Inline,
-        count,
-        span,
-    }];
-    befores.extend(inner_befores);
-    befores.push(Instr::PopTemp {
-        stack: TempStack::Inline,
-        count,
-        span,
-    });
-    // Create afters
-    let mut afters = inner_afters;
-    if inner_befores_sig.args <= inner_afters_sig.args && g_sig.args <= g_sig.outputs {
-        afters.insert(
-            0,
-            Instr::PushTemp {
-                stack: TempStack::Inline,
-                count,
-                span,
-            },
-        );
-        afters.push(Instr::PopTemp {
-            stack: TempStack::Inline,
-            count,
-            span,
-        });
-    }
     Some((input, (befores, afters)))
 }
 
@@ -733,9 +657,7 @@ fn under_partition_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr
     };
     let (f_before, f_after) = f.under(g_sig)?;
     let befores = vec![
-        Instr::Prim(Primitive::Over, span),
-        Instr::Prim(Primitive::Over, span),
-        Instr::PushTemp {
+        Instr::CopyToTemp {
             stack: TempStack::Under,
             count: 2,
             span,
@@ -757,9 +679,7 @@ fn under_group_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], U
     };
     let (f_before, f_after) = f.under(g_sig)?;
     let befores = vec![
-        Instr::Prim(Primitive::Over, span),
-        Instr::Prim(Primitive::Over, span),
-        Instr::PushTemp {
+        Instr::CopyToTemp {
             stack: TempStack::Under,
             count: 2,
             span,

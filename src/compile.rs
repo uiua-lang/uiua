@@ -1147,7 +1147,7 @@ impl Uiua {
                     let sig = Signature::new(
                         before_sig.args + g_sig.args + after_sig.args
                             - before_sig.outputs
-                            - after_sig.outputs,
+                            - g_sig.outputs,
                         before_sig.outputs + g_sig.outputs + after_sig.outputs
                             - g_sig.args
                             - after_sig.args,
@@ -1176,7 +1176,7 @@ impl Uiua {
                 let span = self.add_span(modified.modifier.span.clone());
                 instrs.insert(
                     0,
-                    Instr::CopyToTemp {
+                    Instr::PushTemp {
                         stack: TempStack::Inline,
                         count: sig.args,
                         span,

@@ -587,10 +587,11 @@ code:
                             count - env.stack.len()
                         )));
                     }
-                    for _ in 0..count {
-                        let value = env.pop("value to save")?;
+                    for i in 0..count {
+                        let value = env.stack[env.stack.len() - i - 1].clone();
                         env.temp_stacks[stack as usize].push(value);
                     }
+                    // env.touch_array_stack(count);
                     Ok(())
                 }),
                 &Instr::CopyFromTemp {
@@ -801,9 +802,9 @@ code:
         self.pop_convert(Value::as_string)
     }
     /// Simulates popping a value and imediately pushing it back
-    pub(crate) fn touch_array_stack(&mut self) {
+    pub(crate) fn touch_array_stack(&mut self, n: usize) {
         for bottom in &mut self.scope.array {
-            *bottom = (*bottom).min(self.stack.len().saturating_sub(1));
+            *bottom = (*bottom).min(self.stack.len().saturating_sub(n));
         }
     }
     /// Push a value onto the stack

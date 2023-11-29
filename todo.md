@@ -2,8 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Delay missing modifier arg checking to compile time
-- Allow grouping negation of glyph constants
 - Multimedia
   - Sound input
   - Webcam input

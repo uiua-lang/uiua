@@ -68,9 +68,9 @@ impl Value {
             Self::Num(_) => 0,
             #[cfg(feature = "bytes")]
             Self::Byte(_) => 0,
-            Self::Char(_) => 1,
-            Self::Box(_) => 2,
-            Self::Complex(_) => 3,
+            Self::Complex(_) => 1,
+            Self::Char(_) => 2,
+            Self::Box(_) => 3,
         }
     }
     /// Get a reference to a possible number array

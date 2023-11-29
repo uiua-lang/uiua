@@ -630,7 +630,7 @@ fn TutorialTypes() -> impl IntoView {
 
         <h2 id="empty-arrays">"Empty Arrays"</h2>
         <p>"The type of an array that is constructed with no elements depends on the syntax used to construct it. Its shape is always "<code>"[0]"</code>"."</p>
-        <p>"We can use the "<Prim prim=Type/>" function to get the type of an array. "<code>"0"</code>" corresponds to numbers, "<code>"1"</code>" to characters, and "<code>"2"</code>" to boxes."</p>
+        <p>"We can use the "<Prim prim=Type/>" function to get the type of an array. "<code>"0"</code>" corresponds to real numbers, "<code>"1"</code>" to complex numbers, "<code>"2"</code>" to characters, and "<code>"3"</code>" to boxes."</p>
         <Editor example="type []"/>
         <Editor example="type \"\""/>
         <Editor example="type {}"/>

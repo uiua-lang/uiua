@@ -51,7 +51,6 @@ impl BasicValue {
                 Value::Num(n) => n.data.iter().map(|n| BasicValue::Num(*n)).collect(),
                 #[cfg(feature = "bytes")]
                 Value::Byte(b) => b.data.iter().map(|b| BasicValue::Num(*b as f64)).collect(),
-
                 Value::Complex(c) => c.data.iter().map(|_| BasicValue::Other).collect(),
                 Value::Char(c) => c.data.iter().map(|_| BasicValue::Other).collect(),
                 Value::Box(b) => b.data.iter().map(|_| BasicValue::Other).collect(),

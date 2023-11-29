@@ -17,6 +17,7 @@ If you are reading this on the website, then these changes are live here.
 - Add the experimental [`recur` `↫`](https://uiua.org/docs/recur) modifier, which calls a function recursively
 - Allow custom modifiers to use switch function syntax
 - [`sign` `±`](https://uiua.org/docs/sign) now normalizes complex numbers
+- Change [`type`](https://uiua.org/docs/type) mapping
 ### Interpreter
 - Fix some bugs and crashes
 - Improve some formatting with multiline functions and switch functions

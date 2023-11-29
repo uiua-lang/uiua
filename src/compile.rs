@@ -746,6 +746,7 @@ impl Uiua {
         Ok(())
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
+        let op_count = modified.code_operands().count();
         if let Modifier::Primitive(prim) = modified.modifier.value {
             // Give advice about redundancy
             match prim {
@@ -790,11 +791,12 @@ impl Uiua {
         }
 
         // De-sugar switched
-        if modified.operands.len() == 1 {
+        if op_count == 1 {
+            let operand = modified.code_operands().next().unwrap().clone();
             if let Sp {
                 value: Word::Switch(sw),
                 span,
-            } = modified.operands.first().cloned().unwrap()
+            } = operand
             {
                 match &modified.modifier.value {
                     Modifier::Primitive(Primitive::Dip) => {
@@ -865,6 +867,24 @@ impl Uiua {
                     _ => {}
                 }
             }
+        }
+
+        // Validate operand count
+        if op_count != modified.modifier.value.args() as usize {
+            return Err((modified.modifier.span.clone())
+                .sp(format!(
+                    "{} requires {} function argument{}, but {} {} provided",
+                    modified.modifier.value,
+                    modified.modifier.value.args(),
+                    if modified.modifier.value.args() == 1 {
+                        ""
+                    } else {
+                        "s"
+                    },
+                    op_count,
+                    if op_count == 1 { "was" } else { "were" }
+                ))
+                .into());
         }
 
         // Inlining
@@ -996,11 +1016,7 @@ impl Uiua {
                 };
             }
             Fork => {
-                let mut operands = modified
-                    .operands
-                    .clone()
-                    .into_iter()
-                    .filter(|word| word.value.is_code());
+                let mut operands = modified.code_operands().cloned();
                 let (a_instrs, a_sig) =
                     self.compile_operand_words(vec![operands.next().unwrap()])?;
                 let (b_instrs, b_sig) =

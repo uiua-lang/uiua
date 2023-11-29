@@ -199,6 +199,13 @@ pub struct Modified {
     pub operands: Vec<Sp<Word>>,
 }
 
+impl Modified {
+    /// Get an iterator over the functions that are actual code
+    pub fn code_operands(&self) -> impl Iterator<Item = &Sp<Word>> {
+        self.operands.iter().filter(|word| word.value.is_code())
+    }
+}
+
 impl fmt::Debug for Modified {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.modifier.value)?;

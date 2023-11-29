@@ -497,8 +497,6 @@ impl Parser {
         };
         let mut args = Vec::new();
         self.try_spaces();
-        let mut arg_count = 0;
-        let mut is_switch = false;
         for i in 0..modifier.args() {
             args.extend(self.try_spaces());
             if let Some(arg) = self
@@ -511,32 +509,24 @@ impl Parser {
                 if let Word::Switch(sw) = &arg.value {
                     if i == 0 && sw.branches.len() >= modifier.args() as usize {
                         args.push(arg);
-                        is_switch = true;
                         break;
                     }
                 }
                 args.push(arg);
-                arg_count += 1;
             } else {
                 break;
             }
         }
-        if !is_switch && arg_count != modifier.args() as usize {
-            self.errors.push(self.expected([Expectation::Term]));
-        }
 
-        Some(if args.is_empty() {
-            mod_span.sp(match modifier {
-                Modifier::Primitive(prim) => Word::Primitive(prim),
-                Modifier::Ident(ident) => Word::Ident(ident),
-            })
+        let span = if let Some(last) = args.last() {
+            mod_span.clone().merge(last.span.clone())
         } else {
-            let span = mod_span.clone().merge(args.last().unwrap().span.clone());
-            span.sp(Word::Modified(Box::new(Modified {
-                modifier: mod_span.sp(modifier),
-                operands: args,
-            })))
-        })
+            mod_span.clone()
+        };
+        Some(span.sp(Word::Modified(Box::new(Modified {
+            modifier: mod_span.sp(modifier),
+            operands: args,
+        }))))
     }
     fn try_placeholder(&mut self) -> Option<Sp<Word>> {
         let sig = self.try_signature(Caret)?;

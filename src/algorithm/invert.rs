@@ -120,7 +120,7 @@ fn invert_instr_impl(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
         &invert_invert_pattern,
         &invert_rectify_pattern,
         &invert_setinverse_pattern,
-        &ivnert_trivial_pattern,
+        &invert_trivial_pattern,
         &(Val, ([Rotate], [Neg, Rotate])),
         &([Rotate], [Neg, Rotate]),
         &pat!(Sqrt, (2, Pow)),
@@ -225,7 +225,6 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
     }
 
     let patterns: &[&dyn UnderPattern] = &[
-        &UnderPatternFn(under_both_pattern, "both"),
         &UnderPatternFn(under_rows_pattern, "rows"),
         &UnderPatternFn(under_each_pattern, "each"),
         &UnderPatternFn(under_partition_pattern, "partition"),
@@ -342,8 +341,11 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         &pat!(Abyss, Abyss, (1, Drop)),
         &pat!(Seabed, Seabed, (1, Drop)),
         &UnderPatternFn(under_from_inverse_pattern, "from inverse"),
-        &UnderPatternFn(under_temp_pattern, "temp"),
+        &UnderPatternFn(under_push_temp_pattern, "push temp"),
+        &UnderPatternFn(under_copy_to_temp_pattern, "copy to temp"),
     ];
+
+    // println!("undering {:?}", instrs);
 
     let mut befores = Vec::new();
     let mut afters = Vec::new();
@@ -456,7 +458,7 @@ trait UnderPattern: fmt::Debug {
     ) -> Option<(&'a [Instr], Under)>;
 }
 
-fn ivnert_trivial_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
+fn invert_trivial_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
     use Instr::*;
     match input {
         [Prim(prim, span), input @ ..] => {
@@ -477,6 +479,7 @@ fn ivnert_trivial_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
                 return Some((input, vec![impl_prim_inverse(prim, span)?]));
             }
         }
+        [PushSig(_) | PopSig, input @ ..] => return Some((input, Vec::new())),
         _ => {}
     }
     None
@@ -551,7 +554,69 @@ fn under_setunder_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Un
     Some((input, (befores, afters)))
 }
 
-fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
+fn under_copy_to_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
+    let (
+        instr @ Instr::CopyToTemp {
+            stack: TempStack::Inline,
+            ..
+        },
+        input,
+    ) = input.split_first()?
+    else {
+        return None;
+    };
+    // Find end
+    let mut depth = 1;
+    let mut end = 0;
+    for (i, instr) in input.iter().enumerate() {
+        match instr {
+            Instr::PushTemp {
+                stack: TempStack::Inline,
+                ..
+            }
+            | Instr::CopyToTemp {
+                stack: TempStack::Inline,
+                ..
+            } => depth += 1,
+            Instr::PopTemp {
+                stack: TempStack::Inline,
+                ..
+            } => depth -= 1,
+            _ => {}
+        }
+        if depth == 0 {
+            end = i;
+            break;
+        }
+    }
+    let (inner, input) = input.split_at(end);
+    let end_instr = &input[0];
+    let input = &input[1..];
+    // Calcular inner functions and signatures
+    let (inner_befores, inner_afters) = under_instrs(inner, g_sig)?;
+    let (befores, afters) = match (g_sig.args, g_sig.outputs) {
+        (0, _) => return None,
+        (_, 1) => {
+            let mut befores = inner_befores;
+            befores.insert(0, instr.clone());
+            befores.push(end_instr.clone());
+            (befores, Vec::new())
+        }
+        (2, 2) => {
+            let mut befores = inner_befores;
+            befores.insert(0, instr.clone());
+            befores.push(end_instr.clone());
+            let mut afters = inner_afters;
+            afters.insert(0, instr.clone());
+            afters.push(end_instr.clone());
+            (befores, afters)
+        }
+        _ => return None,
+    };
+    Some((input, (befores, afters)))
+}
+
+fn under_push_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
     let (
         &Instr::PushTemp {
             stack: TempStack::Inline,
@@ -569,6 +634,10 @@ fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
     for (i, instr) in input.iter().enumerate() {
         match instr {
             Instr::PushTemp {
+                stack: TempStack::Inline,
+                ..
+            }
+            | Instr::CopyToTemp {
                 stack: TempStack::Inline,
                 ..
             } => depth += 1,
@@ -618,38 +687,6 @@ fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
             span,
         });
     }
-    Some((input, (befores, afters)))
-}
-
-fn under_both_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
-    let [Instr::PushFunc(func), Instr::Prim(Primitive::Both, span), input @ ..] = input else {
-        return None;
-    };
-    let (befores, afters) = under_instrs(&func.instrs, g_sig)?;
-    let (befores, afters) = match (g_sig.args, g_sig.outputs) {
-        (2, 1) => {
-            let before_func = Function::new(func.id.clone(), befores, func.signature());
-            let befores = vec![
-                Instr::push_func(before_func),
-                Instr::Prim(Primitive::Both, *span),
-            ];
-            (befores, afters)
-        }
-        (2, 2) => {
-            let before_func = Function::new(func.id.clone(), befores, func.signature());
-            let after_func = Function::new(func.id.clone(), afters, func.signature());
-            let befores = vec![
-                Instr::push_func(before_func),
-                Instr::Prim(Primitive::Both, *span),
-            ];
-            let afters = vec![
-                Instr::push_func(after_func),
-                Instr::Prim(Primitive::Both, *span),
-            ];
-            (befores, afters)
-        }
-        _ => return None,
-    };
     Some((input, (befores, afters)))
 }
 

@@ -576,7 +576,9 @@ impl Primitive {
                 let fill_value = env.pop("fill value")?;
                 env.with_fill(fill_value, |env| env.call(f))?;
             }
-            Primitive::Both => fork::both(env)?,
+            Primitive::Both => {
+                return Err(env.error("Both was not inlined. This is a bug in the interpreter"))
+            }
             Primitive::Fork => {
                 return Err(env.error("Fork was not inlined. This is a bug in the interpreter"))
             }

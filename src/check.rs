@@ -90,8 +90,32 @@ impl<'a> VirtualEnv<'a> {
         }
     }
     fn instrs(&mut self, instrs: &'a [Instr]) -> Result<(), String> {
-        for instr in instrs {
-            self.instr(instr)?;
+        let mut i = 0;
+        while i < instrs.len() {
+            match &instrs[i] {
+                Instr::PushSig(sig) => {
+                    let mut depth = 0;
+                    i += 1;
+                    while i < instrs.len() {
+                        match &instrs[i] {
+                            Instr::PushSig(_) => depth += 1,
+                            Instr::PopSig => {
+                                if depth == 0 {
+                                    break;
+                                } else {
+                                    depth -= 1;
+                                }
+                            }
+                            _ => {}
+                        }
+                        i += 1;
+                    }
+                    self.handle_sig(*sig)?;
+                }
+                Instr::PopSig => panic!("PopSig without PushSig"),
+                instr => self.instr(instr)?,
+            }
+            i += 1;
         }
         Ok(())
     }
@@ -114,7 +138,9 @@ impl<'a> VirtualEnv<'a> {
                 let sig = self.pop_func()?.signature();
                 self.handle_sig(sig)?
             }
-            Instr::PushTemp { count, .. } => self.handle_args_outputs(*count, 0)?,
+            Instr::PushTemp { count, .. } | Instr::CopyToTemp { count, .. } => {
+                self.handle_args_outputs(*count, 0)?
+            }
             Instr::PushTempFunctions(_) | Instr::PopTempFunctions(_) => {}
             Instr::GetTempFunction { sig, .. } => {
                 self.function_stack.push(Cow::Owned(Function::new(
@@ -123,7 +149,7 @@ impl<'a> VirtualEnv<'a> {
                     *sig,
                 )));
             }
-            Instr::PopTemp { count, .. } | Instr::CopyTemp { count, .. } => {
+            Instr::PopTemp { count, .. } | Instr::CopyFromTemp { count, .. } => {
                 self.handle_args_outputs(0, *count)?
             }
             Instr::PushFunc(f) => self.function_stack.push(Cow::Borrowed(f)),
@@ -469,6 +495,9 @@ impl<'a> VirtualEnv<'a> {
                 for _ in 0..outputs {
                     self.stack.push(BasicValue::Other);
                 }
+            }
+            Instr::PushSig(_) | Instr::PopSig => {
+                panic!("PushSig and PopSig should have been handled higher up")
             }
         }
         // println!("{instr:?} -> {}/{}", self.min_height, self.stack.len());

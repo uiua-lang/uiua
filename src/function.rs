@@ -63,7 +63,12 @@ pub enum Instr {
         count: usize,
         span: usize,
     },
-    CopyTemp {
+    CopyToTemp {
+        stack: TempStack,
+        count: usize,
+        span: usize,
+    },
+    CopyFromTemp {
         stack: TempStack,
         offset: usize,
         count: usize,
@@ -74,6 +79,8 @@ pub enum Instr {
         count: usize,
         span: usize,
     },
+    PushSig(Signature),
+    PopSig,
 }
 
 /// A type of temporary stacks
@@ -105,12 +112,12 @@ impl PartialEq for Instr {
             (Self::PushTemp { count: a, .. }, Self::PushTemp { count: b, .. }) => a == b,
             (Self::PopTemp { count: a, .. }, Self::PopTemp { count: b, .. }) => a == b,
             (
-                Self::CopyTemp {
+                Self::CopyFromTemp {
                     offset: ao,
                     count: ac,
                     ..
                 },
-                Self::CopyTemp {
+                Self::CopyFromTemp {
                     offset: bo,
                     count: bc,
                     ..
@@ -169,11 +176,13 @@ impl Hash for Instr {
             Instr::Dynamic(f) => f.id.hash(state),
             Instr::PushTemp { count, .. } => count.hash(state),
             Instr::PopTemp { count, .. } => count.hash(state),
-            Instr::CopyTemp { offset, count, .. } => {
+            Instr::CopyToTemp { count, .. } => count.hash(state),
+            Instr::CopyFromTemp { offset, count, .. } => {
                 offset.hash(state);
                 count.hash(state);
             }
             Instr::DropTemp { count, .. } => count.hash(state),
+            Instr::PushSig(_) | Instr::PopSig => {}
         }
     }
 }
@@ -192,9 +201,12 @@ impl Instr {
             self,
             Self::PushTemp { .. }
                 | Self::PopTemp { .. }
-                | Self::CopyTemp { .. }
+                | Self::CopyFromTemp { .. }
                 | Self::DropTemp { .. }
         )
+    }
+    pub(crate) fn is_compile_only(&self) -> bool {
+        matches!(self, Self::PushSig(_) | Self::PopSig)
     }
 }
 
@@ -231,15 +243,18 @@ impl fmt::Display for Instr {
             Instr::Dynamic(df) => write!(f, "{df:?}"),
             Instr::PushTemp { stack, count, .. } => write!(f, "<push {stack} {count}>"),
             Instr::PopTemp { stack, count, .. } => write!(f, "<pop {stack} {count}>"),
-            Instr::CopyTemp {
+            Instr::CopyFromTemp {
                 stack,
                 offset,
                 count,
                 ..
-            } => {
-                write!(f, "<copy {stack} {offset}/{count}>")
+            } => write!(f, "<copy from {stack} {offset}/{count}>"),
+            Instr::CopyToTemp { stack, count, .. } => {
+                write!(f, "<copy to {stack} {count}>")
             }
             Instr::DropTemp { stack, count, .. } => write!(f, "<drop {stack} {count}>"),
+            Instr::PushSig(sig) => write!(f, "<push {sig}>"),
+            Instr::PopSig => write!(f, "<pop sig>"),
         }
     }
 }
@@ -409,7 +424,8 @@ impl fmt::Display for Function {
 impl Function {
     /// Create a new function
     pub fn new(id: FunctionId, instrs: impl Into<Vec<Instr>>, signature: Signature) -> Self {
-        let instrs = instrs.into();
+        let mut instrs = instrs.into();
+        instrs.retain(|instr| !instr.is_compile_only());
         Self {
             id,
             instrs,
@@ -418,8 +434,9 @@ impl Function {
     }
     /// Create a new function and infer its signature
     pub fn new_inferred(id: FunctionId, instrs: impl Into<Vec<Instr>>) -> Result<Self, String> {
-        let instrs = instrs.into();
+        let mut instrs = instrs.into();
         let signature = instrs_signature(&instrs)?;
+        instrs.retain(|instr| !instr.is_compile_only());
         Ok(Self {
             id,
             signature,

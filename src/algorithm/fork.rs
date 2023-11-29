@@ -6,44 +6,6 @@ use crate::{value::Value, Function, Shape, Signature, Uiua, UiuaResult};
 
 use super::multi_output;
 
-pub fn both(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
-    match f.signature().args {
-        0 => {
-            env.call(f.clone())?;
-            env.call(f)?;
-        }
-        1 => {
-            let a = env.pop(1)?;
-            let b = env.pop(2)?;
-            env.push(b);
-            env.call(f.clone())?;
-            env.push(a);
-            env.call(f)?;
-        }
-        n => {
-            let mut a = Vec::with_capacity(n);
-            let mut b = Vec::with_capacity(n);
-            for i in 0..n {
-                a.push(env.pop(i + 1)?);
-            }
-            for i in 0..n {
-                b.push(env.pop(n + i + 1)?);
-            }
-            for b in b.into_iter().rev() {
-                env.push(b);
-            }
-            env.call(f.clone())?;
-            for a in a.into_iter().rev() {
-                env.push(a);
-            }
-            env.call(f)?;
-        }
-    }
-
-    Ok(())
-}
-
 pub fn all(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let g = env.pop_function()?;

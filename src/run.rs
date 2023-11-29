@@ -580,7 +580,20 @@ code:
 
                     Ok(())
                 }),
-                &Instr::CopyTemp {
+                &Instr::CopyToTemp { stack, count, span } => self.with_span(span, |env| {
+                    if env.stack.len() < count {
+                        return Err(env.error(format!(
+                            "Stack was empty evaluating argument {}",
+                            count - env.stack.len()
+                        )));
+                    }
+                    for _ in 0..count {
+                        let value = env.pop("value to save")?;
+                        env.temp_stacks[stack as usize].push(value);
+                    }
+                    Ok(())
+                }),
+                &Instr::CopyFromTemp {
                     stack,
                     offset,
                     count,
@@ -604,6 +617,14 @@ code:
                     stack.truncate(stack.len() - count);
                     Ok(())
                 }),
+                Instr::PushSig(_) => Err(self.error(
+                    "PushSig should have been removed before running. \
+                    This is a bug in the interpreter.",
+                )),
+                Instr::PopSig => Err(self.error(
+                    "PopSig should have been removed before running. \
+                This is a bug in the interpreter.",
+                )),
             };
             if self.time_instrs {
                 let end_time = instant::now();

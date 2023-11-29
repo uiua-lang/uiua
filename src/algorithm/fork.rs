@@ -92,10 +92,10 @@ pub fn all(env: &mut Uiua) -> UiuaResult {
     let mut lower_args = Vec::with_capacity(lower_arg_count);
     let mut upper_args = Vec::with_capacity(upper_arg_count);
     for i in 0..upper_arg_count {
-        upper_args.push(env.pop(lower_arg_count + i + 1)?);
+        upper_args.push(env.pop(i + 1)?);
     }
     for i in 0..lower_arg_count {
-        lower_args.push(env.pop(i + 1)?);
+        lower_args.push(env.pop(upper_arg_count + i + 1)?);
     }
     let mut lower_args = lower_args.into_iter().rev();
     let mut upper_args = upper_args.into_iter().rev();

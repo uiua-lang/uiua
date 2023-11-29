@@ -1370,7 +1370,7 @@ primitive!(
     ([2], Bracket, Planet, ("bracket", '⊓')),
     /// Call a function on many distinct sets of values
     ///
-    /// For just 2 sets of values, prefer [both].
+    /// For just 2 sets of values, [both] is often simpler.
     ///
     /// The second function will be called, then the first function will be called on groups of values.
     /// To do something similar to [both] on more than 2 sets of values, you can use [dip] and [identity] to select values.

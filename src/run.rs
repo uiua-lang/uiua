@@ -973,7 +973,6 @@ code:
     pub(crate) fn box_fill(&self) -> Option<Boxed> {
         self.scope.fills.boxes.last().cloned()
     }
-
     pub(crate) fn complex_fill(&self) -> Option<crate::Complex> {
         self.scope.fills.complexes.last().copied()
     }

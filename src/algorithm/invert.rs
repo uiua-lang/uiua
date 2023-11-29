@@ -230,6 +230,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         &UnderPatternFn(under_each_pattern, "each"),
         &UnderPatternFn(under_partition_pattern, "partition"),
         &UnderPatternFn(under_group_pattern, "group"),
+        &UnderPatternFn(under_setunder_pattern, "setunder"),
         &bin!(Flip, Add, Sub),
         &bin!(Flip, Mul, Div),
         &bin!(Flip, Sub),
@@ -518,6 +519,36 @@ fn under_from_inverse_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr]
         }
         end += 1;
     }
+}
+
+fn under_setunder_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Under)> {
+    let [Instr::PushFunc(after), Instr::PushFunc(before), Instr::PushFunc(normal), Instr::Prim(Primitive::SetUnder, span), input @ ..] =
+        input
+    else {
+        return None;
+    };
+    if before.signature().outputs < normal.signature().outputs {
+        return None;
+    }
+    let to_save = before.signature().outputs - normal.signature().outputs;
+    let mut befores = before.instrs.clone();
+    let mut afters = after.instrs.clone();
+    if to_save > 0 {
+        befores.push(Instr::PushTemp {
+            stack: TempStack::Under,
+            count: to_save,
+            span: *span,
+        });
+        afters.insert(
+            0,
+            Instr::PopTemp {
+                stack: TempStack::Under,
+                count: to_save,
+                span: *span,
+            },
+        );
+    }
+    Some((input, (befores, afters)))
 }
 
 fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {

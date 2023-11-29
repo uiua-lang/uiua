@@ -404,6 +404,12 @@ impl<'a> VirtualEnv<'a> {
                     let _inv = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }
+                SetUnder => {
+                    let f = self.pop_func()?;
+                    let _before = self.pop_func()?;
+                    let _after = self.pop_func()?;
+                    self.handle_sig(f.signature())?;
+                }
                 Dump => {
                     self.pop_func()?;
                 }

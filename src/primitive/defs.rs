@@ -1247,6 +1247,28 @@ primitive!(
     /// ex! F ← setinv+-
     ///   : ⍜F∘ 3 5
     ([2], SetInverse, OtherModifier, "setinv"),
+    /// Set the [under]-compatible inverse of a function
+    ///
+    /// The first function will be called if the function is *outside* an [under].
+    /// The second function will be called in the "do" part of an [under].
+    /// The third function will be called in the "undo" part of an [under].
+    ///
+    /// Any outputs of the second function that excede the number of outputs of the first function will be popped and saved as *context* after the "do" part of the [under]. On the "undo" part, the context will be pushed onto the stack before calling the third function.
+    ///
+    /// For example, here is a manual re-implementation of [add]'s [under] behavior. Note that the second function has 2 outputs. The extra output is saved as context.
+    /// ex: F ← setund(+|⊃∘+|-)
+    ///   : ⍜+(×10) 1 2
+    ///   : ⍜F(×10) 1 2
+    ///
+    /// This example demonstrates the flow of input, output, and context.
+    /// ex: F ← setund(
+    ///   :   &p$"Normal _".
+    ///   : | &p$"Do:   set ctx = _, value = _" ,, +1.
+    ///   : | &p$"Undo: get ctx = _, value = _" ⊙.
+    ///   : )
+    ///   : ;F 5
+    ///   : ;⍜F(×10) 5
+    ([3], SetUnder, OtherModifier, "setund"),
     /// Pop the second stack value then call a function
     ///
     /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [reach] is useful.

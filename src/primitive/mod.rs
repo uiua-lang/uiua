@@ -283,7 +283,7 @@ impl Primitive {
     /// Check if this primitive is experimental
     pub fn is_experimental(&self) -> bool {
         use Primitive::*;
-        matches!(self, SetInverse | Rectify)
+        matches!(self, SetInverse | SetUnder | Rectify)
     }
     /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {
@@ -685,6 +685,12 @@ impl Primitive {
             Primitive::SetInverse => {
                 let f = env.pop_function()?;
                 let _inv = env.pop_function()?;
+                env.call(f)?;
+            }
+            Primitive::SetUnder => {
+                let f = env.pop_function()?;
+                let _before = env.pop_function()?;
+                let _after = env.pop_function()?;
                 env.call(f)?;
             }
             Primitive::Trace => trace(env, false)?,

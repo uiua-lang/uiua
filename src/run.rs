@@ -591,7 +591,6 @@ code:
                         let value = env.stack[env.stack.len() - i - 1].clone();
                         env.temp_stacks[stack as usize].push(value);
                     }
-                    // env.touch_array_stack(count);
                     Ok(())
                 }),
                 &Instr::CopyFromTemp {

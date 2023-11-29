@@ -316,7 +316,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         &UnderPatternFn(under_temp_pattern, "temp"),
     ];
 
-    println!("undering {:?}", instrs);
+    // println!("undering {:?}", instrs);
 
     let mut befores = Vec::new();
     let mut afters = Vec::new();
@@ -324,15 +324,15 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
     'find_pattern: loop {
         for pattern in patterns {
             if let Some((input, (bef, aft))) = pattern.under_extract(instrs_sections, g_sig) {
-                println!(
-                    "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
-                    pattern,
-                    &instrs_sections[..instrs_sections.len() - input.len()],
-                );
+                // println!(
+                //     "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
+                //     pattern,
+                //     &instrs_sections[..instrs_sections.len() - input.len()],
+                // );
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
-                    println!("under {:?} to {:?} {:?}", instrs, befores, afters);
+                    // println!("under {:?} to {:?} {:?}", instrs, befores, afters);
                     return Some((befores, afters));
                 }
                 instrs_sections = input;

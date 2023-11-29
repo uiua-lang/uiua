@@ -1148,9 +1148,9 @@ impl Uiua {
                         before_sig.args + g_sig.args + after_sig.args
                             - before_sig.outputs
                             - g_sig.outputs,
-                        before_sig.outputs + g_sig.outputs + after_sig.outputs
-                            - g_sig.args
-                            - after_sig.args,
+                        (before_sig.outputs + g_sig.outputs)
+                            .saturating_sub(g_sig.args + after_sig.args)
+                            + after_sig.outputs,
                     );
                     if call {
                         self.push_instr(Instr::PushSig(sig));

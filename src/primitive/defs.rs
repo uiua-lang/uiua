@@ -1355,6 +1355,24 @@ primitive!(
     /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
     /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
     ([2], Bracket, Planet, ("bracket", '⊓')),
+    /// Call a function on many distinct sets of values
+    ///
+    /// For just 2 sets of values, prefer [both].
+    ///
+    /// The first function will be called, then the second function will be called on groups of values.
+    /// To do something similar to [both] on more than 2 sets of values, you can use [dip] and [identity] to select values.
+    /// ex: # Experimental
+    ///   : ⋔(↯3)⊙⊙∘ 1 2 3
+    /// If you wanted to use 3 different constants, you could put the constants in the second function.
+    /// ex: # Experimental
+    ///   : ⋔↯(2 3 4) 1 2 3
+    /// This can also be done if the constants are on the stack.
+    /// ex: # Experimental
+    ///   : ⋔↯⊙⊙∘ 2 3 4 1 2 3
+    /// This can also be an interesting way to reorder many values.
+    /// ex: # Experimental
+    ///   : [⋔⊙∘⊙⊙∘ 1 2 3 4 5 6]
+    ([2], All, Planet, ("all", '⋔')),
     /// Apply a function under another
     ///
     /// This is a more powerful version of [invert].

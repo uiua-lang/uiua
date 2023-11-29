@@ -79,6 +79,37 @@ pub fn bracket(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+pub fn all(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop_function()?;
+    let g = env.pop_function()?;
+    let f_sig = f.signature();
+    let g_sig = g.signature();
+    // Call g
+    env.call(g)?;
+    // Determine arg counts
+    let lower_arg_count = g_sig.outputs / f_sig.args.saturating_sub(1).max(1);
+    let upper_arg_count = f_sig.args.saturating_sub(1) * lower_arg_count;
+    let mut lower_args = Vec::with_capacity(lower_arg_count);
+    let mut upper_args = Vec::with_capacity(upper_arg_count);
+    for i in 0..upper_arg_count {
+        upper_args.push(env.pop(lower_arg_count + i + 1)?);
+    }
+    for i in 0..lower_arg_count {
+        lower_args.push(env.pop(i + 1)?);
+    }
+    let mut lower_args = lower_args.into_iter().rev();
+    let mut upper_args = upper_args.into_iter().rev();
+    // Call f
+    for _ in 0..lower_arg_count {
+        env.push(lower_args.next().unwrap());
+        for _ in 0..f_sig.args.saturating_sub(1) {
+            env.push(upper_args.next().unwrap());
+        }
+        env.call(f.clone())?;
+    }
+    Ok(())
+}
+
 pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
     // Get selector
     let selector = env

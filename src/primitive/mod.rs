@@ -283,7 +283,7 @@ impl Primitive {
     /// Check if this primitive is experimental
     pub fn is_experimental(&self) -> bool {
         use Primitive::*;
-        matches!(self, SetInverse | SetUnder | Rectify)
+        matches!(self, SetInverse | SetUnder | Rectify | All)
     }
     /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {
@@ -602,6 +602,7 @@ impl Primitive {
                 fork::fork(env)?
             }
             Primitive::Bracket => fork::bracket(env)?,
+            Primitive::All => fork::all(env)?,
             Primitive::Try => {
                 let f = env.pop_function()?;
                 let handler = env.pop_function()?;

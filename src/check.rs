@@ -252,6 +252,14 @@ impl<'a> VirtualEnv<'a> {
                     let outputs = f_sig.outputs + g_sig.outputs;
                     self.handle_args_outputs(args, outputs)?;
                 }
+                All => {
+                    let f_sig = self.pop_func()?.signature();
+                    let g_sig = self.pop_func()?.signature();
+                    let lower_arg_count = g_sig.outputs / f_sig.args.saturating_sub(1).max(1);
+                    let upper_arg_count = f_sig.args.saturating_sub(1) * lower_arg_count;
+                    let outputs = f_sig.outputs * lower_arg_count;
+                    self.handle_args_outputs(lower_arg_count + upper_arg_count, outputs)?;
+                }
                 Level | Combinate => {
                     let ranks = self.pop_func()?;
                     let ranks_sig = ranks.signature();

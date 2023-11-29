@@ -1345,7 +1345,7 @@ primitive!(
     /// [both] can also be chained. Every additional [both] doubles the number of arguments taken from the stack.
     /// ex: [∩∩(□+2) 1 @a 2_3 5]
     /// ex: [∩∩∩± 1 ¯2 0 42 ¯5 6 7 8 99]
-    (2[1], Both, Stack, ("both", '∩')),
+    (2[1], Both, Planet, ("both", '∩')),
     /// Call two functions on the same values
     ///
     /// [fork] is one of the most important functions for working with the stack.

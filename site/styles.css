@@ -276,7 +276,7 @@ li {
 
 #subtitle {
     margin-left: 1.5em;
-    font-size: 1em;
+    font-size: 0.1em;
     font-weight: bold;
     font-style: italic;
 }
@@ -605,7 +605,7 @@ input[type=number] {
 
 .glyph-button {
     font-family: "Code Font", monospace;
-    font-size: 0.99em;
+    font-size: 0.98em;
     padding: 0.05em;
     margin: 0em;
     background-color: transparent;
@@ -765,15 +765,31 @@ input[type=number] {
     -moz-text-fill-color: transparent;
 }
 
+.pan {
+    background-image: linear-gradient(180deg,
+            #FF218C 48%,
+            #FFD800 48%,
+            #FFD800 65%,
+            #21B1FF 65%);
+    background-size: 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -moz-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    -moz-text-fill-color: transparent;
+}
+
 @media (prefers-color-scheme: light) {
 
+    .trans,
     .bi,
-    .trans {
+    .pan {
         -webkit-text-stroke: 0.01em #000;
     }
 }
 
 @media (prefers-color-scheme: dark) {
+
     .bi {
         -webkit-text-stroke: 0.01em #fff8;
     }

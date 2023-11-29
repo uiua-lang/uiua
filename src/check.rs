@@ -266,26 +266,6 @@ impl<'a> VirtualEnv<'a> {
                         comp_sig.outputs + g_sub_sig.outputs.saturating_sub(g_sig.args),
                     )?;
                 }
-                Both => {
-                    let sig = self.pop_func()?.signature();
-                    let args = sig.args * 2;
-                    let outputs = sig.outputs * 2;
-                    self.handle_args_outputs(args, outputs)?;
-                }
-                Fork => {
-                    let f_sig = self.pop_func()?.signature();
-                    let g_sig = self.pop_func()?.signature();
-                    let args = f_sig.args.max(g_sig.args);
-                    let outputs = f_sig.outputs + g_sig.outputs;
-                    self.handle_args_outputs(args, outputs)?;
-                }
-                Bracket => {
-                    let f_sig = self.pop_func()?.signature();
-                    let g_sig = self.pop_func()?.signature();
-                    let args = f_sig.args + g_sig.args;
-                    let outputs = f_sig.outputs + g_sig.outputs;
-                    self.handle_args_outputs(args, outputs)?;
-                }
                 All => {
                     let f_sig = self.pop_func()?.signature();
                     let g_sig = self.pop_func()?.signature();
@@ -330,37 +310,6 @@ impl<'a> VirtualEnv<'a> {
                     }
                     self.handle_sig(f_sig)?;
                 }
-                Invert => {
-                    let f = self.pop_func()?;
-                    if let Some(inverted) = f.inverse() {
-                        let sig = inverted.signature();
-                        for _ in 0..sig.args {
-                            self.pop()?;
-                        }
-                        self.set_min_height();
-                        for _ in 0..sig.outputs {
-                            self.stack.push(BasicValue::Other);
-                        }
-                    } else {
-                        // We could return an error here,
-                        // but the "no inverse found" error is more useful.
-                    }
-                }
-                Under => {
-                    let f = self.pop_func()?;
-                    let g = self.pop_func()?;
-                    self.set_min_height();
-                    if let Some((before, after)) = f.into_owned().under(g.signature()) {
-                        let before_sig = before.signature();
-                        let after_sig = after.signature();
-                        self.handle_sig(before_sig)?;
-                        self.handle_sig(g.signature())?;
-                        self.handle_sig(after_sig)?;
-                    } else {
-                        // We could return an error here,
-                        // but the "no inverse found" error is more useful.
-                    }
-                }
                 Fill => {
                     let fill = self.pop_func()?;
                     self.handle_sig(fill.signature())?;
@@ -398,24 +347,6 @@ impl<'a> VirtualEnv<'a> {
                     self.stack.push(b.clone());
                     self.stack.push(a);
                     self.stack.push(b);
-                }
-                Dip => {
-                    let f = self.pop_func()?;
-                    let x = self.pop()?;
-                    self.handle_sig(f.signature())?;
-                    self.stack.push(x);
-                }
-                Gap => {
-                    let f = self.pop_func()?;
-                    self.pop()?;
-                    self.handle_sig(f.signature())?;
-                }
-                Reach => {
-                    let f = self.pop_func()?;
-                    let x = self.pop()?;
-                    self.pop()?;
-                    self.stack.push(x);
-                    self.handle_sig(f.signature())?;
                 }
                 Join => {
                     let a = self.pop()?;

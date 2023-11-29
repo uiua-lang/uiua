@@ -44,41 +44,6 @@ pub fn both(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn fork(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
-    let g = env.pop_function()?;
-    let arg_count = f.signature().args.max(g.signature().args);
-    let mut args = Vec::with_capacity(arg_count);
-    for i in 0..arg_count {
-        args.push(env.pop(i + 1)?);
-    }
-    for arg in args.iter().take(g.signature().args).rev() {
-        env.push(arg.clone());
-    }
-    env.call(g)?;
-    for arg in args.into_iter().take(f.signature().args).rev() {
-        env.push(arg);
-    }
-    env.call(f)?;
-    Ok(())
-}
-
-pub fn bracket(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
-    let g = env.pop_function()?;
-    let f_sig = f.signature();
-    let mut f_args = Vec::with_capacity(f_sig.args);
-    for i in 0..f_sig.args {
-        f_args.push(env.pop(i + 1)?);
-    }
-    env.call(g)?;
-    for arg in f_args.into_iter().rev() {
-        env.push(arg);
-    }
-    env.call(f)?;
-    Ok(())
-}
-
 pub fn all(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let g = env.pop_function()?;

@@ -531,25 +531,13 @@ impl Primitive {
                 env.pop(1)?;
             }
             Primitive::Dip => {
-                // This should only run if Dip is not inlined
-                let f = env.pop_function()?;
-                let x = env.pop(1)?;
-                env.call(f)?;
-                env.push(x);
+                return Err(env.error("Dip was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Gap => {
-                // This should only run if Gap is not inlined
-                let f = env.pop_function()?;
-                let _x = env.pop(2)?;
-                env.call(f)?;
+                return Err(env.error("Gap was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Reach => {
-                // This should only run if Reach is not inlined
-                let f = env.pop_function()?;
-                let x = env.pop(1)?;
-                let _y = env.pop(2)?;
-                env.push(x);
-                env.call(f)?;
+                return Err(env.error("Reach was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Rock => {
                 let x = env.pop(1)?;
@@ -572,19 +560,10 @@ impl Primitive {
                 env.push(x.ocean(0.0, env)?);
             }
             Primitive::Invert => {
-                // This should only run if Invert is not inlined
-                let f = env.pop_function()?;
-                let inv_f = f.invert("", env)?;
-                env.call(inv_f)?;
+                return Err(env.error("Invert was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Under => {
-                // This should only run if Under is not inlined
-                let f = env.pop_function()?;
-                let g = env.pop_function()?;
-                let (f_before, f_after) = f.undered(g.signature(), env)?;
-                env.call(f_before)?;
-                env.call(g)?;
-                env.call(f_after)?;
+                return Err(env.error("Under was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Pack => {
                 let f = env.pop_function()?;
@@ -599,10 +578,11 @@ impl Primitive {
             }
             Primitive::Both => fork::both(env)?,
             Primitive::Fork => {
-                // This should only run if Fork is not inlined
-                fork::fork(env)?
+                return Err(env.error("Fork was not inlined. This is a bug in the interpreter"))
             }
-            Primitive::Bracket => fork::bracket(env)?,
+            Primitive::Bracket => {
+                return Err(env.error("Bracket was not inlined. This is a bug in the interpreter"))
+            }
             Primitive::All => fork::all(env)?,
             Primitive::This => {
                 let f = env.pop_function()?;

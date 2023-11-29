@@ -9,7 +9,7 @@ use std::{
 use enum_iterator::Sequence;
 
 use crate::{
-    check::instrs_signature,
+    check::{instrs_signature, SigCheckError},
     lex::CodeSpan,
     primitive::{ImplPrimitive, Primitive},
     value::Value,
@@ -433,7 +433,10 @@ impl Function {
         }
     }
     /// Create a new function and infer its signature
-    pub fn new_inferred(id: FunctionId, instrs: impl Into<Vec<Instr>>) -> Result<Self, String> {
+    pub fn new_inferred(
+        id: FunctionId,
+        instrs: impl Into<Vec<Instr>>,
+    ) -> Result<Self, SigCheckError> {
         let mut instrs = instrs.into();
         let signature = instrs_signature(&instrs)?;
         instrs.retain(|instr| !instr.is_compile_only());

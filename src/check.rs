@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cmp::Ordering};
+use std::{borrow::Cow, cmp::Ordering, fmt};
 
 use crate::{
     array::Array,
@@ -10,7 +10,7 @@ use crate::{
 const START_HEIGHT: usize = 16;
 
 /// Count the number of arguments and outputs of a function.
-pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, String> {
+pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, SigCheckError> {
     if let [Instr::Prim(prim, _)] = instrs {
         if let Some((args, outputs)) = prim.args().zip(prim.outputs()) {
             return Ok(Signature {
@@ -30,6 +30,45 @@ struct VirtualEnv<'a> {
     array_stack: Vec<usize>,
     min_height: usize,
     popped: Vec<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SigCheckError {
+    pub message: String,
+    pub ambiguous: bool,
+}
+
+impl SigCheckError {
+    pub fn ambiguous(self) -> Self {
+        Self {
+            ambiguous: true,
+            ..self
+        }
+    }
+}
+
+impl<'a> From<&'a str> for SigCheckError {
+    fn from(s: &'a str) -> Self {
+        Self {
+            message: s.to_string(),
+            ambiguous: false,
+        }
+    }
+}
+
+impl From<String> for SigCheckError {
+    fn from(s: String) -> Self {
+        Self {
+            message: s,
+            ambiguous: false,
+        }
+    }
+}
+
+impl fmt::Display for SigCheckError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.message.fmt(f)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -71,7 +110,7 @@ impl FromIterator<f64> for BasicValue {
 }
 
 impl<'a> VirtualEnv<'a> {
-    fn from_instrs(instrs: &'a [Instr]) -> Result<Self, String> {
+    fn from_instrs(instrs: &'a [Instr]) -> Result<Self, SigCheckError> {
         let mut env = VirtualEnv {
             stack: (0..START_HEIGHT).rev().map(BasicValue::Unknown).collect(),
             function_stack: Vec::new(),
@@ -88,7 +127,7 @@ impl<'a> VirtualEnv<'a> {
             outputs: self.stack.len() - self.min_height,
         }
     }
-    fn instrs(&mut self, instrs: &'a [Instr]) -> Result<(), String> {
+    fn instrs(&mut self, instrs: &'a [Instr]) -> Result<(), SigCheckError> {
         let mut i = 0;
         while i < instrs.len() {
             match &instrs[i] {
@@ -118,7 +157,7 @@ impl<'a> VirtualEnv<'a> {
         }
         Ok(())
     }
-    fn instr(&mut self, instr: &'a Instr) -> Result<(), String> {
+    fn instr(&mut self, instr: &'a Instr) -> Result<(), SigCheckError> {
         use Primitive::*;
         match instr {
             Instr::Push(val) => self.stack.push(BasicValue::from_val(val)),
@@ -163,11 +202,16 @@ impl<'a> VirtualEnv<'a> {
                 Reduce | Scan => {
                     let sig = self.pop_func()?.signature();
                     let outputs = match (sig.args, sig.outputs) {
-                        (0, _) => return Err(format!("{prim}'s function has no args")),
+                        (0, _) => return Err(format!("{prim}'s function has no args").into()),
                         (1, 0) => 0,
-                        (1, _) => return Err(format!("{prim}'s function's signature is {sig}")),
+                        (1, _) => {
+                            return Err(SigCheckError::from(format!(
+                                "{prim}'s function's signature is {sig}"
+                            ))
+                            .ambiguous())
+                        }
                         (2, 1) => 1,
-                        _ => return Err(format!("{prim}'s function's signature is {sig}")),
+                        _ => return Err(format!("{prim}'s function's signature is {sig}").into()),
                     };
                     self.handle_args_outputs(1, outputs)?;
                 }
@@ -189,7 +233,8 @@ impl<'a> VirtualEnv<'a> {
                             return Err(format!(
                                 "{prim}'s function must take at most 2 arguments, \
                                     but its signature is {sig}",
-                            ))
+                            )
+                            .into())
                         }
                     };
                     self.handle_args_outputs(args, outputs)?;
@@ -245,9 +290,10 @@ impl<'a> VirtualEnv<'a> {
                             if creating_array {
                                 self.handle_sig(sig)?;
                             } else {
-                                return Err(format!(
+                                return Err(SigCheckError::from(format!(
                                     "repeat with no number and a function with signature {sig}"
-                                ));
+                                ))
+                                .ambiguous());
                             };
                         }
                     }
@@ -280,13 +326,15 @@ impl<'a> VirtualEnv<'a> {
                         return Err(format!(
                             "{prim}'s rank list function must have 1 output, \
                             but its signature is {ranks_sig}"
-                        ));
+                        )
+                        .into());
                     }
                     if ranks_sig.args > 1 {
                         return Err(format!(
                             "{prim}'s rank list function must have 0 or 1 arguments, \
                             but its signature is {ranks_sig}"
-                        ));
+                        )
+                        .into());
                     }
                     let sig = self.pop_func()?.signature();
                     self.handle_sig(sig)?;
@@ -305,7 +353,8 @@ impl<'a> VirtualEnv<'a> {
                         return Err(format!(
                             "try's functions have signatures {f_sig} and {handler_sig}, but \
                             the error handler should take one more argument than the function."
-                        ));
+                        )
+                        .into());
                     }
                     self.handle_sig(f_sig)?;
                 }
@@ -388,7 +437,7 @@ impl<'a> VirtualEnv<'a> {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }
-                Recur => return Err("recur present".into()),
+                Recur => return Err(SigCheckError::from("recur present").ambiguous()),
                 Dump => {
                     self.pop_func()?;
                 }

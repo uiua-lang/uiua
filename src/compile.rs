@@ -182,7 +182,14 @@ impl Uiua {
                     )?;
                 } else {
                     return Err(UiuaError::Run(Span::Code(binding.name.span.clone()).sp(
-                        format!("Cannot infer function signature: {e}. A signature can be declared after the `←`."),
+                        format!(
+                            "Cannot infer function signature: {e}{}",
+                            if e.ambiguous {
+                                ". A signature can be declared after the `←`."
+                            } else {
+                                ""
+                            }
+                        ),
                     )));
                 }
             }
@@ -690,9 +697,16 @@ impl Uiua {
                 if let Some(declared_sig) = &func.signature {
                     declared_sig.value
                 } else {
-                    return Err(span.sp(format!(
-                        "Cannot infer function signature: {e}. A signature can be declared after the opening `(`."
-                    )).into());
+                    return Err(span
+                        .sp(format!(
+                            "Cannot infer function signature: {e}{}",
+                            if e.ambiguous {
+                                ". A signature can be declared after the opening `(`."
+                            } else {
+                                ""
+                            }
+                        ))
+                        .into());
                 }
             }
         };
@@ -742,9 +756,16 @@ impl Uiua {
             let sig = match instrs_signature(&instrs) {
                 Ok(sig) => sig,
                 Err(e) => {
-                    return Err(span.sp(format!(
-                        "Cannot infer function signature: {e}. A signature can be declared after the opening `(`."
-                    )).into());
+                    return Err(span
+                        .sp(format!(
+                            "Cannot infer function signature: {e}{}",
+                            if e.ambiguous {
+                                ". A signature can be declared after the opening `(`."
+                            } else {
+                                ""
+                            }
+                        ))
+                        .into());
                 }
             };
             let function = Function::new(FunctionId::Anonymous(span), instrs, sig);

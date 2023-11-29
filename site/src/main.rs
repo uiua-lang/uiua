@@ -340,10 +340,10 @@ fn prim_class(prim: Primitive) -> &'static str {
         }
         prim => {
             if let Some(m) = prim.modifier_args() {
-                if m == 1 {
-                    code_font!("monadic-modifier")
-                } else {
-                    code_font!("dyadic-modifier")
+                match m {
+                    0 | 1 => code_font!("monadic-modifier"),
+                    2 => code_font!("dyadic-modifier"),
+                    _ => code_font!("triadic-modifier"),
                 }
             } else {
                 match prim.args() {

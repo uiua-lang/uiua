@@ -27,7 +27,7 @@ use rand::prelude::*;
 use regex::Regex;
 
 use crate::{
-    algorithm::{fork, loops, reduce, table, zip},
+    algorithm::{self, loops, reduce, table, zip},
     array::Array,
     boxed::Boxed,
     lex::AsciiToken,
@@ -585,7 +585,7 @@ impl Primitive {
             Primitive::Bracket => {
                 return Err(env.error("Bracket was not inlined. This is a bug in the interpreter"))
             }
-            Primitive::All => fork::all(env)?,
+            Primitive::All => algorithm::all(env)?,
             Primitive::This => {
                 let f = env.pop_function()?;
                 env.call_with(f)?;

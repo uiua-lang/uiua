@@ -16,7 +16,7 @@ use parking_lot::Mutex;
 use rand::prelude::*;
 
 use crate::{
-    algorithm::fork, array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
+    algorithm, array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
     primitive::Primitive, value::Value, Diagnostic, DiagnosticKind, Ident, NativeSys, SysBackend,
     SysOp, TraceFrame, UiuaError, UiuaResult,
 };
@@ -528,7 +528,7 @@ code:
                     Ok(())
                 }
                 &Instr::Switch { count, sig, span } => {
-                    self.with_span(span, |env| fork::switch(count, sig, env))
+                    self.with_span(span, |env| algorithm::switch(count, sig, env))
                 }
                 &Instr::PushTempFunctions(n) => (|| {
                     for _ in 0..n {

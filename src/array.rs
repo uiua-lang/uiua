@@ -301,7 +301,7 @@ impl<T: ArrayValue + ArrayCmp<U>, U: ArrayValue> PartialOrd<Array<U>> for Array<
             .zip(&other.data)
             .map(|(a, b)| a.array_cmp(b))
             .find(|o| o != &Ordering::Equal)
-            .unwrap_or_else(|| self.data.len().cmp(&other.data.len()));
+            .unwrap_or_else(|| self.shape.cmp(&other.shape));
         Some(cmp)
     }
 }

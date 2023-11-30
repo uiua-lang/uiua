@@ -206,6 +206,18 @@ pub fn ungroup(env: &mut Uiua) -> UiuaResult {
         .pop_temp_under()?
         .as_ints(env, "Group indices must be a list of integers")?;
 
+    if indices
+        .iter()
+        .any(|&index| index >= 0 && index as usize >= ungrouped_rows.len())
+    {
+        return Err(env.error(format!(
+            "Cannot undo group because the grouped array's \
+            length changed from {} to {}",
+            indices.len(),
+            ungrouped_rows.len(),
+        )));
+    }
+
     // Ungroup
     let mut ungrouped = Vec::with_capacity(indices.len() * original.row_len());
     for (i, index) in indices.into_iter().enumerate() {

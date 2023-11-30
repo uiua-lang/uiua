@@ -602,7 +602,7 @@ primitive!(
     /// The most basic use is to convert a mask into a list of indices.
     /// ex: ⊚ [1 0 0 1 0 1 1 0]
     /// ex: ⊚.=0◿3.[1 0 2 9 3 8 3 4 6]
-    /// It also works for non-zero counts
+    /// It also works for counts `greater than` 1.
     /// ex: ⊚ 1_2_3
     /// ex: ⊚ 1_4_2
     /// [where] on a list is equivalent to `keep``flip``range``length``duplicate`

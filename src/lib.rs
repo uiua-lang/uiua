@@ -76,12 +76,15 @@ mod array;
 pub mod ast;
 mod boxed;
 mod check;
+mod check2;
 mod compile;
+mod compile2;
 mod complex;
 mod cowslice;
 mod error;
 pub mod format;
 mod function;
+mod function2;
 mod grid_fmt;
 mod lex;
 mod lsp;
@@ -105,6 +108,7 @@ pub use self::{
     boxed::*,
     error::*,
     function::*,
+    function2::*,
     lex::is_ident_char,
     lex::*,
     lsp::*,

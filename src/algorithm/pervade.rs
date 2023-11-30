@@ -637,7 +637,7 @@ pub mod complex_im {
     }
 }
 
-macro_rules! cmp_impl {
+macro_rules! eq_impl {
     ($name:ident $eq:tt $ordering:expr) => {
         pub mod $name {
             use super::*;
@@ -650,11 +650,9 @@ macro_rules! cmp_impl {
             pub fn num_num(a: f64, b: f64) -> u8 {
                 (b.array_cmp(&a) $eq $ordering) as u8
             }
-
             pub fn com_x(a: Complex, b: impl Into<Complex>) -> u8 {
                 (b.into().array_cmp(&a) $eq $ordering) as u8
             }
-
             pub fn x_com(a: impl Into<Complex>, b: Complex) -> u8 {
                 (b.array_cmp(&a.into()) $eq $ordering) as u8
             }
@@ -679,8 +677,56 @@ macro_rules! cmp_impl {
     };
 }
 
-cmp_impl!(is_eq == std::cmp::Ordering::Equal);
-cmp_impl!(is_ne != Ordering::Equal);
+macro_rules! cmp_impl {
+    ($name:ident $eq:tt $ordering:expr) => {
+        pub mod $name {
+            use super::*;
+            pub fn always_greater<A, B>(_: A, _: B) -> u8 {
+                ($ordering $eq Ordering::Less).into()
+            }
+            pub fn always_less<A, B>(_: A, _: B) -> u8 {
+                ($ordering $eq Ordering::Greater).into()
+            }
+            pub fn num_num(a: f64, b: f64) -> u8 {
+                (b.array_cmp(&a) $eq $ordering) as u8
+            }
+            pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+                let b = b.into();
+                Complex::new(
+                    (b.re.array_cmp(&a.re) $eq $ordering) as u8 as f64,
+                    (b.im.array_cmp(&a.im) $eq $ordering) as u8 as f64
+                )
+            }
+            pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+                let a = a.into();
+                Complex::new(
+                    (b.re.array_cmp(&a.re) $eq $ordering) as u8 as f64,
+                    (b.im.array_cmp(&a.im) $eq $ordering) as u8 as f64
+                )
+            }
+            #[cfg(feature = "bytes")]
+            pub fn byte_num(a: u8, b: f64) -> u8 {
+                (b.array_cmp(&f64::from(a)) $eq $ordering) as u8
+            }
+            #[cfg(feature = "bytes")]
+            pub fn num_byte(a: f64, b: u8) -> u8 {
+                (f64::from(b).array_cmp(&a) $eq $ordering) as u8
+            }
+            pub fn generic<T: Ord>(a: T, b: T) -> u8 {
+                (b.cmp(&a) $eq $ordering).into()
+            }
+            pub fn same_type<T: ArrayCmp + From<u8>>(a: T, b: T) -> T {
+               ((b.array_cmp(&a) $eq $ordering) as u8).into()
+            }
+            pub fn error<T: Display>(a: T, b: T, _env: &Uiua) -> UiuaError {
+                unreachable!("Comparisons cannot fail, failed to compare {a} and {b}")
+            }
+        }
+    };
+}
+
+eq_impl!(is_eq == Ordering::Equal);
+eq_impl!(is_ne != Ordering::Equal);
 cmp_impl!(is_lt == Ordering::Less);
 cmp_impl!(is_le != Ordering::Greater);
 cmp_impl!(is_gt == Ordering::Greater);

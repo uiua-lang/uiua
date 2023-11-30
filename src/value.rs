@@ -1213,7 +1213,7 @@ value_bin_impl!(
     ("byte", Byte, Complex, x_com, com_x),
 );
 
-macro_rules! cmp_impls {
+macro_rules! eq_impls {
     ($($name:ident),*) => {
         $(
             value_bin_impl!(
@@ -1240,7 +1240,35 @@ macro_rules! cmp_impls {
     };
 }
 
-cmp_impls!(is_eq, is_ne, is_lt, is_le, is_gt, is_ge);
+macro_rules! cmp_impls {
+    ($($name:ident),*) => {
+        $(
+            value_bin_impl!(
+                $name,
+                // Value comparable
+                [Num, same_type],
+                [Complex, com_x],
+                ("bytes", Byte, Byte, same_type, num_num),
+                (Char, Char, generic),
+                (Box, Box, generic),
+                ("bytes", Num, Byte, num_byte, num_num),
+                ("bytes", Byte, Num, byte_num, num_num),
+                (Complex, Num, com_x),
+                (Num, Complex, x_com),
+                ("byte", Complex, Byte, com_x),
+                ("byte", Byte, Complex, x_com),
+                // Type comparable
+                (Num, Char, always_less),
+                ("bytes", Byte, Char, always_less),
+                (Char, Num, always_greater),
+                ("bytes", Char, Byte, always_greater),
+            );
+        )*
+    };
+}
+
+eq_impls!(is_eq, is_ne);
+cmp_impls!(is_lt, is_le, is_gt, is_ge);
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {

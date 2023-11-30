@@ -627,7 +627,9 @@ impl Uiua {
                         Signature::new(0, 1),
                     )));
                 }
-                Global::Func { f, sig_declared } if call && !sig_declared => {
+                Global::Func { f, sig_declared }
+                    if call && !sig_declared && count_temp_functions(&f.instrs) == 0 =>
+                {
                     self.extend_instrs(f.instrs.clone())
                 }
                 Global::Func { f, .. } => {

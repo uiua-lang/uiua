@@ -2,9 +2,10 @@
 
 Uiua is not yet stable.
 
-## 0.4.0 - 2023-11-??
-This version is not yet released.
-If you are reading this on the website, then these changes are live here.
+<!-- This version is not yet released.
+If you are reading this on the website, then these changes are live here. -->
+
+## 0.4.0 - 2023-11-30
 ### Language
 - [`windows` `◫`](https://uiua.org/docs/windows) can now take negative window sizes
 - Add an *experimental* distinction for some functions/modifiers

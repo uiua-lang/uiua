@@ -879,7 +879,7 @@ impl Uiua {
                             return Err((modified.modifier.span.merge(span))
                                 .sp(format!(
                                     "{} requires {} function arguments, but the \
-                                    switch function has {} branches",
+                                    function pack has {} functions",
                                     modifier,
                                     modifier.args(),
                                     sw.branches.len()

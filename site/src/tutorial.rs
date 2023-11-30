@@ -1122,8 +1122,19 @@ ReduceAll!+[1_2_3 4_5_6]"/>
 
 #[component]
 fn EndOfTutorialList() -> impl IntoView {
+    use Primitive::*;
     view! {
         <ul>
+            <li>
+                "Some important functions that were not covered:"
+                <ul>
+                    <li><Prim prim=Under/>" and "<Prim prim=Invert/></li>
+                    <li><Prim prim=Keep/></li>
+                    <li><Prim prim=Where/></li>
+                    <li><Prim prim=Partition/></li>
+                    <li><Prim prim=Fold/></li>
+                </ul>
+            </li>
             <li><A href="/docs#functions">"The list of all functions"</A></li>
             <li><A href="/docs#other-docs">"Other language topics"</A></li>
             <li>"The online "<A href="/pad">"pad"</A>" for writing longer code"</li>

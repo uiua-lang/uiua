@@ -5,6 +5,13 @@ This is the crate so you can use Uiua as a Rust library. If you just want to wri
 
 # Usage
 
+The `uiua` crate is set up primarily to be installed as a binary. For this reason, when using it as a library, you'll likely want to disable default features.
+```toml
+# Cargo.toml
+[dependencies]
+uiua = { version = "*", default-features = false }
+```
+
 The main entry point is the [`Uiua`] struct, which is the Uiua runtime. It must be created with a [`SysBackend`]. [`Uiua::with_native_sys`] is a convenient way to create a Uiua runtime that uses the same backend as the Uiua CLI, though keep in mind it gives full access to the filesystem and TCP sockets and so probably shouldn't be used in a sandboxed environment.
 
 [`Value`] is the generic value type. It wraps one of four [`Array`] types.

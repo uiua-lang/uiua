@@ -19,6 +19,7 @@ If you are reading this on the website, then these changes are live here. -->
 - Allow custom modifiers to use switch function syntax
 - [`sign` `±`](https://uiua.org/docs/sign) now normalizes complex numbers
 - Change [`type`](https://uiua.org/docs/type) mapping
+- Deprecate [`reach` `⟜`](https://uiua.org/docs/reach)
 ### Interpreter
 - Fix some bugs and crashes
 - Improve some formatting with multiline functions and switch functions

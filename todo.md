@@ -2,7 +2,9 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
+- Line split syntax
 - Add line token length diagnostic
+- `update` command
 - Multimedia
   - Sound input
   - Webcam input

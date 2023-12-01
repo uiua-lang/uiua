@@ -303,11 +303,10 @@ impl Parser {
                     .span
                     .clone()
                     .merge(words.last().unwrap().span.clone());
-                let lines = unsplit_words(split_words(words));
                 words = vec![span.clone().sp(Word::Func(Func {
                     id: FunctionId::Anonymous(span),
                     signature: None,
-                    lines,
+                    lines: vec![words],
                     closed: true,
                 }))]
             }
@@ -481,7 +480,7 @@ impl Parser {
                 break;
             }
         }
-        unsplit_words(lines.into_iter().flat_map(split_words))
+        lines
     }
     fn try_word(&mut self) -> Option<Sp<Word>> {
         self.comment()

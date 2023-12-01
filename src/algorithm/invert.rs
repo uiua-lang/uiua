@@ -113,7 +113,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
     inverted
 }
 
-fn invert_instr_impl(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
+fn invert_instr_impl(instrs: &[Instr]) -> Option<Vec<Instr>> {
     use Primitive::*;
 
     // println!("inverting {:?}", instrs);
@@ -142,15 +142,17 @@ fn invert_instr_impl(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
     ];
 
     let mut inverted = Vec::new();
+    let mut curr_instrs = instrs;
     'find_pattern: loop {
         for pattern in patterns {
-            if let Some((input, mut inv)) = pattern.invert_extract(instrs) {
+            if let Some((input, mut inv)) = pattern.invert_extract(curr_instrs) {
                 inv.extend(inverted);
                 inverted = inv;
                 if input.is_empty() {
+                    // println!("inverted {:?} to {:?}", instrs, inverted);
                     return Some(inverted);
                 }
-                instrs = input;
+                curr_instrs = input;
                 continue 'find_pattern;
             }
         }
@@ -327,14 +329,14 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
 
     let mut befores = Vec::new();
     let mut afters = Vec::new();
-    let mut instrs_sections = instrs;
+    let mut curr_instrs = instrs;
     'find_pattern: loop {
         for pattern in patterns {
-            if let Some((input, (bef, aft))) = pattern.under_extract(instrs_sections, g_sig) {
+            if let Some((input, (bef, aft))) = pattern.under_extract(curr_instrs, g_sig) {
                 // println!(
                 //     "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
                 //     pattern,
-                //     &instrs_sections[..instrs_sections.len() - input.len()],
+                //     &curr_instrs[..curr_instrs.len() - input.len()],
                 // );
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
@@ -342,7 +344,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
                     // println!("under {:?} to {:?} {:?}", instrs, befores, afters);
                     return Some((befores, afters));
                 }
-                instrs_sections = input;
+                curr_instrs = input;
                 continue 'find_pattern;
             }
         }
@@ -585,6 +587,9 @@ fn try_temp_wrap(input: &[Instr]) -> Option<(&[Instr], &Instr, &[Instr], &Instr)
             _ => {}
         }
     }
+    if end == 0 {
+        return None;
+    }
     let (inner, input) = input.split_at(end);
     let end_instr = input.first()?;
     let input = &input[1..];
@@ -629,6 +634,30 @@ fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
                 afters.insert(0, instr.clone());
                 afters.push(end_instr.clone());
             }
+            afters
+        }
+        (args, outputs) if args >= outputs => {
+            let mut instr = instr.clone();
+            let mut end_instr = end_instr.clone();
+            let (
+                Instr::PushTemp { count, .. },
+                Instr::PopTemp {
+                    count: end_count, ..
+                },
+            ) = (&mut instr, &mut end_instr)
+            else {
+                return None;
+            };
+            let diff = args - outputs;
+            if *count >= diff && *end_count >= diff {
+                *count -= diff;
+                *end_count -= diff;
+            } else {
+                return None;
+            }
+            let mut afters = inner_afters;
+            afters.insert(0, instr);
+            afters.push(end_instr);
             afters
         }
         _ => return None,

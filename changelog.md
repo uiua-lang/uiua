@@ -2,11 +2,15 @@
 
 Uiua is not yet stable.
 
-<!-- This version is not yet released.
-If you are reading this on the website, then these changes are live here. -->
+
+## 0.5.0 - 2023-12-??
+This version is not yet released.
+If you are reading this on the website, then these changes are live here.
+### Language
+- [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under) now work with stack array notation.
 
 ## 0.4.1 - 2023-11-30
-# Interpreter
+### Interpreter
 - Fix a bug with nested custom modifiers
 
 ## 0.4.0 - 2023-11-30

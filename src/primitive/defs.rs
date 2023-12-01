@@ -1221,6 +1221,10 @@ primitive!(
     /// [invert][sine] gives the arcsine.
     /// ex: ⍘○ 1
     ///
+    /// [invert] can be used with stack array notation and [dip] and [identity] to unpack the items of an array onto the stack.
+    /// ex: [⊙⊙∘] 1 2 3
+    /// ex: ⍘[⊙⊙∘] [1 2 3]
+    ///
     /// While more inverses exists, most of them are not useful on their own.
     /// They are usually used within [under].
     ([1], Invert, OtherModifier, ("invert", '⍘')),

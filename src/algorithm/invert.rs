@@ -785,7 +785,7 @@ fn under_array_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], U
     let (mut befores, mut afters) = under_instrs(inner, g_sig)?;
     befores.insert(0, Instr::BeginArray);
     befores.push(Instr::EndArray { span, boxed: unbox });
-    let count = instrs_signature(&afters).ok()?.args;
+    let count = instrs_signature(&befores).ok()?.args;
     afters.insert(0, Instr::Unpack { count, span, unbox });
     Some((input, (befores, afters)))
 }

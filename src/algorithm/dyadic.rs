@@ -2198,7 +2198,7 @@ impl<T: ArrayValue> Array<T> {
         let any_dim_greater = (searched_for.shape().iter().rev())
             .zip(searched.shape().iter().rev())
             .any(|(a, b)| a > b);
-        if any_dim_greater {
+        if self.rank() > searched.rank() || any_dim_greater {
             // Fill
             if let Some(fill) = env.fill() {
                 let mut target_shape = searched.shape.clone();

@@ -875,9 +875,9 @@ fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
         }
     }
     lines.reverse();
-    if lines.first().unwrap().is_empty() {
-        lines.remove(0);
-    }
+    // if lines.first().unwrap().is_empty() {
+    //     lines.remove(0);
+    // }
     lines
 }
 

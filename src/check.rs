@@ -150,7 +150,12 @@ impl<'a> VirtualEnv<'a> {
                     }
                     self.handle_sig(*sig)?;
                 }
-                Instr::PopSig => panic!("PopSig without PushSig"),
+                Instr::PopSig => {
+                    return Err(SigCheckError::from(
+                        "PopSig without PushSig. \
+                        It is a bug in the interpreter for you to see this message.",
+                    ))
+                }
                 instr => self.instr(instr)?,
             }
             i += 1;

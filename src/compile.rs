@@ -249,7 +249,12 @@ impl Uiua {
         }
         Ok(())
     }
-    fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<Vec<Instr>> {
+    fn compile_words(&mut self, mut words: Vec<Sp<Word>>, call: bool) -> UiuaResult<Vec<Instr>> {
+        words = unsplit_words(split_words(words))
+            .into_iter()
+            .flatten()
+            .collect();
+
         self.new_functions.push(Vec::new());
         self.words(words, call)?;
         self.flush_diagnostics();

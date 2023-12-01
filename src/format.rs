@@ -18,7 +18,7 @@ use crate::{
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
     value::Value,
-    Ident, Primitive, SysBackend, SysOp, Uiua, UiuaError, UiuaResult,
+    FunctionId, Ident, Primitive, SysBackend, SysOp, Uiua, UiuaError, UiuaResult,
 };
 
 // For now disallow any syscalls in the format config file.
@@ -489,7 +489,29 @@ impl<'a> Formatter<'a> {
                 if let Some(sig) = &binding.signature {
                     self.format_signature('|', sig.value, true);
                 }
-                self.format_words(&binding.words, true, 0);
+                let span = binding
+                    .words
+                    .first()
+                    .zip(binding.words.last())
+                    .map(|(first, last)| first.span.clone().merge(last.span.clone()))
+                    .or_else(|| binding.signature.as_ref().map(|sig| sig.span.clone()))
+                    .unwrap_or_else(|| binding.arrow_span.clone());
+                let mut lines = unsplit_words(split_words(binding.words.clone()));
+                if lines.len() == 1 {
+                    self.format_words(&lines[0], true, 0);
+                } else {
+                    lines.push(Vec::new());
+                    self.format_words(
+                        &[span.clone().sp(Word::Func(Func {
+                            id: FunctionId::Anonymous(span),
+                            signature: None,
+                            lines,
+                            closed: true,
+                        }))],
+                        true,
+                        0,
+                    );
+                }
             }
             Item::ExtraNewlines(_) => {
                 self.prev_import_function = None;

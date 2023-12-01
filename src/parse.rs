@@ -285,7 +285,7 @@ impl Parser {
         // Signature
         let signature = self.try_signature(Bar);
         // Words
-        let mut words = self.try_words().unwrap_or_default();
+        let words = self.try_words().unwrap_or_default();
         // Validate words
         if let (1, Some(Word::Func(func))) = (
             words.iter().filter(|w| w.value.is_code()).count(),
@@ -296,20 +296,6 @@ impl Parser {
             }
         } else {
             self.validate_words(&words, false);
-            if words.iter().any(|w| matches!(w.value, Word::BreakLine)) {
-                let span = words
-                    .first()
-                    .unwrap()
-                    .span
-                    .clone()
-                    .merge(words.last().unwrap().span.clone());
-                words = vec![span.clone().sp(Word::Func(Func {
-                    id: FunctionId::Anonymous(span),
-                    signature: None,
-                    lines: vec![words],
-                    closed: true,
-                }))]
-            }
         }
         // Check for uncapitalized binding names
         if name.value.trim_end_matches('!').chars().count() >= 2
@@ -881,7 +867,7 @@ pub(crate) fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
         if matches!(word.value, Word::BreakLine) {
             lines.push(Vec::new());
         } else {
-            lines.last_mut().unwrap().push(word);
+            lines.last_mut().unwrap().push(split_word(word));
         }
     }
     lines.reverse();
@@ -889,7 +875,9 @@ pub(crate) fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
 }
 
 pub(crate) fn unsplit_words(lines: impl IntoIterator<Item = Vec<Sp<Word>>>) -> Vec<Vec<Sp<Word>>> {
-    let mut lines = lines.into_iter();
+    let mut lines = lines
+        .into_iter()
+        .map(|line| line.into_iter().map(unsplit_word).collect::<Vec<_>>());
     let Some(mut first) = lines.next() else {
         return Vec::new();
     };
@@ -917,6 +905,56 @@ pub(crate) fn unsplit_words(lines: impl IntoIterator<Item = Vec<Sp<Word>>>) -> V
         unsplit = unsplit_back;
     }
     new_lines
+}
+
+fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
+    word.map(|word| match word {
+        Word::Func(mut func) => {
+            func.lines = unsplit_words(func.lines);
+            Word::Func(func)
+        }
+        Word::Array(mut arr) => {
+            arr.lines = unsplit_words(arr.lines);
+            Word::Array(arr)
+        }
+        Word::Switch(mut sw) => {
+            sw.branches = sw
+                .branches
+                .into_iter()
+                .map(|mut br| {
+                    br.value.lines = unsplit_words(br.value.lines);
+                    br
+                })
+                .collect();
+            Word::Switch(sw)
+        }
+        word => word,
+    })
+}
+
+fn split_word(word: Sp<Word>) -> Sp<Word> {
+    word.map(|word| match word {
+        Word::Func(mut func) => {
+            func.lines = func.lines.into_iter().flat_map(split_words).collect();
+            Word::Func(func)
+        }
+        Word::Array(mut arr) => {
+            arr.lines = arr.lines.into_iter().flat_map(split_words).collect();
+            Word::Array(arr)
+        }
+        Word::Switch(mut sw) => {
+            sw.branches = sw
+                .branches
+                .into_iter()
+                .map(|mut br| {
+                    br.value.lines = br.value.lines.into_iter().flat_map(split_words).collect();
+                    br
+                })
+                .collect();
+            Word::Switch(sw)
+        }
+        word => word,
+    })
 }
 
 pub(crate) fn ident_modifier_args(ident: &Ident) -> u8 {

@@ -771,6 +771,16 @@ impl Parser {
             break;
         }
         let signature = self.try_signature(Bar);
+        loop {
+            if self.try_exact(Newline).is_some() {
+                any_newlines = true;
+                continue;
+            }
+            if self.try_spaces().is_some() {
+                continue;
+            }
+            break;
+        }
         let mut lines = self.multiline_words();
         any_newlines |= lines.len() > 1;
         if any_newlines && !lines.last().is_some_and(|line| line.is_empty()) {

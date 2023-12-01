@@ -753,9 +753,6 @@ impl<'a> Formatter<'a> {
             self.format_words(line, true, depth);
         }
         if !compact {
-            if !lines.last().is_some_and(|line| line.is_empty()) {
-                self.output.push('\n');
-            }
             for _ in 0..self.config.multiline_indent * depth.saturating_sub(1) {
                 self.output.push(' ');
             }

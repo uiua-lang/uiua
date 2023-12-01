@@ -2,7 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Unify `fill` and `pack` contexts
 - Multimedia
   - Sound input
   - Webcam input

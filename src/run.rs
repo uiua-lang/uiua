@@ -17,8 +17,8 @@ use rand::prelude::*;
 
 use crate::{
     algorithm, array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
-    primitive::Primitive, value::Value, Diagnostic, DiagnosticKind, Ident, NativeSys, SysBackend,
-    SysOp, TraceFrame, UiuaError, UiuaResult,
+    primitive::Primitive, value::Value, Complex, Diagnostic, DiagnosticKind, Ident, NativeSys,
+    SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua runtime
@@ -86,13 +86,11 @@ pub(crate) struct Scope {
     /// The call stack
     call: Vec<StackFrame>,
     /// The recur stack
-    with: Vec<usize>,
+    this: Vec<usize>,
     /// Map local names to global indices
     pub names: HashMap<Ident, usize>,
-    /// The current fill values
-    fills: Fills,
-    /// The current pack depth
-    pack_depth: usize,
+    /// The shape fix stack
+    shape_fix: Vec<ShapeFix>,
     /// Whether to allow experimental features
     pub experimental: bool,
 }
@@ -111,21 +109,21 @@ impl Default for Scope {
                 pc: 0,
                 spans: Vec::new(),
             }],
-            with: Vec::new(),
+            this: Vec::new(),
             names: HashMap::new(),
-            fills: Fills::default(),
-            pack_depth: 0,
+            shape_fix: Vec::new(),
             experimental: false,
         }
     }
 }
 
-#[derive(Default, Clone)]
-struct Fills {
-    nums: Vec<f64>,
-    complexes: Vec<crate::Complex>,
-    chars: Vec<char>,
-    boxes: Vec<Boxed>,
+#[derive(Clone)]
+enum ShapeFix {
+    FillNum(f64),
+    FillComplex(Complex),
+    FillChar(char),
+    FillBox(Boxed),
+    Pack,
 }
 
 #[derive(Clone)]
@@ -1011,20 +1009,37 @@ code:
         self.stack.truncate(size);
     }
     pub(crate) fn num_fill(&self) -> Option<f64> {
-        self.scope.fills.nums.last().copied()
+        match self.scope.shape_fix.last() {
+            Some(ShapeFix::FillNum(n)) => Some(*n),
+            _ => None,
+        }
     }
     pub(crate) fn byte_fill(&self) -> Option<u8> {
-        let n = self.scope.fills.nums.last().copied()?;
-        (n.fract() == 0.0 && (0.0..=255.0).contains(&n)).then_some(n as u8)
+        match self.scope.shape_fix.last() {
+            Some(ShapeFix::FillNum(n)) if (n.fract() == 0.0 && (0.0..=255.0).contains(n)) => {
+                Some(*n as u8)
+            }
+            _ => None,
+        }
     }
     pub(crate) fn char_fill(&self) -> Option<char> {
-        self.scope.fills.chars.last().copied()
+        match self.scope.shape_fix.last() {
+            Some(ShapeFix::FillChar(c)) => Some(*c),
+            _ => None,
+        }
     }
     pub(crate) fn box_fill(&self) -> Option<Boxed> {
-        self.scope.fills.boxes.last().cloned()
+        match self.scope.shape_fix.last() {
+            Some(ShapeFix::FillBox(b)) => Some(b.clone()),
+            _ => None,
+        }
     }
-    pub(crate) fn complex_fill(&self) -> Option<crate::Complex> {
-        self.scope.fills.complexes.last().copied()
+    pub(crate) fn complex_fill(&self) -> Option<Complex> {
+        match self.scope.shape_fix.last() {
+            Some(ShapeFix::FillNum(n)) => Some(Complex::new(*n, 0.0)),
+            Some(ShapeFix::FillComplex(c)) => Some(*c),
+            _ => None,
+        }
     }
     /// Do something with the fill context set
     pub(crate) fn with_fill(
@@ -1032,89 +1047,50 @@ code:
         fill: Value,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
     ) -> UiuaResult {
-        let mut set = false;
-        match &fill {
-            Value::Num(n) => {
-                if let Some(&n) = n.as_scalar() {
-                    self.scope.fills.nums.push(n);
-                    set = true;
-                }
-            }
-            #[cfg(feature = "bytes")]
-            Value::Byte(b) => {
-                if let Some(&b) = b.as_scalar() {
-                    self.scope.fills.nums.push(b as f64);
-                    set = true;
-                }
-            }
-
-            Value::Complex(c) => {
-                if let Some(&c) = c.as_scalar() {
-                    self.scope.fills.complexes.push(c);
-                    set = true;
-                }
-            }
-            Value::Char(c) => {
-                if let Some(&c) = c.as_scalar() {
-                    self.scope.fills.chars.push(c);
-                    set = true;
-                }
-            }
-            Value::Box(f) => {
-                if let Some(f) = f.as_scalar() {
-                    self.scope.fills.boxes.push(f.clone());
-                    set = true;
-                }
-            }
-        }
-        if !set {
+        if !fill.shape().is_empty() {
             return Err(self.error(format!(
                 "Fill values must be scalar, but its shape is {}",
                 fill.format_shape()
             )));
         }
-        let res = in_ctx(self);
-        match fill {
-            Value::Num(_) => {
-                self.scope.fills.nums.pop();
-            }
+        self.scope.shape_fix.push(match fill {
+            Value::Num(n) => ShapeFix::FillNum(n.data.into_iter().next().unwrap()),
             #[cfg(feature = "bytes")]
-            Value::Byte(_) => {
-                self.scope.fills.nums.pop();
-            }
-
-            Value::Complex(_) => {
-                self.scope.fills.complexes.pop();
-            }
-            Value::Char(_) => {
-                self.scope.fills.chars.pop();
-            }
-            Value::Box(_) => {
-                self.scope.fills.boxes.pop();
-            }
-        }
+            Value::Byte(b) => ShapeFix::FillNum(b.data.into_iter().next().unwrap() as f64),
+            Value::Char(c) => ShapeFix::FillChar(c.data.into_iter().next().unwrap()),
+            Value::Box(b) => ShapeFix::FillBox(b.data.into_iter().next().unwrap()),
+            Value::Complex(c) => ShapeFix::FillComplex(c.data.into_iter().next().unwrap()),
+        });
+        let res = in_ctx(self);
+        self.scope.shape_fix.pop();
         res
     }
     pub(crate) fn with_pack(&mut self, in_ctx: impl FnOnce(&mut Self) -> UiuaResult) -> UiuaResult {
-        self.scope.pack_depth += 1;
+        self.scope.shape_fix.push(ShapeFix::Pack);
         let res = in_ctx(self);
-        self.scope.pack_depth -= 1;
+        self.scope.shape_fix.pop();
         res
     }
     pub(crate) fn pack_boxes(&self) -> bool {
-        self.scope.pack_depth > 0
+        (0..2).any(|i| {
+            self.scope
+                .shape_fix
+                .iter()
+                .nth_back(i)
+                .is_some_and(|fix| matches!(fix, ShapeFix::Pack))
+        })
     }
-    pub(crate) fn call_with(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult {
+    pub(crate) fn call_with_this(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult {
         let call_height = self.scope.call.len();
-        let with_height = self.scope.with.len();
-        self.scope.with.push(self.scope.call.len());
+        let with_height = self.scope.this.len();
+        self.scope.this.push(self.scope.call.len());
         let res = self.call(f.into());
         self.scope.call.truncate(call_height);
-        self.scope.with.truncate(with_height);
+        self.scope.this.truncate(with_height);
         res
     }
     pub(crate) fn recur(&mut self) -> UiuaResult {
-        let Some(i) = self.scope.with.last().copied() else {
+        let Some(i) = self.scope.this.last().copied() else {
             return Err(self.error("No recursion context set"));
         };
         let f = self.scope.call[i].function.clone();

@@ -11,6 +11,7 @@ If you are reading this on the website, then these changes are live here.
 - Add special syntax for splitting/joining lines of code
   - `'` will split a line without changing semantics
   - `''` will combine two lines without changing semantics
+- [`fill` `⬚`](https://uiua.org/docs/fill) and [`pack` `⊐`](https://uiua.org/docs/pack) are now exclusive
 ### Interpreter
 - Add a style diagnostic about lines that are too long
 - Replace `uiua check-update` with `uiua update`, which will update the interpreter by installing a new version with Cargo

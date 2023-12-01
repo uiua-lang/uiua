@@ -582,7 +582,7 @@ impl Primitive {
             Primitive::All => algorithm::all(env)?,
             Primitive::This => {
                 let f = env.pop_function()?;
-                env.call_with(f)?;
+                env.call_with_this(f)?;
             }
             Primitive::Recur => env.recur()?,
             Primitive::Try => {

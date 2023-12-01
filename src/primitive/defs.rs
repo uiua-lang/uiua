@@ -1198,8 +1198,9 @@ primitive!(
     ///   : ⊐∵/+ B # X Each element is a number!
     ///   : ⊐≡/+ B # ✓ Each row is a list of numbers
     ///
-    /// [pack] is overridden by [fill], regardless of order.
-    /// ex: ⬚0⊐∵⇡ ⇡5
+    /// [pack] and [fill] are exclusive.
+    /// ex: ⊐⬚0⊟ 1_2 3
+    ///   : ⬚0⊐⊟ 1_2 3
     ([1], Pack, OtherModifier, ("pack", '⊐')),
     /// Invert the behavior of a function
     ///
@@ -1512,6 +1513,10 @@ primitive!(
     /// To [fill] with a value that is on the stack, use [identity].
     /// ex: F = ⬚∘+
     ///   : F 100 [1 2 3 4] [5 6]
+    ///
+    /// [fill] and [pack] are exclusive.
+    /// ex: ⊐⬚0⊟ 1_2 3
+    ///   : ⬚0⊐⊟ 1_2 3
     ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Apply a function at a different array depth
     ///

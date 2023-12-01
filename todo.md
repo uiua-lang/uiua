@@ -13,6 +13,7 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - UDP Sockets
 
 ## Bugs
+- Dedicated `under first`
 - Figure out what is going on with the editor cursor
   - Problems are mostly on Firefox, especially on mobile
 - Expand test suite

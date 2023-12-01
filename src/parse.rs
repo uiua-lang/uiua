@@ -19,6 +19,8 @@ pub enum ParseError {
     InvalidOutCount(String),
     AmpersandBindingName,
     FunctionNotAllowed,
+    SplitInModifier,
+    UnsplitInModifier,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,6 +86,14 @@ impl fmt::Display for ParseError {
                 f,
                 "Inline functions are only allowed in modifiers \
                 or as the only item in a binding"
+            ),
+            ParseError::SplitInModifier => write!(
+                f,
+                "Line splitting is not allowed between modifier arguments"
+            ),
+            ParseError::UnsplitInModifier => write!(
+                f,
+                "Line unsplitting is not allowed between modifier arguments"
             ),
         }
     }
@@ -562,7 +572,18 @@ impl Parser {
         let mut args = Vec::new();
         self.try_spaces();
         for i in 0..modifier.args() {
-            args.extend(self.try_spaces());
+            loop {
+                args.extend(self.try_spaces());
+                if let Some(span) = self.try_exact(Quote) {
+                    self.errors.push(span.sp(ParseError::SplitInModifier));
+                    continue;
+                }
+                if let Some(span) = self.try_exact(Quote2) {
+                    self.errors.push(span.sp(ParseError::UnsplitInModifier));
+                    continue;
+                }
+                break;
+            }
             if let Some(arg) = self
                 .try_func()
                 .or_else(|| self.try_strand())
@@ -875,9 +896,6 @@ fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
         }
     }
     lines.reverse();
-    // if lines.first().unwrap().is_empty() {
-    //     lines.remove(0);
-    // }
     lines
 }
 

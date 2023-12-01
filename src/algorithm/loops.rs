@@ -156,7 +156,7 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
     let positive_partitions = marker_partitions.iter().filter(|(m, _)| *m > 0).count();
     if positive_partitions != untransformed.len() {
         return Err(env.error(format!(
-            "Cannot undo partition because the paritioned array \
+            "Cannot undo partition because the partitioned array \
             originally had {} rows, but now it has {}",
             positive_partitions,
             untransformed.len()

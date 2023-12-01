@@ -210,7 +210,7 @@ fn run() -> UiuaResult {
                     .print_diagnostics(true);
                 repl(rt, true, config);
             }
-            App::CheckUpdate => show_update_message(),
+            App::Update { main, check } => update(main, check),
             #[cfg(feature = "stand")]
             App::Stand { main, name } => {
                 let main = main.unwrap_or_else(|| "main.ua".into());
@@ -562,8 +562,13 @@ enum App {
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },
-    #[clap(about = "Check for updates")]
-    CheckUpdate,
+    #[clap(about = "Update Uiua by installing with Cargo")]
+    Update {
+        #[clap(long, help = "Install from the main branch instead of crates.io")]
+        main: bool,
+        #[clap(long, help = "Only check for updates")]
+        check: bool,
+    },
     #[cfg(feature = "stand")]
     #[clap(about = "Create a standalone executable")]
     Stand {
@@ -643,50 +648,77 @@ fn clear_watching_with(s: &str, end: &str) {
     );
 }
 
-fn show_update_message() {
-    let output = match Command::new("cargo").args(["search", "uiua"]).output() {
-        Ok(output) => output,
-        Err(e) => {
-            eprintln!("Failed to run `cargo search uiua`: {e}");
+fn update(main: bool, check: bool) {
+    if !main || check {
+        let output = match Command::new("cargo").args(["search", "uiua"]).output() {
+            Ok(output) => output,
+            Err(e) => {
+                eprintln!("Failed to run `cargo search uiua`: {e}");
+                return;
+            }
+        };
+        let output = String::from_utf8_lossy(&output.stdout);
+        let Some(remote_version) = output.split('"').nth(1) else {
             return;
+        };
+        fn parse_version(s: &str) -> Option<Vec<u16>> {
+            let mut nums = Vec::with_capacity(3);
+            for s in s.split('.') {
+                if let Ok(num) = s.parse() {
+                    nums.push(num);
+                } else {
+                    return None;
+                }
+            }
+            Some(nums)
         }
-    };
-    let output = String::from_utf8_lossy(&output.stdout);
-    let Some(remote_version) = output.split('"').nth(1) else {
-        return;
-    };
-    fn parse_version(s: &str) -> Option<Vec<u16>> {
-        let mut nums = Vec::with_capacity(3);
-        for s in s.split('.') {
-            if let Ok(num) = s.parse() {
-                nums.push(num);
+        let local_version = env!("CARGO_PKG_VERSION");
+        if let Some((local, remote)) =
+            parse_version(local_version).zip(parse_version(remote_version))
+        {
+            if local >= remote {
+                println!("Your version of Uiua ({}) is the latest!", local_version);
+                return;
             } else {
-                return None;
+                println!(
+                    "{}\n",
+                    format!(
+                        "Update available: {local_version} → {remote_version}\n\
+                        Run `uiua update` to update\n\
+                        Changelog: https://github.com/uiua-lang/uiua/blob/main/changelog.md",
+                    )
+                    .bright_white()
+                    .bold()
+                );
             }
         }
-        Some(nums)
-    }
-    let local_version = env!("CARGO_PKG_VERSION");
-    if let Some((local, remote)) = parse_version(local_version).zip(parse_version(remote_version)) {
-        if local < remote {
-            let flags = if cfg!(feature = "audio") {
-                " --features audio"
-            } else {
-                ""
-            };
-            println!(
-                "{}\n",
-                format!(
-                    "Update available: {local_version} → {remote_version}\n\
-                    Run `cargo install uiua {flags}` to update\n\
-                    Changelog: https://github.com/uiua-lang/uiua/blob/main/changelog.md",
-                )
-                .bright_white()
-                .bold()
-            );
-        } else {
-            println!("Your version of Uiua ({}) is the latest!", local_version);
+        if check {
+            return;
         }
+    }
+
+    let mut args = vec!["install"];
+    if main {
+        args.extend(["--git", "https://github.com/uiua-lang/uiua", "uiua"]);
+    } else {
+        args.push("uiua");
+    }
+    let mut features = Vec::new();
+    if cfg!(feature = "audio") {
+        features.push("audio");
+    }
+    if cfg!(feature = "bytes") {
+        features.push("bytes");
+    }
+    let feature_str;
+    if !features.is_empty() {
+        args.push("--features");
+        feature_str = features.join(",");
+        args.push(&feature_str);
+    }
+    if let Err(e) = Command::new("cargo").args(&args).spawn() {
+        let full_command = format!("cargo {}", args.join(" "));
+        eprintln!("Failed to run `{full_command}`: {e}");
     }
 }
 

@@ -13,6 +13,7 @@ If you are reading this on the website, then these changes are live here.
   - `''` will combine two lines without changing semantics
 ### Interpreter
 - Add a style diagnostic about lines that are too long
+- Replace `uiua check-update` with `uiua update`, which will update the interpreter by installing a new version with Cargo
 
 ## 0.4.1 - 2023-11-30
 ### Interpreter

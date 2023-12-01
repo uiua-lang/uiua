@@ -616,7 +616,10 @@ fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
     let afters = match (g_sig.args, g_sig.outputs) {
         (0, _) => return None,
         (_, 1) => {
-            let both = input.len() >= inner.len() && inner.iter().zip(input).all(|(a, b)| a == b);
+            let input_iter = input.iter().filter(|instr| !instr.is_compile_only());
+            let inner_iter = inner.iter().filter(|instr| !instr.is_compile_only());
+            let both = input_iter.clone().count() >= inner_iter.clone().count()
+                && input_iter.zip(inner_iter).all(|(a, b)| a == b);
             if both {
                 Vec::new()
             } else {

@@ -34,7 +34,11 @@ fn items_spans(items: &[Item]) -> Vec<Sp<SpanKind>> {
     for item in items {
         match item {
             Item::TestScope(items) => spans.extend(items_spans(&items.value)),
-            Item::Words(words) => spans.extend(words_spans(words)),
+            Item::Words(lines) => {
+                for line in lines {
+                    spans.extend(words_spans(line))
+                }
+            }
             Item::Binding(binding) => {
                 spans.push(binding.name.span.clone().sp(SpanKind::Ident));
                 spans.push(binding.arrow_span.clone().sp(SpanKind::Delimiter));
@@ -209,11 +213,14 @@ mod server {
         for item in items {
             match item {
                 Item::TestScope(items) => scope_bindings.push(bindings_info(&items.value)),
-                Item::Words(words) => {
+                Item::Words(lines) => {
                     if let [Sp {
                         value: Word::Comment(comment),
                         ..
-                    }] = words.as_slice()
+                    }] = lines
+                        .first()
+                        .map(|line| line.as_slice())
+                        .unwrap_or_default()
                     {
                         let full = last_comment.get_or_insert_with(String::new);
                         if !full.is_empty() {
@@ -227,7 +234,7 @@ mod server {
                         full.push_str(comment.trim());
                     } else {
                         last_comment = None;
-                        for word in words {
+                        for word in lines.iter().flatten() {
                             if let Word::Ident(ident) = &word.value {
                                 if let Some((_, info)) =
                                     bindings.iter().rev().find(|(name, _)| name.value == *ident)

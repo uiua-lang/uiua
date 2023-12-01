@@ -12,7 +12,7 @@ use crate::{
     check::instrs_signature,
     function::*,
     lex::{CodeSpan, Sp, Span},
-    parse::{count_placeholders, ident_modifier_args},
+    parse::{count_placeholders, ident_modifier_args, split_words, unsplit_words},
     primitive::{ImplPrimitive, Primitive},
     run::{Global, RunMode},
     value::Value,
@@ -38,26 +38,32 @@ impl Uiua {
             Item::TestScope(items) => {
                 self.in_scope(|env| env.items(items.value, true))?;
             }
-            Item::Words(words) => {
+            Item::Words(mut lines) => {
                 let can_run = match self.mode {
                     RunMode::Normal => !in_test,
                     RunMode::Test => in_test,
                     RunMode::All => true,
                 };
-                if can_run || words_have_import(&words) {
-                    let span = words
-                        .first()
-                        .unwrap()
-                        .span
-                        .clone()
-                        .merge(words.last().unwrap().span.clone());
-                    if count_placeholders(&words) > 0 {
-                        return Err(span
-                            .sp("Cannot use placeholder outside of function".into())
-                            .into());
+                lines = unsplit_words(lines.into_iter().flat_map(split_words));
+                for line in lines {
+                    if line.is_empty() {
+                        continue;
                     }
-                    let instrs = self.compile_words(words, true)?;
-                    self.exec_global_instrs(instrs)?;
+                    if can_run || words_have_import(&line) {
+                        let span = line
+                            .first()
+                            .unwrap()
+                            .span
+                            .clone()
+                            .merge(line.last().unwrap().span.clone());
+                        if count_placeholders(&line) > 0 {
+                            return Err(span
+                                .sp("Cannot use placeholder outside of function".into())
+                                .into());
+                        }
+                        let instrs = self.compile_words(line, true)?;
+                        self.exec_global_instrs(instrs)?;
+                    }
                 }
             }
             Item::Binding(binding) => {

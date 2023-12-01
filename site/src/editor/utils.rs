@@ -926,18 +926,20 @@ pub fn progressive_strings(input: &str) -> Vec<String> {
     let mut lines: Vec<Vec<String>> = Vec::new();
     for item in items {
         match item {
-            Item::Words(words) => {
-                let mut line: Vec<String> = Vec::new();
-                for word in words {
-                    if word.value.is_code() {
-                        line.push(word.span.as_str().into());
-                    } else if let Some(last) = line.last_mut() {
-                        last.push_str(word.span.as_str());
-                    } else {
-                        line.push(word.span.as_str().into());
+            Item::Words(lns) => {
+                for ln in lns {
+                    let mut line: Vec<String> = Vec::new();
+                    for word in ln {
+                        if word.value.is_code() {
+                            line.push(word.span.as_str().into());
+                        } else if let Some(last) = line.last_mut() {
+                            last.push_str(word.span.as_str());
+                        } else {
+                            line.push(word.span.as_str().into());
+                        }
                     }
+                    lines.push(line);
                 }
-                lines.push(line);
             }
             Item::Binding(binding) => lines.push(vec![binding.span().as_str().into()]),
             Item::TestScope(items) => lines.push(vec![items.span.as_str().into()]),

@@ -16,7 +16,7 @@ use crate::{
     function::Signature,
     grid_fmt::GridFmt,
     lex::{is_ident_char, CodeSpan, Loc, Sp},
-    parse::{parse, trim_spaces},
+    parse::{parse, split_words, trim_spaces, unsplit_words},
     value::Value,
     Ident, Primitive, SysBackend, SysOp, Uiua, UiuaError, UiuaResult,
 };
@@ -459,9 +459,10 @@ impl<'a> Formatter<'a> {
                 self.format_items(&items.value);
                 self.output.push_str("---");
             }
-            Item::Words(w) => {
+            Item::Words(lines) => {
                 self.prev_import_function = None;
-                self.format_words(w, true, 0);
+                let lines = unsplit_words(lines.iter().cloned().flat_map(split_words));
+                self.format_multiline_words(&lines, false, false, 0);
             }
             Item::Binding(binding) => {
                 match binding.words.first().map(|w| &w.value) {
@@ -692,7 +693,8 @@ impl<'a> Formatter<'a> {
                         .push((line_number, comment.to_string()));
                 }
             }
-            Word::BreakLine | Word::UnbreakLine => {}
+            Word::BreakLine => self.output.push('\''),
+            Word::UnbreakLine => self.output.push_str("''"),
         }
     }
     fn format_multiline_words(

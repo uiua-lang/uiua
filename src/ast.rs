@@ -13,7 +13,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub enum Item {
     /// Just some code
-    Words(Vec<Sp<Word>>),
+    Words(Vec<Vec<Sp<Word>>>),
     /// A binding
     Binding(Binding),
     /// A test scope
@@ -28,8 +28,14 @@ impl Item {
         match self {
             Item::TestScope(items) => items.span.clone(),
             Item::Words(words) => {
-                let first = words.first().expect("empty words").span.clone();
-                let last = words.last().expect("empty words").span.clone();
+                let first = (words.iter().flatten().next())
+                    .expect("empty words")
+                    .span
+                    .clone();
+                let last = (words.iter().flatten().last())
+                    .expect("empty words")
+                    .span
+                    .clone();
                 first.merge(last)
             }
             Item::Binding(binding) => binding.span(),

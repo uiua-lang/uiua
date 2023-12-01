@@ -190,7 +190,7 @@ impl Parser {
         let mut items = Vec::new();
         loop {
             match self.try_item(parse_scopes) {
-                Some(item) => items.extend(item),
+                Some(item) => items.push(item),
                 None => {
                     if self.try_exact(Newline).is_none() {
                         break;
@@ -209,10 +209,10 @@ impl Parser {
         }
         items
     }
-    fn try_item(&mut self, parse_scopes: bool) -> Option<Vec<Item>> {
+    fn try_item(&mut self, parse_scopes: bool) -> Option<Item> {
         self.try_spaces();
         Some(if let Some(binding) = self.try_binding() {
-            vec![Item::Binding(binding)]
+            Item::Binding(binding)
         } else {
             let lines = self.multiline_words();
             // Convert multiline words into multiple items
@@ -221,39 +221,7 @@ impl Parser {
                 for line in &lines {
                     self.validate_words(line, false);
                 }
-                let template_span = lines.iter().flatten().next().unwrap().span.clone();
-                let mut lines = unsplit_words(lines.into_iter().flat_map(split_words))
-                    .into_iter()
-                    .peekable();
-                let mut items = Vec::with_capacity(lines.len());
-                let mut prev_loc = None;
-                while let Some(line) = lines.next() {
-                    if line.is_empty() {
-                        // Get the span of the empty line
-                        let next_loc = lines
-                            .peek()
-                            .and_then(|line| line.first())
-                            .map(|w| w.span.start);
-                        let (start, end) = match (prev_loc, next_loc) {
-                            (Some(prev), Some(next)) => (prev, next),
-                            (Some(prev), None) => (prev, self.prev_span().start),
-                            (None, Some(next)) => (next, self.prev_span().start),
-                            (None, None) => continue,
-                        };
-                        let span = CodeSpan {
-                            start,
-                            end,
-                            ..template_span.clone()
-                        };
-                        items.push(Item::ExtraNewlines(span));
-                    } else {
-                        if let Some(loc) = line.last().map(|w| w.span.end) {
-                            prev_loc = Some(loc);
-                        }
-                        items.push(Item::Words(line));
-                    }
-                }
-                items
+                Item::Words(lines)
             } else if parse_scopes {
                 let start = self.try_exact(TripleMinus)?;
                 let items = self.items(false);
@@ -263,7 +231,7 @@ impl Parser {
                     self.errors.push(self.expected([TripleMinus]));
                     start
                 };
-                vec![Item::TestScope(span.sp(items))]
+                Item::TestScope(span.sp(items))
             } else {
                 return None;
             }
@@ -666,6 +634,7 @@ impl Parser {
             let span = start.merge(end);
             span.sp(Word::MultilineString(lines))
         } else if let Some(start) = self.try_exact(OpenBracket) {
+            while self.try_exact(Newline).is_some() {}
             let items = self.multiline_words();
             let end = self.expect_close(CloseBracket);
             let span = start.merge(end.span);
@@ -675,6 +644,7 @@ impl Parser {
                 closed: end.value,
             }))
         } else if let Some(start) = self.try_exact(OpenCurly) {
+            while self.try_exact(Newline).is_some() {}
             let items = self.multiline_words();
             let end = self.expect_close(CloseCurly);
             let span = start.merge(end.span);
@@ -896,7 +866,7 @@ impl Parser {
     }
 }
 
-fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
+pub(crate) fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
     let mut lines = vec![Vec::new()];
     for word in words {
         if matches!(word.value, Word::BreakLine) {
@@ -909,7 +879,7 @@ fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
     lines
 }
 
-fn unsplit_words(lines: impl IntoIterator<Item = Vec<Sp<Word>>>) -> Vec<Vec<Sp<Word>>> {
+pub(crate) fn unsplit_words(lines: impl IntoIterator<Item = Vec<Sp<Word>>>) -> Vec<Vec<Sp<Word>>> {
     let mut lines = lines.into_iter();
     let Some(mut first) = lines.next() else {
         return Vec::new();

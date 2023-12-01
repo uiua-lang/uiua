@@ -16,7 +16,7 @@ use crate::{
     function::Signature,
     grid_fmt::GridFmt,
     lex::{is_ident_char, CodeSpan, Loc, Sp},
-    parse::parse,
+    parse::{parse, trim_spaces},
     value::Value,
     Ident, Primitive, SysBackend, SysOp, Uiua, UiuaError, UiuaResult,
 };
@@ -767,31 +767,6 @@ impl<'a> Formatter<'a> {
             self.glyph_map.insert(span.clone(), (start, end));
         }
     }
-}
-
-fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {
-    let mut start = 0;
-    for word in words {
-        if let Word::Spaces = word.value {
-            start += 1;
-        } else {
-            break;
-        }
-    }
-    let mut end = words.len();
-    if trim_end {
-        for word in words.iter().rev() {
-            if let Word::Spaces = word.value {
-                end -= 1;
-            } else {
-                break;
-            }
-        }
-    }
-    if start >= end {
-        return &[];
-    }
-    &words[start..end]
 }
 
 fn word_is_multiline(word: &Word) -> bool {

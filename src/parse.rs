@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, iter::once, path::Path};
+use std::{error::Error, fmt, iter::once, mem::replace, path::Path};
 
 use crate::{
     ast::*,
@@ -180,10 +180,7 @@ impl Parser {
         let mut items = Vec::new();
         loop {
             match self.try_item(parse_scopes) {
-                Some(Item::Words(words)) => {
-                    items.extend(split_words(words).into_iter().map(Item::Words))
-                }
-                Some(item) => items.push(item),
+                Some(item) => items.extend(item),
                 None => {
                     if self.try_exact(Newline).is_none() {
                         break;
@@ -202,25 +199,64 @@ impl Parser {
         }
         items
     }
-    fn try_item(&mut self, parse_scopes: bool) -> Option<Item> {
+    fn try_item(&mut self, parse_scopes: bool) -> Option<Vec<Item>> {
         self.try_spaces();
         Some(if let Some(binding) = self.try_binding() {
-            Item::Binding(binding)
-        } else if let Some(words) = self.try_words() {
-            self.validate_words(&words, false);
-            Item::Words(words)
-        } else if parse_scopes {
-            let start = self.try_exact(TripleMinus)?;
-            let items = self.items(false);
-            let span = if let Some(end) = self.try_exact(TripleMinus) {
-                start.merge(end)
-            } else {
-                self.errors.push(self.expected([TripleMinus]));
-                start
-            };
-            Item::TestScope(span.sp(items))
+            vec![Item::Binding(binding)]
         } else {
-            return None;
+            let lines = self.multiline_words();
+            // Convert multiline words into multiple items
+            if !lines.is_empty() {
+                // Validate words
+                for line in &lines {
+                    self.validate_words(line, false);
+                }
+                let template_span = lines.iter().flatten().next().unwrap().span.clone();
+                let mut lines = unsplit_words(lines.into_iter().flat_map(split_words))
+                    .into_iter()
+                    .peekable();
+                let mut items = Vec::with_capacity(lines.len());
+                let mut prev_loc = None;
+                while let Some(line) = lines.next() {
+                    if line.is_empty() {
+                        // Get the span of the empty line
+                        let next_loc = lines
+                            .peek()
+                            .and_then(|line| line.first())
+                            .map(|w| w.span.start);
+                        let (start, end) = match (prev_loc, next_loc) {
+                            (Some(prev), Some(next)) => (prev, next),
+                            (Some(prev), None) => (prev, self.prev_span().start),
+                            (None, Some(next)) => (next, self.prev_span().start),
+                            (None, None) => continue,
+                        };
+                        let span = CodeSpan {
+                            start,
+                            end,
+                            ..template_span.clone()
+                        };
+                        items.push(Item::ExtraNewlines(span));
+                    } else {
+                        if let Some(loc) = line.last().map(|w| w.span.end) {
+                            prev_loc = Some(loc);
+                        }
+                        items.push(Item::Words(line));
+                    }
+                }
+                items
+            } else if parse_scopes {
+                let start = self.try_exact(TripleMinus)?;
+                let items = self.items(false);
+                let span = if let Some(end) = self.try_exact(TripleMinus) {
+                    start.merge(end)
+                } else {
+                    self.errors.push(self.expected([TripleMinus]));
+                    start
+                };
+                vec![Item::TestScope(span.sp(items))]
+            } else {
+                return None;
+            }
         })
     }
     fn comment(&mut self) -> Option<Sp<String>> {
@@ -229,102 +265,103 @@ impl Parser {
         let s = s.strip_prefix('#').unwrap_or(s).into();
         Some(span.sp(s))
     }
-    fn try_binding(&mut self) -> Option<Binding> {
+    fn try_binding_init(&mut self) -> Option<(Sp<Ident>, CodeSpan)> {
         let start = self.index;
-        Some(if let Some(name) = self.try_ident() {
-            // Left arrow
-            let mut arrow_span = self.try_spaces().map(|w| w.span);
-            if let Some(span) = self.try_exact(Equal).or_else(|| self.try_exact(LeftArrow)) {
-                arrow_span = Some(if let Some(arrow_span) = arrow_span {
-                    arrow_span.merge(span)
-                } else {
-                    span
-                });
+        let name = self.try_ident()?;
+        // Left arrow
+        let mut arrow_span = self.try_spaces().map(|w| w.span);
+        if let Some(span) = self.try_exact(Equal).or_else(|| self.try_exact(LeftArrow)) {
+            arrow_span = Some(if let Some(arrow_span) = arrow_span {
+                arrow_span.merge(span)
             } else {
-                self.index = start;
-                return None;
-            }
-            let mut arrow_span = arrow_span.unwrap();
-            if let Some(span) = self.try_spaces().map(|w| w.span) {
-                arrow_span = arrow_span.merge(span);
-            }
-            // Check for invalid binding names
-            if name.value.contains('&') {
-                self.errors
-                    .push(name.span.clone().sp(ParseError::AmpersandBindingName));
-            }
-            // Bad name advice
-            if ["\u{200b}", "\u{200c}", "\u{200d}"]
-                .iter()
-                .any(|bad_name| &*name.value == *bad_name)
-            {
-                self.diagnostics.push(Diagnostic::new(
-                    "Maybe don't",
-                    name.span.clone(),
-                    DiagnosticKind::Advice,
-                ));
-            }
-            // Signature
-            let signature = self.try_signature(Bar);
-            // Words
-            let mut words = self.try_words().unwrap_or_default();
-            // Validate words
-            if let (1, Some(Word::Func(func))) = (
-                words.iter().filter(|w| w.value.is_code()).count(),
-                &words.iter().find(|w| w.value.is_code()).map(|w| &w.value),
-            ) {
-                for line in &func.lines {
-                    self.validate_words(line, false);
-                }
-            } else {
-                self.validate_words(&words, false);
-                if words.iter().any(|w| matches!(w.value, Word::BreakLine)) {
-                    let span = words
-                        .first()
-                        .unwrap()
-                        .span
-                        .clone()
-                        .merge(words.last().unwrap().span.clone());
-                    let lines = split_words(words);
-                    words = vec![span.clone().sp(Word::Func(Func {
-                        id: FunctionId::Anonymous(span),
-                        signature: None,
-                        lines,
-                        closed: true,
-                    }))]
-                }
-            }
-            // Check for uncapitalized binding names
-            if name.value.trim_end_matches('!').chars().count() >= 2
-                && name.value.chars().next().unwrap().is_ascii_lowercase()
-            {
-                let captialized: String = name
-                    .value
-                    .chars()
-                    .next()
-                    .map(|c| c.to_ascii_uppercase())
-                    .into_iter()
-                    .chain(name.value.chars().skip(1))
-                    .collect();
-                self.diagnostics.push(Diagnostic::new(
-                    format!(
-                        "Binding names with 2 or more characters should be TitleCase \
-                        to avoid collisions with future builtin functions.\n\
-                        Try `{}` instead of `{}`",
-                        captialized, name.value
-                    ),
-                    name.span.clone(),
-                    DiagnosticKind::Advice,
-                ));
-            }
-            Binding {
-                name,
-                arrow_span,
-                words,
-                signature,
+                span
+            });
+        } else {
+            self.index = start;
+            return None;
+        }
+        let mut arrow_span = arrow_span.unwrap();
+        if let Some(span) = self.try_spaces().map(|w| w.span) {
+            arrow_span = arrow_span.merge(span);
+        }
+        Some((name, arrow_span))
+    }
+    fn try_binding(&mut self) -> Option<Binding> {
+        let (name, arrow_span) = self.try_binding_init()?;
+        // Check for invalid binding names
+        if name.value.contains('&') {
+            self.errors
+                .push(name.span.clone().sp(ParseError::AmpersandBindingName));
+        }
+        // Bad name advice
+        if ["\u{200b}", "\u{200c}", "\u{200d}"]
+            .iter()
+            .any(|bad_name| &*name.value == *bad_name)
+        {
+            self.diagnostics.push(Diagnostic::new(
+                "Maybe don't",
+                name.span.clone(),
+                DiagnosticKind::Advice,
+            ));
+        }
+        // Signature
+        let signature = self.try_signature(Bar);
+        // Words
+        let mut words = self.try_words().unwrap_or_default();
+        // Validate words
+        if let (1, Some(Word::Func(func))) = (
+            words.iter().filter(|w| w.value.is_code()).count(),
+            &words.iter().find(|w| w.value.is_code()).map(|w| &w.value),
+        ) {
+            for line in &func.lines {
+                self.validate_words(line, false);
             }
         } else {
-            return None;
+            self.validate_words(&words, false);
+            if words.iter().any(|w| matches!(w.value, Word::BreakLine)) {
+                let span = words
+                    .first()
+                    .unwrap()
+                    .span
+                    .clone()
+                    .merge(words.last().unwrap().span.clone());
+                let lines = unsplit_words(split_words(words));
+                words = vec![span.clone().sp(Word::Func(Func {
+                    id: FunctionId::Anonymous(span),
+                    signature: None,
+                    lines,
+                    closed: true,
+                }))]
+            }
+        }
+        // Check for uncapitalized binding names
+        if name.value.trim_end_matches('!').chars().count() >= 2
+            && name.value.chars().next().unwrap().is_ascii_lowercase()
+        {
+            let captialized: String = name
+                .value
+                .chars()
+                .next()
+                .map(|c| c.to_ascii_uppercase())
+                .into_iter()
+                .chain(name.value.chars().skip(1))
+                .collect();
+            self.diagnostics.push(Diagnostic::new(
+                format!(
+                    "Binding names with 2 or more characters should be TitleCase \
+                        to avoid collisions with future builtin functions.\n\
+                        Try `{}` instead of `{}`",
+                    captialized, name.value
+                ),
+                name.span.clone(),
+                DiagnosticKind::Advice,
+            ));
+        }
+        Some(Binding {
+            name,
+            arrow_span,
+            words,
+            signature,
         })
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
@@ -435,19 +472,28 @@ impl Parser {
     }
     fn multiline_words(&mut self) -> Vec<Vec<Sp<Word>>> {
         let mut lines = Vec::new();
-        while self.try_exact(Newline).is_some() || self.try_spaces().is_some() {}
-        while let Some(words) = self.try_words() {
-            lines.push(words);
-            let mut newlines = 0;
-            while self.try_exact(Newline).is_some() {
-                newlines += 1;
-                self.try_spaces();
+        while self.try_spaces().is_some() {}
+        loop {
+            let curr = self.index;
+            if self.try_binding_init().is_some() {
+                self.index = curr;
+                break;
             }
-            if newlines > 1 {
-                lines.push(Vec::new());
+            if let Some(words) = self.try_words() {
+                lines.push(words);
+                let mut newlines = 0;
+                while self.try_exact(Newline).is_some() {
+                    newlines += 1;
+                    self.try_spaces();
+                }
+                if newlines > 1 {
+                    lines.push(Vec::new());
+                }
+            } else {
+                break;
             }
         }
-        lines.into_iter().flat_map(split_words).collect()
+        unsplit_words(lines.into_iter().flat_map(split_words))
     }
     fn try_word(&mut self) -> Option<Sp<Word>> {
         self.comment()
@@ -829,7 +875,41 @@ fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
         }
     }
     lines.reverse();
+    if lines.first().unwrap().is_empty() {
+        lines.remove(0);
+    }
     lines
+}
+
+fn unsplit_words(lines: impl IntoIterator<Item = Vec<Sp<Word>>>) -> Vec<Vec<Sp<Word>>> {
+    let mut lines = lines.into_iter();
+    let Some(mut first) = lines.next() else {
+        return Vec::new();
+    };
+    let mut unsplit = trim_spaces(&first, true)
+        .last()
+        .is_some_and(|w| matches!(w.value, Word::UnbreakLine));
+    first.retain(|w| !matches!(w.value, Word::UnbreakLine));
+    let mut new_lines = vec![first];
+    for mut line in lines {
+        let trimmed = trim_spaces(&line, true);
+        let unsplit_front = trimmed
+            .first()
+            .is_some_and(|w| matches!(w.value, Word::UnbreakLine));
+        let unsplit_back = trimmed
+            .last()
+            .is_some_and(|w| matches!(w.value, Word::UnbreakLine));
+        line.retain(|w| !matches!(w.value, Word::UnbreakLine));
+        if unsplit || unsplit_front {
+            let prev = new_lines.last_mut().unwrap();
+            let taken_prev = replace(prev, line);
+            prev.extend(taken_prev);
+        } else {
+            new_lines.push(line);
+        }
+        unsplit = unsplit_back;
+    }
+    new_lines
 }
 
 pub(crate) fn ident_modifier_args(ident: &Ident) -> u8 {
@@ -870,4 +950,29 @@ pub(crate) fn count_placeholders(words: &[Sp<Word>]) -> usize {
         }
     }
     count
+}
+
+pub(crate) fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {
+    let mut start = 0;
+    for word in words {
+        if let Word::Spaces = word.value {
+            start += 1;
+        } else {
+            break;
+        }
+    }
+    let mut end = words.len();
+    if trim_end {
+        for word in words.iter().rev() {
+            if let Word::Spaces = word.value {
+                end -= 1;
+            } else {
+                break;
+            }
+        }
+    }
+    if start >= end {
+        return &[];
+    }
+    &words[start..end]
 }

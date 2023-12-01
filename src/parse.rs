@@ -180,6 +180,9 @@ impl Parser {
         let mut items = Vec::new();
         loop {
             match self.try_item(parse_scopes) {
+                Some(Item::Words(words)) => {
+                    items.extend(split_words(words).into_iter().map(Item::Words))
+                }
                 Some(item) => items.push(item),
                 None => {
                     if self.try_exact(Newline).is_none() {
@@ -203,13 +206,8 @@ impl Parser {
         self.try_spaces();
         Some(if let Some(binding) = self.try_binding() {
             Item::Binding(binding)
-        } else if let Some(mut words) = self.try_words() {
+        } else if let Some(words) = self.try_words() {
             self.validate_words(&words, false);
-            words = words
-                .split(|w| matches!(w.value, Word::BreakLine))
-                .rev()
-                .flat_map(|line| line.to_vec())
-                .collect();
             Item::Words(words)
         } else if parse_scopes {
             let start = self.try_exact(TripleMinus)?;
@@ -280,14 +278,14 @@ impl Parser {
                 }
             } else {
                 self.validate_words(&words, false);
-                let lines: Vec<_> = words
-                    .split(|w| matches!(w.value, Word::BreakLine))
-                    .rev()
-                    .map(|line| line.to_vec())
-                    .collect();
-                if lines.len() > 1 {
-                    let span = (words.first().unwrap().span.clone())
+                if words.iter().any(|w| matches!(w.value, Word::BreakLine)) {
+                    let span = words
+                        .first()
+                        .unwrap()
+                        .span
+                        .clone()
                         .merge(words.last().unwrap().span.clone());
+                    let lines = split_words(words);
                     words = vec![span.clone().sp(Word::Func(Func {
                         id: FunctionId::Anonymous(span),
                         signature: None,
@@ -449,14 +447,7 @@ impl Parser {
                 lines.push(Vec::new());
             }
         }
-        lines
-            .iter()
-            .flat_map(|line| {
-                line.split(|word| matches!(word.value, Word::BreakLine))
-                    .rev()
-            })
-            .map(|line| line.to_vec())
-            .collect()
+        lines.into_iter().flat_map(split_words).collect()
     }
     fn try_word(&mut self) -> Option<Sp<Word>> {
         self.comment()
@@ -826,6 +817,19 @@ impl Parser {
             }
         }
     }
+}
+
+fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
+    let mut lines = vec![Vec::new()];
+    for word in words {
+        if matches!(word.value, Word::BreakLine) {
+            lines.push(Vec::new());
+        } else {
+            lines.last_mut().unwrap().push(word);
+        }
+    }
+    lines.reverse();
+    lines
 }
 
 pub(crate) fn ident_modifier_args(ident: &Ident) -> u8 {

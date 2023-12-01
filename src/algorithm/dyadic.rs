@@ -2192,35 +2192,28 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// Try to `find` this array in another
     pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        let searched_for = self;
         let mut searched = searched;
         let mut local_searched: Self;
-        let any_dim_greater = (self.shape().iter().rev())
+        let any_dim_greater = (searched_for.shape().iter().rev())
             .zip(searched.shape().iter().rev())
             .any(|(a, b)| a > b);
-        if self.rank() > searched.rank() || any_dim_greater {
-            let mut filled = false;
-            if any_dim_greater {
-                // Fill
-                if let Some(fill) = env.fill() {
-                    let mut target_shape = searched.shape.clone();
-                    target_shape[0] = self.row_count();
-                    local_searched = searched.clone();
-                    local_searched.fill_to_shape(&target_shape, fill);
-                    searched = &local_searched;
-                    filled = true;
-                }
-            }
-            if !filled {
-                return Err(env.error(format!(
-                    "Cannot search for array of shape {} in array of shape {}",
-                    self.format_shape(),
-                    searched.format_shape()
-                )));
+        if any_dim_greater {
+            // Fill
+            if let Some(fill) = env.fill() {
+                let mut target_shape = searched.shape.clone();
+                target_shape[0] = searched_for.row_count();
+                local_searched = searched.clone();
+                local_searched.fill_to_shape(&target_shape, fill);
+                searched = &local_searched;
+            } else {
+                let data = cowslice![0; searched.element_count()];
+                return Ok(Array::new(searched.shape.clone(), data));
             }
         }
 
         // Pad the shape of the searched-for array
-        let mut searched_for_shape = self.shape.clone();
+        let mut searched_for_shape = searched_for.shape.clone();
         while searched_for_shape.len() < searched.shape.len() {
             searched_for_shape.insert(0, 1);
         }
@@ -2261,7 +2254,7 @@ impl<T: ArrayValue> Array<T> {
                     stride *= s;
                 }
                 // Compare the current items in the two arrays
-                let same = if let Some(searched_for) = self.data.get(search_for_index) {
+                let same = if let Some(searched_for) = searched_for.data.get(search_for_index) {
                     searched.data[searched_index].array_eq(searched_for)
                 } else {
                     false

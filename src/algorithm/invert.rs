@@ -632,11 +632,22 @@ fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
             }
         }
         (2, 2) => {
+            let mut instr = instr.clone();
+            let mut end_instr = end_instr.clone();
+            let (
+                Instr::PushTemp { count, .. },
+                Instr::PopTemp {
+                    count: end_count, ..
+                },
+            ) = (&mut instr, &mut end_instr)
+            else {
+                return None;
+            };
+            *count = inner_afters_sig.outputs;
+            *end_count = inner_befores_sig.outputs;
             let mut afters = inner_afters;
-            if inner_befores_sig.args <= inner_afters_sig.args && g_sig.args <= g_sig.outputs {
-                afters.insert(0, instr.clone());
-                afters.push(end_instr.clone());
-            }
+            afters.insert(0, instr.clone());
+            afters.push(end_instr.clone());
             afters
         }
         (args, outputs) if args >= outputs => {

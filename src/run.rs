@@ -462,6 +462,10 @@ code:
                 break self.scope.call.pop().unwrap().function;
             };
             // Uncomment to debug
+            // for val in &self.stack {
+            //     print!("{:?} ", val);
+            // }
+            // println!();
             // if !self.scope.array.is_empty() {
             //     print!("array: ");
             //     for val in &self.scope.array {
@@ -479,10 +483,6 @@ code:
             //     }
             //     println!();
             // }
-            // for val in &self.stack {
-            //     print!("{:?} ", val);
-            // }
-            // println!();
             // println!("  {:?}", instr);
 
             if self.time_instrs {

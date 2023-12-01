@@ -477,6 +477,16 @@ impl Parser {
         if words.is_empty() {
             None
         } else {
+            let width = count_width(&words);
+            if width > 45 {
+                let span =
+                    (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());
+                self.diagnostics.push(Diagnostic::new(
+                    format!("Split this line into multiple lines (current heuristic: {width}/45)"),
+                    span,
+                    DiagnosticKind::Style,
+                ));
+            }
             Some(words)
         }
     }
@@ -993,4 +1003,48 @@ pub(crate) fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {
         return &[];
     }
     &words[start..end]
+}
+
+fn count_width(words: &[Sp<Word>]) -> usize {
+    let mut count = 0;
+    for word in words {
+        count += match &word.value {
+            Word::Char(_)
+            | Word::String(_)
+            | Word::FormatString(_)
+            | Word::Number(..)
+            | Word::Primitive(_)
+            | Word::MultilineString(_)
+            | Word::Ident(_)
+            | Word::Placeholder(_) => 1,
+            Word::Strand(_) => 1,
+            Word::Array(arr) => {
+                (arr.lines.iter().map(|line| count_width(line)))
+                    .max()
+                    .unwrap_or(0)
+                    + 1
+            }
+            Word::Func(func) => {
+                (func.lines.iter().map(|line| count_width(line)))
+                    .max()
+                    .unwrap_or(0)
+                    + 1
+            }
+            Word::Switch(sw) => {
+                let line_counts = (sw.branches.iter())
+                    .flat_map(|br| &br.value.lines)
+                    .map(|line| count_width(line));
+                let count = if word.span.start.line == word.span.end.line {
+                    line_counts.sum()
+                } else {
+                    line_counts.max().unwrap_or(0)
+                };
+                count + 1 + sw.branches.len()
+            }
+            Word::Ocean(ocean) => ocean.len(),
+            Word::Modified(m) => count_width(&m.operands) + 1,
+            Word::Spaces | Word::BreakLine | Word::UnbreakLine | Word::Comment(_) => 0,
+        }
+    }
+    count
 }

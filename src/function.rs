@@ -46,6 +46,11 @@ pub enum Instr {
     },
     /// Call a dynamic function
     Dynamic(DynamicFunction),
+    Unpack {
+        count: usize,
+        span: usize,
+        unbox: bool,
+    },
     PushTempFunctions(usize),
     PopTempFunctions(usize),
     GetTempFunction {
@@ -170,6 +175,7 @@ impl Hash for Instr {
                 count.hash(state);
                 sig.hash(state);
             }
+            Instr::Unpack { count, .. } => count.hash(state),
             Instr::PushTempFunctions(count) => count.hash(state),
             Instr::PopTempFunctions(count) => count.hash(state),
             Instr::GetTempFunction { offset, .. } => offset.hash(state),
@@ -229,8 +235,8 @@ impl fmt::Display for Instr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Instr::Push(val) => write!(f, "{val:?}"),
-            Instr::BeginArray => write!(f, "]"),
-            Instr::EndArray { .. } => write!(f, "["),
+            Instr::BeginArray => write!(f, "begin array"),
+            Instr::EndArray { .. } => write!(f, "end array"),
             Instr::Prim(prim @ Primitive::Over, _) => write!(f, "`{prim}`"),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::ImplPrim(prim, _) => write!(f, "{prim}"),
@@ -241,6 +247,7 @@ impl fmt::Display for Instr {
             Instr::PopTempFunctions(count) => write!(f, "<pop {count} functions>"),
             Instr::GetTempFunction { offset, .. } => write!(f, "<get function at {offset}>"),
             Instr::Dynamic(df) => write!(f, "{df:?}"),
+            Instr::Unpack { count, .. } => write!(f, "<unpack {count}>"),
             Instr::PushTemp { stack, count, .. } => write!(f, "<push {stack} {count}>"),
             Instr::PopTemp { stack, count, .. } => write!(f, "<pop {stack} {count}>"),
             Instr::CopyFromTemp {

@@ -116,11 +116,15 @@ pub(crate) fn invert_instrs(instrs: &[Instr]) -> Option<Vec<Instr>> {
 fn invert_instr_impl(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
     use Primitive::*;
 
+    // println!("inverting {:?}", instrs);
+
     let patterns: &[&dyn InvertPattern] = &[
         &invert_invert_pattern,
         &invert_rectify_pattern,
         &invert_setinverse_pattern,
         &invert_trivial_pattern,
+        &invert_array_pattern,
+        &invert_unpack_pattern,
         &(Val, ([Rotate], [Neg, Rotate])),
         &([Rotate], [Neg, Rotate]),
         &pat!(Sqrt, (2, Pow)),
@@ -134,6 +138,7 @@ fn invert_instr_impl(mut instrs: &[Instr]) -> Option<Vec<Instr>> {
         &([Dup, Mul], [Sqrt]),
         &(Val, pat!(Pow, (1, Flip, Div, Pow))),
         &(Val, ([Log], [Flip, Pow])),
+        &invert_temp_pattern,
     ];
 
     let mut inverted = Vec::new();
@@ -222,6 +227,8 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         &UnderPatternFn(under_partition_pattern, "partition"),
         &UnderPatternFn(under_group_pattern, "group"),
         &UnderPatternFn(under_setunder_pattern, "setunder"),
+        &UnderPatternFn(under_array_pattern, "array"),
+        &UnderPatternFn(under_unpack_pattern, "unpack"),
         &bin!(Flip, Add, Sub),
         &bin!(Flip, Mul, Div),
         &bin!(Flip, Sub),
@@ -312,8 +319,8 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(Vec<Instr>, 
         &pat!(Deep, Deep, (1, Drop)),
         &pat!(Abyss, Abyss, (1, Drop)),
         &pat!(Seabed, Seabed, (1, Drop)),
-        &UnderPatternFn(under_from_inverse_pattern, "from inverse"),
         &UnderPatternFn(under_temp_pattern, "temp"),
+        &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // This must come last!
     ];
 
     // println!("undering {:?}", instrs);
@@ -537,7 +544,7 @@ fn under_setunder_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Un
     Some((input, (befores, afters)))
 }
 
-fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
+fn try_temp_wrap(input: &[Instr]) -> Option<(&[Instr], &Instr, &[Instr], &Instr)> {
     let (
         instr @ (Instr::PushTemp {
             stack: TempStack::Inline,
@@ -568,17 +575,32 @@ fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
             Instr::PopTemp {
                 stack: TempStack::Inline,
                 ..
-            } => depth -= 1,
+            } => {
+                depth -= 1;
+                if depth == 0 {
+                    end = i;
+                    break;
+                }
+            }
             _ => {}
-        }
-        if depth == 0 {
-            end = i;
-            break;
         }
     }
     let (inner, input) = input.split_at(end);
-    let end_instr = &input[0];
+    let end_instr = input.first()?;
     let input = &input[1..];
+    Some((input, instr, inner, end_instr))
+}
+
+fn invert_temp_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
+    let (input, instr, inner, end_instr) = try_temp_wrap(input)?;
+    let mut instrs = invert_instrs(inner)?;
+    instrs.insert(0, instr.clone());
+    instrs.push(end_instr.clone());
+    Some((input, instrs))
+}
+
+fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
+    let (input, instr, inner, end_instr) = try_temp_wrap(input)?;
     // Calcular inner functions and signatures
     let (inner_befores, inner_afters) = under_instrs(inner, g_sig)?;
     let inner_befores_sig = instrs_signature(&inner_befores).ok()?;
@@ -589,7 +611,7 @@ fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
     let afters = match (g_sig.args, g_sig.outputs) {
         (0, _) => return None,
         (_, 1) => {
-            let both = inner.iter().zip(input).all(|(a, b)| a == b);
+            let both = input.len() >= inner.len() && inner.iter().zip(input).all(|(a, b)| a == b);
             if both {
                 Vec::new()
             } else {
@@ -691,6 +713,83 @@ fn under_group_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], U
         Instr::PushFunc(f_after.into()),
         Instr::ImplPrim(ImplPrimitive::Ungroup, span),
     ];
+    Some((input, (befores, afters)))
+}
+
+fn try_array_wrap(input: &[Instr]) -> Option<(&[Instr], &[Instr], usize, bool)> {
+    let [Instr::BeginArray, input @ ..] = input else {
+        return None;
+    };
+    let mut depth = 1;
+    let mut end = 0;
+    let mut end_arr = None;
+    for (i, instr) in input.iter().enumerate() {
+        match instr {
+            Instr::BeginArray => depth += 1,
+            Instr::EndArray { span, boxed } => {
+                depth -= 1;
+                if depth == 0 {
+                    end = i;
+                    end_arr = Some((*span, *boxed));
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    let (inner, input) = input.split_at(end);
+    let input = &input[1..];
+    let (span, boxed) = end_arr?;
+    Some((input, inner, span, boxed))
+}
+
+fn invert_array_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
+    let (input, inner, span, unbox) = try_array_wrap(input)?;
+    let mut instrs = invert_instrs(inner)?;
+    let count = instrs_signature(&instrs).ok()?.args;
+    instrs.insert(0, Instr::Unpack { count, span, unbox });
+    Some((input, instrs))
+}
+
+fn under_array_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
+    let (input, inner, span, unbox) = try_array_wrap(input)?;
+    let (mut befores, mut afters) = under_instrs(inner, g_sig)?;
+    befores.insert(0, Instr::BeginArray);
+    befores.push(Instr::EndArray { span, boxed: unbox });
+    let count = instrs_signature(&afters).ok()?.args;
+    afters.insert(0, Instr::Unpack { count, span, unbox });
+    Some((input, (befores, afters)))
+}
+
+fn invert_unpack_pattern(input: &[Instr]) -> Option<(&[Instr], Vec<Instr>)> {
+    let [Instr::Unpack { span, unbox, .. }, input @ ..] = input else {
+        return None;
+    };
+    let mut instrs = invert_instrs(input)?;
+    instrs.insert(0, Instr::BeginArray);
+    instrs.push(Instr::EndArray {
+        span: *span,
+        boxed: *unbox,
+    });
+    Some((input, instrs))
+}
+
+fn under_unpack_pattern(input: &[Instr], mut g_sig: Signature) -> Option<(&[Instr], Under)> {
+    let [unpack @ Instr::Unpack { count, span, unbox }, input @ ..] = input else {
+        return None;
+    };
+    if g_sig.args < *count {
+        let diff = *count - g_sig.args;
+        g_sig.args += diff;
+        g_sig.outputs += diff;
+    }
+    let (mut befores, mut afters) = under_instrs(input, g_sig)?;
+    befores.insert(0, unpack.clone());
+    afters.insert(0, Instr::BeginArray);
+    afters.push(Instr::EndArray {
+        span: *span,
+        boxed: *unbox,
+    });
     Some((input, (befores, afters)))
 }
 

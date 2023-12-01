@@ -444,14 +444,8 @@ impl Primitive {
                 env.push(Boxed(val));
             }
             Primitive::Unbox => {
-                let val = match env.pop(1)? {
-                    Value::Box(boxed) => match boxed.into_scalar() {
-                        Ok(scalar) => scalar.0,
-                        Err(boxed) => Value::Box(boxed),
-                    },
-                    val => val,
-                };
-                env.push(val);
+                let val = env.pop(1)?;
+                env.push(val.unboxed());
             }
             Primitive::Parse => env.monadic_ref_env(Value::parse_num)?,
             Primitive::Utf => env.monadic_ref_env(Value::utf8)?,

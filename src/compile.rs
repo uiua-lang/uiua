@@ -360,8 +360,6 @@ impl Uiua {
             ) if *a_stack == b_stack => {
                 *a_count += b_count;
             }
-            // // Coalesce inline stack ops
-            // ([.., Instr::])
             (_, instr) => instrs.push(instr),
         }
     }

@@ -854,6 +854,16 @@ impl Value {
             value => value,
         }
     }
+    /// Remove a single layer of boxing
+    pub fn unboxed(self) -> Self {
+        match self {
+            Value::Box(boxed) => match boxed.into_scalar() {
+                Ok(scalar) => scalar.0,
+                Err(boxed) => Value::Box(boxed),
+            },
+            val => val,
+        }
+    }
     /// Turn the value into a scalar box if it is not one already
     pub fn box_if_not(&mut self) {
         match &mut *self {

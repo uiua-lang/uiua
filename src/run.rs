@@ -563,6 +563,27 @@ code:
                     Ok(())
                 }),
                 Instr::Dynamic(df) => df.f.clone()(self),
+                &Instr::Unpack { count, span, unbox } => self.with_span(span, |env| {
+                    let arr = env.pop(1)?;
+                    if arr.row_count() != count {
+                        return Err(env.error(format!(
+                            "This ⍘[] expects an array with {} rows, \
+                            but the array has {}",
+                            count,
+                            arr.row_count()
+                        )));
+                    }
+                    if unbox {
+                        for val in arr.into_rows().rev() {
+                            env.push(val.unboxed());
+                        }
+                    } else {
+                        for val in arr.into_rows().rev() {
+                            env.push(val);
+                        }
+                    }
+                    Ok(())
+                }),
                 &Instr::PushTemp { stack, count, span } => self.with_span(span, |env| {
                     for _ in 0..count {
                         let value = env.pop("value to save")?;

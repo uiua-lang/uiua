@@ -197,6 +197,7 @@ impl<'a> VirtualEnv<'a> {
                 self.handle_args_outputs(sig.args + 1, sig.outputs)?;
             }
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
+            Instr::Unpack { count, .. } => self.handle_args_outputs(1, *count)?,
             Instr::DropTemp { .. } => {}
             Instr::Prim(prim, _) => match prim {
                 Reduce | Scan => {

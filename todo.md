@@ -5,6 +5,7 @@ Within each section, items are ordered (roughly) by decreasing priority.
 - Line split syntax
 - Add line token length diagnostic
 - `update` command
+- Unify `fill` and `pack` contexts
 - Multimedia
   - Sound input
   - Webcam input

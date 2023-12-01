@@ -603,7 +603,7 @@ impl Uiua {
                     self.scope.experimental = true;
                 }
             }
-            Word::Spaces => {}
+            Word::Spaces | Word::BreakLine | Word::UnbreakLine => {}
         }
         Ok(())
     }

@@ -82,12 +82,17 @@ pub enum Word {
     Placeholder(Signature),
     Comment(String),
     Spaces,
+    BreakLine,
+    UnbreakLine,
 }
 
 impl Word {
     /// Whether this word is code
     pub fn is_code(&self) -> bool {
-        !matches!(self, Word::Comment(_) | Word::Spaces)
+        !matches!(
+            self,
+            Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::UnbreakLine
+        )
     }
 }
 
@@ -128,6 +133,8 @@ impl fmt::Debug for Word {
             Word::Spaces => write!(f, "' '"),
             Word::Comment(comment) => write!(f, "# {comment}"),
             Word::Placeholder(sig) => write!(f, "^{}.{}", sig.args, sig.outputs),
+            Word::BreakLine => write!(f, "'"),
+            Word::UnbreakLine => write!(f, "''"),
         }
     }
 }

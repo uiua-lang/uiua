@@ -405,6 +405,7 @@ pub enum AsciiToken {
     Backtick,
     TripleMinus,
     Quote,
+    Quote2,
     QuestionMark,
 }
 
@@ -430,6 +431,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::Backtick => write!(f, "`"),
             AsciiToken::TripleMinus => write!(f, "---"),
             AsciiToken::Quote => write!(f, "'"),
+            AsciiToken::Quote2 => write!(f, "''"),
             AsciiToken::QuestionMark => write!(f, "?"),
         }
     }
@@ -544,7 +546,6 @@ impl<'a> Lexer<'a> {
                 "↲" => self.end(Primitive::Wait, start),
                 "⍚" => self.end(Primitive::Level, start),
                 "≅" => self.end(Primitive::Match, start),
-                "'" => self.end(Quote, start),
                 "?" => self.end(QuestionMark, start),
                 "∶" => self.end(Primitive::Flip, start),
 
@@ -557,6 +558,8 @@ impl<'a> Lexer<'a> {
                 "_" => self.end(Underscore, start),
                 "|" => self.end(Bar, start),
                 ":" => self.end(Colon, start),
+                "'" if self.next_char_exact("'") => self.end(Quote2, start),
+                "'" => self.end(Quote, start),
                 "`" => {
                     if self.number("-") {
                         self.end(Number, start)

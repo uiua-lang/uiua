@@ -203,8 +203,13 @@ impl Parser {
         self.try_spaces();
         Some(if let Some(binding) = self.try_binding() {
             Item::Binding(binding)
-        } else if let Some(words) = self.try_words() {
+        } else if let Some(mut words) = self.try_words() {
             self.validate_words(&words, false);
+            words = words
+                .split(|w| matches!(w.value, Word::BreakLine))
+                .rev()
+                .flat_map(|line| line.to_vec())
+                .collect();
             Item::Words(words)
         } else if parse_scopes {
             let start = self.try_exact(TripleMinus)?;
@@ -264,7 +269,7 @@ impl Parser {
             // Signature
             let signature = self.try_signature(Bar);
             // Words
-            let words = self.try_words().unwrap_or_default();
+            let mut words = self.try_words().unwrap_or_default();
             // Validate words
             if let (1, Some(Word::Func(func))) = (
                 words.iter().filter(|w| w.value.is_code()).count(),
@@ -274,7 +279,22 @@ impl Parser {
                     self.validate_words(line, false);
                 }
             } else {
-                self.validate_words(&words, false)
+                self.validate_words(&words, false);
+                let lines: Vec<_> = words
+                    .split(|w| matches!(w.value, Word::BreakLine))
+                    .rev()
+                    .map(|line| line.to_vec())
+                    .collect();
+                if lines.len() > 1 {
+                    let span = (words.first().unwrap().span.clone())
+                        .merge(words.last().unwrap().span.clone());
+                    words = vec![span.clone().sp(Word::Func(Func {
+                        id: FunctionId::Anonymous(span),
+                        signature: None,
+                        lines,
+                        closed: true,
+                    }))]
+                }
             }
             // Check for uncapitalized binding names
             if name.value.trim_end_matches('!').chars().count() >= 2
@@ -430,6 +450,13 @@ impl Parser {
             }
         }
         lines
+            .iter()
+            .flat_map(|line| {
+                line.split(|word| matches!(word.value, Word::BreakLine))
+                    .rev()
+            })
+            .map(|line| line.to_vec())
+            .collect()
     }
     fn try_word(&mut self) -> Option<Sp<Word>> {
         self.comment()
@@ -503,7 +530,6 @@ impl Parser {
                 .try_func()
                 .or_else(|| self.try_strand())
                 .or_else(|| self.try_placeholder())
-                .or_else(|| self.try_bind())
             {
                 // Parse switch function syntax
                 if let Word::Switch(sw) = &arg.value {
@@ -595,8 +621,10 @@ impl Parser {
             word
         } else if let Some(switch) = self.try_if() {
             switch
-        } else if let Some(word) = self.try_bind() {
-            word
+        } else if let Some(span) = self.try_exact(Quote) {
+            span.sp(Word::BreakLine)
+        } else if let Some(span) = self.try_exact(Quote2) {
+            span.sp(Word::UnbreakLine)
         } else {
             return None;
         })
@@ -723,25 +751,6 @@ impl Parser {
             .or_else(|| signature.as_ref().map(|sig| sig.span.clone()));
         let span = start.zip(end).map(|(start, end)| start.merge(end));
         (signature, lines, span)
-    }
-    fn try_bind(&mut self) -> Option<Sp<Word>> {
-        let start = self.try_exact(Quote)?;
-        let mut operands = Vec::new();
-        operands.extend(self.try_spaces());
-        operands.extend(self.try_strand());
-        operands.extend(self.try_spaces());
-        operands.extend(self.try_strand());
-        let end = operands
-            .last()
-            .map(|w| w.span.clone())
-            .unwrap_or(start.clone());
-        let span = start.merge(end);
-        Some(span.clone().sp(Word::Func(Func {
-            id: FunctionId::Anonymous(span),
-            signature: None,
-            lines: vec![operands],
-            closed: false,
-        })))
     }
     fn try_if(&mut self) -> Option<Sp<Word>> {
         let start = self.try_exact(QuestionMark)?;

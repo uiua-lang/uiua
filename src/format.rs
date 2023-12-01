@@ -692,6 +692,7 @@ impl<'a> Formatter<'a> {
                         .push((line_number, comment.to_string()));
                 }
             }
+            Word::BreakLine | Word::UnbreakLine => {}
         }
     }
     fn format_multiline_words(
@@ -824,6 +825,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::Placeholder(_) => false,
         Word::Comment(_) => false,
         Word::Spaces => false,
+        Word::BreakLine | Word::UnbreakLine => false,
     }
 }
 

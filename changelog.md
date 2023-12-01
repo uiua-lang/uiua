@@ -11,6 +11,8 @@ If you are reading this on the website, then these changes are live here.
 - Add special syntax for splitting/joining lines of code
   - `'` will split a line without changing semantics
   - `''` will combine two lines without changing semantics
+### Interpreter
+- Add a style diagnostic about lines that are too long
 
 ## 0.4.1 - 2023-11-30
 ### Interpreter

@@ -766,9 +766,9 @@ fn try_array_wrap(input: &[Instr]) -> Option<(&[Instr], &[Instr], usize, bool)> 
             _ => {}
         }
     }
+    let (span, boxed) = end_arr?;
     let (inner, input) = input.split_at(end);
     let input = &input[1..];
-    let (span, boxed) = end_arr?;
     Some((input, inner, span, boxed))
 }
 

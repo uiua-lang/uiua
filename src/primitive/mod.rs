@@ -809,18 +809,19 @@ fn regex(env: &mut Uiua) -> UiuaResult {
             cache.entry(pattern.clone()).or_insert(regex.clone())
         };
 
-        let mut matches = Value::builder(0);
-        regex.captures_iter(&target).for_each(|caps| {
+        let mut matches: Value =
+            Array::<Boxed>::new([0, regex.captures_len()].as_slice(), []).into();
+
+        for caps in regex.captures_iter(&target) {
             let row: EcoVec<Boxed> = caps
                 .iter()
                 .flatten()
                 .map(|m| Boxed(Value::from(m.as_str())))
                 .collect();
-            // This unwrap should be fine because fill context () is infalliable.
-            matches.add_row(row.into(), &()).unwrap();
-        });
+            matches.append(row.into(), env)?;
+        }
 
-        env.push(matches.finish());
+        env.push(matches);
         Ok(())
     })
 }

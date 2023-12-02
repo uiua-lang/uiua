@@ -365,28 +365,31 @@ impl<T: ArrayValue> Array<T> {
                 if self.shape() == [0] {
                     return Ok(other);
                 }
-                let target_shape = if let Some(fill) = ctx.fill::<T>() {
-                    let target_shape = max_shape(&self.shape, &other.shape);
-                    let row_shape = &target_shape[1..];
-                    self.fill_to_shape(row_shape, fill.clone());
-                    other.fill_to_shape(&target_shape, fill);
-                    target_shape
-                } else {
-                    if other.rank() - self.rank() > 1 {
-                        return Err(C::fill_error(ctx.error(format!(
-                            "Cannot join rank {} array with rank {} array",
-                            self.rank(),
-                            other.rank()
-                        ))));
+                let target_shape = match ctx.fill::<T>() {
+                    Ok(fill) => {
+                        let target_shape = max_shape(&self.shape, &other.shape);
+                        let row_shape = &target_shape[1..];
+                        self.fill_to_shape(row_shape, fill.clone());
+                        other.fill_to_shape(&target_shape, fill);
+                        target_shape
                     }
-                    if self.shape() != &other.shape()[1..] {
-                        return Err(C::fill_error(ctx.error(format!(
-                            "Cannot join arrays of shapes {} and {}",
-                            self.format_shape(),
-                            other.format_shape()
-                        ))));
+                    Err(e) => {
+                        if other.rank() - self.rank() > 1 {
+                            return Err(C::fill_error(ctx.error(format!(
+                                "Cannot join rank {} array with rank {} array{e}",
+                                self.rank(),
+                                other.rank()
+                            ))));
+                        }
+                        if self.shape() != &other.shape()[1..] {
+                            return Err(C::fill_error(ctx.error(format!(
+                                "Cannot join arrays of shapes {} and {}{e}",
+                                self.format_shape(),
+                                other.format_shape()
+                            ))));
+                        }
+                        other.shape
                     }
-                    other.shape
                 };
                 self.data.extend(other.data);
                 self.shape = target_shape;
@@ -407,19 +410,23 @@ impl<T: ArrayValue> Array<T> {
                     self.shape = tiny_vec![2];
                     self
                 } else {
-                    if let Some(fill) = ctx.fill::<T>() {
-                        let new_row_shape = max_shape(&self.shape[1..], &other.shape[1..]);
-                        for (array, fill) in [(&mut self, fill.clone()), (&mut other, fill)] {
-                            let mut new_shape = new_row_shape.clone();
-                            new_shape.insert(0, array.shape[0]);
-                            array.fill_to_shape(&new_shape, fill);
+                    match ctx.fill::<T>() {
+                        Ok(fill) => {
+                            let new_row_shape = max_shape(&self.shape[1..], &other.shape[1..]);
+                            for (array, fill) in [(&mut self, fill.clone()), (&mut other, fill)] {
+                                let mut new_shape = new_row_shape.clone();
+                                new_shape.insert(0, array.shape[0]);
+                                array.fill_to_shape(&new_shape, fill);
+                            }
                         }
-                    } else if self.shape[1..] != other.shape[1..] {
-                        return Err(C::fill_error(ctx.error(format!(
-                            "Cannot join arrays of shapes {} and {}",
-                            self.format_shape(),
-                            other.format_shape()
-                        ))));
+                        Err(e) if self.shape[1..] != other.shape[1..] => {
+                            return Err(C::fill_error(ctx.error(format!(
+                                "Cannot join arrays of shapes {} and {}. {e}",
+                                self.format_shape(),
+                                other.format_shape()
+                            ))));
+                        }
+                        _ => (),
                     }
                     self.data.extend(other.data);
                     self.shape[0] += other.shape[0];
@@ -431,31 +438,34 @@ impl<T: ArrayValue> Array<T> {
         Ok(res)
     }
     fn append<C: FillContext>(&mut self, mut other: Self, ctx: &C) -> Result<(), C::Error> {
-        let target_shape = if let Some(fill) = ctx.fill::<T>() {
-            while self.rank() <= other.rank() {
-                self.shape.push(1);
+        let target_shape = match ctx.fill::<T>() {
+            Ok(fill) => {
+                while self.rank() <= other.rank() {
+                    self.shape.push(1);
+                }
+                let target_shape = max_shape(&self.shape, &other.shape);
+                let row_shape = &target_shape[1..];
+                self.fill_to_shape(&target_shape, fill.clone());
+                other.fill_to_shape(row_shape, fill);
+                target_shape
             }
-            let target_shape = max_shape(&self.shape, &other.shape);
-            let row_shape = &target_shape[1..];
-            self.fill_to_shape(&target_shape, fill.clone());
-            other.fill_to_shape(row_shape, fill);
-            target_shape
-        } else {
-            if self.rank() <= other.rank() || self.rank() - other.rank() > 1 {
-                return Err(C::fill_error(ctx.error(format!(
-                    "Cannot append rank {} array with rank {} array",
-                    self.rank(),
-                    other.rank()
-                ))));
+            Err(e) => {
+                if self.rank() <= other.rank() || self.rank() - other.rank() > 1 {
+                    return Err(C::fill_error(ctx.error(format!(
+                        "Cannot append rank {} array with rank {} array{e}",
+                        self.rank(),
+                        other.rank()
+                    ))));
+                }
+                if &self.shape()[1..] != other.shape() {
+                    return Err(C::fill_error(ctx.error(format!(
+                        "Cannot append arrays of shapes {} and {}{e}",
+                        self.format_shape(),
+                        other.format_shape()
+                    ))));
+                }
+                take(&mut self.shape)
             }
-            if &self.shape()[1..] != other.shape() {
-                return Err(C::fill_error(ctx.error(format!(
-                    "Cannot append arrays of shapes {} and {}",
-                    self.format_shape(),
-                    other.format_shape()
-                ))));
-            }
-            take(&mut self.shape)
         };
         self.data.extend(other.data);
         self.shape = target_shape;
@@ -584,16 +594,19 @@ impl<T: ArrayValue> Array<T> {
     fn couple_impl<C: FillContext>(&mut self, mut other: Self, ctx: &C) -> Result<(), C::Error> {
         crate::profile_function!();
         if self.shape != other.shape {
-            if let Some(fill) = ctx.fill::<T>() {
-                let new_shape = max_shape(&self.shape, &other.shape);
-                self.fill_to_shape(&new_shape, fill.clone());
-                other.fill_to_shape(&new_shape, fill);
-            } else {
-                return Err(C::fill_error(ctx.error(format!(
-                    "Cannot couple arrays with shapes {} and {}",
-                    self.format_shape(),
-                    other.format_shape()
-                ))));
+            match ctx.fill::<T>() {
+                Ok(fill) => {
+                    let new_shape = max_shape(&self.shape, &other.shape);
+                    self.fill_to_shape(&new_shape, fill.clone());
+                    other.fill_to_shape(&new_shape, fill);
+                }
+                Err(e) => {
+                    return Err(C::fill_error(ctx.error(format!(
+                        "Cannot couple arrays with shapes {} and {}{e}",
+                        self.format_shape(),
+                        other.format_shape()
+                    ))));
+                }
             }
         }
         self.data.extend(other.data);
@@ -767,7 +780,7 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         let derive_len = |data_len: usize, other_len: usize| {
-            (if env.fill::<T>().is_some() {
+            (if env.fill::<T>().is_ok() {
                 f32::ceil
             } else {
                 f32::floor
@@ -832,25 +845,32 @@ impl<T: ArrayValue> Array<T> {
         };
         let target_len: usize = shape.iter().product();
         if self.data.len() < target_len {
-            if let Some(fill) = env.fill::<T>() {
-                let start = self.data.len();
-                self.data.modify(|data| {
-                    data.extend(repeat(fill).take(target_len - start));
-                });
-            } else if self.data.is_empty() {
-                if !shape.contains(&0) {
-                    return Err(env.error("Cannot reshape empty array without a fill value"));
+            match env.fill::<T>() {
+                Ok(fill) => {
+                    let start = self.data.len();
+                    self.data.modify(|data| {
+                        data.extend(repeat(fill).take(target_len - start));
+                    });
                 }
-            } else if self.rank() == 0 {
-                self.data = cowslice![self.data[0].clone(); target_len];
-            } else {
-                let start = self.data.len();
-                self.data.modify(|data| {
-                    data.reserve(target_len - data.len());
-                    for i in 0..target_len - start {
-                        data.push(data[i % start].clone());
+                Err(e) => {
+                    if self.data.is_empty() {
+                        if !shape.contains(&0) {
+                            return Err(env.error(format!(
+                                "Cannot reshape empty array without a fill value{e}"
+                            )));
+                        }
+                    } else if self.rank() == 0 {
+                        self.data = cowslice![self.data[0].clone(); target_len];
+                    } else {
+                        let start = self.data.len();
+                        self.data.modify(|data| {
+                            data.reserve(target_len - data.len());
+                            for i in 0..target_len - start {
+                                data.push(data[i % start].clone());
+                            }
+                        });
                     }
-                });
+                }
             }
         } else {
             self.data.truncate(target_len);
@@ -1041,8 +1061,8 @@ impl<T: ArrayValue> Array<T> {
         let mut amount = Cow::Borrowed(counts);
         match amount.len().cmp(&self.row_count()) {
             Ordering::Equal => {}
-            Ordering::Less => {
-                if let Some(fill) = env.fill::<f64>() {
+            Ordering::Less => match env.fill::<f64>() {
+                Ok(fill) => {
                     if fill < 0.0 || fill.fract() != 0.0 {
                         return Err(env.error(format!(
                             "Fill value for keep must be a non-negative\
@@ -1053,29 +1073,33 @@ impl<T: ArrayValue> Array<T> {
                     let mut new_amount = amount.to_vec();
                     new_amount.extend(repeat(fill).take(self.row_count() - amount.len()));
                     amount = new_amount.into();
-                } else {
+                }
+                Err(e) => {
                     return Err(env.error(format!(
-                        "Cannot keep array with shape {} with array of shape {}",
+                        "Cannot keep array with shape {} with array of shape {}{e}",
                         self.format_shape(),
                         FormatShape(&[amount.len()])
                     )));
                 }
-            }
+            },
             Ordering::Greater => {
-                return Err(env.error(if env.fill::<f64>().is_some() {
-                    format!(
-                        "Cannot keep array with shape {} with array of shape {}.\
-                        A fill value is available, but keep can only been filled\
-                        if there are fewer counts than rows.",
-                        self.format_shape(),
-                        FormatShape(amount.as_ref())
-                    )
-                } else {
-                    format!(
-                        "Cannot keep array with shape {} with array of shape {}",
-                        self.format_shape(),
-                        FormatShape(amount.as_ref())
-                    )
+                return Err(env.error(match env.fill::<f64>() {
+                    Ok(_) => {
+                        format!(
+                            "Cannot keep array with shape {} with array of shape {}.\
+                            A fill value is available, but keep can only been filled\
+                            if there are fewer counts than rows.",
+                            self.format_shape(),
+                            FormatShape(amount.as_ref())
+                        )
+                    }
+                    Err(e) => {
+                        format!(
+                            "Cannot keep array with shape {} with array of shape {}{e}",
+                            self.format_shape(),
+                            FormatShape(amount.as_ref())
+                        )
+                    }
                 }))
             }
         }
@@ -1294,16 +1318,20 @@ impl<T: ArrayValue> Array<T> {
             let row_len: usize = self.shape[d + 1..].iter().product();
             let s = s as isize;
             if i >= s || i < -s {
-                if let Some(fill) = env.fill::<T>() {
-                    picked = cowslice![fill; row_len];
-                    continue;
+                match env.fill::<T>() {
+                    Ok(fill) => {
+                        picked = cowslice![fill; row_len];
+                        continue;
+                    }
+                    Err(e) => {
+                        return Err(env
+                            .error(format!(
+                                "Index {i} is out of bounds of length {s} (dimension {d}) in shape {}{e}",
+                                self.format_shape()
+                            ))
+                            .fill());
+                    }
                 }
-                return Err(env
-                    .error(format!(
-                        "Index {i} is out of bounds of length {s} (dimension {d}) in shape {}",
-                        self.format_shape()
-                    ))
-                    .fill());
             }
             let i = if i >= 0 { i as usize } else { (s + i) as usize };
             let start = i * row_len;
@@ -1472,41 +1500,49 @@ impl<T: ArrayValue> Array<T> {
                 self.data.modify(|data| {
                     if taking >= 0 {
                         if abs_taking > row_count {
-                            if let Some(fill) = T::get_fill(env) {
-                                filled = true;
-                                data.extend(repeat(fill).take((abs_taking - row_count) * row_len));
-                            } else {
-                                return Err(env
-                                    .error(format!(
-                                        "Cannot take {} rows from array with {} row{} \
-                                        outside a fill context",
-                                        abs_taking,
-                                        row_count,
-                                        if row_count == 1 { "" } else { "s" }
-                                    ))
-                                    .fill());
+                            match T::get_fill(env) {
+                                Ok(fill) => {
+                                    filled = true;
+                                    data.extend(
+                                        repeat(fill).take((abs_taking - row_count) * row_len),
+                                    );
+                                }
+                                Err(e) => {
+                                    return Err(env
+                                        .error(format!(
+                                            "Cannot take {} rows from array with {} row{} \
+                                            outside a fill context{e}",
+                                            abs_taking,
+                                            row_count,
+                                            if row_count == 1 { "" } else { "s" }
+                                        ))
+                                        .fill());
+                                }
                             }
                         } else {
                             data.truncate(abs_taking * row_len);
                         }
                     } else {
                         *data = if abs_taking > row_count {
-                            if let Some(fill) = T::get_fill(env) {
-                                filled = true;
-                                repeat(fill)
-                                    .take((abs_taking - row_count) * row_len)
-                                    .chain(take(data))
-                                    .collect()
-                            } else {
-                                return Err(env
-                                    .error(format!(
-                                        "Cannot take {} rows from array with {} row{} \
-                                        outside a fill context",
-                                        abs_taking,
-                                        row_count,
-                                        if row_count == 1 { "" } else { "s" }
-                                    ))
-                                    .fill());
+                            match T::get_fill(env) {
+                                Ok(fill) => {
+                                    filled = true;
+                                    repeat(fill)
+                                        .take((abs_taking - row_count) * row_len)
+                                        .chain(take(data))
+                                        .collect()
+                                }
+                                Err(e) => {
+                                    return Err(env
+                                        .error(format!(
+                                            "Cannot take {} rows from array with {} row{} \
+                                            outside a fill context{e}",
+                                            abs_taking,
+                                            row_count,
+                                            if row_count == 1 { "" } else { "s" }
+                                        ))
+                                        .fill());
+                                }
                             }
                         } else {
                             take(data)
@@ -1554,21 +1590,24 @@ impl<T: ArrayValue> Array<T> {
                     let mut arr = Array::from_row_arrays_infallible(new_rows);
                     // Extend with fill values if necessary
                     if abs_taking > arr.row_count() {
-                        if let Some(fill) = T::get_fill(env) {
-                            let row_len = arr.row_len();
-                            arr.data.extend(
-                                repeat(fill).take((abs_taking - arr.row_count()) * row_len),
-                            );
-                        } else {
-                            return Err(env
-                                .error(format!(
-                                    "Cannot take {} rows from array with {} row{} \
-                                    outside a fill context",
-                                    abs_taking,
-                                    arr.row_count(),
-                                    if arr.row_count() == 1 { "" } else { "s" }
-                                ))
-                                .fill());
+                        match T::get_fill(env) {
+                            Ok(fill) => {
+                                let row_len = arr.row_len();
+                                arr.data.extend(
+                                    repeat(fill).take((abs_taking - arr.row_count()) * row_len),
+                                );
+                            }
+                            Err(e) => {
+                                return Err(env
+                                    .error(format!(
+                                        "Cannot take {} rows from array with {} row{} \
+                                        outside a fill context{e}",
+                                        abs_taking,
+                                        arr.row_count(),
+                                        if arr.row_count() == 1 { "" } else { "s" }
+                                    ))
+                                    .fill());
+                            }
                         }
                     }
                     arr
@@ -1581,22 +1620,25 @@ impl<T: ArrayValue> Array<T> {
                     let mut arr = Array::from_row_arrays_infallible(new_rows);
                     // Prepend with fill values if necessary
                     if abs_taking > arr.row_count() {
-                        if let Some(fill) = T::get_fill(env) {
-                            let row_len = arr.row_len();
-                            arr.data = repeat(fill)
-                                .take((abs_taking - arr.row_count()) * row_len)
-                                .chain(arr.data)
-                                .collect();
-                        } else {
-                            return Err(env
-                                .error(format!(
-                                    "Cannot take {} rows from array with {} row{} \
-                                    outside a fill context",
-                                    abs_taking,
-                                    arr.row_count(),
-                                    if arr.row_count() == 1 { "" } else { "s" }
-                                ))
-                                .fill());
+                        match T::get_fill(env) {
+                            Ok(fill) => {
+                                let row_len = arr.row_len();
+                                arr.data = repeat(fill)
+                                    .take((abs_taking - arr.row_count()) * row_len)
+                                    .chain(arr.data)
+                                    .collect();
+                            }
+                            Err(e) => {
+                                return Err(env
+                                    .error(format!(
+                                        "Cannot take {} rows from array with {} row{} \
+                                        outside a fill context{e}",
+                                        abs_taking,
+                                        arr.row_count(),
+                                        if arr.row_count() == 1 { "" } else { "s" }
+                                    ))
+                                    .fill());
+                            }
                         }
                     }
                     arr
@@ -1749,7 +1791,7 @@ impl Value {
     pub fn rotate(&self, mut rotated: Self, env: &Uiua) -> UiuaResult<Self> {
         let by = self.as_ints(env, "Rotation amount must be a list of integers")?;
         #[cfg(feature = "bytes")]
-        if env.fill::<f64>().is_some() {
+        if env.fill::<f64>().is_ok() {
             if let Value::Byte(bytes) = &rotated {
                 rotated = bytes.convert_ref::<f64>().into();
             }
@@ -1773,7 +1815,7 @@ impl Value {
     ) -> UiuaResult<Self> {
         let by = self.as_integer_array(env, "Rotation amount must be an array of integers")?;
         #[cfg(feature = "bytes")]
-        if env.fill::<f64>().is_some() {
+        if env.fill::<f64>().is_ok() {
             if let Value::Byte(bytes) = &rotated {
                 rotated = bytes.convert_ref::<f64>().into();
             }
@@ -1802,7 +1844,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let data = self.data.as_mut_slice();
         rotate(by, &self.shape, data);
-        if let Some(fill) = env.fill::<T>() {
+        if let Ok(fill) = env.fill::<T>() {
             fill_shift(by, &self.shape, data, fill);
         }
         Ok(())
@@ -1976,31 +2018,39 @@ impl<T: ArrayValue> Array<T> {
             let i = if i >= 0 {
                 let ui = i as usize;
                 if ui >= row_count {
-                    if let Some(fill) = env.fill::<T>() {
-                        selected.extend(repeat(fill).take(row_len));
-                        continue;
+                    match env.fill::<T>() {
+                        Ok(fill) => {
+                            selected.extend(repeat(fill).take(row_len));
+                            continue;
+                        }
+                        Err(e) => {
+                            return Err(env
+                                .error(format!(
+                                    "Index {} is out of bounds of length {}{e}",
+                                    i, row_count
+                                ))
+                                .fill());
+                        }
                     }
-                    return Err(env
-                        .error(format!(
-                            "Index {} is out of bounds of length {}",
-                            i, row_count
-                        ))
-                        .fill());
                 }
                 ui
             } else {
                 let pos_i = (row_count as isize + i) as usize;
                 if pos_i >= row_count {
-                    if let Some(fill) = env.fill::<T>() {
-                        selected.extend(repeat(fill).take(row_len));
-                        continue;
+                    match env.fill::<T>() {
+                        Ok(fill) => {
+                            selected.extend(repeat(fill).take(row_len));
+                            continue;
+                        }
+                        Err(e) => {
+                            return Err(env
+                                .error(format!(
+                                    "Index {} is out of bounds of length {}{e}",
+                                    i, row_count
+                                ))
+                                .fill());
+                        }
                     }
-                    return Err(env
-                        .error(format!(
-                            "Index {} is out of bounds of length {}",
-                            i, row_count
-                        ))
-                        .fill());
                 }
                 pos_i
             };
@@ -2200,15 +2250,18 @@ impl<T: ArrayValue> Array<T> {
             .any(|(a, b)| a > b);
         if self.rank() > searched.rank() || any_dim_greater {
             // Fill
-            if let Some(fill) = env.fill() {
-                let mut target_shape = searched.shape.clone();
-                target_shape[0] = searched_for.row_count();
-                local_searched = searched.clone();
-                local_searched.fill_to_shape(&target_shape, fill);
-                searched = &local_searched;
-            } else {
-                let data = cowslice![0; searched.element_count()];
-                return Ok(Array::new(searched.shape.clone(), data));
+            match env.fill() {
+                Ok(fill) => {
+                    let mut target_shape = searched.shape.clone();
+                    target_shape[0] = searched_for.row_count();
+                    local_searched = searched.clone();
+                    local_searched.fill_to_shape(&target_shape, fill);
+                    searched = &local_searched;
+                }
+                Err(_) => {
+                    let data = cowslice![0; searched.element_count()];
+                    return Ok(Array::new(searched.shape.clone(), data));
+                }
             }
         }
 

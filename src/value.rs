@@ -1108,7 +1108,7 @@ value_un_impl!(
 
 macro_rules! val_retry {
     (Byte, $env:expr) => {
-        $env.num_fill().is_some()
+        $env.num_fill().is_ok()
     };
     ($variant:ident, $env:expr) => {
         false

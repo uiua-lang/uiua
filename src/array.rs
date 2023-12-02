@@ -396,7 +396,7 @@ pub trait ArrayValue: Clone + Debug + Display + GridFmt + ArrayCmp + Send + Sync
     /// The type name
     const NAME: &'static str;
     /// Get the fill value from the environment
-    fn get_fill(env: &Uiua) -> Option<Self>;
+    fn get_fill(env: &Uiua) -> Result<Self, &'static str>;
     /// Hash the value
     fn array_hash<H: Hasher>(&self, hasher: &mut H);
     /// Delimiters for formatting
@@ -411,7 +411,7 @@ pub trait ArrayValue: Clone + Debug + Display + GridFmt + ArrayCmp + Send + Sync
 
 impl ArrayValue for f64 {
     const NAME: &'static str = "number";
-    fn get_fill(env: &Uiua) -> Option<Self> {
+    fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.num_fill()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
@@ -428,7 +428,7 @@ impl ArrayValue for f64 {
 
 impl ArrayValue for u8 {
     const NAME: &'static str = "number";
-    fn get_fill(env: &Uiua) -> Option<Self> {
+    fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.byte_fill()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
@@ -438,7 +438,7 @@ impl ArrayValue for u8 {
 
 impl ArrayValue for char {
     const NAME: &'static str = "character";
-    fn get_fill(env: &Uiua) -> Option<Self> {
+    fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.char_fill()
     }
     fn format_delims() -> (&'static str, &'static str) {
@@ -454,7 +454,7 @@ impl ArrayValue for char {
 
 impl ArrayValue for Boxed {
     const NAME: &'static str = "box";
-    fn get_fill(env: &Uiua) -> Option<Self> {
+    fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.box_fill()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
@@ -464,7 +464,7 @@ impl ArrayValue for Boxed {
 
 impl ArrayValue for Complex {
     const NAME: &'static str = "complex";
-    fn get_fill(env: &Uiua) -> Option<Self> {
+    fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.complex_fill()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {

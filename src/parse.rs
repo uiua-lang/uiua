@@ -928,6 +928,10 @@ fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
                 .collect();
             Word::Switch(sw)
         }
+        Word::Modified(mut m) => {
+            m.operands = m.operands.into_iter().map(unsplit_word).collect();
+            Word::Modified(m)
+        }
         word => word,
     })
 }
@@ -936,6 +940,9 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
     word.map(|word| match word {
         Word::Func(mut func) => {
             func.lines = func.lines.into_iter().flat_map(split_words).collect();
+            if func.lines.len() > 1 && !func.lines.last().unwrap().is_empty() {
+                func.lines.push(Vec::new());
+            }
             Word::Func(func)
         }
         Word::Array(mut arr) => {
@@ -952,6 +959,10 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
                 })
                 .collect();
             Word::Switch(sw)
+        }
+        Word::Modified(mut m) => {
+            m.operands = m.operands.into_iter().map(split_word).collect();
+            Word::Modified(m)
         }
         word => word,
     })

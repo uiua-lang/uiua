@@ -47,13 +47,14 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Transpose => Instr::ImplPrim(InvTranspose, span),
         Bits => Instr::ImplPrim(InverseBits, span),
         Couple => Instr::ImplPrim(InvCouple, span),
-        Trace => Instr::ImplPrim(InvTrace, span),
         Box => Instr::Prim(Unbox, span),
         Unbox => Instr::Prim(Box, span),
         Where => Instr::ImplPrim(InvWhere, span),
         Utf => Instr::ImplPrim(InvUtf, span),
         Parse => Instr::ImplPrim(InvParse, span),
         Fix => Instr::ImplPrim(InvFix, span),
+        Trace => Instr::ImplPrim(InvTrace, span),
+        Stack => Instr::ImplPrim(InvStack, span),
         _ => return None,
     })
 }
@@ -67,7 +68,6 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         Acos => Instr::ImplPrim(Cos, span),
         InvTranspose => Instr::Prim(Transpose, span),
         InverseBits => Instr::Prim(Bits, span),
-        InvTrace => Instr::Prim(Trace, span),
         InvWhere => Instr::Prim(Where, span),
         InvUtf => Instr::Prim(Utf, span),
         InvAtan => Instr::Prim(Atan, span),
@@ -75,6 +75,8 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         InvCouple => Instr::Prim(Couple, span),
         InvParse => Instr::Prim(Parse, span),
         InvFix => Instr::Prim(Fix, span),
+        InvTrace => Instr::Prim(Trace, span),
+        InvStack => Instr::Prim(Stack, span),
         _ => return None,
     })
 }

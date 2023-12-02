@@ -661,8 +661,6 @@ impl Parser {
             spaces
         } else if let Some(word) = self.try_func() {
             word
-        } else if let Some(switch) = self.try_if() {
-            switch
         } else if let Some(span) = self.try_exact(Quote) {
             span.sp(Word::BreakLine)
         } else if let Some(span) = self.try_exact(Quote2) {
@@ -792,38 +790,6 @@ impl Parser {
             .or_else(|| signature.as_ref().map(|sig| sig.span.clone()));
         let span = start.zip(end).map(|(start, end)| start.merge(end));
         (signature, lines, span)
-    }
-    fn try_if(&mut self) -> Option<Sp<Word>> {
-        let start = self.try_exact(QuestionMark)?;
-        let mut operands = Vec::new();
-        operands.extend(self.try_spaces());
-        operands.extend(self.try_strand());
-        operands.extend(self.try_spaces());
-        operands.extend(self.try_strand());
-        let end = operands
-            .last()
-            .map(|w| w.span.clone())
-            .unwrap_or(start.clone());
-        let span = start.merge(end);
-        Some(
-            span.sp(Word::Switch(Switch {
-                branches: (operands.into_iter().filter(|w| w.value.is_code()).rev())
-                    .map(|w| {
-                        w.span.clone().sp(Func {
-                            id: match w.value {
-                                Word::Primitive(prim) => FunctionId::Primitive(prim),
-                                Word::Func(func) => return w.span.clone().sp(func),
-                                _ => FunctionId::Anonymous(w.span.clone()),
-                            },
-                            lines: vec![vec![w]],
-                            signature: None,
-                            closed: false,
-                        })
-                    })
-                    .collect(),
-                closed: false,
-            })),
-        )
     }
     fn try_spaces(&mut self) -> Option<Sp<Word>> {
         self.try_exact(Spaces).map(|span| span.sp(Word::Spaces))

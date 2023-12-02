@@ -209,10 +209,12 @@ fn TutorialBasic() -> impl IntoView {
         <p><Prim prim=Pop/>" removes the top item from the stack."</p>
         <p>"This is useful when you want to discard a value that you do not need."</p>
         <Editor example="1 ; 2 3 4 ; 5 6"/>
-        <h2><Prim prim=Trace/></h2>
-        <p><Prim prim=Trace/>" prints the top item on the stack without popping it."</p>
+        <h2><Prim prim=Stack/>" and "<Prim prim=Trace/></h2>
+        <p><Prim prim=Stack/>" prints the entire stack."</p>
         <p>"It also attaches line and column numbers."</p>
         <p>"This is useful for debugging by inspecting the stack."</p>
+        <Editor example="√+ ? .+ ? 1 ×3 4"/>
+        <p><Prim prim=Trace/>" prints only top item on the stack."</p>
         <Editor example="+1 ⸮ ×4 trace ×. -3 5"/>
 
         <h2 id="challenges">"Challenges"</h2>

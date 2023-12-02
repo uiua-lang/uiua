@@ -138,6 +138,7 @@ impl fmt::Display for ImplPrimitive {
             InvParse => write!(f, "{Invert}{Parse}"),
             InvFix => write!(f, "{Invert}{Fix}"),
             InvTrace => write!(f, "{Invert}{Trace}"),
+            InvStack => write!(f, "{Invert}{Stack}"),
             InvDump => write!(f, "{Invert}{Dump}"),
             Untake => write!(f, "{Invert}{Take}"),
             Undrop => write!(f, "{Invert}{Drop}"),
@@ -625,6 +626,7 @@ impl Primitive {
                 env.call(f)?;
             }
             Primitive::Trace => trace(env, false)?,
+            Primitive::Stack => stack(env, false)?,
             Primitive::Dump => dump(env, false)?,
             Primitive::Regex => regex(env)?,
             Primitive::Sys(io) => io.run(env)?,
@@ -712,6 +714,7 @@ impl ImplPrimitive {
                 env.push(im);
             }
             ImplPrimitive::InvTrace => trace(env, true)?,
+            ImplPrimitive::InvStack => stack(env, true)?,
             ImplPrimitive::InvDump => dump(env, true)?,
             // Optimizations
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
@@ -777,6 +780,32 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
     env.backend.print_str_trace(&format!("┌╴{span}\n"));
     for line in item_lines {
         env.backend.print_str_trace(&line);
+    }
+    env.backend.print_str_trace("└");
+    for _ in 0..max_line_len - 1 {
+        env.backend.print_str_trace("╴");
+    }
+    env.backend.print_str_trace("\n");
+    Ok(())
+}
+
+fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
+    let span = if inverse {
+        format!("{} {}", env.span(), Primitive::Invert)
+    } else {
+        env.span().to_string()
+    };
+    let items = env.clone_stack_top(env.stack_height());
+    let max_line_len = span.chars().count() + 2;
+    let item_lines: Vec<Vec<String>> = items
+        .iter()
+        .map(Value::show)
+        .map(|s| s.lines().map(Into::into).collect::<Vec<String>>())
+        .map(|lines| format_trace_item_lines(lines, max_line_len))
+        .collect();
+    env.backend.print_str_trace(&format!("┌╴{span}\n"));
+    for line in item_lines.iter().flatten() {
+        env.backend.print_str_trace(line);
     }
     env.backend.print_str_trace("└");
     for _ in 0..max_line_len - 1 {

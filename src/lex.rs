@@ -411,7 +411,6 @@ pub enum AsciiToken {
     TripleMinus,
     Quote,
     Quote2,
-    QuestionMark,
 }
 
 impl fmt::Display for AsciiToken {
@@ -437,7 +436,6 @@ impl fmt::Display for AsciiToken {
             AsciiToken::TripleMinus => write!(f, "---"),
             AsciiToken::Quote => write!(f, "'"),
             AsciiToken::Quote2 => write!(f, "''"),
-            AsciiToken::QuestionMark => write!(f, "?"),
         }
     }
 }
@@ -550,7 +548,6 @@ impl<'a> Lexer<'a> {
                 "↰" => self.end(Primitive::Spawn, start),
                 "↲" => self.end(Primitive::Wait, start),
                 "≅" => self.end(Primitive::Match, start),
-                "?" => self.end(QuestionMark, start),
                 "∶" => self.end(Primitive::Flip, start),
 
                 "(" => self.end(OpenParen, start),

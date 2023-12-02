@@ -1729,6 +1729,19 @@ primitive!(
     /// ex: ↧5 ∞
     /// ex: ↥5 ∞
     (0, Infinity, Constant, ("infinity", '∞')),
+    /// Debug print all stack values without popping them
+    ///
+    /// This is equivalent to [dump][identity], but is easier to type.
+    ///
+    /// This is useful when you want to inspect the current ordering of the stack.
+    /// For example, if you are juggling some values on the stack, you can use [stack] to inspect the stack afterwards:
+    /// ex: 1 2 3
+    ///   : ,,⊙.:
+    ///   : ?
+    ///   : +×-×+
+    /// ex: 2_3_10 ? 17 ↯3_4⇡12
+    ///   : ++
+    (0, Stack, Stack, ("stack", '?')),
     /// Debug print the top value on the stack without popping it
     ///
     /// ex: ⸮[1 2 3]
@@ -1744,7 +1757,7 @@ primitive!(
     /// Debug print all the values currently on stack without popping them
     ///
     /// The function is used to preprocess the values before printing.
-    /// If you just want to print the values, use [dump][identity].
+    /// [dump][identity] is equivalent to [stack].
     /// ex: dump∘ 1 2 3
     /// This is useful when you want to inspect the current ordering of the stack.
     /// For example, if you are juggling some values on the stack, you can use [dump] to inspect the stack afterwards:
@@ -1760,7 +1773,7 @@ primitive!(
     ///   : ⍉.⊃≡(⊟.)(⊞+.).
     ///   : dump△
     ///   : +++∩∩⧻
-    /// Error encountered within [dump]'s function are caught and dumped as strings.
+    /// Errors encountered within [dump]'s function are caught and dumped as strings.
     /// ex: 1_2_3 4 5_6_7
     ///   : dump⊢
     (0(0)[1], Dump, Stack, "dump"),
@@ -1818,6 +1831,7 @@ impl_primitive!(
     (1, InvParse),
     (1, InvFix),
     (1, InvTrace),
+    (0, InvStack),
     (0[1], InvDump),
     // Unders
     (3, Unselect),

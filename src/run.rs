@@ -769,7 +769,7 @@ code:
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
         let res = match self.stack.pop() {
             Some(mut val) => {
-                if self.pack_boxes() {
+                if self.unpack_boxes() {
                     val.unpack();
                 }
                 Ok(val)
@@ -1076,6 +1076,12 @@ code:
         res
     }
     pub(crate) fn pack_boxes(&self) -> bool {
+        self.scope
+            .shape_fix
+            .last()
+            .is_some_and(|fix| matches!(fix, ShapeFix::Pack))
+    }
+    pub(crate) fn unpack_boxes(&self) -> bool {
         (0..2).any(|i| {
             self.scope
                 .shape_fix

@@ -471,7 +471,12 @@ impl<'a> Formatter<'a> {
             }
             Item::Binding(binding) => {
                 match binding.words.first().map(|w| &w.value) {
-                    Some(Word::Primitive(Primitive::Sys(SysOp::Import))) => {
+                    Some(Word::Primitive(Primitive::Sys(SysOp::Import)))
+                        if (binding.words.iter())
+                            .filter(|word| word.value.is_code())
+                            .count()
+                            == 2 =>
+                    {
                         self.prev_import_function = Some(binding.name.value.clone());
                     }
                     Some(Word::Ident(ident)) => {

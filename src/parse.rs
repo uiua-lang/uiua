@@ -430,12 +430,12 @@ impl Parser {
         if words.is_empty() {
             None
         } else {
-            let width = count_width(&words);
-            if width > 45 {
-                let span =
-                    (words.first().unwrap().span.clone()).merge(words.last().unwrap().span.clone());
+            if let Err((width, span)) = count_width(&words) {
                 self.diagnostics.push(Diagnostic::new(
-                    format!("Split this line into multiple lines (current heuristic: {width}/45)"),
+                    format!(
+                        "Split this line into multiple lines \
+                        (current heuristic: {width}/{MAX_WIDTH})"
+                    ),
                     span,
                     DiagnosticKind::Style,
                 ));
@@ -1033,10 +1033,12 @@ pub(crate) fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {
     &words[start..end]
 }
 
-fn count_width(words: &[Sp<Word>]) -> usize {
+const MAX_WIDTH: usize = 45;
+
+fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan)> {
     let mut count = 0;
     for word in words {
-        count += match &word.value {
+        match &word.value {
             Word::Char(_)
             | Word::String(_)
             | Word::FormatString(_)
@@ -1044,35 +1046,50 @@ fn count_width(words: &[Sp<Word>]) -> usize {
             | Word::Primitive(_)
             | Word::MultilineString(_)
             | Word::Ident(_)
-            | Word::Placeholder(_) => 1,
-            Word::Strand(_) => 1,
+            | Word::Placeholder(_) => count += 1,
+            Word::Strand(_) => count += 1,
             Word::Array(arr) => {
-                (arr.lines.iter().map(|line| count_width(line)))
-                    .max()
-                    .unwrap_or(0)
-                    + 1
+                let mut max_width = 0;
+                for line in &arr.lines {
+                    max_width = max_width.max(count_width(line)?);
+                }
+                count += max_width + (arr.lines.len() == 1) as usize;
             }
             Word::Func(func) => {
-                (func.lines.iter().map(|line| count_width(line)))
-                    .max()
-                    .unwrap_or(0)
-                    + 1
+                let mut max_width = 0;
+                for line in &func.lines {
+                    max_width = max_width.max(count_width(line)?);
+                }
+                count += max_width + (func.lines.len() == 1) as usize;
             }
             Word::Switch(sw) => {
-                let line_counts = (sw.branches.iter())
-                    .flat_map(|br| &br.value.lines)
-                    .map(|line| count_width(line));
-                let count = if word.span.start.line == word.span.end.line {
-                    line_counts.sum()
+                if word.span.start.line == word.span.end.line {
+                    for br in &sw.branches {
+                        for line in &br.value.lines {
+                            count += count_width(line)?;
+                        }
+                    }
+                    count += sw.branches.len() + 1;
                 } else {
-                    line_counts.max().unwrap_or(0)
+                    let mut max_width = 0;
+                    for br in &sw.branches {
+                        for line in &br.value.lines {
+                            max_width = max_width.max(count_width(line)?);
+                        }
+                    }
+                    count += max_width;
                 };
-                count + 1 + sw.branches.len()
             }
-            Word::Ocean(ocean) => ocean.len(),
-            Word::Modified(m) => count_width(&m.operands) + 1,
-            Word::Spaces | Word::BreakLine | Word::UnbreakLine | Word::Comment(_) => 0,
+            Word::Ocean(ocean) => count += ocean.len(),
+            Word::Modified(m) => count += count_width(&m.operands)? + 1,
+            Word::Spaces | Word::BreakLine | Word::UnbreakLine | Word::Comment(_) => {}
         }
     }
-    count
+    if count > MAX_WIDTH {
+        let first = words.first().unwrap().span.clone();
+        let last = words.last().unwrap().span.clone();
+        Err((count, first.merge(last)))
+    } else {
+        Ok(count)
+    }
 }

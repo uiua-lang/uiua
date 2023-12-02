@@ -57,7 +57,7 @@ pub trait FillContext {
     type Error;
     fn error(&self, msg: impl ToString) -> Self::Error;
     fn pack_boxes(&self) -> bool;
-    fn fill<T: ArrayValue>(&self) -> Option<T>;
+    fn fill<T: ArrayValue>(&self) -> Result<T, &'static str>;
     fn fill_error(error: Self::Error) -> Self::Error;
     fn is_fill_error(error: &Self::Error) -> bool;
 }
@@ -70,7 +70,7 @@ impl FillContext for Uiua {
     fn pack_boxes(&self) -> bool {
         self.pack_boxes()
     }
-    fn fill<T: ArrayValue>(&self) -> Option<T> {
+    fn fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
         T::get_fill(self)
     }
     fn fill_error(error: Self::Error) -> Self::Error {
@@ -89,8 +89,8 @@ impl FillContext for () {
     fn pack_boxes(&self) -> bool {
         false
     }
-    fn fill<T: ArrayValue>(&self) -> Option<T> {
-        None
+    fn fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
+        Err("No fill is set")
     }
     fn fill_error(error: Self::Error) -> Self::Error {
         error
@@ -115,61 +115,81 @@ where
     C: FillContext,
 {
     if !shape_prefixes_match(&a.shape, &b.shape) {
+        let mut fill_error = None;
         // Fill in missing rows
         match a.row_count().cmp(&b.row_count()) {
-            Ordering::Less => {
-                if let Some(fill) = ctx.fill() {
+            Ordering::Less => match ctx.fill() {
+                Ok(fill) => {
                     let mut target_shape = a.shape().to_vec();
                     target_shape[0] = b.row_count();
                     a.fill_to_shape(&target_shape, fill);
                 }
-            }
-            Ordering::Greater => {
-                if let Some(fill) = ctx.fill() {
+                Err(e) => fill_error = Some(e),
+            },
+            Ordering::Greater => match ctx.fill() {
+                Ok(fill) => {
                     let mut target_shape = b.shape().to_vec();
                     target_shape[0] = a.row_count();
                     b.fill_to_shape(&target_shape, fill);
                 }
-            }
+                Err(e) => fill_error = Some(e),
+            },
             Ordering::Equal => {}
         }
         // Fill in missing dimensions
         if !shape_prefixes_match(&a.shape, &b.shape) {
             match a.rank().cmp(&b.rank()) {
-                Ordering::Less => {
-                    if let Some(fill) = ctx.fill() {
+                Ordering::Less => match ctx.fill() {
+                    Ok(fill) => {
                         let mut target_shape = a.shape.clone();
                         target_shape.insert(0, b.row_count());
                         a.fill_to_shape(&target_shape, fill);
                     }
-                }
-                Ordering::Greater => {
-                    if let Some(fill) = ctx.fill() {
+                    Err(e) => fill_error = Some(e),
+                },
+                Ordering::Greater => match ctx.fill() {
+                    Ok(fill) => {
                         let mut target_shape = b.shape.clone();
                         target_shape.insert(0, a.row_count());
                         b.fill_to_shape(&target_shape, fill);
                     }
-                }
+                    Err(e) => fill_error = Some(e),
+                },
                 Ordering::Equal => {
                     let target_shape = max_shape(a.shape(), b.shape());
                     if a.shape() != &*target_shape {
-                        if let Some(fill) = ctx.fill() {
-                            a.fill_to_shape(&target_shape, fill);
+                        match ctx.fill() {
+                            Ok(fill) => {
+                                a.fill_to_shape(&target_shape, fill);
+                            }
+                            Err(e) => fill_error = Some(e),
                         }
                     }
                     if b.shape() != &*target_shape {
-                        if let Some(fill) = ctx.fill() {
-                            b.fill_to_shape(&target_shape, fill);
+                        match ctx.fill() {
+                            Ok(fill) => {
+                                b.fill_to_shape(&target_shape, fill);
+                            }
+                            Err(e) => fill_error = Some(e),
                         }
                     }
                 }
             }
             if !shape_prefixes_match(&a.shape, &b.shape) {
-                return Err(C::fill_error(ctx.error(format!(
-                    "Shapes {} and {} do not match",
-                    a.format_shape(),
-                    b.format_shape()
-                ))));
+                return Err(C::fill_error(ctx.error(if let Some(e) = fill_error {
+                    format!(
+                        "Shapes {} and {} do not match. {}.",
+                        a.format_shape(),
+                        b.format_shape(),
+                        e
+                    )
+                } else {
+                    format!(
+                        "Shapes {} and {} do not match",
+                        a.format_shape(),
+                        b.format_shape()
+                    )
+                })));
             }
         }
     }

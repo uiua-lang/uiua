@@ -31,7 +31,7 @@ const CHORD: &str = "\
 ÷⧻: ≡/+          # Mix";
 const SPIRAL: &str = "\
 ⇌×τ÷⊃∘⇡20            # Frame times
-⍉.↯:×20-1×2÷:⇡..300  # x and y
+⍉.↯:×20-1×2÷:⇡..200  # x and y
 ≡(-⊃∠(-π◿τ+⍜∩⍘√+))∩¤ # Generate
 <0.2⌵                # Threshold";
 const QUADRATIC: &str = "\

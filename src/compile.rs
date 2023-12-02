@@ -1110,9 +1110,9 @@ impl Uiua {
                     instrs.extend(g_instrs);
                     instrs.extend(f_after);
                     let sig = Signature::new(
-                        before_sig.args + g_sig.args + after_sig.args
-                            - before_sig.outputs
-                            - g_sig.outputs,
+                        (before_sig.args + g_sig.args + after_sig.args)
+                            .saturating_sub(before_sig.outputs + g_sig.outputs)
+                            .max(before_sig.args),
                         (before_sig.outputs + g_sig.outputs)
                             .saturating_sub(g_sig.args + after_sig.args)
                             + after_sig.outputs,

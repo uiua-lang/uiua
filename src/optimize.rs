@@ -94,11 +94,11 @@ pub(crate) fn optimize_instrs(mut instrs: Vec<Instr>, maximal: bool) -> Vec<Inst
     if maximal {
         instrs.retain(|instr| !instr.is_compile_only());
     }
-    println!("optimize {:?}", instrs);
+    // println!("optimize {:?}", instrs);
     let mut new = Vec::with_capacity(instrs.len());
     for instr in instrs {
         optimize_instrs_mut(&mut new, instr, maximal);
     }
-    println!("to       {:?}", new);
+    // println!("to       {:?}", new);
     new
 }

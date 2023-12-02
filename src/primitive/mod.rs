@@ -690,43 +690,7 @@ impl Primitive {
             }
             Primitive::Trace => trace(env, false)?,
             Primitive::Dump => dump(env)?,
-            Primitive::Regex => {
-                thread_local! {
-                    pub static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
-                }
-                let pattern = env.pop(1)?.as_string(env, "Pattern must be a string")?;
-                let target = env
-                    .pop(1)?
-                    .as_string(env, "Matching target must be a string")?;
-                REGEX_CACHE.with(|cache| -> UiuaResult {
-                    let mut cache = cache.borrow_mut();
-                    let regex = if let Some(regex) = cache.get(&pattern) {
-                        regex
-                    } else {
-                        let regex = Regex::new(&pattern)
-                            .map_err(|e| env.error(format!("Invalid pattern: {}", e)))?;
-                        cache.entry(pattern.clone()).or_insert(regex.clone())
-                    };
-                    let matches: EcoVec<Boxed> = if regex.captures_len() == 1 {
-                        regex
-                            .find_iter(&target)
-                            .map(|m| Boxed(Value::from(m.as_str())))
-                            .collect()
-                    } else {
-                        regex
-                            .captures(&target)
-                            .map(|caps| {
-                                caps.iter()
-                                    .flatten()
-                                    .map(|m| Boxed(Value::from(m.as_str())))
-                                    .collect()
-                            })
-                            .unwrap_or_default()
-                    };
-                    env.push(matches);
-                    Ok(())
-                })?
-            }
+            Primitive::Regex => regex(env)?,
             Primitive::Sys(io) => io.run(env)?,
         }
         Ok(())
@@ -825,6 +789,44 @@ impl ImplPrimitive {
         }
         Ok(())
     }
+}
+
+fn regex(env: &mut Uiua) -> UiuaResult {
+    thread_local! {
+        pub static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
+    }
+    let pattern = env.pop(1)?.as_string(env, "Pattern must be a string")?;
+    let target = env
+        .pop(1)?
+        .as_string(env, "Matching target must be a string")?;
+    REGEX_CACHE.with(|cache| -> UiuaResult {
+        let mut cache = cache.borrow_mut();
+        let regex = if let Some(regex) = cache.get(&pattern) {
+            regex
+        } else {
+            let regex =
+                Regex::new(&pattern).map_err(|e| env.error(format!("Invalid pattern: {}", e)))?;
+            cache.entry(pattern.clone()).or_insert(regex.clone())
+        };
+        let matches: EcoVec<Boxed> = if regex.captures_len() == 1 {
+            regex
+                .find_iter(&target)
+                .map(|m| Boxed(Value::from(m.as_str())))
+                .collect()
+        } else {
+            regex
+                .captures(&target)
+                .map(|caps| {
+                    caps.iter()
+                        .flatten()
+                        .map(|m| Boxed(Value::from(m.as_str())))
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+        env.push(matches);
+        Ok(())
+    })
 }
 
 fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {

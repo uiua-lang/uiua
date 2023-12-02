@@ -6,6 +6,7 @@ use std::{
     sync::Arc,
 };
 
+use ecow::EcoVec;
 use enum_iterator::Sequence;
 
 use crate::{
@@ -38,7 +39,7 @@ pub enum Instr {
     /// Call a function
     Call(usize),
     /// Push a function onto the function stack
-    PushFunc(Arc<Function>),
+    PushFunc(Function),
     /// Execute a switch function
     Switch {
         count: usize,
@@ -204,10 +205,6 @@ impl Instr {
     pub fn push(val: impl Into<Value>) -> Self {
         Self::Push(val.into())
     }
-    /// Create a new push function instruction
-    pub fn push_func(f: impl Into<Arc<Function>>) -> Self {
-        Self::PushFunc(f.into())
-    }
     pub(crate) fn is_temp(&self) -> bool {
         matches!(
             self,
@@ -279,7 +276,7 @@ pub struct Function {
     /// The function's id
     pub id: FunctionId,
     /// The function's instructions
-    pub instrs: Vec<Instr>,
+    pub instrs: EcoVec<Instr>,
     signature: Signature,
 }
 
@@ -437,8 +434,12 @@ impl fmt::Display for Function {
 
 impl Function {
     /// Create a new function
-    pub fn new(id: FunctionId, instrs: impl Into<Vec<Instr>>, signature: Signature) -> Self {
-        let instrs = optimize_instrs(instrs.into(), true);
+    pub fn new<I>(id: FunctionId, instrs: I, signature: Signature) -> Self
+    where
+        I: IntoIterator<Item = Instr>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        let instrs = optimize_instrs(instrs, true);
         Self {
             id,
             instrs,
@@ -448,9 +449,9 @@ impl Function {
     /// Create a new function and infer its signature
     pub fn new_inferred(
         id: FunctionId,
-        instrs: impl Into<Vec<Instr>>,
+        instrs: impl IntoIterator<Item = Instr>,
     ) -> Result<Self, SigCheckError> {
-        let instrs = instrs.into();
+        let instrs: Vec<_> = instrs.into_iter().collect();
         let signature = instrs_signature(&instrs)?;
         let instrs = optimize_instrs(instrs, true);
         Ok(Self {

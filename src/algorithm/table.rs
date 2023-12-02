@@ -1,6 +1,6 @@
 //! Algorithms for tabling modifiers
 
-use std::{mem::take, sync::Arc};
+use std::mem::take;
 
 use ecow::EcoVec;
 use tinyvec::tiny_vec;
@@ -210,7 +210,7 @@ fn fast_table_join_or_couple<T: ArrayValue>(a: Array<T>, b: Array<T>, flipped: b
     Array::new(new_shape, new_data)
 }
 
-fn generic_table(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig.args != 2 {
         return Err(env.error(format!(
@@ -383,7 +383,7 @@ pub fn combinate(env: &mut Uiua) -> UiuaResult {
 }
 
 fn multi_combinate_recursive(
-    f: Arc<Function>,
+    f: Function,
     args: &mut [Value],
     ns: &[usize],
     curr: usize,

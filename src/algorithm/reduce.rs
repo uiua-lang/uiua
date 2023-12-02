@@ -1,7 +1,5 @@
 //! Algorithms for reducing modifiers
 
-use std::sync::Arc;
-
 use ecow::EcoVec;
 
 use crate::{
@@ -144,12 +142,7 @@ where
     }
 }
 
-fn generic_fold_right_1(
-    f: Arc<Function>,
-    xs: Value,
-    init: Option<Value>,
-    env: &mut Uiua,
-) -> UiuaResult {
+fn generic_fold_right_1(f: Function, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig.outputs > 1 {
         return Err(env.error(format!(
@@ -287,7 +280,7 @@ where
     }
 }
 
-fn generic_scan(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig != (2, 1) {
         return Err(env.error(format!(

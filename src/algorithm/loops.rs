@@ -46,7 +46,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     const INVERSE_CONTEXT: &str = "; repeat with a negative number repeats the inverse";
     if n.is_infinite() {
         let f = if n < 0.0 {
-            f.invert(INVERSE_CONTEXT, env)?.into()
+            f.invert(INVERSE_CONTEXT, env)?
         } else {
             f
         };
@@ -58,7 +58,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
             return Err(env.error("Repetitions must be a single integer or infinity"));
         };
         let f = if n < 0.0 {
-            f.invert(INVERSE_CONTEXT, env)?.into()
+            f.invert(INVERSE_CONTEXT, env)?
         } else {
             f
         };

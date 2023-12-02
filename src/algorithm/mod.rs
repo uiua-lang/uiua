@@ -4,7 +4,6 @@ use std::{
     cmp::Ordering,
     convert::Infallible,
     hash::{Hash, Hasher},
-    sync::Arc,
 };
 
 use tinyvec::TinyVec;
@@ -265,7 +264,7 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
         }
         args_rows.reverse();
         // Collect functions
-        let functions: Vec<Arc<Function>> = env
+        let functions: Vec<Function> = env
             .function_stack
             .drain(env.function_stack.len() - count..)
             .collect();

@@ -1,9 +1,11 @@
+use ecow::EcoVec;
+
 use crate::{ImplPrimitive, Instr, Primitive};
 
-pub(crate) fn optimize_instrs_mut(instrs: &mut Vec<Instr>, new: Instr, maximal: bool) {
+pub(crate) fn optimize_instrs_mut(instrs: &mut EcoVec<Instr>, new: Instr, maximal: bool) {
     use ImplPrimitive::*;
     use Primitive::*;
-    match (instrs.as_mut_slice(), new) {
+    match (instrs.make_mut(), new) {
         // Cosine
         ([.., Instr::Prim(Eta, _), Instr::Prim(Add, _)], Instr::Prim(Sin, span)) => {
             instrs.pop();
@@ -90,13 +92,18 @@ pub(crate) fn optimize_instrs_mut(instrs: &mut Vec<Instr>, new: Instr, maximal: 
     }
 }
 
-pub(crate) fn optimize_instrs(mut instrs: Vec<Instr>, maximal: bool) -> Vec<Instr> {
-    if maximal {
-        instrs.retain(|instr| !instr.is_compile_only());
-    }
+pub(crate) fn optimize_instrs<I>(instrs: I, maximal: bool) -> EcoVec<Instr>
+where
+    I: IntoIterator<Item = Instr>,
+    I::IntoIter: ExactSizeIterator,
+{
     // println!("optimize {:?}", instrs);
-    let mut new = Vec::with_capacity(instrs.len());
+    let instrs = instrs.into_iter();
+    let mut new = EcoVec::with_capacity(instrs.len());
     for instr in instrs {
+        if instr.is_compile_only() {
+            continue;
+        }
         optimize_instrs_mut(&mut new, instr, maximal);
     }
     // println!("to       {:?}", new);

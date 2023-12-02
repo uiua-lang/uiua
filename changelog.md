@@ -4,8 +4,7 @@ Uiua is not yet stable.
 
 
 ## 0.5.0 - 2023-12-??
-This version is not yet released.
-If you are reading this on the website, then these changes are live here.
+This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under) now work with stack array notation.
 - Add special syntax for splitting/joining lines of code
@@ -14,6 +13,7 @@ If you are reading this on the website, then these changes are live here.
 - [`fill` `⬚`](https://uiua.org/docs/fill) and [`pack` `⊐`](https://uiua.org/docs/pack) are now exclusive
 ### Interpreter
 - Add a style diagnostic about lines that are too long
+- Add some other style diagnostics
 - Replace `uiua check-update` with `uiua update`, which will update the interpreter by installing a new version with Cargo
 - Bug and crash fixes
 ### Website

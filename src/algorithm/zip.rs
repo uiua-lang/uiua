@@ -1,7 +1,5 @@
 //! Algorithms for zipping modifiers
 
-use std::sync::Arc;
-
 use crate::{
     algorithm::{
         loops::{rank_list, rank_to_depth},
@@ -175,7 +173,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn each1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn each1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, ..)) = instrs_un_fast_fn(&f.instrs) {
         let rank = xs.rank();
         let val = f(xs, rank, env)?;
@@ -203,7 +201,7 @@ fn each1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn each2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     if !xs.shape().iter().zip(ys.shape()).all(|(a, b)| a == b) {
         let min_rank = xs.rank().min(ys.rank());
         return Err(env.error(format!(
@@ -258,7 +256,7 @@ fn each2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn eachn(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+fn eachn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for win in args.windows(2) {
         if win[0].shape() != win[1].shape() {
             return Err(env.error(format!(
@@ -302,7 +300,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn rows1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, d)) = instrs_un_fast_fn(&f.instrs) {
         let val = f(xs, d + 1, env)?;
         env.push(val);
@@ -324,7 +322,7 @@ fn rows1(f: Arc<Function>, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn rows2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     match (xs.row_count(), ys.row_count()) {
         (a, b) if a == b => {
             if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
@@ -363,7 +361,7 @@ fn rows2(f: Arc<Function>, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn rowsn(f: Arc<Function>, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for a in 0..args.len() {
         for b in a + 1..args.len() {
             if !(args[a].row_count() == 1 || args[b].row_count() == 1)
@@ -493,7 +491,7 @@ pub fn distribute(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn distribute2(f: Arc<Function>, a: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn distribute2(f: Function, a: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs) {
         let val = f(a, xs, xd, yd + 1, env)?;
         env.push(val);
@@ -593,7 +591,7 @@ pub fn tribute(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn tribute2(f: Arc<Function>, xs: Value, a: Value, env: &mut Uiua) -> UiuaResult {
+fn tribute2(f: Function, xs: Value, a: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs) {
         let val = f(xs, a, xd + 1, yd, env)?;
         env.push(val);
@@ -696,7 +694,7 @@ pub fn level(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn monadic_level(f: Arc<Function>, value: Value, mut n: usize, env: &mut Uiua) -> UiuaResult {
+fn monadic_level(f: Function, value: Value, mut n: usize, env: &mut Uiua) -> UiuaResult {
     if let Some((f, d)) = instrs_un_fast_fn(&f.instrs) {
         let val = f(value, d + n, env)?;
         env.push(val);
@@ -724,7 +722,7 @@ fn monadic_level(f: Arc<Function>, value: Value, mut n: usize, env: &mut Uiua) -
 }
 
 fn dyadic_level(
-    f: Arc<Function>,
+    f: Function,
     xs: Value,
     ys: Value,
     mut xn: usize,
@@ -775,7 +773,7 @@ fn dyadic_level(
 }
 
 fn multi_level_recursive(
-    f: Arc<Function>,
+    f: Function,
     args: Vec<Value>,
     ns: &[usize],
     env: &mut Uiua,

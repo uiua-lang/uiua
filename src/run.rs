@@ -10,6 +10,7 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
+use ecow::EcoVec;
 use enum_iterator::Sequence;
 use instant::Duration;
 use parking_lot::Mutex;
@@ -25,7 +26,7 @@ use crate::{
 #[derive(Clone)]
 pub struct Uiua {
     /// Functions which are under construction
-    pub(crate) new_functions: Vec<Vec<Instr>>,
+    pub(crate) new_functions: Vec<EcoVec<Instr>>,
     /// Global values
     pub(crate) globals: Arc<Mutex<Vec<Global>>>,
     /// Indexable spans
@@ -33,11 +34,11 @@ pub struct Uiua {
     /// The thread's stack
     pub(crate) stack: Vec<Value>,
     /// The thread's function stack
-    pub(crate) function_stack: Vec<Arc<Function>>,
+    pub(crate) function_stack: Vec<Function>,
     /// The thread's temp stack for inlining
     temp_stacks: [Vec<Value>; TempStack::CARDINALITY],
     /// The thread's temp stack for functions
-    temp_function_stack: Vec<Arc<Function>>,
+    temp_function_stack: Vec<Function>,
     /// The current scope
     pub(crate) scope: Scope,
     /// Ancestor scopes of the current one
@@ -73,10 +74,7 @@ pub struct Uiua {
 #[derive(Clone)]
 pub(crate) enum Global {
     Val(Value),
-    Func {
-        f: Arc<Function>,
-        sig_declared: bool,
-    },
+    Func { f: Function, sig_declared: bool },
 }
 
 #[derive(Clone)]
@@ -100,11 +98,7 @@ impl Default for Scope {
         Self {
             array: Vec::new(),
             call: vec![StackFrame {
-                function: Arc::new(Function::new(
-                    FunctionId::Main,
-                    Vec::new(),
-                    Signature::new(0, 0),
-                )),
+                function: Function::new(FunctionId::Main, Vec::new(), Signature::new(0, 0)),
                 call_span: 0,
                 pc: 0,
                 spans: Vec::new(),
@@ -129,7 +123,7 @@ enum ShapeFix {
 #[derive(Clone)]
 struct StackFrame {
     /// The function being executed
-    function: Arc<Function>,
+    function: Function,
     /// The span at which the function was called
     call_span: usize,
     /// The program counter for the function
@@ -443,17 +437,17 @@ code:
             pathdiff::diff_paths(&target, base).unwrap_or(target)
         }
     }
-    pub(crate) fn exec_global_instrs(&mut self, instrs: Vec<Instr>) -> UiuaResult {
-        let func = Function::new(FunctionId::Main, instrs, Signature::new(0, 0));
+    pub(crate) fn exec_global_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult {
+        let function = Function::new(FunctionId::Main, instrs, Signature::new(0, 0));
         self.exec(StackFrame {
-            function: Arc::new(func),
+            function,
             call_span: 0,
             spans: Vec::new(),
             pc: 0,
         })?;
         Ok(())
     }
-    fn exec(&mut self, frame: StackFrame) -> UiuaResult<Arc<Function>> {
+    fn exec(&mut self, frame: StackFrame) -> UiuaResult<Function> {
         self.scope.call.push(frame);
         let mut formatted_instr = String::new();
         Ok(loop {
@@ -695,7 +689,7 @@ code:
         self.scope.call.last_mut().unwrap().spans.pop();
         res
     }
-    fn call_with_span(&mut self, f: impl Into<Arc<Function>>, call_span: usize) -> UiuaResult {
+    fn call_with_span(&mut self, f: impl Into<Function>, call_span: usize) -> UiuaResult {
         let function = f.into();
         let sig = function.signature();
         let start_height = self.stack.len();
@@ -725,7 +719,7 @@ code:
     }
     /// Call a function
     #[inline]
-    pub fn call(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult {
+    pub fn call(&mut self, f: impl Into<Function>) -> UiuaResult {
         let call_span = self.span_index();
         self.call_with_span(f, call_span)
     }
@@ -840,7 +834,7 @@ code:
         self.stack.push(val.into());
     }
     /// Push a function onto the function stack
-    pub fn push_func(&mut self, f: impl Into<Arc<Function>>) {
+    pub fn push_func(&mut self, f: impl Into<Function>) {
         self.function_stack.push(f.into());
     }
     /// Create a function
@@ -867,7 +861,7 @@ code:
     pub fn bind_function(
         &mut self,
         name: impl Into<Arc<str>>,
-        function: impl Into<Arc<Function>>,
+        function: impl Into<Function>,
     ) -> UiuaResult {
         self.compile_bind_function(name.into(), function.into(), true, Span::Builtin)
     }
@@ -894,7 +888,7 @@ code:
         take(&mut self.stack)
     }
     /// Pop a function from the function stack
-    pub fn pop_function(&mut self) -> UiuaResult<Arc<Function>> {
+    pub fn pop_function(&mut self) -> UiuaResult<Function> {
         self.function_stack.pop().ok_or_else(|| {
             self.error(
                 "Function stack was empty when popping. \
@@ -1090,7 +1084,7 @@ code:
                 .is_some_and(|fix| matches!(fix, ShapeFix::Pack))
         })
     }
-    pub(crate) fn call_with_this(&mut self, f: impl Into<Arc<Function>>) -> UiuaResult {
+    pub(crate) fn call_with_this(&mut self, f: impl Into<Function>) -> UiuaResult {
         let call_height = self.scope.call.len();
         let with_height = self.scope.this.len();
         self.scope.this.push(self.scope.call.len());

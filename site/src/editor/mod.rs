@@ -458,7 +458,7 @@ pub fn Editor<'a>(
             // Redo
             "y" if os_ctrl(event) => state().redo(),
             // Toggle line comment
-            "/" if os_ctrl(event) => {
+            "/" | "4" if os_ctrl(event) => {
                 let code = code_text();
                 let (start, end) = get_code_cursor().unwrap();
                 let (start, end) = (start.min(end), start.max(end));
@@ -466,7 +466,8 @@ pub fn Editor<'a>(
                 let (end_line, _) = line_col(&code, end as usize);
                 let mut lines: Vec<String> = code.lines().map(Into::into).collect();
                 let range = &mut lines[start_line - 1..end_line];
-                if range.iter().all(|line| line.trim().starts_with('#')) {
+                let prefix = if key == "/" { '#' } else { '$' };
+                if range.iter().all(|line| line.trim().starts_with(prefix)) {
                     // Toggle comments off
                     for line in range {
                         let space_count = line.chars().take_while(|c| *c == ' ').count();
@@ -474,7 +475,7 @@ pub fn Editor<'a>(
                             .take(space_count)
                             .chain(
                                 line.trim()
-                                    .trim_start_matches('#')
+                                    .trim_start_matches(prefix)
                                     .trim_start_matches(' ')
                                     .chars(),
                             )
@@ -484,7 +485,8 @@ pub fn Editor<'a>(
                     // Toggle comments on
                     for line in range {
                         let spot = line.chars().take_while(|c| " \t".contains(*c)).count();
-                        line.insert_str(spot, "# ");
+                        line.insert(spot, ' ');
+                        line.insert(spot, prefix);
                     }
                 }
                 let new_code = lines.join("\n");
@@ -1031,6 +1033,7 @@ pub fn Editor<'a>(
                         class="info-button"
                         data-title=" shift Enter   - Run + Format
 ctrl/⌘ /       - Toggle line comment
+ctrl/⌘ 4       - Toggle multiline string
    alt Up/Down - Swap lines
  shift Delete  - Delete lines
 ctrl/⌘ Z       - Undo

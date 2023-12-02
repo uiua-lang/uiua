@@ -584,7 +584,7 @@ input[type=number] {
 
 .info-button:hover::after {
     background-color: #000d;
-    width: 22em;
+    width: 24em;
     white-space: pre-wrap;
     text-align: left;
 }

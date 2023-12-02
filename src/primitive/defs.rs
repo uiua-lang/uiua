@@ -1771,6 +1771,9 @@ primitive!(
     /// ex: regex "\\d+" "123"
     /// ex: P ← $"(\\d{_})"
     ///   : regex $"_-_-_"P3P3P4 "123-456-7890"
+    /// Regex patterns with optional captures can be used with [pack] or [fill].
+    /// ex: ⊐regex "a(b)?" "a ab"
+    /// ex: ⬚(□"")regex "a(b)?" "a ab"
     ///
     /// Uiua uses the [Rust regex crate](https://docs.rs/regex/latest/regex/) internally.
     (2, Regex, Misc, "regex"),

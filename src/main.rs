@@ -115,7 +115,7 @@ fn run() -> UiuaResult {
                         formatter_options.format_config_source,
                         Some(&path),
                     )?;
-                    format_file(&path, &config)?;
+                    format_file(&path, &config, false)?;
                 }
                 let mode = mode.unwrap_or(RunMode::Normal);
                 #[cfg(feature = "audio")]
@@ -162,7 +162,7 @@ fn run() -> UiuaResult {
                 };
                 let config =
                     FormatConfig::from_source(formatter_options.format_config_source, Some(&path))?;
-                format_file(&path, &config)?;
+                format_file(&path, &config, false)?;
                 Uiua::with_native_sys()
                     .with_mode(RunMode::Test)
                     .print_diagnostics(true)
@@ -385,7 +385,7 @@ fn watch(
         const TRIES: u8 = 10;
         for i in 0..TRIES {
             let formatted = if let (Some(config), true) = (&config, format) {
-                format_file(path, config).map(|f| f.output)
+                format_file(path, config, false).map(|f| f.output)
             } else {
                 fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e.into()))
             };
@@ -723,7 +723,7 @@ fn update(main: bool, check: bool) {
 }
 
 fn format_single_file(path: PathBuf, config: &FormatConfig, stdout: bool) -> Result<(), UiuaError> {
-    let output = format_file(path, config)?.output;
+    let output = format_file(path, config, stdout)?.output;
     if stdout {
         println!("{output}");
     }
@@ -733,7 +733,7 @@ fn format_single_file(path: PathBuf, config: &FormatConfig, stdout: bool) -> Res
 fn format_multi_files(config: &FormatConfig, stdout: bool) -> Result<(), UiuaError> {
     for path in uiua_files() {
         let path_as_string = path.to_string_lossy().into_owned();
-        let output = format_file(path, config)?.output;
+        let output = format_file(path, config, stdout)?.output;
         if stdout {
             println!("{path_as_string}");
             println!("{output}");

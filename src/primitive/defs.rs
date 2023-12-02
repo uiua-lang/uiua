@@ -1918,11 +1918,12 @@ impl_primitive!(
     (1, InvWhere),
     (1(2), InvCouple),
     (1, InvUtf),
-    (1, InvTrace),
     (1(2), InvAtan),
     (1(2), InvComplex),
     (1, InvParse),
     (1, InvFix),
+    (1, InvTrace),
+    (0[1], InvDump),
     // Unders
     (3, Unselect),
     (3, Unpick),

@@ -7,6 +7,7 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under) now work with stack array notation.
+- [`dump`](https://uiua.org/docs/dump) now works with [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under)
 - Add special syntax for splitting/joining lines of code
   - `'` will split a line without changing semantics
   - `''` will combine two lines without changing semantics

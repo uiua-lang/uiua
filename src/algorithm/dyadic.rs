@@ -1734,9 +1734,9 @@ impl<T: ArrayValue> Array<T> {
             .zip(&into.shape)
             .map(|(&i, &s)| {
                 if i >= 0 {
-                    i - s as isize
+                    (i - s as isize).min(0)
                 } else {
-                    i + s as isize
+                    (i + s as isize).max(0)
                 }
             })
             .collect();

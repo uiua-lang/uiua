@@ -378,7 +378,11 @@ fn format_impl(
 /// Format Uiua code in a file at the given path
 ///
 /// This modifies the file
-pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult<FormatOutput> {
+pub fn format_file<P: AsRef<Path>>(
+    path: P,
+    config: &FormatConfig,
+    dont_write: bool,
+) -> UiuaResult<FormatOutput> {
     let path = path.as_ref();
     let input =
         fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e.into()))?;
@@ -386,8 +390,9 @@ pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult
     if formatted.output == input {
         return Ok(formatted);
     }
-    let dont_write = env::var("UIUA_NO_FORMAT").is_ok_and(|val| val == "1");
-    if !dont_write {
+    let is_no_format_set = env::var("UIUA_NO_FORMAT").is_ok_and(|val| val == "1");
+    let should_write = !dont_write && !is_no_format_set;
+    if should_write {
         fs::write(path, &formatted.output)
             .map_err(|e| UiuaError::Format(path.to_path_buf(), e.into()))?;
     }

@@ -11,6 +11,7 @@ use enum_iterator::Sequence;
 use crate::{
     check::{instrs_signature, SigCheckError},
     lex::CodeSpan,
+    optimize::optimize_instrs,
     primitive::{ImplPrimitive, Primitive},
     value::Value,
     Ident, Uiua, UiuaResult,
@@ -56,6 +57,10 @@ pub enum Instr {
     GetTempFunction {
         offset: usize,
         sig: Signature,
+        span: usize,
+    },
+    TouchStack {
+        count: usize,
         span: usize,
     },
     PushTemp {
@@ -180,6 +185,7 @@ impl Hash for Instr {
             Instr::PopTempFunctions(count) => count.hash(state),
             Instr::GetTempFunction { offset, .. } => offset.hash(state),
             Instr::Dynamic(f) => f.id.hash(state),
+            Instr::TouchStack { count, .. } => count.hash(state),
             Instr::PushTemp { count, .. } => count.hash(state),
             Instr::PopTemp { count, .. } => count.hash(state),
             Instr::CopyToTemp { count, .. } => count.hash(state),
@@ -248,6 +254,7 @@ impl fmt::Display for Instr {
             Instr::GetTempFunction { offset, .. } => write!(f, "<get function at {offset}>"),
             Instr::Dynamic(df) => write!(f, "{df:?}"),
             Instr::Unpack { count, .. } => write!(f, "<unpack {count}>"),
+            Instr::TouchStack { count, .. } => write!(f, "<touch {count}>"),
             Instr::PushTemp { stack, count, .. } => write!(f, "<push {stack} {count}>"),
             Instr::PopTemp { stack, count, .. } => write!(f, "<pop {stack} {count}>"),
             Instr::CopyFromTemp {
@@ -431,8 +438,7 @@ impl fmt::Display for Function {
 impl Function {
     /// Create a new function
     pub fn new(id: FunctionId, instrs: impl Into<Vec<Instr>>, signature: Signature) -> Self {
-        let mut instrs = instrs.into();
-        instrs.retain(|instr| !instr.is_compile_only());
+        let instrs = optimize_instrs(instrs.into(), true);
         Self {
             id,
             instrs,
@@ -444,9 +450,9 @@ impl Function {
         id: FunctionId,
         instrs: impl Into<Vec<Instr>>,
     ) -> Result<Self, SigCheckError> {
-        let mut instrs = instrs.into();
+        let instrs = instrs.into();
         let signature = instrs_signature(&instrs)?;
-        instrs.retain(|instr| !instr.is_compile_only());
+        let instrs = optimize_instrs(instrs, true);
         Ok(Self {
             id,
             signature,

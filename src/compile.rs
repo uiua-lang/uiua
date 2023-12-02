@@ -12,8 +12,9 @@ use crate::{
     check::instrs_signature,
     function::*,
     lex::{CodeSpan, Sp, Span},
+    optimize::optimize_instrs_mut,
     parse::{count_placeholders, ident_modifier_args, split_words, unsplit_words},
-    primitive::{ImplPrimitive, Primitive},
+    primitive::Primitive,
     run::{Global, RunMode},
     value::Value,
     Diagnostic, DiagnosticKind, Ident, SysOp, UiuaError, UiuaResult,
@@ -303,76 +304,8 @@ impl Uiua {
     /// Also performs some optimizations if the instruction and the previous
     /// instruction form some known pattern
     fn push_instr(&mut self, instr: Instr) {
-        use ImplPrimitive::*;
-        use Primitive::*;
         let instrs = self.new_functions.last_mut().unwrap();
-        // Optimizations
-        match (instrs.as_mut_slice(), instr) {
-            // Cosine
-            ([.., Instr::Prim(Eta, _), Instr::Prim(Add, _)], Instr::Prim(Sin, span)) => {
-                instrs.pop();
-                instrs.pop();
-                instrs.push(Instr::ImplPrim(Cos, span));
-            }
-            // First Rise = FirstMinIndex
-            ([.., Instr::Prim(Rise, _)], Instr::Prim(First, span)) => {
-                instrs.pop();
-                instrs.push(Instr::ImplPrim(FirstMinIndex, span))
-            }
-            // First Reverse Fall = LastMinIndex
-            ([.., Instr::Prim(Fall, _), Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
-                instrs.pop();
-                instrs.pop();
-                instrs.push(Instr::ImplPrim(LastMinIndex, span))
-            }
-            // First Fall = FirstMaxIndex
-            ([.., Instr::Prim(Fall, _)], Instr::Prim(First, span)) => {
-                instrs.pop();
-                instrs.push(Instr::ImplPrim(FirstMaxIndex, span))
-            }
-            // First Reverse Rise = LastMaxIndex
-            ([.., Instr::Prim(Rise, _), Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
-                instrs.pop();
-                instrs.pop();
-                instrs.push(Instr::ImplPrim(LastMaxIndex, span))
-            }
-            // First Reverse = last
-            ([.., Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
-                instrs.pop();
-                instrs.push(Instr::ImplPrim(Last, span))
-            }
-            // Combine push temps
-            (
-                [.., Instr::PushTemp {
-                    stack: a_stack,
-                    count: a_count,
-                    ..
-                }],
-                Instr::PushTemp {
-                    stack: b_stack,
-                    count: b_count,
-                    ..
-                },
-            ) if *a_stack == b_stack => {
-                *a_count += b_count;
-            }
-            // Combine pop temps
-            (
-                [.., Instr::PopTemp {
-                    stack: a_stack,
-                    count: a_count,
-                    ..
-                }],
-                Instr::PopTemp {
-                    stack: b_stack,
-                    count: b_count,
-                    ..
-                },
-            ) if *a_stack == b_stack => {
-                *a_count += b_count;
-            }
-            (_, instr) => instrs.push(instr),
-        }
+        optimize_instrs_mut(instrs, instr, false);
     }
     fn extend_instrs(&mut self, instrs: impl IntoIterator<Item = Instr>) {
         for instr in instrs {

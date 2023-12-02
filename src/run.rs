@@ -582,6 +582,16 @@ code:
                     }
                     Ok(())
                 }),
+                &Instr::TouchStack { count, span } => self.with_span(span, |env| {
+                    if env.stack.len() < count {
+                        return Err(env.error(format!(
+                            "Stack was empty evaluating argument {}",
+                            count - env.stack.len()
+                        )));
+                    }
+                    env.touch_array_stack(count);
+                    Ok(())
+                }),
                 &Instr::PushTemp { stack, count, span } => self.with_span(span, |env| {
                     for _ in 0..count {
                         let value = env.pop("value to save")?;

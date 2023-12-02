@@ -85,6 +85,7 @@ mod function;
 mod grid_fmt;
 mod lex;
 mod lsp;
+mod optimize;
 mod parse;
 mod primitive;
 #[doc(hidden)]

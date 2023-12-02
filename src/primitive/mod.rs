@@ -130,11 +130,15 @@ impl fmt::Display for ImplPrimitive {
         match self {
             InvTranspose => write!(f, "{Invert}{Transpose}"),
             InverseBits => write!(f, "{Invert}{Bits}"),
-            InvTrace => write!(f, "{Invert}{Trace}"),
             InvWhere => write!(f, "{Invert}{Where}"),
             InvCouple => write!(f, "{Invert}{Couple}"),
             InvAtan => write!(f, "{Invert}{Atan}"),
             InvComplex => write!(f, "{Invert}{Complex}"),
+            InvUtf => write!(f, "{Invert}{Utf}"),
+            InvParse => write!(f, "{Invert}{Parse}"),
+            InvFix => write!(f, "{Invert}{Fix}"),
+            InvTrace => write!(f, "{Invert}{Trace}"),
+            InvDump => write!(f, "{Invert}{Dump}"),
             Untake => write!(f, "{Invert}{Take}"),
             Undrop => write!(f, "{Invert}{Drop}"),
             Unselect => write!(f, "{Invert}{Select}"),
@@ -144,9 +148,6 @@ impl fmt::Display for ImplPrimitive {
             Asin => write!(f, "{Invert}{Sin}"),
             Acos => write!(f, "{Invert}{Cos}"),
             Last => write!(f, "{First}{Reverse}"),
-            InvUtf => write!(f, "{Invert}{Utf}"),
-            InvParse => write!(f, "{Invert}{Parse}"),
-            InvFix => write!(f, "{Invert}{Fix}"),
             Unfirst => write!(f, "{Invert}{First}"),
             Unlast => write!(f, "{Invert}{Last}"),
             Unkeep => write!(f, "{Invert}{Keep}"),
@@ -624,7 +625,7 @@ impl Primitive {
                 env.call(f)?;
             }
             Primitive::Trace => trace(env, false)?,
-            Primitive::Dump => dump(env)?,
+            Primitive::Dump => dump(env, false)?,
             Primitive::Regex => regex(env)?,
             Primitive::Sys(io) => io.run(env)?,
         }
@@ -696,7 +697,6 @@ impl ImplPrimitive {
             ImplPrimitive::InverseBits => env.monadic_ref_env(Value::inv_bits)?,
             ImplPrimitive::Unpartition => loops::unpartition(env)?,
             ImplPrimitive::Ungroup => loops::ungroup(env)?,
-            ImplPrimitive::InvTrace => trace(env, true)?,
             ImplPrimitive::InvAtan => {
                 let x = env.pop(1)?;
                 let sin = x.clone().sin(env)?;
@@ -711,6 +711,8 @@ impl ImplPrimitive {
                 env.push(re);
                 env.push(im);
             }
+            ImplPrimitive::InvTrace => trace(env, true)?,
+            ImplPrimitive::InvDump => dump(env, true)?,
             // Optimizations
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Last => env.monadic_env(Value::last)?,
@@ -784,7 +786,7 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
     Ok(())
 }
 
-fn dump(env: &mut Uiua) -> UiuaResult {
+fn dump(env: &mut Uiua, inverse: bool) -> UiuaResult {
     let f = env.pop_function()?;
     if f.signature() != (1, 1) {
         return Err(env.error(format!(
@@ -792,7 +794,11 @@ fn dump(env: &mut Uiua) -> UiuaResult {
             f.signature()
         )));
     }
-    let span = env.span().to_string();
+    let span = if inverse {
+        format!("{} {}", env.span(), Primitive::Invert)
+    } else {
+        env.span().to_string()
+    };
     let unprocessed = env.clone_stack_top(env.stack_height());
     let mut items = Vec::new();
     for item in unprocessed {

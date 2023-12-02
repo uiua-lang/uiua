@@ -121,6 +121,7 @@ fn invert_instr_impl(instrs: &[Instr]) -> Option<EcoVec<Instr>> {
     // println!("inverting {:?}", instrs);
 
     let patterns: &[&dyn InvertPattern] = &[
+        &invert_dump_pattern,
         &invert_invert_pattern,
         &invert_rectify_pattern,
         &invert_setinverse_pattern,
@@ -226,6 +227,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(EcoVec<Instr
     }
 
     let patterns: &[&dyn UnderPattern] = &[
+        &UnderPatternFn(under_dump_pattern, "dump"),
         &UnderPatternFn(under_rows_pattern, "rows"),
         &UnderPatternFn(under_each_pattern, "each"),
         &UnderPatternFn(under_partition_pattern, "partition"),
@@ -488,6 +490,44 @@ fn invert_setinverse_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>
         return None;
     };
     Some((input, inv.instrs.clone()))
+}
+
+fn invert_dump_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>)> {
+    match input {
+        [f @ Instr::PushFunc(_), Instr::Prim(Primitive::Dump, span), input @ ..] => Some((
+            input,
+            eco_vec![f.clone(), Instr::ImplPrim(ImplPrimitive::InvDump, *span)],
+        )),
+        [f @ Instr::PushFunc(_), Instr::ImplPrim(ImplPrimitive::InvDump, span), input @ ..] => {
+            Some((
+                input,
+                eco_vec![f.clone(), Instr::Prim(Primitive::Dump, *span)],
+            ))
+        }
+        _ => None,
+    }
+}
+
+fn under_dump_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Under)> {
+    match input {
+        [f @ Instr::PushFunc(_), Instr::Prim(Primitive::Dump, span), input @ ..] => Some((
+            input,
+            (
+                eco_vec![f.clone(), Instr::Prim(Primitive::Dump, *span)],
+                eco_vec![f.clone(), Instr::ImplPrim(ImplPrimitive::InvDump, *span)],
+            ),
+        )),
+        [f @ Instr::PushFunc(_), Instr::ImplPrim(ImplPrimitive::InvDump, span), input @ ..] => {
+            Some((
+                input,
+                (
+                    eco_vec![f.clone(), Instr::ImplPrim(ImplPrimitive::InvDump, *span)],
+                    eco_vec![f.clone(), Instr::Prim(Primitive::Dump, *span)],
+                ),
+            ))
+        }
+        _ => None,
+    }
 }
 
 fn under_from_inverse_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Under)> {

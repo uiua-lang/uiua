@@ -734,8 +734,8 @@ impl Uiua {
                                 format!(
                                     "Using {m} with a pervasive primitive like {p} is \
                                     redundant. Just use {p} by itself.",
-                                    m = m.name(),
-                                    p = prim.name(),
+                                    m = m.format(),
+                                    p = prim.format(),
                                 ),
                                 span,
                                 DiagnosticKind::Advice,
@@ -747,7 +747,7 @@ impl Uiua {
                             format!(
                                 "{m}'s function is pervasive, \
                                 so {m} is redundant here.",
-                                m = m.name()
+                                m = m.format()
                             ),
                             span,
                             DiagnosticKind::Advice,

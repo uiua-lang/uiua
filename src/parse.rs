@@ -570,6 +570,41 @@ impl Parser {
         } else {
             mod_span.clone()
         };
+
+        if let Modifier::Primitive(Primitive::Bracket) = &modifier {
+            let mut operands = Vec::new();
+            if let Some(Sp {
+                value: Word::Switch(sw),
+                ..
+            }) = args.first()
+            {
+                operands.extend(
+                    sw.branches
+                        .iter()
+                        .map(|branch| Word::Func(branch.value.clone())),
+                );
+            } else {
+                operands.extend(
+                    args.iter()
+                        .map(|arg| &arg.value)
+                        .filter(|word| word.is_code())
+                        .cloned(),
+                );
+            }
+            if operands.len() == 2 && operands[0] == operands[1] {
+                self.diagnostics.push(Diagnostic::new(
+                    format!(
+                        "{}'s functions are the same, so it \
+                                can be replaced with {}.",
+                        Primitive::Bracket.format(),
+                        Primitive::Both.format(),
+                    ),
+                    span.clone(),
+                    DiagnosticKind::Advice,
+                ));
+            }
+        }
+
         Some(span.sp(Word::Modified(Box::new(Modified {
             modifier: mod_span.sp(modifier),
             operands: args,

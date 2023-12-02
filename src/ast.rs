@@ -1,5 +1,6 @@
 //! Uiua's abstract syntax tree
 
+use core::mem::discriminant;
 use std::fmt;
 
 use crate::{
@@ -90,6 +91,55 @@ pub enum Word {
     Spaces,
     BreakLine,
     UnbreakLine,
+}
+
+impl PartialEq for Word {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Number(_, a), Self::Number(_, b)) => a == b,
+            (Self::Char(a), Self::Char(b)) => a == b,
+            (Self::String(a), Self::String(b)) => a == b,
+            (Self::FormatString(a), Self::FormatString(b)) => a == b,
+            (Self::MultilineString(a), Self::MultilineString(b)) => a == b,
+            (Self::Ident(a), Self::Ident(b)) => a == b,
+            (Self::Strand(a), Self::Strand(b)) => {
+                a.iter().map(|w| &w.value).eq(b.iter().map(|w| &w.value))
+            }
+            (Self::Array(a), Self::Array(b)) => a.lines.iter().flatten().map(|w| &w.value).eq(b
+                .lines
+                .iter()
+                .flatten()
+                .map(|w| &w.value)),
+            (Self::Func(a), Self::Func(b)) => a.lines.iter().flatten().map(|w| &w.value).eq(b
+                .lines
+                .iter()
+                .flatten()
+                .map(|w| &w.value)),
+            (Self::Switch(a), Self::Switch(b)) => a
+                .branches
+                .iter()
+                .flat_map(|br| &br.value.lines)
+                .flatten()
+                .map(|w| &w.value)
+                .eq(b
+                    .branches
+                    .iter()
+                    .flat_map(|br| &br.value.lines)
+                    .flatten()
+                    .map(|w| &w.value)),
+            (Self::Ocean(a), Self::Ocean(b)) => a == b,
+            (Self::Primitive(a), Self::Primitive(b)) => a == b,
+            (Self::Modified(a), Self::Modified(b)) => {
+                a.modifier == b.modifier
+                    && a.code_operands()
+                        .map(|w| &w.value)
+                        .eq(b.code_operands().map(|w| &w.value))
+            }
+            (Self::Placeholder(_), Self::Placeholder(_)) => false,
+            (Self::Comment(a), Self::Comment(b)) => a == b,
+            _ => discriminant(self) == discriminant(other),
+        }
+    }
 }
 
 impl Word {

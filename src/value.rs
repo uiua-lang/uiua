@@ -1161,9 +1161,20 @@ macro_rules! value_bin_impl {
                             bin_pervade(a, b, a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$f))?.into()
                         }
                     },)*)*
+                    (Value::Box(a), Value::Box(b)) => {
+                        let (a, b) = match (a.into_unboxed(), b.into_unboxed()) {
+                            (Ok(a), Ok(b)) => return Ok(Boxed(Value::$name(a, b, a_depth, b_depth, env)?).into()),
+                            (Ok(a), Err(b)) => (a.coerce_as_boxes().into_owned(), b),
+                            (Err(a), Ok(b)) => (a, b.coerce_as_boxes().into_owned()),
+                            (Err(a), Err(b)) => (a, b),
+                        };
+                        bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
+                            Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
+                        }))?.into()
+                    }
                     (Value::Box(a), b) => {
                         match a.into_unboxed() {
-                            Ok(a) => Value::$name(a, b, a_depth, b_depth, env)?,
+                            Ok(a) => Boxed(Value::$name(a, b, a_depth, b_depth, env)?).into(),
                             Err(a) => {
                                 let b = b.coerce_as_boxes().into_owned();
                                 bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
@@ -1174,7 +1185,7 @@ macro_rules! value_bin_impl {
                     },
                     (a, Value::Box(b)) => {
                         match b.into_unboxed() {
-                            Ok(b) => Value::$name(a, b, a_depth, b_depth, env)?,
+                            Ok(b) => Boxed(Value::$name(a, b, a_depth, b_depth, env)?).into(),
                             Err(b) => {
                                 let a = a.coerce_as_boxes().into_owned();
                                 bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
@@ -1253,7 +1264,6 @@ macro_rules! eq_impls {
                 [Complex, same_type],
                 ("bytes", Byte, Byte, same_type, num_num),
                 (Char, Char, generic),
-                (Box, Box, generic),
                 ("bytes", Num, Byte, num_byte, num_num),
                 ("bytes", Byte, Num, byte_num, num_num),
                 (Complex, Num, com_x),
@@ -1280,7 +1290,6 @@ macro_rules! cmp_impls {
                 [Complex, com_x],
                 ("bytes", Byte, Byte, same_type, num_num),
                 (Char, Char, generic),
-                (Box, Box, generic),
                 ("bytes", Num, Byte, num_byte, num_num),
                 ("bytes", Byte, Num, byte_num, num_num),
                 (Complex, Num, com_x),

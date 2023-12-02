@@ -1059,20 +1059,6 @@ primitive!(
     /// ex: ≡⊂ ⊙¤ 1_2_3 4_5_6
     /// [fold] also has this behavior.
     ([1], Rows, IteratingModifier, ("rows", '≡')),
-    /// Apply a function to a fixed value and each row of an array
-    ///
-    /// This is a reversed version of [tribute].
-    ///
-    /// ex: ∺⊂ 1 2_3_4
-    /// ex: ∺⊂ 1_2_3 4_5_6
-    (2[1], Distribute, IteratingModifier, ("distribute", '∺')),
-    /// Apply a function to each row of an array and a fixed value
-    ///
-    /// This is a reversed version of [distribute].
-    ///
-    /// ex: ≐⊂ 1_2_3 4
-    /// ex: ≐⊂ 1_2_3 4_5_6
-    (2[1], Tribute, IteratingModifier, ("tribute", '≐')),
     /// Apply a function to each combination of elements of two arrays
     ///
     /// This is the element-wise version of [cross].
@@ -1287,18 +1273,6 @@ primitive!(
     ///
     /// Inverses set with [setund] cannot be used with [invert]. For simpler inverse defining, see [setinv].
     ([3], SetUnder, OtherModifier, "setund"),
-    /// Pop the second stack value then call a function
-    ///
-    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [reach] is useful.
-    ///
-    /// ex: ⟜+ 1 2 3
-    /// ex: ⟜⟜+ 1 3 5 7
-    /// This is especially useful when used in a [fork].
-    /// If you have three values on the stack `a`, `b`, and `c`, and you want to call one function on `a` and `b` and another function on `a` and `c`, you can use [reach].
-    /// ex: [⊃+⟜× 2 3 5]
-    /// If you wanted the argument pairs to be `a` `c` and `b` `c`, you can add a [gap].
-    /// ex: [⊃⟜+⋅× 2 3 5]
-    ([1], Reach, Planet, ("reach", '⟜')),
     /// Discard the top stack value then call a function
     ///
     /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [gap] is useful.
@@ -1518,99 +1492,6 @@ primitive!(
     /// ex: ⊐⬚0⊟ 1_2 3
     ///   : ⬚0⊐⊟ 1_2 3
     ([2], Fill, OtherModifier, ("fill", '⬚')),
-    /// Apply a function at a different array depth
-    ///
-    /// Expects a rank to operate on, a function, and an array.
-    /// The rank supplied indicates the desired rank of the operand.
-    /// The array will be split into arrays of that rank, and the function will be applied to each of those arrays.
-    ///
-    /// Ranks may be specified using [Ocean Notation](/docs/advancedarray#ocean-notation), but this page uses numbers and lists only.
-    ///
-    /// `level``0` is equivalent to [each], applying the function to each element of the array.
-    /// `level``¯1` is equivalent to [rows], applying the function to each row of the array's major axis.
-    /// `level``1` applies the function to each row of the array's last axis.
-    /// `level``infinity` calls the function on the array without splitting it.
-    ///
-    /// One nice way to see what this means is to test it using [reverse].
-    /// For each of these examples, pay attention to the number passed to [level] and which elements change position.
-    /// ex: ↯2_2_3 ⇡12
-    /// ex: ⇌ ↯2_2_3 ⇡12 # Reverse as normal
-    /// ex: ≑0⇌ ↯2_2_3 ⇡12 # Reverse each element (does nothing)
-    /// ex: ≑¯1⇌ ↯2_2_3 ⇡12 # Reverse each row
-    /// ex: ≑¯2⇌ ↯2_2_3 ⇡12 # Reverse each row of each row
-    /// ex: ≑1⇌ ↯2_2_3 ⇡12 # Reverse each last axis row
-    ///
-    /// [level] can operate on multiple arrays at once if passed a list of ranks.
-    /// While `level``¯1` is equivelent to [rows] called with a single array, `level``[¯1 ¯1]` is equivalent to [rows] called with two arrays, and so on.
-    /// ex: a ← ↯3_3   ⇡9
-    ///   : b ← ↯3_3+10⇡9
-    ///   :      ≡⊂ a b
-    ///   : ≑¯1_¯1⊂ a b
-    ///
-    /// One way to think of the number(s) passed to [level] is as the rank of the array that the function will be applied to.
-    /// `level``1` will always apply to rank `1` arrays, no matter how many dimensions the original array has.
-    /// ex: ≑[1 1]⊂ ↯3_3⇡9 10_11_12 # Join two rank 1 arrays
-    /// ex: ≑[1 0]⊂ ↯3_3⇡9 10_11_12 # Join rank 1 arrays with scalars
-    ///
-    /// [each] is equivalent to `level``0` or `level``[0 0 …]`.
-    /// [rows] is equivalent to `level``¯1` or `level``[¯1 ¯1 …]`.
-    /// [distribute] is equivalent to `level``[``infinity``¯1]` or `level``[``infinity``…``infinity``¯1]`.
-    /// [tribute] is equivalent to `level``[¯1``infinity``]` or `level``[¯1``infinity``…``infinity``]`.
-    ([2], Level, IteratingModifier, ("level", '≑')),
-    /// Apply a function to combinations at array depths
-    ///
-    /// Expect a list of ranks to operate on, a function, and some arrays.
-    /// The ranks supplied indicate the desired ranks of the arguments to the function.
-    /// The arrays will be split into arrays of those ranks, and the function will be applied to combinations of those arrays.
-    /// The function must take as many arguments as there are ranks.
-    ///
-    /// Ranks may be specified using [Ocean Notation](/docs/advancedarray#ocean-notation), but this page uses number lists only.
-    ///
-    /// ex: ◳0_1(+×10) ,, ↯2_2⇡4 ↯2_4⇡8
-    /// ex: ◳∞_¯1_¯1(▽⊙⊂) 3 [1 2 3] [4 5 6]
-    ///
-    /// [table] is equivalent to `combinate``[0 0]`.
-    /// [cross] is equivalent to `combinate``[¯1 ¯1]`.
-    ([2], Combinate, IteratingModifier, ("combinate", '◳')),
-    /// `join` `infinity` to an array
-    ///
-    /// See the [Ocean Notation tutorial](/docs/advancedarray#ocean-notation) to understand what this is for.
-    /// ex: ⋄5
-    /// ex: ⋄[1_2_3 4_5_6]
-    /// *Rocks line the shores of the ocean, their immovable forms jutting from the surface.*
-    (1, Rock, Ocean, ("rock", '⋄')),
-    /// `join` `¯1` to an array
-    ///
-    /// See the [Ocean Notation tutorial](/docs/advancedarray#ocean-notation) to understand what this is for.
-    /// ex: ~5
-    /// ex: ~[1_2_3 4_5_6]
-    /// ex: ≑~/+[[1_2 3_4] [5_6 7_8]]
-    /// *The light of the sun reflects reflects off the rippling surface of the ocean.*
-    (1, Surface, Ocean, ("surface", '~')),
-    /// `join` `2` to an array
-    ///
-    /// See the [Ocean Notation tutorial](/docs/advancedarray#ocean-notation) to understand what this is for.
-    /// ex: ≊5
-    /// ex: ≊[1_2_3 4_5_6]
-    /// ex: ≑≊/+[[1_2 3_4] [5_6 7_8]]
-    /// *In the deep ocean live many wonderous creatures.*
-    (1, Deep, Ocean, ("deep", '≊')),
-    /// `join` `1` to an array
-    ///
-    /// See the [Ocean Notation tutorial](/docs/advancedarray#ocean-notation) to understand what this is for.
-    /// ex: ≃5
-    /// ex: ≃[1_2_3 4_5_6]
-    /// ex: ≑≃/+[[1_2 3_4] [5_6 7_8]]
-    /// *In the abyss, where no light reaches, life is restricted to simpler forms.*
-    (1, Abyss, Ocean, ("abyss", '≃')),
-    /// `join` `0` to an array
-    ///
-    /// See the [Ocean Notation tutorial](/docs/advancedarray#ocean-notation) to understand what this is for.
-    /// ex: ∸5
-    /// ex: ∸[1_2_3 4_5_6]
-    /// ex: ◳∸≃⊂.[1_2_3 4_5_6]
-    /// *At the seabed, countless small scavengers feed on the detritus of the ocean above.*
-    (1, Seabed, Ocean, ("seabed", '∸')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the original arguments and the error value below.

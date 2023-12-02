@@ -222,7 +222,7 @@ impl<'a> VirtualEnv<'a> {
                     };
                     self.handle_args_outputs(1, outputs)?;
                 }
-                Each | Rows | Distribute | Tribute => {
+                Each | Rows => {
                     let sig = self.pop_func()?.signature();
                     self.handle_sig(sig)?
                 }
@@ -325,26 +325,6 @@ impl<'a> VirtualEnv<'a> {
                     let upper_arg_count = f_sig.args.saturating_sub(1) * lower_arg_count;
                     let outputs = f_sig.outputs * lower_arg_count;
                     self.handle_args_outputs(lower_arg_count + upper_arg_count, outputs)?;
-                }
-                Level | Combinate => {
-                    let ranks = self.pop_func()?;
-                    let ranks_sig = ranks.signature();
-                    if ranks_sig.outputs != 1 {
-                        return Err(format!(
-                            "{prim}'s rank list function must have 1 output, \
-                            but its signature is {ranks_sig}"
-                        )
-                        .into());
-                    }
-                    if ranks_sig.args > 1 {
-                        return Err(format!(
-                            "{prim}'s rank list function must have 0 or 1 arguments, \
-                            but its signature is {ranks_sig}"
-                        )
-                        .into());
-                    }
-                    let sig = self.pop_func()?.signature();
-                    self.handle_sig(sig)?;
                 }
                 Fold => {
                     let f = self.pop_func()?;

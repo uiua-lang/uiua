@@ -4,7 +4,7 @@ use std::{
     sync::Arc,
 };
 
-use ecow::{eco_vec, EcoVec};
+use ecow::EcoVec;
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
@@ -886,7 +886,7 @@ impl Uiua {
             return Ok(false);
         };
         match prim {
-            Dip | Gap | Reach => {
+            Dip | Gap => {
                 // Compile operands
                 let (mut instrs, sig) = self.compile_operand_words(modified.operands.clone())?;
                 // Dip (|1 …) . diagnostic
@@ -924,24 +924,6 @@ impl Uiua {
                     }
                     Gap => {
                         instrs.insert(0, Instr::Prim(Pop, span));
-                        Signature::new(sig.args + 1, sig.outputs)
-                    }
-                    Reach => {
-                        let mut init = eco_vec![
-                            Instr::PushTemp {
-                                stack: TempStack::Inline,
-                                count: 1,
-                                span,
-                            },
-                            Instr::Prim(Pop, span),
-                            Instr::PopTemp {
-                                stack: TempStack::Inline,
-                                count: 1,
-                                span,
-                            },
-                        ];
-                        init.extend(instrs);
-                        instrs = init;
                         Signature::new(sig.args + 1, sig.outputs)
                     }
                     _ => unreachable!(),

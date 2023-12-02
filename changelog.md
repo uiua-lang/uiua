@@ -12,6 +12,7 @@ This version is not yet released. If you are reading this on the website, then t
   - `''` will combine two lines without changing semantics
 - [`fill` `⬚`](https://uiua.org/docs/fill) and [`pack` `⊐`](https://uiua.org/docs/pack) are now exclusive
 - The way pervasive function work with [`box` `□`](https://uiua.org/docs/box)ed arrays is now more consistent
+- Remove `reach`, `distribute`, `tribute`, `level`, `combinate`, and all ocean functions for good
 ### Interpreter
 - Add a style diagnostic about lines that are too long
 - Add some other style diagnostics

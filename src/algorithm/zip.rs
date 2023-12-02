@@ -1,10 +1,7 @@
 //! Algorithms for zipping modifiers
 
 use crate::{
-    algorithm::{
-        loops::{rank_list, rank_to_depth},
-        pervade::bin_pervade_generic,
-    },
+    algorithm::pervade::bin_pervade_generic,
     array::{FormatShape, Shape},
     function::Function,
     value::Value,
@@ -138,12 +135,6 @@ pub(crate) fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize,
         }
         [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
             return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 1, 1)
-        }
-        [Instr::PushFunc(f), Instr::Prim(Distribute, _)] => {
-            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 0, 1)
-        }
-        [Instr::PushFunc(f), Instr::Prim(Tribute, _)] => {
-            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 1, 0)
         }
         [Instr::Prim(Flip, _), rest @ ..] => {
             let (f, a, b) = instrs_bin_fast_fn(rest)?;
@@ -349,11 +340,38 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
         }
         (_, 1) => {
             let ys = ys.into_rows().next().unwrap();
-            tribute2(f, xs, ys, env)
+            let outputs = f.signature().outputs;
+            let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
+            for x in xs.into_rows() {
+                env.push(ys.clone());
+                env.push(x);
+                env.call(f.clone())?;
+                for i in 0..outputs {
+                    new_rows[i].push(env.pop("rows's function result")?);
+                }
+            }
+            for new_rows in new_rows.into_iter().rev() {
+                env.push(Value::from_row_values(new_rows, env)?);
+            }
+            Ok(())
         }
         (1, _) => {
             let xs = xs.into_rows().next().unwrap();
-            distribute2(f, xs, ys, env)
+            let outputs = f.signature().outputs;
+            let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
+            let y_rows = ys.into_rows();
+            for y in y_rows {
+                env.push(y);
+                env.push(xs.clone());
+                env.call(f.clone())?;
+                for i in 0..outputs {
+                    new_rows[i].push(env.pop("rows's function result")?);
+                }
+            }
+            for new_rows in new_rows.into_iter().rev() {
+                env.push(Value::from_row_values(new_rows, env)?);
+            }
+            Ok(())
         }
         (a, b) => Err(env.error(format!(
             "Cannot rows arrays with different number of rows {a} and {b}",
@@ -417,409 +435,4 @@ fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         env.push(eached);
     }
     Ok(())
-}
-
-pub fn distribute(env: &mut Uiua) -> UiuaResult {
-    crate::profile_function!();
-    let f = env.pop_function()?;
-    let sig = f.signature();
-    let outputs = sig.outputs;
-    match sig.args {
-        n @ (0 | 1) => {
-            return Err(env.error(format!(
-                "Distribute's function must take at least 2 arguments, \
-                but it takes {n}"
-            )))
-        }
-        2 => {
-            let a = env.pop(1)?;
-            let xs = env.pop(2)?;
-            distribute2(f, a, xs, env)?;
-        }
-        3 => {
-            let a = env.pop(1)?;
-            let b = env.pop(2)?;
-            let xs = env.pop(3)?;
-            if xs.row_count() == 0 {
-                for _ in 0..outputs {
-                    env.push(xs.clone());
-                }
-                return Ok(());
-            }
-            let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-            for x in xs.into_rows() {
-                env.push(x);
-                env.push(b.clone());
-                env.push(a.clone());
-                env.call(f.clone())?;
-                for i in 0..outputs {
-                    new_rows[i].push(env.pop("distribute's function result")?);
-                }
-            }
-            for new_rows in new_rows.into_iter().rev() {
-                env.push(Value::from_row_values(new_rows, env)?);
-            }
-        }
-        n => {
-            let mut args = Vec::with_capacity(n - 1);
-            for i in 0..n - 1 {
-                args.push(env.pop(i + 1)?);
-            }
-            let xs = env.pop(n)?;
-            if xs.row_count() == 0 {
-                for _ in 0..outputs {
-                    env.push(xs.clone());
-                }
-                return Ok(());
-            }
-            let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-            for x in xs.into_rows() {
-                env.push(x);
-                for arg in args.iter().rev() {
-                    env.push(arg.clone());
-                }
-                env.call(f.clone())?;
-                for i in 0..outputs {
-                    new_rows[i].push(env.pop("distribute's function result")?);
-                }
-            }
-            for new_rows in new_rows.into_iter().rev() {
-                env.push(Value::from_row_values(new_rows, env)?);
-            }
-        }
-    }
-    Ok(())
-}
-
-fn distribute2(f: Function, a: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs) {
-        let val = f(a, xs, xd, yd + 1, env)?;
-        env.push(val);
-    } else {
-        let outputs = f.signature().outputs;
-        if xs.row_count() == 0 {
-            for _ in 0..outputs {
-                env.push(xs.clone());
-            }
-            return Ok(());
-        }
-        let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-        for x in xs.into_rows() {
-            env.push(x);
-            env.push(a.clone());
-            env.call(f.clone())?;
-            for i in 0..outputs {
-                new_rows[i].push(env.pop("distribute's function result")?);
-            }
-        }
-        for new_rows in new_rows.into_iter().rev() {
-            env.push(Value::from_row_values(new_rows, env)?);
-        }
-    }
-    Ok(())
-}
-
-pub fn tribute(env: &mut Uiua) -> UiuaResult {
-    crate::profile_function!();
-    let f = env.pop_function()?;
-    let sig = f.signature();
-    let outputs = sig.outputs;
-    match sig.args {
-        n @ (0 | 1) => {
-            return Err(env.error(format!(
-                "Tribute's function must take at least 2 arguments, \
-                but it takes {n}"
-            )))
-        }
-        2 => {
-            let xs = env.pop(1)?;
-            let a = env.pop(2)?;
-            tribute2(f, xs, a, env)?;
-        }
-        3 => {
-            let xs = env.pop(1)?;
-            let a = env.pop(2)?;
-            let b = env.pop(3)?;
-            if xs.row_count() == 0 {
-                for _ in 0..outputs {
-                    env.push(xs.clone());
-                }
-                return Ok(());
-            }
-            let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-            for x in xs.into_rows() {
-                env.push(b.clone());
-                env.push(a.clone());
-                env.push(x);
-                env.call(f.clone())?;
-                for i in 0..outputs {
-                    new_rows[i].push(env.pop("tribute's function result")?);
-                }
-            }
-            for new_rows in new_rows.into_iter().rev() {
-                env.push(Value::from_row_values(new_rows, env)?);
-            }
-        }
-        n => {
-            let mut args = Vec::with_capacity(n - 1);
-            let xs = env.pop(1)?;
-            for i in 0..n - 1 {
-                args.push(env.pop(i + 2)?);
-            }
-            if xs.row_count() == 0 {
-                for _ in 0..outputs {
-                    env.push(xs.clone());
-                }
-                return Ok(());
-            }
-            let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-            for x in xs.into_rows() {
-                for arg in args.iter().rev() {
-                    env.push(arg.clone());
-                }
-                env.push(x);
-                env.call(f.clone())?;
-                for i in 0..outputs {
-                    new_rows[i].push(env.pop("tribute's function result")?);
-                }
-            }
-            for new_rows in new_rows.into_iter().rev() {
-                env.push(Value::from_row_values(new_rows, env)?);
-            }
-        }
-    }
-    Ok(())
-}
-
-fn tribute2(f: Function, xs: Value, a: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, xd, yd)) = instrs_bin_fast_fn(&f.instrs) {
-        let val = f(xs, a, xd + 1, yd, env)?;
-        env.push(val);
-    } else {
-        let outputs = f.signature().outputs;
-        if xs.row_count() == 0 {
-            for _ in 0..outputs {
-                env.push(xs.clone());
-            }
-            return Ok(());
-        }
-        let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-        for x in xs.into_rows() {
-            env.push(a.clone());
-            env.push(x);
-            env.call(f.clone())?;
-            for i in 0..outputs {
-                new_rows[i].push(env.pop("tribute's function result")?);
-            }
-        }
-        for new_rows in new_rows.into_iter().rev() {
-            env.push(Value::from_row_values(new_rows, env)?);
-        }
-    }
-    Ok(())
-}
-
-pub fn level(env: &mut Uiua) -> UiuaResult {
-    crate::profile_function!();
-    let ns = rank_list("Level", env)?;
-    let f = env.pop_function()?;
-    let f_sig = f.signature();
-    if f_sig.outputs != 1 {
-        return Err(env.error(format!(
-            "Level's function must return 1 value, but it returns {}",
-            f_sig.outputs
-        )));
-    }
-    if f_sig.args != ns.len() {
-        return Err(env.error(format!(
-            "Level's rank list has {} elements, but its function takes {} arguments",
-            ns.len(),
-            f_sig.args
-        )));
-    }
-    match ns.as_slice() {
-        [] => return Ok(()),
-        &[n] => {
-            let xs = env.pop(1)?;
-            let n = rank_to_depth(n, xs.rank());
-            match n {
-                0 => {
-                    env.push(xs);
-                    return env.call(f);
-                }
-                1 => return rows1(f, xs, env),
-                n if n == xs.rank() => return each1(f, xs, env),
-                _ => {}
-            }
-            monadic_level(f, xs, n, env)?;
-        }
-        &[xn, yn] => {
-            let xs = env.pop(1)?;
-            let ys = env.pop(2)?;
-            let xn = rank_to_depth(xn, xs.rank());
-            let yn = rank_to_depth(yn, ys.rank());
-            match (xn, yn) {
-                (0, 0) => {
-                    env.push(ys);
-                    env.push(xs);
-                    return env.call(f);
-                }
-                (1, 1) => return rows2(f, xs, ys, env),
-                (0, 1) => return distribute2(f, xs, ys, env),
-                (1, 0) => return tribute2(f, xs, ys, env),
-                (a, b) if a == xs.rank() && b == ys.rank() => return each2(f, xs, ys, env),
-                _ => {}
-            }
-            if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
-                let value = f(xs, ys, xn + a, yn + b, env)?;
-                env.push(value);
-            } else {
-                dyadic_level(f, xs, ys, xn, yn, env)?;
-            }
-        }
-        is => {
-            let mut args = Vec::with_capacity(is.len());
-            for i in 0..is.len() {
-                let arg = env.pop(i + 1)?;
-                args.push(arg);
-            }
-            let mut ns: Vec<usize> = Vec::with_capacity(is.len());
-            for (i, arg) in args.iter().enumerate() {
-                ns.push(rank_to_depth(is[i], arg.rank()));
-            }
-            let res = multi_level_recursive(f, args, &ns, env)?;
-            env.push(res);
-        }
-    }
-    Ok(())
-}
-
-fn monadic_level(f: Function, value: Value, mut n: usize, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, d)) = instrs_un_fast_fn(&f.instrs) {
-        let val = f(value, d + n, env)?;
-        env.push(val);
-    } else if n == 0 {
-        env.push(value);
-        env.call(f)?;
-    } else {
-        n = n.min(value.rank());
-        let row_shape = Shape::from(&value.shape()[n..]);
-        let mut new_shape = Shape::from(&value.shape()[..n]);
-        let mut new_rows = Value::builder(new_shape.iter().product());
-        for value in value.row_shaped_slices(row_shape) {
-            env.push(value);
-            env.call(f.clone())?;
-            let row = env.pop("level's function result")?;
-            new_rows.add_row(row, env)?;
-        }
-        let mut new_value = new_rows.finish();
-        new_shape.extend_from_slice(&new_value.shape()[1..]);
-        *new_value.shape_mut() = new_shape;
-        new_value.validate_shape();
-        env.push(new_value);
-    }
-    Ok(())
-}
-
-fn dyadic_level(
-    f: Function,
-    xs: Value,
-    ys: Value,
-    mut xn: usize,
-    mut yn: usize,
-    env: &mut Uiua,
-) -> UiuaResult {
-    xn = xn.min(xs.rank());
-    yn = yn.min(ys.rank());
-    // Validate shapes
-    let xs_suffix = &xs.shape()[xn.saturating_sub(1)..];
-    let ys_suffix = &ys.shape()[yn.saturating_sub(1)..];
-    if !xs_suffix.iter().zip(ys_suffix).all(|(a, b)| a == b) {
-        return Err(env.error(format!(
-            "Cannot level arrays with shapes {} and {} \
-            because shape prefixes {} and {} are different",
-            xs.format_shape(),
-            ys.format_shape(),
-            FormatShape(xs_suffix),
-            FormatShape(ys_suffix)
-        )));
-    }
-    // Collect rows
-    let xs_row_shape = Shape::from(&xs.shape()[xn..]);
-    let ys_row_shape = Shape::from(&ys.shape()[yn..]);
-    let mut new_rows = Vec::new();
-    for (x, y) in xs
-        .row_shaped_slices(xs_row_shape)
-        .zip(ys.row_shaped_slices(ys_row_shape))
-    {
-        env.push(y);
-        env.push(x);
-        env.call(f.clone())?;
-        let row = env.pop("level's function result")?;
-        new_rows.push(row);
-    }
-    // Finalize result
-    let mut new_value = Value::from_row_values(new_rows, env)?;
-    let mut new_shape = Shape::from_iter(if xs.shape().len() > ys.shape().len() {
-        xs.shape()[..xn].iter().copied()
-    } else {
-        ys.shape()[..yn].iter().copied()
-    });
-    new_shape.extend_from_slice(&new_value.shape()[1..]);
-    *new_value.shape_mut() = new_shape;
-    new_value.validate_shape();
-    env.push(new_value);
-    Ok(())
-}
-
-fn multi_level_recursive(
-    f: Function,
-    args: Vec<Value>,
-    ns: &[usize],
-    env: &mut Uiua,
-) -> UiuaResult<Value> {
-    if ns.iter().all(|&n| n == 0) {
-        for arg in args.into_iter().rev() {
-            env.push(arg);
-        }
-        env.call(f)?;
-        Ok(env.pop("level's function result")?)
-    } else {
-        let (&n_with_max_row_count, arg_with_max_row_count) = ns
-            .iter()
-            .zip(&args)
-            .max_by_key(|&(&n, v)| if n == 0 { 1 } else { v.shape()[0] })
-            .unwrap();
-        for (n, arg) in ns.iter().zip(&args) {
-            if !arg.shape()[..*n]
-                .iter()
-                .zip(&arg_with_max_row_count.shape()[..n_with_max_row_count])
-                .all(|(a, b)| a == b)
-            {
-                return Err(env.error(format!(
-                    "Cannot level with ranks {} and {} arrays with shapes {} and {}",
-                    arg_with_max_row_count.rank() - n_with_max_row_count,
-                    arg.rank() - n,
-                    arg_with_max_row_count.format_shape(),
-                    arg.format_shape()
-                )));
-            }
-        }
-        let row_count = if n_with_max_row_count == 0 {
-            1
-        } else {
-            arg_with_max_row_count.shape()[0]
-        };
-        let mut rows = Vec::with_capacity(row_count);
-        let mut row_args = args.clone();
-        let dec_ns: Vec<usize> = ns.iter().map(|n| n.saturating_sub(1)).collect();
-        for i in 0..row_count {
-            for (j, (arg, n)) in args.iter().zip(ns).enumerate() {
-                row_args[j] = if *n == 0 { arg.clone() } else { arg.row(i) };
-            }
-            let row = multi_level_recursive(f.clone(), row_args.clone(), &dec_ns, env)?;
-            rows.push(row);
-        }
-        Value::from_row_values(rows, env)
-    }
 }

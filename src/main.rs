@@ -793,7 +793,6 @@ fn repl(mut rt: Uiua, color: bool, config: FormatConfig) {
             let (r, g, b) = match span.value {
                 SpanKind::Primitive(prim) => match prim.class() {
                     PrimClass::Stack => (209, 218, 236),
-                    PrimClass::Ocean => (3, 215, 217),
                     PrimClass::Constant => (237, 94, 36),
                     _ => {
                         if let Some(margs) = prim.modifier_args() {

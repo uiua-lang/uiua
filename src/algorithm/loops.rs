@@ -6,34 +6,8 @@ use crate::{
     ExactDoubleIterator, Signature, Uiua, UiuaResult,
 };
 
-pub(crate) fn rank_to_depth(declared_rank: Option<isize>, array_rank: usize) -> usize {
-    let declared_rank = declared_rank.unwrap_or(array_rank as isize);
-    array_rank
-        - if declared_rank < 0 {
-            (array_rank as isize + declared_rank).max(0) as usize
-        } else {
-            (declared_rank as usize).min(array_rank)
-        }
-}
-
 pub fn flip<A, B, C>(f: impl Fn(A, B) -> C) -> impl Fn(B, A) -> C {
     move |b, a| f(a, b)
-}
-
-pub(crate) fn rank_list(name: &str, env: &mut Uiua) -> UiuaResult<Vec<Option<isize>>> {
-    let ns = env.pop_function()?;
-    let sig = ns.signature();
-    if sig.outputs != 1 {
-        return Err(env.error(format!(
-            "{name}'s rank list function must return 1 value, \
-            but its signature is {sig}"
-        )));
-    }
-    if sig.args > 0 {
-        env.push(Array::<f64>::default())
-    }
-    env.call(ns)?;
-    env.pop("rank list")?.as_rank_list(env, "")
 }
 
 pub fn repeat(env: &mut Uiua) -> UiuaResult {

@@ -549,7 +549,6 @@ impl<'a> Lexer<'a> {
                 "⌂" => self.end(Primitive::Rise, start),
                 "↰" => self.end(Primitive::Spawn, start),
                 "↲" => self.end(Primitive::Wait, start),
-                "⍚" => self.end(Primitive::Level, start),
                 "≅" => self.end(Primitive::Match, start),
                 "?" => self.end(QuestionMark, start),
                 "∶" => self.end(Primitive::Flip, start),

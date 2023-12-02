@@ -50,7 +50,6 @@ pub enum PrimClass {
     AggregatingModifier,
     OtherModifier,
     Planet,
-    Ocean,
     Misc,
     Sys(SysOpClass),
 }
@@ -234,22 +233,6 @@ impl Primitive {
     pub fn is_modifier(&self) -> bool {
         self.modifier_args().is_some()
     }
-    /// Get the value joined by an ocean function
-    pub fn ocean_constant(&self) -> Option<f64> {
-        use Primitive::*;
-        match self {
-            Rock => Some(INFINITY),
-            Surface => Some(-1.0),
-            Deep => Some(2.0),
-            Abyss => Some(1.0),
-            Seabed => Some(0.0),
-            _ => None,
-        }
-    }
-    /// Check if this primitive is an ocean function
-    pub fn is_ocean(&self) -> bool {
-        self.ocean_constant().is_some()
-    }
     /// Check if this primitive is a constant
     pub fn is_constant(&self) -> bool {
         self.constant().is_some()
@@ -270,28 +253,7 @@ impl Primitive {
         FormatPrimitive(*self)
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
-        match self {
-            Primitive::Tribute | Primitive::Distribute => Some(format!(
-                "try using {} with {} instead",
-                Primitive::Rows.format(),
-                Primitive::Fix.format()
-            )),
-            Primitive::Level => Some(format!(
-                "try using {} with {} or {} instead",
-                Primitive::Rows.format(),
-                Primitive::Fix.format(),
-                Primitive::Rerank.format()
-            )),
-            Primitive::Combinate => Some(format!(
-                "try using {} with {} or {} instead",
-                Primitive::Cross.format(),
-                Primitive::Fix.format(),
-                Primitive::Rerank.format()
-            )),
-            Primitive::Reach => Some("try using `⊙⋅∘` instead".into()),
-            prim if prim.is_ocean() => Some(String::new()),
-            _ => None,
-        }
+        None
     }
     /// Check if this primitive is experimental
     pub fn is_experimental(&self) -> bool {
@@ -493,12 +455,8 @@ impl Primitive {
             Primitive::Fold => reduce::fold(env)?,
             Primitive::Each => zip::each(env)?,
             Primitive::Rows => zip::rows(env)?,
-            Primitive::Distribute => zip::distribute(env)?,
-            Primitive::Tribute => zip::tribute(env)?,
-            Primitive::Level => zip::level(env)?,
             Primitive::Table => table::table(env)?,
             Primitive::Cross => table::cross(env)?,
-            Primitive::Combinate => table::combinate(env)?,
             Primitive::Repeat => loops::repeat(env)?,
             Primitive::Do => loops::do_(env)?,
             Primitive::Group => loops::group(env)?,
@@ -541,29 +499,6 @@ impl Primitive {
             }
             Primitive::Gap => {
                 return Err(env.error("Gap was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Reach => {
-                return Err(env.error("Reach was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Rock => {
-                let x = env.pop(1)?;
-                env.push(x.ocean(INFINITY, env)?);
-            }
-            Primitive::Surface => {
-                let x = env.pop(1)?;
-                env.push(x.ocean(-1.0, env)?);
-            }
-            Primitive::Deep => {
-                let x = env.pop(1)?;
-                env.push(x.ocean(2.0, env)?);
-            }
-            Primitive::Abyss => {
-                let x = env.pop(1)?;
-                env.push(x.ocean(1.0, env)?);
-            }
-            Primitive::Seabed => {
-                let x = env.pop(1)?;
-                env.push(x.ocean(0.0, env)?);
             }
             Primitive::Invert => {
                 return Err(env.error("Invert was not inlined. This is a bug in the interpreter"))
@@ -1260,8 +1195,6 @@ mod tests {
                         | Primitive::Rand
                         | Primitive::Transpose
                         | Primitive::Trace
-                        | Primitive::Complex
-                        | Primitive::Combinate
                         | Primitive::Rectify
                         | Primitive::Recur
                 ) {

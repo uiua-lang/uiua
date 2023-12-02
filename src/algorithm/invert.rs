@@ -314,11 +314,6 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(EcoVec<Instr
             (Sys(SysOp::TcpAccept), Dup, PushTempN(1)),
             (PopTempN(1), Sys(SysOp::Close)),
         ),
-        &pat!(Rock, Rock, (1, Drop)),
-        &pat!(Surface, Surface, (1, Drop)),
-        &pat!(Deep, Deep, (1, Drop)),
-        &pat!(Abyss, Abyss, (1, Drop)),
-        &pat!(Seabed, Seabed, (1, Drop)),
         &UnderPatternFn(under_temp_pattern, "temp"),
         &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // This must come last!
     ];

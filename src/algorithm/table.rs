@@ -1,15 +1,10 @@
 //! Algorithms for tabling modifiers
 
-use std::mem::take;
-
 use ecow::EcoVec;
 use tinyvec::tiny_vec;
 
 use crate::{
-    algorithm::{
-        loops::{rank_list, rank_to_depth},
-        pervade::*,
-    },
+    algorithm::pervade::*,
     array::{Array, ArrayValue, Shape},
     function::Function,
     value::Value,
@@ -341,73 +336,4 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
         }
     }
     Ok(())
-}
-
-pub fn combinate(env: &mut Uiua) -> UiuaResult {
-    crate::profile_function!();
-    let ns = rank_list("Combinate", env)?;
-    if ns.len() < 2 {
-        return Err(env.error(format!(
-            "Combinate's rank list must have at least 2 elements, but it has {}",
-            ns.len()
-        )));
-    }
-    let f = env.pop_function()?;
-    let f_sig = f.signature();
-    if f_sig.outputs != 1 {
-        return Err(env.error(format!(
-            "Combinate's function must return 1 value, but it returns {}",
-            f_sig.outputs
-        )));
-    }
-    if f_sig.args != ns.len() {
-        return Err(env.error(format!(
-            "Combinate's rank list has {} elements, but its function takes {} arguments",
-            ns.len(),
-            f_sig.args
-        )));
-    }
-    let mut args = Vec::with_capacity(ns.len());
-    for i in 0..ns.len() {
-        let arg = env.pop(i + 1)?;
-        args.push(arg);
-    }
-    let ns: Vec<usize> = ns
-        .into_iter()
-        .zip(&args)
-        .map(|(n, arg)| rank_to_depth(n, arg.rank()))
-        .collect();
-    let res = multi_combinate_recursive(f, &mut args, &ns, 0, env)?;
-    env.push(res);
-    Ok(())
-}
-
-fn multi_combinate_recursive(
-    f: Function,
-    args: &mut [Value],
-    ns: &[usize],
-    curr: usize,
-    env: &mut Uiua,
-) -> UiuaResult<Value> {
-    if ns.iter().all(|&n| n == 0) {
-        for arg in args.iter().rev() {
-            env.push(arg.clone());
-        }
-        env.call(f)?;
-        Ok(env.pop("combinate's function result")?)
-    } else if ns[curr] == 0 {
-        multi_combinate_recursive(f, args, ns, curr + 1, env)
-    } else {
-        let curr_arg = take(&mut args[curr]);
-        let mut res = Value::builder(curr_arg.row_count());
-        let mut dec_ns = ns.to_vec();
-        dec_ns[curr] -= 1;
-        for row in curr_arg.rows() {
-            args[curr] = row;
-            let item = multi_combinate_recursive(f.clone(), args, &dec_ns, curr, env)?;
-            res.add_row(item, env)?;
-        }
-        args[curr] = curr_arg;
-        Ok(res.finish())
-    }
 }

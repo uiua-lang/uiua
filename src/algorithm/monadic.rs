@@ -4,7 +4,7 @@ use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet, HashMap},
     f64::consts::{PI, TAU},
-    iter::{once, repeat},
+    iter::repeat,
     mem::size_of,
     ptr,
 };
@@ -889,48 +889,6 @@ impl Value {
         let bytes = self.as_bytes(env, "Argument to inverse utf must be a list of bytes")?;
         let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
         Ok(s.into())
-    }
-}
-
-impl Value {
-    /// Join an ocean value
-    pub fn ocean(mut self, val: f64, env: &Uiua) -> UiuaResult<Self> {
-        match &mut self {
-            Value::Num(n) => n.ocean(val),
-            #[cfg(feature = "bytes")]
-            Value::Byte(b) => {
-                if val.fract() == 0.0 && (0.0..=255.0).contains(&val) {
-                    b.ocean(val as u8);
-                } else {
-                    let mut arr = b.convert_ref();
-                    arr.ocean(val);
-                    self = arr.into();
-                }
-            }
-            val => {
-                return Err(env.error(format!(
-                    "Cannot join ocean values to {} array",
-                    val.type_name()
-                )))
-            }
-        }
-        Ok(self)
-    }
-}
-
-impl<T: ArrayValue> Array<T> {
-    /// Join an ocean value
-    pub fn ocean(&mut self, value: T) {
-        if self.rank() == 0 {
-            self.data.extend(once(value));
-            self.data.as_mut_slice().rotate_right(1);
-            self.shape = tiny_vec![2];
-        } else {
-            let row_len = self.row_len();
-            self.data.extend(repeat(value).take(row_len));
-            self.data.as_mut_slice().rotate_right(row_len);
-            self.shape[0] += 1;
-        }
     }
 }
 

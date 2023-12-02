@@ -357,7 +357,6 @@ impl Allowed {
                 ("system", &system_classes),
                 ("function", &function_classes),
                 ("planet", &[PrimClass::Planet]),
-                ("ocean", &[PrimClass::Ocean]),
                 ("images", &[PrimClass::Sys(SysOpClass::Images)]),
                 ("gifs", &[PrimClass::Sys(SysOpClass::Gifs)]),
                 ("audio", &[PrimClass::Sys(SysOpClass::Audio)]),
@@ -392,7 +391,7 @@ impl Allowed {
     }
     fn table(&self) -> impl IntoView {
         let mut table_cells = Vec::new();
-        for class in PrimClass::all().filter(|c| c != &PrimClass::Ocean) {
+        for class in PrimClass::all() {
             if !self.classes.contains(&class) {
                 continue;
             }
@@ -407,7 +406,6 @@ impl Allowed {
                 PrimClass::IteratingModifier => "iterating-modifiers",
                 PrimClass::OtherModifier => "other-modifiers",
                 PrimClass::Planet => "planet-modifiers",
-                PrimClass::Ocean => "ocean-functions",
                 PrimClass::Misc => "misc-functions",
                 PrimClass::Sys(_) => "system-functions",
             };
@@ -466,7 +464,6 @@ impl Allowed {
                     view!(<a class="clean" href="/docs/advancedstack#planet-notation">"🌎 Planet 🪐"</a>).into_view(),
                     "Advanced stack manipulation",
                 ),
-                PrimClass::Ocean => (view!(<a class="clean" href="/docs/advancedarray#ocean-notation">"🌊 Ocean 🪸"</a>).into_view(), "Create rank lists"),
                 PrimClass::Misc => ("Miscellaneous".into_view(), ""),
                 PrimClass::Sys(class) => {
                     match class {

@@ -484,6 +484,9 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
         <Editor example=
 r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 ∊ □"APL" Langs"#/>
+        <p>"Pervasive functions work through boxes and preserve the maximum "<Prim prim=Box/>" depth of their arguments."</p>
+        <Editor example="¯ 1\n¯ □1\n¯ □□1"/>
+        <Editor example="+1 4\n+1 □4\n+1 □□4\n+□□1 □4"/>
 
         <p>"For more about working with box arrays, see "<Prim prim=Box/>"'s documentation."</p>
 

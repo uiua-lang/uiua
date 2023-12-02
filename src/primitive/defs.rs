@@ -659,14 +659,25 @@ primitive!(
     /// ex: $ Words of different lengths
     ///   : ⊜□≠@ .
     ///
-    /// Most monadic functions, like [reverse], will work on box elements without needing to [unbox] them.
+    /// Pervasive functions work through boxes and preserve the maximum [box] depth of their arguments.
+    /// ex: ¯ 1
+    ///   : ¯ □1
+    ///   : ¯ □□1
+    /// ex: +1 4
+    ///   : +1 □4
+    ///   : +1 □□4
+    ///   : +□□1 □4
+    ///
+    /// Most non-pervasive monadic functions, like [reverse], [first], [transpose], etc, will work on box elements without needing to [unbox] them.
+    /// Unlike pervasive functions, [box] depth is not preserved.
+    /// ex: ⊢□□[1 2 3]
     /// ex: $ Reverse these words
     ///   : ⊜□≠@ .
     ///   : ∵⇌.
     ///
     /// For more complex operations, you can use [under][unbox] or [pack].
     /// ex: Parts ← .⊜□≠@ . $ Prepend the word length
-    ///   : F ← ($"_ _"⧻.)
+    ///   : F ← $"_ _"⧻.
     ///   : ∵⍜⊔F Parts
     ///   : ⊐∵F Parts.
     /// [under][unbox] works because `invert``unbox` is just `box`. For each element, it un-[box]s the [box] function to get the array out, does something to it, then [box]s the result.

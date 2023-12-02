@@ -1644,14 +1644,17 @@ primitive!(
     (1, Parse, Misc, "parse"),
     /// Match a regex pattern
     ///
-    /// Returns an list of [box]ed strings, with one string per matching group
-    /// ex: regex "h[io]" "hihaho"
+    /// Returns an array of [box]ed strings, with one string per matching group and one row per match
+    /// ex: regex "h([io])" "hihaho"
     /// ex: regex "hi" "dog"
     /// ex: regex "[a-z]+" "hello world"
     /// Escaped regex characters must be double-escaped.
     /// ex: regex "\\d+" "123"
     /// ex: P ← $"(\\d{_})"
     ///   : regex $"_-_-_"P3P3P4 "123-456-7890"
+    /// Regex patterns with optional captures can be used with [pack] or [fill].
+    /// ex: ⊐regex "a(b)?" "a ab"
+    /// ex: ⬚(□"")regex "a(b)?" "a ab"
     ///
     /// Uiua uses the [Rust regex crate](https://docs.rs/regex/latest/regex/) internally.
     (2, Regex, Misc, "regex"),

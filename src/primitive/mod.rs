@@ -743,22 +743,19 @@ fn regex(env: &mut Uiua) -> UiuaResult {
                 Regex::new(&pattern).map_err(|e| env.error(format!("Invalid pattern: {}", e)))?;
             cache.entry(pattern.clone()).or_insert(regex.clone())
         };
-        let matches: EcoVec<Boxed> = if regex.captures_len() == 1 {
-            regex
-                .find_iter(&target)
+
+        let mut matches: Value =
+            Array::<Boxed>::new([0, regex.captures_len()].as_slice(), []).into();
+
+        for caps in regex.captures_iter(&target) {
+            let row: EcoVec<Boxed> = caps
+                .iter()
+                .flatten()
                 .map(|m| Boxed(Value::from(m.as_str())))
-                .collect()
-        } else {
-            regex
-                .captures(&target)
-                .map(|caps| {
-                    caps.iter()
-                        .flatten()
-                        .map(|m| Boxed(Value::from(m.as_str())))
-                        .collect()
-                })
-                .unwrap_or_default()
-        };
+                .collect();
+            matches.append(row.into(), env)?;
+        }
+
         env.push(matches);
         Ok(())
     })

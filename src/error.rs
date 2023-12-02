@@ -342,20 +342,24 @@ impl Report {
                 fragments.push(ReportFragment::Newline);
                 let line_prefix = format!("{} | ", span.start.line);
                 fragments.push(ReportFragment::Plain(line_prefix.clone()));
-                let line = span.input.lines().nth(span.start.line - 1).unwrap_or("");
+                let line = span
+                    .input
+                    .lines()
+                    .nth(span.start.line as usize - 1)
+                    .unwrap_or("");
                 let start_char_pos = span.start.col - 1;
                 let end_char_pos = if span.start.line == span.end.line {
                     span.end.col - 1
                 } else {
-                    line.chars().count()
+                    line.chars().count() as u32
                 };
-                let pre_color: String = line.chars().take(start_char_pos).collect();
+                let pre_color: String = line.chars().take(start_char_pos as usize).collect();
                 let color: String = line
                     .chars()
-                    .skip(start_char_pos)
-                    .take(end_char_pos - start_char_pos)
+                    .skip(start_char_pos as usize)
+                    .take((end_char_pos - start_char_pos) as usize)
                     .collect();
-                let post_color: String = line.chars().skip(end_char_pos).collect();
+                let post_color: String = line.chars().skip(end_char_pos as usize).collect();
                 fragments.push(ReportFragment::Faint(pre_color));
                 fragments.push(ReportFragment::Colored(color));
                 fragments.push(ReportFragment::Faint(post_color));
@@ -363,9 +367,9 @@ impl Report {
                 fragments.push(ReportFragment::Plain(
                     " ".repeat(line_prefix.chars().count()),
                 ));
-                fragments.push(ReportFragment::Plain(" ".repeat(start_char_pos)));
+                fragments.push(ReportFragment::Plain(" ".repeat(start_char_pos as usize)));
                 fragments.push(ReportFragment::Colored(
-                    "─".repeat(end_char_pos - start_char_pos),
+                    "─".repeat((end_char_pos - start_char_pos) as usize),
                 ));
             }
         }

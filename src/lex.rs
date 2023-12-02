@@ -64,10 +64,10 @@ impl Error for LexError {}
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Loc {
-    pub char_pos: usize,
-    pub byte_pos: usize,
-    pub line: usize,
-    pub col: usize,
+    pub char_pos: u32,
+    pub byte_pos: u32,
+    pub line: u32,
+    pub col: u32,
 }
 
 impl fmt::Display for Loc {
@@ -190,10 +190,12 @@ impl CodeSpan {
     }
     /// Get the text of the span
     pub fn as_str(&self) -> &str {
-        &self.input[self.start.byte_pos..self.end.byte_pos]
+        &self.input[self.start.byte_pos as usize..self.end.byte_pos as usize]
     }
     /// Check if the span contains a line and column
     pub fn contains_line_col(&self, line: usize, col: usize) -> bool {
+        let line = line as u32;
+        let col = col as u32;
         if self.start.line == self.end.line {
             self.start.line == line && (self.start.col..=self.end.col).contains(&col)
         } else {
@@ -207,7 +209,7 @@ impl CodeSpan {
         let start = self.start;
         let mut end = self.start;
         end.char_pos += 1;
-        end.byte_pos += self.as_str().chars().next().map_or(0, char::len_utf8);
+        end.byte_pos += self.as_str().chars().next().map_or(0, char::len_utf8) as u32;
         end.col += 1;
         CodeSpan {
             start,
@@ -220,9 +222,12 @@ impl CodeSpan {
         let end = self.end;
         let mut start = self.end;
         start.char_pos = start.char_pos.saturating_sub(1);
-        start.byte_pos = start
-            .byte_pos
-            .saturating_sub(self.as_str().chars().next_back().map_or(0, char::len_utf8));
+        start.byte_pos = start.byte_pos.saturating_sub(
+            self.as_str()
+                .chars()
+                .next_back()
+                .map_or(0, |c| c.len_utf8() as u32),
+        );
         start.col = start.col.saturating_sub(1);
         CodeSpan {
             start,
@@ -460,7 +465,7 @@ struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     fn peek_char(&self) -> Option<&'a str> {
-        self.input_segments.get(self.loc.char_pos).copied()
+        self.input_segments.get(self.loc.char_pos as usize).copied()
     }
     fn update_loc(&mut self, c: &'a str) {
         for c in c.chars() {
@@ -474,10 +479,10 @@ impl<'a> Lexer<'a> {
             }
         }
         self.loc.char_pos += 1;
-        self.loc.byte_pos += c.len();
+        self.loc.byte_pos += c.len() as u32;
     }
     fn next_char_if(&mut self, f: impl Fn(&str) -> bool) -> Option<&'a str> {
-        let c = *self.input_segments.get(self.loc.char_pos)?;
+        let c = *self.input_segments.get(self.loc.char_pos as usize)?;
         if !f(c) {
             return None;
         }
@@ -681,7 +686,7 @@ impl<'a> Lexer<'a> {
                         exclam_count += 1;
                     }
                     let ambiguous_ne = exclam_count == 1
-                        && self.input_segments.get(self.loc.char_pos) == Some(&"=");
+                        && self.input_segments.get(self.loc.char_pos as usize) == Some(&"=");
                     if ambiguous_ne {
                         ident.pop();
                     }
@@ -699,9 +704,9 @@ impl<'a> Lexer<'a> {
                         let mut start = start;
                         for (prim, frag) in prims {
                             let end = Loc {
-                                col: start.col + frag.chars().count(),
-                                char_pos: start.char_pos + frag.chars().count(),
-                                byte_pos: start.byte_pos + frag.len(),
+                                col: start.col + frag.chars().count() as u32,
+                                char_pos: start.char_pos + frag.chars().count() as u32,
+                                byte_pos: start.byte_pos + frag.len() as u32,
                                 ..start
                             };
                             self.tokens.push(Sp {

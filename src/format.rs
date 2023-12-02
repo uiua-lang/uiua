@@ -292,7 +292,7 @@ pub struct FormatOutput {
 
 impl FormatOutput {
     /// Map a cursor position in unfomatted code to glyph start/end positions in formatted code
-    pub fn map_char_pos(&self, pos: usize) -> (usize, usize) {
+    pub fn map_char_pos(&self, pos: u32) -> (u32, u32) {
         let mut pairs = self.glyph_map.iter();
         let Some((mut a_span, (mut a_start, mut a_end))) = pairs.next() else {
             return (pos, pos);
@@ -838,7 +838,7 @@ fn end_loc(s: &str) -> Loc {
             col += 1;
         }
         char_pos += 1;
-        byte_pos += c.len_utf8();
+        byte_pos += c.len_utf8() as u32;
     }
     Loc {
         line,

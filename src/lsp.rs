@@ -554,7 +554,7 @@ mod server {
                 tokens.push(SemanticToken {
                     delta_line: start.line - prev_line,
                     delta_start,
-                    length: (span.end.char_pos - span.start.char_pos) as u32,
+                    length: (span.end.char_pos - span.start.char_pos),
                     token_type,
                     token_modifiers_bitset: 0,
                 });
@@ -577,7 +577,7 @@ mod server {
     }
 
     fn uiua_loc_to_lsp(loc: Loc) -> Position {
-        Position::new(loc.line as u32 - 1, loc.col as u32 - 1)
+        Position::new(loc.line - 1, loc.col - 1)
     }
 
     fn uiua_locs_to_lsp(start: Loc, end: Loc) -> Range {

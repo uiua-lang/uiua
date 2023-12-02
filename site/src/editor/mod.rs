@@ -135,14 +135,14 @@ pub fn Editor<'a>(
                 },
             ) {
                 let cursor = if let Some((start, end)) = get_code_cursor() {
-                    let (new_start_start, new_start_end) = formatted.map_char_pos(start as usize);
-                    let (new_end_start, new_end_end) = formatted.map_char_pos(end as usize);
+                    let (new_start_start, new_start_end) = formatted.map_char_pos(start);
+                    let (new_end_start, new_end_end) = formatted.map_char_pos(end);
                     let (new_start, new_end) = if get_right_to_left() {
                         (new_start_start, new_end_start)
                     } else {
                         (new_start_end, new_end_end)
                     };
-                    Cursor::Set(new_start as u32, new_end as u32)
+                    Cursor::Set(new_start, new_end)
                 } else {
                     cursor
                 };

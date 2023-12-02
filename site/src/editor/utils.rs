@@ -506,9 +506,9 @@ fn set_code_html(id: &str, code: &str) {
     for span in spans(code) {
         let kind = span.value;
         let span = span.span;
-        push_unspanned(&mut html, span.start.char_pos, &mut end);
+        push_unspanned(&mut html, span.start.char_pos as usize, &mut end);
 
-        let text: String = chars[span.start.char_pos..span.end.char_pos]
+        let text: String = chars[span.start.char_pos as usize..span.end.char_pos as usize]
             .iter()
             .collect();
         // logging::log!("spanned: {:?} {:?}", kind, text);
@@ -596,7 +596,7 @@ fn set_code_html(id: &str, code: &str) {
             });
         }
 
-        end = span.end.char_pos;
+        end = span.end.char_pos as usize;
     }
 
     push_unspanned(&mut html, code.chars().count(), &mut end);

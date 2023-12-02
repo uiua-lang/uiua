@@ -808,23 +808,19 @@ fn regex(env: &mut Uiua) -> UiuaResult {
                 Regex::new(&pattern).map_err(|e| env.error(format!("Invalid pattern: {}", e)))?;
             cache.entry(pattern.clone()).or_insert(regex.clone())
         };
-        let matches: EcoVec<Boxed> = if regex.captures_len() == 1 {
-            regex
-                .find_iter(&target)
+
+        let mut matches = Value::builder(0);
+        regex.captures_iter(&target).for_each(|caps| {
+            let row: EcoVec<Boxed> = caps
+                .iter()
+                .flatten()
                 .map(|m| Boxed(Value::from(m.as_str())))
-                .collect()
-        } else {
-            regex
-                .captures(&target)
-                .map(|caps| {
-                    caps.iter()
-                        .flatten()
-                        .map(|m| Boxed(Value::from(m.as_str())))
-                        .collect()
-                })
-                .unwrap_or_default()
-        };
-        env.push(matches);
+                .collect();
+            // This unwrap should be fine because fill context () is infalliable.
+            matches.add_row(row.into(), &()).unwrap();
+        });
+
+        env.push(matches.finish());
         Ok(())
     })
 }

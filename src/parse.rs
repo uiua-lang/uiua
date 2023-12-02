@@ -1068,7 +1068,7 @@ pub(crate) fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {
     &words[start..end]
 }
 
-const MAX_WIDTH: usize = 45;
+const MAX_WIDTH: usize = 40;
 
 fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan)> {
     let mut count = 0;

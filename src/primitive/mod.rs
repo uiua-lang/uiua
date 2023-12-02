@@ -129,23 +129,35 @@ impl fmt::Display for ImplPrimitive {
         use ImplPrimitive::*;
         use Primitive::*;
         match self {
-            InvTranspose => write!(f, "⍘{Transpose}"),
-            InverseBits => write!(f, "⍘{Bits}"),
-            InvTrace => write!(f, "⍘{Trace}"),
-            InvWhere => write!(f, "⍘{Where}"),
-            InvCouple => write!(f, "⍘{Couple}"),
-            InvAtan => write!(f, "⍘{Atan}"),
-            InvComplex => write!(f, "⍘{Complex}"),
-            Untake => write!(f, "⍘{Take}"),
-            Undrop => write!(f, "⍘{Drop}"),
-            Unselect => write!(f, "⍘{Select}"),
-            Unpick => write!(f, "⍘{Pick}"),
-            Unpartition => write!(f, "⍘{Partition}"),
+            InvTranspose => write!(f, "{Invert}{Transpose}"),
+            InverseBits => write!(f, "{Invert}{Bits}"),
+            InvTrace => write!(f, "{Invert}{Trace}"),
+            InvWhere => write!(f, "{Invert}{Where}"),
+            InvCouple => write!(f, "{Invert}{Couple}"),
+            InvAtan => write!(f, "{Invert}{Atan}"),
+            InvComplex => write!(f, "{Invert}{Complex}"),
+            Untake => write!(f, "{Invert}{Take}"),
+            Undrop => write!(f, "{Invert}{Drop}"),
+            Unselect => write!(f, "{Invert}{Select}"),
+            Unpick => write!(f, "{Invert}{Pick}"),
+            Unpartition => write!(f, "{Invert}{Partition}"),
             Cos => write!(f, "{Sin}{Add}{Eta}"),
             Asin => write!(f, "{Invert}{Sin}"),
             Acos => write!(f, "{Invert}{Cos}"),
             Last => write!(f, "{First}{Reverse}"),
-            _ => write!(f, "{self:?}"),
+            InvUtf => write!(f, "{Invert}{Utf}"),
+            InvParse => write!(f, "{Invert}{Parse}"),
+            InvFix => write!(f, "{Invert}{Fix}"),
+            Unfirst => write!(f, "{Invert}{First}"),
+            Unlast => write!(f, "{Invert}{Last}"),
+            Unkeep => write!(f, "{Invert}{Keep}"),
+            Unrerank => write!(f, "{Invert}{Rerank}"),
+            Ungroup => write!(f, "{Invert}{Group}"),
+            FirstMinIndex => write!(f, "{First}{Rise}"),
+            FirstMaxIndex => write!(f, "{First}{Fall}"),
+            LastMinIndex => write!(f, "{First}{Reverse}{Rise}"),
+            LastMaxIndex => write!(f, "{First}{Reverse}{Fall}"),
+            FirstWhere => write!(f, "{First}{Where}"),
         }
     }
 }
@@ -769,6 +781,16 @@ impl ImplPrimitive {
                 let mut array = env.pop(3)?;
                 array.unrerank(&rank, &shape, env)?;
                 env.push(array);
+            }
+            ImplPrimitive::Unfirst => {
+                let into = env.pop(1)?;
+                let from = env.pop(2)?;
+                env.push(from.unfirst(into, env)?);
+            }
+            ImplPrimitive::Unlast => {
+                let into = env.pop(1)?;
+                let from = env.pop(2)?;
+                env.push(from.unlast(into, env)?);
             }
             ImplPrimitive::InvWhere => env.monadic_ref_env(Value::inverse_where)?,
             ImplPrimitive::InvUtf => env.monadic_ref_env(Value::inv_utf8)?,

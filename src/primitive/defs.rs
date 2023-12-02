@@ -1928,6 +1928,8 @@ impl_primitive!(
     (3, Unpick),
     (3, Untake),
     (3, Undrop),
+    (2, Unfirst),
+    (2, Unlast),
     (3, Unkeep),
     (3, Unrerank),
     (1[1], Unpartition),

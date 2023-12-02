@@ -854,6 +854,26 @@ impl Value {
             value => value,
         }
     }
+    /// Apply a function to the highest-level unboxed value
+    pub fn map_boxed(self, f: impl FnOnce(Self) -> Self) -> Self {
+        match self {
+            Value::Box(boxed) => match boxed.into_scalar() {
+                Ok(scalar) => Boxed(scalar.0.map_boxed(f)).into(),
+                Err(boxed) => f(Value::Box(boxed)),
+            },
+            val => f(val),
+        }
+    }
+    /// Apply a function to the highest-level unboxed value
+    pub fn try_map_boxed(self, f: impl FnOnce(Self) -> UiuaResult<Self>) -> UiuaResult<Self> {
+        match self {
+            Value::Box(boxed) => match boxed.into_scalar() {
+                Ok(scalar) => scalar.0.try_map_boxed(f).map(Boxed).map(Value::from),
+                Err(boxed) => f(Value::Box(boxed)),
+            },
+            val => f(val),
+        }
+    }
     /// Remove a single layer of boxing
     pub fn unboxed(self) -> Self {
         match self {

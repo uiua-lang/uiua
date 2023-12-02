@@ -188,6 +188,44 @@ impl Value {
             |a| a.last(env).map(Into::into),
         )
     }
+    pub(crate) fn unfirst(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        into.try_map_boxed(|into| {
+            self.generic_bin_into(
+                into.unboxed(),
+                |a, b| a.unfirst(b, env).map(Into::into),
+                |a, b| a.unfirst(b, env).map(Into::into),
+                |a, b| a.unfirst(b, env).map(Into::into),
+                |a, b| a.unfirst(b, env).map(Into::into),
+                |a, b| a.unfirst(b, env).map(Into::into),
+                |a, b| {
+                    env.error(format!(
+                        "Cannot invert first of {} into {}",
+                        a.type_name(),
+                        b.type_name()
+                    ))
+                },
+            )
+        })
+    }
+    pub(crate) fn unlast(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        into.try_map_boxed(|into| {
+            self.generic_bin_into(
+                into.unboxed(),
+                |a, b| a.unlast(b, env).map(Into::into),
+                |a, b| a.unlast(b, env).map(Into::into),
+                |a, b| a.unlast(b, env).map(Into::into),
+                |a, b| a.unlast(b, env).map(Into::into),
+                |a, b| a.unlast(b, env).map(Into::into),
+                |a, b| {
+                    env.error(format!(
+                        "Cannot invert last of {} into {}",
+                        a.type_name(),
+                        b.type_name()
+                    ))
+                },
+            )
+        })
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -233,6 +271,12 @@ impl<T: ArrayValue> Array<T> {
                 Ok(self)
             }
         }
+    }
+    pub(crate) fn unfirst(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.join(into.drop(&[1], env)?, env)
+    }
+    pub(crate) fn unlast(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        into.drop(&[-1], env)?.join(self, env)
     }
 }
 

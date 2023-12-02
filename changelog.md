@@ -15,6 +15,7 @@ If you are reading this on the website, then these changes are live here.
 ### Interpreter
 - Add a style diagnostic about lines that are too long
 - Replace `uiua check-update` with `uiua update`, which will update the interpreter by installing a new version with Cargo
+- Bug and crash fixes
 
 ## 0.4.1 - 2023-11-30
 ### Interpreter

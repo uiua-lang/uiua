@@ -2,6 +2,7 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
+- New `?` function
 - Multimedia
   - Sound input
   - Webcam input
@@ -13,6 +14,8 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - UDP Sockets
 
 ## Bugs
+- Fix `&i` indenting
+- Box comparison
 - Figure out what is going on with the editor cursor
 - Expand test suite
 

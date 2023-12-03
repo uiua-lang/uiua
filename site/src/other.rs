@@ -137,29 +137,35 @@ pub fn Install() -> impl IntoView {
         <p>"The following optional features are available (enabled by passing "<code>"--features <feature>"</code>"):"</p>
         <ul>
             <li><code>"bytes"</code>" - Enables byte arrays, which behave identically to numeric arrays but take up less space."</li>
-            <li><code>"audio"</code>" - Enables audio system functions."</li>
+            <li>
+                <p><code>"audio"</code>" - Enables audio system functions."</p>
+                <p>"On Linux, this may require installing some dependencies:"</p>
+                <code class="code-block">"apt install libasound2-dev libudev-dev pkg-config"</code>
+            </li>
         </ul>
-        <code class="code-block">"apt install libasound2-dev libudev-dev pkg-config"</code>
         <p>"If you want the most recent development version of Uiua, you can install from the git repository."</p>
         <code class="code-block">"cargo install --git https://github.com/uiua-lang/uiua uiua"</code>
+
+        <h2>"Font"</h2>
+        <p>"Uiua was originally designed to be used with stock "<a href="https://dejavu-fonts.github.io">"DejaVu Sans Mono"</a>". However, it now supports two custom fonts:"</p>
+        <ul>
+            <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/DejaVuSansMono.ttf">"DejaVuSansMono"</a>" - a modified version"</li>
+            <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/Uiua386.ttf">"Uiua386"</a>" - inspired by APL386. Thanks to Gifti for making it!"</li>
+        </ul>
+
+        <h2>"Editor Support"</h2>
+        <p>"An official "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">"Uiua language extension for VSCode"</a>" is available."</p>
+        <p>"For Neovim, Apeiros-46B maintains "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/syntax/uiua.vim">"syntax"</a>" and "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/ftplugin/uiua.lua">"LSP"</a>" scripts."</p>
+        <p>"These require Uiua to be installed and in your "<code>"PATH"</code>"."</p>
 
         <h2>"Basic Usage"</h2>
         <p>"Running just "<code>"uiua"</code>" will display the help message if there are no "<code>".ua"</code>" files in the directory."</p>
         <p>"You can initialize a "<code>"main.ua"</code>" with "<code>"uiua init"</code>"."</p>
         <p>"Once a "<code>".ua"</code>" file exists, running "<code>"uiua"</code>" will begin watching the directory for changes. If you edit and save a "<code>".ua"</code>" file, the interpreter will automatically format and run it."</p>
         <p>"You should configure you editor so that it automatically reloads files if they change on disk. This will allow you to see the formatted file as soon as it is saved."</p>
-        <p>"Use "<code>"uiua run"</code>" to format and run a file without watching it."</p>
-        <p>"Use "<code>"uiua fmt"</code>" to format a file without running it."</p>
-        <p>"Use "<code>"uiua test"</code>" to run tests."</p>
-
-        <h2>"Font"</h2>
-        <p>"The Uiua glyphs were chosen to be compatible specifically with "<a href="https://dejavu-fonts.github.io/Download.html">"DejaVu Sans Mono"</a>". It is recommended that you install this font to get the best experience with Uiua."</p>
-        <p>"The excellent "<a href="https://github.com/uiua-lang/uiua/raw/main/site/Uiua386.ttf">"Uiua386"</a>" font (inspired by APL386) is also available. Thanks to Gifti for making it!"</p>
-
-        <h2>"Editor Support"</h2>
-        <p>"An official "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">"Uiua language extension for VSCode"</a>" is available."</p>
-        <p>"For Neovim, Apeiros-46B maintains "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/syntax/uiua.vim">"syntax"</a>" and "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/ftplugin/uiua.lua">"LSP"</a>" scripts."</p>
-        <p>"These require Uiua to be installed and in your "<code>"PATH"</code>"."</p>
+        <p>"Use "<code>"uiua <PATH>"</code>" or "<code>"uiua run [PATH]"</code>" to format and run a file without watching it."</p>
+        <p>"Use "<code>"uiua fmt [PATH]"</code>" to format a file without running it."</p>
+        <p>"Use "<code>"uiua test [PATH]"</code>" to run tests."</p>
     }
 }
 

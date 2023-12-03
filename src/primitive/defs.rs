@@ -1655,9 +1655,10 @@ primitive!(
     (1, Parse, Misc, "parse"),
     /// Match a regex pattern
     ///
-    /// Returns an array of [box]ed strings, with one string per matching group and one row per match
+    /// Returns a rank-2 array of [box]ed strings, with one string per matching group and one row per match
     /// ex: regex "h([io])" "hihaho"
     /// ex: regex "hi" "dog"
+    ///   : △.
     /// ex: regex "[a-z]+" "hello world"
     /// Escaped regex characters must be double-escaped.
     /// ex: regex "\\d+" "123"

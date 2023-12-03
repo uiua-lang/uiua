@@ -873,7 +873,7 @@ pub fn Editor<'a>(
                         .collect();
                     format!("`{code}`")
                 } else {
-                    "text".into()
+                    "this".into()
                 };
             format!("[{text}]({url})")
         } else {

@@ -654,10 +654,10 @@ primitive!(
     /// ex: [□@a □3 □7_8_9]
     /// The more ergonomic way to make box arrays is to use `{}`s instead of `[]`s.
     /// ex: {@a 3 7_8_9}
-    /// Use [unbox] to get the values back out.
-    /// ex: ⊔ □1_2_3
-    /// [reduce][unbox] will unpack an array of boxes onto the stack.
-    /// ex: /⊔ {@a 3 7_8_9}
+    /// Use [un][box] to get the values back out.
+    /// ex: ⍘□ □1_2_3
+    /// [reduce][un][box] will unpack an array of boxes onto the stack.
+    /// ex: /⍘□ {@a 3 7_8_9}
     ///
     /// You would not normally construct arrays like the one above.
     /// The more important use case of [box] is for jagged or nested data.
@@ -674,20 +674,20 @@ primitive!(
     ///   : +1 □□4
     ///   : +□□1 □4
     ///
-    /// Most non-pervasive monadic functions, like [reverse], [first], [transpose], etc, will work on box elements without needing to [unbox] them.
+    /// Most non-pervasive monadic functions, like [reverse], [first], [transpose], etc, will work on box elements without needing to [un][box] them.
     /// Unlike pervasive functions, [box] depth is not preserved.
     /// ex: ⊢□□[1 2 3]
     /// ex: $ Reverse these words
     ///   : ⊜□≠@ .
     ///   : ∵⇌.
     ///
-    /// For more complex operations, you can use [under][unbox].
+    /// For more complex operations, you can use [under][un][box].
     /// ex: Parts ← .⊜□≠@ . $ Prepend the word length
     ///   : F ← $"_ _"⧻.
-    ///   : ∵⍜⊔F Parts
-    /// [under][unbox] works because `invert``unbox` is just `box`. For each element, it un-[box]es the [box] function to get the array out, does something to it, then [box]es the result.
+    ///   : ∵⍜⍘□F Parts
+    /// [under][un][box] works because `invert``unbox` is just `box`. For each element, it un-[box]es the [box] function to get the array out, does something to it, then [box]es the result.
     /// ex: A ← .{1_2_3 4_5 [7]}
-    ///   : ∵⍜⊔(⬚0↙3) A
+    ///   : ∵⍜⍘□(⬚0↙3) A
     (1, Box, MonadicArray, ("box", '□')),
     /// Take an array out of a box
     ///
@@ -1435,7 +1435,7 @@ primitive!(
     /// For example, this hypotenuse function does not use [both] when undoing because its `g` (`add`) returns a single value.
     /// ex: ⍜∩(×.)+ 3 4
     /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
-    /// ex: ⍜∩⊔(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
+    /// ex: ⍜∩⍘□(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
     ///
     /// [under] works with [&fo], [&fc], [&tcpa], and [&tcpc]. It calls [&cl] when `g` is done.
     ([2], Under, OtherModifier, ("under", '⍜')),
@@ -1704,8 +1704,8 @@ primitive!(
     /// ex: type i
     /// ex: type "hello"
     /// ex: type □[5 6]
-    /// ex: ∵ type   {10 "dog" [1 2 3]}
-    ///   : ∵(type⊔) {10 "dog" [1 2 3]}
+    /// ex: ∵ type    {10 "dog" [1 2 3]}
+    ///   : ∵(type⍘□) {10 "dog" [1 2 3]}
     (1, Type, Misc, "type"),
     /// Get the current time in seconds
     ///

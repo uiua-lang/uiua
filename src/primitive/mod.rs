@@ -256,7 +256,14 @@ impl Primitive {
         FormatPrimitive(*self)
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
-        None
+        match self {
+            Primitive::Unbox => Some(format!(
+                "use {} {} instead",
+                Primitive::Un.format(),
+                Primitive::Box.format(),
+            )),
+            _ => None,
+        }
     }
     /// Check if this primitive is experimental
     pub fn is_experimental(&self) -> bool {

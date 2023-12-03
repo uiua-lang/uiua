@@ -6,13 +6,15 @@ Uiua is not yet stable.
 ## 0.6.0 - 2023-12-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
-- `pack` is now called [`unpack` `⊐`](https://uiua.org/docs/unpack), and it no longer implicitly boxes values (only unboxes them)
 - [`fix` `¤`](https://uiua.org/docs/fix) now works with binary pervasive functions
 - [`fill` `⬚`](https://uiua.org/docs/fill) can now be disabled for a function by filling with an empty list
 - [`parse` `⋕`](https://uiua.org/docs/parse) now has a glyph and is semi-pervasive
 - [`sign` `±`](https://uiua.org/docs/sign), [`floor` `⌊`](https://uiua.org/docs/floor), [`ceiling` `⌈`](https://uiua.org/docs/ceiling), and [`round` `⁅`](https://uiua.org/docs/round) now work with [`under` `⍜`](https://uiua.org/docs/under)
 - [`reduce` `/`](https://uiua.org/docs/reduce) can now use a function that takes more than 2 arguments
 - Add some missing arithmetic inverses and unders involving [`flip` `:`](https://uiua.org/docs/flip)
+- `pack` is now called [`unpack` `⊐`](https://uiua.org/docs/unpack), and it no longer implicitly boxes values (only unboxes them)
+- `invert` is now called [`un` `⍘`](https://uiua.org/docs/un)
+- Deprecate [`unbox` `⊔`](https://uiua.org/docs/unbox) in favor of [`un` `⍘`](https://uiua.org/docs/un) [`box` `□`](https://uiua.org/docs/box)
 ### Interpreter
 - Make [`stack` `?`](https://uiua.org/docs/stack) and [`dump`](https://uiua.org/docs/dump) output show call stack
 - Show type and shape information when pretty-printing empty arrays with rank 2 or greater
@@ -28,9 +30,9 @@ This version is not yet released. If you are reading this on the website, then t
 
 ## 0.5.0 - 2023-12-02
 ### Language
-- [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under) now work with stack array notation.
+- [`invert` `⍘`](https://uiua.org/docs/un) and [`under` `⍜`](https://uiua.org/docs/under) now work with stack array notation.
 - Add the [`stack` `?`](https://uiua.org/docs/stack) function, which debug-prints the entire stack
-- [`dump`](https://uiua.org/docs/dump) now works with [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under)
+- [`dump`](https://uiua.org/docs/dump) now works with [`invert` `⍘`](https://uiua.org/docs/un) and [`under` `⍜`](https://uiua.org/docs/under)
 - [`fill` `⬚`](https://uiua.org/docs/fill) and [`pack` `⊐`](https://uiua.org/docs/pack) are now exclusive
 - Change how [`regex`](https://uiua.org/docs/regex) works to be more powerful
 - Add special syntax for splitting/joining lines of code
@@ -109,7 +111,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`range` `⇡`](https://uiua.org/docs/range) called on a list of 0 or 1 values is now more consistent
 - [`fill` `⬚`](https://uiua.org/docs/fill) now works with [`rotate` `↻`](https://uiua.org/docs/rotate) to give non-wrapping behavior
 - [`fill` `⬚`](https://uiua.org/docs/fill) now works with [`find` `⌕`](https://uiua.org/docs/find) if the searched-for array is longer than the array being searched
-- [`parse`](https://uiua.org/docs/parse) now works with [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under)
+- [`parse`](https://uiua.org/docs/parse) now works with [`invert` `⍘`](https://uiua.org/docs/un) and [`under` `⍜`](https://uiua.org/docs/under)
 - The output of [`find` `⌕`](https://uiua.org/docs/find) is now the same shape as the array being searched
 ### Interpreter
 - Fix a bunch of bugs
@@ -131,7 +133,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`each` `∵`](https://uiua.org/docs/each) and [`rows` `≡`](https://uiua.org/docs/rows) now work with [`under` `⍜`](https://uiua.org/docs/under)
 - All [ocean functions](https://uiua.org/docs/ocean) now work with [`under` `⍜`](https://uiua.org/docs/under)
 - Allow multiple values to be returned from [`each` `∵`](https://uiua.org/docs/each), [`rows` `≡`](https://uiua.org/docs/rows), [`distribute` `∺`](https://uiua.org/docs/distribute), [`tribute` `≐`](https://uiua.org/docs/tribute), [`table` `⊞`](https://uiua.org/docs/table), and [`cross` `⊠`](https://uiua.org/docs/cross)
-- [`invert` `⍘`](https://uiua.org/docs/invert) [`atangent` `∠`](https://uiua.org/docs/atangent) now produces the sine and cosine of an angle
+- [`invert` `⍘`](https://uiua.org/docs/un) [`atangent` `∠`](https://uiua.org/docs/atangent) now produces the sine and cosine of an angle
 - [`&i`](https://uiua.org/docs/&i) now treats paths as relative to the file calling it rather than the current working directory
 - Rank list functions for the rank-generic modifiers can now take any number of arguments. For any number of aguments greater that 0, an empty numeric list will be pushed before the function is called.
 - Add fraction literals with `/`
@@ -220,7 +222,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Change [`match` `≍`](https://uiua.org/docs/match)'s glyph to avoid confusion with the new ocean functions' glyphs. Code using `≅` will continue to work and will be formatted as `≍`.
 - Stack signatures found to be incorrect at runtime produce an error
 - Dyadic math operations now work with [`under` `⍜`](https://uiua.org/docs/under) even if both arguments are outside [`under` `⍜`](https://uiua.org/docs/under)'s function
-- Some mathematical functions that previously did not work with [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under) when accompanied by [`flip` `:`](https://uiua.org/docs/flip) now do
+- Some mathematical functions that previously did not work with [`invert` `⍘`](https://uiua.org/docs/un) and [`under` `⍜`](https://uiua.org/docs/under) when accompanied by [`flip` `:`](https://uiua.org/docs/flip) now do
 ### Website
 - Add 3 new tutorials
   - [Control Flow](https://uiua.org/docs/controlflow)

@@ -1032,7 +1032,7 @@ impl Uiua {
                 }
                 Ok(true)
             }
-            Invert => {
+            Un => {
                 let mut operands = modified.code_operands().cloned();
                 let f = operands.next().unwrap();
                 let span = f.span.clone();

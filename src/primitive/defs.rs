@@ -276,9 +276,9 @@ primitive!(
     /// ex: ○ 1
     /// You can get a cosine function by [add]ing [eta].
     /// ex: ○+η 1
-    /// You can get an arcsine function with [invert].
+    /// You can get an arcsine function with [un].
     /// ex: ⍘○ 1
-    /// You can get an arccosine function by [invert]ing the cosine.
+    /// You can get an arccosine function by [un]ing the cosine.
     /// ex: ⍘(○+η) 1
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
     /// ex: ÷○+η:○. 0
@@ -475,7 +475,7 @@ primitive!(
     /// [complex] is equivalent to `add``multiply``i`.
     /// You can use [absolute value] to get the magnitude of the complex number.
     /// ex: ⌵ ℂ3 4
-    /// You can use [invert][complex] to get the imaginary and real parts back out.
+    /// You can use [un][complex] to get the imaginary and real parts back out.
     /// ex: [⍘ℂ] i
     /// ex: [⍘ℂ] ×. ℂ3 4
     (2, Complex, DyadicPervasive, ("complex", 'ℂ')),
@@ -560,7 +560,7 @@ primitive!(
     /// ex: ⋯⇡8
     /// ex: ⋯[1_2 3_4 5_6]
     ///
-    /// [invert][bits] can be used to decode the bits back into numbers.
+    /// [un][bits] can be used to decode the bits back into numbers.
     /// ex: ⍘⋯ [1 0 1]
     /// ex: ⍘⋯ [0 1 1 0 1]
     /// ex: ⍘⋯ [[0 1 1]
@@ -615,7 +615,7 @@ primitive!(
     /// ex:     ⊚ [0 1 0 0 2 0 1]
     /// ex: ▽:⇡⧻. [0 1 0 0 2 0 1]
     ///
-    /// [invert][where] will convert the indices back into a a list of counts
+    /// [un][where] will convert the indices back into a a list of counts
     /// ex: ⍘⊚ [0 0 0 1 1 2 2 2 2 2 3]
     /// The indices need not be in order
     /// ex: ⍘⊚ [0 1 2 2 0 3 2 1 2 0 2]
@@ -1136,7 +1136,7 @@ primitive!(
     /// ex: ⍥(⊂2)5 []
     /// One interesting use of `repeat` is to collect some number of stack values into an array.
     /// ex: ⍥⊂3 [] 1 2 3
-    /// [repeat]ing a negative number of times will repeat the [invert]ed function.
+    /// [repeat]ing a negative number of times will repeat the [un]ed function.
     /// ex: ⍥√¯3 2
     /// Repeating [infinity] times will create an infinite loop that can only be terminated by ending the program.
     /// If you want an infinite loop that ends when some condition is met, use [do].
@@ -1216,26 +1216,26 @@ primitive!(
     /// ex: √2
     /// ex: ⍘√2
     ///
-    /// [invert][couple] uncouples a [length]`2` array and pushes both rows onto the stack.
+    /// [un][couple] uncouples a [length]`2` array and pushes both rows onto the stack.
     /// ex: ⍘⊟ .[1_2_3 4_5_6]
     ///
-    /// [invert][transpose] transposes in the opposite direction.
+    /// [un][transpose] transposes in the opposite direction.
     /// This is useful for arrays with rank `greater than``2`.
     /// ex: ⍘⍉ .⊟.[1_2_3 4_5_6]
     ///
-    /// [invert][bits] converts an array of bits into a number.
+    /// [un][bits] converts an array of bits into a number.
     /// ex: ⍘⋯ [1 0 1 0 1 0 1 0]
     ///
-    /// [invert][sine] gives the arcsine.
+    /// [un][sine] gives the arcsine.
     /// ex: ⍘○ 1
     ///
-    /// [invert] can be used with stack array notation and [dip] and [identity] to unpack the items of an array onto the stack.
+    /// [un] can be used with stack array notation and [dip] and [identity] to unpack the items of an array onto the stack.
     /// ex: [⊙⊙∘] 1 2 3
     /// ex: ⍘[⊙⊙∘] [1 2 3]
     ///
     /// While more inverses exists, most of them are not useful on their own.
     /// They are usually used within [under].
-    ([1], Invert, OtherModifier, ("invert", '⍘')),
+    ([1], Un, OtherModifier, ("un", '⍘')),
     /// Set a function as its own inverse
     ///
     /// ex: # Experimental!
@@ -1292,7 +1292,7 @@ primitive!(
     ///   : ;F 5
     ///   : ;⍜F(×10) 5
     ///
-    /// Inverses set with [setund] cannot be used with [invert]. For simpler inverse defining, see [setinv].
+    /// Inverses set with [setund] cannot be used with [un]. For simpler inverse defining, see [setinv].
     ([3], SetUnder, OtherModifier, "setund"),
     /// Discard the top stack value then call a function
     ///
@@ -1388,23 +1388,23 @@ primitive!(
     ([2], All, Planet, ("all", '⋔')),
     /// Apply a function under another
     ///
-    /// This is a more powerful version of [invert].
+    /// This is a more powerful version of [un].
     /// Conceptually, [under] transforms a value, modifies it, then reverses the transformation.
     ///
     /// [under] takes 2 functions `f` and `g` and another argument `x`.
     /// It applies `f` to `x`, then applies `g` to the result.
     /// It then applies the inverse of `f` to the result of `g`.
     ///
-    /// Any function that can be [invert]ed can be used with [under].
-    /// Some functions that can't be [invert]ed can still be used with [under].
+    /// Any function that can be [un]ed can be used with [under].
+    /// Some functions that can't be [un]ed can still be used with [under].
     ///
     /// Here, we [negate] 5, [subtract] 2, then [negate] again.
     /// ex: ⍜¯(-2) 5
     /// You can use [under] with [round] to round to a specific number of decimal places.
     /// ex: ⍜(×1e3)⁅ π
     ///
-    /// The above examples involve an *arithmetic* under. That is, [invert]`f` is well-definined independent of [under]'s concept of "undoing".
-    /// The remaining examples below involve `f`s which cannot be normally [invert]ed, but which are valid as functions to use with [under].
+    /// The above examples involve an *arithmetic* under. That is, [un]`f` is well-definined independent of [under]'s concept of "undoing".
+    /// The remaining examples below involve `f`s which cannot be normally [un]ed, but which are valid as functions to use with [under].
     ///
     /// [under][deshape] will [reshape] the array after `g` finishes.
     /// ex: ⍜♭⇌ .↯3_4⇡12
@@ -1680,7 +1680,7 @@ primitive!(
     ///
     /// ex: utf "hello!"
     /// ex: utf "❤️"
-    /// You can use [invert] to convert UTF-8 bytes back to a string.
+    /// You can use [un] to convert UTF-8 bytes back to a string.
     /// ex: ⍘utf [226 156 168 32 119 111 119 33]
     ///
     /// [utf] is different from just [add]ing or [subtracting] `@\0`.

@@ -1134,7 +1134,7 @@ fn EndOfTutorialList() -> impl IntoView {
             <li>
                 "Some important functions that were not covered:"
                 <ul>
-                    <li><Prim prim=Under/>" and "<Prim prim=Invert/></li>
+                    <li><Prim prim=Under/>" and "<Prim prim=Un/></li>
                     <li><Prim prim=Keep/></li>
                     <li><Prim prim=Where/></li>
                     <li><Prim prim=Partition/></li>

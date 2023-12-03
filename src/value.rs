@@ -787,7 +787,6 @@ impl Value {
                 }
                 return Ok(chars.data().iter().collect());
             }
-            #[cfg(feature = "bytes")]
             Value::Box(boxes) => {
                 if let Some(bx) = boxes.as_scalar() {
                     return bx.as_value().as_string(env, requirement);

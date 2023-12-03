@@ -348,10 +348,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(EcoVec<Instr
         break;
     }
 
-    // println!(
-    //     "under {:?} failed with remaining {:?}",
-    //     instrs, instrs_sections
-    // );
+    println!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
 
     None
 }
@@ -455,14 +452,6 @@ fn invert_trivial_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>)> 
         [ImplPrim(prim, span), input @ ..] => {
             if let Some(inv) = impl_prim_inverse(*prim, *span).map(|instr| eco_vec![instr]) {
                 return Some((input, inv));
-            }
-        }
-        [PushFunc(val), input @ ..] => {
-            if let Some((prim, span)) = val.as_primitive() {
-                return Some((input, eco_vec![prim_inverse(prim, span)?]));
-            }
-            if let Some((prim, span)) = val.as_impl_primitive() {
-                return Some((input, eco_vec![impl_prim_inverse(prim, span)?]));
             }
         }
         [PushSig(_) | PopSig, input @ ..] => return Some((input, EcoVec::new())),

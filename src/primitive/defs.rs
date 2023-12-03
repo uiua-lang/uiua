@@ -681,16 +681,13 @@ primitive!(
     ///   : ⊜□≠@ .
     ///   : ∵⇌.
     ///
-    /// For more complex operations, you can use [under][unbox] or [pack].
+    /// For more complex operations, you can use [under][unbox].
     /// ex: Parts ← .⊜□≠@ . $ Prepend the word length
     ///   : F ← $"_ _"⧻.
     ///   : ∵⍜⊔F Parts
-    ///   : ⊐∵F Parts.
     /// [under][unbox] works because `invert``unbox` is just `box`. For each element, it un-[box]es the [box] function to get the array out, does something to it, then [box]es the result.
-    /// The difference between [under][unbox] and [pack] is that [pack] will only [box] the results if it is necessary.
     /// ex: A ← .{1_2_3 4_5 [7]}
     ///   : ∵⍜⊔(⬚0↙3) A
-    ///   : ⊐∵(⬚0↙3) A
     (1, Box, MonadicArray, ("box", '□')),
     /// Take an array out of a box
     ///
@@ -1201,35 +1198,17 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
-    /// Apply a function with implicit (un)boxing
+    /// Apply a function with implicit unboxing
     ///
-    /// When working with [box]ed data, [pack] will automatically [unbox] the data for functions like [join].
+    /// When working with [box]ed data, [unpack] will automatically [unbox] the data for functions like [join].
     /// ex:  /⊂ {"a" "bc" "def"}
     /// ex: ⊐/⊂ {"a" "bc" "def"}
     ///
-    /// If combining arrays would fail because of a shape mismatch, [pack] will automatically [box] the arrays.
-    /// ex!  \⊂⇡5
-    /// ex: ⊐\⊂⇡5
-    /// ex: ⊐⊟ 5 "hello"
-    ///
-    /// While `{}`s will always [box] their contents, [pack] will only [box] if necessary.
-    /// ex:  {1 2_3}
-    ///   : ⊐[1 2_3]
-    /// ex:  {1 2 3}
-    ///   : ⊐[1 2 3]
-    /// Because [pack] only [box]es if necessary, it is often best to use [rows] instead of [each] to iterate over results.
-    /// This can avoid potential inconsistencies with [pack]ed arrays.
-    /// ex: A ← ⊐∵⇡ +1⇡4 # Pack boxes
-    ///   : B ← ⊐∵⇡ ↯4 4 # Pack doesn't box
-    ///   : ⊐∵/+ A # ✓ Each element is a boxed list of numbers
-    ///   : ⊐≡/+ A # ✓ Each row is a boxed list of numbers
-    ///   : ⊐∵/+ B # X Each element is a number!
-    ///   : ⊐≡/+ B # ✓ Each row is a list of numbers
-    ///
-    /// [pack] and [fill] are exclusive.
-    /// ex: ⊐⬚0⊟ 1_2 3
-    ///   : ⬚0⊐⊟ 1_2 3
-    ([1], Pack, OtherModifier, ("pack", '⊐')),
+    /// Anything that is [box]ed inside the function will be [unbox]ed as soon as it is used.
+    /// This may lead to unexpected behavior if you are not aware of it.
+    /// ex: ⊐(¯□3) # Used
+    /// ex: ⊐( □3) # Not used
+    ([1], Unpack, OtherModifier, ("unpack", '⊐')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.
@@ -1536,10 +1515,6 @@ primitive!(
     ///   :   ⬚[]↻3 ⇡5
     ///   :   ↻1 ⇡5
     ///   : )
-    ///
-    /// [fill] and [pack] are exclusive.
-    /// ex: ⊐⬚0⊟ 1_2 3
-    ///   : ⬚0⊐⊟ 1_2 3
     ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Call a function and catch errors
     ///
@@ -1696,8 +1671,7 @@ primitive!(
     /// ex: regex "\\d+" "123"
     /// ex: P ← $"(\\d{_})"
     ///   : regex $"_-_-_"P3P3P4 "123-456-7890"
-    /// Regex patterns with optional captures can be used with [pack] or [fill].
-    /// ex: ⊐regex "a(b)?" "a ab"
+    /// Regex patterns with optional captures can be used with [fill].
     /// ex: ⬚(□"")regex "a(b)?" "a ab"
     ///
     /// Uiua uses the [Rust regex crate](https://docs.rs/regex/latest/regex/) internally.

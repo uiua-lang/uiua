@@ -6,6 +6,7 @@ Uiua is not yet stable.
 ## 0.6.0 - 2023-12-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- `pack` is now called [`unpack` `⊐`](https://uiua.org/docs/unpack), and it no longer implicitly boxes values (only unboxes them)
 - [`fix` `¤`](https://uiua.org/docs/fix) now works with binary pervasive functions
 - [`fill` `⬚`](https://uiua.org/docs/fill) can now be disabled for a function by filling with an empty list
 - [`parse` `⋕`](https://uiua.org/docs/parse) now has a glyph and is semi-pervasive

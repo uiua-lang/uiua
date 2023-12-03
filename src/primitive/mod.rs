@@ -509,7 +509,7 @@ impl Primitive {
             Primitive::Under => {
                 return Err(env.error("Under was not inlined. This is a bug in the interpreter"))
             }
-            Primitive::Pack => {
+            Primitive::Unpack => {
                 let f = env.pop_function()?;
                 env.with_pack(|env| env.call(f))?;
             }

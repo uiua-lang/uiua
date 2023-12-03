@@ -368,7 +368,7 @@ impl<'a> VirtualEnv<'a> {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }
-                Pack => {
+                Unpack => {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }

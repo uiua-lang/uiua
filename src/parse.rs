@@ -1037,8 +1037,8 @@ fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan, Option<Dia
             | Word::Number(..)
             | Word::Primitive(_)
             | Word::MultilineString(_)
-            | Word::Ident(_)
             | Word::Placeholder(_) => count += 1,
+            Word::Ident(ident) => count += (ident.chars().count() / 2).max(1),
             Word::Strand(_) => count += 1,
             Word::Array(arr) => {
                 let mut max_width = 0;

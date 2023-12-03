@@ -21,6 +21,7 @@ pub enum ParseError {
     FunctionNotAllowed,
     SplitInModifier,
     UnsplitInModifier,
+    LineTooLong(usize),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -94,6 +95,11 @@ impl fmt::Display for ParseError {
             ParseError::UnsplitInModifier => write!(
                 f,
                 "Line unsplitting is not allowed between modifier arguments"
+            ),
+            ParseError::LineTooLong(width) => write!(
+                f,
+                "Split this line into multiple lines (heuristic: {}/{}).",
+                width, ERROR_MAX_WIDTH
             ),
         }
     }
@@ -430,15 +436,24 @@ impl Parser {
         if words.is_empty() {
             None
         } else {
-            if let Err((width, span)) = count_width(&words) {
-                self.diagnostics.push(Diagnostic::new(
-                    format!(
-                        "Split this line into multiple lines \
-                        (current heuristic: {width}/{MAX_WIDTH})"
-                    ),
-                    span,
-                    DiagnosticKind::Style,
-                ));
+            if let Err((width, span, kind)) = count_width(&words) {
+                if let Some(kind) = kind {
+                    let max = match kind {
+                        DiagnosticKind::Style => STYLE_MAX_WIDTH,
+                        DiagnosticKind::Advice => ADVICE_MAX_WIDTH,
+                        DiagnosticKind::Warning => WARNING_MAX_WIDTH,
+                    };
+                    self.diagnostics.push(Diagnostic::new(
+                        format!(
+                            "Split this line into multiple lines \
+                            (heuristic: {width}/{max})"
+                        ),
+                        span,
+                        kind,
+                    ));
+                } else {
+                    self.errors.push(span.sp(ParseError::LineTooLong(width)));
+                }
             }
             Some(words)
         }
@@ -1007,9 +1022,12 @@ pub(crate) fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {
     &words[start..end]
 }
 
-const MAX_WIDTH: usize = 40;
+const STYLE_MAX_WIDTH: usize = 40;
+const ADVICE_MAX_WIDTH: usize = 53;
+const WARNING_MAX_WIDTH: usize = 67;
+const ERROR_MAX_WIDTH: usize = 80;
 
-fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan)> {
+fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan, Option<DiagnosticKind>)> {
     let mut count = 0;
     for word in words {
         match &word.value {
@@ -1059,10 +1077,19 @@ fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan)> {
             Word::Spaces | Word::BreakLine | Word::UnbreakLine | Word::Comment(_) => {}
         }
     }
-    if count > MAX_WIDTH {
+    if count > STYLE_MAX_WIDTH {
         let first = words.first().unwrap().span.clone();
         let last = words.last().unwrap().span.clone();
-        Err((count, first.merge(last)))
+        let kind = if count > ERROR_MAX_WIDTH {
+            None
+        } else if count > WARNING_MAX_WIDTH {
+            Some(DiagnosticKind::Warning)
+        } else if count > ADVICE_MAX_WIDTH {
+            Some(DiagnosticKind::Advice)
+        } else {
+            Some(DiagnosticKind::Style)
+        };
+        Err((count, first.merge(last), kind))
     } else {
         Ok(count)
     }

@@ -2,9 +2,9 @@
 
 Uiua is not yet stable.
 
+<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
-## 0.5.0 - 2023-12-??
-This version is not yet released. If you are reading this on the website, then these changes are live here.
+## 0.5.0 - 2023-12-2
 ### Language
 - [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under) now work with stack array notation.
 - Add the [`stack` `?`](https://uiua.org/docs/stack) function, which debug-prints the entire stack

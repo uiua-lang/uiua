@@ -663,18 +663,14 @@ impl Value {
         let Some(mut value) = row_values.next() else {
             return Ok(Value::default());
         };
-        let mut count = 1;
-        for row in row_values {
-            count += 1;
-            if count == 2 {
-                let total_elements = total_rows * value.shape().iter().product::<usize>();
-                value.reserve_min(total_elements);
-                value.couple_impl(row, ctx)?;
-            } else {
+        if let Some(row) = row_values.next() {
+            let total_elements = total_rows * value.shape().iter().product::<usize>();
+            value.reserve_min(total_elements);
+            value.couple_impl(row, ctx)?;
+            for row in row_values {
                 value.append(row, ctx)?;
             }
-        }
-        if count == 1 {
+        } else {
             value.shape_mut().insert(0, 1);
         }
         Ok(value)

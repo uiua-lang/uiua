@@ -650,7 +650,7 @@ primitive!(
     /// ex: {@a 3 7_8_9}
     /// Use [unbox] to get the values back out.
     /// ex: ⊔ □1_2_3
-    /// [reduce][unbox] will unpack an array of boxs onto the stack.
+    /// [reduce][unbox] will unpack an array of boxes onto the stack.
     /// ex: /⊔ {@a 3 7_8_9}
     ///
     /// You would not normally construct arrays like the one above.
@@ -680,7 +680,7 @@ primitive!(
     ///   : F ← $"_ _"⧻.
     ///   : ∵⍜⊔F Parts
     ///   : ⊐∵F Parts.
-    /// [under][unbox] works because `invert``unbox` is just `box`. For each element, it un-[box]s the [box] function to get the array out, does something to it, then [box]s the result.
+    /// [under][unbox] works because `invert``unbox` is just `box`. For each element, it un-[box]es the [box] function to get the array out, does something to it, then [box]es the result.
     /// The difference between [under][unbox] and [pack] is that [pack] will only [box] the results if it is necessary.
     /// ex: A ← .{1_2_3 4_5 [7]}
     ///   : ∵⍜⊔(⬚0↙3) A

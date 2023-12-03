@@ -7,13 +7,14 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under) now work with stack array notation.
+- Add the [`stack` `?`](https://uiua.org/docs/stack) function, which debug-prints the entire stack
 - [`dump`](https://uiua.org/docs/dump) now works with [`invert` `⍘`](https://uiua.org/docs/invert) and [`under` `⍜`](https://uiua.org/docs/under)
 - [`fill` `⬚`](https://uiua.org/docs/fill) and [`pack` `⊐`](https://uiua.org/docs/pack) are now exclusive
 - Change how [`regex`](https://uiua.org/docs/regex) works to be more powerful
 - Add special syntax for splitting/joining lines of code
   - `'` will split a line without changing semantics
   - `''` will combine two lines without changing semantics
-- The way pervasive function work with [`box` `□`](https://uiua.org/docs/box)ed arrays is now more consistent
+- The way pervasive functions work with [`box` `□`](https://uiua.org/docs/box)ed arrays is now more consistent
 - Remove `reach`, `distribute`, `tribute`, `level`, `combinate`, and all ocean functions for good
 ### Interpreter
 - Add a style diagnostic about lines that are too long

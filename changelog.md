@@ -2,7 +2,11 @@
 
 Uiua is not yet stable.
 
-<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
+
+## 0.6.0 - 2023-12-??
+This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Website
+- Add a token count to the editor (in settings)
 
 ## 0.5.1 - 2023-12-02
 ### Interpreter

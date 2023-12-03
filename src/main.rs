@@ -254,7 +254,9 @@ fn run() -> UiuaResult {
         },
         Err(e)
             if e.kind() == ErrorKind::InvalidSubcommand
-                && env::args().nth(1).is_some_and(|file| file.ends_with(".ua")) =>
+                && env::args()
+                    .nth(1)
+                    .is_some_and(|path| Path::new(&path).exists()) =>
         {
             let mut args: Vec<String> = env::args().collect();
             args[0] = "run".into();

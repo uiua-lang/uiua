@@ -115,8 +115,8 @@ li {
     .code,
     .input-div,
     input[type=text],
-    #settings>*>input,
-    #settings>*>select {
+    #settings>*>*>input,
+    #settings>*>*>select {
         color: #d1daec;
         background-color: #1d2c3a;
     }
@@ -192,8 +192,8 @@ li {
     .code,
     .input-div,
     input[type=text],
-    #settings>*>input,
-    #settings>*>select {
+    #settings>*>*>input,
+    #settings>*>*>select {
         color: #344;
         background-color: #f4f6f6;
     }
@@ -354,15 +354,31 @@ li {
 }
 
 #settings {
-    font-size: 0.82em;
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
+    font-size: 0.82em;
     padding: 0.2em;
+    gap: 0.5em;
 }
 
 #settings>* {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.2em;
+}
+
+#settings-left {
+    width: 85%;
+    justify-content: space-between;
+}
+
+#settings-right {
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+#settings>*>* {
     display: inline-block;
     white-space: nowrap;
 }
@@ -372,14 +388,14 @@ input[type=number] {
     -moz-appearance: textfield;
 }
 
-#settings>*>input,
-#settings>*>select {
+#settings>*>*>input,
+#settings>*>*>select {
     border-radius: 0.5em;
     border: none;
     margin-left: 0.5em;
 }
 
-#settings>*>input[type=number] {
+#settings>*>*>input[type=number] {
     width: 3em;
 }
 

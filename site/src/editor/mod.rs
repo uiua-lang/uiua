@@ -8,7 +8,7 @@ use leptos::{ev::keydown, *};
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
-    is_ident_char, Primitive, SysOp,
+    is_ident_char, lex, Primitive, SysOp, Token,
 };
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
@@ -82,11 +82,23 @@ pub fn Editor<'a>(
 
     let (example, set_example) = create_signal(0);
     let (output, set_output) = create_signal(View::default());
+    let (token_count, set_token_count) = create_signal(0);
 
     let code_text = move || code_text(&code_id());
     let get_code_cursor = move || get_code_cursor_impl(&code_id());
     let (copied_link, set_copied_link) = create_signal(false);
     let (settings_open, set_settings_open) = create_signal(false);
+    let update_token_count = move |code: &str| {
+        set_token_count.set(
+            lex(code, None)
+                .0
+                .into_iter()
+                .filter(|tok| {
+                    !matches!(&tok.value, Token::Spaces | Token::Newline | Token::Comment)
+                })
+                .count(),
+        )
+    };
 
     // Initialize the state
     let state = Rc::new(State {
@@ -124,6 +136,8 @@ pub fn Editor<'a>(
             set_initial_code.set(None);
             cursor = Cursor::Ignore;
         }
+
+        update_token_count(&code_text);
 
         // Format code
         let input = if format {
@@ -282,7 +296,9 @@ pub fn Editor<'a>(
             return;
         }
         if let Some((start, _)) = get_code_cursor() {
-            state().set_code(&code_text(), Cursor::Set(start, start));
+            let code = code_text();
+            update_token_count(&code);
+            state().set_code(&code, Cursor::Set(start, start));
         }
     };
 
@@ -579,6 +595,7 @@ pub fn Editor<'a>(
         if handled {
             event.prevent_default();
             event.stop_propagation();
+            update_token_count(&code_text());
         }
     });
 
@@ -966,72 +983,75 @@ pub fn Editor<'a>(
                     <div class="glyph-buttons">{glyph_buttons}</div>
                 </div>
                 <div id="settings" style=settings_style>
-                    <div title="The maximum number of seconds a program can run for">
-                        "Exec limit:"
-                        <input
-                            type="number"
-                            min="0.01"
-                            max="1000000"
-                            width="3em"
-                            value=get_execution_limit
-                            on:input=on_execution_limit_change/>
-                        "s"
+                    <div id="settings-left">
+                        <div title="The maximum number of seconds a program can run for">
+                            "Exec limit:"
+                            <input
+                                type="number"
+                                min="0.01"
+                                max="1000000"
+                                width="3em"
+                                value=get_execution_limit
+                                on:input=on_execution_limit_change/>
+                            "s"
+                        </div>
+                        <div title="The maximum number of seconds of audio &ast will generate">
+                            <Prim prim=Primitive::Sys(SysOp::AudioStream) />" time:"
+                            <input
+                                type="number"
+                                min="1"
+                                max="600"
+                                width="3em"
+                                value=get_ast_time
+                                on:input=on_ast_time_change/>
+                            "s"
+                        </div>
+                        <div title="Place the cursor on the left of the current token when formatting">
+                            "Format left:"
+                            <input
+                                type="checkbox"
+                                checked=get_right_to_left
+                                on:change=toggle_right_to_left/>
+                        </div>
+                        <div title="Automatically run pad links">
+                            "Autorun links:"
+                            <input
+                                type="checkbox"
+                                checked=get_autorun
+                                on:change=toggle_autorun/>
+                        </div>
+                        <div>
+                            "Stack:"
+                            <select
+                                on:change=on_select_top_at_top>
+                                <option value="false" selected=get_top_at_top()>"Top at bottom"</option>
+                                <option value="true" selected=get_top_at_top()>"Top at top"</option>
+                            </select>
+                        </div>
+                        <div>
+                            "Font size:"
+                            <select
+                                on:change=on_select_font_size>
+                                <option value="0.6em" selected={get_font_size() == "0.6em"}>"Scalar"</option>
+                                <option value="0.8em" selected={get_font_size() == "0.8em"}>"Small"</option>
+                                <option value="1em" selected={get_font_size() == "1em"}>"Normal"</option>
+                                <option value="1.2em" selected={get_font_size() == "1.2em"}>"Big"</option>
+                                <option value="1.4em" selected={get_font_size() == "1.4em"}>"Rank 3"</option>
+                            </select>
+                        </div>
+                        <div>
+                            "Font:"
+                            <select
+                                on:change=on_select_font>
+                                <option value="DejaVuSansMono" selected={get_font_name() == "DejaVuSansMono"}>"DejaVu"</option>
+                                <option value="Uiua386" selected={get_font_name() == "Uiua386"}>"Uiua386"</option>
+                            </select>
+                        </div>
                     </div>
-                    <div title="The maximum number of seconds of audio &ast will generate">
-                        <Prim prim=Primitive::Sys(SysOp::AudioStream) />" time:"
-                        <input
-                            type="number"
-                            min="1"
-                            max="600"
-                            width="3em"
-                            value=get_ast_time
-                            on:input=on_ast_time_change/>
-                        "s"
-                    </div>
-                    <div title="Place the cursor on the left of the current token when formatting">
-                        "Format left:"
-                        <input
-                            type="checkbox"
-                            checked=get_right_to_left
-                            on:change=toggle_right_to_left/>
-                    </div>
-                    <div title="Automatically run pad links">
-                        "Autorun links:"
-                        <input
-                            type="checkbox"
-                            checked=get_autorun
-                            on:change=toggle_autorun/>
-                    </div>
-                    <div>
-                        "Stack:"
-                        <select
-                            on:change=on_select_top_at_top>
-                            <option value="false" selected=get_top_at_top()>"Top at bottom"</option>
-                            <option value="true" selected=get_top_at_top()>"Top at top"</option>
-                        </select>
-                    </div>
-                    <div>
-                        "Font size:"
-                        <select
-                            on:change=on_select_font_size>
-                            <option value="0.6em" selected={get_font_size() == "0.6em"}>"Scalar"</option>
-                            <option value="0.8em" selected={get_font_size() == "0.8em"}>"Small"</option>
-                            <option value="1em" selected={get_font_size() == "1em"}>"Normal"</option>
-                            <option value="1.2em" selected={get_font_size() == "1.2em"}>"Big"</option>
-                            <option value="1.4em" selected={get_font_size() == "1.4em"}>"Rank 3"</option>
-                        </select>
-                    </div>
-                    <div>
-                        "Font:"
-                        <select
-                            on:change=on_select_font>
-                            <option value="DejaVuSansMono" selected={get_font_name() == "DejaVuSansMono"}>"DejaVu"</option>
-                            <option value="Uiua386" selected={get_font_name() == "Uiua386"}>"Uiua386"</option>
-                        </select>
-                    </div>
-                    <button
-                        class="info-button"
-                        data-title=" shift Enter   - Run + Format
+                    <div id="settings-right">
+                        <button
+                            class="info-button"
+                            data-title=" shift Enter   - Run + Format
 ctrl/⌘ /       - Toggle line comment
 ctrl/⌘ 4       - Toggle multiline string
    alt Up/Down - Swap lines
@@ -1040,9 +1060,14 @@ ctrl/⌘ Z       - Undo
 ctrl/⌘ Y       - Redo
 replace \"pad\" in links with \"embed\"
 or \"embedpad\" to embed the editor"
-                        disabled>
-                        "🛈"
-                    </button>
+                            disabled>
+                            "🛈"
+                        </button>
+                        <div style="margin-right: 0.1em">
+                            "Tokens: "
+                            { move || token_count.get() }
+                        </div>
+                    </div>
                 </div>
                 <div class=editor_class>
                     <div id="code-area">

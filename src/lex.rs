@@ -11,7 +11,8 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{Primitive, UiuaError};
 
-pub(crate) fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
+/// Lex a Uiua source file
+pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
     Lexer {
         input_segments: input.graphemes(true).collect(),
         loc: Loc {

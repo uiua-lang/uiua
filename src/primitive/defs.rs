@@ -1742,7 +1742,7 @@ primitive!(
     ///   : +×-×+
     /// ex: 2_3_10 ? 17 ↯3_4⇡12
     ///   : ++
-    (0, Stack, Stack, ("stack", '?')),
+    (0(0), Stack, Stack, ("stack", '?')),
     /// Debug print the top value on the stack without popping it
     ///
     /// ex: ⸮[1 2 3]

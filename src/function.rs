@@ -472,12 +472,6 @@ impl Function {
             _ => None,
         }
     }
-    pub(crate) fn as_impl_primitive(&self) -> Option<(ImplPrimitive, usize)> {
-        match self.instrs.as_slice() {
-            [Instr::ImplPrim(prim, span)] => Some((*prim, *span)),
-            _ => None,
-        }
-    }
     pub(crate) fn as_flipped_primitive(&self) -> Option<(Primitive, bool)> {
         match &self.id {
             FunctionId::Primitive(prim) => Some((*prim, false)),

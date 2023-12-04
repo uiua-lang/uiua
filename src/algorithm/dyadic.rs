@@ -1905,7 +1905,7 @@ fn fill_shift<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: T) 
                 *val = fill.clone();
             }
         } else {
-            for val in &mut data[..abs_offset] {
+            for val in &mut data[..abs_offset.min(data_len)] {
                 *val = fill.clone();
             }
         }

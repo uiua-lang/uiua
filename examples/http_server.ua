@@ -18,27 +18,23 @@ Listener ← &tcpl "0.0.0.0:8080"
 # Mime types
 GetExt ← |1 ⊔⊢⇌ ⊜□ ≠@. .
 ⍘⊟⍉[{"js" "text/javascript"}
-    {"html" "text/html"}
     {"wasm" "application/wasm"}]
 ExtMimeExt ←
 ExtMimeMime ←
 ExtMime ← |1 ⊔⊏:⊂ExtMimeMime □⊂"text/": ⊗:ExtMimeExt□.
 
-# Convert string to bytes
-Bytes ← -@\0
-
 # Make response: status mime bytes
 Response ← (|3
   ⊙⊙(⧻.)
-  ⊂ Bytes $ HTTP/1.1 _
-          $ Content-Type: _
-          $ Content-Length: _
-          $ 
-          $ 
+  ⊂ utf $ HTTP/1.1 _
+        $ Content-Type: _
+        $ Content-Length: _
+        $ 
+        $ 
 )
 
 # Handlers
-NotFound ← Response "404 Not Found" "text/plain" Bytes"Not Found"
+NotFound ← Response "404 Not Found" "text/plain" utf"Not Found"
 ServerError ← Response "500 Internal Server Error" "text/plain"
 HandlePageLoadError ← ⋅(
   /↥⌕"The system cannot find the file specified".

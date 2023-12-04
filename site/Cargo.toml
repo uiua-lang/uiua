@@ -12,7 +12,7 @@ hound = "3.5.1"
 image = "0.24.5"
 instant = {version = "0.1.12", features = ['wasm-bindgen']}
 js-sys = "0.3"
-leptos = "0.5.0"
+leptos = "0.5.4"
 leptos_meta = {version = "0.5.2", features = ["csr"]}
 leptos_router = {version = "0.5.2", features = ["csr"]}
 pathdiff = "0.2.1"

@@ -755,8 +755,10 @@ fn regex(env: &mut Uiua) -> UiuaResult {
         for caps in regex.captures_iter(&target) {
             let row: EcoVec<Boxed> = caps
                 .iter()
-                .flatten()
-                .map(|m| Boxed(Value::from(m.as_str())))
+                .flat_map(|m| {
+                    m.map(|m| Boxed(Value::from(m.as_str())))
+                        .or_else(|| env.box_fill().ok())
+                })
                 .collect();
             matches.append(row.into(), env)?;
         }

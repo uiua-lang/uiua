@@ -1,5 +1,6 @@
 use std::{
     any::Any,
+    cell::RefCell,
     collections::HashMap,
     io::Cursor,
     path::{Path, PathBuf},
@@ -18,13 +19,25 @@ pub struct WebBackend {
     pub files: Mutex<HashMap<PathBuf, Vec<u8>>>,
 }
 
+thread_local! {
+    static DROPPED_FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = RefCell::new(HashMap::new());
+}
+
+pub fn drop_file(path: PathBuf, contents: Vec<u8>) {
+    DROPPED_FILES.with(|dropped_files| {
+        dropped_files.borrow_mut().insert(path, contents);
+    });
+}
+
 impl Default for WebBackend {
     fn default() -> Self {
         Self {
             stdout: Vec::new().into(),
             stderr: String::new().into(),
             trace: String::new().into(),
-            files: HashMap::new().into(),
+            files: DROPPED_FILES
+                .with(|dropped_files| dropped_files.borrow().clone())
+                .into(),
         }
     }
 }

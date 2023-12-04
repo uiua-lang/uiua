@@ -338,6 +338,17 @@ li {
 
 #editor {
     border-radius: 0.5em;
+    position: relative;
+}
+
+#drag-message {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #0008;
+    font-size: 2em;
 }
 
 #editor-wrapper {

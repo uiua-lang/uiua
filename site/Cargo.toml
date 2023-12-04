@@ -36,6 +36,11 @@ features = [
   "ScrollIntoViewOptions",
   "ScrollBehavior",
   "ScrollLogicalPosition",
+  "StorageManager",
+  "FileReader",
   "EventInit",
+  "DataTransfer",
+  "File",
+  "FileList",
 ]
 version = "0.3.65"

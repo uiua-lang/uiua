@@ -9,7 +9,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Bug fixes
 ### Website
 - Add a token count to the editor (in settings)
-
+- Files can now be dragged into the editor to open them with [`&fras`](https://uiua.org/docs/&fras)
 ## 0.5.1 - 2023-12-02
 ### Interpreter
 - Fix [`stack` `?`](https://uiua.org/docs/stack) signature

@@ -3,6 +3,7 @@ use std::{
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
+    iter::repeat,
     mem::take,
 };
 
@@ -210,6 +211,48 @@ impl Value {
                 .into(),
             Self::Char(_) => env.char_fill().unwrap_or_else(|_| char::prototype()).into(),
             Self::Box(_) => env.box_fill().unwrap_or_else(|_| Boxed::prototype()).into(),
+        }
+    }
+    pub(crate) fn prototype_row(&self, env: &Uiua) -> Self {
+        let shape: Shape = self.shape()[1..].into();
+        let elem_count = shape.iter().product();
+        match self {
+            Self::Num(_) => Array::new(
+                shape,
+                repeat(env.num_fill().unwrap_or_else(|_| f64::prototype()))
+                    .take(elem_count)
+                    .collect::<CowSlice<_>>(),
+            )
+            .into(),
+            #[cfg(feature = "bytes")]
+            Self::Byte(_) => Array::new(
+                shape,
+                repeat(env.byte_fill().unwrap_or_else(|_| u8::prototype()))
+                    .take(elem_count)
+                    .collect::<CowSlice<_>>(),
+            )
+            .into(),
+            Self::Complex(_) => Array::new(
+                shape,
+                repeat(env.complex_fill().unwrap_or_else(|_| Complex::prototype()))
+                    .take(elem_count)
+                    .collect::<CowSlice<_>>(),
+            )
+            .into(),
+            Self::Char(_) => Array::new(
+                shape,
+                repeat(env.char_fill().unwrap_or_else(|_| char::prototype()))
+                    .take(elem_count)
+                    .collect::<CowSlice<_>>(),
+            )
+            .into(),
+            Self::Box(_) => Array::new(
+                shape,
+                repeat(env.box_fill().unwrap_or_else(|_| Boxed::prototype()))
+                    .take(elem_count)
+                    .collect::<CowSlice<_>>(),
+            )
+            .into(),
         }
     }
     pub(crate) fn first_dim_zero(&self) -> Self {

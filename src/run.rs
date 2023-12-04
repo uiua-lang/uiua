@@ -587,8 +587,8 @@ code:
                     Ok(())
                 }),
                 &Instr::PushTemp { stack, count, span } => self.with_span(span, |env| {
-                    for _ in 0..count {
-                        let value = env.pop("value to save")?;
+                    for i in 0..count {
+                        let value = env.pop(i + 1)?;
                         env.temp_stacks[stack as usize].push(value);
                     }
                     Ok(())
@@ -646,7 +646,7 @@ code:
                 )),
                 Instr::PopSig => Err(self.error(
                     "PopSig should have been removed before running. \
-                This is a bug in the interpreter.",
+                    This is a bug in the interpreter.",
                 )),
             };
             if self.time_instrs {

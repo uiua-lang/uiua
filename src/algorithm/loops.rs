@@ -6,6 +6,8 @@ use crate::{
     ExactDoubleIterator, Signature, Uiua, UiuaResult,
 };
 
+use super::multi_output;
+
 pub fn flip<A, B, C>(f: impl Fn(A, B) -> C) -> impl Fn(B, A) -> C {
     move |b, a| f(a, b)
 }
@@ -219,7 +221,6 @@ impl Value {
                 .partition_groups(markers, env)?
                 .map(Into::into)
                 .collect(),
-
             Value::Complex(arr) => arr
                 .partition_groups(markers, env)?
                 .map(Into::into)
@@ -280,7 +281,6 @@ impl Value {
             Value::Num(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
-
             Value::Complex(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             Value::Char(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             Value::Box(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
@@ -324,22 +324,25 @@ fn collapse_groups(
 ) -> UiuaResult {
     let f = env.pop_function()?;
     let sig = f.signature();
-    match sig.args {
-        0 | 1 => {
+    match (sig.args, sig.outputs) {
+        (0 | 1, n) => {
             let indices = env.pop(1)?;
             let indices = indices.as_ints(env, indices_error)?;
             let values = env.pop(2)?;
             let groups = get_groups(&values, &indices, env)?;
-            let mut rows = Vec::with_capacity(groups.len());
+            let mut rows = multi_output(n, Vec::with_capacity(groups.len()));
             for group in groups {
                 env.push(group);
                 env.call(f.clone())?;
-                rows.push(env.pop(|| format!("{name}'s function result"))?);
+                for i in 0..n {
+                    rows[i].push(env.pop(|| format!("{name}'s function result"))?);
+                }
             }
-            let res = Value::from_row_values(rows, env)?;
-            env.push(res);
+            for rows in rows.into_iter().rev() {
+                env.push(Value::from_row_values(rows, env)?);
+            }
         }
-        2 => {
+        (2, 1) => {
             let mut acc = env.pop(1)?;
             let indices = env.pop(2)?;
             let indices = indices.as_ints(env, indices_error)?;
@@ -353,9 +356,9 @@ fn collapse_groups(
             }
             env.push(acc);
         }
-        args => {
+        _ => {
             return Err(env.error(format!(
-                "Cannot {name} with a function that takes {args} arguments"
+                "Cannot {name} with a function with signature {sig}"
             )))
         }
     }

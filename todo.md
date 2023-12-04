@@ -13,6 +13,7 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - UDP Sockets
 
 ## Bugs
+- See if the type/shape loss problem can be solved
 - Figure out what is going on with the editor cursor
 - Expand test suite
 

@@ -892,16 +892,38 @@ pub fn Editor<'a>(
         let file = files.get(0).unwrap();
         let file_name = file.name();
         let reader = FileReader::new().unwrap();
-        reader.read_as_text(&file).unwrap();
+        reader.read_as_array_buffer(&file).unwrap();
         let on_load = Closure::wrap(Box::new(move |event: Event| {
             // Log file contents
             let event = event.dyn_into::<web_sys::ProgressEvent>().unwrap();
             let reader = event.target().unwrap().dyn_into::<FileReader>().unwrap();
-            let text = reader.result().unwrap().as_string().unwrap();
-            drop_file(PathBuf::from(&file_name), text.into());
+            let bytes = reader
+                .result()
+                .unwrap()
+                .dyn_into::<js_sys::ArrayBuffer>()
+                .unwrap();
+            let bytes = js_sys::Uint8Array::new(&bytes);
+            let byte_count = bytes.length();
+            let path = PathBuf::from(&file_name);
+            drop_file(path.clone(), bytes.to_vec());
             set_drag_message.set("");
             if code_text().trim().is_empty() {
-                state().set_code(&format!("&fras {file_name:?}\n"), Cursor::Ignore);
+                let function = if path
+                    .extension()
+                    .map_or(true, |ext| ["txt", "md", "ua"].iter().any(|e| e == &ext))
+                {
+                    "&fras"
+                } else {
+                    "&frab"
+                };
+                state().set_code(
+                    &if byte_count < 10000 {
+                        format!("{function} {file_name:?}\n")
+                    } else {
+                        format!("# {byte_count} bytes\n# {function} {file_name:?}\n")
+                    },
+                    Cursor::Ignore,
+                );
             }
             run(true, false);
         }) as Box<dyn FnMut(_)>);

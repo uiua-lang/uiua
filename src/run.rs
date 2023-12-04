@@ -576,7 +576,7 @@ code:
                     let arr = env.pop(1)?;
                     if arr.row_count() != count {
                         return Err(env.error(format!(
-                            "This ⍘[] expects an array with {} rows, \
+                            "This °[] expects an array with {} rows, \
                             but the array has {}",
                             count,
                             arr.row_count()

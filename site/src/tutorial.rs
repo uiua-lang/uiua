@@ -465,7 +465,7 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="[□1 □2 □[7 8 9]]"/>
         <p>"The "<code>"⟦⟧"</code>"s indicate that a list is "<Prim prim=Box/>"ed."</p>
         <p><Prim prim=Un/><Prim prim=Box/>" extracts a "<Prim prim=Box/>"ed value."</p>
-        <Editor example="⍘□ .□[1 2 3]"/>
+        <Editor example="°□ .□[1 2 3]"/>
         <p>"Having to write "<Prim prim=Box glyph_only=true/>" everywhere is annoying, and so..."</p>
 
         <h2 id="nested-arrays">"Nested Arrays"</h2>
@@ -1044,7 +1044,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="⊠⊂ η_π_τ ↯3_3⇡9"/>
         <p><Prim prim=Cross/>" can be useful when working with "<Prim prim=Rerank/>"ed or "<Prim prim=Fix/>"ed arrays."</p>
         <p>"In this example, we apply a table of rotations to each matrix cell of a 3D array."</p>
-        <Editor example="⍘⊚ ≡[..]⇡3           # Target array
+        <Editor example="°⊚ ≡[..]⇡3           # Target array
 [0_0 0_1]_[¯1_1 1_0] # Rotations table
 ,,                   # Copy to see inputs
 ⍜(☇1)⊠↻              # All rotation combinations

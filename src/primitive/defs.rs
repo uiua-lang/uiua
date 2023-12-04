@@ -270,9 +270,9 @@ primitive!(
     /// You can get a cosine function by [add]ing [eta].
     /// ex: ○+η 1
     /// You can get an arcsine function with [un].
-    /// ex: ⍘○ 1
+    /// ex: °○ 1
     /// You can get an arccosine function by [un]ing the cosine.
-    /// ex: ⍘(○+η) 1
+    /// ex: °(○+η) 1
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
     /// ex: ÷○+η:○. 0
     (1, Sin, MonadicPervasive, ("sine", '○')),
@@ -469,8 +469,8 @@ primitive!(
     /// You can use [absolute value] to get the magnitude of the complex number.
     /// ex: ⌵ ℂ3 4
     /// You can use [un][complex] to get the imaginary and real parts back out.
-    /// ex: [⍘ℂ] i
-    /// ex: [⍘ℂ] ×. ℂ3 4
+    /// ex: [°ℂ] i
+    /// ex: [°ℂ] ×. ℂ3 4
     (2, Complex, DyadicPervasive, ("complex", 'ℂ')),
     /// Get the number of rows in an array
     ///
@@ -554,9 +554,9 @@ primitive!(
     /// ex: ⋯[1_2 3_4 5_6]
     ///
     /// [un][bits] can be used to decode the bits back into numbers.
-    /// ex: ⍘⋯ [1 0 1]
-    /// ex: ⍘⋯ [0 1 1 0 1]
-    /// ex: ⍘⋯ [[0 1 1]
+    /// ex: °⋯ [1 0 1]
+    /// ex: °⋯ [0 1 1 0 1]
+    /// ex: °⋯ [[0 1 1]
     ///   :     [1 0 0]
     ///   :     [1 1 0]]
     (1, Bits, MonadicArray, ("bits", '⋯')),
@@ -609,14 +609,14 @@ primitive!(
     /// ex: ▽:⇡⧻. [0 1 0 0 2 0 1]
     ///
     /// [un][where] will convert the indices back into a a list of counts
-    /// ex: ⍘⊚ [0 0 0 1 1 2 2 2 2 2 3]
+    /// ex: °⊚ [0 0 0 1 1 2 2 2 2 2 3]
     /// The indices need not be in order
-    /// ex: ⍘⊚ [0 1 2 2 0 3 2 1 2 0 2]
+    /// ex: °⊚ [0 1 2 2 0 3 2 1 2 0 2]
     ///
     /// [where] can be used on multidimensional arrays, and the result will always be rank-2
     /// ex: ⊚.[1_0_0 0_1_1 0_2_0]
     /// The inverse works as well
-    /// ex: ⍘⊚[3_4 2_1 0_3]
+    /// ex: °⊚[3_4 2_1 0_3]
     ///
     /// [where] on a scalar is equivalent to [where] on a singleton array of that scalar, and so creates a list of `0`s.
     /// ex: ⊚3
@@ -648,9 +648,9 @@ primitive!(
     /// The more ergonomic way to make box arrays is to use `{}`s instead of `[]`s.
     /// ex: {@a 3 7_8_9}
     /// Use [un][box] to get the values back out.
-    /// ex: ⍘□ □1_2_3
+    /// ex: °□ □1_2_3
     /// [un] with stack array and planet notations to get the values back onto the stack
-    /// ex: ⍘{⊙⊙∘} {@a 3 7_8_9}
+    /// ex: °{⊙⊙∘} {@a 3 7_8_9}
     ///
     /// You would not normally construct arrays like the one above.
     /// The more important use case of [box] is for jagged or nested data.
@@ -677,10 +677,10 @@ primitive!(
     /// For more complex operations, you can use [under][un][box].
     /// ex: Parts ← .⊜□≠@ . $ Prepend the word length
     ///   : F ← $"_ _"⧻.
-    ///   : ∵⍜⍘□F Parts
+    ///   : ∵⍜°□F Parts
     /// [under][un][box] works because `invert``unbox` is just `box`. For each element, it un-[box]es the [box] function to get the array out, does something to it, then [box]es the result.
     /// ex: A ← .{1_2_3 4_5 [7]}
-    ///   : ∵⍜⍘□(⬚0↙3) A
+    ///   : ∵⍜°□(⬚0↙3) A
     (1, Box, MonadicArray, ("box", '□')),
     /// Take an array out of a box
     ///
@@ -1207,34 +1207,34 @@ primitive!(
     /// Most functions are not invertible.
     ///
     /// ex: √2
-    /// ex: ⍘√2
+    /// ex: °√2
     ///
     /// [un][couple] uncouples a [length]`2` array and pushes both rows onto the stack.
-    /// ex: ⍘⊟ .[1_2_3 4_5_6]
+    /// ex: °⊟ .[1_2_3 4_5_6]
     ///
     /// [un][transpose] transposes in the opposite direction.
     /// This is useful for arrays with rank `greater than``2`.
-    /// ex: ⍘⍉ .⊟.[1_2_3 4_5_6]
+    /// ex: °⍉ .⊟.[1_2_3 4_5_6]
     ///
     /// [un][bits] converts an array of bits into a number.
-    /// ex: ⍘⋯ [1 0 1 0 1 0 1 0]
+    /// ex: °⋯ [1 0 1 0 1 0 1 0]
     ///
     /// [un][sine] gives the arcsine.
-    /// ex: ⍘○ 1
+    /// ex: °○ 1
     ///
     /// [un] can be used with stack array notation and [dip] and [identity] to unpack the items of an array onto the stack.
     /// ex: [⊙⊙∘] 1 2 3
-    /// ex: ⍘[⊙⊙∘] [1 2 3]
+    /// ex: °[⊙⊙∘] [1 2 3]
     ///
     /// While more inverses exists, most of them are not useful on their own.
     /// They are usually used within [under].
-    ([1], Un, OtherModifier, ("un", '⍘')),
+    ([1], Un, OtherModifier, ("un", '°')),
     /// Set a function as its own inverse
     ///
     /// ex: # Experimental!
     ///   : F ← ⌅⧻
     ///   : F   1_2_4
-    ///   : ⍘F  1_2_4
+    ///   : °F  1_2_4
     ///   : ⍜F∘ 1_2_4 # Calls ⧻ twice
     /// This is useful when combined with [under]. It allows you to call a function twice with another function in between.
     /// Finding the standard deviation of a list of numbers requires finding the mean twice. Here, we only need to write the mean code once.
@@ -1250,7 +1250,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
     ///   : ;F   @A
-    ///   : ;⍘F  @B
+    ///   : ;°F  @B
     ///   : ;⍜F∘ @C
     ///
     /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
@@ -1428,7 +1428,7 @@ primitive!(
     /// For example, this hypotenuse function does not use [both] when undoing because its `g` (`add`) returns a single value.
     /// ex: ⍜∩(×.)+ 3 4
     /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
-    /// ex: ⍜∩⍘□(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
+    /// ex: ⍜∩°□(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
     ///
     /// [under] works with [&fo], [&fc], [&tcpa], and [&tcpc]. It calls [&cl] when `g` is done.
     ([2], Under, OtherModifier, ("under", '⍜')),
@@ -1674,7 +1674,7 @@ primitive!(
     /// ex: utf "hello!"
     /// ex: utf "❤️"
     /// You can use [un] to convert UTF-8 bytes back to a string.
-    /// ex: ⍘utf [226 156 168 32 119 111 119 33]
+    /// ex: °utf [226 156 168 32 119 111 119 33]
     ///
     /// [utf] is different from just [add]ing or [subtracting] `@\0`.
     /// Character math can only convert to and from UTF-32.
@@ -1698,7 +1698,7 @@ primitive!(
     /// ex: type "hello"
     /// ex: type □[5 6]
     /// ex: ∵ type    {10 "dog" [1 2 3]}
-    ///   : ∵(type⍘□) {10 "dog" [1 2 3]}
+    ///   : ∵(type°□) {10 "dog" [1 2 3]}
     (1, Type, Misc, "type"),
     /// Get the current time in seconds
     ///

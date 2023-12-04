@@ -17,7 +17,7 @@ Listener ← &tcpl "0.0.0.0:8080"
 
 # Mime types
 GetExt ← |1 ⊔⊢⇌ ⊜□ ≠@. .
-⍘⊟⍉[{"js" "text/javascript"}
+°⊟⍉[{"js" "text/javascript"}
     {"wasm" "application/wasm"}]
 ExtMimeExt ←
 ExtMimeMime ←

@@ -19,10 +19,10 @@ const PRIMES: &str = "\
 deshapetable*  # List of products
 keepnotmember: # Keep not in list";
 pub const LOGO: &str = "\
-Xy ← ⍘⍉⊞⊟. ÷÷2: -÷2,⇡.200
-Rgb ← [:⍘⊟×.Xy ↯△⊢Xy0.5]
-u ← ↥<0.2:>0.7.+×2 ×.:⍘⊟Xy
-c ← <:⍜⍘√/+ Xy
+Xy ← °⍉⊞⊟. ÷÷2: -÷2,⇡.200
+Rgb ← [:°⊟×.Xy ↯△⊢Xy0.5]
+u ← ↥<0.2:>0.7.+×2 ×.:°⊟Xy
+c ← <:⍜°√/+ Xy
 ⍉⊂:-¬u c1 +0.1 ↧¤c0.95Rgb";
 const CHORD: &str = "\
 [0 4 7 10]       # Notes
@@ -32,7 +32,7 @@ const CHORD: &str = "\
 const SPIRAL: &str = "\
 ⇌×τ÷⊃∘⇡20            # Frame times
 ⍉.↯:×20-1×2÷:⇡..200  # x and y
-≡(-⊃∠(-π◿τ+⍜∩⍘√+))∩¤ # Generate
+≡(-⊃∠(-π◿τ+⍜∩°√+))∩¤ # Generate
 <0.2⌵                # Threshold";
 const QUADRATIC: &str = "\
 Disc ← ⊟¯.√ℂ0-⊃(××4⊙⋅∘)⋅(×.)
@@ -44,7 +44,7 @@ const STRIPES: &str = "\
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ⬚@ ⊜(⊂⊏:"❌✅" ≍⇌..)≠@ ."#;
 const AUTOMATA: &str = "\
-Rule ← /+⊞= ⊓(⊚⋯|⍘⋯⇌◫3⇌ ⊂:0⊂0)
+Rule ← /+⊞= ⊓(⊚⋯|°⋯⇌◫3⇌ ⊂:0⊂0)
 =⌊÷2:⇡.500         # Init
 ⇌[⍥(Rule30.)⌊÷2⧻.] # Run";
 const ROMAN: &str = r#"k ← "IVXLCDM"

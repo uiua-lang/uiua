@@ -139,7 +139,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="{1 2_3_4 5_6}\n∵⇌.\n∵⧻."/>
         <Editor example="+5 {1 2_3_4 5_6}"/>
         <p>"For more complex operations, though, you'll need to use "<Prim prim=Un/><Prim prim=Box/>". Using it with "<Prim prim=Under/>" will re-"<Prim prim=Box/>" the result."</p>
-        <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜⍘□(⊂:⇌.)."/>
+        <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜°□(⊂:⇌.)."/>
 
         <h2 id="multimedia">"Multimedia"</h2>
         <p>"Uiua can natively generate images, audio, and GIFs."</p>

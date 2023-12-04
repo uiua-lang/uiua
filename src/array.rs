@@ -482,7 +482,7 @@ impl ArrayValue for Boxed {
         self.hash(hasher)
     }
     fn prototype() -> Self {
-        Boxed(Array::<f64>::new(tiny_vec![], []).into())
+        Boxed(Array::<f64>::new(tiny_vec![0], []).into())
     }
 }
 

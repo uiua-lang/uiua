@@ -142,6 +142,7 @@ impl Uiua {
                     let func = make_fn(f.instrs.clone(), f.signature(), self);
                     self.compile_bind_function(name, func, sig_declared, span.clone().into())?;
                 } else if sig.args == 0
+                    && sig.outputs <= 1
                     && (sig.outputs > 0 || instrs.is_empty())
                     && placeholder_count == 0
                 {

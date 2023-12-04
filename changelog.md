@@ -15,6 +15,7 @@ This version is not yet released. If you are reading this on the website, then t
 - `pack` is now called [`unpack` `⊐`](https://uiua.org/docs/unpack), and it no longer implicitly boxes values (only unboxes them)
 - `invert` is now called [`un` `⍘`](https://uiua.org/docs/un)
 - Deprecate [`unbox` `⊔`](https://uiua.org/docs/unbox) in favor of [`un` `⍘`](https://uiua.org/docs/un) [`box` `□`](https://uiua.org/docs/box)
+- Deprecate [`reduce` `/`](https://uiua.org/docs/reduce) with a monadic function
 ### Interpreter
 - Make [`stack` `?`](https://uiua.org/docs/stack) and [`dump`](https://uiua.org/docs/dump) output show call stack
 - Show type and shape information when pretty-printing empty arrays with rank 2 or greater

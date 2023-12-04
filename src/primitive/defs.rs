@@ -211,13 +211,6 @@ primitive!(
     /// Do nothing with one value
     ///
     /// [identity] is mostly useless on its own. See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) to understand what it is for.
-    ///
-    /// One way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
-    /// ex: /∘ [1 2 3]
-    /// However, doing this in a function prevents the signature from being inferred.
-    ///
-    /// While [identity]'s signature is `|1.1`, it will not throw an error if the stack is empty.
-    /// ex: ∘
     (1, Identity, Planet, ("identity", '∘')),
     // Pervasive monadic ops
     /// Logical not
@@ -656,8 +649,8 @@ primitive!(
     /// ex: {@a 3 7_8_9}
     /// Use [un][box] to get the values back out.
     /// ex: ⍘□ □1_2_3
-    /// [reduce][un][box] will unpack an array of boxes onto the stack.
-    /// ex: /⍘□ {@a 3 7_8_9}
+    /// [un] with stack array and planet notations to get the values back onto the stack
+    /// ex: ⍘{⊙⊙∘} {@a 3 7_8_9}
     ///
     /// You would not normally construct arrays like the one above.
     /// The more important use case of [box] is for jagged or nested data.

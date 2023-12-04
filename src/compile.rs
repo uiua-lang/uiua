@@ -852,15 +852,35 @@ impl Uiua {
             return Ok(());
         }
 
+        let instrs = self.compile_words(modified.operands, false)?;
+
+        // Reduce monadic deprectation message
+        if let (Modifier::Primitive(Primitive::Reduce), [Instr::PushFunc(f)]) =
+            (&modified.modifier.value, instrs.as_slice())
+        {
+            if f.signature().args == 1 {
+                self.diagnostic_with_span(
+                    format!(
+                        "{} with a monadic function is deprecated. \
+                        Prefer {} with stack array notation.",
+                        Primitive::Reduce.format(),
+                        Primitive::Un.format()
+                    ),
+                    DiagnosticKind::Warning,
+                    modified.modifier.span.clone(),
+                );
+            }
+        }
+
         if call {
-            self.words(modified.operands, false)?;
+            self.extend_instrs(instrs);
             match modified.modifier.value {
                 Modifier::Primitive(prim) => self.primitive(prim, modified.modifier.span, true)?,
                 Modifier::Ident(ident) => self.ident(ident, modified.modifier.span, true)?,
             }
         } else {
             self.new_functions.push(EcoVec::new());
-            self.words(modified.operands, false)?;
+            self.extend_instrs(instrs);
             match modified.modifier.value {
                 Modifier::Primitive(prim) => {
                     self.primitive(prim, modified.modifier.span.clone(), true)?

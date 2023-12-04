@@ -2,7 +2,7 @@ use std::{
     collections::{BTreeSet, HashMap},
     fs,
     hash::Hash,
-    mem::{replace, take},
+    mem::{replace, size_of, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
     str::FromStr,
@@ -507,6 +507,18 @@ code:
                     let val = if values.is_empty() && boxed {
                         Array::<Boxed>::default().into()
                     } else {
+                        let elems: usize = values.iter().map(Value::element_count).sum();
+                        let elem_size = values.get(0).map_or(size_of::<f64>(), Value::elem_size);
+                        let max_mega = if cfg!(target_arch = "wasm32") {
+                            256
+                        } else {
+                            2048
+                        };
+                        if elems * elem_size > max_mega * 1024usize.pow(2) {
+                            return Err(
+                                env.error(format!("Array of {elems} elements would be too large",))
+                            );
+                        }
                         Value::from_row_values(values, env)?
                     };
                     env.push(val);

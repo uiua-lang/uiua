@@ -4,7 +4,7 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
     iter::repeat,
-    mem::take,
+    mem::{size_of, take},
 };
 
 use ecow::EcoVec;
@@ -281,6 +281,16 @@ impl Value {
             Self::Complex(array) => array.pop_row().map(Value::from),
             Self::Char(array) => array.pop_row().map(Value::from),
             Self::Box(array) => array.pop_row().map(Value::from),
+        }
+    }
+    pub(crate) fn elem_size(&self) -> usize {
+        match self {
+            Self::Num(_) => size_of::<f64>(),
+            #[cfg(feature = "bytes")]
+            Self::Byte(_) => size_of::<u8>(),
+            Self::Complex(_) => size_of::<Complex>(),
+            Self::Char(_) => size_of::<char>(),
+            Self::Box(_) => size_of::<Boxed>(),
         }
     }
 }

@@ -199,6 +199,19 @@ impl Value {
     pub fn row_len(&self) -> usize {
         self.shape().iter().skip(1).product()
     }
+    pub(crate) fn prototype_scalar(&self, env: &Uiua) -> Self {
+        match self {
+            Self::Num(_) => env.num_fill().unwrap_or_else(|_| f64::prototype()).into(),
+            #[cfg(feature = "bytes")]
+            Self::Byte(_) => env.byte_fill().unwrap_or_else(|_| u8::prototype()).into(),
+            Self::Complex(_) => env
+                .complex_fill()
+                .unwrap_or_else(|_| Complex::prototype())
+                .into(),
+            Self::Char(_) => env.char_fill().unwrap_or_else(|_| char::prototype()).into(),
+            Self::Box(_) => env.box_fill().unwrap_or_else(|_| Boxed::prototype()).into(),
+        }
+    }
     pub(crate) fn first_dim_zero(&self) -> Self {
         match self {
             Self::Num(array) => array.first_dim_zero().into(),
@@ -216,6 +229,16 @@ impl Value {
     /// Get the rank
     pub fn rank(&self) -> usize {
         self.shape().len()
+    }
+    pub(crate) fn pop_row(&mut self) -> Option<Self> {
+        match self {
+            Self::Num(array) => array.pop_row().map(Value::from),
+            #[cfg(feature = "bytes")]
+            Self::Byte(array) => array.pop_row().map(Value::from),
+            Self::Complex(array) => array.pop_row().map(Value::from),
+            Self::Char(array) => array.pop_row().map(Value::from),
+            Self::Box(array) => array.pop_row().map(Value::from),
+        }
     }
 }
 

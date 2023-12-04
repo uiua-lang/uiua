@@ -137,6 +137,13 @@ impl<T: Clone> CowSlice<T> {
             self.modify(|vec| vec.reserve(vec.capacity().max(min) - vec.len()))
         }
     }
+    pub fn split_off(&mut self, at: usize) -> Self {
+        assert!(at <= self.len());
+        let mut other = Self::with_capacity(self.len() - at);
+        other.extend_from_slice(&self[at..]);
+        self.truncate(at);
+        other
+    }
 }
 
 #[test]

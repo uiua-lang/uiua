@@ -1012,9 +1012,10 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="≡⊂ ⊙¤ 1_2_3 4_5_6"/>
         <Editor example="≡(⊂⊂⊂) ⊓⊓⊓∘¤¤∘ 1_2_3 4_5_6 7_8_9 10_11_12"/>
         <Editor example="≡(⊂⊂⊂) ⊙∩¤     1_2_3 4_5_6 7_8_9 10_11_12"/>
-        <p>"Note that in the case of using "<Prim prim=Rows/>" with a pervasive functions like "<Prim prim=Sub/>" on two lists, "<Prims prims=[Rows]/><code>"f"</code><Prims prims=[Dip, Fix]/>" is equivalent to "<Prims prims=[Table]/><code>"f"</code>"."</p>
-        <Editor example="≡- ⊙¤ 1_2_3 4_5_6\n⊞- 1_2_3 4_5_6"/>
-        <p>"In cases like this, using "<Prim prim=Table/>" is preferred because it is more clear, but also because it is "<em>"much"</em>" faster."</p>
+        <p><Prim prim=Fix/>" also works without "<Prim prim=Rows/>" with pervasive dyadic functions."</p>
+        <Editor example="-  [1 2 3]  [4 5 6]\n- ¤[1 2 3]  [4 5 6]\n-  [1 2 3] ¤[4 5 6]"/>
+        <Editor example="-  1_3 [3_4 5_6 7_8]"/> // Should fail
+        <Editor example="- ¤1_3 [3_4 5_6 7_8]"/>
 
         <h2 id="rerank"><Prim prim=Rerank/></h2>
         <p>"The above examples dig into an array from the top down. But what if you want to think about the array from the "<em>"bottom up"</em>"?"</p>

@@ -544,6 +544,12 @@ primitive!(
     /// ex: ¤¤[1 2 3]
     /// This is useful when combine with [rows] or [cross] to re-use an entire array for each row of others.
     /// ex: ≡⊂ ¤ 1_2_3 4_5_6
+    /// [fix] can also be used with pervasive dyadic functions.
+    /// ex: -  [1 2 3]  [4 5 6]
+    ///   : - ¤[1 2 3]  [4 5 6]
+    ///   : -  [1 2 3] ¤[4 5 6]
+    /// ex! -  1_3 [3_4 5_6 7_8]
+    /// ex: - ¤1_3 [3_4 5_6 7_8]
     /// [fix]'s name come from the way it "fixes" an array in this way.
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) for more information on this use case.
     (1, Fix, MonadicArray, ("fix", '¤')),

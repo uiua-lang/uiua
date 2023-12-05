@@ -13,7 +13,7 @@ image = "0.24.5"
 instant = {version = "0.1.12", features = ['wasm-bindgen']}
 js-sys = "0.3"
 leptos = "0.5.0"
-leptos_meta = {version = "0.5.2", features = ["csr"]}
+leptos_meta = {version = "0.5.4", features = ["csr"]}
 leptos_router = {version = "0.5.2", features = ["csr"]}
 pathdiff = "0.2.1"
 uiua = {path = "..", default-features = false, features = ["bytes"]}

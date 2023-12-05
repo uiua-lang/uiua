@@ -496,12 +496,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "common_macros"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3f6d59c71e7dc3af60f0af9db32364d96a16e9310f3f5db2b55ed642162dd35"
-
-[[package]]
 name = "comrak"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1806,12 +1800,11 @@ dependencies = [
 
 [[package]]
 name = "leptos_router"
-version = "0.5.2"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5ca4422fdfba8af03d347d346f9364a4393ad36e227a018567192395285cf65"
+checksum = "c1a2ff8b8e8ae8b17efd8be2a407f7f83ed57c5243f70f2d03e6635f9ff61848"
 dependencies = [
  "cfg-if",
- "common_macros",
  "gloo-net",
  "itertools 0.11.0",
  "js-sys",

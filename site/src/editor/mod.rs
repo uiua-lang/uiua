@@ -876,7 +876,10 @@ pub fn Editor<'a>(
         let event = event.dyn_into::<web_sys::DragEvent>().unwrap();
         event.prevent_default();
         event.stop_propagation();
-        set_drag_message.set("Drop file to load");
+        let files = event.data_transfer().unwrap().files().unwrap();
+        if files.length() > 0 {
+            set_drag_message.set("Drop file to load");
+        }
     });
     window_event_listener(leptos_dom::ev::dragleave, move |event: DragEvent| {
         let event = event.dyn_into::<web_sys::DragEvent>().unwrap();

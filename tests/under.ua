@@ -72,3 +72,13 @@
 ⍤⊃⋅∘≍ [1 2 3] [⍘{⊙⊙∘} {1 2 3}]
 ⍤⊃⋅∘≍ [11 12 13] [⍜[⊙⊙∘]+ 1 2 3 10]
 ⍤⊃⋅∘≍ ⊃(⍜⍘⊟+|⍜⍘[⊙∘]+) [1 2] 4
+
+# Experimental!
+F ← setund(setinv"normal""inverse"|"do"|"undo")
+⍤⊃⋅∘≍ "normal" F
+⍤⊃⋅∘≍ "inverse" ⍘F
+⍤⊃⋅∘≍ {"undo""do"} {⍜F∘}
+G ← setinvsetund("normal"|"do"|"undo")"inverse"
+⍤⊃⋅∘≍ "normal" G
+⍤⊃⋅∘≍ "inverse" ⍘G
+⍤⊃⋅∘≍ {"undo""do"} {⍜G∘}

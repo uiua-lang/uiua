@@ -236,6 +236,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(EcoVec<Instr
         &UnderPatternFn(under_partition_pattern, "partition"),
         &UnderPatternFn(under_group_pattern, "group"),
         &UnderPatternFn(under_setunder_pattern, "setunder"),
+        &UnderPatternFn(under_setinverse_setunder_pattern, "setinverse setunder"),
         &UnderPatternFn(under_array_pattern, "array"),
         &UnderPatternFn(under_unpack_pattern, "unpack"),
         &UnderPatternFn(under_touch_pattern, "touch"),
@@ -581,6 +582,20 @@ fn under_setunder_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Un
         );
     }
     Some((input, (befores, afters)))
+}
+
+fn under_setinverse_setunder_pattern(input: &[Instr], _: Signature) -> Option<(&[Instr], Under)> {
+    let [Instr::PushFunc(_), Instr::PushFunc(normal), Instr::Prim(Primitive::SetInverse, _), input @ ..] =
+        input
+    else {
+        return None;
+    };
+    let [Instr::PushFunc(after), Instr::PushFunc(before), Instr::PushFunc(_), Instr::Prim(Primitive::SetUnder, _)] =
+        normal.instrs.as_slice()
+    else {
+        return None;
+    };
+    Some((input, (before.instrs.clone(), after.instrs.clone())))
 }
 
 fn try_temp_wrap(input: &[Instr]) -> Option<(&[Instr], &Instr, &[Instr], &Instr)> {

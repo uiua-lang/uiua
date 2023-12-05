@@ -310,16 +310,24 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
         }
         args_rows.reverse();
         // Collect functions
-        let functions: Vec<Function> = env
+        let functions: Vec<(Function, usize)> = env
             .function_stack
             .drain(env.function_stack.len() - count..)
+            .map(|f| {
+                let args = if f.signature().outputs < sig.outputs {
+                    f.signature().args + sig.outputs - f.signature().outputs
+                } else {
+                    f.signature().args
+                };
+                (f, args)
+            })
             .collect();
         let mut outputs = multi_output(sig.outputs, Vec::new());
         for elem in selector.data {
-            let f = &functions[elem];
+            let (f, args) = &functions[elem];
             for (i, arg) in args_rows.iter_mut().rev().enumerate().rev() {
                 let arg = arg.next().unwrap();
-                if i < f.signature().args {
+                if i < *args {
                     env.push(arg);
                 }
             }

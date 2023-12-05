@@ -30,10 +30,11 @@ use crate::{
     algorithm::{self, loops, reduce, table, zip},
     array::Array,
     boxed::Boxed,
+    check::instrs_signature,
     lex::AsciiToken,
     sys::*,
     value::*,
-    Uiua, UiuaError, UiuaResult,
+    FunctionId, Uiua, UiuaError, UiuaResult,
 };
 
 /// Categories of primitives
@@ -793,17 +794,26 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
 
 fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
     let span = if inverse {
-        format!("{} {}", env.span(), Primitive::Invert)
+        format!("? {} {}", env.span(), Primitive::Invert)
     } else {
-        env.span().to_string()
+        format!("? {}", env.span())
     };
     let items = env.clone_stack_top(env.stack_height());
     let max_line_len = span.chars().count() + 2;
+    let boundaries = stack_boundaries(env);
     let item_lines: Vec<Vec<String>> = items
         .iter()
         .map(Value::show)
         .map(|s| s.lines().map(Into::into).collect::<Vec<String>>())
         .map(|lines| format_trace_item_lines(lines, max_line_len))
+        .enumerate()
+        .flat_map(|(i, lines)| {
+            if let Some((_, id)) = boundaries.iter().find(|(height, _)| i == *height) {
+                vec![vec![format!("│╴╴╴{id}╶╶╶\n")], lines]
+            } else {
+                vec![lines]
+            }
+        })
         .collect();
     env.backend.print_str_trace(&format!("┌╴{span}\n"));
     for line in item_lines.iter().flatten() {
@@ -826,9 +836,9 @@ fn dump(env: &mut Uiua, inverse: bool) -> UiuaResult {
         )));
     }
     let span = if inverse {
-        format!("{} {}", env.span(), Primitive::Invert)
+        format!("dump {} {}", env.span(), Primitive::Invert)
     } else {
-        env.span().to_string()
+        format!("dump {}", env.span())
     };
     let unprocessed = env.clone_stack_top(env.stack_height());
     let mut items = Vec::new();
@@ -840,11 +850,20 @@ fn dump(env: &mut Uiua, inverse: bool) -> UiuaResult {
         }
     }
     let max_line_len = span.chars().count() + 2;
+    let boundaries = stack_boundaries(env);
     let item_lines: Vec<Vec<String>> = items
         .iter()
         .map(Value::show)
         .map(|s| s.lines().map(Into::into).collect::<Vec<String>>())
         .map(|lines| format_trace_item_lines(lines, max_line_len))
+        .enumerate()
+        .flat_map(|(i, lines)| {
+            if let Some((_, id)) = boundaries.iter().find(|(height, _)| i == *height) {
+                vec![vec![format!("│╴╴╴{id}╶╶╶\n")], lines]
+            } else {
+                vec![lines]
+            }
+        })
         .collect();
     env.backend.print_str_trace(&format!("┌╴{span}\n"));
     for line in item_lines.iter().flatten() {
@@ -856,6 +875,24 @@ fn dump(env: &mut Uiua, inverse: bool) -> UiuaResult {
     }
     env.backend.print_str_trace("\n");
     Ok(())
+}
+
+fn stack_boundaries(env: &Uiua) -> Vec<(usize, &FunctionId)> {
+    let mut boundaries: Vec<(usize, &FunctionId)> = Vec::new();
+    let mut height = 0;
+    let mut reduced = 0;
+    for (i, frame) in env.call_frames().rev().enumerate() {
+        if i == 0 {
+            let before_sig = instrs_signature(&frame.function.instrs[..frame.pc])
+                .ok()
+                .unwrap_or(frame.function.signature());
+            reduced = before_sig.args as isize - before_sig.outputs as isize;
+        }
+        let sig = frame.function.signature();
+        height = height.max(((sig.args as isize) - reduced).max(0) as usize);
+        boundaries.push((env.stack_height() - height, &frame.function.id));
+    }
+    boundaries
 }
 
 fn format_trace_item_lines(mut lines: Vec<String>, mut max_line_len: usize) -> Vec<String> {

@@ -121,13 +121,13 @@ enum ShapeFix {
 }
 
 #[derive(Clone)]
-struct StackFrame {
+pub(crate) struct StackFrame {
     /// The function being executed
-    function: Function,
+    pub(crate) function: Function,
     /// The span at which the function was called
     call_span: usize,
     /// The program counter for the function
-    pc: usize,
+    pub(crate) pc: usize,
     /// Additional spans for error reporting
     spans: Vec<(usize, Option<Primitive>)>,
 }
@@ -1117,6 +1117,9 @@ code:
                 .nth_back(i)
                 .is_some_and(|fix| matches!(fix, ShapeFix::Pack))
         })
+    }
+    pub(crate) fn call_frames(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {
+        self.scope.call.iter()
     }
     pub(crate) fn call_with_this(&mut self, f: impl Into<Function>) -> UiuaResult {
         let call_height = self.scope.call.len();

@@ -8,6 +8,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - [`fix` `¤`](https://uiua.org/docs/fix) now works with binary pervasive functions
 ### Interpreter
+- Make [`stack` `?`](https://uiua.org/docs/stack) and [`dump`](https://uiua.org/docs/dump) output show call stack
 - Bug fixes
 ### Website
 - Add a token count to the editor (in settings)

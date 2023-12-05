@@ -3,6 +3,7 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
     mem::{discriminant, transmute},
+    ops::ControlFlow,
     sync::Arc,
 };
 
@@ -492,6 +493,30 @@ impl Function {
         self.under(g_sig)
             .ok_or_else(|| env.error("No inverse found"))
     }
+    pub(crate) fn recurse_instrs<T>(
+        &self,
+        mut f: impl FnMut(&Instr) -> ControlFlow<T>,
+    ) -> Option<T> {
+        recurse_instrs(&self.instrs, &mut f)
+    }
+}
+
+fn recurse_instrs<T>(instrs: &[Instr], f: &mut impl FnMut(&Instr) -> ControlFlow<T>) -> Option<T> {
+    for instr in instrs {
+        match instr {
+            Instr::PushFunc(func) => {
+                if let Some(val) = recurse_instrs(&func.instrs, f) {
+                    return Some(val);
+                }
+            }
+            _ => {
+                if let ControlFlow::Break(val) = f(instr) {
+                    return Some(val);
+                }
+            }
+        }
+    }
+    None
 }
 
 /// A Uiua function id
@@ -534,7 +559,7 @@ impl From<Primitive> for FunctionId {
 impl fmt::Display for FunctionId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FunctionId::Named(name) => write!(f, "`{name}`"),
+            FunctionId::Named(name) => write!(f, "{name}"),
             FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
             FunctionId::Primitive(prim) => write!(f, "{prim}"),
             FunctionId::Main => write!(f, "main"),

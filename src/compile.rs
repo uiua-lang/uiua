@@ -1,6 +1,7 @@
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
+    ops::ControlFlow,
     sync::Arc,
 };
 
@@ -553,7 +554,15 @@ impl Uiua {
                     )));
                 }
                 Global::Func { f, sig_declared }
-                    if call && !sig_declared && count_temp_functions(&f.instrs) == 0 =>
+                    if call
+                        && !sig_declared
+                        && count_temp_functions(&f.instrs) == 0
+                        && f.recurse_instrs(|instr| {
+                            matches!(instr, Instr::Prim(Primitive::Stack | Primitive::Dump, _))
+                                .then_some(ControlFlow::Break(()))
+                                .unwrap_or(ControlFlow::Continue(()))
+                        })
+                        .is_none() =>
                 {
                     self.extend_instrs(f.instrs.clone())
                 }

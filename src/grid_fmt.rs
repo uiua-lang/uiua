@@ -162,6 +162,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 }
             };
         }
+
         // Fill the metagrid
         let mut metagrid = Metagrid::new();
 
@@ -184,7 +185,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         for col in 0..metagrid_width {
             let max_col_width = metagrid
                 .iter_mut()
-                .map(|row| row[col].iter().map(|cell| cell.len()).max().unwrap())
+                .flat_map(|row| row.get(col)?.iter().map(|cell| cell.len()).max())
                 .max()
                 .unwrap();
             column_widths[col] = max_col_width;
@@ -227,7 +228,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             }
             *grid.last_mut().unwrap().last_mut().unwrap() = if boxed { '╜' } else { '╯' };
             // Handle really big grid
-            let max_width = term_size::dimensions().map_or(55, |(w, _)| w);
+            let max_width = term_size::dimensions().map_or(54, |(w, _)| w);
             for row in grid.iter_mut() {
                 if row.len() > max_width {
                     let diff = row.len() - max_width;
@@ -300,6 +301,19 @@ fn fmt_array<T: GridFmt + ArrayValue>(
             }
         }
         fmt_array(shape, cell, stringy, false, metagrid);
+        if i * cell_size > 1000 {
+            let mut elipses_row = Vec::new();
+            for prev_grid in metagrid.last().unwrap() {
+                let prev_row = &prev_grid[0];
+                let mut new_row = Vec::with_capacity(prev_row.len());
+                for c in prev_row {
+                    new_row.push(if c.is_whitespace() { ' ' } else { '⋮' });
+                }
+                elipses_row.push(vec![new_row]);
+            }
+            metagrid.push(elipses_row);
+            break;
+        }
     }
 }
 

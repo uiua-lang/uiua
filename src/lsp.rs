@@ -288,12 +288,12 @@ mod server {
         docs: DashMap<Url, LspDoc>,
     }
 
-    const STACK_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("stack-function");
-    const NOADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("noadic-function");
-    const MONADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("monadic-function");
-    const DYADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("dyadic-function");
-    const MONADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("monadic-modifier");
-    const DYADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("dyadic-modifier");
+    const STACK_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("stack_function");
+    const NOADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("noadic_function");
+    const MONADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("monadic_function");
+    const DYADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("dyadic_function");
+    const MONADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("monadic_modifier");
+    const DYADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("dyadic_modifier");
 
     const SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 9] = [
         SemanticTokenType::STRING,

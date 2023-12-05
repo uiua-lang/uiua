@@ -9,7 +9,8 @@ This version is not yet released. If you are reading this on the website, then t
 - [`fix` `¤`](https://uiua.org/docs/fix) now works with binary pervasive functions
 ### Interpreter
 - Make [`stack` `?`](https://uiua.org/docs/stack) and [`dump`](https://uiua.org/docs/dump) output show call stack
-- Bug fixes
+- Show type and shape information when pretty-printing empty arrays with rank 2 or greater
+- Bug and crash fixes
 ### Website
 - Add a token count to the editor (in settings)
 - Files can now be dragged into the editor to open them with [`&fras`](https://uiua.org/docs/&fras)

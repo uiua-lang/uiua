@@ -253,7 +253,16 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     metagrid: &mut Metagrid,
 ) {
     if data.is_empty() {
-        metagrid.push(vec![vec![vec![' ']]]);
+        let mut shape_row = Vec::new();
+        for (i, dim) in shape.iter().enumerate() {
+            if i > 0 {
+                shape_row.extend(" × ".chars());
+            }
+            shape_row.extend(dim.to_string().chars());
+        }
+        shape_row.push(' ');
+        shape_row.extend(T::NAME.chars());
+        metagrid.push(vec![vec![shape_row]]);
         return;
     }
     let rank = shape.len();

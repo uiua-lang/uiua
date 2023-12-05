@@ -45,9 +45,6 @@ pub fn Site() -> impl IntoView {
         "An array-oriented tacit programming language".into_view(),
         "A programming language for point-free enjoyers".into_view(),
         "A programming language for variable dislikers".into_view(),
-        view!("What if APL had no "<code>"ω"</code>"?").into_view(),
-        view!("What if BQN had no "<code>"𝕩"</code>"?").into_view(),
-        view!("What if LISP had fewer "<code>"()"</code>"s?").into_view(),
         view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>).into_view(),
         view!(<a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
         view! {
@@ -75,15 +72,36 @@ pub fn Site() -> impl IntoView {
         .into_view(),
         "It's got um...I um...arrays".into_view(),
         view! {
-            <div style="font-size: 0.9em;">
+            <div>
                 <div style="display: flex; gap: 0.5em; flex-wrap: wrap">
-                    <div style="font-style: normal"><Prims prims=[Repeat, Do]/></div>
-                    " Hey honey, the kids are asleep. What do you say"
+                    <div style="font-style: normal"><Prim prim=Try/></div>
+                    " Hey bro! Throw me the error!"
+                    <div style="font-style: normal"><Prim prim=Assert/></div>
                 </div>
                 <div style="display: flex; gap: 0.5em; flex-wrap: wrap">
-                    " we go and"
-                    <div class="spoiler">"make the language Turing-complete"</div>
+                    <div style="font-style: normal"><Prims prims=[Repeat, Do]/></div>
+                    " Kids! Dinner's ready! Who wants "
+                    <div class="spoiler">"control flow"</div>
                     "?"
+                </div>
+            </div>
+        }
+        .into_view(),
+        view! {
+                <div style="display: flex; gap: 0.5em;">
+                    "A "<div style="font-style: normal"><Prim prim=Fork/></div>
+                    " is worth a thousand "<div style="font-style: normal"><Prim prim=Dip/></div>"s."
+                </div>
+        }.into_view(),
+        view! {
+            <div>
+                <div style="display: flex; gap: 0.5em; flex-wrap: wrap">
+                    <div style="font-style: normal"><Prim prim=Repeat/></div>
+                    " Sometimes I miss the days when I could break"
+                </div>
+                <div style="display: flex; gap: 0.5em; flex-wrap: wrap">
+                    <div style="font-style: normal"><Prim prim=Do/></div>
+                    " Oh honey, don't be silly. That's why you have me ❤️"
                 </div>
             </div>
         }

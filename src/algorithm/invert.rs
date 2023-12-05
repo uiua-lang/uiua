@@ -237,6 +237,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(EcoVec<Instr
         &UnderPatternFn(under_setunder_pattern, "setunder"),
         &UnderPatternFn(under_array_pattern, "array"),
         &UnderPatternFn(under_unpack_pattern, "unpack"),
+        &UnderPatternFn(under_touch_pattern, "touch"),
         &bin!(Flip, Add, Sub),
         &bin!(Flip, Mul, Div),
         &bin!(Flip, Sub),
@@ -348,7 +349,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(EcoVec<Instr
         break;
     }
 
-    println!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
+    // println!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
 
     None
 }
@@ -852,6 +853,21 @@ fn under_unpack_pattern(input: &[Instr], mut g_sig: Signature) -> Option<(&[Inst
         boxed: *unbox,
     });
     Some((input, (befores, afters)))
+}
+
+fn under_touch_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
+    let [instr @ Instr::TouchStack { count, span }, input @ ..] = input else {
+        return None;
+    };
+    let mut afters = eco_vec![];
+    let new_count = (*count + g_sig.outputs).saturating_sub(g_sig.args);
+    if new_count > 0 {
+        afters.push(Instr::TouchStack {
+            count: new_count,
+            span: *span,
+        });
+    }
+    Some((input, (eco_vec![instr.clone()], afters)))
 }
 
 impl<A: InvertPattern, B: InvertPattern> InvertPattern for (A, B) {

@@ -686,7 +686,7 @@ primitive!(
     /// ex: Parts ← .⊜□≠@ . $ Prepend the word length
     ///   : F ← $"_ _"⧻.
     ///   : ∵⍜°□F Parts
-    /// [under][un][box] works because `invert``unbox` is just `box`. For each element, it un-[box]es the [box] function to get the array out, does something to it, then [box]es the result.
+    /// [under][un][box] works because `un``un`box` is just `box`. For each element, it [un][box]es the array out, does something to it, then [box]es the result.
     /// ex: A ← .{1_2_3 4_5 [7]}
     ///   : ∵⍜°□(⬚0↙3) A
     (1, Box, MonadicArray, ("box", '□')),

@@ -489,6 +489,14 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
         <p>"Pervasive functions work through boxes and preserve the maximum "<Prim prim=Box/>" depth of their arguments."</p>
         <Editor example="¯ 1\n¯ □1\n¯ □□1"/>
         <Editor example="+1 4\n+1 □4\n+1 □□4\n+□□1 □4"/>
+        <p>"There is an exception for comparison functions, which compare lexographically."</p>
+        <Editor example=r#"=  [1 2 3]  [1 2 5]
+= □[1 2 3] □[1 2 5]
+>  [1 2 3]  [1 2 5]
+> □[1 2 3] □[1 2 5]
+>  "banana"  "orange"
+> □"banana" □"orange"
+> □"banana"  "orange""#/>
 
         <p>"For more about working with box arrays, see "<Prim prim=Box/>"'s documentation."</p>
 

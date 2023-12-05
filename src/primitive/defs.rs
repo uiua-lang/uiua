@@ -665,7 +665,15 @@ primitive!(
     /// ex: +1 4
     ///   : +1 □4
     ///   : +1 □□4
-    ///   : +□□1 □4
+    ///   : +□□1 4
+    /// There is an exception for comparison functions, which compare lexographically.
+    /// ex: =  [1 2 3]  [1 2 5]
+    ///   : = □[1 2 3] □[1 2 5]
+    ///   : >  [1 2 3]  [1 2 5]
+    ///   : > □[1 2 3] □[1 2 5]
+    ///   : >  "banana"  "orange"
+    ///   : > □"banana" □"orange"
+    ///   : > □"banana"  "orange"
     ///
     /// Most non-pervasive monadic functions, like [reverse], [first], [transpose], etc, will work on box elements without needing to [un][box] them.
     /// Unlike pervasive functions, [box] depth is not preserved.
@@ -1193,11 +1201,11 @@ primitive!(
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
     /// Apply a function with implicit unboxing
     ///
-    /// When working with [box]ed data, [unpack] will automatically [unbox] the data for functions like [join].
+    /// When working with [box]ed data, [unpack] will automatically [un][box] the data for functions like [join].
     /// ex:  /⊂ {"a" "bc" "def"}
     /// ex: ⊐/⊂ {"a" "bc" "def"}
     ///
-    /// Anything that is [box]ed inside the function will be [unbox]ed as soon as it is used.
+    /// Anything that is [box]ed inside the function will be [un][box]ed as soon as it is used.
     /// This may lead to unexpected behavior if you are not aware of it.
     /// ex: ⊐(¯□3) # Used
     /// ex: ⊐( □3) # Not used

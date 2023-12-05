@@ -13,9 +13,16 @@ This version is not yet released. If you are reading this on the website, then t
 - [`reduce` `/`](https://uiua.org/docs/reduce) can now use a function that takes more than 2 arguments
 - Add some missing arithmetic inverses and unders involving [`flip` `:`](https://uiua.org/docs/flip)
 - Change `pack`'s name to [`unpack` `⊐`](https://uiua.org/docs/unpack), and it no longer implicitly boxes values (only unboxes them)
+  - Implicit boxing could lead to unexpected and inconsistent behavior
 - Change `invert`'s name and glyph to [`un` `°`](https://uiua.org/docs/un). Code using `⍘` will continue to work and will be formatted as `°`.
+  - `°` is a nicer glyph, and `un` composes more nicely with the names of invertible functions
 - Deprecate [`unbox` `⊔`](https://uiua.org/docs/unbox) in favor of [`un` `⍘`](https://uiua.org/docs/un) [`box` `□`](https://uiua.org/docs/box)
+  - It can still be typed the same way!
 - Deprecate [`reduce` `/`](https://uiua.org/docs/reduce) with a monadic function
+  - This created poorly-defined stack signatures that changed depending on the length of the array being reduced
+  - [`un` `°`](https://uiua.org/docs/un) with stack array and planet notations, i.e. `°[⊙⊙∘]`, can be used instead, as it has a well-defined signature
+  - For operating on just part of an array, use [`under` `⍜`](https://uiua.org/docs/under) [`take` `↙`](https://uiua.org/docs/take), [`drop` `↘`](https://uiua.org/docs/drop), or [`select` `⊏`](https://uiua.org/docs/select)
+- [`box` `□`](https://uiua.org/docs/box)ed arrays can once again be compared lexographically
 ### Interpreter
 - Make [`stack` `?`](https://uiua.org/docs/stack) and [`dump`](https://uiua.org/docs/dump) output show call stack
 - Show type and shape information when pretty-printing empty arrays with rank 2 or greater

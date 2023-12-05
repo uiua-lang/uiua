@@ -178,10 +178,9 @@ where
             if !shape_prefixes_match(&a.shape, &b.shape) {
                 return Err(C::fill_error(ctx.error(if let Some(e) = fill_error {
                     format!(
-                        "Shapes {} and {} do not match. {}.",
+                        "Shapes {} and {} do not match{e}",
                         a.format_shape(),
                         b.format_shape(),
-                        e
                     )
                 } else {
                     format!(

@@ -890,7 +890,10 @@ fn stack_boundaries(env: &Uiua) -> Vec<(usize, &FunctionId)> {
         }
         let sig = frame.function.signature();
         height = height.max(((sig.args as isize) - reduced).max(0) as usize);
-        boundaries.push((env.stack_height() - height, &frame.function.id));
+        boundaries.push((
+            env.stack_height().saturating_sub(height),
+            &frame.function.id,
+        ));
     }
     boundaries
 }

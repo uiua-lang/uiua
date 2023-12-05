@@ -127,6 +127,7 @@ fn invert_instr_impl(instrs: &[Instr]) -> Option<EcoVec<Instr>> {
         &invert_invert_pattern,
         &invert_rectify_pattern,
         &invert_setinverse_pattern,
+        &invert_setunder_setinverse_pattern,
         &invert_trivial_pattern,
         &invert_array_pattern,
         &invert_unpack_pattern,
@@ -478,6 +479,20 @@ fn invert_rectify_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>)> 
 fn invert_setinverse_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>)> {
     let [Instr::PushFunc(inv), Instr::PushFunc(_), Instr::Prim(Primitive::SetInverse, _), input @ ..] =
         input
+    else {
+        return None;
+    };
+    Some((input, inv.instrs.clone()))
+}
+
+fn invert_setunder_setinverse_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>)> {
+    let [Instr::PushFunc(_), Instr::PushFunc(_), Instr::PushFunc(normal), Instr::Prim(Primitive::SetUnder, _), input @ ..] =
+        input
+    else {
+        return None;
+    };
+    let [Instr::PushFunc(inv), Instr::PushFunc(_), Instr::Prim(Primitive::SetInverse, _)] =
+        normal.instrs.as_slice()
     else {
         return None;
     };

@@ -125,11 +125,13 @@ where
                     a.fill_to_shape(&target_shape, fill);
                 }
                 Err(e) if a.row_count() == 1 => {
-                    while a.shape.first() == Some(&1) {
-                        a.shape.remove(0);
-                    }
-                    if b.shape.ends_with(&a.shape) {
-                        for &dim in b.shape[..b.shape.len() - a.shape.len()].iter().rev() {
+                    let fixes = a.shape.iter().take_while(|&&dim| dim == 1).count();
+                    if (b.shape[fixes..].iter().rev())
+                        .zip(a.shape[fixes..].iter().rev())
+                        .all(|(a, b)| a == b)
+                    {
+                        a.shape.drain(..fixes);
+                        for &dim in b.shape[..fixes].iter().rev() {
                             a.reshape_scalar(dim);
                         }
                     } else {
@@ -145,11 +147,13 @@ where
                     b.fill_to_shape(&target_shape, fill);
                 }
                 Err(e) if b.row_count() == 1 => {
-                    while b.shape.first() == Some(&1) {
-                        b.shape.remove(0);
-                    }
-                    if a.shape.ends_with(&b.shape) {
-                        for &dim in a.shape[..a.shape.len() - b.shape.len()].iter().rev() {
+                    let fixes = b.shape.iter().take_while(|&&dim| dim == 1).count();
+                    if (a.shape[fixes..].iter().rev())
+                        .zip(b.shape[fixes..].iter().rev())
+                        .all(|(a, b)| a == b)
+                    {
+                        b.shape.drain(..fixes);
+                        for &dim in a.shape[..fixes].iter().rev() {
                             b.reshape_scalar(dim);
                         }
                     } else {
@@ -159,6 +163,13 @@ where
                 Err(e) => fill_error = Some(e),
             },
             Ordering::Equal => {}
+        }
+        if let Some(e) = fill_error {
+            return Err(C::fill_error(ctx.error(format!(
+                "Shapes {} and {} do not match{e}",
+                a.format_shape(),
+                b.format_shape(),
+            ))));
         }
         // Fill in missing dimensions
         if !shape_prefixes_match(&a.shape, &b.shape) {
@@ -199,20 +210,12 @@ where
                     }
                 }
             }
-            if !shape_prefixes_match(&a.shape, &b.shape) {
-                return Err(C::fill_error(ctx.error(if let Some(e) = fill_error {
-                    format!(
-                        "Shapes {} and {} do not match{e}",
-                        a.format_shape(),
-                        b.format_shape(),
-                    )
-                } else {
-                    format!(
-                        "Shapes {} and {} do not match",
-                        a.format_shape(),
-                        b.format_shape()
-                    )
-                })));
+            if let Some(e) = fill_error {
+                return Err(C::fill_error(ctx.error(format!(
+                    "Shapes {} and {} do not match{e}",
+                    a.format_shape(),
+                    b.format_shape(),
+                ))));
             }
         }
     }

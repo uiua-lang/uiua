@@ -74,14 +74,13 @@ impl GridFmt for Complex {
             grid
         } else {
             let mut re = self.re.fmt_grid(boxed);
-            let im = if self.im == 1.0 {
+            let im = if self.im.abs() == 1.0 {
                 String::new()
-            } else if self.im == -1.0 {
-                "¯".to_string()
             } else {
-                self.im.grid_string()
+                self.im.abs().grid_string()
             };
-            re[0].push('+');
+            let sign = if self.im < 0.0 { '-' } else { '+' };
+            re[0].push(sign);
             re[0].extend(im.chars());
             re[0].push('i');
             re

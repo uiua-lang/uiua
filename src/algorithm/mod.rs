@@ -124,6 +124,10 @@ where
                     target_shape[0] = b.row_count();
                     a.fill_to_shape(&target_shape, fill);
                 }
+                Err(_) if a.row_count() == 1 => {
+                    a.shape.remove(0);
+                    a.reshape_scalar(b.row_count())
+                }
                 Err(e) => fill_error = Some(e),
             },
             Ordering::Greater => match ctx.fill() {
@@ -131,6 +135,10 @@ where
                     let mut target_shape = b.shape().to_vec();
                     target_shape[0] = a.row_count();
                     b.fill_to_shape(&target_shape, fill);
+                }
+                Err(_) if b.row_count() == 1 => {
+                    b.shape.remove(0);
+                    b.reshape_scalar(a.row_count());
                 }
                 Err(e) => fill_error = Some(e),
             },

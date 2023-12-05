@@ -851,18 +851,17 @@ fn invert_unpack_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>)> {
     Some((input, instrs))
 }
 
-fn under_unpack_pattern(input: &[Instr], mut g_sig: Signature) -> Option<(&[Instr], Under)> {
+fn under_unpack_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
     let [unpack @ Instr::Unpack { count, span, unbox }, input @ ..] = input else {
         return None;
     };
-    if g_sig.args < *count {
-        let diff = *count - g_sig.args;
-        g_sig.args += diff;
-        g_sig.outputs += diff;
-    }
     let (mut befores, mut afters) = under_instrs(input, g_sig)?;
     befores.insert(0, unpack.clone());
     afters.insert(0, Instr::BeginArray);
+    afters.push(Instr::TouchStack {
+        count: *count,
+        span: *span,
+    });
     afters.push(Instr::EndArray {
         span: *span,
         boxed: *unbox,

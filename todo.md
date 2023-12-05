@@ -1,6 +1,10 @@
 # Uiua Todo
 Within each section, items are ordered (roughly) by decreasing priority.
 
+## Immediate
+- Fix `invert` `setund` `setinv`
+- Make `fill` only apply to one function
+
 ## Features
 - Multimedia
   - Sound input
@@ -13,7 +17,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - UDP Sockets
 
 ## Bugs
-- See if the type/shape loss problem can be solved
 - Figure out what is going on with the editor cursor
 - Expand test suite
 

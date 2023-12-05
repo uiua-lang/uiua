@@ -117,6 +117,7 @@ enum ShapeFix {
     FillComplex(Complex),
     FillChar(char),
     FillBox(Boxed),
+    None,
     Pack,
 }
 
@@ -1079,20 +1080,24 @@ code:
         fill: Value,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
     ) -> UiuaResult {
-        if !fill.shape().is_empty() {
-            return Err(self.error(format!(
-                "Fill values must be scalar, but its shape is {}",
-                fill.format_shape()
-            )));
+        if fill.shape() == [0] {
+            self.scope.shape_fix.push(ShapeFix::None)
+        } else {
+            if !fill.shape().is_empty() {
+                return Err(self.error(format!(
+                    "Fill values must be scalar or an empty list, but its shape is {}",
+                    fill.format_shape()
+                )));
+            }
+            self.scope.shape_fix.push(match fill {
+                Value::Num(n) => ShapeFix::FillNum(n.data.into_iter().next().unwrap()),
+                #[cfg(feature = "bytes")]
+                Value::Byte(b) => ShapeFix::FillNum(b.data.into_iter().next().unwrap() as f64),
+                Value::Char(c) => ShapeFix::FillChar(c.data.into_iter().next().unwrap()),
+                Value::Box(b) => ShapeFix::FillBox(b.data.into_iter().next().unwrap()),
+                Value::Complex(c) => ShapeFix::FillComplex(c.data.into_iter().next().unwrap()),
+            });
         }
-        self.scope.shape_fix.push(match fill {
-            Value::Num(n) => ShapeFix::FillNum(n.data.into_iter().next().unwrap()),
-            #[cfg(feature = "bytes")]
-            Value::Byte(b) => ShapeFix::FillNum(b.data.into_iter().next().unwrap() as f64),
-            Value::Char(c) => ShapeFix::FillChar(c.data.into_iter().next().unwrap()),
-            Value::Box(b) => ShapeFix::FillBox(b.data.into_iter().next().unwrap()),
-            Value::Complex(c) => ShapeFix::FillComplex(c.data.into_iter().next().unwrap()),
-        });
         let res = in_ctx(self);
         self.scope.shape_fix.pop();
         res

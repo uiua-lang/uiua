@@ -1505,6 +1505,13 @@ primitive!(
     /// ex: F = ⬚∘+
     ///   : F 100 [1 2 3 4] [5 6]
     ///
+    /// [fill] can be temporarily disabled within a context by filling with an empty list.
+    /// ex: ⬚0(
+    ///   :   ↻2 ⇡5
+    ///   :   ⬚[]↻3 ⇡5
+    ///   :   ↻1 ⇡5
+    ///   : )
+    ///
     /// [fill] and [pack] are exclusive.
     /// ex: ⊐⬚0⊟ 1_2 3
     ///   : ⬚0⊐⊟ 1_2 3

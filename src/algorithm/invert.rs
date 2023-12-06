@@ -140,10 +140,12 @@ fn invert_instr_impl(instrs: &[Instr]) -> Option<EcoVec<Instr>> {
         &(Val, IgnoreMany(Flip), ([Mul], [Div])),
         &(Val, ([Div], [Mul])),
         &(Val, ([Flip, Div], [Flip, Div])),
+        &(Val, pat!(Pow, (1, Flip, Div, Pow))),
+        &(Val, pat!((Flip, Pow), (Flip, 1, Flip, Div, Pow))),
+        &(Val, ([Log], [Flip, Pow])),
+        &(Val, ([Flip, Log], [Pow])),
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
-        &(Val, pat!(Pow, (1, Flip, Div, Pow))),
-        &(Val, ([Log], [Flip, Pow])),
         &invert_temp_pattern,
     ];
 
@@ -249,6 +251,10 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(EcoVec<Instr
         &bin!(Mul, Div),
         &bin!(Div, Mul),
         &pat!((Flip, Pow), (CopyToTempN(1), Flip, Pow), (PopTempN(1), Log)),
+        &(
+            Val,
+            pat!((Flip, Pow), (CopyToTempN(1), Flip, Pow), (PopTempN(1), Log)),
+        ),
         &pat!(Pow, (CopyToTempN(1), Pow), (PopTempN(1), 1, Flip, Div, Pow)),
         &pat!(
             (Flip, Log),
@@ -256,6 +262,18 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(EcoVec<Instr
             (1, Flip, Div, PopTempN(1), Flip, Pow)
         ),
         &pat!(Log, (CopyToTempN(1), Log), (PopTempN(1), Flip, Pow)),
+        &(
+            Val,
+            pat!(Log, (CopyToTempN(1), Log), (PopTempN(1), Flip, Pow)),
+        ),
+        &(
+            Val,
+            pat!(
+                (Flip, Log),
+                (CopyToTempN(1), Flip, Log),
+                (1, Flip, Div, PopTempN(1), Flip, Pow)
+            ),
+        ),
         &(Val, stash2!(Take, Untake)),
         &stash2!(Take, Untake),
         &(Val, stash2!(Drop, Undrop)),

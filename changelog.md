@@ -8,9 +8,11 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - [`fix` `¤`](https://uiua.org/docs/fix) now works with binary pervasive functions
 - [`fill` `⬚`](https://uiua.org/docs/fill) can now be disabled for a function by filling with an empty list
+- Add some missing arithmetic inverses and unders involving [`flip` `:`](https://uiua.org/docs/flip)
 ### Interpreter
 - Make [`stack` `?`](https://uiua.org/docs/stack) and [`dump`](https://uiua.org/docs/dump) output show call stack
 - Show type and shape information when pretty-printing empty arrays with rank 2 or greater
+- Improve language server hover information
 - Bug and crash fixes
 ### Website
 - Add a token count to the editor (in settings)

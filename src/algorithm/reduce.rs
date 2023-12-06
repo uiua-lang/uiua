@@ -146,8 +146,10 @@ fn generic_fold_right_1(f: Function, xs: Value, init: Option<Value>, env: &mut U
     let sig = f.signature();
     if sig.outputs > 1 {
         return Err(env.error(format!(
-            "Reduce's function must return 0 or 1 values, but {} returns {}",
-            f, sig.outputs
+            "{}'s function must return 0 or 1 values, but {} returns {}",
+            Primitive::Reduce.format(),
+            f,
+            sig.outputs
         )));
     }
     let args = sig.args;
@@ -161,9 +163,9 @@ fn generic_fold_right_1(f: Function, xs: Value, init: Option<Value>, env: &mut U
         }
         2 => {
             let mut rows = xs.into_rows();
-            let mut acc = init
-                .or_else(|| rows.next())
-                .ok_or_else(|| env.error("Cannot reduce empty array"))?;
+            let mut acc = init.or_else(|| rows.next()).ok_or_else(|| {
+                env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
+            })?;
             for row in rows {
                 env.push(row);
                 env.push(acc);
@@ -174,7 +176,8 @@ fn generic_fold_right_1(f: Function, xs: Value, init: Option<Value>, env: &mut U
         }
         args => {
             return Err(env.error(format!(
-                "Cannot reduce a function that takes {args} arguments"
+                "Cannot {} a function that takes {args} arguments",
+                Primitive::Reduce.format(),
             )))
         }
     }
@@ -186,7 +189,7 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let xs = env.pop(1)?;
     if xs.rank() == 0 {
-        return Err(env.error("Cannot scan rank 0 array"));
+        return Err(env.error(format!("Cannot {} rank 0 array", Primitive::Scan.format())));
     }
     match (f.as_flipped_primitive(), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => {
@@ -284,7 +287,8 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig != (2, 1) {
         return Err(env.error(format!(
-            "Scan's function's signature must be |2.1, but it is {sig}"
+            "{}'s function's signature must be |2.1, but it is {sig}",
+            Primitive::Scan.format(),
         )));
     }
     if xs.row_count() == 0 {

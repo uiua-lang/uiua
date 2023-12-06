@@ -151,7 +151,10 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let sig = f.signature();
     match sig.args {
-        0 => Err(env.error("Each's function must take at least 1 argument")),
+        0 => Err(env.error(format!(
+            "{}'s function must take at least 1 argument",
+            Primitive::Each.format()
+        ))),
         1 => each1(f, env.pop(1)?, env),
         2 => each2(f, env.pop(1)?, env.pop(2)?, env),
         n => {
@@ -201,8 +204,9 @@ fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     if !xs.shape().iter().zip(ys.shape()).all(|(a, b)| a == b) {
         let min_rank = xs.rank().min(ys.rank());
         return Err(env.error(format!(
-            "Cannot each arrays with shapes {} and {} because their \
+            "Cannot {} arrays with shapes {} and {} because their \
             shape prefixes {} and {} are different",
+            Primitive::Each.format(),
             xs.format_shape(),
             ys.format_shape(),
             FormatShape(&xs.shape()[..min_rank]),
@@ -273,10 +277,12 @@ fn eachn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for win in args.windows(2) {
         if win[0].shape() != win[1].shape() {
             return Err(env.error(format!(
-                "The shapes in each of 3 or more arrays must all match, but shapes {} and {} cannot be eached together. \
+                "The shapes in each of 3 or more arrays must all match, \
+                but shapes {} and {} cannot be {}ed together. \
                 If you want more flexibility, use rows.",
                 win[0].format_shape(),
-                win[1].format_shape()
+                win[1].format_shape(),
+                Primitive::Each.format()
             )));
         }
     }
@@ -321,7 +327,10 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let sig = f.signature();
     match sig.args {
-        0 => Err(env.error("Rows' function must take at least 1 argument")),
+        0 => Err(env.error(format!(
+            "{}'s function must take at least 1 argument",
+            Primitive::Rows.format()
+        ))),
         1 => rows1(f, env.pop(1)?, env),
         2 => rows2(f, env.pop(1)?, env.pop(2)?, env),
         n => {
@@ -439,7 +448,8 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             Ok(())
         }
         (a, b) => Err(env.error(format!(
-            "Cannot rows arrays with different number of rows {a} and {b}",
+            "Cannot {} arrays with different number of rows {a} and {b}",
+            Primitive::Rows.format(),
         ))),
     }
 }
@@ -451,9 +461,10 @@ fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
                 && args[a].row_count() != args[b].row_count()
             {
                 return Err(env.error(format!(
-                    "Cannot rows arrays with different number of rows {} and {}",
+                    "Cannot {} arrays with different number of rows {} and {}",
                     args[a].row_count(),
-                    args[b].row_count()
+                    args[b].row_count(),
+                    Primitive::Rows.format(),
                 )));
             }
         }

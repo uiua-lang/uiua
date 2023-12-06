@@ -3,7 +3,7 @@
 use crate::{
     array::{Array, ArrayValue},
     value::Value,
-    ExactDoubleIterator, Signature, Uiua, UiuaResult,
+    ExactDoubleIterator, Primitive, Signature, Uiua, UiuaResult,
 };
 
 use super::multi_output;
@@ -99,13 +99,14 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig != (1, 1) {
         return Err(env.error(format!(
-            "Cannot undo partition with on function with signature {sig}"
+            "Cannot undo {} on function with signature {sig}",
+            Primitive::Partition.format()
         )));
     }
     let partitioned = env.pop(1)?;
     let markers = env
         .pop(2)?
-        .as_ints(env, "Partition markers must be a list of integers")?;
+        .as_ints(env, "⊜ partition markers must be a list of integers")?;
     let original = env.pop(3)?;
     // Untransform rows
     let mut untransformed = Vec::with_capacity(partitioned.row_count());
@@ -132,8 +133,9 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
     let positive_partitions = marker_partitions.iter().filter(|(m, _)| *m > 0).count();
     if positive_partitions != untransformed.len() {
         return Err(env.error(format!(
-            "Cannot undo partition because the partitioned array \
+            "Cannot undo {} because the partitioned array \
             originally had {} rows, but now it has {}",
+            Primitive::Partition.format(),
             positive_partitions,
             untransformed.len()
         )));
@@ -162,13 +164,14 @@ pub fn ungroup(env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig != (1, 1) {
         return Err(env.error(format!(
-            "Cannot undo group with on function with signature {sig}"
+            "Cannot undo {} on function with signature {sig}",
+            Primitive::Group.format()
         )));
     }
     let grouped = env.pop(1)?;
     let indices = env
         .pop(2)?
-        .as_ints(env, "Group indices must be a list of integers")?;
+        .as_ints(env, "⊕ group indices must be a list of integers")?;
     let original = env.pop(3)?;
 
     // Untransform rows
@@ -187,8 +190,9 @@ pub fn ungroup(env: &mut Uiua) -> UiuaResult {
         .any(|&index| index >= 0 && index as usize >= ungrouped_rows.len())
     {
         return Err(env.error(format!(
-            "Cannot undo group because the grouped array's \
+            "Cannot undo {} because the grouped array's \
             length changed from {} to {}",
+            Primitive::Group.format(),
             indices.len(),
             ungrouped_rows.len(),
         )));

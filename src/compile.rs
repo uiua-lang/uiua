@@ -733,7 +733,7 @@ impl Uiua {
         if let Modifier::Primitive(prim) = modified.modifier.value {
             // Give advice about redundancy
             match prim {
-                m @ Primitive::Each => {
+                m @ (Primitive::Each | Primitive::Rows) => {
                     if let [Sp {
                         value: Word::Primitive(prim),
                         span,

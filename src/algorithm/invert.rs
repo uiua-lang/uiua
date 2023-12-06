@@ -1,6 +1,6 @@
 //! Algorithms for invert and under
 
-use std::{cell::RefCell, collections::HashMap, fmt};
+use std::{cell::RefCell, cmp::Ordering, collections::HashMap, fmt};
 
 use ecow::{eco_vec, EcoVec};
 
@@ -676,78 +676,100 @@ fn invert_temp_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>)> {
 }
 
 fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
-    let (input, instr, inner, end_instr) = try_temp_wrap(input)?;
+    let (input, start_instr, inner, end_instr) = try_temp_wrap(input)?;
     // Calcular inner functions and signatures
     let (inner_befores, inner_afters) = under_instrs(inner, g_sig)?;
     let inner_befores_sig = instrs_signature(&inner_befores).ok()?;
     let inner_afters_sig = instrs_signature(&inner_afters).ok()?;
+
     let mut befores = inner_befores;
-    befores.insert(0, instr.clone());
+    befores.insert(0, start_instr.clone());
     befores.push(end_instr.clone());
+
     let afters = match (g_sig.args, g_sig.outputs) {
-        (0, _) => return None,
-        (_, 1) => {
+        (g_args, 1) => {
             let input_iter = input.iter().filter(|instr| !instr.is_compile_only());
             let inner_iter = inner.iter().filter(|instr| !instr.is_compile_only());
             let both = input_iter.clone().count() >= inner_iter.clone().count()
                 && input_iter.zip(inner_iter).all(|(a, b)| a == b);
-            if both {
+            if both && g_args > 1 {
                 EcoVec::new()
             } else {
                 let mut afters = inner_afters;
-                if inner_befores_sig.args <= inner_afters_sig.args && g_sig.args <= g_sig.outputs {
-                    afters.insert(0, instr.clone());
-                    afters.push(end_instr.clone());
+                let mut start_instr = start_instr.clone();
+                let mut end_instr = end_instr.clone();
+                match g_args.cmp(&1) {
+                    Ordering::Equal if both || inner_befores_sig.args <= inner_afters_sig.args => {
+                        let (start_count, end_count) =
+                            temp_pair_counts(&mut start_instr, &mut end_instr)?;
+                        *start_count = inner_afters_sig.outputs;
+                        *end_count = inner_befores_sig.outputs;
+                        afters.insert(0, start_instr);
+                        afters.push(end_instr);
+                    }
+                    Ordering::Greater => {
+                        let (start_count, end_count) =
+                            temp_pair_counts(&mut start_instr, &mut end_instr)?;
+                        let diff = g_args - 1;
+                        *start_count = start_count.saturating_sub(diff);
+                        *end_count = end_count.saturating_sub(diff);
+                        if *start_count > 0 || *end_count > 0 {
+                            afters.insert(0, start_instr);
+                            afters.push(end_instr);
+                        }
+                    }
+                    _ => {}
                 }
                 afters
             }
         }
-        (2, 2) => {
-            let mut instr = instr.clone();
+        (0, 0) | (2, 2) => {
+            let mut start_instr = start_instr.clone();
             let mut end_instr = end_instr.clone();
-            let (
-                Instr::PushTemp { count, .. },
-                Instr::PopTemp {
-                    count: end_count, ..
-                },
-            ) = (&mut instr, &mut end_instr)
-            else {
-                return None;
-            };
-            *count = inner_afters_sig.outputs;
+            let (start_count, end_count) = temp_pair_counts(&mut start_instr, &mut end_instr)?;
+            *start_count = inner_afters_sig.outputs;
             *end_count = inner_befores_sig.outputs;
             let mut afters = inner_afters;
-            afters.insert(0, instr.clone());
+            afters.insert(0, start_instr.clone());
             afters.push(end_instr.clone());
             afters
         }
         (args, outputs) if args >= outputs => {
-            let mut instr = instr.clone();
+            let mut start_instr = start_instr.clone();
             let mut end_instr = end_instr.clone();
-            let (
-                Instr::PushTemp { count, .. },
-                Instr::PopTemp {
-                    count: end_count, ..
-                },
-            ) = (&mut instr, &mut end_instr)
-            else {
-                return None;
-            };
+            let (start_count, end_count) = temp_pair_counts(&mut start_instr, &mut end_instr)?;
             let diff = args - outputs;
-            if *count >= diff && *end_count >= diff {
-                *count -= diff;
+            if *start_count >= diff && *end_count >= diff {
+                *start_count -= diff;
                 *end_count -= diff;
             } else {
                 return None;
             }
             let mut afters = inner_afters;
-            afters.insert(0, instr);
+            afters.insert(0, start_instr);
             afters.push(end_instr);
             afters
         }
         _ => return None,
     };
     Some((input, (befores, afters)))
+}
+
+fn temp_pair_counts<'a, 'b>(
+    start_instr: &'a mut Instr,
+    end_instr: &'b mut Instr,
+) -> Option<(&'a mut usize, &'b mut usize)> {
+    match (start_instr, end_instr) {
+        (
+            Instr::PushTemp {
+                count: start_count, ..
+            },
+            Instr::PopTemp {
+                count: end_count, ..
+            },
+        ) => Some((start_count, end_count)),
+        _ => None,
+    }
 }
 
 fn under_each_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Under)> {
@@ -799,6 +821,21 @@ fn under_partition_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr
         Instr::Prim(Primitive::Partition, span),
     ];
     let afters = eco_vec![
+        Instr::PushTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            span
+        },
+        Instr::PopTemp {
+            stack: TempStack::Under,
+            count: 2,
+            span
+        },
+        Instr::PopTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            span
+        },
         Instr::PushFunc(f_after),
         Instr::ImplPrim(ImplPrimitive::Unpartition, span),
     ];
@@ -821,6 +858,21 @@ fn under_group_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], U
         Instr::Prim(Primitive::Group, span),
     ];
     let afters = eco_vec![
+        Instr::PushTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            span
+        },
+        Instr::PopTemp {
+            stack: TempStack::Under,
+            count: 2,
+            span
+        },
+        Instr::PopTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            span
+        },
         Instr::PushFunc(f_after),
         Instr::ImplPrim(ImplPrimitive::Ungroup, span),
     ];

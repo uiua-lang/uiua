@@ -1853,8 +1853,8 @@ impl_primitive!(
     (2, Unlast),
     (3, Unkeep),
     (3, Unrerank),
-    (1[1], Unpartition),
-    (1[1], Ungroup),
+    (3[1], Unpartition),
+    (3[1], Ungroup),
     // Optimizations
     (1, Cos),
     (1, Last),

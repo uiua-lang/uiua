@@ -471,12 +471,14 @@ code:
             // if !self.function_stack.is_empty() {
             //     println!("{} function(s)", self.function_stack.len());
             // }
-            // if !self.temp_stacks[TempStack::Under as usize].is_empty() {
-            //     print!("under: ");
-            //     for val in &self.temp_stacks[TempStack::Under as usize] {
-            //         print!("{:?} ", val);
+            // for temp in enum_iterator::all::<TempStack>() {
+            //     if !self.temp_stacks[temp as usize].is_empty() {
+            //         print!("{temp}: ");
+            //         for val in &self.temp_stacks[temp as usize] {
+            //             print!("{:?} ", val);
+            //         }
+            //         println!();
             //     }
-            //     println!();
             // }
             // println!("  {:?}", instr);
 
@@ -908,16 +910,6 @@ code:
                 This is a bug in the interpreter.",
             )
         })
-    }
-    pub(crate) fn pop_temp_under(&mut self) -> UiuaResult<Value> {
-        self.temp_stacks[TempStack::Under as usize]
-            .pop()
-            .ok_or_else(|| {
-                self.error(
-                    "Under stack was empty when popping. \
-                This is a bug in the interpreter.",
-                )
-            })
     }
     /// Get the values for all bindings in the current scope
     pub fn all_values_is_scope(&self) -> HashMap<Ident, Value> {

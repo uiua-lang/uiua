@@ -2,8 +2,7 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Immediate
-- Fix `invert` `setund` `setinv`
-- Make `fill` only apply to one function
+- Pervasive `parse`
 
 ## Features
 - Multimedia

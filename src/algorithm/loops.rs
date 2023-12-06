@@ -103,6 +103,10 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
         )));
     }
     let partitioned = env.pop(1)?;
+    let markers = env
+        .pop(2)?
+        .as_ints(env, "Partition markers must be a list of integers")?;
+    let original = env.pop(3)?;
     // Untransform rows
     let mut untransformed = Vec::with_capacity(partitioned.row_count());
     for row in partitioned.into_rows() {
@@ -110,10 +114,6 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
         env.call(f.clone())?;
         untransformed.push(env.pop("unpartitioned row")?);
     }
-    let original = env.pop_temp_under()?;
-    let markers = env
-        .pop_temp_under()?
-        .as_ints(env, "Partition markers must be a list of integers")?;
 
     // Count partition markers
     let mut marker_partitions: Vec<(isize, usize)> = Vec::new();
@@ -166,6 +166,10 @@ pub fn ungroup(env: &mut Uiua) -> UiuaResult {
         )));
     }
     let grouped = env.pop(1)?;
+    let indices = env
+        .pop(2)?
+        .as_ints(env, "Group indices must be a list of integers")?;
+    let original = env.pop(3)?;
 
     // Untransform rows
     let mut ungrouped_rows: Vec<Box<dyn ExactDoubleIterator<Item = Value>>> =
@@ -177,10 +181,6 @@ pub fn ungroup(env: &mut Uiua) -> UiuaResult {
         ungrouped_rows.push(row.into_rows());
     }
     ungrouped_rows.reverse();
-    let original = env.pop_temp_under()?;
-    let indices = env
-        .pop_temp_under()?
-        .as_ints(env, "Group indices must be a list of integers")?;
 
     if indices
         .iter()

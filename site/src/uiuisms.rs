@@ -145,7 +145,7 @@ uiuisms!(
     /// Convert a list of code points to a string
     r#"+@\0 [85 105 117 97]"#,
     /// Parse a string as a base 2 number
-    r#"⍘⋯⇌-@0 "110""#,
+    r#"°⋯⇌-@0 "110""#,
     /// Parse a string as a base 3 <= X <= 9 number
     r#"/+×ⁿ⇌⇡⧻,⊙-:@0 3 "210""#,
     /// Interleave two arrays
@@ -179,7 +179,7 @@ uiuisms!(
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
     /// Find the most common row in an array
-    r#"⊏⊢⍖⍘⊚⊛:⊝. "Hello World!""#,
+    r#"⊏⊢⍖°⊚⊛:⊝. "Hello World!""#,
     /// Convert a string to uppercase
     r#"-×32×≥@a,≤@z. "These are Words""#,
     /// Convert a string to lowercase

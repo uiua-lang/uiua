@@ -492,7 +492,7 @@ fn invert_trivial_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>)> 
 }
 
 fn invert_invert_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>)> {
-    let [Instr::PushFunc(func), Instr::Prim(Primitive::Invert, _), input @ ..] = input else {
+    let [Instr::PushFunc(func), Instr::Prim(Primitive::Un, _), input @ ..] = input else {
         return None;
     };
     Some((input, func.instrs.clone()))

@@ -464,8 +464,8 @@ fn TutorialArrays() -> impl IntoView {
         <p>"By using "<Prim prim=Box/>", we can turn any value into a box that contains that value. We can then put these boxes into an array together."</p>
         <Editor example="[□1 □2 □[7 8 9]]"/>
         <p>"The "<code>"⟦⟧"</code>"s indicate that a list is "<Prim prim=Box/>"ed."</p>
-        <p><Prim prim=Unbox/>" extracts a "<Prim prim=Box/>"ed value."</p>
-        <Editor example="⊔ .□[1 2 3]"/>
+        <p><Prim prim=Un/><Prim prim=Box/>" extracts a "<Prim prim=Box/>"ed value."</p>
+        <Editor example="°□ .□[1 2 3]"/>
         <p>"Having to write "<Prim prim=Box glyph_only=true/>" everywhere is annoying, and so..."</p>
 
         <h2 id="nested-arrays">"Nested Arrays"</h2>
@@ -476,12 +476,12 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example=r#"Langs ← .["Uiua" "APL" "J" "BQN" "K" "Q"]"#/>
         <Editor example=r#"Langs ← .{"Uiua" "APL" "J" "BQN" "K" "Q"}"#/>
         <p>"The "<code>"⌜⌟"</code>"s indicate that a string is "<Prim prim=Box/>"ed."</p>
-        <p>"Many simple functions will work on "<Prim prim=Box/>" elements without needing to use "<Prim prim=Unbox/>"."</p>
+        <p>"Many simple functions will work on "<Prim prim=Box/>" elements without needing to use "<Prim prim=Un/><Prim prim=Box/>"."</p>
         <Editor example=
 r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 ⧻⊢Langs
 +1Langs"#/>
-        <p>"However, more complex functions usually need both operands to be the same type, so you must either "<Prim prim=Unbox/>" the boxed elements or "<Prim prim=Box/>" the normal ones."</p>
+        <p>"However, more complex functions usually need both operands to be the same type, so you must either "<Prim prim=Un/><Prim prim=Box/>" the boxed elements or "<Prim prim=Box/>" the normal ones."</p>
         <p>"For example, to check if a string is in the list with "<Prim prim=Member/>", you would need to "<Prim prim=Box/>" the string first."</p>
         <Editor example=
 r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
@@ -489,6 +489,14 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
         <p>"Pervasive functions work through boxes and preserve the maximum "<Prim prim=Box/>" depth of their arguments."</p>
         <Editor example="¯ 1\n¯ □1\n¯ □□1"/>
         <Editor example="+1 4\n+1 □4\n+1 □□4\n+□□1 □4"/>
+        <p>"There is an exception for comparison functions, which compare lexographically."</p>
+        <Editor example=r#"=  [1 2 3]  [1 2 5]
+= □[1 2 3] □[1 2 5]
+>  [1 2 3]  [1 2 5]
+> □[1 2 3] □[1 2 5]
+>  "banana"  "orange"
+> □"banana" □"orange"
+> □"banana"  "orange""#/>
 
         <p>"For more about working with box arrays, see "<Prim prim=Box/>"'s documentation."</p>
 
@@ -1044,7 +1052,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="⊠⊂ η_π_τ ↯3_3⇡9"/>
         <p><Prim prim=Cross/>" can be useful when working with "<Prim prim=Rerank/>"ed or "<Prim prim=Fix/>"ed arrays."</p>
         <p>"In this example, we apply a table of rotations to each matrix cell of a 3D array."</p>
-        <Editor example="⍘⊚ ≡[..]⇡3           # Target array
+        <Editor example="°⊚ ≡[..]⇡3           # Target array
 [0_0 0_1]_[¯1_1 1_0] # Rotations table
 ,,                   # Copy to see inputs
 ⍜(☇1)⊠↻              # All rotation combinations
@@ -1134,7 +1142,7 @@ fn EndOfTutorialList() -> impl IntoView {
             <li>
                 "Some important functions that were not covered:"
                 <ul>
-                    <li><Prim prim=Under/>" and "<Prim prim=Invert/></li>
+                    <li><Prim prim=Under/>" and "<Prim prim=Un/></li>
                     <li><Prim prim=Keep/></li>
                     <li><Prim prim=Where/></li>
                     <li><Prim prim=Partition/></li>

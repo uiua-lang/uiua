@@ -131,15 +131,15 @@ pub fn Tour() -> impl IntoView {
         <Editor example="⬚π↙ 5 [1 2 3]"/>
         <br/>
         <p><Prim prim=Fill/>" is nice, but you don't always want to fill in the missing elements. Sometimes you need to mix values of different shapes or types in an array. To understand Uiua's solution to this problem, you must first understand its "<em>"array model"</em>"."</p>
-        <p>"Uiua has what is called a "<em>"flat"</em>" array model. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Box/>" function can turn any array into a "<em>"box"</em>" element that can be put in an array with other boxes. That value can then be extracted with "<Prim prim=Unbox/>"."</p>
+        <p>"Uiua has what is called a "<em>"flat"</em>" array model. Arrays must be rectangular and cannot mix types. However, the "<Prim prim=Box/>" function can turn any array into a "<em>"box"</em>" element that can be put in an array with other boxes. That value can then be extracted with "<Prim prim=Un/><Prim prim=Box/>"."</p>
         <Editor example="[□1 □2_3_4 □5_6]"/>
         <p>"Having to use "<Prim prim=Box/>" on every value is kind of annoying, so there is a special syntax for "<Prim prim=Box/>" arrays that uses "<code>"{}"</code>"s instead of "<code>"[]"</code>"s."</p>
         <Editor example="{1 2_3_4 5_6}"/>
-        <p>"Many simple functions work on "<Prim prim=Box/>"ed elements without needing to "<Prim prim=Unbox/>" them."</p>
+        <p>"Many simple functions work on "<Prim prim=Box/>"ed elements without needing to "<Prim prim=Un/><Prim prim=Box/>" them."</p>
         <Editor example="{1 2_3_4 5_6}\n∵⇌.\n∵⧻."/>
         <Editor example="+5 {1 2_3_4 5_6}"/>
-        <p>"For more complex operations, though, you'll need to use "<Prim prim=Unbox/>". Using it with "<Prim prim=Under/>" will re-"<Prim prim=Box/>" the result."</p>
-        <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜⊔(⊂:⇌.)."/>
+        <p>"For more complex operations, though, you'll need to use "<Prim prim=Un/><Prim prim=Box/>". Using it with "<Prim prim=Under/>" will re-"<Prim prim=Box/>" the result."</p>
+        <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜°□(⊂:⇌.)."/>
 
         <h2 id="multimedia">"Multimedia"</h2>
         <p>"Uiua can natively generate images, audio, and GIFs."</p>

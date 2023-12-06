@@ -56,7 +56,7 @@ fn max_shape(a: &[usize], b: &[usize]) -> Shape {
 pub trait FillContext {
     type Error;
     fn error(&self, msg: impl ToString) -> Self::Error;
-    fn pack_boxes(&self) -> bool;
+    fn unpack_boxes(&self) -> bool;
     fn fill<T: ArrayValue>(&self) -> Result<T, &'static str>;
     fn fill_error(error: Self::Error) -> Self::Error;
     fn is_fill_error(error: &Self::Error) -> bool;
@@ -67,8 +67,8 @@ impl FillContext for Uiua {
     fn error(&self, msg: impl ToString) -> Self::Error {
         self.error(msg)
     }
-    fn pack_boxes(&self) -> bool {
-        self.pack_boxes()
+    fn unpack_boxes(&self) -> bool {
+        self.unpack_boxes()
     }
     fn fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
         T::get_fill(self)
@@ -86,7 +86,7 @@ impl FillContext for () {
     fn error(&self, msg: impl ToString) -> Self::Error {
         panic!("{}", msg.to_string())
     }
-    fn pack_boxes(&self) -> bool {
+    fn unpack_boxes(&self) -> bool {
         false
     }
     fn fill<T: ArrayValue>(&self) -> Result<T, &'static str> {

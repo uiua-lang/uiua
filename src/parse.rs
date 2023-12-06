@@ -586,38 +586,64 @@ impl Parser {
             mod_span.clone()
         };
 
-        if let Modifier::Primitive(Primitive::Bracket) = &modifier {
-            let mut operands = Vec::new();
-            if let Some(Sp {
-                value: Word::Switch(sw),
-                ..
-            }) = args.first()
-            {
-                operands.extend(
-                    sw.branches
-                        .iter()
-                        .map(|branch| Word::Func(branch.value.clone())),
-                );
-            } else {
-                operands.extend(
-                    args.iter()
-                        .map(|arg| &arg.value)
-                        .filter(|word| word.is_code())
-                        .cloned(),
-                );
+        match &modifier {
+            Modifier::Primitive(Primitive::Un) => {
+                single_word_and(&args, |inverted| {
+                    if let Word::Array(arr) = &inverted.value {
+                        if arr_is_di(arr) {
+                            self.diagnostics.pop(); // Pop lower diagnostic
+                            self.diagnostics.push(Diagnostic::new(
+                                format!(
+                                    "Prefer `{}{}` ({}{}) over `{}[{}{}]`",
+                                    Primitive::Un,
+                                    Primitive::Couple,
+                                    Primitive::Un.name(),
+                                    Primitive::Couple.name(),
+                                    Primitive::Un,
+                                    Primitive::Dip,
+                                    Primitive::Identity
+                                ),
+                                span.clone(),
+                                DiagnosticKind::Style,
+                            ));
+                        }
+                    }
+                });
             }
-            if operands.len() == 2 && operands[0] == operands[1] {
-                self.diagnostics.push(Diagnostic::new(
-                    format!(
-                        "{}'s functions are the same, so it \
+            Modifier::Primitive(Primitive::Bracket) => {
+                let mut operands = Vec::new();
+                if let Some(Sp {
+                    value: Word::Switch(sw),
+                    ..
+                }) = args.first()
+                {
+                    operands.extend(
+                        sw.branches
+                            .iter()
+                            .map(|branch| Word::Func(branch.value.clone())),
+                    );
+                } else {
+                    operands.extend(
+                        args.iter()
+                            .map(|arg| &arg.value)
+                            .filter(|word| word.is_code())
+                            .cloned(),
+                    );
+                }
+                if operands.len() == 2 && operands[0] == operands[1] {
+                    self.diagnostics.push(Diagnostic::new(
+                        format!(
+                            "{}'s functions are the same, so it \
                                 can be replaced with {}.",
-                        Primitive::Bracket.format(),
-                        Primitive::Both.format(),
-                    ),
-                    span.clone(),
-                    DiagnosticKind::Advice,
-                ));
+                            Primitive::Bracket.format(),
+                            Primitive::Both.format(),
+                        ),
+                        span.clone(),
+                        DiagnosticKind::Advice,
+                    ));
+                }
             }
+            _ => (),
         }
 
         Some(span.sp(Word::Modified(Box::new(Modified {
@@ -657,11 +683,25 @@ impl Parser {
             let items = self.multiline_words();
             let end = self.expect_close(CloseBracket);
             let span = start.merge(end.span);
-            span.sp(Word::Array(Arr {
+            let arr = Arr {
                 lines: items,
                 constant: false,
                 closed: end.value,
-            }))
+            };
+            if arr_is_di(&arr) {
+                self.diagnostics.push(Diagnostic::new(
+                    format!(
+                        "Prefer `{}` ({}) over `[{}{}]`",
+                        Primitive::Couple,
+                        Primitive::Couple.name(),
+                        Primitive::Dip,
+                        Primitive::Identity
+                    ),
+                    span.clone(),
+                    DiagnosticKind::Style,
+                ));
+            }
+            span.sp(Word::Array(arr))
         } else if let Some(start) = self.try_exact(OpenCurly) {
             while self.try_exact(Newline).is_some() {}
             let items = self.multiline_words();
@@ -1052,7 +1092,11 @@ fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan, Option<Dia
                 for line in &func.lines {
                     max_width = max_width.max(count_width(line)?);
                 }
-                count += max_width + (func.lines.len() == 1) as usize;
+                if func.lines.len() == 1 {
+                    count += max_width + 1;
+                } else {
+                    count = max_width.max(count + 1);
+                }
             }
             Word::Switch(sw) => {
                 if word.span.start.line == word.span.end.line {
@@ -1069,10 +1113,9 @@ fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan, Option<Dia
                             max_width = max_width.max(count_width(line)?);
                         }
                     }
-                    count += max_width;
+                    count = max_width.max(count + 1);
                 };
             }
-            Word::Ocean(ocean) => count += ocean.len(),
             Word::Modified(m) => count += count_width(&m.operands)? + 1,
             Word::Spaces | Word::BreakLine | Word::UnbreakLine | Word::Comment(_) => {}
         }
@@ -1093,4 +1136,30 @@ fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan, Option<Dia
     } else {
         Ok(count)
     }
+}
+
+fn single_word_and<'a, I>(words: I, mut f: impl FnMut(&Sp<Word>))
+where
+    I: IntoIterator<Item = &'a Sp<Word>>,
+    I::IntoIter: Clone,
+{
+    let mut iter = words.into_iter();
+    if iter.clone().filter(|w| w.value.is_code()).count() == 1 {
+        f(iter.find(|w| w.value.is_code()).unwrap())
+    }
+}
+
+fn arr_is_di(arr: &Arr) -> bool {
+    let mut is_di = false;
+    single_word_and(arr.lines.iter().flatten(), |m| {
+        if let Word::Modified(m) = &m.value {
+            let Modified { modifier, operands } = &**m;
+            if let Modifier::Primitive(Primitive::Dip) = modifier.value {
+                single_word_and(operands, |f| {
+                    is_di = matches!(f.value, Word::Primitive(Primitive::Identity));
+                })
+            }
+        }
+    });
+    is_di
 }

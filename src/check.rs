@@ -206,7 +206,23 @@ impl<'a> VirtualEnv<'a> {
             Instr::TouchStack { count, .. } => self.handle_args_outputs(*count, *count)?,
             Instr::DropTemp { .. } => {}
             Instr::Prim(prim, _) => match prim {
-                Reduce | Scan => {
+                Reduce => {
+                    let sig = self.pop_func()?.signature();
+                    let outputs = match (sig.args, sig.outputs) {
+                        (0, _) => return Err(format!("{prim}'s function has no args").into()),
+                        (1, 0) => 0,
+                        (1, _) => {
+                            return Err(SigCheckError::from(format!(
+                                "{prim}'s function's signature is {sig}"
+                            ))
+                            .ambiguous())
+                        }
+                        (_, 1) => 1,
+                        _ => return Err(format!("{prim}'s function's signature is {sig}").into()),
+                    };
+                    self.handle_args_outputs(1, outputs)?;
+                }
+                Scan => {
                     let sig = self.pop_func()?.signature();
                     let outputs = match (sig.args, sig.outputs) {
                         (0, _) => return Err(format!("{prim}'s function has no args").into()),
@@ -352,7 +368,7 @@ impl<'a> VirtualEnv<'a> {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }
-                Pack => {
+                Unpack => {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }

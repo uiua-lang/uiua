@@ -1,4 +1,7 @@
-use std::{collections::HashSet, iter::once};
+use std::{
+    collections::{HashMap, HashSet},
+    iter::once,
+};
 
 use enum_iterator::all;
 use instant::Duration;
@@ -266,6 +269,24 @@ struct Allowed {
     prims: HashSet<Primitive>,
 }
 
+fn aliases() -> HashMap<&'static str, &'static [Primitive]> {
+    [
+        ("filter", &[Primitive::Keep] as &[_]),
+        ("map", &[Primitive::Each, Primitive::Rows]),
+        ("search", &[Primitive::Find]),
+        ("intersect", &[Primitive::Member]),
+        ("split", &[Primitive::Partition]),
+        ("while", &[Primitive::Do]),
+        ("for", &[Primitive::Repeat]),
+        ("invert", &[Primitive::Un]),
+    ]
+    .into()
+}
+
+thread_local! {
+    static ALIASES: HashMap<&'static str, &'static [Primitive]> = aliases();
+}
+
 impl Allowed {
     fn all() -> Self {
         Self {
@@ -291,6 +312,13 @@ impl Allowed {
                     || p.glyph().is_some_and(|u| part.chars().all(|c| c == u))
             })
         };
+        for part in &parts {
+            ALIASES.with(|aliases| {
+                if let Some(prim) = aliases.get(part) {
+                    prims.extend(prim.iter().copied());
+                }
+            });
+        }
         if let Some(prim) = prim_matching_part_exactly(&search) {
             prims.insert(prim);
             return Self {

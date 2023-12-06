@@ -18,8 +18,8 @@ use rand::prelude::*;
 
 use crate::{
     algorithm, array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
-    primitive::Primitive, value::Value, Complex, Diagnostic, DiagnosticKind, Ident, NativeSys,
-    SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    value::Value, Complex, Diagnostic, DiagnosticKind, Ident, NativeSys, Primitive, SysBackend,
+    SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua runtime
@@ -88,7 +88,9 @@ pub(crate) struct Scope {
     /// Map local names to global indices
     pub names: HashMap<Ident, usize>,
     /// The shape fix stack
-    shape_fix: Vec<ShapeFix>,
+    fills: Vec<Fill>,
+    /// Whether to unpack boxed values
+    pub unpack_boxes: bool,
     /// Whether to allow experimental features
     pub experimental: bool,
 }
@@ -105,20 +107,20 @@ impl Default for Scope {
             }],
             this: Vec::new(),
             names: HashMap::new(),
-            shape_fix: Vec::new(),
+            fills: Vec::new(),
+            unpack_boxes: false,
             experimental: false,
         }
     }
 }
 
 #[derive(Clone)]
-enum ShapeFix {
-    FillNum(f64),
-    FillComplex(Complex),
-    FillChar(char),
-    FillBox(Boxed),
+enum Fill {
+    Num(f64),
+    Complex(Complex),
+    Char(char),
+    Box(Boxed),
     None,
-    Pack,
 }
 
 #[derive(Clone)]
@@ -574,7 +576,7 @@ code:
                     let arr = env.pop(1)?;
                     if arr.row_count() != count {
                         return Err(env.error(format!(
-                            "This ⍘[] expects an array with {} rows, \
+                            "This °[] expects an array with {} rows, \
                             but the array has {}",
                             count,
                             arr.row_count()
@@ -1018,51 +1020,47 @@ code:
         self.stack.truncate(size);
     }
     pub(crate) fn num_fill(&self) -> Result<f64, &'static str> {
-        match self.scope.shape_fix.last() {
-            Some(ShapeFix::FillNum(n)) => Ok(*n),
+        match self.scope.fills.last() {
+            Some(Fill::Num(n)) => Ok(*n),
             _ => Err(self.fill_error()),
         }
     }
     pub(crate) fn byte_fill(&self) -> Result<u8, &'static str> {
-        match self.scope.shape_fix.last() {
-            Some(ShapeFix::FillNum(n)) if (n.fract() == 0.0 && (0.0..=255.0).contains(n)) => {
-                Ok(*n as u8)
-            }
+        match self.scope.fills.last() {
+            Some(Fill::Num(n)) if (n.fract() == 0.0 && (0.0..=255.0).contains(n)) => Ok(*n as u8),
             _ => Err(self.fill_error()),
         }
     }
     pub(crate) fn char_fill(&self) -> Result<char, &'static str> {
-        match self.scope.shape_fix.last() {
-            Some(ShapeFix::FillChar(c)) => Ok(*c),
+        match self.scope.fills.last() {
+            Some(Fill::Char(c)) => Ok(*c),
             _ => Err(self.fill_error()),
         }
     }
     pub(crate) fn box_fill(&self) -> Result<Boxed, &'static str> {
-        match self.scope.shape_fix.last().cloned() {
-            Some(ShapeFix::FillNum(n)) => Ok(Value::from(n).into()),
-            Some(ShapeFix::FillChar(c)) => Ok(Value::from(c).into()),
-            Some(ShapeFix::FillComplex(c)) => Ok(Value::from(c).into()),
-            Some(ShapeFix::FillBox(b)) => Ok(b),
+        match self.scope.fills.last().cloned() {
+            Some(Fill::Num(n)) => Ok(Value::from(n).into()),
+            Some(Fill::Char(c)) => Ok(Value::from(c).into()),
+            Some(Fill::Complex(c)) => Ok(Value::from(c).into()),
+            Some(Fill::Box(b)) => Ok(b),
             _ => Err(self.fill_error()),
         }
     }
     pub(crate) fn complex_fill(&self) -> Result<Complex, &'static str> {
-        match self.scope.shape_fix.last() {
-            Some(ShapeFix::FillNum(n)) => Ok(Complex::new(*n, 0.0)),
-            Some(ShapeFix::FillComplex(c)) => Ok(*c),
+        match self.scope.fills.last() {
+            Some(Fill::Num(n)) => Ok(Complex::new(*n, 0.0)),
+            Some(Fill::Complex(c)) => Ok(*c),
             _ => Err(self.fill_error()),
         }
     }
     fn fill_error(&self) -> &'static str {
-        match self.scope.shape_fix.last() {
-            Some(ShapeFix::FillNum(_)) => ". A number fill is set, but the array is not numbers.",
-            Some(ShapeFix::FillChar(_)) => {
-                ". A character fill is set, but the array is not characters."
-            }
-            Some(ShapeFix::FillComplex(_)) => {
+        match self.scope.fills.last() {
+            Some(Fill::Num(_)) => ". A number fill is set, but the array is not numbers.",
+            Some(Fill::Char(_)) => ". A character fill is set, but the array is not characters.",
+            Some(Fill::Complex(_)) => {
                 ". A complex fill is set, but the array is not complex numbers."
             }
-            Some(ShapeFix::FillBox(_)) => ". A box fill is set, but the array is not boxed values.",
+            Some(Fill::Box(_)) => ". A box fill is set, but the array is not boxed values.",
             _ => "",
         }
     }
@@ -1073,7 +1071,7 @@ code:
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
     ) -> UiuaResult {
         if fill.shape() == [0] {
-            self.scope.shape_fix.push(ShapeFix::None)
+            self.scope.fills.push(Fill::None)
         } else {
             if !fill.shape().is_empty() {
                 return Err(self.error(format!(
@@ -1081,39 +1079,27 @@ code:
                     fill.format_shape()
                 )));
             }
-            self.scope.shape_fix.push(match fill {
-                Value::Num(n) => ShapeFix::FillNum(n.data.into_iter().next().unwrap()),
+            self.scope.fills.push(match fill {
+                Value::Num(n) => Fill::Num(n.data.into_iter().next().unwrap()),
                 #[cfg(feature = "bytes")]
-                Value::Byte(b) => ShapeFix::FillNum(b.data.into_iter().next().unwrap() as f64),
-                Value::Char(c) => ShapeFix::FillChar(c.data.into_iter().next().unwrap()),
-                Value::Box(b) => ShapeFix::FillBox(b.data.into_iter().next().unwrap()),
-                Value::Complex(c) => ShapeFix::FillComplex(c.data.into_iter().next().unwrap()),
+                Value::Byte(b) => Fill::Num(b.data.into_iter().next().unwrap() as f64),
+                Value::Char(c) => Fill::Char(c.data.into_iter().next().unwrap()),
+                Value::Box(b) => Fill::Box(b.data.into_iter().next().unwrap()),
+                Value::Complex(c) => Fill::Complex(c.data.into_iter().next().unwrap()),
             });
         }
         let res = in_ctx(self);
-        self.scope.shape_fix.pop();
+        self.scope.fills.pop();
         res
     }
     pub(crate) fn with_pack(&mut self, in_ctx: impl FnOnce(&mut Self) -> UiuaResult) -> UiuaResult {
-        self.scope.shape_fix.push(ShapeFix::Pack);
+        let upper = replace(&mut self.scope.unpack_boxes, true);
         let res = in_ctx(self);
-        self.scope.shape_fix.pop();
+        self.scope.unpack_boxes = upper;
         res
     }
-    pub(crate) fn pack_boxes(&self) -> bool {
-        self.scope
-            .shape_fix
-            .last()
-            .is_some_and(|fix| matches!(fix, ShapeFix::Pack))
-    }
     pub(crate) fn unpack_boxes(&self) -> bool {
-        (0..2).any(|i| {
-            self.scope
-                .shape_fix
-                .iter()
-                .nth_back(i)
-                .is_some_and(|fix| matches!(fix, ShapeFix::Pack))
-        })
+        self.scope.unpack_boxes
     }
     pub(crate) fn call_frames(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {
         self.scope.call.iter()

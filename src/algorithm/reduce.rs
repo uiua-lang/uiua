@@ -17,7 +17,7 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(1)?;
 
     match (f.as_flipped_primitive(), xs) {
-        (Some((Primitive::Join, false)), mut xs) if !env.pack_boxes() => {
+        (Some((Primitive::Join, false)), mut xs) if !env.unpack_boxes() => {
             if xs.rank() < 2 {
                 env.push(xs);
                 return Ok(());
@@ -144,14 +144,14 @@ where
 
 fn generic_reduce(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
-    match sig.args {
-        0 | 1 => {
+    match (sig.args, sig.outputs) {
+        (0 | 1, 1) => {
             for row in xs.into_rows() {
                 env.push(row);
                 env.call(f.clone())?;
             }
         }
-        2 => {
+        (2, 1) => {
             let mut rows = xs.into_rows();
             let mut acc = rows.next().ok_or_else(|| {
                 env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
@@ -164,36 +164,11 @@ fn generic_reduce(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
             }
             env.push(acc);
         }
-        args => {
-            let row_count = xs.row_count();
-            if row_count == 0 {
-                return Err(env.error(format!("Cannot {} empty array", Primitive::Reduce.format())));
-            }
-            if (row_count - 1) % (args - 1) != 0 {
-                return Err(env.error(format!(
-                    "{}'s function takes {} values, so the array's length \
-                    must be 1 + a multitple of {}, but the length is {}",
-                    Primitive::Reduce.format(),
-                    args,
-                    args - 1,
-                    row_count
-                )));
-            }
-            let mut rows = xs.into_rows();
-            let mut acc = rows.next().unwrap();
-            let mut temp_args = Vec::with_capacity(args - 1);
-            for _ in 0..row_count / (args - 1) {
-                for _ in 0..args - 1 {
-                    temp_args.push(rows.next().unwrap());
-                }
-                for arg in temp_args.drain(..).rev() {
-                    env.push(arg);
-                }
-                env.push(acc);
-                env.call(f.clone())?;
-                acc = env.pop("reduced function result")?;
-            }
-            env.push(acc);
+        _ => {
+            return Err(env.error(format!(
+                "{}'s function's signature must be |2.1, but it is {sig}",
+                Primitive::Reduce.format(),
+            )))
         }
     }
     Ok(())

@@ -16,12 +16,12 @@ Listener ← &tcpl "0.0.0.0:8080"
 &p $ Server started
 
 # Mime types
-GetExt ← |1 ⊔⊢⇌ ⊜□ ≠@. .
-⍘⊟⍉[{"js" "text/javascript"}
+GetExt ← |1 °□⊢⇌ ⊜□ ≠@. .
+°⊟⍉[{"js" "text/javascript"}
     {"wasm" "application/wasm"}]
 ExtMimeExt ←
 ExtMimeMime ←
-ExtMime ← |1 ⊔⊏:⊂ExtMimeMime □⊂"text/": ⊗:ExtMimeExt□.
+ExtMime ← |1 °□⊏:⊂ExtMimeMime □⊂"text/": ⊗:ExtMimeExt□.
 
 # Make response: status mime bytes
 Response ← (|3
@@ -48,7 +48,7 @@ Home ← |0 Page "/index.html"
 
 Respond ← ;spawn(
   # Extract path from request
-  ⊔⊡1 ⊜□≠@ . &ru "\r\n\r\n".
+  °□⊡1 ⊜□≠@ . &ru "\r\n\r\n".
   &p "Request:"
   &p.
 

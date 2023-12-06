@@ -83,7 +83,6 @@ pub enum Word {
     Array(Arr),
     Func(Func),
     Switch(Switch),
-    Ocean(Vec<Sp<Primitive>>),
     Primitive(Primitive),
     Modified(Box<Modified>),
     Placeholder(Signature),
@@ -127,7 +126,6 @@ impl PartialEq for Word {
                     .flat_map(|br| &br.value.lines)
                     .flatten()
                     .map(|w| &w.value)),
-            (Self::Ocean(a), Self::Ocean(b)) => a == b,
             (Self::Primitive(a), Self::Primitive(b)) => a == b,
             (Self::Modified(a), Self::Modified(b)) => {
                 a.modifier == b.modifier
@@ -183,7 +181,6 @@ impl fmt::Debug for Word {
             Word::Strand(items) => write!(f, "strand({items:?})"),
             Word::Func(func) => func.fmt(f),
             Word::Switch(sw) => sw.fmt(f),
-            Word::Ocean(prims) => write!(f, "ocean({prims:?})"),
             Word::Primitive(prim) => prim.fmt(f),
             Word::Modified(modified) => modified.fmt(f),
             Word::Spaces => write!(f, "' '"),

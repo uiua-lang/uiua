@@ -211,13 +211,6 @@ primitive!(
     /// Do nothing with one value
     ///
     /// [identity] is mostly useless on its own. See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) to understand what it is for.
-    ///
-    /// One way to use it is to pass it to [reduce], which will put all of an array's values on the stack.
-    /// ex: /∘ [1 2 3]
-    /// However, doing this in a function prevents the signature from being inferred.
-    ///
-    /// While [identity]'s signature is `|1.1`, it will not throw an error if the stack is empty.
-    /// ex: ∘
     (1, Identity, Planet, ("identity", '∘')),
     // Pervasive monadic ops
     /// Logical not
@@ -276,10 +269,10 @@ primitive!(
     /// ex: ○ 1
     /// You can get a cosine function by [add]ing [eta].
     /// ex: ○+η 1
-    /// You can get an arcsine function with [invert].
-    /// ex: ⍘○ 1
-    /// You can get an arccosine function by [invert]ing the cosine.
-    /// ex: ⍘(○+η) 1
+    /// You can get an arcsine function with [un].
+    /// ex: °○ 1
+    /// You can get an arccosine function by [un]ing the cosine.
+    /// ex: °(○+η) 1
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
     /// ex: ÷○+η:○. 0
     (1, Sin, MonadicPervasive, ("sine", '○')),
@@ -475,9 +468,9 @@ primitive!(
     /// [complex] is equivalent to `add``multiply``i`.
     /// You can use [absolute value] to get the magnitude of the complex number.
     /// ex: ⌵ ℂ3 4
-    /// You can use [invert][complex] to get the imaginary and real parts back out.
-    /// ex: [⍘ℂ] i
-    /// ex: [⍘ℂ] ×. ℂ3 4
+    /// You can use [un][complex] to get the imaginary and real parts back out.
+    /// ex: [°ℂ] i
+    /// ex: [°ℂ] ×. ℂ3 4
     (2, Complex, DyadicPervasive, ("complex", 'ℂ')),
     /// Get the number of rows in an array
     ///
@@ -517,6 +510,9 @@ primitive!(
     /// ex: ⊢[1_2 3_4 5_6]
     /// ex! ⊢[]
     /// ex! ⊢1
+    ///
+    /// [first][reverse] is optimized in the interpreter to be O(1).
+    /// ex: ⊢⇌ [1 8 4 9 2 3]
     (1, First, MonadicArray, ("first", '⊢')),
     /// Reverse the rows of an array
     ///
@@ -557,10 +553,10 @@ primitive!(
     /// ex: ⋯⇡8
     /// ex: ⋯[1_2 3_4 5_6]
     ///
-    /// [invert][bits] can be used to decode the bits back into numbers.
-    /// ex: ⍘⋯ [1 0 1]
-    /// ex: ⍘⋯ [0 1 1 0 1]
-    /// ex: ⍘⋯ [[0 1 1]
+    /// [un][bits] can be used to decode the bits back into numbers.
+    /// ex: °⋯ [1 0 1]
+    /// ex: °⋯ [0 1 1 0 1]
+    /// ex: °⋯ [[0 1 1]
     ///   :     [1 0 0]
     ///   :     [1 1 0]]
     (1, Bits, MonadicArray, ("bits", '⋯')),
@@ -612,15 +608,15 @@ primitive!(
     /// ex:     ⊚ [0 1 0 0 2 0 1]
     /// ex: ▽:⇡⧻. [0 1 0 0 2 0 1]
     ///
-    /// [invert][where] will convert the indices back into a a list of counts
-    /// ex: ⍘⊚ [0 0 0 1 1 2 2 2 2 2 3]
+    /// [un][where] will convert the indices back into a a list of counts
+    /// ex: °⊚ [0 0 0 1 1 2 2 2 2 2 3]
     /// The indices need not be in order
-    /// ex: ⍘⊚ [0 1 2 2 0 3 2 1 2 0 2]
+    /// ex: °⊚ [0 1 2 2 0 3 2 1 2 0 2]
     ///
     /// [where] can be used on multidimensional arrays, and the result will always be rank-2
     /// ex: ⊚.[1_0_0 0_1_1 0_2_0]
     /// The inverse works as well
-    /// ex: ⍘⊚[3_4 2_1 0_3]
+    /// ex: °⊚[3_4 2_1 0_3]
     ///
     /// [where] on a scalar is equivalent to [where] on a singleton array of that scalar, and so creates a list of `0`s.
     /// ex: ⊚3
@@ -651,10 +647,10 @@ primitive!(
     /// ex: [□@a □3 □7_8_9]
     /// The more ergonomic way to make box arrays is to use `{}`s instead of `[]`s.
     /// ex: {@a 3 7_8_9}
-    /// Use [unbox] to get the values back out.
-    /// ex: ⊔ □1_2_3
-    /// [reduce][unbox] will unpack an array of boxes onto the stack.
-    /// ex: /⊔ {@a 3 7_8_9}
+    /// Use [un][box] to get the values back out.
+    /// ex: °□ □1_2_3
+    /// [un] with stack array and planet notations to get the values back onto the stack
+    /// ex: °{⊙⊙∘} {@a 3 7_8_9}
     ///
     /// You would not normally construct arrays like the one above.
     /// The more important use case of [box] is for jagged or nested data.
@@ -669,25 +665,30 @@ primitive!(
     /// ex: +1 4
     ///   : +1 □4
     ///   : +1 □□4
-    ///   : +□□1 □4
+    ///   : +□□1 4
+    /// There is an exception for comparison functions, which compare lexographically.
+    /// ex: =  [1 2 3]  [1 2 5]
+    ///   : = □[1 2 3] □[1 2 5]
+    ///   : >  [1 2 3]  [1 2 5]
+    ///   : > □[1 2 3] □[1 2 5]
+    ///   : >  "banana"  "orange"
+    ///   : > □"banana" □"orange"
+    ///   : > □"banana"  "orange"
     ///
-    /// Most non-pervasive monadic functions, like [reverse], [first], [transpose], etc, will work on box elements without needing to [unbox] them.
+    /// Most non-pervasive monadic functions, like [reverse], [first], [transpose], etc, will work on box elements without needing to [un][box] them.
     /// Unlike pervasive functions, [box] depth is not preserved.
     /// ex: ⊢□□[1 2 3]
     /// ex: $ Reverse these words
     ///   : ⊜□≠@ .
     ///   : ∵⇌.
     ///
-    /// For more complex operations, you can use [under][unbox] or [pack].
+    /// For more complex operations, you can use [under][un][box].
     /// ex: Parts ← .⊜□≠@ . $ Prepend the word length
     ///   : F ← $"_ _"⧻.
-    ///   : ∵⍜⊔F Parts
-    ///   : ⊐∵F Parts.
-    /// [under][unbox] works because `invert``unbox` is just `box`. For each element, it un-[box]es the [box] function to get the array out, does something to it, then [box]es the result.
-    /// The difference between [under][unbox] and [pack] is that [pack] will only [box] the results if it is necessary.
+    ///   : ∵⍜°□F Parts
+    /// [under][un][box] works because `un``un`box` is just `box`. For each element, it [un][box]es the array out, does something to it, then [box]es the result.
     /// ex: A ← .{1_2_3 4_5 [7]}
-    ///   : ∵⍜⊔(⬚0↙3) A
-    ///   : ⊐∵(⬚0↙3) A
+    ///   : ∵⍜°□(⬚0↙3) A
     (1, Box, MonadicArray, ("box", '□')),
     /// Take an array out of a box
     ///
@@ -701,6 +702,17 @@ primitive!(
     /// ex: ⋕ "17"
     /// ex: ⋕ "3.1415926535897932"
     /// ex! ⋕ "dog"
+    ///
+    /// [parse] is semi-pervasive. It works on multidimensional arrays of characters or boxes.
+    /// ex: ⋕ {"5" "24" "106"}
+    /// ex: ⋕ .↯3_4 "012"
+    ///
+    /// [un][parse] will convert a scalar number into a string.
+    /// ex: °⋕ 58
+    /// ex: °⋕ 6.283185307179586
+    /// [un][parse] on a non-scalar number array will [box] each string.
+    /// ex: °⋕ 1_2_3
+    /// ex: °⋕ ↯3_4⇡12
     (1, Parse, Misc, ("parse", '⋕')),
     /// Check if two arrays are exactly the same
     ///
@@ -1119,7 +1131,7 @@ primitive!(
     /// ex: ⍥(⊂2)5 []
     /// One interesting use of `repeat` is to collect some number of stack values into an array.
     /// ex: ⍥⊂3 [] 1 2 3
-    /// [repeat]ing a negative number of times will repeat the [invert]ed function.
+    /// [repeat]ing a negative number of times will repeat the [un]ed function.
     /// ex: ⍥√¯3 2
     /// Repeating [infinity] times will create an infinite loop that can only be terminated by ending the program.
     /// If you want an infinite loop that ends when some condition is met, use [do].
@@ -1181,68 +1193,50 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
-    /// Apply a function with implicit (un)boxing
+    /// Apply a function with implicit unboxing
     ///
-    /// When working with [box]ed data, [pack] will automatically [unbox] the data for functions like [join].
+    /// When working with [box]ed data, [unpack] will automatically [un][box] the data for functions like [join].
     /// ex:  /⊂ {"a" "bc" "def"}
     /// ex: ⊐/⊂ {"a" "bc" "def"}
     ///
-    /// If combining arrays would fail because of a shape mismatch, [pack] will automatically [box] the arrays.
-    /// ex!  \⊂⇡5
-    /// ex: ⊐\⊂⇡5
-    /// ex: ⊐⊟ 5 "hello"
-    ///
-    /// While `{}`s will always [box] their contents, [pack] will only [box] if necessary.
-    /// ex:  {1 2_3}
-    ///   : ⊐[1 2_3]
-    /// ex:  {1 2 3}
-    ///   : ⊐[1 2 3]
-    /// Because [pack] only [box]es if necessary, it is often best to use [rows] instead of [each] to iterate over results.
-    /// This can avoid potential inconsistencies with [pack]ed arrays.
-    /// ex: A ← ⊐∵⇡ +1⇡4 # Pack boxes
-    ///   : B ← ⊐∵⇡ ↯4 4 # Pack doesn't box
-    ///   : ⊐∵/+ A # ✓ Each element is a boxed list of numbers
-    ///   : ⊐≡/+ A # ✓ Each row is a boxed list of numbers
-    ///   : ⊐∵/+ B # X Each element is a number!
-    ///   : ⊐≡/+ B # ✓ Each row is a list of numbers
-    ///
-    /// [pack] and [fill] are exclusive.
-    /// ex: ⊐⬚0⊟ 1_2 3
-    ///   : ⬚0⊐⊟ 1_2 3
-    ([1], Pack, OtherModifier, ("pack", '⊐')),
+    /// Anything that is [box]ed inside the function will be [un][box]ed as soon as it is used.
+    /// This may lead to unexpected behavior if you are not aware of it.
+    /// ex: ⊐(¯□3) # Used
+    /// ex: ⊐( □3) # Not used
+    ([1], Unpack, OtherModifier, ("unpack", '⊐')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.
     ///
     /// ex: √2
-    /// ex: ⍘√2
+    /// ex: °√2
     ///
-    /// [invert][couple] uncouples a [length]`2` array and pushes both rows onto the stack.
-    /// ex: ⍘⊟ .[1_2_3 4_5_6]
+    /// [un][couple] uncouples a [length]`2` array and pushes both rows onto the stack.
+    /// ex: °⊟ .[1_2_3 4_5_6]
     ///
-    /// [invert][transpose] transposes in the opposite direction.
+    /// [un][transpose] transposes in the opposite direction.
     /// This is useful for arrays with rank `greater than``2`.
-    /// ex: ⍘⍉ .⊟.[1_2_3 4_5_6]
+    /// ex: °⍉ .⊟.[1_2_3 4_5_6]
     ///
-    /// [invert][bits] converts an array of bits into a number.
-    /// ex: ⍘⋯ [1 0 1 0 1 0 1 0]
+    /// [un][bits] converts an array of bits into a number.
+    /// ex: °⋯ [1 0 1 0 1 0 1 0]
     ///
-    /// [invert][sine] gives the arcsine.
-    /// ex: ⍘○ 1
+    /// [un][sine] gives the arcsine.
+    /// ex: °○ 1
     ///
-    /// [invert] can be used with stack array notation and [dip] and [identity] to unpack the items of an array onto the stack.
+    /// [un] can be used with stack array notation and [dip] and [identity] to unpack the items of an array onto the stack.
     /// ex: [⊙⊙∘] 1 2 3
-    /// ex: ⍘[⊙⊙∘] [1 2 3]
+    /// ex: °[⊙⊙∘] [1 2 3]
     ///
     /// While more inverses exists, most of them are not useful on their own.
     /// They are usually used within [under].
-    ([1], Invert, OtherModifier, ("invert", '⍘')),
+    ([1], Un, OtherModifier, ("un", '°')),
     /// Set a function as its own inverse
     ///
     /// ex: # Experimental!
     ///   : F ← ⌅⧻
     ///   : F   1_2_4
-    ///   : ⍘F  1_2_4
+    ///   : °F  1_2_4
     ///   : ⍜F∘ 1_2_4 # Calls ⧻ twice
     /// This is useful when combined with [under]. It allows you to call a function twice with another function in between.
     /// Finding the standard deviation of a list of numbers requires finding the mean twice. Here, we only need to write the mean code once.
@@ -1258,7 +1252,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
     ///   : ;F   @A
-    ///   : ;⍘F  @B
+    ///   : ;°F  @B
     ///   : ;⍜F∘ @C
     ///
     /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
@@ -1293,7 +1287,7 @@ primitive!(
     ///   : ;F 5
     ///   : ;⍜F(×10) 5
     ///
-    /// Inverses set with [setund] cannot be used with [invert]. For simpler inverse defining, see [setinv].
+    /// Inverses set with [setund] cannot be used with [un]. For simpler inverse defining, see [setinv].
     ([3], SetUnder, OtherModifier, "setund"),
     /// Discard the top stack value then call a function
     ///
@@ -1389,23 +1383,23 @@ primitive!(
     ([2], All, Planet, ("all", '⋔')),
     /// Apply a function under another
     ///
-    /// This is a more powerful version of [invert].
+    /// This is a more powerful version of [un].
     /// Conceptually, [under] transforms a value, modifies it, then reverses the transformation.
     ///
     /// [under] takes 2 functions `f` and `g` and another argument `x`.
     /// It applies `f` to `x`, then applies `g` to the result.
     /// It then applies the inverse of `f` to the result of `g`.
     ///
-    /// Any function that can be [invert]ed can be used with [under].
-    /// Some functions that can't be [invert]ed can still be used with [under].
+    /// Any function that can be [un]ed can be used with [under].
+    /// Some functions that can't be [un]ed can still be used with [under].
     ///
     /// Here, we [negate] 5, [subtract] 2, then [negate] again.
     /// ex: ⍜¯(-2) 5
     /// You can use [under] with [round] to round to a specific number of decimal places.
     /// ex: ⍜(×1e3)⁅ π
     ///
-    /// The above examples involve an *arithmetic* under. That is, [invert]`f` is well-definined independent of [under]'s concept of "undoing".
-    /// The remaining examples below involve `f`s which cannot be normally [invert]ed, but which are valid as functions to use with [under].
+    /// The above examples involve an *arithmetic* under. That is, [un]`f` is well-definined independent of [under]'s concept of "undoing".
+    /// The remaining examples below involve `f`s which cannot be normally [un]ed, but which are valid as functions to use with [under].
     ///
     /// [under][deshape] will [reshape] the array after `g` finishes.
     /// ex: ⍜♭⇌ .↯3_4⇡12
@@ -1436,7 +1430,7 @@ primitive!(
     /// For example, this hypotenuse function does not use [both] when undoing because its `g` (`add`) returns a single value.
     /// ex: ⍜∩(×.)+ 3 4
     /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
-    /// ex: ⍜∩⊔(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
+    /// ex: ⍜∩°□(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
     ///
     /// [under] works with [&fo], [&fc], [&tcpa], and [&tcpc]. It calls [&cl] when `g` is done.
     ([2], Under, OtherModifier, ("under", '⍜')),
@@ -1516,10 +1510,6 @@ primitive!(
     ///   :   ⬚[]↻3 ⇡5
     ///   :   ↻1 ⇡5
     ///   : )
-    ///
-    /// [fill] and [pack] are exclusive.
-    /// ex: ⊐⬚0⊟ 1_2 3
-    ///   : ⬚0⊐⊟ 1_2 3
     ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Call a function and catch errors
     ///
@@ -1676,8 +1666,7 @@ primitive!(
     /// ex: regex "\\d+" "123"
     /// ex: P ← $"(\\d{_})"
     ///   : regex $"_-_-_"P3P3P4 "123-456-7890"
-    /// Regex patterns with optional captures can be used with [pack] or [fill].
-    /// ex: ⊐regex "a(b)?" "a ab"
+    /// Regex patterns with optional captures can be used with [fill].
     /// ex: ⬚(□"")regex "a(b)?" "a ab"
     ///
     /// Uiua uses the [Rust regex crate](https://docs.rs/regex/latest/regex/) internally.
@@ -1686,8 +1675,8 @@ primitive!(
     ///
     /// ex: utf "hello!"
     /// ex: utf "❤️"
-    /// You can use [invert] to convert UTF-8 bytes back to a string.
-    /// ex: ⍘utf [226 156 168 32 119 111 119 33]
+    /// You can use [un] to convert UTF-8 bytes back to a string.
+    /// ex: °utf [226 156 168 32 119 111 119 33]
     ///
     /// [utf] is different from just [add]ing or [subtracting] `@\0`.
     /// Character math can only convert to and from UTF-32.
@@ -1710,8 +1699,8 @@ primitive!(
     /// ex: type i
     /// ex: type "hello"
     /// ex: type □[5 6]
-    /// ex: ∵ type   {10 "dog" [1 2 3]}
-    ///   : ∵(type⊔) {10 "dog" [1 2 3]}
+    /// ex: ∵ type    {10 "dog" [1 2 3]}
+    ///   : ∵(type°□) {10 "dog" [1 2 3]}
     (1, Type, Misc, "type"),
     /// Get the current time in seconds
     ///

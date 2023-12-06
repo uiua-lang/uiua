@@ -129,32 +129,32 @@ impl fmt::Display for ImplPrimitive {
         use ImplPrimitive::*;
         use Primitive::*;
         match self {
-            InvTranspose => write!(f, "{Invert}{Transpose}"),
-            InverseBits => write!(f, "{Invert}{Bits}"),
-            InvWhere => write!(f, "{Invert}{Where}"),
-            InvCouple => write!(f, "{Invert}{Couple}"),
-            InvAtan => write!(f, "{Invert}{Atan}"),
-            InvComplex => write!(f, "{Invert}{Complex}"),
-            InvUtf => write!(f, "{Invert}{Utf}"),
-            InvParse => write!(f, "{Invert}{Parse}"),
-            InvFix => write!(f, "{Invert}{Fix}"),
-            InvTrace => write!(f, "{Invert}{Trace}"),
-            InvStack => write!(f, "{Invert}{Stack}"),
-            InvDump => write!(f, "{Invert}{Dump}"),
-            Untake => write!(f, "{Invert}{Take}"),
-            Undrop => write!(f, "{Invert}{Drop}"),
-            Unselect => write!(f, "{Invert}{Select}"),
-            Unpick => write!(f, "{Invert}{Pick}"),
-            Unpartition => write!(f, "{Invert}{Partition}"),
+            InvTranspose => write!(f, "{Un}{Transpose}"),
+            InverseBits => write!(f, "{Un}{Bits}"),
+            InvWhere => write!(f, "{Un}{Where}"),
+            InvCouple => write!(f, "{Un}{Couple}"),
+            InvAtan => write!(f, "{Un}{Atan}"),
+            InvComplex => write!(f, "{Un}{Complex}"),
+            InvUtf => write!(f, "{Un}{Utf}"),
+            InvParse => write!(f, "{Un}{Parse}"),
+            InvFix => write!(f, "{Un}{Fix}"),
+            InvTrace => write!(f, "{Un}{Trace}"),
+            InvStack => write!(f, "{Un}{Stack}"),
+            InvDump => write!(f, "{Un}{Dump}"),
+            Untake => write!(f, "{Un}{Take}"),
+            Undrop => write!(f, "{Un}{Drop}"),
+            Unselect => write!(f, "{Un}{Select}"),
+            Unpick => write!(f, "{Un}{Pick}"),
+            Unpartition => write!(f, "{Un}{Partition}"),
             Cos => write!(f, "{Sin}{Add}{Eta}"),
-            Asin => write!(f, "{Invert}{Sin}"),
-            Acos => write!(f, "{Invert}{Cos}"),
+            Asin => write!(f, "{Un}{Sin}"),
+            Acos => write!(f, "{Un}{Cos}"),
             Last => write!(f, "{First}{Reverse}"),
-            Unfirst => write!(f, "{Invert}{First}"),
-            Unlast => write!(f, "{Invert}{Last}"),
-            Unkeep => write!(f, "{Invert}{Keep}"),
-            Unrerank => write!(f, "{Invert}{Rerank}"),
-            Ungroup => write!(f, "{Invert}{Group}"),
+            Unfirst => write!(f, "{Un}{First}"),
+            Unlast => write!(f, "{Un}{Last}"),
+            Unkeep => write!(f, "{Un}{Keep}"),
+            Unrerank => write!(f, "{Un}{Rerank}"),
+            Ungroup => write!(f, "{Un}{Group}"),
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
             LastMinIndex => write!(f, "{First}{Reverse}{Rise}"),
@@ -256,7 +256,14 @@ impl Primitive {
         FormatPrimitive(*self)
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
-        None
+        match self {
+            Primitive::Unbox => Some(format!(
+                "use {} {} instead",
+                Primitive::Un.format(),
+                Primitive::Box.format(),
+            )),
+            _ => None,
+        }
     }
     /// Check if this primitive is experimental
     pub fn is_experimental(&self) -> bool {
@@ -503,13 +510,13 @@ impl Primitive {
             Primitive::Gap => {
                 return Err(env.error("Gap was not inlined. This is a bug in the interpreter"))
             }
-            Primitive::Invert => {
+            Primitive::Un => {
                 return Err(env.error("Invert was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Under => {
                 return Err(env.error("Under was not inlined. This is a bug in the interpreter"))
             }
-            Primitive::Pack => {
+            Primitive::Unpack => {
                 let f = env.pop_function()?;
                 env.with_pack(|env| env.call(f))?;
             }
@@ -725,7 +732,7 @@ impl ImplPrimitive {
             ImplPrimitive::LastMinIndex => env.monadic_ref_env(Value::last_min_index)?,
             ImplPrimitive::LastMaxIndex => env.monadic_ref_env(Value::last_max_index)?,
             ImplPrimitive::FirstWhere => env.monadic_ref_env(Value::first_where)?,
-            ImplPrimitive::InvParse => env.monadic_ref(ToString::to_string)?,
+            ImplPrimitive::InvParse => env.monadic_ref_env(Value::inv_parse)?,
             ImplPrimitive::InvFix => env.monadic_mut(Value::inv_fix)?,
         }
         Ok(())
@@ -772,7 +779,7 @@ fn regex(env: &mut Uiua) -> UiuaResult {
 fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
     let val = env.pop(1)?;
     let span: String = if inverse {
-        format!("{} {}", env.span(), Primitive::Invert)
+        format!("{}{} {}", Primitive::Un, Primitive::Trace, env.span())
     } else {
         env.span().to_string()
     };
@@ -794,9 +801,9 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
 
 fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
     let span = if inverse {
-        format!("? {} {}", env.span(), Primitive::Invert)
+        format!("{}{} {}", Primitive::Un, Primitive::Stack, env.span())
     } else {
-        format!("? {}", env.span())
+        format!("{} {}", Primitive::Stack, env.span())
     };
     let items = env.clone_stack_top(env.stack_height());
     let max_line_len = span.chars().count() + 2;
@@ -836,9 +843,9 @@ fn dump(env: &mut Uiua, inverse: bool) -> UiuaResult {
         )));
     }
     let span = if inverse {
-        format!("dump {} {}", env.span(), Primitive::Invert)
+        format!("{}{} {}", Primitive::Un, Primitive::Dump, env.span())
     } else {
-        format!("dump {}", env.span())
+        format!("{} {}", Primitive::Dump, env.span())
     };
     let unprocessed = env.clone_stack_top(env.stack_height());
     let mut items = Vec::new();

@@ -531,7 +531,6 @@ impl Uiua {
             }
             Word::Func(func) => self.func(func, word.span)?,
             Word::Switch(sw) => self.switch(sw, word.span, call)?,
-            Word::Ocean(prims) => self.ocean(prims, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call)?,
             Word::Modified(m) => self.modified(*m, call)?,
             Word::Placeholder(sig) => {
@@ -595,28 +594,6 @@ impl Uiua {
             }
         } else {
             return Err(span.sp(format!("Unknown identifier `{ident}`")).into());
-        }
-        Ok(())
-    }
-    fn ocean(&mut self, prims: Vec<Sp<Primitive>>, call: bool) -> UiuaResult {
-        if call {
-            for prim in prims.into_iter().rev() {
-                self.primitive(prim.value, prim.span, true)?;
-            }
-        } else {
-            self.new_functions.push(EcoVec::new());
-            let span = prims
-                .first()
-                .unwrap()
-                .span
-                .clone()
-                .merge(prims.last().unwrap().span.clone());
-            for prim in prims.into_iter().rev() {
-                self.primitive(prim.value, prim.span, true)?;
-            }
-            let instrs = self.new_functions.pop().unwrap();
-            let function = Function::new(FunctionId::Anonymous(span), instrs, Signature::new(1, 1));
-            self.push_instr(Instr::PushFunc(function));
         }
         Ok(())
     }
@@ -875,15 +852,35 @@ impl Uiua {
             return Ok(());
         }
 
+        let instrs = self.compile_words(modified.operands, false)?;
+
+        // Reduce monadic deprectation message
+        if let (Modifier::Primitive(Primitive::Reduce), [Instr::PushFunc(f)]) =
+            (&modified.modifier.value, instrs.as_slice())
+        {
+            if f.signature().args == 1 {
+                self.diagnostic_with_span(
+                    format!(
+                        "{} with a monadic function is deprecated. \
+                        Prefer {} with stack array notation.",
+                        Primitive::Reduce.format(),
+                        Primitive::Un.format()
+                    ),
+                    DiagnosticKind::Warning,
+                    modified.modifier.span.clone(),
+                );
+            }
+        }
+
         if call {
-            self.words(modified.operands, false)?;
+            self.extend_instrs(instrs);
             match modified.modifier.value {
                 Modifier::Primitive(prim) => self.primitive(prim, modified.modifier.span, true)?,
                 Modifier::Ident(ident) => self.ident(ident, modified.modifier.span, true)?,
             }
         } else {
             self.new_functions.push(EcoVec::new());
-            self.words(modified.operands, false)?;
+            self.extend_instrs(instrs);
             match modified.modifier.value {
                 Modifier::Primitive(prim) => {
                     self.primitive(prim, modified.modifier.span.clone(), true)?
@@ -1055,7 +1052,7 @@ impl Uiua {
                 }
                 Ok(true)
             }
-            Invert => {
+            Un => {
                 let mut operands = modified.code_operands().cloned();
                 let f = operands.next().unwrap();
                 let span = f.span.clone();

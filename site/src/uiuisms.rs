@@ -139,7 +139,7 @@ uiuisms!(
     /// Convert a number to a string
     r#"$"_" 17"#,
     /// Convert a string to a number
-    r#"parse "42""#,
+    r#"⋕ "42""#,
     /// Convert a string to a list of code points
     r#"-@\0 "Uiua""#,
     /// Convert a list of code points to a string

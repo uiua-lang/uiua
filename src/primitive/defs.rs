@@ -696,6 +696,12 @@ primitive!(
     ///
     /// Boxes are created with [box].
     (1, Unbox, MonadicArray, ("unbox", '⊔')),
+    /// Parse a string as a number
+    ///
+    /// ex: ⋕ "17"
+    /// ex: ⋕ "3.1415926535897932"
+    /// ex! ⋕ "dog"
+    (1, Parse, Misc, ("parse", '⋕')),
     /// Check if two arrays are exactly the same
     ///
     /// ex: ≍ 1_2_3 [1 2 3]
@@ -1525,12 +1531,12 @@ primitive!(
     /// ex: ⍣(⍤5 0 3)(×5)
     /// If the first function has the signature `|n.r`, then the second function must have the signature `|(n+1).r`. The additional value is the error.
     /// If you don't care about the input values, you can simply [pop] them.
-    /// ex: ⍣parse; "dog"
-    /// ex: ⍣parse(0;;) "dog"
-    /// ex: ⍣parse(0;;) "5"
+    /// ex: ⍣⋕; "dog"
+    /// ex: ⍣⋕(0;;) "dog"
+    /// ex: ⍣⋕(0;;) "5"
     /// [gap] can often look nicer.
-    /// ex: ⍣parse⋅⋅0 "dog"
-    /// ex: ⍣parse⋅⋅0 "5"
+    /// ex: ⍣⋕⋅⋅0 "dog"
+    /// ex: ⍣⋕⋅⋅0 "5"
     ([2], Try, Misc, ("try", '⍣')),
     /// Throw an error if a condition is not met
     ///
@@ -1657,12 +1663,6 @@ primitive!(
     /// ex: deal⚂ [1 2 3 4 5]
     /// ex: deal⚂ [1_2 3_4 5_6 7_8]
     (2, Deal, Misc, "deal"),
-    /// Parse a string as a number
-    ///
-    /// ex: parse "17"
-    /// ex: parse "3.1415926535897932"
-    /// ex! parse "dog"
-    (1, Parse, Misc, "parse"),
     /// Match a regex pattern
     ///
     /// Returns a rank-2 array of [box]ed strings, with one string per matching group and one row per match

@@ -939,9 +939,9 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p>"The "<Prim prim=Try/>" modifier takes two functions. If the first function throws an error, the second function is called with the same arguments plus an error message."</p>
         <p>"We can see how this works by using it with "<Prim prim=Parse/>"."</p>
         <p>"If the parsing fails, we "<Prim prim=Box/>" "<Prim prim=Both/>" the argument and the error message and put them in an array."</p>
-        <Editor example="f ← ⍣parse[∩□]\nf \"5\"\nf \"dog\""/>
+        <Editor example="f ← ⍣⋕[∩□]\nf \"5\"\nf \"dog\""/>
         <p>"If we don't care about an error and just want to supply a default value, we can use "<Prim prim=Gap/>" to discard the argument and error message."</p>
-        <Editor example="f ← ⍣parse⋅⋅0\nf \"5\"\nf \"dog\""/>
+        <Editor example="f ← ⍣⋕⋅⋅0\nf \"5\"\nf \"dog\""/>
 
         <h2 id="switch">"Switch Functions"</h2>
         <p>"A "<A href="/docs/advancedstack#function-packs">"function pack"</A>" that is used outside a modifier becomes a "<em>"switch function"</em>". Switch functions take an array of natural numbers called the "<em>"selector"</em>" and call the function at the corresponding index in the pack."</p>

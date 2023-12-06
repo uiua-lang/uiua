@@ -1009,12 +1009,6 @@ primitive!(
     /// It is optimized in the interpreter to be very fast.
     /// ex: /⊂ .↯2_2_4⇡16
     ///
-    /// [reduce]'s function may take more than 2 arguments.
-    /// To show what this does, we can put the arguments in a box array.
-    /// /{⊙⊙∘} ⇡9
-    /// One use case for this is to call a function with the rows of an array as arguments.
-    /// ≡/(+⊂) [1_2_3 4_5_6 7_8_9]
-    ///
     /// Some functions have default values if the array is empty.
     /// Functions without default values will throw an error if the array is empty.
     /// ex: /+ []

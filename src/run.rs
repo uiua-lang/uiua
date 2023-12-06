@@ -904,10 +904,6 @@ code:
         self.function_stack.clear();
         take(&mut self.stack)
     }
-    pub(crate) fn reverse_stack(&mut self, n: usize) {
-        let at = self.stack.len() - n;
-        self.stack[at..].reverse();
-    }
     /// Pop a function from the function stack
     pub fn pop_function(&mut self) -> UiuaResult<Function> {
         self.function_stack.pop().ok_or_else(|| {

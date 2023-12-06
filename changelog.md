@@ -7,10 +7,11 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - [`fix` `¤`](https://uiua.org/docs/fix) now works with binary pervasive functions
+  - This removes the need for some uses of [`rows` `≡`](https://uiua.org/docs/rows) and should be a bit faster
 - [`fill` `⬚`](https://uiua.org/docs/fill) can now be disabled for a function by filling with an empty list
 - [`parse` `⋕`](https://uiua.org/docs/parse) now has a glyph and is semi-pervasive
+  - It was being used enough to warrant a glyph
 - [`sign` `±`](https://uiua.org/docs/sign), [`floor` `⌊`](https://uiua.org/docs/floor), [`ceiling` `⌈`](https://uiua.org/docs/ceiling), and [`round` `⁅`](https://uiua.org/docs/round) now work with [`under` `⍜`](https://uiua.org/docs/under)
-- [`reduce` `/`](https://uiua.org/docs/reduce) can now use a function that takes more than 2 arguments
 - Add some missing arithmetic inverses and unders involving [`flip` `:`](https://uiua.org/docs/flip)
 - Change `pack`'s name to [`unpack` `⊐`](https://uiua.org/docs/unpack), and it no longer implicitly boxes values (only unboxes them)
   - Implicit boxing could lead to unexpected and inconsistent behavior

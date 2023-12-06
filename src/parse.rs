@@ -1092,7 +1092,11 @@ fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan, Option<Dia
                 for line in &func.lines {
                     max_width = max_width.max(count_width(line)?);
                 }
-                count += max_width + (func.lines.len() == 1) as usize;
+                if func.lines.len() == 1 {
+                    count += max_width + 1;
+                } else {
+                    count = max_width.max(count + 1);
+                }
             }
             Word::Switch(sw) => {
                 if word.span.start.line == word.span.end.line {
@@ -1109,10 +1113,9 @@ fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan, Option<Dia
                             max_width = max_width.max(count_width(line)?);
                         }
                     }
-                    count += max_width;
+                    count = max_width.max(count + 1);
                 };
             }
-            Word::Ocean(ocean) => count += ocean.len(),
             Word::Modified(m) => count += count_width(&m.operands)? + 1,
             Word::Spaces | Word::BreakLine | Word::UnbreakLine | Word::Comment(_) => {}
         }

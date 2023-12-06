@@ -767,6 +767,15 @@ X 5"/>
         <p>"If the compiler cannot derive the stack signature of a function and you give it one which is "<em>"wrong"</em>", the function will throw an error at runtime."</p>
         <Editor example="f = |1.2 /∘\nf [1 2 3]"/> // Should fail
 
+        <h2 id="proxy">"Proxy Values"</h2>
+        <p>"Some iterating modifiers use what are called "<em>"proxy values"</em>" if the iterated array is empty. The modifier's function is called on these values if the array is empty. The ensures the the result has the correct shape and type, even if the function is never run on the actual values."</p>
+        <p>"The following example would produce inconsistent results if the proxy value was not used."</p>
+        <Editor example="△≡⇌↯3_4⇡12\n△≡⇌↯0_4⇡12"/>
+        <p>"There are some ways to make the proxy value visible."</p>
+        <Editor example="≡(&p.) []"/>
+        <p>"To avoid this case, you can conditionally iterate. This example uses a "<A href="/docs/controlflow#switch">"switch function"</A>", which will be explained in a "<A href="/docs/controlflow">"later section"</A>"."</p>
+        <Editor example="(∘|≡(&p.))±⧻. []"/>
+
         <h2 id="challenges">"Challenges"</h2>
 
         <Challenge

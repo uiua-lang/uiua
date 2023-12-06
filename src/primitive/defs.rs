@@ -1039,6 +1039,12 @@ primitive!(
     /// ex: \+   1_2_3_4
     /// ex: \-   1_2_3_4
     /// ex: \(-:) 1_2_3_4
+    /// [scan] is often used to do something with masks.
+    /// [scan]ning with [minimum] or [maximum] will propogate `0`s or `1`s.
+    /// ex: ▽\↧≠@ . "Hello World!"
+    /// [scan]ning with [add] and then using [group] can split by a delimiter while keeping the delimiter.
+    /// ex: ⊕□\+=@    . "Everyday man's on the block"
+    ///   : ⊕□\+↻¯1=@ . "Everyday man's on the block"
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or arrays.
     ///

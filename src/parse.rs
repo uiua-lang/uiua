@@ -586,38 +586,70 @@ impl Parser {
             mod_span.clone()
         };
 
-        if let Modifier::Primitive(Primitive::Bracket) = &modifier {
-            let mut operands = Vec::new();
-            if let Some(Sp {
-                value: Word::Switch(sw),
-                ..
-            }) = args.first()
-            {
-                operands.extend(
-                    sw.branches
-                        .iter()
-                        .map(|branch| Word::Func(branch.value.clone())),
-                );
-            } else {
-                operands.extend(
-                    args.iter()
-                        .map(|arg| &arg.value)
-                        .filter(|word| word.is_code())
-                        .cloned(),
-                );
+        match &modifier {
+            Modifier::Primitive(Primitive::Invert) => {
+                single_word_and(&args, |inverted| {
+                    if let Word::Array(arr) = &inverted.value {
+                        single_word_and(arr.lines.iter().flatten(), |m| {
+                            if let Word::Modified(m) = &m.value {
+                                let Modified { modifier, operands } = &**m;
+                                if let Modifier::Primitive(Primitive::Dip) = modifier.value {
+                                    single_word_and(operands, |f| {
+                                        if matches!(f.value, Word::Primitive(Primitive::Identity)) {
+                                            self.diagnostics.push(Diagnostic::new(
+                                                format!(
+                                                    "Prefer `{}{}` over `{}[{}{}]`",
+                                                    Primitive::Invert,
+                                                    Primitive::Couple,
+                                                    Primitive::Invert,
+                                                    Primitive::Dip,
+                                                    Primitive::Identity
+                                                ),
+                                                span.clone(),
+                                                DiagnosticKind::Style,
+                                            ));
+                                        }
+                                    })
+                                }
+                            }
+                        })
+                    }
+                });
             }
-            if operands.len() == 2 && operands[0] == operands[1] {
-                self.diagnostics.push(Diagnostic::new(
-                    format!(
-                        "{}'s functions are the same, so it \
+            Modifier::Primitive(Primitive::Bracket) => {
+                let mut operands = Vec::new();
+                if let Some(Sp {
+                    value: Word::Switch(sw),
+                    ..
+                }) = args.first()
+                {
+                    operands.extend(
+                        sw.branches
+                            .iter()
+                            .map(|branch| Word::Func(branch.value.clone())),
+                    );
+                } else {
+                    operands.extend(
+                        args.iter()
+                            .map(|arg| &arg.value)
+                            .filter(|word| word.is_code())
+                            .cloned(),
+                    );
+                }
+                if operands.len() == 2 && operands[0] == operands[1] {
+                    self.diagnostics.push(Diagnostic::new(
+                        format!(
+                            "{}'s functions are the same, so it \
                                 can be replaced with {}.",
-                        Primitive::Bracket.format(),
-                        Primitive::Both.format(),
-                    ),
-                    span.clone(),
-                    DiagnosticKind::Advice,
-                ));
+                            Primitive::Bracket.format(),
+                            Primitive::Both.format(),
+                        ),
+                        span.clone(),
+                        DiagnosticKind::Advice,
+                    ));
+                }
             }
+            _ => (),
         }
 
         Some(span.sp(Word::Modified(Box::new(Modified {
@@ -1092,5 +1124,16 @@ fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan, Option<Dia
         Err((count, first.merge(last), kind))
     } else {
         Ok(count)
+    }
+}
+
+fn single_word_and<'a, I>(words: I, mut f: impl FnMut(&Sp<Word>))
+where
+    I: IntoIterator<Item = &'a Sp<Word>>,
+    I::IntoIter: Clone,
+{
+    let mut iter = words.into_iter();
+    if iter.clone().filter(|w| w.value.is_code()).count() == 1 {
+        f(iter.find(|w| w.value.is_code()).unwrap())
     }
 }

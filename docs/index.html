@@ -35,9 +35,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="A stack-based array programming language">
-  <script type="module">import init from '/site-2e918e18c947b64c.js';init('/site-2e918e18c947b64c_bg.wasm');</script>
+  <script type="module">import init from '/site-838546f877e9dfe7.js';init('/site-838546f877e9dfe7_bg.wasm');</script>
   
-  <link rel="stylesheet" href="/styles-dab8dcd41f2002fb.css">
+  <link rel="stylesheet" href="/styles-6385626079c368ac.css">
   
   
   
@@ -49,8 +49,8 @@
   
   
 
-<link rel="preload" href="/site-2e918e18c947b64c_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
-<link rel="modulepreload" href="/site-2e918e18c947b64c.js"></head>
+<link rel="preload" href="/site-838546f877e9dfe7_bg.wasm" as="fetch" type="application/wasm" crossorigin="">
+<link rel="modulepreload" href="/site-838546f877e9dfe7.js"></head>
 
 <body>
   <div id="top">
@@ -92,4 +92,31 @@
   </div>
 
 
-</body></html>
+<script>(function () {
+    var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    var url = protocol + '//' + window.location.host + '/_trunk/ws';
+    var poll_interval = 5000;
+    var reload_upon_connect = () => {
+        window.setTimeout(
+            () => {
+                // when we successfully reconnect, we'll force a
+                // reload (since we presumably lost connection to
+                // trunk due to it being killed, so it will have
+                // rebuilt on restart)
+                var ws = new WebSocket(url);
+                ws.onopen = () => window.location.reload();
+                ws.onclose = reload_upon_connect;
+            },
+            poll_interval);
+    };
+
+    var ws = new WebSocket(url);
+    ws.onmessage = (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.reload) {
+            window.location.reload();
+        }
+    };
+    ws.onclose = reload_upon_connect;
+})()
+</script></body></html>

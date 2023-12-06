@@ -166,6 +166,8 @@ uiuisms!(
     r#"⊐/⊂ {"a" "bc" "def"}"#,
     /// Find the nth fibonacci number
     ";⍥(+,:)⊙.:1 10",
+    /// Find the GCD of two numbers
+    ";⍢(⊃◿∘|≠0) 35 360",
     /// Remove all instances of an element from a list
     "▽≠, 4 [1 4 2 0 5 4 3]",
     /// Remove first instance of an element from an array
@@ -195,11 +197,11 @@ uiuisms!(
     /// Trim whitespace
     r#"▽×⍜(⊟⇌)≡\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a 2d matrix
-    "30 [0_1 1_0]\n/⊂⍉/⊂∵▽⊃∘(⍉∵▽)",
+    "30 [0_1 1_0]\n⊙;⍥(⍉▽↯⧻,,)2:",
     /// Upscale a colored image
-    "[[0_0_1 0_1_0] [1_0_0 0_0_0]]\n⍜⍘⍉≡(⍉▽↯⧻,⊙(⍉▽):↯⊙.⧻,30)",
+    "30 [[0_0_1 0_1_0] [1_0_0 0_0_0]]\n⊙;⍉⍥(⍉▽↯⧻,,)2:",
     /// Linearly interpolate between two values
-    "+⊃∘(×-) 0 10 0.2",
+    "⍜-× 10 0 0.2\n⍜⊙-× 0.2 10 0",
     /// Set the value of an array at an index
     "⍜⊏; 2 1_2_3_4 10",
     /// Create a matrix of random 0s or 1s
@@ -218,4 +220,6 @@ uiuisms!(
     "4 [1_2 3_4]\n⊙;⍥(⊠(/+×)⊙⍉,):⊞=.⇡⬚1⊢△,",
     /// Repeat a function and collect intermediate results into an array
     "[⍥(×2.)] 10 1",
+    /// Pad an array with 0s
+    "[1_2_3 4_5_6]\n↻↯⊃(⧻|¯1|⬚0↙+2)△."
 );

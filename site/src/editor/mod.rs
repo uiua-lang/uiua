@@ -675,24 +675,22 @@ pub fn Editor<'a>(
         };
         // Show the glyph doc on mouseover
         let onmouseover = move |_| {
-            if let Some(doc) = prim.doc() {
-                set_glyph_doc.set(
-                    view! {
-                        <Prim prim=prim/>
-                        { prim.is_experimental().then(||
-                            view! {
-                                <span class="experimental" style="font-size: 0.8em;">
-                                    "⚠️ Experimental"
-                                </span>
-                            }
-                        ) }
-                        <br/>
-                        { doc.short_text().into_owned() }
-                    }
-                    .into_view(),
-                );
-                _ = glyph_doc_element().style().remove_property("display");
-            }
+            set_glyph_doc.set(
+                view! {
+                    <Prim prim=prim/>
+                    { prim.is_experimental().then(||
+                        view! {
+                            <span class="experimental" style="font-size: 0.8em;">
+                                "⚠️ Experimental"
+                            </span>
+                        }
+                    ) }
+                    <br/>
+                    { prim.doc().short_text().into_owned() }
+                }
+                .into_view(),
+            );
+            _ = glyph_doc_element().style().remove_property("display");
         };
         Some(
             view! {

@@ -312,7 +312,8 @@ pub fn Prim(
         title.push(':');
         title.push('\n');
     }
-    if let Some(doc) = prim.doc().filter(|_| !hide_docs) {
+    if !hide_docs {
+        let doc = prim.doc();
         if glyph_only && !title.is_empty() && !matches!(prim, Primitive::Sys(_)) {
             title.push_str(": ");
         }

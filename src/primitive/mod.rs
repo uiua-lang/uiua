@@ -1211,25 +1211,23 @@ mod tests {
     #[test]
     fn prim_docs() {
         for prim in Primitive::non_deprecated() {
-            if let Some(doc) = prim.doc() {
-                for line in &doc.lines {
-                    if let PrimDocLine::Example(ex) = line {
-                        if !ex.should_run() {
-                            continue;
+            for line in &prim.doc().lines {
+                if let PrimDocLine::Example(ex) = line {
+                    if !ex.should_run() {
+                        continue;
+                    }
+                    println!("{prim} example:\n{}", ex.input);
+                    let mut env = Uiua::with_native_sys();
+                    if let Err(e) = env.load_str(&ex.input) {
+                        if !ex.should_error {
+                            panic!("\nExample failed:\n{}\n{}", ex.input, e.report());
                         }
-                        println!("{prim} example:\n{}", ex.input);
-                        let mut env = Uiua::with_native_sys();
-                        if let Err(e) = env.load_str(&ex.input) {
-                            if !ex.should_error {
-                                panic!("\nExample failed:\n{}\n{}", ex.input, e.report());
-                            }
-                        } else if let Some(diag) = env.take_diagnostics().into_iter().next() {
-                            if !ex.should_error {
-                                panic!("\nExample failed:\n{}\n{}", ex.input, diag.report());
-                            }
-                        } else if ex.should_error {
-                            panic!("Example should have failed: {}", ex.input);
+                    } else if let Some(diag) = env.take_diagnostics().into_iter().next() {
+                        if !ex.should_error {
+                            panic!("\nExample failed:\n{}\n{}", ex.input, diag.report());
                         }
+                    } else if ex.should_error {
+                        panic!("Example should have failed: {}", ex.input);
                     }
                 }
             }

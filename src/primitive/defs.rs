@@ -141,15 +141,12 @@ macro_rules! primitive {
                 }
             }
             /// Get the primitive's documentation
-            pub fn doc(&self) -> Option<&'static PrimDoc> {
+            pub fn doc(&self) -> &'static PrimDoc {
                 match self {
                     $(Primitive::$variant => {
                         let doc_str = concat!($doc_rust, $($doc, "\n"),*);
                         static DOC: OnceLock<PrimDoc> = OnceLock::new();
-                        if doc_str.is_empty() {
-                            return None;
-                        }
-                        Some(DOC.get_or_init(|| PrimDoc::from_lines(doc_str)))
+                        DOC.get_or_init(|| PrimDoc::from_lines(doc_str))
                     },)*
                     Primitive::Sys(op) => op.doc(),
                 }

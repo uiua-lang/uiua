@@ -531,25 +531,16 @@ fn set_code_html(id: &str, code: &str) {
             html.push_str(&match kind {
                 SpanKind::Primitive(prim) => {
                     let name = prim.name();
-                    if let Some(doc) = prim.doc() {
-                        let mut title = format!("{}: {}", name, doc.short_text());
-                        if let Some(ascii) = prim.ascii() {
-                            title = format!("({}) {}", ascii, title);
-                        }
-                        format!(
-                            r#"<span 
+                    let mut title = format!("{}: {}", name, prim.doc().short_text());
+                    if let Some(ascii) = prim.ascii() {
+                        title = format!("({}) {}", ascii, title);
+                    }
+                    format!(
+                        r#"<span 
                             class="code-span code-hover {color_class}" 
                             data-title={title:?}>{}</span>"#,
-                            escape_html(&text)
-                        )
-                    } else {
-                        format!(
-                            r#"<span 
-                            class="code-span code-hover {color_class}" 
-                            data-title={name:?}>{}</span>"#,
-                            escape_html(&text)
-                        )
-                    }
+                        escape_html(&text)
+                    )
                 }
                 SpanKind::Ident if text == "i" => r#"<span 
                             class="code-span code-hover noadic-function" 

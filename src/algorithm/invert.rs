@@ -231,6 +231,12 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(EcoVec<Instr
         };
     }
 
+    macro_rules! round {
+        ($before:expr) => {
+            pat!($before, (Dup, $before, Flip, Over, Sub, Flip), (Add))
+        };
+    }
+
     let patterns: &[&dyn UnderPattern] = &[
         &UnderPatternFn(under_dump_pattern, "dump"),
         &UnderPatternFn(under_rows_pattern, "rows"),
@@ -274,6 +280,9 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(EcoVec<Instr
                 (1, Flip, Div, PopTempN(1), Flip, Pow)
             ),
         ),
+        &round!(Floor),
+        &round!(Ceil),
+        &round!(Round),
         &(Val, stash2!(Take, Untake)),
         &stash2!(Take, Untake),
         &(Val, stash2!(Drop, Undrop)),

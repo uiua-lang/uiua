@@ -587,7 +587,7 @@ impl Parser {
         };
 
         match &modifier {
-            Modifier::Primitive(Primitive::Invert) => {
+            Modifier::Primitive(Primitive::Un) => {
                 single_word_and(&args, |inverted| {
                     if let Word::Array(arr) = &inverted.value {
                         if arr_is_di(arr) {
@@ -595,11 +595,11 @@ impl Parser {
                             self.diagnostics.push(Diagnostic::new(
                                 format!(
                                     "Prefer `{}{}` ({}{}) over `{}[{}{}]`",
-                                    Primitive::Invert,
+                                    Primitive::Un,
                                     Primitive::Couple,
-                                    Primitive::Invert.name(),
+                                    Primitive::Un.name(),
                                     Primitive::Couple.name(),
-                                    Primitive::Invert,
+                                    Primitive::Un,
                                     Primitive::Dip,
                                     Primitive::Identity
                                 ),

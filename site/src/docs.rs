@@ -278,6 +278,7 @@ fn aliases() -> HashMap<&'static str, &'static [Primitive]> {
         ("split", &[Primitive::Partition]),
         ("while", &[Primitive::Do]),
         ("for", &[Primitive::Repeat]),
+        ("invert", &[Primitive::Un]),
     ]
     .into()
 }

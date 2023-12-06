@@ -31,13 +31,13 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
         }
         (Some((prim, flipped)), Value::Num(nums)) => {
             if let Err(nums) = reduce_nums(prim, flipped, nums, env) {
-                return generic_fold_right_1(f, Value::Num(nums), None, env);
+                return generic_reduce(f, Value::Num(nums), env);
             }
         }
 
         (Some((prim, flipped)), Value::Complex(nums)) => {
             if let Err(nums) = reduce_coms(prim, flipped, nums, env) {
-                return generic_fold_right_1(f, Value::Complex(nums), None, env);
+                return generic_reduce(f, Value::Complex(nums), env);
             }
         }
         #[cfg(feature = "bytes")]
@@ -54,9 +54,9 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             Primitive::Atan => fast_reduce(bytes.convert(), 0.0, atan2::num_num),
             Primitive::Max => fast_reduce(bytes.convert(), f64::NEG_INFINITY, max::num_num),
             Primitive::Min => fast_reduce(bytes.convert(), f64::INFINITY, min::num_num),
-            _ => return generic_fold_right_1(f, Value::Byte(bytes), None, env),
+            _ => return generic_reduce(f, Value::Byte(bytes), env),
         }),
-        (_, xs) => generic_fold_right_1(f, xs, None, env)?,
+        (_, xs) => generic_reduce(f, xs, env)?,
     }
     Ok(())
 }
@@ -142,28 +142,18 @@ where
     }
 }
 
-fn generic_fold_right_1(f: Function, xs: Value, init: Option<Value>, env: &mut Uiua) -> UiuaResult {
+fn generic_reduce(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
-    if sig.outputs > 1 {
-        return Err(env.error(format!(
-            "{}'s function must return 0 or 1 values, but {} returns {}",
-            Primitive::Reduce.format(),
-            f,
-            sig.outputs
-        )));
-    }
-    let args = sig.args;
-    match args {
+    match sig.args {
         0 | 1 => {
-            let rows = init.into_iter().chain(xs.into_rows());
-            for row in rows {
+            for row in xs.into_rows() {
                 env.push(row);
                 env.call(f.clone())?;
             }
         }
         2 => {
             let mut rows = xs.into_rows();
-            let mut acc = init.or_else(|| rows.next()).ok_or_else(|| {
+            let mut acc = rows.next().ok_or_else(|| {
                 env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
             })?;
             for row in rows {
@@ -175,10 +165,35 @@ fn generic_fold_right_1(f: Function, xs: Value, init: Option<Value>, env: &mut U
             env.push(acc);
         }
         args => {
-            return Err(env.error(format!(
-                "Cannot {} a function that takes {args} arguments",
-                Primitive::Reduce.format(),
-            )))
+            let row_count = xs.row_count();
+            if row_count == 0 {
+                return Err(env.error(format!("Cannot {} empty array", Primitive::Reduce.format())));
+            }
+            if (row_count - 1) % (args - 1) != 0 {
+                return Err(env.error(format!(
+                    "{}'s function takes {} values, so the array's length \
+                    must be 1 + a multitple of {}, but the length is {}",
+                    Primitive::Reduce.format(),
+                    args,
+                    args - 1,
+                    row_count
+                )));
+            }
+            let mut rows = xs.into_rows();
+            let mut acc = rows.next().unwrap();
+            let mut temp_args = Vec::with_capacity(args - 1);
+            for _ in 0..row_count / (args - 1) {
+                for _ in 0..args - 1 {
+                    temp_args.push(rows.next().unwrap());
+                }
+                for arg in temp_args.drain(..).rev() {
+                    env.push(arg);
+                }
+                env.push(acc);
+                env.call(f.clone())?;
+                acc = env.pop("reduced function result")?;
+            }
+            env.push(acc);
         }
     }
     Ok(())

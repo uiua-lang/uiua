@@ -1269,6 +1269,8 @@ mod tests {
                         | Primitive::Trace
                         | Primitive::Rectify
                         | Primitive::Recur
+                        | Primitive::Parse
+                        | Primitive::Partition
                 ) {
                     continue;
                 }

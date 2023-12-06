@@ -496,12 +496,12 @@ fn invert_rectify_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>)> 
 }
 
 fn invert_setinverse_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>)> {
-    let [Instr::PushFunc(inv), Instr::PushFunc(_), Instr::Prim(Primitive::SetInverse, _), input @ ..] =
+    let [inv @ Instr::PushFunc(_), normal @ Instr::PushFunc(_), set @ Instr::Prim(Primitive::SetInverse, _), input @ ..] =
         input
     else {
         return None;
     };
-    Some((input, inv.instrs.clone()))
+    Some((input, eco_vec![normal.clone(), inv.clone(), set.clone(),]))
 }
 
 fn invert_setunder_setinverse_pattern(input: &[Instr]) -> Option<(&[Instr], EcoVec<Instr>)> {

@@ -16,8 +16,9 @@ use tinyvec::tiny_vec;
 use crate::{
     array::*,
     cowslice::{cowslice, CowSlice},
+    grid_fmt::GridFmt,
     value::Value,
-    Uiua, UiuaResult,
+    Boxed, Uiua, UiuaResult,
 };
 
 use super::{ArrayCmpSlice, FillContext};
@@ -63,28 +64,77 @@ impl Value {
     }
     /// Attempt to parse the value into a number
     pub fn parse_num(&self, env: &Uiua) -> UiuaResult<Self> {
-        let mut s = self.as_string(env, "Parsed array must be a string")?;
-        if s.contains('¯') {
-            s = s.replace('¯', "-");
+        Ok(match (self, self.shape()) {
+            (Value::Char(arr), [] | [_]) => {
+                let mut s: String = arr.data.iter().copied().collect();
+                if s.contains('¯') {
+                    s = s.replace('¯', "-");
+                }
+                if s.contains('`') {
+                    s = s.replace('`', "-");
+                }
+                if s.contains('η') {
+                    s = s.replace('η', &(PI * 0.5).to_string());
+                }
+                if s.contains('π') {
+                    s = s.replace('π', &PI.to_string());
+                }
+                if s.contains('τ') {
+                    s = s.replace('τ', &TAU.to_string());
+                }
+                if s.contains('∞') {
+                    s = s.replace('∞', &f64::INFINITY.to_string());
+                }
+                s.parse::<f64>()
+                    .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))?
+                    .into()
+            }
+            (Value::Box(arr), []) => {
+                let value = &arr.data[0].0;
+                value.parse_num(env)?
+            }
+            (Value::Char(_) | Value::Box(_), _) => {
+                let mut rows = Vec::with_capacity(self.row_count());
+                for row in self.rows() {
+                    rows.push(row.parse_num(env)?);
+                }
+                Value::from_row_values(rows, env)?
+            }
+            (val, _) => return Err(env.error(format!("Cannot parse {} array", val.type_name()))),
+        })
+    }
+    pub(crate) fn inv_parse(&self, env: &Uiua) -> UiuaResult<Self> {
+        if self.rank() == 0 {
+            return match self {
+                Value::Box(b) => b.as_scalar().unwrap().as_value().inv_parse(env),
+                value => Ok(value.show().into()),
+            };
         }
-        if s.contains('`') {
-            s = s.replace('`', "-");
-        }
-        if s.contains('η') {
-            s = s.replace('η', &(PI * 0.5).to_string());
-        }
-        if s.contains('π') {
-            s = s.replace('π', &PI.to_string());
-        }
-        if s.contains('τ') {
-            s = s.replace('τ', &TAU.to_string());
-        }
-        if s.contains('∞') {
-            s = s.replace('∞', &f64::INFINITY.to_string());
-        }
-        Ok(s.parse::<f64>()
-            .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))?
-            .into())
+        Ok(match self {
+            Value::Num(nums) => {
+                let new_data: CowSlice<Boxed> = (nums.data.iter().map(GridFmt::grid_string))
+                    .map(Value::from)
+                    .map(Boxed)
+                    .collect();
+                Array::new(nums.shape.clone(), new_data).into()
+            }
+            #[cfg(feature = "bytes")]
+            Value::Byte(bytes) => {
+                let new_data: CowSlice<Boxed> = (bytes.data.iter().map(GridFmt::grid_string))
+                    .map(Value::from)
+                    .map(Boxed)
+                    .collect();
+                Array::new(bytes.shape.clone(), new_data).into()
+            }
+            Value::Complex(complexes) => {
+                let new_data: CowSlice<Boxed> = (complexes.data.iter().map(GridFmt::grid_string))
+                    .map(Value::from)
+                    .map(Boxed)
+                    .collect();
+                Array::new(complexes.shape.clone(), new_data).into()
+            }
+            val => return Err(env.error(format!("Cannot invert parse {} array", val.type_name()))),
+        })
     }
 }
 

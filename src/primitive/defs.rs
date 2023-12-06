@@ -704,6 +704,17 @@ primitive!(
     /// ex: ⋕ "17"
     /// ex: ⋕ "3.1415926535897932"
     /// ex! ⋕ "dog"
+    ///
+    /// [parse] is semi-pervasive. It works on multidimensional arrays of characters or boxes.
+    /// ex: ⋕ {"5" "24" "106"}
+    /// ex: ⋕ .↯3_4 "012"
+    ///
+    /// [invert][parse] will convert a scalar number into a string.
+    /// ex: ⍘⋕ 58
+    /// ex: ⍘⋕ 6.283185307179586
+    /// [invert][parse] on a non-scalar number array will [box] each string.
+    /// ex: ⍘⋕ 1_2_3
+    /// ex: ⍘⋕ ↯3_4⇡12
     (1, Parse, Misc, ("parse", '⋕')),
     /// Check if two arrays are exactly the same
     ///

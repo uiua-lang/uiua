@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     fmt::{self, Debug, Display},
     hash::{Hash, Hasher},
+    sync::Arc,
 };
 
 use ecow::EcoVec;
@@ -21,16 +22,25 @@ use crate::{
 pub struct Array<T> {
     pub(crate) shape: Shape,
     pub(crate) data: CowSlice<T>,
+    pub(crate) meta: Option<Arc<ArrayMeta>>,
 }
 
 /// Uiua's array shape type
 pub type Shape = TinyVec<[usize; 3]>;
+
+/// Non-shape metadata for an array
+#[derive(Clone, Default)]
+pub struct ArrayMeta {}
+
+/// Default metadata for an array
+pub static DEFAULT_META: ArrayMeta = ArrayMeta {};
 
 impl<T: ArrayValue> Default for Array<T> {
     fn default() -> Self {
         Self {
             shape: tiny_vec![0],
             data: CowSlice::new(),
+            meta: None,
         }
     }
 }
@@ -90,7 +100,11 @@ impl<T> Array<T> {
         let shape = shape.into();
         let data = data.into();
         validate_shape(&shape, &data);
-        Self { shape, data }
+        Self {
+            shape,
+            data,
+            meta: None,
+        }
     }
     #[track_caller]
     #[inline(always)]
@@ -117,6 +131,15 @@ impl<T> Array<T> {
     /// Get the shape of the array
     pub fn shape(&self) -> &[usize] {
         &self.shape
+    }
+    /// Get the metadata of the array
+    pub fn meta(&self) -> &ArrayMeta {
+        self.meta.as_deref().unwrap_or(&DEFAULT_META)
+    }
+    /// Get a mutable reference to the metadata of the array
+    pub fn meta_mut(&mut self) -> &mut ArrayMeta {
+        let meta = self.meta.get_or_insert_with(Default::default);
+        Arc::make_mut(meta)
     }
     /// Get a formattable shape of the array
     pub fn format_shape(&self) -> FormatShape<'_> {
@@ -218,6 +241,7 @@ impl<T: ArrayValue> Array<T> {
         Array {
             shape: self.shape,
             data: self.data.into_iter().map(f).collect(),
+            meta: self.meta,
         }
     }
     /// Convert the elements of the array with a fallible function
@@ -228,6 +252,7 @@ impl<T: ArrayValue> Array<T> {
         Ok(Array {
             shape: self.shape,
             data: self.data.into_iter().map(f).collect::<Result<_, _>>()?,
+            meta: self.meta,
         })
     }
     /// Convert the elements of the array without consuming it
@@ -243,6 +268,7 @@ impl<T: ArrayValue> Array<T> {
         Array {
             shape: self.shape.clone(),
             data: self.data.iter().cloned().map(f).collect(),
+            meta: self.meta.clone(),
         }
     }
     /// Consume the array and get an iterator over its rows

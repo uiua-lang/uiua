@@ -338,7 +338,7 @@ impl Value {
                         a.append(b, env)?;
                         Ok(a.into())
                     },
-                    |a, b| format!("Cannot append {a} array to {b} array"),
+                    |a, b| format!("Cannot add {b} row to {a} array"),
                 )?
             }
         }
@@ -452,16 +452,16 @@ impl<T: ArrayValue> Array<T> {
             Err(e) => {
                 if self.rank() <= other.rank() || self.rank() - other.rank() > 1 {
                     return Err(C::fill_error(ctx.error(format!(
-                        "Cannot append rank {} array with rank {} array{e}",
-                        self.rank(),
-                        other.rank()
+                        "Cannot add rank {} row to rank {} array{e}",
+                        other.rank(),
+                        self.rank()
                     ))));
                 }
                 if &self.shape()[1..] != other.shape() {
                     return Err(C::fill_error(ctx.error(format!(
-                        "Cannot append arrays of shapes {} and {}{e}",
-                        self.format_shape(),
-                        other.format_shape()
+                        "Cannot add shape {} row to array with shape {} rows{e}",
+                        other.format_shape(),
+                        FormatShape(&self.shape()[1..]),
                     ))));
                 }
                 take(&mut self.shape)

@@ -123,9 +123,13 @@ impl SysBackend for NativeSys {
         let mut buffer = Vec::new();
         let mut b = 0u8;
         loop {
-            stdin()
-                .read_exact(slice::from_mut(&mut b))
-                .map_err(|e| e.to_string())?;
+            if let Err(e) = stdin().read_exact(slice::from_mut(&mut b)) {
+                if e.kind() == std::io::ErrorKind::UnexpectedEof {
+                    return Ok(None);
+                }
+                return Err(e.to_string());
+            }
+
             match b {
                 #[cfg(feature = "raw_mode")]
                 b'\r'

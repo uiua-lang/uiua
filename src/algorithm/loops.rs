@@ -86,9 +86,11 @@ pub fn do_(env: &mut Uiua) -> UiuaResult {
 pub fn partition(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     collapse_groups(
-        "partition",
+        Primitive::Partition,
         Value::partition_groups,
-        "Partition indices must be a list of integers",
+        "⊜ partition indices array must be a list of integers",
+        "⊜ partition's function has signature |2.1, so it is the reducing form. \
+        Its indices array must be a list of integers",
         env,
     )
 }
@@ -272,9 +274,11 @@ impl<T: ArrayValue> Array<T> {
 pub fn group(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     collapse_groups(
-        "group",
+        Primitive::Group,
         Value::group_groups,
-        "Group indices must be a list of integers",
+        "⊕ group indices array must be a list of integers",
+        "⊕ group's function has signature |2.1, so it is the reducing form. \
+        Its indices array must be a list of integers",
         env,
     )
 }
@@ -321,9 +325,10 @@ impl<T: ArrayValue> Array<T> {
 }
 
 fn collapse_groups(
-    name: &str,
+    prim: Primitive,
     get_groups: impl Fn(&Value, &[isize], &Uiua) -> UiuaResult<Vec<Value>>,
-    indices_error: &'static str,
+    agg_indices_error: &'static str,
+    red_indices_error: &'static str,
     env: &mut Uiua,
 ) -> UiuaResult {
     let f = env.pop_function()?;
@@ -331,7 +336,7 @@ fn collapse_groups(
     match (sig.args, sig.outputs) {
         (0 | 1, n) => {
             let indices = env.pop(1)?;
-            let indices = indices.as_ints(env, indices_error)?;
+            let indices = indices.as_ints(env, agg_indices_error)?;
             let values = env.pop(2)?;
             let groups = get_groups(&values, &indices, env)?;
             let mut rows = multi_output(n, Vec::with_capacity(groups.len()));
@@ -339,7 +344,7 @@ fn collapse_groups(
                 env.push(group);
                 env.call(f.clone())?;
                 for i in 0..n {
-                    rows[i].push(env.pop(|| format!("{name}'s function result"))?);
+                    rows[i].push(env.pop(|| format!("{}'s function result", prim.format()))?);
                 }
             }
             for rows in rows.into_iter().rev() {
@@ -349,7 +354,7 @@ fn collapse_groups(
         (2, 1) => {
             let mut acc = env.pop(1)?;
             let indices = env.pop(2)?;
-            let indices = indices.as_ints(env, indices_error)?;
+            let indices = indices.as_ints(env, red_indices_error)?;
             let values = env.pop(3)?;
             let groups = get_groups(&values, &indices, env)?;
             for row in groups {
@@ -362,7 +367,8 @@ fn collapse_groups(
         }
         _ => {
             return Err(env.error(format!(
-                "Cannot {name} with a function with signature {sig}"
+                "Cannot {} with a function with signature {sig}",
+                prim.format()
             )))
         }
     }

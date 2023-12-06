@@ -1143,9 +1143,6 @@ primitive!(
     /// It is common to use [box] to encapsulate groups of different [shape]s.
     /// ex: ⊕□ [0 1 0 2 1 1] [1 2 3 4 5 6]
     ///
-    /// If you want to get the length of each group, use [length].
-    /// ex: ⊕⧻ [0 1 0 2 1 1] [1 2 3 4 5 6]
-    ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
     ///   : ⊕{⊢:⧻.} ⊛.⊏⍏.
@@ -1157,12 +1154,14 @@ primitive!(
     ///
     /// [group] is closely related to [partition].
     (2[1], Group, AggregatingModifier, ("group", '⊕')),
-    /// Group elements of an array into buckets by sequential keys
+    /// Group sequential sections of an array
+    ///
+    /// The most common use of [partition] is to split an array by a delimiter.
     ///
     /// Takes a function and two arrays.
     /// The arrays must be the same [length].
     /// The first array must be rank `1` and contain integers.
-    /// Rows in the second array that line up with sequential keys in the first array will be grouped together.
+    /// Consecutive rows in the second array that line up with groups of the same key in the first array will be grouped together.
     /// Keys `less or equal``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.
     /// If the function takes 0 or 1 arguments, then [partition] behaves like [rows]. This is called *iterating* [partition].
@@ -1173,9 +1172,6 @@ primitive!(
     /// ex! ⊜∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     /// It is common to use [box] to encapsulate groups of different [shape]s.
     /// ex: ⊜□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
-    ///
-    /// If you want to get the length of each group, use [length].
-    /// ex: ⊜⧻ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// This can be used to split an array by a delimiter.
     /// ex: ⊜□ ≠@ . $ Hey there friendo

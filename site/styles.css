@@ -1001,6 +1001,10 @@ input[type=text] {
     animation: fadeAnimation 1s infinite;
 }
 
+.slow-pulse {
+    animation: pulseAnimation 2s infinite;
+}
+
 @keyframes fadeAnimation {
 
     0%,
@@ -1010,6 +1014,19 @@ input[type=text] {
 
     50% {
         opacity: 1;
+    }
+}
+
+
+@keyframes pulseAnimation {
+
+    0%,
+    100% {
+        transform: scale(1) translate(0);
+    }
+
+    50% {
+        transform: scale(1, 1.1) translate(0, -0.05em);
     }
 }
 

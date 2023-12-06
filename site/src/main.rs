@@ -181,6 +181,7 @@ pub fn MainPage() -> impl IntoView {
             </div>
             <div>
                 // <A href="/blog">"Blog"</A>
+                <A href="/docs/basic" class="slow-pulse">"Tutorial"</A>
                 <A href="/pad">"Pad"</A>
                 <a href="https://discord.gg/3r9nrfYhCc">"Discord"</a>
                 <a href="https://github.com/uiua-lang/uiua">"GitHub"</a>

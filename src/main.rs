@@ -791,41 +791,7 @@ fn repl(mut rt: Uiua, color: bool, config: FormatConfig) {
         }
 
         print!("↪ ");
-        for span in spans(&code) {
-            let (r, g, b) = match span.value {
-                SpanKind::Primitive(prim) => match prim.class() {
-                    PrimClass::Stack => (209, 218, 236),
-                    PrimClass::Constant => (237, 94, 36),
-                    _ => {
-                        if let Some(margs) = prim.modifier_args() {
-                            if margs == 1 {
-                                (240, 195, 111)
-                            } else {
-                                (204, 107, 233)
-                            }
-                        } else {
-                            match prim.args() {
-                                Some(0) => (237, 94, 106),
-                                Some(1) => (149, 209, 106),
-                                Some(2) => (84, 176, 252),
-                                _ => (255, 255, 255),
-                            }
-                        }
-                    }
-                },
-                SpanKind::String => (32, 249, 252),
-                SpanKind::Number => (255, 136, 68),
-                SpanKind::Comment => (127, 127, 127),
-                SpanKind::Strand => (200, 200, 200),
-                SpanKind::Ident
-                | SpanKind::Signature
-                | SpanKind::Whitespace
-                | SpanKind::Placeholder
-                | SpanKind::Delimiter => (255, 255, 255),
-            };
-            print!("{}", span.span.as_str().truecolor(r, g, b));
-        }
-        println!();
+        println!("{}", color_code(&code));
 
         let res = rt.load_str(&code);
         print_stack(&rt.take_stack(), color);
@@ -842,4 +808,43 @@ fn repl(mut rt: Uiua, color: bool, config: FormatConfig) {
             }
         }
     }
+}
+
+fn color_code(code: &str) -> String {
+    let mut colored = String::new();
+    for span in spans(code) {
+        let (r, g, b) = match span.value {
+            SpanKind::Primitive(prim) => match prim.class() {
+                PrimClass::Stack => (209, 218, 236),
+                PrimClass::Constant => (237, 94, 36),
+                _ => {
+                    if let Some(margs) = prim.modifier_args() {
+                        if margs == 1 {
+                            (240, 195, 111)
+                        } else {
+                            (204, 107, 233)
+                        }
+                    } else {
+                        match prim.args() {
+                            Some(0) => (237, 94, 106),
+                            Some(1) => (149, 209, 106),
+                            Some(2) => (84, 176, 252),
+                            _ => (255, 255, 255),
+                        }
+                    }
+                }
+            },
+            SpanKind::String => (32, 249, 252),
+            SpanKind::Number => (255, 136, 68),
+            SpanKind::Comment => (127, 127, 127),
+            SpanKind::Strand => (200, 200, 200),
+            SpanKind::Ident
+            | SpanKind::Signature
+            | SpanKind::Whitespace
+            | SpanKind::Placeholder
+            | SpanKind::Delimiter => (255, 255, 255),
+        };
+        colored.push_str(&format!("{}", span.span.as_str().truecolor(r, g, b)));
+    }
+    colored
 }

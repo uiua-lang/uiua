@@ -297,6 +297,7 @@ fn under_instrs_impl(instrs: &[Instr], g_sig: Signature) -> Option<(EcoVec<Instr
         ),
         &pat!(Rotate, (CopyToTempN(1), Rotate), (PopTempN(1), Neg, Rotate)),
         &pat!(Abs, (CopyToTempN(1), Abs), (PopTempN(1), Sign, Mul)),
+        &pat!(Sign, (Dup, Abs, PushTempN(1), Sign), (PopTempN(1), Mul)),
         &pat!(First, (CopyToTempN(1), First), (PopTempN(1), Unfirst)),
         &pat!(Last, (CopyToTempN(1), Last), (PopTempN(1), Unlast)),
         &pat!(Shape, (CopyToTempN(1), Shape), (PopTempN(1), Flip, Reshape)),

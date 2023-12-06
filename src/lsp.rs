@@ -431,7 +431,7 @@ mod server {
                                 }
                                 Err(err) => value.push_str(&format!("> Error: {err}\n")),
                             }
-                            value.push_str("> ```\n");
+                            value.push_str("> ```\n\n");
                         }
                     }
                 }

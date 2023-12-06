@@ -181,14 +181,11 @@ fn generic_reduce(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
             }
             let mut rows = xs.into_rows();
             let mut acc = rows.next().unwrap();
-            let mut temp_args = Vec::with_capacity(args - 1);
             for _ in 0..row_count / (args - 1) {
                 for _ in 0..args - 1 {
-                    temp_args.push(rows.next().unwrap());
+                    env.push(rows.next().unwrap());
                 }
-                for arg in temp_args.drain(..).rev() {
-                    env.push(arg);
-                }
+                env.reverse_stack(args - 1);
                 env.push(acc);
                 env.call(f.clone())?;
                 acc = env.pop("reduced function result")?;

@@ -517,6 +517,9 @@ primitive!(
     /// ex: ⊢[1_2 3_4 5_6]
     /// ex! ⊢[]
     /// ex! ⊢1
+    ///
+    /// [first][reverse] is optimized in the interpreter to be O(1).
+    /// ex: ⊢⇌ [1 8 4 9 2 3]
     (1, First, MonadicArray, ("first", '⊢')),
     /// Reverse the rows of an array
     ///
@@ -996,6 +999,12 @@ primitive!(
     /// [reduce][join] is the simplest way to combine the first two dimensions of an array.
     /// It is optimized in the interpreter to be very fast.
     /// ex: /⊂ .↯2_2_4⇡16
+    ///
+    /// [reduce]'s function may take more than 2 arguments.
+    /// To show what this does, we can put the arguments in a box array.
+    /// /{⊙⊙∘} ⇡9
+    /// One use case for this is to call a function with the rows of an array as arguments.
+    /// ≡/(+⊂) [1_2_3 4_5_6 7_8_9]
     ///
     /// Some functions have default values if the array is empty.
     /// Functions without default values will throw an error if the array is empty.

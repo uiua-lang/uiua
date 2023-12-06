@@ -848,6 +848,9 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="[⊙+ 1 2 3]"/>
         <p><Prim prim=Dip/>" can be chained to dig deeper into the stack, though try not to dig "<em>"too"</em>" deep, as it makes code harder to read."</p>
         <Editor example="[⊙⊙⊙⊙⊙⊙+ 1 2 3 4 5 6 7 8]"/>
+        <p>"One niche use of "<Prim prim=Dip/>" is to collect values from the stack into an array."</p>
+        <Editor example="[⊙⊙⊙∘] 1 2 3 4 5"/>
+        <Editor example="{⊙⊙∘} 1 2_3 \"wow\""/>
         <p><Prim prim=Gap/>" "<em>"discards"</em>" the top value on the stack and calls its function."</p>
         <Editor example="⋅+ 1 2 3"/>
         <p>"But wait, "<Prim prim=Pop/>" exists! Why would you need this?"</p>

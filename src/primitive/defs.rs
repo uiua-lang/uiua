@@ -141,15 +141,12 @@ macro_rules! primitive {
                 }
             }
             /// Get the primitive's documentation
-            pub fn doc(&self) -> Option<&'static PrimDoc> {
+            pub fn doc(&self) -> &'static PrimDoc {
                 match self {
                     $(Primitive::$variant => {
                         let doc_str = concat!($doc_rust, $($doc, "\n"),*);
                         static DOC: OnceLock<PrimDoc> = OnceLock::new();
-                        if doc_str.is_empty() {
-                            return None;
-                        }
-                        Some(DOC.get_or_init(|| PrimDoc::from_lines(doc_str)))
+                        DOC.get_or_init(|| PrimDoc::from_lines(doc_str))
                     },)*
                     Primitive::Sys(op) => op.doc(),
                 }
@@ -544,6 +541,12 @@ primitive!(
     /// ex: ¤¤[1 2 3]
     /// This is useful when combine with [rows] or [cross] to re-use an entire array for each row of others.
     /// ex: ≡⊂ ¤ 1_2_3 4_5_6
+    /// [fix] can also be used with pervasive dyadic functions.
+    /// ex: -  [1 2 3]  [4 5 6]
+    ///   : - ¤[1 2 3]  [4 5 6]
+    ///   : -  [1 2 3] ¤[4 5 6]
+    /// ex! -  1_3 [3_4 5_6 7_8]
+    /// ex: - ¤1_3 [3_4 5_6 7_8]
     /// [fix]'s name come from the way it "fixes" an array in this way.
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) for more information on this use case.
     (1, Fix, MonadicArray, ("fix", '¤')),
@@ -693,6 +696,12 @@ primitive!(
     ///
     /// Boxes are created with [box].
     (1, Unbox, MonadicArray, ("unbox", '⊔')),
+    /// Parse a string as a number
+    ///
+    /// ex: ⋕ "17"
+    /// ex: ⋕ "3.1415926535897932"
+    /// ex! ⋕ "dog"
+    (1, Parse, Misc, ("parse", '⋕')),
     /// Check if two arrays are exactly the same
     ///
     /// ex: ≍ 1_2_3 [1 2 3]
@@ -1030,6 +1039,12 @@ primitive!(
     /// ex: \+   1_2_3_4
     /// ex: \-   1_2_3_4
     /// ex: \(-:) 1_2_3_4
+    /// [scan] is often used to do something with masks.
+    /// [scan]ning with [minimum] or [maximum] will propogate `0`s or `1`s.
+    /// ex: ▽\↧≠@ . "Hello World!"
+    /// [scan]ning with [add] and then using [group] can split by a delimiter while keeping the delimiter.
+    /// ex: ⊕□\+=@    . "Everyday man's on the block"
+    ///   : ⊕□\+↻¯1=@ . "Everyday man's on the block"
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or arrays.
     ///
@@ -1128,9 +1143,6 @@ primitive!(
     /// It is common to use [box] to encapsulate groups of different [shape]s.
     /// ex: ⊕□ [0 1 0 2 1 1] [1 2 3 4 5 6]
     ///
-    /// If you want to get the length of each group, use [length].
-    /// ex: ⊕⧻ [0 1 0 2 1 1] [1 2 3 4 5 6]
-    ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters is this string
     ///   : ⊕{⊢:⧻.} ⊛.⊏⍏.
@@ -1142,12 +1154,14 @@ primitive!(
     ///
     /// [group] is closely related to [partition].
     (2[1], Group, AggregatingModifier, ("group", '⊕')),
-    /// Group elements of an array into buckets by sequential keys
+    /// Group sequential sections of an array
+    ///
+    /// The most common use of [partition] is to split an array by a delimiter.
     ///
     /// Takes a function and two arrays.
     /// The arrays must be the same [length].
     /// The first array must be rank `1` and contain integers.
-    /// Rows in the second array that line up with sequential keys in the first array will be grouped together.
+    /// Consecutive rows in the second array that line up with groups of the same key in the first array will be grouped together.
     /// Keys `less or equal``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.
     /// If the function takes 0 or 1 arguments, then [partition] behaves like [rows]. This is called *iterating* [partition].
@@ -1158,9 +1172,6 @@ primitive!(
     /// ex! ⊜∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     /// It is common to use [box] to encapsulate groups of different [shape]s.
     /// ex: ⊜□ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
-    ///
-    /// If you want to get the length of each group, use [length].
-    /// ex: ⊜⧻ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     ///
     /// This can be used to split an array by a delimiter.
     /// ex: ⊜□ ≠@ . $ Hey there friendo
@@ -1499,6 +1510,13 @@ primitive!(
     /// ex: F = ⬚∘+
     ///   : F 100 [1 2 3 4] [5 6]
     ///
+    /// [fill] can be temporarily disabled within a context by filling with an empty list.
+    /// ex: ⬚0(
+    ///   :   ↻2 ⇡5
+    ///   :   ⬚[]↻3 ⇡5
+    ///   :   ↻1 ⇡5
+    ///   : )
+    ///
     /// [fill] and [pack] are exclusive.
     /// ex: ⊐⬚0⊟ 1_2 3
     ///   : ⬚0⊐⊟ 1_2 3
@@ -1515,12 +1533,12 @@ primitive!(
     /// ex: ⍣(⍤5 0 3)(×5)
     /// If the first function has the signature `|n.r`, then the second function must have the signature `|(n+1).r`. The additional value is the error.
     /// If you don't care about the input values, you can simply [pop] them.
-    /// ex: ⍣parse; "dog"
-    /// ex: ⍣parse(0;;) "dog"
-    /// ex: ⍣parse(0;;) "5"
+    /// ex: ⍣⋕; "dog"
+    /// ex: ⍣⋕(0;;) "dog"
+    /// ex: ⍣⋕(0;;) "5"
     /// [gap] can often look nicer.
-    /// ex: ⍣parse⋅⋅0 "dog"
-    /// ex: ⍣parse⋅⋅0 "5"
+    /// ex: ⍣⋕⋅⋅0 "dog"
+    /// ex: ⍣⋕⋅⋅0 "5"
     ([2], Try, Misc, ("try", '⍣')),
     /// Throw an error if a condition is not met
     ///
@@ -1647,12 +1665,6 @@ primitive!(
     /// ex: deal⚂ [1 2 3 4 5]
     /// ex: deal⚂ [1_2 3_4 5_6 7_8]
     (2, Deal, Misc, "deal"),
-    /// Parse a string as a number
-    ///
-    /// ex: parse "17"
-    /// ex: parse "3.1415926535897932"
-    /// ex! parse "dog"
-    (1, Parse, Misc, "parse"),
     /// Match a regex pattern
     ///
     /// Returns a rank-2 array of [box]ed strings, with one string per matching group and one row per match
@@ -1843,8 +1855,8 @@ impl_primitive!(
     (2, Unlast),
     (3, Unkeep),
     (3, Unrerank),
-    (1[1], Unpartition),
-    (1[1], Ungroup),
+    (3[1], Unpartition),
+    (3[1], Ungroup),
     // Optimizations
     (1, Cos),
     (1, Last),

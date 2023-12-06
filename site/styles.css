@@ -338,6 +338,17 @@ li {
 
 #editor {
     border-radius: 0.5em;
+    position: relative;
+}
+
+#drag-message {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #0008;
+    font-size: 2em;
 }
 
 #editor-wrapper {
@@ -990,6 +1001,10 @@ input[type=text] {
     animation: fadeAnimation 1s infinite;
 }
 
+.slow-pulse {
+    animation: pulseAnimation 2s infinite;
+}
+
 @keyframes fadeAnimation {
 
     0%,
@@ -999,6 +1014,19 @@ input[type=text] {
 
     50% {
         opacity: 1;
+    }
+}
+
+
+@keyframes pulseAnimation {
+
+    0%,
+    100% {
+        transform: scale(1) translate(0);
+    }
+
+    50% {
+        transform: scale(1, 1.1) translate(0, -0.05em);
     }
 }
 

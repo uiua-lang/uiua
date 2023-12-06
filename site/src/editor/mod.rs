@@ -1,6 +1,6 @@
 mod utils;
 
-use std::{cell::Cell, iter::repeat, rc::Rc, time::Duration};
+use std::{cell::Cell, iter::repeat, path::PathBuf, rc::Rc, time::Duration};
 
 use base64::engine::{general_purpose::STANDARD, Engine};
 
@@ -10,12 +10,18 @@ use uiua::{
     format::{format_str, FormatConfig},
     is_ident_char, lex, Primitive, SysOp, Token,
 };
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
-    Event, HtmlDivElement, HtmlInputElement, HtmlSelectElement, KeyboardEvent, MouseEvent,
+    DragEvent, Event, FileReader, HtmlDivElement, HtmlInputElement, HtmlSelectElement,
+    KeyboardEvent, MouseEvent,
 };
 
-use crate::{backend::OutputItem, element, examples::EXAMPLES, prim_class, Prim};
+use crate::{
+    backend::{drop_file, OutputItem},
+    element,
+    examples::EXAMPLES,
+    prim_class, Prim,
+};
 
 use utils::*;
 pub use utils::{get_ast_time, Challenge};
@@ -120,7 +126,7 @@ pub fn Editor<'a>(
         .into(),
     });
     let (state, _) = create_signal(state);
-    let state = move || state.get();
+    let state = move || state.get_untracked();
 
     // Run the code
     let run = move |format: bool, set_cursor: bool| {
@@ -131,7 +137,7 @@ pub fn Editor<'a>(
         } else {
             Cursor::Ignore
         };
-        if let Some(code) = initial_code.get() {
+        if let Some(code) = initial_code.get_untracked() {
             code_text = code;
             set_initial_code.set(None);
             cursor = Cursor::Ignore;
@@ -669,24 +675,22 @@ pub fn Editor<'a>(
         };
         // Show the glyph doc on mouseover
         let onmouseover = move |_| {
-            if let Some(doc) = prim.doc() {
-                set_glyph_doc.set(
-                    view! {
-                        <Prim prim=prim/>
-                        { prim.is_experimental().then(||
-                            view! {
-                                <span class="experimental" style="font-size: 0.8em;">
-                                    "⚠️ Experimental"
-                                </span>
-                            }
-                        ) }
-                        <br/>
-                        { doc.short_text().into_owned() }
-                    }
-                    .into_view(),
-                );
-                _ = glyph_doc_element().style().remove_property("display");
-            }
+            set_glyph_doc.set(
+                view! {
+                    <Prim prim=prim/>
+                    { prim.is_experimental().then(||
+                        view! {
+                            <span class="experimental" style="font-size: 0.8em;">
+                                "⚠️ Experimental"
+                            </span>
+                        }
+                    ) }
+                    <br/>
+                    { prim.doc().short_text().into_owned() }
+                }
+                .into_view(),
+            );
+            _ = glyph_doc_element().style().remove_property("display");
         };
         Some(
             view! {
@@ -862,6 +866,75 @@ pub fn Editor<'a>(
         },
         Duration::from_millis(0),
     );
+
+    let (drag_message, set_drag_message) = create_signal("");
+
+    // Get file drop events
+    window_event_listener(leptos_dom::ev::dragover, move |event: DragEvent| {
+        let event = event.dyn_into::<web_sys::DragEvent>().unwrap();
+        event.prevent_default();
+        event.stop_propagation();
+        let files = event.data_transfer().unwrap().files().unwrap();
+        if files.length() > 0 {
+            set_drag_message.set("Drop file to load");
+        }
+    });
+    window_event_listener(leptos_dom::ev::dragleave, move |event: DragEvent| {
+        let event = event.dyn_into::<web_sys::DragEvent>().unwrap();
+        event.prevent_default();
+        event.stop_propagation();
+        set_drag_message.set("");
+    });
+    let listener = window_event_listener(leptos_dom::ev::drop, move |event: DragEvent| {
+        let event = event.dyn_into::<web_sys::DragEvent>().unwrap();
+        event.prevent_default();
+        event.stop_propagation();
+        let files = event.data_transfer().unwrap().files().unwrap();
+        let file = files.get(0).unwrap();
+        let file_name = file.name();
+        let reader = FileReader::new().unwrap();
+        reader.read_as_array_buffer(&file).unwrap();
+        let on_load = Closure::wrap(Box::new(move |event: Event| {
+            // Log file contents
+            let event = event.dyn_into::<web_sys::ProgressEvent>().unwrap();
+            let reader = event.target().unwrap().dyn_into::<FileReader>().unwrap();
+            let bytes = reader
+                .result()
+                .unwrap()
+                .dyn_into::<js_sys::ArrayBuffer>()
+                .unwrap();
+            let bytes = js_sys::Uint8Array::new(&bytes);
+            let byte_count = bytes.length();
+            let path = PathBuf::from(&file_name);
+            drop_file(path.clone(), bytes.to_vec());
+            set_drag_message.set("");
+            if code_text().trim().is_empty() {
+                let function = if path
+                    .extension()
+                    .map_or(true, |ext| ["txt", "md", "ua"].iter().any(|e| e == &ext))
+                {
+                    "&fras"
+                } else {
+                    "&frab"
+                };
+                state().set_code(
+                    &if byte_count < 10000 {
+                        format!("{function} {file_name:?}\n")
+                    } else {
+                        format!("# {byte_count} bytes\n# {function} {file_name:?}\n")
+                    },
+                    Cursor::Ignore,
+                );
+            }
+            run(true, false);
+        }) as Box<dyn FnMut(_)>);
+        reader
+            .add_event_listener_with_callback("load", on_load.as_ref().unchecked_ref())
+            .unwrap();
+        on_load.forget();
+    });
+
+    on_cleanup(move || listener.remove());
 
     // Line numbers
     let line_numbers = move || {
@@ -1132,6 +1205,10 @@ or \"embedpad\" to embed the editor"
                         </div>
                     </div>
                 </div>
+                { move || {
+                    let message = drag_message.get();
+                    (!message.is_empty()).then(|| view!(<div id="drag-message">{ message }</div>))
+                } }
             </div>
             <div id="editor-help">
                 { help.iter().map(|s| view!(<p>{s}</p>)).collect::<Vec<_>>() }

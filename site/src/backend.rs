@@ -1,5 +1,6 @@
 use std::{
     any::Any,
+    cell::RefCell,
     collections::HashMap,
     io::Cursor,
     path::{Path, PathBuf},
@@ -7,7 +8,7 @@ use std::{
 };
 
 use leptos::*;
-use uiua::{Report, SysBackend};
+use uiua::{example_ua, Report, SysBackend};
 
 use crate::{editor::get_ast_time, weewuh};
 
@@ -18,13 +19,28 @@ pub struct WebBackend {
     pub files: Mutex<HashMap<PathBuf, Vec<u8>>>,
 }
 
+thread_local! {
+    static DROPPED_FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = RefCell::new([
+        (PathBuf::from("example.ua"),
+        example_ua(|ex| ex.clone()).into())
+    ].into());
+}
+
+pub fn drop_file(path: PathBuf, contents: Vec<u8>) {
+    DROPPED_FILES.with(|dropped_files| {
+        dropped_files.borrow_mut().insert(path, contents);
+    });
+}
+
 impl Default for WebBackend {
     fn default() -> Self {
         Self {
             stdout: Vec::new().into(),
             stderr: String::new().into(),
             trace: String::new().into(),
-            files: HashMap::new().into(),
+            files: DROPPED_FILES
+                .with(|dropped_files| dropped_files.borrow().clone())
+                .into(),
         }
     }
 }
@@ -95,6 +111,22 @@ impl SysBackend for WebBackend {
     fn show_gif(&self, gif_bytes: Vec<u8>) -> Result<(), String> {
         self.stdout.lock().unwrap().push(OutputItem::Gif(gif_bytes));
         Ok(())
+    }
+    fn list_dir(&self, mut path: &str) -> Result<Vec<String>, String> {
+        if path.starts_with("./") {
+            path = &path[2..];
+        } else if path.starts_with('.') {
+            path = &path[1..];
+        }
+        let path = Path::new(path);
+        let files = self.files.lock().unwrap();
+        let mut in_dir = Vec::new();
+        for file in files.keys() {
+            if file.parent() == Some(path) {
+                in_dir.push(file.file_name().unwrap().to_string_lossy().into());
+            }
+        }
+        Ok(in_dir)
     }
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
         self.files

@@ -175,7 +175,7 @@ mod server {
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Ident, Uiua,
+        Ident, PrimDocLine, Uiua,
     };
 
     pub struct LspDoc {
@@ -288,12 +288,12 @@ mod server {
         docs: DashMap<Url, LspDoc>,
     }
 
-    const STACK_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("stack-function");
-    const NOADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("noadic-function");
-    const MONADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("monadic-function");
-    const DYADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("dyadic-function");
-    const MONADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("monadic-modifier");
-    const DYADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("dyadic-modifier");
+    const STACK_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("stack_function");
+    const NOADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("noadic_function");
+    const MONADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("monadic_function");
+    const DYADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("dyadic_function");
+    const MONADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("monadic_modifier");
+    const DYADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("dyadic_modifier");
 
     const SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 9] = [
         SemanticTokenType::STRING,
@@ -393,39 +393,51 @@ mod server {
                 }
             }
             Ok(Some(if let Some((prim, range)) = prim_range {
-                let mut value: String = prim.name().into();
-                if let Some(doc) = prim.doc() {
-                    value.push('\n');
-                    for frag in doc.short.iter() {
-                        match frag {
-                            PrimDocFragment::Text(text) => value.push_str(text),
-                            PrimDocFragment::Code(text) => value.push_str(&format!("`{}`", text)),
-                            PrimDocFragment::Emphasis(text) => {
-                                value.push_str(&format!("*{}*", text))
+                let mut value = format!("```uiua\n{}\n```", prim.format());
+                let doc = prim.doc();
+                value.push_str("\n\n");
+                for frag in &doc.short {
+                    doc_frag_markdown(&mut value, frag);
+                }
+                value.push_str("\n\n");
+                value.push_str(&format!(
+                    "[Documentation](https://uiua.org/docs/{})",
+                    prim.name()
+                ));
+                value.push_str("\n\n");
+                for line in &doc.lines {
+                    match line {
+                        PrimDocLine::Text(frags) => {
+                            for frag in frags {
+                                doc_frag_markdown(&mut value, frag);
                             }
-                            PrimDocFragment::Strong(text) => {
-                                value.push_str(&format!("**{}**", text))
-                            }
-                            PrimDocFragment::Link { text, url } => {
-                                value.push_str(&format!("[{}]({})", text, url))
-                            }
-                            PrimDocFragment::Primitive { prim, named } => {
-                                let name = prim.name();
-                                value.push_str(&if *named {
-                                    if let Some(unicode) = prim.glyph() {
-                                        format!("`{unicode} {name}`")
-                                    } else {
-                                        format!("`{name}`")
+                            value.push('\n');
+                        }
+                        PrimDocLine::Example(ex) => {
+                            value.push_str(&format!(
+                                "\
+```uiua
+{}
+```
+> ```
+",
+                                ex.input()
+                            ));
+                            match ex.output() {
+                                Ok(lines) => {
+                                    for line in lines.iter().flat_map(|l| l.lines()) {
+                                        value.push_str(&format!("> {line}\n"));
                                     }
-                                } else if let Some(unicode) = prim.glyph() {
-                                    format!("`{unicode}`")
-                                } else {
-                                    format!("`{name}`")
-                                })
+                                }
+                                Err(err) => value.push_str(&format!("> Error: {err}\n")),
                             }
+                            value.push_str("> ```\n\n");
                         }
                     }
                 }
+                self.client
+                    .log_message(MessageType::INFO, value.clone())
+                    .await;
                 Hover {
                     contents: HoverContents::Markup(MarkupContent {
                         kind: MarkupKind::Markdown,
@@ -436,7 +448,7 @@ mod server {
             } else if let Some((ident, binding, range)) = binding_range {
                 let mut value: String = ident.value.as_ref().into();
                 if let Some(comment) = &binding.comment {
-                    value.push('\n');
+                    value.push_str("\n\n");
                     value.push_str(comment);
                 }
                 Hover {
@@ -586,5 +598,27 @@ mod server {
 
     fn uiua_span_to_lsp(span: &CodeSpan) -> Range {
         uiua_locs_to_lsp(span.start, span.end)
+    }
+
+    fn doc_frag_markdown(md: &mut String, frag: &PrimDocFragment) {
+        match frag {
+            PrimDocFragment::Text(text) => md.push_str(text),
+            PrimDocFragment::Code(text) => md.push_str(&format!("`{}`", text)),
+            PrimDocFragment::Emphasis(text) => md.push_str(&format!("*{}*", text)),
+            PrimDocFragment::Strong(text) => md.push_str(&format!("**{}**", text)),
+            PrimDocFragment::Link { text, url } => md.push_str(&format!("[{}]({})", text, url)),
+            PrimDocFragment::Primitive { prim, named } => {
+                let text = if *named {
+                    format!("`{}`", prim.format())
+                } else {
+                    prim.to_string()
+                };
+                md.push_str(&format!(
+                    "[{}](https://uiua.org/docs/{})",
+                    text,
+                    prim.name()
+                ))
+            }
+        }
     }
 }

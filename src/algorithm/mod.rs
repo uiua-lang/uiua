@@ -124,6 +124,20 @@ where
                     target_shape[0] = b.row_count();
                     a.fill_to_shape(&target_shape, fill);
                 }
+                Err(e) if a.row_count() == 1 => {
+                    let fixes = a.shape.iter().take_while(|&&dim| dim == 1).count();
+                    if (b.shape[fixes..].iter().rev())
+                        .zip(a.shape[fixes..].iter().rev())
+                        .all(|(a, b)| a == b)
+                    {
+                        a.shape.drain(..fixes);
+                        for &dim in b.shape[..fixes].iter().rev() {
+                            a.reshape_scalar(dim);
+                        }
+                    } else {
+                        fill_error = Some(e);
+                    }
+                }
                 Err(e) => fill_error = Some(e),
             },
             Ordering::Greater => match ctx.fill() {
@@ -132,9 +146,30 @@ where
                     target_shape[0] = a.row_count();
                     b.fill_to_shape(&target_shape, fill);
                 }
+                Err(e) if b.row_count() == 1 => {
+                    let fixes = b.shape.iter().take_while(|&&dim| dim == 1).count();
+                    if (a.shape[fixes..].iter().rev())
+                        .zip(b.shape[fixes..].iter().rev())
+                        .all(|(a, b)| a == b)
+                    {
+                        b.shape.drain(..fixes);
+                        for &dim in a.shape[..fixes].iter().rev() {
+                            b.reshape_scalar(dim);
+                        }
+                    } else {
+                        fill_error = Some(e);
+                    }
+                }
                 Err(e) => fill_error = Some(e),
             },
             Ordering::Equal => {}
+        }
+        if let Some(e) = fill_error {
+            return Err(C::fill_error(ctx.error(format!(
+                "Shapes {} and {} do not match{e}",
+                a.format_shape(),
+                b.format_shape(),
+            ))));
         }
         // Fill in missing dimensions
         if !shape_prefixes_match(&a.shape, &b.shape) {
@@ -175,21 +210,12 @@ where
                     }
                 }
             }
-            if !shape_prefixes_match(&a.shape, &b.shape) {
-                return Err(C::fill_error(ctx.error(if let Some(e) = fill_error {
-                    format!(
-                        "Shapes {} and {} do not match. {}.",
-                        a.format_shape(),
-                        b.format_shape(),
-                        e
-                    )
-                } else {
-                    format!(
-                        "Shapes {} and {} do not match",
-                        a.format_shape(),
-                        b.format_shape()
-                    )
-                })));
+            if let Some(e) = fill_error {
+                return Err(C::fill_error(ctx.error(format!(
+                    "Shapes {} and {} do not match{e}",
+                    a.format_shape(),
+                    b.format_shape(),
+                ))));
             }
         }
     }
@@ -284,16 +310,24 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
         }
         args_rows.reverse();
         // Collect functions
-        let functions: Vec<Function> = env
+        let functions: Vec<(Function, usize)> = env
             .function_stack
             .drain(env.function_stack.len() - count..)
+            .map(|f| {
+                let args = if f.signature().outputs < sig.outputs {
+                    f.signature().args + sig.outputs - f.signature().outputs
+                } else {
+                    f.signature().args
+                };
+                (f, args)
+            })
             .collect();
         let mut outputs = multi_output(sig.outputs, Vec::new());
         for elem in selector.data {
-            let f = &functions[elem];
+            let (f, args) = &functions[elem];
             for (i, arg) in args_rows.iter_mut().rev().enumerate().rev() {
                 let arg = arg.next().unwrap();
-                if i < f.signature().args {
+                if i < *args {
                     env.push(arg);
                 }
             }

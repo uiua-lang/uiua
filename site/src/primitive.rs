@@ -86,12 +86,11 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
     } else {
         None
     };
-    let body = prim.doc().map(|doc| {
-        view! {
-            <p style="white-space: pre-wrap">{doc_line_fragments_to_view(&doc.short)}</p>
-            { doc_lines_to_view(&doc.lines) }
-        }
-    });
+    let doc = prim.doc();
+    let body = view! {
+        <p style="white-space: pre-wrap">{doc_line_fragments_to_view(&doc.short)}</p>
+        { doc_lines_to_view(&doc.lines) }
+    };
 
     let id = prim.name();
 

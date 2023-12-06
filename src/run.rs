@@ -2,7 +2,7 @@ use std::{
     collections::{BTreeSet, HashMap},
     fs,
     hash::Hash,
-    mem::{replace, take},
+    mem::{replace, size_of, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
     str::FromStr,
@@ -117,17 +117,18 @@ enum ShapeFix {
     FillComplex(Complex),
     FillChar(char),
     FillBox(Boxed),
+    None,
     Pack,
 }
 
 #[derive(Clone)]
-struct StackFrame {
+pub(crate) struct StackFrame {
     /// The function being executed
-    function: Function,
+    pub(crate) function: Function,
     /// The span at which the function was called
     call_span: usize,
     /// The program counter for the function
-    pc: usize,
+    pub(crate) pc: usize,
     /// Additional spans for error reporting
     spans: Vec<(usize, Option<Primitive>)>,
 }
@@ -470,12 +471,14 @@ code:
             // if !self.function_stack.is_empty() {
             //     println!("{} function(s)", self.function_stack.len());
             // }
-            // if !self.temp_stacks[TempStack::Under as usize].is_empty() {
-            //     print!("under: ");
-            //     for val in &self.temp_stacks[TempStack::Under as usize] {
-            //         print!("{:?} ", val);
+            // for temp in enum_iterator::all::<TempStack>() {
+            //     if !self.temp_stacks[temp as usize].is_empty() {
+            //         print!("{temp}: ");
+            //         for val in &self.temp_stacks[temp as usize] {
+            //             print!("{:?} ", val);
+            //         }
+            //         println!();
             //     }
-            //     println!();
             // }
             // println!("  {:?}", instr);
 
@@ -507,6 +510,18 @@ code:
                     let val = if values.is_empty() && boxed {
                         Array::<Boxed>::default().into()
                     } else {
+                        let elems: usize = values.iter().map(Value::element_count).sum();
+                        let elem_size = values.get(0).map_or(size_of::<f64>(), Value::elem_size);
+                        let max_mega = if cfg!(target_arch = "wasm32") {
+                            256
+                        } else {
+                            2048
+                        };
+                        if elems * elem_size > max_mega * 1024usize.pow(2) {
+                            return Err(
+                                env.error(format!("Array of {elems} elements would be too large",))
+                            );
+                        }
                         Value::from_row_values(values, env)?
                     };
                     env.push(val);
@@ -896,16 +911,6 @@ code:
             )
         })
     }
-    pub(crate) fn pop_temp_under(&mut self) -> UiuaResult<Value> {
-        self.temp_stacks[TempStack::Under as usize]
-            .pop()
-            .ok_or_else(|| {
-                self.error(
-                    "Under stack was empty when popping. \
-                This is a bug in the interpreter.",
-                )
-            })
-    }
     /// Get the values for all bindings in the current scope
     pub fn all_values_is_scope(&self) -> HashMap<Ident, Value> {
         let mut bindings = HashMap::new();
@@ -1067,20 +1072,24 @@ code:
         fill: Value,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
     ) -> UiuaResult {
-        if !fill.shape().is_empty() {
-            return Err(self.error(format!(
-                "Fill values must be scalar, but its shape is {}",
-                fill.format_shape()
-            )));
+        if fill.shape() == [0] {
+            self.scope.shape_fix.push(ShapeFix::None)
+        } else {
+            if !fill.shape().is_empty() {
+                return Err(self.error(format!(
+                    "Fill values must be scalar or an empty list, but its shape is {}",
+                    fill.format_shape()
+                )));
+            }
+            self.scope.shape_fix.push(match fill {
+                Value::Num(n) => ShapeFix::FillNum(n.data.into_iter().next().unwrap()),
+                #[cfg(feature = "bytes")]
+                Value::Byte(b) => ShapeFix::FillNum(b.data.into_iter().next().unwrap() as f64),
+                Value::Char(c) => ShapeFix::FillChar(c.data.into_iter().next().unwrap()),
+                Value::Box(b) => ShapeFix::FillBox(b.data.into_iter().next().unwrap()),
+                Value::Complex(c) => ShapeFix::FillComplex(c.data.into_iter().next().unwrap()),
+            });
         }
-        self.scope.shape_fix.push(match fill {
-            Value::Num(n) => ShapeFix::FillNum(n.data.into_iter().next().unwrap()),
-            #[cfg(feature = "bytes")]
-            Value::Byte(b) => ShapeFix::FillNum(b.data.into_iter().next().unwrap() as f64),
-            Value::Char(c) => ShapeFix::FillChar(c.data.into_iter().next().unwrap()),
-            Value::Box(b) => ShapeFix::FillBox(b.data.into_iter().next().unwrap()),
-            Value::Complex(c) => ShapeFix::FillComplex(c.data.into_iter().next().unwrap()),
-        });
         let res = in_ctx(self);
         self.scope.shape_fix.pop();
         res
@@ -1105,6 +1114,9 @@ code:
                 .nth_back(i)
                 .is_some_and(|fix| matches!(fix, ShapeFix::Pack))
         })
+    }
+    pub(crate) fn call_frames(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {
+        self.scope.call.iter()
     }
     pub(crate) fn call_with_this(&mut self, f: impl Into<Function>) -> UiuaResult {
         let call_height = self.scope.call.len();

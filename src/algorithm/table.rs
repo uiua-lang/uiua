@@ -209,7 +209,8 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
     let sig = f.signature();
     if sig.args != 2 {
         return Err(env.error(format!(
-            "Table's function must take 2 arguments, but its signature is {sig}",
+            "{}'s function must take 2 arguments, but its signature is {sig}",
+            Primitive::Table.format()
         )));
     }
     let mut new_shape = Shape::from(xs.shape());
@@ -248,17 +249,13 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
     match sig.args {
         0 | 1 => {
             return Err(env.error(format!(
-                "Cross's function must take at least 2 arguments, but its signature is {sig}",
+                "{}'s function must take at least 2 arguments, but its signature is {sig}",
+                Primitive::Cross.format()
             )))
         }
         2 => {
             let xs = env.pop(1)?;
             let ys = env.pop(2)?;
-            if sig.args != 2 {
-                return Err(env.error(format!(
-                    "Cross's function must take 2 arguments, but its signature is {sig}",
-                )));
-            }
             let new_shape = tiny_vec![xs.row_count(), ys.row_count()];
             let outputs = sig.outputs;
             let mut items = multi_output(outputs, Value::builder(xs.row_count() * ys.row_count()));

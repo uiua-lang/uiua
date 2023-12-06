@@ -939,9 +939,9 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p>"The "<Prim prim=Try/>" modifier takes two functions. If the first function throws an error, the second function is called with the same arguments plus an error message."</p>
         <p>"We can see how this works by using it with "<Prim prim=Parse/>"."</p>
         <p>"If the parsing fails, we "<Prim prim=Box/>" "<Prim prim=Both/>" the argument and the error message and put them in an array."</p>
-        <Editor example="f ← ⍣parse[∩□]\nf \"5\"\nf \"dog\""/>
+        <Editor example="f ← ⍣⋕[∩□]\nf \"5\"\nf \"dog\""/>
         <p>"If we don't care about an error and just want to supply a default value, we can use "<Prim prim=Gap/>" to discard the argument and error message."</p>
-        <Editor example="f ← ⍣parse⋅⋅0\nf \"5\"\nf \"dog\""/>
+        <Editor example="f ← ⍣⋕⋅⋅0\nf \"5\"\nf \"dog\""/>
 
         <h2 id="switch">"Switch Functions"</h2>
         <p>"A "<A href="/docs/advancedstack#function-packs">"function pack"</A>" that is used outside a modifier becomes a "<em>"switch function"</em>". Switch functions take an array of natural numbers called the "<em>"selector"</em>" and call the function at the corresponding index in the pack."</p>
@@ -1012,9 +1012,10 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <Editor example="≡⊂ ⊙¤ 1_2_3 4_5_6"/>
         <Editor example="≡(⊂⊂⊂) ⊓⊓⊓∘¤¤∘ 1_2_3 4_5_6 7_8_9 10_11_12"/>
         <Editor example="≡(⊂⊂⊂) ⊙∩¤     1_2_3 4_5_6 7_8_9 10_11_12"/>
-        <p>"Note that in the case of using "<Prim prim=Rows/>" with a pervasive functions like "<Prim prim=Sub/>" on two lists, "<Prims prims=[Rows]/><code>"f"</code><Prims prims=[Dip, Fix]/>" is equivalent to "<Prims prims=[Table]/><code>"f"</code>"."</p>
-        <Editor example="≡- ⊙¤ 1_2_3 4_5_6\n⊞- 1_2_3 4_5_6"/>
-        <p>"In cases like this, using "<Prim prim=Table/>" is preferred because it is more clear, but also because it is "<em>"much"</em>" faster."</p>
+        <p><Prim prim=Fix/>" also works without "<Prim prim=Rows/>" with pervasive dyadic functions."</p>
+        <Editor example="-  [1 2 3]  [4 5 6]\n- ¤[1 2 3]  [4 5 6]\n-  [1 2 3] ¤[4 5 6]"/>
+        <Editor example="-  1_3 [3_4 5_6 7_8]"/> // Should fail
+        <Editor example="- ¤1_3 [3_4 5_6 7_8]"/>
 
         <h2 id="rerank"><Prim prim=Rerank/></h2>
         <p>"The above examples dig into an array from the top down. But what if you want to think about the array from the "<em>"bottom up"</em>"?"</p>

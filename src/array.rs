@@ -263,6 +263,16 @@ impl<T: ArrayValue> Array<T> {
     pub fn show(&self) -> String {
         self.grid_string()
     }
+    pub(crate) fn pop_row(&mut self) -> Option<Self> {
+        if self.row_count() == 0 {
+            return None;
+        }
+        let data = self.data.split_off(self.data.len() - self.row_len());
+        self.shape[0] -= 1;
+        let shape: Shape = self.shape[1..].into();
+        self.validate_shape();
+        Some(Self::new(shape, data))
+    }
 }
 
 impl Array<Boxed> {
@@ -399,6 +409,8 @@ pub trait ArrayValue: Clone + Debug + Display + GridFmt + ArrayCmp + Send + Sync
     fn get_fill(env: &Uiua) -> Result<Self, &'static str>;
     /// Hash the value
     fn array_hash<H: Hasher>(&self, hasher: &mut H);
+    /// Get the prototype value
+    fn prototype() -> Self;
     /// Delimiters for formatting
     fn format_delims() -> (&'static str, &'static str) {
         ("[", "]")
@@ -424,6 +436,9 @@ impl ArrayValue for f64 {
         };
         v.to_bits().hash(hasher)
     }
+    fn prototype() -> Self {
+        0.0
+    }
 }
 
 impl ArrayValue for u8 {
@@ -433,6 +448,9 @@ impl ArrayValue for u8 {
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
+    }
+    fn prototype() -> Self {
+        0
     }
 }
 
@@ -450,6 +468,9 @@ impl ArrayValue for char {
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
     }
+    fn prototype() -> Self {
+        ' '
+    }
 }
 
 impl ArrayValue for Boxed {
@@ -459,6 +480,9 @@ impl ArrayValue for Boxed {
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
+    }
+    fn prototype() -> Self {
+        Boxed(Array::<f64>::new(tiny_vec![0], []).into())
     }
 }
 
@@ -471,6 +495,9 @@ impl ArrayValue for Complex {
         for n in [self.re, self.im] {
             n.array_hash(hasher);
         }
+    }
+    fn prototype() -> Self {
+        Complex::new(0.0, 0.0)
     }
 }
 

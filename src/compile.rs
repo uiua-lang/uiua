@@ -1,6 +1,7 @@
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
+    ops::ControlFlow,
     sync::Arc,
 };
 
@@ -137,13 +138,33 @@ impl Uiua {
                         )));
                     }
                 }
+                let is_setinv = matches!(
+                    instrs.as_slice(),
+                    [
+                        Instr::PushFunc(_),
+                        Instr::PushFunc(_),
+                        Instr::Prim(Primitive::SetInverse, _)
+                    ]
+                );
+                let is_setund = matches!(
+                    instrs.as_slice(),
+                    [
+                        Instr::PushFunc(_),
+                        Instr::PushFunc(_),
+                        Instr::PushFunc(_),
+                        Instr::Prim(Primitive::SetUnder, _)
+                    ]
+                );
                 if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
                     let func = make_fn(f.instrs.clone(), f.signature(), self);
                     self.compile_bind_function(name, func, sig_declared, span.clone().into())?;
                 } else if sig.args == 0
+                    && sig.outputs <= 1
                     && (sig.outputs > 0 || instrs.is_empty())
                     && placeholder_count == 0
+                    && !is_setinv
+                    && !is_setund
                 {
                     // Binding's instrs must be run
                     self.exec_global_instrs(instrs)?;
@@ -552,7 +573,15 @@ impl Uiua {
                     )));
                 }
                 Global::Func { f, sig_declared }
-                    if call && !sig_declared && count_temp_functions(&f.instrs) == 0 =>
+                    if call
+                        && !sig_declared
+                        && count_temp_functions(&f.instrs) == 0
+                        && f.recurse_instrs(|instr| {
+                            matches!(instr, Instr::Prim(Primitive::Stack | Primitive::Dump, _))
+                                .then_some(ControlFlow::Break(()))
+                                .unwrap_or(ControlFlow::Continue(()))
+                        })
+                        .is_none() =>
                 {
                     self.extend_instrs(f.instrs.clone())
                 }
@@ -704,7 +733,7 @@ impl Uiua {
         if let Modifier::Primitive(prim) = modified.modifier.value {
             // Give advice about redundancy
             match prim {
-                m @ Primitive::Each => {
+                m @ (Primitive::Each | Primitive::Rows) => {
                     if let [Sp {
                         value: Word::Primitive(prim),
                         span,
@@ -1037,11 +1066,8 @@ impl Uiua {
                             if call {
                                 self.extend_instrs(inverted);
                             } else {
-                                let func = Function::new(
-                                    FunctionId::Anonymous(modified.modifier.span.clone()),
-                                    inverted,
-                                    sig,
-                                );
+                                let id = FunctionId::Anonymous(modified.modifier.span.clone());
+                                let func = Function::new(id, inverted, sig);
                                 self.push_instr(Instr::PushFunc(func));
                             }
                             Ok(true)

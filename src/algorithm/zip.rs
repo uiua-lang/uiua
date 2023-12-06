@@ -151,7 +151,10 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let sig = f.signature();
     match sig.args {
-        0 => Err(env.error("Each's function must take at least 1 argument")),
+        0 => Err(env.error(format!(
+            "{}'s function must take at least 1 argument",
+            Primitive::Each.format()
+        ))),
         1 => each1(f, env.pop(1)?, env),
         2 => each2(f, env.pop(1)?, env.pop(2)?, env),
         n => {
@@ -173,8 +176,10 @@ fn each1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
         let outputs = f.signature().outputs;
         let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
         let new_shape = Shape::from(xs.shape());
+        let is_empty = outputs > 0 && xs.row_count() == 0;
+        let prototype = is_empty.then(|| xs.prototype_scalar(env));
         let mut old_values = xs.into_elements();
-        for val in old_values.by_ref() {
+        for val in old_values.by_ref().chain(prototype) {
             env.push(val);
             env.call(f.clone())?;
             for i in 0..outputs {
@@ -184,6 +189,9 @@ fn each1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
         for new_values in new_values.into_iter().rev() {
             let mut new_shape = new_shape.clone();
             let mut eached = Value::from_row_values(new_values, env)?;
+            if is_empty {
+                eached.pop_row();
+            }
             new_shape.extend_from_slice(&eached.shape()[1..]);
             *eached.shape_mut() = new_shape;
             env.push(eached);
@@ -196,8 +204,9 @@ fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     if !xs.shape().iter().zip(ys.shape()).all(|(a, b)| a == b) {
         let min_rank = xs.rank().min(ys.rank());
         return Err(env.error(format!(
-            "Cannot each arrays with shapes {} and {} because their \
+            "Cannot {} arrays with shapes {} and {} because their \
             shape prefixes {} and {} are different",
+            Primitive::Each.format(),
             xs.format_shape(),
             ys.format_shape(),
             FormatShape(&xs.shape()[..min_rank]),
@@ -211,10 +220,21 @@ fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
         env.push(val);
     } else {
         let outputs = f.signature().outputs;
-        let xs_shape = xs.shape().to_vec();
-        let ys_shape = ys.shape().to_vec();
-        let xs_values: Vec<_> = xs.into_elements().collect();
-        let ys_values: Vec<_> = ys.into_elements().collect();
+        let mut xs_shape = xs.shape().to_vec();
+        let mut ys_shape = ys.shape().to_vec();
+        let is_empty = outputs > 0 && xs.row_count() == 0 || ys.row_count() == 0;
+        let xs_proto = is_empty.then(|| xs.prototype_scalar(env));
+        let ys_proto = is_empty.then(|| ys.prototype_scalar(env));
+        if is_empty {
+            if let Some(r) = xs_shape.first_mut() {
+                *r += 1;
+            }
+            if let Some(r) = ys_shape.first_mut() {
+                *r += 1;
+            }
+        }
+        let xs_values: Vec<_> = xs.into_elements().chain(xs_proto).collect();
+        let ys_values: Vec<_> = ys.into_elements().chain(ys_proto).collect();
         let (new_shape, new_values) = bin_pervade_generic(
             &xs_shape,
             xs_values,
@@ -239,6 +259,12 @@ fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
         for new_values in transposed {
             let mut new_shape = new_shape.clone();
             let mut eached = Value::from_row_values(new_values, env)?;
+            if is_empty {
+                eached.pop_row();
+                if let Some(r) = new_shape.first_mut() {
+                    *r -= 1;
+                }
+            }
             new_shape.extend_from_slice(&eached.shape()[1..]);
             *eached.shape_mut() = new_shape;
             env.push(eached);
@@ -251,25 +277,48 @@ fn eachn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for win in args.windows(2) {
         if win[0].shape() != win[1].shape() {
             return Err(env.error(format!(
-                "The shapes in each of 3 or more arrays must all match, but shapes {} and {} cannot be eached together. \
+                "The shapes in each of 3 or more arrays must all match, \
+                but shapes {} and {} cannot be {}ed together. \
                 If you want more flexibility, use rows.",
                 win[0].format_shape(),
-                win[1].format_shape()
+                win[1].format_shape(),
+                Primitive::Each.format()
             )));
         }
     }
-    let elem_count = args[0].element_count();
-    let mut arg_elems: Vec<_> = args.into_iter().map(|v| v.into_elements()).collect();
-    let mut new_values = Vec::new();
+    let outputs = f.signature().outputs;
+    let is_empty = outputs > 0 && args.iter().any(|v| v.row_count() == 0);
+    let prototypes: Vec<_> = args
+        .iter()
+        .map(|v| is_empty.then(|| v.prototype_scalar(env)))
+        .collect();
+    let elem_count = args[0].element_count() + is_empty as usize;
+    let mut new_values = multi_output(outputs, Vec::with_capacity(elem_count));
+    let new_shape = Shape::from(args[0].shape());
+    let mut arg_elems: Vec<_> = args
+        .into_iter()
+        .zip(prototypes)
+        .map(|(v, proto)| v.into_elements().chain(proto))
+        .collect();
     for _ in 0..elem_count {
         for arg in arg_elems.iter_mut().rev() {
             env.push(arg.next().unwrap());
         }
         env.call(f.clone())?;
-        new_values.push(env.pop("each's function result")?);
+        for i in 0..outputs {
+            new_values[i].push(env.pop("each's function result")?);
+        }
     }
-    let eached = Value::from_row_values(new_values, env)?;
-    env.push(eached);
+    for new_values in new_values.into_iter().rev() {
+        let mut new_shape = new_shape.clone();
+        let mut eached = Value::from_row_values(new_values, env)?;
+        if is_empty {
+            eached.pop_row();
+        }
+        new_shape.extend_from_slice(&eached.shape()[1..]);
+        *eached.shape_mut() = new_shape;
+        env.push(eached);
+    }
     Ok(())
 }
 
@@ -278,7 +327,10 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let sig = f.signature();
     match sig.args {
-        0 => Err(env.error("Rows' function must take at least 1 argument")),
+        0 => Err(env.error(format!(
+            "{}'s function must take at least 1 argument",
+            Primitive::Rows.format()
+        ))),
         1 => rows1(f, env.pop(1)?, env),
         2 => rows2(f, env.pop(1)?, env.pop(2)?, env),
         n => {
@@ -297,9 +349,11 @@ fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
         env.push(val);
     } else {
         let outputs = f.signature().outputs;
-        let mut new_rows = multi_output(outputs, Value::builder(xs.row_count()));
-        let mut old_rows = xs.into_rows();
-        for row in old_rows.by_ref() {
+        let is_empty = outputs > 0 && xs.row_count() == 0;
+        let prototype = is_empty.then(|| xs.prototype_row(env));
+        let mut new_rows =
+            multi_output(outputs, Value::builder(xs.row_count() + is_empty as usize));
+        for row in xs.into_rows().chain(prototype) {
             env.push(row);
             env.call(f.clone())?;
             for i in 0..outputs {
@@ -307,23 +361,30 @@ fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
             }
         }
         for new_rows in new_rows.into_iter().rev() {
-            env.push(new_rows.finish());
+            let mut val = new_rows.finish();
+            if is_empty {
+                val.pop_row();
+            }
+            env.push(val);
         }
     }
     Ok(())
 }
 
 fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+    let outputs = f.signature().outputs;
     match (xs.row_count(), ys.row_count()) {
         (a, b) if a == b => {
             if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
                 let val = f(xs, ys, a + 1, b + 1, env)?;
                 env.push(val);
             } else {
-                let outputs = f.signature().outputs;
+                let is_empty = outputs > 0 && xs.row_count() == 0 || ys.row_count() == 0;
+                let xs_proto = is_empty.then(|| xs.prototype_row(env));
+                let ys_proto = is_empty.then(|| ys.prototype_row(env));
                 let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-                let x_rows = xs.into_rows();
-                let y_rows = ys.into_rows();
+                let x_rows = xs.into_rows().chain(xs_proto);
+                let y_rows = ys.into_rows().chain(ys_proto);
                 for (x, y) in x_rows.into_iter().zip(y_rows) {
                     env.push(y);
                     env.push(x);
@@ -333,16 +394,21 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     }
                 }
                 for new_rows in new_rows.into_iter().rev() {
-                    env.push(Value::from_row_values(new_rows, env)?);
+                    let mut val = Value::from_row_values(new_rows, env)?;
+                    if is_empty {
+                        val.pop_row();
+                    }
+                    env.push(val);
                 }
             }
             Ok(())
         }
         (_, 1) => {
             let ys = ys.into_rows().next().unwrap();
-            let outputs = f.signature().outputs;
+            let is_empty = outputs > 0 && xs.row_count() == 0;
+            let prototype = is_empty.then(|| xs.prototype_row(env));
             let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-            for x in xs.into_rows() {
+            for x in xs.into_rows().chain(prototype) {
                 env.push(ys.clone());
                 env.push(x);
                 env.call(f.clone())?;
@@ -351,16 +417,20 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 }
             }
             for new_rows in new_rows.into_iter().rev() {
-                env.push(Value::from_row_values(new_rows, env)?);
+                let mut val = Value::from_row_values(new_rows, env)?;
+                if is_empty {
+                    val.pop_row();
+                }
+                env.push(val);
             }
             Ok(())
         }
         (1, _) => {
             let xs = xs.into_rows().next().unwrap();
-            let outputs = f.signature().outputs;
+            let is_empty = outputs > 0 && ys.row_count() == 0;
+            let prototype = is_empty.then(|| ys.prototype_row(env));
             let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
-            let y_rows = ys.into_rows();
-            for y in y_rows {
+            for y in ys.into_rows().chain(prototype) {
                 env.push(y);
                 env.push(xs.clone());
                 env.call(f.clone())?;
@@ -369,12 +439,17 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 }
             }
             for new_rows in new_rows.into_iter().rev() {
-                env.push(Value::from_row_values(new_rows, env)?);
+                let mut val = Value::from_row_values(new_rows, env)?;
+                if is_empty {
+                    val.pop_row();
+                }
+                env.push(val);
             }
             Ok(())
         }
         (a, b) => Err(env.error(format!(
-            "Cannot rows arrays with different number of rows {a} and {b}",
+            "Cannot {} arrays with different number of rows {a} and {b}",
+            Primitive::Rows.format(),
         ))),
     }
 }
@@ -386,9 +461,10 @@ fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
                 && args[a].row_count() != args[b].row_count()
             {
                 return Err(env.error(format!(
-                    "Cannot rows arrays with different number of rows {} and {}",
+                    "Cannot {} arrays with different number of rows {} and {}",
                     args[a].row_count(),
-                    args[b].row_count()
+                    args[b].row_count(),
+                    Primitive::Rows.format(),
                 )));
             }
         }
@@ -396,6 +472,8 @@ fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     let mut row_count = 0;
     let mut all_scalar = true;
     let mut all_1 = true;
+    let outputs = f.signature().outputs;
+    let is_empty = outputs > 0 && args.iter().any(|v| v.row_count() == 0);
     let mut arg_elems: Vec<_> = args
         .into_iter()
         .map(|v| {
@@ -403,18 +481,18 @@ fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             if v.row_count() == 1 {
                 Err(v.into_rows().next().unwrap())
             } else {
+                let proto = is_empty.then(|| v.prototype_row(env));
                 row_count = row_count.max(v.row_count());
                 all_1 = false;
-                Ok(v.into_rows())
+                Ok(v.into_rows().chain(proto))
             }
         })
         .collect();
     if all_1 {
         row_count = 1;
     }
-    let outputs = f.signature().outputs;
     let mut new_values = multi_output(outputs, Vec::new());
-    for _ in 0..row_count {
+    for _ in 0..row_count + is_empty as usize {
         for arg in arg_elems.iter_mut().rev() {
             match arg {
                 Ok(rows) => env.push(rows.next().unwrap()),
@@ -430,6 +508,8 @@ fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         let mut eached = Value::from_row_values(new_values, env)?;
         if all_scalar {
             eached.shape_mut().remove(0);
+        } else if is_empty {
+            eached.pop_row();
         }
         eached.validate_shape();
         env.push(eached);

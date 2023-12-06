@@ -97,15 +97,12 @@ macro_rules! sys_op {
                 }
             }
             /// Get the documentation for the system function
-            pub fn doc(&self) -> Option<&'static PrimDoc> {
+            pub fn doc(&self) -> &'static PrimDoc {
                 match self {
                     $(SysOp::$variant => {
                         let doc_str = concat!($doc_rust, $($doc, "\n"),*);
                         static DOC: OnceLock<PrimDoc> = OnceLock::new();
-                        if doc_str.is_empty() {
-                            return None;
-                        }
-                        Some(DOC.get_or_init(|| PrimDoc::from_lines(doc_str)))
+                        DOC.get_or_init(|| PrimDoc::from_lines(doc_str))
                     },)*
                 }
             }

@@ -5,11 +5,22 @@ Uiua is not yet stable.
 
 ## 0.6.0 - 2023-12-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Language
+- [`fix` `¤`](https://uiua.org/docs/fix) now works with binary pervasive functions
+- [`fill` `⬚`](https://uiua.org/docs/fill) can now be disabled for a function by filling with an empty list
+- [`parse` `⋕`](https://uiua.org/docs/parse) now has a glyph
+- [`sign` `±`](https://uiua.org/docs/sign), [`floor` `⌊`](https://uiua.org/docs/floor), [`ceiling` `⌈`](https://uiua.org/docs/ceiling), and [`round` `⁅`](https://uiua.org/docs/round) now work with [`under` `⍜`](https://uiua.org/docs/under)
+- [`reduce` `/`](https://uiua.org/docs/reduce) can now use a function that takes more than 2 arguments
+- Add some missing arithmetic inverses and unders involving [`flip` `:`](https://uiua.org/docs/flip)
 ### Interpreter
-- Bug fixes
+- Make [`stack` `?`](https://uiua.org/docs/stack) and [`dump`](https://uiua.org/docs/dump) output show call stack
+- Show type and shape information when pretty-printing empty arrays with rank 2 or greater
+- Improve language server hover information
+- Bug and crash fixes
 ### Website
 - Add a token count to the editor (in settings)
-
+- Files can now be dragged into the editor to open them with [`&fras`](https://uiua.org/docs/&fras)
+- [`&fld`](https://uiua.org/docs/&fld) now works on the website
 ## 0.5.1 - 2023-12-02
 ### Interpreter
 - Fix [`stack` `?`](https://uiua.org/docs/stack) signature

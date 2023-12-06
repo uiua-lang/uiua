@@ -3,6 +3,7 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
     mem::{discriminant, transmute},
+    ops::ControlFlow,
     sync::Arc,
 };
 
@@ -115,27 +116,33 @@ impl fmt::Display for TempStack {
 impl PartialEq for Instr {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Push(a), Self::Push(b)) => a == b,
-            (Self::BeginArray, Self::BeginArray) => true,
-            (Self::EndArray { .. }, Self::EndArray { .. }) => true,
             (Self::Prim(a, s_span), Self::Prim(b, b_span)) => a == b && s_span == b_span,
-            (Self::Call(a), Self::Call(b)) => a == b,
-            (Self::PushTemp { count: a, .. }, Self::PushTemp { count: b, .. }) => a == b,
-            (Self::PopTemp { count: a, .. }, Self::PopTemp { count: b, .. }) => a == b,
+            (Self::ImplPrim(a, s_span), Self::ImplPrim(b, b_span)) => a == b && s_span == b_span,
             (
-                Self::CopyFromTemp {
-                    offset: ao,
-                    count: ac,
-                    ..
+                Self::CopyToTemp {
+                    stack: a_stack,
+                    count: a_count,
+                    span: a_span,
                 },
-                Self::CopyFromTemp {
-                    offset: bo,
-                    count: bc,
-                    ..
+                Self::CopyToTemp {
+                    stack: b_stack,
+                    count: b_count,
+                    span: b_span,
                 },
-            ) => ao == bo && ac == bc,
-            (Self::DropTemp { count: a, .. }, Self::DropTemp { count: b, .. }) => a == b,
-            _ => false,
+            ) => a_stack == b_stack && a_count == b_count && a_span == b_span,
+            (
+                Self::PushTemp {
+                    stack: a_stack,
+                    count: a_count,
+                    span: a_span,
+                },
+                Self::PushTemp {
+                    stack: b_stack,
+                    count: b_count,
+                    span: b_span,
+                },
+            ) => a_stack == b_stack && a_count == b_count && a_span == b_span,
+            (a, b) => a.semantic_eq(b),
         }
     }
 }
@@ -216,6 +223,33 @@ impl Instr {
     }
     pub(crate) fn is_compile_only(&self) -> bool {
         matches!(self, Self::PushSig(_) | Self::PopSig)
+    }
+    pub(crate) fn semantic_eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Push(a), Self::Push(b)) => a == b,
+            (Self::BeginArray, Self::BeginArray) => true,
+            (Self::EndArray { .. }, Self::EndArray { .. }) => true,
+            (Self::Prim(a, _), Self::Prim(b, _)) => a == b,
+            (Self::ImplPrim(a, _), Self::ImplPrim(b, _)) => a == b,
+            (Self::Call(a), Self::Call(b)) => a == b,
+            (Self::PushFunc(a), Self::PushFunc(b)) => a == b,
+            (Self::PushTemp { count: a, .. }, Self::PushTemp { count: b, .. }) => a == b,
+            (Self::PopTemp { count: a, .. }, Self::PopTemp { count: b, .. }) => a == b,
+            (
+                Self::CopyFromTemp {
+                    offset: ao,
+                    count: ac,
+                    ..
+                },
+                Self::CopyFromTemp {
+                    offset: bo,
+                    count: bc,
+                    ..
+                },
+            ) => ao == bo && ac == bc,
+            (Self::DropTemp { count: a, .. }, Self::DropTemp { count: b, .. }) => a == b,
+            _ => false,
+        }
     }
 }
 
@@ -492,6 +526,30 @@ impl Function {
         self.under(g_sig)
             .ok_or_else(|| env.error("No inverse found"))
     }
+    pub(crate) fn recurse_instrs<T>(
+        &self,
+        mut f: impl FnMut(&Instr) -> ControlFlow<T>,
+    ) -> Option<T> {
+        recurse_instrs(&self.instrs, &mut f)
+    }
+}
+
+fn recurse_instrs<T>(instrs: &[Instr], f: &mut impl FnMut(&Instr) -> ControlFlow<T>) -> Option<T> {
+    for instr in instrs {
+        match instr {
+            Instr::PushFunc(func) => {
+                if let Some(val) = recurse_instrs(&func.instrs, f) {
+                    return Some(val);
+                }
+            }
+            _ => {
+                if let ControlFlow::Break(val) = f(instr) {
+                    return Some(val);
+                }
+            }
+        }
+    }
+    None
 }
 
 /// A Uiua function id
@@ -534,7 +592,7 @@ impl From<Primitive> for FunctionId {
 impl fmt::Display for FunctionId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FunctionId::Named(name) => write!(f, "`{name}`"),
+            FunctionId::Named(name) => write!(f, "{name}"),
             FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
             FunctionId::Primitive(prim) => write!(f, "{prim}"),
             FunctionId::Main => write!(f, "main"),

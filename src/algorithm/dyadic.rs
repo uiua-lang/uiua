@@ -338,7 +338,7 @@ impl Value {
                         a.append(b, env)?;
                         Ok(a.into())
                     },
-                    |a, b| format!("Cannot append {a} array to {b} array"),
+                    |a, b| format!("Cannot add {b} row to {a} array"),
                 )?
             }
         }
@@ -452,16 +452,16 @@ impl<T: ArrayValue> Array<T> {
             Err(e) => {
                 if self.rank() <= other.rank() || self.rank() - other.rank() > 1 {
                     return Err(C::fill_error(ctx.error(format!(
-                        "Cannot append rank {} array with rank {} array{e}",
-                        self.rank(),
-                        other.rank()
+                        "Cannot add rank {} row to rank {} array{e}",
+                        other.rank(),
+                        self.rank()
                     ))));
                 }
                 if &self.shape()[1..] != other.shape() {
                     return Err(C::fill_error(ctx.error(format!(
-                        "Cannot append arrays of shapes {} and {}{e}",
-                        self.format_shape(),
-                        other.format_shape()
+                        "Cannot add shape {} row to array with shape {} rows{e}",
+                        other.format_shape(),
+                        FormatShape(&self.shape()[1..]),
                     ))));
                 }
                 take(&mut self.shape)
@@ -2003,7 +2003,7 @@ impl<T: ArrayValue> Array<T> {
         if indices_shape.len() > 1 {
             Err(env.error("Cannot undo multi-dimensional selection"))
         } else {
-            self.unselect(indices, into, env)
+            self.unselect(indices_shape, indices, into, env)
         }
     }
     fn select(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
@@ -2064,50 +2064,69 @@ impl<T: ArrayValue> Array<T> {
         arr.validate_shape();
         Ok(arr)
     }
-    fn unselect(&self, indices: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let shape_is_valid = self.row_count() == indices.len()
-            || indices.len() == 1 && !into.shape().is_empty() && &into.shape()[1..] == self.shape();
+    fn unselect(
+        &self,
+        indices_shape: &[usize],
+        indices: &[isize],
+        mut into: Self,
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        let shape_is_valid = self.row_count() == indices.len() || indices_shape.is_empty();
         if !shape_is_valid {
             return Err(env.error(
                 "Attempted to undo selection, but \
                 the shape of the selected array changed",
             ));
         }
-        let into_row_len = into.row_len();
-        let into_row_count = into.row_count();
-        let into_data = into.data.as_mut_slice();
-        for (&i, row) in indices.iter().zip(self.row_slices()) {
-            let i = if i >= 0 {
-                let ui = i as usize;
-                if ui >= into_row_count {
-                    return Err(env
-                        .error(format!(
-                            "Index {} is out of bounds of length {}",
-                            i, into_row_count
-                        ))
-                        .fill());
-                }
-                ui
-            } else {
-                let pos_i = (into_row_count as isize + i) as usize;
-                if pos_i >= into_row_count {
-                    return Err(env
-                        .error(format!(
-                            "Index {} is out of bounds of length {}",
-                            i, into_row_count
-                        ))
-                        .fill());
-                }
-                pos_i
-            };
-            let start = i * into_row_len;
-            let end = start + into_row_len;
-            for (i, x) in (start..end).zip(row) {
-                into_data[i] = x.clone();
-            }
+        if indices_shape.is_empty() {
+            unselect_inner(once(self.data.as_slice()), indices, &mut into, env)?;
+        } else {
+            unselect_inner(self.row_slices(), indices, &mut into, env)?;
         }
         Ok(into)
     }
+}
+
+fn unselect_inner<'a, T: ArrayValue>(
+    row_slices: impl Iterator<Item = &'a [T]>,
+    indices: &[isize],
+    into: &mut Array<T>,
+    env: &Uiua,
+) -> UiuaResult {
+    let into_row_len = into.row_len();
+    let into_row_count = into.row_count();
+    let into_data = into.data.as_mut_slice();
+    for (&index, row) in indices.iter().zip(row_slices) {
+        let i = if index >= 0 {
+            let uns_index = index as usize;
+            if uns_index >= into_row_count {
+                return Err(env
+                    .error(format!(
+                        "Index {} is out of bounds of length {}",
+                        index, into_row_count
+                    ))
+                    .fill());
+            }
+            uns_index
+        } else {
+            let pos_i = (into_row_count as isize + index) as usize;
+            if pos_i >= into_row_count {
+                return Err(env
+                    .error(format!(
+                        "Index {} is out of bounds of length {}",
+                        index, into_row_count
+                    ))
+                    .fill());
+            }
+            pos_i
+        };
+        let start = i * into_row_len;
+        let end = start + into_row_len;
+        for (i, x) in (start..end).zip(row) {
+            into_data[i] = x.clone();
+        }
+    }
+    Ok(())
 }
 
 impl Value {

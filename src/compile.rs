@@ -1,5 +1,5 @@
 use std::{
-    collections::hash_map::DefaultHasher,
+    collections::{hash_map::DefaultHasher, HashMap, HashSet},
     hash::{Hash, Hasher},
     ops::ControlFlow,
     sync::Arc,
@@ -107,7 +107,7 @@ impl Uiua {
 
             // Handle placeholders
             if placeholder_count > 0 {
-                increment_placeholders(instrs.make_mut(), &mut 0);
+                increment_placeholders(instrs.make_mut(), &mut 0, &mut HashMap::new());
                 instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
                 instrs.push(Instr::PopTempFunctions(placeholder_count));
             }
@@ -238,7 +238,7 @@ impl Uiua {
         Ok(())
     }
     fn validate_binding_name(&self, name: &Ident, instrs: &[Instr], span: Span) -> UiuaResult {
-        let temp_function_count = count_temp_functions(instrs);
+        let temp_function_count = count_temp_functions(instrs, &mut HashSet::new());
         let name_marg_count = ident_modifier_args(name) as usize;
         if temp_function_count != name_marg_count {
             let trimmed = name.trim_end_matches('!');
@@ -574,7 +574,7 @@ impl Uiua {
                 Global::Func { f, sig_declared }
                     if call
                         && !sig_declared
-                        && count_temp_functions(&f.instrs) == 0
+                        && count_temp_functions(&f.instrs, &mut HashSet::new()) == 0
                         && f.recurse_instrs(|instr| {
                             matches!(instr, Instr::Prim(Primitive::Stack | Primitive::Dump, _))
                                 .then_some(ControlFlow::Break(()))
@@ -1227,28 +1227,31 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
     })
 }
 
-fn increment_placeholders(instrs: &mut [Instr], curr: &mut usize) {
+fn increment_placeholders(instrs: &mut [Instr], curr: &mut usize, map: &mut HashMap<usize, usize>) {
     for instr in instrs {
         match instr {
-            Instr::GetTempFunction { offset, .. } => {
-                *offset = *curr;
-                *curr += 1;
+            Instr::GetTempFunction { offset, span, .. } => {
+                *offset = *map.entry(*span).or_insert_with(|| {
+                    let new = *curr;
+                    *curr += 1;
+                    new
+                });
             }
             Instr::PushFunc(f) => {
-                increment_placeholders(f.instrs.make_mut(), curr);
+                increment_placeholders(f.instrs.make_mut(), curr, map);
             }
             _ => (),
         }
     }
 }
 
-fn count_temp_functions(instrs: &[Instr]) -> usize {
+fn count_temp_functions(instrs: &[Instr], counted: &mut HashSet<usize>) -> usize {
     let mut count = 0;
     for instr in instrs {
         match instr {
-            Instr::GetTempFunction { .. } => count += 1,
+            Instr::GetTempFunction { span, .. } => count += counted.insert(*span) as usize,
             Instr::PushFunc(f) if matches!(f.id, FunctionId::Anonymous(_)) => {
-                count += count_temp_functions(&f.instrs);
+                count += count_temp_functions(&f.instrs, counted);
             }
             _ => (),
         }

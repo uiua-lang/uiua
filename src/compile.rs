@@ -89,9 +89,12 @@ impl Uiua {
         I: IntoIterator<Item = Instr>,
         I::IntoIter: ExactSizeIterator,
     {
-        let address = self.instrs.len();
-        self.instrs.extend(optimize_instrs(instrs, true));
-        let length = self.instrs.len() - address;
+        let address = self.instrs.len() + 1;
+        let mut instrs = optimize_instrs(instrs, true);
+        instrs.insert(0, Instr::Comment(format!("({id}").into()));
+        instrs.push(Instr::Comment(format!("{id})").into()));
+        self.instrs.extend(instrs);
+        let length = self.instrs.len() - address - 1;
         Function::new(
             id,
             sig,

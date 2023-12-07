@@ -21,8 +21,10 @@ use crate::{
 #[repr(u8)]
 #[allow(missing_docs)]
 pub enum Instr {
+    /// A comment
+    Comment(Arc<str>) = 0,
     /// Push a value onto the stack
-    Push(Value) = 0,
+    Push(Value),
     /// Begin an array
     BeginArray,
     /// End an array
@@ -174,6 +176,7 @@ impl Hash for Instr {
         let disc: u8 = unsafe { transmute(discriminant(self)) };
         disc.hash(state);
         match self {
+            Instr::Comment(_) => {}
             Instr::Push(val) => val.hash(state),
             Instr::BeginArray => {}
             Instr::EndArray { .. } => {}
@@ -268,6 +271,7 @@ impl fmt::Debug for Instr {
 impl fmt::Display for Instr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Instr::Comment(comment) => write!(f, "# {comment}"),
             Instr::Push(val) => write!(f, "{val:?}"),
             Instr::BeginArray => write!(f, "begin array"),
             Instr::EndArray { .. } => write!(f, "end array"),
@@ -311,7 +315,7 @@ pub struct Function {
 }
 
 /// A range of compiled instructions
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct FuncSlice {
     pub(crate) address: usize,
     pub(crate) len: usize,

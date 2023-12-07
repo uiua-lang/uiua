@@ -165,6 +165,7 @@ impl<'a> VirtualEnv<'a> {
     fn instr(&mut self, instr: &'a Instr) -> Result<(), SigCheckError> {
         use Primitive::*;
         match instr {
+            Instr::Comment(_) => {}
             Instr::Push(val) => self.stack.push(BasicValue::from_val(val)),
             Instr::BeginArray => self.array_stack.push(self.stack.len()),
             Instr::EndArray { .. } => {

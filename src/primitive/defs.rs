@@ -1142,8 +1142,6 @@ primitive!(
     /// ex: ⍥(⊂2)5 []
     /// One interesting use of `repeat` is to collect some number of stack values into an array.
     /// ex: ⍥⊂3 [] 1 2 3
-    /// [repeat]ing a negative number of times will repeat the [un]ed function.
-    /// ex: ⍥√¯3 2
     /// Repeating [infinity] times will create an infinite loop that can only be terminated by ending the program.
     /// If you want an infinite loop that ends when some condition is met, use [do].
     ///

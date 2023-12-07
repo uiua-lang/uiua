@@ -415,7 +415,7 @@ code:
             )));
         }
         if !self.imports.lock().contains_key(path) {
-            let import = self.in_scope(|env| env.load_str_path(input, path).map(drop))?;
+            let import = self.in_scope(|env| env.load_str_path(input, path))?;
             self.imports.lock().insert(path.into(), import);
         }
         let imports_gaurd = self.imports.lock();
@@ -451,18 +451,23 @@ code:
         self.instrs
             .extend(instrs.into_iter().filter(|instr| !instr.is_compile_only()));
         let end = self.instrs.len();
+        let slice = FuncSlice {
+            address: start,
+            len: end - start,
+        };
         let res = self.exec(StackFrame {
-            slice: FuncSlice {
-                address: start,
-                len: end - start,
-            },
+            slice,
             id: FunctionId::Main,
             sig: Signature::new(0, 0),
             call_span: 0,
             pc: 0,
             spans: Vec::new(),
         });
-        self.instrs.truncate(start);
+        // Only truncate if now new instructions were added
+        // i.e. nothing was imported
+        if self.instrs.len() == end {
+            self.instrs.truncate(start);
+        }
         res
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
@@ -470,7 +475,9 @@ code:
         let mut formatted_instr = String::new();
         loop {
             let frame = self.scope.call.last().unwrap();
-            let Some(instr) = self.instrs.get(frame.slice.address + frame.pc) else {
+            let Some(instr) = self.instrs[frame.slice.address..][..frame.slice.len].get(frame.pc)
+            else {
+                self.scope.call.pop().unwrap();
                 break;
             };
             // Uncomment to debug
@@ -504,6 +511,7 @@ code:
                 self.last_time = instant::now();
             }
             let res = match instr {
+                Instr::Comment(_) => Ok(()),
                 &Instr::Prim(prim, span) => {
                     self.with_prim_span(span, Some(prim), |env| prim.run(env))
                 }
@@ -1158,7 +1166,8 @@ code:
         let Some(i) = self.scope.this.last().copied() else {
             return Err(self.error("No recursion context set"));
         };
-        let frame = self.scope.call[i].clone();
+        let mut frame = self.scope.call[i].clone();
+        frame.pc = 0;
         self.call_frame(frame)
     }
     /// Spawn a thread
@@ -1184,7 +1193,7 @@ code:
             ..ThisThread::default()
         };
         let mut env = Uiua {
-            instrs: EcoVec::new(),
+            instrs: self.instrs.clone(),
             new_functions: Vec::new(),
             globals: self.globals.clone(),
             spans: self.spans.clone(),

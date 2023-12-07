@@ -4,6 +4,10 @@ Uiua is not yet stable.
 
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.7.0 - 2023-12-??
+### Language
+- [`repeat` `⍥`](https://uiua.org/docs/repeat) can no longer use a negative number of repetitions
+
 ## 0.6.1 - 2023-12-07
 ### Interpreter
 - Make [proxy values](https://uiua.org/docs/functions#proxy) a little less leaky

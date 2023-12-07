@@ -676,7 +676,7 @@ primitive!(
     ///   : > □"banana"  "orange"
     ///
     /// Most non-pervasive monadic functions, like [reverse], [first], [transpose], etc, will work on box elements without needing to [un][box] them.
-    /// Unlike pervasive functions, [box] depth is not preserved.
+    /// Unlike pervasive functions, [box] depth is only preserved for some of these.
     /// ex: ⊢□□[1 2 3]
     /// ex: $ Reverse these words
     ///   : ⊜□≠@ .

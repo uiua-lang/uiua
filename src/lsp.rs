@@ -150,6 +150,7 @@ fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
             Word::Placeholder(_) => spans.push(word.span.clone().sp(SpanKind::Placeholder)),
         }
     }
+    spans.retain(|sp| !sp.span.as_str().is_empty());
     spans
 }
 

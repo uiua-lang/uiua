@@ -516,7 +516,7 @@ impl<'a> Lexer<'a> {
         }
     }
     fn end_span(&self, start: Loc) -> CodeSpan {
-        assert!(self.loc.char_pos > start.char_pos, "empty span");
+        assert!(self.loc.char_pos >= start.char_pos, "empty span");
         self.make_span(start, self.loc)
     }
     fn end(&mut self, token: impl Into<Token>, start: Loc) {
@@ -551,6 +551,10 @@ impl<'a> Lexer<'a> {
                 "≅" => self.end(Primitive::Match, start),
                 "∶" => self.end(Primitive::Flip, start),
                 "⍘" => self.end(Primitive::Un, start),
+                "⊔" => {
+                    self.end(Primitive::Un, self.loc);
+                    self.end(Primitive::Box, start);
+                }
 
                 "(" => self.end(OpenParen, start),
                 ")" => self.end(CloseParen, start),

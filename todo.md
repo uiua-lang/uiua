@@ -1,9 +1,6 @@
 # Uiua Todo
 Within each section, items are ordered (roughly) by decreasing priority.
 
-## Immediate
-- Pervasive `parse`
-
 ## Features
 - Multimedia
   - Sound input

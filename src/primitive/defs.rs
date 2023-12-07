@@ -649,7 +649,7 @@ primitive!(
     /// ex: {@a 3 7_8_9}
     /// Use [un][box] to get the values back out.
     /// ex: °□ □1_2_3
-    /// [un] with stack array and planet notations to get the values back onto the stack
+    /// Use [un] with `{}`s, [dip]s, and [identity] to get the values back onto the stack
     /// ex: °{⊙⊙∘} {@a 3 7_8_9}
     ///
     /// You would not normally construct arrays like the one above.
@@ -666,7 +666,7 @@ primitive!(
     ///   : +1 □4
     ///   : +1 □□4
     ///   : +□□1 4
-    /// There is an exception for comparison functions, which compare lexographically.
+    /// There is an exception for comparison functions, which compare lexicographically if both arguments are boxes.
     /// ex: =  [1 2 3]  [1 2 5]
     ///   : = □[1 2 3] □[1 2 5]
     ///   : >  [1 2 3]  [1 2 5]
@@ -683,12 +683,21 @@ primitive!(
     ///   : ∵⇌.
     ///
     /// For more complex operations, you can use [under][un][box].
-    /// ex: Parts ← .⊜□≠@ . $ Prepend the word length
-    ///   : F ← $"_ _"⧻.
-    ///   : ∵⍜°□F Parts
-    /// [under][un][box] works because `un``un`box` is just `box`. For each element, it [un][box]es the array out, does something to it, then [box]es the result.
+    /// ex: {"Hey" "there" "world"}
+    ///   : ≡⍜°□(⊂⊢.)
+    /// ex: PrepLen ← $"_ _"⧻.
+    ///   : .⊜□≠@ . $ Prepend the word length
+    ///   : ∵⍜°□PrepLen
+    /// [under][un][box] works because `un``un``box` is just `box`. For each element, it [un][box]es the array out, does something to it, then [box]es the result.
     /// ex: A ← .{1_2_3 4_5 [7]}
     ///   : ∵⍜°□(⬚0↙3) A
+    /// If you do not need to re-[box] the result, you can use [unpack] instead.
+    /// [unpack] implicitly [un][box]es all box elements that are passed to a function, but does not re-[box] results.
+    /// ex: {1_2_3 9_2 5_5_5_5}
+    ///   : ⊐≡/+
+    /// This is the main way to [join] a list of [box]ed strings.
+    /// ex: ⊐/⊂       {"Join" "these" "strings"}
+    /// ex: ⊐/(⊂⊂:@ ) {"Join" "these" "strings"}
     (1, Box, MonadicArray, ("box", '□')),
     /// Take an array out of a box
     ///
@@ -1071,6 +1080,8 @@ primitive!(
     /// If the function is already pervasive, then [each] is redundant.
     /// ex! ∵+ 1_2_3 4_5_6
     /// ex:  + 1_2_3 4_5_6
+    ///
+    /// [each] is one of a few modifiers that uses [proxy values](/docs/functions#proxy).
     ([1], Each, IteratingModifier, ("each", '∵')),
     /// Apply a function to each row of an array or arrays
     ///
@@ -1095,7 +1106,7 @@ primitive!(
     /// ex: ≡⊂ ⊙¤ 1_2_3 4_5_6
     /// [fold] also has this behavior.
     ///
-    /// [rows] is one of many modifiers that uses *proxy* values.
+    /// [rows] is one of a few modifiers that uses [proxy values](/docs/functions#proxy).
     ([1], Rows, IteratingModifier, ("rows", '≡')),
     /// Apply a function to each combination of elements of two arrays
     ///

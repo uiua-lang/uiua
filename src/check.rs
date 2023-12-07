@@ -167,6 +167,10 @@ impl<'a> VirtualEnv<'a> {
         match instr {
             Instr::Comment(_) => {}
             Instr::Push(val) => self.stack.push(BasicValue::from_val(val)),
+            Instr::PushGobal(_) => self.stack.push(BasicValue::Other),
+            Instr::BindGlobal { .. } => {
+                self.pop()?;
+            }
             Instr::BeginArray => self.array_stack.push(self.stack.len()),
             Instr::EndArray { .. } => {
                 let bottom = self

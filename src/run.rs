@@ -30,6 +30,7 @@ pub struct Uiua {
     pub(crate) new_functions: Vec<EcoVec<Instr>>,
     /// Global values
     pub(crate) globals: Arc<Mutex<Vec<Global>>>,
+    pub(crate) next_global: usize,
     /// Indexable spans
     spans: Arc<Mutex<Vec<Span>>>,
     /// The thread's stack
@@ -75,7 +76,7 @@ pub struct Uiua {
 #[derive(Clone)]
 pub(crate) enum Global {
     Val(Value),
-    Func { f: Function, sig_declared: bool },
+    Func(Function),
 }
 
 #[derive(Clone)]
@@ -213,6 +214,7 @@ impl Uiua {
             scope.names.insert(def.name.into(), globals.len());
             globals.push(Global::Val(def.value.clone()));
         }
+        let next_global = globals.len();
         Uiua {
             instrs: EcoVec::new(),
             spans: Arc::new(Mutex::new(vec![Span::Builtin])),
@@ -223,6 +225,7 @@ impl Uiua {
             scope,
             higher_scopes: Vec::new(),
             globals: Arc::new(Mutex::new(globals)),
+            next_global,
             new_functions: Vec::new(),
             current_imports: Arc::new(Mutex::new(Vec::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
@@ -520,6 +523,32 @@ code:
                     self.stack.push(Value::clone(val));
                     Ok(())
                 }
+                &Instr::PushGobal(i) => {
+                    let global = self.globals.lock()[i].clone();
+                    match global {
+                        Global::Val(val) => self.stack.push(val),
+                        Global::Func { f, .. } => self.function_stack.push(f),
+                    }
+                    Ok(())
+                }
+                Instr::BindGlobal { name, span, index } => (|| {
+                    if let Some(f) = self.function_stack.pop() {
+                        // Binding is an imported function
+                        self.compile_bind_function(name.clone(), f, span.clone().into())?;
+                    } else if let Some(value) = self.stack.pop() {
+                        // Binding is a constant
+                        self.compile_bind_value(name.clone(), value, span.clone().into())?;
+                    } else {
+                        // Binding is an empty function
+                        let func = make_fn(EcoVec::new(), sig, self);
+                        self.compile_bind_function(name, func, span.clone().into())?;
+                    }
+                    let val = self.pop(1)?;
+                    let mut globals = self.globals.lock();
+                    assert_eq!(globals.len(), i);
+                    globals.push(Global::Val(val));
+                    Ok(())
+                })(),
                 Instr::BeginArray => {
                     self.scope.array.push(self.stack.len());
                     Ok(())
@@ -1196,6 +1225,7 @@ code:
             instrs: self.instrs.clone(),
             new_functions: Vec::new(),
             globals: self.globals.clone(),
+            next_global: self.next_global,
             spans: self.spans.clone(),
             stack: self
                 .stack

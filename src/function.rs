@@ -22,9 +22,17 @@ use crate::{
 #[allow(missing_docs)]
 pub enum Instr {
     /// A comment
-    Comment(Arc<str>) = 0,
+    Comment(Ident) = 0,
     /// Push a value onto the stack
     Push(Value),
+    /// Push a global value onto the stack
+    PushGobal(usize),
+    /// Bind a global value
+    BindGlobal {
+        name: Ident,
+        span: usize,
+        index: usize,
+    },
     /// Begin an array
     BeginArray,
     /// End an array
@@ -178,6 +186,8 @@ impl Hash for Instr {
         match self {
             Instr::Comment(_) => {}
             Instr::Push(val) => val.hash(state),
+            Instr::PushGobal(_) => {}
+            Instr::BindGlobal { .. } => {}
             Instr::BeginArray => {}
             Instr::EndArray { .. } => {}
             Instr::Prim(p, _) => p.hash(state),
@@ -273,6 +283,8 @@ impl fmt::Display for Instr {
         match self {
             Instr::Comment(comment) => write!(f, "# {comment}"),
             Instr::Push(val) => write!(f, "{val:?}"),
+            Instr::PushGobal(i) => write!(f, "<push global {i}>"),
+            Instr::BindGlobal { index, .. } => write!(f, "<bind global {index}>"),
             Instr::BeginArray => write!(f, "begin array"),
             Instr::EndArray { .. } => write!(f, "end array"),
             Instr::Prim(prim @ Primitive::Over, _) => write!(f, "`{prim}`"),

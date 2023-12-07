@@ -1,7 +1,6 @@
 use std::{
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     hash::{Hash, Hasher},
-    ops::ControlFlow,
     sync::Arc,
 };
 
@@ -107,7 +106,6 @@ impl Uiua {
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let name = binding.name.value;
         let span = &binding.name.span;
-        let sig_declared = binding.signature.is_some();
         let placeholder_count = count_placeholders(&binding.words);
 
         let make_fn = |mut instrs: EcoVec<Instr>, sig: Signature, env: &mut Self| {
@@ -138,7 +136,8 @@ impl Uiua {
             f
         };
         // Compile the body
-        let instrs = self.compile_words(binding.words, true)?;
+        let mut instrs = self.compile_words(binding.words, true)?;
+        let span = self.add_span(span.clone());
         // Resolve signature
         match instrs_signature(&instrs) {
             Ok(mut sig) => {
@@ -182,7 +181,7 @@ impl Uiua {
                 if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
-                    self.compile_bind_function(name, func, sig_declared, span.clone().into())?;
+                    self.compile_bind_function(name, func, span)?;
                 } else if sig.args == 0
                     && sig.outputs <= 1
                     && (sig.outputs > 0 || instrs.is_empty())
@@ -191,29 +190,25 @@ impl Uiua {
                     && !is_setund
                 {
                     // Binding's instrs must be run
+                    let global_index = self.next_global;
+                    self.next_global += 1;
+                    instrs.push(Instr::BindGlobal {
+                        name,
+                        span,
+                        index: global_index,
+                    });
                     self.exec_global_instrs(instrs)?;
-                    if let Some(f) = self.function_stack.pop() {
-                        // Binding is an imported function
-                        self.compile_bind_function(name, f, sig_declared, span.clone().into())?;
-                    } else if let Some(value) = self.stack.pop() {
-                        // Binding is a constant
-                        self.compile_bind_value(name, value, span.clone().into())?;
-                    } else {
-                        // Binding is an empty function
-                        let func = make_fn(EcoVec::new(), sig, self);
-                        self.compile_bind_function(name, func, sig_declared, span.clone().into())?;
-                    }
                 } else {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);
-                    self.compile_bind_function(name, func, sig_declared, span.clone().into())?;
+                    self.compile_bind_function(name, func, span)?;
                 }
             }
             Err(e) => {
                 if let Some(sig) = binding.signature {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig.value, self);
-                    self.compile_bind_function(name, func, sig_declared, span.clone().into())?;
+                    self.compile_bind_function(name, func, span)?;
                 } else {
                     return Err(UiuaError::Run(Span::Code(binding.name.span.clone()).sp(
                         format!(
@@ -233,10 +228,11 @@ impl Uiua {
     pub(crate) fn compile_bind_value(
         &mut self,
         name: Ident,
+        index: usize,
         mut value: Value,
-        span: Span,
+        span: usize,
     ) -> UiuaResult {
-        self.validate_binding_name(&name, &[], span)?;
+        self.validate_binding_name(&name, &[], self.get_span(span))?;
         value.compress();
         let mut globals = self.globals.lock();
         let idx = globals.len();
@@ -247,17 +243,14 @@ impl Uiua {
     pub(crate) fn compile_bind_function(
         &mut self,
         name: Ident,
+        index: usize,
         function: Function,
-        sig_declared: bool,
-        span: Span,
+        span: usize,
     ) -> UiuaResult {
-        self.validate_binding_name(&name, function.instrs(self), span)?;
+        self.validate_binding_name(&name, function.instrs(self), self.get_span(span))?;
         let mut globals = self.globals.lock();
         let idx = globals.len();
-        globals.push(Global::Func {
-            f: function,
-            sig_declared,
-        });
+        globals.push(Global::Func(function));
         self.scope.names.insert(name, idx);
         Ok(())
     }
@@ -599,20 +592,7 @@ impl Uiua {
                     );
                     self.push_instr(Instr::PushFunc(f));
                 }
-                Global::Func { f, sig_declared }
-                    if call
-                        && !sig_declared
-                        && self.count_temp_functions(f.instrs(self), &mut HashSet::new()) == 0
-                        && f.recurse_instrs(self, |instr| {
-                            matches!(instr, Instr::Prim(Primitive::Stack | Primitive::Dump, _))
-                                .then_some(ControlFlow::Break(()))
-                                .unwrap_or(ControlFlow::Continue(()))
-                        })
-                        .is_none() =>
-                {
-                    self.extend_instrs(f.instrs(self).to_vec())
-                }
-                Global::Func { f, .. } => {
+                Global::Func(f) => {
                     self.push_instr(Instr::PushFunc(f));
                     if call {
                         let span = self.add_span(span);

@@ -25,6 +25,7 @@ use crate::{
 /// The Uiua runtime
 #[derive(Clone)]
 pub struct Uiua {
+    pub(crate) instrs: EcoVec<Instr>,
     /// Functions which are under construction
     pub(crate) new_functions: Vec<EcoVec<Instr>>,
     /// Global values
@@ -100,7 +101,9 @@ impl Default for Scope {
         Self {
             array: Vec::new(),
             call: vec![StackFrame {
-                function: Function::new(FunctionId::Main, Vec::new(), Signature::new(0, 0)),
+                slice: FuncSlice::default(),
+                id: FunctionId::Main,
+                sig: Signature::new(0, 0),
                 call_span: 0,
                 pc: 0,
                 spans: Vec::new(),
@@ -126,7 +129,9 @@ enum Fill {
 #[derive(Clone)]
 pub(crate) struct StackFrame {
     /// The function being executed
-    pub(crate) function: Function,
+    pub(crate) slice: FuncSlice,
+    pub(crate) id: FunctionId,
+    pub(crate) sig: Signature,
     /// The span at which the function was called
     call_span: usize,
     /// The program counter for the function
@@ -209,6 +214,7 @@ impl Uiua {
             globals.push(Global::Val(def.value.clone()));
         }
         Uiua {
+            instrs: EcoVec::new(),
             spans: Arc::new(Mutex::new(vec![Span::Builtin])),
             stack: Vec::new(),
             function_stack: Vec::new(),
@@ -388,7 +394,7 @@ code:
             }
         }
         frames.push(TraceFrame {
-            id: frame.function.id.clone(),
+            id: frame.id.clone(),
             span: self.spans.lock()[frame.call_span].clone(),
         });
         if let UiuaError::Traced { trace, .. } = &mut error {
@@ -441,22 +447,28 @@ code:
         }
     }
     pub(crate) fn exec_global_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult {
-        let function = Function::new(FunctionId::Main, instrs, Signature::new(0, 0));
+        let start = self.instrs.len();
+        self.instrs.extend(instrs);
+        let end = self.instrs.len();
         self.exec(StackFrame {
-            function,
+            slice: FuncSlice {
+                address: start,
+                len: end - start,
+            },
+            id: FunctionId::Main,
+            sig: Signature::new(0, 0),
             call_span: 0,
-            spans: Vec::new(),
             pc: 0,
-        })?;
-        Ok(())
+            spans: Vec::new(),
+        })
     }
-    fn exec(&mut self, frame: StackFrame) -> UiuaResult<Function> {
+    fn exec(&mut self, frame: StackFrame) -> UiuaResult {
         self.scope.call.push(frame);
         let mut formatted_instr = String::new();
-        Ok(loop {
+        loop {
             let frame = self.scope.call.last().unwrap();
-            let Some(instr) = frame.function.instrs.get(frame.pc) else {
-                break self.scope.call.pop().unwrap().function;
+            let Some(instr) = self.instrs.get(frame.slice.address + frame.pc) else {
+                break;
             };
             // Uncomment to debug
             // for val in &self.stack {
@@ -690,7 +702,8 @@ code:
                     }
                 }
             }
-        })
+        }
+        Ok(())
     }
     pub(crate) fn with_span<T>(&mut self, span: usize, f: impl FnOnce(&mut Self) -> T) -> T {
         self.with_prim_span(span, None, f)
@@ -706,21 +719,52 @@ code:
         self.scope.call.last_mut().unwrap().spans.pop();
         res
     }
-    fn call_with_span(&mut self, f: impl Into<Function>, call_span: usize) -> UiuaResult {
-        let function = f.into();
-        let sig = function.signature();
-        let start_height = self.stack.len();
-        let function = self.exec(StackFrame {
-            function,
+    /// Call a function
+    #[inline]
+    pub fn call(&mut self, f: Function) -> UiuaResult {
+        let call_span = self.span_index();
+        self.call_with_span(f, call_span)
+    }
+    #[inline]
+    fn call_frame(&mut self, frame: StackFrame) -> UiuaResult {
+        let call_span = self.span_index();
+        self.call_with_frame_span(frame, call_span)
+    }
+    #[inline]
+    pub(crate) fn call_restore(&mut self, f: Function) -> UiuaResult {
+        let f_args = f.signature().args;
+        let bottom = self.stack_height().saturating_sub(f_args);
+        let res = self.call(f);
+        if res.is_err() {
+            self.truncate_stack(bottom);
+        }
+        res
+    }
+    #[inline]
+    fn call_with_span(&mut self, f: Function, call_span: usize) -> UiuaResult {
+        self.call_with_frame_span(
+            StackFrame {
+                slice: f.slice(),
+                sig: f.signature(),
+                id: f.id,
+                call_span,
+                spans: Vec::new(),
+                pc: 0,
+            },
             call_span,
-            spans: Vec::new(),
-            pc: 0,
-        })?;
+        )
+    }
+    #[inline]
+    fn call_with_frame_span(&mut self, frame: StackFrame, call_span: usize) -> UiuaResult {
+        let start_height = self.stack.len();
+        let sig = frame.sig;
+        let slice = frame.slice;
+        self.exec(frame)?;
         let height_diff = self.stack.len() as isize - start_height as isize;
         let sig_diff = sig.outputs as isize - sig.args as isize;
         if height_diff != sig_diff
-            && !function
-                .instrs
+            && !self
+                .instrs(slice)
                 .iter()
                 .any(|instr| matches!(instr, Instr::Prim(Primitive::Sys(SysOp::Import), _)))
         {
@@ -733,21 +777,6 @@ code:
                 .into());
         }
         Ok(())
-    }
-    /// Call a function
-    #[inline]
-    pub fn call(&mut self, f: Function) -> UiuaResult {
-        let call_span = self.span_index();
-        self.call_with_span(f, call_span)
-    }
-    pub(crate) fn call_restore(&mut self, f: Function) -> UiuaResult {
-        let f_args = f.signature().args;
-        let bottom = self.stack_height().saturating_sub(f_args);
-        let res = self.call(f);
-        if res.is_err() {
-            self.truncate_stack(bottom);
-        }
-        res
     }
     pub(crate) fn span_index(&self) -> usize {
         self.scope.call.last().map_or(0, |frame| {
@@ -860,7 +889,7 @@ code:
         self.stack.push(val.into());
     }
     /// Push a function onto the function stack
-    pub fn push_func(&mut self, f: impl Into<Function>) {
+    pub fn push_func(&mut self, f: Function) {
         self.function_stack.push(f.into());
     }
     /// Create a function
@@ -870,25 +899,24 @@ code:
         f: impl Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static,
     ) -> Function {
         let signature = signature.into();
-        Function::new(
+        self.new_function(
             FunctionId::Unnamed,
+            signature,
             vec![Instr::Dynamic(DynamicFunction {
                 id: SmallRng::seed_from_u64(instant::now().to_bits()).gen(),
                 f: Arc::new(f),
                 signature,
             })],
-            signature,
         )
+    }
+    pub fn instrs(&self, slice: FuncSlice) -> &[Instr] {
+        &self.instrs[slice.address..][..slice.len]
     }
     /// Bind a function in the current scope
     ///
     /// # Errors
     /// Returns an error in the binding name is not valid
-    pub fn bind_function(
-        &mut self,
-        name: impl Into<Arc<str>>,
-        function: impl Into<Function>,
-    ) -> UiuaResult {
+    pub fn bind_function(&mut self, name: impl Into<Arc<str>>, function: Function) -> UiuaResult {
         self.compile_bind_function(name.into(), function.into(), true, Span::Builtin)
     }
     /// Create and bind a function in the current scope
@@ -1113,7 +1141,7 @@ code:
     pub(crate) fn call_frames(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {
         self.scope.call.iter()
     }
-    pub(crate) fn call_with_this(&mut self, f: impl Into<Function>) -> UiuaResult {
+    pub(crate) fn call_with_this(&mut self, f: Function) -> UiuaResult {
         let call_height = self.scope.call.len();
         let with_height = self.scope.this.len();
         self.scope.this.push(self.scope.call.len());
@@ -1126,8 +1154,8 @@ code:
         let Some(i) = self.scope.this.last().copied() else {
             return Err(self.error("No recursion context set"));
         };
-        let f = self.scope.call[i].function.clone();
-        self.call(f)
+        let frame = self.scope.call[i].clone();
+        self.call_frame(frame)
     }
     /// Spawn a thread
     pub(crate) fn spawn(
@@ -1152,6 +1180,7 @@ code:
             ..ThisThread::default()
         };
         let mut env = Uiua {
+            instrs: EcoVec::new(),
             new_functions: Vec::new(),
             globals: self.globals.clone(),
             spans: self.spans.clone(),

@@ -3,17 +3,14 @@ use std::{
     fmt,
     hash::{Hash, Hasher},
     mem::{discriminant, transmute},
-    ops::ControlFlow,
+    ops::{Add, AddAssign, ControlFlow},
     sync::Arc,
 };
 
-use ecow::EcoVec;
 use enum_iterator::Sequence;
 
 use crate::{
-    check::{instrs_signature, SigCheckError},
     lex::CodeSpan,
-    optimize::optimize_instrs,
     primitive::{ImplPrimitive, Primitive},
     value::Value,
     Ident, Uiua, UiuaResult,
@@ -309,9 +306,40 @@ impl fmt::Display for Instr {
 pub struct Function {
     /// The function's id
     pub id: FunctionId,
-    /// The function's instructions
-    pub instrs: EcoVec<Instr>,
+    slice: FuncSlice,
     signature: Signature,
+}
+
+/// A range of compiled instructions
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub struct FuncSlice {
+    pub(crate) address: usize,
+    pub(crate) len: usize,
+}
+
+impl FuncSlice {
+    /// Get the length of the instructions
+    pub fn len(&self) -> usize {
+        self.len
+    }
+    /// Check if the instructions are empty
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+}
+
+impl AddAssign<usize> for FuncSlice {
+    fn add_assign(&mut self, rhs: usize) {
+        self.address += rhs;
+    }
+}
+
+impl Add<usize> for FuncSlice {
+    type Output = Self;
+    fn add(mut self, rhs: usize) -> Self::Output {
+        self += rhs;
+        self
+    }
 }
 
 /// A function stack signature
@@ -421,7 +449,7 @@ impl Hash for DynamicFunction {
 
 impl PartialEq for Function {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id && self.instrs == other.instrs
+        self.slice == other.slice
     }
 }
 
@@ -435,16 +463,14 @@ impl PartialOrd for Function {
 
 impl Ord for Function {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.id
-            .cmp(&other.id)
-            .then_with(|| self.instrs.cmp(&other.instrs))
+        self.slice.cmp(&other.slice)
     }
 }
 
 impl Hash for Function {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.id.hash(state);
-        self.instrs.hash(state);
+        self.slice.hash(state);
     }
 }
 
@@ -456,89 +482,70 @@ impl fmt::Debug for Function {
 
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let FunctionId::Named(name) = &self.id {
-            return write!(f, "{name}");
-        }
-        if let Some((prim, _)) = self.as_primitive() {
-            return write!(f, "{prim}");
-        }
-        write!(f, "<function>")
+        write!(f, "{}", self.id)
     }
 }
 
 impl Function {
     /// Create a new function
-    pub fn new<I>(id: FunctionId, instrs: I, signature: Signature) -> Self
-    where
-        I: IntoIterator<Item = Instr> + fmt::Debug,
-        I::IntoIter: ExactSizeIterator,
-    {
-        let instrs = optimize_instrs(instrs, true);
+    pub(crate) fn new(id: FunctionId, signature: Signature, slice: FuncSlice) -> Self {
         Self {
             id,
-            instrs,
+            slice,
             signature,
         }
-    }
-    /// Create a new function and infer its signature
-    pub fn new_inferred(
-        id: FunctionId,
-        instrs: impl IntoIterator<Item = Instr>,
-    ) -> Result<Self, SigCheckError> {
-        let instrs: Vec<_> = instrs.into_iter().collect();
-        let signature = instrs_signature(&instrs)?;
-        let instrs = optimize_instrs(instrs, true);
-        Ok(Self {
-            id,
-            signature,
-            instrs,
-        })
     }
     /// Get how many arguments this function pops off the stack and how many it pushes.
     /// Returns `None` if either of these values are dynamic.
     pub fn signature(&self) -> Signature {
         self.signature
     }
+    /// Get the address of function's instructions
+    pub fn slice(&self) -> FuncSlice {
+        self.slice
+    }
+    /// Get the function's instructions
+    pub fn instrs<'a>(&self, env: &'a Uiua) -> &'a [Instr] {
+        env.instrs(self.slice)
+    }
+    pub fn instrs_mut<'a>(&self, env: &'a mut Uiua) -> &'a mut [Instr] {
+        &mut env.instrs.make_mut()[self.slice.address..][..self.slice.len]
+    }
     /// Try to get a lone primitive from this function
-    pub fn as_primitive(&self) -> Option<(Primitive, usize)> {
-        match self.instrs.as_slice() {
+    pub fn as_primitive(&self, env: &Uiua) -> Option<(Primitive, usize)> {
+        match self.instrs(env) {
             [Instr::Prim(prim, span)] => Some((*prim, *span)),
             _ => None,
         }
     }
-    pub(crate) fn as_flipped_primitive(&self) -> Option<(Primitive, bool)> {
+    pub(crate) fn as_flipped_primitive(&self, env: &Uiua) -> Option<(Primitive, bool)> {
         match &self.id {
             FunctionId::Primitive(prim) => Some((*prim, false)),
-            _ => match self.instrs.as_slice() {
+            _ => match self.instrs(env) {
                 [Instr::Prim(prim, _)] => Some((*prim, false)),
                 [Instr::Prim(Primitive::Flip, _), Instr::Prim(prim, _)] => Some((*prim, true)),
                 _ => None,
             },
         }
     }
-    /// `invert` this function
-    pub fn invert(&self, context: &str, env: &Uiua) -> UiuaResult<Self> {
-        self.inverse()
-            .ok_or_else(|| env.error(format!("No inverse found{context}")))
-    }
-    /// `under` this function
-    pub fn undered(&self, g_sig: Signature, env: &Uiua) -> UiuaResult<(Self, Self)> {
-        self.under(g_sig)
-            .ok_or_else(|| env.error("No inverse found"))
-    }
     pub(crate) fn recurse_instrs<T>(
         &self,
+        env: &Uiua,
         mut f: impl FnMut(&Instr) -> ControlFlow<T>,
     ) -> Option<T> {
-        recurse_instrs(&self.instrs, &mut f)
+        recurse_instrs(self.instrs(env), env, &mut f)
     }
 }
 
-fn recurse_instrs<T>(instrs: &[Instr], f: &mut impl FnMut(&Instr) -> ControlFlow<T>) -> Option<T> {
+fn recurse_instrs<T>(
+    instrs: &[Instr],
+    env: &Uiua,
+    f: &mut impl FnMut(&Instr) -> ControlFlow<T>,
+) -> Option<T> {
     for instr in instrs {
         match instr {
             Instr::PushFunc(func) => {
-                if let Some(val) = recurse_instrs(&func.instrs, f) {
+                if let Some(val) = recurse_instrs(func.instrs(env), env, f) {
                     return Some(val);
                 }
             }

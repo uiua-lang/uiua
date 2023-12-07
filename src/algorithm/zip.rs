@@ -60,9 +60,9 @@ fn impl_prim_un_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> {
     })
 }
 
-fn instrs_un_fast_fn(instrs: &[Instr]) -> Option<(ValueUnFn, usize)> {
+fn f_un_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUnFn, usize)> {
     use Primitive::*;
-    match instrs {
+    match f.instrs(env) {
         &[Instr::Prim(prim, span)] => {
             let f = prim_un_fast_fn(prim, span)?;
             return Some((f, 0));
@@ -72,7 +72,7 @@ fn instrs_un_fast_fn(instrs: &[Instr]) -> Option<(ValueUnFn, usize)> {
             return Some((f, 0));
         }
         [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
-            let (f, d) = instrs_un_fast_fn(&f.instrs)?;
+            let (f, d) = f_un_fast_fn(f, env)?;
             return Some((f, d + 1));
         }
         _ => (),
@@ -115,7 +115,7 @@ fn prim_bin_fast_fn(prim: Primitive, span: usize) -> Option<ValueBinFn> {
     })
 }
 
-pub(crate) fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize, usize)> {
+pub(crate) fn f_bin_fast_fn(instrs: &[Instr], env: &Uiua) -> Option<(ValueBinFn, usize, usize)> {
     use std::boxed::Box;
     use Primitive::*;
 
@@ -136,10 +136,10 @@ pub(crate) fn instrs_bin_fast_fn(instrs: &[Instr]) -> Option<(ValueBinFn, usize,
             return Some((f, 0, 0));
         }
         [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
-            return nest_bin_fast(instrs_bin_fast_fn(&f.instrs)?, 1, 1)
+            return nest_bin_fast(f_bin_fast_fn(f.instrs(env), env)?, 1, 1)
         }
         [Instr::Prim(Flip, _), rest @ ..] => {
-            let (f, a, b) = instrs_bin_fast_fn(rest)?;
+            let (f, a, b) = f_bin_fast_fn(rest, env)?;
             let f = Box::new(move |a, b, ad, bd, env: &mut Uiua| f(b, a, bd, ad, env));
             return Some((f, a, b));
         }
@@ -170,7 +170,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
 }
 
 fn each1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, ..)) = instrs_un_fast_fn(&f.instrs) {
+    if let Some((f, ..)) = f_un_fast_fn(&f, env) {
         let rank = xs.rank();
         let val = f(xs, rank, env)?;
         env.push(val);
@@ -222,7 +222,7 @@ fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             FormatShape(&ys.shape()[..min_rank])
         )));
     }
-    if let Some((f, ..)) = instrs_bin_fast_fn(&f.instrs) {
+    if let Some((f, ..)) = f_bin_fast_fn(f.instrs(env), env) {
         let xrank = xs.rank();
         let yrank = ys.rank();
         let val = f(xs, ys, xrank, yrank, env)?;
@@ -373,7 +373,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
 }
 
 fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, d)) = instrs_un_fast_fn(&f.instrs) {
+    if let Some((f, d)) = f_un_fast_fn(&f, env) {
         let val = f(xs, d + 1, env)?;
         env.push(val);
     } else {
@@ -412,7 +412,7 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let outputs = f.signature().outputs;
     match (xs.row_count(), ys.row_count()) {
         (a, b) if a == b => {
-            if let Some((f, a, b)) = instrs_bin_fast_fn(&f.instrs) {
+            if let Some((f, a, b)) = f_bin_fast_fn(f.instrs(env), env) {
                 let val = f(xs, ys, a + 1, b + 1, env)?;
                 env.push(val);
             } else {

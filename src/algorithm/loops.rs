@@ -17,28 +17,18 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let n = env
         .pop(2)?
-        .as_num(env, "Repetitions must be a single integer or infinity")?;
+        .as_num(env, "Repetitions must be a natural number or infinity")?;
 
-    const INVERSE_CONTEXT: &str = "; repeat with a negative number repeats the inverse";
     if n.is_infinite() {
-        let f = if n < 0.0 {
-            f.invert(INVERSE_CONTEXT, env)?
-        } else {
-            f
-        };
         loop {
             env.call(f.clone())?;
         }
     } else {
-        if n.fract().abs() > f64::EPSILON {
-            return Err(env.error("Repetitions must be a single integer or infinity"));
-        };
-        let f = if n < 0.0 {
-            f.invert(INVERSE_CONTEXT, env)?
-        } else {
-            f
-        };
-        for _ in 0..n.abs() as usize {
+        if n < 0.0 || n.fract() != 0.0 {
+            return Err(env.error("Repetitions must be a natural number or infinity"));
+        }
+        let n = n as usize;
+        for _ in 0..n {
             env.call(f.clone())?;
         }
     }

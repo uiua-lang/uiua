@@ -4,7 +4,7 @@ use crate::{
     array::Array,
     function::{Function, FunctionId, Instr, Signature},
     value::Value,
-    Primitive,
+    FuncSlice, Primitive,
 };
 
 const START_HEIGHT: usize = 16;
@@ -187,8 +187,8 @@ impl<'a> VirtualEnv<'a> {
             Instr::GetTempFunction { sig, .. } => {
                 self.function_stack.push(Cow::Owned(Function::new(
                     FunctionId::Unnamed,
-                    Vec::new(),
                     *sig,
+                    FuncSlice { address: 0, len: 0 },
                 )));
             }
             Instr::PopTemp { count, .. } | Instr::CopyFromTemp { count, .. } => {

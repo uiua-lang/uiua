@@ -888,20 +888,16 @@ fn stack_boundaries(env: &Uiua) -> Vec<(usize, &FunctionId)> {
     let mut reduced = 0;
     for (i, frame) in env.call_frames().rev().enumerate() {
         if i == 0 {
-            let before_sig = instrs_signature(&frame.function.instrs[..frame.pc])
+            let before_sig = instrs_signature(&env.instrs(frame.slice)[..frame.pc])
                 .ok()
-                .unwrap_or(frame.function.signature());
+                .unwrap_or(frame.sig);
             reduced = before_sig.args as isize - before_sig.outputs as isize;
         }
-        let sig = frame.function.signature();
-        height = height.max(((sig.args as isize) - reduced).max(0) as usize);
-        if matches!(frame.function.id, FunctionId::Main) {
+        height = height.max(((frame.sig.args as isize) - reduced).max(0) as usize);
+        if matches!(frame.id, FunctionId::Main) {
             break;
         }
-        boundaries.push((
-            env.stack_height().saturating_sub(height),
-            &frame.function.id,
-        ));
+        boundaries.push((env.stack_height().saturating_sub(height), &frame.id));
     }
     boundaries
 }

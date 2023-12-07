@@ -15,7 +15,7 @@ use crate::{
     check::instrs_signature,
     function::*,
     lex::{CodeSpan, Sp, Span},
-    optimize::optimize_instrs_mut,
+    optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, ident_modifier_args, split_words, unsplit_words},
     primitive::Primitive,
     run::{Global, RunMode},
@@ -83,6 +83,24 @@ impl Uiua {
         }
         Ok(())
     }
+    #[must_use]
+    pub(crate) fn new_function<I>(&mut self, id: FunctionId, sig: Signature, instrs: I) -> Function
+    where
+        I: IntoIterator<Item = Instr>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        let address = self.instrs.len();
+        self.instrs.extend(optimize_instrs(instrs, true));
+        let length = self.instrs.len() - address;
+        Function::new(
+            id,
+            sig,
+            FuncSlice {
+                address,
+                len: length,
+            },
+        )
+    }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let name = binding.name.value;
         let span = &binding.name.span;
@@ -105,13 +123,14 @@ impl Uiua {
                 }
             }
 
+            let f = env.new_function(FunctionId::Named(name.clone()), sig, instrs);
             // Handle placeholders
             if placeholder_count > 0 {
-                increment_placeholders(instrs.make_mut(), &mut 0, &mut HashMap::new());
+                env.increment_placeholders(&f, &mut 0, &mut HashMap::new());
                 instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
                 instrs.push(Instr::PopTempFunctions(placeholder_count));
             }
-            Function::new(FunctionId::Named(name.clone()), instrs, sig)
+            f
         };
         // Compile the body
         let instrs = self.compile_words(binding.words, true)?;
@@ -157,7 +176,7 @@ impl Uiua {
                 );
                 if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
-                    let func = make_fn(f.instrs.clone(), f.signature(), self);
+                    let func = make_fn(f.instrs(self).into(), f.signature(), self);
                     self.compile_bind_function(name, func, sig_declared, span.clone().into())?;
                 } else if sig.args == 0
                     && sig.outputs <= 1
@@ -227,7 +246,7 @@ impl Uiua {
         sig_declared: bool,
         span: Span,
     ) -> UiuaResult {
-        self.validate_binding_name(&name, &function.instrs, span)?;
+        self.validate_binding_name(&name, function.instrs(self), span)?;
         let mut globals = self.globals.lock();
         let idx = globals.len();
         globals.push(Global::Func {
@@ -238,7 +257,7 @@ impl Uiua {
         Ok(())
     }
     fn validate_binding_name(&self, name: &Ident, instrs: &[Instr], span: Span) -> UiuaResult {
-        let temp_function_count = count_temp_functions(instrs, &mut HashSet::new());
+        let temp_function_count = self.count_temp_functions(instrs, &mut HashSet::new());
         let name_marg_count = ident_modifier_args(name) as usize;
         if temp_function_count != name_marg_count {
             let trimmed = name.trim_end_matches('!');
@@ -284,7 +303,7 @@ impl Uiua {
         // Extract function instrs if possible
         if let [Instr::PushFunc(f)] = instrs.as_slice() {
             sig = Some(f.signature());
-            instrs = f.instrs.clone();
+            instrs = f.instrs(self).into();
         }
         let sig = if let Some(sig) = sig {
             sig
@@ -321,11 +340,11 @@ impl Uiua {
                 if call {
                     self.push_instr(Instr::push(n));
                 } else {
-                    self.push_instr(Instr::PushFunc(Function::new(
+                    self.new_function(
                         FunctionId::Anonymous(word.span.clone()),
-                        vec![Instr::push(n)],
                         Signature::new(0, 1),
-                    )));
+                        vec![Instr::push(n)],
+                    );
                 }
             }
             Word::Char(c) => {
@@ -337,28 +356,30 @@ impl Uiua {
                 if call {
                     self.push_instr(Instr::push(val));
                 } else {
-                    self.push_instr(Instr::PushFunc(Function::new(
+                    self.new_function(
                         FunctionId::Anonymous(word.span.clone()),
-                        vec![Instr::push(val)],
                         Signature::new(0, 1),
-                    )));
+                        vec![Instr::push(val)],
+                    );
                 }
             }
             Word::String(s) => {
                 if call {
                     self.push_instr(Instr::push(s));
                 } else {
-                    self.push_instr(Instr::PushFunc(Function::new(
+                    let f = self.new_function(
                         FunctionId::Anonymous(word.span.clone()),
-                        vec![Instr::push(s)],
                         Signature::new(0, 1),
-                    )));
+                        vec![Instr::push(s)],
+                    );
+                    self.push_instr(Instr::PushFunc(f));
                 }
             }
             Word::FormatString(frags) => {
                 let signature = Signature::new(frags.len() - 1, 1);
-                let f = Function::new(
+                let f = self.new_function(
                     FunctionId::Anonymous(word.span.clone()),
+                    signature,
                     vec![Instr::Dynamic(DynamicFunction {
                         id: {
                             let mut hasher = DefaultHasher::new();
@@ -379,7 +400,6 @@ impl Uiua {
                         }),
                         signature,
                     })],
-                    signature,
                 );
                 self.push_instr(Instr::PushFunc(f));
                 if call {
@@ -392,8 +412,9 @@ impl Uiua {
                     lines.iter().map(|l| l.value.len().saturating_sub(1)).sum(),
                     1,
                 );
-                let f = Function::new(
+                let f = self.new_function(
                     FunctionId::Anonymous(word.span.clone()),
+                    signature,
                     vec![Instr::Dynamic(DynamicFunction {
                         id: {
                             let mut hasher = DefaultHasher::new();
@@ -421,7 +442,6 @@ impl Uiua {
                         }),
                         signature,
                     })],
-                    signature,
                 );
                 self.push_instr(Instr::PushFunc(f));
                 if call {
@@ -476,7 +496,7 @@ impl Uiua {
                     if !call {
                         let instrs = self.new_functions.pop().unwrap();
                         let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
-                        let func = Function::new(FunctionId::Anonymous(word.span), instrs, sig);
+                        let func = self.new_function(FunctionId::Anonymous(word.span), sig, instrs);
                         self.push_instr(Instr::PushFunc(func));
                     }
                 }
@@ -524,7 +544,7 @@ impl Uiua {
                     if !call {
                         let instrs = self.new_functions.pop().unwrap();
                         let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
-                        let func = Function::new(FunctionId::Anonymous(word.span), instrs, sig);
+                        let func = self.new_function(FunctionId::Anonymous(word.span), sig, instrs);
                         self.push_instr(Instr::PushFunc(func));
                     }
                 }
@@ -565,24 +585,25 @@ impl Uiua {
             match global {
                 Global::Val(val) if call => self.push_instr(Instr::push(val)),
                 Global::Val(val) => {
-                    self.push_instr(Instr::PushFunc(Function::new(
+                    let f = self.new_function(
                         FunctionId::Anonymous(span),
-                        vec![Instr::push(val)],
                         Signature::new(0, 1),
-                    )));
+                        vec![Instr::push(val)],
+                    );
+                    self.push_instr(Instr::PushFunc(f));
                 }
                 Global::Func { f, sig_declared }
                     if call
                         && !sig_declared
-                        && count_temp_functions(&f.instrs, &mut HashSet::new()) == 0
-                        && f.recurse_instrs(|instr| {
+                        && self.count_temp_functions(f.instrs(self), &mut HashSet::new()) == 0
+                        && f.recurse_instrs(self, |instr| {
                             matches!(instr, Instr::Prim(Primitive::Stack | Primitive::Dump, _))
                                 .then_some(ControlFlow::Break(()))
                                 .unwrap_or(ControlFlow::Continue(()))
                         })
                         .is_none() =>
                 {
-                    self.extend_instrs(f.instrs.clone())
+                    self.extend_instrs(f.instrs(self).iter().cloned())
                 }
                 Global::Func { f, .. } => {
                     self.push_instr(Instr::PushFunc(f));
@@ -647,7 +668,7 @@ impl Uiua {
             return Ok(Function::clone(f));
         }
 
-        Ok(Function::new(func.id, instrs, sig))
+        Ok(self.new_function(func.id, sig, instrs))
     }
     fn switch(&mut self, sw: Switch, span: CodeSpan, call: bool) -> UiuaResult {
         let count = sw.branches.len();
@@ -700,7 +721,7 @@ impl Uiua {
                         .into());
                 }
             };
-            let function = Function::new(FunctionId::Anonymous(span), instrs, sig);
+            let function = self.new_function(FunctionId::Anonymous(span), sig, instrs);
             self.push_instr(Instr::PushFunc(function));
         }
         Ok(())
@@ -892,8 +913,11 @@ impl Uiua {
             let instrs = self.new_functions.pop().unwrap();
             match instrs_signature(&instrs) {
                 Ok(sig) => {
-                    let func =
-                        Function::new(FunctionId::Anonymous(modified.modifier.span), instrs, sig);
+                    let func = self.new_function(
+                        FunctionId::Anonymous(modified.modifier.span),
+                        sig,
+                        instrs,
+                    );
                     self.push_instr(Instr::PushFunc(func));
                 }
                 Err(e) => {
@@ -959,10 +983,10 @@ impl Uiua {
                     self.extend_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = Function::new(
+                    let func = self.new_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
-                        instrs,
                         sig,
+                        instrs,
                     );
                     self.push_instr(Instr::PushFunc(func));
                 }
@@ -1009,10 +1033,10 @@ impl Uiua {
                     self.extend_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = Function::new(
+                    let func = self.new_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
-                        instrs,
                         sig,
+                        instrs,
                     );
                     self.push_instr(Instr::PushFunc(func));
                 }
@@ -1043,10 +1067,10 @@ impl Uiua {
                     self.extend_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = Function::new(
+                    let func = self.new_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
-                        instrs,
                         sig,
+                        instrs,
                     );
                     self.push_instr(Instr::PushFunc(func));
                 }
@@ -1057,14 +1081,14 @@ impl Uiua {
                 let f = operands.next().unwrap();
                 let span = f.span.clone();
                 let (instrs, _) = self.compile_operand_words(vec![f])?;
-                if let Some(inverted) = invert_instrs(&instrs) {
+                if let Some(inverted) = invert_instrs(&instrs, self) {
                     match instrs_signature(&inverted) {
                         Ok(sig) => {
                             if call {
                                 self.extend_instrs(inverted);
                             } else {
                                 let id = FunctionId::Anonymous(modified.modifier.span.clone());
-                                let func = Function::new(id, inverted, sig);
+                                let func = self.new_function(id, sig, inverted);
                                 self.push_instr(Instr::PushFunc(func));
                             }
                             Ok(true)
@@ -1085,7 +1109,7 @@ impl Uiua {
                 let (f_instrs, _) = self.compile_operand_words(vec![f])?;
                 let (g_instrs, g_sig) =
                     self.compile_operand_words(vec![operands.next().unwrap()])?;
-                if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig) {
+                if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig, self) {
                     let before_sig = instrs_signature(&f_before).map_err(|e| {
                         f_span
                             .clone()
@@ -1109,10 +1133,10 @@ impl Uiua {
                         self.extend_instrs(instrs);
                         self.push_instr(Instr::PopSig);
                     } else {
-                        let func = Function::new(
+                        let func = self.new_function(
                             FunctionId::Anonymous(modified.modifier.span.clone()),
-                            instrs,
                             sig,
+                            instrs,
                         );
                         self.push_instr(Instr::PushFunc(func));
                     }
@@ -1148,10 +1172,10 @@ impl Uiua {
                     self.extend_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = Function::new(
+                    let func = self.new_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
-                        instrs,
                         sig,
+                        instrs,
                     );
                     self.push_instr(Instr::PushFunc(func));
                 }
@@ -1199,9 +1223,11 @@ impl Uiua {
             self.push_instr(Instr::Prim(prim, span_i));
         } else {
             let instrs = [Instr::Prim(prim, span_i)];
-            let func = Function::new_inferred(FunctionId::Primitive(prim), instrs);
-            match func {
-                Ok(func) => self.push_instr(Instr::PushFunc(func)),
+            match instrs_signature(&instrs) {
+                Ok(sig) => {
+                    let func = self.new_function(FunctionId::Primitive(prim), sig, instrs);
+                    self.push_instr(Instr::PushFunc(func))
+                }
                 Err(e) => {
                     return Err(span
                         .sp(format!("Cannot infer function signature: {e}"))
@@ -1210,6 +1236,44 @@ impl Uiua {
             }
         }
         Ok(())
+    }
+
+    fn increment_placeholders(
+        &mut self,
+        f: &Function,
+        curr: &mut usize,
+        map: &mut HashMap<usize, usize>,
+    ) {
+        let len = f.instrs(self).len();
+        for i in 0..len {
+            match &mut f.instrs_mut(self)[i] {
+                Instr::GetTempFunction { offset, span, .. } => {
+                    *offset = *map.entry(*span).or_insert_with(|| {
+                        let new = *curr;
+                        *curr += 1;
+                        new
+                    });
+                }
+                Instr::PushFunc(f) => {
+                    let f = f.clone();
+                    self.increment_placeholders(&f, curr, map);
+                }
+                _ => (),
+            }
+        }
+    }
+    fn count_temp_functions(&self, instrs: &[Instr], counted: &mut HashSet<usize>) -> usize {
+        let mut count = 0;
+        for instr in instrs {
+            match instr {
+                Instr::GetTempFunction { span, .. } => count += counted.insert(*span) as usize,
+                Instr::PushFunc(f) if matches!(f.id, FunctionId::Anonymous(_)) => {
+                    count += self.count_temp_functions(f.instrs(self), counted);
+                }
+                _ => (),
+            }
+        }
+        count
     }
 }
 
@@ -1225,36 +1289,4 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
         Word::Modified(m) if m.modifier.value == Modifier::Primitive(Primitive::Each) => true,
         _ => false,
     })
-}
-
-fn increment_placeholders(instrs: &mut [Instr], curr: &mut usize, map: &mut HashMap<usize, usize>) {
-    for instr in instrs {
-        match instr {
-            Instr::GetTempFunction { offset, span, .. } => {
-                *offset = *map.entry(*span).or_insert_with(|| {
-                    let new = *curr;
-                    *curr += 1;
-                    new
-                });
-            }
-            Instr::PushFunc(f) => {
-                increment_placeholders(f.instrs.make_mut(), curr, map);
-            }
-            _ => (),
-        }
-    }
-}
-
-fn count_temp_functions(instrs: &[Instr], counted: &mut HashSet<usize>) -> usize {
-    let mut count = 0;
-    for instr in instrs {
-        match instr {
-            Instr::GetTempFunction { span, .. } => count += counted.insert(*span) as usize,
-            Instr::PushFunc(f) if matches!(f.id, FunctionId::Anonymous(_)) => {
-                count += count_temp_functions(&f.instrs, counted);
-            }
-            _ => (),
-        }
-    }
-    count
 }

@@ -18,7 +18,7 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let xs = env.pop(1)?;
     let ys = env.pop(2)?;
-    match (f.as_flipped_primitive(), xs, ys) {
+    match (f.as_flipped_primitive(env), xs, ys) {
         (Some((prim, flipped)), Value::Num(xs), Value::Num(ys)) => {
             if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env) {
                 return generic_table(f, Value::Num(xs), Value::Num(ys), env);

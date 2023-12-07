@@ -16,7 +16,7 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let xs = env.pop(1)?;
 
-    match (f.as_flipped_primitive(), xs) {
+    match (f.as_flipped_primitive(env), xs) {
         (Some((Primitive::Join, false)), mut xs) if !env.unpack_boxes() => {
             if xs.rank() < 2 {
                 env.push(xs);
@@ -184,7 +184,7 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     if xs.rank() == 0 {
         return Err(env.error(format!("Cannot {} rank 0 array", Primitive::Scan.format())));
     }
-    match (f.as_flipped_primitive(), xs) {
+    match (f.as_flipped_primitive(env), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => {
             let arr = match prim {
                 Primitive::Eq => fast_scan(nums, |a, b| is_eq::num_num(a, b) as f64),

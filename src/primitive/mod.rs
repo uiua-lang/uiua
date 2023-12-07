@@ -222,7 +222,7 @@ impl Primitive {
     }
     /// Find a primitive by its text name
     pub fn from_name(name: &str) -> Option<Self> {
-        Self::all().find(|p| p.name().eq_ignore_ascii_case(name))
+        Self::all().find(|p| p.name() == name)
     }
     /// Find a primitive by its ASCII token
     pub fn from_ascii(s: AsciiToken) -> Option<Self> {

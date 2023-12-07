@@ -997,7 +997,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
 
         <Challenge
             number=2
-            prompt="multiplies an array by its reverse until any element is greater than 1000, at most 10 times"
+            prompt="multiplies an array by its reverse until any element is greater than 1000"
             example="[1.5 8 2]"
             answer="⍢(×⇌.)(≤1000/↥)"
             tests={&["[1 2 3]", "[¯6 5 1]"]}

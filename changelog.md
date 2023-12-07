@@ -2,9 +2,9 @@
 
 Uiua is not yet stable.
 
+<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
-## 0.6.0 - 2023-12-??
-This version is not yet released. If you are reading this on the website, then these changes are live here.
+## 0.6.0 - 2023-12-06
 ### Language
 - [`fix` `¤`](https://uiua.org/docs/fix) now works with binary pervasive functions
   - This removes the need for some uses of [`rows` `≡`](https://uiua.org/docs/rows) and should be a bit faster
@@ -33,6 +33,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add a token count to the editor (in settings)
 - Files can now be dragged into the editor to open them with [`&fras`](https://uiua.org/docs/&fras)
 - [`&fld`](https://uiua.org/docs/&fld) now works on the website
+
 ## 0.5.1 - 2023-12-02
 ### Interpreter
 - Fix [`stack` `?`](https://uiua.org/docs/stack) signature

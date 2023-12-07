@@ -501,7 +501,7 @@ impl Uiua {
                         _ => unreachable!(),
                     });
                     let val = self.with_span(span, |env| {
-                        if arr.constant {
+                        if arr.boxes {
                             if empty {
                                 Ok(Array::<Boxed>::default().into())
                             } else {
@@ -519,7 +519,7 @@ impl Uiua {
                     instrs.extend(inner);
                     self.push_instr(Instr::EndArray {
                         span,
-                        boxed: arr.constant,
+                        boxed: arr.boxes,
                     });
                     if !call {
                         let instrs = self.new_functions.pop().unwrap();

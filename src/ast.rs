@@ -197,8 +197,8 @@ impl fmt::Debug for Word {
 pub struct Arr {
     /// The words in the array
     pub lines: Vec<Vec<Sp<Word>>>,
-    /// Whether this is a constant-item function
-    pub constant: bool,
+    /// Whether this is a box array
+    pub boxes: bool,
     /// Whether a closing bracket was found
     pub closed: bool,
 }

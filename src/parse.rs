@@ -590,7 +590,7 @@ impl Parser {
             Modifier::Primitive(Primitive::Un) => {
                 single_word_and(&args, |inverted| {
                     if let Word::Array(arr) = &inverted.value {
-                        if arr_is_di(arr) {
+                        if arr_is_normal_di(arr) {
                             self.diagnostics.pop(); // Pop lower diagnostic
                             self.diagnostics.push(Diagnostic::new(
                                 format!(
@@ -685,10 +685,10 @@ impl Parser {
             let span = start.merge(end.span);
             let arr = Arr {
                 lines: items,
-                constant: false,
+                boxes: false,
                 closed: end.value,
             };
-            if arr_is_di(&arr) {
+            if arr_is_normal_di(&arr) {
                 self.diagnostics.push(Diagnostic::new(
                     format!(
                         "Prefer `{}` ({}) over `[{}{}]`",
@@ -709,7 +709,7 @@ impl Parser {
             let span = start.merge(end.span);
             span.sp(Word::Array(Arr {
                 lines: items,
-                constant: true,
+                boxes: true,
                 closed: end.value,
             }))
         } else if let Some(spaces) = self.try_spaces() {
@@ -1149,7 +1149,10 @@ where
     }
 }
 
-fn arr_is_di(arr: &Arr) -> bool {
+fn arr_is_normal_di(arr: &Arr) -> bool {
+    if arr.boxes {
+        return false;
+    }
     let mut is_di = false;
     single_word_and(arr.lines.iter().flatten(), |m| {
         if let Word::Modified(m) = &m.value {

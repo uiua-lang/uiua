@@ -606,13 +606,13 @@ impl<'a> Formatter<'a> {
                 }
             }
             Word::Array(arr) => {
-                if arr.constant {
+                if arr.boxes {
                     self.output.push('{');
                 } else {
                     self.output.push('[');
                 }
                 self.format_multiline_words(&arr.lines, true, true, depth + 1);
-                if arr.constant {
+                if arr.boxes {
                     self.output.push('}');
                 } else {
                     self.output.push(']');

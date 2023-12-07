@@ -124,20 +124,6 @@ where
                     target_shape[0] = b.row_count();
                     a.fill_to_shape(&target_shape, fill);
                 }
-                Err(e) if a.row_count() == 1 => {
-                    let fixes = a.shape.iter().take_while(|&&dim| dim == 1).count();
-                    if (b.shape[fixes..].iter().rev())
-                        .zip(a.shape[fixes..].iter().rev())
-                        .all(|(a, b)| a == b)
-                    {
-                        a.shape.drain(..fixes);
-                        for &dim in b.shape[..fixes].iter().rev() {
-                            a.reshape_scalar(dim);
-                        }
-                    } else {
-                        fill_error = Some(e);
-                    }
-                }
                 Err(e) => fill_error = Some(e),
             },
             Ordering::Greater => match ctx.fill() {
@@ -146,8 +132,30 @@ where
                     target_shape[0] = a.row_count();
                     b.fill_to_shape(&target_shape, fill);
                 }
-                Err(e) if b.row_count() == 1 => {
-                    let fixes = b.shape.iter().take_while(|&&dim| dim == 1).count();
+                Err(e) => fill_error = Some(e),
+            },
+            Ordering::Equal => fill_error = Some(""),
+        }
+        if let Some(e) = fill_error {
+            let mut fixed = false;
+            if a.row_count() == 1 {
+                let fixes = a.shape.iter().take_while(|&&dim| dim == 1).count();
+                if b.shape.len() >= fixes {
+                    if (b.shape[fixes..].iter().rev())
+                        .zip(a.shape[fixes..].iter().rev())
+                        .all(|(a, b)| a == b)
+                    {
+                        a.shape.drain(..fixes);
+                        for &dim in b.shape[..fixes].iter().rev() {
+                            a.reshape_scalar(dim);
+                        }
+                    }
+                    fixed = true;
+                }
+            }
+            if b.row_count() == 1 {
+                let fixes = b.shape.iter().take_while(|&&dim| dim == 1).count();
+                if a.shape.len() >= fixes {
                     if (a.shape[fixes..].iter().rev())
                         .zip(b.shape[fixes..].iter().rev())
                         .all(|(a, b)| a == b)
@@ -156,20 +164,17 @@ where
                         for &dim in a.shape[..fixes].iter().rev() {
                             b.reshape_scalar(dim);
                         }
-                    } else {
-                        fill_error = Some(e);
                     }
+                    fixed = true;
                 }
-                Err(e) => fill_error = Some(e),
-            },
-            Ordering::Equal => {}
-        }
-        if let Some(e) = fill_error {
-            return Err(C::fill_error(ctx.error(format!(
-                "Shapes {} and {} do not match{e}",
-                a.format_shape(),
-                b.format_shape(),
-            ))));
+            }
+            if !fixed {
+                return Err(C::fill_error(ctx.error(format!(
+                    "Shapes {} and {} do not match{e}",
+                    a.format_shape(),
+                    b.format_shape(),
+                ))));
+            }
         }
         // Fill in missing dimensions
         if !shape_prefixes_match(&a.shape, &b.shape) {

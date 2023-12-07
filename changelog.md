@@ -2,12 +2,13 @@
 
 Uiua is not yet stable.
 
-<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
-## 0.6.1 - 2023-12-07
+## 0.6.1 - 2023-12-0?
+This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Interpreter
 - Make [proxy values](https://uiua.org/docs/functions#proxy) a little less leaky
-- Some bug and crash fixes
+- Make placeholders work properly with [`both` `∩`](https://uiua.org/docs/both)
+- Some other bug and crash fixes
 
 ## 0.6.0 - 2023-12-06
 ### Language

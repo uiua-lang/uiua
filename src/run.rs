@@ -736,9 +736,18 @@ code:
     }
     /// Call a function
     #[inline]
-    pub fn call(&mut self, f: impl Into<Function>) -> UiuaResult {
+    pub fn call(&mut self, f: Function) -> UiuaResult {
         let call_span = self.span_index();
         self.call_with_span(f, call_span)
+    }
+    pub(crate) fn call_restore(&mut self, f: Function) -> UiuaResult {
+        let f_args = f.signature().args;
+        let bottom = self.stack_height().saturating_sub(f_args);
+        let res = self.call(f);
+        if res.is_err() {
+            self.truncate_stack(bottom);
+        }
+        res
     }
     pub(crate) fn span_index(&self) -> usize {
         self.scope.call.last().map_or(0, |frame| {

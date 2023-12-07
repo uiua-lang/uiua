@@ -547,9 +547,7 @@ impl Primitive {
                 let handler = env.pop_function()?;
                 let f_args = f.signature().args;
                 let backup = env.clone_stack_top(f_args);
-                let bottom = env.stack_height().saturating_sub(f_args);
-                if let Err(e) = env.call(f) {
-                    env.truncate_stack(bottom);
+                if let Err(e) = env.call_restore(f) {
                     env.backend.save_error_color(&e);
                     env.push(e.value());
                     for val in backup {

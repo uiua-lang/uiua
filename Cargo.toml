@@ -78,6 +78,7 @@ binary = [
 bytes = []
 debug = []
 default = [
+  "bytes",
   "binary",
   "terminal_image",
   "https",

@@ -1227,7 +1227,7 @@ macro_rules! value_bin_impl {
                                 Ok(arr) => arr.into(),
                                 #[allow(unreachable_code, unused_variables)]
                                 Err(e) if e.is_fill() => {
-                                    $(return bin_pervade(a.convert(), b.convert(), a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$retry)).map(Into::into);)?
+                                    $(return bin_pervade(a.convert::<f64>(), b.convert::<f64>(), a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$retry)).map(Into::into);)?
                                     return Err(e);
                                 }
                                 Err(e) => return Err(e),
@@ -1287,8 +1287,8 @@ macro_rules! value_bin_math_impl {
             [Complex, com_x],
             (Complex, Num, com_x),
             (Num, Complex, x_com),
-            ("byte", Complex, Byte, com_x, com_x),
-            ("byte", Byte, Complex, x_com, com_x),
+            ("bytes", Complex, Byte, com_x),
+            ("bytes", Byte, Complex, x_com),
             $($($tt)*)?
         );
     };
@@ -1325,8 +1325,8 @@ value_bin_impl!(
     [Complex, com_x],
     (Complex, Num, com_x),
     (Num, Complex, x_com),
-    ("byte", Complex, Byte, com_x, com_x),
-    ("byte", Byte, Complex, x_com, com_x),
+    ("bytes", Complex, Byte, com_x),
+    ("bytes", Byte, Complex, x_com),
 );
 
 macro_rules! eq_impls {
@@ -1344,8 +1344,8 @@ macro_rules! eq_impls {
                 ("bytes", Byte, Num, byte_num, num_num),
                 (Complex, Num, com_x),
                 (Num, Complex, x_com),
-                ("byte", Complex, Byte, com_x),
-                ("byte", Byte, Complex, x_com),
+                ("bytes", Complex, Byte, com_x),
+                ("bytes", Byte, Complex, x_com),
                 // Type comparable
                 (Num, Char, always_less),
                 ("bytes", Byte, Char, always_less),

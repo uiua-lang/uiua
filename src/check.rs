@@ -327,7 +327,8 @@ impl<'a> VirtualEnv<'a> {
                     let f_sig = f.signature();
                     let g_sig = g.signature();
                     let copy_count = g_sig.args.saturating_sub(g_sig.outputs.saturating_sub(1));
-                    let g_sub_sig = Signature::new(g_sig.args, g_sig.outputs + copy_count - 1);
+                    let g_sub_sig =
+                        Signature::new(g_sig.args, g_sig.outputs + copy_count.saturating_sub(1));
                     let comp_sig = f_sig.compose(g_sub_sig);
                     self.handle_args_outputs(
                         comp_sig.args,

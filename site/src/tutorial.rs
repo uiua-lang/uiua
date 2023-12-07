@@ -291,7 +291,7 @@ fn TutorialMath() -> impl IntoView {
         <Title text="Math and Comparison - Uiua Docs"/>
         <h1>"Math and Comparison"</h1>
         <p>"Uiua supports all the basic math operations as well as comparison, min/max, and rounding."</p>
-        <div id="ascii-glyphs" style="display: flex; justify-content: space-evenly;">
+        <div id="ascii-glyphs">
             <table class="bordered-table">
                 <tr>
                     <th>"Function"</th>

@@ -945,6 +945,7 @@ input[type=number] {
     justify-content: space-between;
     align-items: center;
     font-size: 1.25em;
+    gap: 0.5em;
 }
 
 .tutorial-nav>* {
@@ -966,6 +967,12 @@ input[type=number] {
 
 .primitive-list>* {
     margin-bottom: 0.5em;
+}
+
+#ascii-glyphs {
+    display: flex;
+    justify-content: space-evenly;
+    flex-wrap: wrap;
 }
 
 .input-div {

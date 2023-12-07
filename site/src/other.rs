@@ -192,7 +192,7 @@ pub fn RightToLeft() -> impl IntoView {
         <p><code>"-3"</code>" has this nice quality where it kind of becomes its own little monadic function that also has a syntactic similarity to mathematical notation. You could do something similar if the language went the other way, with "<code>"5-"</code>", but subtracting is a more common and intuitive operation than subtracting from."</p>
         <p>"Consider the simple "<Prim prim=First/>" function:"</p>
         <Editor example="⊢[1 2 3]"/>
-        <p>"The "<Prim prim=First glyph_only=true/>" glyph was chosen because it looks like it indicates the left side of a span (imagine some longer "<code>"⊢–––––°"</code>"). If it had to go on the right, there is no glyph that would indicate it quite so nicely. "<code>"°"</code>" has a similar aesthetic when put at the end, but that would indicate the last item rather than the first."</p>
+        <p>"The "<Prim prim=First glyph_only=true/>" glyph was chosen because it looks like it indicates the left side of a span (imagine some longer "<code>"⊢–––––⊣"</code>"). If it had to go on the right, there is no glyph that would indicate it quite so nicely. "<code>"°"</code>" has a similar aesthetic when put at the end, but that would indicate the last item rather than the first."</p>
     }
 }
 

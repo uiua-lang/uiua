@@ -123,12 +123,14 @@ impl Uiua {
                 }
             }
 
-            let f = env.new_function(FunctionId::Named(name.clone()), sig, instrs);
             // Handle placeholders
             if placeholder_count > 0 {
-                env.increment_placeholders(&f, &mut 0, &mut HashMap::new());
                 instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
                 instrs.push(Instr::PopTempFunctions(placeholder_count));
+            }
+            let f = env.new_function(FunctionId::Named(name.clone()), sig, instrs);
+            if placeholder_count > 0 {
+                env.increment_placeholders(&f, &mut 0, &mut HashMap::new());
             }
             f
         };
@@ -340,11 +342,12 @@ impl Uiua {
                 if call {
                     self.push_instr(Instr::push(n));
                 } else {
-                    self.new_function(
+                    let f = self.new_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
                         vec![Instr::push(n)],
                     );
+                    self.push_instr(Instr::PushFunc(f))
                 }
             }
             Word::Char(c) => {
@@ -356,11 +359,12 @@ impl Uiua {
                 if call {
                     self.push_instr(Instr::push(val));
                 } else {
-                    self.new_function(
+                    let f = self.new_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
                         vec![Instr::push(val)],
                     );
+                    self.push_instr(Instr::PushFunc(f))
                 }
             }
             Word::String(s) => {
@@ -603,7 +607,7 @@ impl Uiua {
                         })
                         .is_none() =>
                 {
-                    self.extend_instrs(f.instrs(self).iter().cloned())
+                    self.extend_instrs(f.instrs(self).to_vec())
                 }
                 Global::Func { f, .. } => {
                     self.push_instr(Instr::PushFunc(f));

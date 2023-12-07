@@ -448,9 +448,10 @@ code:
     }
     pub(crate) fn exec_global_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult {
         let start = self.instrs.len();
-        self.instrs.extend(instrs);
+        self.instrs
+            .extend(instrs.into_iter().filter(|instr| !instr.is_compile_only()));
         let end = self.instrs.len();
-        self.exec(StackFrame {
+        let res = self.exec(StackFrame {
             slice: FuncSlice {
                 address: start,
                 len: end - start,
@@ -460,7 +461,9 @@ code:
             call_span: 0,
             pc: 0,
             spans: Vec::new(),
-        })
+        });
+        self.instrs.truncate(start);
+        res
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
         self.scope.call.push(frame);
@@ -890,7 +893,7 @@ code:
     }
     /// Push a function onto the function stack
     pub fn push_func(&mut self, f: Function) {
-        self.function_stack.push(f.into());
+        self.function_stack.push(f);
     }
     /// Create a function
     pub fn create_function(
@@ -909,6 +912,7 @@ code:
             })],
         )
     }
+    /// Get a slice of instructions
     pub fn instrs(&self, slice: FuncSlice) -> &[Instr] {
         &self.instrs[slice.address..][..slice.len]
     }
@@ -917,7 +921,7 @@ code:
     /// # Errors
     /// Returns an error in the binding name is not valid
     pub fn bind_function(&mut self, name: impl Into<Arc<str>>, function: Function) -> UiuaResult {
-        self.compile_bind_function(name.into(), function.into(), true, Span::Builtin)
+        self.compile_bind_function(name.into(), function, true, Span::Builtin)
     }
     /// Create and bind a function in the current scope
     ///
@@ -1145,7 +1149,7 @@ code:
         let call_height = self.scope.call.len();
         let with_height = self.scope.this.len();
         self.scope.this.push(self.scope.call.len());
-        let res = self.call(f.into());
+        let res = self.call(f);
         self.scope.call.truncate(call_height);
         self.scope.this.truncate(with_height);
         res

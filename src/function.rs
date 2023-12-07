@@ -508,6 +508,7 @@ impl Function {
     pub fn instrs<'a>(&self, env: &'a Uiua) -> &'a [Instr] {
         env.instrs(self.slice)
     }
+    /// Get a mutable slice of the function's instructions
     pub fn instrs_mut<'a>(&self, env: &'a mut Uiua) -> &'a mut [Instr] {
         &mut env.instrs.make_mut()[self.slice.address..][..self.slice.len]
     }

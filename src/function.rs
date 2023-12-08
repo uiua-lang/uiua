@@ -26,7 +26,10 @@ pub enum Instr {
     /// Push a value onto the stack
     Push(Value),
     /// Push a global value onto the stack
-    PushGobal(usize),
+    CallGlobal {
+        index: usize,
+        call: bool,
+    },
     /// Bind a global value
     BindGlobal {
         name: Ident,
@@ -186,7 +189,7 @@ impl Hash for Instr {
         match self {
             Instr::Comment(_) => {}
             Instr::Push(val) => val.hash(state),
-            Instr::PushGobal(_) => {}
+            Instr::CallGlobal { .. } => {}
             Instr::BindGlobal { .. } => {}
             Instr::BeginArray => {}
             Instr::EndArray { .. } => {}
@@ -283,7 +286,7 @@ impl fmt::Display for Instr {
         match self {
             Instr::Comment(comment) => write!(f, "# {comment}"),
             Instr::Push(val) => write!(f, "{val:?}"),
-            Instr::PushGobal(i) => write!(f, "<push global {i}>"),
+            Instr::CallGlobal { index, .. } => write!(f, "<call global {index}>"),
             Instr::BindGlobal { index, .. } => write!(f, "<bind global {index}>"),
             Instr::BeginArray => write!(f, "begin array"),
             Instr::EndArray { .. } => write!(f, "end array"),

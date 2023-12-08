@@ -167,7 +167,11 @@ impl<'a> VirtualEnv<'a> {
         match instr {
             Instr::Comment(_) => {}
             Instr::Push(val) => self.stack.push(BasicValue::from_val(val)),
-            Instr::PushGobal(_) => self.stack.push(BasicValue::Other),
+            Instr::CallGlobal { call, .. } => {
+                if !call {
+                    self.stack.push(BasicValue::Other)
+                }
+            }
             Instr::BindGlobal { .. } => {
                 self.pop()?;
             }

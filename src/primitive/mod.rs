@@ -1222,7 +1222,7 @@ mod tests {
                     }
                     println!("{prim} example:\n{}", ex.input);
                     let mut env = Uiua::with_native_sys();
-                    if let Err(e) = env.load_str(&ex.input) {
+                    if let Err(e) = env.load_str(&ex.input).and_then(Chunk::run) {
                         if !ex.should_error {
                             panic!("\nExample failed:\n{}\n{}", ex.input, e.report());
                         }

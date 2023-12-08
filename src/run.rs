@@ -540,30 +540,30 @@ code:
                 break;
             };
             // Uncomment to debug
-            for val in &self.rt.stack {
-                print!("{:?} ", val);
-            }
-            println!();
-            if !self.rt.array_stack.is_empty() {
-                print!("array: ");
-                for val in &self.rt.array_stack {
-                    print!("{:?} ", val);
-                }
-                println!();
-            }
-            if !self.rt.function_stack.is_empty() {
-                println!("{} function(s)", self.rt.function_stack.len());
-            }
-            for temp in enum_iterator::all::<TempStack>() {
-                if !self.rt.temp_stacks[temp as usize].is_empty() {
-                    print!("{temp}: ");
-                    for val in &self.rt.temp_stacks[temp as usize] {
-                        print!("{:?} ", val);
-                    }
-                    println!();
-                }
-            }
-            println!("  {:?}", instr);
+            // for val in &self.rt.stack {
+            //     print!("{:?} ", val);
+            // }
+            // println!();
+            // if !self.rt.array_stack.is_empty() {
+            //     print!("array: ");
+            //     for val in &self.rt.array_stack {
+            //         print!("{:?} ", val);
+            //     }
+            //     println!();
+            // }
+            // if !self.rt.function_stack.is_empty() {
+            //     println!("{} function(s)", self.rt.function_stack.len());
+            // }
+            // for temp in enum_iterator::all::<TempStack>() {
+            //     if !self.rt.temp_stacks[temp as usize].is_empty() {
+            //         print!("{temp}: ");
+            //         for val in &self.rt.temp_stacks[temp as usize] {
+            //             print!("{:?} ", val);
+            //         }
+            //         println!();
+            //     }
+            // }
+            // println!("  {:?}", instr);
 
             if self.rt.time_instrs {
                 formatted_instr = format!("{instr:?}");
@@ -579,27 +579,28 @@ code:
                     self.rt.stack.push(Value::clone(val));
                     Ok(())
                 }
-                &Instr::PushGobal(i) => {
-                    let global = self.globals[i].clone();
+                &Instr::CallGlobal { index, call } => (|| {
+                    let global = self.globals[index].clone();
                     match global {
                         Global::Val(val) => self.rt.stack.push(val),
-                        Global::Func(f) => self.rt.function_stack.push(dbg!(f)),
+                        Global::Func(f) if call => self.call(f)?,
+                        Global::Func(f) => self.rt.function_stack.push(f),
                     }
                     Ok(())
-                }
+                })(),
                 &Instr::BindGlobal {
                     ref name,
                     span,
-                    index: _,
+                    index,
                 } => {
                     let name = name.clone();
                     (|| {
                         if let Some(f) = self.rt.function_stack.pop() {
                             // Binding is an imported function
-                            self.compile_bind_function(name, f, span)?;
+                            self.compile_bind_function(&name, index, f, span)?;
                         } else if let Some(value) = self.rt.stack.pop() {
                             // Binding is a constant
-                            self.bind_value(name, value, span)?;
+                            self.bind_value(&name, index, value, span)?;
                         } else {
                             // Binding is an empty function
                             let id = match self.get_span(span) {
@@ -607,7 +608,7 @@ code:
                                 Span::Builtin => FunctionId::Unnamed,
                             };
                             let func = self.add_function(id, Signature::new(0, 0), Vec::new());
-                            self.compile_bind_function(name, func, span)?;
+                            self.compile_bind_function(&name, index, func, span)?;
                         }
                         Ok(())
                     })()
@@ -1041,7 +1042,12 @@ code:
     /// # Errors
     /// Returns an error in the binding name is not valid
     pub fn bind_function(&mut self, name: impl Into<Arc<str>>, function: Function) -> UiuaResult {
-        self.compile_bind_function(name.into(), function, 0)
+        let index = self.ct.next_global;
+        let name = name.into();
+        self.compile_bind_function(&name, index, function, 0)?;
+        self.ct.next_global += 1;
+        self.ct.scope.names.insert(name, index);
+        Ok(())
     }
     /// Create and bind a function in the current scope
     ///

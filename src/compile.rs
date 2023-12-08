@@ -197,7 +197,8 @@ impl Uiua {
                 if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
-                    self.compile_bind_function(name, func, span)?;
+                    self.compile_bind_function(&name, global_index, func, span)?;
+                    self.ct.scope.names.insert(name, global_index);
                 } else if sig.args == 0
                     && sig.outputs <= 1
                     && (sig.outputs > 0 || instrs.is_empty())
@@ -240,14 +241,16 @@ impl Uiua {
                 } else {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);
-                    self.compile_bind_function(name, func, span)?;
+                    self.compile_bind_function(&name, global_index, func, span)?;
+                    self.ct.scope.names.insert(name, global_index);
                 }
             }
             Err(e) => {
                 if let Some(sig) = binding.signature {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig.value, self);
-                    self.compile_bind_function(name, func, span)?;
+                    self.compile_bind_function(&name, global_index, func, span)?;
+                    self.ct.scope.names.insert(name, global_index);
                 } else {
                     return Err(UiuaError::Run(Span::Code(binding.name.span.clone()).sp(
                         format!(
@@ -264,24 +267,43 @@ impl Uiua {
         }
         Ok(())
     }
-    pub(crate) fn bind_value(&mut self, name: Ident, mut value: Value, span: usize) -> UiuaResult {
-        self.validate_binding_name(&name, &[], self.get_span(span))?;
+    pub(crate) fn bind_value(
+        &mut self,
+        name: &Ident,
+        index: usize,
+        mut value: Value,
+        span: usize,
+    ) -> UiuaResult {
+        self.validate_binding_name(name, &[], self.get_span(span))?;
         value.compress();
-        let idx = self.globals.len();
-        self.globals.push(Global::Val(value));
-        self.ct.scope.names.insert(name, idx);
+        let global = Global::Val(value);
+        if index < self.globals.len() {
+            self.globals.make_mut()[index] = global;
+        } else {
+            while self.globals.len() < index {
+                self.globals.push(Global::Val(Value::default()));
+            }
+            self.globals.push(global);
+        }
         Ok(())
     }
     pub(crate) fn compile_bind_function(
         &mut self,
-        name: Ident,
+        name: &Ident,
+        index: usize,
         function: Function,
         span: usize,
     ) -> UiuaResult {
-        self.validate_binding_name(&name, function.instrs(self), self.get_span(span))?;
-        let idx = self.globals.len();
-        self.globals.push(Global::Func(function));
-        self.ct.scope.names.insert(name, idx);
+        self.validate_binding_name(name, function.instrs(self), self.get_span(span))?;
+        let global = Global::Func(function);
+        if index < self.globals.len() {
+            self.globals.make_mut()[index] = global;
+        } else {
+            while self.globals.len() < index {
+                self.globals.push(Global::Val(Value::default()));
+            }
+            self.globals.push(global);
+        }
         Ok(())
     }
     fn validate_binding_name(&self, name: &Ident, instrs: &[Instr], span: Span) -> UiuaResult {
@@ -604,11 +626,12 @@ impl Uiua {
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if let Some(idx) = (self.ct.scope.names.get(&ident))
+        if let Some(index) = (self.ct.scope.names.get(&ident))
             .or_else(|| self.ct.higher_scopes.last()?.names.get(&ident))
+            .copied()
         {
             // Name exists in scope
-            match self.globals.get(*idx).cloned() {
+            match self.globals.get(index).cloned() {
                 Some(Global::Val(val)) if call => self.push_instr(Instr::push(val)),
                 Some(Global::Val(val)) => {
                     let f = self.add_function(
@@ -618,7 +641,9 @@ impl Uiua {
                     );
                     self.push_instr(Instr::PushFunc(f));
                 }
-                Some(Global::Func(f)) => {
+                Some(Global::Func(f))
+                    if self.count_temp_functions(f.instrs(self), &mut HashSet::new()) == 0 =>
+                {
                     if call {
                         self.push_instr(Instr::PushSig(f.signature()));
                         let instrs = f.instrs(self).to_vec();
@@ -628,7 +653,14 @@ impl Uiua {
                         self.push_instr(Instr::PushFunc(f));
                     }
                 }
-                None => self.push_instr(Instr::PushGobal(*idx)),
+                Some(Global::Func(f)) => {
+                    self.push_instr(Instr::PushFunc(f));
+                    if call {
+                        let span = self.add_span(span);
+                        self.push_instr(Instr::Call(span));
+                    }
+                }
+                None => self.push_instr(Instr::CallGlobal { index, call }),
             }
         } else {
             return Err(span.sp(format!("Unknown identifier `{ident}`")).into());

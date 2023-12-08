@@ -32,7 +32,9 @@ pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
             "\
 Square ← ×.
 Double ← +.
-Increment ← +1"
+Increment ← +1
+Foo ← 5
+Bar ← \"bar\""
                 .into(),
         )
     });

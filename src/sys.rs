@@ -1002,7 +1002,7 @@ impl SysOp {
                         .map_err(|e| env.error(e))?,
                 )
                 .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
-                env.import(&input, resolved_path.as_ref(), &item)?;
+                env.import_run(&input, resolved_path.as_ref(), &item)?;
             }
             SysOp::Invoke => {
                 let path = env.pop(1)?.as_string(env, "Invoke path must be a string")?;

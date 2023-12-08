@@ -418,14 +418,8 @@ impl Uiua {
         let res = f(self);
         let scope = replace(&mut self.ct.scope, self.ct.higher_scopes.pop().unwrap());
         res?;
-        let mut names = HashMap::new();
-        for (name, idx) in scope.names {
-            if idx >= constants().len() {
-                names.insert(name, idx);
-            }
-        }
         self.rt.stack.truncate(start_height);
-        Ok(names)
+        Ok(scope.names)
     }
     fn load_impl<'a>(&'a mut self, input: &str, src: InputSrc) -> UiuaResult<Chunk<'a>> {
         self.rt.execution_start = instant::now();
@@ -496,7 +490,21 @@ code:
             }
         }
     }
-    pub(crate) fn import(&mut self, input: &str, path: &Path, item: &str) -> UiuaResult {
+    pub(crate) fn import_compile(&mut self, input: &str, path: &Path) -> UiuaResult {
+        if self.current_imports.lock().iter().any(|p| p == path) {
+            return Err(self.error(format!(
+                "Cycle detected importing {}",
+                path.to_string_lossy()
+            )));
+        }
+        if !self.imports.lock().contains_key(path) {
+            let import = self.in_scope(|env| env.load_str_src(input, path).map(drop))?;
+            self.imports.lock().insert(path.into(), import);
+            self.asm.import_inputs.insert(path.into(), input.into());
+        }
+        Ok(())
+    }
+    pub(crate) fn import_run(&mut self, input: &str, path: &Path, item: &str) -> UiuaResult {
         if self.current_imports.lock().iter().any(|p| p == path) {
             return Err(self.error(format!(
                 "Cycle detected importing {}",

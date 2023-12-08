@@ -160,7 +160,7 @@ impl Uiua {
                     if let Word::String(s) = &second.value {
                         let path = self.resolve_import_path(Path::new(s));
                         let input = self.load_import_input(&path)?;
-                        self.asm.import_inputs.insert(path, input);
+                        self.import_compile(&input, &path)?;
                     }
                 }
             }

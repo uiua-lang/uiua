@@ -812,7 +812,7 @@ fn make_fn(instrs: EcoVec<Instr>, span: usize, env: &mut Uiua) -> Option<Functio
         return None;
     };
     let id = FunctionId::Anonymous(span);
-    Some(env.new_function(id, sig, instrs))
+    Some(env.add_function(id, sig, instrs))
 }
 
 fn under_each_pattern<'a>(

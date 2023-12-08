@@ -83,7 +83,7 @@ impl Uiua {
         Ok(())
     }
     #[must_use]
-    pub(crate) fn new_function<I>(&mut self, id: FunctionId, sig: Signature, instrs: I) -> Function
+    pub(crate) fn add_function<I>(&mut self, id: FunctionId, sig: Signature, instrs: I) -> Function
     where
         I: IntoIterator<Item = Instr>,
         I::IntoIter: ExactSizeIterator,
@@ -129,7 +129,7 @@ impl Uiua {
                 instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
                 instrs.push(Instr::PopTempFunctions(placeholder_count));
             }
-            let f = env.new_function(FunctionId::Named(name.clone()), sig, instrs);
+            let f = env.add_function(FunctionId::Named(name.clone()), sig, instrs);
             if placeholder_count > 0 {
                 env.increment_placeholders(&f, &mut 0, &mut HashMap::new());
             }
@@ -189,8 +189,8 @@ impl Uiua {
                     && !is_setinv
                     && !is_setund
                 {
-                    let global_index = self.next_global;
-                    self.next_global += 1;
+                    let global_index = self.ct.next_global;
+                    self.ct.next_global += 1;
                     // Binding's instrs must be run
                     instrs.push(Instr::BindGlobal {
                         name,
@@ -274,10 +274,10 @@ impl Uiua {
             .flatten()
             .collect();
 
-        self.new_functions.push(EcoVec::new());
+        self.ct.new_functions.push(EcoVec::new());
         self.words(words, call)?;
         self.flush_diagnostics();
-        Ok(self.new_functions.pop().unwrap())
+        Ok(self.ct.new_functions.pop().unwrap())
     }
     fn flush_diagnostics(&mut self) {
         if self.print_diagnostics {
@@ -322,7 +322,7 @@ impl Uiua {
     /// Also performs some optimizations if the instruction and the previous
     /// instruction form some known pattern
     fn push_instr(&mut self, instr: Instr) {
-        let instrs = self.new_functions.last_mut().unwrap();
+        let instrs = self.ct.new_functions.last_mut().unwrap();
         optimize_instrs_mut(instrs, instr, false);
     }
     fn extend_instrs(&mut self, instrs: impl IntoIterator<Item = Instr>) {
@@ -336,7 +336,7 @@ impl Uiua {
                 if call {
                     self.push_instr(Instr::push(n));
                 } else {
-                    let f = self.new_function(
+                    let f = self.add_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
                         vec![Instr::push(n)],
@@ -353,7 +353,7 @@ impl Uiua {
                 if call {
                     self.push_instr(Instr::push(val));
                 } else {
-                    let f = self.new_function(
+                    let f = self.add_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
                         vec![Instr::push(val)],
@@ -365,7 +365,7 @@ impl Uiua {
                 if call {
                     self.push_instr(Instr::push(s));
                 } else {
-                    let f = self.new_function(
+                    let f = self.add_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
                         vec![Instr::push(s)],
@@ -375,7 +375,7 @@ impl Uiua {
             }
             Word::FormatString(frags) => {
                 let signature = Signature::new(frags.len() - 1, 1);
-                let f = self.new_function(
+                let f = self.add_function(
                     FunctionId::Anonymous(word.span.clone()),
                     signature,
                     vec![Instr::Dynamic(DynamicFunction {
@@ -410,7 +410,7 @@ impl Uiua {
                     lines.iter().map(|l| l.value.len().saturating_sub(1)).sum(),
                     1,
                 );
-                let f = self.new_function(
+                let f = self.add_function(
                     FunctionId::Anonymous(word.span.clone()),
                     signature,
                     vec![Instr::Dynamic(DynamicFunction {
@@ -450,7 +450,7 @@ impl Uiua {
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
             Word::Strand(items) => {
                 if !call {
-                    self.new_functions.push(EcoVec::new());
+                    self.ct.new_functions.push(EcoVec::new());
                 }
                 self.push_instr(Instr::BeginArray);
                 let inner = self.compile_words(items, true)?;
@@ -477,7 +477,7 @@ impl Uiua {
                     }
                 }
                 let span = self.add_span(word.span.clone());
-                let instrs = self.new_functions.last_mut().unwrap();
+                let instrs = self.ct.new_functions.last_mut().unwrap();
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
                     // Inline constant arrays
                     instrs.pop();
@@ -492,16 +492,16 @@ impl Uiua {
                     instrs.extend(inner);
                     self.push_instr(Instr::EndArray { span, boxed: false });
                     if !call {
-                        let instrs = self.new_functions.pop().unwrap();
+                        let instrs = self.ct.new_functions.pop().unwrap();
                         let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
-                        let func = self.new_function(FunctionId::Anonymous(word.span), sig, instrs);
+                        let func = self.add_function(FunctionId::Anonymous(word.span), sig, instrs);
                         self.push_instr(Instr::PushFunc(func));
                     }
                 }
             }
             Word::Array(arr) => {
                 if !call {
-                    self.new_functions.push(EcoVec::new());
+                    self.ct.new_functions.push(EcoVec::new());
                 }
                 self.push_instr(Instr::BeginArray);
                 let mut inner = Vec::new();
@@ -509,7 +509,7 @@ impl Uiua {
                     inner.extend(self.compile_words(lines, true)?);
                 }
                 let span = self.add_span(word.span.clone());
-                let instrs = self.new_functions.last_mut().unwrap();
+                let instrs = self.ct.new_functions.last_mut().unwrap();
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
                     // Inline constant arrays
                     instrs.pop();
@@ -540,9 +540,9 @@ impl Uiua {
                         boxed: arr.boxes,
                     });
                     if !call {
-                        let instrs = self.new_functions.pop().unwrap();
+                        let instrs = self.ct.new_functions.pop().unwrap();
                         let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
-                        let func = self.new_function(FunctionId::Anonymous(word.span), sig, instrs);
+                        let func = self.add_function(FunctionId::Anonymous(word.span), sig, instrs);
                         self.push_instr(Instr::PushFunc(func));
                     }
                 }
@@ -583,7 +583,7 @@ impl Uiua {
             match global {
                 Global::Val(val) if call => self.push_instr(Instr::push(val)),
                 Global::Val(val) => {
-                    let f = self.new_function(
+                    let f = self.add_function(
                         FunctionId::Anonymous(span),
                         Signature::new(0, 1),
                         vec![Instr::push(val)],
@@ -656,12 +656,12 @@ impl Uiua {
             return Ok(Function::clone(f));
         }
 
-        Ok(self.new_function(func.id, sig, instrs))
+        Ok(self.add_function(func.id, sig, instrs))
     }
     fn switch(&mut self, sw: Switch, span: CodeSpan, call: bool) -> UiuaResult {
         let count = sw.branches.len();
         if !call {
-            self.new_functions.push(EcoVec::new());
+            self.ct.new_functions.push(EcoVec::new());
         }
         let mut branches = sw.branches.into_iter();
         let first_branch = branches.next().expect("switch cannot have no branches");
@@ -693,7 +693,7 @@ impl Uiua {
             span: span_idx,
         });
         if !call {
-            let instrs = self.new_functions.pop().unwrap();
+            let instrs = self.ct.new_functions.pop().unwrap();
             let sig = match instrs_signature(&instrs) {
                 Ok(sig) => sig,
                 Err(e) => {
@@ -709,7 +709,7 @@ impl Uiua {
                         .into());
                 }
             };
-            let function = self.new_function(FunctionId::Anonymous(span), sig, instrs);
+            let function = self.add_function(FunctionId::Anonymous(span), sig, instrs);
             self.push_instr(Instr::PushFunc(function));
         }
         Ok(())
@@ -888,7 +888,7 @@ impl Uiua {
                 Modifier::Ident(ident) => self.ident(ident, modified.modifier.span, true)?,
             }
         } else {
-            self.new_functions.push(EcoVec::new());
+            self.ct.new_functions.push(EcoVec::new());
             self.extend_instrs(instrs);
             match modified.modifier.value {
                 Modifier::Primitive(prim) => {
@@ -898,10 +898,10 @@ impl Uiua {
                     self.ident(ident, modified.modifier.span.clone(), true)?
                 }
             }
-            let instrs = self.new_functions.pop().unwrap();
+            let instrs = self.ct.new_functions.pop().unwrap();
             match instrs_signature(&instrs) {
                 Ok(sig) => {
-                    let func = self.new_function(
+                    let func = self.add_function(
                         FunctionId::Anonymous(modified.modifier.span),
                         sig,
                         instrs,
@@ -929,8 +929,11 @@ impl Uiua {
                 let (mut instrs, sig) = self.compile_operand_words(modified.operands.clone())?;
                 // Dip (|1 …) . diagnostic
                 if prim == Dip && sig == (1, 1) {
-                    if let Some(Instr::Prim(Dup, dup_span)) =
-                        self.new_functions.last().and_then(|instrs| instrs.last())
+                    if let Some(Instr::Prim(Dup, dup_span)) = self
+                        .ct
+                        .new_functions
+                        .last()
+                        .and_then(|instrs| instrs.last())
                     {
                         let span = Span::Code(modified.modifier.span.clone())
                             .merge(self.get_span(*dup_span));
@@ -971,7 +974,7 @@ impl Uiua {
                     self.extend_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = self.new_function(
+                    let func = self.add_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
                         sig,
                         instrs,
@@ -1021,7 +1024,7 @@ impl Uiua {
                     self.extend_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = self.new_function(
+                    let func = self.add_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
                         sig,
                         instrs,
@@ -1055,7 +1058,7 @@ impl Uiua {
                     self.extend_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = self.new_function(
+                    let func = self.add_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
                         sig,
                         instrs,
@@ -1076,7 +1079,7 @@ impl Uiua {
                                 self.extend_instrs(inverted);
                             } else {
                                 let id = FunctionId::Anonymous(modified.modifier.span.clone());
-                                let func = self.new_function(id, sig, inverted);
+                                let func = self.add_function(id, sig, inverted);
                                 self.push_instr(Instr::PushFunc(func));
                             }
                             Ok(true)
@@ -1121,7 +1124,7 @@ impl Uiua {
                         self.extend_instrs(instrs);
                         self.push_instr(Instr::PopSig);
                     } else {
-                        let func = self.new_function(
+                        let func = self.add_function(
                             FunctionId::Anonymous(modified.modifier.span.clone()),
                             sig,
                             instrs,
@@ -1160,7 +1163,7 @@ impl Uiua {
                     self.extend_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = self.new_function(
+                    let func = self.add_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
                         sig,
                         instrs,
@@ -1213,7 +1216,7 @@ impl Uiua {
             let instrs = [Instr::Prim(prim, span_i)];
             match instrs_signature(&instrs) {
                 Ok(sig) => {
-                    let func = self.new_function(FunctionId::Primitive(prim), sig, instrs);
+                    let func = self.add_function(FunctionId::Primitive(prim), sig, instrs);
                     self.push_instr(Instr::PushFunc(func))
                 }
                 Err(e) => {

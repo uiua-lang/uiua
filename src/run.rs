@@ -26,11 +26,8 @@ use crate::{
 #[derive(Clone)]
 pub struct Uiua {
     pub(crate) instrs: EcoVec<Instr>,
-    /// Functions which are under construction
-    pub(crate) new_functions: Vec<EcoVec<Instr>>,
     /// Global values
     pub(crate) globals: Arc<Mutex<Vec<Global>>>,
-    pub(crate) next_global: usize,
     /// Indexable spans
     spans: Arc<Mutex<Vec<Span>>>,
     /// The current scope
@@ -46,6 +43,14 @@ pub struct Uiua {
     /// Print diagnostics as they are encountered
     pub(crate) print_diagnostics: bool,
     pub(crate) rt: Runtime,
+    pub(crate) ct: CompileTime,
+}
+
+#[derive(Clone)]
+pub(crate) struct CompileTime {
+    /// Functions which are under construction
+    pub(crate) new_functions: Vec<EcoVec<Instr>>,
+    pub(crate) next_global: usize,
 }
 
 #[derive(Clone)]
@@ -246,12 +251,14 @@ impl Uiua {
             scope,
             higher_scopes: Vec::new(),
             globals: Arc::new(Mutex::new(globals)),
-            next_global,
-            new_functions: Vec::new(),
             current_imports: Arc::new(Mutex::new(Vec::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
+            ct: CompileTime {
+                next_global,
+                new_functions: Vec::new(),
+            },
             rt: Runtime::with_native_sys(),
         }
     }
@@ -566,7 +573,7 @@ code:
                                 Span::Code(span) => FunctionId::Anonymous(span),
                                 Span::Builtin => FunctionId::Unnamed,
                             };
-                            let func = self.new_function(id, Signature::new(0, 0), Vec::new());
+                            let func = self.add_function(id, Signature::new(0, 0), Vec::new());
                             self.compile_bind_function(name, func, span)?;
                         }
                         Ok(())
@@ -964,7 +971,7 @@ code:
         f: impl Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static,
     ) -> Function {
         let signature = signature.into();
-        self.new_function(
+        self.add_function(
             FunctionId::Unnamed,
             signature,
             vec![Instr::Dynamic(DynamicFunction {
@@ -1248,9 +1255,7 @@ code:
         };
         let mut env = Uiua {
             instrs: self.instrs.clone(),
-            new_functions: Vec::new(),
             globals: self.globals.clone(),
-            next_global: self.next_global,
             spans: self.spans.clone(),
             scope: self.scope.clone(),
             higher_scopes: self.higher_scopes.last().cloned().into_iter().collect(),
@@ -1258,6 +1263,10 @@ code:
             imports: self.imports.clone(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: self.print_diagnostics,
+            ct: CompileTime {
+                new_functions: Vec::new(),
+                next_global: self.ct.next_global,
+            },
             rt: Runtime {
                 stack: self
                     .rt

@@ -1,3 +1,5 @@
+use std::fmt;
+
 use ecow::EcoVec;
 
 use crate::{ImplPrimitive, Instr, Primitive};
@@ -94,7 +96,7 @@ pub(crate) fn optimize_instrs_mut(instrs: &mut EcoVec<Instr>, new: Instr, maxima
 
 pub(crate) fn optimize_instrs<I>(instrs: I, maximal: bool) -> EcoVec<Instr>
 where
-    I: IntoIterator<Item = Instr>,
+    I: IntoIterator<Item = Instr> + fmt::Debug,
     I::IntoIter: ExactSizeIterator,
 {
     // println!("optimize {:?}", instrs);

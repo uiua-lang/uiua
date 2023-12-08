@@ -711,8 +711,8 @@ fn under_temp_pattern(input: &[Instr], g_sig: Signature) -> Option<(&[Instr], Un
                     Ordering::Equal if both || inner_befores_sig.args <= inner_afters_sig.args => {
                         let (start_count, end_count) =
                             temp_pair_counts(&mut start_instr, &mut end_instr)?;
-                        *start_count = inner_afters_sig.outputs;
-                        *end_count = inner_befores_sig.outputs;
+                        *start_count = (*start_count).min(inner_afters_sig.outputs);
+                        *end_count = (*end_count).min(inner_befores_sig.outputs);
                         afters.insert(0, start_instr);
                         afters.push(end_instr);
                     }

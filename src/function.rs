@@ -298,8 +298,8 @@ impl fmt::Display for Instr {
                 write!(f, "<copy to {stack} {count}>")
             }
             Instr::DropTemp { stack, count, .. } => write!(f, "<drop {stack} {count}>"),
-            Instr::PushSig(sig) => write!(f, "<push {sig}>"),
-            Instr::PopSig => write!(f, "<pop sig>"),
+            Instr::PushSig(sig) => write!(f, "{sig}"),
+            Instr::PopSig => write!(f, "-|"),
         }
     }
 }
@@ -470,7 +470,7 @@ impl Function {
     /// Create a new function
     pub fn new<I>(id: FunctionId, instrs: I, signature: Signature) -> Self
     where
-        I: IntoIterator<Item = Instr>,
+        I: IntoIterator<Item = Instr> + fmt::Debug,
         I::IntoIter: ExactSizeIterator,
     {
         let instrs = optimize_instrs(instrs, true);

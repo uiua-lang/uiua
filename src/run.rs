@@ -25,15 +25,13 @@ use crate::{
 /// The Uiua interpreter
 #[derive(Clone)]
 pub struct Uiua {
+    pub(crate) rt: Runtime,
+    pub(crate) ct: CompileTime,
     pub(crate) instrs: EcoVec<Instr>,
     /// Global values
     pub(crate) globals: Arc<Mutex<Vec<Global>>>,
     /// Indexable spans
     spans: Arc<Mutex<Vec<Span>>>,
-    /// The current scope
-    pub(crate) scope: Scope,
-    /// Ancestor scopes of the current one
-    pub(crate) higher_scopes: Vec<Scope>,
     /// The paths of files currently being imported (used to detect import cycles)
     current_imports: Arc<Mutex<Vec<PathBuf>>>,
     /// The bindings of imported files
@@ -42,17 +40,21 @@ pub struct Uiua {
     pub(crate) diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
     pub(crate) print_diagnostics: bool,
-    pub(crate) rt: Runtime,
-    pub(crate) ct: CompileTime,
 }
 
+/// Compile-time only data
 #[derive(Clone)]
 pub(crate) struct CompileTime {
     /// Functions which are under construction
     pub(crate) new_functions: Vec<EcoVec<Instr>>,
     pub(crate) next_global: usize,
+    /// The current scope
+    pub(crate) scope: CtScope,
+    /// Ancestor scopes of the current one
+    pub(crate) higher_scopes: Vec<CtScope>,
 }
 
+/// Runtime-only data
 #[derive(Clone)]
 pub(crate) struct Runtime {
     /// The thread's stack
@@ -63,6 +65,16 @@ pub(crate) struct Runtime {
     temp_stacks: [Vec<Value>; TempStack::CARDINALITY],
     /// The thread's temp stack for functions
     temp_function_stack: Vec<Function>,
+    /// The stack height at the start of each array currently being built
+    array_stack: Vec<usize>,
+    /// The call stack
+    call_stack: Vec<StackFrame>,
+    /// The recur stack
+    this_stack: Vec<usize>,
+    /// The shape fix stack
+    fill_stack: Vec<Fill>,
+    /// Whether to unpack boxed values
+    pub unpack_boxes: bool,
     /// Determines which How test scopes are run
     pub(crate) mode: RunMode,
     /// A limit on the execution duration in milliseconds
@@ -83,49 +95,18 @@ pub(crate) struct Runtime {
     thread: ThisThread,
 }
 
-#[derive(Clone)]
-pub(crate) enum Global {
-    Val(Value),
-    Func(Function),
-}
-
-#[derive(Clone)]
-pub(crate) struct Scope {
-    /// The stack height at the start of each array currently being built
-    array: Vec<usize>,
-    /// The call stack
-    call: Vec<StackFrame>,
-    /// The recur stack
-    this: Vec<usize>,
+#[derive(Clone, Default)]
+pub(crate) struct CtScope {
     /// Map local names to global indices
     pub names: HashMap<Ident, usize>,
-    /// The shape fix stack
-    fills: Vec<Fill>,
-    /// Whether to unpack boxed values
-    pub unpack_boxes: bool,
     /// Whether to allow experimental features
     pub experimental: bool,
 }
 
-impl Default for Scope {
-    fn default() -> Self {
-        Self {
-            array: Vec::new(),
-            call: vec![StackFrame {
-                slice: FuncSlice::default(),
-                id: FunctionId::Main,
-                sig: Signature::new(0, 0),
-                call_span: 0,
-                pc: 0,
-                spans: Vec::new(),
-            }],
-            this: Vec::new(),
-            names: HashMap::new(),
-            fills: Vec::new(),
-            unpack_boxes: false,
-            experimental: false,
-        }
-    }
+#[derive(Clone)]
+pub(crate) enum Global {
+    Val(Value),
+    Func(Function),
 }
 
 #[derive(Clone)]
@@ -223,6 +204,18 @@ impl Runtime {
             function_stack: Vec::new(),
             temp_stacks: [Vec::new(), Vec::new()],
             temp_function_stack: Vec::new(),
+            array_stack: Vec::new(),
+            call_stack: vec![StackFrame {
+                slice: FuncSlice::default(),
+                id: FunctionId::Main,
+                sig: Signature::new(0, 0),
+                call_span: 0,
+                pc: 0,
+                spans: Vec::new(),
+            }],
+            this_stack: Vec::new(),
+            fill_stack: Vec::new(),
+            unpack_boxes: false,
             backend: Arc::new(NativeSys),
             time_instrs: false,
             last_time: 0.0,
@@ -238,7 +231,7 @@ impl Runtime {
 impl Uiua {
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_native_sys() -> Self {
-        let mut scope = Scope::default();
+        let mut scope = CtScope::default();
         let mut globals = Vec::new();
         for def in constants() {
             scope.names.insert(def.name.into(), globals.len());
@@ -248,14 +241,14 @@ impl Uiua {
         Uiua {
             instrs: EcoVec::new(),
             spans: Arc::new(Mutex::new(vec![Span::Builtin])),
-            scope,
-            higher_scopes: Vec::new(),
             globals: Arc::new(Mutex::new(globals)),
             current_imports: Arc::new(Mutex::new(Vec::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             ct: CompileTime {
+                scope,
+                higher_scopes: Vec::new(),
                 next_global,
                 new_functions: Vec::new(),
             },
@@ -359,10 +352,10 @@ impl Uiua {
         &mut self,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<HashMap<Ident, usize>> {
-        self.higher_scopes.push(take(&mut self.scope));
+        self.ct.higher_scopes.push(take(&mut self.ct.scope));
         let start_height = self.rt.stack.len();
         let res = f(self);
-        let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
+        let scope = replace(&mut self.ct.scope, self.ct.higher_scopes.pop().unwrap());
         res?;
         let mut names = HashMap::new();
         for (name, idx) in scope.names {
@@ -497,13 +490,13 @@ code:
         res
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
-        self.scope.call.push(frame);
+        self.rt.call_stack.push(frame);
         let mut formatted_instr = String::new();
         loop {
-            let frame = self.scope.call.last().unwrap();
+            let frame = self.rt.call_stack.last().unwrap();
             let Some(instr) = self.instrs[frame.slice.address..][..frame.slice.len].get(frame.pc)
             else {
-                self.scope.call.pop().unwrap();
+                self.rt.call_stack.pop().unwrap();
                 break;
             };
             // Uncomment to debug
@@ -511,9 +504,9 @@ code:
             //     print!("{:?} ", val);
             // }
             // println!();
-            // if !self.scope.array.is_empty() {
+            // if !self.rt.array_stack.is_empty() {
             //     print!("array: ");
-            //     for val in &self.scope.array {
+            //     for val in &self.rt.array_stack {
             //         print!("{:?} ", val);
             //     }
             //     println!();
@@ -580,11 +573,11 @@ code:
                     })()
                 }
                 Instr::BeginArray => {
-                    self.scope.array.push(self.rt.stack.len());
+                    self.rt.array_stack.push(self.rt.stack.len());
                     Ok(())
                 }
                 &Instr::EndArray { span, boxed } => self.with_span(span, |env| {
-                    let start = env.scope.array.pop().unwrap();
+                    let start = env.rt.array_stack.pop().unwrap();
                     let values = env.rt.stack.drain(start..).rev();
                     let values: Vec<Value> = if boxed {
                         values.map(Boxed).map(Value::from).collect()
@@ -752,7 +745,7 @@ code:
             };
             if self.rt.time_instrs {
                 let end_time = instant::now();
-                let padding = self.scope.call.len().saturating_sub(1) * 2;
+                let padding = self.rt.call_stack.len().saturating_sub(1) * 2;
                 println!(
                     "  ⏲{:padding$}{:.2}ms - {}",
                     "",
@@ -763,11 +756,11 @@ code:
             }
             if let Err(err) = res {
                 // Trace errors
-                let frame = self.scope.call.pop().unwrap();
+                let frame = self.rt.call_stack.pop().unwrap();
                 return Err(self.trace_error(err, frame));
             } else {
                 // Go to next instruction
-                self.scope.call.last_mut().unwrap().pc += 1;
+                self.rt.call_stack.last_mut().unwrap().pc += 1;
                 if let Some(limit) = self.rt.execution_limit {
                     if instant::now() - self.rt.execution_start > limit {
                         return Err(UiuaError::Timeout(self.span()));
@@ -786,9 +779,14 @@ code:
         prim: Option<Primitive>,
         f: impl FnOnce(&mut Self) -> T,
     ) -> T {
-        self.scope.call.last_mut().unwrap().spans.push((span, prim));
+        self.rt
+            .call_stack
+            .last_mut()
+            .unwrap()
+            .spans
+            .push((span, prim));
         let res = f(self);
-        self.scope.call.last_mut().unwrap().spans.pop();
+        self.rt.call_stack.last_mut().unwrap().spans.pop();
         res
     }
     /// Call a function
@@ -851,7 +849,7 @@ code:
         Ok(())
     }
     pub(crate) fn span_index(&self) -> usize {
-        self.scope.call.last().map_or(0, |frame| {
+        self.rt.call_stack.last().map_or(0, |frame| {
             frame
                 .spans
                 .last()
@@ -906,7 +904,7 @@ code:
                 arg.arg_name()
             ))),
         };
-        for bottom in &mut self.scope.array {
+        for bottom in &mut self.rt.array_stack {
             *bottom = (*bottom).min(self.rt.stack.len());
         }
         res
@@ -952,7 +950,7 @@ code:
     }
     /// Simulates popping a value and imediately pushing it back
     pub(crate) fn touch_array_stack(&mut self, n: usize) {
-        for bottom in &mut self.scope.array {
+        for bottom in &mut self.rt.array_stack {
             *bottom = (*bottom).min(self.rt.stack.len().saturating_sub(n));
         }
     }
@@ -1024,10 +1022,10 @@ code:
         })
     }
     /// Get the values for all bindings in the current scope
-    pub fn all_values_is_scope(&self) -> HashMap<Ident, Value> {
+    pub fn all_values_in_scope(&self) -> HashMap<Ident, Value> {
         let mut bindings = HashMap::new();
         let globals = self.globals.lock();
-        for (name, idx) in &self.scope.names {
+        for (name, idx) in &self.ct.scope.names {
             if !constants().iter().any(|c| c.name == name.as_ref()) {
                 if let Global::Val(val) = &globals[*idx] {
                     bindings.insert(name.clone(), val.clone());
@@ -1130,25 +1128,25 @@ code:
         self.rt.stack.truncate(size);
     }
     pub(crate) fn num_fill(&self) -> Result<f64, &'static str> {
-        match self.scope.fills.last() {
+        match self.rt.fill_stack.last() {
             Some(Fill::Num(n)) => Ok(*n),
             _ => Err(self.fill_error()),
         }
     }
     pub(crate) fn byte_fill(&self) -> Result<u8, &'static str> {
-        match self.scope.fills.last() {
+        match self.rt.fill_stack.last() {
             Some(Fill::Num(n)) if (n.fract() == 0.0 && (0.0..=255.0).contains(n)) => Ok(*n as u8),
             _ => Err(self.fill_error()),
         }
     }
     pub(crate) fn char_fill(&self) -> Result<char, &'static str> {
-        match self.scope.fills.last() {
+        match self.rt.fill_stack.last() {
             Some(Fill::Char(c)) => Ok(*c),
             _ => Err(self.fill_error()),
         }
     }
     pub(crate) fn box_fill(&self) -> Result<Boxed, &'static str> {
-        match self.scope.fills.last().cloned() {
+        match self.rt.fill_stack.last().cloned() {
             Some(Fill::Num(n)) => Ok(Value::from(n).into()),
             Some(Fill::Char(c)) => Ok(Value::from(c).into()),
             Some(Fill::Complex(c)) => Ok(Value::from(c).into()),
@@ -1157,14 +1155,14 @@ code:
         }
     }
     pub(crate) fn complex_fill(&self) -> Result<Complex, &'static str> {
-        match self.scope.fills.last() {
+        match self.rt.fill_stack.last() {
             Some(Fill::Num(n)) => Ok(Complex::new(*n, 0.0)),
             Some(Fill::Complex(c)) => Ok(*c),
             _ => Err(self.fill_error()),
         }
     }
     fn fill_error(&self) -> &'static str {
-        match self.scope.fills.last() {
+        match self.rt.fill_stack.last() {
             Some(Fill::Num(_)) => ". A number fill is set, but the array is not numbers.",
             Some(Fill::Char(_)) => ". A character fill is set, but the array is not characters.",
             Some(Fill::Complex(_)) => {
@@ -1181,7 +1179,7 @@ code:
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
     ) -> UiuaResult {
         if fill.shape() == [0] {
-            self.scope.fills.push(Fill::None)
+            self.rt.fill_stack.push(Fill::None)
         } else {
             if !fill.shape().is_empty() {
                 return Err(self.error(format!(
@@ -1189,7 +1187,7 @@ code:
                     fill.format_shape()
                 )));
             }
-            self.scope.fills.push(match fill {
+            self.rt.fill_stack.push(match fill {
                 Value::Num(n) => Fill::Num(n.data.into_iter().next().unwrap()),
                 #[cfg(feature = "bytes")]
                 Value::Byte(b) => Fill::Num(b.data.into_iter().next().unwrap() as f64),
@@ -1199,35 +1197,35 @@ code:
             });
         }
         let res = in_ctx(self);
-        self.scope.fills.pop();
+        self.rt.fill_stack.pop();
         res
     }
     pub(crate) fn with_pack(&mut self, in_ctx: impl FnOnce(&mut Self) -> UiuaResult) -> UiuaResult {
-        let upper = replace(&mut self.scope.unpack_boxes, true);
+        let upper = replace(&mut self.rt.unpack_boxes, true);
         let res = in_ctx(self);
-        self.scope.unpack_boxes = upper;
+        self.rt.unpack_boxes = upper;
         res
     }
     pub(crate) fn unpack_boxes(&self) -> bool {
-        self.scope.unpack_boxes
+        self.rt.unpack_boxes
     }
     pub(crate) fn call_frames(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {
-        self.scope.call.iter()
+        self.rt.call_stack.iter()
     }
     pub(crate) fn call_with_this(&mut self, f: Function) -> UiuaResult {
-        let call_height = self.scope.call.len();
-        let with_height = self.scope.this.len();
-        self.scope.this.push(self.scope.call.len());
+        let call_height = self.rt.call_stack.len();
+        let with_height = self.rt.this_stack.len();
+        self.rt.this_stack.push(self.rt.call_stack.len());
         let res = self.call(f);
-        self.scope.call.truncate(call_height);
-        self.scope.this.truncate(with_height);
+        self.rt.call_stack.truncate(call_height);
+        self.rt.this_stack.truncate(with_height);
         res
     }
     pub(crate) fn recur(&mut self) -> UiuaResult {
-        let Some(i) = self.scope.this.last().copied() else {
+        let Some(i) = self.rt.this_stack.last().copied() else {
             return Err(self.error("No recursion context set"));
         };
-        let mut frame = self.scope.call[i].clone();
+        let mut frame = self.rt.call_stack[i].clone();
         frame.pc = 0;
         self.call_frame(frame)
     }
@@ -1257,8 +1255,6 @@ code:
             instrs: self.instrs.clone(),
             globals: self.globals.clone(),
             spans: self.spans.clone(),
-            scope: self.scope.clone(),
-            higher_scopes: self.higher_scopes.last().cloned().into_iter().collect(),
             current_imports: self.current_imports.clone(),
             imports: self.imports.clone(),
             diagnostics: BTreeSet::new(),
@@ -1266,6 +1262,8 @@ code:
             ct: CompileTime {
                 new_functions: Vec::new(),
                 next_global: self.ct.next_global,
+                scope: self.ct.scope.clone(),
+                higher_scopes: Vec::new(),
             },
             rt: Runtime {
                 stack: self
@@ -1276,6 +1274,11 @@ code:
                 function_stack: Vec::new(),
                 temp_stacks: [Vec::new(), Vec::new()],
                 temp_function_stack: Vec::new(),
+                array_stack: Vec::new(),
+                fill_stack: Vec::new(),
+                this_stack: self.rt.this_stack.clone(),
+                call_stack: Vec::new(),
+                unpack_boxes: self.rt.unpack_boxes,
                 mode: self.rt.mode,
                 time_instrs: self.rt.time_instrs,
                 last_time: self.rt.last_time,

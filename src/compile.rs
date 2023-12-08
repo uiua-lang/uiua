@@ -236,7 +236,7 @@ impl Uiua {
         let mut globals = self.globals.lock();
         let idx = globals.len();
         globals.push(Global::Val(value));
-        self.scope.names.insert(name, idx);
+        self.ct.scope.names.insert(name, idx);
         Ok(())
     }
     pub(crate) fn compile_bind_function(
@@ -249,7 +249,7 @@ impl Uiua {
         let mut globals = self.globals.lock();
         let idx = globals.len();
         globals.push(Global::Func(function));
-        self.scope.names.insert(name, idx);
+        self.ct.scope.names.insert(name, idx);
         Ok(())
     }
     fn validate_binding_name(&self, name: &Ident, instrs: &[Instr], span: Span) -> UiuaResult {
@@ -564,7 +564,7 @@ impl Uiua {
             }
             Word::Comment(comment) => {
                 if comment.trim() == "Experimental!" {
-                    self.scope.experimental = true;
+                    self.ct.scope.experimental = true;
                 }
             }
             Word::Spaces | Word::BreakLine | Word::UnbreakLine => {}
@@ -572,11 +572,8 @@ impl Uiua {
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if let Some(idx) = self
-            .scope
-            .names
-            .get(&ident)
-            .or_else(|| self.higher_scopes.last()?.names.get(&ident))
+        if let Some(idx) = (self.ct.scope.names.get(&ident))
+            .or_else(|| self.ct.higher_scopes.last()?.names.get(&ident))
         {
             // Name exists in scope
             let global = self.globals.lock()[*idx].clone();
@@ -1194,7 +1191,7 @@ impl Uiua {
         }
     }
     fn handle_primitive_experimental(&self, prim: Primitive, span: &CodeSpan) -> UiuaResult {
-        if prim.is_experimental() && !self.scope.experimental {
+        if prim.is_experimental() && !self.ct.scope.experimental {
             return Err(span
                 .clone()
                 .sp(format!(

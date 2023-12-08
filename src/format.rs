@@ -119,7 +119,7 @@ macro_rules! create_config {
                     let mut env = Uiua::with_backend(FormatConfigBackend)
                         .print_diagnostics(true);
                     env.load_file(file_path)?;
-                    let mut bindings = env.all_values_is_scope();
+                    let mut bindings = env.all_values_in_scope();
                     $(
                         let $name = {
                             let requirement = requirement!([<$name:camel>], $ty);

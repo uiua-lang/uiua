@@ -65,7 +65,21 @@ impl Uiua {
                                 .into());
                         }
                         let instrs = self.compile_words(line, true)?;
-                        self.exec_global_instrs(instrs)?;
+                        match instrs_signature(&instrs) {
+                            Ok(sig) => {
+                                if let Ok(height) = &mut self.ct.scope.stack_height {
+                                    *height = (*height + sig.outputs).saturating_sub(sig.args);
+                                }
+                            }
+                            Err(e) => self.ct.scope.stack_height = Err(span.sp(e)),
+                        }
+                        let start = self.instrs.len();
+                        self.instrs.extend(optimize_instrs(instrs, true));
+                        let end = self.instrs.len();
+                        self.top_slices.push(FuncSlice {
+                            address: start,
+                            len: end - start,
+                        });
                     }
                 }
             }
@@ -138,6 +152,8 @@ impl Uiua {
         // Compile the body
         let mut instrs = self.compile_words(binding.words, true)?;
         let span = self.add_span(span.clone());
+        let global_index = self.ct.next_global;
+        self.ct.next_global += 1;
         // Resolve signature
         match instrs_signature(&instrs) {
             Ok(mut sig) => {
@@ -189,15 +205,38 @@ impl Uiua {
                     && !is_setinv
                     && !is_setund
                 {
-                    let global_index = self.ct.next_global;
-                    self.ct.next_global += 1;
+                    // Runtime-depending binding
+                    if instrs.is_empty() {
+                        // Binding from the stack set above
+                        match &mut self.ct.scope.stack_height {
+                            Ok(height) => *height = height.saturating_sub(1),
+                            Err(sp) => {
+                                return Err(sp
+                                    .clone()
+                                    .map(|err| {
+                                        format!(
+                                            "This line's signature is undefined: {err}. \
+                                            This prevents the later binding of {name}."
+                                        )
+                                    })
+                                    .into())
+                            }
+                        }
+                    }
+                    self.ct.scope.names.insert(name.clone(), global_index);
                     // Binding's instrs must be run
                     instrs.push(Instr::BindGlobal {
                         name,
                         span,
                         index: global_index,
                     });
-                    self.exec_global_instrs(instrs)?;
+                    let start = self.instrs.len();
+                    self.instrs.extend(optimize_instrs(instrs, true));
+                    let end = self.instrs.len();
+                    self.top_slices.push(FuncSlice {
+                        address: start,
+                        len: end - start,
+                    });
                 } else {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);
@@ -225,17 +264,11 @@ impl Uiua {
         }
         Ok(())
     }
-    pub(crate) fn compile_bind_value(
-        &mut self,
-        name: Ident,
-        mut value: Value,
-        span: usize,
-    ) -> UiuaResult {
+    pub(crate) fn bind_value(&mut self, name: Ident, mut value: Value, span: usize) -> UiuaResult {
         self.validate_binding_name(&name, &[], self.get_span(span))?;
         value.compress();
-        let mut globals = self.globals.lock();
-        let idx = globals.len();
-        globals.push(Global::Val(value));
+        let idx = self.globals.len();
+        self.globals.push(Global::Val(value));
         self.ct.scope.names.insert(name, idx);
         Ok(())
     }
@@ -246,9 +279,8 @@ impl Uiua {
         span: usize,
     ) -> UiuaResult {
         self.validate_binding_name(&name, function.instrs(self), self.get_span(span))?;
-        let mut globals = self.globals.lock();
-        let idx = globals.len();
-        globals.push(Global::Func(function));
+        let idx = self.globals.len();
+        self.globals.push(Global::Func(function));
         self.ct.scope.names.insert(name, idx);
         Ok(())
     }
@@ -325,7 +357,7 @@ impl Uiua {
         let instrs = self.ct.new_functions.last_mut().unwrap();
         optimize_instrs_mut(instrs, instr, false);
     }
-    fn extend_instrs(&mut self, instrs: impl IntoIterator<Item = Instr>) {
+    fn push_all_instrs(&mut self, instrs: impl IntoIterator<Item = Instr>) {
         for instr in instrs {
             self.push_instr(instr);
         }
@@ -576,10 +608,9 @@ impl Uiua {
             .or_else(|| self.ct.higher_scopes.last()?.names.get(&ident))
         {
             // Name exists in scope
-            let global = self.globals.lock()[*idx].clone();
-            match global {
-                Global::Val(val) if call => self.push_instr(Instr::push(val)),
-                Global::Val(val) => {
+            match self.globals.get(*idx).cloned() {
+                Some(Global::Val(val)) if call => self.push_instr(Instr::push(val)),
+                Some(Global::Val(val)) => {
                     let f = self.add_function(
                         FunctionId::Anonymous(span),
                         Signature::new(0, 1),
@@ -587,16 +618,17 @@ impl Uiua {
                     );
                     self.push_instr(Instr::PushFunc(f));
                 }
-                Global::Func(f) => {
+                Some(Global::Func(f)) => {
                     if call {
                         self.push_instr(Instr::PushSig(f.signature()));
                         let instrs = f.instrs(self).to_vec();
-                        self.extend_instrs(instrs);
+                        self.push_all_instrs(instrs);
                         self.push_instr(Instr::PopSig);
                     } else {
                         self.push_instr(Instr::PushFunc(f));
                     }
                 }
+                None => self.push_instr(Instr::PushGobal(*idx)),
             }
         } else {
             return Err(span.sp(format!("Unknown identifier `{ident}`")).into());
@@ -879,14 +911,14 @@ impl Uiua {
         }
 
         if call {
-            self.extend_instrs(instrs);
+            self.push_all_instrs(instrs);
             match modified.modifier.value {
                 Modifier::Primitive(prim) => self.primitive(prim, modified.modifier.span, true)?,
                 Modifier::Ident(ident) => self.ident(ident, modified.modifier.span, true)?,
             }
         } else {
             self.ct.new_functions.push(EcoVec::new());
-            self.extend_instrs(instrs);
+            self.push_all_instrs(instrs);
             match modified.modifier.value {
                 Modifier::Primitive(prim) => {
                     self.primitive(prim, modified.modifier.span.clone(), true)?
@@ -968,7 +1000,7 @@ impl Uiua {
                 };
                 if call {
                     self.push_instr(Instr::PushSig(sig));
-                    self.extend_instrs(instrs);
+                    self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
                     let func = self.add_function(
@@ -1018,7 +1050,7 @@ impl Uiua {
                 let sig = Signature::new(a_sig.args.max(b_sig.args), a_sig.outputs + b_sig.outputs);
                 if call {
                     self.push_instr(Instr::PushSig(sig));
-                    self.extend_instrs(instrs);
+                    self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
                     let func = self.add_function(
@@ -1052,7 +1084,7 @@ impl Uiua {
                 let sig = Signature::new(a_sig.args + b_sig.args, a_sig.outputs + b_sig.outputs);
                 if call {
                     self.push_instr(Instr::PushSig(sig));
-                    self.extend_instrs(instrs);
+                    self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
                     let func = self.add_function(
@@ -1073,7 +1105,7 @@ impl Uiua {
                     match instrs_signature(&inverted) {
                         Ok(sig) => {
                             if call {
-                                self.extend_instrs(inverted);
+                                self.push_all_instrs(inverted);
                             } else {
                                 let id = FunctionId::Anonymous(modified.modifier.span.clone());
                                 let func = self.add_function(id, sig, inverted);
@@ -1118,7 +1150,7 @@ impl Uiua {
                     );
                     if call {
                         self.push_instr(Instr::PushSig(sig));
-                        self.extend_instrs(instrs);
+                        self.push_all_instrs(instrs);
                         self.push_instr(Instr::PopSig);
                     } else {
                         let func = self.add_function(
@@ -1157,7 +1189,7 @@ impl Uiua {
                 let sig = Signature::new(sig.args * 2, sig.outputs * 2);
                 if call {
                     self.push_instr(Instr::PushSig(sig));
-                    self.extend_instrs(instrs);
+                    self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
                     let func = self.add_function(

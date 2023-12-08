@@ -17,9 +17,9 @@ use parking_lot::Mutex;
 use rand::prelude::*;
 
 use crate::{
-    algorithm, array::Array, boxed::Boxed, constants, function::*, lex::Span, parse::parse,
-    value::Value, Complex, Diagnostic, DiagnosticKind, Ident, NativeSys, Primitive, SysBackend,
-    SysOp, TraceFrame, UiuaError, UiuaResult,
+    algorithm, array::Array, boxed::Boxed, check::SigCheckError, constants, function::*, lex::Span,
+    parse::parse, value::Value, Complex, Diagnostic, DiagnosticKind, Ident, NativeSys, Primitive,
+    Sp, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua interpreter
@@ -28,8 +28,9 @@ pub struct Uiua {
     pub(crate) rt: Runtime,
     pub(crate) ct: CompileTime,
     pub(crate) instrs: EcoVec<Instr>,
+    pub(crate) top_slices: Vec<FuncSlice>,
     /// Global values
-    pub(crate) globals: Arc<Mutex<Vec<Global>>>,
+    pub(crate) globals: EcoVec<Global>,
     /// Indexable spans
     spans: Arc<Mutex<Vec<Span>>>,
     /// The paths of files currently being imported (used to detect import cycles)
@@ -52,6 +53,26 @@ pub(crate) struct CompileTime {
     pub(crate) scope: CtScope,
     /// Ancestor scopes of the current one
     pub(crate) higher_scopes: Vec<CtScope>,
+}
+
+#[derive(Clone)]
+pub(crate) struct CtScope {
+    /// Map local names to global indices
+    pub names: HashMap<Ident, usize>,
+    /// Whether to allow experimental features
+    pub experimental: bool,
+    /// The stack height between top-level statements
+    pub stack_height: Result<usize, Sp<SigCheckError>>,
+}
+
+impl Default for CtScope {
+    fn default() -> Self {
+        Self {
+            names: HashMap::new(),
+            experimental: false,
+            stack_height: Ok(0),
+        }
+    }
 }
 
 /// Runtime-only data
@@ -93,14 +114,6 @@ pub(crate) struct Runtime {
     pub(crate) backend: Arc<dyn SysBackend>,
     /// The thread interface
     thread: ThisThread,
-}
-
-#[derive(Clone, Default)]
-pub(crate) struct CtScope {
-    /// Map local names to global indices
-    pub names: HashMap<Ident, usize>,
-    /// Whether to allow experimental features
-    pub experimental: bool,
 }
 
 #[derive(Clone)]
@@ -232,7 +245,7 @@ impl Uiua {
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_native_sys() -> Self {
         let mut scope = CtScope::default();
-        let mut globals = Vec::new();
+        let mut globals = EcoVec::new();
         for def in constants() {
             scope.names.insert(def.name.into(), globals.len());
             globals.push(Global::Val(def.value.clone()));
@@ -241,7 +254,8 @@ impl Uiua {
         Uiua {
             instrs: EcoVec::new(),
             spans: Arc::new(Mutex::new(vec![Span::Builtin])),
-            globals: Arc::new(Mutex::new(globals)),
+            top_slices: Vec::new(),
+            globals,
             current_imports: Arc::new(Mutex::new(Vec::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
             diagnostics: BTreeSet::new(),
@@ -400,6 +414,19 @@ code:
         if path.is_some() {
             self.current_imports.lock().pop();
         }
+        res?;
+        self.run_slices()
+    }
+    fn run_slices(&mut self) -> UiuaResult {
+        let slices = take(&mut self.top_slices);
+        let mut res = Ok(());
+        for &slice in &slices {
+            res = self.call_slice(slice);
+            if res.is_err() {
+                break;
+            }
+        }
+        self.top_slices = slices;
         res
     }
     fn trace_error(&self, mut error: UiuaError, frame: StackFrame) -> UiuaError {
@@ -442,7 +469,7 @@ code:
         let idx = imports.get(item).ok_or_else(|| {
             self.error(format!("Item `{}` not found in {}", item, path.display()))
         })?;
-        let global = self.globals.lock()[*idx].clone();
+        let global = self.globals[*idx].clone();
         drop(imports_gaurd);
         match global {
             Global::Val(val) => self.push(val),
@@ -464,30 +491,6 @@ code:
         } else {
             pathdiff::diff_paths(&target, base).unwrap_or(target)
         }
-    }
-    pub(crate) fn exec_global_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult {
-        let start = self.instrs.len();
-        self.instrs
-            .extend(instrs.into_iter().filter(|instr| !instr.is_compile_only()));
-        let end = self.instrs.len();
-        let slice = FuncSlice {
-            address: start,
-            len: end - start,
-        };
-        let res = self.exec(StackFrame {
-            slice,
-            id: FunctionId::Main,
-            sig: Signature::new(0, 0),
-            call_span: 0,
-            pc: 0,
-            spans: Vec::new(),
-        });
-        // Only truncate if now new instructions were added
-        // i.e. nothing was imported
-        if self.instrs.len() == end {
-            self.instrs.truncate(start);
-        }
-        res
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
         self.rt.call_stack.push(frame);
@@ -540,7 +543,7 @@ code:
                     Ok(())
                 }
                 &Instr::PushGobal(i) => {
-                    let global = self.globals.lock()[i].clone();
+                    let global = self.globals[i].clone();
                     match global {
                         Global::Val(val) => self.rt.stack.push(val),
                         Global::Func(f) => self.rt.function_stack.push(f),
@@ -559,7 +562,7 @@ code:
                             self.compile_bind_function(name, f, span)?;
                         } else if let Some(value) = self.rt.stack.pop() {
                             // Binding is a constant
-                            self.compile_bind_value(name, value, span)?;
+                            self.bind_value(name, value, span)?;
                         } else {
                             // Binding is an empty function
                             let id = match self.get_span(span) {
@@ -796,6 +799,19 @@ code:
         self.call_with_span(f, call_span)
     }
     #[inline]
+    fn call_slice(&mut self, slice: FuncSlice) -> UiuaResult {
+        let call_span = self.span_index();
+        let frame = StackFrame {
+            slice,
+            sig: Signature::new(0, 0),
+            id: FunctionId::Main,
+            call_span,
+            spans: Vec::new(),
+            pc: 0,
+        };
+        self.exec(frame)
+    }
+    #[inline]
     fn call_frame(&mut self, frame: StackFrame) -> UiuaResult {
         let call_span = self.span_index();
         self.call_with_frame_span(frame, call_span)
@@ -1024,10 +1040,9 @@ code:
     /// Get the values for all bindings in the current scope
     pub fn all_values_in_scope(&self) -> HashMap<Ident, Value> {
         let mut bindings = HashMap::new();
-        let globals = self.globals.lock();
         for (name, idx) in &self.ct.scope.names {
             if !constants().iter().any(|c| c.name == name.as_ref()) {
-                if let Global::Val(val) = &globals[*idx] {
+                if let Global::Val(val) = &self.globals[*idx] {
                     bindings.insert(name.clone(), val.clone());
                 }
             }
@@ -1254,6 +1269,7 @@ code:
         let mut env = Uiua {
             instrs: self.instrs.clone(),
             globals: self.globals.clone(),
+            top_slices: Vec::new(),
             spans: self.spans.clone(),
             current_imports: self.current_imports.clone(),
             imports: self.imports.clone(),

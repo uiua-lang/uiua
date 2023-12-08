@@ -272,6 +272,7 @@ impl<'a> Chunk<'a> {
             }
         }
         self.env.asm.top_slices = slices;
+        self.env.rt.last_slice_run = self.start + self.len;
         res
     }
 }

@@ -4,7 +4,6 @@ use std::{
     hash::{Hash, Hasher},
     mem::{discriminant, transmute},
     ops::{Add, AddAssign, ControlFlow},
-    sync::Arc,
 };
 
 use ecow::{EcoString, EcoVec};
@@ -14,7 +13,7 @@ use crate::{
     lex::CodeSpan,
     primitive::{ImplPrimitive, Primitive},
     value::Value,
-    Ident, Uiua, UiuaResult,
+    Ident, Uiua,
 };
 
 /// A Uiua bytecode instruction
@@ -209,7 +208,7 @@ impl Hash for Instr {
             Instr::PopTempFunctions(count) => count.hash(state),
             Instr::GetTempFunction { offset, .. } => offset.hash(state),
             Instr::Format(parts, _) => parts.hash(state),
-            Instr::Dynamic(f) => f.id.hash(state),
+            Instr::Dynamic(f) => f.index.hash(state),
             Instr::TouchStack { count, .. } => count.hash(state),
             Instr::PushTemp { count, .. } => count.hash(state),
             Instr::PopTemp { count, .. } => count.hash(state),
@@ -439,25 +438,30 @@ impl fmt::Display for Signature {
 }
 
 /// A function that executes Rust code
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct DynamicFunction {
-    /// An id used for hashing and equality
-    pub id: u64,
-    /// The function
-    pub f: Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync>,
+    /// An index used to look up the function
+    pub(crate) index: usize,
     /// The function's signature
-    pub signature: Signature,
+    pub(crate) signature: Signature,
+}
+
+impl DynamicFunction {
+    /// Get the function's signature
+    pub fn signature(&self) -> Signature {
+        self.signature
+    }
 }
 
 impl fmt::Debug for DynamicFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "<dynamic#{:x}>", self.id)
+        write!(f, "<dynamic#{:x}>", self.index)
     }
 }
 
 impl PartialEq for DynamicFunction {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
+        self.index == other.index
     }
 }
 
@@ -471,13 +475,13 @@ impl PartialOrd for DynamicFunction {
 
 impl Ord for DynamicFunction {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.id.cmp(&other.id)
+        self.index.cmp(&other.index)
     }
 }
 
 impl Hash for DynamicFunction {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.id.hash(state);
+        self.index.hash(state);
     }
 }
 

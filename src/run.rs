@@ -14,7 +14,6 @@ use ecow::{EcoString, EcoVec};
 use enum_iterator::Sequence;
 use instant::Duration;
 use parking_lot::Mutex;
-use rand::prelude::*;
 
 use crate::{
     algorithm, array::Array, boxed::Boxed, check::SigCheckError, constants, example_ua,
@@ -33,11 +32,14 @@ pub struct Uiua {
     current_imports: Arc<Mutex<Vec<PathBuf>>>,
     /// The bindings of imported files
     imports: Arc<Mutex<HashMap<PathBuf, HashMap<Ident, usize>>>>,
+    dynamic_functions: EcoVec<DynFn>,
     /// Accumulated diagnostics
     pub(crate) diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
     pub(crate) print_diagnostics: bool,
 }
+
+type DynFn = Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static>;
 
 /// Compile-time only data
 #[derive(Clone)]
@@ -288,6 +290,7 @@ impl Uiua {
             asm,
             current_imports: Arc::new(Mutex::new(Vec::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
+            dynamic_functions: EcoVec::new(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             ct: CompileTime {
@@ -717,7 +720,14 @@ code:
                         Ok(())
                     })
                 }
-                Instr::Dynamic(df) => df.f.clone()(self),
+                &Instr::Dynamic(df) => (|| {
+                    self.dynamic_functions
+                        .get(df.index)
+                        .ok_or_else(|| {
+                            self.error(format!("Dynamic function index {} out of range", df.index))
+                        })?
+                        .clone()(self)
+                })(),
                 &Instr::Unpack { count, span, unbox } => self.with_span(span, |env| {
                     let arr = env.pop(1)?;
                     if arr.row_count() != count {
@@ -1050,14 +1060,12 @@ code:
         f: impl Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static,
     ) -> Function {
         let signature = signature.into();
+        let index = self.dynamic_functions.len();
+        self.dynamic_functions.push(Arc::new(f));
         self.add_function(
             FunctionId::Unnamed,
             signature,
-            vec![Instr::Dynamic(DynamicFunction {
-                id: SmallRng::seed_from_u64(instant::now().to_bits()).gen(),
-                f: Arc::new(f),
-                signature,
-            })],
+            vec![Instr::Dynamic(DynamicFunction { index, signature })],
         )
     }
     /// Get a slice of instructions
@@ -1340,6 +1348,7 @@ code:
             asm: self.asm.clone(),
             current_imports: self.current_imports.clone(),
             imports: self.imports.clone(),
+            dynamic_functions: self.dynamic_functions.clone(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: self.print_diagnostics,
             ct: CompileTime {

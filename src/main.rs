@@ -129,6 +129,33 @@ fn run() -> UiuaResult {
                 rt.load_file(path).and_then(Chunk::run)?;
                 print_stack(&rt.take_stack(), !no_color);
             }
+            App::Build { path, output } => {
+                let path = if let Some(path) = path {
+                    path
+                } else {
+                    match working_file_path() {
+                        Ok(path) => path,
+                        Err(e) => {
+                            eprintln!("{}", e);
+                            return Ok(());
+                        }
+                    }
+                };
+                let mut rt = Uiua::with_native_sys().print_diagnostics(true);
+                _ = rt.load_file(&path)?;
+                let assembly = rt.build();
+                let output = output.unwrap_or_else(|| path.with_extension("uasm"));
+                let json = match serde_json::to_string(&assembly) {
+                    Ok(json) => json,
+                    Err(e) => {
+                        eprintln!("Failed to serialize assembly: {e}");
+                        return Ok(());
+                    }
+                };
+                if let Err(e) = fs::write(output, json) {
+                    eprintln!("Failed to write assembly: {e}");
+                }
+            }
             App::Eval {
                 code,
                 no_color,
@@ -512,6 +539,12 @@ enum App {
         audio_options: AudioOptions,
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
+    },
+    #[clap(about = "Build an assembly")]
+    Build {
+        path: Option<PathBuf>,
+        #[clap(short, long, help = "The path to the output file")]
+        output: Option<PathBuf>,
     },
     #[clap(about = "Evaluate an expression and print its output")]
     Eval {

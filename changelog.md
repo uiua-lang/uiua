@@ -6,7 +6,10 @@ Uiua is not yet stable.
 
 ## 0.7.0 - 2023-12-??
 ### Language
+- An entire Uiua codebase is now compiled before it is executed, rather than compiling and executing line-by-line
 - [`repeat` `⍥`](https://uiua.org/docs/repeat) can no longer use a negative number of repetitions
+### Interpreter
+- Add the `uiua build` command, which emits bytecode
 
 ## 0.6.1 - 2023-12-07
 ### Interpreter

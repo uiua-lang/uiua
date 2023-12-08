@@ -9,6 +9,7 @@ site/dist
 !*/uiua-logo.png
 
 main.ua
+*.uasm
 profile.yaml
 uiua.tmLanguage.json
 

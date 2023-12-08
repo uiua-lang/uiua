@@ -63,7 +63,7 @@ impl Error for LexError {}
 /// A location in a Uiua source file
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(from = "[u32;4]", into = "[u32;4]")]
+#[serde(from = "u128", into = "u128")]
 pub struct Loc {
     pub char_pos: u32,
     pub byte_pos: u32,
@@ -71,8 +71,12 @@ pub struct Loc {
     pub col: u32,
 }
 
-impl From<[u32; 4]> for Loc {
-    fn from([char_pos, byte_pos, line, col]: [u32; 4]) -> Self {
+impl From<u128> for Loc {
+    fn from(u: u128) -> Self {
+        let char_pos = u as u32;
+        let byte_pos = (u >> 32) as u32;
+        let line = (u >> 64) as u32;
+        let col = (u >> 96) as u32;
         Self {
             char_pos,
             byte_pos,
@@ -82,9 +86,13 @@ impl From<[u32; 4]> for Loc {
     }
 }
 
-impl From<Loc> for [u32; 4] {
+impl From<Loc> for u128 {
     fn from(loc: Loc) -> Self {
-        [loc.char_pos, loc.byte_pos, loc.line, loc.col]
+        let char_pos = loc.char_pos as u128;
+        let byte_pos = loc.byte_pos as u128;
+        let line = loc.line as u128;
+        let col = loc.col as u128;
+        char_pos | byte_pos << 32 | line << 64 | col << 96
     }
 }
 

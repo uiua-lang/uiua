@@ -1510,10 +1510,16 @@ impl Serialize for Value {
         S: Serializer,
     {
         match self {
+            Value::Num(arr) if arr.rank() == 0 => arr.data[0].serialize(serializer),
             Value::Num(arr) => (0, &arr.shape, arr.data.as_slice()).serialize(serializer),
+            #[cfg(feature = "bytes")]
+            Value::Byte(arr) if arr.rank() == 0 => arr.data[0].serialize(serializer),
             #[cfg(feature = "bytes")]
             Value::Byte(arr) => (0, &arr.shape, arr.data.as_slice()).serialize(serializer),
             Value::Complex(arr) => (1, &arr.shape, arr.data.as_slice()).serialize(serializer),
+            Value::Char(arr) if arr.rank() == 1 => {
+                arr.data.iter().collect::<String>().serialize(serializer)
+            }
             Value::Char(arr) => (2, &arr.shape, arr.data.as_slice()).serialize(serializer),
             Value::Box(arr) => (3, &arr.shape, arr.data.as_slice()).serialize(serializer),
         }
@@ -1525,8 +1531,18 @@ impl<'de> Deserialize<'de> for Value {
     where
         D: Deserializer<'de>,
     {
+        let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+        match &value {
+            serde_json::Value::String(s) => return Ok(s.clone().into()),
+            serde_json::Value::Number(n) => {
+                if let Some(n) = n.as_f64() {
+                    return Ok(n.into());
+                }
+            }
+            _ => {}
+        }
         let (tag, shape, data): (u8, Shape, serde_json::Value) =
-            Deserialize::deserialize(deserializer)?;
+            serde_json::from_value(value).map_err(|e| de::Error::custom(format!("{}", e)))?;
         Ok(match tag {
             0 => Value::Num(Array::new(
                 shape,

@@ -282,24 +282,17 @@ impl<'a> Chunk<'a> {
 impl Uiua {
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_native_sys() -> Self {
-        let mut scope = CtScope::default();
-        let mut asm = Assembly::default();
-        for def in constants() {
-            scope.names.insert(def.name.into(), asm.globals.len());
-            asm.globals.push(Global::Val(def.value.clone()));
-        }
-        let next_global = asm.globals.len();
         Uiua {
-            asm,
+            asm: Assembly::default(),
             current_imports: Arc::new(Mutex::new(Vec::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
             dynamic_functions: EcoVec::new(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             ct: CompileTime {
-                scope,
+                scope: CtScope::default(),
                 higher_scopes: Vec::new(),
-                next_global,
+                next_global: 0,
                 new_functions: Vec::new(),
                 mode: RunMode::Normal,
             },
@@ -315,6 +308,10 @@ impl Uiua {
             },
             ..Default::default()
         }
+    }
+    /// Build an assembly
+    pub fn build(self) -> Assembly {
+        self.asm
     }
     /// Get a reference to the system backend
     pub fn backend(&self) -> &dyn SysBackend {

@@ -13,6 +13,7 @@ use crate::{
     ast::*,
     boxed::Boxed,
     check::instrs_signature,
+    constants,
     function::*,
     lex::{CodeSpan, Sp, Span},
     optimize::{optimize_instrs, optimize_instrs_mut},
@@ -648,6 +649,8 @@ impl Uiua {
                 }
                 None => self.push_instr(Instr::CallGlobal { index, call }),
             }
+        } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
+            self.push_instr(Instr::push(constant.value.clone()));
         } else {
             return Err(self.error_with_span(span, format!("Unknown identifier `{ident}`")));
         }

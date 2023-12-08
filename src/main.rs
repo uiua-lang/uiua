@@ -20,7 +20,7 @@ use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
-    spans, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult, Value,
+    spans, Chunk, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult, Value,
 };
 
 fn main() {
@@ -60,7 +60,7 @@ fn run() -> UiuaResult {
             .with_mode(RunMode::Normal)
             .with_args(env::args().skip(1).collect())
             .print_diagnostics(true);
-        rt.load_str(code)?;
+        rt.load_str(code).and_then(Chunk::run)?;
         print_stack(&rt.take_stack(), true);
         return Ok(());
     }
@@ -126,7 +126,7 @@ fn run() -> UiuaResult {
                     .with_args(args)
                     .print_diagnostics(true)
                     .time_instrs(time_instrs);
-                rt.load_file(path)?;
+                rt.load_file(path).and_then(Chunk::run)?;
                 print_stack(&rt.take_stack(), !no_color);
             }
             App::Eval {
@@ -142,7 +142,7 @@ fn run() -> UiuaResult {
                     .with_mode(RunMode::Normal)
                     .with_args(args)
                     .print_diagnostics(true);
-                rt.load_str(&code)?;
+                rt.load_str(&code).and_then(Chunk::run)?;
                 print_stack(&rt.take_stack(), !no_color);
             }
             App::Test {
@@ -166,7 +166,8 @@ fn run() -> UiuaResult {
                 Uiua::with_native_sys()
                     .with_mode(RunMode::Test)
                     .print_diagnostics(true)
-                    .load_file(path)?;
+                    .load_file(path)
+                    .and_then(Chunk::run)?;
                 println!("No failures!");
             }
             App::Watch {
@@ -793,7 +794,7 @@ fn repl(mut rt: Uiua, color: bool, config: FormatConfig) {
         print!("↪ ");
         println!("{}", color_code(&code));
 
-        let res = rt.load_str(&code);
+        let res = rt.load_str(&code).and_then(Chunk::run);
         print_stack(&rt.take_stack(), color);
         res.map(|()| true)
     };

@@ -18,7 +18,7 @@ use crate::{
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
     value::Value,
-    FunctionId, Ident, Primitive, SysBackend, SysOp, Uiua, UiuaError, UiuaResult,
+    Chunk, FunctionId, Ident, Primitive, SysBackend, SysOp, Uiua, UiuaError, UiuaResult,
 };
 
 // For now disallow any syscalls in the format config file.
@@ -118,7 +118,7 @@ macro_rules! create_config {
                 fn from_file(file_path: PathBuf) -> UiuaResult<Self> {
                     let mut env = Uiua::with_backend(FormatConfigBackend)
                         .print_diagnostics(true);
-                    env.load_file(file_path)?;
+                    env.load_file(file_path).and_then(Chunk::run)?;
                     let mut bindings = env.all_values_in_scope();
                     $(
                         let $name = {

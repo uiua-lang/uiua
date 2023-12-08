@@ -42,7 +42,7 @@ impl Uiua {
                 self.in_scope(|env| env.items(items.value, true))?;
             }
             Item::Words(mut lines) => {
-                let can_run = match self.rt.mode {
+                let can_run = match self.ct.mode {
                     RunMode::Normal => !in_test,
                     RunMode::Test => in_test,
                     RunMode::All => true,
@@ -84,7 +84,7 @@ impl Uiua {
                 }
             }
             Item::Binding(binding) => {
-                let can_run = match self.rt.mode {
+                let can_run = match self.ct.mode {
                     RunMode::Normal => !in_test,
                     RunMode::All | RunMode::Test => true,
                 };

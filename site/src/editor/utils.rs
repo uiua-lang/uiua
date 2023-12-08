@@ -13,7 +13,7 @@ use leptos::*;
 
 use uiua::{
     ast::Item, image_to_bytes, spans, value_to_gif_bytes, value_to_image, value_to_wav_bytes,
-    DiagnosticKind, Report, ReportFragment, ReportKind, RunMode, SpanKind, SysBackend, Uiua,
+    Chunk, DiagnosticKind, Report, ReportFragment, ReportKind, RunMode, SpanKind, SysBackend, Uiua,
     UiuaResult, Value,
 };
 use wasm_bindgen::JsCast;
@@ -637,7 +637,7 @@ fn init_rt() -> Uiua {
 
 fn just_values(code: &str) -> UiuaResult<Vec<Value>> {
     let mut rt = init_rt();
-    rt.load_str(code)?;
+    rt.load_str(code).and_then(Chunk::run)?;
     Ok(rt.take_stack())
 }
 
@@ -709,7 +709,7 @@ fn run_code_single(code: &str) -> Vec<OutputItem> {
     // Run
     let mut rt = init_rt();
     let mut error = None;
-    let mut values = match rt.load_str(code) {
+    let mut values = match rt.load_str(code).and_then(Chunk::run) {
         Ok(()) => rt.take_stack(),
         Err(e) => {
             error = Some(e);

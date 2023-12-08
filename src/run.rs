@@ -53,6 +53,8 @@ pub(crate) struct CompileTime {
     pub(crate) scope: CtScope,
     /// Ancestor scopes of the current one
     pub(crate) higher_scopes: Vec<CtScope>,
+    /// Determines which How test scopes are run
+    pub(crate) mode: RunMode,
 }
 
 #[derive(Clone)]
@@ -82,6 +84,7 @@ pub(crate) struct Runtime {
     pub(crate) stack: Vec<Value>,
     /// The thread's function stack
     pub(crate) function_stack: Vec<Function>,
+    last_slice_run: usize,
     /// The thread's temp stack for inlining
     temp_stacks: [Vec<Value>; TempStack::CARDINALITY],
     /// The thread's temp stack for functions
@@ -96,8 +99,6 @@ pub(crate) struct Runtime {
     fill_stack: Vec<Fill>,
     /// Whether to unpack boxed values
     pub unpack_boxes: bool,
-    /// Determines which How test scopes are run
-    pub(crate) mode: RunMode,
     /// A limit on the execution duration in milliseconds
     execution_limit: Option<f64>,
     /// The time at which execution started
@@ -212,7 +213,7 @@ impl FromStr for RunMode {
 impl Runtime {
     fn with_native_sys() -> Self {
         Runtime {
-            mode: RunMode::Normal,
+            last_slice_run: 0,
             stack: Vec::new(),
             function_stack: Vec::new(),
             temp_stacks: [Vec::new(), Vec::new()],
@@ -241,6 +242,42 @@ impl Runtime {
     }
 }
 
+impl Default for Runtime {
+    fn default() -> Self {
+        Self::with_native_sys()
+    }
+}
+
+/// A handle to a compiled chunk of Uiua bytecode
+#[must_use = "Chunks must be run for their code to be executed"]
+pub struct Chunk<'a> {
+    env: &'a mut Uiua,
+    start: usize,
+    len: usize,
+}
+
+impl<'a> Chunk<'a> {
+    /// Run the chunk
+    pub fn run(self) -> UiuaResult {
+        let slices = take(&mut self.env.top_slices);
+        let mut res = Ok(());
+        for &slice in &slices[self.start..][..self.len] {
+            res = self.env.call_slice(slice);
+            if res.is_err() {
+                self.env.rt = Runtime {
+                    backend: self.env.rt.backend.clone(),
+                    execution_limit: self.env.rt.execution_limit,
+                    time_instrs: self.env.rt.time_instrs,
+                    ..Runtime::default()
+                };
+                break;
+            }
+        }
+        self.env.top_slices = slices;
+        res
+    }
+}
+
 impl Uiua {
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_native_sys() -> Self {
@@ -265,8 +302,9 @@ impl Uiua {
                 higher_scopes: Vec::new(),
                 next_global,
                 new_functions: Vec::new(),
+                mode: RunMode::Normal,
             },
-            rt: Runtime::with_native_sys(),
+            rt: Runtime::default(),
         }
     }
     /// Create a new Uiua runtime with a custom IO backend
@@ -274,7 +312,7 @@ impl Uiua {
         Uiua {
             rt: Runtime {
                 backend: Arc::new(backend),
-                ..Runtime::with_native_sys()
+                ..Runtime::default()
             },
             ..Default::default()
         }
@@ -317,12 +355,12 @@ impl Uiua {
     ///
     /// Default is [`RunMode::Normal`]
     pub fn with_mode(mut self, mode: RunMode) -> Self {
-        self.rt.mode = mode;
+        self.ct.mode = mode;
         self
     }
     /// Get the [`RunMode`]
     pub fn mode(&self) -> RunMode {
-        self.rt.mode
+        self.ct.mode
     }
     /// Set the command line arguments
     pub fn with_args(mut self, args: Vec<String>) -> Self {
@@ -343,17 +381,21 @@ impl Uiua {
         self.rt.cli_file_path.as_path()
     }
     /// Load a Uiua file from a path
-    pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
+    pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<Chunk> {
         let path = path.as_ref();
         let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e.into()))?;
         self.load_impl(&input, Some(path))
     }
     /// Load a Uiua file from a string
-    pub fn load_str(&mut self, input: &str) -> UiuaResult {
+    pub fn load_str<'a>(&'a mut self, input: &str) -> UiuaResult<Chunk<'a>> {
         self.load_impl(input, None)
     }
     /// Load a Uiua file from a string with a path for error reporting
-    pub fn load_str_path<P: AsRef<Path>>(&mut self, input: &str, path: P) -> UiuaResult {
+    pub fn load_str_path<'a, P: AsRef<Path>>(
+        &'a mut self,
+        input: &str,
+        path: P,
+    ) -> UiuaResult<Chunk<'a>> {
         self.load_impl(input, Some(path.as_ref()))
     }
     /// Run in a scoped context. Names defined in this context will be removed when the scope ends.
@@ -380,7 +422,7 @@ impl Uiua {
         self.rt.stack.truncate(start_height);
         Ok(names)
     }
-    fn load_impl(&mut self, input: &str, path: Option<&Path>) -> UiuaResult {
+    fn load_impl<'a>(&'a mut self, input: &str, path: Option<&Path>) -> UiuaResult<Chunk<'a>> {
         self.rt.execution_start = instant::now();
         let (items, errors, diagnostics) = parse(input, path);
         if self.print_diagnostics {
@@ -415,19 +457,13 @@ code:
             self.current_imports.lock().pop();
         }
         res?;
-        self.run_slices()
-    }
-    fn run_slices(&mut self) -> UiuaResult {
-        let slices = take(&mut self.top_slices);
-        let mut res = Ok(());
-        for &slice in &slices {
-            res = self.call_slice(slice);
-            if res.is_err() {
-                break;
-            }
-        }
-        self.top_slices = slices;
-        res
+        let start = self.rt.last_slice_run;
+        let len = self.top_slices.len() - start;
+        Ok(Chunk {
+            env: self,
+            start,
+            len,
+        })
     }
     fn trace_error(&self, mut error: UiuaError, frame: StackFrame) -> UiuaError {
         let mut frames = Vec::new();
@@ -461,7 +497,8 @@ code:
             )));
         }
         if !self.imports.lock().contains_key(path) {
-            let import = self.in_scope(|env| env.load_str_path(input, path))?;
+            let import =
+                self.in_scope(|env| env.load_str_path(input, path).and_then(Chunk::run))?;
             self.imports.lock().insert(path.into(), import);
         }
         let imports_gaurd = self.imports.lock();
@@ -503,30 +540,30 @@ code:
                 break;
             };
             // Uncomment to debug
-            // for val in &self.rt.stack {
-            //     print!("{:?} ", val);
-            // }
-            // println!();
-            // if !self.rt.array_stack.is_empty() {
-            //     print!("array: ");
-            //     for val in &self.rt.array_stack {
-            //         print!("{:?} ", val);
-            //     }
-            //     println!();
-            // }
-            // if !self.rt.function_stack.is_empty() {
-            //     println!("{} function(s)", self.rt.function_stack.len());
-            // }
-            // for temp in enum_iterator::all::<TempStack>() {
-            //     if !self.temp_stacks[temp as usize].is_empty() {
-            //         print!("{temp}: ");
-            //         for val in &self.temp_stacks[temp as usize] {
-            //             print!("{:?} ", val);
-            //         }
-            //         println!();
-            //     }
-            // }
-            // println!("  {:?}", instr);
+            for val in &self.rt.stack {
+                print!("{:?} ", val);
+            }
+            println!();
+            if !self.rt.array_stack.is_empty() {
+                print!("array: ");
+                for val in &self.rt.array_stack {
+                    print!("{:?} ", val);
+                }
+                println!();
+            }
+            if !self.rt.function_stack.is_empty() {
+                println!("{} function(s)", self.rt.function_stack.len());
+            }
+            for temp in enum_iterator::all::<TempStack>() {
+                if !self.rt.temp_stacks[temp as usize].is_empty() {
+                    print!("{temp}: ");
+                    for val in &self.rt.temp_stacks[temp as usize] {
+                        print!("{:?} ", val);
+                    }
+                    println!();
+                }
+            }
+            println!("  {:?}", instr);
 
             if self.rt.time_instrs {
                 formatted_instr = format!("{instr:?}");
@@ -546,7 +583,7 @@ code:
                     let global = self.globals[i].clone();
                     match global {
                         Global::Val(val) => self.rt.stack.push(val),
-                        Global::Func(f) => self.rt.function_stack.push(f),
+                        Global::Func(f) => self.rt.function_stack.push(dbg!(f)),
                     }
                     Ok(())
                 }
@@ -1280,8 +1317,10 @@ code:
                 next_global: self.ct.next_global,
                 scope: self.ct.scope.clone(),
                 higher_scopes: Vec::new(),
+                mode: self.ct.mode,
             },
             rt: Runtime {
+                last_slice_run: 0,
                 stack: self
                     .rt
                     .stack
@@ -1295,7 +1334,6 @@ code:
                 this_stack: self.rt.this_stack.clone(),
                 call_stack: Vec::new(),
                 unpack_boxes: self.rt.unpack_boxes,
-                mode: self.rt.mode,
                 time_instrs: self.rt.time_instrs,
                 last_time: self.rt.last_time,
                 cli_arguments: self.rt.cli_arguments.clone(),

@@ -17,9 +17,9 @@ use parking_lot::Mutex;
 use rand::prelude::*;
 
 use crate::{
-    algorithm, array::Array, boxed::Boxed, check::SigCheckError, constants, function::*, lex::Span,
-    parse::parse, value::Value, Complex, Diagnostic, DiagnosticKind, Ident, NativeSys, Primitive,
-    Sp, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    algorithm, array::Array, boxed::Boxed, check::SigCheckError, constants, example_ua,
+    function::*, lex::Span, parse::parse, value::Value, Complex, Diagnostic, DiagnosticKind, Ident,
+    NativeSys, Primitive, Sp, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua interpreter
@@ -55,6 +55,7 @@ pub(crate) struct CompileTime {
     pub(crate) higher_scopes: Vec<CtScope>,
     /// Determines which How test scopes are run
     pub(crate) mode: RunMode,
+    pub(crate) import_inputs: HashMap<PathBuf, Arc<str>>,
 }
 
 #[derive(Clone)]
@@ -303,6 +304,7 @@ impl Uiua {
                 next_global,
                 new_functions: Vec::new(),
                 mode: RunMode::Normal,
+                import_inputs: HashMap::new(),
             },
             rt: Runtime::default(),
         }
@@ -528,6 +530,26 @@ code:
         } else {
             pathdiff::diff_paths(&target, base).unwrap_or(target)
         }
+    }
+    pub(crate) fn load_import_input(&self, path: &Path) -> UiuaResult<Arc<str>> {
+        if let Some(input) = self.ct.import_inputs.get(path) {
+            return Ok(input.clone());
+        }
+        String::from_utf8(
+            self.rt
+                .backend
+                .file_read_all(path)
+                .or_else(|e| {
+                    if path.ends_with(Path::new("example.ua")) {
+                        Ok(example_ua(|ex| ex.as_bytes().to_vec()))
+                    } else {
+                        Err(e)
+                    }
+                })
+                .map_err(|e| self.error(e))?,
+        )
+        .map_err(|e| self.error(format!("Failed to read file: {e}")))
+        .map(Into::into)
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
         self.rt.call_stack.push(frame);
@@ -1324,6 +1346,7 @@ code:
                 scope: self.ct.scope.clone(),
                 higher_scopes: Vec::new(),
                 mode: self.ct.mode,
+                import_inputs: self.ct.import_inputs.clone(),
             },
             rt: Runtime {
                 last_slice_run: 0,

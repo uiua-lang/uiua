@@ -1,6 +1,8 @@
 use std::{
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
+    fmt,
     hash::{Hash, Hasher},
+    path::Path,
     sync::Arc,
 };
 
@@ -99,7 +101,7 @@ impl Uiua {
     #[must_use]
     pub(crate) fn add_function<I>(&mut self, id: FunctionId, sig: Signature, instrs: I) -> Function
     where
-        I: IntoIterator<Item = Instr>,
+        I: IntoIterator<Item = Instr> + fmt::Debug,
         I::IntoIter: ExactSizeIterator,
     {
         let address = self.instrs.len() + 1;
@@ -149,6 +151,19 @@ impl Uiua {
             }
             f
         };
+        // Add imports
+        let mut words = binding.words.iter().filter(|word| word.value.is_code());
+        if let Some(first) = words.next() {
+            if matches!(first.value, Word::Primitive(Primitive::Sys(SysOp::Import))) {
+                if let Some(second) = words.next() {
+                    if let Word::String(s) = &second.value {
+                        let path = self.resolve_import_path(Path::new(s));
+                        let input = self.load_import_input(&path)?;
+                        self.ct.import_inputs.insert(path, input);
+                    }
+                }
+            }
+        }
         // Compile the body
         let mut instrs = self.compile_words(binding.words, true)?;
         let span = self.add_span(span.clone());

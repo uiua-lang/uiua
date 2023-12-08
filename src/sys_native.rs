@@ -183,7 +183,7 @@ impl SysBackend for NativeSys {
     }
     fn open_file(&self, path: &Path) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
-        let file = File::open(path).map_err(|e| e.to_string())?;
+        let file = File::open(path).map_err(|e| format!("{e} {}", path.display()))?;
         NATIVE_SYS.files.insert(handle, Buffered::new_reader(file));
         Ok(handle)
     }

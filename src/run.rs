@@ -18,8 +18,9 @@ use rand::prelude::*;
 
 use crate::{
     algorithm, array::Array, boxed::Boxed, check::SigCheckError, constants, example_ua,
-    function::*, lex::Span, parse::parse, value::Value, Complex, Diagnostic, DiagnosticKind, Ident,
-    NativeSys, Primitive, Sp, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    function::*, lex::Span, parse::parse, value::Value, Assembly, Complex, Diagnostic,
+    DiagnosticKind, Ident, NativeSys, Primitive, Sp, SysBackend, SysOp, TraceFrame, UiuaError,
+    UiuaResult,
 };
 
 /// The Uiua interpreter
@@ -27,12 +28,7 @@ use crate::{
 pub struct Uiua {
     pub(crate) rt: Runtime,
     pub(crate) ct: CompileTime,
-    pub(crate) instrs: EcoVec<Instr>,
-    pub(crate) top_slices: Vec<FuncSlice>,
-    /// Global values
-    pub(crate) globals: EcoVec<Global>,
-    /// Indexable spans
-    spans: Arc<Mutex<Vec<Span>>>,
+    pub(crate) asm: Assembly,
     /// The paths of files currently being imported (used to detect import cycles)
     current_imports: Arc<Mutex<Vec<PathBuf>>>,
     /// The bindings of imported files
@@ -55,7 +51,6 @@ pub(crate) struct CompileTime {
     pub(crate) higher_scopes: Vec<CtScope>,
     /// Determines which How test scopes are run
     pub(crate) mode: RunMode,
-    pub(crate) import_inputs: HashMap<PathBuf, Arc<str>>,
 }
 
 #[derive(Clone)]
@@ -260,7 +255,7 @@ pub struct Chunk<'a> {
 impl<'a> Chunk<'a> {
     /// Run the chunk
     pub fn run(self) -> UiuaResult {
-        let slices = take(&mut self.env.top_slices);
+        let slices = take(&mut self.env.asm.top_slices);
         let mut res = Ok(());
         for &slice in &slices[self.start..][..self.len] {
             res = self.env.call_slice(slice);
@@ -274,7 +269,7 @@ impl<'a> Chunk<'a> {
                 break;
             }
         }
-        self.env.top_slices = slices;
+        self.env.asm.top_slices = slices;
         res
     }
 }
@@ -283,17 +278,14 @@ impl Uiua {
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_native_sys() -> Self {
         let mut scope = CtScope::default();
-        let mut globals = EcoVec::new();
+        let mut asm = Assembly::default();
         for def in constants() {
-            scope.names.insert(def.name.into(), globals.len());
-            globals.push(Global::Val(def.value.clone()));
+            scope.names.insert(def.name.into(), asm.globals.len());
+            asm.globals.push(Global::Val(def.value.clone()));
         }
-        let next_global = globals.len();
+        let next_global = asm.globals.len();
         Uiua {
-            instrs: EcoVec::new(),
-            spans: Arc::new(Mutex::new(vec![Span::Builtin])),
-            top_slices: Vec::new(),
-            globals,
+            asm,
             current_imports: Arc::new(Mutex::new(Vec::new())),
             imports: Arc::new(Mutex::new(HashMap::new())),
             diagnostics: BTreeSet::new(),
@@ -304,7 +296,6 @@ impl Uiua {
                 next_global,
                 new_functions: Vec::new(),
                 mode: RunMode::Normal,
-                import_inputs: HashMap::new(),
             },
             rt: Runtime::default(),
         }
@@ -460,7 +451,7 @@ code:
         }
         res?;
         let start = self.rt.last_slice_run;
-        let len = self.top_slices.len() - start;
+        let len = self.asm.top_slices.len() - start;
         Ok(Chunk {
             env: self,
             start,
@@ -473,13 +464,13 @@ code:
             if let Some(prim) = prim {
                 frames.push(TraceFrame {
                     id: FunctionId::Primitive(*prim),
-                    span: self.spans.lock()[*span].clone(),
+                    span: self.asm.spans[*span].clone(),
                 });
             }
         }
         frames.push(TraceFrame {
             id: frame.id.clone(),
-            span: self.spans.lock()[frame.call_span].clone(),
+            span: self.asm.spans[frame.call_span].clone(),
         });
         if let UiuaError::Traced { trace, .. } = &mut error {
             trace.extend(frames);
@@ -508,7 +499,7 @@ code:
         let idx = imports.get(item).ok_or_else(|| {
             self.error(format!("Item `{}` not found in {}", item, path.display()))
         })?;
-        let global = self.globals[*idx].clone();
+        let global = self.asm.globals[*idx].clone();
         drop(imports_gaurd);
         match global {
             Global::Val(val) => self.push(val),
@@ -532,7 +523,7 @@ code:
         }
     }
     pub(crate) fn load_import_input(&self, path: &Path) -> UiuaResult<Arc<str>> {
-        if let Some(input) = self.ct.import_inputs.get(path) {
+        if let Some(input) = self.asm.import_inputs.get(path) {
             return Ok(input.clone());
         }
         String::from_utf8(
@@ -556,7 +547,8 @@ code:
         let mut formatted_instr = String::new();
         loop {
             let frame = self.rt.call_stack.last().unwrap();
-            let Some(instr) = self.instrs[frame.slice.address..][..frame.slice.len].get(frame.pc)
+            let Some(instr) =
+                self.asm.instrs[frame.slice.address..][..frame.slice.len].get(frame.pc)
             else {
                 self.rt.call_stack.pop().unwrap();
                 break;
@@ -602,7 +594,7 @@ code:
                     Ok(())
                 }
                 &Instr::CallGlobal { index, call } => (|| {
-                    let global = self.globals[index].clone();
+                    let global = self.asm.globals[index].clone();
                     match global {
                         Global::Val(val) => self.rt.stack.push(val),
                         Global::Func(f) if call => self.call(f)?,
@@ -914,7 +906,7 @@ code:
                 .iter()
                 .any(|instr| matches!(instr, Instr::Prim(Primitive::Sys(SysOp::Import), _)))
         {
-            return Err(self.spans.lock()[call_span]
+            return Err(self.asm.spans[call_span]
                 .clone()
                 .sp(format!(
                     "Function modified the stack by {height_diff} values, but its \
@@ -939,13 +931,12 @@ code:
     }
     /// Get a span by its index
     pub fn get_span(&self, span: usize) -> Span {
-        self.spans.lock()[span].clone()
+        self.asm.spans[span].clone()
     }
     /// Register a span
     pub fn add_span(&mut self, span: impl Into<Span>) -> usize {
-        let mut spans = self.spans.lock();
-        let idx = spans.len();
-        spans.push(span.into());
+        let idx = self.asm.spans.len();
+        self.asm.spans.push(span.into());
         idx
     }
     /// Construct an error with the current span
@@ -1057,7 +1048,7 @@ code:
     }
     /// Get a slice of instructions
     pub fn instrs(&self, slice: FuncSlice) -> &[Instr] {
-        &self.instrs[slice.address..][..slice.len]
+        &self.asm.instrs[slice.address..][..slice.len]
     }
     /// Bind a function in the current scope
     ///
@@ -1107,7 +1098,7 @@ code:
         let mut bindings = HashMap::new();
         for (name, idx) in &self.ct.scope.names {
             if !constants().iter().any(|c| c.name == name.as_ref()) {
-                if let Global::Val(val) = &self.globals[*idx] {
+                if let Global::Val(val) = &self.asm.globals[*idx] {
                     bindings.insert(name.clone(), val.clone());
                 }
             }
@@ -1332,10 +1323,7 @@ code:
             ..ThisThread::default()
         };
         let mut env = Uiua {
-            instrs: self.instrs.clone(),
-            globals: self.globals.clone(),
-            top_slices: Vec::new(),
-            spans: self.spans.clone(),
+            asm: self.asm.clone(),
             current_imports: self.current_imports.clone(),
             imports: self.imports.clone(),
             diagnostics: BTreeSet::new(),
@@ -1346,7 +1334,6 @@ code:
                 scope: self.ct.scope.clone(),
                 higher_scopes: Vec::new(),
                 mode: self.ct.mode,
-                import_inputs: self.ct.import_inputs.clone(),
             },
             rt: Runtime {
                 last_slice_run: 0,

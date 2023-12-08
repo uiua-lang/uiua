@@ -197,6 +197,8 @@ Ex ← &i "example.ua"
   Dub ← Ex "Double"
 ⍤⊃⋅∘≍ 12 Dub Incr Foo
 
+⍤⊃⋅∘≍ 0 ⍜(×1e12)⁅ ⌵+1 ⁿ×iπ e
+
 # Experimental!
 ⍤⊃⋅∘≍ 120 ↬((|1 ×↫-1.|1)<2.) 5
 ⍤⊃⋅∘≍ 8 ↬((+∩(|2 ↫ -)1,2|1)<2.) 5

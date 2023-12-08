@@ -529,7 +529,7 @@ impl Function {
     }
     /// Get a mutable slice of the function's instructions
     pub fn instrs_mut<'a>(&self, env: &'a mut Uiua) -> &'a mut [Instr] {
-        &mut env.instrs.make_mut()[self.slice.address..][..self.slice.len]
+        &mut env.asm.instrs.make_mut()[self.slice.address..][..self.slice.len]
     }
     /// Try to get a lone primitive from this function
     pub fn as_primitive(&self, env: &Uiua) -> Option<(Primitive, usize)> {

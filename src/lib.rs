@@ -75,6 +75,7 @@ The `uiua` crate has the following feature flags:
 
 mod algorithm;
 mod array;
+mod assembly;
 pub mod ast;
 mod boxed;
 mod check;
@@ -104,6 +105,7 @@ use std::sync::Arc;
 
 pub use self::{
     array::*,
+    assembly::*,
     boxed::*,
     error::*,
     function::*,

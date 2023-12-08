@@ -75,10 +75,10 @@ impl Uiua {
                             }
                             Err(e) => self.ct.scope.stack_height = Err(span.sp(e)),
                         }
-                        let start = self.instrs.len();
-                        self.instrs.extend(optimize_instrs(instrs, true));
-                        let end = self.instrs.len();
-                        self.top_slices.push(FuncSlice {
+                        let start = self.asm.instrs.len();
+                        self.asm.instrs.extend(optimize_instrs(instrs, true));
+                        let end = self.asm.instrs.len();
+                        self.asm.top_slices.push(FuncSlice {
                             address: start,
                             len: end - start,
                         });
@@ -104,12 +104,12 @@ impl Uiua {
         I: IntoIterator<Item = Instr> + fmt::Debug,
         I::IntoIter: ExactSizeIterator,
     {
-        let address = self.instrs.len() + 1;
+        let address = self.asm.instrs.len() + 1;
         let mut instrs = optimize_instrs(instrs, true);
         instrs.insert(0, Instr::Comment(format!("({id}").into()));
         instrs.push(Instr::Comment(format!("{id})").into()));
-        self.instrs.extend(instrs);
-        let length = self.instrs.len() - address - 1;
+        self.asm.instrs.extend(instrs);
+        let length = self.asm.instrs.len() - address - 1;
         Function::new(
             id,
             sig,
@@ -159,7 +159,7 @@ impl Uiua {
                     if let Word::String(s) = &second.value {
                         let path = self.resolve_import_path(Path::new(s));
                         let input = self.load_import_input(&path)?;
-                        self.ct.import_inputs.insert(path, input);
+                        self.asm.import_inputs.insert(path, input);
                     }
                 }
             }
@@ -246,10 +246,10 @@ impl Uiua {
                         span,
                         index: global_index,
                     });
-                    let start = self.instrs.len();
-                    self.instrs.extend(optimize_instrs(instrs, true));
-                    let end = self.instrs.len();
-                    self.top_slices.push(FuncSlice {
+                    let start = self.asm.instrs.len();
+                    self.asm.instrs.extend(optimize_instrs(instrs, true));
+                    let end = self.asm.instrs.len();
+                    self.asm.top_slices.push(FuncSlice {
                         address: start,
                         len: end - start,
                     });
@@ -292,13 +292,13 @@ impl Uiua {
         self.validate_binding_name(name, &[], self.get_span(span))?;
         value.compress();
         let global = Global::Val(value);
-        if index < self.globals.len() {
-            self.globals.make_mut()[index] = global;
+        if index < self.asm.globals.len() {
+            self.asm.globals.make_mut()[index] = global;
         } else {
-            while self.globals.len() < index {
-                self.globals.push(Global::Val(Value::default()));
+            while self.asm.globals.len() < index {
+                self.asm.globals.push(Global::Val(Value::default()));
             }
-            self.globals.push(global);
+            self.asm.globals.push(global);
         }
         Ok(())
     }
@@ -311,13 +311,13 @@ impl Uiua {
     ) -> UiuaResult {
         self.validate_binding_name(name, function.instrs(self), self.get_span(span))?;
         let global = Global::Func(function);
-        if index < self.globals.len() {
-            self.globals.make_mut()[index] = global;
+        if index < self.asm.globals.len() {
+            self.asm.globals.make_mut()[index] = global;
         } else {
-            while self.globals.len() < index {
-                self.globals.push(Global::Val(Value::default()));
+            while self.asm.globals.len() < index {
+                self.asm.globals.push(Global::Val(Value::default()));
             }
-            self.globals.push(global);
+            self.asm.globals.push(global);
         }
         Ok(())
     }
@@ -646,7 +646,7 @@ impl Uiua {
             .copied()
         {
             // Name exists in scope
-            match self.globals.get(index).cloned() {
+            match self.asm.globals.get(index).cloned() {
                 Some(Global::Val(val)) if call => self.push_instr(Instr::push(val)),
                 Some(Global::Val(val)) => {
                     let f = self.add_function(

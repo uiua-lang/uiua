@@ -100,7 +100,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr], env: &mut Uiua) -> Option<EcoVec<I
 fn invert_instr_impl(instrs: &[Instr], env: &mut Uiua) -> Option<EcoVec<Instr>> {
     use Primitive::*;
 
-    println!("inverting {:?}", instrs);
+    // println!("inverting {:?}", instrs);
 
     let patterns: &[&dyn InvertPattern] = &[
         &invert_dump_pattern,
@@ -137,7 +137,7 @@ fn invert_instr_impl(instrs: &[Instr], env: &mut Uiua) -> Option<EcoVec<Instr>> 
                 inv.extend(inverted);
                 inverted = inv;
                 if input.is_empty() {
-                    println!("inverted {:?} to {:?}", instrs, inverted);
+                    // println!("inverted {:?} to {:?}", instrs, inverted);
                     return Some(inverted);
                 }
                 curr_instrs = input;
@@ -337,7 +337,7 @@ fn under_instrs_impl(
         &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // This must come last!
     ];
 
-    println!("undering {:?}", instrs);
+    // println!("undering {:?}", instrs);
 
     let mut befores = EcoVec::new();
     let mut afters = EcoVec::new();
@@ -345,15 +345,15 @@ fn under_instrs_impl(
     'find_pattern: loop {
         for pattern in patterns {
             if let Some((input, (bef, aft))) = pattern.under_extract(curr_instrs, g_sig, env) {
-                println!(
-                    "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
-                    pattern,
-                    &curr_instrs[..curr_instrs.len() - input.len()],
-                );
+                // println!(
+                //     "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
+                //     pattern,
+                //     &curr_instrs[..curr_instrs.len() - input.len()],
+                // );
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
-                    println!("under {:?} to {:?} {:?}", instrs, befores, afters);
+                    // println!("under {:?} to {:?} {:?}", instrs, befores, afters);
                     return Some((befores, afters));
                 }
                 curr_instrs = input;

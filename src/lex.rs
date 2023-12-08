@@ -106,7 +106,8 @@ impl Default for Loc {
 }
 
 /// A runtime span in a Uiua source file
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Span {
     /// A span that has a place in actual code
     Code(CodeSpan),

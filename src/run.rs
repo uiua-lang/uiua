@@ -14,6 +14,7 @@ use ecow::{EcoString, EcoVec};
 use enum_iterator::Sequence;
 use instant::Duration;
 use parking_lot::Mutex;
+use serde::*;
 
 use crate::{
     algorithm, array::Array, boxed::Boxed, check::SigCheckError, constants, example_ua,
@@ -115,7 +116,8 @@ pub(crate) struct Runtime {
     thread: ThisThread,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(untagged)]
 pub(crate) enum Global {
     Val(Value),
     Func(Function),

@@ -274,8 +274,9 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
         let i = selector.data[0];
         // Get function
         let Some(f) = env
+            .rt
             .function_stack
-            .drain(env.function_stack.len() - count..)
+            .drain(env.rt.function_stack.len() - count..)
             .nth(i)
         else {
             return Err(env.error(
@@ -284,16 +285,16 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
             ));
         };
         // Discard unused arguments
-        let discard_start = env.stack.len().saturating_sub(sig.args);
-        if discard_start > env.stack.len() {
+        let discard_start = env.rt.stack.len().saturating_sub(sig.args);
+        if discard_start > env.rt.stack.len() {
             return Err(env.error("Stack was empty when discarding excess switch arguments."));
         }
         let discard_end =
             discard_start + sig.args - f.signature().args - (sig.outputs - f.signature().outputs);
-        if discard_end > env.stack.len() {
+        if discard_end > env.rt.stack.len() {
             return Err(env.error("Stack was empty when discarding excess switch arguments."));
         }
-        env.stack.drain(discard_start..discard_end);
+        env.rt.stack.drain(discard_start..discard_end);
         env.call(f)
     } else {
         // Array
@@ -316,8 +317,9 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
         args_rows.reverse();
         // Collect functions
         let functions: Vec<(Function, usize)> = env
+            .rt
             .function_stack
-            .drain(env.function_stack.len() - count..)
+            .drain(env.rt.function_stack.len() - count..)
             .map(|f| {
                 let args = if f.signature().outputs < sig.outputs {
                     f.signature().args + sig.outputs - f.signature().outputs

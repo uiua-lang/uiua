@@ -343,8 +343,11 @@ fn collapse_groups(
             for group in groups {
                 env.push(group);
                 env.call(f.clone())?;
-                for i in 0..n {
-                    rows[i].push(env.pop(|| format!("{}'s function result", prim.format()))?);
+                for i in 0..n.max(1) {
+                    let value = env.pop(|| format!("{}'s function result", prim.format()))?;
+                    if sig.args == 1 {
+                        rows[i].push(value);
+                    }
                 }
             }
             for rows in rows.into_iter().rev() {

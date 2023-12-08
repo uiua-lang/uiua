@@ -100,7 +100,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr], env: &mut Uiua) -> Option<EcoVec<I
 fn invert_instr_impl(instrs: &[Instr], env: &mut Uiua) -> Option<EcoVec<Instr>> {
     use Primitive::*;
 
-    // println!("inverting {:?}", instrs);
+    println!("inverting {:?}", instrs);
 
     let patterns: &[&dyn InvertPattern] = &[
         &invert_dump_pattern,
@@ -137,7 +137,7 @@ fn invert_instr_impl(instrs: &[Instr], env: &mut Uiua) -> Option<EcoVec<Instr>> 
                 inv.extend(inverted);
                 inverted = inv;
                 if input.is_empty() {
-                    // println!("inverted {:?} to {:?}", instrs, inverted);
+                    println!("inverted {:?} to {:?}", instrs, inverted);
                     return Some(inverted);
                 }
                 curr_instrs = input;
@@ -433,14 +433,6 @@ impl AsInstr for ImplPrimitive {
 impl AsInstr for Box<dyn AsInstr> {
     fn as_instr(&self, span: usize) -> Instr {
         self.as_ref().as_instr(span)
-    }
-}
-
-#[derive(Debug)]
-struct Call;
-impl AsInstr for Call {
-    fn as_instr(&self, span: usize) -> Instr {
-        Instr::Call(span)
     }
 }
 

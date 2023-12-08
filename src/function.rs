@@ -545,16 +545,16 @@ impl Function {
             },
         }
     }
-    pub(crate) fn recurse_instrs<T>(
+    pub(crate) fn _recurse_instrs<T>(
         &self,
         env: &Uiua,
         mut f: impl FnMut(&Instr) -> ControlFlow<T>,
     ) -> Option<T> {
-        recurse_instrs(self.instrs(env), env, &mut f)
+        _recurse_instrs(self.instrs(env), env, &mut f)
     }
 }
 
-fn recurse_instrs<T>(
+fn _recurse_instrs<T>(
     instrs: &[Instr],
     env: &Uiua,
     f: &mut impl FnMut(&Instr) -> ControlFlow<T>,
@@ -562,7 +562,7 @@ fn recurse_instrs<T>(
     for instr in instrs {
         match instr {
             Instr::PushFunc(func) => {
-                if let Some(val) = recurse_instrs(func.instrs(env), env, f) {
+                if let Some(val) = _recurse_instrs(func.instrs(env), env, f) {
                     return Some(val);
                 }
             }

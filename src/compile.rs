@@ -189,9 +189,9 @@ impl Uiua {
                     && !is_setinv
                     && !is_setund
                 {
-                    // Binding's instrs must be run
                     let global_index = self.next_global;
                     self.next_global += 1;
+                    // Binding's instrs must be run
                     instrs.push(Instr::BindGlobal {
                         name,
                         span,
@@ -228,7 +228,6 @@ impl Uiua {
     pub(crate) fn compile_bind_value(
         &mut self,
         name: Ident,
-        index: usize,
         mut value: Value,
         span: usize,
     ) -> UiuaResult {
@@ -243,7 +242,6 @@ impl Uiua {
     pub(crate) fn compile_bind_function(
         &mut self,
         name: Ident,
-        index: usize,
         function: Function,
         span: usize,
     ) -> UiuaResult {
@@ -593,10 +591,13 @@ impl Uiua {
                     self.push_instr(Instr::PushFunc(f));
                 }
                 Global::Func(f) => {
-                    self.push_instr(Instr::PushFunc(f));
                     if call {
-                        let span = self.add_span(span);
-                        self.push_instr(Instr::Call(span));
+                        self.push_instr(Instr::PushSig(f.signature()));
+                        let instrs = f.instrs(self).to_vec();
+                        self.extend_instrs(instrs);
+                        self.push_instr(Instr::PopSig);
+                    } else {
+                        self.push_instr(Instr::PushFunc(f));
                     }
                 }
             }

@@ -430,7 +430,7 @@ code:
         drop(imports_gaurd);
         match global {
             Global::Val(val) => self.push(val),
-            Global::Func { f, .. } => self.function_stack.push(f),
+            Global::Func(f) => self.function_stack.push(f),
         }
         Ok(())
     }
@@ -527,28 +527,35 @@ code:
                     let global = self.globals.lock()[i].clone();
                     match global {
                         Global::Val(val) => self.stack.push(val),
-                        Global::Func { f, .. } => self.function_stack.push(f),
+                        Global::Func(f) => self.function_stack.push(f),
                     }
                     Ok(())
                 }
-                Instr::BindGlobal { name, span, index } => (|| {
-                    if let Some(f) = self.function_stack.pop() {
-                        // Binding is an imported function
-                        self.compile_bind_function(name.clone(), f, span.clone().into())?;
-                    } else if let Some(value) = self.stack.pop() {
-                        // Binding is a constant
-                        self.compile_bind_value(name.clone(), value, span.clone().into())?;
-                    } else {
-                        // Binding is an empty function
-                        let func = make_fn(EcoVec::new(), sig, self);
-                        self.compile_bind_function(name, func, span.clone().into())?;
-                    }
-                    let val = self.pop(1)?;
-                    let mut globals = self.globals.lock();
-                    assert_eq!(globals.len(), i);
-                    globals.push(Global::Val(val));
-                    Ok(())
-                })(),
+                &Instr::BindGlobal {
+                    ref name,
+                    span,
+                    index: _,
+                } => {
+                    let name = name.clone();
+                    (|| {
+                        if let Some(f) = self.function_stack.pop() {
+                            // Binding is an imported function
+                            self.compile_bind_function(name, f, span)?;
+                        } else if let Some(value) = self.stack.pop() {
+                            // Binding is a constant
+                            self.compile_bind_value(name, value, span)?;
+                        } else {
+                            // Binding is an empty function
+                            let id = match self.get_span(span) {
+                                Span::Code(span) => FunctionId::Anonymous(span),
+                                Span::Builtin => FunctionId::Unnamed,
+                            };
+                            let func = self.new_function(id, Signature::new(0, 0), Vec::new());
+                            self.compile_bind_function(name, func, span)?;
+                        }
+                        Ok(())
+                    })()
+                }
                 Instr::BeginArray => {
                     self.scope.array.push(self.stack.len());
                     Ok(())
@@ -958,7 +965,7 @@ code:
     /// # Errors
     /// Returns an error in the binding name is not valid
     pub fn bind_function(&mut self, name: impl Into<Arc<str>>, function: Function) -> UiuaResult {
-        self.compile_bind_function(name.into(), function, true, Span::Builtin)
+        self.compile_bind_function(name.into(), function, 0)
     }
     /// Create and bind a function in the current scope
     ///

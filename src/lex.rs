@@ -1,19 +1,18 @@
-use std::{
-    cmp::Ordering,
-    error::Error,
-    fmt,
-    hash::{Hash, Hasher},
-    path::Path,
-    sync::Arc,
-};
+use std::{error::Error, fmt, hash::Hash, ops::Range, path::Path};
 
 use ecow::EcoString;
+use serde::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{Primitive, UiuaError};
+use crate::{Inputs, Primitive};
 
 /// Lex a Uiua source file
-pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
+pub fn lex(
+    input: &str,
+    src: impl IntoInputSrc,
+    inputs: &mut Inputs,
+) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
+    let src = inputs.add_src(src, input);
     Lexer {
         input_segments: input.graphemes(true).collect(),
         loc: Loc {
@@ -22,8 +21,7 @@ pub fn lex(input: &str, file: Option<&Path>) -> (Vec<Sp<Token>>, Vec<Sp<LexError
             line: 1,
             col: 1,
         },
-        file: file.map(Into::into),
-        input: input.into(),
+        src,
         tokens: Vec::new(),
         errors: Vec::new(),
     }
@@ -64,12 +62,30 @@ impl Error for LexError {}
 
 /// A location in a Uiua source file
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(from = "[u32;4]", into = "[u32;4]")]
 pub struct Loc {
     pub char_pos: u32,
     pub byte_pos: u32,
     pub line: u32,
     pub col: u32,
+}
+
+impl From<[u32; 4]> for Loc {
+    fn from([char_pos, byte_pos, line, col]: [u32; 4]) -> Self {
+        Self {
+            char_pos,
+            byte_pos,
+            line,
+            col,
+        }
+    }
+}
+
+impl From<Loc> for [u32; 4] {
+    fn from(loc: Loc) -> Self {
+        [loc.char_pos, loc.byte_pos, loc.line, loc.col]
+    }
 }
 
 impl fmt::Display for Loc {
@@ -109,10 +125,6 @@ impl Span {
     pub fn sp<T>(self, value: T) -> Sp<T, Self> {
         Sp { value, span: self }
     }
-    /// Use this span to create a runtime error
-    pub fn error(&self, msg: impl Into<String>) -> UiuaError {
-        self.clone().sp(msg.into()).into()
-    }
     /// Merge two spans
     pub fn merge(self, other: Self) -> Self {
         match (self, other) {
@@ -124,17 +136,55 @@ impl Span {
     }
 }
 
+/// The source of code input into the interpreter
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum InputSrc {
+    /// Code from a file with a path
+    File(EcoString),
+    /// Code from a string
+    Str(usize),
+}
+
+impl<'a> From<&'a Path> for InputSrc {
+    fn from(path: &'a Path) -> Self {
+        InputSrc::File(path.to_string_lossy().into())
+    }
+}
+
+/// A trait for types that can be converted into an `InputSrc`
+pub trait IntoInputSrc {
+    /// Convert into an `InputSrc`
+    fn into_input_src(self, str_index: usize) -> InputSrc;
+}
+
+impl IntoInputSrc for InputSrc {
+    fn into_input_src(self, _: usize) -> InputSrc {
+        self
+    }
+}
+
+impl<'a> IntoInputSrc for &'a Path {
+    fn into_input_src(self, _: usize) -> InputSrc {
+        self.into()
+    }
+}
+
+impl IntoInputSrc for () {
+    fn into_input_src(self, str_index: usize) -> InputSrc {
+        InputSrc::Str(str_index)
+    }
+}
+
 /// A span in a Uiua source file
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct CodeSpan {
     /// The starting location
     pub start: Loc,
     /// The ending location
     pub end: Loc,
     /// The path of the file
-    pub path: Option<Arc<Path>>,
-    /// The text of the input
-    pub input: EcoString,
+    pub src: InputSrc,
 }
 
 impl fmt::Debug for CodeSpan {
@@ -145,20 +195,20 @@ impl fmt::Debug for CodeSpan {
 
 impl fmt::Display for CodeSpan {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(path) = &self.path {
-            let file = path.to_string_lossy();
-            let mut file = file.into_owned();
-            if let Some(s) = file.strip_prefix("C:\\Users\\") {
-                if let Some((_, sub)) = s.split_once('\\') {
-                    file = format!("~\\{}", sub);
-                } else {
-                    file = s.to_string();
+        match &self.src {
+            InputSrc::File(path) => {
+                let mut file: String = path.into();
+                if let Some(s) = file.strip_prefix("C:\\Users\\") {
+                    if let Some((_, sub)) = s.split_once('\\') {
+                        file = format!("~\\{}", sub);
+                    } else {
+                        file = s.to_string();
+                    }
                 }
+                let file = file.replace("\\.\\", "\\");
+                write!(f, "{}:{}", file, self.start)
             }
-            let file = file.replace("\\.\\", "\\");
-            write!(f, "{}:{}", file, self.start)
-        } else {
-            write!(f, "{}", self.start)
+            InputSrc::Str(_) => write!(f, "{}", self.start),
         }
     }
 }
@@ -191,8 +241,8 @@ impl CodeSpan {
         }
     }
     /// Get the text of the span
-    pub fn as_str(&self) -> &str {
-        &self.input[self.start.byte_pos as usize..self.end.byte_pos as usize]
+    pub fn byte_range(&self) -> Range<usize> {
+        self.start.byte_pos as usize..self.end.byte_pos as usize
     }
     /// Check if the span contains a line and column
     pub fn contains_line_col(&self, line: usize, col: usize) -> bool {
@@ -206,12 +256,20 @@ impl CodeSpan {
                 && (self.end.line > line || col <= self.end.col)
         }
     }
+    /// Get the text of the span from the inputs
+    pub fn as_str<T>(&self, inputs: &Inputs, f: impl FnOnce(&str) -> T) -> T {
+        f(&inputs.get(&self.src)[self.byte_range()])
+    }
     /// Get just the span of the first character
-    pub fn just_start(&self) -> Self {
+    pub fn just_start(&self, inputs: &Inputs) -> Self {
         let start = self.start;
         let mut end = self.start;
         end.char_pos += 1;
-        end.byte_pos += self.as_str().chars().next().map_or(0, char::len_utf8) as u32;
+        end.byte_pos += inputs
+            .get(&self.src)
+            .chars()
+            .next()
+            .map_or(0, char::len_utf8) as u32;
         end.col += 1;
         CodeSpan {
             start,
@@ -220,12 +278,13 @@ impl CodeSpan {
         }
     }
     /// Get just the span of the last character
-    pub fn just_end(&self) -> Self {
+    pub fn just_end(&self, inputs: &Inputs) -> Self {
         let end = self.end;
         let mut start = self.end;
         start.char_pos = start.char_pos.saturating_sub(1);
         start.byte_pos = start.byte_pos.saturating_sub(
-            self.as_str()
+            inputs
+                .get(&self.src)
                 .chars()
                 .next_back()
                 .map_or(0, |c| c.len_utf8() as u32),
@@ -236,37 +295,6 @@ impl CodeSpan {
             end,
             ..self.clone()
         }
-    }
-}
-
-impl PartialEq for CodeSpan {
-    fn eq(&self, other: &Self) -> bool {
-        self.start == other.start && self.end == other.end && self.path == other.path
-    }
-}
-
-impl Eq for CodeSpan {}
-
-impl PartialOrd for CodeSpan {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for CodeSpan {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.start
-            .cmp(&other.start)
-            .then(self.end.cmp(&other.end))
-            .then(self.path.cmp(&other.path))
-    }
-}
-
-impl Hash for CodeSpan {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.start.hash(state);
-        self.end.hash(state);
-        self.path.hash(state);
     }
 }
 
@@ -457,8 +485,7 @@ impl From<Primitive> for Token {
 struct Lexer<'a> {
     input_segments: Vec<&'a str>,
     loc: Loc,
-    file: Option<Arc<Path>>,
-    input: EcoString,
+    src: InputSrc,
     tokens: Vec<Sp<Token>>,
     errors: Vec<Sp<LexError>>,
 }
@@ -512,8 +539,7 @@ impl<'a> Lexer<'a> {
         CodeSpan {
             start,
             end,
-            path: self.file.clone(),
-            input: self.input.clone(),
+            src: self.src.clone(),
         }
     }
     fn end_span(&self, start: Loc) -> CodeSpan {

@@ -107,7 +107,10 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         NodeValue::Strikethrough => view!(<del>{children}</del>).into_view(),
         NodeValue::LineBreak => view!(<br/>).into_view(),
         NodeValue::CodeBlock(block) => {
-            if uiua::parse(&block.literal, None).1.is_empty() {
+            if uiua::parse(&block.literal, (), &mut Default::default())
+                .1
+                .is_empty()
+            {
                 view!(<Editor example={block.literal.trim_end()}/>).into_view()
             } else {
                 view!(<code class="code-block">{&block.literal}</code>).into_view()

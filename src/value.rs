@@ -8,6 +8,7 @@ use std::{
 };
 
 use ecow::EcoVec;
+use serde::*;
 
 use crate::{
     algorithm::{pervade::*, FillContext},
@@ -1500,5 +1501,54 @@ impl ValueBuilder {
     }
     pub fn finish(self) -> Value {
         self.value.unwrap_or_default()
+    }
+}
+
+impl Serialize for Value {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Value::Num(arr) => (0, &arr.shape, arr.data.as_slice()).serialize(serializer),
+            #[cfg(feature = "bytes")]
+            Value::Byte(arr) => (0, &arr.shape, arr.data.as_slice()).serialize(serializer),
+            Value::Complex(arr) => (1, &arr.shape, arr.data.as_slice()).serialize(serializer),
+            Value::Char(arr) => (2, &arr.shape, arr.data.as_slice()).serialize(serializer),
+            Value::Box(arr) => (3, &arr.shape, arr.data.as_slice()).serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Value {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let (tag, shape, data): (u8, Shape, serde_json::Value) =
+            Deserialize::deserialize(deserializer)?;
+        Ok(match tag {
+            0 => Value::Num(Array::new(
+                shape,
+                serde_json::from_value::<EcoVec<_>>(data)
+                    .map_err(|e| de::Error::custom(format!("invalid number array: {}", e)))?,
+            )),
+            1 => Value::Complex(Array::new(
+                shape,
+                serde_json::from_value::<EcoVec<_>>(data)
+                    .map_err(|e| de::Error::custom(format!("invalid complex array: {}", e)))?,
+            )),
+            2 => Value::Char(Array::new(
+                shape,
+                serde_json::from_value::<EcoVec<_>>(data)
+                    .map_err(|e| de::Error::custom(format!("invalid char array: {}", e)))?,
+            )),
+            3 => Value::Box(Array::new(
+                shape,
+                serde_json::from_value::<EcoVec<_>>(data)
+                    .map_err(|e| de::Error::custom(format!("invalid box array: {}", e)))?,
+            )),
+            tag => return Err(de::Error::custom(format!("invalid value tag: {tag}"))),
+        })
     }
 }

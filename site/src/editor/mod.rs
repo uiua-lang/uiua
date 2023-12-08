@@ -96,7 +96,7 @@ pub fn Editor<'a>(
     let (settings_open, set_settings_open) = create_signal(false);
     let update_token_count = move |code: &str| {
         set_token_count.set(
-            lex(code, None)
+            lex(code, (), &mut Default::default())
                 .0
                 .into_iter()
                 .filter(|tok| {

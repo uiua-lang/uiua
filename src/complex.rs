@@ -1,12 +1,27 @@
 use std::{f64::consts::E, fmt, ops::*};
 
+use serde::*;
+
 /// Uiua's complex number type
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
+#[serde(from = "(f64, f64)", into = "(f64, f64)")]
 pub struct Complex {
     /// The real part
     pub re: f64,
     /// The imaginary part
     pub im: f64,
+}
+
+impl From<(f64, f64)> for Complex {
+    fn from((re, im): (f64, f64)) -> Self {
+        Self { re, im }
+    }
+}
+
+impl From<Complex> for (f64, f64) {
+    fn from(c: Complex) -> Self {
+        (c.re, c.im)
+    }
 }
 
 impl Complex {

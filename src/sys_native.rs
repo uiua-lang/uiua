@@ -12,7 +12,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{Handle, SysBackend, UiuaError};
+use crate::{Handle, SysBackend};
 use bufreaderwriter::seq::BufReaderWriterSeq;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
@@ -144,10 +144,8 @@ impl SysBackend for NativeSys {
         }
         Ok(Some(String::from_utf8(buffer).map_err(|e| e.to_string())?))
     }
-    fn save_error_color(&self, error: &UiuaError) {
-        NATIVE_SYS
-            .colored_errors
-            .insert(error.message(), error.report().to_string());
+    fn save_error_color(&self, message: String, colored: String) {
+        NATIVE_SYS.colored_errors.insert(message, colored);
     }
     fn term_size(&self) -> Result<(usize, usize), String> {
         let (w, h) = term_size::dimensions().ok_or("Failed to get terminal size")?;

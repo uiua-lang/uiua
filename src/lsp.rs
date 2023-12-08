@@ -4,7 +4,7 @@ use crate::{
     ast::{Item, Modifier, Word},
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    Primitive,
+    InputSrc, Inputs, Primitive,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -24,134 +24,152 @@ pub enum SpanKind {
 }
 
 /// Get spans and their kinds from Uiua code
-pub fn spans(input: &str) -> Vec<Sp<SpanKind>> {
-    let (items, _, _) = parse(input, None);
-    items_spans(&items)
+pub fn spans(input: &str) -> (Vec<Sp<SpanKind>>, Inputs) {
+    let mut inputs = Inputs::default();
+    let (items, _, _) = parse(input, InputSrc::Str(0), &mut inputs);
+    (Spanner::new(input).items_spans(&items), inputs)
 }
 
-fn items_spans(items: &[Item]) -> Vec<Sp<SpanKind>> {
-    let mut spans = Vec::new();
-    for item in items {
-        match item {
-            Item::TestScope(items) => spans.extend(items_spans(&items.value)),
-            Item::Words(lines) => {
-                for line in lines {
-                    spans.extend(words_spans(line))
-                }
-            }
-            Item::Binding(binding) => {
-                spans.push(binding.name.span.clone().sp(SpanKind::Ident));
-                spans.push(binding.arrow_span.clone().sp(SpanKind::Delimiter));
-                if let Some(sig) = &binding.signature {
-                    spans.push(sig.span.clone().sp(SpanKind::Signature));
-                }
-                spans.extend(words_spans(&binding.words));
-            }
-            Item::ExtraNewlines(span) => spans.push(span.clone().sp(SpanKind::Whitespace)),
-        }
+struct Spanner {
+    inputs: Inputs,
+}
+
+impl Spanner {
+    fn new(input: &str) -> Self {
+        let mut inputs = Inputs::default();
+        inputs.strings.push(input.into());
+        Self { inputs }
     }
-    spans
-}
-
-fn words_spans(words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
-    let mut spans = Vec::new();
-    for word in words {
-        match &word.value {
-            Word::Number(..) => spans.push(word.span.clone().sp(SpanKind::Number)),
-            Word::Char(_) | Word::String(_) | Word::FormatString(_) => {
-                spans.push(word.span.clone().sp(SpanKind::String))
-            }
-            Word::MultilineString(lines) => {
-                spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
-            }
-            Word::Ident(_) => spans.push(word.span.clone().sp(SpanKind::Ident)),
-            Word::Strand(items) => {
-                for (i, word) in items.iter().enumerate() {
-                    let item_spans = words_spans(slice::from_ref(word));
-                    if i > 0 {
-                        if let Some(first_item) = item_spans.first() {
-                            let end = first_item.span.start;
-                            spans.push(
-                                CodeSpan {
-                                    start: Loc {
-                                        char_pos: end.char_pos - 1,
-                                        byte_pos: end.byte_pos - 1,
-                                        col: end.col - 1,
-                                        ..end
-                                    },
-                                    end,
-                                    ..first_item.span.clone()
-                                }
-                                .sp(SpanKind::Strand),
-                            )
-                        }
-                    }
-                    spans.extend(item_spans);
-                }
-            }
-            Word::Array(arr) => {
-                spans.push(word.span.just_start().sp(SpanKind::Delimiter));
-                spans.extend(arr.lines.iter().flat_map(|w| words_spans(w)));
-                if arr.closed {
-                    let end = word.span.just_end();
-                    if end.as_str() == "]" || end.as_str() == "}" {
-                        spans.push(end.sp(SpanKind::Delimiter));
+    fn items_spans(&self, items: &[Item]) -> Vec<Sp<SpanKind>> {
+        let mut spans = Vec::new();
+        for item in items {
+            match item {
+                Item::TestScope(items) => spans.extend(self.items_spans(&items.value)),
+                Item::Words(lines) => {
+                    for line in lines {
+                        spans.extend(self.words_spans(line))
                     }
                 }
-            }
-            Word::Func(func) => {
-                spans.push(word.span.just_start().sp(SpanKind::Delimiter));
-                if let Some(sig) = &func.signature {
-                    spans.push(sig.span.clone().sp(SpanKind::Signature));
-                }
-                spans.extend(func.lines.iter().flat_map(|w| words_spans(w)));
-                if func.closed {
-                    let end = word.span.just_end();
-                    if end.as_str() == ")" || end.as_str() == "}" {
-                        spans.push(end.sp(SpanKind::Delimiter));
-                    }
-                }
-            }
-            Word::Switch(sw) => {
-                if word.span.as_str().starts_with('?') {
-                    spans.push(word.span.clone().sp(SpanKind::Delimiter));
-                    continue;
-                }
-                spans.push(word.span.just_start().sp(SpanKind::Delimiter));
-                for (i, branch) in sw.branches.iter().enumerate() {
-                    let start_span = branch.span.just_start();
-                    if i > 0 && start_span.as_str() == "|" {
-                        spans.push(start_span.sp(SpanKind::Delimiter));
-                    }
-                    if let Some(sig) = &branch.value.signature {
+                Item::Binding(binding) => {
+                    spans.push(binding.name.span.clone().sp(SpanKind::Ident));
+                    spans.push(binding.arrow_span.clone().sp(SpanKind::Delimiter));
+                    if let Some(sig) = &binding.signature {
                         spans.push(sig.span.clone().sp(SpanKind::Signature));
                     }
-                    spans.extend(branch.value.lines.iter().flat_map(|w| words_spans(w)));
+                    spans.extend(self.words_spans(&binding.words));
                 }
-                if sw.closed {
-                    let end = word.span.just_end();
-                    if end.as_str() == ")" {
-                        spans.push(end.sp(SpanKind::Delimiter));
+                Item::ExtraNewlines(span) => spans.push(span.clone().sp(SpanKind::Whitespace)),
+            }
+        }
+        spans
+    }
+
+    fn words_spans(&self, words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
+        let mut spans = Vec::new();
+        for word in words {
+            match &word.value {
+                Word::Number(..) => spans.push(word.span.clone().sp(SpanKind::Number)),
+                Word::Char(_) | Word::String(_) | Word::FormatString(_) => {
+                    spans.push(word.span.clone().sp(SpanKind::String))
+                }
+                Word::MultilineString(lines) => {
+                    spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
+                }
+                Word::Ident(_) => spans.push(word.span.clone().sp(SpanKind::Ident)),
+                Word::Strand(items) => {
+                    for (i, word) in items.iter().enumerate() {
+                        let item_spans = self.words_spans(slice::from_ref(word));
+                        if i > 0 {
+                            if let Some(first_item) = item_spans.first() {
+                                let end = first_item.span.start;
+                                spans.push(
+                                    CodeSpan {
+                                        start: Loc {
+                                            char_pos: end.char_pos - 1,
+                                            byte_pos: end.byte_pos - 1,
+                                            col: end.col - 1,
+                                            ..end
+                                        },
+                                        end,
+                                        ..first_item.span.clone()
+                                    }
+                                    .sp(SpanKind::Strand),
+                                )
+                            }
+                        }
+                        spans.extend(item_spans);
                     }
                 }
+                Word::Array(arr) => {
+                    spans.push(word.span.just_start(&self.inputs).sp(SpanKind::Delimiter));
+                    spans.extend(arr.lines.iter().flat_map(|w| self.words_spans(w)));
+                    if arr.closed {
+                        let end = word.span.just_end(&self.inputs);
+                        if end.as_str(&self.inputs, |s| s == "]")
+                            || end.as_str(&self.inputs, |s| s == "}")
+                        {
+                            spans.push(end.sp(SpanKind::Delimiter));
+                        }
+                    }
+                }
+                Word::Func(func) => {
+                    spans.push(word.span.just_start(&self.inputs).sp(SpanKind::Delimiter));
+                    if let Some(sig) = &func.signature {
+                        spans.push(sig.span.clone().sp(SpanKind::Signature));
+                    }
+                    spans.extend(func.lines.iter().flat_map(|w| self.words_spans(w)));
+                    if func.closed {
+                        let end = word.span.just_end(&self.inputs);
+                        if end.as_str(&self.inputs, |s| s == ")")
+                            || end.as_str(&self.inputs, |s| s == "}")
+                        {
+                            spans.push(end.sp(SpanKind::Delimiter));
+                        }
+                    }
+                }
+                Word::Switch(sw) => {
+                    if word.span.as_str(&self.inputs, |s| s.starts_with('?')) {
+                        spans.push(word.span.clone().sp(SpanKind::Delimiter));
+                        continue;
+                    }
+                    spans.push(word.span.just_start(&self.inputs).sp(SpanKind::Delimiter));
+                    for (i, branch) in sw.branches.iter().enumerate() {
+                        let start_span = branch.span.just_start(&self.inputs);
+                        if i > 0 && start_span.as_str(&self.inputs, |s| s == "|") {
+                            spans.push(start_span.sp(SpanKind::Delimiter));
+                        }
+                        if let Some(sig) = &branch.value.signature {
+                            spans.push(sig.span.clone().sp(SpanKind::Signature));
+                        }
+                        spans.extend(branch.value.lines.iter().flat_map(|w| self.words_spans(w)));
+                    }
+                    if sw.closed {
+                        let end = word.span.just_end(&self.inputs);
+                        if end.as_str(&self.inputs, |s| s == ")") {
+                            spans.push(end.sp(SpanKind::Delimiter));
+                        }
+                    }
+                }
+                Word::Primitive(prim) => {
+                    spans.push(word.span.clone().sp(SpanKind::Primitive(*prim)))
+                }
+                Word::Modified(m) => {
+                    spans.push(m.modifier.clone().map(|m| match m {
+                        Modifier::Primitive(p) => SpanKind::Primitive(p),
+                        Modifier::Ident(_) => SpanKind::Ident,
+                    }));
+                    spans.extend(self.words_spans(&m.operands));
+                }
+                Word::Spaces | Word::BreakLine | Word::UnbreakLine => {
+                    spans.push(word.span.clone().sp(SpanKind::Whitespace))
+                }
+                Word::Comment(_) => spans.push(word.span.clone().sp(SpanKind::Comment)),
+                Word::Placeholder(_) => spans.push(word.span.clone().sp(SpanKind::Placeholder)),
             }
-            Word::Primitive(prim) => spans.push(word.span.clone().sp(SpanKind::Primitive(*prim))),
-            Word::Modified(m) => {
-                spans.push(m.modifier.clone().map(|m| match m {
-                    Modifier::Primitive(p) => SpanKind::Primitive(p),
-                    Modifier::Ident(_) => SpanKind::Ident,
-                }));
-                spans.extend(words_spans(&m.operands));
-            }
-            Word::Spaces | Word::BreakLine | Word::UnbreakLine => {
-                spans.push(word.span.clone().sp(SpanKind::Whitespace))
-            }
-            Word::Comment(_) => spans.push(word.span.clone().sp(SpanKind::Comment)),
-            Word::Placeholder(_) => spans.push(word.span.clone().sp(SpanKind::Placeholder)),
         }
+        spans.retain(|sp| !sp.span.as_str(&self.inputs, str::is_empty));
+        spans
     }
-    spans.retain(|sp| !sp.span.as_str().is_empty());
-    spans
 }
 
 #[cfg(feature = "lsp")]
@@ -185,8 +203,9 @@ mod server {
 
     impl LspDoc {
         fn new(input: String) -> Self {
-            let (items, _, _) = parse(&input, None);
-            let spans = items_spans(&items);
+            let spanner = Spanner::new(&input);
+            let (items, _, _) = parse(&input, InputSrc::Str(0), &mut Inputs::default());
+            let spans = spanner.items_spans(&items);
             let bindings = bindings_info(&items);
             Self {
                 input,

@@ -3,10 +3,13 @@ use std::{
     fmt,
 };
 
+use serde::*;
+
 use crate::value::Value;
 
 /// The element type for box arrays
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct Boxed(pub Value);
 
 impl Boxed {

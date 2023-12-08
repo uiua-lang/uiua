@@ -18,7 +18,8 @@ use crate::{
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
     value::Value,
-    Chunk, FunctionId, Ident, Primitive, SysBackend, SysOp, Uiua, UiuaError, UiuaResult,
+    Chunk, FunctionId, Ident, InputSrc, Inputs, Primitive, SysBackend, SysOp, Uiua, UiuaError,
+    UiuaResult,
 };
 
 // For now disallow any syscalls in the format config file.
@@ -149,6 +150,8 @@ macro_rules! create_config {
                 #[doc = concat!("Default: `", stringify!($default), "`")]
                 pub $name: $ty,
             )*
+            /// The source inputs for the formatter
+            pub inputs: Inputs,
         }
 
         paste! {
@@ -171,6 +174,7 @@ macro_rules! create_config {
                     $(
                         $name: $default,
                     )*
+                    inputs: Inputs::default(),
                 }
             }
         }
@@ -181,6 +185,7 @@ macro_rules! create_config {
                     $(
                         $name: config.$name.unwrap_or($default),
                     )*
+                    inputs: Inputs::default(),
                 }
             }
         }
@@ -332,46 +337,29 @@ pub fn format<P: AsRef<Path>>(
     path: P,
     config: &FormatConfig,
 ) -> UiuaResult<FormatOutput> {
-    format_impl(input, Some(path.as_ref()), config)
+    format_impl(input, path.as_ref().into(), config)
 }
 
 /// Format Uiua code without a path
 pub fn format_str(input: &str, config: &FormatConfig) -> UiuaResult<FormatOutput> {
-    format_impl(input, None, config)
+    format_impl(input, InputSrc::Str(0), config)
 }
 
-pub(crate) fn format_items(items: &[Item], config: &FormatConfig) -> FormatOutput {
-    let mut formatter = Formatter {
-        config,
-        output: String::new(),
-        glyph_map: BTreeMap::new(),
-        end_of_line_comments: Vec::new(),
-        prev_import_function: None,
-    };
-    formatter.format_items(items);
-    let mut output = formatter.output;
-    while output.ends_with('\n') {
-        output.pop();
-    }
-    if config.trailing_newline && !output.trim().is_empty() {
-        output.push('\n');
-    }
-    FormatOutput {
-        output,
-        glyph_map: formatter.glyph_map,
-    }
-}
-
-fn format_impl(
-    input: &str,
-    path: Option<&Path>,
-    config: &FormatConfig,
-) -> UiuaResult<FormatOutput> {
-    let (items, errors, _) = parse(input, path);
+fn format_impl(input: &str, src: InputSrc, config: &FormatConfig) -> UiuaResult<FormatOutput> {
+    let mut inputs = Inputs::default();
+    let (items, errors, _) = parse(input, src.clone(), &mut inputs);
     if errors.is_empty() {
-        Ok(format_items(&items, config))
+        Ok(Formatter {
+            config,
+            inputs: &inputs,
+            output: String::new(),
+            glyph_map: BTreeMap::new(),
+            end_of_line_comments: Vec::new(),
+            prev_import_function: None,
+        }
+        .format_top_items(&items))
     } else {
-        Err(errors.into())
+        Err(UiuaError::Parse(errors, inputs.into()))
     }
 }
 
@@ -401,6 +389,7 @@ pub fn format_file<P: AsRef<Path>>(
 
 struct Formatter<'a> {
     config: &'a FormatConfig,
+    inputs: &'a Inputs,
     output: String,
     glyph_map: BTreeMap<CodeSpan, (Loc, Loc)>,
     end_of_line_comments: Vec<(usize, String)>,
@@ -408,6 +397,20 @@ struct Formatter<'a> {
 }
 
 impl<'a> Formatter<'a> {
+    fn format_top_items(mut self, items: &[Item]) -> FormatOutput {
+        self.format_items(items);
+        let mut output = self.output;
+        while output.ends_with('\n') {
+            output.pop();
+        }
+        if self.config.trailing_newline && !output.trim().is_empty() {
+            output.push('\n');
+        }
+        FormatOutput {
+            output,
+            glyph_map: self.glyph_map,
+        }
+    }
     fn format_items(&mut self, items: &[Item]) {
         for item in items {
             self.format_item(item);
@@ -560,12 +563,20 @@ impl<'a> Formatter<'a> {
                 }
                 self.push(&word.span, &formatted);
             }
-            Word::Char(_) => self.output.push_str(word.span.as_str()),
-            Word::String(_) => self.output.push_str(word.span.as_str()),
-            Word::FormatString(_) => self.output.push_str(word.span.as_str()),
+            Word::Char(_) => self
+                .output
+                .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
+            Word::String(_) => self
+                .output
+                .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
+            Word::FormatString(_) => self
+                .output
+                .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
             Word::MultilineString(lines) => {
                 if lines.len() == 1 {
-                    self.output.push_str(lines[0].span.as_str());
+                    let span = &lines[0].span;
+                    self.output
+                        .push_str(&self.inputs.get(&span.src)[span.byte_range()]);
                     return;
                 }
                 let curr_line_pos = if self.output.ends_with('\n') {
@@ -585,7 +596,8 @@ impl<'a> Formatter<'a> {
                             self.output.push(' ');
                         }
                     }
-                    self.output.push_str(line.span.as_str());
+                    self.output
+                        .push_str(&self.inputs.get(&line.span.src)[line.span.byte_range()]);
                 }
             }
             Word::Ident(ident) => {
@@ -693,9 +705,11 @@ impl<'a> Formatter<'a> {
                 );
                 self.format_words(&m.operands, true, depth);
             }
-            Word::Placeholder(sig) => {
-                self.format_signature('^', *sig, word.span.as_str().ends_with(' '))
-            }
+            Word::Placeholder(sig) => self.format_signature(
+                '^',
+                *sig,
+                self.inputs.get(&word.span.src)[word.span.byte_range()].ends_with(' '),
+            ),
             Word::Spaces => self.push(&word.span, " "),
             Word::Comment(comment) => {
                 let beginning_of_line = self
@@ -788,7 +802,7 @@ impl<'a> Formatter<'a> {
     fn push(&mut self, span: &CodeSpan, formatted: &str) {
         let start = end_loc(&self.output);
         self.output.push_str(formatted);
-        if span.as_str() != formatted {
+        if &self.inputs.get(&span.src)[span.byte_range()] != formatted {
             let end = end_loc(&self.output);
             self.glyph_map.insert(span.clone(), (start, end));
         }

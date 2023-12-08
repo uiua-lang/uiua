@@ -20,7 +20,7 @@ use crate::{
     primitive::Primitive,
     run::{Global, RunMode},
     value::Value,
-    Diagnostic, DiagnosticKind, Ident, SysOp, UiuaError, UiuaResult,
+    Diagnostic, DiagnosticKind, Ident, SysOp, UiuaResult,
 };
 
 use crate::Uiua;
@@ -61,9 +61,10 @@ impl Uiua {
                             .clone()
                             .merge(line.last().unwrap().span.clone());
                         if count_placeholders(&line) > 0 {
-                            return Err(span
-                                .sp("Cannot use placeholder outside of function".into())
-                                .into());
+                            return Err(self.error_with_span(
+                                span,
+                                "Cannot use placeholder outside of function",
+                            ));
                         }
                         let instrs = self.compile_words(line, true)?;
                         match instrs_signature(&instrs) {
@@ -183,12 +184,13 @@ impl Uiua {
                     if declared_sig.value == sig_to_check {
                         sig = declared_sig.value;
                     } else {
-                        return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
+                        return Err(self.error_with_span(
+                            declared_sig.span.clone(),
                             format!(
                                 "Function signature mismatch:  declared {} but inferred {}",
                                 declared_sig.value, sig_to_check
                             ),
-                        )));
+                        ));
                     }
                 }
                 let is_setinv = matches!(
@@ -226,15 +228,15 @@ impl Uiua {
                         match &mut self.ct.scope.stack_height {
                             Ok(height) => *height = height.saturating_sub(1),
                             Err(sp) => {
-                                return Err(sp
-                                    .clone()
-                                    .map(|err| {
-                                        format!(
-                                            "This line's signature is undefined: {err}. \
-                                            This prevents the later binding of {name}."
-                                        )
-                                    })
-                                    .into())
+                                let sp = sp.clone();
+                                return Err(self.error_with_span(
+                                    sp.span,
+                                    format!(
+                                        "This line's signature is undefined: {}. \
+                                        This prevents the later binding of {}.",
+                                        sp.value, name
+                                    ),
+                                ));
                             }
                         }
                     }
@@ -266,7 +268,8 @@ impl Uiua {
                     self.compile_bind_function(&name, global_index, func, span)?;
                     self.ct.scope.names.insert(name, global_index);
                 } else {
-                    return Err(UiuaError::Run(Span::Code(binding.name.span.clone()).sp(
+                    return Err(self.error_with_span(
+                        binding.name.span.clone(),
                         format!(
                             "Cannot infer function signature: {e}{}",
                             if e.ambiguous {
@@ -275,7 +278,7 @@ impl Uiua {
                                 ""
                             }
                         ),
-                    )));
+                    ));
                 }
             }
         }
@@ -326,13 +329,13 @@ impl Uiua {
         if temp_function_count != name_marg_count {
             let trimmed = name.trim_end_matches('!');
             let this = format!("{}{}", trimmed, "!".repeat(temp_function_count));
-            return Err(span
-                .clone()
-                .sp(format!(
+            return Err(self.error_with_span(
+                span.clone(),
+                format!(
                     "The name {name} implies {name_marg_count} modifier arguments, \
                     but the binding body references {temp_function_count}. Try `{this}`."
-                ))
-                .into());
+                ),
+            ));
         }
         Ok(())
     }
@@ -373,8 +376,10 @@ impl Uiua {
             sig
         } else {
             instrs_signature(&instrs).map_err(|e| {
-                span.unwrap()
-                    .sp(format!("Cannot infer function signature: {e}"))
+                self.error_with_span(
+                    span.unwrap(),
+                    format!("Cannot infer function signature: {e}"),
+                )
             })?
         };
         Ok((instrs, sig))
@@ -505,10 +510,9 @@ impl Uiua {
                             }
                         }
                         _ => {
-                            return Err(word
-                                .span
-                                .sp("Strand cannot contain functions".into())
-                                .into())
+                            return Err(
+                                self.error_with_span(word.span, "Strand cannot contain functions")
+                            )
                         }
                     }
                 }
@@ -645,7 +649,7 @@ impl Uiua {
                 None => self.push_instr(Instr::CallGlobal { index, call }),
             }
         } else {
-            return Err(span.sp(format!("Unknown identifier `{ident}`")).into());
+            return Err(self.error_with_span(span, format!("Unknown identifier `{ident}`")));
         }
         Ok(())
     }
@@ -667,12 +671,13 @@ impl Uiua {
                     if declared_sig.value == sig {
                         sig = declared_sig.value;
                     } else {
-                        return Err(UiuaError::Run(Span::Code(declared_sig.span.clone()).sp(
+                        return Err(self.error_with_span(
+                            declared_sig.span.clone(),
                             format!(
                                 "Function signature mismatch: declared {} but inferred {}",
                                 declared_sig.value, sig
                             ),
-                        )));
+                        ));
                     }
                 }
                 sig
@@ -681,16 +686,17 @@ impl Uiua {
                 if let Some(declared_sig) = &func.signature {
                     declared_sig.value
                 } else {
-                    return Err(span
-                        .sp(format!(
+                    return Err(self.error_with_span(
+                        span,
+                        format!(
                             "Cannot infer function signature: {e}{}",
                             if e.ambiguous {
                                 ". A signature can be declared after the opening `(`."
                             } else {
                                 ""
                             }
-                        ))
-                        .into());
+                        ),
+                    ));
                 }
             }
         };
@@ -719,13 +725,13 @@ impl Uiua {
             } else if f_sig.outputs == sig.outputs {
                 sig.args = sig.args.max(f_sig.args)
             } else {
-                return Err(branch
-                    .span
-                    .sp(format!(
+                return Err(self.error_with_span(
+                    branch.span,
+                    format!(
                         "Switch branch's signature {f_sig} is \
                         incompatible with previous branches {sig}",
-                    ))
-                    .into());
+                    ),
+                ));
             }
             self.push_instr(Instr::PushFunc(f));
         }
@@ -740,16 +746,17 @@ impl Uiua {
             let sig = match instrs_signature(&instrs) {
                 Ok(sig) => sig,
                 Err(e) => {
-                    return Err(span
-                        .sp(format!(
+                    return Err(self.error_with_span(
+                        span,
+                        format!(
                             "Cannot infer function signature: {e}{}",
                             if e.ambiguous {
                                 ". A signature can be declared after the opening `(`."
                             } else {
                                 ""
                             }
-                        ))
-                        .into());
+                        ),
+                    ));
                 }
             };
             let function = self.add_function(FunctionId::Anonymous(span), sig, instrs);
@@ -779,6 +786,7 @@ impl Uiua {
                                 ),
                                 span,
                                 DiagnosticKind::Advice,
+                                self.inputs().clone(),
                             ));
                         }
                     } else if words_look_pervasive(&modified.operands) {
@@ -791,6 +799,7 @@ impl Uiua {
                             ),
                             span,
                             DiagnosticKind::Advice,
+                            self.inputs().clone(),
                         ));
                     }
                 }
@@ -860,15 +869,16 @@ impl Uiua {
                     }
                     modifier if modifier.args() >= 2 => {
                         if sw.branches.len() != modifier.args() as usize {
-                            return Err((modified.modifier.span.merge(span))
-                                .sp(format!(
+                            return Err(self.error_with_span(
+                                modified.modifier.span.merge(span),
+                                format!(
                                     "{} requires {} function arguments, but the \
                                     function pack has {} functions",
                                     modifier,
                                     modifier.args(),
                                     sw.branches.len()
-                                ))
-                                .into());
+                                ),
+                            ));
                         }
                         let new = Modified {
                             modifier: modified.modifier.clone(),
@@ -883,8 +893,9 @@ impl Uiua {
 
         // Validate operand count
         if op_count != modified.modifier.value.args() as usize {
-            return Err((modified.modifier.span.clone())
-                .sp(format!(
+            return Err(self.error_with_span(
+                modified.modifier.span.clone(),
+                format!(
                     "{} requires {} function argument{}, but {} {} provided",
                     modified.modifier.value,
                     modified.modifier.value.args(),
@@ -895,8 +906,8 @@ impl Uiua {
                     },
                     op_count,
                     if op_count == 1 { "was" } else { "were" }
-                ))
-                .into());
+                ),
+            ));
         }
 
         // Inlining
@@ -952,9 +963,9 @@ impl Uiua {
                     self.push_instr(Instr::PushFunc(func));
                 }
                 Err(e) => {
-                    return Err(UiuaError::Run(
-                        Span::Code(modified.modifier.span.clone())
-                            .sp(format!("Cannot infer function signature: {e}")),
+                    return Err(self.error_with_span(
+                        modified.modifier.span.clone(),
+                        format!("Cannot infer function signature: {e}"),
                     ));
                 }
             }
@@ -1127,13 +1138,13 @@ impl Uiua {
                             }
                             Ok(true)
                         }
-                        Err(e) => Err(UiuaError::Run(
-                            Span::Code(modified.modifier.span.clone())
-                                .sp(format!("Cannot infer function signature: {e}")),
+                        Err(e) => Err(self.error_with_span(
+                            modified.modifier.span.clone(),
+                            format!("Cannot infer function signature: {e}"),
                         )),
                     }
                 } else {
-                    Err(span.sp("No inverse found".into()).into())
+                    Err(self.error_with_span(span, "No inverse found"))
                 }
             }
             Under => {
@@ -1145,12 +1156,17 @@ impl Uiua {
                     self.compile_operand_words(vec![operands.next().unwrap()])?;
                 if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig, self) {
                     let before_sig = instrs_signature(&f_before).map_err(|e| {
-                        f_span
-                            .clone()
-                            .sp(format!("Cannot infer function signature: {e}"))
+                        self.error_with_span(
+                            f_span.clone(),
+                            format!("Cannot infer function signature: {e}"),
+                        )
                     })?;
-                    let after_sig = instrs_signature(&f_after)
-                        .map_err(|e| f_span.sp(format!("Cannot infer function signature: {e}")))?;
+                    let after_sig = instrs_signature(&f_after).map_err(|e| {
+                        self.error_with_span(
+                            f_span,
+                            format!("Cannot infer function signature: {e}"),
+                        )
+                    })?;
                     let mut instrs = f_before;
                     instrs.extend(g_instrs);
                     instrs.extend(f_after);
@@ -1176,7 +1192,7 @@ impl Uiua {
                     }
                     Ok(true)
                 } else {
-                    Err(f_span.sp("No inverse found".into()).into())
+                    Err(self.error_with_span(f_span, "No inverse found"))
                 }
             }
             Both => {
@@ -1233,19 +1249,20 @@ impl Uiua {
                 ),
                 span.clone(),
                 DiagnosticKind::Warning,
+                self.inputs().clone(),
             ));
         }
     }
     fn handle_primitive_experimental(&self, prim: Primitive, span: &CodeSpan) -> UiuaResult {
         if prim.is_experimental() && !self.ct.scope.experimental {
-            return Err(span
-                .clone()
-                .sp(format!(
+            return Err(self.error_with_span(
+                span.clone(),
+                format!(
                     "{} is experimental. To use it, add \
                     `# Experimental!` to the top of the file.",
                     prim.format()
-                ))
-                .into());
+                ),
+            ));
         }
         Ok(())
     }
@@ -1263,9 +1280,9 @@ impl Uiua {
                     self.push_instr(Instr::PushFunc(func))
                 }
                 Err(e) => {
-                    return Err(span
-                        .sp(format!("Cannot infer function signature: {e}"))
-                        .into())
+                    return Err(
+                        self.error_with_span(span, format!("Cannot infer function signature: {e}"))
+                    )
                 }
             }
         }

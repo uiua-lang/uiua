@@ -1,4 +1,10 @@
-use std::{convert::Infallible, error::Error, fmt, io, path::PathBuf, sync::Arc};
+use std::{
+    convert::Infallible,
+    error::Error,
+    fmt, io,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use colored::*;
 
@@ -7,6 +13,7 @@ use crate::{
     lex::{Sp, Span},
     parse::ParseError,
     value::Value,
+    InputSrc, Inputs,
 };
 
 /// An error produced when running a Uiua program
@@ -17,9 +24,9 @@ pub enum UiuaError {
     /// An error occurred while formatting a file
     Format(PathBuf, Arc<io::Error>),
     /// An error occurred while parsing a file
-    Parse(Vec<Sp<ParseError>>),
+    Parse(Vec<Sp<ParseError>>, Box<Inputs>),
     /// An error occurred while compiling or executing a program
-    Run(Sp<String, Span>),
+    Run(Sp<String, Span>, Box<Inputs>),
     /// An error with a trace attached
     Traced {
         /// The error itself
@@ -28,27 +35,15 @@ pub enum UiuaError {
         trace: Vec<TraceFrame>,
     },
     /// An error thrown by `assert`
-    Throw(Box<Value>, Span),
+    Throw(Box<Value>, Span, Box<Inputs>),
     /// Maximum execution time exceeded
-    Timeout(Span),
+    Timeout(Span, Box<Inputs>),
     /// A wrapper marking this error as being fill-related
     Fill(Box<Self>),
 }
 
 /// Uiua's result type
 pub type UiuaResult<T = ()> = Result<T, UiuaError>;
-
-impl From<Sp<String, Span>> for UiuaError {
-    fn from(value: Sp<String, Span>) -> Self {
-        Self::Run(value)
-    }
-}
-
-impl From<Sp<String>> for UiuaError {
-    fn from(value: Sp<String>) -> Self {
-        Self::Run(value.into())
-    }
-}
 
 /// A frame in a trace
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,13 +63,13 @@ impl fmt::Display for UiuaError {
             UiuaError::Format(path, e) => {
                 write!(f, "failed to format {}: {e}", path.to_string_lossy())
             }
-            UiuaError::Parse(errors) => {
+            UiuaError::Parse(errors, _) => {
                 for error in errors {
                     writeln!(f, "{error}")?;
                 }
                 Ok(())
             }
-            UiuaError::Run(error) => write!(f, "{error}"),
+            UiuaError::Run(error, _) => write!(f, "{error}"),
             UiuaError::Traced { error, trace } => {
                 write!(f, "{error}")?;
                 for line in format_trace(trace) {
@@ -82,8 +77,8 @@ impl fmt::Display for UiuaError {
                 }
                 Ok(())
             }
-            UiuaError::Throw(value, span) => write!(f, "{span}: {value}"),
-            UiuaError::Timeout(_) => write!(f, "Maximum execution time exceeded"),
+            UiuaError::Throw(value, span, _) => write!(f, "{span}: {value}"),
+            UiuaError::Timeout(..) => write!(f, "Maximum execution time exceeded"),
             UiuaError::Fill(error) => error.fmt(f),
         }
     }
@@ -100,7 +95,7 @@ impl UiuaError {
     /// Get the value of the error if it was thrown by `assert`
     pub fn value(self) -> Value {
         match self {
-            UiuaError::Throw(value, _) => *value,
+            UiuaError::Throw(value, ..) => *value,
             UiuaError::Traced { error, .. } => error.value(),
             error => error.message().into(),
         }
@@ -151,12 +146,6 @@ fn format_trace(trace: &[TraceFrame]) -> Vec<String> {
     lines
 }
 
-impl From<Vec<Sp<ParseError>>> for UiuaError {
-    fn from(errors: Vec<Sp<ParseError>>) -> Self {
-        Self::Parse(errors)
-    }
-}
-
 impl Error for UiuaError {}
 
 impl From<Infallible> for UiuaError {
@@ -170,18 +159,25 @@ impl UiuaError {
     pub fn report(&self) -> Report {
         let kind = ReportKind::Error;
         match self {
-            UiuaError::Parse(errors) => Report::new_multi(
+            UiuaError::Parse(errors, inputs) => Report::new_multi(
                 kind,
+                inputs,
                 errors
                     .iter()
                     .map(|error| (error.value.to_string(), error.span.clone().into())),
             ),
-            UiuaError::Run(error) => Report::new_multi(kind, [(&error.value, error.span.clone())]),
-            UiuaError::Traced { error, trace } => error.report().trace(trace),
-            UiuaError::Throw(message, span) => Report::new_multi(kind, [(&message, span.clone())]),
-            UiuaError::Timeout(span) => {
-                Report::new_multi(kind, [("Maximum execution time exceeded", span.clone())])
+            UiuaError::Run(error, inputs) => {
+                Report::new_multi(kind, inputs, [(&error.value, error.span.clone())])
             }
+            UiuaError::Traced { error, trace } => error.report().trace(trace),
+            UiuaError::Throw(message, span, inputs) => {
+                Report::new_multi(kind, inputs, [(&message, span.clone())])
+            }
+            UiuaError::Timeout(span, inputs) => Report::new_multi(
+                kind,
+                inputs,
+                [("Maximum execution time exceeded", span.clone())],
+            ),
             UiuaError::Fill(error) => error.report(),
             UiuaError::Load(..) | UiuaError::Format(..) => Report::new(kind, self.to_string()),
         }
@@ -189,7 +185,7 @@ impl UiuaError {
 }
 
 /// A message to be displayed to the user that is not an error
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone)]
 pub struct Diagnostic {
     /// The span of the message
     pub span: Span,
@@ -197,6 +193,28 @@ pub struct Diagnostic {
     pub message: String,
     /// What kind of diagnostic this is
     pub kind: DiagnosticKind,
+    /// The inputs of the program
+    pub inputs: Inputs,
+}
+
+impl PartialEq for Diagnostic {
+    fn eq(&self, other: &Self) -> bool {
+        self.span == other.span && self.message == other.message
+    }
+}
+
+impl Eq for Diagnostic {}
+
+impl PartialOrd for Diagnostic {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Diagnostic {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.span.cmp(&other.span)
+    }
 }
 
 /// Kinds of non-error diagnostics
@@ -218,17 +236,24 @@ impl fmt::Display for Diagnostic {
 
 impl Diagnostic {
     /// Create a new diagnostic
-    pub fn new(message: impl Into<String>, span: impl Into<Span>, kind: DiagnosticKind) -> Self {
+    pub fn new(
+        message: impl Into<String>,
+        span: impl Into<Span>,
+        kind: DiagnosticKind,
+        inputs: Inputs,
+    ) -> Self {
         Self {
             message: message.into(),
             span: span.into(),
             kind,
+            inputs,
         }
     }
     /// Get a rich-text report for the diagnostic
     pub fn report(&self) -> Report {
         Report::new_multi(
             ReportKind::Diagnostic(self.kind),
+            &self.inputs,
             [(&self.message, self.span.clone())],
         )
     }
@@ -313,7 +338,7 @@ impl Report {
         }
     }
     /// Create a new report with multiple messages
-    pub fn new_multi<I, T>(kind: ReportKind, errors: I) -> Self
+    pub fn new_multi<I, T>(kind: ReportKind, inputs: &Inputs, errors: I) -> Self
     where
         I: IntoIterator<Item = (T, Span)>,
         T: fmt::Display,
@@ -332,8 +357,11 @@ impl Report {
             if let Span::Code(span) = span {
                 fragments.push(ReportFragment::Newline);
                 fragments.push(ReportFragment::Fainter("  at ".into()));
-                if let Some(path) = &span.path {
-                    fragments.push(ReportFragment::Fainter(format!("{}:", path.display())));
+                if let InputSrc::File(path) = &span.src {
+                    fragments.push(ReportFragment::Fainter(format!(
+                        "{}:",
+                        Path::new(path.as_str()).display()
+                    )));
                 }
                 fragments.push(ReportFragment::Fainter(format!(
                     "{}:{}",
@@ -342,8 +370,8 @@ impl Report {
                 fragments.push(ReportFragment::Newline);
                 let line_prefix = format!("{} | ", span.start.line);
                 fragments.push(ReportFragment::Plain(line_prefix.clone()));
-                let line = span
-                    .input
+                let input = inputs.get(&span.src);
+                let line = input
                     .lines()
                     .nth(span.start.line as usize - 1)
                     .unwrap_or("");

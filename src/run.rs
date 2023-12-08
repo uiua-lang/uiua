@@ -18,8 +18,8 @@ use parking_lot::Mutex;
 use crate::{
     algorithm, array::Array, boxed::Boxed, check::SigCheckError, constants, example_ua,
     function::*, lex::Span, parse::parse, value::Value, Assembly, Complex, Diagnostic,
-    DiagnosticKind, Ident, NativeSys, Primitive, Sp, SysBackend, SysOp, TraceFrame, UiuaError,
-    UiuaResult,
+    DiagnosticKind, Ident, InputSrc, Inputs, IntoInputSrc, NativeSys, Primitive, Sp, SysBackend,
+    SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua interpreter
@@ -377,23 +377,32 @@ impl Uiua {
     pub fn file_path(&self) -> &Path {
         self.rt.cli_file_path.as_path()
     }
+    /// Get the input code
+    pub fn inputs(&self) -> &Inputs {
+        &self.asm.inputs
+    }
     /// Load a Uiua file from a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<Chunk> {
         let path = path.as_ref();
-        let input = fs::read_to_string(path).map_err(|e| UiuaError::Load(path.into(), e.into()))?;
-        self.load_impl(&input, Some(path))
+        let input: EcoString = fs::read_to_string(path)
+            .map_err(|e| UiuaError::Load(path.into(), e.into()))?
+            .into();
+        self.asm.inputs.files.insert(path.into(), input.clone());
+        self.load_impl(&input, InputSrc::File(path.to_string_lossy().into()))
     }
     /// Load a Uiua file from a string
     pub fn load_str<'a>(&'a mut self, input: &str) -> UiuaResult<Chunk<'a>> {
-        self.load_impl(input, None)
+        let src = self.asm.inputs.add_src((), input);
+        self.load_impl(input, src)
     }
     /// Load a Uiua file from a string with a path for error reporting
-    pub fn load_str_path<'a, P: AsRef<Path>>(
+    pub fn load_str_src<'a, S: IntoInputSrc>(
         &'a mut self,
         input: &str,
-        path: P,
+        src: S,
     ) -> UiuaResult<Chunk<'a>> {
-        self.load_impl(input, Some(path.as_ref()))
+        let src = self.asm.inputs.add_src(src, input);
+        self.load_impl(input, src)
     }
     /// Run in a scoped context. Names defined in this context will be removed when the scope ends.
     ///
@@ -419,9 +428,9 @@ impl Uiua {
         self.rt.stack.truncate(start_height);
         Ok(names)
     }
-    fn load_impl<'a>(&'a mut self, input: &str, path: Option<&Path>) -> UiuaResult<Chunk<'a>> {
+    fn load_impl<'a>(&'a mut self, input: &str, src: InputSrc) -> UiuaResult<Chunk<'a>> {
         self.rt.execution_start = instant::now();
-        let (items, errors, diagnostics) = parse(input, path);
+        let (items, errors, diagnostics) = parse(input, src.clone(), &mut self.asm.inputs);
         if self.print_diagnostics {
             for diagnostic in diagnostics {
                 println!("{}", diagnostic.report());
@@ -430,10 +439,12 @@ impl Uiua {
             self.diagnostics.extend(diagnostics);
         }
         if !errors.is_empty() {
-            return Err(errors.into());
+            return Err(UiuaError::Parse(errors, self.inputs().clone().into()));
         }
-        if let Some(path) = path {
-            self.current_imports.lock().push(path.into());
+        if let InputSrc::File(path) = &src {
+            self.current_imports
+                .lock()
+                .push(Path::new(path.as_str()).into());
         }
         let res = match catch_unwind(AssertUnwindSafe(|| self.items(items, false))) {
             Ok(res) => res,
@@ -450,7 +461,7 @@ code:
                 input
             ))),
         };
-        if path.is_some() {
+        if let InputSrc::File(_) = &src {
             self.current_imports.lock().pop();
         }
         res?;
@@ -494,8 +505,7 @@ code:
             )));
         }
         if !self.imports.lock().contains_key(path) {
-            let import =
-                self.in_scope(|env| env.load_str_path(input, path).and_then(Chunk::run))?;
+            let import = self.in_scope(|env| env.load_str_src(input, path).and_then(Chunk::run))?;
             self.imports.lock().insert(path.into(), import);
         }
         let imports_gaurd = self.imports.lock();
@@ -843,7 +853,10 @@ code:
                 self.rt.call_stack.last_mut().unwrap().pc += 1;
                 if let Some(limit) = self.rt.execution_limit {
                     if instant::now() - self.rt.execution_start > limit {
-                        return Err(UiuaError::Timeout(self.span()));
+                        return Err(UiuaError::Timeout(
+                            self.span(),
+                            self.inputs().clone().into(),
+                        ));
                     }
                 }
             }
@@ -931,13 +944,13 @@ code:
                 .iter()
                 .any(|instr| matches!(instr, Instr::Prim(Primitive::Sys(SysOp::Import), _)))
         {
-            return Err(self.asm.spans[call_span]
-                .clone()
-                .sp(format!(
+            return Err(self.error_with_span(
+                self.asm.spans[call_span].clone(),
+                format!(
                     "Function modified the stack by {height_diff} values, but its \
                     signature of {sig} implies a change of {sig_diff}"
-                ))
-                .into());
+                ),
+            ));
         }
         Ok(())
     }
@@ -966,7 +979,17 @@ code:
     }
     /// Construct an error with the current span
     pub fn error(&self, message: impl ToString) -> UiuaError {
-        UiuaError::Run(self.span().clone().sp(message.to_string()))
+        UiuaError::Run(
+            self.span().clone().sp(message.to_string()),
+            self.inputs().clone().into(),
+        )
+    }
+    /// Construct an error with a custom span
+    pub fn error_with_span(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
+        UiuaError::Run(
+            span.into().sp(message.to_string()),
+            self.inputs().clone().into(),
+        )
     }
     /// Construct and add a diagnostic with the current span
     pub fn diagnostic(&mut self, message: impl Into<String>, kind: DiagnosticKind) {
@@ -979,8 +1002,12 @@ code:
         kind: DiagnosticKind,
         span: impl Into<Span>,
     ) {
-        self.diagnostics
-            .insert(Diagnostic::new(message.into(), span, kind));
+        self.diagnostics.insert(Diagnostic::new(
+            message.into(),
+            span,
+            kind,
+            self.inputs().clone(),
+        ));
     }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {

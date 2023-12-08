@@ -163,11 +163,10 @@ fn run() -> UiuaResult {
                 let config =
                     FormatConfig::from_source(formatter_options.format_config_source, Some(&path))?;
                 format_file(&path, &config, false)?;
-                Uiua::with_native_sys()
+                let mut rt = Uiua::with_native_sys()
                     .with_mode(RunMode::Test)
-                    .print_diagnostics(true)
-                    .load_file(path)
-                    .and_then(Chunk::run)?;
+                    .print_diagnostics(true);
+                rt.load_file(path).and_then(Chunk::run)?;
                 println!("No failures!");
             }
             App::Watch {
@@ -813,7 +812,8 @@ fn repl(mut rt: Uiua, color: bool, config: FormatConfig) {
 
 fn color_code(code: &str) -> String {
     let mut colored = String::new();
-    for span in spans(code) {
+    let (spans, inputs) = spans(code);
+    for span in spans {
         let (r, g, b) = match span.value {
             SpanKind::Primitive(prim) => match prim.class() {
                 PrimClass::Stack => (209, 218, 236),
@@ -845,7 +845,10 @@ fn color_code(code: &str) -> String {
             | SpanKind::Placeholder
             | SpanKind::Delimiter => (255, 255, 255),
         };
-        colored.push_str(&format!("{}", span.span.as_str().truecolor(r, g, b)));
+        colored.push_str(&format!(
+            "{}",
+            span.span.as_str(&inputs, |s| s.truecolor(r, g, b))
+        ));
     }
     colored
 }

@@ -8,6 +8,7 @@ use std::{
 
 use ecow::{EcoString, EcoVec};
 use enum_iterator::Sequence;
+use serde::*;
 
 use crate::{
     lex::CodeSpan,
@@ -107,7 +108,9 @@ pub enum Instr {
 }
 
 /// A type of temporary stacks
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence, Serialize, Deserialize,
+)]
 pub enum TempStack {
     /// A stack used to hold values need to undo a function
     Under,
@@ -335,7 +338,11 @@ impl fmt::Display for Instr {
 }
 
 /// A Uiua function
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(
+    from = "(FunctionId, Signature, FuncSlice)",
+    into = "(FunctionId, Signature, FuncSlice)"
+)]
 pub struct Function {
     /// The function's id
     pub id: FunctionId,
@@ -343,11 +350,38 @@ pub struct Function {
     signature: Signature,
 }
 
+impl From<(FunctionId, Signature, FuncSlice)> for Function {
+    fn from((id, signature, slice): (FunctionId, Signature, FuncSlice)) -> Self {
+        Self::new(id, signature, slice)
+    }
+}
+
+impl From<Function> for (FunctionId, Signature, FuncSlice) {
+    fn from(func: Function) -> Self {
+        (func.id, func.signature, func.slice)
+    }
+}
+
 /// A range of compiled instructions
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
+)]
+#[serde(from = "(usize, usize)", into = "(usize, usize)")]
 pub struct FuncSlice {
     pub(crate) address: usize,
     pub(crate) len: usize,
+}
+
+impl From<(usize, usize)> for FuncSlice {
+    fn from((address, len): (usize, usize)) -> Self {
+        Self { address, len }
+    }
+}
+
+impl From<FuncSlice> for (usize, usize) {
+    fn from(slice: FuncSlice) -> Self {
+        (slice.address, slice.len)
+    }
 }
 
 impl FuncSlice {
@@ -376,12 +410,25 @@ impl Add<usize> for FuncSlice {
 }
 
 /// A function stack signature
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(from = "(usize, usize)", into = "(usize, usize)")]
 pub struct Signature {
     /// The number of arguments the function pops off the stack
     pub args: usize,
     /// The number of values the function pushes onto the stack
     pub outputs: usize,
+}
+
+impl From<(usize, usize)> for Signature {
+    fn from((args, outputs): (usize, usize)) -> Self {
+        Self::new(args, outputs)
+    }
+}
+
+impl From<Signature> for (usize, usize) {
+    fn from(sig: Signature) -> Self {
+        (sig.args, sig.outputs)
+    }
 }
 
 impl Signature {
@@ -419,12 +466,6 @@ impl PartialEq<(usize, usize)> for Signature {
     }
 }
 
-impl From<(usize, usize)> for Signature {
-    fn from((args, outputs): (usize, usize)) -> Self {
-        Self::new(args, outputs)
-    }
-}
-
 impl fmt::Debug for Signature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "|{}.{}", self.args, self.outputs)
@@ -438,12 +479,24 @@ impl fmt::Display for Signature {
 }
 
 /// A function that executes Rust code
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct DynamicFunction {
     /// An index used to look up the function
     pub(crate) index: usize,
     /// The function's signature
     pub(crate) signature: Signature,
+}
+
+impl From<(usize, Signature)> for DynamicFunction {
+    fn from((index, signature): (usize, Signature)) -> Self {
+        Self { index, signature }
+    }
+}
+
+impl From<DynamicFunction> for (usize, Signature) {
+    fn from(func: DynamicFunction) -> Self {
+        (func.index, func.signature)
+    }
 }
 
 impl DynamicFunction {
@@ -456,32 +509,6 @@ impl DynamicFunction {
 impl fmt::Debug for DynamicFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "<dynamic#{:x}>", self.index)
-    }
-}
-
-impl PartialEq for DynamicFunction {
-    fn eq(&self, other: &Self) -> bool {
-        self.index == other.index
-    }
-}
-
-impl Eq for DynamicFunction {}
-
-impl PartialOrd for DynamicFunction {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for DynamicFunction {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.index.cmp(&other.index)
-    }
-}
-
-impl Hash for DynamicFunction {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.index.hash(state);
     }
 }
 
@@ -599,7 +626,7 @@ fn _recurse_instrs<T>(
 }
 
 /// A Uiua function id
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum FunctionId {
     /// A named function
     Named(Ident),

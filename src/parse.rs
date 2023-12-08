@@ -1,10 +1,12 @@
-use std::{error::Error, fmt, mem::replace, path::Path};
+use std::{error::Error, fmt, mem::replace};
+
+use ecow::EcoString;
 
 use crate::{
     ast::*,
     function::{FunctionId, Signature},
     lex::{AsciiToken::*, Token::*, *},
-    Diagnostic, DiagnosticKind, Ident, Primitive,
+    Diagnostic, DiagnosticKind, Ident, Inputs, Primitive,
 };
 
 /// An error that occurred while parsing
@@ -12,7 +14,7 @@ use crate::{
 #[allow(missing_docs)]
 pub enum ParseError {
     Lex(LexError),
-    Expected(Vec<Expectation>, Option<Box<Sp<Token>>>),
+    Expected(Vec<Expectation>, Option<EcoString>),
     InvalidNumber(String),
     Unexpected(Token),
     InvalidArgCount(String),
@@ -64,12 +66,6 @@ impl fmt::Display for ParseError {
                     }
                 }
                 if let Some(found) = found {
-                    if let Token::Simple(ascii) = found.value {
-                        if exps.iter().any(|exp| exp == &Expectation::Simple(ascii)) {
-                            return Ok(());
-                        }
-                    }
-                    let found = found.span.as_str();
                     if found == "\n" {
                         write!(f, ", found newline")?;
                     } else {
@@ -110,32 +106,45 @@ impl Error for ParseError {}
 /// Parse Uiua code into an AST
 pub fn parse(
     input: &str,
-    path: Option<&Path>,
+    src: impl IntoInputSrc,
+    inputs: &mut Inputs,
 ) -> (Vec<Item>, Vec<Sp<ParseError>>, Vec<Diagnostic>) {
-    let (tokens, lex_errors) = lex(input, path);
-    let errors = lex_errors
-        .into_iter()
-        .map(|e| e.map(ParseError::Lex))
-        .collect();
-    let mut parser = Parser {
-        tokens,
-        index: 0,
-        errors,
-        diagnostics: Vec::new(),
-    };
-    let items = parser.items(true);
-    if parser.errors.is_empty() && parser.index < parser.tokens.len() {
-        parser.errors.push(
-            parser
-                .tokens
-                .remove(parser.index)
-                .map(ParseError::Unexpected),
-        );
+    let (tokens, lex_errors) = lex(input, src, inputs);
+    fn parse(
+        input: &str,
+        inputs: &mut Inputs,
+        tokens: Vec<Sp<crate::lex::Token>>,
+        lex_errors: Vec<Sp<LexError>>,
+    ) -> (Vec<Item>, Vec<Sp<ParseError>>, Vec<Diagnostic>) {
+        let errors = lex_errors
+            .into_iter()
+            .map(|e| e.map(ParseError::Lex))
+            .collect();
+        let mut parser = Parser {
+            inputs,
+            input: input.into(),
+            tokens,
+            index: 0,
+            errors,
+            diagnostics: Vec::new(),
+        };
+        let items = parser.items(true);
+        if parser.errors.is_empty() && parser.index < parser.tokens.len() {
+            parser.errors.push(
+                parser
+                    .tokens
+                    .remove(parser.index)
+                    .map(ParseError::Unexpected),
+            );
+        }
+        (items, parser.errors, parser.diagnostics)
     }
-    (items, parser.errors, parser.diagnostics)
+    parse(input, inputs, tokens, lex_errors)
 }
 
-struct Parser {
+struct Parser<'i> {
+    inputs: &'i mut Inputs,
+    input: EcoString,
     tokens: Vec<Sp<crate::lex::Token>>,
     index: usize,
     errors: Vec<Sp<ParseError>>,
@@ -144,7 +153,7 @@ struct Parser {
 
 type FunctionContents = (Option<Sp<Signature>>, Vec<Vec<Sp<Word>>>, Option<CodeSpan>);
 
-impl Parser {
+impl<'i> Parser<'i> {
     fn next_token_map<'a, T: 'a>(
         &'a mut self,
         f: impl FnOnce(&'a Token) -> Option<T>,
@@ -177,8 +186,7 @@ impl Parser {
             expectations.into_iter().map(Into::into).collect(),
             self.tokens
                 .get(self.index.saturating_sub(1))
-                .cloned()
-                .map(Box::new),
+                .map(|t| self.input[t.span.byte_range()].into()),
         ))
     }
     #[allow(unused)]
@@ -245,7 +253,7 @@ impl Parser {
     }
     fn comment(&mut self) -> Option<Sp<String>> {
         let span = self.try_exact(Token::Comment)?;
-        let s = span.as_str();
+        let s = &self.input[span.byte_range()];
         let s = s.strip_prefix('#').unwrap_or(s).into();
         Some(span.sp(s))
     }
@@ -286,6 +294,7 @@ impl Parser {
                 "Maybe don't",
                 name.span.clone(),
                 DiagnosticKind::Advice,
+                self.inputs.clone(),
             ));
         }
         // Signature
@@ -324,6 +333,7 @@ impl Parser {
                 ),
                 name.span.clone(),
                 DiagnosticKind::Advice,
+                self.inputs.clone(),
             ));
         }
         Some(Binding {
@@ -335,7 +345,7 @@ impl Parser {
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         let span = self.try_exact(Token::Ident)?;
-        let s: Ident = span.as_str().into();
+        let s: Ident = self.input[span.byte_range()].into();
         Some(span.sp(s))
     }
     fn try_modifier_ident(&mut self) -> Option<Sp<Ident>> {
@@ -407,6 +417,7 @@ impl Parser {
                             format!("Prefer `{Dip}{Dup}` over `{Flip}{Over}` for clarity"),
                             span(),
                             DiagnosticKind::Style,
+                            self.inputs.clone(),
                         )),
                         // Not comparisons
                         (Not, prim) => {
@@ -416,12 +427,14 @@ impl Parser {
                                         format!("Prefer `{b}` over `{Not}{prim}` for clarity"),
                                         span(),
                                         DiagnosticKind::Style,
+                                        self.inputs.clone(),
                                     ));
                                 } else if *prim == b {
                                     self.diagnostics.push(Diagnostic::new(
                                         format!("Prefer `{a}` over `{Not}{prim}` for clarity"),
                                         span(),
                                         DiagnosticKind::Style,
+                                        self.inputs.clone(),
                                     ));
                                 }
                             }
@@ -450,6 +463,7 @@ impl Parser {
                         ),
                         span,
                         kind,
+                        self.inputs.clone(),
                     ));
                 } else {
                     self.errors.push(span.sp(ParseError::LineTooLong(width)));
@@ -605,6 +619,7 @@ impl Parser {
                                 ),
                                 span.clone(),
                                 DiagnosticKind::Style,
+                                self.inputs.clone(),
                             ));
                         }
                     }
@@ -640,6 +655,7 @@ impl Parser {
                         ),
                         span.clone(),
                         DiagnosticKind::Advice,
+                        self.inputs.clone(),
                     ));
                 }
             }
@@ -699,6 +715,7 @@ impl Parser {
                     ),
                     span.clone(),
                     DiagnosticKind::Style,
+                    self.inputs.clone(),
                 ));
             }
             span.sp(Word::Array(arr))
@@ -726,7 +743,7 @@ impl Parser {
     }
     fn try_num(&mut self) -> Option<Sp<(String, f64)>> {
         let span = self.try_exact(Token::Number)?;
-        let s = span.as_str().to_string();
+        let s = self.input[span.byte_range()].to_string();
         fn parse(s: &str) -> Option<f64> {
             let parseable = s.replace(['`', '¯'], "-");
             parseable.parse().ok()

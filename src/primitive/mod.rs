@@ -25,6 +25,7 @@ use enum_iterator::{all, Sequence};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use regex::Regex;
+use serde::*;
 
 use crate::{
     algorithm::{self, loops, reduce, table, zip},
@@ -548,7 +549,9 @@ impl Primitive {
                 let f_args = f.signature().args;
                 let backup = env.clone_stack_top(f_args);
                 if let Err(e) = env.call_restore(f) {
-                    env.rt.backend.save_error_color(&e);
+                    env.rt
+                        .backend
+                        .save_error_color(e.message(), e.report().to_string());
                     env.push(e.value());
                     for val in backup {
                         env.push(val);
@@ -560,7 +563,11 @@ impl Primitive {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
                 if !cond.as_nat(env, "").is_ok_and(|n| n == 1) {
-                    return Err(UiuaError::Throw(msg.into(), env.span().clone()));
+                    return Err(UiuaError::Throw(
+                        msg.into(),
+                        env.span().clone(),
+                        env.inputs().clone().into(),
+                    ));
                 }
             }
             Primitive::Rand => {

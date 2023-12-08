@@ -90,7 +90,7 @@ macro_rules! primitive {
         )
     ),* $(,)?) => {
         /// A built-in function
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence, Serialize, Deserialize)]
         pub enum Primitive {
             $(
                 #[doc = $doc_rust]
@@ -1801,7 +1801,7 @@ macro_rules! impl_primitive {
     ),* $(,)?) => {
         /// Primitives that exist as an implementation detail
         #[doc(hidden)]
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence, Serialize, Deserialize)]
         pub enum ImplPrimitive {
             $($variant,)*
         }

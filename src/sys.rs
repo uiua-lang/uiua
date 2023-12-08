@@ -13,6 +13,7 @@ use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
+use serde::*;
 use tinyvec::tiny_vec;
 
 use crate::{
@@ -22,7 +23,7 @@ use crate::{
     function::Signature,
     primitive::PrimDoc,
     value::Value,
-    Uiua, UiuaError, UiuaResult,
+    Uiua, UiuaResult,
 };
 
 /// Access the built-in `example.ua` file
@@ -51,7 +52,7 @@ macro_rules! sys_op {
         )
     ),* $(,)?) => {
         /// A system function
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence, Serialize, Deserialize)]
         pub enum SysOp {
             $(
                 #[doc = $doc_rust]
@@ -481,7 +482,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Cast the backend to `&mut dyn Any`
     fn any_mut(&mut self) -> &mut dyn Any;
     /// Save a color-formatted version of an error message for later printing
-    fn save_error_color(&self, error: &UiuaError) {}
+    fn save_error_color(&self, message: String, colored: String) {}
     /// Print a string (without a newline) to stdout
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
         Err("Printing to stdout is not supported in this environment".into())

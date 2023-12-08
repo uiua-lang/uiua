@@ -13,8 +13,8 @@ use leptos::*;
 
 use uiua::{
     ast::Item, image_to_bytes, spans, value_to_gif_bytes, value_to_image, value_to_wav_bytes,
-    Chunk, DiagnosticKind, Report, ReportFragment, ReportKind, RunMode, SpanKind, SysBackend, Uiua,
-    UiuaResult, Value,
+    Chunk, DiagnosticKind, Inputs, Report, ReportFragment, ReportKind, RunMode, SpanKind,
+    SysBackend, Uiua, UiuaResult, Value,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlBrElement, HtmlDivElement, HtmlStyleElement, Node};
@@ -503,7 +503,7 @@ fn set_code_html(id: &str, code: &str) {
 
     let mut end = 0;
     // logging::log!("{:#?}", spans(code));
-    for span in spans(code) {
+    for span in spans(code).0 {
         let kind = span.value;
         let span = span.span;
         push_unspanned(&mut html, span.start.char_pos as usize, &mut end);
@@ -910,7 +910,8 @@ pub fn Challenge<'a>(
 }
 
 pub fn progressive_strings(input: &str) -> Vec<String> {
-    let (items, errors, _) = uiua::parse(input, None);
+    let mut inputs = Inputs::default();
+    let (items, errors, _) = uiua::parse(input, (), &mut inputs);
     if !errors.is_empty() {
         return vec![input.into()];
     }
@@ -922,19 +923,21 @@ pub fn progressive_strings(input: &str) -> Vec<String> {
                     let mut line: Vec<String> = Vec::new();
                     for word in ln {
                         if word.value.is_code() {
-                            line.push(word.span.as_str().into());
+                            line.push(word.span.as_str(&inputs, |s| s.into()));
                         } else if let Some(last) = line.last_mut() {
-                            last.push_str(word.span.as_str());
+                            word.span.as_str(&inputs, |s| last.push_str(s));
                         } else {
-                            line.push(word.span.as_str().into());
+                            line.push(word.span.as_str(&inputs, |s| s.into()));
                         }
                     }
                     lines.push(line);
                 }
             }
-            Item::Binding(binding) => lines.push(vec![binding.span().as_str().into()]),
-            Item::TestScope(items) => lines.push(vec![items.span.as_str().into()]),
-            Item::ExtraNewlines(span) => lines.push(vec![span.as_str().into()]),
+            Item::Binding(binding) => {
+                lines.push(vec![binding.span().as_str(&inputs, |s| s.into())])
+            }
+            Item::TestScope(items) => lines.push(vec![items.span.as_str(&inputs, |s| s.into())]),
+            Item::ExtraNewlines(span) => lines.push(vec![span.as_str(&inputs, |s| s.into())]),
         }
     }
     let mut strings = Vec::new();

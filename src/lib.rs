@@ -101,8 +101,6 @@ mod sys;
 mod sys_native;
 mod value;
 
-use std::sync::Arc;
-
 pub use self::{
     array::*,
     assembly::*,
@@ -122,12 +120,13 @@ pub use self::{
 };
 
 pub use complex::*;
+use ecow::EcoString;
 
 /// The Uiua version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// A Uiua identifier
-pub type Ident = Arc<str>;
+pub type Ident = EcoString;
 
 #[test]
 fn suite() {

@@ -10,7 +10,7 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
-use ecow::EcoVec;
+use ecow::{EcoString, EcoVec};
 use enum_iterator::Sequence;
 use instant::Duration;
 use parking_lot::Mutex;
@@ -522,7 +522,7 @@ code:
             pathdiff::diff_paths(&target, base).unwrap_or(target)
         }
     }
-    pub(crate) fn load_import_input(&self, path: &Path) -> UiuaResult<Arc<str>> {
+    pub(crate) fn load_import_input(&self, path: &Path) -> UiuaResult<EcoString> {
         if let Some(input) = self.asm.import_inputs.get(path) {
             return Ok(input.clone());
         }
@@ -1054,7 +1054,7 @@ code:
     ///
     /// # Errors
     /// Returns an error in the binding name is not valid
-    pub fn bind_function(&mut self, name: impl Into<Arc<str>>, function: Function) -> UiuaResult {
+    pub fn bind_function(&mut self, name: impl Into<EcoString>, function: Function) -> UiuaResult {
         let index = self.ct.next_global;
         let name = name.into();
         self.compile_bind_function(&name, index, function, 0)?;
@@ -1068,7 +1068,7 @@ code:
     /// Returns an error in the binding name is not valid
     pub fn create_bind_function(
         &mut self,
-        name: impl Into<Arc<str>>,
+        name: impl Into<EcoString>,
         signature: impl Into<Signature>,
         f: impl Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static,
     ) -> UiuaResult {

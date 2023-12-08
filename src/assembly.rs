@@ -1,6 +1,6 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf};
 
-use ecow::{eco_vec, EcoVec};
+use ecow::{eco_vec, EcoString, EcoVec};
 
 use crate::{FuncSlice, Global, Instr, Span};
 
@@ -10,7 +10,7 @@ pub struct Assembly {
     pub(crate) instrs: EcoVec<Instr>,
     pub(crate) top_slices: Vec<FuncSlice>,
     pub(crate) globals: EcoVec<Global>,
-    pub(crate) import_inputs: HashMap<PathBuf, Arc<str>>,
+    pub(crate) import_inputs: HashMap<PathBuf, EcoString>,
     pub(crate) spans: EcoVec<Span>,
 }
 

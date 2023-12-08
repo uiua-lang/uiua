@@ -7,6 +7,7 @@ use std::{
     sync::Arc,
 };
 
+use ecow::EcoString;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{Primitive, UiuaError};
@@ -133,7 +134,7 @@ pub struct CodeSpan {
     /// The path of the file
     pub path: Option<Arc<Path>>,
     /// The text of the input
-    pub input: Arc<str>,
+    pub input: EcoString,
 }
 
 impl fmt::Debug for CodeSpan {
@@ -457,7 +458,7 @@ struct Lexer<'a> {
     input_segments: Vec<&'a str>,
     loc: Loc,
     file: Option<Arc<Path>>,
-    input: Arc<str>,
+    input: EcoString,
     tokens: Vec<Sp<Token>>,
     errors: Vec<Sp<LexError>>,
 }

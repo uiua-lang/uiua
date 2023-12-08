@@ -1,12 +1,11 @@
 use std::{
-    collections::{hash_map::DefaultHasher, HashMap, HashSet},
+    collections::{HashMap, HashSet},
     fmt,
-    hash::{Hash, Hasher},
+    mem::take,
     path::Path,
-    sync::Arc,
 };
 
-use ecow::EcoVec;
+use ecow::{EcoString, EcoVec};
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
@@ -444,34 +443,15 @@ impl Uiua {
             }
             Word::FormatString(frags) => {
                 let signature = Signature::new(frags.len() - 1, 1);
-                let f = self.add_function(
-                    FunctionId::Anonymous(word.span.clone()),
-                    signature,
-                    vec![Instr::Dynamic(DynamicFunction {
-                        id: {
-                            let mut hasher = DefaultHasher::new();
-                            frags.hash(&mut hasher);
-                            hasher.finish()
-                        },
-                        f: Arc::new(move |env| {
-                            let mut formatted = String::new();
-                            for (i, frag) in frags.iter().enumerate() {
-                                if i > 0 {
-                                    let val = env.pop(format!("format argument {i}"))?;
-                                    formatted.push_str(&format!("{}", val));
-                                }
-                                formatted.push_str(frag);
-                            }
-                            env.push(formatted);
-                            Ok(())
-                        }),
-                        signature,
-                    })],
-                );
-                self.push_instr(Instr::PushFunc(f));
+                let parts = frags.into_iter().map(Into::into).collect();
+                let span = self.add_span(word.span.clone());
+                let instr = Instr::Format(parts, span);
                 if call {
-                    let span = self.add_span(word.span);
-                    self.push_instr(Instr::Call(span));
+                    self.push_instr(instr)
+                } else {
+                    let f =
+                        self.add_function(FunctionId::Anonymous(word.span), signature, vec![instr]);
+                    self.push_instr(Instr::PushFunc(f));
                 }
             }
             Word::MultilineString(lines) => {
@@ -479,41 +459,28 @@ impl Uiua {
                     lines.iter().map(|l| l.value.len().saturating_sub(1)).sum(),
                     1,
                 );
-                let f = self.add_function(
-                    FunctionId::Anonymous(word.span.clone()),
-                    signature,
-                    vec![Instr::Dynamic(DynamicFunction {
-                        id: {
-                            let mut hasher = DefaultHasher::new();
-                            lines.hash(&mut hasher);
-                            hasher.finish()
-                        },
-                        f: Arc::new(move |env| {
-                            let mut formatted = String::new();
-                            let mut i = 0;
-                            for (j, line) in lines.iter().enumerate() {
-                                if j > 0 {
-                                    formatted.push('\n');
-                                }
-                                for (k, frag) in line.value.iter().enumerate() {
-                                    if k > 0 {
-                                        let val = env.pop(format!("format argument {i}"))?;
-                                        formatted.push_str(&format!("{}", val));
-                                    }
-                                    formatted.push_str(frag);
-                                    i += 1;
-                                }
-                            }
-                            env.push(formatted);
-                            Ok(())
-                        }),
-                        signature,
-                    })],
-                );
-                self.push_instr(Instr::PushFunc(f));
+                let span = self.add_span(word.span.clone());
+                let mut curr_part = EcoString::new();
+                let mut parts = EcoVec::new();
+                for (l, line) in lines.into_iter().enumerate() {
+                    if l > 0 {
+                        curr_part.push('\n');
+                    }
+                    for (f, frag) in line.value.into_iter().enumerate() {
+                        if f > 0 {
+                            parts.push(take(&mut curr_part));
+                        }
+                        curr_part.push_str(&frag);
+                    }
+                }
+                parts.push(curr_part);
+                let instr = Instr::Format(parts, span);
                 if call {
-                    let span = self.add_span(word.span);
-                    self.push_instr(Instr::Call(span));
+                    self.push_instr(instr)
+                } else {
+                    let f =
+                        self.add_function(FunctionId::Anonymous(word.span), signature, vec![instr]);
+                    self.push_instr(Instr::PushFunc(f));
                 }
             }
             Word::Ident(ident) => self.ident(ident, word.span, call)?,

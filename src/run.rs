@@ -703,6 +703,20 @@ code:
                     env.rt.function_stack.push(f.clone());
                     Ok(())
                 }),
+                Instr::Format(parts, span) => {
+                    let parts = parts.clone();
+                    self.with_span(*span, |env| {
+                        let mut s = String::new();
+                        for (i, part) in parts.into_iter().enumerate() {
+                            if i > 0 {
+                                s.push_str(&env.pop(FormatArg(i))?.to_string());
+                            }
+                            s.push_str(&part);
+                        }
+                        env.push(s);
+                        Ok(())
+                    })
+                }
                 Instr::Dynamic(df) => df.f.clone()(self),
                 &Instr::Unpack { count, span, unbox } => self.with_span(span, |env| {
                     let arr = env.pop(1)?;
@@ -1545,6 +1559,13 @@ impl<'a> StackArg for &'a str {
 impl StackArg for String {
     fn arg_name(self) -> String {
         self
+    }
+}
+
+struct FormatArg(usize);
+impl StackArg for FormatArg {
+    fn arg_name(self) -> String {
+        format!("format arg {}", self.0)
     }
 }
 

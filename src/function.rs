@@ -7,6 +7,7 @@ use std::{
     sync::Arc,
 };
 
+use ecow::{EcoString, EcoVec};
 use enum_iterator::Sequence;
 
 use crate::{
@@ -57,6 +58,7 @@ pub enum Instr {
         sig: Signature,
         span: usize,
     },
+    Format(EcoVec<EcoString>, usize),
     /// Call a dynamic function
     Dynamic(DynamicFunction),
     Unpack {
@@ -127,7 +129,7 @@ impl PartialEq for Instr {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Prim(a, s_span), Self::Prim(b, b_span)) => a == b && s_span == b_span,
-            (Self::ImplPrim(a, s_span), Self::ImplPrim(b, b_span)) => a == b && s_span == b_span,
+            (Self::ImplPrim(a, a_span), Self::ImplPrim(b, b_span)) => a == b && a_span == b_span,
             (
                 Self::CopyToTemp {
                     stack: a_stack,
@@ -140,6 +142,7 @@ impl PartialEq for Instr {
                     span: b_span,
                 },
             ) => a_stack == b_stack && a_count == b_count && a_span == b_span,
+            (Self::Format(a, a_span), Self::Format(b, b_span)) => a == b && a_span == b_span,
             (
                 Self::PushTemp {
                     stack: a_stack,
@@ -205,6 +208,7 @@ impl Hash for Instr {
             Instr::PushTempFunctions(count) => count.hash(state),
             Instr::PopTempFunctions(count) => count.hash(state),
             Instr::GetTempFunction { offset, .. } => offset.hash(state),
+            Instr::Format(parts, _) => parts.hash(state),
             Instr::Dynamic(f) => f.id.hash(state),
             Instr::TouchStack { count, .. } => count.hash(state),
             Instr::PushTemp { count, .. } => count.hash(state),
@@ -245,6 +249,7 @@ impl Instr {
             (Self::Prim(a, _), Self::Prim(b, _)) => a == b,
             (Self::ImplPrim(a, _), Self::ImplPrim(b, _)) => a == b,
             (Self::Call(a), Self::Call(b)) => a == b,
+            (Self::Format(a, _), Self::Format(b, _)) => a == b,
             (Self::PushFunc(a), Self::PushFunc(b)) => a == b,
             (Self::PushTemp { count: a, .. }, Self::PushTemp { count: b, .. }) => a == b,
             (Self::PopTemp { count: a, .. }, Self::PopTemp { count: b, .. }) => a == b,
@@ -299,6 +304,16 @@ impl fmt::Display for Instr {
             Instr::PushTempFunctions(count) => write!(f, "<push {count} functions>"),
             Instr::PopTempFunctions(count) => write!(f, "<pop {count} functions>"),
             Instr::GetTempFunction { offset, .. } => write!(f, "<get function at {offset}>"),
+            Instr::Format(parts, _) => {
+                write!(f, "$\"")?;
+                for (i, part) in parts.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, "_")?
+                    }
+                    write!(f, "{part}")?
+                }
+                write!(f, "\"")
+            }
             Instr::Dynamic(df) => write!(f, "{df:?}"),
             Instr::Unpack { count, .. } => write!(f, "<unpack {count}>"),
             Instr::TouchStack { count, .. } => write!(f, "<touch {count}>"),

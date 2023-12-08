@@ -63,37 +63,59 @@ impl Error for LexError {}
 /// A location in a Uiua source file
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(from = "u128", into = "u128")]
+#[serde(from = "u64", into = "u64")]
 pub struct Loc {
-    pub char_pos: u32,
     pub byte_pos: u32,
+    pub char_pos: u32,
     pub line: u32,
     pub col: u32,
 }
 
-impl From<u128> for Loc {
-    fn from(u: u128) -> Self {
-        let char_pos = u as u32;
-        let byte_pos = (u >> 32) as u32;
-        let line = (u >> 64) as u32;
-        let col = (u >> 96) as u32;
+const BYTE_BITS: u64 = 22;
+const CHAR_BITS: u64 = 22;
+const LINE_BITS: u64 = 10;
+const _COL_BITS: u64 = 10;
+
+impl From<u64> for Loc {
+    fn from(u: u64) -> Self {
+        let byte_pos = (u & ((1 << BYTE_BITS) - 1)) as u32;
+        let char_pos = ((u >> BYTE_BITS) & ((1 << CHAR_BITS) - 1)) as u32;
+        let line = ((u >> (BYTE_BITS + CHAR_BITS)) & ((1 << LINE_BITS) - 1)) as u32;
+        let col = ((u >> (BYTE_BITS + CHAR_BITS + LINE_BITS)) & ((1 << CHAR_BITS) - 1)) as u32;
         Self {
-            char_pos,
             byte_pos,
+            char_pos,
             line,
             col,
         }
     }
 }
 
-impl From<Loc> for u128 {
+impl From<Loc> for u64 {
     fn from(loc: Loc) -> Self {
-        let char_pos = loc.char_pos as u128;
-        let byte_pos = loc.byte_pos as u128;
-        let line = loc.line as u128;
-        let col = loc.col as u128;
-        char_pos | byte_pos << 32 | line << 64 | col << 96
+        let byte_pos = loc.byte_pos as u64;
+        let char_pos = loc.char_pos as u64;
+        let line = loc.line as u64;
+        let col = loc.col as u64;
+        byte_pos
+            | (char_pos << BYTE_BITS)
+            | (line << (BYTE_BITS + CHAR_BITS))
+            | (col << (BYTE_BITS + CHAR_BITS + LINE_BITS))
     }
+}
+
+#[cfg(test)]
+#[test]
+fn loc_ser() {
+    let loc = Loc {
+        byte_pos: 1,
+        char_pos: 2,
+        line: 3,
+        col: 4,
+    };
+    let u: u64 = loc.into();
+    let loc2: Loc = u.into();
+    assert_eq!(loc, loc2);
 }
 
 impl fmt::Display for Loc {

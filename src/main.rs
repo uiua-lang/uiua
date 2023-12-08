@@ -20,7 +20,7 @@ use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
-    spans, Chunk, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult, Value,
+    spans, Assembly, Chunk, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult, Value,
 };
 
 fn main() {
@@ -110,23 +110,42 @@ fn run() -> UiuaResult {
                         }
                     }
                 };
-                if !no_format {
-                    let config = FormatConfig::from_source(
-                        formatter_options.format_config_source,
-                        Some(&path),
-                    )?;
-                    format_file(&path, &config, false)?;
-                }
-                let mode = mode.unwrap_or(RunMode::Normal);
                 #[cfg(feature = "audio")]
                 setup_audio(audio_options);
+                let mode = mode.unwrap_or(RunMode::Normal);
                 let mut rt = Uiua::with_native_sys()
                     .with_mode(mode)
                     .with_file_path(&path)
                     .with_args(args)
                     .print_diagnostics(true)
                     .time_instrs(time_instrs);
-                rt.load_file(path).and_then(Chunk::run)?;
+                if path.extension().is_some_and(|ext| ext == "uasm") {
+                    let json = match fs::read_to_string(&path) {
+                        Ok(json) => json,
+                        Err(e) => {
+                            eprintln!("Failed to read assembly: {e}");
+                            return Ok(());
+                        }
+                    };
+                    let assembly = match serde_json::from_str::<Assembly>(&json) {
+                        Ok(assembly) => assembly,
+                        Err(e) => {
+                            eprintln!("Failed to parse assembly: {e}");
+                            return Ok(());
+                        }
+                    };
+                    rt = rt.assembly(assembly);
+                    rt.full_chunk().run()?;
+                } else {
+                    if !no_format {
+                        let config = FormatConfig::from_source(
+                            formatter_options.format_config_source,
+                            Some(&path),
+                        )?;
+                        format_file(&path, &config, false)?;
+                    }
+                    rt.load_file(path).and_then(Chunk::run)?;
+                }
                 print_stack(&rt.take_stack(), !no_color);
             }
             App::Build { path, output } => {

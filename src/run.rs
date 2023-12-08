@@ -280,6 +280,16 @@ impl<'a> Chunk<'a> {
 }
 
 impl Uiua {
+    /// Get a chunk that can run all newly compiled code
+    pub fn full_chunk(&mut self) -> Chunk {
+        let start = self.rt.last_slice_run;
+        let len = self.asm.top_slices.len() - start;
+        Chunk {
+            env: self,
+            start,
+            len,
+        }
+    }
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_native_sys() -> Self {
         Uiua {
@@ -312,6 +322,12 @@ impl Uiua {
     /// Build an assembly
     pub fn build(self) -> Assembly {
         self.asm
+    }
+    /// Set the assembly
+    pub fn assembly(mut self, asm: Assembly) -> Self {
+        self.asm = asm;
+        self.rt.last_slice_run = 0;
+        self
     }
     /// Get a reference to the system backend
     pub fn backend(&self) -> &dyn SysBackend {

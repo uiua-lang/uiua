@@ -8,8 +8,8 @@ use ecow::{eco_vec, EcoString, EcoVec};
 use serde::*;
 
 use crate::{
-    DynamicFunction, FuncSlice, Function, Global, Ident, ImplPrimitive, InputSrc, Instr,
-    IntoInputSrc, Primitive, Signature, Span, TempStack, Value,
+    DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc, Instr, IntoInputSrc,
+    Primitive, Signature, Span, TempStack, Value,
 };
 
 /// A compiled Uiua assembly
@@ -34,6 +34,14 @@ impl Default for Assembly {
             inputs: Inputs::default(),
         }
     }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub(crate) enum Global {
+    Const(Value),
+    Func(Function),
+    Sig(Signature),
 }
 
 /// A repository of code strings input to the compiler
@@ -97,7 +105,7 @@ impl<'de> Deserialize<'de> for Instr {
 enum InstrRep {
     Comment(Ident),
     Push(Value),
-    CallGlobal(usize, bool),
+    CallGlobal(usize, bool, Signature),
     BindGlobal(Ident, usize, usize),
     BeginArray,
     EndArray(bool, usize),
@@ -127,7 +135,7 @@ impl From<Instr> for InstrRep {
         match value {
             Instr::Comment(ident) => Self::Comment(ident),
             Instr::Push(value) => Self::Push(value),
-            Instr::CallGlobal { index, call } => Self::CallGlobal(index, call),
+            Instr::CallGlobal { index, call, sig } => Self::CallGlobal(index, call, sig),
             Instr::BindGlobal { name, span, index } => Self::BindGlobal(name, span, index),
             Instr::BeginArray => Self::BeginArray,
             Instr::EndArray { boxed, span } => Self::EndArray(boxed, span),
@@ -166,7 +174,7 @@ impl From<InstrRep> for Instr {
         match value {
             InstrRep::Comment(ident) => Self::Comment(ident),
             InstrRep::Push(value) => Self::Push(value),
-            InstrRep::CallGlobal(index, call) => Self::CallGlobal { index, call },
+            InstrRep::CallGlobal(index, call, sig) => Self::CallGlobal { index, call, sig },
             InstrRep::BindGlobal(name, span, index) => Self::BindGlobal { name, span, index },
             InstrRep::BeginArray => Self::BeginArray,
             InstrRep::EndArray(boxed, span) => Self::EndArray { boxed, span },

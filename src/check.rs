@@ -167,9 +167,9 @@ impl<'a> VirtualEnv<'a> {
         match instr {
             Instr::Comment(_) => {}
             Instr::Push(val) => self.stack.push(BasicValue::from_val(val)),
-            Instr::CallGlobal { call, .. } => {
-                if !call {
-                    self.stack.push(BasicValue::Other)
+            Instr::CallGlobal { call, sig, .. } => {
+                if *call {
+                    self.handle_sig(*sig)?;
                 }
             }
             Instr::BindGlobal { .. } => {

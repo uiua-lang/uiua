@@ -9,19 +9,15 @@ use ecow::{EcoString, EcoVec};
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
-    array::Array,
     ast::*,
-    boxed::Boxed,
     check::instrs_signature,
     constants,
     function::*,
     lex::{CodeSpan, Sp, Span},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, ident_modifier_args, split_words, unsplit_words},
-    primitive::Primitive,
-    run::{Global, RunMode},
-    value::Value,
-    Diagnostic, DiagnosticKind, Ident, SysOp, UiuaResult,
+    Array, Boxed, Diagnostic, DiagnosticKind, Global, Ident, Primitive, RunMode, SysOp, UiuaResult,
+    Value,
 };
 
 use crate::Uiua;
@@ -215,7 +211,6 @@ impl Uiua {
                     // Binding is a single inline function
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
                     self.compile_bind_function(&name, global_index, func, span)?;
-                    self.ct.scope.names.insert(name, global_index);
                 } else if sig.args == 0
                     && sig.outputs <= 1
                     && (sig.outputs > 0 || instrs.is_empty())
@@ -241,8 +236,8 @@ impl Uiua {
                             }
                         }
                     }
-                    self.ct.scope.names.insert(name.clone(), global_index);
-                    // Binding's instrs must be run
+                    self.compile_bind_sig(&name, global_index, sig, span)?;
+                    // Add binding instrs to top slices
                     instrs.push(Instr::BindGlobal {
                         name,
                         span,
@@ -259,7 +254,6 @@ impl Uiua {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);
                     self.compile_bind_function(&name, global_index, func, span)?;
-                    self.ct.scope.names.insert(name, global_index);
                 }
             }
             Err(e) => {
@@ -267,7 +261,6 @@ impl Uiua {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig.value, self);
                     self.compile_bind_function(&name, global_index, func, span)?;
-                    self.ct.scope.names.insert(name, global_index);
                 } else {
                     return Err(self.error_with_span(
                         binding.name.span.clone(),
@@ -294,15 +287,18 @@ impl Uiua {
     ) -> UiuaResult {
         self.validate_binding_name(name, &[], self.get_span(span))?;
         value.compress();
-        let global = Global::Val(value);
-        if index < self.asm.globals.len() {
-            self.asm.globals.make_mut()[index] = global;
-        } else {
-            while self.asm.globals.len() < index {
-                self.asm.globals.push(Global::Val(Value::default()));
-            }
-            self.asm.globals.push(global);
-        }
+        self.add_global_at(index, Global::Const(value));
+        Ok(())
+    }
+    pub(crate) fn compile_bind_sig(
+        &mut self,
+        name: &Ident,
+        index: usize,
+        sig: Signature,
+        _span: usize,
+    ) -> UiuaResult {
+        self.add_global_at(index, Global::Sig(sig));
+        self.ct.scope.names.insert(name.clone(), index);
         Ok(())
     }
     pub(crate) fn compile_bind_function(
@@ -313,16 +309,19 @@ impl Uiua {
         span: usize,
     ) -> UiuaResult {
         self.validate_binding_name(name, function.instrs(self), self.get_span(span))?;
-        let global = Global::Func(function);
+        self.ct.scope.names.insert(name.clone(), index);
+        self.add_global_at(index, Global::Func(function));
+        Ok(())
+    }
+    fn add_global_at(&mut self, index: usize, global: Global) {
         if index < self.asm.globals.len() {
             self.asm.globals.make_mut()[index] = global;
         } else {
             while self.asm.globals.len() < index {
-                self.asm.globals.push(Global::Val(Value::default()));
+                self.asm.globals.push(Global::Const(Value::default()));
             }
             self.asm.globals.push(global);
         }
-        Ok(())
     }
     fn validate_binding_name(&self, name: &Ident, instrs: &[Instr], span: Span) -> UiuaResult {
         let temp_function_count = self.count_temp_functions(instrs, &mut HashSet::new());
@@ -618,9 +617,10 @@ impl Uiua {
             .copied()
         {
             // Name exists in scope
-            match self.asm.globals.get(index).cloned() {
-                Some(Global::Val(val)) if call => self.push_instr(Instr::push(val)),
-                Some(Global::Val(val)) => {
+            let global = self.asm.globals[index].clone();
+            match global {
+                Global::Const(val) if call => self.push_instr(Instr::push(val)),
+                Global::Const(val) => {
                     let f = self.add_function(
                         FunctionId::Anonymous(span),
                         Signature::new(0, 1),
@@ -628,7 +628,7 @@ impl Uiua {
                     );
                     self.push_instr(Instr::PushFunc(f));
                 }
-                Some(Global::Func(f))
+                Global::Func(f)
                     if self.count_temp_functions(f.instrs(self), &mut HashSet::new()) == 0 =>
                 {
                     if call {
@@ -640,14 +640,14 @@ impl Uiua {
                         self.push_instr(Instr::PushFunc(f));
                     }
                 }
-                Some(Global::Func(f)) => {
+                Global::Func(f) => {
                     self.push_instr(Instr::PushFunc(f));
                     if call {
                         let span = self.add_span(span);
                         self.push_instr(Instr::Call(span));
                     }
                 }
-                None => self.push_instr(Instr::CallGlobal { index, call }),
+                Global::Sig(sig) => self.push_instr(Instr::CallGlobal { index, call, sig }),
             }
         } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
             self.push_instr(Instr::push(constant.value.clone()));

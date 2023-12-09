@@ -14,13 +14,12 @@ use ecow::{EcoString, EcoVec};
 use enum_iterator::Sequence;
 use instant::Duration;
 use parking_lot::Mutex;
-use serde::*;
 
 use crate::{
     algorithm, array::Array, boxed::Boxed, check::SigCheckError, constants, example_ua,
     function::*, lex::Span, parse::parse, value::Value, Assembly, Complex, Diagnostic,
-    DiagnosticKind, Ident, InputSrc, Inputs, IntoInputSrc, NativeSys, Primitive, Sp, SysBackend,
-    SysOp, TraceFrame, UiuaError, UiuaResult,
+    DiagnosticKind, Global, Ident, InputSrc, Inputs, IntoInputSrc, NativeSys, Primitive, Sp,
+    SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua interpreter
@@ -114,13 +113,6 @@ pub(crate) struct Runtime {
     pub(crate) backend: Arc<dyn SysBackend>,
     /// The thread interface
     thread: ThisThread,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub(crate) enum Global {
-    Val(Value),
-    Func(Function),
 }
 
 #[derive(Clone)]
@@ -262,6 +254,7 @@ impl<'a> Chunk<'a> {
         let slices = take(&mut self.env.asm.top_slices);
         let mut res = Ok(());
         for &slice in &slices[self.start..][..self.len] {
+            println!("{:?}", self.env.instrs(slice));
             res = self.env.call_slice(slice);
             if res.is_err() {
                 self.env.rt = Runtime {
@@ -539,8 +532,9 @@ code:
         let global = self.asm.globals[*idx].clone();
         drop(imports_gaurd);
         match global {
-            Global::Val(val) => self.push(val),
+            Global::Const(val) => self.push(val),
             Global::Func(f) => self.rt.function_stack.push(f),
+            Global::Sig(_) => {}
         }
         Ok(())
     }
@@ -630,12 +624,18 @@ code:
                     self.rt.stack.push(Value::clone(val));
                     Ok(())
                 }
-                &Instr::CallGlobal { index, call } => (|| {
+                &Instr::CallGlobal { index, call, .. } => (|| {
                     let global = self.asm.globals[index].clone();
                     match global {
-                        Global::Val(val) => self.rt.stack.push(val),
+                        Global::Const(val) => self.rt.stack.push(val),
                         Global::Func(f) if call => self.call(f)?,
                         Global::Func(f) => self.rt.function_stack.push(f),
+                        Global::Sig(_) => {
+                            return Err(self.error(
+                                "Signature global was not overwritten. \
+                                This is a bug in the interpreter.",
+                            ))
+                        }
                     }
                     Ok(())
                 })(),
@@ -1171,7 +1171,7 @@ code:
         let mut bindings = HashMap::new();
         for (name, idx) in &self.ct.scope.names {
             if !constants().iter().any(|c| c.name == name.as_ref()) {
-                if let Global::Val(val) = &self.asm.globals[*idx] {
+                if let Global::Const(val) = &self.asm.globals[*idx] {
                     bindings.insert(name.clone(), val.clone());
                 }
             }

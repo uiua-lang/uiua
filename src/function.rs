@@ -30,6 +30,7 @@ pub enum Instr {
     CallGlobal {
         index: usize,
         call: bool,
+        sig: Signature,
     },
     /// Bind a global value
     BindGlobal {

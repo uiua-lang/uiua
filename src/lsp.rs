@@ -189,7 +189,7 @@ mod server {
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Ident, PrimDocLine, Uiua,
+        Chunk, Ident, PrimDocLine, Uiua,
     };
 
     pub struct LspDoc {
@@ -515,7 +515,7 @@ mod server {
                 return Ok(None);
             };
             let mut env = Uiua::with_native_sys();
-            Ok(if env.load_str(&doc.input).is_ok() {
+            Ok(if env.load_str(&doc.input).and_then(Chunk::run).is_ok() {
                 let stack = env.take_stack();
                 let mut text = String::new();
                 for val in stack {

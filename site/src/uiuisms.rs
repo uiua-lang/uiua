@@ -100,7 +100,7 @@ macro_rules! uiuisms {
             for code in [$($code),*] {
                 println!("Testing Uiuism:\n{code}");
                 let mut env = uiua::Uiua::with_native_sys();
-                if let Err(e) = env.load_str(code) {
+                if let Err(e) = env.load_str(code).and_then(uiua::Chunk::run) {
                     panic!("Uiuism failed\n{code}\n{}", e.report());
                 }
                 if let Some(diag) = env.take_diagnostics().into_iter().next() {

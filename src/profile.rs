@@ -34,6 +34,10 @@ pub(crate) mod enabled {
     };
 
     use crossbeam_channel::{Receiver, Sender};
+    use indexmap::IndexMap;
+    use serde::{Deserialize, Serialize};
+
+    use crate::{Chunk, Uiua};
 
     const BENCHMARKS: &[(&str, &str)] = &[
         ("PRIMES", "▽¬∊:♭⊞×...+2⇡1000"),
@@ -104,7 +108,10 @@ Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3¤.
             print!("\rProfiling... warmup {}/{}", i + 1, WARMUP_RUNS);
             stdout().flush().unwrap();
             for (_, bench) in BENCHMARKS {
-                Uiua::with_native_sys().load_str(bench).unwrap();
+                Uiua::with_native_sys()
+                    .load_str(bench)
+                    .and_then(Chunk::run)
+                    .unwrap();
             }
         }
 
@@ -116,7 +123,10 @@ Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3¤.
             stdout().flush().unwrap();
             for (name, bench) in BENCHMARKS {
                 profile_scope!(name);
-                Uiua::with_native_sys().load_str(bench).unwrap();
+                Uiua::with_native_sys()
+                    .load_str(bench)
+                    .and_then(Chunk::run)
+                    .unwrap();
             }
         }
 
@@ -155,10 +165,6 @@ Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3¤.
         }};
     }
     pub(crate) use current_function_name;
-    use indexmap::IndexMap;
-    use serde::{Deserialize, Serialize};
-
-    use crate::Uiua;
     pub struct Scope {
         name: &'static str,
         start: Instant,

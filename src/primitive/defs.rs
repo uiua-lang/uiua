@@ -1257,23 +1257,23 @@ primitive!(
     ///
     /// For more complex inverse defining, see [setinv] and [setund].
     ([1], Rectify, OtherModifier, ("rectify", '⌅')),
-    /// Set the inverse of a function
+    /// Set the [un] of a function
     ///
     /// The first function is the uninverted function, and the second function is the inverse.
     /// ex: # Experimental!
-    ///   : F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
+    ///   : F ← ⌆(&p$"Forward _" .)(&p$"Backward _" .)
     ///   : ;F   @A
     ///   : ;°F  @B
     ///   : ;⍜F∘ @C
     ///
-    /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
+    /// Unlike built-in functions, [setun] cannot properly make inverses that save context for use in [under].
     /// This can lead to errors if you are unaware of it.
     /// ex! # Experimental!
-    ///   : F ← setinv+-
+    ///   : F ← ⌆+-
     ///   : ⍜F∘ 3 5
     ///
     /// For [under]-compatible inverse defining, see [setund].
-    ([2], SetInverse, OtherModifier, "setinv"),
+    ([2], SetInverse, OtherModifier, "setun", '⌆'),
     /// Set the [under]-compatible inverse of a function
     ///
     /// The first function will be called if the function is *outside* an [under].
@@ -1660,12 +1660,12 @@ primitive!(
     (1(2), Gen, Misc, "gen"),
     /// Randomly reorder the rows of an array with a seed
     ///
-    /// ex: deal0 [1 2 3 4 5]
-    /// ex: deal5 [1_2 3_4 5_6 7_8]
+    /// ex: 🂡0 [1 2 3 4 5]
+    /// ex: 🂡5 [1_2 3_4 5_6 7_8]
     /// If you don't care about a seed, just seed with [random].
-    /// ex: deal⚂ [1 2 3 4 5]
-    /// ex: deal⚂ [1_2 3_4 5_6 7_8]
-    (2, Deal, Misc, "deal"),
+    /// ex: 🂡⚂ [1 2 3 4 5]
+    /// ex: 🂡⚂ [1_2 3_4 5_6 7_8]
+    (2, Deal, Misc, "deal", '🂡'),
     /// Match a regex pattern
     ///
     /// Returns a rank-2 array of [box]ed strings, with one string per matching group and one row per match

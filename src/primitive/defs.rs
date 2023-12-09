@@ -1273,7 +1273,7 @@ primitive!(
     ///   : ⍜F∘ 3 5
     ///
     /// For [under]-compatible inverse defining, see [setund].
-    ([2], SetInverse, OtherModifier, "setun", '⌆'),
+    ([2], SetInverse, OtherModifier, "setun", '⊽'),
     /// Set the [under]-compatible inverse of a function
     ///
     /// The first function will be called if the function is *outside* an [under].
@@ -1299,7 +1299,7 @@ primitive!(
     ///   : ;⍜F(×10) 5
     ///
     /// Inverses set with [setund] cannot be used with [un]. For simpler inverse defining, see [setinv].
-    ([3], SetUnder, OtherModifier, "setund"),
+    ([3], SetUnder, OtherModifier, "setund", '⊻'),
     /// Discard the top stack value then call a function
     ///
     /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [gap] is useful.

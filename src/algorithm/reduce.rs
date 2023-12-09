@@ -156,6 +156,9 @@ fn generic_reduce(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
             let mut acc = rows.next().ok_or_else(|| {
                 env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
             })?;
+            if env.unpack_boxes() {
+                acc.unpack();
+            }
             for row in rows {
                 env.push(row);
                 env.push(acc);

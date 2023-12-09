@@ -254,7 +254,6 @@ impl<'a> Chunk<'a> {
         let slices = take(&mut self.env.asm.top_slices);
         let mut res = Ok(());
         for &slice in &slices[self.start..][..self.len] {
-            println!("{:?}", self.env.instrs(slice));
             res = self.env.call_slice(slice);
             if res.is_err() {
                 self.env.rt = Runtime {

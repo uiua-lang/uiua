@@ -913,6 +913,10 @@ code:
         self.function_stack.clear();
         take(&mut self.stack)
     }
+    // Return a reference to the stack
+    pub fn get_stack(&self) -> &Vec<Value> {
+        &self.stack
+    }
     /// Pop a function from the function stack
     pub fn pop_function(&mut self) -> UiuaResult<Function> {
         self.function_stack.pop().ok_or_else(|| {

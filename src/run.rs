@@ -913,7 +913,7 @@ code:
         self.function_stack.clear();
         take(&mut self.stack)
     }
-    // Return a reference to the stack
+    /// Return a reference to the stack
     pub fn get_stack(&self) -> &Vec<Value> {
         &self.stack
     }

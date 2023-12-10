@@ -169,6 +169,29 @@ impl Uiua {
         // Resolve signature
         match instrs_signature(&instrs) {
             Ok(mut sig) => {
+                // Runtime-dependent binding
+                if instrs.is_empty() {
+                    // Binding from the stack set above
+                    match &mut self.ct.scope.stack_height {
+                        Ok(height) => {
+                            if *height > 0 {
+                                sig = Signature::new(0, 1);
+                            }
+                            *height = height.saturating_sub(1);
+                        }
+                        Err(sp) => {
+                            let sp = sp.clone();
+                            return Err(self.error_with_span(
+                                sp.span,
+                                format!(
+                                    "This line's signature is undefined: {}. \
+                                        This prevents the later binding of {}.",
+                                    sp.value, name
+                                ),
+                            ));
+                        }
+                    }
+                }
                 // Validate signature
                 if let Some(declared_sig) = &binding.signature {
                     let sig_to_check = if let [Instr::PushFunc(f)] = instrs.as_slice() {
@@ -218,24 +241,6 @@ impl Uiua {
                     && !is_setinv
                     && !is_setund
                 {
-                    // Runtime-depending binding
-                    if instrs.is_empty() {
-                        // Binding from the stack set above
-                        match &mut self.ct.scope.stack_height {
-                            Ok(height) => *height = height.saturating_sub(1),
-                            Err(sp) => {
-                                let sp = sp.clone();
-                                return Err(self.error_with_span(
-                                    sp.span,
-                                    format!(
-                                        "This line's signature is undefined: {}. \
-                                        This prevents the later binding of {}.",
-                                        sp.value, name
-                                    ),
-                                ));
-                            }
-                        }
-                    }
                     self.compile_bind_sig(&name, global_index, sig, span)?;
                     // Add binding instrs to top slices
                     instrs.push(Instr::BindGlobal {

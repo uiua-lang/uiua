@@ -379,7 +379,7 @@ impl Report {
                 let end_char_pos = if span.start.line == span.end.line {
                     span.end.col - 1
                 } else {
-                    line.chars().count() as u32
+                    line.chars().count() as u16
                 };
                 let pre_color: String = line.chars().take(start_char_pos as usize).collect();
                 let color: String = line

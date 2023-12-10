@@ -604,7 +604,7 @@ mod server {
     }
 
     fn uiua_loc_to_lsp(loc: Loc) -> Position {
-        Position::new(loc.line - 1, loc.col - 1)
+        Position::new(loc.line as u32 - 1, loc.col as u32 - 1)
     }
 
     fn uiua_locs_to_lsp(start: Loc, end: Loc) -> Range {

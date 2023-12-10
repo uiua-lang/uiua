@@ -63,25 +63,18 @@ impl Error for LexError {}
 /// A location in a Uiua source file
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(from = "u64", into = "u64")]
+#[serde(from = "LocRep", into = "LocRep")]
 pub struct Loc {
     pub byte_pos: u32,
     pub char_pos: u32,
-    pub line: u32,
-    pub col: u32,
+    pub line: u16,
+    pub col: u16,
 }
 
-const BYTE_BITS: u64 = 22;
-const CHAR_BITS: u64 = 22;
-const LINE_BITS: u64 = 10;
-const _COL_BITS: u64 = 10;
+type LocRep = (u32, u32, u16, u16);
 
-impl From<u64> for Loc {
-    fn from(u: u64) -> Self {
-        let byte_pos = (u & ((1 << BYTE_BITS) - 1)) as u32;
-        let char_pos = ((u >> BYTE_BITS) & ((1 << CHAR_BITS) - 1)) as u32;
-        let line = ((u >> (BYTE_BITS + CHAR_BITS)) & ((1 << LINE_BITS) - 1)) as u32;
-        let col = ((u >> (BYTE_BITS + CHAR_BITS + LINE_BITS)) & ((1 << CHAR_BITS) - 1)) as u32;
+impl From<LocRep> for Loc {
+    fn from((byte_pos, char_pos, line, col): LocRep) -> Self {
         Self {
             byte_pos,
             char_pos,
@@ -91,31 +84,10 @@ impl From<u64> for Loc {
     }
 }
 
-impl From<Loc> for u64 {
+impl From<Loc> for LocRep {
     fn from(loc: Loc) -> Self {
-        let byte_pos = loc.byte_pos as u64;
-        let char_pos = loc.char_pos as u64;
-        let line = loc.line as u64;
-        let col = loc.col as u64;
-        byte_pos
-            | (char_pos << BYTE_BITS)
-            | (line << (BYTE_BITS + CHAR_BITS))
-            | (col << (BYTE_BITS + CHAR_BITS + LINE_BITS))
+        (loc.byte_pos, loc.char_pos, loc.line, loc.col)
     }
-}
-
-#[cfg(test)]
-#[test]
-fn loc_ser() {
-    let loc = Loc {
-        byte_pos: 1,
-        char_pos: 2,
-        line: 3,
-        col: 4,
-    };
-    let u: u64 = loc.into();
-    let loc2: Loc = u.into();
-    assert_eq!(loc, loc2);
 }
 
 impl fmt::Display for Loc {
@@ -277,8 +249,8 @@ impl CodeSpan {
     }
     /// Check if the span contains a line and column
     pub fn contains_line_col(&self, line: usize, col: usize) -> bool {
-        let line = line as u32;
-        let col = col as u32;
+        let line = line as u16;
+        let col = col as u16;
         if self.start.line == self.end.line {
             self.start.line == line && (self.start.col..=self.end.col).contains(&col)
         } else {
@@ -764,7 +736,7 @@ impl<'a> Lexer<'a> {
                         let mut start = start;
                         for (prim, frag) in prims {
                             let end = Loc {
-                                col: start.col + frag.chars().count() as u32,
+                                col: start.col + frag.chars().count() as u16,
                                 char_pos: start.char_pos + frag.chars().count() as u32,
                                 byte_pos: start.byte_pos + frag.len() as u32,
                                 ..start

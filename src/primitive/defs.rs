@@ -1238,7 +1238,8 @@ primitive!(
     /// ex: °[⊙⊙∘] [1 2 3]
     ///
     /// While more inverses exists, most of them are not useful on their own.
-    /// They are usually used within [under].
+    /// [under] also uses inverses, but is more powerful.
+    /// A function's inverse can be set with [setinv].
     ([1], Un, OtherModifier, ("un", '°')),
     /// Set a function as its own inverse
     ///
@@ -1255,7 +1256,7 @@ primitive!(
     ///
     /// For more complex inverse defining, see [setinv] and [setund].
     ([1], Rectify, OtherModifier, ("rectify", '⌅')),
-    /// Set the inverse of a function
+    /// Set the [un]-compatible inverse of a function
     ///
     /// The first function is the uninverted function, and the second function is the inverse.
     /// ex: # Experimental!
@@ -1442,6 +1443,8 @@ primitive!(
     /// ex: ⍜∩°□(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
     ///
     /// [under] works with [&fo], [&fc], [&tcpa], and [&tcpc]. It calls [&cl] when `g` is done.
+    ///
+    /// [setund] can be used to define a function's [under] behavior.
     ([2], Under, OtherModifier, ("under", '⍜')),
     /// Repeat a function while a condition holds
     ///

@@ -9,7 +9,8 @@ Uiua is not yet stable.
 - An entire Uiua codebase is now compiled before it is executed, rather than compiling and executing line-by-line
 - [`repeat` `⍥`](https://uiua.org/docs/repeat) can no longer use a negative number of repetitions
 ### Interpreter
-- Add the `uiua build` command, which emits bytecode
+- Add the `uiua build` command, which emits a `.uasm` bytecode file
+- `uiua run` can now run a `.uasm` bytecode file
 
 ## 0.6.1 - 2023-12-07
 ### Interpreter

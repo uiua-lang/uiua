@@ -1492,6 +1492,7 @@ code:
             .unwrap()?;
             #[cfg(target_arch = "wasm32")]
             let thread_stack = self
+                .rt
                 .thread
                 .children
                 .remove(&handle)
@@ -1515,6 +1516,7 @@ code:
                 .unwrap()?;
                 #[cfg(target_arch = "wasm32")]
                 let thread_stack = self
+                    .rt
                     .thread
                     .children
                     .remove(&handle)

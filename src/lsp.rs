@@ -188,7 +188,8 @@ mod server {
     use crate::{
         format::{format_str, FormatConfig},
         lex::Loc,
-        primitive::{PrimClass, PrimDocFragment}, Ident, PrimDocLine, Uiua,
+        primitive::{PrimClass, PrimDocFragment},
+        Ident, PrimDocLine, Uiua,
     };
 
     pub struct LspDoc {

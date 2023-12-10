@@ -140,7 +140,7 @@ impl Span {
 }
 
 /// The source of code input into the interpreter
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum InputSrc {
     /// Code from a file with a path
@@ -268,11 +268,9 @@ impl CodeSpan {
         let start = self.start;
         let mut end = self.start;
         end.char_pos += 1;
-        end.byte_pos += inputs
-            .get(&self.src)
-            .chars()
-            .next()
-            .map_or(0, char::len_utf8) as u32;
+        end.byte_pos += self.as_str(inputs, |s| {
+            s.chars().next().map_or(0, char::len_utf8) as u32
+        });
         end.col += 1;
         CodeSpan {
             start,
@@ -285,13 +283,9 @@ impl CodeSpan {
         let end = self.end;
         let mut start = self.end;
         start.char_pos = start.char_pos.saturating_sub(1);
-        start.byte_pos = start.byte_pos.saturating_sub(
-            inputs
-                .get(&self.src)
-                .chars()
-                .next_back()
-                .map_or(0, |c| c.len_utf8() as u32),
-        );
+        start.byte_pos = start.byte_pos.saturating_sub(self.as_str(inputs, |s| {
+            s.chars().next_back().map_or(0, char::len_utf8) as u32
+        }));
         start.col = start.col.saturating_sub(1);
         CodeSpan {
             start,

@@ -201,29 +201,29 @@ impl Value {
     pub fn row_len(&self) -> usize {
         self.shape().iter().skip(1).product()
     }
-    pub(crate) fn prototype_scalar(&self, env: &Uiua) -> Self {
+    pub(crate) fn proxy_scalar(&self, env: &Uiua) -> Self {
         match self {
-            Self::Num(_) => env.num_fill().unwrap_or_else(|_| f64::prototype()).into(),
+            Self::Num(_) => env.num_fill().unwrap_or_else(|_| f64::proxy()).into(),
             #[cfg(feature = "bytes")]
-            Self::Byte(_) => env.byte_fill().unwrap_or_else(|_| u8::prototype()).into(),
+            Self::Byte(_) => env.byte_fill().unwrap_or_else(|_| u8::proxy()).into(),
             Self::Complex(_) => env
                 .complex_fill()
-                .unwrap_or_else(|_| Complex::prototype())
+                .unwrap_or_else(|_| Complex::proxy())
                 .into(),
-            Self::Char(_) => env.char_fill().unwrap_or_else(|_| char::prototype()).into(),
-            Self::Box(_) => env.box_fill().unwrap_or_else(|_| Boxed::prototype()).into(),
+            Self::Char(_) => env.char_fill().unwrap_or_else(|_| char::proxy()).into(),
+            Self::Box(_) => env.box_fill().unwrap_or_else(|_| Boxed::proxy()).into(),
         }
     }
-    pub(crate) fn prototype_row(&self, env: &Uiua) -> Self {
+    pub(crate) fn proxy_row(&self, env: &Uiua) -> Self {
         if self.rank() == 0 {
-            return self.prototype_scalar(env);
+            return self.proxy_scalar(env);
         }
         let shape: Shape = self.shape()[1..].into();
         let elem_count = shape.iter().product();
         match self {
             Self::Num(_) => Array::new(
                 shape,
-                repeat(env.num_fill().unwrap_or_else(|_| f64::prototype()))
+                repeat(env.num_fill().unwrap_or_else(|_| f64::proxy()))
                     .take(elem_count)
                     .collect::<CowSlice<_>>(),
             )
@@ -231,28 +231,28 @@ impl Value {
             #[cfg(feature = "bytes")]
             Self::Byte(_) => Array::new(
                 shape,
-                repeat(env.byte_fill().unwrap_or_else(|_| u8::prototype()))
+                repeat(env.byte_fill().unwrap_or_else(|_| u8::proxy()))
                     .take(elem_count)
                     .collect::<CowSlice<_>>(),
             )
             .into(),
             Self::Complex(_) => Array::new(
                 shape,
-                repeat(env.complex_fill().unwrap_or_else(|_| Complex::prototype()))
+                repeat(env.complex_fill().unwrap_or_else(|_| Complex::proxy()))
                     .take(elem_count)
                     .collect::<CowSlice<_>>(),
             )
             .into(),
             Self::Char(_) => Array::new(
                 shape,
-                repeat(env.char_fill().unwrap_or_else(|_| char::prototype()))
+                repeat(env.char_fill().unwrap_or_else(|_| char::proxy()))
                     .take(elem_count)
                     .collect::<CowSlice<_>>(),
             )
             .into(),
             Self::Box(_) => Array::new(
                 shape,
-                repeat(env.box_fill().unwrap_or_else(|_| Boxed::prototype()))
+                repeat(env.box_fill().unwrap_or_else(|_| Boxed::proxy()))
                     .take(elem_count)
                     .collect::<CowSlice<_>>(),
             )

@@ -17,8 +17,8 @@ use crate::{
     grid_fmt::GridFmt,
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
-    value::Value, FunctionId, Ident, InputSrc, Inputs, Primitive, SysBackend, SysOp, Uiua, UiuaError,
-    UiuaResult,
+    value::Value,
+    FunctionId, Ident, InputSrc, Inputs, Primitive, SysBackend, SysOp, Uiua, UiuaError, UiuaResult,
 };
 
 // For now disallow any syscalls in the format config file.

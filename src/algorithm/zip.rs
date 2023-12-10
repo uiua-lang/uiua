@@ -180,7 +180,7 @@ fn each1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
         let new_shape = Shape::from(xs.shape());
         let is_empty = outputs > 0 && xs.row_count() == 0;
         if is_empty {
-            env.push(xs.prototype_scalar(env));
+            env.push(xs.proxy_scalar(env));
             if env.call_restore(f).is_ok() {
                 for i in 0..outputs {
                     new_values[i].push(env.pop("each's function result")?);
@@ -241,9 +241,9 @@ fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             }
             bin_pervade_generic(
                 &xs_shape,
-                slice::from_ref(&xs.prototype_scalar(env)),
+                slice::from_ref(&xs.proxy_scalar(env)),
                 &ys_shape,
-                slice::from_ref(&ys.prototype_scalar(env)),
+                slice::from_ref(&ys.proxy_scalar(env)),
                 env,
                 |x, y, env| {
                     env.push(y);
@@ -319,7 +319,7 @@ fn eachn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     let new_shape = Shape::from(args[0].shape());
     if is_empty {
         for arg in args.into_iter().rev() {
-            env.push(arg.prototype_scalar(env));
+            env.push(arg.proxy_scalar(env));
         }
         if env.call_restore(f).is_ok() {
             for i in 0..outputs {
@@ -382,7 +382,7 @@ fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
         let mut new_rows =
             multi_output(outputs, Value::builder(xs.row_count() + is_empty as usize));
         if is_empty {
-            env.push(xs.prototype_row(env));
+            env.push(xs.proxy_row(env));
             if env.call_restore(f).is_ok() {
                 for i in 0..outputs {
                     new_rows[i].add_row(env.pop("rows' function result")?, env)?;
@@ -422,8 +422,8 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     Vec::with_capacity(xs.row_count() + is_empty as usize),
                 );
                 if is_empty {
-                    env.push(ys.prototype_row(env));
-                    env.push(xs.prototype_row(env));
+                    env.push(ys.proxy_row(env));
+                    env.push(xs.proxy_row(env));
                     if env.call_restore(f).is_ok() {
                         for i in 0..outputs {
                             new_rows[i].push(env.pop("rows's function result")?);
@@ -454,8 +454,8 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             let is_empty = outputs > 0 && xs.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
             if is_empty {
-                env.push(ys.prototype_row(env));
-                env.push(xs.prototype_row(env));
+                env.push(ys.proxy_row(env));
+                env.push(xs.proxy_row(env));
                 if env.call_restore(f).is_ok() {
                     for i in 0..outputs {
                         new_rows[i].push(env.pop("rows's function result")?);
@@ -485,8 +485,8 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             let is_empty = outputs > 0 && ys.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
             if is_empty {
-                env.push(ys.prototype_row(env));
-                env.push(xs.prototype_row(env));
+                env.push(ys.proxy_row(env));
+                env.push(xs.proxy_row(env));
                 if env.call_restore(f).is_ok() {
                     for i in 0..outputs {
                         new_rows[i].push(env.pop("rows's function result")?);
@@ -545,10 +545,10 @@ fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             if v.row_count() == 1 {
                 Err(v.into_rows().next().unwrap())
             } else {
-                let proto = is_empty.then(|| v.prototype_row(env));
+                let proxy = is_empty.then(|| v.proxy_row(env));
                 row_count = row_count.max(v.row_count());
                 all_1 = false;
-                Ok(v.into_rows().chain(proto))
+                Ok(v.into_rows().chain(proxy))
             }
         })
         .collect();

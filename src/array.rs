@@ -435,8 +435,8 @@ pub trait ArrayValue: Clone + Debug + Display + GridFmt + ArrayCmp + Send + Sync
     fn get_fill(env: &Uiua) -> Result<Self, &'static str>;
     /// Hash the value
     fn array_hash<H: Hasher>(&self, hasher: &mut H);
-    /// Get the prototype value
-    fn prototype() -> Self;
+    /// Get the proxy value
+    fn proxy() -> Self;
     /// Delimiters for formatting
     fn format_delims() -> (&'static str, &'static str) {
         ("[", "]")
@@ -462,7 +462,7 @@ impl ArrayValue for f64 {
         };
         v.to_bits().hash(hasher)
     }
-    fn prototype() -> Self {
+    fn proxy() -> Self {
         0.0
     }
 }
@@ -475,7 +475,7 @@ impl ArrayValue for u8 {
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
     }
-    fn prototype() -> Self {
+    fn proxy() -> Self {
         0
     }
 }
@@ -494,7 +494,7 @@ impl ArrayValue for char {
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
     }
-    fn prototype() -> Self {
+    fn proxy() -> Self {
         ' '
     }
 }
@@ -507,7 +507,7 @@ impl ArrayValue for Boxed {
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.hash(hasher)
     }
-    fn prototype() -> Self {
+    fn proxy() -> Self {
         Boxed(Array::<f64>::new(tiny_vec![0], []).into())
     }
 }
@@ -522,7 +522,7 @@ impl ArrayValue for Complex {
             n.array_hash(hasher);
         }
     }
-    fn prototype() -> Self {
+    fn proxy() -> Self {
         Complex::new(0.0, 0.0)
     }
 }

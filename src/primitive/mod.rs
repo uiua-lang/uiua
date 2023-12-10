@@ -34,7 +34,8 @@ use crate::{
     check::instrs_signature,
     lex::AsciiToken,
     sys::*,
-    value::*, FunctionId, Uiua, UiuaError, UiuaResult,
+    value::*,
+    FunctionId, Uiua, UiuaError, UiuaResult,
 };
 
 /// Categories of primitives

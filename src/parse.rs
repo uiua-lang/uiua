@@ -103,6 +103,11 @@ impl fmt::Display for ParseError {
     }
 }
 
+const STYLE_MAX_WIDTH: usize = 40;
+const ADVICE_MAX_WIDTH: usize = 53;
+const WARNING_MAX_WIDTH: usize = 67;
+const ERROR_MAX_WIDTH: usize = 80;
+
 impl Error for ParseError {}
 
 /// Parse Uiua code into an AST
@@ -118,17 +123,67 @@ pub fn parse(
         tokens: Vec<Sp<crate::lex::Token>>,
         lex_errors: Vec<Sp<LexError>>,
     ) -> (Vec<Item>, Vec<Sp<ParseError>>, Vec<Diagnostic>) {
-        let errors = lex_errors
+        let mut errors: Vec<_> = lex_errors
             .into_iter()
             .map(|e| e.map(ParseError::Lex))
             .collect();
+        let mut diagnostics = Vec::new();
+
+        // Check for lines that are too long
+        for line in tokens.split(|t| matches!(t.value, Newline)) {
+            let mut heuristic = 0;
+            let mut first = None;
+            for tok in line {
+                heuristic += match &tok.value {
+                    Spaces | Comment => 0,
+                    Simple(CloseBracket | CloseCurly | CloseParen) => 0,
+                    Simple(Underscore) => 0,
+                    _ => {
+                        first = first.or(Some(&tok.span));
+                        1
+                    }
+                };
+            }
+            if heuristic <= STYLE_MAX_WIDTH {
+                continue;
+            }
+            let first = first.unwrap().clone();
+            let last = line.last().unwrap().span.clone();
+            let span = first.merge(last);
+            let kind = if heuristic > ERROR_MAX_WIDTH {
+                errors.push(span.sp(ParseError::LineTooLong(heuristic)));
+                continue;
+            } else if heuristic > WARNING_MAX_WIDTH {
+                DiagnosticKind::Warning
+            } else if heuristic > ADVICE_MAX_WIDTH {
+                DiagnosticKind::Advice
+            } else {
+                DiagnosticKind::Style
+            };
+            let max = match kind {
+                DiagnosticKind::Style => STYLE_MAX_WIDTH,
+                DiagnosticKind::Advice => ADVICE_MAX_WIDTH,
+                DiagnosticKind::Warning => WARNING_MAX_WIDTH,
+            };
+            diagnostics.push(Diagnostic::new(
+                format!(
+                    "Split this line into multiple lines \
+                    (heuristic: {heuristic}/{max})"
+                ),
+                span,
+                kind,
+                inputs.clone(),
+            ));
+        }
+
+        // Parse
         let mut parser = Parser {
             inputs,
             input: input.into(),
             tokens,
             index: 0,
             errors,
-            diagnostics: Vec::new(),
+            diagnostics,
         };
         let items = parser.items(true);
         if parser.errors.is_empty() && parser.index < parser.tokens.len() {
@@ -451,26 +506,6 @@ impl<'i> Parser<'i> {
         if words.is_empty() {
             None
         } else {
-            if let Err((width, span, kind)) = count_width(&words) {
-                if let Some(kind) = kind {
-                    let max = match kind {
-                        DiagnosticKind::Style => STYLE_MAX_WIDTH,
-                        DiagnosticKind::Advice => ADVICE_MAX_WIDTH,
-                        DiagnosticKind::Warning => WARNING_MAX_WIDTH,
-                    };
-                    self.diagnostics.push(Diagnostic::new(
-                        format!(
-                            "Split this line into multiple lines \
-                            (heuristic: {width}/{max})"
-                        ),
-                        span,
-                        kind,
-                        self.inputs.clone(),
-                    ));
-                } else {
-                    self.errors.push(span.sp(ParseError::LineTooLong(width)));
-                }
-            }
             Some(words)
         }
     }
@@ -1079,82 +1114,6 @@ pub(crate) fn trim_spaces(words: &[Sp<Word>], trim_end: bool) -> &[Sp<Word>] {
         return &[];
     }
     &words[start..end]
-}
-
-const STYLE_MAX_WIDTH: usize = 40;
-const ADVICE_MAX_WIDTH: usize = 53;
-const WARNING_MAX_WIDTH: usize = 67;
-const ERROR_MAX_WIDTH: usize = 80;
-
-fn count_width(words: &[Sp<Word>]) -> Result<usize, (usize, CodeSpan, Option<DiagnosticKind>)> {
-    let mut count = 0;
-    for word in words {
-        match &word.value {
-            Word::Char(_)
-            | Word::String(_)
-            | Word::FormatString(_)
-            | Word::Number(..)
-            | Word::Primitive(_)
-            | Word::MultilineString(_)
-            | Word::Placeholder(_) => count += 1,
-            Word::Ident(ident) => count += (ident.chars().count() / 2).max(1),
-            Word::Strand(_) => count += 1,
-            Word::Array(arr) => {
-                let mut max_width = 0;
-                for line in &arr.lines {
-                    max_width = max_width.max(count_width(line)?);
-                }
-                count += max_width + (arr.lines.len() == 1) as usize;
-            }
-            Word::Func(func) => {
-                let mut max_width = 0;
-                for line in &func.lines {
-                    max_width = max_width.max(count_width(line)?);
-                }
-                if func.lines.len() == 1 {
-                    count += max_width + 1;
-                } else {
-                    count = max_width.max(count + 1);
-                }
-            }
-            Word::Switch(sw) => {
-                if word.span.start.line == word.span.end.line {
-                    for br in &sw.branches {
-                        for line in &br.value.lines {
-                            count += count_width(line)?;
-                        }
-                    }
-                    count += sw.branches.len() + 1;
-                } else {
-                    let mut max_width = 0;
-                    for br in &sw.branches {
-                        for line in &br.value.lines {
-                            max_width = max_width.max(count_width(line)?);
-                        }
-                    }
-                    count = max_width.max(count + 1);
-                };
-            }
-            Word::Modified(m) => count += count_width(&m.operands)? + 1,
-            Word::Spaces | Word::BreakLine | Word::UnbreakLine | Word::Comment(_) => {}
-        }
-    }
-    if count > STYLE_MAX_WIDTH {
-        let first = words.first().unwrap().span.clone();
-        let last = words.last().unwrap().span.clone();
-        let kind = if count > ERROR_MAX_WIDTH {
-            None
-        } else if count > WARNING_MAX_WIDTH {
-            Some(DiagnosticKind::Warning)
-        } else if count > ADVICE_MAX_WIDTH {
-            Some(DiagnosticKind::Advice)
-        } else {
-            Some(DiagnosticKind::Style)
-        };
-        Err((count, first.merge(last), kind))
-    } else {
-        Ok(count)
-    }
 }
 
 fn single_word_and<'a, I>(words: I, mut f: impl FnMut(&Sp<Word>))

@@ -388,7 +388,7 @@ impl Uiua {
     pub fn inputs(&self) -> &Inputs {
         &self.asm.inputs
     }
-    /// Load a Uiua file from a path
+    /// Compile a Uiua file from a file at a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<Chunk> {
         let path = path.as_ref();
         let input: EcoString = fs::read_to_string(path)
@@ -397,12 +397,24 @@ impl Uiua {
         self.asm.inputs.files.insert(path.into(), input.clone());
         self.load_impl(&input, InputSrc::File(path.to_string_lossy().into()))
     }
-    /// Load a Uiua file from a string
+    /// Compile a Uiua file from a string
     pub fn load_str<'a>(&'a mut self, input: &str) -> UiuaResult<Chunk<'a>> {
         let src = self.asm.inputs.add_src((), input);
         self.load_impl(input, src)
     }
-    /// Load a Uiua file from a string with a path for error reporting
+    /// Run a string as Uiua code
+    ///
+    /// This is equivalent to [`Uiua::load_str`]`(&mut self, intput).and_then(`[`Chunk::run`]`)`
+    pub fn run_str(&mut self, input: &str) -> UiuaResult {
+        self.load_str(input)?.run()
+    }
+    /// Run a file as Uiua code
+    ///
+    /// This is equivalent to [`Uiua::load_file`]`(&mut self, path).and_then(`[`Chunk::run`]`)`
+    pub fn run_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
+        self.load_file(path)?.run()
+    }
+    /// Compile a Uiua file from a string with a path for error reporting
     pub fn load_str_src<'a, S: IntoInputSrc>(
         &'a mut self,
         input: &str,

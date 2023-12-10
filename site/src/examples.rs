@@ -69,10 +69,10 @@ pub const EXAMPLES: &[&str] = &[
 #[cfg(test)]
 #[test]
 fn test_examples() {
-    use uiua::{Chunk, Uiua};
+    use uiua::Uiua;
     for example in EXAMPLES {
         let mut env = Uiua::with_native_sys();
-        if let Err(e) = env.load_str(example).and_then(Chunk::run) {
+        if let Err(e) = env.run_str(example) {
             panic!("Example failed:\n{example}\n{e}");
         } else if let Some(diag) = env.take_diagnostics().into_iter().next() {
             panic!("Example failed:\n{example}\n{diag}");

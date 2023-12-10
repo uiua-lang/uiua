@@ -17,8 +17,7 @@ use crate::{
     grid_fmt::GridFmt,
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
-    value::Value,
-    Chunk, FunctionId, Ident, InputSrc, Inputs, Primitive, SysBackend, SysOp, Uiua, UiuaError,
+    value::Value, FunctionId, Ident, InputSrc, Inputs, Primitive, SysBackend, SysOp, Uiua, UiuaError,
     UiuaResult,
 };
 
@@ -119,7 +118,7 @@ macro_rules! create_config {
                 fn from_file(file_path: PathBuf) -> UiuaResult<Self> {
                     let mut env = Uiua::with_backend(FormatConfigBackend)
                         .print_diagnostics(true);
-                    env.load_file(file_path).and_then(Chunk::run)?;
+                    env.run_file(file_path)?;
                     let mut bindings = env.all_values_in_scope();
                     $(
                         let $name = {

@@ -34,8 +34,7 @@ use crate::{
     check::instrs_signature,
     lex::AsciiToken,
     sys::*,
-    value::*,
-    Chunk, FunctionId, Uiua, UiuaError, UiuaResult,
+    value::*, FunctionId, Uiua, UiuaError, UiuaResult,
 };
 
 /// Categories of primitives
@@ -1059,7 +1058,7 @@ impl PrimExample {
     pub fn output(&self) -> &Result<Vec<String>, String> {
         self.output.get_or_init(|| {
             let env = &mut Uiua::with_native_sys();
-            match env.load_str(&self.input).and_then(Chunk::run) {
+            match env.run_str(&self.input) {
                 Ok(()) => Ok(env.take_stack().into_iter().map(|val| val.show()).collect()),
                 Err(e) => Err(e
                     .to_string()
@@ -1229,7 +1228,7 @@ mod tests {
                     }
                     println!("{prim} example:\n{}", ex.input);
                     let mut env = Uiua::with_native_sys();
-                    if let Err(e) = env.load_str(&ex.input).and_then(Chunk::run) {
+                    if let Err(e) = env.run_str(&ex.input) {
                         if !ex.should_error {
                             panic!("\nExample failed:\n{}\n{}", ex.input, e.report());
                         }

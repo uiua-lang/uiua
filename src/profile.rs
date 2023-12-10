@@ -37,7 +37,7 @@ pub(crate) mod enabled {
     use indexmap::IndexMap;
     use serde::{Deserialize, Serialize};
 
-    use crate::{Chunk, Uiua};
+    use crate::Uiua;
 
     const BENCHMARKS: &[(&str, &str)] = &[
         ("PRIMES", "▽¬∊:♭⊞×...+2⇡1000"),
@@ -108,10 +108,7 @@ Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3¤.
             print!("\rProfiling... warmup {}/{}", i + 1, WARMUP_RUNS);
             stdout().flush().unwrap();
             for (_, bench) in BENCHMARKS {
-                Uiua::with_native_sys()
-                    .load_str(bench)
-                    .and_then(Chunk::run)
-                    .unwrap();
+                Uiua::with_native_sys().run_str(bench).unwrap();
             }
         }
 
@@ -123,10 +120,7 @@ Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3¤.
             stdout().flush().unwrap();
             for (name, bench) in BENCHMARKS {
                 profile_scope!(name);
-                Uiua::with_native_sys()
-                    .load_str(bench)
-                    .and_then(Chunk::run)
-                    .unwrap();
+                Uiua::with_native_sys().run_str(bench).unwrap();
             }
         }
 

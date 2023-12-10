@@ -16,14 +16,14 @@ The main entry point is the [`Uiua`] struct, which is the Uiua runtime. It must 
 
 [`Value`] is the generic value type. It wraps one of four [`Array`] types.
 
-You can load a [`Chunk`] of code with [`Uiua::load_str`] or [`Uiua::load_file`].
+You can run Uiua code with [`Uiua::run_str`] or [`Uiua::run_file`].
 
-Then, run the [`Chunk`] with [`Chunk::run`].
+If you want to compile and run code separately, you can load a [`Chunk`] of code with [`Uiua::load_str`] or [`Uiua::load_file`]. Then, run the [`Chunk`] with [`Chunk::run`].
 ```rust
 use uiua::*;
 
 let mut uiua = Uiua::with_native_sys();
-uiua.load_str("&p + 1 2").and_then(Chunk::run).unwrap();
+uiua.run_str("&p + 1 2").unwrap();
 ```
 You can push values onto the stack with [`Uiua::push`]. When you're done, you can get the results with [`Uiua::pop`], [`Uiua::take_stack`], or one of numerous pop+conversion convenience functions.
 ```rust
@@ -32,7 +32,7 @@ use uiua::*;
 let mut uiua = Uiua::with_native_sys();
 uiua.push(1);
 uiua.push(2);
-uiua.load_str("+").and_then(Chunk::run).unwrap();
+uiua.run_str("+").unwrap();
 let res = uiua.pop_int().unwrap();
 assert_eq!(res, 3);
 ```
@@ -49,7 +49,7 @@ uiua.create_bind_function("MyAdd", (2, 1), |uiua| {
     Ok(())
 }).unwrap();
 
-uiua.load_str("MyAdd 2 3").and_then(Chunk::run).unwrap();
+uiua.run_str("MyAdd 2 3").unwrap();
 let res = uiua.pop_num().unwrap();
 assert_eq!(res, 5.0);
 ```

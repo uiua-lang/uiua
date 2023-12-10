@@ -526,9 +526,9 @@ fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
             {
                 return Err(env.error(format!(
                     "Cannot {} arrays with different number of rows {} and {}",
+                    Primitive::Rows.format(),
                     args[a].row_count(),
                     args[b].row_count(),
-                    Primitive::Rows.format(),
                 )));
             }
         }

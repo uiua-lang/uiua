@@ -525,6 +525,7 @@ impl Uiua {
                             {
                             }
                         }
+                        Instr::CallGlobal { sig, .. } if *sig == (0, 1) => {}
                         _ => {
                             return Err(
                                 self.error_with_span(word.span, "Strand cannot contain functions")

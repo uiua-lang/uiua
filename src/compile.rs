@@ -495,6 +495,17 @@ impl Uiua {
                 }
                 self.push_instr(Instr::BeginArray);
                 let inner = self.compile_words(items, true)?;
+                if !inner.is_empty()
+                    && inner.iter().all(
+                        |instr| matches!(instr, Instr::Push(Value::Char(arr)) if arr.rank() == 0),
+                    )
+                {
+                    self.diagnostic_with_span(
+                        "Stranded characters should instead be written as a string",
+                        DiagnosticKind::Advice,
+                        word.span.clone(),
+                    );
+                }
                 let mut instrs = inner.iter();
                 while let Some(instr) = instrs.next() {
                     match instr {
@@ -545,8 +556,21 @@ impl Uiua {
                 }
                 self.push_instr(Instr::BeginArray);
                 let mut inner = Vec::new();
+                let line_count = arr.lines.len();
                 for lines in arr.lines.into_iter().rev() {
                     inner.extend(self.compile_words(lines, true)?);
+                }
+                if line_count <= 1
+                    && !inner.is_empty()
+                    && inner.iter().all(
+                        |instr| matches!(instr, Instr::Push(Value::Char(arr)) if arr.rank() == 0),
+                    )
+                {
+                    self.diagnostic_with_span(
+                        "An array of characters should instead be written as a string",
+                        DiagnosticKind::Advice,
+                        word.span.clone(),
+                    );
                 }
                 let span = self.add_span(word.span.clone());
                 let instrs = self.ct.new_functions.last_mut().unwrap();

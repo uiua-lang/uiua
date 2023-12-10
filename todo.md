@@ -2,6 +2,11 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
+- Under reshape
+- LSP
+  - Rename
+  - Signatures
+  - Smarter idents
 - Multimedia
   - Sound input
   - Webcam input

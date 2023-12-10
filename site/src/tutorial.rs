@@ -591,9 +591,9 @@ fn TutorialTypes() -> impl IntoView {
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>
         <p>"Character literals, denoted with a preceding "<code>"@"</code>", create rank 0 (scalar) character arrays."</p>
         <Editor example="@a @b"/>
-        <Editor example="[@u @i @u @a]"/>
+        <Editor example="[@u @i @u @a]"/> // Should fail
         <p>"Characters like newline or null need to be escaped with "<code>"\\"</code>", but spaces do not."</p>
-        <Editor example="[@\\r @\\0 @ ]"/>
+        <Editor example="[@\\r @\\0 @ ]"/> // Should fail
         <p>"If you don't like the significant whitespace of "<code>"@ "</code>", "<code>"@\\s"</code>" is also space."</p>
         <p>"String literals, delimited by "<code>"\""</code>"s, create rank 1 character arrays."</p>
         <Editor example="△.\"Hello, World!\""/>

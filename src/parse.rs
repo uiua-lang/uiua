@@ -82,7 +82,9 @@ impl fmt::Display for ParseError {
             ParseError::FunctionNotAllowed => write!(
                 f,
                 "Inline functions are only allowed in modifiers \
-                or as the only item in a binding"
+                or as the only item in a binding. \
+                If you want to visually separate this code, \
+                use spaces."
             ),
             ParseError::SplitInModifier => write!(
                 f,
@@ -885,7 +887,7 @@ impl<'i> Parser<'i> {
                     }
                 }
                 Word::Func(func) => {
-                    if !allow_func {
+                    if !allow_func && func.closed {
                         self.errors
                             .push(word.span.clone().sp(ParseError::FunctionNotAllowed));
                     }

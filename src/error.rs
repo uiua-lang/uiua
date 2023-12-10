@@ -344,7 +344,10 @@ impl Report {
         T: fmt::Display,
     {
         let mut fragments = Vec::new();
-        for (message, span) in errors {
+        for (i, (message, span)) in errors.into_iter().enumerate() {
+            if i > 0 {
+                fragments.push(ReportFragment::Newline);
+            }
             fragments.push(ReportFragment::Colored(kind.str().into()));
             fragments.push(ReportFragment::Plain(": ".into()));
             for (i, line) in message.to_string().lines().enumerate() {

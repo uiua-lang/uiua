@@ -1196,6 +1196,10 @@ primitive!(
     ///
     /// This can be used to split an array by a delimiter.
     /// ex: ⊜□ ≠@ . $ Hey there friendo
+    /// You can nest [partition]s to split by multiple delimiters and create a multi-dimensional array.
+    /// ex: $ 1 1 2 3
+    ///   : $ 5 8 13 21
+    ///   : ⊜(⊜⋕≠@ .)≠@\n.
     ///
     /// [under][partition] works if [partition]'s function is [under]able.
     /// ex: ⍜⊜□⇌ ≠@ . $ These are some words

@@ -215,6 +215,9 @@ impl Value {
         }
     }
     pub(crate) fn prototype_row(&self, env: &Uiua) -> Self {
+        if self.rank() == 0 {
+            return self.prototype_scalar(env);
+        }
         let shape: Shape = self.shape()[1..].into();
         let elem_count = shape.iter().product();
         match self {

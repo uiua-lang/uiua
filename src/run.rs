@@ -757,7 +757,7 @@ code:
                         let mut s = String::new();
                         for (i, part) in parts.into_iter().enumerate() {
                             if i > 0 {
-                                s.push_str(&env.pop(FormatArg(i))?.to_string());
+                                s.push_str(&env.pop(("format argument", i))?.to_string());
                             }
                             s.push_str(&part);
                         }
@@ -1639,10 +1639,9 @@ impl StackArg for String {
     }
 }
 
-struct FormatArg(usize);
-impl StackArg for FormatArg {
+impl StackArg for (&'static str, usize) {
     fn arg_name(self) -> String {
-        format!("format arg {}", self.0)
+        format!("{} {}", self.0, self.1)
     }
 }
 

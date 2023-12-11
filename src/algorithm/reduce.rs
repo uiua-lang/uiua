@@ -325,12 +325,17 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
     let iterable_count = sig.args - sig.outputs;
     let mut arrays = Vec::with_capacity(iterable_count);
     for i in 0..iterable_count {
-        let val = env.pop(i + 1)?;
+        let val = env.pop(("iterated array", i + 1))?;
         arrays.push(if val.row_count() == 1 {
             Err(val.into_rows().next().unwrap())
         } else {
             Ok(val.into_rows())
         });
+    }
+    if env.stack_height() < sig.outputs {
+        for i in 0..sig.outputs {
+            env.pop(("accumulator", i + 1))?;
+        }
     }
     for i in 0..iterable_count {
         for j in i + 1..iterable_count {

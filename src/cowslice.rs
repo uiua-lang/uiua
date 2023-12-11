@@ -3,7 +3,6 @@ use std::{
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
-    iter::{Skip, Take},
     ops::{Bound, Deref, RangeBounds},
     ptr,
 };
@@ -134,7 +133,7 @@ impl<T: Clone> CowSlice<T> {
     /// Ensure that the capacity is at least `min`
     pub fn reserve_min(&mut self, min: usize) {
         if self.data.capacity() < min {
-            self.modify(|vec| vec.reserve(vec.capacity().max(min) - vec.len()))
+            self.modify(|vec| vec.reserve(min - vec.len()))
         }
     }
     pub fn split_off(&mut self, at: usize) -> Self {
@@ -301,12 +300,33 @@ impl<T: Hash> Hash for CowSlice<T> {
 
 impl<T: Clone> IntoIterator for CowSlice<T> {
     type Item = T;
-    type IntoIter = Take<Skip<<EcoVec<T> as IntoIterator>::IntoIter>>;
+    type IntoIter = CowSliceIntoIter<T>;
     fn into_iter(self) -> Self::IntoIter {
-        self.data
-            .into_iter()
-            .skip(self.start)
-            .take(self.end - self.start)
+        CowSliceIntoIter {
+            data: self.data,
+            start: self.start,
+            end: self.end,
+        }
+    }
+}
+
+/// An iterator over a CowSlice
+pub struct CowSliceIntoIter<T> {
+    data: EcoVec<T>,
+    start: usize,
+    end: usize,
+}
+
+impl<T: Clone> Iterator for CowSliceIntoIter<T> {
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.start >= self.end {
+            None
+        } else {
+            let item = self.data[self.start].clone();
+            self.start += 1;
+            Some(item)
+        }
     }
 }
 

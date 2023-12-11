@@ -640,7 +640,11 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     #[track_caller]
     /// Create an array from row arrays
-    pub fn from_row_arrays(values: impl IntoIterator<Item = Self>, env: &Uiua) -> UiuaResult<Self> {
+    pub fn from_row_arrays<V>(values: V, env: &Uiua) -> UiuaResult<Self>
+    where
+        V: IntoIterator<Item = Self>,
+        V::IntoIter: ExactSizeIterator,
+    {
         Self::from_row_arrays_impl(values, env)
     }
     #[track_caller]
@@ -648,32 +652,36 @@ impl<T: ArrayValue> Array<T> {
     ///
     /// # Panics
     /// Panics if the row arrays have incompatible shapes
-    pub fn from_row_arrays_infallible(values: impl IntoIterator<Item = Self>) -> Self {
+    pub fn from_row_arrays_infallible<V>(values: V) -> Self
+    where
+        V: IntoIterator<Item = Self>,
+        V::IntoIter: ExactSizeIterator,
+    {
         Self::from_row_arrays_impl(values, &()).unwrap()
     }
     #[track_caller]
-    fn from_row_arrays_impl<C: FillContext>(
-        values: impl IntoIterator<Item = Self>,
-        ctx: &C,
-    ) -> Result<Self, C::Error> {
+    fn from_row_arrays_impl<V, C>(values: V, ctx: &C) -> Result<Self, C::Error>
+    where
+        V: IntoIterator<Item = Self>,
+        V::IntoIter: ExactSizeIterator,
+        C: FillContext,
+    {
         let mut row_values = values.into_iter();
-        let Some(mut value) = row_values.next() else {
+        let total_rows = row_values.len();
+        let Some(mut arr) = row_values.next() else {
             return Ok(Self::default());
         };
-        let mut count = 1;
-        for row in row_values {
-            count += 1;
-            if count == 2 {
-                value.couple_impl(row, ctx)?;
-            } else {
-                value.append(row, ctx)?;
+        if let Some(row) = row_values.next() {
+            let total_elements = total_rows * arr.shape().iter().product::<usize>();
+            arr.data.reserve_min(total_elements);
+            arr.couple_impl(row, ctx)?;
+            for row in row_values {
+                arr.append(row, ctx)?;
             }
+        } else {
+            arr.shape.insert(0, 1);
         }
-        if count == 1 {
-            value.shape.insert(0, 1);
-        }
-        value.validate_shape();
-        Ok(value)
+        Ok(arr)
     }
 }
 

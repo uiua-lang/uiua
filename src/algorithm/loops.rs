@@ -206,7 +206,7 @@ pub fn ungroup(env: &mut Uiua) -> UiuaResult {
 }
 
 impl Value {
-    fn partition_groups(&self, markers: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
+    fn partition_groups(self, markers: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
         Ok(match self {
             Value::Num(arr) => arr
                 .partition_groups(markers, env)?
@@ -235,7 +235,7 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     fn partition_groups(
-        &self,
+        self,
         markers: &[isize],
         env: &Uiua,
     ) -> UiuaResult<impl Iterator<Item = Self>> {
@@ -248,7 +248,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut groups = Vec::new();
         let mut last_marker = isize::MAX;
-        for (row, &marker) in self.rows().zip(markers) {
+        for (row, &marker) in self.into_rows().zip(markers) {
             if marker > 0 {
                 if marker != last_marker {
                     groups.push(Vec::new());
@@ -274,7 +274,7 @@ pub fn group(env: &mut Uiua) -> UiuaResult {
 }
 
 impl Value {
-    fn group_groups(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
+    fn group_groups(self, indices: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
         Ok(match self {
             Value::Num(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             #[cfg(feature = "bytes")]
@@ -287,11 +287,7 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    fn group_groups(
-        &self,
-        indices: &[isize],
-        env: &Uiua,
-    ) -> UiuaResult<impl Iterator<Item = Self>> {
+    fn group_groups(self, indices: &[isize], env: &Uiua) -> UiuaResult<impl Iterator<Item = Self>> {
         if indices.len() != self.row_count() {
             return Err(env.error(format!(
                 "Cannot group array of shape {} with indices of length {}",
@@ -316,7 +312,7 @@ impl<T: ArrayValue> Array<T> {
 
 fn collapse_groups(
     prim: Primitive,
-    get_groups: impl Fn(&Value, &[isize], &Uiua) -> UiuaResult<Vec<Value>>,
+    get_groups: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Vec<Value>>,
     agg_indices_error: &'static str,
     red_indices_error: &'static str,
     env: &mut Uiua,
@@ -324,16 +320,15 @@ fn collapse_groups(
     let f = env.pop_function()?;
     let sig = f.signature();
     match (sig.args, sig.outputs) {
-        (0 | 1, n) => {
-            let indices = env.pop(1)?;
-            let indices = indices.as_ints(env, agg_indices_error)?;
+        (0 | 1, outputs) => {
+            let indices = env.pop(1)?.as_ints(env, agg_indices_error)?;
             let values = env.pop(2)?;
-            let groups = get_groups(&values, &indices, env)?;
-            let mut rows = multi_output(n, Vec::with_capacity(groups.len()));
+            let groups = get_groups(values, &indices, env)?;
+            let mut rows = multi_output(outputs, Vec::with_capacity(groups.len()));
             for group in groups {
                 env.push(group);
                 env.call(f.clone())?;
-                for i in 0..n.max(1) {
+                for i in 0..outputs.max(1) {
                     let value = env.pop(|| format!("{}'s function result", prim.format()))?;
                     if sig.args == 1 {
                         rows[i].push(value);
@@ -346,10 +341,9 @@ fn collapse_groups(
         }
         (2, 1) => {
             let mut acc = env.pop(1)?;
-            let indices = env.pop(2)?;
-            let indices = indices.as_ints(env, red_indices_error)?;
+            let indices = env.pop(2)?.as_ints(env, red_indices_error)?;
             let values = env.pop(3)?;
-            let groups = get_groups(&values, &indices, env)?;
+            let groups = get_groups(values, &indices, env)?;
             for row in groups {
                 env.push(row);
                 env.push(acc);

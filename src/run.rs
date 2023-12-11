@@ -1555,12 +1555,13 @@ code:
         let ids = id.as_natural_array(self, "Thread id must be an array of natural numbers")?;
         let mut values = Vec::with_capacity(ids.data.len());
         for id in ids.data {
-            values.push(
-                self.channel(id)?
-                    .recv
-                    .recv()
-                    .map_err(|_| self.error("Thread channel closed"))?,
-            );
+            values.push(self.channel(id)?.recv.recv().map_err(|_| {
+                if let Err(e) = self.wait(id.into()) {
+                    e
+                } else {
+                    self.error("Thread channel closed")
+                }
+            })?);
         }
         let mut val = Value::from_row_values(values, self)?;
         let mut shape = ids.shape;
@@ -1574,7 +1575,13 @@ code:
         let value = match self.channel(id)?.recv.try_recv() {
             Ok(value) => value,
             Err(TryRecvError::Empty) => return Err(self.error("No value available")),
-            Err(_) => return Err(self.error("Thread channel closed")),
+            Err(_) => {
+                return Err(if let Err(e) = self.wait(id.into()) {
+                    e
+                } else {
+                    self.error("Thread channel closed")
+                })
+            }
         };
         self.push(value);
         Ok(())

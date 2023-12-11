@@ -550,7 +550,6 @@ impl<'a> Formatter<'a> {
         match &word.value {
             Word::Number(s, n) => {
                 let grid_str = n.grid_string();
-                dbg!(&grid_str, s);
                 let formatted =
                     if grid_str.chars().count() < s.trim_end_matches('i').chars().count() {
                         grid_str

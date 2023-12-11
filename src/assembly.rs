@@ -90,13 +90,13 @@ impl Inputs {
 }
 
 impl Serialize for Instr {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         InstrRep::from(self.clone()).serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for Instr {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         InstrRep::deserialize(deserializer).map(Self::from)
     }
 }
@@ -104,13 +104,10 @@ impl<'de> Deserialize<'de> for Instr {
 #[derive(Serialize, Deserialize)]
 enum InstrRep {
     Comment(Ident),
-    Push(Value),
     CallGlobal(usize, bool, Signature),
     BindGlobal(Ident, usize, usize),
     BeginArray,
     EndArray(bool, usize),
-    Prim(Primitive, usize),
-    ImplPrim(ImplPrimitive, usize),
     Call(usize),
     PushFunc(Function),
     Switch(usize, Signature, usize),
@@ -128,6 +125,12 @@ enum InstrRep {
     DropTemp(TempStack, usize, usize),
     PushSig(Signature),
     PopSig,
+    #[serde(untagged)]
+    Push(Value),
+    #[serde(untagged)]
+    Prim(Primitive, usize),
+    #[serde(untagged)]
+    ImplPrim(ImplPrimitive, usize),
 }
 
 impl From<Instr> for InstrRep {

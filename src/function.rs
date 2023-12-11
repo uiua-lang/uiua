@@ -9,6 +9,7 @@ use std::{
 use ecow::{EcoString, EcoVec};
 use enum_iterator::Sequence;
 use serde::*;
+use serde_tuple::*;
 
 use crate::{
     lex::CodeSpan,
@@ -339,28 +340,12 @@ impl fmt::Display for Instr {
 }
 
 /// A Uiua function
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(
-    from = "(FunctionId, Signature, FuncSlice)",
-    into = "(FunctionId, Signature, FuncSlice)"
-)]
+#[derive(Clone, Serialize_tuple, Deserialize_tuple)]
 pub struct Function {
     /// The function's id
     pub id: FunctionId,
-    slice: FuncSlice,
     signature: Signature,
-}
-
-impl From<(FunctionId, Signature, FuncSlice)> for Function {
-    fn from((id, signature, slice): (FunctionId, Signature, FuncSlice)) -> Self {
-        Self::new(id, signature, slice)
-    }
-}
-
-impl From<Function> for (FunctionId, Signature, FuncSlice) {
-    fn from(func: Function) -> Self {
-        (func.id, func.signature, func.slice)
-    }
+    slice: FuncSlice,
 }
 
 /// A range of compiled instructions
@@ -628,13 +613,14 @@ fn _recurse_instrs<T>(
 
 /// A Uiua function id
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum FunctionId {
+    /// Just a primitive
+    Primitive(Primitive),
     /// A named function
     Named(Ident),
     /// An anonymous function
     Anonymous(CodeSpan),
-    /// Just a primitive
-    Primitive(Primitive),
     /// The top-level function
     Main,
     #[doc(hidden)]

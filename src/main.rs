@@ -559,7 +559,7 @@ enum App {
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },
-    #[clap(about = "Build an assembly")]
+    #[clap(about = "Build an assembly (the .uasm format is currently unstable)")]
     Build {
         path: Option<PathBuf>,
         #[clap(short, long, help = "The path to the output file")]

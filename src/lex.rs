@@ -2,6 +2,7 @@ use std::{error::Error, fmt, hash::Hash, ops::Range, path::Path};
 
 use ecow::EcoString;
 use serde::*;
+use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{Inputs, Primitive};
@@ -62,32 +63,14 @@ impl Error for LexError {}
 
 /// A location in a Uiua source file
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(from = "LocRep", into = "LocRep")]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize_tuple, Deserialize_tuple,
+)]
 pub struct Loc {
     pub byte_pos: u32,
     pub char_pos: u32,
     pub line: u16,
     pub col: u16,
-}
-
-type LocRep = (u32, u32, u16, u16);
-
-impl From<LocRep> for Loc {
-    fn from((byte_pos, char_pos, line, col): LocRep) -> Self {
-        Self {
-            byte_pos,
-            char_pos,
-            line,
-            col,
-        }
-    }
-}
-
-impl From<Loc> for LocRep {
-    fn from(loc: Loc) -> Self {
-        (loc.byte_pos, loc.char_pos, loc.line, loc.col)
-    }
 }
 
 impl fmt::Display for Loc {
@@ -180,14 +163,14 @@ impl IntoInputSrc for () {
 }
 
 /// A span in a Uiua source file
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize_tuple, Deserialize_tuple)]
 pub struct CodeSpan {
+    /// The path of the file
+    pub src: InputSrc,
     /// The starting location
     pub start: Loc,
     /// The ending location
     pub end: Loc,
-    /// The path of the file
-    pub src: InputSrc,
 }
 
 impl fmt::Debug for CodeSpan {

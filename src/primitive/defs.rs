@@ -91,12 +91,14 @@ macro_rules! primitive {
     ),* $(,)?) => {
         /// A built-in function
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence, Serialize, Deserialize)]
+        #[serde(rename_all = "snake_case")]
         pub enum Primitive {
             $(
                 #[doc = $doc_rust]
                 $variant,
             )*
             /// System function
+            #[serde(untagged)]
             Sys(SysOp)
         }
 
@@ -1809,6 +1811,7 @@ macro_rules! impl_primitive {
         /// Primitives that exist as an implementation detail
         #[doc(hidden)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence, Serialize, Deserialize)]
+        #[serde(rename_all = "snake_case")]
         pub enum ImplPrimitive {
             $($variant,)*
         }

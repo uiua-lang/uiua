@@ -53,6 +53,7 @@ macro_rules! sys_op {
     ),* $(,)?) => {
         /// A system function
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence, Serialize, Deserialize)]
+        #[serde(rename_all = "snake_case")]
         pub enum SysOp {
             $(
                 #[doc = $doc_rust]

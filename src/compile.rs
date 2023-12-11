@@ -5,7 +5,7 @@ use std::{
     path::Path,
 };
 
-use ecow::{EcoString, EcoVec};
+use ecow::{eco_vec, EcoString, EcoVec};
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
@@ -1197,22 +1197,34 @@ impl Uiua {
                             format!("Cannot infer function signature: {e}"),
                         )
                     })?;
-                    let mut instrs = f_before;
-                    instrs.extend(g_instrs);
-                    instrs.extend(f_after);
-                    let sig = Signature::new(
-                        (before_sig.args + g_sig.args + after_sig.args)
-                            .saturating_sub(before_sig.outputs + g_sig.outputs)
-                            .max(before_sig.args),
-                        (before_sig.outputs + g_sig.outputs)
-                            .saturating_sub(g_sig.args + after_sig.args)
-                            + after_sig.outputs,
-                    );
-                    if call {
-                        self.push_instr(Instr::PushSig(sig));
-                        self.push_all_instrs(instrs);
-                        self.push_instr(Instr::PopSig);
+                    let mut instrs = if call {
+                        eco_vec![Instr::PushSig(before_sig)]
                     } else {
+                        EcoVec::new()
+                    };
+                    instrs.extend(f_before);
+                    if call {
+                        instrs.push(Instr::PopSig);
+                    }
+                    instrs.extend(g_instrs);
+                    if call {
+                        instrs.push(Instr::PushSig(after_sig));
+                    }
+                    instrs.extend(f_after);
+                    if call {
+                        instrs.push(Instr::PopSig);
+                    }
+                    if call {
+                        self.push_all_instrs(instrs);
+                    } else {
+                        let sig = Signature::new(
+                            (before_sig.args + g_sig.args + after_sig.args)
+                                .saturating_sub(before_sig.outputs + g_sig.outputs)
+                                .max(before_sig.args),
+                            (before_sig.outputs + g_sig.outputs)
+                                .saturating_sub(g_sig.args + after_sig.args)
+                                + after_sig.outputs,
+                        );
                         let func = self.add_function(
                             FunctionId::Anonymous(modified.modifier.span.clone()),
                             sig,

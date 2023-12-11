@@ -41,7 +41,7 @@ unicode-segmentation = "1.10"
 crossterm = {version = "0.27.0", optional = true, default-features = false}
 httparse = {version = "1.8.0", optional = true}
 open = {version = "5", optional = true}
-rustls = {version = "0.21.9", optional = true, default-features = false, features = [
+rustls = {version = "0.22.1", optional = true, default-features = false, features = [
   "tls12",
 ]}
 trash = {version = "3.1.2", optional = true}

@@ -503,21 +503,15 @@ impl SysBackend for NativeSys {
         let host = NATIVE_SYS
             .hostnames
             .get(&handle)
-            .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
+            .ok_or_else(|| "Invalid tcp socket handle".to_string())?
+            .to_string();
         let request = check_http(request.to_string(), &host)?;
 
         // https://github.com/rustls/rustls/blob/c9cfe3499681361372351a57a00ccd793837ae9c/examples/src/bin/simpleclient.rs
         static CLIENT_CONFIG: Lazy<std::sync::Arc<rustls::ClientConfig>> = Lazy::new(|| {
             let mut store = rustls::RootCertStore::empty();
-            store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
-                rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
-                    ta.subject,
-                    ta.spki,
-                    ta.name_constraints,
-                )
-            }));
+            store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
             rustls::ClientConfig::builder()
-                .with_safe_defaults()
                 .with_root_certificates(store)
                 .with_no_client_auth()
                 .into()
@@ -528,13 +522,13 @@ impl SysBackend for NativeSys {
             .get_mut(&handle)
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
 
-        let server_name = rustls::ServerName::try_from(host.as_str()).map_err(|e| e.to_string())?;
+        let server_name =
+            rustls::pki_types::ServerName::try_from(host).map_err(|e| e.to_string())?;
         let tcp_stream = socket.get_mut();
 
         let mut conn = rustls::ClientConnection::new(CLIENT_CONFIG.clone(), server_name)
             .map_err(|e| e.to_string())?;
         let mut tls = rustls::Stream::new(&mut conn, tcp_stream);
-
         tls.write_all(request.as_bytes())
             .map_err(|e| e.to_string())?;
         let mut buffer = Vec::new();

@@ -2755,6 +2755,7 @@ version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe6b63262c9fcac8659abfaa96cac103d28166d3ff3eaf8f412e19f3ae9e5a48"
 dependencies = [
+ "ring",
  "rustls-pki-types",
  "rustls-webpki",
  "subtle",

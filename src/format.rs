@@ -550,11 +550,13 @@ impl<'a> Formatter<'a> {
         match &word.value {
             Word::Number(s, n) => {
                 let grid_str = n.grid_string();
-                let formatted = if grid_str.len() < s.trim_end_matches('i').len() {
-                    grid_str
-                } else {
-                    s.replace('`', "¯")
-                };
+                dbg!(&grid_str, s);
+                let formatted =
+                    if grid_str.chars().count() < s.trim_end_matches('i').chars().count() {
+                        grid_str
+                    } else {
+                        s.replace('`', "¯")
+                    };
                 if formatted.starts_with(|c: char| c.is_ascii_digit())
                     && self.output.ends_with(|c: char| c.is_ascii_digit())
                 {

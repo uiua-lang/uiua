@@ -346,14 +346,15 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
             }
         }
     }
-    let row_count = arrays
+    let mut row_count = arrays
         .iter()
-        .map(|arr| match arr {
-            Ok(arr) => arr.len(),
-            Err(_) => 1,
-        })
+        .filter_map(|arr| arr.as_ref().ok())
+        .map(|arr| arr.len())
         .max()
         .unwrap_or(0);
+    if row_count == 0 && arrays.iter().all(Result::is_err) {
+        row_count = 1;
+    }
     for _ in 0..row_count {
         for array in arrays.iter_mut().rev() {
             env.push(match array {

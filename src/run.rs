@@ -1170,7 +1170,7 @@ code:
     }
     /// Return a reference to the stack
     pub fn get_stack(&self) -> &[Value] {
-        &self.stack
+        &self.rt.stack
     }
     /// Pop a function from the function stack
     pub fn pop_function(&mut self) -> UiuaResult<Function> {

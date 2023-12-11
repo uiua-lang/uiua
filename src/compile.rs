@@ -101,27 +101,17 @@ impl Uiua {
         I: IntoIterator<Item = Instr> + fmt::Debug,
         I::IntoIter: ExactSizeIterator,
     {
-        let mut instrs = optimize_instrs(instrs, true);
+        let instrs = optimize_instrs(instrs, true);
         let len = instrs.len();
         if len > 1 {
-            instrs.insert(0, Instr::Comment(format!("({id}").into()));
+            (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
         }
         let address = self.asm.instrs.len();
         self.asm.instrs.extend(instrs);
         if len > 1 {
-            self.asm
-                .instrs
-                .push(Instr::Comment(format!("{id})").into()));
+            (self.asm.instrs).push(Instr::Comment(format!("{id})").into()));
         }
-        let length = self.asm.instrs.len() - address;
-        Function::new(
-            id,
-            sig,
-            FuncSlice {
-                address,
-                len: length,
-            },
-        )
+        Function::new(id, sig, FuncSlice { address, len })
     }
     fn binding(&mut self, binding: Binding) -> UiuaResult {
         let name = binding.name.value;

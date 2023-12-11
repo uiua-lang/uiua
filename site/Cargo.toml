@@ -19,7 +19,7 @@ pathdiff = "0.2.1"
 uiua = {path = "..", default-features = false, features = ["bytes"]}
 urlencoding = "2"
 wasm-bindgen = "0.2.89"
-wasm-bindgen-futures = "0.4.38"
+wasm-bindgen-futures = "0.4.39"
 
 [dependencies.web-sys]
 features = [

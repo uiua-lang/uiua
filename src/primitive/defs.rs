@@ -689,8 +689,8 @@ primitive!(
     ///   : .⊜□≠@ . $ Prepend the word length
     ///   : ∵⍜°□PrepLen
     /// [under][un][box] works because `un``un``box` is just `box`. For each element, it [un][box]es the array out, does something to it, then [box]es the result.
-    /// ex: A ← .{1_2_3 4_5 [7]}
-    ///   : ∵⍜°□(⬚0↙3) A
+    /// ex: .{1_2_3 4_5 [7]}
+    ///   : ∵⍜°□(⬚0↙3)
     /// If you do not need to re-[box] the result, you can use [unpack] instead.
     /// [unpack] implicitly [un][box]es all box elements that are passed to a function, but does not re-[box] results.
     /// ex: {1_2_3 9_2 5_5_5_5}
@@ -1127,9 +1127,9 @@ primitive!(
     ///
     /// This is the row-wise version of [table].
     ///
-    /// ex: a ← .[1_2 3_4 5_6]
-    ///   : b ← .[7_8 9_10]
-    ///   : ⊠⊂ a b
+    /// ex: [1_2 3_4 5_6]
+    ///   : [7_8 9_10]
+    ///   : ⊠⊂ ,,
     /// [cross] works with more than two arrays.
     /// ex: ⊠(⊂⊂) 1_2 3_4 5_6
     /// If you want to fix one of the arrays so that it is present in every call of the function, you can simply add a dimension to it, though you may need to collapse it later.

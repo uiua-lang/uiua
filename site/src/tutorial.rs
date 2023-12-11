@@ -473,8 +473,8 @@ fn TutorialArrays() -> impl IntoView {
         <p>"Using "<code>"{}"</code>"s instead of "<code>"[]"</code>"s for stack array notation will automatically "<Prim prim=Box/>" every item."</p>
         <Editor example="{1 2 [7 8 9]}"/>
         <p>"This is very useful for making lists of strings."</p>
-        <Editor example=r#"Langs ← .["Uiua" "APL" "J" "BQN" "K" "Q"]"#/>
-        <Editor example=r#"Langs ← .{"Uiua" "APL" "J" "BQN" "K" "Q"}"#/>
+        <Editor example=r#"["Uiua" "APL" "J" "BQN" "K" "Q"]"#/>
+        <Editor example=r#"{"Uiua" "APL" "J" "BQN" "K" "Q"}"#/>
         <p>"The "<code>"⌜⌟"</code>"s indicate that a string is "<Prim prim=Box/>"ed."</p>
         <p>"Many simple functions will work on "<Prim prim=Box/>" elements without needing to use "<Prim prim=Un/><Prim prim=Box/>"."</p>
         <Editor example=

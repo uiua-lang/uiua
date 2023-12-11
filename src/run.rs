@@ -914,7 +914,7 @@ code:
         take(&mut self.stack)
     }
     /// Return a reference to the stack
-    pub fn get_stack(&self) -> &Vec<Value> {
+    pub fn get_stack(&self) -> &[Value] {
         &self.stack
     }
     /// Pop a function from the function stack

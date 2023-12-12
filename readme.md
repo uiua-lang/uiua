@@ -25,8 +25,6 @@ This requires [Rust](https://www.rust-lang.org/tools/install) to be installed.
   cargo install uiua
   ```
   The following optional features are available (enabled by passing `--features <feature>`):
-  - `bytes`: Enables byte arrays, which behave identically to numeric arrays but take up less space.
-    - Byte arrays are returned by certain IO system functions.
   - `audio`: Enables audio system functions
 
   If you want audio on Linux, you may need to install some dependencies first:

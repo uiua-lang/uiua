@@ -136,7 +136,6 @@ pub fn Install() -> impl IntoView {
         <code class="code-block">"cargo install uiua"</code>
         <p>"The following optional features are available (enabled by passing "<code>"--features <feature>"</code>"):"</p>
         <ul>
-            <li><code>"bytes"</code>" - Enables byte arrays, which behave identically to numeric arrays but take up less space."</li>
             <li>
                 <p><code>"audio"</code>" - Enables audio system functions."</p>
                 <p>"On Linux, this may require installing some dependencies:"</p>

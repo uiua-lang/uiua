@@ -528,63 +528,68 @@ fn set_code_html(id: &str, code: &str) {
             }
             html.push_str("<div class=\"code-line\">");
         } else {
-            html.push_str(&match kind {
-                SpanKind::Primitive(prim) => {
-                    let name = prim.name();
-                    let mut title = format!("{}: {}", name, prim.doc().short_text());
-                    if let Some(ascii) = prim.ascii() {
-                        title = format!("({}) {}", ascii, title);
-                    }
-                    format!(
-                        r#"<span 
+            for (i, text) in text.lines().enumerate() {
+                if i > 0 {
+                    html.push_str("</div><div class=\"code-line\">");
+                }
+                html.push_str(&match kind {
+                    SpanKind::Primitive(prim) => {
+                        let name = prim.name();
+                        let mut title = format!("{}: {}", name, prim.doc().short_text());
+                        if let Some(ascii) = prim.ascii() {
+                            title = format!("({}) {}", ascii, title);
+                        }
+                        format!(
+                            r#"<span 
                             class="code-span code-hover {color_class}" 
                             data-title={title:?}>{}</span>"#,
-                        escape_html(&text)
-                    )
-                }
-                SpanKind::Ident if text == "i" => r#"<span 
+                            escape_html(text)
+                        )
+                    }
+                    SpanKind::Ident if text == "i" => r#"<span 
                             class="code-span code-hover noadic-function" 
                             data-title="i: The imaginary unit">i</span>"#
-                    .into(),
-                SpanKind::Ident if text == "e" => r#"<span 
+                        .into(),
+                    SpanKind::Ident if text == "e" => r#"<span 
                             class="code-span code-hover noadic-function" 
                             data-title="e: Euler's constant">e</span>"#
-                    .into(),
-                SpanKind::String => {
-                    if text == "@ " {
-                        format!(
-                            r#"<span
+                        .into(),
+                    SpanKind::String => {
+                        if text == "@ " {
+                            format!(
+                                r#"<span
                                 class="code-span code-hover {color_class}" 
                                 data-title="space character">@</span><span
                                 class="code-span code-hover {color_class} space-character" 
                                 data-title="space character"> </span>"#
-                        )
-                    } else {
-                        let title = if text.starts_with('@') {
-                            "character"
+                            )
                         } else {
-                            "string"
-                        };
-                        format!(
-                            r#"<span
+                            let title = if text.starts_with('@') {
+                                "character"
+                            } else {
+                                "string"
+                            };
+                            format!(
+                                r#"<span
                                 class="code-span code-hover {color_class}" 
                                 data-title={title}>{}</span>"#,
-                            escape_html(&text)
-                        )
+                                escape_html(text)
+                            )
+                        }
                     }
-                }
-                SpanKind::Signature | SpanKind::Placeholder => format!(
-                    r#"<span 
+                    SpanKind::Signature | SpanKind::Placeholder => format!(
+                        r#"<span 
                         class="code-span code-hover {color_class}" 
                         data-title="{}">{}</span>"#,
-                    format!("{kind:?}").to_lowercase(),
-                    escape_html(&text)
-                ),
-                _ => format!(
-                    r#"<span class="code-span {color_class}">{}</span>"#,
-                    escape_html(&text)
-                ),
-            });
+                        format!("{kind:?}").to_lowercase(),
+                        escape_html(text)
+                    ),
+                    _ => format!(
+                        r#"<span class="code-span {color_class}">{}</span>"#,
+                        escape_html(text)
+                    ),
+                });
+            }
         }
 
         end = span.end.char_pos as usize;

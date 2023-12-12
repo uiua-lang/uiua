@@ -652,14 +652,15 @@ impl<'a> Lexer<'a> {
                     } else {
                         loop {
                             while self.next_char_if(|c| !c.ends_with('\n')).is_some() {}
+                            let restore = self.loc;
                             self.next_char_exact("\r");
                             self.next_char_exact("\n");
-                            let start = self.loc;
                             if !self.next_chars_exact(["#", "#"]) {
+                                self.loc = restore;
                                 self.end(OutputComment(n), start);
                                 continue 'main;
                             }
-                            self.next_char_exact("#");
+                            while self.next_char_exact("#") {}
                         }
                     }
                 }

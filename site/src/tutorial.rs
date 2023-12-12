@@ -182,6 +182,11 @@ fn TutorialBasic() -> impl IntoView {
         <p>"The formatter will align consecutive end-of-line comments. Try it out!"</p>
         <Editor example="%2 8 # Line\n@x # these\n1 # up"/>
 
+        <h3>"Output Comments"</h3>
+        <p>"A comment that starts with additional "<code>"#"</code>"s is an "<em>"output comment"</em>". The formatter replaces the text of an output comment with as many values from the stack as there are extra "<code>"#"</code>"s."</p>
+        <p>"Click Run to try it out!"</p>
+        <Editor example="1 2 3\n####\n+\n###\n+\n##"/>
+
         <h2 id="stack-functions">"Stack Functions"</h2>
         <p>"There are a few functions that work on the stack itself. Some of these are critical and can be found scattered across all Uiua code."</p>
         <h2><Prim prim=Dup/></h2>

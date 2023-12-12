@@ -379,13 +379,15 @@ fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     } else {
         let outputs = f.signature().outputs;
         let is_empty = outputs > 0 && xs.row_count() == 0;
-        let mut new_rows =
-            multi_output(outputs, Value::builder(xs.row_count() + is_empty as usize));
+        let mut new_rows = multi_output(
+            outputs,
+            Vec::with_capacity(xs.row_count() + is_empty as usize),
+        );
         if is_empty {
             env.push(xs.proxy_row(env));
             if env.call_restore(f).is_ok() {
                 for i in 0..outputs {
-                    new_rows[i].add_row(env.pop("rows' function result")?, env)?;
+                    new_rows[i].push(env.pop("rows' function result")?);
                 }
             }
         } else {
@@ -393,12 +395,12 @@ fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
                 env.push(row);
                 env.call(f.clone())?;
                 for i in 0..outputs {
-                    new_rows[i].add_row(env.pop("rows' function result")?, env)?;
+                    new_rows[i].push(env.pop("rows' function result")?);
                 }
             }
         }
         for new_rows in new_rows.into_iter().rev() {
-            let mut val = new_rows.finish();
+            let mut val = Value::from_row_values(new_rows, env)?;
             if is_empty {
                 val.pop_row();
             }

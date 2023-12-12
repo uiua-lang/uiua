@@ -40,6 +40,25 @@ impl Value {
             (a, b) => Err(ctx.error(on_error(a.type_name(), b.type_name()))),
         }
     }
+    fn coerce_to_functions_mut<T, C: FillContext, E: ToString>(
+        &mut self,
+        other: Self,
+        ctx: &C,
+        on_success: impl FnOnce(&mut Array<Boxed>, Array<Boxed>, &C) -> Result<T, C::Error>,
+        on_error: impl FnOnce(&str, &str) -> E,
+    ) -> Result<T, C::Error> {
+        match (self, other) {
+            (Value::Box(a), Value::Box(b)) => on_success(a, b, ctx),
+            (Value::Box(a), b) => on_success(a, b.coerce_to_boxes(), ctx),
+            (a, Value::Box(b)) => {
+                let mut a_arr = take(a).coerce_to_boxes();
+                let res = on_success(&mut a_arr, b, ctx)?;
+                *a = a_arr.into();
+                Ok(res)
+            }
+            (a, b) => Err(ctx.error(on_error(a.type_name(), b.type_name()))),
+        }
+    }
 }
 
 impl<T: Clone + std::fmt::Debug> Array<T> {
@@ -298,17 +317,12 @@ impl Value {
                 a.append(b, ctx)?;
                 *self = a.into();
             }
-            (a, b) => {
-                *self = a.clone().coerce_to_functions(
-                    b,
-                    ctx,
-                    |mut a, b, env| {
-                        a.append(b, env)?;
-                        Ok(a.into())
-                    },
-                    |a, b| format!("Cannot add {b} row to {a} array"),
-                )?
-            }
+            (a, b) => a.coerce_to_functions_mut(
+                b,
+                ctx,
+                |a, b, env| a.append(b, env),
+                |a, b| format!("Cannot add {b} row to {a} array"),
+            )?,
         }
         Ok(())
     }
@@ -510,17 +524,12 @@ impl Value {
                 a.couple_impl(b, ctx)?;
                 *self = a.into();
             }
-            (a, b) => {
-                *self = a.clone().coerce_to_functions(
-                    b,
-                    ctx,
-                    |mut a, b, ctx| {
-                        a.couple_impl(b, ctx)?;
-                        Ok(a.into())
-                    },
-                    |a, b| format!("Cannot couple {a} array with {b} array"),
-                )?
-            }
+            (a, b) => a.coerce_to_functions_mut(
+                b,
+                ctx,
+                |a, b, ctx| a.couple_impl(b, ctx),
+                |a, b| format!("Cannot couple {a} array with {b} array"),
+            )?,
         }
         Ok(())
     }

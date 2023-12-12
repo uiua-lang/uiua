@@ -11,6 +11,8 @@ Uiua is not yet stable.
 ### Interpreter
 - Add the `uiua build` command, which emits a `.uasm` bytecode file
 - `uiua run` can now run a `.uasm` bytecode file
+- Bug and crash fixes
+- Performance improvements
 
 ## 0.6.1 - 2023-12-07
 ### Interpreter

@@ -1,10 +1,4 @@
-use std::{
-    convert::Infallible,
-    error::Error,
-    fmt, io,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{convert::Infallible, error::Error, fmt, io, path::PathBuf, sync::Arc};
 
 use colored::*;
 
@@ -361,10 +355,7 @@ impl Report {
                 fragments.push(ReportFragment::Newline);
                 fragments.push(ReportFragment::Fainter("  at ".into()));
                 if let InputSrc::File(path) = &span.src {
-                    fragments.push(ReportFragment::Fainter(format!(
-                        "{}:",
-                        Path::new(path.as_str()).display()
-                    )));
+                    fragments.push(ReportFragment::Fainter(format!("{}:", path.display())));
                 }
                 fragments.push(ReportFragment::Fainter(format!(
                     "{}:{}",

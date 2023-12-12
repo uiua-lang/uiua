@@ -1,6 +1,12 @@
-use std::{error::Error, fmt, hash::Hash, ops::Range, path::Path};
+use std::{
+    error::Error,
+    fmt,
+    hash::Hash,
+    ops::Range,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
-use ecow::EcoString;
 use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
@@ -124,17 +130,41 @@ impl Span {
 
 /// The source of code input into the interpreter
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(untagged)]
+#[serde(untagged, into = "InputSrcRep", from = "InputSrcRep")]
 pub enum InputSrc {
     /// Code from a file with a path
-    File(EcoString),
+    File(Arc<Path>),
     /// Code from a string
     Str(usize),
 }
 
+#[derive(Serialize, Deserialize)]
+enum InputSrcRep {
+    File(PathBuf),
+    Str(usize),
+}
+
+impl From<InputSrc> for InputSrcRep {
+    fn from(src: InputSrc) -> Self {
+        match src {
+            InputSrc::File(path) => InputSrcRep::File(path.to_path_buf()),
+            InputSrc::Str(index) => InputSrcRep::Str(index),
+        }
+    }
+}
+
+impl From<InputSrcRep> for InputSrc {
+    fn from(src: InputSrcRep) -> Self {
+        match src {
+            InputSrcRep::File(path) => InputSrc::File(path.into()),
+            InputSrcRep::Str(index) => InputSrc::Str(index),
+        }
+    }
+}
+
 impl<'a> From<&'a Path> for InputSrc {
     fn from(path: &'a Path) -> Self {
-        InputSrc::File(path.to_string_lossy().into())
+        InputSrc::File(path.into())
     }
 }
 
@@ -183,7 +213,7 @@ impl fmt::Display for CodeSpan {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.src {
             InputSrc::File(path) => {
-                let mut file: String = path.into();
+                let mut file: String = path.to_string_lossy().into_owned();
                 if let Some(s) = file.strip_prefix("C:\\Users\\") {
                     if let Some((_, sub)) = s.split_once('\\') {
                         file = format!("~\\{}", sub);

@@ -107,7 +107,6 @@ pub enum Instr {
     SetOutputComment {
         i: usize,
         n: usize,
-        span: usize,
     },
     PushSig(Signature),
     PopSig,

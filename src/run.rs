@@ -112,7 +112,7 @@ pub(crate) struct Runtime {
     pub(crate) backend: Arc<dyn SysBackend>,
     /// The thread interface
     thread: ThisThread,
-    pub(crate) output_comments: HashMap<(InputSrc, usize), Vec<Value>>,
+    pub(crate) output_comments: HashMap<usize, Vec<Value>>,
 }
 
 #[derive(Clone)]
@@ -261,6 +261,7 @@ impl<'a> Chunk<'a> {
                     backend: self.env.rt.backend.clone(),
                     execution_limit: self.env.rt.execution_limit,
                     time_instrs: self.env.rt.time_instrs,
+                    output_comments: self.env.rt.output_comments.clone(),
                     ..Runtime::default()
                 };
                 break;
@@ -396,7 +397,7 @@ impl Uiua {
             .map_err(|e| UiuaError::Load(path.into(), e.into()))?
             .into();
         self.asm.inputs.files.insert(path.into(), input.clone());
-        self.load_impl(&input, InputSrc::File(path.to_string_lossy().into()))
+        self.load_impl(&input, InputSrc::File(path.into()))
     }
     /// Compile a Uiua file from a string
     pub fn load_str<'a>(&'a mut self, input: &str) -> UiuaResult<Chunk<'a>> {
@@ -456,9 +457,7 @@ impl Uiua {
             return Err(UiuaError::Parse(errors, self.inputs().clone().into()));
         }
         if let InputSrc::File(path) = &src {
-            self.ct
-                .current_imports
-                .push(Path::new(path.as_str()).into());
+            self.ct.current_imports.push(path.to_path_buf());
         }
         let res = match catch_unwind(AssertUnwindSafe(|| self.items(items, false))) {
             Ok(res) => res,
@@ -850,13 +849,11 @@ code:
                     "PopSig should have been removed before running. \
                     This is a bug in the interpreter.",
                 )),
-                &Instr::SetOutputComment { i, n, span } => self.with_span(span, |env| {
-                    let values = env.clone_stack_top(n);
-                    if let Span::Code(span) = env.get_span(span) {
-                        env.rt.output_comments.insert((span.src, i), values);
-                    }
+                &Instr::SetOutputComment { i, n } => {
+                    let values = self.clone_stack_top(n);
+                    self.rt.output_comments.insert(i, values);
                     Ok(())
-                }),
+                }
             };
             if self.rt.time_instrs {
                 let end_time = instant::now();

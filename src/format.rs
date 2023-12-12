@@ -398,7 +398,7 @@ struct Formatter<'a> {
     glyph_map: BTreeMap<CodeSpan, (Loc, Loc)>,
     end_of_line_comments: Vec<(usize, String)>,
     prev_import_function: Option<Ident>,
-    output_comments: Option<HashMap<(InputSrc, usize), Vec<Value>>>,
+    output_comments: Option<HashMap<usize, Vec<Value>>>,
 }
 
 impl<'a> Formatter<'a> {
@@ -534,17 +534,23 @@ impl<'a> Formatter<'a> {
             Item::ExtraNewlines(_) => self.prev_import_function = None,
             Item::OutputComment { i, n, span } => {
                 let values = self.output_comment(*i);
+                let mut s = String::new();
                 if values.is_empty() {
-                    self.push(span, &"#".repeat(*n + 1));
+                    s.push('#');
+                    for _ in 0..=*n {
+                        s.push('#');
+                    }
                 }
                 for value in values {
                     for line in value.show().lines() {
-                        self.output.push_str(&"#".repeat(*n + 1));
-                        self.output.push(' ');
-                        self.output.push_str(line);
-                        self.output.push('\n');
+                        s.push_str(&"#".repeat(*n + 1));
+                        s.push(' ');
+                        s.push_str(line);
+                        s.push('\n');
                     }
                 }
+                s.pop();
+                self.push(span, &s);
             }
         }
     }
@@ -829,16 +835,19 @@ impl<'a> Formatter<'a> {
         let values = self.output_comments.get_or_insert_with(|| {
             let mut env = Uiua::with_native_sys()
                 .with_mode(RunMode::All)
-                .with_execution_limit(Duration::from_secs(1));
+                .with_execution_limit(Duration::from_secs(2));
             let input = self.inputs.get(&self.src);
-            _ = env
+            let res = env
                 .load_str_src(&input, self.src.clone())
                 .and_then(Chunk::run);
-            env.rt.output_comments
+            let mut values = env.rt.output_comments;
+            if let Err(e) = res {
+                let next = (0..).take_while(|i| values.contains_key(i)).count();
+                values.insert(next, vec![e.to_string().into()]);
+            }
+            values
         });
-        values
-            .remove(&(self.src.clone(), index))
-            .unwrap_or_default()
+        values.remove(&index).unwrap_or_default()
     }
 }
 

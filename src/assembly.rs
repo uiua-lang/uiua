@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::PathBuf};
 
 use dashmap::DashMap;
 use ecow::{eco_vec, EcoString, EcoVec};
@@ -63,8 +60,7 @@ impl Inputs {
         let mut src = src.into_input_src(self.strings.len());
         match &mut src {
             InputSrc::File(path) => {
-                self.files
-                    .insert(PathBuf::from(path.as_str()), input.into());
+                self.files.insert(path.to_path_buf(), input.into());
             }
             InputSrc::Str(i) => {
                 *i = self.strings.len();
@@ -78,7 +74,7 @@ impl Inputs {
         match src {
             InputSrc::File(path) => self
                 .files
-                .get(Path::new(path.as_str()))
+                .get(&**path)
                 .unwrap_or_else(|| panic!("File {:?} not found", path))
                 .clone(),
             InputSrc::Str(index) => self
@@ -126,7 +122,7 @@ enum InstrRep {
     DropTemp(TempStack, usize, usize),
     PushSig(Signature),
     PopSig,
-    SetOutputComment(usize, usize, usize),
+    SetOutputComment(usize, usize),
     #[serde(untagged)]
     Push(Value),
     #[serde(untagged)]
@@ -170,7 +166,7 @@ impl From<Instr> for InstrRep {
             Instr::DropTemp { stack, count, span } => Self::DropTemp(stack, count, span),
             Instr::PushSig(sig) => Self::PushSig(sig),
             Instr::PopSig => Self::PopSig,
-            Instr::SetOutputComment { i, n, span } => Self::SetOutputComment(i, n, span),
+            Instr::SetOutputComment { i, n } => Self::SetOutputComment(i, n),
         }
     }
 }
@@ -210,7 +206,7 @@ impl From<InstrRep> for Instr {
             InstrRep::DropTemp(stack, count, span) => Self::DropTemp { stack, count, span },
             InstrRep::PushSig(sig) => Self::PushSig(sig),
             InstrRep::PopSig => Self::PopSig,
-            InstrRep::SetOutputComment(i, n, span) => Self::SetOutputComment { i, n, span },
+            InstrRep::SetOutputComment(i, n) => Self::SetOutputComment { i, n },
         }
     }
 }

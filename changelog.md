@@ -10,6 +10,10 @@ Uiua is not yet stable.
 - [`&i`](https://uiua.org/docs/&i) can now only be used as the first function in a binding
 - [`repeat` `⍥`](https://uiua.org/docs/repeat) can no longer use a negative number of repetitions
 - [`reshape` `↯`](https://uiua.org/docs/reshape) now works with [`under` `⍜`](https://uiua.org/docs/under)
+- Add output comments, which the formatter fills with values from the stack
+  - Make an empty comment starting with `n` additional `#`s
+  - The formatter will replace the comment with the top `n` values from the stack
+  - Output comments can only be defined in the top-level scope
 ### Interpreter
 - Add the `uiua build` command, which emits a `.uasm` bytecode file
 - `uiua run` can now run a `.uasm` bytecode file

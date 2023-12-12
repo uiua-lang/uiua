@@ -9,6 +9,7 @@ Uiua is not yet stable.
 - An entire Uiua codebase is now compiled before it is executed, rather than compiling and executing line-by-line
 - [`&i`](https://uiua.org/docs/&i) can now only be used as the first function in a binding
 - [`repeat` `⍥`](https://uiua.org/docs/repeat) can no longer use a negative number of repetitions
+- [`reshape` `↯`](https://uiua.org/docs/reshape) now works with [`under` `⍜`](https://uiua.org/docs/under)
 ### Interpreter
 - Add the `uiua build` command, which emits a `.uasm` bytecode file
 - `uiua run` can now run a `.uasm` bytecode file

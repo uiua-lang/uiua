@@ -275,6 +275,19 @@ pub(crate) fn under_instrs(
                 (PopTempN(2), Unrerank),
             ),
         ),
+        &pat!(
+            Reshape,
+            (Over, Shape, PushTempN(1), Reshape),
+            (PopTempN(1), Unreshape),
+        ),
+        &(
+            Val,
+            pat!(
+                Reshape,
+                (Over, Shape, PushTempN(1), Reshape),
+                (PopTempN(1), Unreshape),
+            ),
+        ),
         &pat!((Now), (Now, PushTempN(1)), (PopTempN(1), Now, Flip, Sub)),
         &pat!(
             Sys(SysOp::FOpen),

@@ -155,6 +155,7 @@ impl fmt::Display for ImplPrimitive {
             Unlast => write!(f, "{Un}{Last}"),
             Unkeep => write!(f, "{Un}{Keep}"),
             Unrerank => write!(f, "{Un}{Rerank}"),
+            Unreshape => write!(f, "{Un}{Reshape}"),
             Ungroup => write!(f, "{Un}{Group}"),
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
@@ -695,6 +696,12 @@ impl ImplPrimitive {
                 let shape = env.pop(2)?;
                 let mut array = env.pop(3)?;
                 array.unrerank(&rank, &shape, env)?;
+                env.push(array);
+            }
+            ImplPrimitive::Unreshape => {
+                let orig_shape = env.pop(1)?;
+                let mut array = env.pop(2)?;
+                array.unreshape(&orig_shape, env)?;
                 env.push(array);
             }
             ImplPrimitive::Unfirst => {

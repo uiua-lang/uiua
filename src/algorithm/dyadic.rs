@@ -723,6 +723,23 @@ impl Value {
         }
         Ok(())
     }
+    pub(crate) fn unreshape(&mut self, old_shape: &Self, env: &Uiua) -> UiuaResult {
+        if old_shape.as_nat(env, "").is_ok() {
+            return Err(env.error("Cannot undo scalar reshae"));
+        }
+        let orig_shape = old_shape.as_nats(env, "Shape should be a list of natural numbers")?;
+        if orig_shape.iter().product::<usize>() == self.shape().iter().product::<usize>() {
+            *self.shape_mut() = Shape::from(orig_shape.as_slice());
+            Ok(())
+        } else {
+            Err(env.error(format!(
+                "Cannot unreshape array because its old shape was {}, \
+                but its new shape is {}, which has a different number of elements",
+                FormatShape(&orig_shape),
+                self.format_shape()
+            )))
+        }
+    }
 }
 
 impl<T: Clone> Array<T> {
@@ -746,76 +763,8 @@ impl<T: Clone> Array<T> {
 impl<T: ArrayValue> Array<T> {
     /// `reshape` the array
     pub fn reshape(&mut self, dims: &[isize], env: &Uiua) -> UiuaResult {
-        let mut neg_count = 0;
-        for dim in dims {
-            if *dim < 0 {
-                neg_count += 1;
-            }
-        }
-        let derive_len = |data_len: usize, other_len: usize| {
-            (if env.fill::<T>().is_ok() {
-                f32::ceil
-            } else {
-                f32::floor
-            }(data_len as f32 / other_len as f32) as usize)
-        };
-        let shape: Shape = match neg_count {
-            0 => dims.iter().map(|&dim| dim as usize).collect(),
-            1 => {
-                if dims[0] < 0 {
-                    if dims[1..].iter().any(|&dim| dim < 0) {
-                        return Err(
-                            env.error("Cannot reshape array with multiple negative dimensions")
-                        );
-                    }
-                    let shape_non_leading_len = dims[1..].iter().product::<isize>() as usize;
-                    if shape_non_leading_len == 0 {
-                        return Err(
-                            env.error("Cannot reshape array with any 0 non-leading dimensions")
-                        );
-                    }
-                    let leading_len = derive_len(self.data.len(), shape_non_leading_len);
-                    let mut shape = vec![leading_len];
-                    shape.extend(dims[1..].iter().map(|&dim| dim as usize));
-                    Shape::from(&*shape)
-                } else if *dims.last().unwrap() < 0 {
-                    if dims.iter().rev().skip(1).any(|&dim| dim < 0) {
-                        return Err(
-                            env.error("Cannot reshape array with multiple negative dimensions")
-                        );
-                    }
-                    let shape_non_trailing_len =
-                        dims.iter().rev().skip(1).product::<isize>() as usize;
-                    if shape_non_trailing_len == 0 {
-                        return Err(
-                            env.error("Cannot reshape array with any 0 non-trailing dimensions")
-                        );
-                    }
-                    let trailing_len = derive_len(self.data.len(), shape_non_trailing_len);
-                    let mut shape: Vec<usize> = dims.iter().map(|&dim| dim as usize).collect();
-                    shape.pop();
-                    shape.push(trailing_len);
-                    Shape::from(&*shape)
-                } else {
-                    let neg_index = dims.iter().position(|&dim| dim < 0).unwrap();
-                    let (front, back) = dims.split_at(neg_index);
-                    let back = &back[1..];
-                    let front_len = front.iter().product::<isize>() as usize;
-                    let back_len = back.iter().product::<isize>() as usize;
-                    if front_len == 0 || back_len == 0 {
-                        return Err(env.error("Cannot reshape array with any 0 outer dimensions"));
-                    }
-                    let middle_len = derive_len(self.data.len(), front_len * back_len);
-                    let mut shape: Vec<usize> = front.iter().map(|&dim| dim as usize).collect();
-                    shape.push(middle_len);
-                    shape.extend(back.iter().map(|&dim| dim as usize));
-                    Shape::from(&*shape)
-                }
-            }
-            n => {
-                return Err(env.error(format!("Cannot reshape array with {n} negative dimensions")))
-            }
-        };
+        let fill = env.fill::<T>();
+        let shape = derive_shape(&self.shape, dims, fill.is_ok(), env)?;
         let target_len: usize = shape.iter().product();
         if self.data.len() < target_len {
             match env.fill::<T>() {
@@ -852,6 +801,66 @@ impl<T: ArrayValue> Array<T> {
         self.validate_shape();
         Ok(())
     }
+}
+
+fn derive_shape(shape: &[usize], dims: &[isize], has_fill: bool, env: &Uiua) -> UiuaResult<Shape> {
+    let mut neg_count = 0;
+    for dim in dims {
+        if *dim < 0 {
+            neg_count += 1;
+        }
+    }
+    let derive_len = |data_len: usize, other_len: usize| {
+        (if has_fill { f32::ceil } else { f32::floor }(data_len as f32 / other_len as f32) as usize)
+    };
+    Ok(match neg_count {
+        0 => dims.iter().map(|&dim| dim as usize).collect(),
+        1 => {
+            if dims[0] < 0 {
+                if dims[1..].iter().any(|&dim| dim < 0) {
+                    return Err(env.error("Cannot reshape array with multiple negative dimensions"));
+                }
+                let shape_non_leading_len = dims[1..].iter().product::<isize>() as usize;
+                if shape_non_leading_len == 0 {
+                    return Err(env.error("Cannot reshape array with any 0 non-leading dimensions"));
+                }
+                let leading_len = derive_len(shape.iter().product(), shape_non_leading_len);
+                let mut shape = vec![leading_len];
+                shape.extend(dims[1..].iter().map(|&dim| dim as usize));
+                Shape::from(&*shape)
+            } else if *dims.last().unwrap() < 0 {
+                if dims.iter().rev().skip(1).any(|&dim| dim < 0) {
+                    return Err(env.error("Cannot reshape array with multiple negative dimensions"));
+                }
+                let shape_non_trailing_len = dims.iter().rev().skip(1).product::<isize>() as usize;
+                if shape_non_trailing_len == 0 {
+                    return Err(
+                        env.error("Cannot reshape array with any 0 non-trailing dimensions")
+                    );
+                }
+                let trailing_len = derive_len(shape.iter().product(), shape_non_trailing_len);
+                let mut shape: Vec<usize> = dims.iter().map(|&dim| dim as usize).collect();
+                shape.pop();
+                shape.push(trailing_len);
+                Shape::from(&*shape)
+            } else {
+                let neg_index = dims.iter().position(|&dim| dim < 0).unwrap();
+                let (front, back) = dims.split_at(neg_index);
+                let back = &back[1..];
+                let front_len = front.iter().product::<isize>() as usize;
+                let back_len = back.iter().product::<isize>() as usize;
+                if front_len == 0 || back_len == 0 {
+                    return Err(env.error("Cannot reshape array with any 0 outer dimensions"));
+                }
+                let middle_len = derive_len(shape.iter().product(), front_len * back_len);
+                let mut shape: Vec<usize> = front.iter().map(|&dim| dim as usize).collect();
+                shape.push(middle_len);
+                shape.extend(back.iter().map(|&dim| dim as usize));
+                Shape::from(&*shape)
+            }
+        }
+        n => return Err(env.error(format!("Cannot reshape array with {n} negative dimensions"))),
+    })
 }
 
 impl Value {

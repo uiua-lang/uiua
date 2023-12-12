@@ -1,6 +1,6 @@
 //! Algorithms for invert and under
 
-use std::{cell::RefCell, cmp::Ordering, collections::HashMap, fmt};
+use std::{cmp::Ordering, fmt};
 
 use ecow::{eco_vec, EcoVec};
 
@@ -82,23 +82,11 @@ macro_rules! pat {
 }
 
 pub(crate) fn invert_instrs(instrs: &[Instr], env: &mut Uiua) -> Option<EcoVec<Instr>> {
+    use Primitive::*;
+
     if instrs.is_empty() {
         return Some(EcoVec::new());
     }
-
-    thread_local! {
-        static INVERT_CACHE: RefCell<HashMap<Vec<Instr>, Option<EcoVec<Instr>>>> = RefCell::new(HashMap::new());
-    }
-    if let Some(inverted) = INVERT_CACHE.with(|cache| cache.borrow().get(instrs).cloned()) {
-        return inverted;
-    }
-    let inverted = invert_instr_impl(instrs, env);
-    INVERT_CACHE.with(|cache| cache.borrow_mut().insert(instrs.to_vec(), inverted.clone()));
-    inverted
-}
-
-fn invert_instr_impl(instrs: &[Instr], env: &mut Uiua) -> Option<EcoVec<Instr>> {
-    use Primitive::*;
 
     // println!("inverting {:?}", instrs);
 
@@ -152,42 +140,17 @@ fn invert_instr_impl(instrs: &[Instr], env: &mut Uiua) -> Option<EcoVec<Instr>> 
 
 type Under = (EcoVec<Instr>, EcoVec<Instr>);
 
-pub(crate) fn under_instrs(instrs: &[Instr], g_sig: Signature, env: &mut Uiua) -> Option<Under> {
-    if instrs.is_empty() {
-        return Some((EcoVec::new(), EcoVec::new()));
-    }
-
-    type UnderCache = HashMap<Vec<Instr>, HashMap<Signature, Option<Under>>>;
-    thread_local! {
-        static UNDER_CACHE: RefCell<UnderCache> = RefCell::new(HashMap::new());
-    }
-    if let Some(under) = UNDER_CACHE.with(|cache| {
-        cache
-            .borrow()
-            .get(instrs)
-            .and_then(|map| map.get(&g_sig))
-            .cloned()
-    }) {
-        return under;
-    }
-    let under = under_instrs_impl(instrs, g_sig, env);
-    UNDER_CACHE.with(|cache| {
-        cache
-            .borrow_mut()
-            .entry(instrs.to_vec())
-            .or_default()
-            .insert(g_sig, under.clone())
-    });
-    under
-}
-
-fn under_instrs_impl(
+pub(crate) fn under_instrs(
     instrs: &[Instr],
     g_sig: Signature,
     env: &mut Uiua,
 ) -> Option<(EcoVec<Instr>, EcoVec<Instr>)> {
     use ImplPrimitive::*;
     use Primitive::*;
+
+    if instrs.is_empty() {
+        return Some((EcoVec::new(), EcoVec::new()));
+    }
 
     macro_rules! stash2 {
         ($before:expr, $after:expr) => {

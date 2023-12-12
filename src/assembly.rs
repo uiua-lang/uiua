@@ -36,12 +36,13 @@ impl Default for Assembly {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub(crate) enum Global {
     Const(Value),
     Func(Function),
     Sig(Signature),
+    Module { module: PathBuf },
 }
 
 /// A repository of code strings input to the compiler

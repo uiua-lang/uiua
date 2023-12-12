@@ -13,7 +13,6 @@ use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use ecow::{EcoString, EcoVec};
 use enum_iterator::Sequence;
 use instant::Duration;
-use parking_lot::Mutex;
 
 use crate::{
     algorithm, array::Array, boxed::Boxed, check::SigCheckError, constants, example_ua,
@@ -28,10 +27,6 @@ pub struct Uiua {
     pub(crate) rt: Runtime,
     pub(crate) ct: CompileTime,
     pub(crate) asm: Assembly,
-    /// The paths of files currently being imported (used to detect import cycles)
-    current_imports: Arc<Mutex<Vec<PathBuf>>>,
-    /// The bindings of imported files
-    imports: Arc<Mutex<HashMap<PathBuf, HashMap<Ident, usize>>>>,
     dynamic_functions: EcoVec<DynFn>,
     /// Accumulated diagnostics
     pub(crate) diagnostics: BTreeSet<Diagnostic>,
@@ -53,6 +48,10 @@ pub(crate) struct CompileTime {
     pub(crate) higher_scopes: Vec<CtScope>,
     /// Determines which How test scopes are run
     pub(crate) mode: RunMode,
+    /// The paths of files currently being imported (used to detect import cycles)
+    pub(crate) current_imports: Vec<PathBuf>,
+    /// The bindings of imported files
+    pub(crate) imports: HashMap<PathBuf, HashMap<Ident, usize>>,
 }
 
 #[derive(Clone)]
@@ -286,8 +285,6 @@ impl Uiua {
     pub fn with_native_sys() -> Self {
         Uiua {
             asm: Assembly::default(),
-            current_imports: Arc::new(Mutex::new(Vec::new())),
-            imports: Arc::new(Mutex::new(HashMap::new())),
             dynamic_functions: EcoVec::new(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
@@ -297,6 +294,8 @@ impl Uiua {
                 next_global: 0,
                 new_functions: Vec::new(),
                 mode: RunMode::Normal,
+                current_imports: Vec::new(),
+                imports: HashMap::new(),
             },
             rt: Runtime::default(),
         }
@@ -455,8 +454,8 @@ impl Uiua {
             return Err(UiuaError::Parse(errors, self.inputs().clone().into()));
         }
         if let InputSrc::File(path) = &src {
-            self.current_imports
-                .lock()
+            self.ct
+                .current_imports
                 .push(Path::new(path.as_str()).into());
         }
         let res = match catch_unwind(AssertUnwindSafe(|| self.items(items, false))) {
@@ -475,7 +474,7 @@ code:
             ))),
         };
         if let InputSrc::File(_) = &src {
-            self.current_imports.lock().pop();
+            self.ct.current_imports.pop();
         }
         res?;
         let start = self.rt.last_slice_run;
@@ -510,53 +509,28 @@ code:
             }
         }
     }
-    pub(crate) fn import_compile(&mut self, input: &str, path: &Path) -> UiuaResult {
-        if self.current_imports.lock().iter().any(|p| p == path) {
+    pub(crate) fn import_compile(&mut self, path: &Path) -> UiuaResult<PathBuf> {
+        let path = self.resolve_import_path(Path::new(&path));
+        let input = self.load_import_input(&path)?;
+        if self.ct.current_imports.iter().any(|p| p == &path) {
             return Err(self.error(format!(
                 "Cycle detected importing {}",
                 path.to_string_lossy()
             )));
         }
-        if !self.imports.lock().contains_key(path) {
-            let import = self.in_scope(|env| env.load_str_src(input, path).map(drop))?;
-            self.imports.lock().insert(path.into(), import);
-            self.asm.import_inputs.insert(path.into(), input.into());
+        if !self.ct.imports.contains_key(&path) {
+            let import = self.in_scope(|env| env.load_str_src(&input, path.as_ref()).map(drop))?;
+            self.ct.imports.insert(path.clone(), import);
         }
-        Ok(())
-    }
-    pub(crate) fn import_run(&mut self, input: &str, path: &Path, item: &str) -> UiuaResult {
-        if self.current_imports.lock().iter().any(|p| p == path) {
-            return Err(self.error(format!(
-                "Cycle detected importing {}",
-                path.to_string_lossy()
-            )));
-        }
-        if !self.imports.lock().contains_key(path) {
-            let import = self.in_scope(|env| env.load_str_src(input, path).and_then(Chunk::run))?;
-            self.imports.lock().insert(path.into(), import);
-        }
-        let imports_gaurd = self.imports.lock();
-        let imports = &imports_gaurd[path];
-        let idx = imports.get(item).ok_or_else(|| {
-            self.error(format!("Item `{}` not found in {}", item, path.display()))
-        })?;
-        let global = self.asm.globals[*idx].clone();
-        drop(imports_gaurd);
-        match global {
-            Global::Const(val) => self.push(val),
-            Global::Func(f) => self.rt.function_stack.push(f),
-            Global::Sig(_) => {}
-        }
-        Ok(())
+        Ok(path)
     }
     /// Resolve a declared import path relative to the path of the file that is being executed
     pub(crate) fn resolve_import_path(&self, path: &Path) -> PathBuf {
-        let target =
-            if let Some(parent) = self.current_imports.lock().last().and_then(|p| p.parent()) {
-                parent.join(path)
-            } else {
-                path.to_path_buf()
-            };
+        let target = if let Some(parent) = self.ct.current_imports.last().and_then(|p| p.parent()) {
+            parent.join(path)
+        } else {
+            path.to_path_buf()
+        };
         let base = Path::new(".");
         if let (Ok(canon_target), Ok(canon_base)) = (target.canonicalize(), base.canonicalize()) {
             pathdiff::diff_paths(canon_target, canon_base).unwrap_or(target)
@@ -564,25 +538,27 @@ code:
             pathdiff::diff_paths(&target, base).unwrap_or(target)
         }
     }
-    pub(crate) fn load_import_input(&self, path: &Path) -> UiuaResult<EcoString> {
+    pub(crate) fn load_import_input(&mut self, path: &Path) -> UiuaResult<EcoString> {
         if let Some(input) = self.asm.import_inputs.get(path) {
             return Ok(input.clone());
         }
-        String::from_utf8(
-            self.rt
-                .backend
-                .file_read_all(path)
-                .or_else(|e| {
-                    if path.ends_with(Path::new("example.ua")) {
-                        Ok(example_ua(|ex| ex.as_bytes().to_vec()))
-                    } else {
-                        Err(e)
-                    }
-                })
-                .map_err(|e| self.error(e))?,
-        )
-        .map_err(|e| self.error(format!("Failed to read file: {e}")))
-        .map(Into::into)
+        let bytes = self
+            .rt
+            .backend
+            .file_read_all(path)
+            .or_else(|e| {
+                if path.ends_with(Path::new("example.ua")) {
+                    Ok(example_ua(|ex| ex.as_bytes().to_vec()))
+                } else {
+                    Err(e)
+                }
+            })
+            .map_err(|e| self.error(e))?;
+        let input: EcoString = String::from_utf8(bytes)
+            .map_err(|e| self.error(format!("Failed to read file: {e}")))?
+            .into();
+        self.asm.import_inputs.insert(path.into(), input.clone());
+        Ok(input)
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
         self.rt.call_stack.push(frame);
@@ -644,6 +620,12 @@ code:
                         Global::Sig(_) => {
                             return Err(self.error(
                                 "Signature global was not overwritten. \
+                                This is a bug in the interpreter.",
+                            ))
+                        }
+                        Global::Module { .. } => {
+                            return Err(self.error(
+                                "Called module global. \
                                 This is a bug in the interpreter.",
                             ))
                         }
@@ -897,7 +879,11 @@ code:
         }
         Ok(())
     }
-    pub(crate) fn with_span<T>(&mut self, span: usize, f: impl FnOnce(&mut Self) -> T) -> T {
+    pub(crate) fn with_span<T>(
+        &mut self,
+        span: usize,
+        f: impl FnOnce(&mut Self) -> UiuaResult<T>,
+    ) -> UiuaResult<T> {
         self.with_prim_span(span, None, f)
     }
     fn with_prim_span<T>(
@@ -1412,8 +1398,6 @@ code:
         };
         let mut env = Uiua {
             asm: self.asm.clone(),
-            current_imports: self.current_imports.clone(),
-            imports: self.imports.clone(),
             dynamic_functions: self.dynamic_functions.clone(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: self.print_diagnostics,
@@ -1423,6 +1407,8 @@ code:
                 scope: self.ct.scope.clone(),
                 higher_scopes: Vec::new(),
                 mode: self.ct.mode,
+                current_imports: Vec::new(),
+                imports: HashMap::new(),
             },
             rt: Runtime {
                 last_slice_run: 0,

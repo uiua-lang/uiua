@@ -236,6 +236,8 @@ Ex ← &i "example.ua"
   Incr ← Ex "Increment"
   Dub ← Ex "Double"
 ⍤⊃⋅∘≍ 12 Dub Incr Foo
+Square ← &i "example.ua" "Square"
+⍤⊃⋅∘≍ 25 Square 5
 
 # Euler's identity
 ⍤⊃⋅∘≍ 0 ⍜(×1e12)⁅ ⌵+1 ⁿ×iπ e

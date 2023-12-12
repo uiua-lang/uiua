@@ -225,6 +225,9 @@ sys_op! {
     ///   : Double ← Ex "Double"
     ///   : Square ← Ex "Square"
     ///   : Square Double 5
+    ///
+    /// [import] can only be used as the first function in a binding.
+    /// ex! &i "example.ua" "Double" 5
     (2, Import, Filesystem, "&i", "import"),
     /// Invoke a path with the system's default program
     (1(1), Invoke, Command, "&invk", "invoke"),
@@ -986,24 +989,10 @@ impl SysOp {
                 env.push(is_file);
             }
             SysOp::Import => {
-                let path = env.pop(1)?.as_string(env, "Import path must be a string")?;
-                let item = env.pop(2)?.as_string(env, "Item name must be a string")?;
-                let resolved_path = env.resolve_import_path(path.as_ref());
-                let input = String::from_utf8(
-                    env.rt
-                        .backend
-                        .file_read_all(&resolved_path)
-                        .or_else(|e| {
-                            if path == "example.ua" {
-                                Ok(example_ua(|ex| ex.as_bytes().to_vec()))
-                            } else {
-                                Err(e)
-                            }
-                        })
-                        .map_err(|e| env.error(e))?,
-                )
-                .map_err(|e| env.error(format!("Failed to read file: {e}")))?;
-                env.import_run(&input, resolved_path.as_ref(), &item)?;
+                return Err(env.error(
+                    "&i is not valid in this position. \
+                    It must be the first item in a binding.",
+                ));
             }
             SysOp::Invoke => {
                 let path = env.pop(1)?.as_string(env, "Invoke path must be a string")?;

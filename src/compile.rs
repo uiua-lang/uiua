@@ -2,7 +2,6 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
     mem::take,
-    path::Path,
 };
 
 use ecow::{eco_vec, EcoString, EcoVec};
@@ -145,27 +144,61 @@ impl Uiua {
             }
             f
         };
-        // Add imports
-        let mut words = binding.words.iter().filter(|word| word.value.is_code());
-        if let Some(first) = words.next() {
-            if matches!(first.value, Word::Primitive(Primitive::Sys(SysOp::Import))) {
-                if let Some(second) = words.next() {
-                    if let Word::String(s) = &second.value {
-                        let path = self.resolve_import_path(Path::new(s));
-                        let input = self.load_import_input(&path)?;
-                        self.import_compile(&input, &path)?;
-                    }
-                }
-            }
-        }
         // Compile the body
         let mut instrs = self.compile_words(binding.words, true)?;
         let span = self.add_span(span.clone());
         let global_index = self.ct.next_global;
         self.ct.next_global += 1;
+
+        // Check if binding is an import
+        let mut is_import = false;
+        let mut sig = None;
+        if let [init @ .., Instr::Prim(Primitive::Sys(SysOp::Import), _)] = instrs.as_slice() {
+            is_import = true;
+            match init {
+                [Instr::Push(path)] => {
+                    if let Some(sig) = &binding.signature {
+                        return Err(self.error_with_span(
+                            sig.span.clone(),
+                            "Cannot declare a signature for a module import",
+                        ));
+                    }
+                    let path = path.as_string(self, "Import path must be a string")?;
+                    let module = self.import_compile(path.as_ref())?;
+                    self.add_global_at(global_index, Global::Module { module });
+                    self.ct.scope.names.insert(name.clone(), global_index);
+                }
+                [Instr::Push(item), Instr::Push(path)] => self.with_span(span, |env| {
+                    let path = path.as_string(env, "Import path must be a string")?;
+                    let module = env.import_compile(path.as_ref())?;
+                    let item = item.as_string(env, "Import item must be a string")?;
+                    let index = *env.ct.imports[&module].get(item.as_str()).ok_or_else(|| {
+                        env.error(format!("Item `{item}` not found in module `{path}`"))
+                    })?;
+                    env.ct.scope.names.insert(name.clone(), index);
+                    sig = Some(match &env.asm.globals[index] {
+                        Global::Func(f) => f.signature(),
+                        Global::Sig(s) => *s,
+                        Global::Const(_) => Signature::new(0, 1),
+                        Global::Module { .. } => {
+                            return Err(env.error("Cannot define a signature for a module rebind"))
+                        }
+                    });
+                    Ok(())
+                })?,
+                _ => {
+                    return Err(self.error_with_span(
+                        self.get_span(span),
+                        "&i must be followed by one or two strings",
+                    ))
+                }
+            }
+        }
+
         // Resolve signature
         match instrs_signature(&instrs) {
-            Ok(mut sig) => {
+            Ok(s) => {
+                let mut sig = sig.unwrap_or(s);
                 // Runtime-dependent binding
                 if instrs.is_empty() {
                     // Binding from the stack set above
@@ -182,7 +215,7 @@ impl Uiua {
                                 sp.span,
                                 format!(
                                     "This line's signature is undefined: {}. \
-                                        This prevents the later binding of {}.",
+                                    This prevents the later binding of {}.",
                                     sp.value, name
                                 ),
                             ));
@@ -210,24 +243,18 @@ impl Uiua {
                         ));
                     }
                 }
+                #[rustfmt::skip]
                 let is_setinv = matches!(
                     instrs.as_slice(),
-                    [
-                        Instr::PushFunc(_),
-                        Instr::PushFunc(_),
-                        Instr::Prim(Primitive::SetInverse, _)
-                    ]
+                    [Instr::PushFunc(_), Instr::PushFunc(_), Instr::Prim(Primitive::SetInverse, _)]
                 );
+                #[rustfmt::skip]
                 let is_setund = matches!(
                     instrs.as_slice(),
-                    [
-                        Instr::PushFunc(_),
-                        Instr::PushFunc(_),
-                        Instr::PushFunc(_),
-                        Instr::Prim(Primitive::SetUnder, _)
-                    ]
+                    [Instr::PushFunc(_), Instr::PushFunc(_), Instr::PushFunc(_), Instr::Prim(Primitive::SetUnder, _)]
                 );
-                if let [Instr::PushFunc(f)] = instrs.as_slice() {
+                if is_import {
+                } else if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
                     self.compile_bind_function(&name, global_index, func, span)?;
@@ -259,7 +286,8 @@ impl Uiua {
                 }
             }
             Err(e) => {
-                if let Some(sig) = binding.signature {
+                if is_import {
+                } else if let Some(sig) = binding.signature {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig.value, self);
                     self.compile_bind_function(&name, global_index, func, span)?;
@@ -387,7 +415,46 @@ impl Uiua {
         Ok((instrs, sig))
     }
     fn words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult {
-        for word in words.into_iter().rev() {
+        let mut words = words
+            .into_iter()
+            .rev()
+            .filter(|word| word.value.is_code() || matches!(&word.value, Word::Comment(_)))
+            .peekable();
+        while let Some(word) = words.next() {
+            // Handle imports
+            if let Some(next) = words.peek() {
+                if let Word::Ident(name) = &next.value {
+                    if let Some(index) = self.ct.scope.names.get(name) {
+                        if let Global::Module { module } = &self.asm.globals[*index] {
+                            if let Word::String(item_name) = &word.value {
+                                let index = self.ct.imports[module]
+                                    .get(item_name.as_str())
+                                    .copied()
+                                    .ok_or_else(|| {
+                                        self.error_with_span(
+                                            next.span.clone(),
+                                            format!(
+                                                "Item `{item_name}` not found in module `{}`",
+                                                module.display()
+                                            ),
+                                        )
+                                    })?;
+                                self.global_index(index, next.span.clone(), call)?;
+                                words.next();
+                                continue;
+                            } else {
+                                return Err(self.error_with_span(
+                                    next.span.clone(),
+                                    format!(
+                                        "Expected a string after `{name}` \
+                                        to specify an item to import",
+                                    ),
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
             self.word(word, call)?;
         }
         Ok(())
@@ -644,42 +711,49 @@ impl Uiua {
             .copied()
         {
             // Name exists in scope
-            let global = self.asm.globals[index].clone();
-            match global {
-                Global::Const(val) if call => self.push_instr(Instr::push(val)),
-                Global::Const(val) => {
-                    let f = self.add_function(
-                        FunctionId::Anonymous(span),
-                        Signature::new(0, 1),
-                        vec![Instr::push(val)],
-                    );
-                    self.push_instr(Instr::PushFunc(f));
-                }
-                Global::Func(f)
-                    if self.count_temp_functions(f.instrs(self), &mut HashSet::new()) == 0 =>
-                {
-                    if call {
-                        self.push_instr(Instr::PushSig(f.signature()));
-                        let instrs = f.instrs(self).to_vec();
-                        self.push_all_instrs(instrs);
-                        self.push_instr(Instr::PopSig);
-                    } else {
-                        self.push_instr(Instr::PushFunc(f));
-                    }
-                }
-                Global::Func(f) => {
-                    self.push_instr(Instr::PushFunc(f));
-                    if call {
-                        let span = self.add_span(span);
-                        self.push_instr(Instr::Call(span));
-                    }
-                }
-                Global::Sig(sig) => self.push_instr(Instr::CallGlobal { index, call, sig }),
-            }
+            self.global_index(index, span, call)?;
         } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
             self.push_instr(Instr::push(constant.value.clone()));
         } else {
             return Err(self.error_with_span(span, format!("Unknown identifier `{ident}`")));
+        }
+        Ok(())
+    }
+    fn global_index(&mut self, index: usize, span: CodeSpan, call: bool) -> UiuaResult {
+        let global = self.asm.globals[index].clone();
+        match global {
+            Global::Const(val) if call => self.push_instr(Instr::push(val)),
+            Global::Const(val) => {
+                let f = self.add_function(
+                    FunctionId::Anonymous(span),
+                    Signature::new(0, 1),
+                    vec![Instr::push(val)],
+                );
+                self.push_instr(Instr::PushFunc(f));
+            }
+            Global::Func(f)
+                if self.count_temp_functions(f.instrs(self), &mut HashSet::new()) == 0 =>
+            {
+                if call {
+                    self.push_instr(Instr::PushSig(f.signature()));
+                    let instrs = f.instrs(self).to_vec();
+                    self.push_all_instrs(instrs);
+                    self.push_instr(Instr::PopSig);
+                } else {
+                    self.push_instr(Instr::PushFunc(f));
+                }
+            }
+            Global::Func(f) => {
+                self.push_instr(Instr::PushFunc(f));
+                if call {
+                    let span = self.add_span(span);
+                    self.push_instr(Instr::Call(span));
+                }
+            }
+            Global::Sig(sig) => self.push_instr(Instr::CallGlobal { index, call, sig }),
+            Global::Module { .. } => {
+                return Err(self.error_with_span(span, "Cannot import module item here."))
+            }
         }
         Ok(())
     }

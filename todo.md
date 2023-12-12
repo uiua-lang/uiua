@@ -2,8 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Under reshape
-- Output comments
 - LSP
   - Rename
   - Signatures

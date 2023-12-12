@@ -21,6 +21,9 @@ pub enum Item {
     TestScope(Sp<Vec<Item>>),
     /// Extra newlines between items
     ExtraNewlines(CodeSpan),
+    /// Output comment
+    #[allow(missing_docs)]
+    OutputComment { i: usize, n: usize, span: CodeSpan },
 }
 
 impl Item {
@@ -41,6 +44,7 @@ impl Item {
             }
             Item::Binding(binding) => binding.span(),
             Item::ExtraNewlines(span) => span.clone(),
+            Item::OutputComment { span, .. } => span.clone(),
         }
     }
 }

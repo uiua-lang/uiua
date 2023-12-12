@@ -126,6 +126,7 @@ enum InstrRep {
     DropTemp(TempStack, usize, usize),
     PushSig(Signature),
     PopSig,
+    SetOutputComment(usize, usize, usize),
     #[serde(untagged)]
     Push(Value),
     #[serde(untagged)]
@@ -169,6 +170,7 @@ impl From<Instr> for InstrRep {
             Instr::DropTemp { stack, count, span } => Self::DropTemp(stack, count, span),
             Instr::PushSig(sig) => Self::PushSig(sig),
             Instr::PopSig => Self::PopSig,
+            Instr::SetOutputComment { i, n, span } => Self::SetOutputComment(i, n, span),
         }
     }
 }
@@ -208,6 +210,7 @@ impl From<InstrRep> for Instr {
             InstrRep::DropTemp(stack, count, span) => Self::DropTemp { stack, count, span },
             InstrRep::PushSig(sig) => Self::PushSig(sig),
             InstrRep::PopSig => Self::PopSig,
+            InstrRep::SetOutputComment(i, n, span) => Self::SetOutputComment { i, n, span },
         }
     }
 }

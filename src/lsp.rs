@@ -59,6 +59,7 @@ impl Spanner {
                     spans.extend(self.words_spans(&binding.words));
                 }
                 Item::ExtraNewlines(span) => spans.push(span.clone().sp(SpanKind::Whitespace)),
+                Item::OutputComment { span, .. } => spans.push(span.clone().sp(SpanKind::Comment)),
             }
         }
         spans
@@ -273,6 +274,7 @@ mod server {
                     );
                 }
                 Item::ExtraNewlines(_) => {}
+                Item::OutputComment { .. } => {}
             }
         }
         scope_bindings.push(bindings);

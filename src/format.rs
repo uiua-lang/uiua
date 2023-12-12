@@ -2,13 +2,14 @@
 
 use std::{
     any::Any,
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     env,
     fmt::Display,
     fs,
     path::{Path, PathBuf},
 };
 
+use instant::Duration;
 use paste::paste;
 
 use crate::{
@@ -18,7 +19,8 @@ use crate::{
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
     value::Value,
-    FunctionId, Ident, InputSrc, Inputs, Primitive, SysBackend, SysOp, Uiua, UiuaError, UiuaResult,
+    Chunk, FunctionId, Ident, InputSrc, Inputs, Primitive, RunMode, SysBackend, SysOp, Uiua,
+    UiuaError, UiuaResult,
 };
 
 // For now disallow any syscalls in the format config file.
@@ -349,12 +351,14 @@ fn format_impl(input: &str, src: InputSrc, config: &FormatConfig) -> UiuaResult<
     let (items, errors, _) = parse(input, src.clone(), &mut inputs);
     if errors.is_empty() {
         Ok(Formatter {
+            src,
             config,
             inputs: &inputs,
             output: String::new(),
             glyph_map: BTreeMap::new(),
             end_of_line_comments: Vec::new(),
             prev_import_function: None,
+            output_comments: None,
         }
         .format_top_items(&items))
     } else {
@@ -387,12 +391,14 @@ pub fn format_file<P: AsRef<Path>>(
 }
 
 struct Formatter<'a> {
+    src: InputSrc,
     config: &'a FormatConfig,
     inputs: &'a Inputs,
     output: String,
     glyph_map: BTreeMap<CodeSpan, (Loc, Loc)>,
     end_of_line_comments: Vec<(usize, String)>,
     prev_import_function: Option<Ident>,
+    output_comments: Option<HashMap<(InputSrc, usize), Vec<Value>>>,
 }
 
 impl<'a> Formatter<'a> {
@@ -525,8 +531,20 @@ impl<'a> Formatter<'a> {
                     );
                 }
             }
-            Item::ExtraNewlines(_) => {
-                self.prev_import_function = None;
+            Item::ExtraNewlines(_) => self.prev_import_function = None,
+            Item::OutputComment { i, n, span } => {
+                let values = self.output_comment(*i);
+                if values.is_empty() {
+                    self.push(span, &"#".repeat(*n + 1));
+                }
+                for value in values {
+                    for line in value.show().lines() {
+                        self.output.push_str(&"#".repeat(*n + 1));
+                        self.output.push(' ');
+                        self.output.push_str(line);
+                        self.output.push('\n');
+                    }
+                }
             }
         }
     }
@@ -806,6 +824,21 @@ impl<'a> Formatter<'a> {
             let end = end_loc(&self.output);
             self.glyph_map.insert(span.clone(), (start, end));
         }
+    }
+    fn output_comment(&mut self, index: usize) -> Vec<Value> {
+        let values = self.output_comments.get_or_insert_with(|| {
+            let mut env = Uiua::with_native_sys()
+                .with_mode(RunMode::All)
+                .with_execution_limit(Duration::from_secs(1));
+            let input = self.inputs.get(&self.src);
+            _ = env
+                .load_str_src(&input, self.src.clone())
+                .and_then(Chunk::run);
+            env.rt.output_comments
+        });
+        values
+            .remove(&(self.src.clone(), index))
+            .unwrap_or_default()
     }
 }
 

@@ -357,6 +357,7 @@ impl<T> From<Sp<T>> for Sp<T, Span> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Comment,
+    OutputComment(usize),
     Ident,
     Number,
     Char(String),
@@ -392,6 +393,12 @@ impl Token {
     pub(crate) fn as_multiline_string(&self) -> Option<Vec<String>> {
         match self {
             Token::MultilineString(parts) => Some(parts.clone()),
+            _ => None,
+        }
+    }
+    pub(crate) fn as_output_comment(&self) -> Option<usize> {
+        match self {
+            Token::OutputComment(n) => Some(*n),
             _ => None,
         }
     }
@@ -540,7 +547,7 @@ impl<'a> Lexer<'a> {
             self.end(TripleMinus, start);
         }
         // Main loop
-        loop {
+        'main: loop {
             let start = self.loc;
             let Some(c) = self.next_char() else {
                 break;
@@ -599,14 +606,32 @@ impl<'a> Lexer<'a> {
                 "←" => self.end(LeftArrow, start),
                 // Comments
                 "#" => {
-                    let mut comment = String::new();
-                    while let Some(c) = self.next_char_if(|c| !c.ends_with('\n')) {
-                        comment.push_str(c);
+                    let mut n = 0;
+                    while self.next_char_exact("#") {
+                        n += 1;
                     }
-                    if comment.starts_with(' ') {
-                        comment.remove(0);
+                    if n == 0 {
+                        let mut comment = String::new();
+                        while let Some(c) = self.next_char_if(|c| !c.ends_with('\n')) {
+                            comment.push_str(c);
+                        }
+                        if comment.starts_with(' ') {
+                            comment.remove(0);
+                        }
+                        self.end(Comment, start);
+                    } else {
+                        loop {
+                            while self.next_char_if(|c| !c.ends_with('\n')).is_some() {}
+                            self.next_char_exact("\r");
+                            self.next_char_exact("\n");
+                            let start = self.loc;
+                            if !self.next_chars_exact(["#", "#"]) {
+                                self.end(OutputComment(n), start);
+                                continue 'main;
+                            }
+                            self.next_char_exact("#");
+                        }
                     }
-                    self.end(Comment, start)
                 }
                 // Characters
                 "@" => {

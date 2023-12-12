@@ -1003,14 +1003,16 @@ fn under_unpack_pattern<'a>(
     let (mut befores, mut afters) = under_instrs(input, g_sig, env)?;
     befores.insert(0, unpack.clone());
     afters.insert(0, Instr::BeginArray);
-    afters.push(Instr::TouchStack {
-        count: *count,
-        span: *span,
-    });
-    afters.push(Instr::EndArray {
-        span: *span,
-        boxed: *unbox,
-    });
+    afters.extend([
+        Instr::TouchStack {
+            count: *count,
+            span: *span,
+        },
+        Instr::EndArray {
+            span: *span,
+            boxed: *unbox,
+        },
+    ]);
     Some((input, (befores, afters)))
 }
 

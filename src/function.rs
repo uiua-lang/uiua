@@ -2,7 +2,6 @@ use std::{
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
-    mem::{discriminant, transmute},
     ops::{Add, AddAssign, ControlFlow},
 };
 
@@ -105,6 +104,11 @@ pub enum Instr {
         count: usize,
         span: usize,
     },
+    SetOutputComment {
+        i: usize,
+        n: usize,
+        span: usize,
+    },
     PushSig(Signature),
     PopSig,
 }
@@ -132,121 +136,6 @@ impl fmt::Display for TempStack {
 impl PartialEq for Instr {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Prim(a, s_span), Self::Prim(b, b_span)) => a == b && s_span == b_span,
-            (Self::ImplPrim(a, a_span), Self::ImplPrim(b, b_span)) => a == b && a_span == b_span,
-            (
-                Self::CopyToTemp {
-                    stack: a_stack,
-                    count: a_count,
-                    span: a_span,
-                },
-                Self::CopyToTemp {
-                    stack: b_stack,
-                    count: b_count,
-                    span: b_span,
-                },
-            ) => a_stack == b_stack && a_count == b_count && a_span == b_span,
-            (Self::Format(a, a_span), Self::Format(b, b_span)) => a == b && a_span == b_span,
-            (
-                Self::PushTemp {
-                    stack: a_stack,
-                    count: a_count,
-                    span: a_span,
-                },
-                Self::PushTemp {
-                    stack: b_stack,
-                    count: b_count,
-                    span: b_span,
-                },
-            ) => a_stack == b_stack && a_count == b_count && a_span == b_span,
-            (a, b) => a.semantic_eq(b),
-        }
-    }
-}
-
-impl Eq for Instr {}
-
-impl PartialOrd for Instr {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Instr {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match (self, other) {
-            (Self::Push(a), Self::Push(b)) => a.cmp(b),
-            (a, b) => {
-                if a == b {
-                    Ordering::Equal
-                } else {
-                    let a: u8 = unsafe { transmute(discriminant(a)) };
-                    let b: u8 = unsafe { transmute(discriminant(b)) };
-                    a.cmp(&b)
-                }
-            }
-        }
-    }
-}
-
-impl Hash for Instr {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        let disc: u8 = unsafe { transmute(discriminant(self)) };
-        disc.hash(state);
-        match self {
-            Instr::Comment(_) => {}
-            Instr::Push(val) => val.hash(state),
-            Instr::CallGlobal { .. } => {}
-            Instr::BindGlobal { .. } => {}
-            Instr::BeginArray => {}
-            Instr::EndArray { .. } => {}
-            Instr::Prim(p, _) => p.hash(state),
-            Instr::ImplPrim(p, _) => p.hash(state),
-            Instr::Call(_) => {}
-            Instr::PushFunc(f) => f.id.hash(state),
-            Instr::Switch { count, sig, .. } => {
-                count.hash(state);
-                sig.hash(state);
-            }
-            Instr::Unpack { count, .. } => count.hash(state),
-            Instr::PushTempFunctions(count) => count.hash(state),
-            Instr::PopTempFunctions(count) => count.hash(state),
-            Instr::GetTempFunction { offset, .. } => offset.hash(state),
-            Instr::Format(parts, _) => parts.hash(state),
-            Instr::Dynamic(f) => f.index.hash(state),
-            Instr::TouchStack { count, .. } => count.hash(state),
-            Instr::PushTemp { count, .. } => count.hash(state),
-            Instr::PopTemp { count, .. } => count.hash(state),
-            Instr::CopyToTemp { count, .. } => count.hash(state),
-            Instr::CopyFromTemp { offset, count, .. } => {
-                offset.hash(state);
-                count.hash(state);
-            }
-            Instr::DropTemp { count, .. } => count.hash(state),
-            Instr::PushSig(_) | Instr::PopSig => {}
-        }
-    }
-}
-
-impl Instr {
-    /// Create a new push instruction
-    pub fn push(val: impl Into<Value>) -> Self {
-        Self::Push(val.into())
-    }
-    pub(crate) fn is_temp(&self) -> bool {
-        matches!(
-            self,
-            Self::PushTemp { .. }
-                | Self::PopTemp { .. }
-                | Self::CopyFromTemp { .. }
-                | Self::DropTemp { .. }
-        )
-    }
-    pub(crate) fn is_compile_only(&self) -> bool {
-        matches!(self, Self::PushSig(_) | Self::PopSig)
-    }
-    pub(crate) fn semantic_eq(&self, other: &Self) -> bool {
-        match (self, other) {
             (Self::Push(a), Self::Push(b)) => a == b,
             (Self::BeginArray, Self::BeginArray) => true,
             (Self::EndArray { .. }, Self::EndArray { .. }) => true,
@@ -272,6 +161,27 @@ impl Instr {
             (Self::DropTemp { count: a, .. }, Self::DropTemp { count: b, .. }) => a == b,
             _ => false,
         }
+    }
+}
+
+impl Eq for Instr {}
+
+impl Instr {
+    /// Create a new push instruction
+    pub fn push(val: impl Into<Value>) -> Self {
+        Self::Push(val.into())
+    }
+    pub(crate) fn is_temp(&self) -> bool {
+        matches!(
+            self,
+            Self::PushTemp { .. }
+                | Self::PopTemp { .. }
+                | Self::CopyFromTemp { .. }
+                | Self::DropTemp { .. }
+        )
+    }
+    pub(crate) fn is_compile_only(&self) -> bool {
+        matches!(self, Self::PushSig(_) | Self::PopSig)
     }
 }
 
@@ -333,6 +243,7 @@ impl fmt::Display for Instr {
                 write!(f, "<copy to {stack} {count}>")
             }
             Instr::DropTemp { stack, count, .. } => write!(f, "<drop {stack} {count}>"),
+            Instr::SetOutputComment { i, n, .. } => write!(f, "<set output comment {i}({n})>"),
             Instr::PushSig(sig) => write!(f, "{sig}"),
             Instr::PopSig => write!(f, "-|"),
         }

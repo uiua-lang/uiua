@@ -112,6 +112,7 @@ pub(crate) struct Runtime {
     pub(crate) backend: Arc<dyn SysBackend>,
     /// The thread interface
     thread: ThisThread,
+    pub(crate) output_comments: HashMap<(InputSrc, usize), Vec<Value>>,
 }
 
 #[derive(Clone)]
@@ -229,6 +230,7 @@ impl Runtime {
             execution_limit: None,
             execution_start: 0.0,
             thread: ThisThread::default(),
+            output_comments: HashMap::new(),
         }
     }
 }
@@ -848,6 +850,13 @@ code:
                     "PopSig should have been removed before running. \
                     This is a bug in the interpreter.",
                 )),
+                &Instr::SetOutputComment { i, n, span } => self.with_span(span, |env| {
+                    let values = env.clone_stack_top(n);
+                    if let Span::Code(span) = env.get_span(span) {
+                        env.rt.output_comments.insert((span.src, i), values);
+                    }
+                    Ok(())
+                }),
             };
             if self.rt.time_instrs {
                 let end_time = instant::now();
@@ -1432,6 +1441,7 @@ code:
                 backend: self.rt.backend.clone(),
                 execution_limit: self.rt.execution_limit,
                 execution_start: self.rt.execution_start,
+                output_comments: HashMap::new(),
                 thread,
             },
         };

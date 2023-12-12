@@ -184,6 +184,7 @@ pub fn parse(
             index: 0,
             errors,
             diagnostics,
+            next_output_comment: 0,
         };
         let items = parser.items(true);
         if parser.errors.is_empty() && parser.index < parser.tokens.len() {
@@ -204,6 +205,7 @@ struct Parser<'i> {
     input: EcoString,
     tokens: Vec<Sp<crate::lex::Token>>,
     index: usize,
+    next_output_comment: usize,
     errors: Vec<Sp<ParseError>>,
     diagnostics: Vec<Diagnostic>,
 }
@@ -284,6 +286,14 @@ impl<'i> Parser<'i> {
         self.try_spaces();
         Some(if let Some(binding) = self.try_binding() {
             Item::Binding(binding)
+        } else if let Some(n) = self.next_token_map(Token::as_output_comment) {
+            let i = self.next_output_comment;
+            self.next_output_comment += 1;
+            Item::OutputComment {
+                i,
+                n: n.value,
+                span: n.span,
+            }
         } else {
             let lines = self.multiline_words();
             // Convert multiline words into multiple items

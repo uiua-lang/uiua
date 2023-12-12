@@ -121,22 +121,11 @@ where
     }
 }
 
-pub fn bin_pervade<A, B, C, F>(
-    mut a: Array<A>,
-    mut b: Array<B>,
-    mut a_depth: usize,
-    mut b_depth: usize,
-    env: &Uiua,
-    f: F,
-) -> UiuaResult<Array<C>>
+fn reshape_depths<A, B>(a: &mut Array<A>, b: &mut Array<B>, mut a_depth: usize, mut b_depth: usize)
 where
     A: ArrayValue,
     B: ArrayValue,
-    C: ArrayValue,
-    F: PervasiveFn<A, B, Output = C> + Clone,
-    F::Error: Into<UiuaError>,
 {
-    // Account for depths
     a_depth = a_depth.min(a.rank());
     b_depth = b_depth.min(b.rank());
     match a_depth.cmp(&b_depth) {
@@ -152,6 +141,25 @@ where
             }
         }
     }
+}
+
+pub fn bin_pervade<A, B, C, F>(
+    mut a: Array<A>,
+    mut b: Array<B>,
+    a_depth: usize,
+    b_depth: usize,
+    env: &Uiua,
+    f: F,
+) -> UiuaResult<Array<C>>
+where
+    A: ArrayValue,
+    B: ArrayValue,
+    C: ArrayValue,
+    F: PervasiveFn<A, B, Output = C> + Clone,
+    F::Error: Into<UiuaError>,
+{
+    // Account for depths
+    reshape_depths(&mut a, &mut b, a_depth, b_depth);
     // Fill
     fill_array_shapes(&mut a, &mut b, env)?;
     // Pervade
@@ -209,8 +217,8 @@ where
 pub fn bin_pervade_mut<T>(
     a: &mut Array<T>,
     mut b: Array<T>,
-    mut a_depth: usize,
-    mut b_depth: usize,
+    a_depth: usize,
+    b_depth: usize,
     env: &Uiua,
     f: impl Fn(T, T) -> T + Copy,
 ) -> UiuaResult
@@ -218,21 +226,7 @@ where
     T: ArrayValue + Copy,
 {
     // Account for depths
-    a_depth = a_depth.min(a.rank());
-    b_depth = b_depth.min(b.rank());
-    match a_depth.cmp(&b_depth) {
-        Ordering::Equal => {}
-        Ordering::Less => {
-            for b_dim in b.shape[..b_depth - a_depth].iter().rev() {
-                a.reshape_scalar(*b_dim);
-            }
-        }
-        Ordering::Greater => {
-            for a_dim in a.shape[..a_depth - b_depth].iter().rev() {
-                b.reshape_scalar(*a_dim);
-            }
-        }
-    }
+    reshape_depths(a, &mut b, a_depth, b_depth);
     // Fill
     fill_array_shapes(a, &mut b, env)?;
     // Pervade

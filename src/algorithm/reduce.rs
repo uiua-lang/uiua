@@ -8,7 +8,7 @@ use crate::{
     cowslice::cowslice,
     function::Function,
     value::Value,
-    Primitive, Uiua, UiuaResult,
+    ImplPrimitive, Primitive, Uiua, UiuaResult,
 };
 
 pub fn reduce(env: &mut Uiua) -> UiuaResult {
@@ -307,6 +307,35 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
         Value::from_row_values(rows, env)?
     };
     env.push(val);
+    Ok(())
+}
+
+pub fn invscan(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop_function()?;
+    let xs = env.pop(1)?;
+    let sig = f.signature();
+    if sig != (2, 1) {
+        return Err(env.error(format!(
+            "{} unscan's function's signature must be |2.1, but it is {sig}",
+            ImplPrimitive::InvScan,
+        )));
+    }
+    if xs.row_count() == 0 {
+        env.push(xs.first_dim_zero());
+        return Ok(());
+    }
+    let mut unscanned = Vec::with_capacity(xs.row_count());
+    let mut rows = xs.into_rows();
+    let mut curr = rows.next().unwrap();
+    unscanned.push(curr.clone());
+    for row in rows {
+        env.push(row.clone());
+        env.push(curr);
+        env.call(f.clone())?;
+        unscanned.push(env.pop("unscanned function result")?);
+        curr = row;
+    }
+    env.push(Value::from_row_values(unscanned, env)?);
     Ok(())
 }
 

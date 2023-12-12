@@ -139,6 +139,7 @@ impl fmt::Display for ImplPrimitive {
             InvUtf => write!(f, "{Un}{Utf}"),
             InvParse => write!(f, "{Un}{Parse}"),
             InvFix => write!(f, "{Un}{Fix}"),
+            InvScan => write!(f, "{Un}{Scan}"),
             InvTrace => write!(f, "{Un}{Trace}"),
             InvStack => write!(f, "{Un}{Stack}"),
             InvDump => write!(f, "{Un}{Dump}"),
@@ -733,6 +734,7 @@ impl ImplPrimitive {
                 env.push(re);
                 env.push(im);
             }
+            ImplPrimitive::InvScan => reduce::invscan(env)?,
             ImplPrimitive::InvTrace => trace(env, true)?,
             ImplPrimitive::InvStack => stack(env, true)?,
             ImplPrimitive::InvDump => dump(env, true)?,

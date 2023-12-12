@@ -99,9 +99,12 @@ pub(crate) fn invert_instrs(instrs: &[Instr], env: &mut Uiua) -> Option<EcoVec<I
         &invert_trivial_pattern,
         &invert_array_pattern,
         &invert_unpack_pattern,
+        &invert_scan_pattern,
         &(Val, ([Rotate], [Neg, Rotate])),
         &([Rotate], [Neg, Rotate]),
         &pat!(Sqrt, (2, Pow)),
+        &([Add], [Sub]),
+        &([Mul], [Div]),
         &(Val, IgnoreMany(Flip), ([Add], [Sub])),
         &(Val, ([Sub], [Add])),
         &(Val, ([Flip, Sub], [Flip, Sub])),
@@ -1033,6 +1036,25 @@ fn under_touch_pattern<'a>(
         });
     }
     Some((input, (eco_vec![instr.clone()], afters)))
+}
+
+fn invert_scan_pattern<'a>(
+    input: &'a [Instr],
+    env: &mut Uiua,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::PushFunc(f), Instr::Prim(Primitive::Scan, span), input @ ..] = input else {
+        return None;
+    };
+    let instrs = f.instrs(env).to_vec();
+    let inverse = invert_instrs(&instrs, env)?;
+    let inverse = make_fn(inverse, *span, env)?;
+    Some((
+        input,
+        eco_vec![
+            Instr::PushFunc(inverse),
+            Instr::ImplPrim(ImplPrimitive::InvScan, *span)
+        ],
+    ))
 }
 
 impl<A: InvertPattern, B: InvertPattern> InvertPattern for (A, B) {

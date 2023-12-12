@@ -10,6 +10,7 @@ Uiua is not yet stable.
 - [`&i`](https://uiua.org/docs/&i) can now only be used as the first function in a binding
 - [`repeat` `⍥`](https://uiua.org/docs/repeat) can no longer use a negative number of repetitions
 - [`reshape` `↯`](https://uiua.org/docs/reshape) now works with [`under` `⍜`](https://uiua.org/docs/under)
+- [`scan` `\`](https://uiua.org/docs/scan) now works with [`un` `°`](https://uiua.org/docs/un) in some cases
 - Add output comments, which the formatter fills with values from the stack
   - Make an empty comment starting with `n` additional `#`s
   - The formatter will replace the comment with the top `n` values from the stack

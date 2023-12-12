@@ -1851,6 +1851,7 @@ impl_primitive!(
     (1(2), InvComplex),
     (1, InvParse),
     (1, InvFix),
+    (1[1], InvScan),
     (1, InvTrace),
     (0, InvStack),
     (0[1], InvDump),

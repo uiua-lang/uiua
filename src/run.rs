@@ -520,7 +520,7 @@ code:
             )));
         }
         if !self.ct.imports.contains_key(&path) {
-            let import = self.in_scope(|env| env.load_str_src(&input, path.as_ref()).map(drop))?;
+            let import = self.in_scope(|env| env.load_str_src(&input, &path).map(drop))?;
             self.ct.imports.insert(path.clone(), import);
         }
         Ok(path)

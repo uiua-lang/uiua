@@ -186,6 +186,12 @@ impl<'a> IntoInputSrc for &'a Path {
     }
 }
 
+impl<'a> IntoInputSrc for &'a PathBuf {
+    fn into_input_src(self, _: usize) -> InputSrc {
+        self.as_path().into()
+    }
+}
+
 impl IntoInputSrc for () {
     fn into_input_src(self, str_index: usize) -> InputSrc {
         InputSrc::Str(str_index)

@@ -128,52 +128,59 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// A Uiua identifier
 pub type Ident = EcoString;
 
-#[test]
-fn suite() {
-    for entry in std::fs::read_dir("tests").unwrap() {
-        let entry = entry.unwrap();
-        let path = entry.path();
-        if path.is_file() && path.extension().is_some_and(|s| s == "ua") {
-            let mut env = Uiua::with_native_sys().print_diagnostics(false);
-            if let Err(e) = env.run_file(&path) {
-                panic!("Test failed in {}:\n{}", path.display(), e.report());
-            } else if let Some(diag) = env
-                .take_diagnostics()
-                .into_iter()
-                .find(|d| d.kind < DiagnosticKind::Advice)
-            {
-                panic!("Test failed in {}:\n{}", path.display(), diag.report());
-            }
-        }
-    }
-}
-
-#[test]
-fn no_dbgs() {
-    fn recurse_dirs(dir: &std::path::Path, f: &impl Fn(&std::path::Path)) {
-        for entry in std::fs::read_dir(dir).unwrap() {
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn suite() {
+        for entry in std::fs::read_dir("tests").unwrap() {
             let entry = entry.unwrap();
             let path = entry.path();
-            if path.to_string_lossy().contains("target") {
-                continue;
-            }
-            if path.is_dir() {
-                recurse_dirs(&path, f);
-            } else {
-                f(&path);
+            if path.is_file() && path.extension().is_some_and(|s| s == "ua") {
+                let code = std::fs::read_to_string(&path).unwrap();
+                // Run code
+                let mut env = Uiua::with_native_sys().print_diagnostics(false);
+                if let Err(e) = env.load_str_src(&code, &path).and_then(Chunk::run) {
+                    panic!("Test failed in {}:\n{}", path.display(), e.report());
+                } else if let Some(diag) = env
+                    .take_diagnostics()
+                    .into_iter()
+                    .find(|d| d.kind < DiagnosticKind::Advice)
+                {
+                    panic!("Test failed in {}:\n{}", path.display(), diag.report());
+                }
             }
         }
     }
-    recurse_dirs(std::path::Path::new("."), &|path| {
-        if path.extension().is_some_and(|ext| ext == "rs") {
-            if path.canonicalize().unwrap() == std::path::Path::new(file!()).canonicalize().unwrap()
-            {
-                return;
-            }
-            let contents = std::fs::read_to_string(path).unwrap();
-            if contents.contains("dbg!") {
-                panic!("File {} contains a dbg! macro", path.display());
+
+    #[test]
+    fn no_dbgs() {
+        fn recurse_dirs(dir: &std::path::Path, f: &impl Fn(&std::path::Path)) {
+            for entry in std::fs::read_dir(dir).unwrap() {
+                let entry = entry.unwrap();
+                let path = entry.path();
+                if path.to_string_lossy().contains("target") {
+                    continue;
+                }
+                if path.is_dir() {
+                    recurse_dirs(&path, f);
+                } else {
+                    f(&path);
+                }
             }
         }
-    });
+        recurse_dirs(std::path::Path::new("."), &|path| {
+            if path.extension().is_some_and(|ext| ext == "rs") {
+                if path.canonicalize().unwrap()
+                    == std::path::Path::new(file!()).canonicalize().unwrap()
+                {
+                    return;
+                }
+                let contents = std::fs::read_to_string(path).unwrap();
+                if contents.contains("dbg!") {
+                    panic!("File {} contains a dbg! macro", path.display());
+                }
+            }
+        });
+    }
 }

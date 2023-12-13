@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     collections::{BTreeSet, HashMap},
     fmt, fs,
     hash::Hash,
@@ -610,7 +611,7 @@ code:
             //         println!();
             //     }
             // }
-            // println!("  {:?}", instr);
+            // println!("    {:?}", instr);
 
             if self.rt.time_instrs {
                 formatted_instr = format!("{instr:?}");
@@ -953,13 +954,30 @@ code:
         let call_span = self.span_index();
         self.call_with_frame_span(frame, call_span)
     }
-    #[inline]
-    pub(crate) fn call_restore(&mut self, f: Function) -> UiuaResult {
-        let f_args = f.signature().args;
-        let bottom = self.stack_height().saturating_sub(f_args);
+    /// Call and truncate the stack to before the args were pushed if the call fails
+    pub(crate) fn call_clean_stack(&mut self, f: Function) -> UiuaResult {
+        let sig = f.signature();
+        let bottom = self.stack_height().saturating_sub(sig.args);
         let res = self.call(f);
         if res.is_err() {
             self.truncate_stack(bottom);
+        }
+        res
+    }
+    /// Call and maintaint eh stack delta if the call fails
+    pub(crate) fn call_maintain_sig(&mut self, f: Function) -> UiuaResult {
+        let sig = f.signature();
+        let target_height = (self.stack_height() + sig.outputs).saturating_sub(sig.args);
+        let res = self.call(f);
+        match self.stack_height().cmp(&target_height) {
+            Ordering::Equal => {}
+            Ordering::Greater => self.truncate_stack(target_height),
+            Ordering::Less => {
+                let diff = target_height - self.stack_height();
+                for _ in 0..diff {
+                    self.push(Value::default());
+                }
+            }
         }
         res
     }

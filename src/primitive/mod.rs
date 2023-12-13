@@ -550,7 +550,7 @@ impl Primitive {
                 let handler = env.pop_function()?;
                 let f_args = f.signature().args;
                 let backup = env.clone_stack_top(f_args);
-                if let Err(e) = env.call_restore(f) {
+                if let Err(e) = env.call_clean_stack(f) {
                     env.rt
                         .backend
                         .save_error_color(e.message(), e.report().to_string());

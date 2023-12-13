@@ -181,10 +181,9 @@ fn each1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
         let is_empty = outputs > 0 && xs.row_count() == 0;
         if is_empty {
             env.push(xs.proxy_scalar(env));
-            if env.call_restore(f).is_ok() {
-                for i in 0..outputs {
-                    new_values[i].push(env.pop("each's function result")?);
-                }
+            _ = env.call_maintain_sig(f);
+            for i in 0..outputs {
+                new_values[i].push(env.pop("each's function result")?);
             }
         } else {
             for val in xs.into_elements() {
@@ -248,7 +247,7 @@ fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 |x, y, env| {
                     env.push(y);
                     env.push(x);
-                    if env.call_restore(f.clone()).is_ok() {
+                    if env.call_maintain_sig(f.clone()).is_ok() {
                         (0..outputs)
                             .map(|_| env.pop("each's function result"))
                             .collect::<Result<MultiOutput<_>, _>>()
@@ -321,10 +320,9 @@ fn eachn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         for arg in args.into_iter().rev() {
             env.push(arg.proxy_scalar(env));
         }
-        if env.call_restore(f).is_ok() {
-            for i in 0..outputs {
-                new_values[i].push(env.pop("each's function result")?);
-            }
+        _ = env.call_maintain_sig(f);
+        for i in 0..outputs {
+            new_values[i].push(env.pop("each's function result")?);
         }
     } else {
         let mut arg_elems: Vec<_> = args.into_iter().map(Value::into_elements).collect();
@@ -385,10 +383,9 @@ fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
         );
         if is_empty {
             env.push(xs.proxy_row(env));
-            if env.call_restore(f).is_ok() {
-                for i in 0..outputs {
-                    new_rows[i].push(env.pop("rows' function result")?);
-                }
+            _ = env.call_maintain_sig(f);
+            for i in 0..outputs {
+                new_rows[i].push(env.pop("rows' function result")?);
             }
         } else {
             for row in xs.into_rows() {
@@ -426,10 +423,9 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 if is_empty {
                     env.push(ys.proxy_row(env));
                     env.push(xs.proxy_row(env));
-                    if env.call_restore(f).is_ok() {
-                        for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?);
-                        }
+                    _ = env.call_maintain_sig(f);
+                    for i in 0..outputs {
+                        new_rows[i].push(env.pop("rows's function result")?);
                     }
                 } else {
                     for (x, y) in xs.into_rows().zip(ys.into_rows()) {
@@ -458,10 +454,9 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             if is_empty {
                 env.push(ys.proxy_row(env));
                 env.push(xs.proxy_row(env));
-                if env.call_restore(f).is_ok() {
-                    for i in 0..outputs {
-                        new_rows[i].push(env.pop("rows's function result")?);
-                    }
+                _ = env.call_maintain_sig(f);
+                for i in 0..outputs {
+                    new_rows[i].push(env.pop("rows's function result")?);
                 }
             } else {
                 for x in xs.into_rows() {
@@ -489,10 +484,9 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             if is_empty {
                 env.push(ys.proxy_row(env));
                 env.push(xs.proxy_row(env));
-                if env.call_restore(f).is_ok() {
-                    for i in 0..outputs {
-                        new_rows[i].push(env.pop("rows's function result")?);
-                    }
+                _ = env.call_maintain_sig(f);
+                for i in 0..outputs {
+                    new_rows[i].push(env.pop("rows's function result")?);
                 }
             } else {
                 for y in ys.into_rows() {

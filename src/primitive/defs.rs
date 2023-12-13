@@ -201,7 +201,7 @@ primitive!(
     /// Or maybe you want to calculate the averge of a list of numbers.
     /// Here, we get the [length] and the `reduce``add``sum` of the list, then [divide] them.
     /// ex: ÷⧻:/+. 1_8_2_5
-    (2(2), Flip, Stack, ("flip", AsciiToken::Colon, ':')),
+    (2(2), Flip, Stack, ("flip", ':')),
     /// Discard the top stack value
     ///
     /// This is usually used to discard values that are no longer needed.

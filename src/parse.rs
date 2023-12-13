@@ -968,6 +968,12 @@ pub(crate) fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
 }
 
 pub(crate) fn unsplit_words(lines: impl IntoIterator<Item = Vec<Sp<Word>>>) -> Vec<Vec<Sp<Word>>> {
+    unsplit_words_impl(lines, false)
+}
+fn unsplit_words_impl(
+    lines: impl IntoIterator<Item = Vec<Sp<Word>>>,
+    in_array: bool,
+) -> Vec<Vec<Sp<Word>>> {
     let mut lines = lines
         .into_iter()
         .map(|line| line.into_iter().map(unsplit_word).collect::<Vec<_>>());
@@ -990,8 +996,12 @@ pub(crate) fn unsplit_words(lines: impl IntoIterator<Item = Vec<Sp<Word>>>) -> V
         line.retain(|w| !matches!(w.value, Word::UnbreakLine));
         if unsplit || unsplit_front {
             let prev = new_lines.last_mut().unwrap();
-            let taken_prev = replace(prev, line);
-            prev.extend(taken_prev);
+            if in_array {
+                prev.extend(line);
+            } else {
+                let taken_prev = replace(prev, line);
+                prev.extend(taken_prev);
+            }
         } else {
             new_lines.push(line);
         }
@@ -1007,7 +1017,7 @@ fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
             Word::Func(func)
         }
         Word::Array(mut arr) => {
-            arr.lines = unsplit_words(arr.lines);
+            arr.lines = unsplit_words_impl(arr.lines, true);
             Word::Array(arr)
         }
         Word::Switch(mut sw) => {
@@ -1039,7 +1049,15 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
             Word::Func(func)
         }
         Word::Array(mut arr) => {
-            arr.lines = arr.lines.into_iter().flat_map(split_words).collect();
+            arr.lines = arr
+                .lines
+                .into_iter()
+                .flat_map(|line| {
+                    let mut split_words = split_words(line);
+                    split_words.reverse();
+                    split_words
+                })
+                .collect();
             Word::Array(arr)
         }
         Word::Switch(mut sw) => {

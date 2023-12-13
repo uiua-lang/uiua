@@ -1081,7 +1081,7 @@ fn TutorialAdvancedArray() -> impl IntoView {
             number=1
             prompt="adds the first argument list to each row of the second argument matrix"
             example="1_2_3 [4_5_6 7_8_9]"
-            answer="≡+¤"
+            answer="+¤"
             tests={&["10_20 10_20 ↯4_2⇡8", "\"Wow\" ¯[10_0_10 19_14_19]"]}
             hidden="1_2 [3_4]"/>
 

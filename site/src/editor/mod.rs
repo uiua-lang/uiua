@@ -8,7 +8,7 @@ use leptos::{ev::keydown, *};
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
-    is_ident_char, lex, spans, Primitive, SysOp, Token,
+    is_ident_char, lex, Primitive, SysOp, Token,
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
@@ -130,21 +130,23 @@ pub fn Editor<'a>(
 
     // Get the code with output comments cleaned up
     let clean_code = move || {
-        let (sps, inputs) = spans(&code_text());
-        sps.into_iter()
-            .map(|sp| {
-                sp.span.as_str(&inputs, |s| {
-                    if s.starts_with("##") {
-                        format!(
-                            "\n{}\n",
-                            s.chars().take_while(|c| *c == '#').collect::<String>()
-                        )
-                    } else {
-                        s.into()
-                    }
-                })
-            })
-            .collect::<String>()
+        let code = code_text();
+        let mut cleaned = String::new();
+        let mut in_output_comment = false;
+        for line in code.lines() {
+            if line.trim().starts_with("##") {
+                if !in_output_comment {
+                    cleaned.extend(line.trim().chars().take_while(|c| *c == '#'));
+                    in_output_comment = true;
+                    cleaned.push('\n');
+                }
+            } else {
+                cleaned.push_str(line);
+                cleaned.push('\n');
+                in_output_comment = false;
+            }
+        }
+        cleaned
     };
 
     // Run the code

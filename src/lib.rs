@@ -134,10 +134,14 @@ fn suite() {
         let entry = entry.unwrap();
         let path = entry.path();
         if path.is_file() && path.extension().is_some_and(|s| s == "ua") {
-            let mut env = Uiua::with_native_sys().print_diagnostics(true);
-            if let Err(e) = env.load_file(&path) {
+            let mut env = Uiua::with_native_sys().print_diagnostics(false);
+            if let Err(e) = env.run_file(&path) {
                 panic!("Test failed in {}:\n{}", path.display(), e.report());
-            } else if let Some(diag) = env.take_diagnostics().into_iter().next() {
+            } else if let Some(diag) = env
+                .take_diagnostics()
+                .into_iter()
+                .find(|d| d.kind < DiagnosticKind::Advice)
+            {
                 panic!("Test failed in {}:\n{}", path.display(), diag.report());
             }
         }

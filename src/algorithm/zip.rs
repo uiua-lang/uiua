@@ -231,7 +231,7 @@ fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
         let outputs = f.signature().outputs;
         let mut xs_shape = xs.shape().to_vec();
         let mut ys_shape = ys.shape().to_vec();
-        let is_empty = outputs > 0 && xs.row_count() == 0 || ys.row_count() == 0;
+        let is_empty = outputs > 0 && (xs.row_count() == 0 || ys.row_count() == 0);
         let (new_shape, new_values) = if is_empty {
             if let Some(r) = xs_shape.first_mut() {
                 *r = 1;
@@ -418,7 +418,7 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 let val = f(xs, ys, a + 1, b + 1, env)?;
                 env.push(val);
             } else {
-                let is_empty = outputs > 0 && xs.row_count() == 0 || ys.row_count() == 0;
+                let is_empty = outputs > 0 && (xs.row_count() == 0 || ys.row_count() == 0);
                 let mut new_rows = multi_output(
                     outputs,
                     Vec::with_capacity(xs.row_count() + is_empty as usize),

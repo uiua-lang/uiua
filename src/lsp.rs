@@ -345,8 +345,12 @@ mod server {
                 if let Some(span) = &binding.span {
                     if span.contains_line_col(line, col) {
                         let ident = span.as_str(&doc.asm.inputs, |s| s.into());
-                        binding_range =
-                            Some((ident, binding.comment.clone(), uiua_span_to_lsp(span)));
+                        binding_range = Some((
+                            ident,
+                            binding.global.signature(),
+                            binding.comment.clone(),
+                            uiua_span_to_lsp(span),
+                        ));
                     }
                 }
             }
@@ -356,6 +360,7 @@ mod server {
                 if let Some(span) = &binding.span {
                     binding_range = Some((
                         name.value.to_string(),
+                        binding.global.signature(),
                         binding.comment.clone(),
                         uiua_span_to_lsp(span),
                     ));
@@ -414,8 +419,12 @@ mod server {
                     }),
                     range: Some(range),
                 }
-            } else if let Some((ident, comment, range)) = binding_range {
+            } else if let Some((ident, signature, comment, range)) = binding_range {
                 let mut value = ident;
+                if let Some(sig) = signature {
+                    value.push_str("\n\n");
+                    value.push_str(&format!("`{sig}`"));
+                }
                 if let Some(comment) = comment {
                     value.push_str("\n\n");
                     value.push_str(&comment);

@@ -1,6 +1,6 @@
 use std::{
     collections::{BTreeSet, HashMap},
-    fs,
+    fmt, fs,
     hash::Hash,
     mem::{replace, size_of, take},
     panic::{catch_unwind, AssertUnwindSafe},
@@ -254,21 +254,28 @@ impl<'a> Chunk<'a> {
     pub fn run(self) -> UiuaResult {
         let slices = take(&mut self.env.asm.top_slices);
         let mut res = Ok(());
-        for &slice in &slices[self.start..][..self.len] {
-            res = self.env.call_slice(slice);
-            if res.is_err() {
-                self.env.rt = Runtime {
-                    backend: self.env.rt.backend.clone(),
-                    execution_limit: self.env.rt.execution_limit,
-                    time_instrs: self.env.rt.time_instrs,
-                    output_comments: self.env.rt.output_comments.clone(),
-                    ..Runtime::default()
-                };
-                break;
+        if let Err(e) = self.env.catching_crash("", |env| {
+            for &slice in &slices[self.start..][..self.len] {
+                res = env.call_slice(slice);
+                if res.is_err() {
+                    break;
+                }
             }
+        }) {
+            res = Err(e);
         }
-        self.env.asm.top_slices = slices;
-        self.env.rt.last_slice_run = self.start + self.len;
+        if res.is_ok() {
+            self.env.asm.top_slices = slices;
+            self.env.rt.last_slice_run = self.start + self.len;
+        } else {
+            self.env.rt = Runtime {
+                backend: self.env.rt.backend.clone(),
+                execution_limit: self.env.rt.execution_limit,
+                time_instrs: self.env.rt.time_instrs,
+                output_comments: self.env.rt.output_comments.clone(),
+                ..Runtime::default()
+            };
+        }
         res
     }
 }
@@ -459,8 +466,26 @@ impl Uiua {
         if let InputSrc::File(path) = &src {
             self.ct.current_imports.push(path.to_path_buf());
         }
-        let res = match catch_unwind(AssertUnwindSafe(|| self.items(items, false))) {
-            Ok(res) => res,
+        let res = self.catching_crash(input, |env| env.items(items, false));
+        if let InputSrc::File(_) = &src {
+            self.ct.current_imports.pop();
+        }
+        res??;
+        let start = self.rt.last_slice_run;
+        let len = self.asm.top_slices.len() - start;
+        Ok(Chunk {
+            env: self,
+            start,
+            len,
+        })
+    }
+    fn catching_crash<T>(
+        &mut self,
+        input: impl fmt::Display,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> UiuaResult<T> {
+        match catch_unwind(AssertUnwindSafe(|| f(self))) {
+            Ok(res) => Ok(res),
             Err(_) => Err(self.error(format!(
                 "\
 The interpreter has crashed!
@@ -473,18 +498,7 @@ code:
                 self.span(),
                 input
             ))),
-        };
-        if let InputSrc::File(_) = &src {
-            self.ct.current_imports.pop();
         }
-        res?;
-        let start = self.rt.last_slice_run;
-        let len = self.asm.top_slices.len() - start;
-        Ok(Chunk {
-            env: self,
-            start,
-            len,
-        })
     }
     fn trace_error(&self, mut error: UiuaError, frame: StackFrame) -> UiuaError {
         let mut frames = Vec::new();

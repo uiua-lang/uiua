@@ -761,14 +761,17 @@ impl<'a> Formatter<'a> {
                         .count()
                 };
                 // Build grid
+                const MAX_HEIGHT: usize = 100;
                 let mut grid: Vec<Vec<Vec<String>>> = vec![Vec::new(); stacks.len()];
                 for (i, stack) in stacks.iter().enumerate() {
-                    for value in stack.iter().take(100) {
+                    for value in stack.iter().take(MAX_HEIGHT) {
                         grid[i].push(value.show().lines().map(Into::into).collect());
                     }
                 }
                 // Pad grid cells
-                let stack_height = stacks.first().map_or(0, |stack| stack.len());
+                let stack_height = stacks
+                    .first()
+                    .map_or(0, |stack| stack.len().min(MAX_HEIGHT));
                 let max_widths: Vec<usize> = (0..stack_height)
                     .map(|i| {
                         grid.iter()

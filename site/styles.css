@@ -439,7 +439,7 @@ input[type=number] {
     border: none;
     width: 100%;
     display: inline-block;
-    white-space: nowrap;
+    white-space: pre;
 }
 
 .line-numbers {

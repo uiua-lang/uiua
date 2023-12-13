@@ -762,13 +762,13 @@ impl<'a> Formatter<'a> {
                 };
                 // Build grid
                 let mut grid: Vec<Vec<Vec<String>>> = vec![Vec::new(); stacks.len()];
-                for (i, stack) in stacks.into_iter().enumerate() {
-                    for value in stack.into_iter().take(100) {
+                for (i, stack) in stacks.iter().enumerate() {
+                    for value in stack.iter().take(100) {
                         grid[i].push(value.show().lines().map(Into::into).collect());
                     }
                 }
                 // Pad grid cells
-                let stack_height = grid[0].len();
+                let stack_height = stacks.first().map_or(0, |stack| stack.len());
                 let max_widths: Vec<usize> = (0..stack_height)
                     .map(|i| {
                         grid.iter()

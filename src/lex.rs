@@ -664,7 +664,7 @@ impl<'a> Lexer<'a> {
                             {}
                             if !self.next_chars_exact(["#", "#"]) {
                                 self.loc = restore;
-                                self.end(dbg!(OutputComment(n)), start);
+                                self.end(OutputComment(n), start);
                                 continue 'main;
                             }
                             while self.next_char_exact("#") {}

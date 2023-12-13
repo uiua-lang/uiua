@@ -1452,9 +1452,10 @@ impl Uiua {
     fn has_tracing(&self, instrs: &[Instr]) -> bool {
         for instr in instrs {
             match instr {
-                Instr::Prim(Primitive::Trace | Primitive::Dump | Primitive::Stack, _) => {
-                    return true
-                }
+                Instr::Prim(
+                    Primitive::Trace | Primitive::Dump | Primitive::Stack | Primitive::Assert,
+                    _,
+                ) => return true,
                 Instr::ImplPrim(
                     ImplPrimitive::InvTrace | ImplPrimitive::InvDump | ImplPrimitive::InvStack,
                     _,

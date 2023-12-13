@@ -136,7 +136,10 @@ pub fn Editor<'a>(
         for line in code.lines() {
             if line.trim().starts_with("##") {
                 if !in_output_comment {
-                    cleaned.extend(line.trim().chars().take_while(|c| *c == '#'));
+                    let mut chars = line.chars();
+                    cleaned.extend(chars.by_ref().take_while(|c| c.is_whitespace()));
+                    cleaned.push('#');
+                    cleaned.extend(chars.take_while(|c| *c == '#'));
                     in_output_comment = true;
                     cleaned.push('\n');
                 }

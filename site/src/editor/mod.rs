@@ -8,7 +8,7 @@ use leptos::{ev::keydown, *};
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
-    is_ident_char, lex, Primitive, SysOp, Token,
+    is_ident_char, lex, spans, Primitive, SysOp, Token,
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
@@ -128,6 +128,25 @@ pub fn Editor<'a>(
     let (state, _) = create_signal(state);
     let state = move || state.get_untracked();
 
+    // Get the code with output comments cleaned up
+    let clean_code = move || {
+        let (sps, inputs) = spans(&code_text());
+        sps.into_iter()
+            .map(|sp| {
+                sp.span.as_str(&inputs, |s| {
+                    if s.starts_with("##") {
+                        format!(
+                            "\n{}\n",
+                            s.chars().take_while(|c| *c == '#').collect::<String>()
+                        )
+                    } else {
+                        s.into()
+                    }
+                })
+            })
+            .collect::<String>()
+    };
+
     // Run the code
     let run = move |format: bool, set_cursor: bool| {
         // Get code
@@ -179,7 +198,7 @@ pub fn Editor<'a>(
 
         // Update URL
         {
-            let encoded = url_encode_code(&input);
+            let encoded = url_encode_code(&clean_code());
             if let EditorMode::Pad = mode {
                 BrowserIntegration {}.navigate(&LocationChange {
                     value: format!("/pad?src={encoded}"),
@@ -949,7 +968,7 @@ pub fn Editor<'a>(
 
     // Copy a link to the code
     let copy_link = move |event: MouseEvent| {
-        let encoded = url_encode_code(&code_text());
+        let encoded = url_encode_code(&clean_code());
         let url = format!("https://uiua.org/pad?src={encoded}");
         let to_copy = if event.shift_key() {
             let text =

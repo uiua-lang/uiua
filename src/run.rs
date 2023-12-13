@@ -112,7 +112,7 @@ pub(crate) struct Runtime {
     pub(crate) backend: Arc<dyn SysBackend>,
     /// The thread interface
     thread: ThisThread,
-    pub(crate) output_comments: HashMap<usize, Vec<Value>>,
+    pub(crate) output_comments: HashMap<usize, Vec<Vec<Value>>>,
 }
 
 #[derive(Clone)]
@@ -865,7 +865,14 @@ code:
                 )),
                 &Instr::SetOutputComment { i, n } => {
                     let values = self.clone_stack_top(n);
-                    self.rt.output_comments.insert(i, values);
+                    let stack_values = self.rt.output_comments.entry(i).or_default();
+                    if stack_values.is_empty() {
+                        *stack_values = values.into_iter().map(|v| vec![v]).collect();
+                    } else {
+                        for (stack_values, value) in stack_values.iter_mut().zip(values) {
+                            stack_values.push(value);
+                        }
+                    }
                     Ok(())
                 }
             };

@@ -59,7 +59,6 @@ impl Spanner {
                     spans.extend(self.words_spans(&binding.words));
                 }
                 Item::ExtraNewlines(span) => spans.push(span.clone().sp(SpanKind::Whitespace)),
-                Item::OutputComment { span, .. } => spans.push(span.clone().sp(SpanKind::Comment)),
             }
         }
         spans
@@ -164,7 +163,9 @@ impl Spanner {
                 Word::Spaces | Word::BreakLine | Word::UnbreakLine => {
                     spans.push(word.span.clone().sp(SpanKind::Whitespace))
                 }
-                Word::Comment(_) => spans.push(word.span.clone().sp(SpanKind::Comment)),
+                Word::Comment(_) | Word::OutputComment { .. } => {
+                    spans.push(word.span.clone().sp(SpanKind::Comment))
+                }
                 Word::Placeholder(_) => spans.push(word.span.clone().sp(SpanKind::Placeholder)),
             }
         }
@@ -274,7 +275,6 @@ mod server {
                     );
                 }
                 Item::ExtraNewlines(_) => {}
-                Item::OutputComment { .. } => {}
             }
         }
         scope_bindings.push(bindings);

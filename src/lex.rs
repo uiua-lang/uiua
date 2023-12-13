@@ -658,9 +658,13 @@ impl<'a> Lexer<'a> {
                             let restore = self.loc;
                             self.next_char_exact("\r");
                             self.next_char_exact("\n");
+                            while self
+                                .next_char_if(|c| c.chars().all(char::is_whitespace))
+                                .is_some()
+                            {}
                             if !self.next_chars_exact(["#", "#"]) {
                                 self.loc = restore;
-                                self.end(OutputComment(n), start);
+                                self.end(dbg!(OutputComment(n)), start);
                                 continue 'main;
                             }
                             while self.next_char_exact("#") {}

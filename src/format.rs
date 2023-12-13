@@ -6,6 +6,7 @@ use std::{
     env,
     fmt::Display,
     fs,
+    iter::repeat,
     path::{Path, PathBuf},
 };
 
@@ -398,7 +399,7 @@ struct Formatter<'a> {
     glyph_map: BTreeMap<CodeSpan, (Loc, Loc)>,
     end_of_line_comments: Vec<(usize, String)>,
     prev_import_function: Option<Ident>,
-    output_comments: Option<HashMap<usize, Vec<Value>>>,
+    output_comments: Option<HashMap<usize, Vec<Vec<Value>>>>,
 }
 
 impl<'a> Formatter<'a> {
@@ -532,26 +533,6 @@ impl<'a> Formatter<'a> {
                 }
             }
             Item::ExtraNewlines(_) => self.prev_import_function = None,
-            Item::OutputComment { i, n, span } => {
-                let values = self.output_comment(*i);
-                let mut s = String::new();
-                if values.is_empty() {
-                    s.push('#');
-                    for _ in 0..=*n {
-                        s.push('#');
-                    }
-                }
-                for value in values {
-                    for line in value.show().lines() {
-                        s.push_str(&"#".repeat(*n + 1));
-                        s.push(' ');
-                        s.push_str(line);
-                        s.push('\n');
-                    }
-                }
-                s.pop();
-                self.push(span, &s);
-            }
         }
     }
     fn format_signature(&mut self, init_char: char, sig: Signature, trailing_space: bool) {
@@ -760,6 +741,89 @@ impl<'a> Formatter<'a> {
             }
             Word::BreakLine => self.output.push('\''),
             Word::UnbreakLine => self.output.push_str("''"),
+            Word::OutputComment { i, n } => {
+                let stacks = self.output_comment(*i);
+                let mut s = String::new();
+                if stacks.is_empty() {
+                    s.push('#');
+                    for _ in 0..=*n {
+                        s.push('#');
+                    }
+                }
+                let start_line_pos = if self.output.ends_with('\n') {
+                    0
+                } else {
+                    self.output
+                        .split('\n')
+                        .last()
+                        .unwrap_or_default()
+                        .chars()
+                        .count()
+                };
+                // Build grid
+                let mut grid: Vec<Vec<Vec<String>>> = vec![Vec::new(); stacks.len()];
+                for (i, stack) in stacks.into_iter().enumerate() {
+                    for value in stack.into_iter().take(100) {
+                        grid[i].push(value.show().lines().map(Into::into).collect());
+                    }
+                }
+                // Pad grid cells
+                let stack_height = grid[0].len();
+                let max_widths: Vec<usize> = (0..stack_height)
+                    .map(|i| {
+                        grid.iter()
+                            .map(|row| {
+                                row[i]
+                                    .iter()
+                                    .map(|line| line.chars().count())
+                                    .max()
+                                    .unwrap_or_default()
+                            })
+                            .max()
+                            .unwrap_or_default()
+                    })
+                    .collect();
+                for row in &mut grid {
+                    for (i, cell) in row.iter_mut().enumerate() {
+                        let width = max_widths[i];
+                        for line in cell {
+                            for _ in line.chars().count()..=width {
+                                line.push(' ');
+                            }
+                        }
+                    }
+                }
+                // Collapse grid
+                let mut lines: Vec<String> = Vec::new();
+                for row in grid {
+                    let top_row = lines.len();
+                    for cell in row {
+                        for (i, line) in cell.iter().enumerate() {
+                            let i = top_row + i;
+                            while i >= lines.len() {
+                                lines.push(String::new());
+                            }
+                            lines[i].push_str(line);
+                            if lines[i].chars().count() > 200 {
+                                lines[i] = lines[i].chars().take(199).collect();
+                                lines[i].push('…');
+                            }
+                        }
+                    }
+                }
+                for (i, line) in lines.into_iter().enumerate() {
+                    if i > 0 {
+                        s.push('\n');
+                        for _ in 0..start_line_pos {
+                            s.push(' ');
+                        }
+                    }
+                    s.extend(repeat('#').take(*n + 1));
+                    s.push(' ');
+                    s.push_str(&line);
+                }
+                self.push(&word.span, &s);
+            }
         }
     }
     fn format_multiline_words(
@@ -831,7 +895,7 @@ impl<'a> Formatter<'a> {
             self.glyph_map.insert(span.clone(), (start, end));
         }
     }
-    fn output_comment(&mut self, index: usize) -> Vec<Value> {
+    fn output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {
         let values = self.output_comments.get_or_insert_with(|| {
             let mut env = Uiua::with_native_sys()
                 .with_mode(RunMode::All)
@@ -843,7 +907,7 @@ impl<'a> Formatter<'a> {
             let mut values = env.rt.output_comments;
             if let Err(e) = res {
                 let next = (0..).take_while(|i| values.contains_key(i)).count();
-                values.insert(next, vec![e.to_string().into()]);
+                values.insert(next, vec![vec![e.to_string().into()]]);
             }
             values
         });
@@ -882,6 +946,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::Comment(_) => false,
         Word::Spaces => false,
         Word::BreakLine | Word::UnbreakLine => false,
+        Word::OutputComment { .. } => true,
     }
 }
 

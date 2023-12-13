@@ -286,14 +286,6 @@ impl<'i> Parser<'i> {
         self.try_spaces();
         Some(if let Some(binding) = self.try_binding() {
             Item::Binding(binding)
-        } else if let Some(n) = self.next_token_map(Token::as_output_comment) {
-            let i = self.next_output_comment;
-            self.next_output_comment += 1;
-            Item::OutputComment {
-                i,
-                n: n.value,
-                span: n.span,
-            }
         } else {
             let lines = self.multiline_words();
             // Convert multiline words into multiple items
@@ -323,6 +315,12 @@ impl<'i> Parser<'i> {
         let s = &self.input[span.byte_range()];
         let s = s.strip_prefix('#').unwrap_or(s).into();
         Some(span.sp(s))
+    }
+    fn output_comment(&mut self) -> Option<Sp<Word>> {
+        let n = self.next_token_map(Token::as_output_comment)?;
+        let i = self.next_output_comment;
+        self.next_output_comment += 1;
+        Some(n.span.sp(Word::OutputComment { i, n: n.value }))
     }
     fn try_binding_init(&mut self) -> Option<(Sp<Ident>, CodeSpan)> {
         let start = self.index;
@@ -547,6 +545,7 @@ impl<'i> Parser<'i> {
     fn try_word(&mut self) -> Option<Sp<Word>> {
         self.comment()
             .map(|c| c.map(Word::Comment))
+            .or_else(|| self.output_comment())
             .or_else(|| self.try_strand())
             .or_else(|| self.try_placeholder())
     }

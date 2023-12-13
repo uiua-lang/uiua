@@ -91,11 +91,6 @@ impl Uiua {
                 }
             }
             Item::ExtraNewlines(_) => {}
-            Item::OutputComment { i, n, .. } => {
-                let address = self.asm.instrs.len();
-                self.asm.instrs.push(Instr::SetOutputComment { i, n });
-                self.asm.top_slices.push(FuncSlice { address, len: 1 });
-            }
         }
         Ok(())
     }
@@ -706,6 +701,7 @@ impl Uiua {
                     self.ct.scope.experimental = true;
                 }
             }
+            Word::OutputComment { i, n } => self.push_instr(Instr::SetOutputComment { i, n }),
             Word::Spaces | Word::BreakLine | Word::UnbreakLine => {}
         }
         Ok(())

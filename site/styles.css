@@ -287,6 +287,17 @@ li {
     border-radius: 0.5em;
 }
 
+.long-subtitle {
+    font-size: 0.9em;
+}
+
+.long-subtitle>div {
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
 #nav {
     display: flex;
     gap: 1em;

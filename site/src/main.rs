@@ -58,7 +58,7 @@ pub fn Site() -> impl IntoView {
         }
         .into_view(),
         view! {
-            <div>
+            <div class="long-subtitle">
                 <div style="display: flex; gap: 0.5em;">
                     <div style="font-style: normal"><Prims prims=[Try, Assert]/></div>
                     " Dad! Can we go play outside?"
@@ -72,13 +72,13 @@ pub fn Site() -> impl IntoView {
         .into_view(),
         "It's got um...I um...arrays".into_view(),
         view! {
-            <div>
-                <div style="display: flex; gap: 0.5em; flex-wrap: wrap">
+            <div class="long-subtitle">
+                <div>
                     <div style="font-style: normal"><Prim prim=Try/></div>
                     " Hey bro! Throw me the error!"
                     <div style="font-style: normal"><Prim prim=Assert/></div>
                 </div>
-                <div style="display: flex; gap: 0.5em; flex-wrap: wrap">
+                <div>
                     <div style="font-style: normal"><Prims prims=[Repeat, Do]/></div>
                     " Kids! Dinner's ready! Who wants "
                     <div class="spoiler">"control flow"</div>
@@ -94,12 +94,12 @@ pub fn Site() -> impl IntoView {
                 </div>
         }.into_view(),
         view! {
-            <div>
-                <div style="display: flex; gap: 0.5em; flex-wrap: wrap">
+            <div class="long-subtitle">
+                <div>
                     <div style="font-style: normal"><Prim prim=Repeat/></div>
                     " Sometimes I miss the days when I could break"
                 </div>
-                <div style="display: flex; gap: 0.5em; flex-wrap: wrap">
+                <div>
                     <div style="font-style: normal"><Prim prim=Do/></div>
                     " Oh honey, don't be silly. That's why you have me ❤️"
                 </div>

@@ -943,9 +943,6 @@ pub fn progressive_strings(input: &str) -> Vec<String> {
             }
             Item::TestScope(items) => lines.push(vec![items.span.as_str(&inputs, |s| s.into())]),
             Item::ExtraNewlines(span) => lines.push(vec![span.as_str(&inputs, |s| s.into())]),
-            Item::OutputComment { span, .. } => {
-                lines.push(vec![span.as_str(&inputs, |s| s.into())])
-            }
         }
     }
     let mut strings = Vec::new();

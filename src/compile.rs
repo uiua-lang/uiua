@@ -15,8 +15,8 @@ use crate::{
     lex::{CodeSpan, Sp, Span},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, ident_modifier_args, split_words, unsplit_words},
-    Array, Boxed, Diagnostic, DiagnosticKind, Global, Ident, Primitive, RunMode, SysOp, UiuaResult,
-    Value,
+    Array, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, Primitive, RunMode,
+    SysOp, UiuaResult, Value,
 };
 
 use crate::Uiua;
@@ -737,9 +737,11 @@ impl Uiua {
                 self.push_instr(Instr::PushFunc(f));
             }
             Global::Func(f)
-                if self.count_temp_functions(f.instrs(self), &mut HashSet::new()) == 0 =>
+                if self.count_temp_functions(f.instrs(self), &mut HashSet::new()) == 0
+                    && !self.has_tracing(f.instrs(self)) =>
             {
                 if call {
+                    // Inline instructions
                     self.push_instr(Instr::PushSig(f.signature()));
                     let instrs = f.instrs(self).to_vec();
                     self.push_all_instrs(instrs);
@@ -1442,10 +1444,26 @@ impl Uiua {
                 Instr::PushFunc(f) if matches!(f.id, FunctionId::Anonymous(_)) => {
                     count += self.count_temp_functions(f.instrs(self), counted);
                 }
-                _ => (),
+                _ => {}
             }
         }
         count
+    }
+    fn has_tracing(&self, instrs: &[Instr]) -> bool {
+        for instr in instrs {
+            match instr {
+                Instr::Prim(Primitive::Trace | Primitive::Dump | Primitive::Stack, _) => {
+                    return true
+                }
+                Instr::ImplPrim(
+                    ImplPrimitive::InvTrace | ImplPrimitive::InvDump | ImplPrimitive::InvStack,
+                    _,
+                ) => return true,
+                Instr::PushFunc(f) if self.has_tracing(f.instrs(self)) => return true,
+                _ => {}
+            }
+        }
+        false
     }
 }
 

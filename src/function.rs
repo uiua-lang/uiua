@@ -2,7 +2,7 @@ use std::{
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
-    ops::{Add, AddAssign, ControlFlow},
+    ops::{Add, AddAssign},
 };
 
 use ecow::{EcoString, EcoVec};
@@ -490,35 +490,6 @@ impl Function {
             },
         }
     }
-    pub(crate) fn _recurse_instrs<T>(
-        &self,
-        env: &Uiua,
-        mut f: impl FnMut(&Instr) -> ControlFlow<T>,
-    ) -> Option<T> {
-        _recurse_instrs(self.instrs(env), env, &mut f)
-    }
-}
-
-fn _recurse_instrs<T>(
-    instrs: &[Instr],
-    env: &Uiua,
-    f: &mut impl FnMut(&Instr) -> ControlFlow<T>,
-) -> Option<T> {
-    for instr in instrs {
-        match instr {
-            Instr::PushFunc(func) => {
-                if let Some(val) = _recurse_instrs(func.instrs(env), env, f) {
-                    return Some(val);
-                }
-            }
-            _ => {
-                if let ControlFlow::Break(val) = f(instr) {
-                    return Some(val);
-                }
-            }
-        }
-    }
-    None
 }
 
 /// A Uiua function id

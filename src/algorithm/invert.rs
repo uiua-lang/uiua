@@ -100,6 +100,8 @@ pub(crate) fn invert_instrs(instrs: &[Instr], env: &mut Uiua) -> Option<EcoVec<I
         &invert_array_pattern,
         &invert_unpack_pattern,
         &invert_scan_pattern,
+        &invert_repeat_pattern,
+        &(Val, invert_repeat_pattern),
         &(Val, ([Rotate], [Neg, Rotate])),
         &([Rotate], [Neg, Rotate]),
         &pat!(Sqrt, (2, Pow)),
@@ -198,6 +200,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_array_pattern, "array"),
         &UnderPatternFn(under_unpack_pattern, "unpack"),
         &UnderPatternFn(under_touch_pattern, "touch"),
+        &UnderPatternFn(under_repeat_pattern, "repeat"),
         &bin!(Flip, Add, Sub),
         &bin!(Flip, Mul, Div),
         &bin!(Flip, Sub),
@@ -342,7 +345,7 @@ pub(crate) fn under_instrs(
         break;
     }
 
-    // println!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
+    println!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
 
     None
 }
@@ -1055,6 +1058,69 @@ fn invert_scan_pattern<'a>(
             Instr::ImplPrim(ImplPrimitive::InvScan, *span)
         ],
     ))
+}
+
+fn invert_repeat_pattern<'a>(
+    input: &'a [Instr],
+    env: &mut Uiua,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::PushFunc(f), repeat @ Instr::Prim(Primitive::Repeat, span), input @ ..] = input
+    else {
+        return None;
+    };
+    let instrs = f.instrs(env).to_vec();
+    let inverse = invert_instrs(&instrs, env)?;
+    let inverse = make_fn(inverse, *span, env)?;
+    Some((input, eco_vec![Instr::PushFunc(inverse), repeat.clone()]))
+}
+
+fn under_repeat_pattern<'a>(
+    input: &'a [Instr],
+    g_sig: Signature,
+    env: &mut Uiua,
+) -> Option<(&'a [Instr], Under)> {
+    Some(match input {
+        [Instr::PushFunc(f), repeat @ Instr::Prim(Primitive::Repeat, span), input @ ..] => {
+            let instrs = f.instrs(env).to_vec();
+            let (befores, afters) = under_instrs(&instrs, g_sig, env)?;
+            let befores = eco_vec![
+                Instr::CopyToTemp {
+                    stack: TempStack::Under,
+                    count: 1,
+                    span: *span
+                },
+                Instr::PushFunc(make_fn(befores, *span, env)?),
+                repeat.clone()
+            ];
+            let afters = eco_vec![
+                Instr::PopTemp {
+                    stack: TempStack::Under,
+                    count: 1,
+                    span: *span
+                },
+                Instr::PushFunc(make_fn(afters, *span, env)?),
+                repeat.clone()
+            ];
+            (input, (befores, afters))
+        }
+        [push @ Instr::Push(_), Instr::PushFunc(f), repeat @ Instr::Prim(Primitive::Repeat, span), input @ ..] =>
+        {
+            let instrs = f.instrs(env).to_vec();
+            let (befores, afters) = under_instrs(&instrs, g_sig, env)?;
+            let befores = eco_vec![
+                push.clone(),
+                Instr::PushFunc(make_fn(befores, *span, env)?),
+                repeat.clone()
+            ];
+            let afters = eco_vec![
+                push.clone(),
+                Instr::PushFunc(make_fn(afters, *span, env)?),
+                repeat.clone()
+            ];
+            (input, (befores, afters))
+        }
+        _ => return None,
+    })
 }
 
 impl<A: InvertPattern, B: InvertPattern> InvertPattern for (A, B) {

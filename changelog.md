@@ -9,6 +9,7 @@ Uiua is not yet stable.
 - An entire Uiua codebase is now compiled before it is executed, rather than compiling and executing line-by-line
 - [`&i`](https://uiua.org/docs/&i) can now only be used as the first function in a binding
 - [`repeat` `⍥`](https://uiua.org/docs/repeat) can no longer use a negative number of repetitions
+- [`repeat` `⍥`](https://uiua.org/docs/repeat) can now be used with [`un` `°`](https://uiua.org/docs/un) and [`under` `⍜`](https://uiua.org/docs/under)
 - [`reshape` `↯`](https://uiua.org/docs/reshape) now works with [`under` `⍜`](https://uiua.org/docs/under)
 - [`scan` `\`](https://uiua.org/docs/scan) now works with [`un` `°`](https://uiua.org/docs/un) in some cases
 - Add output comments, which the formatter fills with values from the stack

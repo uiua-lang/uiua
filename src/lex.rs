@@ -126,6 +126,13 @@ impl Span {
             (Span::Builtin, Span::Builtin) => Span::Builtin,
         }
     }
+    /// Get the code span, if any
+    pub fn code(self) -> Option<CodeSpan> {
+        match self {
+            Span::Code(span) => Some(span),
+            Span::Builtin => None,
+        }
+    }
 }
 
 /// The source of code input into the interpreter

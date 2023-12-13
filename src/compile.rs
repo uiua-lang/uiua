@@ -2,6 +2,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
     mem::take,
+    sync::Arc,
 };
 
 use ecow::{eco_vec, EcoString, EcoVec};
@@ -15,30 +16,51 @@ use crate::{
     lex::{CodeSpan, Sp, Span},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, ident_modifier_args, split_words, unsplit_words},
-    Array, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, Primitive, RunMode,
-    SysOp, UiuaResult, Value,
+    Array, Boxed, Diagnostic, DiagnosticKind, Global, GlobalBinding, Ident, ImplPrimitive,
+    Primitive, RunMode, SysOp, UiuaResult, Value,
 };
 
 use crate::Uiua;
 
 impl Uiua {
     pub(crate) fn items(&mut self, items: Vec<Item>, in_test: bool) -> UiuaResult {
+        let mut prev_comment = None;
         for item in items {
-            self.item(item, in_test)?;
+            self.item(item, in_test, &mut prev_comment)?;
         }
         Ok(())
     }
-    fn item(&mut self, item: Item, in_test: bool) -> UiuaResult {
+    fn item(
+        &mut self,
+        item: Item,
+        in_test: bool,
+        prev_comment: &mut Option<Arc<str>>,
+    ) -> UiuaResult {
         fn words_have_import(words: &[Sp<Word>]) -> bool {
             words
                 .iter()
                 .any(|w| matches!(w.value, Word::Primitive(Primitive::Sys(SysOp::Import))))
         }
+        let prev_com = prev_comment.take();
         match item {
             Item::TestScope(items) => {
                 self.in_scope(|env| env.items(items.value, true))?;
             }
             Item::Words(mut lines) => {
+                if lines.iter().flatten().all(|w| !w.value.is_code()) {
+                    let mut comment = String::new();
+                    for (i, line) in lines.iter().enumerate() {
+                        for word in line {
+                            if let Word::Comment(c) = &word.value {
+                                if i > 0 {
+                                    comment.push('\n');
+                                }
+                                comment.push_str(c);
+                            }
+                        }
+                    }
+                    *prev_comment = Some(comment.into());
+                }
                 let can_run = match self.ct.mode {
                     RunMode::Normal => !in_test,
                     RunMode::Test => in_test,
@@ -87,7 +109,7 @@ impl Uiua {
                     RunMode::All | RunMode::Test => true,
                 };
                 if can_run || words_have_import(&binding.words) {
-                    self.binding(binding)?;
+                    self.binding(binding, prev_com)?;
                 }
             }
             Item::ExtraNewlines(_) => {}
@@ -112,7 +134,7 @@ impl Uiua {
         }
         Function::new(id, sig, FuncSlice { address, len })
     }
-    fn binding(&mut self, binding: Binding) -> UiuaResult {
+    fn binding(&mut self, binding: Binding, comment: Option<Arc<str>>) -> UiuaResult {
         let name = binding.name.value;
         let span = &binding.name.span;
         let placeholder_count = count_placeholders(&binding.words);
@@ -165,7 +187,12 @@ impl Uiua {
                     }
                     let path = path.as_string(self, "Import path must be a string")?;
                     let module = self.import_compile(path.as_ref())?;
-                    self.add_global_at(global_index, Global::Module { module });
+                    self.add_global_at(
+                        global_index,
+                        Global::Module { module },
+                        Some(binding.name.span.clone()),
+                        comment.clone(),
+                    );
                     self.ct.scope.names.insert(name.clone(), global_index);
                 }
                 [Instr::Push(item), Instr::Push(path)] => self.with_span(span, |env| {
@@ -176,14 +203,9 @@ impl Uiua {
                         env.error(format!("Item `{item}` not found in module `{path}`"))
                     })?;
                     env.ct.scope.names.insert(name.clone(), index);
-                    sig = Some(match &env.asm.globals[index] {
-                        Global::Func(f) => f.signature(),
-                        Global::Sig(s) => *s,
-                        Global::Const(_) => Signature::new(0, 1),
-                        Global::Module { .. } => {
-                            return Err(env.error("Cannot define a signature for a module rebind"))
-                        }
-                    });
+                    sig = Some(env.asm.globals[index].global.signature().ok_or_else(|| {
+                        env.error("Cannot define a signature for a module rebind")
+                    })?);
                     Ok(())
                 })?,
                 _ => {
@@ -257,7 +279,7 @@ impl Uiua {
                 } else if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
-                    self.compile_bind_function(&name, global_index, func, span)?;
+                    self.compile_bind_function(&name, global_index, func, span, comment)?;
                 } else if sig.args == 0
                     && sig.outputs <= 1
                     && (sig.outputs > 0 || instrs.is_empty())
@@ -265,7 +287,7 @@ impl Uiua {
                     && !is_setinv
                     && !is_setund
                 {
-                    self.compile_bind_sig(&name, global_index, sig, span)?;
+                    self.compile_bind_sig(&name, global_index, sig, span, comment)?;
                     // Add binding instrs to top slices
                     instrs.push(Instr::BindGlobal {
                         name,
@@ -282,7 +304,7 @@ impl Uiua {
                 } else {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);
-                    self.compile_bind_function(&name, global_index, func, span)?;
+                    self.compile_bind_function(&name, global_index, func, span, comment)?;
                 }
             }
             Err(e) => {
@@ -290,7 +312,7 @@ impl Uiua {
                 } else if let Some(sig) = binding.signature {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig.value, self);
-                    self.compile_bind_function(&name, global_index, func, span)?;
+                    self.compile_bind_function(&name, global_index, func, span, comment)?;
                 } else {
                     return Err(self.error_with_span(
                         binding.name.span.clone(),
@@ -314,10 +336,12 @@ impl Uiua {
         index: usize,
         mut value: Value,
         span: usize,
+        comment: Option<Arc<str>>,
     ) -> UiuaResult {
         self.validate_binding_name(name, &[], self.get_span(span))?;
         value.compress();
-        self.add_global_at(index, Global::Const(value));
+        let span = self.get_span(span).code();
+        self.add_global_at(index, Global::Const(value), span, comment);
         Ok(())
     }
     pub(crate) fn compile_bind_sig(
@@ -325,9 +349,11 @@ impl Uiua {
         name: &Ident,
         index: usize,
         sig: Signature,
-        _span: usize,
+        span: usize,
+        comment: Option<Arc<str>>,
     ) -> UiuaResult {
-        self.add_global_at(index, Global::Sig(sig));
+        let span = self.get_span(span).code();
+        self.add_global_at(index, Global::Sig(sig), span, comment);
         self.ct.scope.names.insert(name.clone(), index);
         Ok(())
     }
@@ -337,20 +363,37 @@ impl Uiua {
         index: usize,
         function: Function,
         span: usize,
+        comment: Option<Arc<str>>,
     ) -> UiuaResult {
-        self.validate_binding_name(name, function.instrs(self), self.get_span(span))?;
+        let span = self.get_span(span);
+        self.validate_binding_name(name, function.instrs(self), span.clone())?;
         self.ct.scope.names.insert(name.clone(), index);
-        self.add_global_at(index, Global::Func(function));
+        self.add_global_at(index, Global::Func(function), span.code(), comment);
         Ok(())
     }
-    fn add_global_at(&mut self, index: usize, global: Global) {
+    fn add_global_at(
+        &mut self,
+        index: usize,
+        global: Global,
+        span: Option<CodeSpan>,
+        comment: Option<Arc<str>>,
+    ) {
+        let binding = GlobalBinding {
+            global,
+            span,
+            comment,
+        };
         if index < self.asm.globals.len() {
-            self.asm.globals.make_mut()[index] = global;
+            self.asm.globals.make_mut()[index] = binding;
         } else {
             while self.asm.globals.len() < index {
-                self.asm.globals.push(Global::Const(Value::default()));
+                self.asm.globals.push(GlobalBinding {
+                    global: Global::Const(Value::default()),
+                    span: None,
+                    comment: None,
+                });
             }
-            self.asm.globals.push(global);
+            self.asm.globals.push(binding);
         }
     }
     fn validate_binding_name(&self, name: &Ident, instrs: &[Instr], span: Span) -> UiuaResult {
@@ -425,7 +468,7 @@ impl Uiua {
             if let Some(next) = words.peek() {
                 if let Word::Ident(name) = &next.value {
                     if let Some(index) = self.ct.scope.names.get(name) {
-                        if let Global::Module { module } = &self.asm.globals[*index] {
+                        if let Global::Module { module } = &self.asm.globals[*index].global {
                             if let Word::String(item_name) = &word.value {
                                 let index = self.ct.imports[module]
                                     .get(item_name.as_str())
@@ -712,6 +755,9 @@ impl Uiua {
             .copied()
         {
             // Name exists in scope
+            self.asm
+                .global_references
+                .insert(span.clone().sp(ident), index);
             self.global_index(index, span, call)?;
         } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
             self.push_instr(Instr::push(constant.value.clone()));
@@ -721,7 +767,7 @@ impl Uiua {
         Ok(())
     }
     fn global_index(&mut self, index: usize, span: CodeSpan, call: bool) -> UiuaResult {
-        let global = self.asm.globals[index].clone();
+        let global = self.asm.globals[index].global.clone();
         match global {
             Global::Const(val) if call => self.push_instr(Instr::push(val)),
             Global::Const(val) => {

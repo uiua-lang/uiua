@@ -1,12 +1,12 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use dashmap::DashMap;
 use ecow::{eco_vec, EcoString, EcoVec};
 use serde::*;
 
 use crate::{
-    DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc, Instr, IntoInputSrc,
-    Primitive, Signature, Span, TempStack, Value,
+    lex::Sp, CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc, Instr,
+    IntoInputSrc, Primitive, Signature, Span, TempStack, Value,
 };
 
 /// A compiled Uiua assembly
@@ -14,7 +14,9 @@ use crate::{
 pub struct Assembly {
     pub(crate) instrs: EcoVec<Instr>,
     pub(crate) top_slices: Vec<FuncSlice>,
-    pub(crate) globals: EcoVec<Global>,
+    pub(crate) globals: EcoVec<GlobalBinding>,
+    #[serde(skip)]
+    pub(crate) global_references: HashMap<Sp<Ident>, usize>,
     pub(crate) import_inputs: HashMap<PathBuf, EcoString>,
     pub(crate) spans: EcoVec<Span>,
     pub(crate) inputs: Inputs,
@@ -28,9 +30,20 @@ impl Default for Assembly {
             import_inputs: HashMap::new(),
             spans: eco_vec![Span::Builtin],
             globals: EcoVec::new(),
+            global_references: HashMap::new(),
             inputs: Inputs::default(),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
+pub(crate) struct GlobalBinding {
+    pub global: Global,
+    #[serde(skip)]
+    pub span: Option<CodeSpan>,
+    #[serde(skip)]
+    pub comment: Option<Arc<str>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,6 +53,17 @@ pub(crate) enum Global {
     Func(Function),
     Sig(Signature),
     Module { module: PathBuf },
+}
+
+impl Global {
+    pub(crate) fn signature(&self) -> Option<Signature> {
+        match self {
+            Self::Const(_) => Some(Signature::new(0, 1)),
+            Self::Func(func) => Some(func.signature()),
+            Self::Sig(sig) => Some(*sig),
+            Self::Module { .. } => None,
+        }
+    }
 }
 
 /// A repository of code strings input to the compiler

@@ -180,7 +180,6 @@ pub use server::run_language_server;
 
 #[cfg(feature = "lsp")]
 mod server {
-    use std::{collections::BTreeMap, sync::Arc};
 
     use dashmap::DashMap;
     use tower_lsp::{jsonrpc::Result, lsp_types::*, *};
@@ -191,94 +190,30 @@ mod server {
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Ident, PrimDocLine, Uiua,
+        Assembly, PrimDocLine, Uiua,
     };
 
     pub struct LspDoc {
         pub input: String,
         pub items: Vec<Item>,
         pub spans: Vec<Sp<SpanKind>>,
-        pub bindings: BindingsInfo,
+        pub asm: Assembly,
     }
-
-    type BindingsInfo = BTreeMap<Sp<Ident>, Arc<BindingInfo>>;
 
     impl LspDoc {
         fn new(input: String) -> Self {
-            let spanner = Spanner::new(&input);
             let (items, _, _) = parse(&input, InputSrc::Str(0), &mut Inputs::default());
+            let spanner = Spanner::new(&input);
             let spans = spanner.items_spans(&items);
-            let bindings = bindings_info(&items);
+            let mut env = Uiua::with_native_sys();
+            _ = env.load_str(&input);
             Self {
                 input,
                 items,
                 spans,
-                bindings,
+                asm: env.asm,
             }
         }
-    }
-
-    pub struct BindingInfo {
-        pub span: CodeSpan,
-        pub comment: Option<String>,
-    }
-
-    fn bindings_info(items: &[Item]) -> BindingsInfo {
-        let mut bindings = BindingsInfo::new();
-        let mut scope_bindings = Vec::new();
-        let mut last_comment: Option<String> = None;
-        for item in items {
-            match item {
-                Item::TestScope(items) => scope_bindings.push(bindings_info(&items.value)),
-                Item::Words(lines) => {
-                    if let [Sp {
-                        value: Word::Comment(comment),
-                        ..
-                    }] = lines
-                        .first()
-                        .map(|line| line.as_slice())
-                        .unwrap_or_default()
-                    {
-                        let full = last_comment.get_or_insert_with(String::new);
-                        if !full.is_empty() {
-                            if comment.trim().is_empty() {
-                                full.push('\n');
-                                full.push('\n');
-                            } else {
-                                full.push(' ');
-                            }
-                        }
-                        full.push_str(comment.trim());
-                    } else {
-                        last_comment = None;
-                        for word in lines.iter().flatten() {
-                            if let Word::Ident(ident) = &word.value {
-                                if let Some((_, info)) =
-                                    bindings.iter().rev().find(|(name, _)| name.value == *ident)
-                                {
-                                    let info = info.clone();
-                                    bindings.insert(word.span.clone().sp(ident.clone()), info);
-                                }
-                            }
-                        }
-                    }
-                }
-                Item::Binding(binding) => {
-                    let comment = last_comment.take();
-                    bindings.insert(
-                        binding.name.clone(),
-                        BindingInfo {
-                            comment,
-                            span: binding.name.span.clone(),
-                        }
-                        .into(),
-                    );
-                }
-                Item::ExtraNewlines(_) => {}
-            }
-        }
-        scope_bindings.push(bindings);
-        scope_bindings.into_iter().flatten().collect()
     }
 
     #[doc(hidden)]
@@ -393,6 +328,7 @@ mod server {
             };
             let (line, col) = lsp_pos_to_uiua(params.text_document_position_params.position);
             let mut prim_range = None;
+            // Hovering a primitive
             for sp in &doc.spans {
                 if sp.span.contains_line_col(line, col) {
                     match sp.value {
@@ -404,9 +340,25 @@ mod server {
                 }
             }
             let mut binding_range = None;
-            for (ident, binding) in &doc.bindings {
-                if ident.span.contains_line_col(line, col) {
-                    binding_range = Some((ident, binding, uiua_span_to_lsp(&ident.span)));
+            // Hovering the name of the binding itself
+            for binding in &doc.asm.globals {
+                if let Some(span) = &binding.span {
+                    if span.contains_line_col(line, col) {
+                        let ident = span.as_str(&doc.asm.inputs, |s| s.into());
+                        binding_range =
+                            Some((ident, binding.comment.clone(), uiua_span_to_lsp(span)));
+                    }
+                }
+            }
+            // Hovering the name of a binding reference
+            for (name, index) in &doc.asm.global_references {
+                let binding = &doc.asm.globals[*index];
+                if let Some(span) = &binding.span {
+                    binding_range = Some((
+                        name.value.to_string(),
+                        binding.comment.clone(),
+                        uiua_span_to_lsp(span),
+                    ));
                 }
             }
             Ok(Some(if let Some((prim, range)) = prim_range {
@@ -462,11 +414,11 @@ mod server {
                     }),
                     range: Some(range),
                 }
-            } else if let Some((ident, binding, range)) = binding_range {
-                let mut value: String = ident.value.as_ref().into();
-                if let Some(comment) = &binding.comment {
+            } else if let Some((ident, comment, range)) = binding_range {
+                let mut value = ident;
+                if let Some(comment) = comment {
                     value.push_str("\n\n");
-                    value.push_str(comment);
+                    value.push_str(&comment);
                 }
                 Hover {
                     contents: HoverContents::Markup(MarkupContent {

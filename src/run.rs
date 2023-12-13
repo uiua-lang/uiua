@@ -635,7 +635,7 @@ code:
                     Ok(())
                 }
                 &Instr::CallGlobal { index, call, .. } => (|| {
-                    let global = self.asm.globals[index].clone();
+                    let global = self.asm.globals[index].global.clone();
                     match global {
                         Global::Const(val) => self.rt.stack.push(val),
                         Global::Func(f) if call => self.call(f)?,
@@ -664,10 +664,10 @@ code:
                     (|| {
                         if let Some(f) = self.rt.function_stack.pop() {
                             // Binding is an imported function
-                            self.compile_bind_function(&name, index, f, span)?;
+                            self.compile_bind_function(&name, index, f, span, None)?;
                         } else if let Some(value) = self.rt.stack.pop() {
                             // Binding is a constant
-                            self.bind_value(&name, index, value, span)?;
+                            self.bind_value(&name, index, value, span, None)?;
                         } else {
                             // Binding is an empty function
                             let id = match self.get_span(span) {
@@ -675,7 +675,7 @@ code:
                                 Span::Builtin => FunctionId::Unnamed,
                             };
                             let func = self.add_function(id, Signature::new(0, 0), Vec::new());
-                            self.compile_bind_function(&name, index, func, span)?;
+                            self.compile_bind_function(&name, index, func, span, None)?;
                         }
                         Ok(())
                     })()
@@ -1201,7 +1201,7 @@ code:
     pub fn bind_function(&mut self, name: impl Into<EcoString>, function: Function) -> UiuaResult {
         let index = self.ct.next_global;
         let name = name.into();
-        self.compile_bind_function(&name, index, function, 0)?;
+        self.compile_bind_function(&name, index, function, 0, None)?;
         self.ct.next_global += 1;
         self.ct.scope.names.insert(name, index);
         Ok(())
@@ -1246,7 +1246,7 @@ code:
         let mut bindings = HashMap::new();
         for (name, idx) in &self.ct.scope.names {
             if !constants().iter().any(|c| c.name == name.as_ref()) {
-                if let Global::Const(val) = &self.asm.globals[*idx] {
+                if let Global::Const(val) = &self.asm.globals[*idx].global {
                     bindings.insert(name.clone(), val.clone());
                 }
             }

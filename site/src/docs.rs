@@ -219,7 +219,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <p>"Otherwise, read on for more detailed documentation."</p>
 
         <h2 id="tutorial">"Tutorial"</h2>
-        <h3><strong><em>"If you are new Uiua, you will likely be lost if you don't read this!"</em></strong></h3>
+        <h3><strong><em>"If you are new to Uiua, you will likely be lost if you don't read this!"</em></strong></h3>
         <p>"These pages introduce Uiua concepts one at a time, each tutorial building on the previous. They go into much more depth than the language tour."</p>
         <p>"They are meant to be read in order, but feel free to skip around!"</p>
         <ul>{ all::<TutorialPage>()

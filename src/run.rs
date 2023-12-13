@@ -12,14 +12,21 @@ use std::{
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use ecow::{EcoString, EcoVec};
-use enum_iterator::Sequence;
+use enum_iterator::{all, Sequence};
 use instant::Duration;
 
 use crate::{
-    algorithm, array::Array, boxed::Boxed, check::SigCheckError, constants, example_ua,
-    function::*, lex::Span, parse::parse, value::Value, Assembly, Complex, Diagnostic,
-    DiagnosticKind, Global, Ident, InputSrc, Inputs, IntoInputSrc, NativeSys, Primitive, Sp,
-    SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    algorithm,
+    array::Array,
+    boxed::Boxed,
+    check::{instrs_temp_signatures, SigCheckError},
+    constants, example_ua,
+    function::*,
+    lex::Span,
+    parse::parse,
+    value::Value,
+    Assembly, Complex, Diagnostic, DiagnosticKind, Global, Ident, InputSrc, Inputs, IntoInputSrc,
+    NativeSys, Primitive, Sp, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua interpreter
@@ -964,10 +971,17 @@ code:
         }
         res
     }
-    /// Call and maintaint eh stack delta if the call fails
+    /// Call and maintaint the stack delta if the call fails
     pub(crate) fn call_maintain_sig(&mut self, f: Function) -> UiuaResult {
         let sig = f.signature();
+        let temp_sigs = instrs_temp_signatures(f.instrs(self))
+            .unwrap_or([Signature::new(0, 0); TempStack::CARDINALITY]);
         let target_height = (self.stack_height() + sig.outputs).saturating_sub(sig.args);
+        let mut temp_target_heights: [usize; TempStack::CARDINALITY] = [0; TempStack::CARDINALITY];
+        for (temp, temp_sig) in all::<TempStack>().zip(&temp_sigs) {
+            temp_target_heights[temp as usize] =
+                (self.temp_stack_height(temp) + temp_sig.outputs).saturating_sub(temp_sig.args);
+        }
         let res = self.call(f);
         match self.stack_height().cmp(&target_height) {
             Ordering::Equal => {}
@@ -976,6 +990,18 @@ code:
                 let diff = target_height - self.stack_height();
                 for _ in 0..diff {
                     self.push(Value::default());
+                }
+            }
+        }
+        for (temp, target_height) in all::<TempStack>().zip(&temp_target_heights) {
+            match self.temp_stack_height(temp).cmp(target_height) {
+                Ordering::Equal => {}
+                Ordering::Greater => self.truncate_temp_stack(temp, *target_height),
+                Ordering::Less => {
+                    let diff = target_height - self.temp_stack_height(temp);
+                    for _ in 0..diff {
+                        self.push_temp(temp, Value::default());
+                    }
                 }
             }
         }
@@ -1141,6 +1167,9 @@ code:
     /// Push a value onto the stack
     pub fn push(&mut self, val: impl Into<Value>) {
         self.rt.stack.push(val.into());
+    }
+    fn push_temp(&mut self, temp: TempStack, val: impl Into<Value>) {
+        self.rt.temp_stacks[temp as usize].push(val.into());
     }
     /// Push a function onto the function stack
     pub fn push_func(&mut self, f: Function) {
@@ -1314,8 +1343,14 @@ code:
     pub(crate) fn stack_height(&self) -> usize {
         self.rt.stack.len()
     }
+    pub(crate) fn temp_stack_height(&self, stack: TempStack) -> usize {
+        self.rt.temp_stacks[stack as usize].len()
+    }
     pub(crate) fn truncate_stack(&mut self, size: usize) {
         self.rt.stack.truncate(size);
+    }
+    pub(crate) fn truncate_temp_stack(&mut self, stack: TempStack, size: usize) {
+        self.rt.temp_stacks[stack as usize].truncate(size);
     }
     pub(crate) fn num_fill(&self) -> Result<f64, &'static str> {
         match self.rt.fill_stack.last() {

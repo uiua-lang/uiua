@@ -1,10 +1,12 @@
 use std::{borrow::Cow, cmp::Ordering, fmt};
 
+use enum_iterator::Sequence;
+
 use crate::{
     array::Array,
     function::{Function, FunctionId, Instr, Signature},
     value::Value,
-    FuncSlice, Primitive,
+    FuncSlice, Primitive, TempStack,
 };
 
 const START_HEIGHT: usize = 16;
@@ -23,12 +25,21 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, SigCheckEr
     Ok(env.sig())
 }
 
+pub(crate) fn instrs_temp_signatures(
+    instrs: &[Instr],
+) -> Result<[Signature; TempStack::CARDINALITY], SigCheckError> {
+    let env = VirtualEnv::from_instrs(instrs)?;
+    Ok(env.temp_signatures())
+}
+
 /// An environment that emulates the runtime but only keeps track of the stack.
 struct VirtualEnv<'a> {
     stack: Vec<BasicValue>,
+    temp_stacks: [Vec<BasicValue>; TempStack::CARDINALITY],
     function_stack: Vec<Cow<'a, Function>>,
     array_stack: Vec<usize>,
     min_height: usize,
+    temp_min_heights: [usize; TempStack::CARDINALITY],
     popped: Vec<usize>,
 }
 
@@ -109,23 +120,44 @@ impl FromIterator<f64> for BasicValue {
     }
 }
 
+fn derive_sig(min_height: usize, final_height: usize) -> Signature {
+    Signature {
+        args: START_HEIGHT.saturating_sub(min_height),
+        outputs: final_height - min_height,
+    }
+}
+
 impl<'a> VirtualEnv<'a> {
     fn from_instrs(instrs: &'a [Instr]) -> Result<Self, SigCheckError> {
+        let mut temp_stacks = <[_; TempStack::CARDINALITY]>::default();
+        for stack in temp_stacks.iter_mut() {
+            *stack = vec![BasicValue::Other; START_HEIGHT];
+        }
         let mut env = VirtualEnv {
             stack: (0..START_HEIGHT).rev().map(BasicValue::Unknown).collect(),
+            temp_stacks,
             function_stack: Vec::new(),
             array_stack: Vec::new(),
             min_height: START_HEIGHT,
+            temp_min_heights: [START_HEIGHT; TempStack::CARDINALITY],
             popped: Vec::new(),
         };
         env.instrs(instrs)?;
         Ok(env)
     }
     fn sig(&self) -> Signature {
-        Signature {
-            args: START_HEIGHT.saturating_sub(self.min_height),
-            outputs: self.stack.len() - self.min_height,
+        derive_sig(self.min_height, self.stack.len())
+    }
+    fn temp_signatures(&self) -> [Signature; TempStack::CARDINALITY] {
+        let mut sigs = [Signature::new(0, 0); TempStack::CARDINALITY];
+        for ((sig, min_height), stack) in sigs
+            .iter_mut()
+            .zip(&self.temp_min_heights)
+            .zip(&self.temp_stacks)
+        {
+            *sig = derive_sig(*min_height, stack.len());
         }
+        sigs
     }
     fn instrs(&mut self, instrs: &'a [Instr]) -> Result<(), SigCheckError> {
         let mut i = 0;
@@ -190,8 +222,19 @@ impl<'a> VirtualEnv<'a> {
                 let sig = self.pop_func()?.signature();
                 self.handle_sig(sig)?
             }
-            Instr::PushTemp { count, .. } => self.handle_args_outputs(*count, 0)?,
-            Instr::CopyToTemp { .. } => {}
+            Instr::PushTemp { count, stack, .. } => {
+                for _ in 0..*count {
+                    let val = self.pop()?;
+                    self.temp_stacks[*stack as usize].push(val);
+                }
+                self.set_min_height();
+            }
+            Instr::CopyToTemp { count, stack, .. } => {
+                for val in self.stack.iter().rev().take(*count) {
+                    self.temp_stacks[*stack as usize].push(val.clone());
+                }
+                self.set_min_height();
+            }
             Instr::PushTempFunctions(_) | Instr::PopTempFunctions(_) => {}
             Instr::GetTempFunction { sig, .. } => {
                 self.function_stack.push(Cow::Owned(Function::new(
@@ -200,8 +243,28 @@ impl<'a> VirtualEnv<'a> {
                     FuncSlice { address: 0, len: 0 },
                 )));
             }
-            Instr::PopTemp { count, .. } | Instr::CopyFromTemp { count, .. } => {
-                self.handle_args_outputs(0, *count)?
+            Instr::PopTemp { count, stack, .. } => {
+                for _ in 0..*count {
+                    let val = self.pop_temp(*stack)?;
+                    self.stack.push(val);
+                }
+                self.set_min_height();
+            }
+            Instr::CopyFromTemp {
+                count,
+                stack,
+                offset,
+                ..
+            } => {
+                for val in self.temp_stacks[*stack as usize]
+                    .iter()
+                    .rev()
+                    .skip(*offset)
+                    .take(*count)
+                {
+                    self.stack.push(val.clone());
+                }
+                self.set_min_height();
             }
             Instr::PushFunc(f) => self.function_stack.push(Cow::Borrowed(f)),
             &Instr::Switch { count, sig, .. } => {
@@ -216,7 +279,12 @@ impl<'a> VirtualEnv<'a> {
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::Unpack { count, .. } => self.handle_args_outputs(1, *count)?,
             Instr::TouchStack { count, .. } => self.handle_args_outputs(*count, *count)?,
-            Instr::DropTemp { .. } => {}
+            Instr::DropTemp { count, stack, .. } => {
+                for _ in 0..*count {
+                    self.pop_temp(*stack)?;
+                }
+                self.set_min_height();
+            }
             Instr::Prim(prim, _) => match prim {
                 Reduce => {
                     let sig = self.pop_func()?.signature();
@@ -502,6 +570,11 @@ impl<'a> VirtualEnv<'a> {
     fn pop(&mut self) -> Result<BasicValue, String> {
         Ok(self.stack.pop().ok_or("function is too complex")?)
     }
+    fn pop_temp(&mut self, stack: TempStack) -> Result<BasicValue, String> {
+        Ok(self.temp_stacks[stack as usize]
+            .pop()
+            .ok_or("function is too complex")?)
+    }
     fn pop_func(&mut self) -> Result<Cow<'a, Function>, String> {
         self.function_stack
             .pop()
@@ -513,6 +586,9 @@ impl<'a> VirtualEnv<'a> {
         self.min_height = self.min_height.min(self.stack.len());
         if let Some(h) = self.array_stack.last_mut() {
             *h = (*h).min(self.stack.len());
+        }
+        for (min_height, stack) in self.temp_min_heights.iter_mut().zip(&self.temp_stacks) {
+            *min_height = (*min_height).min(stack.len());
         }
     }
     fn handle_args_outputs(&mut self, args: usize, outputs: usize) -> Result<(), String> {

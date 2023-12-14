@@ -12,6 +12,7 @@ Uiua is not yet stable.
 - [`repeat` `⍥`](https://uiua.org/docs/repeat) can now be used with [`un` `°`](https://uiua.org/docs/un) and [`under` `⍜`](https://uiua.org/docs/under)
 - [`reshape` `↯`](https://uiua.org/docs/reshape) now works with [`under` `⍜`](https://uiua.org/docs/under)
 - [`scan` `\`](https://uiua.org/docs/scan) now works with [`un` `°`](https://uiua.org/docs/un) in some cases
+- [`setinv`](https://uiua.org/docs/setinv) and [`setund`](https://uiua.org/docs/setund) are no longer experimental
 - Add output comments, which the formatter fills with values from the stack
   - Make an empty comment starting with `n` additional `#`s
   - The formatter will replace the comment with the top `n` values from the stack

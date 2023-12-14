@@ -433,6 +433,7 @@ impl Allowed {
                 PrimClass::DyadicArray => "dyadic-array-functions",
                 PrimClass::AggregatingModifier => "aggregating-modifiers",
                 PrimClass::IteratingModifier => "iterating-modifiers",
+                PrimClass::InversionModifier => "inversion-modifiers",
                 PrimClass::OtherModifier => "other-modifiers",
                 PrimClass::Planet => "planet-modifiers",
                 PrimClass::Misc => "misc-functions",
@@ -487,6 +488,10 @@ impl Allowed {
                 PrimClass::AggregatingModifier => (
                     "Aggregating Modifiers".into_view(),
                     "Apply a function to aggregate an array",
+                ),
+                PrimClass::InversionModifier => (
+                    "Inversion Modifiers".into_view(),
+                    "Work with the inverses of functions",
                 ),
                 PrimClass::OtherModifier => ("Other Modifiers".into_view(), ""),
                 PrimClass::Planet => (

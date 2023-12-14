@@ -102,7 +102,6 @@
 ⍤⊃⋅∘≍ ¯18 ⍜(⍥(+1)4)¯ 10
 ⍤⊃⋅∘≍ ¯18 ⍜⍥(+1)¯ 4 10
 
-# Experimental!
 F ← setund(setinv"normal""inverse"|"do"|"undo")
 ⍤⊃⋅∘≍ "normal" F
 ⍤⊃⋅∘≍ "inverse" °F

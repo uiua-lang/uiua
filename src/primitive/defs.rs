@@ -1219,92 +1219,6 @@ primitive!(
     /// ex: ⊐(¯□3) # Used
     /// ex: ⊐( □3) # Not used
     ([1], Unpack, OtherModifier, ("unpack", '⊐')),
-    /// Invert the behavior of a function
-    ///
-    /// Most functions are not invertible.
-    ///
-    /// ex: √2
-    /// ex: °√2
-    ///
-    /// [un][couple] uncouples a [length]`2` array and pushes both rows onto the stack.
-    /// ex: °⊟ .[1_2_3 4_5_6]
-    ///
-    /// [un][transpose] transposes in the opposite direction.
-    /// This is useful for arrays with rank `greater than``2`.
-    /// ex: °⍉ .⊟.[1_2_3 4_5_6]
-    ///
-    /// [un][bits] converts an array of bits into a number.
-    /// ex: °⋯ [1 0 1 0 1 0 1 0]
-    ///
-    /// [un][sine] gives the arcsine.
-    /// ex: °○ 1
-    ///
-    /// [un] can be used with stack array notation and [dip] and [identity] to unpack the items of an array onto the stack.
-    /// ex: [⊙⊙∘] 1 2 3
-    /// ex: °[⊙⊙∘] [1 2 3]
-    ///
-    /// While more inverses exists, most of them are not useful on their own.
-    /// [under] also uses inverses, but is more powerful.
-    /// A function's inverse can be set with [setinv].
-    ([1], Un, OtherModifier, ("un", '°')),
-    /// Set a function as its own inverse
-    ///
-    /// ex: # Experimental!
-    ///   : F ← ⌅⧻
-    ///   : F   1_2_4
-    ///   : °F  1_2_4
-    ///   : ⍜F∘ 1_2_4 # Calls ⧻ twice
-    /// This is useful when combined with [under]. It allows you to call a function twice with another function in between.
-    /// Finding the standard deviation of a list of numbers requires finding the mean twice. Here, we only need to write the mean code once.
-    /// ex: # Experimental!
-    ///   : StdDev ← √⍜⌅(÷⊃⧻/+)(×.-).
-    ///   : StdDev [1 2 5 8 9]
-    ///
-    /// For more complex inverse defining, see [setinv] and [setund].
-    ([1], Rectify, OtherModifier, ("rectify", '⌅')),
-    /// Set the [un]-compatible inverse of a function
-    ///
-    /// The first function is the uninverted function, and the second function is the inverse.
-    /// ex: # Experimental!
-    ///   : F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
-    ///   : ;F   @A
-    ///   : ;°F  @B
-    ///   : ;⍜F∘ @C
-    ///
-    /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
-    /// This can lead to errors if you are unaware of it.
-    /// ex! # Experimental!
-    ///   : F ← setinv+-
-    ///   : ⍜F∘ 3 5
-    ///
-    /// For [under]-compatible inverse defining, see [setund].
-    ([2], SetInverse, OtherModifier, "setinv"),
-    /// Set the [under]-compatible inverse of a function
-    ///
-    /// The first function will be called if the function is *outside* an [under].
-    /// The second function will be called in the "do" part of an [under].
-    /// The third function will be called in the "undo" part of an [under].
-    ///
-    /// Any outputs of the second function that excede the number of outputs of the first function will be popped and saved as *context* after the "do" part of the [under]. On the "undo" part, the context will be pushed onto the stack before calling the third function.
-    ///
-    /// For example, here is a manual re-implementation of [add]'s [under] behavior. Note that the second function has 2 outputs. The extra output is saved as context.
-    /// ex: # Experimental!
-    ///   : F ← setund(+|⊃∘+|-)
-    ///   : ⍜+(×10) 1 2
-    ///   : ⍜F(×10) 1 2
-    ///
-    /// This example demonstrates the flow of input, output, and context.
-    /// ex: # Experimental!
-    ///   : F ← setund(
-    ///   :   &p$"Normal _".
-    ///   : | &p$"Do:   set ctx = _, value = _" ,, +1.
-    ///   : | &p$"Undo: get ctx = _, value = _" ⊙.
-    ///   : )
-    ///   : ;F 5
-    ///   : ;⍜F(×10) 5
-    ///
-    /// Inverses set with [setund] cannot be used with [un]. For simpler inverse defining, see [setinv].
-    ([3], SetUnder, OtherModifier, "setund"),
     /// Discard the top stack value then call a function
     ///
     /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [gap] is useful.
@@ -1357,46 +1271,92 @@ primitive!(
     /// ex: [∩∩(□+2) 1 @a 2_3 5]
     /// ex: [∩∩∩± 1 ¯2 0 42 ¯5 6 7 8 99]
     (2[1], Both, Planet, ("both", '∩')),
-    /// Call two functions on the same values
+    /// Invert the behavior of a function
     ///
-    /// [fork] is one of the most important functions for working with the stack.
-    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding as to why.
+    /// Most functions are not invertible.
     ///
-    /// ex: ⊃⇌⊝ 1_2_2_3
-    /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
-    /// ex: [⊃⊃⊃+-×÷ 5 8]
-    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
-    /// ex: [⊃+¯ 3 5]
-    ([2], Fork, Planet, ("fork", '⊃')),
-    /// Call two functions on two distinct sets of values
+    /// ex: √2
+    /// ex: °√2
     ///
-    /// ex: ⊓⇌⊝ 1_2_3 [1 4 2 4 2]
-    /// Each function will always be called on its own set of values.
-    /// ex: ⊓+× 1 2 3 4
-    /// The functions' signatures need not be the same.
-    /// ex: ⊓+(++) 1 2 3 4 5
-    /// [bracket] can be chained to apply additional functions to arguments deeper on the stack.
-    /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
-    /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
-    ([2], Bracket, Planet, ("bracket", '⊓')),
-    /// Call a function on many distinct sets of values
+    /// [un][couple] uncouples a [length]`2` array and pushes both rows onto the stack.
+    /// ex: °⊟ .[1_2_3 4_5_6]
     ///
-    /// For just 2 sets of values, [both] is often simpler.
+    /// [un][transpose] transposes in the opposite direction.
+    /// This is useful for arrays with rank `greater than``2`.
+    /// ex: °⍉ .⊟.[1_2_3 4_5_6]
     ///
-    /// The second function will be called, then the first function will be called on groups of values.
-    /// To do something similar to [both] on more than 2 sets of values, you can use [dip] and [identity] to select values.
+    /// [un][bits] converts an array of bits into a number.
+    /// ex: °⋯ [1 0 1 0 1 0 1 0]
+    ///
+    /// [un][sine] gives the arcsine.
+    /// ex: °○ 1
+    ///
+    /// [un] can be used with stack array notation and [dip] and [identity] to unpack the items of an array onto the stack.
+    /// ex: [⊙⊙∘] 1 2 3
+    /// ex: °[⊙⊙∘] [1 2 3]
+    ///
+    /// While more inverses exists, most of them are not useful on their own.
+    /// [under] also uses inverses, but is more powerful.
+    /// A function's inverse can be set with [setinv].
+    ([1], Un, InversionModifier, ("un", '°')),
+    /// Set a function as its own inverse
+    ///
     /// ex: # Experimental!
-    ///   : ⋔(↯3)⊙⊙∘ 1 2 3
-    /// If you wanted to use 3 different constants, you could put the constants in the second function.
+    ///   : F ← ⌅⧻
+    ///   : F   1_2_4
+    ///   : °F  1_2_4
+    ///   : ⍜F∘ 1_2_4 # Calls ⧻ twice
+    /// This is useful when combined with [under]. It allows you to call a function twice with another function in between.
+    /// Finding the standard deviation of a list of numbers requires finding the mean twice. Here, we only need to write the mean code once.
     /// ex: # Experimental!
-    ///   : ⋔↯(2 3 4) 1 2 3
-    /// This can also be done if the constants are on the stack.
+    ///   : StdDev ← √⍜⌅(÷⊃⧻/+)(×.-).
+    ///   : StdDev [1 2 5 8 9]
+    ///
+    /// For more complex inverse defining, see [setinv] and [setund].
+    ([1], Rectify, InversionModifier, ("rectify", '⌅')),
+    /// Set the [un]-compatible inverse of a function
+    ///
+    /// The first function is the uninverted function, and the second function is the inverse.
     /// ex: # Experimental!
-    ///   : ⋔↯⊙⊙∘ 2 3 4 1 2 3
-    /// This can also be an interesting way to reorder many values.
+    ///   : F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
+    ///   : ;F   @A
+    ///   : ;°F  @B
+    ///   : ;⍜F∘ @C
+    ///
+    /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
+    /// This can lead to errors if you are unaware of it.
+    /// ex! # Experimental!
+    ///   : F ← setinv+-
+    ///   : ⍜F∘ 3 5
+    ///
+    /// For [under]-compatible inverse defining, see [setund].
+    ([2], SetInverse, InversionModifier, "setinv"),
+    /// Set the [under]-compatible inverse of a function
+    ///
+    /// The first function will be called if the function is *outside* an [under].
+    /// The second function will be called in the "do" part of an [under].
+    /// The third function will be called in the "undo" part of an [under].
+    ///
+    /// Any outputs of the second function that excede the number of outputs of the first function will be popped and saved as *context* after the "do" part of the [under]. On the "undo" part, the context will be pushed onto the stack before calling the third function.
+    ///
+    /// For example, here is a manual re-implementation of [add]'s [under] behavior. Note that the second function has 2 outputs. The extra output is saved as context.
     /// ex: # Experimental!
-    ///   : [⋔⊙∘⊙⊙∘ 1 2 3 4 5 6]
-    ([2], All, Planet, ("all", '⋔')),
+    ///   : F ← setund(+|⊃∘+|-)
+    ///   : ⍜+(×10) 1 2
+    ///   : ⍜F(×10) 1 2
+    ///
+    /// This example demonstrates the flow of input, output, and context.
+    /// ex: # Experimental!
+    ///   : F ← setund(
+    ///   :   &p$"Normal _".
+    ///   : | &p$"Do:   set ctx = _, value = _" ,, +1.
+    ///   : | &p$"Undo: get ctx = _, value = _" ⊙.
+    ///   : )
+    ///   : ;F 5
+    ///   : ;⍜F(×10) 5
+    ///
+    /// Inverses set with [setund] cannot be used with [un]. For simpler inverse defining, see [setinv].
+    ([3], SetUnder, InversionModifier, "setund"),
     /// Apply a function under another
     ///
     /// This is a more powerful version of [un].
@@ -1451,7 +1411,47 @@ primitive!(
     /// [under] works with [&fo], [&fc], [&tcpa], and [&tcpc]. It calls [&cl] when `g` is done.
     ///
     /// [setund] can be used to define a function's [under] behavior.
-    ([2], Under, OtherModifier, ("under", '⍜')),
+    ([2], Under, InversionModifier, ("under", '⍜')),
+    /// Call two functions on the same values
+    ///
+    /// [fork] is one of the most important functions for working with the stack.
+    /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding as to why.
+    ///
+    /// ex: ⊃⇌⊝ 1_2_2_3
+    /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
+    /// ex: [⊃⊃⊃+-×÷ 5 8]
+    /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
+    /// ex: [⊃+¯ 3 5]
+    ([2], Fork, Planet, ("fork", '⊃')),
+    /// Call two functions on two distinct sets of values
+    ///
+    /// ex: ⊓⇌⊝ 1_2_3 [1 4 2 4 2]
+    /// Each function will always be called on its own set of values.
+    /// ex: ⊓+× 1 2 3 4
+    /// The functions' signatures need not be the same.
+    /// ex: ⊓+(++) 1 2 3 4 5
+    /// [bracket] can be chained to apply additional functions to arguments deeper on the stack.
+    /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
+    /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
+    ([2], Bracket, Planet, ("bracket", '⊓')),
+    /// Call a function on many distinct sets of values
+    ///
+    /// For just 2 sets of values, [both] is often simpler.
+    ///
+    /// The second function will be called, then the first function will be called on groups of values.
+    /// To do something similar to [both] on more than 2 sets of values, you can use [dip] and [identity] to select values.
+    /// ex: # Experimental!
+    ///   : ⋔(↯3)⊙⊙∘ 1 2 3
+    /// If you wanted to use 3 different constants, you could put the constants in the second function.
+    /// ex: # Experimental!
+    ///   : ⋔↯(2 3 4) 1 2 3
+    /// This can also be done if the constants are on the stack.
+    /// ex: # Experimental!
+    ///   : ⋔↯⊙⊙∘ 2 3 4 1 2 3
+    /// This can also be an interesting way to reorder many values.
+    /// ex: # Experimental!
+    ///   : [⋔⊙∘⊙⊙∘ 1 2 3 4 5 6]
+    ([2], All, Planet, ("all", '⋔')),
     /// Repeat a function while a condition holds
     ///
     /// The first function is the loop function, and it is run as long as the condition is true.

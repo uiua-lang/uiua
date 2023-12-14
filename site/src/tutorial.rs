@@ -1002,14 +1002,13 @@ FmtPerson PassYear Dan"#/>
         <p>"Many functions, especially more complex ones, do not have well-defined inverses. However, you can use the "<Prim prim=SetInverse/>" and "<Prim prim=SetUnder/>" modifiers to define them yourself."</p>
         <p><Prim prim=SetInverse/>" sets a simple inverse that is compatible with "<Prim prim=Un/>"."</p>
         <p>"For example, "<Prim prim=First/>" does not have an "<Prim prim=Un/>"-compatible inverse, but we can define one."</p>
-        <Editor example="# Experimental!\nMyFirst ← setinv(⊢|[∘])\nMyFirst [1 2 3]\n°MyFirst 5"/>
+        <Editor example="MyFirst ← setinv(⊢|[∘])\nMyFirst [1 2 3]\n°MyFirst 5"/>
         <p>"This inverse is also compatible with "<Prim prim=Under/>"."</p>
-        <Editor example="# Experimental!\nMyFirst ← setinv⊢[∘]\n⍜⊢(×10) [2 3 4]\n⍜MyFirst(×10) [2 3 4]"/>
+        <Editor example="MyFirst ← setinv⊢[∘]\n⍜⊢(×10) [2 3 4]\n⍜MyFirst(×10) [2 3 4]"/>
         <p><Prim prim=SetUnder/>" is more complicated. See it's documentation for how to use it."</p>
         <p><Prim prim=SetInverse/>" and "<Prim prim=SetUnder/>" can be nested so that an inverse can be fully defined in all cases."</p>
         <p>"This example shows how the different inverses get called."</p>
-        <Editor example=r#"# Experimental!
-F ← setund(setinv("normal"|"inverse")|"do"|"undo")
+        <Editor example=r#"F ← setund(setinv("normal"|"inverse")|"do"|"undo")
 F
 °F
 ⍜F"G""#/>

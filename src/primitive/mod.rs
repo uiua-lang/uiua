@@ -50,6 +50,7 @@ pub enum PrimClass {
     DyadicArray,
     IteratingModifier,
     AggregatingModifier,
+    InversionModifier,
     OtherModifier,
     Planet,
     Misc,
@@ -271,7 +272,7 @@ impl Primitive {
     /// Check if this primitive is experimental
     pub fn is_experimental(&self) -> bool {
         use Primitive::*;
-        matches!(self, SetInverse | SetUnder | Rectify | This | Recur | All)
+        matches!(self, Rectify | This | Recur | All)
     }
     /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {

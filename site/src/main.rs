@@ -16,7 +16,7 @@ use base64::engine::{general_purpose::URL_SAFE, Engine};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{ConstantDef, PrimClass, Primitive};
+use uiua::{ConstantDef, PrimClass, Primitive, Signature};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
@@ -342,13 +342,13 @@ pub fn Prims<const N: usize>(prims: [Primitive; N]) -> impl IntoView {
         .collect::<Vec<_>>()
 }
 
-fn prim_class(prim: Primitive) -> &'static str {
-    macro_rules! code_font {
-        ($class:literal) => {
-            concat!("code-font ", $class)
-        };
-    }
+macro_rules! code_font {
+    ($class:literal) => {
+        concat!("code-font ", $class)
+    };
+}
 
+fn prim_class(prim: Primitive) -> &'static str {
     match prim {
         Primitive::Identity => code_font!("stack-function"),
         Primitive::Transpose => code_font!("monadic-function trans"),
@@ -374,6 +374,22 @@ fn prim_class(prim: Primitive) -> &'static str {
                 }
             }
         }
+    }
+}
+
+fn sig_class(sig: Signature, margs: usize) -> &'static str {
+    match margs {
+        0 if sig.outputs == 1 => match sig.args {
+            0 => code_font!("noadic-function"),
+            1 => code_font!("monadic-function"),
+            2 => code_font!("dyadic-function"),
+            3 => code_font!("triadic-function"),
+            _ => code_font!("variadic-function"),
+        },
+        0 => "",
+        1 => code_font!("monadic-modifier"),
+        2 => code_font!("dyadic-modifier"),
+        _ => code_font!("triadic-modifier"),
     }
 }
 

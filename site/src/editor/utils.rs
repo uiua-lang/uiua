@@ -22,7 +22,7 @@ use web_sys::{HtmlBrElement, HtmlDivElement, HtmlStyleElement, Node};
 use crate::{
     backend::{OutputItem, WebBackend},
     editor::Editor,
-    element, prim_class,
+    element, prim_class, sig_class,
 };
 
 /// Handles setting the code in the editor, setting the cursor, and managing the history
@@ -574,6 +574,12 @@ fn set_code_html(id: &str, code: &str) {
                                 .signature()
                                 .map(|sig| sig.to_string())
                                 .unwrap_or_default();
+                            let class = if let Some(sig) = binding.global.signature() {
+                                let margs = text.chars().rev().take_while(|c| *c == '!').count();
+                                sig_class(sig, margs)
+                            } else {
+                                ""
+                            };
                             if let Some(comment) = &binding.comment {
                                 if !title.is_empty() {
                                     title.push(' ');
@@ -582,7 +588,7 @@ fn set_code_html(id: &str, code: &str) {
                             }
                             format!(
                                 r#"<span 
-                                    class="code-span code-hover" 
+                                    class="code-span code-hover {class}" 
                                     data-title="{title}">{}</span>"#,
                                 escape_html(text)
                             )

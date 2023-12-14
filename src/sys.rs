@@ -285,6 +285,12 @@ sys_op! {
     /// Write the entire contents of an array to a file
     ///
     /// Expects a path and a rank-`1` array of either numbers or characters.
+    /// The file will be created if it does not exist and overwritten if it does.
+    ///
+    /// The editor on the website has a virtual filesystem. Files written with [&fwa] can be read with [&fras] or [&frab].
+    /// ex: Path ← "test.txt"
+    ///   : &fwa Path +@A⇡26
+    ///   : &fras Path
     (2(0), FWriteAll, Filesystem, "&fwa", "file - write all"),
     /// Decode an image from a byte array
     ///

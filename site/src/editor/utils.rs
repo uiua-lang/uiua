@@ -658,13 +658,17 @@ impl State {
     /// Run code and return the output
     pub fn run_code(&self, code: &str) -> Vec<OutputItem> {
         if let Some(chal) = &self.challenge {
-            let mut example =
-                run_code_single(&challenge_code(&chal.answer, &chal.example, chal.flip));
+            let mut example = run_code_single(&challenge_code(
+                &chal.intended_answer,
+                &chal.example,
+                chal.flip,
+            ));
             example.insert(0, OutputItem::Faint(format!("Example: {}", chal.example)));
             let mut output_sections = vec![example];
             let mut correct = true;
             for test in &chal.tests {
-                let answer = || just_values(&challenge_code(&chal.answer, test, chal.flip));
+                let answer =
+                    || just_values(&challenge_code(&chal.intended_answer, test, chal.flip));
                 let user_input = challenge_code(code, test, chal.flip);
                 let user_output = || just_values(&user_input);
                 correct = correct
@@ -677,8 +681,13 @@ impl State {
                 output.insert(0, OutputItem::Faint(format!("Input: {test}")));
                 output_sections.push(output);
             }
-            let hidden_answer =
-                || just_values(&challenge_code(&chal.answer, &chal.hidden, chal.flip));
+            let hidden_answer = || {
+                just_values(&challenge_code(
+                    &chal.intended_answer,
+                    &chal.hidden,
+                    chal.flip,
+                ))
+            };
             let hidden_user_output = || just_values(&challenge_code(code, &chal.hidden, chal.flip));
             let hidden_correct = match (hidden_answer(), hidden_user_output()) {
                 (Ok(answer), Ok(users)) => answer == users,
@@ -874,7 +883,8 @@ pub fn report_view(report: &Report) -> impl IntoView {
 
 pub struct ChallengeDef {
     pub example: String,
-    pub answer: String,
+    pub intended_answer: String,
+    pub best_answer: Option<String>,
     pub tests: Vec<String>,
     pub hidden: String,
     flip: bool,
@@ -891,10 +901,12 @@ pub fn Challenge<'a>(
     hidden: &'a str,
     #[prop(optional)] default: &'a str,
     #[prop(optional)] flip: bool,
+    #[prop(optional)] best_answer: &'a str,
 ) -> impl IntoView {
     let def = ChallengeDef {
         example: example.into(),
-        answer: answer.into(),
+        intended_answer: answer.into(),
+        best_answer: (!best_answer.is_empty()).then(|| best_answer.into()),
         tests: tests.iter().copied().map(Into::into).collect(),
         hidden: hidden.into(),
         flip,

@@ -41,8 +41,10 @@ impl Default for Assembly {
 pub(crate) struct GlobalBinding {
     pub global: Global,
     #[serde(skip)]
+    #[allow(dead_code)]
     pub span: Option<CodeSpan>,
     #[serde(skip)]
+    #[allow(dead_code)]
     pub comment: Option<Arc<str>>,
 }
 

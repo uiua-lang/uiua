@@ -227,6 +227,8 @@ fn TutorialBasic() -> impl IntoView {
         <p>"The code you write will be run on multiple inputs and tested for correctness."</p>
         <p>"Each challenge has an example input and output followed by some test cases. There is also a hidden test case that your code is checked against, so make sure to think about edge cases!"</p>
         <p>"Remember that you can click the "<code>"↧"</code>" on the right side of the editor to see a list of all the glyphs."</p>
+        <p>"Answers are available, but "<strong>"try to solve the challenges yourself first!"</strong></p>
+        <p>"Some challenges have additional answers that use functions and concepts not yet covered in the tutorial, but which are more idiomatic."</p>
         <br/>
 
         <Challenge
@@ -354,7 +356,8 @@ fn TutorialMath() -> impl IntoView {
             number=2
             prompt="calculates the hypotenuse of a right triangle with sides A and B (√(A² + B²))"
             example="3 4"
-            answer="√+∩(×.)"
+            answer="√+×.:×."
+            best_answer="⍜∩°√+"
             tests={&["12 9", "5 12", "6 8"]}
             hidden="5 3"/>
     }
@@ -527,7 +530,8 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
             number=3
             prompt="adds a 1-row leading axis to an array"
             example="[1 2 3]"
-            answer="¤"
+            answer="↯⊂1△."
+            best_answer="¤"
             tests={&["1_3_1_5", "5", "↯2_3⇡6"]}
             hidden="1_1_1_1_1"/>
 
@@ -544,6 +548,7 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
             prompt="splits an array into its first row and the rest of its rows"
             example="1_2_3_4"
             answer="⊢:↘1."
+            best_answer="⊃⋅⊢↘1"
             tests={&["[27 9 3 1]", "↯4_3⇡12"]}
             hidden="[5]"/>
 
@@ -551,7 +556,8 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
             number=6
             prompt="boxes two strings and puts them in an array"
             example="\"Hello\" \"World\""
-            answer="{⊙∘}"
+            answer="⊟□:□:"
+            best_answer="⊟∩□"
             tests={&["\"ui\" \"ua\"", "\"dog\" \"cat\""]}
             hidden="\"a\" \"b\""/>
     }
@@ -667,7 +673,8 @@ fn TutorialTypes() -> impl IntoView {
             number=2
             prompt="increments the first character of a string"
             example="\"`rray\""
-            answer="⍜⊢(+1)"
+            answer="⊂:↘1:+1⊢."
+            best_answer="⍜⊢+:1"
             tests={&["\"Xou're\"", "\"coing\"", "\"freat!\""]}
             hidden="\"abc\""/>
     }
@@ -881,8 +888,10 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="-⊃⋅⋅∘(×⋅⊙⋅∘) 1 2 3 4"/>
         <p>"Finally, we can combine the two parts with another "<Prim prim=Fork/>"."</p>
         <Editor example="×⊃(+⊙⋅⋅∘)(-⊃⋅⋅∘(×⋅⊙⋅∘)) 1 2 3 4"/>
-        <p>"If you like, you can factor out the "<Prim prim=Gap/>" in the second part."</p>
+        <p>"If you like, you can factor out the "<Prim prim=Gap/>" in the second part"</p>
         <Editor example="×⊃(+⊙⋅⋅∘)⋅(-⊃⋅∘(×⊙⋅∘)) 1 2 3 4"/>
+        <p>"Alternatively, you can use a function pack."</p>
+        <Editor example="×⊃(+⊙⋅⋅∘|-⊃⋅⋅∘(×⋅⊙⋅∘)) 1 2 3 4"/>
         <p>"And there you have it! A readable syntax juggling lots of values without any names!"</p>
         <p>"It's annoying to write long lists of names like "<code>"gapdipgapgapide"</code>", so those three functions have a special rule in the parser that allows you to write them with only 1 character as long as there are at least 2 characters in the sequence. Also, 'i' for "<Prim prim=Identity/>" only works if it is the last character."</p>
         <p>"Try it out!"</p>
@@ -911,7 +920,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
             number=3
             prompt="finds both the sum and product of three arguments"
             example="4 5 6"
-            answer="⊃(++)(××)"
+            answer="⊃(++|××)"
             tests={&["10 10 10", "1_2 3_4 5"]}
             hidden="[1 2 3] 4 [5 6 7]"/>
 
@@ -919,7 +928,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
             number=4
             prompt="for numbers A, B, C, and D calculates (A+C)×(B+D)"
             example="1 2 3 4"
-            answer="×⊃(+⊙⋅∘)(+⋅⊙⋅∘)"
+            answer="×⊃(+⊙⋅∘|+⋅⊙⋅∘)"
             tests={&["10 ¯3 1 0", "3 ¯7 2 2"]}
             hidden="1_2 3_4 5_6 7"/>
     }
@@ -996,7 +1005,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
             number=1
             prompt="pushes \"small\" if a number is less than 10, \"medium\" if it is less than 100, and \"large\" otherwise"
             example="17"
-            answer=r#"("small"|"medium"|"large")⊢⊚<[10 100 ∞]"#
+            answer=r#"("small"|"medium"|"large")/+≥[10 100]"#
             tests={&["3", "50", "2357"]}
             hidden="10"/>
 
@@ -1004,7 +1013,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
             number=2
             prompt="multiplies an array by its reverse until any element is greater than 1000"
             example="[1.5 8 2]"
-            answer="⍢(×⇌.)(≤1000/↥)"
+            answer="⍢(×⇌.|≤1000/↥)"
             tests={&["[1 2 3]", "[¯6 5 1]"]}
             hidden="7"/>
     }
@@ -1089,7 +1098,8 @@ fn TutorialAdvancedArray() -> impl IntoView {
             number=2
             prompt="rotates all rank 2 arrays in the second argument by all rank 1 arrays in the first"
             example="[¯1_¯2 0_1] [.] ↯3_4⇡12"
-            answer="⊠↻ ∩☇1⊙2"
+            answer="⊠↻ ☇1⊙(☇2)"
+            best_answer="⊠↻ ∩☇1⊙2"
             tests={&["[0_2 2_1 1_1] ⊞×⊞×.↘1.+1⇡3"]}
             hidden="1 [1 2 3]"/>
     }
@@ -1132,12 +1142,12 @@ ReduceAll!+[1_2_3 4_5_6]"/>
 
         <Challenge
             number=1
-            prompt="creates a custom modifier called f! which calls its function on each row of an array, reverses each row, and reverses the whole array"
-            example="f!(⊂.) ↯3_4⇡12"
-            answer="f! ← ⇌≡(⇌^1)"
-            default="f! ← ^1"
+            prompt="creates a custom modifier called F! which calls its function on each row of an array, reverses each row, and reverses the whole array"
+            example="F!(⊂.) ↯3_4⇡12"
+            answer="F! ← ⇌≡(⇌^1)"
+            default="F! ← ^1"
             flip=true
-            tests={&["f!(↯3) [1_2_3 4_5_6]", "f!(⊟.) 1_2 3_4"]}
+            tests={&["F!(↯3) [1_2_3 4_5_6]", "F!(⊟.) 1_2 3_4"]}
             hidden="5"/>
 
 

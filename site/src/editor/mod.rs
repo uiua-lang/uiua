@@ -67,7 +67,7 @@ pub fn Editor<'a>(
     let code_max_lines = if let EditorMode::Pad = mode {
         10
     } else if let Some(chal) = &challenge {
-        chal.answer.lines().count()
+        chal.intended_answer.lines().count()
     } else {
         examples.iter().map(|e| e.lines().count()).max().unwrap()
     };
@@ -1213,6 +1213,35 @@ or \"embedpad\" to embed the editor"
                     <div class="output-frame">
                         <div class="output sized-code">
                             { move || output.get() }
+                            {state().challenge.as_ref().map(|chal| {
+                                let intended = chal.intended_answer.clone();
+                                let click_intended = move|_| {
+                                    state().set_code(&intended, Cursor::Ignore);
+                                };
+                                view! {
+                                <div>
+                                    <hr/>
+                                    <button
+                                        class="glyph-button"
+                                        data-title="Show intended answer"
+                                        on:click=click_intended>
+                                        "📖"
+                                    </button>
+                                    {chal.best_answer.clone().map(|ans| {
+                                        let click_ans = move|_| {
+                                            state().set_code(&ans, Cursor::Ignore);
+                                        };
+                                        view! {
+                                            <button
+                                                class="glyph-button"
+                                                data-title="Show idiomatic answer"
+                                                on:click=click_ans>
+                                                "💡"
+                                            </button>
+                                        }
+                                    })}
+                                </div>
+                            }})}
                         </div>
                         <div id="code-buttons">
                             <button class="code-button" on:click=move |_| run(true, false)>{ "Run" }</button>

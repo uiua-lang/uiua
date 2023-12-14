@@ -6,7 +6,7 @@ use serde::*;
 
 use crate::{
     lex::Sp, CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc, Instr,
-    IntoInputSrc, Primitive, Signature, Span, TempStack, Value,
+    IntoInputSrc, Primitive, Signature, Span, TempStack, Uiua, UiuaResult, Value,
 };
 
 /// A compiled Uiua assembly
@@ -15,14 +15,19 @@ pub struct Assembly {
     pub(crate) instrs: EcoVec<Instr>,
     pub(crate) top_slices: Vec<FuncSlice>,
     /// A list of global bindings
-    pub globals: EcoVec<BindingInfo>,
+    pub bindings: EcoVec<BindingInfo>,
     #[serde(skip)]
     /// A map of references to global bindings
     pub global_references: HashMap<Sp<Ident>, usize>,
+    #[serde(skip)]
+    pub(crate) dynamic_functions: EcoVec<DynFn>,
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub(crate) import_inputs: HashMap<PathBuf, EcoString>,
     pub(crate) spans: EcoVec<Span>,
     pub(crate) inputs: Inputs,
 }
+
+type DynFn = Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static>;
 
 impl Default for Assembly {
     fn default() -> Self {
@@ -31,10 +36,95 @@ impl Default for Assembly {
             top_slices: Vec::new(),
             import_inputs: HashMap::new(),
             spans: eco_vec![Span::Builtin],
-            globals: EcoVec::new(),
+            bindings: EcoVec::new(),
             global_references: HashMap::new(),
+            dynamic_functions: EcoVec::new(),
             inputs: Inputs::default(),
         }
+    }
+}
+
+impl From<&Assembly> for Assembly {
+    fn from(asm: &Assembly) -> Self {
+        asm.clone()
+    }
+}
+
+impl Assembly {
+    /// Get the instructions of a function slice
+    pub fn instrs(&self, slice: FuncSlice) -> &[Instr] {
+        &self.instrs[slice.address..][..slice.len]
+    }
+    /// Get the mutable instructions of a function slice
+    pub fn instrs_mut(&mut self, slice: FuncSlice) -> &mut [Instr] {
+        &mut self.instrs.make_mut()[slice.address..][..slice.len]
+    }
+    pub(crate) fn bind_function(
+        &mut self,
+        index: usize,
+        function: Function,
+        span: usize,
+        comment: Option<Arc<str>>,
+    ) {
+        let span = self.spans[span].clone();
+        self.add_global_at(index, Global::Func(function), span.code(), comment);
+    }
+    pub(crate) fn bind_sig(
+        &mut self,
+        index: usize,
+        sig: Signature,
+        span: usize,
+        comment: Option<Arc<str>>,
+    ) {
+        let span = self.spans[span].clone();
+        self.add_global_at(index, Global::Sig(sig), span.code(), comment);
+    }
+    pub(crate) fn bind_const(
+        &mut self,
+        index: usize,
+        value: Value,
+        span: usize,
+        comment: Option<Arc<str>>,
+    ) {
+        let span = self.spans[span].clone();
+        self.add_global_at(index, Global::Const(value), span.code(), comment);
+    }
+    pub(crate) fn add_global_at(
+        &mut self,
+        index: usize,
+        global: Global,
+        span: Option<CodeSpan>,
+        comment: Option<Arc<str>>,
+    ) {
+        let binding = BindingInfo {
+            global,
+            span,
+            comment,
+        };
+        if index < self.bindings.len() {
+            self.bindings.make_mut()[index] = binding;
+        } else {
+            while self.bindings.len() < index {
+                self.bindings.push(BindingInfo {
+                    global: Global::Const(Value::default()),
+                    span: None,
+                    comment: None,
+                });
+            }
+            self.bindings.push(binding);
+        }
+    }
+}
+
+impl AsRef<Assembly> for Assembly {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
+impl AsMut<Assembly> for Assembly {
+    fn as_mut(&mut self) -> &mut Self {
+        self
     }
 }
 
@@ -83,10 +173,13 @@ impl Global {
 
 /// A repository of code strings input to the compiler
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Inputs {
     /// A map of file paths to their string contents
+    #[serde(skip_serializing_if = "DashMap::is_empty")]
     pub files: DashMap<PathBuf, EcoString>,
     /// A list of input strings without paths
+    #[serde(skip_serializing_if = "EcoVec::is_empty")]
     pub strings: EcoVec<EcoString>,
 }
 
@@ -141,7 +234,7 @@ impl<'de> Deserialize<'de> for Instr {
 enum InstrRep {
     Comment(Ident),
     CallGlobal(usize, bool, Signature),
-    BindGlobal(Ident, usize, usize),
+    BindGlobal(usize, usize),
     BeginArray,
     EndArray(bool, usize),
     Call(usize),
@@ -176,7 +269,7 @@ impl From<Instr> for InstrRep {
             Instr::Comment(ident) => Self::Comment(ident),
             Instr::Push(value) => Self::Push(value),
             Instr::CallGlobal { index, call, sig } => Self::CallGlobal(index, call, sig),
-            Instr::BindGlobal { name, span, index } => Self::BindGlobal(name, span, index),
+            Instr::BindGlobal { span, index } => Self::BindGlobal(span, index),
             Instr::BeginArray => Self::BeginArray,
             Instr::EndArray { boxed, span } => Self::EndArray(boxed, span),
             Instr::Prim(prim, span) => Self::Prim(prim, span),
@@ -216,7 +309,7 @@ impl From<InstrRep> for Instr {
             InstrRep::Comment(ident) => Self::Comment(ident),
             InstrRep::Push(value) => Self::Push(value),
             InstrRep::CallGlobal(index, call, sig) => Self::CallGlobal { index, call, sig },
-            InstrRep::BindGlobal(name, span, index) => Self::BindGlobal { name, span, index },
+            InstrRep::BindGlobal(span, index) => Self::BindGlobal { span, index },
             InstrRep::BeginArray => Self::BeginArray,
             InstrRep::EndArray(boxed, span) => Self::EndArray { boxed, span },
             InstrRep::Prim(prim, span) => Self::Prim(prim, span),

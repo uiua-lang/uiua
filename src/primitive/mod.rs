@@ -1069,7 +1069,7 @@ impl PrimExample {
         self.output.get_or_init(|| {
             let env = &mut Uiua::with_native_sys();
             match env.run_str(&self.input) {
-                Ok(()) => Ok(env.take_stack().into_iter().map(|val| val.show()).collect()),
+                Ok(_) => Ok(env.take_stack().into_iter().map(|val| val.show()).collect()),
                 Err(e) => Err(e
                     .to_string()
                     .lines()
@@ -1237,17 +1237,21 @@ mod tests {
                         continue;
                     }
                     println!("{prim} example:\n{}", ex.input);
-                    let mut env = Uiua::with_native_sys();
-                    if let Err(e) = env.run_str(&ex.input) {
-                        if !ex.should_error {
-                            panic!("\nExample failed:\n{}\n{}", ex.input, e.report());
+                    match Uiua::with_native_sys().run_str(&ex.input) {
+                        Ok(mut comp) => {
+                            if let Some(diag) = comp.take_diagnostics().into_iter().next() {
+                                if !ex.should_error {
+                                    panic!("\nExample failed:\n{}\n{}", ex.input, diag.report());
+                                }
+                            } else if ex.should_error {
+                                panic!("Example should have failed: {}", ex.input);
+                            }
                         }
-                    } else if let Some(diag) = env.take_diagnostics().into_iter().next() {
-                        if !ex.should_error {
-                            panic!("\nExample failed:\n{}\n{}", ex.input, diag.report());
+                        Err(e) => {
+                            if !ex.should_error {
+                                panic!("\nExample failed:\n{}\n{}", ex.input, e.report());
+                            }
                         }
-                    } else if ex.should_error {
-                        panic!("Example should have failed: {}", ex.input);
                     }
                 }
             }

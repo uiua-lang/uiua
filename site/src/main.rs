@@ -446,7 +446,7 @@ fn site() {
     type Test = (
         std::path::PathBuf,
         String,
-        std::thread::JoinHandle<(uiua::UiuaResult<uiua::Uiua>, bool)>,
+        std::thread::JoinHandle<(uiua::UiuaResult<uiua::Compiler>, bool)>,
     );
     fn recurse_dir(path: &std::path::Path, threads: &mut Vec<Test>) -> std::io::Result<()> {
         for entry in std::fs::read_dir(path)? {
@@ -476,12 +476,7 @@ fn site() {
                             path.to_path_buf(),
                             code.clone(),
                             std::thread::spawn(move || {
-                                let mut env =
-                                    uiua::Uiua::with_native_sys().with_mode(uiua::RunMode::All);
-                                (
-                                    env.load_str(&code).and_then(uiua::Chunk::run).map(|_| env),
-                                    should_fail,
-                                )
+                                (uiua::Uiua::with_native_sys().run_str(&code), should_fail)
                             }),
                         ));
                     }
@@ -506,8 +501,8 @@ fn site() {
                 );
             }
             (Err(_), true) => {}
-            (Ok(mut env), should_fail) => {
-                if let Some(diag) = env.take_diagnostics().into_iter().next() {
+            (Ok(mut comp), should_fail) => {
+                if let Some(diag) = comp.take_diagnostics().into_iter().next() {
                     if !should_fail {
                         panic!(
                             "Test failed in {}\n{}\n{}",

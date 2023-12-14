@@ -10,7 +10,7 @@ use tinyvec::TinyVec;
 
 use crate::{
     array::{Array, ArrayValue, Shape},
-    Function, Signature, Uiua, UiuaError, UiuaResult, Value,
+    CodeSpan, Function, Inputs, Signature, Span, Uiua, UiuaError, UiuaResult, Value,
 };
 
 mod dyadic;
@@ -53,9 +53,36 @@ fn max_shape(a: &[usize], b: &[usize]) -> Shape {
     new_shape
 }
 
-pub trait FillContext {
+pub trait ErrorContext {
     type Error;
     fn error(&self, msg: impl ToString) -> Self::Error;
+}
+
+impl ErrorContext for Uiua {
+    type Error = UiuaError;
+    fn error(&self, msg: impl ToString) -> Self::Error {
+        self.error(msg)
+    }
+}
+
+impl ErrorContext for (&CodeSpan, &Inputs) {
+    type Error = UiuaError;
+    fn error(&self, msg: impl ToString) -> Self::Error {
+        UiuaError::Run(
+            Span::Code(self.0.clone()).sp(msg.to_string()),
+            self.1.clone().into(),
+        )
+    }
+}
+
+impl ErrorContext for () {
+    type Error = Infallible;
+    fn error(&self, msg: impl ToString) -> Self::Error {
+        panic!("{}", msg.to_string())
+    }
+}
+
+pub trait FillContext: ErrorContext {
     fn unpack_boxes(&self) -> bool;
     fn fill<T: ArrayValue>(&self) -> Result<T, &'static str>;
     fn fill_error(error: Self::Error) -> Self::Error;
@@ -63,10 +90,6 @@ pub trait FillContext {
 }
 
 impl FillContext for Uiua {
-    type Error = UiuaError;
-    fn error(&self, msg: impl ToString) -> Self::Error {
-        self.error(msg)
-    }
     fn unpack_boxes(&self) -> bool {
         self.unpack_boxes()
     }
@@ -82,10 +105,6 @@ impl FillContext for Uiua {
 }
 
 impl FillContext for () {
-    type Error = Infallible;
-    fn error(&self, msg: impl ToString) -> Self::Error {
-        panic!("{}", msg.to_string())
-    }
     fn unpack_boxes(&self) -> bool {
         false
     }
@@ -97,6 +116,21 @@ impl FillContext for () {
     }
     fn is_fill_error(error: &Self::Error) -> bool {
         match *error {}
+    }
+}
+
+impl FillContext for (&CodeSpan, &Inputs) {
+    fn unpack_boxes(&self) -> bool {
+        false
+    }
+    fn fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
+        Err("No fill is set")
+    }
+    fn fill_error(error: Self::Error) -> Self::Error {
+        error
+    }
+    fn is_fill_error(error: &Self::Error) -> bool {
+        error.is_fill()
     }
 }
 

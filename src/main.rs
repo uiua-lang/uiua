@@ -20,7 +20,7 @@ use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
-    spans, Assembly, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult, Value,
+    spans, Assembly, Compiler, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult, Value,
 };
 
 fn main() {
@@ -56,11 +56,12 @@ fn run() -> UiuaResult {
     }
     #[cfg(feature = "stand")]
     if let Some(code) = uiua::stand::STAND_FILES.main_code() {
-        let mut rt = Uiua::with_native_sys()
-            .with_mode(RunMode::Normal)
-            .with_args(env::args().skip(1).collect())
-            .print_diagnostics(true);
-        rt.run_str(code)?;
+        let mut rt = Uiua::with_native_sys().with_args(env::args().skip(1).collect());
+        rt.compile_run(|comp| {
+            comp.mode(RunMode::Normal)
+                .print_diagnostics(true)
+                .load_str(code)
+        })?;
         print_stack(&rt.take_stack(), true);
         return Ok(());
     }
@@ -112,12 +113,9 @@ fn run() -> UiuaResult {
                 };
                 #[cfg(feature = "audio")]
                 setup_audio(audio_options);
-                let mode = mode.unwrap_or(RunMode::Normal);
                 let mut rt = Uiua::with_native_sys()
-                    .with_mode(mode)
                     .with_file_path(&path)
                     .with_args(args)
-                    .print_diagnostics(true)
                     .time_instrs(time_instrs);
                 if path.extension().is_some_and(|ext| ext == "uasm") {
                     let json = match fs::read_to_string(&path) {
@@ -134,8 +132,7 @@ fn run() -> UiuaResult {
                             return Ok(());
                         }
                     };
-                    rt = rt.assembly(assembly);
-                    rt.full_chunk().run()?;
+                    rt.run_asm(assembly)?;
                 } else {
                     if !no_format {
                         let config = FormatConfig::from_source(
@@ -144,7 +141,10 @@ fn run() -> UiuaResult {
                         )?;
                         format_file(&path, &config, false)?;
                     }
-                    rt.run_file(path)?;
+                    let mode = mode.unwrap_or(RunMode::Normal);
+                    rt.compile_run(|comp| {
+                        comp.mode(mode).print_diagnostics(true).load_file(&path)
+                    })?;
                 }
                 print_stack(&rt.take_stack(), !no_color);
             }
@@ -160,9 +160,10 @@ fn run() -> UiuaResult {
                         }
                     }
                 };
-                let mut rt = Uiua::with_native_sys().print_diagnostics(true);
-                _ = rt.load_file(&path)?;
-                let assembly = rt.build();
+                let assembly = Compiler::new()
+                    .print_diagnostics(true)
+                    .load_file(&path)?
+                    .finish();
                 let output = output.unwrap_or_else(|| path.with_extension("uasm"));
                 let json = match serde_json::to_string(&assembly) {
                     Ok(json) => json,
@@ -184,11 +185,12 @@ fn run() -> UiuaResult {
             } => {
                 #[cfg(feature = "audio")]
                 setup_audio(audio_options);
-                let mut rt = Uiua::with_native_sys()
-                    .with_mode(RunMode::Normal)
-                    .with_args(args)
-                    .print_diagnostics(true);
-                rt.run_str(&code)?;
+                let mut rt = Uiua::with_native_sys().with_args(args);
+                rt.compile_run(|comp| {
+                    comp.mode(RunMode::Normal)
+                        .print_diagnostics(true)
+                        .load_str(&code)
+                })?;
                 print_stack(&rt.take_stack(), !no_color);
             }
             App::Test {
@@ -209,10 +211,12 @@ fn run() -> UiuaResult {
                 let config =
                     FormatConfig::from_source(formatter_options.format_config_source, Some(&path))?;
                 format_file(&path, &config, false)?;
-                let mut rt = Uiua::with_native_sys()
-                    .with_mode(RunMode::Test)
-                    .print_diagnostics(true);
-                rt.run_file(path)?;
+                let mut rt = Uiua::with_native_sys();
+                rt.compile_run(|comp| {
+                    comp.mode(RunMode::Test)
+                        .print_diagnostics(true)
+                        .load_file(path)
+                })?;
                 println!("No failures!");
             }
             App::Watch {
@@ -250,11 +254,10 @@ fn run() -> UiuaResult {
 
                 #[cfg(feature = "audio")]
                 setup_audio(audio_options);
-                let rt = Uiua::with_native_sys()
-                    .with_mode(RunMode::Normal)
-                    .with_args(args)
-                    .print_diagnostics(true);
-                repl(rt, true, config);
+                let rt = Uiua::with_native_sys().with_args(args);
+                let mut compiler = Compiler::new();
+                compiler.mode(RunMode::Normal).print_diagnostics(true);
+                repl(rt, compiler, true, config);
             }
             App::Update { main, check } => update(main, check),
             #[cfg(feature = "stand")]
@@ -819,7 +822,7 @@ fn print_stack(stack: &[Value], color: bool) {
     }
 }
 
-fn repl(mut rt: Uiua, color: bool, config: FormatConfig) {
+fn repl(mut rt: Uiua, mut compiler: Compiler, color: bool, config: FormatConfig) {
     let mut line_reader = DefaultEditor::new().expect("Failed to read from Stdin");
     let mut repl = |rt: &mut Uiua| -> Result<bool, UiuaError> {
         let mut code = match line_reader.readline("» ") {
@@ -845,7 +848,9 @@ fn repl(mut rt: Uiua, color: bool, config: FormatConfig) {
         print!("↪ ");
         println!("{}", color_code(&code));
 
-        let res = rt.run_str(&code);
+        let res = compiler
+            .load_str(&code)
+            .and_then(|comp| rt.run_asm(comp.finish()));
         print_stack(&rt.take_stack(), color);
         res.map(|()| true)
     };

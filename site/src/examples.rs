@@ -69,13 +69,14 @@ pub const EXAMPLES: &[&str] = &[
 #[cfg(test)]
 #[test]
 fn test_examples() {
-    use uiua::Uiua;
     for example in EXAMPLES {
-        let mut env = Uiua::with_native_sys();
-        if let Err(e) = env.run_str(example) {
-            panic!("Example failed:\n{example}\n{e}");
-        } else if let Some(diag) = env.take_diagnostics().into_iter().next() {
-            panic!("Example failed:\n{example}\n{diag}");
+        match uiua::Uiua::with_native_sys().run_str(example) {
+            Ok(mut comp) => {
+                if let Some(diag) = comp.take_diagnostics().into_iter().next() {
+                    panic!("Example failed:\n{example}\n{diag}");
+                }
+            }
+            Err(e) => panic!("Example failed:\n{example}\n{e}"),
         }
     }
 }

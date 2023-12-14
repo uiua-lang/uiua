@@ -1,7 +1,9 @@
 use std::{
-    collections::{HashMap, HashSet},
-    fmt,
-    mem::take,
+    collections::{BTreeSet, HashMap, HashSet},
+    fmt, fs,
+    mem::{replace, take},
+    panic::{catch_unwind, AssertUnwindSafe},
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
@@ -10,19 +12,195 @@ use ecow::{eco_vec, EcoString, EcoVec};
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
     ast::*,
-    check::instrs_signature,
-    constants,
+    check::{instrs_signature, SigCheckError},
+    constants, example_ua,
     function::*,
     lex::{CodeSpan, Sp, Span},
     optimize::{optimize_instrs, optimize_instrs_mut},
-    parse::{count_placeholders, ident_modifier_args, split_words, unsplit_words},
-    Array, BindingInfo, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, Primitive,
-    RunMode, SysOp, UiuaResult, Value,
+    parse::{count_placeholders, ident_modifier_args, parse, split_words, unsplit_words},
+    Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
+    IntoInputSrc, Primitive, RunMode, SysOp, Uiua, UiuaError, UiuaResult, Value,
 };
 
-use crate::Uiua;
+/// The Uiua compiler
+#[derive(Clone)]
+pub struct Compiler {
+    pub(crate) asm: Assembly,
+    /// Functions which are under construction
+    pub(crate) new_functions: Vec<EcoVec<Instr>>,
+    pub(crate) next_global: usize,
+    /// The current scope
+    pub(crate) scope: Scope,
+    /// Ancestor scopes of the current one
+    pub(crate) higher_scopes: Vec<Scope>,
+    /// Determines which How test scopes are run
+    pub(crate) mode: RunMode,
+    /// The paths of files currently being imported (used to detect import cycles)
+    pub(crate) current_imports: Vec<PathBuf>,
+    /// The bindings of imported files
+    pub(crate) imports: HashMap<PathBuf, HashMap<Ident, usize>>,
+    /// Accumulated diagnostics
+    pub(crate) diagnostics: BTreeSet<Diagnostic>,
+    /// Print diagnostics as they are encountered
+    pub(crate) print_diagnostics: bool,
+}
 
-impl Uiua {
+impl Default for Compiler {
+    fn default() -> Self {
+        Compiler {
+            asm: Assembly::default(),
+            new_functions: Vec::new(),
+            next_global: 0,
+            scope: Scope::default(),
+            higher_scopes: Vec::new(),
+            mode: RunMode::All,
+            current_imports: Vec::new(),
+            imports: HashMap::new(),
+            diagnostics: BTreeSet::new(),
+            print_diagnostics: false,
+        }
+    }
+}
+
+impl AsRef<Assembly> for Compiler {
+    fn as_ref(&self) -> &Assembly {
+        &self.asm
+    }
+}
+
+impl AsMut<Assembly> for Compiler {
+    fn as_mut(&mut self) -> &mut Assembly {
+        &mut self.asm
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct Scope {
+    /// Map local names to global indices
+    pub names: HashMap<Ident, usize>,
+    /// Whether to allow experimental features
+    pub experimental: bool,
+    /// The stack height between top-level statements
+    pub stack_height: Result<usize, Sp<SigCheckError>>,
+}
+
+impl Default for Scope {
+    fn default() -> Self {
+        Self {
+            names: HashMap::new(),
+            experimental: false,
+            stack_height: Ok(0),
+        }
+    }
+}
+
+impl Compiler {
+    /// Create a new compiler
+    pub fn new() -> Self {
+        Self::default()
+    }
+    /// Take a completed assembly from the compiler
+    pub fn finish(&mut self) -> Assembly {
+        take(&mut self.asm)
+    }
+    /// Set whether to print diagnostics as they are encountered
+    ///
+    /// If this is set to false, diagnostics will be accumulated and can be retrieved with [`Compiler::take_diagnostics`]
+    ///
+    /// Defaults to false
+    pub fn print_diagnostics(&mut self, print_diagnostics: bool) -> &mut Self {
+        self.print_diagnostics = print_diagnostics;
+        self
+    }
+    /// Set the run mode
+    pub fn mode(&mut self, mode: RunMode) -> &mut Self {
+        self.mode = mode;
+        self
+    }
+    /// Compile a Uiua file from a file at a path
+    pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
+        let path = path.as_ref();
+        let input: EcoString = fs::read_to_string(path)
+            .map_err(|e| UiuaError::Load(path.into(), e.into()))?
+            .into();
+        self.asm.inputs.files.insert(path.into(), input.clone());
+        self.load_impl(&input, InputSrc::File(path.into()))
+    }
+    /// Compile a Uiua file from a string
+    pub fn load_str(&mut self, input: &str) -> UiuaResult<&mut Self> {
+        let src = self.asm.inputs.add_src((), input);
+        self.load_impl(input, src)
+    }
+    /// Compile a Uiua file from a string with a path for error reporting
+    pub fn load_str_src(&mut self, input: &str, src: impl IntoInputSrc) -> UiuaResult<&mut Self> {
+        let src = self.asm.inputs.add_src(src, input);
+        self.load_impl(input, src)
+    }
+    /// Run in a scoped context. Names defined in this context will be removed when the scope ends.
+    ///
+    /// While names defined in this context will be removed when the scope ends, values *bound* to
+    /// those names will not.
+    ///
+    /// All other runtime state other than the stack, will also be restored.
+    pub fn in_scope<T>(
+        &mut self,
+        f: impl FnOnce(&mut Self) -> UiuaResult<T>,
+    ) -> UiuaResult<HashMap<Ident, usize>> {
+        self.higher_scopes.push(take(&mut self.scope));
+        let res = f(self);
+        let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
+        res?;
+        Ok(scope.names)
+    }
+    fn load_impl(&mut self, input: &str, src: InputSrc) -> UiuaResult<&mut Self> {
+        let instrs_start = self.asm.instrs.len();
+        let top_slices_start = self.asm.top_slices.len();
+        let (items, errors, diagnostics) = parse(input, src.clone(), &mut self.asm.inputs);
+        if self.print_diagnostics {
+            for diagnostic in diagnostics {
+                println!("{}", diagnostic.report());
+            }
+        } else {
+            self.diagnostics.extend(diagnostics);
+        }
+        if !errors.is_empty() {
+            return Err(UiuaError::Parse(errors, self.asm.inputs.clone().into()));
+        }
+        if let InputSrc::File(path) = &src {
+            self.current_imports.push(path.to_path_buf());
+        }
+        let res = self.catching_crash(input, |env| env.items(items, false));
+        if let InputSrc::File(_) = &src {
+            self.current_imports.pop();
+        }
+        match res {
+            Err(_) | Ok(Err(_)) => {
+                self.asm.instrs.truncate(instrs_start);
+                self.asm.top_slices.truncate(top_slices_start);
+            }
+            _ => {}
+        }
+        res??;
+        Ok(self)
+    }
+    fn catching_crash<T>(
+        &mut self,
+        input: impl fmt::Display,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> UiuaResult<T> {
+        match catch_unwind(AssertUnwindSafe(|| f(self))) {
+            Ok(res) => Ok(res),
+            Err(_) => Err(UiuaError::Panic(format!(
+                "\
+The compiler has crashed!
+Hooray! You found a bug!
+Please report this at http://github.com/uiua-lang/uiua/issues/new
+
+code:
+{input}"
+            ))),
+        }
+    }
     pub(crate) fn items(&mut self, items: Vec<Item>, in_test: bool) -> UiuaResult {
         let mut prev_comment = None;
         for item in items {
@@ -61,7 +239,7 @@ impl Uiua {
                     }
                     *prev_comment = Some(comment.into());
                 }
-                let can_run = match self.ct.mode {
+                let can_run = match self.mode {
                     RunMode::Normal => !in_test,
                     RunMode::Test => in_test,
                     RunMode::All => true,
@@ -87,11 +265,11 @@ impl Uiua {
                         let instrs = self.compile_words(line, true)?;
                         match instrs_signature(&instrs) {
                             Ok(sig) => {
-                                if let Ok(height) = &mut self.ct.scope.stack_height {
+                                if let Ok(height) = &mut self.scope.stack_height {
                                     *height = (*height + sig.outputs).saturating_sub(sig.args);
                                 }
                             }
-                            Err(e) => self.ct.scope.stack_height = Err(span.sp(e)),
+                            Err(e) => self.scope.stack_height = Err(span.sp(e)),
                         }
                         let start = self.asm.instrs.len();
                         self.asm.instrs.extend(optimize_instrs(instrs, true));
@@ -104,7 +282,7 @@ impl Uiua {
                 }
             }
             Item::Binding(binding) => {
-                let can_run = match self.ct.mode {
+                let can_run = match self.mode {
                     RunMode::Normal => !in_test,
                     RunMode::All | RunMode::Test => true,
                 };
@@ -139,18 +317,18 @@ impl Uiua {
         let span = &binding.name.span;
         let placeholder_count = count_placeholders(&binding.words);
 
-        let make_fn = |mut instrs: EcoVec<Instr>, sig: Signature, env: &mut Self| {
+        let make_fn = |mut instrs: EcoVec<Instr>, sig: Signature, comp: &mut Self| {
             // Diagnostic for function that doesn't consume its arguments
             if let Some((Instr::Prim(Primitive::Dup, span), rest)) = instrs.split_first() {
                 if let Ok(rest_sig) = instrs_signature(rest) {
                     if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs {
-                        env.diagnostic_with_span(
+                        comp.emit_diagnostic(
                             "Functions should consume their arguments. \
                             Try removing this duplicate.",
                             DiagnosticKind::Style,
-                            env.get_span(*span),
+                            comp.get_span(*span),
                         );
-                        env.flush_diagnostics();
+                        comp.flush_diagnostics();
                     }
                 }
             }
@@ -160,17 +338,17 @@ impl Uiua {
                 instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
                 instrs.push(Instr::PopTempFunctions(placeholder_count));
             }
-            let f = env.add_function(FunctionId::Named(name.clone()), sig, instrs);
+            let f = comp.add_function(FunctionId::Named(name.clone()), sig, instrs);
             if placeholder_count > 0 {
-                env.increment_placeholders(&f, &mut 0, &mut HashMap::new());
+                comp.increment_placeholders(&f, &mut 0, &mut HashMap::new());
             }
             f
         };
         // Compile the body
         let mut instrs = self.compile_words(binding.words, true)?;
-        let span = self.add_span(span.clone());
-        let global_index = self.ct.next_global;
-        self.ct.next_global += 1;
+        let span_index = self.add_span(span.clone());
+        let global_index = self.next_global;
+        self.next_global += 1;
 
         // Check if binding is an import
         let mut is_import = false;
@@ -185,32 +363,58 @@ impl Uiua {
                             "Cannot declare a signature for a module import",
                         ));
                     }
-                    let path = path.as_string(self, "Import path must be a string")?;
-                    let module = self.import_compile(path.as_ref())?;
-                    self.add_global_at(
+                    let path: String = match path {
+                        Value::Char(arr) if arr.rank() == 1 => arr.data.iter().copied().collect(),
+                        _ => {
+                            return Err(
+                                self.error_with_span(span.clone(), "Import path must be a string")
+                            )
+                        }
+                    };
+                    let module = self.import_compile(path.as_ref(), span)?;
+                    self.asm.add_global_at(
                         global_index,
                         Global::Module { module },
                         Some(binding.name.span.clone()),
                         comment.clone(),
                     );
-                    self.ct.scope.names.insert(name.clone(), global_index);
+                    self.scope.names.insert(name.clone(), global_index);
                 }
-                [Instr::Push(item), Instr::Push(path)] => self.with_span(span, |env| {
-                    let path = path.as_string(env, "Import path must be a string")?;
-                    let module = env.import_compile(path.as_ref())?;
-                    let item = item.as_string(env, "Import item must be a string")?;
-                    let index = *env.ct.imports[&module].get(item.as_str()).ok_or_else(|| {
-                        env.error(format!("Item `{item}` not found in module `{path}`"))
+                [Instr::Push(item), Instr::Push(path)] => {
+                    let path: String = match path {
+                        Value::Char(arr) if arr.rank() == 1 => arr.data.iter().copied().collect(),
+                        _ => {
+                            return Err(
+                                self.error_with_span(span.clone(), "Import path must be a string")
+                            )
+                        }
+                    };
+                    let module = self.import_compile(path.as_ref(), span)?;
+                    let item: String = match item {
+                        Value::Char(arr) if arr.rank() == 1 => arr.data.iter().copied().collect(),
+                        _ => {
+                            return Err(
+                                self.error_with_span(span.clone(), "Import item must be a string")
+                            )
+                        }
+                    };
+                    let index = *self.imports[&module].get(item.as_str()).ok_or_else(|| {
+                        self.error_with_span(
+                            span.clone(),
+                            format!("Item `{item}` not found in module `{path}`"),
+                        )
                     })?;
-                    env.ct.scope.names.insert(name.clone(), index);
-                    sig = Some(env.asm.globals[index].global.signature().ok_or_else(|| {
-                        env.error("Cannot define a signature for a module rebind")
+                    self.scope.names.insert(name.clone(), index);
+                    sig = Some(self.asm.bindings[index].global.signature().ok_or_else(|| {
+                        self.error_with_span(
+                            span.clone(),
+                            "Cannot define a signature for a module rebind",
+                        )
                     })?);
-                    Ok(())
-                })?,
+                }
                 _ => {
                     return Err(self.error_with_span(
-                        self.get_span(span),
+                        span.clone(),
                         "&i must be followed by one or two strings",
                     ))
                 }
@@ -224,7 +428,7 @@ impl Uiua {
                 // Runtime-dependent binding
                 if instrs.is_empty() {
                     // Binding from the stack set above
-                    match &mut self.ct.scope.stack_height {
+                    match &mut self.scope.stack_height {
                         Ok(height) => {
                             if *height > 0 {
                                 sig = Signature::new(0, 1);
@@ -279,7 +483,7 @@ impl Uiua {
                 } else if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
-                    self.compile_bind_function(&name, global_index, func, span, comment)?;
+                    self.compile_bind_function(&name, global_index, func, span_index, comment)?;
                 } else if sig.args == 0
                     && sig.outputs <= 1
                     && (sig.outputs > 0 || instrs.is_empty())
@@ -287,11 +491,10 @@ impl Uiua {
                     && !is_setinv
                     && !is_setund
                 {
-                    self.compile_bind_sig(&name, global_index, sig, span, comment)?;
+                    self.compile_bind_sig(&name, global_index, sig, span_index, comment)?;
                     // Add binding instrs to top slices
                     instrs.push(Instr::BindGlobal {
-                        name,
-                        span,
+                        span: span_index,
                         index: global_index,
                     });
                     let start = self.asm.instrs.len();
@@ -304,7 +507,7 @@ impl Uiua {
                 } else {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);
-                    self.compile_bind_function(&name, global_index, func, span, comment)?;
+                    self.compile_bind_function(&name, global_index, func, span_index, comment)?;
                 }
             }
             Err(e) => {
@@ -312,7 +515,7 @@ impl Uiua {
                 } else if let Some(sig) = binding.signature {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig.value, self);
-                    self.compile_bind_function(&name, global_index, func, span, comment)?;
+                    self.compile_bind_function(&name, global_index, func, span_index, comment)?;
                 } else {
                     return Err(self.error_with_span(
                         binding.name.span.clone(),
@@ -330,20 +533,6 @@ impl Uiua {
         }
         Ok(())
     }
-    pub(crate) fn bind_value(
-        &mut self,
-        name: &Ident,
-        index: usize,
-        mut value: Value,
-        span: usize,
-        comment: Option<Arc<str>>,
-    ) -> UiuaResult {
-        self.validate_binding_name(name, &[], self.get_span(span))?;
-        value.compress();
-        let span = self.get_span(span).code();
-        self.add_global_at(index, Global::Const(value), span, comment);
-        Ok(())
-    }
     pub(crate) fn compile_bind_sig(
         &mut self,
         name: &Ident,
@@ -352,9 +541,8 @@ impl Uiua {
         span: usize,
         comment: Option<Arc<str>>,
     ) -> UiuaResult {
-        let span = self.get_span(span).code();
-        self.add_global_at(index, Global::Sig(sig), span, comment);
-        self.ct.scope.names.insert(name.clone(), index);
+        self.scope.names.insert(name.clone(), index);
+        self.asm.bind_sig(index, sig, span, comment);
         Ok(())
     }
     pub(crate) fn compile_bind_function(
@@ -365,36 +553,10 @@ impl Uiua {
         span: usize,
         comment: Option<Arc<str>>,
     ) -> UiuaResult {
-        let span = self.get_span(span);
-        self.validate_binding_name(name, function.instrs(self), span.clone())?;
-        self.ct.scope.names.insert(name.clone(), index);
-        self.add_global_at(index, Global::Func(function), span.code(), comment);
+        self.validate_binding_name(name, function.instrs(self), self.get_span(span))?;
+        self.scope.names.insert(name.clone(), index);
+        self.asm.bind_function(index, function, span, comment);
         Ok(())
-    }
-    fn add_global_at(
-        &mut self,
-        index: usize,
-        global: Global,
-        span: Option<CodeSpan>,
-        comment: Option<Arc<str>>,
-    ) {
-        let binding = BindingInfo {
-            global,
-            span,
-            comment,
-        };
-        if index < self.asm.globals.len() {
-            self.asm.globals.make_mut()[index] = binding;
-        } else {
-            while self.asm.globals.len() < index {
-                self.asm.globals.push(BindingInfo {
-                    global: Global::Const(Value::default()),
-                    span: None,
-                    comment: None,
-                });
-            }
-            self.asm.globals.push(binding);
-        }
     }
     fn validate_binding_name(&self, name: &Ident, instrs: &[Instr], span: Span) -> UiuaResult {
         let temp_function_count = self.count_temp_functions(instrs, &mut HashSet::new());
@@ -412,16 +574,60 @@ impl Uiua {
         }
         Ok(())
     }
+    pub(crate) fn import_compile(&mut self, path: &Path, span: &CodeSpan) -> UiuaResult<PathBuf> {
+        let path = self.resolve_import_path(Path::new(&path));
+        if self.asm.import_inputs.get(&path).is_some() {
+            return Ok(path);
+        }
+        let bytes = fs::read(&path)
+            .or_else(|e| {
+                if path.ends_with(Path::new("example.ua")) {
+                    Ok(example_ua(|ex| ex.as_bytes().to_vec()))
+                } else {
+                    Err(e)
+                }
+            })
+            .map_err(|e| self.error_with_span(span.clone(), e))?;
+        let input: EcoString = String::from_utf8(bytes)
+            .map_err(|e| self.error_with_span(span.clone(), format!("Failed to read file: {e}")))?
+            .into();
+        self.asm.import_inputs.insert(path.clone(), input.clone());
+        if self.current_imports.iter().any(|p| p == &path) {
+            return Err(self.error_with_span(
+                span.clone(),
+                format!("Cycle detected importing {}", path.to_string_lossy()),
+            ));
+        }
+        if !self.imports.contains_key(&path) {
+            let import = self.in_scope(|env| env.load_str_src(&input, &path).map(drop))?;
+            self.imports.insert(path.clone(), import);
+        }
+        Ok(path)
+    }
+    /// Resolve a declared import path relative to the path of the file that is being executed
+    pub(crate) fn resolve_import_path(&self, path: &Path) -> PathBuf {
+        let target = if let Some(parent) = self.current_imports.last().and_then(|p| p.parent()) {
+            parent.join(path)
+        } else {
+            path.to_path_buf()
+        };
+        let base = Path::new(".");
+        if let (Ok(canon_target), Ok(canon_base)) = (target.canonicalize(), base.canonicalize()) {
+            pathdiff::diff_paths(canon_target, canon_base).unwrap_or(target)
+        } else {
+            pathdiff::diff_paths(&target, base).unwrap_or(target)
+        }
+    }
     fn compile_words(&mut self, mut words: Vec<Sp<Word>>, call: bool) -> UiuaResult<EcoVec<Instr>> {
         words = unsplit_words(split_words(words))
             .into_iter()
             .flatten()
             .collect();
 
-        self.ct.new_functions.push(EcoVec::new());
+        self.new_functions.push(EcoVec::new());
         self.words(words, call)?;
         self.flush_diagnostics();
-        Ok(self.ct.new_functions.pop().unwrap())
+        Ok(self.new_functions.pop().unwrap())
     }
     fn flush_diagnostics(&mut self) {
         if self.print_diagnostics {
@@ -467,21 +673,21 @@ impl Uiua {
             // Handle imports
             if let Some(next) = words.peek() {
                 if let Word::Ident(name) = &next.value {
-                    if let Some(index) = self.ct.scope.names.get(name) {
-                        if let Global::Module { module } = &self.asm.globals[*index].global {
+                    if let Some(index) = self.scope.names.get(name) {
+                        if let Global::Module { module } = &self.asm.bindings[*index].global {
                             if let Word::String(item_name) = &word.value {
-                                let index = self.ct.imports[module]
+                                let index = self.imports[module]
                                     .get(item_name.as_str())
                                     .copied()
                                     .ok_or_else(|| {
-                                        self.error_with_span(
-                                            next.span.clone(),
-                                            format!(
-                                                "Item `{item_name}` not found in module `{}`",
-                                                module.display()
-                                            ),
-                                        )
-                                    })?;
+                                    self.error_with_span(
+                                        next.span.clone(),
+                                        format!(
+                                            "Item `{item_name}` not found in module `{}`",
+                                            module.display()
+                                        ),
+                                    )
+                                })?;
                                 self.global_index(index, next.span.clone(), call)?;
                                 words.next();
                                 continue;
@@ -507,7 +713,7 @@ impl Uiua {
     /// Also performs some optimizations if the instruction and the previous
     /// instruction form some known pattern
     fn push_instr(&mut self, instr: Instr) {
-        let instrs = self.ct.new_functions.last_mut().unwrap();
+        let instrs = self.new_functions.last_mut().unwrap();
         optimize_instrs_mut(instrs, instr, false);
     }
     fn push_all_instrs(&mut self, instrs: impl IntoIterator<Item = Instr>) {
@@ -603,7 +809,7 @@ impl Uiua {
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
             Word::Strand(items) => {
                 if !call {
-                    self.ct.new_functions.push(EcoVec::new());
+                    self.new_functions.push(EcoVec::new());
                 }
                 self.push_instr(Instr::BeginArray);
                 let inner = self.compile_words(items, true)?;
@@ -612,7 +818,7 @@ impl Uiua {
                         |instr| matches!(instr, Instr::Push(Value::Char(arr)) if arr.rank() == 0),
                     )
                 {
-                    self.diagnostic_with_span(
+                    self.emit_diagnostic(
                         "Stranded characters should instead be written as a string",
                         DiagnosticKind::Advice,
                         word.span.clone(),
@@ -640,32 +846,40 @@ impl Uiua {
                         }
                     }
                 }
-                let span = self.add_span(word.span.clone());
-                let instrs = self.ct.new_functions.last_mut().unwrap();
+                let span_index = self.add_span(word.span.clone());
+                let instrs = self.new_functions.last_mut().unwrap();
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
                     // Inline constant arrays
                     instrs.pop();
-                    let values = inner.into_iter().rev().map(|instr| match instr {
-                        Instr::Push(v) => v,
+                    let values = inner.iter().rev().map(|instr| match instr {
+                        Instr::Push(v) => v.clone(),
                         _ => unreachable!(),
                     });
-                    let val = self.with_span(span, |env| Value::from_row_values(values, env))?;
-                    self.push_instr(Instr::push(val));
-                } else {
-                    // Normal case
-                    instrs.extend(inner);
-                    self.push_instr(Instr::EndArray { span, boxed: false });
-                    if !call {
-                        let instrs = self.ct.new_functions.pop().unwrap();
-                        let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
-                        let func = self.add_function(FunctionId::Anonymous(word.span), sig, instrs);
-                        self.push_instr(Instr::PushFunc(func));
+                    match Value::from_row_values(values, &(&word.span, &self.asm.inputs)) {
+                        Ok(val) => {
+                            self.push_instr(Instr::push(val));
+                            return Ok(());
+                        }
+                        Err(e) if e.is_fill() => {}
+                        Err(e) => return Err(e),
                     }
+                }
+                // Normal case
+                instrs.extend(inner);
+                self.push_instr(Instr::EndArray {
+                    span: span_index,
+                    boxed: false,
+                });
+                if !call {
+                    let instrs = self.new_functions.pop().unwrap();
+                    let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
+                    let func = self.add_function(FunctionId::Anonymous(word.span), sig, instrs);
+                    self.push_instr(Instr::PushFunc(func));
                 }
             }
             Word::Array(arr) => {
                 if !call {
-                    self.ct.new_functions.push(EcoVec::new());
+                    self.new_functions.push(EcoVec::new());
                 }
                 self.push_instr(Instr::BeginArray);
                 let mut inner = Vec::new();
@@ -679,49 +893,53 @@ impl Uiua {
                         |instr| matches!(instr, Instr::Push(Value::Char(arr)) if arr.rank() == 0),
                     )
                 {
-                    self.diagnostic_with_span(
+                    self.emit_diagnostic(
                         "An array of characters should instead be written as a string",
                         DiagnosticKind::Advice,
                         word.span.clone(),
                     );
                 }
                 let span = self.add_span(word.span.clone());
-                let instrs = self.ct.new_functions.last_mut().unwrap();
+                let instrs = self.new_functions.last_mut().unwrap();
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
                     // Inline constant arrays
                     instrs.pop();
                     let empty = inner.is_empty();
-                    let values = inner.into_iter().rev().map(|instr| match instr {
-                        Instr::Push(v) => v,
+                    let values = inner.iter().rev().map(|instr| match instr {
+                        Instr::Push(v) => v.clone(),
                         _ => unreachable!(),
                     });
-                    let val = self.with_span(span, |env| {
-                        if arr.boxes {
-                            if empty {
-                                Ok(Array::<Boxed>::default().into())
-                            } else {
-                                Value::from_row_values(
-                                    values.map(|v| Value::Box(Boxed(v).into())),
-                                    env,
-                                )
-                            }
+                    let res = if arr.boxes {
+                        if empty {
+                            Ok(Array::<Boxed>::default().into())
                         } else {
-                            Value::from_row_values(values, env)
+                            Value::from_row_values(
+                                values.map(|v| Value::Box(Boxed(v).into())),
+                                &(&word.span, &self.asm.inputs),
+                            )
                         }
-                    })?;
-                    self.push_instr(Instr::push(val));
-                } else {
-                    instrs.extend(inner);
-                    self.push_instr(Instr::EndArray {
-                        span,
-                        boxed: arr.boxes,
-                    });
-                    if !call {
-                        let instrs = self.ct.new_functions.pop().unwrap();
-                        let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
-                        let func = self.add_function(FunctionId::Anonymous(word.span), sig, instrs);
-                        self.push_instr(Instr::PushFunc(func));
+                    } else {
+                        Value::from_row_values(values, &(&word.span, &self.asm.inputs))
+                    };
+                    match res {
+                        Ok(val) => {
+                            self.push_instr(Instr::push(val));
+                            return Ok(());
+                        }
+                        Err(e) if e.is_fill() => {}
+                        Err(e) => return Err(e),
                     }
+                }
+                instrs.extend(inner);
+                self.push_instr(Instr::EndArray {
+                    span,
+                    boxed: arr.boxes,
+                });
+                if !call {
+                    let instrs = self.new_functions.pop().unwrap();
+                    let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
+                    let func = self.add_function(FunctionId::Anonymous(word.span), sig, instrs);
+                    self.push_instr(Instr::PushFunc(func));
                 }
             }
             Word::Func(func) => self.func(func, word.span)?,
@@ -741,7 +959,7 @@ impl Uiua {
             }
             Word::Comment(comment) => {
                 if comment.trim() == "Experimental!" {
-                    self.ct.scope.experimental = true;
+                    self.scope.experimental = true;
                 }
             }
             Word::OutputComment { i, n } => self.push_instr(Instr::SetOutputComment { i, n }),
@@ -750,8 +968,8 @@ impl Uiua {
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if let Some(index) = (self.ct.scope.names.get(&ident))
-            .or_else(|| self.ct.higher_scopes.last()?.names.get(&ident))
+        if let Some(index) = (self.scope.names.get(&ident))
+            .or_else(|| self.higher_scopes.last()?.names.get(&ident))
             .copied()
         {
             // Name exists in scope
@@ -767,7 +985,7 @@ impl Uiua {
         Ok(())
     }
     fn global_index(&mut self, index: usize, span: CodeSpan, call: bool) -> UiuaResult {
-        let global = self.asm.globals[index].global.clone();
+        let global = self.asm.bindings[index].global.clone();
         match global {
             Global::Const(val) if call => self.push_instr(Instr::push(val)),
             Global::Const(val) => {
@@ -863,7 +1081,7 @@ impl Uiua {
     fn switch(&mut self, sw: Switch, span: CodeSpan, call: bool) -> UiuaResult {
         let count = sw.branches.len();
         if !call {
-            self.ct.new_functions.push(EcoVec::new());
+            self.new_functions.push(EcoVec::new());
         }
         let mut branches = sw.branches.into_iter();
         let first_branch = branches.next().expect("switch cannot have no branches");
@@ -895,7 +1113,7 @@ impl Uiua {
             span: span_idx,
         });
         if !call {
-            let instrs = self.ct.new_functions.pop().unwrap();
+            let instrs = self.new_functions.pop().unwrap();
             let sig = match instrs_signature(&instrs) {
                 Ok(sig) => sig,
                 Err(e) => {
@@ -930,30 +1148,28 @@ impl Uiua {
                     {
                         if prim.class().is_pervasive() {
                             let span = modified.modifier.span.clone().merge(span.clone());
-                            self.diagnostics.insert(Diagnostic::new(
+                            self.emit_diagnostic(
                                 format!(
                                     "Using {m} with a pervasive primitive like {p} is \
                                     redundant. Just use {p} by itself.",
                                     m = m.format(),
                                     p = prim.format(),
                                 ),
-                                span,
                                 DiagnosticKind::Advice,
-                                self.inputs().clone(),
-                            ));
+                                span,
+                            );
                         }
                     } else if words_look_pervasive(&modified.operands) {
                         let span = modified.modifier.span.clone();
-                        self.diagnostics.insert(Diagnostic::new(
+                        self.emit_diagnostic(
                             format!(
                                 "{m}'s function is pervasive, \
                                 so {m} is redundant here.",
                                 m = m.format()
                             ),
-                            span,
                             DiagnosticKind::Advice,
-                            self.inputs().clone(),
-                        ));
+                            span,
+                        );
                     }
                 }
                 _ => {}
@@ -1075,7 +1291,7 @@ impl Uiua {
             (&modified.modifier.value, instrs.as_slice())
         {
             if f.signature().args == 1 {
-                self.diagnostic_with_span(
+                self.emit_diagnostic(
                     format!(
                         "{} with a monadic function is deprecated. \
                         Prefer {} with stack array notation.",
@@ -1095,7 +1311,7 @@ impl Uiua {
                 Modifier::Ident(ident) => self.ident(ident, modified.modifier.span, true)?,
             }
         } else {
-            self.ct.new_functions.push(EcoVec::new());
+            self.new_functions.push(EcoVec::new());
             self.push_all_instrs(instrs);
             match modified.modifier.value {
                 Modifier::Primitive(prim) => {
@@ -1105,7 +1321,7 @@ impl Uiua {
                     self.ident(ident, modified.modifier.span.clone(), true)?
                 }
             }
-            let instrs = self.ct.new_functions.pop().unwrap();
+            let instrs = self.new_functions.pop().unwrap();
             match instrs_signature(&instrs) {
                 Ok(sig) => {
                     let func = self.add_function(
@@ -1136,15 +1352,12 @@ impl Uiua {
                 let (mut instrs, sig) = self.compile_operand_words(modified.operands.clone())?;
                 // Dip (|1 …) . diagnostic
                 if prim == Dip && sig == (1, 1) {
-                    if let Some(Instr::Prim(Dup, dup_span)) = self
-                        .ct
-                        .new_functions
-                        .last()
-                        .and_then(|instrs| instrs.last())
+                    if let Some(Instr::Prim(Dup, dup_span)) =
+                        self.new_functions.last().and_then(|instrs| instrs.last())
                     {
                         let span = Span::Code(modified.modifier.span.clone())
                             .merge(self.get_span(*dup_span));
-                        self.diagnostic_with_span(
+                        self.emit_diagnostic(
                             "Prefer `⊃∘(…)` over `⊙(…).` for clarity",
                             DiagnosticKind::Style,
                             span,
@@ -1406,20 +1619,19 @@ impl Uiua {
             } else {
                 format!(", {suggestion}")
             };
-            self.diagnostics.insert(Diagnostic::new(
+            self.emit_diagnostic(
                 format!(
                     "{} is deprecated and will be removed in a future version{}",
                     prim.format(),
                     suggestion
                 ),
-                span.clone(),
                 DiagnosticKind::Warning,
-                self.inputs().clone(),
-            ));
+                span.clone(),
+            );
         }
     }
     fn handle_primitive_experimental(&self, prim: Primitive, span: &CodeSpan) -> UiuaResult {
-        if prim.is_experimental() && !self.ct.scope.experimental {
+        if prim.is_experimental() && !self.scope.experimental {
             return Err(self.error_with_span(
                 span.clone(),
                 format!(
@@ -1507,6 +1719,91 @@ impl Uiua {
             }
         }
         false
+    }
+    /// Get all diagnostics
+    pub fn diagnostics(&self) -> &BTreeSet<Diagnostic> {
+        &self.diagnostics
+    }
+    /// Get all diagnostics mutably
+    pub fn diagnostics_mut(&mut self) -> &mut BTreeSet<Diagnostic> {
+        &mut self.diagnostics
+    }
+    /// Take all diagnostics
+    ///
+    /// These are only available if `print_diagnostics` is `false`
+    pub fn take_diagnostics(&mut self) -> BTreeSet<Diagnostic> {
+        take(&mut self.diagnostics)
+    }
+    /// Construct and add a diagnostic with a custom span
+    pub fn emit_diagnostic(
+        &mut self,
+        message: impl Into<String>,
+        kind: DiagnosticKind,
+        span: impl Into<Span>,
+    ) {
+        self.diagnostics.insert(Diagnostic::new(
+            message.into(),
+            span,
+            kind,
+            self.asm.inputs.clone(),
+        ));
+    }
+    /// Construct an error with a custom span
+    pub fn error_with_span(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
+        UiuaError::Run(
+            span.into().sp(message.to_string()),
+            self.asm.inputs.clone().into(),
+        )
+    }
+    /// Get a span by its index
+    pub fn get_span(&self, span: usize) -> Span {
+        self.asm.spans[span].clone()
+    }
+    /// Register a span
+    pub fn add_span(&mut self, span: impl Into<Span>) -> usize {
+        let idx = self.asm.spans.len();
+        self.asm.spans.push(span.into());
+        idx
+    }
+    /// Create a function
+    pub fn create_function(
+        &mut self,
+        signature: impl Into<Signature>,
+        f: impl Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static,
+    ) -> Function {
+        let signature = signature.into();
+        let index = self.asm.dynamic_functions.len();
+        self.asm.dynamic_functions.push(Arc::new(f));
+        self.add_function(
+            FunctionId::Unnamed,
+            signature,
+            vec![Instr::Dynamic(DynamicFunction { index, signature })],
+        )
+    }
+    /// Bind a function in the current scope
+    ///
+    /// # Errors
+    /// Returns an error in the binding name is not valid
+    pub fn bind_function(&mut self, name: impl Into<EcoString>, function: Function) -> UiuaResult {
+        let index = self.next_global;
+        let name = name.into();
+        self.compile_bind_function(&name, index, function, 0, None)?;
+        self.next_global += 1;
+        self.scope.names.insert(name, index);
+        Ok(())
+    }
+    /// Create and bind a function in the current scope
+    ///
+    /// # Errors
+    /// Returns an error in the binding name is not valid
+    pub fn create_bind_function(
+        &mut self,
+        name: impl Into<EcoString>,
+        signature: impl Into<Signature>,
+        f: impl Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static,
+    ) -> UiuaResult {
+        let function = self.create_function(signature, f);
+        self.bind_function(name, function)
     }
 }
 

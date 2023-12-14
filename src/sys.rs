@@ -673,6 +673,17 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
 }
 
+/// A safe backend with no IO
+pub struct SafeBackend;
+impl SysBackend for SafeBackend {
+    fn any(&self) -> &dyn Any {
+        self
+    }
+    fn any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
 impl SysOp {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {

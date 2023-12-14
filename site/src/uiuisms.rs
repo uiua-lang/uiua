@@ -99,12 +99,13 @@ macro_rules! uiuisms {
         fn uiuisms() {
             for code in [$($code),*] {
                 println!("Testing Uiuism:\n{code}");
-                let mut env = uiua::Uiua::with_native_sys();
-                if let Err(e) = env.load_str(code).and_then(uiua::Chunk::run) {
-                    panic!("Uiuism failed\n{code}\n{}", e.report());
-                }
-                if let Some(diag) = env.take_diagnostics().into_iter().next() {
-                    panic!("Uiuism failed\n{code}\n{}", diag.report());
+                match uiua::Uiua::with_native_sys().run_str(code) {
+                    Ok(mut comp) => {
+                        if let Some(diag) = comp.take_diagnostics().into_iter().next() {
+                            panic!("Uiuism failed\n{code}\n{}", diag.report());
+                        }
+                    }
+                    Err(e) => panic!("Uiuism failed\n{code}\n{}", e.report()),
                 }
             }
         }

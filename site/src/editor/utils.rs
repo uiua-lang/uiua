@@ -13,7 +13,7 @@ use leptos::*;
 
 use uiua::{
     ast::Item, image_to_bytes, spans, value_to_gif_bytes, value_to_image, value_to_wav_bytes,
-    DiagnosticKind, Inputs, Report, ReportFragment, ReportKind, RunMode, SpanKind, SysBackend,
+    Compiler, DiagnosticKind, Inputs, Report, ReportFragment, ReportKind, SpanKind, SysBackend,
     Uiua, UiuaResult, Value,
 };
 use wasm_bindgen::JsCast;
@@ -467,9 +467,9 @@ fn set_code_html(id: &str, code: &str) {
 
     let chars: Vec<char> = code.chars().collect();
 
-    let mut env = Uiua::with_backend(WebBackend::default());
-    _ = env.load_str(code);
-    let asm = env.asm;
+    let mut comp = Compiler::new();
+    _ = comp.load_str(code);
+    let asm = comp.finish();
 
     let push_unspanned = |html: &mut String, mut target: usize, curr: &mut usize| {
         target = target.min(chars.len());
@@ -560,12 +560,12 @@ fn set_code_html(id: &str, code: &str) {
                         .into(),
                     SpanKind::Ident => {
                         if let Some(binding) = asm
-                            .globals
+                            .bindings
                             .iter()
                             .find(|b| b.span.as_ref().map(|sp| &sp.start) == Some(&span.start))
                             .or_else(|| {
                                 asm.global_references.iter().find_map(|(name, index)| {
-                                    (name.span.start == span.start).then(|| &asm.globals[*index])
+                                    (name.span.start == span.start).then(|| &asm.bindings[*index])
                                 })
                             })
                         {
@@ -675,7 +675,6 @@ fn escape_html(s: &str) -> Cow<str> {
 
 fn init_rt() -> Uiua {
     Uiua::with_backend(WebBackend::default())
-        .with_mode(RunMode::All)
         .with_execution_limit(Duration::from_secs_f64(get_execution_limit()))
 }
 
@@ -762,7 +761,11 @@ fn run_code_single(code: &str) -> Vec<OutputItem> {
     // Run
     let mut rt = init_rt();
     let mut error = None;
-    let mut values = match rt.run_str(code) {
+    let mut comp = Compiler::new();
+    let mut values = match comp
+        .load_str(code)
+        .and_then(|comp| rt.run_asm(comp.finish()))
+    {
         Ok(()) => rt.take_stack(),
         Err(e) => {
             error = Some(e);
@@ -772,7 +775,7 @@ fn run_code_single(code: &str) -> Vec<OutputItem> {
     if get_top_at_top() {
         values.reverse();
     }
-    let diagnotics = rt.take_diagnostics();
+    let diagnostics = comp.take_diagnostics();
     let io = rt.downcast_backend::<WebBackend>().unwrap();
     // Get stdout and stderr
     let stdout = take(&mut *io.stdout.lock().unwrap());
@@ -883,11 +886,11 @@ fn run_code_single(code: &str) -> Vec<OutputItem> {
             ));
         }
     }
-    if !diagnotics.is_empty() {
+    if !diagnostics.is_empty() {
         if !output.is_empty() {
             output.push(OutputItem::String("".into()));
         }
-        for diag in diagnotics {
+        for diag in diagnostics {
             output.push(OutputItem::Report(diag.report()));
         }
     }

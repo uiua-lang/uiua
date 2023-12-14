@@ -2,7 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Separate compiler and runtime structures
 - Multimedia
   - Sound input
   - Webcam input

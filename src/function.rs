@@ -14,7 +14,7 @@ use crate::{
     lex::CodeSpan,
     primitive::{ImplPrimitive, Primitive},
     value::Value,
-    Ident, Uiua,
+    Assembly, Ident,
 };
 
 /// A Uiua bytecode instruction
@@ -34,7 +34,6 @@ pub enum Instr {
     },
     /// Bind a global value
     BindGlobal {
-        name: Ident,
         span: usize,
         index: usize,
     },
@@ -466,24 +465,27 @@ impl Function {
         self.slice
     }
     /// Get the function's instructions
-    pub fn instrs<'a>(&self, env: &'a Uiua) -> &'a [Instr] {
-        env.instrs(self.slice)
+    pub fn instrs<'a>(&self, env: &'a impl AsRef<Assembly>) -> &'a [Instr] {
+        env.as_ref().instrs(self.slice)
     }
     /// Get a mutable slice of the function's instructions
-    pub fn instrs_mut<'a>(&self, env: &'a mut Uiua) -> &'a mut [Instr] {
-        &mut env.asm.instrs.make_mut()[self.slice.address..][..self.slice.len]
+    pub fn instrs_mut<'a>(&self, env: &'a mut impl AsMut<Assembly>) -> &'a mut [Instr] {
+        env.as_mut().instrs_mut(self.slice)
     }
     /// Try to get a lone primitive from this function
-    pub fn as_primitive(&self, env: &Uiua) -> Option<(Primitive, usize)> {
-        match self.instrs(env) {
+    pub fn as_primitive(&self, env: &impl AsRef<Assembly>) -> Option<(Primitive, usize)> {
+        match self.instrs(env.as_ref()) {
             [Instr::Prim(prim, span)] => Some((*prim, *span)),
             _ => None,
         }
     }
-    pub(crate) fn as_flipped_primitive(&self, env: &Uiua) -> Option<(Primitive, bool)> {
+    pub(crate) fn as_flipped_primitive(
+        &self,
+        env: &impl AsRef<Assembly>,
+    ) -> Option<(Primitive, bool)> {
         match &self.id {
             FunctionId::Primitive(prim) => Some((*prim, false)),
-            _ => match self.instrs(env) {
+            _ => match self.instrs(env.as_ref()) {
                 [Instr::Prim(prim, _)] => Some((*prim, false)),
                 [Instr::Prim(Primitive::Flip, _), Instr::Prim(prim, _)] => Some((*prim, true)),
                 _ => None,

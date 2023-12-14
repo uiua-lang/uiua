@@ -17,8 +17,6 @@ The main entry point is the [`Uiua`] struct, which is the Uiua runtime. It must 
 [`Value`] is the generic value type. It wraps one of four [`Array`] types.
 
 You can run Uiua code with [`Uiua::run_str`] or [`Uiua::run_file`].
-
-If you want to compile and run code separately, you can load a [`Chunk`] of code with [`Uiua::load_str`] or [`Uiua::load_file`]. Then, run the [`Chunk`] with [`Chunk::run`].
 ```rust
 use uiua::*;
 
@@ -36,20 +34,47 @@ uiua.run_str("+").unwrap();
 let res = uiua.pop_int().unwrap();
 assert_eq!(res, 3);
 ```
-You can create and bind Rust functions with [`Uiua::create_function`], [`Uiua::bind_function`], and [`Uiua::create_bind_function`]
+Sometimes, you need to configure the compiler before running.
+
+You can create a new compiler with [`Compiler::new`]. Strings or files can be compiled with [`Compiler::load_str`] or [`Compiler::load_file`] respectively.
+You can get the compiled assembly with [`Compiler::finish`] and run it with [`Uiua::run_asm`].
+```rust
+use uiua::*;
+
+let mut comp = Compiler::new();
+comp.print_diagnostics(true);
+let asm = comp.load_str("+ 3 5").unwrap().finish();
+
+let mut uiua = Uiua::with_native_sys();
+uiua.run_asm(&asm).unwrap();
+let res = uiua.pop_int().unwrap();
+assert_eq!(res, 8);
+```
+This can be shortened a bit with [`Uiua::compile_run`].
 ```rust
 use uiua::*;
 
 let mut uiua = Uiua::with_native_sys();
+uiua.compile_run(|comp| {
+    comp.print_diagnostics(true).load_str("+ 3 5")
+});
+```
+You can create and bind Rust functions with [`Compiler::create_function`], [`Compiler::bind_function`], and [`Compiler::create_bind_function`]
+```rust
+use uiua::*;
 
-uiua.create_bind_function("MyAdd", (2, 1), |uiua| {
+let mut comp = Compiler::new();
+comp.create_bind_function("MyAdd", (2, 1), |uiua| {
     let a = uiua.pop_num()?;
     let b = uiua.pop_num()?;
     uiua.push(a + b);
     Ok(())
 }).unwrap();
+comp.load_str("MyAdd 2 3").unwrap();
+let asm = comp.finish();
 
-uiua.run_str("MyAdd 2 3").unwrap();
+let mut uiua = Uiua::with_native_sys();
+uiua.run_asm(asm).unwrap();
 let res = uiua.pop_num().unwrap();
 assert_eq!(res, 5.0);
 ```
@@ -105,6 +130,7 @@ pub use self::{
     array::*,
     assembly::*,
     boxed::*,
+    compile::*,
     error::*,
     function::*,
     lex::is_ident_char,
@@ -139,10 +165,14 @@ mod tests {
             if path.is_file() && path.extension().is_some_and(|s| s == "ua") {
                 let code = std::fs::read_to_string(&path).unwrap();
                 // Run code
-                let mut env = Uiua::with_native_sys().print_diagnostics(false);
-                if let Err(e) = env.load_str_src(&code, &path).and_then(Chunk::run) {
+                let mut env = Uiua::with_native_sys();
+                let mut comp = Compiler::new();
+                if let Err(e) = comp
+                    .load_str_src(&code, &path)
+                    .and_then(|comp| env.run_asm(&comp.finish()))
+                {
                     panic!("Test failed in {}:\n{}", path.display(), e.report());
-                } else if let Some(diag) = env
+                } else if let Some(diag) = comp
                     .take_diagnostics()
                     .into_iter()
                     .find(|d| d.kind < DiagnosticKind::Advice)

@@ -1,7 +1,6 @@
 //! The Uiua formatter
 
 use std::{
-    any::Any,
     collections::{BTreeMap, HashMap},
     env,
     fmt::Display,
@@ -20,21 +19,9 @@ use crate::{
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
     value::Value,
-    Chunk, FunctionId, Ident, InputSrc, Inputs, Primitive, RunMode, SysBackend, SysOp, Uiua,
+    Compiler, FunctionId, Ident, InputSrc, Inputs, Primitive, RunMode, SafeBackend, SysOp, Uiua,
     UiuaError, UiuaResult,
 };
-
-// For now disallow any syscalls in the format config file.
-struct FormatConfigBackend;
-
-impl SysBackend for FormatConfigBackend {
-    fn any(&self) -> &dyn Any {
-        self
-    }
-    fn any_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-}
 
 trait ConfigValue: Sized {
     fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<Self>;
@@ -119,9 +106,9 @@ macro_rules! create_config {
         impl PartialFormatConfig {
             paste! {
                 fn from_file(file_path: PathBuf) -> UiuaResult<Self> {
-                    let mut env = Uiua::with_backend(FormatConfigBackend)
-                        .print_diagnostics(true);
-                    env.run_file(file_path)?;
+                    let asm = Compiler::new().print_diagnostics(true).load_file(file_path)?.finish();
+                    let mut env = Uiua::with_backend(SafeBackend);
+                    env.run_asm(&asm)?;
                     let mut bindings = env.all_values_in_scope();
                     $(
                         let $name = {
@@ -900,13 +887,12 @@ impl<'a> Formatter<'a> {
     }
     fn output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {
         let values = self.output_comments.get_or_insert_with(|| {
-            let mut env = Uiua::with_native_sys()
-                .with_mode(RunMode::All)
-                .with_execution_limit(Duration::from_secs(2));
-            let input = self.inputs.get(&self.src);
-            let res = env
-                .load_str_src(&input, self.src.clone())
-                .and_then(Chunk::run);
+            let mut env = Uiua::with_native_sys().with_execution_limit(Duration::from_secs(2));
+            let res = env.compile_run(|comp| {
+                comp.print_diagnostics(true)
+                    .mode(RunMode::All)
+                    .load_str_src(&self.inputs.get(&self.src), self.src.clone())
+            });
             let mut values = env.rt.output_comments;
             if let Err(e) = res {
                 let next = (0..).take_while(|i| values.contains_key(i)).count();

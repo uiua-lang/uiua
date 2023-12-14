@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
-    collections::{BTreeSet, HashMap},
-    fmt, fs,
+    collections::HashMap,
+    fmt,
     hash::Hash,
     mem::{replace, size_of, take},
     panic::{catch_unwind, AssertUnwindSafe},
@@ -11,76 +11,21 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
-use ecow::{EcoString, EcoVec};
 use enum_iterator::{all, Sequence};
 use instant::Duration;
 
 use crate::{
-    algorithm,
-    array::Array,
-    boxed::Boxed,
-    check::{instrs_temp_signatures, SigCheckError},
-    constants, example_ua,
-    function::*,
-    lex::Span,
-    parse::parse,
-    value::Value,
-    Assembly, Complex, Diagnostic, DiagnosticKind, Global, Ident, InputSrc, Inputs, IntoInputSrc,
-    NativeSys, Primitive, Sp, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    algorithm, array::Array, boxed::Boxed, check::instrs_temp_signatures, function::*, lex::Span,
+    value::Value, Assembly, Compiler, Complex, Global, Ident, Inputs, NativeSys, Primitive,
+    SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua interpreter
 #[derive(Clone)]
 pub struct Uiua {
     pub(crate) rt: Runtime,
-    pub(crate) ct: CompileTime,
     /// The compiled assembly
     pub asm: Assembly,
-    dynamic_functions: EcoVec<DynFn>,
-    /// Accumulated diagnostics
-    pub(crate) diagnostics: BTreeSet<Diagnostic>,
-    /// Print diagnostics as they are encountered
-    pub(crate) print_diagnostics: bool,
-}
-
-type DynFn = Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static>;
-
-/// Compile-time only data
-#[derive(Clone)]
-pub(crate) struct CompileTime {
-    /// Functions which are under construction
-    pub(crate) new_functions: Vec<EcoVec<Instr>>,
-    pub(crate) next_global: usize,
-    /// The current scope
-    pub(crate) scope: CtScope,
-    /// Ancestor scopes of the current one
-    pub(crate) higher_scopes: Vec<CtScope>,
-    /// Determines which How test scopes are run
-    pub(crate) mode: RunMode,
-    /// The paths of files currently being imported (used to detect import cycles)
-    pub(crate) current_imports: Vec<PathBuf>,
-    /// The bindings of imported files
-    pub(crate) imports: HashMap<PathBuf, HashMap<Ident, usize>>,
-}
-
-#[derive(Clone)]
-pub(crate) struct CtScope {
-    /// Map local names to global indices
-    pub names: HashMap<Ident, usize>,
-    /// Whether to allow experimental features
-    pub experimental: bool,
-    /// The stack height between top-level statements
-    pub stack_height: Result<usize, Sp<SigCheckError>>,
-}
-
-impl Default for CtScope {
-    fn default() -> Self {
-        Self {
-            names: HashMap::new(),
-            experimental: false,
-            stack_height: Ok(0),
-        }
-    }
 }
 
 /// Runtime-only data
@@ -90,7 +35,6 @@ pub(crate) struct Runtime {
     pub(crate) stack: Vec<Value>,
     /// The thread's function stack
     pub(crate) function_stack: Vec<Function>,
-    last_slice_run: usize,
     /// The thread's temp stack for inlining
     temp_stacks: [Vec<Value>; TempStack::CARDINALITY],
     /// The thread's temp stack for functions
@@ -122,6 +66,18 @@ pub(crate) struct Runtime {
     /// The thread interface
     thread: ThisThread,
     pub(crate) output_comments: HashMap<usize, Vec<Vec<Value>>>,
+}
+
+impl AsRef<Assembly> for Uiua {
+    fn as_ref(&self) -> &Assembly {
+        &self.asm
+    }
+}
+
+impl AsMut<Assembly> for Uiua {
+    fn as_mut(&mut self) -> &mut Assembly {
+        &mut self.asm
+    }
 }
 
 #[derive(Clone)]
@@ -214,7 +170,6 @@ impl FromStr for RunMode {
 impl Runtime {
     fn with_native_sys() -> Self {
         Runtime {
-            last_slice_run: 0,
             stack: Vec::new(),
             function_stack: Vec::new(),
             temp_stacks: [Vec::new(), Vec::new()],
@@ -250,72 +205,11 @@ impl Default for Runtime {
     }
 }
 
-/// A handle to a compiled chunk of Uiua bytecode
-#[must_use = "Chunks must be run for their code to be executed"]
-pub struct Chunk<'a> {
-    env: &'a mut Uiua,
-    start: usize,
-    len: usize,
-}
-
-impl<'a> Chunk<'a> {
-    /// Run the chunk
-    pub fn run(self) -> UiuaResult {
-        let slices = take(&mut self.env.asm.top_slices);
-        let mut res = Ok(());
-        if let Err(e) = self.env.catching_crash("", |env| {
-            for &slice in &slices[self.start..][..self.len] {
-                res = env.call_slice(slice);
-                if res.is_err() {
-                    break;
-                }
-            }
-        }) {
-            res = Err(e);
-        }
-        if res.is_ok() {
-            self.env.asm.top_slices = slices;
-            self.env.rt.last_slice_run = self.start + self.len;
-        } else {
-            self.env.rt = Runtime {
-                backend: self.env.rt.backend.clone(),
-                execution_limit: self.env.rt.execution_limit,
-                time_instrs: self.env.rt.time_instrs,
-                output_comments: self.env.rt.output_comments.clone(),
-                ..Runtime::default()
-            };
-        }
-        res
-    }
-}
-
 impl Uiua {
-    /// Get a chunk that can run all newly compiled code
-    pub fn full_chunk(&mut self) -> Chunk {
-        let start = self.rt.last_slice_run;
-        let len = self.asm.top_slices.len() - start;
-        Chunk {
-            env: self,
-            start,
-            len,
-        }
-    }
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_native_sys() -> Self {
         Uiua {
             asm: Assembly::default(),
-            dynamic_functions: EcoVec::new(),
-            diagnostics: BTreeSet::new(),
-            print_diagnostics: false,
-            ct: CompileTime {
-                scope: CtScope::default(),
-                higher_scopes: Vec::new(),
-                next_global: 0,
-                new_functions: Vec::new(),
-                mode: RunMode::Normal,
-                current_imports: Vec::new(),
-                imports: HashMap::new(),
-            },
             rt: Runtime::default(),
         }
     }
@@ -332,12 +226,6 @@ impl Uiua {
     /// Build an assembly
     pub fn build(self) -> Assembly {
         self.asm
-    }
-    /// Set the assembly
-    pub fn assembly(mut self, asm: Assembly) -> Self {
-        self.asm = asm;
-        self.rt.last_slice_run = 0;
-        self
     }
     /// Get a reference to the system backend
     pub fn backend(&self) -> &dyn SysBackend {
@@ -358,11 +246,6 @@ impl Uiua {
     {
         self.downcast_backend_mut::<T>().map(take)
     }
-    /// Set whether to consume print diagnostics as they are encountered
-    pub fn print_diagnostics(mut self, print_diagnostics: bool) -> Self {
-        self.print_diagnostics = print_diagnostics;
-        self
-    }
     /// Set whether to emit the time taken to execute each instruction
     pub fn time_instrs(mut self, time_instrs: bool) -> Self {
         self.rt.time_instrs = time_instrs;
@@ -372,17 +255,6 @@ impl Uiua {
     pub fn with_execution_limit(mut self, limit: Duration) -> Self {
         self.rt.execution_limit = Some(limit.as_millis() as f64);
         self
-    }
-    /// Set the [`RunMode`]
-    ///
-    /// Default is [`RunMode::Normal`]
-    pub fn with_mode(mut self, mode: RunMode) -> Self {
-        self.ct.mode = mode;
-        self
-    }
-    /// Get the [`RunMode`]
-    pub fn mode(&self) -> RunMode {
-        self.ct.mode
     }
     /// Set the command line arguments
     pub fn with_args(mut self, args: Vec<String>) -> Self {
@@ -406,87 +278,57 @@ impl Uiua {
     pub fn inputs(&self) -> &Inputs {
         &self.asm.inputs
     }
-    /// Compile a Uiua file from a file at a path
-    pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<Chunk> {
-        let path = path.as_ref();
-        let input: EcoString = fs::read_to_string(path)
-            .map_err(|e| UiuaError::Load(path.into(), e.into()))?
-            .into();
-        self.asm.inputs.files.insert(path.into(), input.clone());
-        self.load_impl(&input, InputSrc::File(path.into()))
-    }
-    /// Compile a Uiua file from a string
-    pub fn load_str<'a>(&'a mut self, input: &str) -> UiuaResult<Chunk<'a>> {
-        let src = self.asm.inputs.add_src((), input);
-        self.load_impl(input, src)
+    /// Configure the compiler, compile, and run
+    pub fn compile_run(
+        &mut self,
+        compile: impl FnOnce(&mut Compiler) -> UiuaResult<&mut Compiler>,
+    ) -> UiuaResult<Compiler> {
+        let mut comp = Compiler::new();
+        let asm = compile(&mut comp)?.finish();
+        self.run_asm(&asm)?;
+        Ok(comp)
     }
     /// Run a string as Uiua code
     ///
     /// This is equivalent to [`Uiua::load_str`]`(&mut self, intput).and_then(`[`Chunk::run`]`)`
-    pub fn run_str(&mut self, input: &str) -> UiuaResult {
-        self.load_str(input)?.run()
+    pub fn run_str(&mut self, input: &str) -> UiuaResult<Compiler> {
+        self.compile_run(|comp| comp.load_str(input))
     }
     /// Run a file as Uiua code
     ///
     /// This is equivalent to [`Uiua::load_file`]`(&mut self, path).and_then(`[`Chunk::run`]`)`
-    pub fn run_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult {
-        self.load_file(path)?.run()
+    pub fn run_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<Compiler> {
+        self.compile_run(|comp| comp.load_file(path))
     }
-    /// Compile a Uiua file from a string with a path for error reporting
-    pub fn load_str_src<'a, S: IntoInputSrc>(
-        &'a mut self,
-        input: &str,
-        src: S,
-    ) -> UiuaResult<Chunk<'a>> {
-        let src = self.asm.inputs.add_src(src, input);
-        self.load_impl(input, src)
-    }
-    /// Run in a scoped context. Names defined in this context will be removed when the scope ends.
-    ///
-    /// While names defined in this context will be removed when the scope ends, values *bound* to
-    /// those names will not.
-    ///
-    /// All other runtime state other than the stack, will also be restored.
-    pub fn in_scope<T>(
-        &mut self,
-        f: impl FnOnce(&mut Self) -> UiuaResult<T>,
-    ) -> UiuaResult<HashMap<Ident, usize>> {
-        self.ct.higher_scopes.push(take(&mut self.ct.scope));
-        let start_height = self.rt.stack.len();
-        let res = f(self);
-        let scope = replace(&mut self.ct.scope, self.ct.higher_scopes.pop().unwrap());
-        res?;
-        self.rt.stack.truncate(start_height);
-        Ok(scope.names)
-    }
-    fn load_impl<'a>(&'a mut self, input: &str, src: InputSrc) -> UiuaResult<Chunk<'a>> {
-        self.rt.execution_start = instant::now();
-        let (items, errors, diagnostics) = parse(input, src.clone(), &mut self.asm.inputs);
-        if self.print_diagnostics {
-            for diagnostic in diagnostics {
-                println!("{}", diagnostic.report());
+    /// Run a Uiua assembly
+    pub fn run_asm(&mut self, asm: impl Into<Assembly>) -> UiuaResult {
+        fn run_asm(env: &mut Uiua, asm: Assembly) -> UiuaResult {
+            env.asm = asm;
+            let top_slices = take(&mut env.asm.top_slices);
+            let mut res = Ok(());
+            if let Err(e) = env.catching_crash("", |env| {
+                for &slice in &top_slices {
+                    res = env.call_slice(slice);
+                    if res.is_err() {
+                        break;
+                    }
+                }
+            }) {
+                res = Err(e);
             }
-        } else {
-            self.diagnostics.extend(diagnostics);
+            env.asm.top_slices = top_slices;
+            if res.is_err() {
+                env.rt = Runtime {
+                    backend: env.rt.backend.clone(),
+                    execution_limit: env.rt.execution_limit,
+                    time_instrs: env.rt.time_instrs,
+                    output_comments: env.rt.output_comments.clone(),
+                    ..Runtime::default()
+                };
+            }
+            res
         }
-        if !errors.is_empty() {
-            return Err(UiuaError::Parse(errors, self.inputs().clone().into()));
-        }
-        if let InputSrc::File(path) = &src {
-            self.ct.current_imports.push(path.to_path_buf());
-        }
-        let res = self.catching_crash(input, |env| env.items(items, false));
-        if let InputSrc::File(_) = &src {
-            self.ct.current_imports.pop();
-        }
-        res??;
-        let start = self.rt.last_slice_run;
-        let len = self.asm.top_slices.len() - start;
-        Ok(Chunk {
-            env: self,
-            start,
-            len,
-        })
+        run_asm(self, asm.into())
     }
     fn catching_crash<T>(
         &mut self,
@@ -532,57 +374,6 @@ code:
                 trace: frames,
             }
         }
-    }
-    pub(crate) fn import_compile(&mut self, path: &Path) -> UiuaResult<PathBuf> {
-        let path = self.resolve_import_path(Path::new(&path));
-        let input = self.load_import_input(&path)?;
-        if self.ct.current_imports.iter().any(|p| p == &path) {
-            return Err(self.error(format!(
-                "Cycle detected importing {}",
-                path.to_string_lossy()
-            )));
-        }
-        if !self.ct.imports.contains_key(&path) {
-            let import = self.in_scope(|env| env.load_str_src(&input, &path).map(drop))?;
-            self.ct.imports.insert(path.clone(), import);
-        }
-        Ok(path)
-    }
-    /// Resolve a declared import path relative to the path of the file that is being executed
-    pub(crate) fn resolve_import_path(&self, path: &Path) -> PathBuf {
-        let target = if let Some(parent) = self.ct.current_imports.last().and_then(|p| p.parent()) {
-            parent.join(path)
-        } else {
-            path.to_path_buf()
-        };
-        let base = Path::new(".");
-        if let (Ok(canon_target), Ok(canon_base)) = (target.canonicalize(), base.canonicalize()) {
-            pathdiff::diff_paths(canon_target, canon_base).unwrap_or(target)
-        } else {
-            pathdiff::diff_paths(&target, base).unwrap_or(target)
-        }
-    }
-    pub(crate) fn load_import_input(&mut self, path: &Path) -> UiuaResult<EcoString> {
-        if let Some(input) = self.asm.import_inputs.get(path) {
-            return Ok(input.clone());
-        }
-        let bytes = self
-            .rt
-            .backend
-            .file_read_all(path)
-            .or_else(|e| {
-                if path.ends_with(Path::new("example.ua")) {
-                    Ok(example_ua(|ex| ex.as_bytes().to_vec()))
-                } else {
-                    Err(e)
-                }
-            })
-            .map_err(|e| self.error(e))?;
-        let input: EcoString = String::from_utf8(bytes)
-            .map_err(|e| self.error(format!("Failed to read file: {e}")))?
-            .into();
-        self.asm.import_inputs.insert(path.into(), input.clone());
-        Ok(input)
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
         self.rt.call_stack.push(frame);
@@ -636,7 +427,7 @@ code:
                     Ok(())
                 }
                 &Instr::CallGlobal { index, call, .. } => (|| {
-                    let global = self.asm.globals[index].global.clone();
+                    let global = self.asm.bindings[index].global.clone();
                     match global {
                         Global::Const(val) => self.rt.stack.push(val),
                         Global::Func(f) if call => self.call(f)?,
@@ -656,30 +447,27 @@ code:
                     }
                     Ok(())
                 })(),
-                &Instr::BindGlobal {
-                    ref name,
-                    span,
-                    index,
-                } => {
-                    let name = name.clone();
-                    (|| {
-                        if let Some(f) = self.rt.function_stack.pop() {
-                            // Binding is an imported function
-                            self.compile_bind_function(&name, index, f, span, None)?;
-                        } else if let Some(value) = self.rt.stack.pop() {
-                            // Binding is a constant
-                            self.bind_value(&name, index, value, span, None)?;
-                        } else {
-                            // Binding is an empty function
-                            let id = match self.get_span(span) {
-                                Span::Code(span) => FunctionId::Anonymous(span),
-                                Span::Builtin => FunctionId::Unnamed,
-                            };
-                            let func = self.add_function(id, Signature::new(0, 0), Vec::new());
-                            self.compile_bind_function(&name, index, func, span, None)?;
-                        }
-                        Ok(())
-                    })()
+                &Instr::BindGlobal { span, index } => {
+                    if let Some(f) = self.rt.function_stack.pop() {
+                        // Binding is an imported function
+                        self.asm.bind_function(index, f, span, None);
+                    } else if let Some(value) = self.rt.stack.pop() {
+                        // Binding is a constant
+                        self.asm.bind_const(index, value, span, None);
+                    } else {
+                        // Binding is an empty function
+                        let id = match self.get_span(span) {
+                            Span::Code(span) => FunctionId::Anonymous(span),
+                            Span::Builtin => FunctionId::Unnamed,
+                        };
+                        let func = Function::new(
+                            id,
+                            Signature::new(0, 0),
+                            FuncSlice { address: 0, len: 0 },
+                        );
+                        self.asm.bind_function(index, func, span, None);
+                    }
+                    Ok(())
                 }
                 Instr::BeginArray => {
                     self.rt.array_stack.push(self.rt.stack.len());
@@ -772,7 +560,8 @@ code:
                     })
                 }
                 &Instr::Dynamic(df) => (|| {
-                    self.dynamic_functions
+                    self.asm
+                        .dynamic_functions
                         .get(df.index)
                         .ok_or_else(|| {
                             self.error(format!("Dynamic function index {} out of range", df.index))
@@ -1083,24 +872,6 @@ code:
             self.inputs().clone().into(),
         )
     }
-    /// Construct and add a diagnostic with the current span
-    pub fn diagnostic(&mut self, message: impl Into<String>, kind: DiagnosticKind) {
-        self.diagnostic_with_span(message, kind, self.span());
-    }
-    /// Construct and add a diagnostic with a custom span
-    pub fn diagnostic_with_span(
-        &mut self,
-        message: impl Into<String>,
-        kind: DiagnosticKind,
-        span: impl Into<Span>,
-    ) {
-        self.diagnostics.insert(Diagnostic::new(
-            message.into(),
-            span,
-            kind,
-            self.inputs().clone(),
-        ));
-    }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
         let res = match self.rt.stack.pop() {
@@ -1176,49 +947,9 @@ code:
     pub fn push_func(&mut self, f: Function) {
         self.rt.function_stack.push(f);
     }
-    /// Create a function
-    pub fn create_function(
-        &mut self,
-        signature: impl Into<Signature>,
-        f: impl Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static,
-    ) -> Function {
-        let signature = signature.into();
-        let index = self.dynamic_functions.len();
-        self.dynamic_functions.push(Arc::new(f));
-        self.add_function(
-            FunctionId::Unnamed,
-            signature,
-            vec![Instr::Dynamic(DynamicFunction { index, signature })],
-        )
-    }
     /// Get a slice of instructions
     pub fn instrs(&self, slice: FuncSlice) -> &[Instr] {
         &self.asm.instrs[slice.address..][..slice.len]
-    }
-    /// Bind a function in the current scope
-    ///
-    /// # Errors
-    /// Returns an error in the binding name is not valid
-    pub fn bind_function(&mut self, name: impl Into<EcoString>, function: Function) -> UiuaResult {
-        let index = self.ct.next_global;
-        let name = name.into();
-        self.compile_bind_function(&name, index, function, 0, None)?;
-        self.ct.next_global += 1;
-        self.ct.scope.names.insert(name, index);
-        Ok(())
-    }
-    /// Create and bind a function in the current scope
-    ///
-    /// # Errors
-    /// Returns an error in the binding name is not valid
-    pub fn create_bind_function(
-        &mut self,
-        name: impl Into<EcoString>,
-        signature: impl Into<Signature>,
-        f: impl Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static,
-    ) -> UiuaResult {
-        let function = self.create_function(signature, f);
-        self.bind_function(name, function)
     }
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Value> {
@@ -1245,28 +976,15 @@ code:
     /// Get the values for all bindings in the current scope
     pub fn all_values_in_scope(&self) -> HashMap<Ident, Value> {
         let mut bindings = HashMap::new();
-        for (name, idx) in &self.ct.scope.names {
-            if !constants().iter().any(|c| c.name == name.as_ref()) {
-                if let Global::Const(val) = &self.asm.globals[*idx].global {
-                    bindings.insert(name.clone(), val.clone());
+        for binding in &self.asm.bindings {
+            if let Global::Const(val) = &binding.global {
+                if let Some(span) = &binding.span {
+                    let name = span.as_str(self.inputs(), |s| s.into());
+                    bindings.insert(name, val.clone());
                 }
             }
         }
         bindings
-    }
-    /// Get all diagnostics
-    pub fn diagnostics(&self) -> &BTreeSet<Diagnostic> {
-        &self.diagnostics
-    }
-    /// Get all diagnostics mutably
-    pub fn diagnostics_mut(&mut self) -> &mut BTreeSet<Diagnostic> {
-        &mut self.diagnostics
-    }
-    /// Take all diagnostics
-    ///
-    /// These are only available if `print_diagnostics` is `false`
-    pub fn take_diagnostics(&mut self) -> BTreeSet<Diagnostic> {
-        take(&mut self.diagnostics)
     }
     /// Clone `n` values from the top of the stack
     pub fn clone_stack_top(&self, n: usize) -> Vec<Value> {
@@ -1479,20 +1197,7 @@ code:
         };
         let mut env = Uiua {
             asm: self.asm.clone(),
-            dynamic_functions: self.dynamic_functions.clone(),
-            diagnostics: BTreeSet::new(),
-            print_diagnostics: self.print_diagnostics,
-            ct: CompileTime {
-                new_functions: Vec::new(),
-                next_global: self.ct.next_global,
-                scope: self.ct.scope.clone(),
-                higher_scopes: Vec::new(),
-                mode: self.ct.mode,
-                current_imports: Vec::new(),
-                imports: HashMap::new(),
-            },
             rt: Runtime {
-                last_slice_run: 0,
                 stack: self
                     .rt
                     .stack

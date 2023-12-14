@@ -34,6 +34,8 @@ pub enum UiuaError {
     Timeout(Span, Box<Inputs>),
     /// A wrapper marking this error as being fill-related
     Fill(Box<Self>),
+    /// The interpreter panicked
+    Panic(String),
 }
 
 /// Uiua's result type
@@ -74,6 +76,7 @@ impl fmt::Display for UiuaError {
             UiuaError::Throw(value, span, _) => write!(f, "{span}: {value}"),
             UiuaError::Timeout(..) => write!(f, "Maximum execution time exceeded"),
             UiuaError::Fill(error) => error.fmt(f),
+            UiuaError::Panic(message) => message.fmt(f),
         }
     }
 }
@@ -173,6 +176,7 @@ impl UiuaError {
                 [("Maximum execution time exceeded", span.clone())],
             ),
             UiuaError::Fill(error) => error.report(),
+            UiuaError::Panic(message) => Report::new(kind, message),
             UiuaError::Load(..) | UiuaError::Format(..) => Report::new(kind, self.to_string()),
         }
     }

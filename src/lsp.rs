@@ -190,7 +190,7 @@ mod server {
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Assembly, BindingInfo, PrimDocLine, Uiua,
+        Assembly, BindingInfo, Compiler, PrimDocLine, Uiua,
     };
 
     pub struct LspDoc {
@@ -205,13 +205,14 @@ mod server {
             let (items, _, _) = parse(&input, InputSrc::Str(0), &mut Inputs::default());
             let spanner = Spanner::new(&input);
             let spans = spanner.items_spans(&items);
-            let mut env = Uiua::with_native_sys();
-            _ = env.load_str(&input);
+            let compiler = &mut Compiler::new();
+            _ = compiler.load_str(&input);
+            let asm = compiler.finish();
             Self {
                 input,
                 items,
                 spans,
-                asm: env.asm,
+                asm,
             }
         }
     }
@@ -343,7 +344,7 @@ mod server {
             }
             let mut binding_range = None;
             // Hovering the name of the binding itself
-            for binding in &doc.asm.globals {
+            for binding in &doc.asm.bindings {
                 if let Some(span) = &binding.span {
                     if span.contains_line_col(line, col) {
                         let ident = span.as_str(&doc.asm.inputs, |s| s.into());
@@ -358,7 +359,7 @@ mod server {
             }
             // Hovering the name of a binding reference
             for (name, index) in &doc.asm.global_references {
-                let binding = &doc.asm.globals[*index];
+                let binding = &doc.asm.bindings[*index];
                 if let Some(span) = &binding.span {
                     binding_range = Some((
                         name.value.to_string(),
@@ -569,7 +570,7 @@ mod server {
             let (line, col) = lsp_pos_to_uiua(position);
             let mut binding: Option<(&BindingInfo, usize)> = None;
             // Check for span in bindings
-            for (i, gb) in doc.asm.globals.iter().enumerate() {
+            for (i, gb) in doc.asm.bindings.iter().enumerate() {
                 if let Some(span) = &gb.span {
                     if span.contains_line_col(line, col) {
                         binding = Some((gb, i));
@@ -581,7 +582,7 @@ mod server {
             if binding.is_none() {
                 for (name, index) in &doc.asm.global_references {
                     if name.span.contains_line_col(line, col) {
-                        binding = Some((&doc.asm.globals[*index], *index));
+                        binding = Some((&doc.asm.bindings[*index], *index));
                         break;
                     }
                 }
@@ -625,7 +626,7 @@ mod server {
             let (line, col) = lsp_pos_to_uiua(position);
             for (name, idx) in &doc.asm.global_references {
                 if name.span.contains_line_col(line, col) {
-                    let binding = &doc.asm.globals[*idx];
+                    let binding = &doc.asm.bindings[*idx];
                     if let Some(span) = &binding.span {
                         return Ok(Some(GotoDefinitionResponse::Scalar(Location {
                             uri: params.text_document_position_params.text_document.uri,

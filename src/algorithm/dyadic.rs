@@ -601,15 +601,6 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// Create a value from row values
-    pub fn from_row_values<V>(values: V, env: &Uiua) -> UiuaResult<Self>
-    where
-        V: IntoIterator,
-        V::Item: Into<Value>,
-        V::IntoIter: ExactSizeIterator,
-    {
-        Self::from_row_values_impl(values.into_iter().map(Into::into), env)
-    }
-    /// Create a value from row values
     ///
     /// # Panics
     /// Panics if the row values have incompatible shapes
@@ -619,9 +610,10 @@ impl Value {
         V::Item: Into<Value>,
         V::IntoIter: ExactSizeIterator,
     {
-        Self::from_row_values_impl(values.into_iter().map(Into::into), &()).unwrap()
+        Self::from_row_values(values.into_iter().map(Into::into), &()).unwrap()
     }
-    fn from_row_values_impl<V, C>(values: V, ctx: &C) -> Result<Self, C::Error>
+    /// Create a value from row values
+    pub fn from_row_values<V, C>(values: V, ctx: &C) -> Result<Self, C::Error>
     where
         V: IntoIterator<Item = Value>,
         V::IntoIter: ExactSizeIterator,

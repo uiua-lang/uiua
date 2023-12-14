@@ -19,7 +19,7 @@ use crate::{
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
     value::Value,
-    Compiler, FunctionId, Ident, InputSrc, Inputs, Primitive, RunMode, SafeBackend, SysOp, Uiua,
+    Compiler, FunctionId, Ident, InputSrc, Inputs, Primitive, RunMode, SafeSys, SysOp, Uiua,
     UiuaError, UiuaResult,
 };
 
@@ -107,7 +107,7 @@ macro_rules! create_config {
             paste! {
                 fn from_file(file_path: PathBuf) -> UiuaResult<Self> {
                     let asm = Compiler::new().print_diagnostics(true).load_file(file_path)?.finish();
-                    let mut env = Uiua::with_backend(SafeBackend);
+                    let mut env = Uiua::with_backend(SafeSys);
                     env.run_asm(&asm)?;
                     let mut bindings = env.all_values_in_scope();
                     $(

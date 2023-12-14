@@ -449,7 +449,7 @@ impl<'a> VirtualEnv<'a> {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }
-                Unpack => {
+                Unpack | Memo => {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }

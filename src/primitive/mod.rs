@@ -7,7 +7,7 @@ pub use defs::*;
 use ecow::EcoVec;
 
 use std::{
-    borrow::Cow,
+    borrow::{BorrowMut, Cow},
     cell::RefCell,
     collections::HashMap,
     f64::{
@@ -603,6 +603,37 @@ impl Primitive {
             Primitive::Type => {
                 let val = env.pop(1)?;
                 env.push(val.type_id());
+            }
+            Primitive::Memo => {
+                let f = env.pop_function()?;
+                let sig = f.signature();
+                let mut args = Vec::with_capacity(sig.args);
+                for i in 0..sig.args {
+                    args.push(env.pop(i + 1)?);
+                }
+                let mut memo = env.rt.memo.get_or_default().borrow_mut();
+                if let Some(f_memo) = memo.get_mut(&f.id) {
+                    if let Some(outputs) = f_memo.get(&args) {
+                        let outputs = outputs.clone();
+                        drop(memo);
+                        for val in outputs {
+                            env.push(val);
+                        }
+                        return Ok(());
+                    }
+                }
+                drop(memo);
+                for arg in args.iter().rev() {
+                    env.push(arg.clone());
+                }
+                let id = f.id.clone();
+                env.call(f)?;
+                let outputs = env.clone_stack_top(sig.outputs);
+                let mut memo = env.rt.memo.get_or_default().borrow_mut();
+                memo.borrow_mut()
+                    .entry(id)
+                    .or_default()
+                    .insert(args, outputs.clone());
             }
             Primitive::Spawn => {
                 let f = env.pop_function()?;

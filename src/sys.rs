@@ -688,8 +688,8 @@ pub trait SysBackend: Any + Send + Sync + 'static {
 }
 
 /// A safe backend with no IO
-pub struct SafeBackend;
-impl SysBackend for SafeBackend {
+pub struct SafeSys;
+impl SysBackend for SafeSys {
     fn any(&self) -> &dyn Any {
         self
     }

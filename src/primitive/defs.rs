@@ -1596,6 +1596,11 @@ primitive!(
     /// Use [multiply] and [floor] to generate a random integer in a range.
     /// ex: ⌊×10 [⍥⚂5]
     (0, Rand, Misc, ("random", '⚂')),
+    /// Memoize a function
+    ///
+    /// ex: F ← memo(+⌊×10⚂)
+    ///   : ∵F [1 1 2 2 3 3]
+    ([1], Memo, OtherModifier, "memo"),
     /// Spawn a thread
     ///
     /// Expects a function.

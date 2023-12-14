@@ -253,6 +253,11 @@ $ Multi _
 $ _ line
 ⍤⊃⋅∘≍ "Multi foo\nbar line"
 
+# Memo
+F ← memo(+⌊×10⚂)
+⍤⊃⋅∘≍ F1 F1
+⍤⊃⋅∘≍ F5 F5
+
 # Experimental!
 ⍤⊃⋅∘≍ 120 ↬((|1 ×↫-1.|1)<2.) 5
 ⍤⊃⋅∘≍ 8 ↬((+∩(|2 ↫ -)1,2|1)<2.) 5

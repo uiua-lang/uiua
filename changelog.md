@@ -7,6 +7,7 @@ Uiua is not yet stable.
 ## 0.7.0 - 2023-12-??
 ### Language
 - An entire Uiua codebase is now compiled before it is executed, rather than compiling and executing line-by-line
+- Add the [`memo`](https://uiua.org/docs/memo) modifier, which memoizes a function
 - [`&i`](https://uiua.org/docs/&i) can now only be used as the first function in a binding
 - [`repeat` `⍥`](https://uiua.org/docs/repeat) can no longer use a negative number of repetitions
 - [`repeat` `⍥`](https://uiua.org/docs/repeat) can now be used with [`un` `°`](https://uiua.org/docs/un) and [`under` `⍜`](https://uiua.org/docs/under)

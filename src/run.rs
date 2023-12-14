@@ -1,4 +1,5 @@
 use std::{
+    cell::RefCell,
     cmp::Ordering,
     collections::HashMap,
     fmt,
@@ -13,11 +14,12 @@ use std::{
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use enum_iterator::{all, Sequence};
 use instant::Duration;
+use thread_local::ThreadLocal;
 
 use crate::{
     algorithm, array::Array, boxed::Boxed, check::instrs_temp_signatures, function::*, lex::Span,
     value::Value, Assembly, Compiler, Complex, Global, Ident, Inputs, NativeSys, Primitive,
-    SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua interpreter
@@ -65,8 +67,13 @@ pub(crate) struct Runtime {
     pub(crate) backend: Arc<dyn SysBackend>,
     /// The thread interface
     thread: ThisThread,
+    /// Values for output comments
     pub(crate) output_comments: HashMap<usize, Vec<Vec<Value>>>,
+    /// Memoized values
+    pub(crate) memo: Arc<ThreadLocal<RefCell<MemoMap>>>,
 }
+
+type MemoMap = HashMap<FunctionId, HashMap<Vec<Value>, Vec<Value>>>;
 
 impl AsRef<Assembly> for Uiua {
     fn as_ref(&self) -> &Assembly {
@@ -137,7 +144,7 @@ struct Thread {
 
 impl Default for Uiua {
     fn default() -> Self {
-        Self::with_native_sys()
+        Self::with_safe_sys()
     }
 }
 
@@ -167,8 +174,8 @@ impl FromStr for RunMode {
     }
 }
 
-impl Runtime {
-    fn with_native_sys() -> Self {
+impl Default for Runtime {
+    fn default() -> Self {
         Runtime {
             stack: Vec::new(),
             function_stack: Vec::new(),
@@ -186,7 +193,7 @@ impl Runtime {
             this_stack: Vec::new(),
             fill_stack: Vec::new(),
             unpack_boxes: false,
-            backend: Arc::new(NativeSys),
+            backend: Arc::new(SafeSys),
             time_instrs: false,
             last_time: 0.0,
             cli_arguments: Vec::new(),
@@ -195,23 +202,19 @@ impl Runtime {
             execution_start: 0.0,
             thread: ThisThread::default(),
             output_comments: HashMap::new(),
+            memo: Arc::new(ThreadLocal::new()),
         }
-    }
-}
-
-impl Default for Runtime {
-    fn default() -> Self {
-        Self::with_native_sys()
     }
 }
 
 impl Uiua {
     /// Create a new Uiua runtime with the standard IO backend
     pub fn with_native_sys() -> Self {
-        Uiua {
-            asm: Assembly::default(),
-            rt: Runtime::default(),
-        }
+        Self::with_backend(NativeSys)
+    }
+    /// Create a new Uiua runtime with no IO capabilities
+    pub fn with_safe_sys() -> Self {
+        Self::default()
     }
     /// Create a new Uiua runtime with a custom IO backend
     pub fn with_backend(backend: impl SysBackend) -> Self {
@@ -220,7 +223,7 @@ impl Uiua {
                 backend: Arc::new(backend),
                 ..Runtime::default()
             },
-            ..Default::default()
+            asm: Assembly::default(),
         }
     }
     /// Build an assembly
@@ -1221,6 +1224,7 @@ code:
                 execution_limit: self.rt.execution_limit,
                 execution_start: self.rt.execution_start,
                 output_comments: HashMap::new(),
+                memo: self.rt.memo.clone(),
                 thread,
             },
         };

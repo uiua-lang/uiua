@@ -16,8 +16,8 @@ use crate::{
     lex::{CodeSpan, Sp, Span},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, ident_modifier_args, split_words, unsplit_words},
-    Array, Boxed, Diagnostic, DiagnosticKind, Global, GlobalBinding, Ident, ImplPrimitive,
-    Primitive, RunMode, SysOp, UiuaResult, Value,
+    Array, BindingInfo, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, Primitive,
+    RunMode, SysOp, UiuaResult, Value,
 };
 
 use crate::Uiua;
@@ -378,7 +378,7 @@ impl Uiua {
         span: Option<CodeSpan>,
         comment: Option<Arc<str>>,
     ) {
-        let binding = GlobalBinding {
+        let binding = BindingInfo {
             global,
             span,
             comment,
@@ -387,7 +387,7 @@ impl Uiua {
             self.asm.globals.make_mut()[index] = binding;
         } else {
             while self.asm.globals.len() < index {
-                self.asm.globals.push(GlobalBinding {
+                self.asm.globals.push(BindingInfo {
                     global: Global::Const(Value::default()),
                     span: None,
                     comment: None,

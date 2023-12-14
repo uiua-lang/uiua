@@ -190,7 +190,7 @@ mod server {
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Assembly, GlobalBinding, PrimDocLine, Uiua,
+        Assembly, BindingInfo, PrimDocLine, Uiua,
     };
 
     pub struct LspDoc {
@@ -567,7 +567,7 @@ mod server {
             };
             let position = params.text_document_position.position;
             let (line, col) = lsp_pos_to_uiua(position);
-            let mut binding: Option<(&GlobalBinding, usize)> = None;
+            let mut binding: Option<(&BindingInfo, usize)> = None;
             // Check for span in bindings
             for (i, gb) in doc.asm.globals.iter().enumerate() {
                 if let Some(span) = &gb.span {

@@ -467,6 +467,10 @@ fn set_code_html(id: &str, code: &str) {
 
     let chars: Vec<char> = code.chars().collect();
 
+    let mut env = Uiua::with_backend(WebBackend::default());
+    _ = env.load_str(code);
+    let asm = env.asm;
+
     let push_unspanned = |html: &mut String, mut target: usize, curr: &mut usize| {
         target = target.min(chars.len());
         if *curr >= target {
@@ -554,6 +558,41 @@ fn set_code_html(id: &str, code: &str) {
                             class="code-span code-hover noadic-function" 
                             data-title="e: Euler's constant">e</span>"#
                         .into(),
+                    SpanKind::Ident => {
+                        if let Some(binding) = asm
+                            .globals
+                            .iter()
+                            .find(|b| b.span.as_ref().map(|sp| &sp.start) == Some(&span.start))
+                            .or_else(|| {
+                                asm.global_references.iter().find_map(|(name, index)| {
+                                    (name.span.start == span.start).then(|| &asm.globals[*index])
+                                })
+                            })
+                        {
+                            let mut title = binding
+                                .global
+                                .signature()
+                                .map(|sig| sig.to_string())
+                                .unwrap_or_default();
+                            if let Some(comment) = &binding.comment {
+                                if !title.is_empty() {
+                                    title.push(' ');
+                                }
+                                title.push_str(comment);
+                            }
+                            format!(
+                                r#"<span 
+                                    class="code-span code-hover" 
+                                    data-title="{title}">{}</span>"#,
+                                escape_html(text)
+                            )
+                        } else {
+                            format!(
+                                r#"<span class="code-span {color_class}">{}</span>"#,
+                                escape_html(text)
+                            )
+                        }
+                    }
                     SpanKind::String => {
                         if text == "@ " {
                             format!(

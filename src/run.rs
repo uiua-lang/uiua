@@ -34,7 +34,8 @@ use crate::{
 pub struct Uiua {
     pub(crate) rt: Runtime,
     pub(crate) ct: CompileTime,
-    pub(crate) asm: Assembly,
+    /// The compiled assembly
+    pub asm: Assembly,
     dynamic_functions: EcoVec<DynFn>,
     /// Accumulated diagnostics
     pub(crate) diagnostics: BTreeSet<Diagnostic>,

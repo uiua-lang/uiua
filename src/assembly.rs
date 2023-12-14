@@ -14,9 +14,11 @@ use crate::{
 pub struct Assembly {
     pub(crate) instrs: EcoVec<Instr>,
     pub(crate) top_slices: Vec<FuncSlice>,
-    pub(crate) globals: EcoVec<GlobalBinding>,
+    /// A list of global bindings
+    pub globals: EcoVec<BindingInfo>,
     #[serde(skip)]
-    pub(crate) global_references: HashMap<Sp<Ident>, usize>,
+    /// A map of references to global bindings
+    pub global_references: HashMap<Sp<Ident>, usize>,
     pub(crate) import_inputs: HashMap<PathBuf, EcoString>,
     pub(crate) spans: EcoVec<Span>,
     pub(crate) inputs: Inputs,
@@ -36,29 +38,40 @@ impl Default for Assembly {
     }
 }
 
+/// Information about a binding
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
-pub(crate) struct GlobalBinding {
+pub struct BindingInfo {
+    /// The global binding type
     pub global: Global,
     #[serde(skip)]
     #[allow(dead_code)]
+    /// The span of the original binding name
     pub span: Option<CodeSpan>,
     #[serde(skip)]
     #[allow(dead_code)]
+    /// The comment preceding the binding
     pub comment: Option<Arc<str>>,
 }
 
+/// A type of global binding
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub(crate) enum Global {
+pub enum Global {
+    /// A constant value
     Const(Value),
+    /// A function
     Func(Function),
+    /// The signature of something that will be bound at runtime
     Sig(Signature),
+    /// A module
+    #[allow(missing_docs)]
     Module { module: PathBuf },
 }
 
 impl Global {
-    pub(crate) fn signature(&self) -> Option<Signature> {
+    /// Get the signature of the global
+    pub fn signature(&self) -> Option<Signature> {
         match self {
             Self::Const(_) => Some(Signature::new(0, 1)),
             Self::Func(func) => Some(func.signature()),

@@ -304,6 +304,7 @@ impl Uiua {
     pub fn run_asm(&mut self, asm: impl Into<Assembly>) -> UiuaResult {
         fn run_asm(env: &mut Uiua, asm: Assembly) -> UiuaResult {
             env.asm = asm;
+            env.rt.execution_start = instant::now();
             let top_slices = take(&mut env.asm.top_slices);
             let mut res = Ok(());
             if let Err(e) = env.catching_crash("", |env| {

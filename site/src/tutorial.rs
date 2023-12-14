@@ -929,6 +929,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
             prompt="for numbers A, B, C, and D calculates (A+C)×(B+D)"
             example="1 2 3 4"
             answer="×⊃(+⊙⋅∘|+⋅⊙⋅∘)"
+            best_answer="×∩+⊃⊙⋅∘⋅⊙⋅∘"
             tests={&["10 ¯3 1 0", "3 ¯7 2 2"]}
             hidden="1_2 3_4 5_6 7"/>
     }
@@ -1194,7 +1195,8 @@ fn TutorialModules() -> impl IntoView {
 
         <h2 id="import"><Prim prim=Sys(SysOp::Import)/></h2>
         <p>"The "<Prim prim=Sys(SysOp::Import)/>" function allows you to import items from modules. It expects a file path and a binding name from that file, both as strings."</p>
-        <p>"There is no file system here on the website, but there is a test module that can always be imported as "<code>"example.ua"</code>". Its contents is:"</p>
+        <p>"The website has a virtual file system. You can write to virtual files with "<Prim prim=Sys(SysOp::FWriteAll)/>". You can also drag and drop files from your computer into the editor to make them available to import."</p>
+        <p>"There is also a test module that can always be imported as "<code>"example.ua"</code>". Its contents is:"</p>
         <Editor example={&example_ua(|ex| ex.clone())}/>
         <p>"The "<code>"Increment"</code>" function defined in the example module can be imported with "<Prim prim=Sys(SysOp::Import)/>" then immediately bound so that it can be used locally."</p>
         <Editor example="Inc ← &i \"example.ua\" \"Increment\"\nInc 5"/>

@@ -268,15 +268,23 @@ sys_op! {
     (1, FIsFile, Filesystem, "&fif", "file - is file"),
     /// Read all the contents of a file into a string
     ///
-    /// Expects a path and returns a [rank]`1` character array.
+    /// Expects a path and returns a rank-`1` character array.
+    ///
+    /// ex: &fras "example.ua"
+    ///
+    /// See [&frab] for reading into a byte array.
     (1, FReadAllStr, Filesystem, "&fras", "file - read all to string"),
     /// Read all the contents of a file into a byte array
     ///
-    /// Expects a path and returns a [rank]`1` numeric array.
+    /// Expects a path and returns a rank-`1` numeric array.
+    ///
+    /// ex: &frab "example.ua"
+    ///
+    /// See [&fras] for reading into a rank-`1` character array.
     (1, FReadAllBytes, Filesystem, "&frab", "file - read all to bytes"),
     /// Write the entire contents of an array to a file
     ///
-    /// Expects a path and a [rank]`1` array or either numbers or characters.
+    /// Expects a path and a rank-`1` array of either numbers or characters.
     (2(0), FWriteAll, Filesystem, "&fwa", "file - write all"),
     /// Decode an image from a byte array
     ///

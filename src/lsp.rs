@@ -292,6 +292,7 @@ mod server {
                         ),
                     ),
                     rename_provider: Some(OneOf::Left(true)),
+                    definition_provider: Some(OneOf::Left(true)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -410,9 +411,6 @@ mod server {
                         }
                     }
                 }
-                self.client
-                    .log_message(MessageType::INFO, value.clone())
-                    .await;
                 Hover {
                     contents: HoverContents::Markup(MarkupContent {
                         kind: MarkupKind::Markdown,
@@ -609,6 +607,34 @@ mod server {
                 document_changes: None,
                 change_annotations: None,
             }))
+        }
+
+        async fn goto_definition(
+            &self,
+            params: GotoDefinitionParams,
+        ) -> Result<Option<GotoDefinitionResponse>> {
+            let doc = if let Some(doc) = self
+                .docs
+                .get(&params.text_document_position_params.text_document.uri)
+            {
+                doc
+            } else {
+                return Ok(None);
+            };
+            let position = params.text_document_position_params.position;
+            let (line, col) = lsp_pos_to_uiua(position);
+            for (name, idx) in &doc.asm.global_references {
+                if name.span.contains_line_col(line, col) {
+                    let binding = &doc.asm.globals[*idx];
+                    if let Some(span) = &binding.span {
+                        return Ok(Some(GotoDefinitionResponse::Scalar(Location {
+                            uri: params.text_document_position_params.text_document.uri,
+                            range: uiua_span_to_lsp(span),
+                        })));
+                    }
+                }
+            }
+            Ok(None)
         }
 
         async fn shutdown(&self) -> Result<()> {

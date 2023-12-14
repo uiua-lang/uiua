@@ -21,6 +21,7 @@ Uiua is not yet stable.
   - Add hover information on binding references
   - Add signatures to binding hover information
   - Add same-file binding rename support
+  - Add same-file goto definition support
 - Add the `uiua build` command, which emits a `.uasm` bytecode file
 - `uiua run` can now run a `.uasm` bytecode file
 - Bug and crash fixes

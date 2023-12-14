@@ -2,10 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- LSP
-  - Rename
-  - Signatures
-  - Smarter idents
 - Multimedia
   - Sound input
   - Webcam input
@@ -18,7 +14,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Bugs
 - Figure out what is going on with the editor cursor
-- Expand test suite
 
 ## Optimizations
 - Row windows - `≡f◫` for scalar window size should be optimized to not materialize all the windows

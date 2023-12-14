@@ -986,11 +986,11 @@ fn TutorialInverses() -> impl IntoView {
         <p>"Let's say you wanted to utilize a struct-like pattern. Uiua does not have structs or objects with fields like many other languages do, but you can simulate them with box arrays. This can be slow, so you should not do this with any data that needs to accessed in tight loops."</p>
         <p><Prim prim=Under/>" allows a field getter to also be a setter!"</p>
         <Editor example=r#"Person ← {⊙⊙∘}
-Name ← ⊡0
-Surname ← ⊡1
-Age ← ⊡2
+Name ← °□⊡0
+Surname ← °□⊡1
+Age ← °□⊡2
 
-FmtPerson ← $"_ is _ years old" ∩°□⊃(Name|Age)
+FmtPerson ← $"_ is _ years old" ⊃(Name|Age)
 PassYear ← ⍜Age(+1)
 
 Dan ← Person "Dan" "Danson" 31

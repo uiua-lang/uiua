@@ -357,7 +357,7 @@ fn TutorialMath() -> impl IntoView {
             prompt="calculates the hypotenuse of a right triangle with sides A and B (√(A² + B²))"
             example="3 4"
             answer="√+×.:×."
-            best_answer="⍜∩°√+"
+            best_answer="⌵ℂ"
             tests={&["12 9", "5 12", "6 8"]}
             hidden="5 3"/>
     }

@@ -190,7 +190,7 @@ mod server {
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Assembly, PrimDocLine, Uiua,
+        Assembly, GlobalBinding, PrimDocLine, Uiua,
     };
 
     pub struct LspDoc {
@@ -291,6 +291,7 @@ mod server {
                             },
                         ),
                     ),
+                    rename_provider: Some(OneOf::Left(true)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -555,6 +556,59 @@ mod server {
                 result_id: None,
                 data: tokens,
             })))
+        }
+
+        async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
+            let doc = if let Some(doc) = self
+                .docs
+                .get(&params.text_document_position.text_document.uri)
+            {
+                doc
+            } else {
+                return Ok(None);
+            };
+            let position = params.text_document_position.position;
+            let (line, col) = lsp_pos_to_uiua(position);
+            let mut binding: Option<(&GlobalBinding, usize)> = None;
+            // Check for span in bindings
+            for (i, gb) in doc.asm.globals.iter().enumerate() {
+                if let Some(span) = &gb.span {
+                    if span.contains_line_col(line, col) {
+                        binding = Some((gb, i));
+                        break;
+                    }
+                }
+            }
+            // Check for span in binding references
+            if binding.is_none() {
+                for (name, index) in &doc.asm.global_references {
+                    if name.span.contains_line_col(line, col) {
+                        binding = Some((&doc.asm.globals[*index], *index));
+                        break;
+                    }
+                }
+            }
+            let Some((binding, index)) = binding else {
+                return Ok(None);
+            };
+            // Collect edits
+            let mut edits = vec![TextEdit {
+                range: uiua_span_to_lsp(binding.span.as_ref().unwrap()),
+                new_text: params.new_name.clone(),
+            }];
+            for (name, idx) in &doc.asm.global_references {
+                if *idx == index {
+                    edits.push(TextEdit {
+                        range: uiua_span_to_lsp(&name.span),
+                        new_text: params.new_name.clone(),
+                    });
+                }
+            }
+            Ok(Some(WorkspaceEdit {
+                changes: Some([(params.text_document_position.text_document.uri, edits)].into()),
+                document_changes: None,
+                change_annotations: None,
+            }))
         }
 
         async fn shutdown(&self) -> Result<()> {

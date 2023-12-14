@@ -96,7 +96,7 @@ impl fmt::Display for ParseError {
             ),
             ParseError::LineTooLong(width) => write!(
                 f,
-                "Split this line into multiple lines (heuristic: {}/{}).",
+                "Split line into multiple lines (heuristic: {}/{}) 😏",
                 width, ERROR_MAX_WIDTH
             ),
         }
@@ -150,15 +150,15 @@ pub fn parse(
             let first = first.unwrap().clone();
             let last = line.last().unwrap().span.clone();
             let span = first.merge(last);
-            let kind = if heuristic > ERROR_MAX_WIDTH {
+            let (kind, face) = if heuristic > ERROR_MAX_WIDTH {
                 errors.push(span.sp(ParseError::LineTooLong(heuristic)));
                 continue;
             } else if heuristic > WARNING_MAX_WIDTH {
-                DiagnosticKind::Warning
+                (DiagnosticKind::Warning, '😤')
             } else if heuristic > ADVICE_MAX_WIDTH {
-                DiagnosticKind::Advice
+                (DiagnosticKind::Advice, '😠')
             } else {
-                DiagnosticKind::Style
+                (DiagnosticKind::Style, '🤨')
             };
             let max = match kind {
                 DiagnosticKind::Style => STYLE_MAX_WIDTH,
@@ -167,8 +167,8 @@ pub fn parse(
             };
             diagnostics.push(Diagnostic::new(
                 format!(
-                    "Split this line into multiple lines \
-                    (heuristic: {heuristic}/{max})"
+                    "Split this into multiple lines \
+                    (heuristic: {heuristic}/{max}) {face}"
                 ),
                 span,
                 kind,
@@ -392,8 +392,8 @@ impl<'i> Parser<'i> {
             self.diagnostics.push(Diagnostic::new(
                 format!(
                     "Binding names with 2 or more characters should be TitleCase \
-                        to avoid collisions with future builtin functions.\n\
-                        Try `{}` instead of `{}`",
+                    to avoid collisions with future builtin functions.\n\
+                    Try `{}` instead of `{}`",
                     captialized, name.value
                 ),
                 name.span.clone(),

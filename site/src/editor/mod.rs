@@ -69,7 +69,11 @@ pub fn Editor<'a>(
     } else if let Some(chal) = &challenge {
         chal.intended_answer.lines().count()
     } else {
-        examples.iter().map(|e| e.lines().count()).max().unwrap()
+        examples
+            .iter()
+            .map(|e| e.lines().filter(|line| !line.is_empty()).count())
+            .max()
+            .unwrap()
     };
     let code_height_em = code_max_lines as f32 * 1.2;
 

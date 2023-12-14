@@ -27,6 +27,7 @@ Uiua is not yet stable.
 - Bug and crash fixes
 - Performance improvements
 ### Website
+- Add an [Inverses](https://uiua.org/docs/inverses) tutorial
 - Each tutorial challenge now contains 1 or 2 answers
 
 ## 0.6.1 - 2023-12-07

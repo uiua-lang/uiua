@@ -1017,7 +1017,15 @@ code:
                     self.push_instr(Instr::Call(span));
                 }
             }
-            Global::Sig(sig) => self.push_instr(Instr::CallGlobal { index, call, sig }),
+            Global::Sig(sig) if call => self.push_instr(Instr::CallGlobal { index, call, sig }),
+            Global::Sig(sig) => {
+                let f = self.add_function(
+                    FunctionId::Anonymous(span),
+                    Signature::new(0, 1),
+                    vec![Instr::CallGlobal { index, call, sig }],
+                );
+                self.push_instr(Instr::PushFunc(f));
+            }
             Global::Module { .. } => {
                 return Err(self.error_with_span(span, "Cannot import module item here."))
             }

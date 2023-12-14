@@ -2,6 +2,7 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
+- Separate compiler and runtime structures
 - Multimedia
   - Sound input
   - Webcam input
@@ -22,6 +23,7 @@ Within each section, items are ordered (roughly) by decreasing priority.
 ## Documentation
 - `invert` and `under`
 - System functions
+- Second class functions
 
 ## Tooling
 - Discord bot

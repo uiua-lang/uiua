@@ -706,13 +706,13 @@ fn TutorialBindings() -> impl IntoView {
         <h2 id="binding-functions">"Binding Functions"</h2>
         <p>"If the code on the right side of the "<code>"←"</code>" requires more than 0 values to be on the stack, then instead of evaluating its right side immediately, the right side will be bound as a function."</p>
         <p>"This is how you make named functions in Uiua."</p>
-        <Editor example="f ← +1\nf 5"/>
+        <Editor example="F ← +1\nF 5"/>
         <Editor example="Cube ← ××..\nCube 6"/>
         <Editor example="👋 ← ⊂\"Hello, \"\n👋 \"World!\""/>
         <p>"If the code on the right side takes 0 arguments but you still want it to be a function, it must be surrounded by "<code>"()"</code>"s."</p>
         <p>"Notice how the first example here gives the same value every time, while the second one does not."</p>
-        <Editor example="f ← ⚂\nf f f"/>
-        <Editor example="f ← (⚂)\nf f f"/>
+        <Editor example="F ← ⚂\nF F F"/>
+        <Editor example="F ← (⚂)\nF F F"/>
         <p>"The "<A href="/docs/functions">"next section"</A>" discusses functions in more detail."</p>
     }
 }
@@ -955,7 +955,7 @@ def splitArray(array):
 
 splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p>"In Uiua, it is much simpler, and there are no "<code>"if"</code>"s or "<code>"for"</code>"s to be found:"</p>
-        <Editor example="f ← ∩▽¬,,=0◿2.\nf [1 2 3 7 2 4 5]"/>
+        <Editor example="F ← ∩▽¬,,=0◿2.\nF [1 2 3 7 2 4 5]"/>
         <p>"That being said, not every problem lends itself to array operations. Uiua has a few methods for handling such cases."</p>
 
         <h2 id="repeat-do">"Looping with "<Prim prim=Repeat/>" and "<Prim prim=Do/></h2>
@@ -973,9 +973,9 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p>"The "<Prim prim=Try/>" modifier takes two functions. If the first function throws an error, the second function is called with the same arguments plus an error message."</p>
         <p>"We can see how this works by using it with "<Prim prim=Parse/>"."</p>
         <p>"If the parsing fails, we "<Prim prim=Box/>" "<Prim prim=Both/>" the argument and the error message and put them in an array."</p>
-        <Editor example="f ← ⍣⋕[∩□]\nf \"5\"\nf \"dog\""/>
+        <Editor example="F ← ⍣⋕[∩□]\nF \"5\"\nF \"dog\""/>
         <p>"If we don't care about an error and just want to supply a default value, we can use "<Prim prim=Gap/>" to discard the argument and error message."</p>
-        <Editor example="f ← ⍣⋕⋅⋅0\nf \"5\"\nf \"dog\""/>
+        <Editor example="F ← ⍣⋕⋅⋅0\nF \"5\"\nF \"dog\""/>
 
         <h2 id="switch">"Switch Functions"</h2>
         <p>"A "<A href="/docs/advancedstack#function-packs">"function pack"</A>" that is used outside a modifier becomes a "<em>"switch function"</em>". Switch functions take an array of natural numbers called the "<em>"selector"</em>" and call the function at the corresponding index in the pack."</p>
@@ -987,16 +987,16 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="(+|-|×|÷) [1 2 0 3] [...2] [...5]"/>
         <Editor example="≡((×10|+1|(∘|¯)=2.) ◿3.) [2 9 4 0 8 3]"/>
         <p>"Each branch can have a signature specified. For the overall switch function to have a valid signature, all branches must either change the height of the stack by the same amount "<em>"or"</em>" return the same number of outputs."</p>
-        <Editor example="f ← (|2 ×||3.2 ⊃(++)×)\n[f 0 2 3 4]\n[f 1 2 3 4]"/>
+        <Editor example="F ← (|2 ×||3.2 ⊃(++)×)\n[F 0 2 3 4]\n[F 1 2 3 4]"/>
         <p>"Signatures in switch functions are a bit messy, so try to avoid them when possible."</p>
         <p>"Because a second "<code>"|"</code>" immediately after another indicates a signature, branches that do nothing must contain "<Prim prim=Identity/>"."</p>
-        <Editor example="f ← (+5|∘|÷10)+∩>5,10.\n[f2 f6 f200]"/>
+        <Editor example="F ← (+5|∘|÷10)+∩>5,10.\n[F2 F6 F200]"/>
 
         <h2 id="assert"><Prim prim=Assert/></h2>
         <p>"The "<Prim prim=Assert/>" function takes any value and a condition. If the condition is anything but "<code>"1"</code>", the value is thrown as an error that can be caught with "<Prim prim=Try/>"."</p>
-        <Editor example="f ← ⍣(¯⍤10≤10.);\nf 5\nf 12"/>
+        <Editor example="F ← ⍣(¯⍤10≤10.);\nF 5\nF 12"/>
         <p>"If the "<Prim prim=Assert/>"ed value is never caught, it becomes an error."</p>
-        <Editor example="f ← ¯⍤\"too big!\"≤10.\nf 5\nf 12"/> // Should fail
+        <Editor example="F ← ¯⍤\"too big!\"≤10.\nF 5\nF 12"/> // Should fail
         <p>"Using "<Prim prim=Assert/>" for this purpose will be covered more in the "<A href="/docs/testing">"section on testing"</A>"."</p>
 
         <h2 id="challenges">"Challenges"</h2>

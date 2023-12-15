@@ -1508,25 +1508,21 @@ code:
                 let span = f.span.clone();
                 let (instrs, _) = self.compile_operand_words(vec![f])?;
                 if let Some(inverted) = invert_instrs(&instrs, self) {
-                    match instrs_signature(&inverted) {
-                        Ok(sig) => {
-                            if call {
-                                self.push_all_instrs(inverted);
-                            } else {
-                                let id = FunctionId::Anonymous(modified.modifier.span.clone());
-                                let func = self.add_function(id, sig, inverted);
-                                self.push_instr(Instr::PushFunc(func));
-                            }
-                        }
-                        Err(e) => {
-                            self.add_error(
-                                modified.modifier.span.clone(),
-                                format!("Cannot infer function signature: {e}"),
-                            );
-                        }
+                    let sig = instrs_signature(&inverted).map_err(|e| {
+                        self.fatal_error(
+                            span.clone(),
+                            format!("Cannot infer function signature: {e}"),
+                        )
+                    })?;
+                    if call {
+                        self.push_all_instrs(inverted);
+                    } else {
+                        let id = FunctionId::Anonymous(modified.modifier.span.clone());
+                        let func = self.add_function(id, sig, inverted);
+                        self.push_instr(Instr::PushFunc(func));
                     }
                 } else {
-                    self.add_error(span, "No inverse found");
+                    return Err(self.fatal_error(span, "No inverse found"));
                 }
             }
             Under => {
@@ -1537,23 +1533,18 @@ code:
                 let (g_instrs, g_sig) =
                     self.compile_operand_words(vec![operands.next().unwrap()])?;
                 if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig, self) {
-                    let before_sig = match instrs_signature(&f_before) {
-                        Ok(sig) => sig,
-                        Err(e) => {
-                            self.add_error(
-                                f_span.clone(),
-                                format!("Cannot infer function signature: {e}"),
-                            );
-                            return Ok(true);
-                        }
-                    };
-                    let after_sig = match instrs_signature(&f_after) {
-                        Ok(sig) => sig,
-                        Err(e) => {
-                            self.add_error(f_span, format!("Cannot infer function signature: {e}"));
-                            return Ok(true);
-                        }
-                    };
+                    let before_sig = instrs_signature(&f_before).map_err(|e| {
+                        self.fatal_error(
+                            f_span.clone(),
+                            format!("Cannot infer function signature: {e}"),
+                        )
+                    })?;
+                    let after_sig = instrs_signature(&f_after).map_err(|e| {
+                        self.fatal_error(
+                            f_span.clone(),
+                            format!("Cannot infer function signature: {e}"),
+                        )
+                    })?;
                     let mut instrs = if call {
                         eco_vec![Instr::PushSig(before_sig)]
                     } else {
@@ -1590,7 +1581,7 @@ code:
                         self.push_instr(Instr::PushFunc(func));
                     }
                 } else {
-                    self.add_error(f_span, "No inverse found");
+                    return Err(self.fatal_error(f_span, "No inverse found"));
                 }
             }
             Both => {

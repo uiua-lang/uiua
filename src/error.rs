@@ -36,6 +36,8 @@ pub enum UiuaError {
     Fill(Box<Self>),
     /// The interpreter panicked
     Panic(String),
+    /// Multiple errors
+    Multi(Vec<Self>),
 }
 
 /// Uiua's result type
@@ -77,6 +79,12 @@ impl fmt::Display for UiuaError {
             UiuaError::Timeout(..) => write!(f, "Maximum execution time exceeded"),
             UiuaError::Fill(error) => error.fmt(f),
             UiuaError::Panic(message) => message.fmt(f),
+            UiuaError::Multi(errors) => {
+                for error in errors {
+                    writeln!(f, "{error}")?;
+                }
+                Ok(())
+            }
         }
     }
 }
@@ -178,6 +186,20 @@ impl UiuaError {
             UiuaError::Fill(error) => error.report(),
             UiuaError::Panic(message) => Report::new(kind, message),
             UiuaError::Load(..) | UiuaError::Format(..) => Report::new(kind, self.to_string()),
+            UiuaError::Multi(errors) => {
+                let mut fragments = Vec::new();
+                for (i, error) in errors.iter().enumerate() {
+                    if i > 0 {
+                        fragments.push(ReportFragment::Newline);
+                    }
+                    fragments.extend(error.report().fragments);
+                }
+                Report {
+                    kind,
+                    fragments,
+                    color: true,
+                }
+            }
         }
     }
 }

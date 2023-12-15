@@ -40,6 +40,8 @@ pub struct Compiler {
     pub(crate) current_imports: Vec<PathBuf>,
     /// The bindings of imported files
     pub(crate) imports: HashMap<PathBuf, HashMap<Ident, usize>>,
+    /// Accumulated errors
+    pub(crate) errors: Vec<UiuaError>,
     /// Accumulated diagnostics
     pub(crate) diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
@@ -59,6 +61,7 @@ impl Default for Compiler {
             mode: RunMode::All,
             current_imports: Vec::new(),
             imports: HashMap::new(),
+            errors: Vec::new(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             backend: Arc::new(SafeSys),
@@ -185,14 +188,18 @@ impl Compiler {
             self.current_imports.pop();
         }
         match res {
-            Err(_) | Ok(Err(_)) => {
+            Err(e) | Ok(Err(e)) => {
                 self.asm.instrs.truncate(instrs_start);
                 self.asm.top_slices.truncate(top_slices_start);
+                self.errors.push(e);
             }
             _ => {}
         }
-        res??;
-        Ok(self)
+        match self.errors.len() {
+            0 => Ok(self),
+            1 => Err(self.errors.pop().unwrap()),
+            _ => Err(UiuaError::Multi(self.errors.drain(..).collect())),
+        }
     }
     fn catching_crash<T>(
         &mut self,
@@ -272,10 +279,10 @@ code:
                             .clone()
                             .merge(line.last().unwrap().span.clone());
                         if count_placeholders(&line) > 0 {
-                            return Err(self.error_with_span(
-                                span,
+                            self.add_error(
+                                span.clone(),
                                 "Cannot use placeholder outside of function",
-                            ));
+                            );
                         }
                         let instrs = self.compile_words(line, true)?;
                         match instrs_signature(&instrs) {
@@ -372,66 +379,56 @@ code:
             match init {
                 [Instr::Push(path)] => {
                     if let Some(sig) = &binding.signature {
-                        return Err(self.error_with_span(
+                        self.add_error(
                             sig.span.clone(),
                             "Cannot declare a signature for a module import",
-                        ));
+                        );
                     }
-                    let path: String = match path {
-                        Value::Char(arr) if arr.rank() == 1 => arr.data.iter().copied().collect(),
-                        _ => {
-                            return Err(
-                                self.error_with_span(span.clone(), "Import path must be a string")
-                            )
+                    match path {
+                        Value::Char(arr) if arr.rank() == 1 => {
+                            let path: String = arr.data.iter().copied().collect();
+                            let module = self.import_compile(path.as_ref(), span)?;
+                            self.asm.add_global_at(
+                                global_index,
+                                Global::Module { module },
+                                Some(binding.name.span.clone()),
+                                comment.clone(),
+                            );
+                            self.scope.names.insert(name.clone(), global_index);
                         }
-                    };
-                    let module = self.import_compile(path.as_ref(), span)?;
-                    self.asm.add_global_at(
-                        global_index,
-                        Global::Module { module },
-                        Some(binding.name.span.clone()),
-                        comment.clone(),
-                    );
-                    self.scope.names.insert(name.clone(), global_index);
+                        _ => self.add_error(span.clone(), "Import path must be a string"),
+                    }
                 }
-                [Instr::Push(item), Instr::Push(path)] => {
-                    let path: String = match path {
-                        Value::Char(arr) if arr.rank() == 1 => arr.data.iter().copied().collect(),
-                        _ => {
-                            return Err(
-                                self.error_with_span(span.clone(), "Import path must be a string")
-                            )
-                        }
-                    };
-                    let module = self.import_compile(path.as_ref(), span)?;
-                    let item: String = match item {
-                        Value::Char(arr) if arr.rank() == 1 => arr.data.iter().copied().collect(),
-                        _ => {
-                            return Err(
-                                self.error_with_span(span.clone(), "Import item must be a string")
-                            )
-                        }
-                    };
-                    let index = *self.imports[&module].get(item.as_str()).ok_or_else(|| {
-                        self.error_with_span(
-                            span.clone(),
-                            format!("Item `{item}` not found in module `{path}`"),
-                        )
-                    })?;
-                    self.scope.names.insert(name.clone(), index);
-                    sig = Some(self.asm.bindings[index].global.signature().ok_or_else(|| {
-                        self.error_with_span(
-                            span.clone(),
-                            "Cannot define a signature for a module rebind",
-                        )
-                    })?);
-                }
-                _ => {
-                    return Err(self.error_with_span(
-                        span.clone(),
-                        "&i must be followed by one or two strings",
-                    ))
-                }
+                [Instr::Push(item), Instr::Push(path)] => match path {
+                    Value::Char(arr) if arr.rank() == 1 => {
+                        let path: String = arr.data.iter().copied().collect();
+                        let module = self.import_compile(path.as_ref(), span)?;
+                        match item {
+                            Value::Char(arr) if arr.rank() == 1 => {
+                                let item: String = arr.data.iter().copied().collect();
+                                if let Some(&index) = self.imports[&module].get(item.as_str()) {
+                                    self.scope.names.insert(name.clone(), index);
+                                    if let Some(s) = self.asm.bindings[index].global.signature() {
+                                        sig = Some(s);
+                                    } else {
+                                        self.add_error(
+                                            span.clone(),
+                                            "Cannot define a signature for a module rebind",
+                                        )
+                                    }
+                                } else {
+                                    self.add_error(
+                                        span.clone(),
+                                        format!("Item `{item}` not found in module `{path}`"),
+                                    )
+                                }
+                            }
+                            _ => self.add_error(span.clone(), "Import item must be a string"),
+                        };
+                    }
+                    _ => self.add_error(span.clone(), "Import path must be a string"),
+                },
+                _ => self.add_error(span.clone(), "&i must be followed by one or two strings"),
             }
         }
 
@@ -451,14 +448,14 @@ code:
                         }
                         Err(sp) => {
                             let sp = sp.clone();
-                            return Err(self.error_with_span(
+                            self.add_error(
                                 sp.span,
                                 format!(
                                     "This line's signature is undefined: {}. \
                                     This prevents the later binding of {}.",
                                     sp.value, name
                                 ),
-                            ));
+                            );
                         }
                     }
                 }
@@ -474,13 +471,13 @@ code:
                     if declared_sig.value == sig_to_check {
                         sig = declared_sig.value;
                     } else {
-                        return Err(self.error_with_span(
+                        self.add_error(
                             declared_sig.span.clone(),
                             format!(
-                                "Function signature mismatch:  declared {} but inferred {}",
+                                "Function signature mismatch: declared {} but inferred {}",
                                 declared_sig.value, sig_to_check
                             ),
-                        ));
+                        );
                     }
                 }
                 #[rustfmt::skip]
@@ -531,7 +528,7 @@ code:
                     let func = make_fn(instrs, sig.value, self);
                     self.compile_bind_function(&name, global_index, func, span_index, comment)?;
                 } else {
-                    return Err(self.error_with_span(
+                    self.add_error(
                         binding.name.span.clone(),
                         format!(
                             "Cannot infer function signature: {e}{}",
@@ -541,7 +538,7 @@ code:
                                 ""
                             }
                         ),
-                    ));
+                    );
                 }
             }
         }
@@ -567,25 +564,22 @@ code:
         span: usize,
         comment: Option<Arc<str>>,
     ) -> UiuaResult {
-        self.validate_binding_name(name, function.instrs(self), self.get_span(span))?;
-        self.scope.names.insert(name.clone(), index);
-        self.asm.bind_function(index, function, span, comment);
-        Ok(())
-    }
-    fn validate_binding_name(&self, name: &Ident, instrs: &[Instr], span: Span) -> UiuaResult {
-        let temp_function_count = self.count_temp_functions(instrs, &mut HashSet::new());
+        let temp_function_count =
+            self.count_temp_functions(function.instrs(self), &mut HashSet::new());
         let name_marg_count = ident_modifier_args(name) as usize;
         if temp_function_count != name_marg_count {
             let trimmed = name.trim_end_matches('!');
             let this = format!("{}{}", trimmed, "!".repeat(temp_function_count));
-            return Err(self.error_with_span(
-                span.clone(),
+            self.add_error(
+                self.get_span(span),
                 format!(
                     "The name {name} implies {name_marg_count} modifier arguments, \
                     but the binding body references {temp_function_count}. Try `{this}`."
                 ),
-            ));
+            );
         }
+        self.scope.names.insert(name.clone(), index);
+        self.asm.bind_function(index, function, span, comment);
         Ok(())
     }
     pub(crate) fn import_compile(&mut self, path: &Path, span: &CodeSpan) -> UiuaResult<PathBuf> {
@@ -601,13 +595,13 @@ code:
                     Err(e)
                 }
             })
-            .map_err(|e| self.error_with_span(span.clone(), e))?;
+            .map_err(|e| self.fatal_error(span.clone(), e))?;
         let input: EcoString = String::from_utf8(bytes)
-            .map_err(|e| self.error_with_span(span.clone(), format!("Failed to read file: {e}")))?
+            .map_err(|e| self.fatal_error(span.clone(), format!("Failed to read file: {e}")))?
             .into();
         self.asm.import_inputs.insert(path.clone(), input.clone());
         if self.current_imports.iter().any(|p| p == &path) {
-            return Err(self.error_with_span(
+            return Err(self.fatal_error(
                 span.clone(),
                 format!("Cycle detected importing {}", path.to_string_lossy()),
             ));
@@ -674,7 +668,7 @@ code:
             sig
         } else {
             instrs_signature(&instrs).map_err(|e| {
-                self.error_with_span(
+                self.fatal_error(
                     span.unwrap(),
                     format!("Cannot infer function signature: {e}"),
                 )
@@ -699,7 +693,7 @@ code:
                                     .get(item_name.as_str())
                                     .copied()
                                     .ok_or_else(|| {
-                                    self.error_with_span(
+                                    self.fatal_error(
                                         next.span.clone(),
                                         format!(
                                             "Item `{item_name}` not found in module `{}`",
@@ -707,17 +701,17 @@ code:
                                         ),
                                     )
                                 })?;
-                                self.global_index(index, next.span.clone(), call)?;
+                                self.global_index(index, next.span.clone(), call);
                                 words.next();
                                 continue;
                             } else {
-                                return Err(self.error_with_span(
+                                self.add_error(
                                     next.span.clone(),
                                     format!(
                                         "Expected a string after `{name}` \
                                         to specify an item to import",
                                     ),
-                                ));
+                                );
                             }
                         }
                     }
@@ -832,6 +826,7 @@ code:
                 }
                 self.push_instr(Instr::BeginArray);
                 let inner = self.compile_words(items, true)?;
+                // Diagnostic for strand of characters
                 if !inner.is_empty()
                     && inner.iter().all(
                         |instr| matches!(instr, Instr::Push(Value::Char(arr)) if arr.rank() == 0),
@@ -843,6 +838,7 @@ code:
                         word.span.clone(),
                     );
                 }
+                // Validate items
                 let mut instrs = inner.iter();
                 while let Some(instr) = instrs.next() {
                     match instr {
@@ -858,17 +854,13 @@ code:
                             }
                         }
                         Instr::CallGlobal { sig, .. } if *sig == (0, 1) => {}
-                        _ => {
-                            return Err(
-                                self.error_with_span(word.span, "Strand cannot contain functions")
-                            )
-                        }
+                        _ => self.add_error(word.span.clone(), "Strand cannot contain functions"),
                     }
                 }
                 let span_index = self.add_span(word.span.clone());
                 let instrs = self.new_functions.last_mut().unwrap();
+                // Inline constant arrays
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
-                    // Inline constant arrays
                     instrs.pop();
                     let values = inner.iter().rev().map(|instr| match instr {
                         Instr::Push(v) => v.clone(),
@@ -906,6 +898,7 @@ code:
                 for lines in arr.lines.into_iter().rev() {
                     inner.extend(self.compile_words(lines, true)?);
                 }
+                // Diagnostic for array of characters
                 if line_count <= 1
                     && !inner.is_empty()
                     && inner.iter().all(
@@ -920,8 +913,8 @@ code:
                 }
                 let span = self.add_span(word.span.clone());
                 let instrs = self.new_functions.last_mut().unwrap();
+                // Inline constant arrays
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
-                    // Inline constant arrays
                     instrs.pop();
                     let empty = inner.is_empty();
                     let values = inner.iter().rev().map(|instr| match instr {
@@ -949,6 +942,7 @@ code:
                         Err(e) => return Err(e),
                     }
                 }
+                // Normal case
                 instrs.extend(inner);
                 self.push_instr(Instr::EndArray {
                     span,
@@ -963,7 +957,7 @@ code:
             }
             Word::Func(func) => self.func(func, word.span)?,
             Word::Switch(sw) => self.switch(sw, word.span, call)?,
-            Word::Primitive(p) => self.primitive(p, word.span, call)?,
+            Word::Primitive(p) => self.primitive(p, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,
             Word::Placeholder(sig) => {
                 let span = self.add_span(word.span);
@@ -995,15 +989,15 @@ code:
             self.asm
                 .global_references
                 .insert(span.clone().sp(ident), index);
-            self.global_index(index, span, call)?;
+            self.global_index(index, span, call);
         } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
             self.push_instr(Instr::push(constant.value.clone()));
         } else {
-            return Err(self.error_with_span(span, format!("Unknown identifier `{ident}`")));
+            self.add_error(span, format!("Unknown identifier `{ident}`"));
         }
         Ok(())
     }
-    fn global_index(&mut self, index: usize, span: CodeSpan, call: bool) -> UiuaResult {
+    fn global_index(&mut self, index: usize, span: CodeSpan, call: bool) {
         let global = self.asm.bindings[index].global.clone();
         match global {
             Global::Const(val) if call => self.push_instr(Instr::push(val)),
@@ -1045,11 +1039,8 @@ code:
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
-            Global::Module { .. } => {
-                return Err(self.error_with_span(span, "Cannot import module item here."))
-            }
+            Global::Module { .. } => self.add_error(span, "Cannot import module item here."),
         }
-        Ok(())
     }
     fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult {
         let function = self.compile_func(func, span)?;
@@ -1069,7 +1060,7 @@ code:
                     if declared_sig.value == sig {
                         sig = declared_sig.value;
                     } else {
-                        return Err(self.error_with_span(
+                        return Err(self.fatal_error(
                             declared_sig.span.clone(),
                             format!(
                                 "Function signature mismatch: declared {} but inferred {}",
@@ -1084,7 +1075,7 @@ code:
                 if let Some(declared_sig) = &func.signature {
                     declared_sig.value
                 } else {
-                    return Err(self.error_with_span(
+                    return Err(self.fatal_error(
                         span,
                         format!(
                             "Cannot infer function signature: {e}{}",
@@ -1123,13 +1114,13 @@ code:
             } else if f_sig.outputs == sig.outputs {
                 sig.args = sig.args.max(f_sig.args)
             } else {
-                return Err(self.error_with_span(
+                self.add_error(
                     branch.span,
                     format!(
                         "Switch branch's signature {f_sig} is \
                         incompatible with previous branches {sig}",
                     ),
-                ));
+                );
             }
             self.push_instr(Instr::PushFunc(f));
         }
@@ -1144,7 +1135,7 @@ code:
             let sig = match instrs_signature(&instrs) {
                 Ok(sig) => sig,
                 Err(e) => {
-                    return Err(self.error_with_span(
+                    return Err(self.fatal_error(
                         span,
                         format!(
                             "Cannot infer function signature: {e}{}",
@@ -1203,7 +1194,7 @@ code:
             }
 
             // Handle deprecation and experimental
-            self.handle_primitive_experimental(prim, &modified.modifier.span)?;
+            self.handle_primitive_experimental(prim, &modified.modifier.span);
             self.handle_primitive_deprecation(prim, &modified.modifier.span);
         }
 
@@ -1265,8 +1256,8 @@ code:
                     }
                     modifier if modifier.args() >= 2 => {
                         if sw.branches.len() != modifier.args() as usize {
-                            return Err(self.error_with_span(
-                                modified.modifier.span.merge(span),
+                            self.add_error(
+                                modified.modifier.span.clone().merge(span),
                                 format!(
                                     "{} requires {} function arguments, but the \
                                     function pack has {} functions",
@@ -1274,7 +1265,7 @@ code:
                                     modifier.args(),
                                     sw.branches.len()
                                 ),
-                            ));
+                            );
                         }
                         let new = Modified {
                             modifier: modified.modifier.clone(),
@@ -1287,9 +1278,14 @@ code:
             }
         }
 
-        // Validate operand count
-        if op_count != modified.modifier.value.args() as usize {
-            return Err(self.error_with_span(
+        if op_count == modified.modifier.value.args() as usize {
+            // Inlining
+            if self.inline_modifier(&modified, call)? {
+                return Ok(());
+            }
+        } else {
+            // Validate operand count
+            self.add_error(
                 modified.modifier.span.clone(),
                 format!(
                     "{} requires {} function argument{}, but {} {} provided",
@@ -1303,12 +1299,7 @@ code:
                     op_count,
                     if op_count == 1 { "was" } else { "were" }
                 ),
-            ));
-        }
-
-        // Inlining
-        if self.inline_modifier(&modified, call)? {
-            return Ok(());
+            );
         }
 
         let instrs = self.compile_words(modified.operands, false)?;
@@ -1334,7 +1325,7 @@ code:
         if call {
             self.push_all_instrs(instrs);
             match modified.modifier.value {
-                Modifier::Primitive(prim) => self.primitive(prim, modified.modifier.span, true)?,
+                Modifier::Primitive(prim) => self.primitive(prim, modified.modifier.span, true),
                 Modifier::Ident(ident) => self.ident(ident, modified.modifier.span, true)?,
             }
         } else {
@@ -1342,7 +1333,7 @@ code:
             self.push_all_instrs(instrs);
             match modified.modifier.value {
                 Modifier::Primitive(prim) => {
-                    self.primitive(prim, modified.modifier.span.clone(), true)?
+                    self.primitive(prim, modified.modifier.span.clone(), true)
                 }
                 Modifier::Ident(ident) => {
                     self.ident(ident, modified.modifier.span.clone(), true)?
@@ -1359,10 +1350,10 @@ code:
                     self.push_instr(Instr::PushFunc(func));
                 }
                 Err(e) => {
-                    return Err(self.error_with_span(
+                    self.add_error(
                         modified.modifier.span.clone(),
                         format!("Cannot infer function signature: {e}"),
-                    ));
+                    );
                 }
             }
         }
@@ -1428,7 +1419,6 @@ code:
                     );
                     self.push_instr(Instr::PushFunc(func));
                 }
-                Ok(true)
             }
             Fork => {
                 let mut operands = modified.code_operands().cloned();
@@ -1478,7 +1468,6 @@ code:
                     );
                     self.push_instr(Instr::PushFunc(func));
                 }
-                Ok(true)
             }
             Bracket => {
                 let mut operands = modified.code_operands().cloned();
@@ -1512,7 +1501,6 @@ code:
                     );
                     self.push_instr(Instr::PushFunc(func));
                 }
-                Ok(true)
             }
             Un => {
                 let mut operands = modified.code_operands().cloned();
@@ -1529,15 +1517,16 @@ code:
                                 let func = self.add_function(id, sig, inverted);
                                 self.push_instr(Instr::PushFunc(func));
                             }
-                            Ok(true)
                         }
-                        Err(e) => Err(self.error_with_span(
-                            modified.modifier.span.clone(),
-                            format!("Cannot infer function signature: {e}"),
-                        )),
+                        Err(e) => {
+                            self.add_error(
+                                modified.modifier.span.clone(),
+                                format!("Cannot infer function signature: {e}"),
+                            );
+                        }
                     }
                 } else {
-                    Err(self.error_with_span(span, "No inverse found"))
+                    self.add_error(span, "No inverse found");
                 }
             }
             Under => {
@@ -1548,18 +1537,23 @@ code:
                 let (g_instrs, g_sig) =
                     self.compile_operand_words(vec![operands.next().unwrap()])?;
                 if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig, self) {
-                    let before_sig = instrs_signature(&f_before).map_err(|e| {
-                        self.error_with_span(
-                            f_span.clone(),
-                            format!("Cannot infer function signature: {e}"),
-                        )
-                    })?;
-                    let after_sig = instrs_signature(&f_after).map_err(|e| {
-                        self.error_with_span(
-                            f_span,
-                            format!("Cannot infer function signature: {e}"),
-                        )
-                    })?;
+                    let before_sig = match instrs_signature(&f_before) {
+                        Ok(sig) => sig,
+                        Err(e) => {
+                            self.add_error(
+                                f_span.clone(),
+                                format!("Cannot infer function signature: {e}"),
+                            );
+                            return Ok(true);
+                        }
+                    };
+                    let after_sig = match instrs_signature(&f_after) {
+                        Ok(sig) => sig,
+                        Err(e) => {
+                            self.add_error(f_span, format!("Cannot infer function signature: {e}"));
+                            return Ok(true);
+                        }
+                    };
                     let mut instrs = if call {
                         eco_vec![Instr::PushSig(before_sig)]
                     } else {
@@ -1595,9 +1589,8 @@ code:
                         );
                         self.push_instr(Instr::PushFunc(func));
                     }
-                    Ok(true)
                 } else {
-                    Err(self.error_with_span(f_span, "No inverse found"))
+                    self.add_error(f_span, "No inverse found");
                 }
             }
             Both => {
@@ -1634,20 +1627,20 @@ code:
                     );
                     self.push_instr(Instr::PushFunc(func));
                 }
-                Ok(true)
             }
             Comptime => {
                 let mut operands = modified.code_operands().cloned();
                 let (instrs, sig) = self.compile_operand_words(vec![operands.next().unwrap()])?;
                 if sig.args > 0 {
-                    return Err(self.error_with_span(
+                    self.add_error(
                         modified.modifier.span.clone(),
                         format!(
                             "{}'s function must have no arguments, but it has {}",
                             Comptime.format(),
                             sig.args
                         ),
-                    ));
+                    );
+                    return Ok(false);
                 }
                 let instrs = optimize_instrs(instrs, true);
                 let mut asm = self.asm.clone();
@@ -1661,10 +1654,10 @@ code:
                 for value in values {
                     self.push_instr(Instr::push(value));
                 }
-                Ok(true)
             }
-            _ => Ok(false),
+            _ => return Ok(false),
         }
+        Ok(true)
     }
     fn handle_primitive_deprecation(&mut self, prim: Primitive, span: &CodeSpan) {
         if let Some(suggestion) = prim.deprecation_suggestion() {
@@ -1684,21 +1677,20 @@ code:
             );
         }
     }
-    fn handle_primitive_experimental(&self, prim: Primitive, span: &CodeSpan) -> UiuaResult {
+    fn handle_primitive_experimental(&mut self, prim: Primitive, span: &CodeSpan) {
         if prim.is_experimental() && !self.scope.experimental {
-            return Err(self.error_with_span(
+            self.add_error(
                 span.clone(),
                 format!(
                     "{} is experimental. To use it, add \
                     `# Experimental!` to the top of the file.",
                     prim.format()
                 ),
-            ));
+            );
         }
-        Ok(())
     }
-    fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
-        self.handle_primitive_experimental(prim, &span)?;
+    fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) {
+        self.handle_primitive_experimental(prim, &span);
         self.handle_primitive_deprecation(prim, &span);
         let span_i = self.add_span(span.clone());
         if call {
@@ -1711,13 +1703,10 @@ code:
                     self.push_instr(Instr::PushFunc(func))
                 }
                 Err(e) => {
-                    return Err(
-                        self.error_with_span(span, format!("Cannot infer function signature: {e}"))
-                    )
+                    self.add_error(span, format!("Cannot infer function signature: {e}"));
                 }
             }
         }
-        Ok(())
     }
 
     fn increment_placeholders(
@@ -1802,8 +1791,14 @@ code:
             self.asm.inputs.clone(),
         ));
     }
-    /// Construct an error with a custom span
-    pub fn error_with_span(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
+    fn add_error(&mut self, span: impl Into<Span>, message: impl ToString) {
+        let e = UiuaError::Run(
+            span.into().sp(message.to_string()),
+            self.asm.inputs.clone().into(),
+        );
+        self.errors.push(e);
+    }
+    fn fatal_error(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
         UiuaError::Run(
             span.into().sp(message.to_string()),
             self.asm.inputs.clone().into(),

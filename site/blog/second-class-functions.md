@@ -1,5 +1,7 @@
 # Why doesn't Uiua have first-class functions?
 
+2023-12-15
+
 People often ask why Uiua doesn't have first-class functions. That is, functions that can be put on the stack and in arrays.
 
 In the beginning, functions *were* normal array elements. Modifiers popped their functions from the stack like regular values. Functions could be put in arrays, and lists of functions even had some special uses. There was a `! call` function which called the top function on the stack. Boxes were not even a dedicated type. They were just functions that took no arguments and returned a single value.

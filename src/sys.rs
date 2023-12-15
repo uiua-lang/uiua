@@ -80,13 +80,13 @@ macro_rules! sys_op {
                 }
             }
             /// Get the number of arguments the system function expects
-            pub fn args(&self) -> u8 {
+            pub fn args(&self) -> usize {
                 match self {
                     $(SysOp::$variant => $args,)*
                 }
             }
             /// Get the number of function arguments the system function expects if it is a modifier
-            pub fn modifier_args(&self) -> Option<u8> {
+            pub fn modifier_args(&self) -> Option<usize> {
                 match self {
                     $($(
                         SysOp::$variant => Some($mod_args),
@@ -95,9 +95,9 @@ macro_rules! sys_op {
                 }
             }
             /// Get the number of outputs the system function returns
-            pub fn outputs(&self) -> u8 {
+            pub fn outputs(&self) -> usize {
                 match self {
-                    $($(SysOp::$variant => $outputs.into(),)?)*
+                    $($(SysOp::$variant => $outputs as usize,)?)*
                     _ => 1
                 }
             }

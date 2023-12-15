@@ -566,7 +566,7 @@ code:
     ) -> UiuaResult {
         let temp_function_count =
             self.count_temp_functions(function.instrs(self), &mut HashSet::new());
-        let name_marg_count = ident_modifier_args(name) as usize;
+        let name_marg_count = ident_modifier_args(name);
         if temp_function_count != name_marg_count {
             let trimmed = name.trim_end_matches('!');
             let this = format!("{}{}", trimmed, "!".repeat(temp_function_count));
@@ -1255,7 +1255,7 @@ code:
                         return self.modified(new, call);
                     }
                     modifier if modifier.args() >= 2 => {
-                        if sw.branches.len() != modifier.args() as usize {
+                        if sw.branches.len() != modifier.args() {
                             self.add_error(
                                 modified.modifier.span.clone().merge(span),
                                 format!(
@@ -1278,7 +1278,7 @@ code:
             }
         }
 
-        if op_count == modified.modifier.value.args() as usize {
+        if op_count == modified.modifier.value.args() {
             // Inlining
             if self.inline_modifier(&modified, call)? {
                 return Ok(());

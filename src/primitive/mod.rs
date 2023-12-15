@@ -35,7 +35,7 @@ use crate::{
     lex::AsciiToken,
     sys::*,
     value::*,
-    FunctionId, Uiua, UiuaError, UiuaResult,
+    FunctionId, Signature, Uiua, UiuaError, UiuaResult,
 };
 
 /// Categories of primitives
@@ -239,6 +239,11 @@ impl Primitive {
     /// Find a primitive by its glyph
     pub fn from_glyph(c: char) -> Option<Self> {
         Self::all().find(|p| p.glyph() == Some(c))
+    }
+    /// Get the primitive's signature, if it is always well-defined
+    pub fn signature(&self) -> Option<Signature> {
+        let (args, outputs) = self.args().zip(self.outputs())?;
+        Some(Signature { args, outputs })
     }
     /// Check if this primitive is a modifier
     pub fn is_modifier(&self) -> bool {

@@ -374,7 +374,11 @@ mod server {
                 }
             }
             Ok(Some(if let Some((prim, range)) = prim_range {
-                let mut value = format!("```uiua\n{}\n```", prim.format());
+                let sig = prim
+                    .signature()
+                    .map(|sig| format!(" {}", sig))
+                    .unwrap_or_default();
+                let mut value = format!("```uiua\n{}{}\n```", prim.format(), sig);
                 let doc = prim.doc();
                 value.push_str("\n\n");
                 for frag in &doc.short {
@@ -426,8 +430,7 @@ mod server {
             } else if let Some((ident, signature, comment, range)) = binding_range {
                 let mut value = ident;
                 if let Some(sig) = signature {
-                    value.push_str("\n\n");
-                    value.push_str(&format!("`{sig}`"));
+                    value.push_str(&format!(" `{sig}`"));
                 }
                 if let Some(comment) = comment {
                     value.push_str("\n\n");

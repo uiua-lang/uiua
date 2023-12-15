@@ -304,7 +304,7 @@ impl fmt::Display for Modifier {
 
 impl Modifier {
     /// Get the number of arguments this modifier takes
-    pub fn args(&self) -> u8 {
+    pub fn args(&self) -> usize {
         match self {
             Modifier::Primitive(prim) => prim.modifier_args().unwrap_or(0),
             Modifier::Ident(ident) => ident_modifier_args(ident),

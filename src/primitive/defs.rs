@@ -119,7 +119,7 @@ macro_rules! primitive {
                 }
             }
             /// Get the number of function arguments the primitive takes
-            pub fn modifier_args(&self) -> Option<u8> {
+            pub fn modifier_args(&self) -> Option<usize> {
                 match self {
                     $($($(Primitive::$variant => Some($mod_args),)?)?)*
                     Primitive::Sys(op) => op.modifier_args(),
@@ -127,7 +127,7 @@ macro_rules! primitive {
                 }
             }
             /// Get the number of arguments the primitive takes
-            pub fn args(&self) -> Option<u8> {
+            pub fn args(&self) -> Option<usize> {
                 match self {
                     $($($(Primitive::$variant => Some($args),)?)?)*
                     Primitive::Sys(op) => Some(op.args()),
@@ -135,7 +135,7 @@ macro_rules! primitive {
                 }
             }
             /// Get the number of outputs the primitive produces
-            pub fn outputs(&self) -> Option<u8> {
+            pub fn outputs(&self) -> Option<usize> {
                 match self {
                     $($($(Primitive::$variant => $outputs.into(),)?)?)*
                     Primitive::Sys(op) => Some(op.outputs()),
@@ -1838,18 +1838,18 @@ macro_rules! impl_primitive {
         }
 
         impl ImplPrimitive {
-            pub fn args(&self) -> u8 {
+            pub fn args(&self) -> usize {
                 match self {
                     $(ImplPrimitive::$variant => $args,)*
                 }
             }
-            pub fn outputs(&self) -> u8 {
+            pub fn outputs(&self) -> usize {
                 match self {
                     $($(ImplPrimitive::$variant => $outputs,)?)*
                     _ => 1
                 }
             }
-            pub fn modifier_args(&self) -> Option<u8> {
+            pub fn modifier_args(&self) -> Option<usize> {
                 match self {
                     $($(ImplPrimitive::$variant => Some($margs),)?)*
                     _ => None

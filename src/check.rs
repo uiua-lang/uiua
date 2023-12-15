@@ -16,8 +16,8 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, SigCheckEr
     if let [Instr::Prim(prim, _)] = instrs {
         if let Some((args, outputs)) = prim.args().zip(prim.outputs()) {
             return Ok(Signature {
-                args: args as usize + prim.modifier_args().unwrap_or(0) as usize,
-                outputs: outputs as usize,
+                args: args + prim.modifier_args().unwrap_or(0),
+                outputs,
             });
         }
     }

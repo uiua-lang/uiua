@@ -632,7 +632,7 @@ impl<'i> Parser<'i> {
             {
                 // Parse switch function syntax
                 if let Word::Switch(sw) = &arg.value {
-                    if i == 0 && sw.branches.len() >= modifier.args() as usize {
+                    if i == 0 && sw.branches.len() >= modifier.args() {
                         args.push(arg);
                         break;
                     }
@@ -1081,8 +1081,8 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
     })
 }
 
-pub(crate) fn ident_modifier_args(ident: &Ident) -> u8 {
-    let mut count: u8 = 0;
+pub(crate) fn ident_modifier_args(ident: &Ident) -> usize {
+    let mut count: usize = 0;
     let mut prefix = ident.as_ref();
     while let Some(pre) = prefix.strip_suffix('!') {
         prefix = pre;

@@ -1600,6 +1600,8 @@ primitive!(
     ///
     /// If a function is [memo]ized, then its results are cached.
     /// Calling the function with the same arguments will return the cached result instead of recalculating it.
+    /// ex: F ← +⌊×10⚂
+    ///   : ∵F [1 1 2 2 3 3]
     /// ex: F ← memo(+⌊×10⚂)
     ///   : ∵F [1 1 2 2 3 3]
     /// In general, this should only be used with functions that perform a potentially expensive calculation.

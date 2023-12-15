@@ -239,6 +239,10 @@ code:
                 if lines.iter().flatten().all(|w| !w.value.is_code()) {
                     let mut comment = String::new();
                     for (i, line) in lines.iter().enumerate() {
+                        if line.is_empty() {
+                            comment.clear();
+                            continue;
+                        }
                         for word in line {
                             if let Word::Comment(c) = &word.value {
                                 if i > 0 {
@@ -301,7 +305,6 @@ code:
                     self.binding(binding, prev_com)?;
                 }
             }
-            Item::ExtraNewlines(_) => {}
         }
         Ok(())
     }

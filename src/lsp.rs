@@ -58,7 +58,6 @@ impl Spanner {
                     }
                     spans.extend(self.words_spans(&binding.words));
                 }
-                Item::ExtraNewlines(span) => spans.push(span.clone().sp(SpanKind::Whitespace)),
             }
         }
         spans

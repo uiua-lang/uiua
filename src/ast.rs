@@ -19,8 +19,6 @@ pub enum Item {
     Binding(Binding),
     /// A test scope
     TestScope(Sp<Vec<Item>>),
-    /// Extra newlines between items
-    ExtraNewlines(CodeSpan),
 }
 
 impl Item {
@@ -40,7 +38,6 @@ impl Item {
                 first.merge(last)
             }
             Item::Binding(binding) => binding.span(),
-            Item::ExtraNewlines(span) => span.clone(),
         }
     }
 }

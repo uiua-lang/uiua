@@ -388,14 +388,15 @@ fn binding_class(name: &str, sig: Signature, margs: usize) -> &'static str {
         "Fluid" => code_font!("fluid"),
         "Queer" => code_font!("queer"),
         _ => match margs {
-            0 if sig.outputs == 1 => match sig.args {
-                0 => code_font!("noadic-function"),
-                1 => code_font!("monadic-function"),
-                2 => code_font!("dyadic-function"),
-                3 => code_font!("triadic-function"),
-                _ => code_font!("variadic-function"),
+            0 => match (sig.args, sig.outputs) {
+                (0, 1) => code_font!("noadic-function"),
+                (1, 1) => code_font!("monadic-function"),
+                (2, 1) => code_font!("dyadic-function"),
+                (3, _) => code_font!("triadic-function"),
+                (4, _) => code_font!("tetradic-function"),
+                (5, _) => code_font!("pentadic-function"),
+                _ => code_font!(""),
             },
-            0 => "",
             1 => code_font!("monadic-modifier"),
             2 => code_font!("dyadic-modifier"),
             _ => code_font!("triadic-modifier"),

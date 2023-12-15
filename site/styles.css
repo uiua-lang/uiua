@@ -759,6 +759,18 @@ input[type=number] {
     color: #54b0fc;
 }
 
+.triadic-function {
+    color: #8078f1;
+}
+
+.tetradic-function {
+    color: #f576d8;
+}
+
+.pentadic-function {
+    color: #f08f74;
+}
+
 .monadic-modifier {
     color: #f0c36f;
 }

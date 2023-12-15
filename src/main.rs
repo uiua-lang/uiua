@@ -55,13 +55,9 @@ fn run() -> UiuaResult {
         return Ok(());
     }
     #[cfg(feature = "stand")]
-    if let Some(code) = uiua::stand::STAND_FILES.main_code() {
+    if let Some(asm) = &*uiua::stand::STAND_ASM {
         let mut rt = Uiua::with_native_sys().with_args(env::args().skip(1).collect());
-        rt.compile_run(|comp| {
-            comp.mode(RunMode::Normal)
-                .print_diagnostics(true)
-                .load_str(code)
-        })?;
+        rt.run_asm(asm)?;
         print_stack(&rt.take_stack(), true);
         return Ok(());
     }

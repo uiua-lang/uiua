@@ -186,22 +186,10 @@ impl SysBackend for NativeSys {
         Ok(handle)
     }
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
-        let res = (|| {
-            let handle = self.open_file(path)?;
-            let bytes = self.read(handle, usize::MAX)?;
-            self.close(handle)?;
-            Ok(bytes)
-        })();
-        match res {
-            Ok(res) => Ok(res),
-            Err(e) => {
-                #[cfg(feature = "stand")]
-                if let Some(file) = crate::stand::STAND_FILES.files.get(Path::new(path)) {
-                    return Ok(file.as_bytes().to_vec());
-                }
-                Err(e)
-            }
-        }
+        let handle = self.open_file(path)?;
+        let bytes = self.read(handle, usize::MAX)?;
+        self.close(handle)?;
+        Ok(bytes)
     }
     fn create_file(&self, path: &Path) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();

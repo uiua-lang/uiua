@@ -21,7 +21,7 @@ pub struct Assembly {
     pub global_references: HashMap<Sp<Ident>, usize>,
     #[serde(skip)]
     pub(crate) dynamic_functions: EcoVec<DynFn>,
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub(crate) import_inputs: HashMap<PathBuf, EcoString>,
     pub(crate) spans: EcoVec<Span>,
     pub(crate) inputs: Inputs,

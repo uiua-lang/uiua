@@ -27,6 +27,7 @@ Uiua is not yet stable.
   - Add same-file goto definition support
 - Add the `uiua build` command, which emits a `.uasm` bytecode file
 - `uiua run` can now run a `.uasm` bytecode file
+- `uiua stand` now embeds the bytecode assembly in the executable
 - Bug and crash fixes
 - Performance improvements
 ### Website

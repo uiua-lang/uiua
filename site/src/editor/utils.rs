@@ -21,8 +21,9 @@ use web_sys::{HtmlBrElement, HtmlDivElement, HtmlStyleElement, Node};
 
 use crate::{
     backend::{OutputItem, WebBackend},
+    binding_class,
     editor::Editor,
-    element, prim_class, sig_class,
+    element, prim_class,
 };
 
 /// Handles setting the code in the editor, setting the cursor, and managing the history
@@ -576,7 +577,7 @@ fn set_code_html(id: &str, code: &str) {
                                 .unwrap_or_default();
                             let class = if let Some(sig) = binding.global.signature() {
                                 let margs = text.chars().rev().take_while(|c| *c == '!').count();
-                                sig_class(sig, margs)
+                                binding_class(text, sig, margs)
                             } else {
                                 ""
                             };

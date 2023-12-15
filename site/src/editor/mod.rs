@@ -1,6 +1,6 @@
 mod utils;
 
-use std::{cell::Cell, iter::repeat, path::PathBuf, rc::Rc, time::Duration};
+use std::{cell::Cell, iter::repeat, path::PathBuf, rc::Rc, sync::Arc, time::Duration};
 
 use base64::engine::{general_purpose::STANDARD, Engine};
 
@@ -17,7 +17,7 @@ use web_sys::{
 };
 
 use crate::{
-    backend::{drop_file, OutputItem},
+    backend::{drop_file, OutputItem, WebBackend},
     element,
     examples::EXAMPLES,
     prim_class, Prim,
@@ -179,6 +179,7 @@ pub fn Editor<'a>(
                 &code_text,
                 &FormatConfig {
                     trailing_newline: mode == EditorMode::Pad,
+                    backend: Arc::new(WebBackend::default()),
                     ..Default::default()
                 },
             ) {

@@ -7,6 +7,7 @@ use std::{
     fs,
     iter::repeat,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use instant::Duration;
@@ -19,8 +20,8 @@ use crate::{
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
     value::Value,
-    Compiler, FunctionId, Ident, InputSrc, Inputs, Primitive, RunMode, SafeSys, SysOp, Uiua,
-    UiuaError, UiuaResult,
+    Compiler, FunctionId, Ident, InputSrc, Inputs, Primitive, RunMode, SafeSys, SysBackend, SysOp,
+    Uiua, UiuaError, UiuaResult,
 };
 
 trait ConfigValue: Sized {
@@ -141,6 +142,8 @@ macro_rules! create_config {
             )*
             /// The source inputs for the formatter
             pub inputs: Inputs,
+            /// The system backend used for output comments
+            pub backend: Arc<dyn SysBackend>,
         }
 
         paste! {
@@ -164,6 +167,7 @@ macro_rules! create_config {
                         $name: $default,
                     )*
                     inputs: Inputs::default(),
+                    backend: Arc::new(SafeSys),
                 }
             }
         }
@@ -175,6 +179,7 @@ macro_rules! create_config {
                         $name: config.$name.unwrap_or($default),
                     )*
                     inputs: Inputs::default(),
+                    backend: Arc::new(SafeSys),
                 }
             }
         }
@@ -885,7 +890,8 @@ impl<'a> Formatter<'a> {
     }
     fn output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {
         let values = self.output_comments.get_or_insert_with(|| {
-            let mut env = Uiua::with_native_sys().with_execution_limit(Duration::from_secs(2));
+            let mut env = Uiua::with_backend(self.config.backend.clone())
+                .with_execution_limit(Duration::from_secs(2));
             let res = env.compile_run(|comp| {
                 comp.print_diagnostics(true)
                     .mode(RunMode::All)

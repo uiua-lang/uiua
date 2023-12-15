@@ -1,6 +1,7 @@
 use std::{
     any::Any,
     collections::{HashMap, HashSet},
+    fmt,
     io::{stderr, stdin, Cursor, Read, Write},
     path::Path,
     sync::{Arc, OnceLock},
@@ -684,6 +685,12 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Make an HTTPS request on a TCP socket
     fn https_get(&self, request: &str, handle: Handle) -> Result<String, String> {
         Err("Making HTTPS requests is not supported in this environment".into())
+    }
+}
+
+impl fmt::Debug for dyn SysBackend {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "<sys backend>")
     }
 }
 

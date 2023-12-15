@@ -2,7 +2,7 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Use assembly in standalone executables
+- Allow multiple compiler errors
 - Multimedia
   - Sound input
   - Webcam input

@@ -790,16 +790,22 @@ impl<'a> Formatter<'a> {
                 let mut lines: Vec<String> = Vec::new();
                 for row in grid {
                     let top_row = lines.len();
-                    for cell in row {
-                        for (i, line) in cell.iter().enumerate() {
-                            let i = top_row + i;
-                            while i >= lines.len() {
-                                lines.push(String::new());
+                    for (i, cell) in row.into_iter().enumerate() {
+                        for (j, line) in cell.iter().enumerate() {
+                            let j = top_row + j;
+                            let prepad = i + max_widths.iter().take(i).sum::<usize>();
+                            for line in &mut lines {
+                                for _ in line.chars().count()..prepad {
+                                    line.push(' ');
+                                }
                             }
-                            lines[i].push_str(line);
-                            if lines[i].chars().count() > 200 {
-                                lines[i] = lines[i].chars().take(199).collect();
-                                lines[i].push('…');
+                            while j >= lines.len() {
+                                lines.push(str::repeat(" ", prepad));
+                            }
+                            lines[j].push_str(line);
+                            if lines[j].chars().count() > 200 {
+                                lines[j] = lines[j].chars().take(199).collect();
+                                lines[j].push('…');
                             }
                         }
                     }

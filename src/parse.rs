@@ -261,6 +261,9 @@ impl<'i> Parser<'i> {
     }
     fn items(&mut self, parse_scopes: bool) -> Vec<Item> {
         let mut items = Vec::new();
+        while self.try_exact(Newline).is_some() {
+            self.try_spaces();
+        }
         loop {
             match self.try_item(parse_scopes) {
                 Some(item) => items.push(item),
@@ -268,7 +271,15 @@ impl<'i> Parser<'i> {
                     if self.try_exact(Newline).is_none() {
                         break;
                     }
-                    while self.try_exact(Newline).is_some() {}
+                    self.try_spaces();
+                    let mut extra_newlines = false;
+                    while self.try_exact(Newline).is_some() {
+                        extra_newlines = true;
+                        self.try_spaces();
+                    }
+                    if extra_newlines {
+                        items.push(Item::Words(vec![Vec::new()]));
+                    }
                 }
             }
         }

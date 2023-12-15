@@ -731,7 +731,6 @@ impl<'a> Formatter<'a> {
                 let stacks = self.output_comment(*i);
                 let mut s = String::new();
                 if stacks.is_empty() {
-                    s.push('#');
                     for _ in 0..=*n {
                         s.push('#');
                     }

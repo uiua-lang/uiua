@@ -179,9 +179,14 @@ pub use server::run_language_server;
 
 #[cfg(feature = "lsp")]
 mod server {
+    use std::sync::Arc;
 
     use dashmap::DashMap;
-    use tower_lsp::{jsonrpc::Result, lsp_types::*, *};
+    use tower_lsp::{
+        jsonrpc::{Error, Result},
+        lsp_types::*,
+        *,
+    };
 
     use super::*;
 
@@ -189,7 +194,7 @@ mod server {
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Assembly, BindingInfo, Compiler, PrimDocLine, Uiua,
+        Assembly, BindingInfo, Compiler, NativeSys, PrimDocLine, Uiua,
     };
 
     pub struct LspDoc {
@@ -450,15 +455,29 @@ mod server {
                 return Ok(None);
             };
 
-            let Ok(formatted) = format_str(&doc.input, &FormatConfig::find().unwrap_or_default())
-            else {
-                return Ok(None);
-            };
-            let range = Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));
-            Ok(Some(vec![TextEdit {
-                range,
-                new_text: formatted.output,
-            }]))
+            match format_str(
+                &doc.input,
+                &FormatConfig {
+                    backend: Arc::new(NativeSys),
+                    ..FormatConfig::find().unwrap_or_default()
+                },
+            ) {
+                Ok(formatted) => {
+                    let range = Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));
+                    Ok(Some(vec![TextEdit {
+                        range,
+                        new_text: formatted.output,
+                    }]))
+                }
+                Err(e) => {
+                    self.client
+                        .log_message(MessageType::ERROR, format!("Formatting error: {}", e))
+                        .await;
+                    let mut error = Error::parse_error();
+                    error.message = e.to_string().into();
+                    Err(error)
+                }
+            }
         }
 
         async fn inline_value(

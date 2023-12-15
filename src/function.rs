@@ -254,7 +254,7 @@ pub struct Function {
     /// The function's id
     pub id: FunctionId,
     signature: Signature,
-    slice: FuncSlice,
+    pub(crate) slice: FuncSlice,
 }
 
 /// A range of compiled instructions

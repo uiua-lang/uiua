@@ -3,7 +3,7 @@ use std::{
     collections::{HashMap, HashSet},
     io::{stderr, stdin, Cursor, Read, Write},
     path::Path,
-    sync::OnceLock,
+    sync::{Arc, OnceLock},
     time::Duration,
 };
 
@@ -694,6 +694,27 @@ impl SysBackend for SafeSys {
         self
     }
     fn any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+}
+
+/// Trait for converting to a system backend
+pub trait IntoSysBackend {
+    /// Convert to a reference counted system backend
+    fn into_sys_backend(self) -> Arc<dyn SysBackend>;
+}
+
+impl<T> IntoSysBackend for T
+where
+    T: SysBackend + Send + Sync + 'static,
+{
+    fn into_sys_backend(self) -> Arc<dyn SysBackend> {
+        Arc::new(self)
+    }
+}
+
+impl IntoSysBackend for Arc<dyn SysBackend> {
+    fn into_sys_backend(self) -> Arc<dyn SysBackend> {
         self
     }
 }

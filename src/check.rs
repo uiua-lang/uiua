@@ -240,7 +240,7 @@ impl<'a> VirtualEnv<'a> {
                 self.function_stack.push(Cow::Owned(Function::new(
                     FunctionId::Unnamed,
                     *sig,
-                    FuncSlice { address: 0, len: 0 },
+                    FuncSlice { start: 0, len: 0 },
                 )));
             }
             Instr::PopTemp { count, stack, .. } => {
@@ -449,7 +449,7 @@ impl<'a> VirtualEnv<'a> {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }
-                Unpack | Memo => {
+                Unpack | Memo | Comptime => {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }

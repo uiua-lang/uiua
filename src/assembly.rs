@@ -53,11 +53,11 @@ impl From<&Assembly> for Assembly {
 impl Assembly {
     /// Get the instructions of a function slice
     pub fn instrs(&self, slice: FuncSlice) -> &[Instr] {
-        &self.instrs[slice.address..][..slice.len]
+        &self.instrs[slice.start..][..slice.len]
     }
     /// Get the mutable instructions of a function slice
     pub fn instrs_mut(&mut self, slice: FuncSlice) -> &mut [Instr] {
-        &mut self.instrs.make_mut()[slice.address..][..slice.len]
+        &mut self.instrs.make_mut()[slice.start..][..slice.len]
     }
     pub(crate) fn bind_function(
         &mut self,

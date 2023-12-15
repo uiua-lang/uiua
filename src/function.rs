@@ -263,19 +263,19 @@ pub struct Function {
 )]
 #[serde(from = "(usize, usize)", into = "(usize, usize)")]
 pub struct FuncSlice {
-    pub(crate) address: usize,
+    pub(crate) start: usize,
     pub(crate) len: usize,
 }
 
 impl From<(usize, usize)> for FuncSlice {
-    fn from((address, len): (usize, usize)) -> Self {
-        Self { address, len }
+    fn from((start, len): (usize, usize)) -> Self {
+        Self { start, len }
     }
 }
 
 impl From<FuncSlice> for (usize, usize) {
     fn from(slice: FuncSlice) -> Self {
-        (slice.address, slice.len)
+        (slice.start, slice.len)
     }
 }
 
@@ -292,7 +292,7 @@ impl FuncSlice {
 
 impl AddAssign<usize> for FuncSlice {
     fn add_assign(&mut self, rhs: usize) {
-        self.address += rhs;
+        self.start += rhs;
     }
 }
 

@@ -19,7 +19,8 @@ use crate::{
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, ident_modifier_args, parse, split_words, unsplit_words},
     Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
-    IntoInputSrc, Primitive, RunMode, SysOp, Uiua, UiuaError, UiuaResult, Value,
+    IntoInputSrc, IntoSysBackend, Primitive, RunMode, SafeSys, SysBackend, SysOp, Uiua, UiuaError,
+    UiuaResult, Value,
 };
 
 /// The Uiua compiler
@@ -43,6 +44,8 @@ pub struct Compiler {
     pub(crate) diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
     pub(crate) print_diagnostics: bool,
+    /// The backend used to run comptime code
+    pub(crate) backend: Arc<dyn SysBackend>,
 }
 
 impl Default for Compiler {
@@ -58,6 +61,7 @@ impl Default for Compiler {
             imports: HashMap::new(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
+            backend: Arc::new(SafeSys),
         }
     }
 }
@@ -98,6 +102,13 @@ impl Compiler {
     /// Create a new compiler
     pub fn new() -> Self {
         Self::default()
+    }
+    /// Create a new compiler with a custom backend for `comptime` code
+    pub fn with_backend(backend: impl IntoSysBackend) -> Self {
+        Self {
+            backend: backend.into_sys_backend(),
+            ..Self::default()
+        }
     }
     /// Take a completed assembly from the compiler
     pub fn finish(&mut self) -> Assembly {
@@ -275,7 +286,7 @@ code:
                         self.asm.instrs.extend(optimize_instrs(instrs, true));
                         let end = self.asm.instrs.len();
                         self.asm.top_slices.push(FuncSlice {
-                            address: start,
+                            start,
                             len: end - start,
                         });
                     }
@@ -305,12 +316,12 @@ code:
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
         }
-        let address = self.asm.instrs.len();
+        let start = self.asm.instrs.len();
         self.asm.instrs.extend(instrs);
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("{id})").into()));
         }
-        Function::new(id, sig, FuncSlice { address, len })
+        Function::new(id, sig, FuncSlice { start, len })
     }
     fn binding(&mut self, binding: Binding, comment: Option<Arc<str>>) -> UiuaResult {
         let name = binding.name.value;
@@ -501,7 +512,7 @@ code:
                     self.asm.instrs.extend(optimize_instrs(instrs, true));
                     let end = self.asm.instrs.len();
                     self.asm.top_slices.push(FuncSlice {
-                        address: start,
+                        start,
                         len: end - start,
                     });
                 } else {
@@ -1614,6 +1625,33 @@ code:
                         instrs,
                     );
                     self.push_instr(Instr::PushFunc(func));
+                }
+                Ok(true)
+            }
+            Comptime => {
+                let mut operands = modified.code_operands().cloned();
+                let (instrs, sig) = self.compile_operand_words(vec![operands.next().unwrap()])?;
+                if sig.args > 0 {
+                    return Err(self.error_with_span(
+                        modified.modifier.span.clone(),
+                        format!(
+                            "{}'s function must have no arguments, but it has {}",
+                            Comptime.format(),
+                            sig.args
+                        ),
+                    ));
+                }
+                let instrs = optimize_instrs(instrs, true);
+                let mut asm = self.asm.clone();
+                let start = asm.instrs.len();
+                let len = instrs.len();
+                asm.instrs.extend(instrs);
+                asm.top_slices.push(FuncSlice { start, len });
+                let mut env = Uiua::with_backend(self.backend.clone());
+                env.run_asm(&asm)?;
+                let values = env.take_stack();
+                for value in values {
+                    self.push_instr(Instr::push(value));
                 }
                 Ok(true)
             }

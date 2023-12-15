@@ -18,8 +18,8 @@ use thread_local::ThreadLocal;
 
 use crate::{
     algorithm, array::Array, boxed::Boxed, check::instrs_temp_signatures, function::*, lex::Span,
-    value::Value, Assembly, Compiler, Complex, Global, Ident, Inputs, NativeSys, Primitive,
-    SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    value::Value, Assembly, Compiler, Complex, Global, Ident, Inputs, IntoSysBackend, NativeSys,
+    Primitive, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua interpreter
@@ -217,10 +217,10 @@ impl Uiua {
         Self::default()
     }
     /// Create a new Uiua runtime with a custom IO backend
-    pub fn with_backend(backend: impl SysBackend) -> Self {
+    pub fn with_backend(backend: impl IntoSysBackend) -> Self {
         Uiua {
             rt: Runtime {
-                backend: Arc::new(backend),
+                backend: backend.into_sys_backend(),
                 ..Runtime::default()
             },
             asm: Assembly::default(),
@@ -286,7 +286,7 @@ impl Uiua {
         &mut self,
         compile: impl FnOnce(&mut Compiler) -> UiuaResult<&mut Compiler>,
     ) -> UiuaResult<Compiler> {
-        let mut comp = Compiler::new();
+        let mut comp = Compiler::with_backend(self.rt.backend.clone());
         let asm = compile(&mut comp)?.finish();
         self.run_asm(&asm)?;
         Ok(comp)
@@ -384,8 +384,7 @@ code:
         let mut formatted_instr = String::new();
         loop {
             let frame = self.rt.call_stack.last().unwrap();
-            let Some(instr) =
-                self.asm.instrs[frame.slice.address..][..frame.slice.len].get(frame.pc)
+            let Some(instr) = self.asm.instrs[frame.slice.start..][..frame.slice.len].get(frame.pc)
             else {
                 self.rt.call_stack.pop().unwrap();
                 break;
@@ -464,11 +463,8 @@ code:
                             Span::Code(span) => FunctionId::Anonymous(span),
                             Span::Builtin => FunctionId::Unnamed,
                         };
-                        let func = Function::new(
-                            id,
-                            Signature::new(0, 0),
-                            FuncSlice { address: 0, len: 0 },
-                        );
+                        let func =
+                            Function::new(id, Signature::new(0, 0), FuncSlice { start: 0, len: 0 });
                         self.asm.bind_function(index, func, span, None);
                     }
                     Ok(())
@@ -954,7 +950,7 @@ code:
     }
     /// Get a slice of instructions
     pub fn instrs(&self, slice: FuncSlice) -> &[Instr] {
-        &self.asm.instrs[slice.address..][..slice.len]
+        &self.asm.instrs[slice.start..][..slice.len]
     }
     /// Take the entire stack
     pub fn take_stack(&mut self) -> Vec<Value> {

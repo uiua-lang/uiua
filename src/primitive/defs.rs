@@ -1604,6 +1604,17 @@ primitive!(
     ///   : ∵F [1 1 2 2 3 3]
     /// In general, this should only be used with functions that perform a potentially expensive calculation.
     ([1], Memo, OtherModifier, "memo"),
+    /// Run a function at compile time
+    ///
+    /// ex: F ← (⌊×10[⚂⚂⚂])
+    ///   : [F F F]
+    /// ex: F ← comptime(⌊×10[⚂⚂⚂])
+    ///   : [F F F]
+    /// [comptime]'s function must take no arguments.
+    /// If you would like to pass arguments to [comptime]'s function, make them part of the function
+    /// ex! comptime(+) 1 2
+    /// ex: comptime(+ 1 2)
+    ([1], Comptime, OtherModifier, "comptime"),
     /// Spawn a thread
     ///
     /// Expects a function.

@@ -197,7 +197,11 @@ impl fmt::Debug for FormatPrimitive {
 
 impl fmt::Display for FormatPrimitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.0, self.0.name())
+        if self.0.glyph().is_none() {
+            self.0.fmt(f)
+        } else {
+            write!(f, "{} {}", self.0, self.0.name())
+        }
     }
 }
 
@@ -634,6 +638,9 @@ impl Primitive {
                     .entry(id)
                     .or_default()
                     .insert(args, outputs.clone());
+            }
+            Primitive::Comptime => {
+                return Err(env.error("Comptime was not inlined. This is a bug in the interpreter"));
             }
             Primitive::Spawn => {
                 let f = env.pop_function()?;

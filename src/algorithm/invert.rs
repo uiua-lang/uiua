@@ -89,6 +89,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
     // println!("inverting {:?}", instrs);
 
     let patterns: &[&dyn InvertPattern] = &[
+        &invert_call_pattern,
         &invert_dump_pattern,
         &invert_invert_pattern,
         &invert_rectify_pattern,
@@ -188,6 +189,7 @@ pub(crate) fn under_instrs(
     }
 
     let patterns: &[&dyn UnderPattern] = &[
+        &UnderPatternFn(under_call_pattern, "call"),
         &UnderPatternFn(under_dump_pattern, "dump"),
         &UnderPatternFn(under_rows_pattern, "rows"),
         &UnderPatternFn(under_each_pattern, "each"),
@@ -348,74 +350,6 @@ pub(crate) fn under_instrs(
     None
 }
 
-fn box_as_instr(instr: impl AsInstr + 'static) -> Box<dyn AsInstr> {
-    Box::new(instr)
-}
-
-trait AsInstr: fmt::Debug {
-    fn as_instr(&self, span: usize) -> Instr;
-}
-
-#[derive(Debug, Clone, Copy)]
-struct PushTempN(usize);
-impl AsInstr for PushTempN {
-    fn as_instr(&self, span: usize) -> Instr {
-        Instr::PushTemp {
-            stack: TempStack::Under,
-            count: self.0,
-            span,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct CopyToTempN(usize);
-impl AsInstr for CopyToTempN {
-    fn as_instr(&self, span: usize) -> Instr {
-        Instr::CopyToTemp {
-            stack: TempStack::Under,
-            count: self.0,
-            span,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-struct PopTempN(usize);
-impl AsInstr for PopTempN {
-    fn as_instr(&self, span: usize) -> Instr {
-        Instr::PopTemp {
-            stack: TempStack::Under,
-            count: self.0,
-            span,
-        }
-    }
-}
-
-impl AsInstr for i32 {
-    fn as_instr(&self, _: usize) -> Instr {
-        Instr::push(Value::from(*self))
-    }
-}
-
-impl AsInstr for Primitive {
-    fn as_instr(&self, span: usize) -> Instr {
-        Instr::Prim(*self, span)
-    }
-}
-
-impl AsInstr for ImplPrimitive {
-    fn as_instr(&self, span: usize) -> Instr {
-        Instr::ImplPrim(*self, span)
-    }
-}
-
-impl AsInstr for Box<dyn AsInstr> {
-    fn as_instr(&self, span: usize) -> Instr {
-        self.as_ref().as_instr(span)
-    }
-}
-
 trait InvertPattern {
     fn invert_extract<'a>(
         &self,
@@ -431,6 +365,31 @@ trait UnderPattern: fmt::Debug {
         g_sig: Signature,
         comp: &mut Compiler,
     ) -> Option<(&'a [Instr], Under)>;
+}
+
+fn invert_call_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::PushFunc(f), Instr::Call(_), input @ ..] = input else {
+        return None;
+    };
+    let instrs = f.instrs(comp).to_vec();
+    let inverse = invert_instrs(&instrs, comp)?;
+    Some((input, inverse))
+}
+
+fn under_call_pattern<'a>(
+    input: &'a [Instr],
+    g_sig: Signature,
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    let [Instr::PushFunc(f), Instr::Call(_), input @ ..] = input else {
+        return None;
+    };
+    let instrs = f.instrs(comp).to_vec();
+    let (befores, afters) = under_instrs(&instrs, g_sig, comp)?;
+    Some((input, (befores, afters)))
 }
 
 fn invert_trivial_pattern<'a>(
@@ -1447,5 +1406,73 @@ impl UnderPattern for Val {
         } else {
             None
         }
+    }
+}
+
+fn box_as_instr(instr: impl AsInstr + 'static) -> Box<dyn AsInstr> {
+    Box::new(instr)
+}
+
+trait AsInstr: fmt::Debug {
+    fn as_instr(&self, span: usize) -> Instr;
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PushTempN(usize);
+impl AsInstr for PushTempN {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::PushTemp {
+            stack: TempStack::Under,
+            count: self.0,
+            span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CopyToTempN(usize);
+impl AsInstr for CopyToTempN {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::CopyToTemp {
+            stack: TempStack::Under,
+            count: self.0,
+            span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PopTempN(usize);
+impl AsInstr for PopTempN {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::PopTemp {
+            stack: TempStack::Under,
+            count: self.0,
+            span,
+        }
+    }
+}
+
+impl AsInstr for i32 {
+    fn as_instr(&self, _: usize) -> Instr {
+        Instr::push(Value::from(*self))
+    }
+}
+
+impl AsInstr for Primitive {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::Prim(*self, span)
+    }
+}
+
+impl AsInstr for ImplPrimitive {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::ImplPrim(*self, span)
+    }
+}
+
+impl AsInstr for Box<dyn AsInstr> {
+    fn as_instr(&self, span: usize) -> Instr {
+        self.as_ref().as_instr(span)
     }
 }

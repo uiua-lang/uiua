@@ -21,7 +21,7 @@ use crate::{
     Boxed, Uiua, UiuaResult,
 };
 
-use super::{ArrayCmpSlice, FillContext};
+use super::{op_bytes_retry_fill, ArrayCmpSlice, FillContext};
 
 impl Value {
     /// Make the value 1-dimensional
@@ -222,7 +222,13 @@ impl Value {
     pub fn first(self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_into_deep(
             |a| a.first(env).map(Into::into),
-            |a| a.first(env).map(Into::into),
+            |a| {
+                op_bytes_retry_fill(
+                    a,
+                    |a| a.first(env).map(Into::into),
+                    |a| a.first(env).map(Into::into),
+                )
+            },
             |a| a.first(env).map(Into::into),
             |a| a.first(env).map(Into::into),
             |a| a.first(env).map(Into::into),
@@ -232,7 +238,13 @@ impl Value {
     pub fn last(self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_into_deep(
             |a| a.last(env).map(Into::into),
-            |a| a.last(env).map(Into::into),
+            |a| {
+                op_bytes_retry_fill(
+                    a,
+                    |a| a.last(env).map(Into::into),
+                    |a| a.last(env).map(Into::into),
+                )
+            },
             |a| a.last(env).map(Into::into),
             |a| a.last(env).map(Into::into),
             |a| a.last(env).map(Into::into),

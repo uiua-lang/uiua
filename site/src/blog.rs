@@ -44,8 +44,11 @@ fn BlogHome() -> impl IntoView {
         <h1>"Uiua Blog"</h1>
         <Fetch src="/blog/list.txt" f=|list| {
             list.lines().map(|name| {
+                let (path, name) = name.split_once(": ").unwrap_or_default();
+                let (date, name) = name.split_once(" - ").unwrap_or_default();
                 let name = name.to_string();
-                view!(<h3><A href={format!("/blog/{name}")}>{name}</A></h3>)
+                let date = date.to_string();
+                view!(<h3><span class="output-faint">{date}" - "</span><A href={format!("/blog/{path}")}>{name}</A></h3>)
             }).collect::<Vec<_>>().into_view()
         }/>
     }
@@ -58,7 +61,6 @@ fn BlogPage(name: String) -> impl IntoView {
         <A href="/blog">"Back to Blog Home"</A>
         <br/>
         <br/>
-        <h1>{&name}</h1>
         <Markdown src={format!("/blog/{name}.md")}/>
         <br/>
         <br/>

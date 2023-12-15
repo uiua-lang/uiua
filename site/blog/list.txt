@@ -1,0 +1,1 @@
+second-class-functions: 2023-12-15 - Why doesn't Uiua have first-class functions?

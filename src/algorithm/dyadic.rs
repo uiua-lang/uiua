@@ -21,9 +21,9 @@ use crate::{
     Uiua, UiuaResult,
 };
 
-#[cfg(feature = "bytes")]
-use super::{op2_bytes_retry_fill, op_bytes_ref_retry_fill, op_bytes_retry_fill};
-use super::{ArrayCmpSlice, FillContext};
+use super::{
+    op2_bytes_retry_fill, op_bytes_ref_retry_fill, op_bytes_retry_fill, ArrayCmpSlice, FillContext,
+};
 
 impl Value {
     fn coerce_to_functions<T, C: FillContext, E: ToString>(

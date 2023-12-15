@@ -21,9 +21,7 @@ use crate::{
     Boxed, Uiua, UiuaResult,
 };
 
-#[cfg(feature = "bytes")]
-use super::op_bytes_retry_fill;
-use super::{ArrayCmpSlice, FillContext};
+use super::{op_bytes_retry_fill, ArrayCmpSlice, FillContext};
 
 impl Value {
     /// Make the value 1-dimensional

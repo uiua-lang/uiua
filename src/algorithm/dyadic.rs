@@ -2278,65 +2278,68 @@ impl<T: ArrayValue> Array<T> {
         let mut curr = vec![0; searched.shape.len()];
         let mut k = 0;
 
-        'windows: loop {
-            // Reset curr
-            for i in curr.iter_mut() {
-                *i = 0;
-            }
-            // Search the window whose top-left is the current corner
-            'items: loop {
-                // Get index for the current item in the searched array
-                let mut searched_index = 0;
-                let mut stride = 1;
-                for ((c, i), s) in corner.iter().zip(&curr).zip(&searched.shape).rev() {
-                    searched_index += (*c + *i) * stride;
-                    stride *= s;
+        if searched.shape.iter().all(|&d| d > 0) {
+            'windows: loop {
+                // Reset curr
+                for i in curr.iter_mut() {
+                    *i = 0;
                 }
-                // Get index for the current item in the searched-for array
-                let mut search_for_index = 0;
-                let mut stride = 1;
-                for (i, s) in curr.iter().zip(&searched_for_shape).rev() {
-                    search_for_index += *i * stride;
-                    stride *= s;
-                }
-                // Compare the current items in the two arrays
-                let same = if let Some(searched_for) = searched_for.data.get(search_for_index) {
-                    searched.data[searched_index].array_eq(searched_for)
-                } else {
-                    false
-                };
-                if !same {
-                    data_slice[k] = 0;
+                // Search the window whose top-left is the current corner
+                'items: loop {
+                    // Get index for the current item in the searched array
+                    let mut searched_index = 0;
+                    let mut stride = 1;
+                    for ((c, i), s) in corner.iter().zip(&curr).zip(&searched.shape).rev() {
+                        searched_index += (*c + *i) * stride;
+                        stride *= s;
+                    }
+                    // Get index for the current item in the searched-for array
+                    let mut search_for_index = 0;
+                    let mut stride = 1;
+                    for (i, s) in curr.iter().zip(&searched_for_shape).rev() {
+                        search_for_index += *i * stride;
+                        stride *= s;
+                    }
+                    // Compare the current items in the two arrays
+                    let same = if let Some(searched_for) = searched_for.data.get(search_for_index) {
+                        searched.data[searched_index].array_eq(searched_for)
+                    } else {
+                        false
+                    };
+                    if !same {
+                        data_slice[k] = 0;
+                        k += 1;
+                        break;
+                    }
+                    // Go to the next item
+                    for i in (0..curr.len()).rev() {
+                        if curr[i] == searched_for_shape[i] - 1 {
+                            curr[i] = 0;
+                        } else {
+                            curr[i] += 1;
+                            continue 'items;
+                        }
+                    }
+                    data_slice[k] = 1;
                     k += 1;
                     break;
                 }
-                // Go to the next item
-                for i in (0..curr.len()).rev() {
-                    if curr[i] == searched_for_shape[i] - 1 {
-                        curr[i] = 0;
+                // Go to the next corner
+                for i in (0..corner.len()).rev() {
+                    if corner[i] == searched.shape[i] - searched_for_shape[i] {
+                        corner[i] = 0;
                     } else {
-                        curr[i] += 1;
-                        continue 'items;
+                        corner[i] += 1;
+                        continue 'windows;
                     }
                 }
-                data_slice[k] = 1;
-                k += 1;
                 break;
             }
-            // Go to the next corner
-            for i in (0..corner.len()).rev() {
-                if corner[i] == searched.shape[i] - searched_for_shape[i] {
-                    corner[i] = 0;
-                } else {
-                    corner[i] += 1;
-                    continue 'windows;
-                }
-            }
-            let mut arr = Array::new(temp_output_shape, data);
-            arr.fill_to_shape(&searched.shape[..searched_for_shape.len()], 0);
-            arr.validate_shape();
-            break Ok(arr);
         }
+        let mut arr = Array::new(temp_output_shape, data);
+        arr.fill_to_shape(&searched.shape[..searched_for_shape.len()], 0);
+        arr.validate_shape();
+        Ok(arr)
     }
 }
 

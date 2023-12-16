@@ -755,7 +755,16 @@ impl<'a> Formatter<'a> {
                 let mut grid: Vec<Vec<Vec<String>>> = vec![Vec::new(); stacks.len()];
                 for (i, stack) in stacks.iter().enumerate() {
                     for value in stack.iter().take(MAX_HEIGHT) {
-                        grid[i].push(value.show().lines().map(Into::into).collect());
+                        let shown = value.show();
+                        let mut lines = shown.lines();
+                        grid[i].push(lines.by_ref().take(15).map(Into::into).collect());
+                        if lines.next().is_some() {
+                            let mut line = String::new();
+                            for c in grid[i].last().unwrap().last().unwrap().chars() {
+                                line.push(if c.is_alphanumeric() { '⋮' } else { ' ' });
+                            }
+                            grid[i].last_mut().unwrap().push(line);
+                        }
                     }
                 }
                 // Pad grid cells

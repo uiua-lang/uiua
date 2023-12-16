@@ -299,6 +299,9 @@ impl Primitive {
             "id" => return Some(Primitive::Identity),
             "ga" => return Some(Primitive::Gap),
             "pi" => return Some(Primitive::Pi),
+            "ran" => return Some(Primitive::Range),
+            "tra" => return Some(Primitive::Transpose),
+            "par" => return Some(Primitive::Partition),
             _ => {}
         }
         if let Some(prim) = Primitive::non_deprecated().find(|p| p.name() == name) {
@@ -1331,14 +1334,11 @@ mod tests {
             for prim in Primitive::non_deprecated() {
                 if matches!(
                     prim,
-                    Primitive::Range
-                        | Primitive::Rand
-                        | Primitive::Transpose
+                    Primitive::Rand
                         | Primitive::Trace
                         | Primitive::Rectify
                         | Primitive::Recur
                         | Primitive::Parse
-                        | Primitive::Partition
                 ) {
                     continue;
                 }

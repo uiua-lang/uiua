@@ -109,13 +109,9 @@ pub fn format_char_inner(c: char) -> String {
 
 impl GridFmt for char {
     fn fmt_grid(&self, boxed: bool) -> Grid {
-        vec![once(if boxed {
-            Primitive::Box.glyph().unwrap()
-        } else {
-            '@'
-        })
-        .chain(format_char_inner(*self).chars())
-        .collect()]
+        vec![once(if boxed { '⌞' } else { '@' })
+            .chain(format_char_inner(*self).chars())
+            .collect()]
     }
 }
 

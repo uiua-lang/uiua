@@ -900,6 +900,7 @@ code:
                 }
                 // Diagnostic for array of characters
                 if line_count <= 1
+                    && !arr.boxes
                     && !inner.is_empty()
                     && inner.iter().all(
                         |instr| matches!(instr, Instr::Push(Value::Char(arr)) if arr.rank() == 0),

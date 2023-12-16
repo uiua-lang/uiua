@@ -1256,7 +1256,7 @@ code:
                     }
                     modifier if modifier.args() >= 2 => {
                         if sw.branches.len() != modifier.args() {
-                            self.add_error(
+                            return Err(self.fatal_error(
                                 modified.modifier.span.clone().merge(span),
                                 format!(
                                     "{} requires {} function arguments, but the \
@@ -1265,7 +1265,7 @@ code:
                                     modifier.args(),
                                     sw.branches.len()
                                 ),
-                            );
+                            ));
                         }
                         let new = Modified {
                             modifier: modified.modifier.clone(),
@@ -1285,7 +1285,7 @@ code:
             }
         } else {
             // Validate operand count
-            self.add_error(
+            return Err(self.fatal_error(
                 modified.modifier.span.clone(),
                 format!(
                     "{} requires {} function argument{}, but {} {} provided",
@@ -1299,7 +1299,7 @@ code:
                     op_count,
                     if op_count == 1 { "was" } else { "were" }
                 ),
-            );
+            ));
         }
 
         let instrs = self.compile_words(modified.operands, false)?;

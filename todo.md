@@ -2,7 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Allow multiple compiler errors
 - Multimedia
   - Sound input
   - Webcam input
@@ -22,7 +21,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Documentation
 - System functions
-- Second class functions
 
 ## Tooling
 - Discord bot

@@ -596,7 +596,7 @@ enum App {
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },
-    #[clap(about = "Format a uiua file or all files in the current directory")]
+    #[clap(about = "Format a Uiua file or all files in the current directory")]
     Fmt {
         path: Option<PathBuf>,
         #[clap(flatten)]
@@ -605,7 +605,7 @@ enum App {
     #[cfg(feature = "lsp")]
     #[clap(about = "Run the Language Server")]
     Lsp,
-    #[clap(about = "Run very simple REPL")]
+    #[clap(about = "Run the Uiua interpreter in a REPL")]
     Repl {
         #[clap(flatten)]
         formatter_options: FormatterOptions,

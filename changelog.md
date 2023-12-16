@@ -4,7 +4,7 @@ Uiua is not yet stable.
 
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
-## 0.7.0 - 2023-12-??
+## 0.7.0 - 2023-12-15
 ### Language
 - An entire Uiua codebase is now compiled before it is executed, rather than compiling and executing line-by-line
 - Add the [`memo`](https://uiua.org/docs/memo) modifier, which memoizes a function

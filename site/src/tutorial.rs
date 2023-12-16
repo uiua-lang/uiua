@@ -752,6 +752,16 @@ X ← (
   ↥⇌.  # Then this one
 )
 X 5"/>
+        <p>"Output comments inside inline functions will show the values on the stack for each time the function is called. Try it out!"</p>
+        <Editor example="\
+F ← (
+  ### Run to see values here!
+  +×.
+  ##
+)
+F 3 5
+F 2 9
+F 10 11"/>
 
         <h2 id="local-bindings">"A Note on Local Bindings"</h2>
         <p>"Bindings in Uiua can "<em>"only"</em>" be global. There is no way to give a name to a value within an inline function. A "<code>"←"</code>" inside "<code>"()"</code>"s is a syntax error."</p>

@@ -18,7 +18,7 @@ Uiua is not yet stable.
 - Add output comments, which the formatter fills with values from the stack
   - Make an empty comment starting with `n` additional `#`s
   - The formatter will replace the comment with the top `n` values from the stack
-  - Output comments can only be defined in the top-level scope
+  - Output comments in functions will show a number of values present on the stack for each time the function is called
 ### Interpreter
 - LSP improvements
   - Add hover information on binding references

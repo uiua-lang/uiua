@@ -1015,7 +1015,7 @@ FmtPerson PassYear Dan"#/>
         <Editor example="MyFirst ← setinv(⊢|[∘])\nMyFirst [1 2 3]\n°MyFirst 5"/>
         <p>"This inverse is also compatible with "<Prim prim=Under/>"."</p>
         <Editor example="MyFirst ← setinv⊢[∘]\n⍜⊢(×10) [2 3 4]\n⍜MyFirst(×10) [2 3 4]"/>
-        <p><Prim prim=SetUnder/>" is more complicated. See it's documentation for how to use it."</p>
+        <p><Prim prim=SetUnder/>" is more complicated. See its documentation for how to use it."</p>
         <p><Prim prim=SetInverse/>" and "<Prim prim=SetUnder/>" can be nested so that an inverse can be fully defined in all cases."</p>
         <p>"This example shows how the different inverses get called."</p>
         <Editor example=r#"F ← setund(setinv("normal"|"inverse")|"do"|"undo")

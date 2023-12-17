@@ -101,7 +101,7 @@ impl<T: Clone + std::fmt::Debug> Array<T> {
             if !a_prefix.iter().zip(b_prefix).all(|(a, b)| a == b) {
                 return Err(ctx.error(format!(
                     "Cannot combine arrays with shapes {} and {} \
-                because shape prefixes {} and {} are not compatible",
+                    because shape prefixes {} and {} are not compatible",
                     a.format_shape(),
                     b.format_shape(),
                     FormatShape(a_prefix),
@@ -707,7 +707,20 @@ impl Value {
             match self {
                 Value::Num(a) => a.reshape(&target_shape, env),
                 #[cfg(feature = "bytes")]
-                Value::Byte(a) => a.reshape(&target_shape, env),
+                Value::Byte(a) => {
+                    *self = op_bytes_retry_fill(
+                        take(a),
+                        |mut a| {
+                            a.reshape(&target_shape, env)?;
+                            Ok(a.into())
+                        },
+                        |mut a| {
+                            a.reshape(&target_shape, env)?;
+                            Ok(a.into())
+                        },
+                    )?;
+                    Ok(())
+                }
                 Value::Complex(a) => a.reshape(&target_shape, env),
                 Value::Char(a) => a.reshape(&target_shape, env),
                 Value::Box(a) => a.reshape(&target_shape, env),
@@ -769,9 +782,11 @@ impl<T: ArrayValue> Array<T> {
                 Err(e) => {
                     if self.data.is_empty() {
                         if !shape.contains(&0) {
-                            return Err(env.error(format!(
-                                "Cannot reshape empty array without a fill value{e}"
-                            )));
+                            return Err(env
+                                .error(format!(
+                                    "Cannot reshape empty array without a fill value{e}"
+                                ))
+                                .fill());
                         }
                     } else if self.rank() == 0 {
                         self.data = cowslice![self.data[0].clone(); target_len];

@@ -659,11 +659,14 @@ code:
         // Extract function instrs if possible
         if let [Instr::PushFunc(f)] = instrs.as_slice() {
             sig = Some(f.signature());
-            let start = f.slice.start;
+            let slice = f.slice;
             instrs = f.instrs(self).into();
-            self.asm.instrs.truncate(start);
-            if matches!(self.asm.instrs.last(), Some(Instr::Comment(com)) if com.starts_with('(')) {
-                self.asm.instrs.pop();
+            if slice.start + slice.len >= self.asm.instrs.len() - 1 {
+                self.asm.instrs.truncate(slice.start);
+                if matches!(self.asm.instrs.last(), Some(Instr::Comment(com)) if com.starts_with('('))
+                {
+                    self.asm.instrs.pop();
+                }
             }
         }
         let sig = if let Some(sig) = sig {

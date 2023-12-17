@@ -222,7 +222,9 @@ code:
     pub(crate) fn items(&mut self, items: Vec<Item>, in_test: bool) -> UiuaResult {
         let mut prev_comment = None;
         for item in items {
-            self.item(item, in_test, &mut prev_comment)?;
+            if let Err(e) = self.item(item, in_test, &mut prev_comment) {
+                self.errors.push(e);
+            }
         }
         Ok(())
     }
@@ -994,7 +996,7 @@ code:
         } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
             self.push_instr(Instr::push(constant.value.clone()));
         } else {
-            self.add_error(span, format!("Unknown identifier `{ident}`"));
+            self.fatal_error(span, format!("Unknown identifier `{ident}`"));
         }
         Ok(())
     }

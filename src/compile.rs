@@ -706,7 +706,7 @@ code:
                                         ),
                                     )
                                 })?;
-                                self.global_index(index, next.span.clone(), call);
+                                self.global_index(index, next.span.clone(), false);
                                 words.next();
                                 continue;
                             } else {

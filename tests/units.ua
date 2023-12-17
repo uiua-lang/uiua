@@ -239,9 +239,11 @@ Ex ← &i "example.ua"
   Foo ← Ex "Foo"
   Incr ← Ex "Increment"
   Dub ← Ex "Double"
+  Mod! ← Ex "Mod!"
 ⍤⊃⋅∘≍ 12 Dub Incr Foo
 Square ← &i "example.ua" "Square"
 ⍤⊃⋅∘≍ 25 Square 5
+⍤⊃⋅∘≍ 15 Mod!+
 
 # Euler's identity
 ⍤⊃⋅∘≍ 0 ⍜(×1e12)⁅ ⌵+1 ⁿ×iπ e

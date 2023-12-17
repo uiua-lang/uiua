@@ -4,6 +4,10 @@ Uiua is not yet stable.
 
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.7.1 - 2023-12-??
+### Interpreter
+- Fix some bugs and crashes
+
 ## 0.7.0 - 2023-12-15
 ### Language
 - An entire Uiua codebase is now compiled before it is executed, rather than compiling and executing line-by-line

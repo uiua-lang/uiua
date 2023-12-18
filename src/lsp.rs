@@ -366,12 +366,12 @@ mod server {
             if binding_range.is_none() {
                 for (name, index) in &doc.asm.global_references {
                     let binding = &doc.asm.bindings[*index];
-                    if let Some(span) = &binding.span {
+                    if name.span.contains_line_col(line, col) {
                         binding_range = Some((
                             name.value.to_string(),
                             binding.global.signature(),
                             binding.comment.clone(),
-                            uiua_span_to_lsp(span),
+                            uiua_span_to_lsp(&name.span),
                         ));
                         break;
                     }

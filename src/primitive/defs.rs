@@ -1252,7 +1252,7 @@ primitive!(
     /// ex: [⊃⋅⊙∘(++) 3 5 10]
     /// ex: [⊃⊙∘(++) 3 5 10]
     ///
-    /// [dip] is compatible with switch functions.
+    /// [dip] is compatible with function packs.
     /// It is equivalent to nesting [dip]s.
     /// ⚠ Using [dip] in this way is experimental and may change in the future.
     /// ex: +⊙(×⊙(↙⊙↘)) 2 10 3 1 [1 2 3 4 5]

@@ -358,19 +358,23 @@ mod server {
                             binding.comment.clone(),
                             uiua_span_to_lsp(span),
                         ));
+                        break;
                     }
                 }
             }
             // Hovering the name of a binding reference
-            for (name, index) in &doc.asm.global_references {
-                let binding = &doc.asm.bindings[*index];
-                if let Some(span) = &binding.span {
-                    binding_range = Some((
-                        name.value.to_string(),
-                        binding.global.signature(),
-                        binding.comment.clone(),
-                        uiua_span_to_lsp(span),
-                    ));
+            if binding_range.is_none() {
+                for (name, index) in &doc.asm.global_references {
+                    let binding = &doc.asm.bindings[*index];
+                    if let Some(span) = &binding.span {
+                        binding_range = Some((
+                            name.value.to_string(),
+                            binding.global.signature(),
+                            binding.comment.clone(),
+                            uiua_span_to_lsp(span),
+                        ));
+                        break;
+                    }
                 }
             }
             Ok(Some(if let Some((prim, range)) = prim_range {

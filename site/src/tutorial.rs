@@ -983,7 +983,7 @@ fn TutorialInverses() -> impl IntoView {
         <p>"If the values passed to "<Prim prim=Under/>"'s functions are not constants, they can also be put outside, albeit in a different order."</p>
         <Editor example="⍜⊡× 2 [1 2 3 4] 10"/>
         <p>"This works because "<Prim prim=Under/>" keeps track of the original array and passes it to the inversion of "<Prim prim=Pick/>"."</p>
-        <p>"If you wanted to set a value in an array rather than modifying it, you could use "<Prim prim=Pop/>" or "<Prim prim=Gap/>" instead or "<Prim prim=Mul/>"."</p>
+        <p>"If you wanted to set a value in an array rather than modifying it, you could use "<Prim prim=Pop/>" or "<Prim prim=Gap/>" instead of "<Prim prim=Mul/>"."</p>
         <Editor example="⍜(⊡2)⋅∞ [1 2 3 4]\n⍜⊡; 2 [1 2 3 4] ∞"/>
         <p>"It's not just "<Prim prim=Pick/>"! Many functions work with "<Prim prim=Under/>"!"</p>
         <Editor example="⍜(↙2)/× [3 5 4 2]"/>

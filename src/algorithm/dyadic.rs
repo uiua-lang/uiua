@@ -1934,7 +1934,21 @@ impl Value {
         let (ind_shape, ind) = index.as_shaped_indices(env)?;
         let mut sorted_indices = ind.clone();
         sorted_indices.sort();
-        if sorted_indices.windows(2).any(|win| win[0] == win[1]) {
+        if sorted_indices.windows(2).any(|win| {
+            let a = win[0];
+            let b = win[1];
+            let a = if a >= 0 {
+                a as usize
+            } else {
+                into.row_count() - a.unsigned_abs()
+            };
+            let b = if b >= 0 {
+                b as usize
+            } else {
+                into.row_count() - b.unsigned_abs()
+            };
+            a == b
+        }) {
             return Err(env.error("Cannot undo selection with duplicate indices"));
         }
         self.generic_bin_into(

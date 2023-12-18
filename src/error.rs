@@ -12,6 +12,7 @@ use crate::{
 
 /// An error produced when running a Uiua program
 #[derive(Debug, Clone)]
+#[must_use]
 pub enum UiuaError {
     /// An error occurred while loading a file
     Load(PathBuf, Arc<io::Error>),

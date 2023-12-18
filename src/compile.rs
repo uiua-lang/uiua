@@ -999,7 +999,7 @@ code:
         } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
             self.push_instr(Instr::push(constant.value.clone()));
         } else {
-            self.fatal_error(span, format!("Unknown identifier `{ident}`"));
+            return Err(self.fatal_error(span, format!("Unknown identifier `{ident}`")));
         }
         Ok(())
     }

@@ -14,7 +14,7 @@ version = "0.7.0"
 # Core dependencies
 bufreaderwriter = "0.2.4"
 colored = "2"
-crossbeam-channel = "0.5.8"
+crossbeam-channel = "0.5.9"
 dashmap = {version = "5", features = ["serde"]}
 ecow = {version = "0.2.0", features = ["serde"]}
 enum-iterator = "1.4.1"

@@ -216,6 +216,25 @@ impl Inputs {
                 .clone(),
         }
     }
+    /// Get an input string and perform an operation on it
+    pub fn get_with<T>(&self, src: &InputSrc, f: impl FnOnce(&str) -> T) -> T {
+        match src {
+            InputSrc::File(path) => {
+                if let Some(src) = self.files.get(&**path) {
+                    f(&src)
+                } else {
+                    panic!("File {:?} not found", path)
+                }
+            }
+            InputSrc::Str(index) => {
+                if let Some(src) = self.strings.get(*index) {
+                    f(src)
+                } else {
+                    panic!("String {} not found", index)
+                }
+            }
+        }
+    }
 }
 
 impl Serialize for Instr {

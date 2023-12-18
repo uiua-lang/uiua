@@ -287,7 +287,7 @@ impl CodeSpan {
     }
     /// Get the text of the span from the inputs
     pub fn as_str<T>(&self, inputs: &Inputs, f: impl FnOnce(&str) -> T) -> T {
-        f(&inputs.get(&self.src)[self.byte_range()])
+        inputs.get_with(&self.src, |input| f(&input[self.byte_range()]))
     }
     /// Get just the span of the first character
     pub fn just_start(&self, inputs: &Inputs) -> Self {

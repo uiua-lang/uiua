@@ -273,8 +273,7 @@ fn run() -> UiuaResult {
                             })
                             .unwrap_or_else(|| "program".into());
                         let path = PathBuf::from(name).with_extension(env::consts::EXE_EXTENSION);
-                        #[allow(clippy::needless_borrows_for_generic_args)]
-                        if let Err(e) = fs::write(&path, bytes) {
+                        if let Err(e) = fs::write(path, bytes) {
                             eprintln!("Failed to write executable: {e}");
                             exit(1);
                         }

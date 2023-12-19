@@ -696,7 +696,7 @@ fn clear_watching() {
 fn clear_watching_with(s: &str, end: &str) {
     print!(
         "\r{}{}",
-        s.repeat(terminal_size::terminal_size().map_or(10, |(w, _)| w.0 as usize)),
+        s.repeat(term_size::dimensions().map_or(10, |(w, _)| w)),
         end,
     );
 }

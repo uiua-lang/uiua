@@ -431,6 +431,8 @@ impl FromIterator<String> for Array<Boxed> {
 pub trait ArrayValue: Clone + Debug + Display + GridFmt + ArrayCmp + Send + Sync + 'static {
     /// The type name
     const NAME: &'static str;
+    /// A glyph indicating the type
+    const SYMBOL: char;
     /// Get the fill value from the environment
     fn get_fill(env: &Uiua) -> Result<Self, &'static str>;
     /// Hash the value
@@ -449,6 +451,7 @@ pub trait ArrayValue: Clone + Debug + Display + GridFmt + ArrayCmp + Send + Sync
 
 impl ArrayValue for f64 {
     const NAME: &'static str = "number";
+    const SYMBOL: char = 'ℝ';
     fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.num_fill()
     }
@@ -469,6 +472,7 @@ impl ArrayValue for f64 {
 
 impl ArrayValue for u8 {
     const NAME: &'static str = "number";
+    const SYMBOL: char = 'ℝ';
     fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.byte_fill()
     }
@@ -482,6 +486,7 @@ impl ArrayValue for u8 {
 
 impl ArrayValue for char {
     const NAME: &'static str = "character";
+    const SYMBOL: char = '@';
     fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.char_fill()
     }
@@ -501,6 +506,7 @@ impl ArrayValue for char {
 
 impl ArrayValue for Boxed {
     const NAME: &'static str = "box";
+    const SYMBOL: char = '□';
     fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.box_fill()
     }
@@ -514,6 +520,7 @@ impl ArrayValue for Boxed {
 
 impl ArrayValue for Complex {
     const NAME: &'static str = "complex";
+    const SYMBOL: char = 'ℂ';
     fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.complex_fill()
     }

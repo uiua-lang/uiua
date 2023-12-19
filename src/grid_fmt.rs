@@ -142,6 +142,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         }
         let stringy = type_name::<T>() == type_name::<char>();
         let boxy = type_name::<T>() == type_name::<Boxed>();
+        let complexy = type_name::<T>() == type_name::<Complex>();
         if *self.shape == [0] {
             return if stringy {
                 if boxed {
@@ -153,6 +154,8 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 let (left, right) = if boxed { ('⟦', '⟧') } else { ('[', ']') };
                 if boxy {
                     vec![vec![left, '□', right]]
+                } else if complexy {
+                    vec![vec![left, 'ℂ', right]]
                 } else {
                     vec![vec![left, right]]
                 }
@@ -252,12 +255,12 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         let mut shape_row = Vec::new();
         for (i, dim) in shape.iter().enumerate() {
             if i > 0 {
-                shape_row.extend(" × ".chars());
+                shape_row.extend("×".chars());
             }
             shape_row.extend(dim.to_string().chars());
         }
         shape_row.push(' ');
-        shape_row.extend(T::NAME.chars());
+        shape_row.push(T::SYMBOL);
         metagrid.push(vec![vec![shape_row]]);
         return;
     }

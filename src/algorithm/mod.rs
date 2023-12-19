@@ -396,13 +396,8 @@ fn op_bytes_retry_fill<T>(
 ) -> UiuaResult<T> {
     match on_bytes(bytes.clone()) {
         Ok(res) => Ok(res),
-        Err(err) => {
-            if err.is_fill() {
-                on_nums(bytes.convert())
-            } else {
-                Err(err)
-            }
-        }
+        Err(err) if err.is_fill() => on_nums(bytes.convert()),
+        Err(err) => Err(err),
     }
 }
 
@@ -415,13 +410,8 @@ fn op_bytes_ref_retry_fill<T>(
 ) -> UiuaResult<T> {
     match on_bytes(bytes) {
         Ok(res) => Ok(res),
-        Err(err) => {
-            if err.is_fill() {
-                on_nums(&bytes.clone().convert())
-            } else {
-                Err(err)
-            }
-        }
+        Err(err) if err.is_fill() => on_nums(&bytes.clone().convert()),
+        Err(err) => Err(err),
     }
 }
 
@@ -435,13 +425,8 @@ fn op2_bytes_retry_fill<T, C: FillContext>(
 ) -> Result<T, C::Error> {
     match on_bytes(a.clone(), b.clone()) {
         Ok(res) => Ok(res),
-        Err(err) => {
-            if C::is_fill_error(&err) {
-                on_nums(a.convert(), b.convert())
-            } else {
-                Err(err)
-            }
-        }
+        Err(err) if C::is_fill_error(&err) => on_nums(a.convert(), b.convert()),
+        Err(err) => Err(err),
     }
 }
 

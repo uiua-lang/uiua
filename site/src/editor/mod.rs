@@ -1206,6 +1206,8 @@ or \"embedpad\" to embed the editor"
                             <div
                                 id={code_id}
                                 contenteditable="true"
+                                autocorrect="false"
+                                autocapitalize="false"
                                 spellcheck="false"
                                 class="code-entry"
                                 style={format!("height: {code_height_em}em;")}

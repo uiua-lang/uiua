@@ -1712,8 +1712,22 @@ code:
                 let mut env = Uiua::with_backend(self.backend.clone());
                 env.run_asm(&asm)?;
                 let values = env.take_stack();
+                if !call {
+                    self.new_functions.push(EcoVec::new());
+                }
+                let val_count = values.len();
                 for value in values {
                     self.push_instr(Instr::push(value));
+                }
+                if !call {
+                    let instrs = self.new_functions.pop().unwrap();
+                    let sig = Signature::new(0, val_count);
+                    let func = self.add_function(
+                        FunctionId::Anonymous(modified.modifier.span.clone()),
+                        sig,
+                        instrs,
+                    );
+                    self.push_instr(Instr::PushFunc(func));
                 }
             }
             _ => return Ok(false),

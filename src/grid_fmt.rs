@@ -224,7 +224,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             }
             *grid.last_mut().unwrap().last_mut().unwrap() = if boxed { '╜' } else { '╯' };
             // Handle really big grid
-            let max_width = terminal_size::terminal_size().map_or(54, |(w, _)| w.0 as usize);
+            let max_width = term_size::dimensions().map_or(54, |(w, _)| w);
             for row in grid.iter_mut() {
                 if row.len() > max_width {
                     let diff = row.len() - max_width;

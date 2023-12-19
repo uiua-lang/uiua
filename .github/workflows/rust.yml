@@ -23,8 +23,10 @@ jobs:
     - name: Run interpreter tests
       run: cargo test --lib
     - name: Run interpreter tests (no default)
-      run: cargo c --lib --no-default-features
+      run: cargo test --lib --no-default-features
     - name: Run interpreter tests (audio)
       run: cargo test --lib --features audio
     - name: Run site tests
-      run: cargo test -p site
+      run: cargo test -p site 
+    - name: Check site
+      run: cargo check -p site --target wasm32-unknown-unknown

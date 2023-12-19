@@ -281,7 +281,7 @@ impl Primitive {
     /// Check if this primitive is experimental
     pub fn is_experimental(&self) -> bool {
         use Primitive::*;
-        matches!(self, Rectify | This | Recur | All)
+        matches!(self, Rectify | This | Recur | All | Cascade)
     }
     /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {
@@ -548,6 +548,9 @@ impl Primitive {
             }
             Primitive::Fork => {
                 return Err(env.error("Fork was not inlined. This is a bug in the interpreter"))
+            }
+            Primitive::Cascade => {
+                return Err(env.error("Cascade was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Bracket => {
                 return Err(env.error("Bracket was not inlined. This is a bug in the interpreter"))

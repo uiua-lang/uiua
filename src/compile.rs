@@ -1260,6 +1260,31 @@ code:
                         }
                         return self.modified(new, call);
                     }
+                    Modifier::Primitive(Primitive::Cascade) => {
+                        let mut branches = sw.branches.into_iter().rev();
+                        let mut new = Modified {
+                            modifier: modified.modifier.clone(),
+                            operands: {
+                                let mut ops: Vec<_> = branches
+                                    .by_ref()
+                                    .take(2)
+                                    .map(|w| w.map(Word::Func))
+                                    .collect();
+                                ops.reverse();
+                                ops
+                            },
+                        };
+                        for branch in branches {
+                            new = Modified {
+                                modifier: modified.modifier.clone(),
+                                operands: vec![
+                                    branch.map(Word::Func),
+                                    span.clone().sp(Word::Modified(Box::new(new))),
+                                ],
+                            };
+                        }
+                        return self.modified(new, call);
+                    }
                     modifier if modifier.args() >= 2 => {
                         if sw.branches.len() != modifier.args() {
                             return Err(self.fatal_error(
@@ -1462,6 +1487,45 @@ code:
                 });
                 instrs.extend(a_instrs);
                 let sig = Signature::new(a_sig.args.max(b_sig.args), a_sig.outputs + b_sig.outputs);
+                if call {
+                    self.push_instr(Instr::PushSig(sig));
+                    self.push_all_instrs(instrs);
+                    self.push_instr(Instr::PopSig);
+                } else {
+                    let func = self.add_function(
+                        FunctionId::Anonymous(modified.modifier.span.clone()),
+                        sig,
+                        instrs,
+                    );
+                    self.push_instr(Instr::PushFunc(func));
+                }
+            }
+            Cascade => {
+                let mut operands = modified.code_operands().cloned();
+                let (a_instrs, a_sig) =
+                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let (b_instrs, b_sig) =
+                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let span = self.add_span(modified.modifier.span.clone());
+                let count = a_sig.args.saturating_sub(b_sig.outputs);
+                let mut instrs = Vec::new();
+                if count > 0 {
+                    instrs.push(Instr::CopyToTemp {
+                        stack: TempStack::Inline,
+                        count,
+                        span,
+                    });
+                }
+                instrs.extend(b_instrs);
+                if count > 0 {
+                    instrs.push(Instr::PopTemp {
+                        stack: TempStack::Inline,
+                        count,
+                        span,
+                    });
+                }
+                instrs.extend(a_instrs);
+                let sig = Signature::new(b_sig.args, a_sig.outputs);
                 if call {
                     self.push_instr(Instr::PushSig(sig));
                     self.push_all_instrs(instrs);

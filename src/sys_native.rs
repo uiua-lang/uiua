@@ -148,7 +148,9 @@ impl SysBackend for NativeSys {
         NATIVE_SYS.colored_errors.insert(message, colored);
     }
     fn term_size(&self) -> Result<(usize, usize), String> {
-        let (w, h) = term_size::dimensions().ok_or("Failed to get terminal size")?;
+        let (w, h) = terminal_size::terminal_size()
+            .ok_or("Failed to get terminal size")
+            .map(|(w, h)| (w.0 as usize, h.0 as usize))?;
         Ok((w, h.saturating_sub(1)))
     }
     #[cfg(feature = "raw_mode")]
@@ -254,7 +256,8 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "terminal_image")]
     fn show_image(&self, image: image::DynamicImage) -> Result<(), String> {
-        let (width, height) = if let Some((w, h)) = term_size::dimensions() {
+        let dim = terminal_size::terminal_size().map(|(w, h)| (w.0 as usize, h.0 as usize));
+        let (width, height) = if let Some((w, h)) = dim {
             let (tw, th) = (w as u32, h.saturating_sub(1) as u32);
             let (iw, ih) = (image.width(), image.height() / 2);
             let scaled_to_height = (iw * th / ih.max(1), th);

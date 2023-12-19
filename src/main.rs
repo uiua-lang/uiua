@@ -273,7 +273,7 @@ fn run() -> UiuaResult {
                             })
                             .unwrap_or_else(|| "program".into());
                         let path = PathBuf::from(name).with_extension(env::consts::EXE_EXTENSION);
-                        #[allow(clippy::needless_borrow)]
+                        #[allow(clippy::needless_borrows_for_generic_args)]
                         if let Err(e) = fs::write(&path, bytes) {
                             eprintln!("Failed to write executable: {e}");
                             exit(1);
@@ -696,7 +696,7 @@ fn clear_watching() {
 fn clear_watching_with(s: &str, end: &str) {
     print!(
         "\r{}{}",
-        s.repeat(term_size::dimensions().map_or(10, |(w, _)| w)),
+        s.repeat(terminal_size::terminal_size().map_or(10, |(w, _)| w.0 as usize)),
         end,
     );
 }

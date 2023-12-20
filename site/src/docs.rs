@@ -395,6 +395,7 @@ impl Allowed {
                 ("filesystem", &[PrimClass::Sys(SysOpClass::Filesystem)]),
                 ("stream", &[PrimClass::Sys(SysOpClass::Stream)]),
                 ("stdio", &[PrimClass::Sys(SysOpClass::StdIO)]),
+                ("map", &[PrimClass::Map]),
                 ("misc", &[PrimClass::Sys(SysOpClass::Misc)]),
             ] {
                 if pattern.split_whitespace().any(|pat| pat.starts_with(part)) {
@@ -436,6 +437,7 @@ impl Allowed {
                 PrimClass::InversionModifier => "inversion-modifiers",
                 PrimClass::OtherModifier => "other-modifiers",
                 PrimClass::Planet => "planet-modifiers",
+                PrimClass::Map => "map-functions",
                 PrimClass::Misc => "misc-functions",
                 PrimClass::Sys(_) => "system-functions",
             };
@@ -498,6 +500,7 @@ impl Allowed {
                     view!(<a class="clean" href="/docs/advancedstack#planet-notation">"🌎 Planet 🪐"</a>).into_view(),
                     "Advanced stack manipulation",
                 ),
+                PrimClass::Map => ("Map".into_view(), "Use arrays as hash maps"),
                 PrimClass::Misc => ("Miscellaneous".into_view(), ""),
                 PrimClass::Sys(class) => {
                     match class {

@@ -6,7 +6,7 @@ Uiua is not yet stable.
 
 ## 0.8.0 - 202?-??-??
 ### Language
-- Add the experimental [`cascade` `⊇`](https://uiua.org/docs/cascade) modifier, which captures some common [`fork` `⊃`](https://uiua.org/docs/fork) patterns
+- Add the experimental [`cascade` `⪾`](https://uiua.org/docs/cascade) modifier, which captures some common [`fork` `⊃`](https://uiua.org/docs/fork) patterns
 
 ## 0.7.1 - 2023-12-18
 ### Interpreter

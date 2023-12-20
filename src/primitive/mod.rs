@@ -282,7 +282,21 @@ impl Primitive {
     /// Check if this primitive is experimental
     pub fn is_experimental(&self) -> bool {
         use Primitive::*;
-        matches!(self, Rectify | This | Recur | All | Cascade)
+        matches!(
+            self,
+            Rectify
+                | This
+                | Recur
+                | All
+                | Cascade
+                | Insert
+                | Has
+                | Get
+                | Remove
+                | Keys
+                | Values
+                | Shrink
+        )
     }
     /// Check if this primitive is deprecated
     pub fn is_deprecated(&self) -> bool {

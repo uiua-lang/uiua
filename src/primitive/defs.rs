@@ -1785,6 +1785,18 @@ primitive!(
     /// ex: ↧5 ∞
     /// ex: ↥5 ∞
     (0, Infinity, Constant, ("infinity", '∞')),
+    /// Check if a map array has a key
+    (2, Has, Misc, "has"),
+    /// Get the value corresponding to a key in a map array
+    (2, Get, Map, "get"),
+    /// Insert a key-value pair into a map array
+    (3, Insert, Map, "insert"),
+    /// Remove the value corresponding to a key from a map array
+    (2, Remove, Map, "remove"),
+    /// Get the keys of a map array
+    (1, Keys, Map, "keys"),
+    /// Get the values of a map array
+    (1, Values, Map, "values"),
     /// Debug print all stack values without popping them
     ///
     /// This is equivalent to [dump][identity], but is easier to type.

@@ -309,6 +309,10 @@ impl Array<Boxed> {
             Err(a) => Err(a),
         }
     }
+    /// Attempt to unbox a scalar box array
+    pub fn as_unboxed(&self) -> Option<&Value> {
+        self.as_scalar().map(|v| &v.0)
+    }
 }
 
 impl<T: ArrayValue + ArrayCmp<U>, U: ArrayValue> PartialEq<Array<U>> for Array<T> {

@@ -125,7 +125,7 @@ impl Value {
             (Value::Complex(a), Value::Byte(b)) => a.join_impl(b.convert(), ctx)?.into(),
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Complex(b)) => a.convert().join_impl(b, ctx)?.into(),
-            (a, b) => a.coerce_to_functions(
+            (a, b) => a.bin_coerce_to_boxes(
                 b,
                 ctx,
                 |a, b, env| Ok(a.join_impl(b, env)?.into()),
@@ -186,7 +186,7 @@ impl Value {
                 a.append(b, ctx)?;
                 *self = a.into();
             }
-            (a, b) => a.coerce_to_functions_mut(
+            (a, b) => a.bin_coerce_to_boxes_mut(
                 b,
                 ctx,
                 |a, b, env| a.append(b, env),
@@ -393,7 +393,7 @@ impl Value {
                 a.couple_impl(b, ctx)?;
                 *self = a.into();
             }
-            (a, b) => a.coerce_to_functions_mut(
+            (a, b) => a.bin_coerce_to_boxes_mut(
                 b,
                 ctx,
                 |a, b, ctx| a.couple_impl(b, ctx),

@@ -25,7 +25,7 @@ use crate::{
 use super::{op_bytes_retry_fill, ArrayCmpSlice, FillContext};
 
 impl Value {
-    fn coerce_to_functions<T, C: FillContext, E: ToString>(
+    pub(crate) fn bin_coerce_to_boxes<T, C: FillContext, E: ToString>(
         self,
         other: Self,
         ctx: &C,
@@ -39,7 +39,7 @@ impl Value {
             (a, b) => Err(ctx.error(on_error(a.type_name(), b.type_name()))),
         }
     }
-    fn coerce_to_functions_mut<T, C: FillContext, E: ToString>(
+    pub(crate) fn bin_coerce_to_boxes_mut<T, C: FillContext, E: ToString>(
         &mut self,
         other: Self,
         ctx: &C,
@@ -449,7 +449,7 @@ impl Value {
             (Value::Num(a), Value::Byte(b)) => a.unkeep(&counts, b.convert(), env)?.into(),
             #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => a.convert().unkeep(&counts, b, env)?.into(),
-            (a, b) => a.coerce_to_functions(
+            (a, b) => a.bin_coerce_to_boxes(
                 b,
                 env,
                 |a, b, env| Ok(a.unkeep(&counts, b, env)?.into()),

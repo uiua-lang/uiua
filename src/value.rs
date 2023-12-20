@@ -933,6 +933,15 @@ impl Value {
             value => value,
         }
     }
+    pub(crate) fn unpacked_ref(&self) -> &Self {
+        match self {
+            Self::Box(arr) => match arr.as_unboxed() {
+                Some(value) => value.unpacked_ref(),
+                None => self,
+            },
+            value => value,
+        }
+    }
     /// Apply a function to the highest-level unboxed value
     pub fn map_boxed(self, f: impl FnOnce(Self) -> Self) -> Self {
         match self {

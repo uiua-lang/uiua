@@ -16,6 +16,7 @@ use crate::{
 mod dyadic;
 pub(crate) mod invert;
 pub mod loops;
+pub(crate) mod map;
 mod monadic;
 pub mod pervade;
 pub mod reduce;

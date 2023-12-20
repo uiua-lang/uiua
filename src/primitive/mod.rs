@@ -53,6 +53,7 @@ pub enum PrimClass {
     InversionModifier,
     OtherModifier,
     Planet,
+    Map,
     Misc,
     Sys(SysOpClass),
 }
@@ -689,6 +690,40 @@ impl Primitive {
                 let _before = env.pop_function()?;
                 let _after = env.pop_function()?;
                 env.call(f)?;
+            }
+            Primitive::Insert => {
+                let key = env.pop("key")?;
+                let val = env.pop("value")?;
+                let mut map = env.pop("map")?;
+                map.insert(key, val, env)?;
+                env.push(map);
+            }
+            Primitive::Has => {
+                let key = env.pop("key")?;
+                let map = env.pop("map")?;
+                env.push(map.has_key(&key, env)?);
+            }
+            Primitive::Get => {
+                let key = env.pop("key")?;
+                let map = env.pop("map")?;
+                let val = map.get(&key, env)?;
+                env.push(val);
+            }
+            Primitive::Remove => {
+                let key = env.pop("key")?;
+                let mut map = env.pop("map")?;
+                map.remove(&key, env)?;
+                env.push(map);
+            }
+            Primitive::Keys => {
+                let map = env.pop("map")?;
+                let keys = map.keys(env)?;
+                env.push(keys);
+            }
+            Primitive::Values => {
+                let map = env.pop("map")?;
+                let values = map.values(env)?;
+                env.push(values);
             }
             Primitive::Trace => trace(env, false)?,
             Primitive::Stack => stack(env, false)?,

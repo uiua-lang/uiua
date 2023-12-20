@@ -241,7 +241,9 @@ impl<'a> MapRefMut<'a> {
         }
     }
     fn insert(&mut self, key: Value, value: Value) {
-        self.grow();
+        if self.0.row_count() == 0 {
+            self.grow();
+        }
         let start = self.as_ref().hash_start(&key);
         let mut index = start;
         loop {
@@ -261,6 +263,11 @@ impl<'a> MapRefMut<'a> {
                 break;
             }
             index = (index + 1) % self.capacity();
+            if index == start {
+                self.grow();
+                self.insert(key, value);
+                break;
+            }
         }
     }
     fn remove(&mut self, key: &Value) {

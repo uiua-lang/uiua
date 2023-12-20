@@ -1785,17 +1785,55 @@ primitive!(
     /// ex: ↧5 ∞
     /// ex: ↥5 ∞
     (0, Infinity, Constant, ("infinity", '∞')),
+    /// Insert a key-value pair into a map array
+    ///
+    /// ex: {}
+    ///   : insert "hi" [1 2 3]
+    ///   : insert 27 "wow"
+    ///   : insert [10 11] ↯2_3⇡6
+    /// If the key is already present, it is replaced.
+    /// ex: [{1 2} {3 4}]
+    ///   : insert 3 5
+    (3, Insert, Map, "insert"),
     /// Check if a map array has a key
+    ///
+    /// ex: [{1 2} {3 4}]
+    ///   : [fork(has 3|has 5)]
     (2, Has, Misc, "has"),
     /// Get the value corresponding to a key in a map array
+    ///
+    /// ex: [{1 2} {3 4}]
+    ///   : get 3
+    /// If the key is not found, an error is thrown.
+    /// ex! [{1 2} {3 4}]
+    ///   : get 5
+    /// You can use [try] or [has] to avoid the error.
+    /// ex: [{1 2} {3 4}]
+    ///   : tryget⋅⋅⋅0 5
+    /// ex: [{1 2} {3 4}]
+    ///   : (⋅⋅0|get) has,, 5
     (2, Get, Map, "get"),
-    /// Insert a key-value pair into a map array
-    (3, Insert, Map, "insert"),
     /// Remove the value corresponding to a key from a map array
+    ///
+    /// If the key is present, it is replaced with a tombstone NaN value.
+    /// If the key is not present, the array is unchanged.
+    /// ex: [{1 2} {3 4}]
+    ///   : remove 3 .
+    ///   : remove 5 .
     (2, Remove, Map, "remove"),
     /// Get the keys of a map array
+    ///
+    /// Empty and tombstone keys are not included.
+    /// ex: [{1 2} {3 4}]
+    ///   : insert 5 6
+    ///   : keys .
     (1, Keys, Map, "keys"),
     /// Get the values of a map array
+    ///
+    /// Values with empty and tombstone keys are not included.
+    /// ex: [{1 2} {3 4}]
+    ///   : insert 5 6
+    ///   : values .
     (1, Values, Map, "values"),
     /// Debug print all stack values without popping them
     ///

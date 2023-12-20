@@ -30,10 +30,13 @@ pub type Shape = TinyVec<[usize; 3]>;
 
 /// Non-shape metadata for an array
 #[derive(Clone, Default)]
-pub struct ArrayMeta {}
+pub struct ArrayMeta {
+    /// The length of a map array
+    pub map_len: Option<usize>,
+}
 
 /// Default metadata for an array
-pub static DEFAULT_META: ArrayMeta = ArrayMeta {};
+pub static DEFAULT_META: ArrayMeta = ArrayMeta { map_len: None };
 
 impl<T: ArrayValue> Default for Array<T> {
     fn default() -> Self {
@@ -298,6 +301,12 @@ impl<T: ArrayValue> Array<T> {
         let shape: Shape = self.shape[1..].into();
         self.validate_shape();
         Some(Self::new(shape, data))
+    }
+    /// Get a mutable slice of a row
+    #[track_caller]
+    pub fn row_slice_mut(&mut self, row: usize) -> &mut [T] {
+        let row_len = self.row_len();
+        &mut self.data.as_mut_slice()[row * row_len..(row + 1) * row_len]
     }
 }
 

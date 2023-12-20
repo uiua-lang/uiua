@@ -81,6 +81,7 @@ impl Value {
             .flat_map(|row| row.data)
             .collect();
         *arr = Array::new([new_data.len() / 2, 2].as_slice(), new_data);
+        arr.meta_mut().map_len = Some(arr.row_count());
         Ok(())
     }
 }
@@ -148,12 +149,6 @@ impl<'a> MapRef<'a> {
     fn capacity(&self) -> usize {
         self.0.row_count()
     }
-    fn len(&self) -> usize {
-        self.0
-            .rows()
-            .filter(|row| !(is_empty(&row.data[0].0) || is_tombstone(&row.data[0].0)))
-            .count()
-    }
     fn hash_start(&self, value: &Value) -> usize {
         hash_start(value, self.capacity())
     }
@@ -218,15 +213,25 @@ impl<'a> MapRefMut<'a> {
     fn as_ref(&self) -> MapRef {
         MapRef(self.0)
     }
+    fn len(&mut self) -> usize {
+        if let Some(len) = self.0.meta().map_len {
+            return len;
+        }
+        let len = self
+            .0
+            .rows()
+            .filter(|row| !(is_empty(&row.data[0].0) || is_tombstone(&row.data[0].0)))
+            .count();
+        self.0.meta_mut().map_len = Some(len);
+        len
+    }
     fn capacity(&self) -> usize {
         self.as_ref().capacity()
-    }
-    fn len(&self) -> usize {
-        self.as_ref().len()
     }
     fn grow(&mut self) {
         if self.capacity() == 0 || self.len() as f64 / self.capacity() as f64 > LOAD_FACTOR {
             let new_capacity = (self.capacity() * 2).max(1);
+            let len = self.len();
             let old_rows = take(self.0).into_rows();
             *self.0 = Array::new(
                 [new_capacity, 2].as_slice(),
@@ -234,6 +239,7 @@ impl<'a> MapRefMut<'a> {
                     .take(new_capacity * 2)
                     .collect::<EcoVec<_>>(),
             );
+            self.0.meta_mut().map_len = Some(len);
             let data = self.0.data.as_mut_slice();
             for row in old_rows {
                 let mut kv = row.data.into_iter();
@@ -263,10 +269,12 @@ impl<'a> MapRefMut<'a> {
         loop {
             let row = self.0.row(index);
             let row_key = &row.data[0].0;
-            if is_empty(row_key)
-                || is_tombstone(row_key)
-                || key.unpacked_ref() == row_key.unpacked_ref()
-            {
+            let not_present = is_empty(row_key) || is_tombstone(row_key);
+            if not_present || key.unpacked_ref() == row_key.unpacked_ref() {
+                if not_present {
+                    let len = self.len();
+                    self.0.meta_mut().map_len = Some(len + 1);
+                }
                 self.0.set_row(
                     index,
                     Array::new(
@@ -292,6 +300,8 @@ impl<'a> MapRefMut<'a> {
             let row = self.0.row(index);
             let row_key = &row.data[0].0;
             if key.unpacked_ref() == row_key.unpacked_ref() {
+                let len = self.len();
+                self.0.meta_mut().map_len = Some(len - 1);
                 self.0.set_row(
                     index,
                     Array::new(

@@ -11,6 +11,7 @@ use std::{
 };
 
 use crate::{
+    algorithm::map::{EMPTY_NAN, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
     boxed::Boxed,
     value::Value,
@@ -57,6 +58,10 @@ impl GridFmt for f64 {
             format!("{minus}η")
         } else if positive == INFINITY {
             format!("{minus}∞")
+        } else if boxed
+            && (self.to_bits() == EMPTY_NAN.to_bits() || self.to_bits() == TOMBSTONE_NAN.to_bits())
+        {
+            String::new()
         } else {
             format!("{minus}{positive}")
         };
@@ -345,7 +350,7 @@ fn pad_grid_center(width: usize, height: usize, align_numbers: bool, grid: &mut 
             let post_pad = if align_numbers && row.last().map_or(false, char::is_ascii_digit) {
                 0
             } else {
-                diff / 2
+                (diff + 1) / 2
             };
             let pre_pad = diff - post_pad;
             for _ in 0..pre_pad {

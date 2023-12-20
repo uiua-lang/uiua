@@ -1835,6 +1835,13 @@ primitive!(
     ///   : insert 5 6
     ///   : values .
     (1, Values, Map, "values"),
+    /// Shrink a map array's capacity to its current size
+    ///
+    /// This will remove all rows corresponding to empty or tombstone keys.
+    /// ex: ∧(insert:+..) ⇡5 {}
+    ///   : shrink .
+    /// A shrunken map array is can still be used as a map, but lookups may be slower.
+    (1, Shrink, Map, "shrink"),
     /// Debug print all stack values without popping them
     ///
     /// This is equivalent to [dump][identity], but is easier to type.

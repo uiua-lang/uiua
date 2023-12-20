@@ -725,6 +725,11 @@ impl Primitive {
                 let values = map.values(env)?;
                 env.push(values);
             }
+            Primitive::Shrink => {
+                let mut map = env.pop("map")?;
+                map.shrink(env)?;
+                env.push(map);
+            }
             Primitive::Trace => trace(env, false)?,
             Primitive::Stack => stack(env, false)?,
             Primitive::Dump => dump(env, false)?,

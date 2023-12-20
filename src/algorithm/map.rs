@@ -69,6 +69,20 @@ impl Value {
         map.remove(key);
         Ok(())
     }
+    /// Remove all empty and tombstone values from a map array
+    pub fn shrink(&mut self, env: &Uiua) -> UiuaResult {
+        let MapRefMut(arr) = MapRefMut::new(self, env)?;
+        let new_data: EcoVec<_> = take(arr)
+            .into_rows()
+            .filter(|row| {
+                let key = &row.data[0].0;
+                !is_empty(key) && !is_tombstone(key)
+            })
+            .flat_map(|row| row.data)
+            .collect();
+        *arr = Array::new([new_data.len() / 2, 2].as_slice(), new_data);
+        Ok(())
+    }
 }
 
 struct MapRef<'a>(&'a Array<Boxed>);

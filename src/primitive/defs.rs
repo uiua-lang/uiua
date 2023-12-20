@@ -1431,10 +1431,10 @@ primitive!(
     ///   :  ⪾×+ 5 2
     /// Nesting [cascade] can be useful, and doing so is equivalent to using a function pack.
     /// ex: # Experimental!
-    ///   : ÷:-÷2:⇡..10
-    ///   : ⪾÷⪾(-÷2)⇡ 10
+    ///   : ÷:-÷2:⇡..  10
+    ///   : ⪾⪾÷(-÷2)⇡  10
     ///   : ⪾(÷|-÷2|⇡) 10
-    /// In the examples above [cascade] only reuses a single argument. However, it can reuse multiple arguments.
+    /// In the examples above, [cascade] only reuses a single argument. However, it can reuse multiple arguments.
     /// ex: # Experimental!
     ///   : ⪾$"_ + _ = _"+ 1 2
     ([2], Cascade, Planet, ("cascade", '⪾')),

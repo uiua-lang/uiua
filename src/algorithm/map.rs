@@ -266,9 +266,10 @@ impl<'a> MapRefMut<'a> {
             if index == start {
                 self.grow();
                 self.insert(key, value);
-                break;
+                return;
             }
         }
+        self.grow();
     }
     fn remove(&mut self, key: &Value) {
         let start = self.as_ref().hash_start(key);

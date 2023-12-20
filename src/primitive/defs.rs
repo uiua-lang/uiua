@@ -1425,7 +1425,7 @@ primitive!(
     ([2], Fork, Planet, ("fork", '⊃')),
     /// Call one function after another, reusing some values
     ///
-    /// [cascade]'s second function is called, then its first argument(s) are reused, along with its output, as arguments to the second function.
+    /// [cascade]'s second function is called, then its first argument(s) are reused, along with its output, as arguments to the first function.
     /// ex: # Experimental!
     ///   : ×⊃∘+ 5 2
     ///   :  ⪾×+ 5 2

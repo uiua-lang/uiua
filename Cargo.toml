@@ -74,6 +74,12 @@ regex = {version = "1.10.2", optional = true}
 [features]
 audio = ["hodaun", "lockfree", "audio_encode"]
 audio_encode = ["hound"]
+batteries = [
+  "gif",
+  "image",
+  "regex",
+  "audio_encode",
+]
 binary = [
   "ctrlc",
   "notify",
@@ -88,16 +94,14 @@ default = [
   "bytes",
   "binary",
   "terminal_image",
+  "lsp",
+  "stand",
   "https",
   "invoke",
   "trash",
-  "lsp",
-  "raw_mode",
-  "gif",
-  "stand",
-  "image",
   "native_sys",
-  "regex",
+  "raw_mode",
+  "batteries",
 ]
 gif = ["dep:gif", "image"]
 https = ["httparse", "rustls", "webpki-roots"]

@@ -6,10 +6,12 @@ This is the crate so you can use Uiua as a Rust library. If you just want to wri
 # Usage
 
 The `uiua` crate is set up primarily to be installed as a binary. For this reason, when using it as a library, you'll likely want to disable default features.
+
+This disables some of the features that many users are used to having, so to re-enable things like regex and media encoding, you can enable the `batteries` feature.
 ```toml
 # Cargo.toml
 [dependencies]
-uiua = { version = "*", default-features = false }
+uiua = { version = "*", default-features = false, features = ["batteries"] }
 ```
 
 The main entry point is the [`Uiua`] struct, which is the Uiua runtime. It must be created with a [`SysBackend`]. [`Uiua::with_native_sys`] is a convenient way to create a Uiua runtime that uses the same backend as the Uiua CLI, though keep in mind it gives full access to the filesystem and TCP sockets and so probably shouldn't be used in a sandboxed environment.
@@ -90,9 +92,19 @@ assert_eq!(formatted, "↯3_4⇡12");
 
 # Features
 
-The `uiua` crate has the following feature flags:
+The `uiua` crate has the following noteable feature flags:
+- `batteries`: Enables the following features:
+    - `regex`: Enables the `regex` function
+    - `image`: Enables image encoding and decoding
+    - `gif`: Enables GIF encoding and decoding
+    - `audio_encode`: Enables audio encoding and decoding
 - `bytes`: Enables a byte array type. This type is semantically equivalent to a numeric array, but takes up less space. It is returned by certain file and network functions, as well as some comparison functions.
+- `native_sys`: Enables the [`NativeSys`] backend. This is the default backend used by the interpreter.
 - `audio`: Enables audio features in the [`NativeSys`] backend.
+- `https`: Enables the `&httpsw` system function
+- `invoke`: Enables the `&invk` system function
+- `trash`: Enables the `&ftr` system function
+- `raw_mode`: Enables the `&raw` system function
 */
 
 #![allow(clippy::single_match, clippy::needless_range_loop)]

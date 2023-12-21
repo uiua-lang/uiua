@@ -1016,6 +1016,15 @@ a.clean {
     color: #db2;
 }
 
+.text-gradient {
+    background-size: 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -moz-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    -moz-text-fill-color: transparent;
+}
+
 .trans {
     background-image: linear-gradient(180deg,
             #5BCEFA 36%,
@@ -1026,12 +1035,6 @@ a.clean {
             #F5A9B8 58%,
             #F5A9B8 69%,
             #5BCEFA 69%);
-    background-size: 100%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    -moz-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    -moz-text-fill-color: transparent;
 }
 
 .bi {
@@ -1040,12 +1043,6 @@ a.clean {
             #9B4F96 48%,
             #9B4F96 65%,
             #0038A8 65%);
-    background-size: 100%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    -moz-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    -moz-text-fill-color: transparent;
 }
 
 .pan {
@@ -1054,12 +1051,6 @@ a.clean {
             #FFD800 48%,
             #FFD800 65%,
             #21B1FF 65%);
-    background-size: 100%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    -moz-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    -moz-text-fill-color: transparent;
 }
 
 .gay {
@@ -1074,12 +1065,6 @@ a.clean {
             #0000F9 60%,
             #0000F9 70%,
             #86007D 70%);
-    background-size: 100%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    -moz-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    -moz-text-fill-color: transparent;
 }
 
 .ace {
@@ -1090,12 +1075,6 @@ a.clean {
             #FFFFFF 50%,
             #FFFFFF 70%,
             #800080 70%);
-    background-size: 100%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    -moz-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    -moz-text-fill-color: transparent;
 }
 
 .nb {
@@ -1106,12 +1085,6 @@ a.clean {
             #9C59D1 50%,
             #9C59D1 70%,
             #2C2C2C 70%);
-    background-size: 100%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    -moz-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    -moz-text-fill-color: transparent;
 }
 
 .fluid {
@@ -1124,12 +1097,6 @@ a.clean {
             #000000 58%,
             #000000 69%,
             #2F3CBE 69%);
-    background-size: 100%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    -moz-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    -moz-text-fill-color: transparent;
 }
 
 .queer {
@@ -1138,12 +1105,6 @@ a.clean {
             #FFFFFF 48%,
             #FFFFFF 65%,
             #4A8123 65%);
-    background-size: 100%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    -moz-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    -moz-text-fill-color: transparent;
 }
 
 @media (prefers-color-scheme: light) {

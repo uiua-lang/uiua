@@ -351,9 +351,9 @@ macro_rules! code_font {
 fn prim_class(prim: Primitive) -> &'static str {
     match prim {
         Primitive::Identity => code_font!("stack-function"),
-        Primitive::Transpose => code_font!("monadic-function trans"),
-        Primitive::Both => code_font!("monadic-modifier bi"),
-        Primitive::All => code_font!("dyadic-modifier pan"),
+        Primitive::Transpose => code_font!("monadic-function trans text-gradient"),
+        Primitive::Both => code_font!("monadic-modifier bi text-gradient"),
+        Primitive::All => code_font!("dyadic-modifier pan text-gradient"),
         prim if prim.class() == PrimClass::Stack && prim.modifier_args().is_none() => {
             code_font!("stack-function")
         }
@@ -379,14 +379,14 @@ fn prim_class(prim: Primitive) -> &'static str {
 
 fn binding_class(name: &str, sig: Signature, margs: usize) -> &'static str {
     match name {
-        "Trans" => code_font!("trans"),
-        "Bi" => code_font!("bi"),
-        "Pan" => code_font!("pan"),
-        "Gay" => code_font!("gay"),
-        "Ace" => code_font!("ace"),
-        "Nb" | "Enby" => code_font!("nb"),
-        "Fluid" => code_font!("fluid"),
-        "Queer" => code_font!("queer"),
+        "Trans" => code_font!("trans text-gradient"),
+        "Bi" => code_font!("bi text-gradient"),
+        "Pan" => code_font!("pan text-gradient"),
+        "Gay" => code_font!("gay text-gradient"),
+        "Ace" => code_font!("ace text-gradient"),
+        "Nb" | "Enby" => code_font!("nb text-gradient"),
+        "Fluid" => code_font!("fluid text-gradient"),
+        "Queer" => code_font!("queer text-gradient"),
         _ => match margs {
             0 => match (sig.args, sig.outputs) {
                 (0, 1) => code_font!("noadic-function"),

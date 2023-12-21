@@ -253,7 +253,7 @@ primitive!(
     /// ex: ⌵ ¯1
     /// ex: ⌵ 1
     /// [absolute value] converts complex numbers to their magnitude.
-    /// ex: ⌵ +3i4
+    /// ex: ⌵ ℂ3 4
     ///
     /// The glyph looks like the graph of `|x|`.
     (1, Abs, MonadicPervasive, ("absolute value", '⌵')),

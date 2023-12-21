@@ -27,7 +27,6 @@ paste = "1.0.14"
 pathdiff = "0.2.1"
 rand = {version = "0.8.5", features = ["small_rng"]}
 rayon = "1.8.0"
-regex = "1.10.2"
 serde = {version = "1", features = ["derive"]}
 serde_json = "1"
 term_size = "=1.0.0-beta.2"
@@ -70,6 +69,7 @@ serde_yaml = {version = "0.9.27", optional = true}
 gif = {version = "0.12.0", optional = true}
 hound = {version = "3", optional = true}
 image = {version = "0.24.5", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png"]}
+regex = {version = "1.10.2", optional = true}
 
 [features]
 audio = ["hodaun", "lockfree", "audio_encode"]
@@ -97,6 +97,7 @@ default = [
   "stand",
   "image",
   "native_sys",
+  "regex",
 ]
 gif = ["dep:gif", "image"]
 https = ["httparse", "rustls", "webpki-roots"]

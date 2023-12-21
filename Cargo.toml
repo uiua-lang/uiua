@@ -118,4 +118,5 @@ members = ["site"]
 incremental = true
 
 [profile.release]
-lto = true
+lto = 'thin'
+opt-level = 's'

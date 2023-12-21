@@ -503,7 +503,11 @@ fn site() {
                             path.to_path_buf(),
                             code.clone(),
                             std::thread::spawn(move || {
-                                (uiua::Uiua::with_native_sys().run_str(&code), should_fail)
+                                (
+                                    uiua::Uiua::with_backend(crate::backend::WebBackend::default())
+                                        .run_str(&code),
+                                    should_fail,
+                                )
                             }),
                         ));
                     }

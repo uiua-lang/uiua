@@ -99,7 +99,7 @@ macro_rules! uiuisms {
         fn uiuisms() {
             for code in [$($code),*] {
                 println!("Testing Uiuism:\n{code}");
-                match uiua::Uiua::with_native_sys().run_str(code) {
+                match uiua::Uiua::with_backend(crate::backend::WebBackend::default()).run_str(code) {
                     Ok(mut comp) => {
                         if let Some(diag) = comp.take_diagnostics().into_iter().next() {
                             panic!("Uiuism failed\n{code}\n{}", diag.report());

@@ -70,7 +70,7 @@ pub const EXAMPLES: &[&str] = &[
 #[test]
 fn test_examples() {
     for example in EXAMPLES {
-        match uiua::Uiua::with_native_sys().run_str(example) {
+        match uiua::Uiua::with_backend(crate::backend::WebBackend::default()).run_str(example) {
             Ok(mut comp) => {
                 if let Some(diag) = comp.take_diagnostics().into_iter().next() {
                     panic!("Example failed:\n{example}\n{diag}");

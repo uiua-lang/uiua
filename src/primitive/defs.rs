@@ -1809,7 +1809,7 @@ primitive!(
     ///   : [{1 2} {3 4}]
     ///   : get 3
     /// If the key is not found, an error is thrown.
-    /// ex! # Experimental
+    /// ex! # Experimental!
     ///   : [{1 2} {3 4}]
     ///   : get 5
     /// You can use [try] or [has] to avoid the error.

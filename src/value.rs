@@ -1670,7 +1670,7 @@ impl<'de> Deserialize<'de> for Value {
         }
         let (tag, shape, data): (u8, Shape, serde_json::Value) =
             serde_json::from_value(value).map_err(|e| de::Error::custom(format!("{}", e)))?;
-        Ok(match tag {
+        let mut value = match tag {
             0 => Value::Num(Array::new(
                 shape,
                 serde_json::from_value::<EcoVec<_>>(data)
@@ -1692,6 +1692,8 @@ impl<'de> Deserialize<'de> for Value {
                     .map_err(|e| de::Error::custom(format!("invalid box array: {}", e)))?,
             )),
             tag => return Err(de::Error::custom(format!("invalid value tag: {tag}"))),
-        })
+        };
+        value.compress();
+        Ok(value)
     }
 }

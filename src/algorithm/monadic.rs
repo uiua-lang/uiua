@@ -708,8 +708,9 @@ impl Array<f64> {
         }
         let mut shape = self.shape.clone();
         shape.push(max_bits);
-        let arr = Array::new(shape, new_data);
+        let mut arr = Array::new(shape, new_data);
         arr.validate_shape();
+        arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
         Ok(arr)
     }
 }

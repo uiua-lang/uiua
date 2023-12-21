@@ -12,6 +12,7 @@ version = "0.7.1"
 
 [dependencies]
 # Core dependencies
+bitflags = "2"
 bufreaderwriter = "0.2.4"
 colored = "2"
 crossbeam-channel = "0.5.9"

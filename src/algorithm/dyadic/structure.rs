@@ -761,9 +761,7 @@ impl<T: ArrayValue> Array<T> {
         } else {
             shape.push(indices.len());
         }
-        let arr = Array::new(shape, selected);
-        arr.validate_shape();
-        Ok(arr)
+        Ok(Array::new(shape, selected))
     }
     fn unselect(
         &self,

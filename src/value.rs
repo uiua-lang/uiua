@@ -321,6 +321,26 @@ impl Value {
         let repr = unsafe { &*(self as *const Self as *const Repr) };
         repr.arr.element_count()
     }
+    /// Get the value's metadata
+    pub fn meta(&self) -> &ArrayMeta {
+        let repr = unsafe { &*(self as *const Self as *const Repr) };
+        repr.arr.meta()
+    }
+    /// Get a mutable reference to the value's metadata
+    pub fn meta_mut(&mut self) -> &mut ArrayMeta {
+        let repr = unsafe { &mut *(self as *mut Self as *mut Repr) };
+        repr.arr.meta_mut()
+    }
+    /// Combine this value's metadata with another
+    pub fn combine_meta(&mut self, other: &ArrayMeta) {
+        let repr = unsafe { &mut *(self as *mut Self as *mut Repr) };
+        repr.arr.combine_meta(other);
+    }
+    /// Reset this value's metadata flags
+    pub fn reset_meta_flags(&mut self) {
+        let repr = unsafe { &mut *(self as *mut Self as *mut Repr) };
+        repr.arr.reset_meta_flags();
+    }
     pub(crate) fn validate_shape(&self) {
         self.generic_ref_shallow(
             Array::validate_shape,
@@ -987,20 +1007,48 @@ impl Value {
         }
     }
     /// Turn a number array into a byte array if no information is lost.
+    ///
+    /// Does nothing without the `bytes` feature enabled.
     pub fn compress(&mut self) {
-        #[cfg(feature = "bytes")]
-        if let Value::Num(nums) = self {
-            if nums
-                .data
-                .iter()
-                .all(|n| n.fract() == 0.0 && *n <= u8::MAX as f64 && *n >= 0.0)
-            {
-                let mut bytes = EcoVec::with_capacity(nums.element_count());
-                for n in take(&mut nums.data) {
-                    bytes.push(n as u8);
+        match self {
+            Value::Num(nums) => {
+                let mut compress = true;
+                let mut boolean = true;
+                for &n in &nums.data {
+                    if n.fract() != 0.0 || n < 0.0 || n > u8::MAX as f64 {
+                        compress = false;
+                        boolean = false;
+                        break;
+                    }
+                    if n > 1.0 {
+                        boolean = false;
+                    }
                 }
-                *self = (take(&mut nums.shape), bytes).into();
+                if compress {
+                    let mut bytes = EcoVec::with_capacity(nums.element_count());
+                    for n in take(&mut nums.data) {
+                        bytes.push(n as u8);
+                    }
+                    let mut arr = Array::new(take(&mut nums.shape), bytes);
+                    if boolean {
+                        arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+                    }
+                    *self = arr.into();
+                }
             }
+            Value::Byte(bytes) => {
+                let mut boolean = true;
+                for &b in &bytes.data {
+                    if b > 1 {
+                        boolean = false;
+                        break;
+                    }
+                }
+                if boolean {
+                    bytes.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+                }
+            }
+            _ => {}
         }
     }
     /// Convert to a box array by boxing every element
@@ -1133,13 +1181,14 @@ impl From<i32> for Value {
 
 macro_rules! value_un_impl {
     ($name:ident, $(
-        $([$($feature1:literal,)* $in_place:ident, $f:ident])?
+        $([$($feature1:literal,)* $(|$meta:ident| $pred:expr,)* $in_place:ident, $f:ident])?
         $(($($feature2:literal,)* $make_new:ident, $f2:ident))?
     ),* $(,)?) => {
         impl Value {
+            #[allow(clippy::redundant_closure_call)]
             pub(crate) fn $name(self, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match self {
-                    $($($(#[cfg(feature = $feature1)])* Self::$in_place(mut array) => {
+                    $($($(#[cfg(feature = $feature1)])* Self::$in_place(mut array) $(if (|$meta: &ArrayMeta| $pred)(array.meta()))* => {
                         for val in &mut array.data {
                             *val = $name::$f(*val);
                         }
@@ -1169,10 +1218,22 @@ macro_rules! value_un_impl {
 }
 
 value_un_impl!(neg, [Num, num], ("bytes", Byte, byte), [Complex, com]);
-value_un_impl!(not, [Num, num], ("bytes", Byte, byte), [Complex, com]);
+value_un_impl!(
+    not,
+    [Num, num],
+    ["bytes", |meta| meta.flags.is_boolean(), Byte, bool],
+    ("bytes", Byte, byte),
+    [Complex, com]
+);
 value_un_impl!(abs, [Num, num], ("bytes", Byte, byte), (Complex, com));
 value_un_impl!(sign, [Num, num], ["bytes", Byte, byte], [Complex, com]);
-value_un_impl!(sqrt, [Num, num], ("bytes", Byte, byte), [Complex, com]);
+value_un_impl!(
+    sqrt,
+    [Num, num],
+    ["bytes", |meta| meta.flags.is_boolean(), Byte, bool],
+    ("bytes", Byte, byte),
+    [Complex, com]
+);
 value_un_impl!(sin, [Num, num], ("bytes", Byte, byte), [Complex, com]);
 value_un_impl!(cos, [Num, num], ("bytes", Byte, byte), [Complex, com]);
 value_un_impl!(asin, [Num, num], ("bytes", Byte, byte), [Complex, com]);
@@ -1205,22 +1266,26 @@ macro_rules! val_retry {
 
 macro_rules! value_bin_impl {
     ($name:ident, $(
-        $(($($feature1:literal,)* $na:ident, $nb:ident, $f:ident $(, $retry:ident)?))*
-        $([$($feature2:literal,)* $ip:ident, $f2:ident $(, $retry2:ident)?])*
+        $(($($feature1:literal,)* $na:ident, $nb:ident, $f1:ident $(, $retry:ident)? ))*
+        $([$($feature2:literal,)* $(|$meta:ident| $pred:expr,)* $ip:ident, $f2:ident $(, $retry2:ident)? $(, $reset_meta:literal)?])*
     ),* ) => {
         impl Value {
-            #[allow(unreachable_patterns, clippy::wrong_self_convention)]
+            #[allow(unreachable_patterns, unused_mut, clippy::wrong_self_convention)]
             pub(crate) fn $name(self, other: Self, a_depth: usize, b_depth: usize, env: &Uiua) -> UiuaResult<Self> {
                 Ok(match (self, other) {
-                    $($($(#[cfg(feature = $feature2)])* (Value::$ip(mut a), Value::$ip(b)) => {
-                        if val_retry!($ip, env) {
+                    $($($(#[cfg(feature = $feature2)])* (Value::$ip(mut a), Value::$ip(b)) $(if {
+                        let f = |$meta: &ArrayMeta| $pred;
+                        f(a.meta()) && f(b.meta())
+                    })* => {
+                        let mut val: Value = if val_retry!($ip, env) {
                             let mut a_clone = a.clone();
                             if let Err(e) = bin_pervade_mut(&mut a_clone, b.clone(), a_depth, b_depth, env, $name::$f2) {
                                 if e.is_fill() {
                                     $(
                                         let mut a = a.convert();
                                         let b = b.convert();
-                                        bin_pervade_mut(&mut a, b, env, $name::$retry2)?;
+                                        bin_pervade_mut(&mut a, b, a_depth, b_depth, env, $name::$retry2)?;
+                                        a.reset_meta_flags();
                                         return Ok(a.into());
                                     )*
                                 }
@@ -1231,11 +1296,15 @@ macro_rules! value_bin_impl {
                         } else {
                             bin_pervade_mut(&mut a, b, a_depth, b_depth, env, $name::$f2)?;
                             a.into()
-                        }
+                        };
+                        $(if $reset_meta {
+                            val.reset_meta_flags();
+                        })*
+                        val
                     },)*)*
                     $($($(#[cfg(feature = $feature1)])* (Value::$na(a), Value::$nb(b)) => {
-                        if val_retry!($na, env) || val_retry!($nb, env) {
-                            let res = bin_pervade(a.clone(), b.clone(), a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$f));
+                        let mut val: Value = if val_retry!($na, env) || val_retry!($nb, env) {
+                            let res = bin_pervade(a.clone(), b.clone(), a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$f1));
                             match res {
                                 Ok(arr) => arr.into(),
                                 #[allow(unreachable_code, unused_variables)]
@@ -1246,8 +1315,10 @@ macro_rules! value_bin_impl {
                                 Err(e) => return Err(e),
                             }
                         } else {
-                            bin_pervade(a, b, a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$f))?.into()
-                        }
+                            bin_pervade(a, b, a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$f1))?.into()
+                        };
+                        val.reset_meta_flags();
+                        val
                     },)*)*
                     (Value::Box(a), Value::Box(b)) => {
                         let (a, b) = match (a.into_unboxed(), b.into_unboxed()) {
@@ -1256,12 +1327,14 @@ macro_rules! value_bin_impl {
                             (Err(a), Ok(b)) => (a, b.coerce_as_boxes().into_owned()),
                             (Err(a), Err(b)) => (a, b),
                         };
-                        bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
+                        let mut val: Value = bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
                             Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
-                        }))?.into()
+                        }))?.into();
+                        val.reset_meta_flags();
+                        val
                     }
                     (Value::Box(a), b) => {
-                        match a.into_unboxed() {
+                        let mut val: Value = match a.into_unboxed() {
                             Ok(a) => Boxed(Value::$name(a, b, a_depth, b_depth, env)?).into(),
                             Err(a) => {
                                 let b = b.coerce_as_boxes().into_owned();
@@ -1269,10 +1342,12 @@ macro_rules! value_bin_impl {
                                     Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
                                 }))?.into()
                             }
-                        }
+                        };
+                        val.reset_meta_flags();
+                        val
                     },
                     (a, Value::Box(b)) => {
-                        match b.into_unboxed() {
+                        let mut val: Value = match b.into_unboxed() {
                             Ok(b) => Boxed(Value::$name(a, b, a_depth, b_depth, env)?).into(),
                             Err(b) => {
                                 let a = a.coerce_as_boxes().into_owned();
@@ -1280,7 +1355,9 @@ macro_rules! value_bin_impl {
                                     Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
                                 }))?.into()
                             }
-                        }
+                        };
+                        val.reset_meta_flags();
+                        val
                     },
                     (a, b) => return Err($name::error(a.type_name(), b.type_name(), env)),
                 })
@@ -1293,6 +1370,7 @@ macro_rules! value_bin_math_impl {
     ($name:ident $(,$($tt:tt)*)?) => {
         value_bin_impl!(
             $name,
+            $($($tt)*)?
             [Num, num_num],
             ("bytes", Byte, Byte, byte_byte, num_num),
             ("bytes", Byte, Num, byte_num, num_num),
@@ -1302,7 +1380,6 @@ macro_rules! value_bin_math_impl {
             (Num, Complex, x_com),
             ("bytes", Complex, Byte, com_x),
             ("bytes", Byte, Complex, x_com),
-            $($($tt)*)?
         );
     };
 }
@@ -1313,6 +1390,14 @@ value_bin_math_impl!(
     (Char, Num, char_num),
     ("bytes", Byte, Char, byte_char),
     ("bytes", Char, Byte, char_byte),
+    [
+        "bytes",
+        |meta| meta.flags.is_boolean(),
+        Byte,
+        bool_bool,
+        num_num,
+        true
+    ],
 );
 value_bin_math_impl!(
     sub,
@@ -1320,14 +1405,43 @@ value_bin_math_impl!(
     (Char, Char, char_char),
     ("bytes", Byte, Char, byte_char),
 );
-value_bin_math_impl!(mul);
+value_bin_math_impl!(
+    mul,
+    [
+        "bytes",
+        |meta| meta.flags.is_boolean(),
+        Byte,
+        bool_bool,
+        num_num
+    ],
+);
 value_bin_math_impl!(div);
 value_bin_math_impl!(modulus);
 value_bin_math_impl!(pow);
 value_bin_math_impl!(log);
 value_bin_math_impl!(atan2);
-value_bin_math_impl!(min, [Char, char_char]);
-value_bin_math_impl!(max, [Char, char_char]);
+value_bin_math_impl!(
+    min,
+    [Char, char_char],
+    [
+        "bytes",
+        |meta| meta.flags.is_boolean(),
+        Byte,
+        bool_bool,
+        num_num
+    ],
+);
+value_bin_math_impl!(
+    max,
+    [Char, char_char],
+    [
+        "bytes",
+        |meta| meta.flags.is_boolean(),
+        Byte,
+        bool_bool,
+        num_num
+    ],
+);
 
 value_bin_impl!(
     complex,

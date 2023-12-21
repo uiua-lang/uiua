@@ -3549,6 +3549,7 @@ dependencies = [
 name = "uiua"
 version = "0.7.1"
 dependencies = [
+ "bitflags 2.4.1",
  "bufreaderwriter",
  "clap",
  "color-backtrace",

@@ -4,9 +4,12 @@ use ecow::EcoVec;
 
 use crate::{ImplPrimitive, Instr, Primitive};
 
-pub(crate) fn optimize_instrs_mut(instrs: &mut EcoVec<Instr>, new: Instr, maximal: bool) {
+pub(crate) fn optimize_instrs_mut(instrs: &mut EcoVec<Instr>, mut new: Instr, maximal: bool) {
     use ImplPrimitive::*;
     use Primitive::*;
+    if let Instr::Push(val) = &mut new {
+        val.compress();
+    }
     match (instrs.make_mut(), new) {
         // Cosine
         ([.., Instr::Prim(Eta, _), Instr::Prim(Add, _)], Instr::Prim(Sin, span)) => {

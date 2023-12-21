@@ -211,6 +211,7 @@ impl<T: ArrayValue> Array<T> {
     }
     fn join_impl<C: FillContext>(mut self, mut other: Self, ctx: &C) -> Result<Self, C::Error> {
         crate::profile_function!();
+        self.combine_meta(other.meta());
         let res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
                 if self.shape() == [0] {
@@ -289,6 +290,7 @@ impl<T: ArrayValue> Array<T> {
         Ok(res)
     }
     fn append<C: FillContext>(&mut self, mut other: Self, ctx: &C) -> Result<(), C::Error> {
+        self.combine_meta(other.meta());
         let target_shape = match ctx.fill::<T>() {
             Ok(fill) => {
                 while self.rank() <= other.rank() {
@@ -321,6 +323,7 @@ impl<T: ArrayValue> Array<T> {
         self.data.extend(other.data);
         self.shape = target_shape;
         self.shape[0] += 1;
+        self.validate_shape();
         Ok(())
     }
 }
@@ -431,6 +434,7 @@ impl<T: ArrayValue> Array<T> {
     }
     fn couple_impl<C: FillContext>(&mut self, mut other: Self, ctx: &C) -> Result<(), C::Error> {
         crate::profile_function!();
+        self.combine_meta(other.meta());
         if self.shape != other.shape {
             match ctx.fill::<T>() {
                 Ok(fill) => {

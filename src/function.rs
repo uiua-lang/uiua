@@ -167,7 +167,8 @@ impl Eq for Instr {}
 impl Instr {
     /// Create a new push instruction
     pub fn push(val: impl Into<Value>) -> Self {
-        Self::Push(val.into())
+        let val = val.into();
+        Self::Push(val)
     }
     pub(crate) fn is_temp(&self) -> bool {
         matches!(

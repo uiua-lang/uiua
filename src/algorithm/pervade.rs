@@ -392,6 +392,10 @@ pub mod not {
     pub fn byte(a: u8) -> f64 {
         num(a.into())
     }
+    #[cfg(feature = "bytes")]
+    pub fn bool(a: u8) -> u8 {
+        a ^ 1u8
+    }
 
     pub fn com(a: Complex) -> Complex {
         1.0 - a
@@ -466,6 +470,10 @@ pub mod sqrt {
     #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> f64 {
         f64::from(a).sqrt()
+    }
+    #[cfg(feature = "bytes")]
+    pub fn bool(a: u8) -> u8 {
+        a
     }
 
     pub fn com(a: Complex) -> Complex {
@@ -731,6 +739,10 @@ pub mod add {
         f64::from(a) + f64::from(b)
     }
     #[cfg(feature = "bytes")]
+    pub fn bool_bool(a: u8, b: u8) -> u8 {
+        b + a
+    }
+    #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> f64 {
         b + f64::from(a)
     }
@@ -845,15 +857,37 @@ macro_rules! bin_op_mod {
     };
 }
 
-bin_op_mod!(
-    mul,
-    a,
-    b,
-    f64::from,
-    f64,
-    b * a,
-    "Cannot multiply {a} and {b}"
-);
+pub mod mul {
+    use super::*;
+    pub fn num_num(a: f64, b: f64) -> f64 {
+        b * a
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
+        f64::from(b) * f64::from(a)
+    }
+    #[cfg(feature = "bytes")]
+    pub fn bool_bool(a: u8, b: u8) -> u8 {
+        b & a
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_num(a: u8, b: f64) -> f64 {
+        b * f64::from(a)
+    }
+    #[cfg(feature = "bytes")]
+    pub fn num_byte(a: f64, b: u8) -> f64 {
+        f64::from(b) * a
+    }
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        b.into() * a
+    }
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        b * a.into()
+    }
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot multiply {a} and {b}"))
+    }
+}
 
 bin_op_mod!(div, a, b, f64::from, f64, b / a, "Cannot divide {b} by {a}");
 bin_op_mod!(
@@ -959,6 +993,10 @@ pub mod max {
     pub fn byte_byte(a: u8, b: u8) -> u8 {
         a.max(b)
     }
+    #[cfg(feature = "bytes")]
+    pub fn bool_bool(a: u8, b: u8) -> u8 {
+        a | b
+    }
     pub fn char_char(a: char, b: char) -> char {
         a.max(b)
     }
@@ -991,6 +1029,10 @@ pub mod min {
     #[cfg(feature = "bytes")]
     pub fn byte_byte(a: u8, b: u8) -> u8 {
         a.min(b)
+    }
+    #[cfg(feature = "bytes")]
+    pub fn bool_bool(a: u8, b: u8) -> u8 {
+        a & b
     }
     pub fn char_char(a: char, b: char) -> char {
         a.min(b)

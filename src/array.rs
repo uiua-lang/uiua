@@ -5,6 +5,7 @@ use std::{
     sync::Arc,
 };
 
+use bitflags::bitflags;
 use ecow::EcoVec;
 use tinyvec::{tiny_vec, TinyVec};
 
@@ -31,12 +32,39 @@ pub type Shape = TinyVec<[usize; 3]>;
 /// Non-shape metadata for an array
 #[derive(Clone, Default)]
 pub struct ArrayMeta {
+    /// Flags for the array
+    pub flags: ArrayFlags,
     /// The length of a map array
     pub map_len: Option<usize>,
 }
 
+bitflags! {
+    /// Flags for an array
+    #[derive(Clone, Copy, Default)]
+    pub struct ArrayFlags: u8 {
+        /// No flags
+        const NONE = 0;
+        /// The array is boolean
+        const BOOLEAN = 1;
+    }
+}
+
+impl ArrayFlags {
+    /// Check if the array is boolean
+    pub fn is_boolean(self) -> bool {
+        self.contains(Self::BOOLEAN)
+    }
+    /// Reset all flags
+    pub fn reset(&mut self) {
+        *self = Self::NONE;
+    }
+}
+
 /// Default metadata for an array
-pub static DEFAULT_META: ArrayMeta = ArrayMeta { map_len: None };
+pub static DEFAULT_META: ArrayMeta = ArrayMeta {
+    flags: ArrayFlags::NONE,
+    map_len: None,
+};
 
 impl<T: ArrayValue> Default for Array<T> {
     fn default() -> Self {
@@ -144,6 +172,12 @@ impl<T> Array<T> {
         let meta = self.meta.get_or_insert_with(Default::default);
         Arc::make_mut(meta)
     }
+    /// Reset all metadata flags
+    pub fn reset_meta_flags(&mut self) {
+        if self.meta.is_some() {
+            self.meta_mut().flags.reset();
+        }
+    }
     /// Get a formattable shape of the array
     pub fn format_shape(&self) -> FormatShape<'_> {
         FormatShape(self.shape())
@@ -157,6 +191,14 @@ impl<T> Array<T> {
     pub fn row_slice(&self, row: usize) -> &[T] {
         let row_len = self.row_len();
         &self.data[row * row_len..(row + 1) * row_len]
+    }
+    /// Combine the metadata of two arrays
+    pub fn combine_meta(&mut self, other: &ArrayMeta) {
+        if let Some(meta) = self.meta.as_mut() {
+            let meta = Arc::make_mut(meta);
+            meta.flags &= other.flags;
+            meta.map_len = None;
+        }
     }
 }
 

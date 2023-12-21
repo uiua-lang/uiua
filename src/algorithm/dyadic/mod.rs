@@ -690,6 +690,7 @@ impl<T: ArrayValue> Array<T> {
         rotate(by, &self.shape, data);
         if let Ok(fill) = env.fill::<T>() {
             fill_shift(by, &self.shape, data, fill);
+            self.reset_meta_flags();
         }
         Ok(())
     }
@@ -1000,6 +1001,7 @@ impl<T: ArrayValue> Array<T> {
         let mut arr = Array::new(temp_output_shape, data);
         arr.fill_to_shape(&searched.shape[..searched_for_shape.len()], 0);
         arr.validate_shape();
+        arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
         Ok(arr)
     }
 }
@@ -1029,7 +1031,7 @@ impl<T: ArrayValue> Array<T> {
     /// Check which rows of this array are `member`s of another
     pub fn member(&self, of: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
         let elems = self;
-        Ok(match elems.rank().cmp(&of.rank()) {
+        let mut arr = match elems.rank().cmp(&of.rank()) {
             Ordering::Equal => {
                 let mut result_data = EcoVec::with_capacity(elems.row_count());
                 let mut members = HashSet::with_capacity(of.row_count());
@@ -1040,9 +1042,7 @@ impl<T: ArrayValue> Array<T> {
                     result_data.push(members.contains(&ArrayCmpSlice(elem)) as u8);
                 }
                 let shape: Shape = self.shape.iter().cloned().take(1).collect();
-                let res = Array::new(shape, result_data);
-                res.validate_shape();
-                res
+                Array::new(shape, result_data)
             }
             Ordering::Greater => {
                 let mut rows = Vec::with_capacity(elems.row_count());
@@ -1067,7 +1067,9 @@ impl<T: ArrayValue> Array<T> {
                     Array::from_row_arrays(rows, env)?
                 }
             }
-        })
+        };
+        arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+        Ok(arr)
     }
 }
 
@@ -1130,9 +1132,7 @@ impl<T: ArrayValue> Array<T> {
                     );
                 }
                 let shape: Shape = self.shape.iter().cloned().take(1).collect();
-                let res = Array::new(shape, result_data);
-                res.validate_shape();
-                res
+                Array::new(shape, result_data)
             }
             Ordering::Greater => {
                 let mut rows = Vec::with_capacity(searched_for.row_count());
@@ -1211,9 +1211,7 @@ impl<T: ArrayValue> Array<T> {
                     result_data.push(searched_in.row_count() as f64);
                 }
                 let shape: Shape = self.shape.iter().cloned().take(1).collect();
-                let res = Array::new(shape, result_data);
-                res.validate_shape();
-                res
+                Array::new(shape, result_data)
             }
             Ordering::Greater => {
                 let mut rows = Vec::with_capacity(searched_for.row_count());

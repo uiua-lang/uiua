@@ -577,7 +577,7 @@ fn set_code_html(id: &str, code: &str) {
                                 .unwrap_or_default();
                             let class = if let Some(sig) = binding.global.signature() {
                                 let margs = text.chars().rev().take_while(|c| *c == '!').count();
-                                binding_class(text, sig, margs)
+                                binding_class(text, sig, margs, binding.global.is_constant())
                             } else {
                                 ""
                             };

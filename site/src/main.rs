@@ -377,7 +377,7 @@ fn prim_class(prim: Primitive) -> &'static str {
     }
 }
 
-fn binding_class(name: &str, sig: Signature, margs: usize) -> &'static str {
+fn binding_class(name: &str, sig: Signature, margs: usize, constant: bool) -> &'static str {
     match name {
         "Trans" => code_font!("trans text-gradient"),
         "Bi" => code_font!("bi text-gradient"),
@@ -387,6 +387,7 @@ fn binding_class(name: &str, sig: Signature, margs: usize) -> &'static str {
         "Nb" | "Enby" => code_font!("nb text-gradient"),
         "Fluid" => code_font!("fluid text-gradient"),
         "Queer" => code_font!("queer text-gradient"),
+        _ if constant => code_font!(""),
         _ => match margs {
             0 => match (sig.args, sig.outputs) {
                 (0, 1) => code_font!("noadic-function"),

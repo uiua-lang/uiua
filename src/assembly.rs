@@ -169,6 +169,14 @@ impl Global {
             Self::Module { .. } => None,
         }
     }
+    /// Check if the global is a once-bound constant
+    pub fn is_constant(&self) -> bool {
+        match self {
+            Self::Const(_) => true,
+            Self::Sig(sig) if *sig == (0, 1) => true,
+            _ => false,
+        }
+    }
 }
 
 /// A repository of code strings input to the compiler

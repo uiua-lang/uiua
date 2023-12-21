@@ -2,8 +2,10 @@ use std::{cmp::Ordering, mem::take};
 
 use tinyvec::tiny_vec;
 
+#[cfg(feature = "bytes")]
+use crate::algorithm::op2_bytes_retry_fill;
 use crate::{
-    algorithm::{max_shape, op2_bytes_retry_fill, FillContext},
+    algorithm::{max_shape, FillContext},
     cowslice::cowslice,
     Array, ArrayValue, FormatShape, Uiua, UiuaResult, Value,
 };

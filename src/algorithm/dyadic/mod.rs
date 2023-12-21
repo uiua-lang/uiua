@@ -22,7 +22,9 @@ use crate::{
     Uiua, UiuaResult,
 };
 
-use super::{op_bytes_retry_fill, ArrayCmpSlice, FillContext};
+#[cfg(feature = "bytes")]
+use super::op_bytes_retry_fill;
+use super::{ArrayCmpSlice, FillContext};
 
 impl Value {
     pub(crate) fn bin_coerce_to_boxes<T, C: FillContext, E: ToString>(

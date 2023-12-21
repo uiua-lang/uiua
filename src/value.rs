@@ -1010,6 +1010,7 @@ impl Value {
     ///
     /// Does nothing without the `bytes` feature enabled.
     pub fn compress(&mut self) {
+        #[cfg(feature = "bytes")]
         match self {
             Value::Num(nums) => {
                 let mut compress = true;

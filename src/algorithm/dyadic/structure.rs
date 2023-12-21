@@ -4,8 +4,10 @@ use std::{
     mem::take,
 };
 
+#[cfg(feature = "bytes")]
+use crate::algorithm::{op_bytes_ref_retry_fill, op_bytes_retry_fill};
 use crate::{
-    algorithm::{op_bytes_ref_retry_fill, op_bytes_retry_fill, FillContext},
+    algorithm::FillContext,
     cowslice::{cowslice, CowSlice},
     Array, ArrayValue, FormatShape, Shape, Uiua, UiuaResult, Value,
 };

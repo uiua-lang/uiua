@@ -24,10 +24,8 @@ jobs:
       run: cargo build --verbose
     - name: Run interpreter tests
       run: cargo test --lib
-    - name: Run interpreter tests (no default)
-      run: cargo test --lib --no-default-features
-    - name: Run interpreter tests (audio)
-      run: cargo test --lib --features audio
+    - name: Check feature combinations
+      run: cargo run ./features.ua
     - name: Run site tests
       run: cargo test -p site 
     - name: Check site

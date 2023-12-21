@@ -1538,7 +1538,10 @@ code:
                     });
                 }
                 instrs.extend(a_instrs);
-                let sig = Signature::new(b_sig.args, a_sig.outputs);
+                let sig = Signature::new(
+                    b_sig.args.max(count),
+                    a_sig.outputs.max(count.saturating_sub(b_sig.outputs)),
+                );
                 if call {
                     self.push_instr(Instr::PushSig(sig));
                     self.push_all_instrs(instrs);

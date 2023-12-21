@@ -230,10 +230,15 @@ impl<'a> VirtualEnv<'a> {
                 self.set_min_height();
             }
             Instr::CopyToTemp { count, stack, .. } => {
-                for val in self.stack.iter().rev().take(*count) {
-                    self.temp_stacks[*stack as usize].push(val.clone());
+                let mut vals = Vec::with_capacity(*count);
+                for _ in 0..*count {
+                    vals.push(self.pop()?);
                 }
                 self.set_min_height();
+                for val in vals {
+                    self.temp_stacks[*stack as usize].push(val.clone());
+                    self.stack.push(val);
+                }
             }
             Instr::PushTempFunctions(_) | Instr::PopTempFunctions(_) => {}
             Instr::GetTempFunction { sig, .. } => {

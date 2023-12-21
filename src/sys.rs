@@ -1,30 +1,23 @@
 use std::{
     any::Any,
-    collections::{HashMap, HashSet},
     fmt,
-    io::{stderr, stdin, Cursor, Read, Write},
+    io::{stderr, stdin, Read, Write},
     path::Path,
     sync::{Arc, OnceLock},
     time::Duration,
 };
 
-use ecow::EcoVec;
 use enum_iterator::{all, Sequence};
+#[cfg(feature = "audio_encode")]
 use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
+#[cfg(feature = "image")]
 use image::{DynamicImage, ImageOutputFormat};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde::*;
-use tinyvec::tiny_vec;
 
 use crate::{
-    array::{Array, Shape},
-    boxed::Boxed,
-    cowslice::{cowslice, CowSlice},
-    function::Signature,
-    primitive::PrimDoc,
-    value::Value,
-    Uiua, UiuaResult,
+    cowslice::cowslice, primitive::PrimDoc, Array, Boxed, Signature, Uiua, UiuaResult, Value,
 };
 
 /// Access the built-in `example.ua` file
@@ -604,6 +597,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("Sleeping is not supported in this environment".into())
     }
     /// Show an image
+    #[cfg(feature = "image")]
     fn show_image(&self, image: DynamicImage) -> Result<(), String> {
         Err("Showing images not supported in this environment".into())
     }
@@ -1053,127 +1047,178 @@ impl SysOp {
                 env.rt.backend.invoke(&path).map_err(|e| env.error(e))?;
             }
             SysOp::ImDecode => {
-                let bytes: CowSlice<u8> = match env.pop(1)? {
-                    #[cfg(feature = "bytes")]
-                    Value::Byte(arr) => {
-                        if arr.rank() != 1 {
-                            return Err(env.error(format!(
-                                "Image bytes array must be rank 1, but is rank {}",
-                                arr.rank()
-                            )));
+                #[cfg(feature = "image")]
+                {
+                    let bytes: crate::cowslice::CowSlice<u8> = match env.pop(1)? {
+                        #[cfg(feature = "bytes")]
+                        Value::Byte(arr) => {
+                            if arr.rank() != 1 {
+                                return Err(env.error(format!(
+                                    "Image bytes array must be rank 1, but is rank {}",
+                                    arr.rank()
+                                )));
+                            }
+                            arr.data
                         }
-                        arr.data
-                    }
-                    Value::Num(arr) => {
-                        if arr.rank() != 1 {
-                            return Err(env.error(format!(
-                                "Image bytes array must be rank 1, but is rank {}",
-                                arr.rank()
-                            )));
+                        Value::Num(arr) => {
+                            if arr.rank() != 1 {
+                                return Err(env.error(format!(
+                                    "Image bytes array must be rank 1, but is rank {}",
+                                    arr.rank()
+                                )));
+                            }
+                            arr.data.iter().map(|&x| x as u8).collect()
                         }
-                        arr.data.iter().map(|&x| x as u8).collect()
-                    }
-                    _ => return Err(env.error("Image bytes must be a numeric array")),
-                };
-                let image = image::load_from_memory(&bytes)
-                    .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
-                    .into_rgba8();
-                let shape = tiny_vec![image.height() as usize, image.width() as usize, 4];
-                let array = Array::<f64>::new(
-                    shape,
-                    image
-                        .into_raw()
-                        .into_iter()
-                        .map(|b| b as f64 / 255.0)
-                        .collect::<CowSlice<_>>(),
-                );
-                env.push(array);
+                        _ => return Err(env.error("Image bytes must be a numeric array")),
+                    };
+                    let image = image::load_from_memory(&bytes)
+                        .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
+                        .into_rgba8();
+                    let shape =
+                        tinyvec::tiny_vec![image.height() as usize, image.width() as usize, 4];
+                    let array = Array::<f64>::new(
+                        shape,
+                        image
+                            .into_raw()
+                            .into_iter()
+                            .map(|b| b as f64 / 255.0)
+                            .collect::<crate::cowslice::CowSlice<_>>(),
+                    );
+                    env.push(array);
+                }
+                #[cfg(not(feature = "image"))]
+                return Err(env.error("Image decoding is not supported in this environment"));
             }
             SysOp::ImEncode => {
-                let format = env
-                    .pop(1)?
-                    .as_string(env, "Image format must be a string")?;
-                let value = env.pop(2)?;
-                let output_format = match format.as_str() {
-                    "jpg" | "jpeg" => ImageOutputFormat::Jpeg(100),
-                    "png" => ImageOutputFormat::Png,
-                    "bmp" => ImageOutputFormat::Bmp,
-                    "gif" => ImageOutputFormat::Gif,
-                    "ico" => ImageOutputFormat::Ico,
-                    format => return Err(env.error(format!("Invalid image format: {}", format))),
-                };
-                let bytes =
-                    value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
-                env.push(Array::<u8>::from(bytes.as_slice()));
+                #[cfg(feature = "image")]
+                {
+                    let format = env
+                        .pop(1)?
+                        .as_string(env, "Image format must be a string")?;
+                    let value = env.pop(2)?;
+                    let output_format = match format.as_str() {
+                        "jpg" | "jpeg" => ImageOutputFormat::Jpeg(100),
+                        "png" => ImageOutputFormat::Png,
+                        "bmp" => ImageOutputFormat::Bmp,
+                        "gif" => ImageOutputFormat::Gif,
+                        "ico" => ImageOutputFormat::Ico,
+                        format => {
+                            return Err(env.error(format!("Invalid image format: {}", format)))
+                        }
+                    };
+                    let bytes =
+                        value_to_image_bytes(&value, output_format).map_err(|e| env.error(e))?;
+                    env.push(Array::<u8>::from(bytes.as_slice()));
+                }
+                #[cfg(not(feature = "image"))]
+                return Err(env.error("Image encoding is not supported in this environment"));
             }
             SysOp::ImShow => {
-                let value = env.pop(1)?;
-                let image = value_to_image(&value).map_err(|e| env.error(e))?;
-                env.rt.backend.show_image(image).map_err(|e| env.error(e))?;
+                #[cfg(feature = "image")]
+                {
+                    let value = env.pop(1)?;
+                    let image = value_to_image(&value).map_err(|e| env.error(e))?;
+                    env.rt.backend.show_image(image).map_err(|e| env.error(e))?;
+                }
+                #[cfg(not(feature = "image"))]
+                return Err(env.error("Image encoding is not supported in this environment"));
             }
             SysOp::GifDecode => {
-                let bytes = env
-                    .pop(1)?
-                    .as_bytes(env, "Gif bytes must be a byte array")?;
-                let (frame_rate, value) = gif_bytes_to_value(&bytes).map_err(|e| env.error(e))?;
-                env.push(value);
-                env.push(frame_rate);
+                #[cfg(feature = "gif")]
+                {
+                    let bytes = env
+                        .pop(1)?
+                        .as_bytes(env, "Gif bytes must be a byte array")?;
+                    let (frame_rate, value) =
+                        gif_bytes_to_value(&bytes).map_err(|e| env.error(e))?;
+                    env.push(value);
+                    env.push(frame_rate);
+                }
+                #[cfg(not(feature = "gif"))]
+                return Err(env.error("GIF encoding is not supported in this environment"));
             }
             SysOp::GifEncode => {
-                let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
-                let value = env.pop(2)?;
-                let bytes = value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
-                env.push(Array::<u8>::from(bytes.as_slice()));
+                #[cfg(feature = "gif")]
+                {
+                    let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
+                    let value = env.pop(2)?;
+                    let bytes = value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
+                    env.push(Array::<u8>::from(bytes.as_slice()));
+                }
+                #[cfg(not(feature = "gif"))]
+                return Err(env.error("GIF encoding is not supported in this environment"));
             }
             SysOp::GifShow => {
-                let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
-                let value = env.pop(2)?;
-                let bytes = value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
-                env.rt.backend.show_gif(bytes).map_err(|e| env.error(e))?;
+                #[cfg(feature = "gif")]
+                {
+                    let delay = env.pop(1)?.as_num(env, "Delay must be a number")?;
+                    let value = env.pop(2)?;
+                    let bytes = value_to_gif_bytes(&value, delay).map_err(|e| env.error(e))?;
+                    env.rt.backend.show_gif(bytes).map_err(|e| env.error(e))?;
+                }
+                #[cfg(not(feature = "gif"))]
+                return Err(env.error("GIF encoding is not supported in this environment"));
             }
             SysOp::AudioDecode => {
-                let bytes: CowSlice<u8> = match env.pop(1)? {
-                    #[cfg(feature = "bytes")]
-                    Value::Byte(arr) => {
-                        if arr.rank() != 1 {
-                            return Err(env.error(format!(
-                                "Audio bytes array must be rank 1, but is rank {}",
-                                arr.rank()
-                            )));
+                #[cfg(feature = "audio_encode")]
+                {
+                    let bytes: crate::cowslice::CowSlice<u8> = match env.pop(1)? {
+                        #[cfg(feature = "bytes")]
+                        Value::Byte(arr) => {
+                            if arr.rank() != 1 {
+                                return Err(env.error(format!(
+                                    "Audio bytes array must be rank 1, but is rank {}",
+                                    arr.rank()
+                                )));
+                            }
+                            arr.data
                         }
-                        arr.data
-                    }
-                    Value::Num(arr) => {
-                        if arr.rank() != 1 {
-                            return Err(env.error(format!(
-                                "Audio bytes array must be rank 1, but is rank {}",
-                                arr.rank()
-                            )));
+                        Value::Num(arr) => {
+                            if arr.rank() != 1 {
+                                return Err(env.error(format!(
+                                    "Audio bytes array must be rank 1, but is rank {}",
+                                    arr.rank()
+                                )));
+                            }
+                            arr.data.iter().map(|&x| x as u8).collect()
                         }
-                        arr.data.iter().map(|&x| x as u8).collect()
-                    }
-                    _ => return Err(env.error("Audio bytes be a numeric array")),
-                };
-                let array = array_from_wav_bytes(&bytes, env).map_err(|e| env.error(e))?;
-                env.push(array);
+                        _ => return Err(env.error("Audio bytes be a numeric array")),
+                    };
+                    let array = array_from_wav_bytes(&bytes, env).map_err(|e| env.error(e))?;
+                    env.push(array);
+                }
+                #[cfg(not(feature = "audio_encode"))]
+                return Err(env.error("Audio decoding is not supported in this environment"));
             }
             SysOp::AudioEncode => {
-                let format = env
-                    .pop(1)?
-                    .as_string(env, "Audio format must be a string")?;
-                let value = env.pop(2)?;
-                let bytes = match format.as_str() {
-                    "wav" => value_to_wav_bytes(&value, env.rt.backend.audio_sample_rate())
-                        .map_err(|e| env.error(e))?,
-                    format => return Err(env.error(format!("Invalid audio format: {}", format))),
-                };
-                env.push(Array::<u8>::from(bytes.as_slice()));
+                #[cfg(feature = "audio_encode")]
+                {
+                    let format = env
+                        .pop(1)?
+                        .as_string(env, "Audio format must be a string")?;
+                    let value = env.pop(2)?;
+                    let bytes = match format.as_str() {
+                        "wav" => value_to_wav_bytes(&value, env.rt.backend.audio_sample_rate())
+                            .map_err(|e| env.error(e))?,
+                        format => {
+                            return Err(env.error(format!("Invalid audio format: {}", format)))
+                        }
+                    };
+                    env.push(Array::<u8>::from(bytes.as_slice()));
+                }
+                #[cfg(not(feature = "audio_encode"))]
+                return Err(env.error("Audio encoding is not supported in this environment"));
             }
             SysOp::AudioPlay => {
-                let value = env.pop(1)?;
-                let bytes = value_to_wav_bytes(&value, env.rt.backend.audio_sample_rate())
-                    .map_err(|e| env.error(e))?;
-                env.rt.backend.play_audio(bytes).map_err(|e| env.error(e))?;
+                #[cfg(feature = "audio_encode")]
+                {
+                    let value = env.pop(1)?;
+                    let bytes = value_to_wav_bytes(&value, env.rt.backend.audio_sample_rate())
+                        .map_err(|e| env.error(e))?;
+                    env.rt.backend.play_audio(bytes).map_err(|e| env.error(e))?;
+                }
+                #[cfg(not(feature = "audio_encode"))]
+                return Err(env.error("Audio encoding is not supported in this environment"));
             }
             SysOp::AudioSampleRate => {
                 let sample_rate = env.rt.backend.audio_sample_rate();
@@ -1412,13 +1457,15 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
 }
 
 #[doc(hidden)]
+#[cfg(feature = "image")]
 pub fn value_to_image_bytes(value: &Value, format: ImageOutputFormat) -> Result<Vec<u8>, String> {
     image_to_bytes(&value_to_image(value)?, format)
 }
 
 #[doc(hidden)]
+#[cfg(feature = "image")]
 pub fn image_to_bytes(image: &DynamicImage, format: ImageOutputFormat) -> Result<Vec<u8>, String> {
-    let mut bytes = Cursor::new(Vec::new());
+    let mut bytes = std::io::Cursor::new(Vec::new());
     image
         .write_to(&mut bytes, format)
         .map_err(|e| format!("Failed to write image: {e}"))?;
@@ -1426,6 +1473,7 @@ pub fn image_to_bytes(image: &DynamicImage, format: ImageOutputFormat) -> Result
 }
 
 #[doc(hidden)]
+#[cfg(feature = "image")]
 pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     if ![2, 3].contains(&value.rank()) {
         return Err(format!(
@@ -1549,6 +1597,7 @@ pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
 }
 
 #[doc(hidden)]
+#[cfg(feature = "audio_encode")]
 pub fn value_to_wav_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, String> {
     #[cfg(not(feature = "audio"))]
     {
@@ -1566,6 +1615,7 @@ pub fn value_to_wav_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, St
     }
 }
 
+#[cfg(feature = "audio_encode")]
 fn value_to_wav_bytes_impl<T: hound::Sample + Copy>(
     audio: &Value,
     convert_samples: impl Fn(f64) -> T + Copy,
@@ -1585,7 +1635,7 @@ fn value_to_wav_bytes_impl<T: hound::Sample + Copy>(
         bits_per_sample,
         sample_format,
     };
-    let mut bytes = Cursor::new(Vec::new());
+    let mut bytes = std::io::Cursor::new(Vec::new());
     let mut writer = WavWriter::new(&mut bytes, spec).map_err(|e| e.to_string())?;
     for i in 0..channels[0].len() {
         for channel in &channels {
@@ -1601,6 +1651,7 @@ fn value_to_wav_bytes_impl<T: hound::Sample + Copy>(
 }
 
 #[doc(hidden)]
+#[cfg(feature = "audio_encode")]
 pub fn stereo_to_wave_bytes<T: hound::Sample + Copy>(
     samples: &[[f64; 2]],
     convert_samples: impl Fn(f64) -> T + Copy,
@@ -1614,7 +1665,7 @@ pub fn stereo_to_wave_bytes<T: hound::Sample + Copy>(
         bits_per_sample,
         sample_format,
     };
-    let mut bytes = Cursor::new(Vec::new());
+    let mut bytes = std::io::Cursor::new(Vec::new());
     let mut writer = WavWriter::new(&mut bytes, spec).map_err(|e| e.to_string())?;
     for frame in samples {
         for sample in frame {
@@ -1629,9 +1680,10 @@ pub fn stereo_to_wave_bytes<T: hound::Sample + Copy>(
     Ok(bytes.into_inner())
 }
 
+#[cfg(feature = "audio_encode")]
 fn array_from_wav_bytes(bytes: &[u8], env: &Uiua) -> UiuaResult<Array<f64>> {
-    let mut reader: WavReader<Cursor<&[u8]>> =
-        WavReader::new(Cursor::new(bytes)).map_err(|e| env.error(e.to_string()))?;
+    let mut reader: WavReader<std::io::Cursor<&[u8]>> =
+        WavReader::new(std::io::Cursor::new(bytes)).map_err(|e| env.error(e.to_string()))?;
     let spec = reader.spec();
     match (spec.sample_format, spec.bits_per_sample) {
         (SampleFormat::Int, 16) => {
@@ -1650,13 +1702,14 @@ fn array_from_wav_bytes(bytes: &[u8], env: &Uiua) -> UiuaResult<Array<f64>> {
     }
 }
 
+#[cfg(feature = "audio_encode")]
 fn array_from_wav_bytes_impl<T: hound::Sample>(
-    reader: &mut WavReader<Cursor<&[u8]>>,
+    reader: &mut WavReader<std::io::Cursor<&[u8]>>,
     sample_to_f64: impl Fn(T) -> f64,
     env: &Uiua,
 ) -> UiuaResult<Array<f64>> {
     let channel_count = reader.spec().channels as usize;
-    let mut channels = vec![EcoVec::new(); channel_count];
+    let mut channels = vec![ecow::EcoVec::new(); channel_count];
     let mut curr_channel = 0;
     for sample in reader.samples::<T>() {
         let sample = sample.map_err(|e| env.error(e.to_string()))?;
@@ -1672,7 +1725,9 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
 }
 
 #[doc(hidden)]
+#[cfg(feature = "gif")]
 pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, String> {
+    use std::collections::{HashMap, HashSet};
     if value.row_count() == 0 {
         return Err("Cannot convert empty array into GIF".into());
     }
@@ -1695,7 +1750,7 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
         ));
     }
     let mut reduction = 1;
-    let mut bytes = Cursor::new(Vec::new());
+    let mut bytes = std::io::Cursor::new(Vec::new());
     let mut all_colors = HashSet::new();
     for frame in &frames {
         for pixel in frame.pixels() {
@@ -1738,6 +1793,7 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
 }
 
 #[doc(hidden)]
+#[cfg(feature = "gif")]
 pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingError> {
     let mut decoder = gif::DecodeOptions::new();
     decoder.set_color_output(gif::ColorOutput::RGBA);
@@ -1745,7 +1801,7 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
     let first_frame = decoder.read_next_frame()?.unwrap();
     let width = first_frame.width;
     let height = first_frame.height;
-    let mut data: CowSlice<f64> = CowSlice::new();
+    let mut data: crate::cowslice::CowSlice<f64> = Default::default();
     let mut frame_count = 1;
     let mut delay_sum = first_frame.delay as f64 / 100.0;
     data.extend(first_frame.buffer.iter().map(|&b| b as f64 / 255.0));
@@ -1756,7 +1812,7 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
     }
     let avg_delay = delay_sum / frame_count as f64;
     let frame_rate = 1.0 / avg_delay;
-    let shape = Shape::from_iter([frame_count, height as usize, width as usize, 4]);
+    let shape = crate::Shape::from_iter([frame_count, height as usize, width as usize, 4]);
     let mut num = Value::Num(Array::new(shape, data));
     num.compress();
     Ok((frame_rate, num))

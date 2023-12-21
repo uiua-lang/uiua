@@ -18,8 +18,8 @@ use thread_local::ThreadLocal;
 
 use crate::{
     algorithm, array::Array, boxed::Boxed, check::instrs_temp_signatures, function::*, lex::Span,
-    value::Value, Assembly, Compiler, Complex, Global, Ident, Inputs, IntoSysBackend, NativeSys,
-    Primitive, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    value::Value, Assembly, Compiler, Complex, Global, Ident, Inputs, IntoSysBackend, Primitive,
+    SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua interpreter
@@ -209,8 +209,9 @@ impl Default for Runtime {
 
 impl Uiua {
     /// Create a new Uiua runtime with the standard IO backend
+    #[cfg(feature = "native_sys")]
     pub fn with_native_sys() -> Self {
-        Self::with_backend(NativeSys)
+        Self::with_backend(crate::NativeSys)
     }
     /// Create a new Uiua runtime with no IO capabilities
     pub fn with_safe_sys() -> Self {

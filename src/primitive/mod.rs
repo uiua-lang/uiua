@@ -1171,7 +1171,7 @@ impl PrimExample {
     /// Get the example's output
     pub fn output(&self) -> &Result<Vec<String>, String> {
         self.output.get_or_init(|| {
-            let env = &mut Uiua::with_native_sys();
+            let mut env = Uiua::with_safe_sys();
             match env.run_str(&self.input) {
                 Ok(_) => Ok(env.take_stack().into_iter().map(|val| val.show()).collect()),
                 Err(e) => Err(e
@@ -1333,6 +1333,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "native_sys")]
     fn prim_docs() {
         for prim in Primitive::non_deprecated() {
             for line in &prim.doc().lines {

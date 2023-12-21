@@ -1,13 +1,18 @@
 # Test combinations of features
 
 Command ← {"cargo" "c" "--lib" "--no-default-features"}
+Features ← (
+  {"audio" "bytes" "https"}
+  ⊂(
+    {"gif,image,terminal_image" "lsp,raw_mode"}
+  | {"audio_encode" "gif" "image" "terminal_image" "lsp" "native_sys" "raw_mode"}
+  ) ∊□"all" &args
+)
 
 &p "Checking with no features"
 ⍤⊃⋅∘≍ 0 &runi Command
 
-# Features to try
-{"bytes" "lsp" "terminal_image" "raw_mode" "audio"}
-↘1⋯⇡ⁿ:2⧻.
+↘1⋯⇡ⁿ:2⧻. Features
 ≡(
   ⊐/$"_,_" ▽
   &p $"Checking with features: _".

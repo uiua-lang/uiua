@@ -87,13 +87,13 @@ impl GlobalNativeSys {
 
 static NATIVE_SYS: Lazy<GlobalNativeSys> = Lazy::new(Default::default);
 
-#[cfg(feature = "audio")]
+#[cfg(all(feature = "audio", feature = "binary"))]
 #[doc(hidden)]
 pub fn set_audio_stream_time(time: f64) {
     *NATIVE_SYS.audio_stream_time.lock() = Some(time);
 }
 
-#[cfg(feature = "audio")]
+#[cfg(all(feature = "audio", feature = "binary"))]
 #[doc(hidden)]
 pub fn set_audio_stream_time_port(port: u16) -> std::io::Result<()> {
     let socket = std::net::UdpSocket::bind(("127.0.0.1", 0))?;
@@ -252,7 +252,7 @@ impl SysBackend for NativeSys {
         sleep(Duration::from_secs_f64(seconds));
         Ok(())
     }
-    #[cfg(feature = "terminal_image")]
+    #[cfg(all(feature = "terminal_image", feature = "image"))]
     fn show_image(&self, image: image::DynamicImage) -> Result<(), String> {
         let (width, height) = if let Some((w, h)) = term_size::dimensions() {
             let (tw, th) = (w as u32, h.saturating_sub(1) as u32);

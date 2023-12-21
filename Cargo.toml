@@ -19,9 +19,6 @@ crossbeam-channel = "0.5.9"
 dashmap = {version = "5", features = ["serde"]}
 ecow = {version = "0.2.0", features = ["serde"]}
 enum-iterator = "1.4.1"
-gif = "0.12.0"
-hound = "3"
-image = {version = "0.24.5", features = ["bmp", "gif", "ico", "jpeg", "png"]}
 instant = "0.1.12"
 num_cpus = "1.16.0"
 once_cell = "1"
@@ -69,16 +66,21 @@ indexmap = {version = "2", optional = true, features = ["serde"]}
 serde_tuple = "0.5.0"
 serde_yaml = {version = "0.9.27", optional = true}
 
+# Feature dependencies
+gif = {version = "0.12.0", optional = true}
+hound = {version = "3", optional = true}
+image = {version = "0.24.5", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png"]}
+
 [features]
-audio = ["hodaun", "lockfree"]
+audio = ["hodaun", "lockfree", "audio_encode"]
+audio_encode = ["hound"]
 binary = [
   "ctrlc",
   "notify",
   "clap",
   "color-backtrace",
-  "lsp",
   "rustyline",
-  "stand",
+  "native_sys",
 ]
 bytes = []
 debug = []
@@ -89,15 +91,22 @@ default = [
   "https",
   "invoke",
   "trash",
+  "lsp",
   "raw_mode",
+  "gif",
+  "stand",
+  "image",
+  "native_sys",
 ]
+gif = ["dep:gif", "image"]
 https = ["httparse", "rustls", "webpki-roots"]
 invoke = ["open"]
-lsp = ["tower-lsp", "tokio"]
+lsp = ["tower-lsp", "tokio", "native_sys"]
+native_sys = []
 profile = ["serde_yaml", "indexmap"]
-raw_mode = ["crossterm"]
-stand = []
-terminal_image = ["viuer"]
+raw_mode = ["crossterm", "native_sys"]
+stand = ["native_sys"]
+terminal_image = ["viuer", "image"]
 
 [[bin]]
 name = "uiua"

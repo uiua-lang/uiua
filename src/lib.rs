@@ -123,6 +123,7 @@ mod run;
 #[doc(hidden)]
 pub mod stand;
 mod sys;
+#[cfg(feature = "native_sys")]
 mod sys_native;
 mod value;
 
@@ -141,9 +142,11 @@ pub use self::{
     primitive::*,
     run::*,
     sys::*,
-    sys_native::*,
     value::*,
 };
+
+#[cfg(feature = "native_sys")]
+pub use self::sys_native::*;
 
 pub use complex::*;
 use ecow::EcoString;
@@ -156,9 +159,10 @@ pub type Ident = EcoString;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     #[test]
+    #[cfg(feature = "native_sys")]
     fn suite() {
+        use super::*;
         for entry in std::fs::read_dir("tests").unwrap() {
             let entry = entry.unwrap();
             let path = entry.path();

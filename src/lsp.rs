@@ -194,7 +194,7 @@ mod server {
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Assembly, BindingInfo, Compiler, NativeSys, PrimDocLine, Uiua,
+        Assembly, BindingInfo, Compiler, PrimDocLine, Uiua,
     };
 
     pub struct LspDoc {
@@ -465,7 +465,7 @@ mod server {
             match format_str(
                 &doc.input,
                 &FormatConfig {
-                    backend: Arc::new(NativeSys),
+                    backend: Arc::new(crate::NativeSys),
                     ..FormatConfig::find().unwrap_or_default()
                 },
             ) {

@@ -917,7 +917,9 @@ impl<T: ArrayValue> Array<T> {
                 }
                 Err(_) => {
                     let data = cowslice![0; searched.element_count()];
-                    return Ok(Array::new(searched.shape.clone(), data));
+                    let mut arr = Array::new(searched.shape.clone(), data);
+                    arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+                    return Ok(arr);
                 }
             }
         }

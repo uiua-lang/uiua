@@ -7,6 +7,16 @@ Uiua is not yet stable.
 ## 0.8.0 - 202?-??-??
 ### Language
 - Add the experimental [`cascade` `⪾`](https://uiua.org/docs/cascade) modifier, which captures some common [`fork` `⊃`](https://uiua.org/docs/fork) patterns
+- Add experimental hashmap functions, which operate on a box array as if it is a hashmap
+  - [`has`](https://uiua.org/docs/has)
+  - [`get`](https://uiua.org/docs/get)
+  - [`insert`](https://uiua.org/docs/insert)
+  - [`remove`](https://uiua.org/docs/remove)
+  - [`keys`](https://uiua.org/docs/keys)
+  - [`values`](https://uiua.org/docs/values)
+### Interpreter
+- The internal byte array type is now used in more places, which should improve performance a bit
+- Bug and crash fixes
 
 ## 0.7.1 - 2023-12-18
 ### Interpreter

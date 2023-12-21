@@ -1508,6 +1508,19 @@ code:
                     self.compile_operand_words(vec![operands.next().unwrap()])?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let count = a_sig.args.saturating_sub(b_sig.outputs);
+                if count == 0 {
+                    self.emit_diagnostic(
+                        format!(
+                            "{}'s second function has more outputs \
+                            than its first function has arguments, \
+                            so {} is redundant here.",
+                            prim.format(),
+                            prim.format()
+                        ),
+                        DiagnosticKind::Advice,
+                        modified.modifier.span.clone(),
+                    );
+                }
                 let mut instrs = Vec::new();
                 if count > 0 {
                     instrs.push(Instr::CopyToTemp {

@@ -4,11 +4,8 @@ use ecow::EcoVec;
 
 use crate::{
     algorithm::{loops::flip, pervade::*},
-    array::{Array, ArrayValue, Shape},
     cowslice::cowslice,
-    function::Function,
-    value::Value,
-    ImplPrimitive, Primitive, Uiua, UiuaResult,
+    Array, ArrayValue, Function, ImplPrimitive, Primitive, Shape, Uiua, UiuaResult, Value,
 };
 
 pub fn reduce(env: &mut Uiua) -> UiuaResult {

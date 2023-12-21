@@ -9,8 +9,8 @@ use std::{
 use tinyvec::TinyVec;
 
 use crate::{
-    array::{Array, ArrayValue, Shape},
-    CodeSpan, Function, Inputs, Signature, Span, Uiua, UiuaError, UiuaResult, Value,
+    Array, ArrayValue, CodeSpan, Function, Inputs, Shape, Signature, Span, Uiua, UiuaError,
+    UiuaResult, Value,
 };
 
 mod dyadic;

@@ -8,8 +8,8 @@ use std::{
     slice::{self, ChunksExact},
 };
 
-use crate::Complex;
 use crate::{array::*, cowslice::CowSlice, Uiua, UiuaError, UiuaResult};
+use crate::{Complex, Shape};
 
 use super::fill_array_shapes;
 
@@ -230,8 +230,8 @@ where
     // Fill
     fill_array_shapes(a, &mut b, env)?;
     // Pervade
-    let ash = a.shape.as_slice();
-    let bsh = b.shape.as_slice();
+    let ash = a.shape.dims();
+    let bsh = b.shape.dims();
     // Try to avoid copying when possible
     if ash == bsh {
         if a.data.is_copy_of(&b.data) {

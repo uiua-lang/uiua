@@ -11,14 +11,13 @@ use std::{
 
 use ecow::{eco_vec, EcoVec};
 use rayon::prelude::*;
-use tinyvec::tiny_vec;
 
 use crate::{
     array::*,
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
     value::Value,
-    Boxed, Uiua, UiuaResult,
+    Boxed, Shape, Uiua, UiuaResult,
 };
 
 use super::{op_bytes_retry_fill, ArrayCmpSlice, FillContext};
@@ -141,7 +140,7 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// Make the array 1-dimensional
     pub fn deshape(&mut self) {
-        self.shape = tiny_vec![self.element_count()];
+        self.shape = self.element_count().into();
     }
     pub(crate) fn deshape_depth(&mut self, mut depth: usize) {
         depth = depth.min(self.rank());
@@ -162,7 +161,7 @@ impl Value {
             return Ok((0..shape[0]).collect());
         }
         if shape.is_empty() {
-            return Ok(Array::<f64>::new(Shape::from_iter([0]), CowSlice::new()).into());
+            return Ok(Array::<f64>::new(0, CowSlice::new()).into());
         }
         let mut shape = Shape::from(shape.as_slice());
         let data = range(&shape, env)?;

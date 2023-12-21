@@ -199,7 +199,7 @@ impl<'a> MapRefMut<'a> {
         if arr.rank() > 2 {
             return Err(env.error("Map array cannot have a rank greater than 2"));
         }
-        if arr.shape.as_slice() == [0] {
+        if arr.shape == 0 {
             arr.shape.push(2)
         }
         if !arr.shape.ends_with(&[2]) {

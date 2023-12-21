@@ -131,6 +131,7 @@ mod primitive;
 #[doc(hidden)]
 pub mod profile;
 mod run;
+mod shape;
 #[cfg(feature = "stand")]
 #[doc(hidden)]
 pub mod stand;
@@ -153,6 +154,7 @@ pub use self::{
     parse::{parse, ParseError},
     primitive::*,
     run::*,
+    shape::*,
     sys::*,
     value::*,
 };

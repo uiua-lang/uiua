@@ -1075,7 +1075,7 @@ impl SysOp {
                         .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                         .into_rgba8();
                     let shape =
-                        tinyvec::tiny_vec![image.height() as usize, image.width() as usize, 4];
+                        crate::Shape::from([image.height() as usize, image.width() as usize, 4]);
                     let array = Array::<f64>::new(
                         shape,
                         image

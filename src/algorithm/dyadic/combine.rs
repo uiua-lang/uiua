@@ -1,7 +1,5 @@
 use std::{cmp::Ordering, mem::take};
 
-use tinyvec::tiny_vec;
-
 #[cfg(feature = "bytes")]
 use crate::algorithm::op2_bytes_retry_fill;
 use crate::{
@@ -261,7 +259,7 @@ impl<T: ArrayValue> Array<T> {
                 if self.rank() == 0 {
                     debug_assert_eq!(other.rank(), 0);
                     self.data.extend(other.data.into_iter().next());
-                    self.shape = tiny_vec![2];
+                    self.shape = 2.into();
                     self
                 } else {
                     match ctx.fill::<T>() {

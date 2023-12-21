@@ -1,14 +1,10 @@
 //! Algorithms for tabling modifiers
 
 use ecow::EcoVec;
-use tinyvec::tiny_vec;
 
 use crate::{
-    algorithm::pervade::*,
-    array::{Array, ArrayValue, Shape},
-    function::Function,
-    value::Value,
-    Primitive, Uiua, UiuaResult,
+    algorithm::pervade::*, function::Function, value::Value, Array, ArrayValue, Primitive, Shape,
+    Uiua, UiuaResult,
 };
 
 use super::{loops::flip, multi_output};
@@ -256,7 +252,7 @@ pub fn cross(env: &mut Uiua) -> UiuaResult {
         2 => {
             let xs = env.pop(1)?;
             let ys = env.pop(2)?;
-            let new_shape = tiny_vec![xs.row_count(), ys.row_count()];
+            let new_shape = Shape::from([xs.row_count(), ys.row_count()]);
             let outputs = sig.outputs;
             let mut items = multi_output(outputs, Value::builder(xs.row_count() * ys.row_count()));
             let y_rows = ys.into_rows().collect::<Vec<_>>();

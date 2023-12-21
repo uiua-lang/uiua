@@ -3,11 +3,8 @@
 use std::slice;
 
 use crate::{
-    algorithm::pervade::bin_pervade_generic,
-    array::{FormatShape, Shape},
-    function::Function,
-    value::Value,
-    ImplPrimitive, Instr, Primitive, Uiua, UiuaResult,
+    algorithm::pervade::bin_pervade_generic, function::Function, value::Value, FormatShape,
+    ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult,
 };
 
 use super::{multi_output, MultiOutput};

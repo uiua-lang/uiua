@@ -13,10 +13,9 @@ use serde::*;
 use crate::{
     algorithm::{pervade::*, FillContext},
     array::*,
-    boxed::Boxed,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
-    Complex, Uiua, UiuaResult,
+    Boxed, Complex, Shape, Uiua, UiuaResult,
 };
 
 /// A generic array value

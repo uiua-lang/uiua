@@ -1,20 +1,17 @@
 use std::{
     cmp::Ordering,
-    fmt::{self, Debug, Display},
+    fmt,
     hash::{Hash, Hasher},
     sync::Arc,
 };
 
 use bitflags::bitflags;
 use ecow::EcoVec;
-use tinyvec::{tiny_vec, TinyVec};
 
 use crate::{
-    boxed::Boxed,
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
-    value::Value,
-    Complex, Uiua,
+    Boxed, Complex, Shape, Uiua, Value,
 };
 
 /// Uiua's array type
@@ -25,9 +22,6 @@ pub struct Array<T> {
     pub(crate) data: CowSlice<T>,
     pub(crate) meta: Option<Arc<ArrayMeta>>,
 }
-
-/// Uiua's array shape type
-pub type Shape = TinyVec<[usize; 3]>;
 
 /// Non-shape metadata for an array
 #[derive(Clone, Default)]
@@ -69,7 +63,7 @@ pub static DEFAULT_META: ArrayMeta = ArrayMeta {
 impl<T: ArrayValue> Default for Array<T> {
     fn default() -> Self {
         Self {
-            shape: tiny_vec![0],
+            shape: 0.into(),
             data: CowSlice::new(),
             meta: None,
         }
@@ -209,7 +203,7 @@ impl<T> Array<T> {
 impl<T: ArrayValue> Array<T> {
     /// Create a scalar array
     pub fn scalar(data: T) -> Self {
-        Self::new(Shape::new(), cowslice![data])
+        Self::new(Shape::scalar(), cowslice![data])
     }
     /// Attempt to convert the array into a scalar
     pub fn into_scalar(self) -> Result<T, Self> {
@@ -422,19 +416,19 @@ impl<T: ArrayValue> From<T> for Array<T> {
 
 impl<T: ArrayValue> From<EcoVec<T>> for Array<T> {
     fn from(data: EcoVec<T>) -> Self {
-        Self::new(tiny_vec![data.len()], data)
+        Self::new(data.len(), data)
     }
 }
 
 impl<T: ArrayValue> From<CowSlice<T>> for Array<T> {
     fn from(data: CowSlice<T>) -> Self {
-        Self::new(tiny_vec![data.len()], data)
+        Self::new(data.len(), data)
     }
 }
 
 impl<'a, T: ArrayValue> From<&'a [T]> for Array<T> {
     fn from(data: &'a [T]) -> Self {
-        Self::new(tiny_vec![data.len()], data)
+        Self::new(data.len(), data)
     }
 }
 
@@ -446,14 +440,14 @@ impl<T: ArrayValue> FromIterator<T> for Array<T> {
 
 impl From<String> for Array<char> {
     fn from(s: String) -> Self {
-        Self::new(tiny_vec![s.len()], s.chars().collect::<CowSlice<_>>())
+        Self::new(s.len(), s.chars().collect::<CowSlice<_>>())
     }
 }
 
 impl From<Vec<bool>> for Array<u8> {
     fn from(data: Vec<bool>) -> Self {
         Self::new(
-            tiny_vec![data.len()],
+            data.len(),
             data.into_iter().map(u8::from).collect::<CowSlice<_>>(),
         )
     }
@@ -461,14 +455,14 @@ impl From<Vec<bool>> for Array<u8> {
 
 impl From<bool> for Array<u8> {
     fn from(data: bool) -> Self {
-        Self::new(tiny_vec![], cowslice![u8::from(data)])
+        Self::new(Shape::scalar(), cowslice![u8::from(data)])
     }
 }
 
 impl From<Vec<usize>> for Array<f64> {
     fn from(data: Vec<usize>) -> Self {
         Self::new(
-            tiny_vec![data.len()],
+            data.len(),
             data.into_iter().map(|u| u as f64).collect::<CowSlice<_>>(),
         )
     }
@@ -487,7 +481,9 @@ impl FromIterator<String> for Array<Boxed> {
 
 /// A trait for types that can be used as array elements
 #[allow(unused_variables)]
-pub trait ArrayValue: Clone + Debug + Display + GridFmt + ArrayCmp + Send + Sync + 'static {
+pub trait ArrayValue:
+    Clone + fmt::Debug + fmt::Display + GridFmt + ArrayCmp + Send + Sync + 'static
+{
     /// The type name
     const NAME: &'static str;
     /// A glyph indicating the type
@@ -573,7 +569,7 @@ impl ArrayValue for Boxed {
         self.hash(hasher)
     }
     fn proxy() -> Self {
-        Boxed(Array::<f64>::new(tiny_vec![0], []).into())
+        Boxed(Array::<f64>::new(0, []).into())
     }
 }
 

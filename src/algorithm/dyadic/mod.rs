@@ -19,7 +19,7 @@ use crate::{
     boxed::Boxed,
     cowslice::{cowslice, CowSlice},
     value::Value,
-    Uiua, UiuaResult,
+    Shape, Uiua, UiuaResult,
 };
 
 #[cfg(feature = "bytes")]

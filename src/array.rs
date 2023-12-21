@@ -172,6 +172,10 @@ impl<T> Array<T> {
         let meta = self.meta.get_or_insert_with(Default::default);
         Arc::make_mut(meta)
     }
+    /// Reset all metadata
+    pub fn reset_meta(&mut self) {
+        self.meta = None;
+    }
     /// Reset all metadata flags
     pub fn reset_meta_flags(&mut self) {
         if self.meta.is_some() {

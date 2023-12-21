@@ -1724,7 +1724,7 @@ code:
                 let start = asm.instrs.len();
                 let len = instrs.len();
                 asm.instrs.extend(instrs);
-                asm.top_slices = vec![FuncSlice { start, len }];
+                asm.top_slices.push(FuncSlice { start, len });
                 let mut env = Uiua::with_backend(self.backend.clone());
                 env.run_asm(&asm)?;
                 let values = env.take_stack();

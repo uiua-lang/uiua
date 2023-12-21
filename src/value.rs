@@ -306,40 +306,47 @@ struct Repr {
 }
 
 impl Value {
+    /// # Safety
+    /// The value or layout of data accessed from the Repr's array must not be dependent on the array's type
+    unsafe fn repr(&self) -> &Repr {
+        &*(self as *const Self as *const Repr)
+    }
+    /// # Safety
+    /// The value or layout of data accessed from the Repr's array must not be dependent on the array's type
+    unsafe fn repr_mut(&mut self) -> &mut Repr {
+        &mut *(self as *mut Self as *mut Repr)
+    }
     /// Get the shape of the value
     pub fn shape(&self) -> &[usize] {
-        let repr = unsafe { &*(self as *const Self as *const Repr) };
-        &repr.arr.shape
+        &unsafe { self.repr() }.arr.shape
     }
     /// Get a mutable reference to the shape
     pub fn shape_mut(&mut self) -> &mut Shape {
-        let repr = unsafe { &mut *(self as *mut Self as *mut Repr) };
-        &mut repr.arr.shape
+        &mut unsafe { self.repr_mut() }.arr.shape
     }
     /// Get the number of elements
     pub fn element_count(&self) -> usize {
-        let repr = unsafe { &*(self as *const Self as *const Repr) };
-        repr.arr.element_count()
+        unsafe { self.repr() }.arr.element_count()
     }
     /// Get the value's metadata
     pub fn meta(&self) -> &ArrayMeta {
-        let repr = unsafe { &*(self as *const Self as *const Repr) };
-        repr.arr.meta()
+        unsafe { self.repr() }.arr.meta()
     }
     /// Get a mutable reference to the value's metadata
     pub fn meta_mut(&mut self) -> &mut ArrayMeta {
-        let repr = unsafe { &mut *(self as *mut Self as *mut Repr) };
-        repr.arr.meta_mut()
+        unsafe { self.repr_mut() }.arr.meta_mut()
     }
     /// Combine this value's metadata with another
     pub fn combine_meta(&mut self, other: &ArrayMeta) {
-        let repr = unsafe { &mut *(self as *mut Self as *mut Repr) };
-        repr.arr.combine_meta(other);
+        unsafe { self.repr_mut() }.arr.combine_meta(other)
+    }
+    /// Reset this value's metadata
+    pub fn reset_meta(&mut self) {
+        unsafe { self.repr_mut() }.arr.reset_meta()
     }
     /// Reset this value's metadata flags
     pub fn reset_meta_flags(&mut self) {
-        let repr = unsafe { &mut *(self as *mut Self as *mut Repr) };
-        repr.arr.reset_meta_flags();
+        unsafe { self.repr_mut() }.arr.reset_meta_flags()
     }
     pub(crate) fn validate_shape(&self) {
         self.generic_ref_shallow(

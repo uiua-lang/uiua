@@ -276,6 +276,13 @@ F ← memo(+⌊×10⚂)
 ⍤⊃⋅∘≍ F1 F1
 ⍤⊃⋅∘≍ F5 F5
 
+# Comptime
+X ← 5
+Y ← comptime(X)
+⍤⊃⋅∘≍ X Y
+Z ← comptime(+1Y)
+⍤⊃⋅∘≍ Z +1 X
+
 # Experimental!
 
 # Cascade

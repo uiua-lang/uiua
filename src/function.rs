@@ -191,7 +191,7 @@ impl fmt::Debug for Instr {
                 if val.element_count() < 50 && val.shape().len() <= 1 {
                     write!(f, "push {val:?}")
                 } else {
-                    write!(f, "push {} array", val.format_shape())
+                    write!(f, "push {} array", val.shape())
                 }
             }
             _ => write!(f, "{self}"),

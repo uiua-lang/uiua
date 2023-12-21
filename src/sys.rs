@@ -1242,7 +1242,7 @@ impl SysOp {
                     let samples = samples.as_num_array().ok_or_else(|| {
                         stream_env.error("Audio stream function must return a numeric array")
                     })?;
-                    match samples.shape() {
+                    match samples.shape().dims() {
                         [_] => Ok(samples.data.iter().map(|&x| [x, x]).collect()),
                         [_, 2] => Ok(samples
                             .data
@@ -1493,7 +1493,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
         _ => return Err("Image must be a numeric array".into()),
     };
     #[allow(clippy::match_ref_pats)]
-    let [height, width, px_size] = match value.shape() {
+    let [height, width, px_size] = match value.shape().dims() {
         &[a, b] => [a, b, 1],
         &[a, b, c] => [a, b, c],
         _ => unreachable!("Shape checked above"),
@@ -1586,7 +1586,7 @@ pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
     if channels.len() > 5 {
         return Err(format!(
             "Audio can have at most 5 channels, but its shape is {}",
-            audio.format_shape()
+            audio.shape()
         ));
     }
 

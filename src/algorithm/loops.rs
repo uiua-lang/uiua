@@ -242,7 +242,7 @@ impl<T: ArrayValue> Array<T> {
         if markers.len() != self.row_count() {
             return Err(env.error(format!(
                 "Cannot partition array of shape {} with markers of length {}",
-                self.format_shape(),
+                self.shape(),
                 markers.len()
             )));
         }
@@ -291,7 +291,7 @@ impl<T: ArrayValue> Array<T> {
         if indices.len() != self.row_count() {
             return Err(env.error(format!(
                 "Cannot group array of shape {} with indices of length {}",
-                self.format_shape(),
+                self.shape(),
                 indices.len()
             )));
         }

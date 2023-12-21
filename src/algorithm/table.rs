@@ -209,7 +209,7 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
             Primitive::Table.format()
         )));
     }
-    let mut new_shape = Shape::from(xs.shape());
+    let mut new_shape = xs.shape().clone();
     new_shape.extend_from_slice(ys.shape());
     let outputs = sig.outputs;
     let mut items = multi_output(

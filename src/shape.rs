@@ -149,7 +149,13 @@ impl Extend<usize> for Shape {
 
 impl PartialEq<usize> for Shape {
     fn eq(&self, other: &usize) -> bool {
-        self == &[*other]
+        self == [*other]
+    }
+}
+
+impl PartialEq<usize> for &Shape {
+    fn eq(&self, other: &usize) -> bool {
+        *self == [*other]
     }
 }
 
@@ -159,14 +165,38 @@ impl<const N: usize> PartialEq<[usize; N]> for Shape {
     }
 }
 
+impl<const N: usize> PartialEq<[usize; N]> for &Shape {
+    fn eq(&self, other: &[usize; N]) -> bool {
+        *self == other.as_slice()
+    }
+}
+
 impl PartialEq<[usize]> for Shape {
     fn eq(&self, other: &[usize]) -> bool {
         self.dims == other
     }
 }
 
+impl PartialEq<[usize]> for &Shape {
+    fn eq(&self, other: &[usize]) -> bool {
+        *self == other
+    }
+}
+
 impl PartialEq<&[usize]> for Shape {
     fn eq(&self, other: &&[usize]) -> bool {
         self.dims == *other
+    }
+}
+
+impl PartialEq<Shape> for &[usize] {
+    fn eq(&self, other: &Shape) -> bool {
+        other == self
+    }
+}
+
+impl PartialEq<Shape> for [usize] {
+    fn eq(&self, other: &Shape) -> bool {
+        other == self
     }
 }

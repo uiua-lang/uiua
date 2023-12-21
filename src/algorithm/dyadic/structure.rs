@@ -150,7 +150,7 @@ impl<T: ArrayValue> Array<T> {
                         return Err(env
                             .error(format!(
                                 "Index {i} is out of bounds of length {s} (dimension {d}) in shape {}{e}",
-                                self.format_shape()
+                                self.shape()
                             ))
                             .fill());
                     }
@@ -194,7 +194,7 @@ impl<T: ArrayValue> Array<T> {
                 "Attempted to undo pick, but the shape of the selected \
                 array changed from {} to {}",
                 FormatShape(&expected_shape),
-                self.format_shape()
+                self.shape()
             )));
         }
         let index_row_len: usize = index_shape[1..].iter().product();
@@ -216,7 +216,7 @@ impl<T: ArrayValue> Array<T> {
                 "Attempted to undo pick, but the shape of the selected \
                 array changed from {} to {}",
                 FormatShape(expected_shape),
-                self.format_shape()
+                self.shape()
             )));
         }
         let mut start = 0;

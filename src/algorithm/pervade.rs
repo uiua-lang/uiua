@@ -163,7 +163,7 @@ where
     // Fill
     fill_array_shapes(&mut a, &mut b, env)?;
     // Pervade
-    let shape = Shape::from(a.shape().max(b.shape()));
+    let shape = a.shape().max(b.shape()).clone();
     let mut data = CowSlice::with_capacity(a.element_count().max(b.element_count()));
     bin_pervade_recursive(&a, &b, &mut data, env, f).map_err(Into::into)?;
     Ok(Array::new(shape, data))

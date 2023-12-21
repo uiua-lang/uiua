@@ -154,7 +154,7 @@ impl<T> Array<T> {
         self.shape.len()
     }
     /// Get the shape of the array
-    pub fn shape(&self) -> &[usize] {
+    pub fn shape(&self) -> &Shape {
         &self.shape
     }
     /// Get the metadata of the array
@@ -175,10 +175,6 @@ impl<T> Array<T> {
         if self.meta.is_some() {
             self.meta_mut().flags.reset();
         }
-    }
-    /// Get a formattable shape of the array
-    pub fn format_shape(&self) -> FormatShape<'_> {
-        FormatShape(self.shape())
     }
     /// Get an iterator over the row slices of the array
     pub fn row_slices(&self) -> impl ExactSizeIterator<Item = &[T]> + DoubleEndedIterator {

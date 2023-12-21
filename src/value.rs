@@ -268,10 +268,6 @@ impl Value {
             Self::Box(array) => array.first_dim_zero().into(),
         }
     }
-    /// Get a formattable representation of the shape
-    pub fn format_shape(&self) -> FormatShape {
-        FormatShape(self.shape())
-    }
     /// Get the rank
     pub fn rank(&self) -> usize {
         self.shape().len()
@@ -316,7 +312,7 @@ impl Value {
         &mut *(self as *mut Self as *mut Repr)
     }
     /// Get the shape of the value
-    pub fn shape(&self) -> &[usize] {
+    pub fn shape(&self) -> &Shape {
         &unsafe { self.repr() }.arr.shape
     }
     /// Get a mutable reference to the shape
@@ -837,10 +833,9 @@ impl Value {
         Ok(match self {
             Value::Num(nums) => {
                 if !test_shape(self.shape()) {
-                    return Err(env.error(format!(
-                        "{requirement}, but its shape is {}",
-                        nums.format_shape()
-                    )));
+                    return Err(
+                        env.error(format!("{requirement}, but its shape is {}", nums.shape()))
+                    );
                 }
                 let mut result = EcoVec::with_capacity(nums.element_count());
                 for &num in nums.data() {
@@ -849,15 +844,14 @@ impl Value {
                     }
                     result.push(convert_num(num));
                 }
-                Array::new(self.shape(), result)
+                Array::new(self.shape().clone(), result)
             }
             #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
                 if !test_shape(self.shape()) {
-                    return Err(env.error(format!(
-                        "{requirement}, but its shape is {}",
-                        bytes.format_shape()
-                    )));
+                    return Err(
+                        env.error(format!("{requirement}, but its shape is {}", bytes.shape()))
+                    );
                 }
                 let mut result = EcoVec::with_capacity(bytes.element_count());
                 for &byte in bytes.data() {
@@ -867,7 +861,7 @@ impl Value {
                     }
                     result.push(convert_num(num));
                 }
-                Array::new(self.shape(), result)
+                Array::new(self.shape().clone(), result)
             }
             value => {
                 return Err(env.error(format!(

@@ -4,7 +4,7 @@ use std::slice;
 
 use crate::{
     algorithm::pervade::bin_pervade_generic, function::Function, value::Value, FormatShape,
-    ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult,
+    ImplPrimitive, Instr, Primitive, Uiua, UiuaResult,
 };
 
 use super::{multi_output, MultiOutput};
@@ -174,7 +174,7 @@ fn each1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     } else {
         let outputs = f.signature().outputs;
         let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
-        let new_shape = Shape::from(xs.shape());
+        let new_shape = xs.shape().clone();
         let is_empty = outputs > 0 && xs.row_count() == 0;
         if is_empty {
             env.push(xs.proxy_scalar(env));
@@ -212,8 +212,8 @@ fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             "Cannot {} arrays with shapes {} and {} because their \
             shape prefixes {} and {} are different",
             Primitive::Each.format(),
-            xs.format_shape(),
-            ys.format_shape(),
+            xs.shape(),
+            ys.shape(),
             FormatShape(&xs.shape()[..min_rank]),
             FormatShape(&ys.shape()[..min_rank])
         )));
@@ -302,8 +302,8 @@ fn eachn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
                 "The shapes in each of 3 or more arrays must all match, \
                 but shapes {} and {} cannot be {}ed together. \
                 If you want more flexibility, use rows.",
-                win[0].format_shape(),
-                win[1].format_shape(),
+                win[0].shape(),
+                win[1].shape(),
                 Primitive::Each.format()
             )));
         }
@@ -312,7 +312,7 @@ fn eachn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     let is_empty = outputs > 0 && args.iter().any(|v| v.row_count() == 0);
     let elem_count = args[0].element_count() + is_empty as usize;
     let mut new_values = multi_output(outputs, Vec::with_capacity(elem_count));
-    let new_shape = Shape::from(args[0].shape());
+    let new_shape = args[0].shape().clone();
     if is_empty {
         for arg in args.into_iter().rev() {
             env.push(arg.proxy_scalar(env));

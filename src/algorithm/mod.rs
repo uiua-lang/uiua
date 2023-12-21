@@ -227,7 +227,7 @@ where
         },
         Ordering::Equal => {
             let target_shape = max_shape(a.shape(), b.shape());
-            if a.shape() != &*target_shape {
+            if a.shape() != *target_shape {
                 match ctx.fill() {
                     Ok(fill) => {
                         a.fill_to_shape(&target_shape, fill);
@@ -236,7 +236,7 @@ where
                     Err(e) => fill_error = Some(e),
                 }
             }
-            if b.shape() != &*target_shape {
+            if b.shape() != *target_shape {
                 match ctx.fill() {
                     Ok(fill) => {
                         b.fill_to_shape(&target_shape, fill);
@@ -253,8 +253,8 @@ where
     if let Some(e) = fill_error {
         return Err(C::fill_error(ctx.error(format!(
             "Shapes {} and {} do not match{e}",
-            a.format_shape(),
-            b.format_shape(),
+            a.shape(),
+            b.shape(),
         ))));
     }
 
@@ -340,9 +340,9 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
                 return Err(env.error(format!(
                     "The function's select's shape {} is not compatible \
                     with the argument {}'s shape {}",
-                    selector.format_shape(),
+                    selector.shape(),
                     i + 1,
-                    arg.format_shape(),
+                    arg.shape(),
                 )));
             }
             let row_shape = Shape::from(&arg.shape()[selector.rank()..]);

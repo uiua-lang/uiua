@@ -233,11 +233,11 @@ impl<T: ArrayValue> Array<T> {
                                 other.rank()
                             ))));
                         }
-                        if self.shape() != &other.shape()[1..] {
+                        if self.shape() != other.shape()[1..] {
                             return Err(C::fill_error(ctx.error(format!(
                                 "Cannot join arrays of shapes {} and {}{e}",
-                                self.format_shape(),
-                                other.format_shape()
+                                self.shape(),
+                                other.shape()
                             ))));
                         }
                         other.shape
@@ -249,7 +249,7 @@ impl<T: ArrayValue> Array<T> {
                 self
             }
             Ordering::Greater => {
-                if other.shape() == [0] {
+                if other.shape() == 0 {
                     return Ok(self);
                 }
                 self.append(other, ctx)?;
@@ -274,8 +274,8 @@ impl<T: ArrayValue> Array<T> {
                         Err(e) if self.shape[1..] != other.shape[1..] => {
                             return Err(C::fill_error(ctx.error(format!(
                                 "Cannot join arrays of shapes {} and {}. {e}",
-                                self.format_shape(),
-                                other.format_shape()
+                                self.shape(),
+                                other.shape()
                             ))));
                         }
                         _ => (),
@@ -313,7 +313,7 @@ impl<T: ArrayValue> Array<T> {
                 if &self.shape()[1..] != other.shape() {
                     return Err(C::fill_error(ctx.error(format!(
                         "Cannot add shape {} row to array with shape {} rows{e}",
-                        other.format_shape(),
+                        other.shape(),
                         FormatShape(&self.shape()[1..]),
                     ))));
                 }
@@ -445,8 +445,8 @@ impl<T: ArrayValue> Array<T> {
                 Err(e) => {
                     return Err(C::fill_error(ctx.error(format!(
                         "Cannot couple arrays with shapes {} and {}{e}",
-                        self.format_shape(),
-                        other.format_shape()
+                        self.shape(),
+                        other.shape()
                     ))));
                 }
             }

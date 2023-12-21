@@ -1130,7 +1130,7 @@ code:
             if !fill.shape().is_empty() {
                 return Err(self.error(format!(
                     "Fill values must be scalar or an empty list, but its shape is {}",
-                    fill.format_shape()
+                    fill.shape()
                 )));
             }
             self.rt.fill_stack.push(match fill {

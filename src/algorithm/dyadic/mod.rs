@@ -103,8 +103,8 @@ impl<T: Clone + std::fmt::Debug> Array<T> {
                 return Err(ctx.error(format!(
                     "Cannot combine arrays with shapes {} and {} \
                     because shape prefixes {} and {} are not compatible",
-                    a.format_shape(),
-                    b.format_shape(),
+                    a.shape(),
+                    b.shape(),
                     FormatShape(a_prefix),
                     FormatShape(b_prefix)
                 )));
@@ -195,7 +195,7 @@ impl Value {
                 "Cannot unreshape array because its old shape was {}, \
                 but its new shape is {}, which has a different number of elements",
                 FormatShape(&orig_shape),
-                self.format_shape()
+                self.shape()
             )))
         }
     }
@@ -520,7 +520,7 @@ impl<T: ArrayValue> Array<T> {
                 Err(e) => {
                     return Err(env.error(format!(
                         "Cannot keep array with shape {} with array of shape {}{e}",
-                        self.format_shape(),
+                        self.shape(),
                         FormatShape(&[amount.len()])
                     )));
                 }
@@ -532,14 +532,14 @@ impl<T: ArrayValue> Array<T> {
                             "Cannot keep array with shape {} with array of shape {}.\
                             A fill value is available, but keep can only been filled\
                             if there are fewer counts than rows.",
-                            self.format_shape(),
+                            self.shape(),
                             FormatShape(amount.as_ref())
                         )
                     }
                     Err(e) => {
                         format!(
                             "Cannot keep array with shape {} with array of shape {}{e}",
-                            self.format_shape(),
+                            self.shape(),
                             FormatShape(amount.as_ref())
                         )
                     }
@@ -621,8 +621,8 @@ impl<T: ArrayValue> Array<T> {
                     return Err(env.error(format!(
                         "Kept array's shape was changed from {} to {}, \
                         so the keep cannot be inverted",
-                        into_row.format_shape(),
-                        new_row.format_shape()
+                        into_row.shape(),
+                        new_row.shape()
                     )));
                 }
                 new_rows.push(new_row);
@@ -795,7 +795,7 @@ impl<T: ArrayValue> Array<T> {
         if isize_spec.len() > self.shape.len() {
             return Err(env.error(format!(
                 "Window size {isize_spec:?} has too many axes for shape {}",
-                self.format_shape()
+                self.shape()
             )));
         }
         let mut size_spec = Vec::with_capacity(isize_spec.len());

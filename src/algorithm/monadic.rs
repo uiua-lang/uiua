@@ -63,7 +63,7 @@ impl Value {
     }
     /// Attempt to parse the value into a number
     pub fn parse_num(&self, env: &Uiua) -> UiuaResult<Self> {
-        Ok(match (self, self.shape()) {
+        Ok(match (self, self.shape().dims()) {
             (Value::Char(arr), [] | [_]) => {
                 let mut s: String = arr.data.iter().copied().collect();
                 if s.contains('¯') {
@@ -867,7 +867,7 @@ impl Value {
     }
     /// `invert` `where`
     pub fn inverse_where(&self, env: &Uiua) -> UiuaResult<Self> {
-        Ok(match self.shape() {
+        Ok(match self.shape().dims() {
             [] | [_] => {
                 let indices =
                     self.as_nats(env, "Argument to inverse where must be a list of naturals")?;

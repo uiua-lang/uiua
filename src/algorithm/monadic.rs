@@ -2,7 +2,7 @@
 
 use std::{
     cmp::Ordering,
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{HashMap, HashSet},
     f64::consts::{PI, TAU},
     iter::repeat,
     mem::size_of,
@@ -636,11 +636,11 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 {
             return Err(env.error("Cannot classify a rank-0 array"));
         }
-        let mut classes = BTreeMap::new();
+        let mut classes = HashMap::new();
         let mut classified = Vec::with_capacity(self.row_count());
-        for row in self.rows() {
+        for row in self.row_slices() {
             let new_class = classes.len();
-            let class = *classes.entry(row).or_insert(new_class);
+            let class = *classes.entry(ArrayCmpSlice(row)).or_insert(new_class);
             classified.push(class);
         }
         Ok(classified)
@@ -651,7 +651,7 @@ impl<T: ArrayValue> Array<T> {
             return;
         }
         let mut deduped = CowSlice::new();
-        let mut seen = BTreeSet::new();
+        let mut seen = HashSet::new();
         let mut new_len = 0;
         for row in self.row_slices() {
             if seen.insert(ArrayCmpSlice(row)) {

@@ -333,10 +333,10 @@ Maps ← MapA MapB
 ∩(⍤. has "hi") Maps
 ∩(⍤. has [1 2 3]) Maps
 
-∩(⍤⊃⋅∘≍ 2 get 1) Maps
-∩(⍤⊃⋅∘≍ 4 get 3) Maps
-∩(⍤⊃⋅∘≍ "there" get "hi") Maps
-∩(⍤⊃⋅∘≍ [4 5 6] get [1 2 3]) Maps
+∩(⍤⊃⋅∘≍ □2 get 1) Maps
+∩(⍤⊃⋅∘≍ □4 get 3) Maps
+∩(⍤⊃⋅∘≍ □"there" get "hi") Maps
+∩(⍤⊃⋅∘≍ □[4 5 6] get [1 2 3]) Maps
 
 Maps ← ∩(remove 1) Maps
 ∩(⍤. ¬has 1) Maps

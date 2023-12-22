@@ -549,8 +549,9 @@ impl<'a> PairMut<'a> {
             loop {
                 let cell_key = &mut key_data[index * key_row_len..(index + 1) * key_row_len];
                 if ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
-                    let len = meta.map_len.unwrap();
-                    meta.map_len = Some(len - 1);
+                    if let Some(len) = meta.map_len {
+                        meta.map_len = Some(len - 1);
+                    }
                     for elem in cell_key {
                         *elem = K::from_num(TOMBSTONE_NAN);
                     }

@@ -1790,10 +1790,18 @@ primitive!(
     /// Create a hashmap from lists of keys and values
     ///
     /// ex: # Experimental!
-    ///   : .map 1_2 3_4
+    ///   : map 1_2 3_4
+    ///   : map {"Alice" "Bob" "Carol"} [3_8 12_2 4_5]
+    /// Use [get] to get the value corresponding to a key.
+    /// ex: # Experimental!
+    ///   : map 1_2 3_4
+    ///   : get 2 .
+    /// Use [insert] to insert additional key-value pairs.
+    /// ex: # Experimental!
+    ///   : map 1_2 3_4
     ///   : insert 5 6
-    ///   : keys .
     ///
+    /// A box array `{}` works as an empty map.
     /// You can use [un][map] to get the keys and values back.
     /// ex: # Experimental!
     ///   : {}
@@ -1804,46 +1812,57 @@ primitive!(
     (2, Map, Map, "map"),
     /// Insert a key-value pair into a map array
     ///
+    /// The array is used as an actual hashmap, so some entries may be empty.
     /// ex: # Experimental!
     ///   : {}
-    ///   : insert "hi" [1 2 3]
-    ///   : insert 27 "wow"
-    ///   : insert [10 11] ↯2_3⇡6
+    ///   : insert 1 2
+    ///   : insert 3 4
+    ///   : insert 5 6
     /// If the key is already present, it is replaced.
     /// ex: # Experimental!
-    ///   : [{1 2} {3 4}]
+    ///   : {}
+    ///   : insert 1 2
+    ///   : insert 3 4
     ///   : insert 3 5
+    /// All keys (and all value) must have the same shape and type.
+    /// ex! # Experimental!
+    ///   : insert 1 2 {}
+    ///   : insert "hi" "there"
+    /// [box] keys or values if you need to.
+    /// ex: # Experimental!
+    ///   : insert □1 □2 {}
+    ///   : insert □"hi" □"there"
     (3, Insert, Map, "insert"),
     /// Check if a map array has a key
     ///
     /// ex: # Experimental!
-    ///   : .map 1_2 3_4
-    ///   : [fork(has 3|has 5)]
+    ///   : map 1_2 3_4
+    ///   : [fork(has 2|has 5)].
     (2, Has, Map, "has"),
     /// Get the value corresponding to a key in a map array
     ///
     /// ex: # Experimental!
-    ///   : .map 1_2 3_4
-    ///   : get 3
+    ///   : map 1_2 3_4
+    ///   : get 2 .
     /// If the key is not found, an error is thrown.
     /// ex! # Experimental!
-    ///   : .map 1_2 3_4
-    ///   : get 5
+    ///   : map 1_2 3_4
+    ///   : get 5 .
     /// You can use [try] or [has] to avoid the error.
     /// ex: # Experimental!
-    ///   : .map 1_2 3_4
-    ///   : tryget⋅⋅⋅0 5
+    ///   : map 1_2 3_4
+    ///   : tryget⋅⋅⋅0 5 .
     /// ex: # Experimental!
-    ///   : .map 1_2 3_4
-    ///   : (⋅⋅0|get) has,, 5
+    ///   : map 1_2 3_4
+    ///   : (⋅⋅0|get) has,, 5 .
     (2, Get, Map, "get"),
     /// Remove the value corresponding to a key from a map array
     ///
     /// If the key is present, it is replaced with a tombstone NaN value.
     /// If the key is not present, the array is unchanged.
     /// ex: # Experimental!
-    ///   : .map 1_2 3_4
-    ///   : remove 3 .
+    ///   : map 1_2 3_4
+    ///   : remove 2 .
     ///   : remove 5 .
     (2, Remove, Map, "remove"),
     /// Debug print all stack values without popping them

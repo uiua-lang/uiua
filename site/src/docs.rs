@@ -272,7 +272,6 @@ struct Allowed {
 fn aliases() -> HashMap<&'static str, &'static [Primitive]> {
     [
         ("filter", &[Primitive::Keep] as &[_]),
-        ("map", &[Primitive::Each, Primitive::Rows]),
         ("search", &[Primitive::Find]),
         ("intersect", &[Primitive::Member]),
         ("split", &[Primitive::Partition]),

@@ -571,6 +571,8 @@ primitive!(
     /// ex: [1_2 3_4 5_6]
     ///   : ↻1△ .
     ///   : △⍉  :
+    ///
+    /// Multiple [transpose]s, as well as [rows][transpose], are optimized in the interpreter to only do a single operation.
     (1, Transpose, MonadicArray, ("transpose", '⍉')),
     /// Get the indices into an array if it were sorted ascending
     ///

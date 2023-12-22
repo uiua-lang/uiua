@@ -1918,15 +1918,14 @@ macro_rules! impl_primitive {
         #[serde(rename_all = "snake_case")]
         pub enum ImplPrimitive {
             $($variant,)*
-            TransposeN(usize),
-            InvTransposeN(usize),
+            TransposeN(i32),
         }
 
         impl ImplPrimitive {
             pub fn args(&self) -> usize {
                 match self {
                     $(ImplPrimitive::$variant => $args,)*
-                    ImplPrimitive::TransposeN(_) | ImplPrimitive::InvTransposeN(_) => 1,
+                    ImplPrimitive::TransposeN(_) => 1,
                 }
             }
             pub fn outputs(&self) -> usize {

@@ -161,19 +161,17 @@ impl fmt::Display for ImplPrimitive {
             LastMinIndex => write!(f, "{First}{Reverse}{Rise}"),
             LastMaxIndex => write!(f, "{First}{Reverse}{Fall}"),
             FirstWhere => write!(f, "{First}{Where}"),
-            TransposeN(n) => {
-                for _ in 0..*n {
+            &TransposeN(n) => {
+                if n < 0 {
+                    write!(f, "{Un}(")?;
+                }
+                for _ in 0..n.unsigned_abs() {
                     write!(f, "{Transpose}")?;
+                }
+                if n < 0 {
+                    write!(f, ")")?;
                 }
                 Ok(())
-            }
-            InvTransposeN(1) => write!(f, "{Un}{Transpose}"),
-            InvTransposeN(n) => {
-                write!(f, "{Un}(")?;
-                for _ in 0..*n {
-                    write!(f, "{Transpose}")?;
-                }
-                write!(f, ")")
             }
         }
     }
@@ -862,9 +860,6 @@ impl ImplPrimitive {
             ImplPrimitive::InvParse => env.monadic_ref_env(Value::inv_parse)?,
             ImplPrimitive::InvFix => env.monadic_mut(Value::inv_fix)?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
-            &ImplPrimitive::InvTransposeN(n) => {
-                env.monadic_mut(|val| val.inv_transpose_depth(0, n))?
-            }
         }
         Ok(())
     }

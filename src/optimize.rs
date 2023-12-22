@@ -99,10 +99,17 @@ pub(crate) fn optimize_instrs_mut(instrs: &mut EcoVec<Instr>, mut new: Instr, ma
             instrs.pop();
             instrs.push(Instr::ImplPrim(TransposeN(2), span));
         }
-        ([.., Instr::ImplPrim(TransposeN(n), _)], Instr::Prim(Transpose, _)) => *n += 1,
-        ([.., Instr::ImplPrim(TransposeN(a), _)], Instr::ImplPrim(TransposeN(b), _))
-        | ([.., Instr::ImplPrim(InvTransposeN(a), _)], Instr::ImplPrim(InvTransposeN(b), _)) => {
-            *a += b
+        ([.., Instr::ImplPrim(TransposeN(n), _)], Instr::Prim(Transpose, _)) => {
+            *n += 1;
+            if *n == 0 {
+                instrs.pop();
+            }
+        }
+        ([.., Instr::ImplPrim(TransposeN(a), _)], Instr::ImplPrim(TransposeN(b), _)) => {
+            *a += b;
+            if *a == 0 {
+                instrs.pop();
+            }
         }
         (_, instr) => instrs.push(instr),
     }

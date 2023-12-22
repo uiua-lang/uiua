@@ -53,10 +53,6 @@ fn impl_prim_un_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> {
             Value::transpose_depth(&mut v, d, n);
             Ok(v)
         }),
-        InvTransposeN(n) => spanned_un_fn(span, move |mut v, d, _| {
-            Value::inv_transpose_depth(&mut v, d, n);
-            Ok(v)
-        }),
         _ => return None,
     })
 }

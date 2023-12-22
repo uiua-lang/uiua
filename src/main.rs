@@ -20,7 +20,8 @@ use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
-    spans, Assembly, Compiler, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult, Value,
+    spans, Assembly, Compiler, NativeSys, PrimClass, RunMode, SpanKind, Uiua, UiuaError,
+    UiuaResult, Value,
 };
 
 fn main() {
@@ -156,7 +157,7 @@ fn run() -> UiuaResult {
                         }
                     }
                 };
-                let assembly = Compiler::new()
+                let assembly = Compiler::with_backend(NativeSys)
                     .print_diagnostics(true)
                     .load_file(&path)?
                     .finish();

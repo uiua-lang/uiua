@@ -562,7 +562,18 @@ impl ArrayValue for Boxed {
         env.box_fill()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
-        self.hash(hasher)
+        if self.0.rank() == 0 {
+            match &self.0 {
+                Value::Num(arr) => arr.data[0].array_hash(hasher),
+                #[cfg(feature = "bytes")]
+                Value::Byte(arr) => arr.data[0].array_hash(hasher),
+                Value::Char(arr) => arr.data[0].array_hash(hasher),
+                Value::Complex(arr) => arr.data[0].array_hash(hasher),
+                Value::Box(arr) => arr.data[0].array_hash(hasher),
+            }
+        } else {
+            self.hash(hasher)
+        }
     }
     fn proxy() -> Self {
         Boxed(Array::<f64>::new(0, []).into())

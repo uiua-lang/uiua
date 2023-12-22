@@ -3,6 +3,8 @@ Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
 - Change `pop`s glyph to `◌`
+- Fix `get`, `has`, and `remove`
+- Local bindings
 - Multimedia
   - Sound input
   - Webcam input

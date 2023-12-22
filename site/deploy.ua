@@ -1,8 +1,8 @@
 ✅ ← ⍤⊃⋅∘≍0
 
+&cd "site"
 ¬∊ □"resume" &args
 ⍥(
-  &cd "site"
   ✅&runi {"git" "checkout" "site" "-f"}
   ✅&runi {"git" "reset" "--hard" "origin/site"}
   ✅&runi {"git" "rebase" "main"}

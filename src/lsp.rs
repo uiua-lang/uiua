@@ -478,7 +478,7 @@ mod server {
                 }
                 Err(e) => {
                     self.client
-                        .log_message(MessageType::INFO, format!("Formatting error: {}", e))
+                        .log_message(MessageType::LOG, format!("Formatting error: {}", e))
                         .await;
                     let mut error = Error::parse_error();
                     error.message = e.to_string().into();

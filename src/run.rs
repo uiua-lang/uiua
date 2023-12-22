@@ -391,30 +391,30 @@ code:
                 break;
             };
             // Uncomment to debug
-            // for val in &self.rt.stack {
-            //     print!("{:?} ", val);
-            // }
-            // println!();
-            // if !self.rt.array_stack.is_empty() {
-            //     print!("array: ");
-            //     for val in &self.rt.array_stack {
-            //         print!("{:?} ", val);
-            //     }
-            //     println!();
-            // }
-            // if !self.rt.function_stack.is_empty() {
-            //     println!("{} function(s)", self.rt.function_stack.len());
-            // }
-            // for temp in enum_iterator::all::<TempStack>() {
-            //     if !self.rt.temp_stacks[temp as usize].is_empty() {
-            //         print!("{temp}: ");
-            //         for val in &self.rt.temp_stacks[temp as usize] {
-            //             print!("{:?} ", val);
-            //         }
-            //         println!();
-            //     }
-            // }
-            // println!("    {:?}", instr);
+            for val in &self.rt.stack {
+                print!("{:?} ", val);
+            }
+            println!();
+            if !self.rt.array_stack.is_empty() {
+                print!("array: ");
+                for val in &self.rt.array_stack {
+                    print!("{:?} ", val);
+                }
+                println!();
+            }
+            if !self.rt.function_stack.is_empty() {
+                println!("{} function(s)", self.rt.function_stack.len());
+            }
+            for temp in enum_iterator::all::<TempStack>() {
+                if !self.rt.temp_stacks[temp as usize].is_empty() {
+                    print!("{temp}: ");
+                    for val in &self.rt.temp_stacks[temp as usize] {
+                        print!("{:?} ", val);
+                    }
+                    println!();
+                }
+            }
+            println!("    {:?}", instr);
 
             if self.rt.time_instrs {
                 formatted_instr = format!("{instr:?}");

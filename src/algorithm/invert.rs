@@ -247,6 +247,19 @@ pub(crate) fn under_instrs(
         &(
             Val,
             pat!(
+                Get,
+                (CopyToTempN(2), Get),
+                (PopTempN(1), Flip, PopTempN(1), Insert),
+            ),
+        ),
+        &pat!(
+            Get,
+            (CopyToTempN(2), Get),
+            (PopTempN(1), Flip, PopTempN(1), Insert),
+        ),
+        &(
+            Val,
+            pat!(
                 Keep,
                 (CopyToTempN(2), Keep),
                 (PopTempN(1), Flip, PopTempN(1), Unkeep)

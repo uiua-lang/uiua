@@ -653,9 +653,9 @@ impl<T: ArrayValue> Array<T> {
         let mut deduped = CowSlice::new();
         let mut seen = BTreeSet::new();
         let mut new_len = 0;
-        for row in self.rows() {
-            if seen.insert(row.clone()) {
-                deduped.extend_from_slice(&row.data);
+        for row in self.row_slices() {
+            if seen.insert(ArrayCmpSlice(row)) {
+                deduped.extend_from_slice(row);
                 new_len += 1;
             }
         }

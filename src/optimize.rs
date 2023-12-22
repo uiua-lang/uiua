@@ -111,6 +111,17 @@ pub(crate) fn optimize_instrs_mut(instrs: &mut EcoVec<Instr>, mut new: Instr, ma
                 instrs.pop();
             }
         }
+        // Sorting
+        ([.., Instr::Prim(Dup, _), Instr::Prim(Rise, _)], Instr::Prim(Select, span)) => {
+            instrs.pop();
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(SortUp, span));
+        }
+        ([.., Instr::Prim(Dup, _), Instr::Prim(Fall, _)], Instr::Prim(Select, span)) => {
+            instrs.pop();
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(SortDown, span));
+        }
         (_, instr) => instrs.push(instr),
     }
 }

@@ -161,6 +161,8 @@ impl fmt::Display for ImplPrimitive {
             LastMinIndex => write!(f, "{First}{Reverse}{Rise}"),
             LastMaxIndex => write!(f, "{First}{Reverse}{Fall}"),
             FirstWhere => write!(f, "{First}{Where}"),
+            SortUp => write!(f, "{Select}{Rise}{Dup}"),
+            SortDown => write!(f, "{Select}{Fall}{Dup}"),
             &TransposeN(n) => {
                 if n < 0 {
                     write!(f, "{Un}(")?;
@@ -845,6 +847,8 @@ impl ImplPrimitive {
                 env.push(re);
                 env.push(im);
             }
+            ImplPrimitive::InvParse => env.monadic_ref_env(Value::inv_parse)?,
+            ImplPrimitive::InvFix => env.monadic_mut(Value::inv_fix)?,
             ImplPrimitive::InvScan => reduce::invscan(env)?,
             ImplPrimitive::InvTrace => trace(env, true)?,
             ImplPrimitive::InvStack => stack(env, true)?,
@@ -857,8 +861,8 @@ impl ImplPrimitive {
             ImplPrimitive::LastMinIndex => env.monadic_ref_env(Value::last_min_index)?,
             ImplPrimitive::LastMaxIndex => env.monadic_ref_env(Value::last_max_index)?,
             ImplPrimitive::FirstWhere => env.monadic_ref_env(Value::first_where)?,
-            ImplPrimitive::InvParse => env.monadic_ref_env(Value::inv_parse)?,
-            ImplPrimitive::InvFix => env.monadic_mut(Value::inv_fix)?,
+            ImplPrimitive::SortUp => env.monadic_mut_env(Value::sort_up)?,
+            ImplPrimitive::SortDown => env.monadic_mut_env(Value::sort_down)?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
         }
         Ok(())

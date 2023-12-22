@@ -1019,6 +1019,15 @@ code:
         self.push(a);
         Ok(())
     }
+    pub(crate) fn monadic_mut_env(
+        &mut self,
+        f: impl FnOnce(&mut Value, &Self) -> UiuaResult,
+    ) -> UiuaResult {
+        let mut a = self.pop(1)?;
+        f(&mut a, self)?;
+        self.push(a);
+        Ok(())
+    }
     pub(crate) fn dyadic_rr<V: Into<Value>>(&mut self, f: fn(&Value, &Value) -> V) -> UiuaResult {
         let a = self.pop(1)?;
         let b = self.pop(2)?;

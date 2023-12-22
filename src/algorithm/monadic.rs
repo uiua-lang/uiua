@@ -508,6 +508,26 @@ impl Value {
             env,
         )
     }
+    /// Sort the value ascending
+    pub fn sort_up(&mut self, env: &Uiua) -> UiuaResult {
+        self.generic_mut_deep(
+            |a| a.sort_up(env),
+            |a| a.sort_up(env),
+            |a| a.sort_up(env),
+            |a| a.sort_up(env),
+            |a| a.sort_up(env),
+        )
+    }
+    /// Sort the value descending
+    pub fn sort_down(&mut self, env: &Uiua) -> UiuaResult {
+        self.generic_mut_deep(
+            |a| a.sort_down(env),
+            |a| a.sort_down(env),
+            |a| a.sort_down(env),
+            |a| a.sort_down(env),
+            |a| a.sort_down(env),
+        )
+    }
     /// `classify` the rows of the value
     pub fn classify(&self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_ref_env_deep(
@@ -570,6 +590,46 @@ impl<T: ArrayValue> Array<T> {
                 .unwrap_or(Ordering::Equal)
         });
         Ok(indices)
+    }
+    /// Sort an array ascending
+    pub fn sort_up(&mut self, env: &Uiua) -> UiuaResult {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot rise a scalar"));
+        }
+        if self.element_count() == 0 {
+            return Ok(());
+        }
+        if self.rank() == 1 {
+            self.data.as_mut_slice().par_sort_by(|a, b| a.array_cmp(b));
+        } else {
+            let rise = self.rise(env)?;
+            let mut new_data = EcoVec::with_capacity(self.data.len());
+            for i in rise {
+                new_data.extend_from_slice(self.row_slice(i));
+            }
+            self.data = new_data.into();
+        }
+        Ok(())
+    }
+    /// Sort an array descending
+    pub fn sort_down(&mut self, env: &Uiua) -> UiuaResult {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot fall a scalar"));
+        }
+        if self.element_count() == 0 {
+            return Ok(());
+        }
+        if self.rank() == 1 {
+            self.data.as_mut_slice().par_sort_by(|a, b| b.array_cmp(a));
+        } else {
+            let fall = self.fall(env)?;
+            let mut new_data = EcoVec::with_capacity(self.data.len());
+            for i in fall {
+                new_data.extend_from_slice(self.row_slice(i));
+            }
+            self.data = new_data.into();
+        }
+        Ok(())
     }
     /// `classify` the rows of the array
     pub fn classify(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {

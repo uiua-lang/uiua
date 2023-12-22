@@ -1982,4 +1982,6 @@ impl_primitive!(
     (1, LastMinIndex),
     (1, LastMaxIndex),
     (1, FirstWhere),
+    (1, SortUp),
+    (1, SortDown),
 );

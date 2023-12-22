@@ -321,25 +321,26 @@ Z ← comptime(+1Y)
 ⍤⊃⋅∘≍ 8 ↬((+∩(|2 ↫ -)1,2|1)<2.) 5
 
 # Maps
-{}
-insert 1 2
-insert 3 4
-insert "hi" "there"
-insert [1 2 3] [4 5 6]
-Map ←
+[{1 2}
+ {3 4}
+ {"hi" "there"}
+ {[1 2 3] [4 5 6]}]
+MapA ←
+MapB ← insert 5 6 MapA
+Maps ← MapA MapB
 
-⍤. has 1 Map
-⍤. has 3 Map
-⍤. has "hi" Map
-⍤. has [1 2 3] Map
+∩(⍤. has 1) Maps
+∩(⍤. has 3) Maps
+∩(⍤. has "hi") Maps
+∩(⍤. has [1 2 3]) Maps
 
-⍤⊃⋅∘≍ 2 get 1 Map
-⍤⊃⋅∘≍ 4 get 3 Map
-⍤⊃⋅∘≍ "there" get "hi" Map
-⍤⊃⋅∘≍ [4 5 6] get [1 2 3] Map
+∩(⍤⊃⋅∘≍ 2 get 1) Maps
+∩(⍤⊃⋅∘≍ 4 get 3) Maps
+∩(⍤⊃⋅∘≍ "there" get "hi") Maps
+∩(⍤⊃⋅∘≍ [4 5 6] get [1 2 3]) Maps
 
-Map ← remove 1 Map
-⍤. ¬has 1 Map
-⍤. has 3 Map
-⍤. has "hi" Map
-⍤. has [1 2 3] Map
+Maps ← ∩(remove 1) Maps
+∩(⍤. ¬has 1) Maps
+∩(⍤. has 3) Maps
+∩(⍤. has "hi") Maps
+∩(⍤. has [1 2 3]) Maps

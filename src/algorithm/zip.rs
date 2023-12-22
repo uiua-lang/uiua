@@ -49,8 +49,12 @@ fn prim_un_fast_fn(prim: Primitive, span: usize) -> Option<ValueUnFn> {
 fn impl_prim_un_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> {
     use ImplPrimitive::*;
     Some(match prim {
-        InvTranspose => spanned_un_fn(span, |mut v, d, _| {
-            Value::inv_transpose_depth(&mut v, d, 1);
+        TransposeN(n) => spanned_un_fn(span, move |mut v, d, _| {
+            Value::transpose_depth(&mut v, d, n);
+            Ok(v)
+        }),
+        InvTransposeN(n) => spanned_un_fn(span, move |mut v, d, _| {
+            Value::inv_transpose_depth(&mut v, d, n);
             Ok(v)
         }),
         _ => return None,

@@ -93,6 +93,17 @@ pub(crate) fn optimize_instrs_mut(instrs: &mut EcoVec<Instr>, mut new: Instr, ma
             instrs.pop();
             instrs.push(Instr::TouchStack { count, span });
         }
+        // Tranposes
+        ([.., Instr::Prim(Transpose, span)], Instr::Prim(Transpose, _)) => {
+            let span = *span;
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(TransposeN(2), span));
+        }
+        ([.., Instr::ImplPrim(TransposeN(n), _)], Instr::Prim(Transpose, _)) => *n += 1,
+        ([.., Instr::ImplPrim(TransposeN(a), _)], Instr::ImplPrim(TransposeN(b), _))
+        | ([.., Instr::ImplPrim(InvTransposeN(a), _)], Instr::ImplPrim(InvTransposeN(b), _)) => {
+            *a += b
+        }
         (_, instr) => instrs.push(instr),
     }
 }

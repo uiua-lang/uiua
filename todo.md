@@ -2,7 +2,7 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Make native sys optional
+- Change `pop`s glyph to `◌`
 - Multimedia
   - Sound input
   - Webcam input

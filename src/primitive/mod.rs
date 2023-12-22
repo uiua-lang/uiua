@@ -129,7 +129,6 @@ impl fmt::Display for ImplPrimitive {
         use ImplPrimitive::*;
         use Primitive::*;
         match self {
-            InvTranspose => write!(f, "{Un}{Transpose}"),
             InverseBits => write!(f, "{Un}{Bits}"),
             InvWhere => write!(f, "{Un}{Where}"),
             InvCouple => write!(f, "{Un}{Couple}"),
@@ -162,6 +161,20 @@ impl fmt::Display for ImplPrimitive {
             LastMinIndex => write!(f, "{First}{Reverse}{Rise}"),
             LastMaxIndex => write!(f, "{First}{Reverse}{Fall}"),
             FirstWhere => write!(f, "{First}{Where}"),
+            TransposeN(n) => {
+                for _ in 0..*n {
+                    write!(f, "{Transpose}")?;
+                }
+                Ok(())
+            }
+            InvTransposeN(1) => write!(f, "{Un}{Transpose}"),
+            InvTransposeN(n) => {
+                write!(f, "{Un}(")?;
+                for _ in 0..*n {
+                    write!(f, "{Transpose}")?;
+                }
+                write!(f, ")")
+            }
         }
     }
 }
@@ -756,7 +769,6 @@ impl ImplPrimitive {
         match self {
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
             ImplPrimitive::Acos => env.monadic_env(Value::acos)?,
-            ImplPrimitive::InvTranspose => env.monadic_mut(Value::inv_transpose)?,
             ImplPrimitive::Unkeep => {
                 let from = env.pop(1)?;
                 let counts = env.pop(2)?;
@@ -849,6 +861,10 @@ impl ImplPrimitive {
             ImplPrimitive::FirstWhere => env.monadic_ref_env(Value::first_where)?,
             ImplPrimitive::InvParse => env.monadic_ref_env(Value::inv_parse)?,
             ImplPrimitive::InvFix => env.monadic_mut(Value::inv_fix)?,
+            &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
+            &ImplPrimitive::InvTransposeN(n) => {
+                env.monadic_mut(|val| val.inv_transpose_depth(0, n))?
+            }
         }
         Ok(())
     }

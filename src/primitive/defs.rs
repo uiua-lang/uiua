@@ -1914,16 +1914,19 @@ macro_rules! impl_primitive {
     ),* $(,)?) => {
         /// Primitives that exist as an implementation detail
         #[doc(hidden)]
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence, Serialize, Deserialize)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
         #[serde(rename_all = "snake_case")]
         pub enum ImplPrimitive {
             $($variant,)*
+            TransposeN(usize),
+            InvTransposeN(usize),
         }
 
         impl ImplPrimitive {
             pub fn args(&self) -> usize {
                 match self {
                     $(ImplPrimitive::$variant => $args,)*
+                    ImplPrimitive::TransposeN(_) | ImplPrimitive::InvTransposeN(_) => 1,
                 }
             }
             pub fn outputs(&self) -> usize {
@@ -1947,7 +1950,6 @@ impl_primitive!(
     (1, Asin),
     (1, Acos),
     (1, InverseBits),
-    (1, InvTranspose),
     (1, InvWhere),
     (1(2), InvCouple),
     (1, InvUtf),

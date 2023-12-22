@@ -473,7 +473,7 @@ impl<T: ArrayValue> Array<T> {
     pub(crate) fn transpose_depth(&mut self, mut depth: usize, count: usize) {
         crate::profile_function!();
         depth = depth.min(self.rank());
-        if self.rank() - depth < 2 {
+        if self.rank() - depth < 2 || depth + count == self.rank() {
             return;
         }
         if self.shape[depth..].iter().any(|&d| d == 0) {
@@ -510,7 +510,7 @@ impl<T: ArrayValue> Array<T> {
     pub(crate) fn inv_transpose_depth(&mut self, mut depth: usize, count: usize) {
         crate::profile_function!();
         depth = depth.min(self.rank());
-        if self.rank() - depth < 2 {
+        if self.rank() - depth < 2 || depth + count == self.rank() {
             return;
         }
         if self.shape[depth..].iter().any(|&d| d == 0) {
@@ -522,11 +522,11 @@ impl<T: ArrayValue> Array<T> {
             let mut temp = data.to_vec();
             let mut shape = self.shape[depth..].to_vec();
             for _ in 0..count {
-                let col_count: usize = self.shape[depth..].iter().rev().skip(1).product();
-                let col_len = *self.shape.last().unwrap();
-                let op = |(j, chunk): (usize, &mut [T])| {
-                    for (i, item) in chunk.iter_mut().enumerate() {
-                        *item = data[i * col_len + j].clone();
+                let col_count: usize = shape.iter().rev().skip(1).product();
+                let col_len = *shape.last().unwrap();
+                let op = |(temp_chunk_i, chunk): (usize, &mut [T])| {
+                    for (chunk_i, item) in chunk.iter_mut().enumerate() {
+                        *item = data[chunk_i * col_len + temp_chunk_i].clone();
                     }
                 };
                 if col_count > 500 {
@@ -538,7 +538,7 @@ impl<T: ArrayValue> Array<T> {
                 shape.rotate_right(1);
             }
         }
-        self.shape[depth..].rotate_right(1);
+        self.shape[depth..].rotate_right(count);
     }
 }
 

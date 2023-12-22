@@ -1013,7 +1013,7 @@ code:
         self.push(f(&value, self)?);
         Ok(())
     }
-    pub(crate) fn monadic_mut(&mut self, f: fn(&mut Value)) -> UiuaResult {
+    pub(crate) fn monadic_mut(&mut self, f: impl FnOnce(&mut Value)) -> UiuaResult {
         let mut a = self.pop(1)?;
         f(&mut a);
         self.push(a);

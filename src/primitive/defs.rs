@@ -1804,7 +1804,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : [{1 2} {3 4}]
     ///   : [fork(has 3|has 5)]
-    (2, Has, Misc, "has"),
+    (2, Has, Map, "has"),
     /// Get the value corresponding to a key in a map array
     ///
     /// ex: # Experimental!

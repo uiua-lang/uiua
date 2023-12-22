@@ -541,14 +541,7 @@ impl Value {
     }
     /// Get the pretty-printed string representation of the value
     pub fn show(&self) -> String {
-        match self {
-            Self::Num(array) => array.grid_string(),
-            #[cfg(feature = "bytes")]
-            Self::Byte(array) => array.grid_string(),
-            Self::Complex(array) => array.grid_string(),
-            Self::Char(array) => array.grid_string(),
-            Self::Box(array) => array.grid_string(),
-        }
+        self.grid_string()
     }
     /// Attempt to convert the array to a list of integers
     ///
@@ -1058,7 +1051,6 @@ impl Value {
             Value::Num(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
-
             Value::Complex(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Char(arr) => arr.convert_with(|v| Boxed(Value::from(v))),
             Value::Box(arr) => arr,
@@ -1070,7 +1062,6 @@ impl Value {
             Value::Num(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             #[cfg(feature = "bytes")]
             Value::Byte(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
-
             Value::Complex(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Char(arr) => Cow::Owned(arr.convert_ref_with(|v| Boxed(Value::from(v)))),
             Value::Box(arr) => Cow::Borrowed(arr),
@@ -1588,14 +1579,8 @@ impl Hash for Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Value::Num(n) => n.grid_string().fmt(f),
-            #[cfg(feature = "bytes")]
-            Value::Byte(b) => b.grid_string().fmt(f),
-
-            Value::Complex(c) => c.grid_string().fmt(f),
-            Value::Box(v) => v.grid_string().fmt(f),
             Value::Char(c) if c.rank() < 2 => c.fmt(f),
-            Value::Char(c) => c.grid_string().fmt(f),
+            value => value.grid_string().fmt(f),
         }
     }
 }

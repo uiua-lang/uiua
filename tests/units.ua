@@ -321,10 +321,9 @@ Z ← comptime(+1Y)
 ⍤⊃⋅∘≍ 8 ↬((+∩(|2 ↫ -)1,2|1)<2.) 5
 
 # Maps
-[{1 2}
- {3 4}
- {"hi" "there"}
- {[1 2 3] [4 5 6]}]
+{1 3 "hi" [1 2 3]}
+{2 4 "there" [4 5 6]}
+map:
 MapA ←
 MapB ← insert 5 6 MapA
 Maps ← MapA MapB

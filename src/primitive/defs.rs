@@ -1787,6 +1787,21 @@ primitive!(
     /// ex: ↧5 ∞
     /// ex: ↥5 ∞
     (0, Infinity, Constant, ("infinity", '∞')),
+    /// Create a hashmap from lists of keys and values
+    ///
+    /// ex: # Experimental!
+    ///   : .map 1_2 3_4
+    ///   : insert 5 6
+    ///   : keys .
+    ///
+    /// You can use [un][map] to get the keys and values back.
+    /// ex: # Experimental!
+    ///   : {}
+    ///   : insert 1 2_3
+    ///   : insert 4 5_6
+    ///   : insert 7 8_9
+    ///   : °map .
+    (2, Map, Map, "map"),
     /// Insert a key-value pair into a map array
     ///
     /// ex: # Experimental!
@@ -1802,24 +1817,24 @@ primitive!(
     /// Check if a map array has a key
     ///
     /// ex: # Experimental!
-    ///   : [{1 2} {3 4}]
+    ///   : .map 1_2 3_4
     ///   : [fork(has 3|has 5)]
     (2, Has, Map, "has"),
     /// Get the value corresponding to a key in a map array
     ///
     /// ex: # Experimental!
-    ///   : [{1 2} {3 4}]
+    ///   : .map 1_2 3_4
     ///   : get 3
     /// If the key is not found, an error is thrown.
     /// ex! # Experimental!
-    ///   : [{1 2} {3 4}]
+    ///   : .map 1_2 3_4
     ///   : get 5
     /// You can use [try] or [has] to avoid the error.
     /// ex: # Experimental!
-    ///   : [{1 2} {3 4}]
+    ///   : .map 1_2 3_4
     ///   : tryget⋅⋅⋅0 5
     /// ex: # Experimental!
-    ///   : [{1 2} {3 4}]
+    ///   : .map 1_2 3_4
     ///   : (⋅⋅0|get) has,, 5
     (2, Get, Map, "get"),
     /// Remove the value corresponding to a key from a map array
@@ -1827,34 +1842,10 @@ primitive!(
     /// If the key is present, it is replaced with a tombstone NaN value.
     /// If the key is not present, the array is unchanged.
     /// ex: # Experimental!
-    ///   : [{1 2} {3 4}]
+    ///   : .map 1_2 3_4
     ///   : remove 3 .
     ///   : remove 5 .
     (2, Remove, Map, "remove"),
-    /// Get the keys of a map array
-    ///
-    /// Empty and tombstone keys are not included.
-    /// ex: # Experimental!
-    ///   : [{1 2} {3 4}]
-    ///   : insert 5 6
-    ///   : keys .
-    (1, Keys, Map, "keys"),
-    /// Get the values of a map array
-    ///
-    /// Values with empty and tombstone keys are not included.
-    /// ex: # Experimental!
-    ///   : [{1 2} {3 4}]
-    ///   : insert 5 6
-    ///   : values .
-    (1, Values, Map, "values"),
-    /// Shrink a map array's capacity to its current size
-    ///
-    /// This will remove all rows corresponding to empty or tombstone keys.
-    /// ex: # Experimental!
-    ///   : ∧(insert:+..) ⇡5 {}
-    ///   : shrink .
-    /// A shrunken map array is can still be used as a map, but lookups may be slower.
-    (1, Shrink, Map, "shrink"),
     /// Debug print all stack values without popping them
     ///
     /// This is equivalent to [dump][identity], but is easier to type.
@@ -1959,6 +1950,7 @@ impl_primitive!(
     (1, InvParse),
     (1, InvFix),
     (1[1], InvScan),
+    (1(2), InvMap),
     (1, InvTrace),
     (0, InvStack),
     (0[1], InvDump),

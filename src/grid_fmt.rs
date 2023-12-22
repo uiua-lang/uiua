@@ -58,10 +58,9 @@ impl GridFmt for f64 {
             format!("{minus}η")
         } else if positive == INFINITY {
             format!("{minus}∞")
-        } else if boxed
-            && (self.to_bits() == EMPTY_NAN.to_bits() || self.to_bits() == TOMBSTONE_NAN.to_bits())
+        } else if self.to_bits() == EMPTY_NAN.to_bits() || self.to_bits() == TOMBSTONE_NAN.to_bits()
         {
-            String::new()
+            return vec![vec!['⋅']];
         } else {
             format!("{minus}{positive}")
         };
@@ -89,6 +88,19 @@ impl GridFmt for Complex {
             re[0].extend(im.chars());
             re[0].push('i');
             re
+        }
+    }
+}
+
+impl GridFmt for Value {
+    fn fmt_grid(&self, boxed: bool) -> Grid {
+        match self {
+            Value::Num(n) => n.fmt_grid(boxed),
+            #[cfg(feature = "bytes")]
+            Value::Byte(b) => b.fmt_grid(boxed),
+            Value::Complex(c) => c.fmt_grid(boxed),
+            Value::Box(v) => v.fmt_grid(boxed),
+            Value::Char(c) => c.fmt_grid(boxed),
         }
     }
 }
@@ -126,7 +138,6 @@ impl GridFmt for Boxed {
             Value::Num(array) => array.fmt_grid(true),
             #[cfg(feature = "bytes")]
             Value::Byte(array) => array.fmt_grid(true),
-
             Value::Complex(array) => array.fmt_grid(true),
             Value::Char(array) => array.fmt_grid(true),
             Value::Box(array) => array.fmt_grid(true),

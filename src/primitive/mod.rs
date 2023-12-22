@@ -132,6 +132,7 @@ impl fmt::Display for ImplPrimitive {
             InverseBits => write!(f, "{Un}{Bits}"),
             InvWhere => write!(f, "{Un}{Where}"),
             InvCouple => write!(f, "{Un}{Couple}"),
+            InvMap => write!(f, "{Un}{Map}"),
             InvAtan => write!(f, "{Un}{Atan}"),
             InvComplex => write!(f, "{Un}{Complex}"),
             InvUtf => write!(f, "{Un}{Utf}"),
@@ -294,18 +295,7 @@ impl Primitive {
         use Primitive::*;
         matches!(
             self,
-            Rectify
-                | This
-                | Recur
-                | All
-                | Cascade
-                | Insert
-                | Has
-                | Get
-                | Remove
-                | Keys
-                | Values
-                | Shrink
+            Rectify | This | Recur | All | Cascade | Map | Insert | Has | Get | Remove
         )
     }
     /// Check if this primitive is deprecated
@@ -736,22 +726,13 @@ impl Primitive {
             Primitive::Remove => {
                 let key = env.pop("key")?;
                 let mut map = env.pop("map")?;
-                map.remove(&key, env)?;
+                map.remove(key, env)?;
                 env.push(map);
             }
-            Primitive::Keys => {
-                let map = env.pop("map")?;
-                let keys = map.keys(env)?;
-                env.push(keys);
-            }
-            Primitive::Values => {
-                let map = env.pop("map")?;
-                let values = map.values(env)?;
-                env.push(values);
-            }
-            Primitive::Shrink => {
-                let mut map = env.pop("map")?;
-                map.shrink(env)?;
+            Primitive::Map => {
+                let keys = env.pop("keys")?;
+                let vals = env.pop("values")?;
+                let map = keys.map(vals, env)?;
                 env.push(map);
             }
             Primitive::Trace => trace(env, false)?,
@@ -792,6 +773,12 @@ impl ImplPrimitive {
                 let (a, b) = coupled.uncouple(env)?;
                 env.push(b);
                 env.push(a);
+            }
+            ImplPrimitive::InvMap => {
+                let map = env.pop(1)?;
+                let (keys, vals) = map.unmap(env)?;
+                env.push(vals);
+                env.push(keys);
             }
             ImplPrimitive::Unpick => {
                 let index = env.pop(1)?;

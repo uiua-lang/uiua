@@ -161,10 +161,13 @@ impl<T> Array<T> {
     pub fn meta(&self) -> &ArrayMeta {
         self.meta.as_deref().unwrap_or(&DEFAULT_META)
     }
+    pub(crate) fn get_meta_mut(meta: &mut Option<Arc<ArrayMeta>>) -> &mut ArrayMeta {
+        let meta = meta.get_or_insert_with(Default::default);
+        Arc::make_mut(meta)
+    }
     /// Get a mutable reference to the metadata of the array
     pub fn meta_mut(&mut self) -> &mut ArrayMeta {
-        let meta = self.meta.get_or_insert_with(Default::default);
-        Arc::make_mut(meta)
+        Self::get_meta_mut(&mut self.meta)
     }
     /// Reset all metadata
     pub fn reset_meta(&mut self) {
@@ -358,6 +361,10 @@ impl Array<Boxed> {
     pub fn as_unboxed(&self) -> Option<&Value> {
         self.as_scalar().map(|v| &v.0)
     }
+    /// Attempt to unbox a scalar box array
+    pub fn as_unboxed_mut(&mut self) -> Option<&mut Value> {
+        self.as_scalar_mut().map(|v| &mut v.0)
+    }
 }
 
 impl<T: ArrayValue + ArrayCmp<U>, U: ArrayValue> PartialEq<Array<U>> for Array<T> {
@@ -528,7 +535,7 @@ impl ArrayValue for u8 {
         env.byte_fill()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
-        self.hash(hasher)
+        (*self as f64).to_bits().hash(hasher)
     }
     fn proxy() -> Self {
         0

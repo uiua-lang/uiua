@@ -459,31 +459,23 @@ impl<T: ArrayValue> Array<T> {
         let data_slice = self.data.as_mut_slice();
         for data in data_slice.chunks_exact_mut(self.shape[depth..].iter().product()) {
             let mut temp = data.to_vec();
-            let mut shape = self.shape[depth..].to_vec();
-            for _ in 0..count {
-                let subs = if forward {
-                    shape[0]
-                } else {
-                    shape.iter().rev().skip(1).product()
-                };
-                let stride = data.len() / subs;
-                let op = |(temp_chunk_i, chunk): (usize, &mut [T])| {
-                    for (chunk_i, item) in chunk.iter_mut().enumerate() {
-                        *item = data[chunk_i * stride + temp_chunk_i].clone();
-                    }
-                };
-                if subs > 500 {
-                    temp.par_chunks_mut(subs).enumerate().for_each(op);
-                } else {
-                    temp.chunks_mut(subs).enumerate().for_each(op);
+            let subs: usize = if forward {
+                self.shape[depth..].iter().take(count).product()
+            } else {
+                self.shape[depth..].iter().rev().skip(count).product()
+            };
+            let stride = data.len() / subs;
+            let op = |(temp_chunk_i, chunk): (usize, &mut [T])| {
+                for (chunk_i, item) in chunk.iter_mut().enumerate() {
+                    *item = data[chunk_i * stride + temp_chunk_i].clone();
                 }
-                data.clone_from_slice(&temp);
-                if forward {
-                    shape.rotate_left(1);
-                } else {
-                    shape.rotate_right(1);
-                }
+            };
+            if subs > 500 {
+                temp.par_chunks_mut(subs).enumerate().for_each(op);
+            } else {
+                temp.chunks_mut(subs).enumerate().for_each(op);
             }
+            data.clone_from_slice(&temp);
         }
         if forward {
             self.shape[depth..].rotate_left(count);

@@ -270,12 +270,12 @@ mod server {
             self.client
                 .log_message(MessageType::INFO, "Initializing Uiua language server")
                 .await;
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    format!("Client capabilities: {:#?}", _params.capabilities),
-                )
-                .await;
+            // self.client
+            //     .log_message(
+            //         MessageType::INFO,
+            //         format!("Client capabilities: {:#?}", _params.capabilities),
+            //     )
+            //     .await;
             Ok(InitializeResult {
                 capabilities: ServerCapabilities {
                     text_document_sync: Some(TextDocumentSyncCapability::Kind(

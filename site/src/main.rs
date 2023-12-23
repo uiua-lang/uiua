@@ -226,6 +226,10 @@ pub fn MainPage() -> impl IntoView {
                     <h2>"System APIs"</h2>
                     <p>"Uiua has functions for spawning threads, interacting with the file system, communicating over network sockets, and "<A href="/docs/system">"more"</A>"."</p>
                 </div>
+                <div>
+                    <h2>"Rust Integration"</h2>
+                    <p>"Uiua can be embedded in Rust programs "<a href="https://docs.rs/uiua">"as a library"</a>"."</p>
+                </div>
             </div>
             <div>
                 <div>

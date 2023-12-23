@@ -1508,7 +1508,7 @@ code:
                     self.compile_operand_words(vec![operands.next().unwrap()])?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let count = a_sig.args.saturating_sub(b_sig.outputs);
-                if count == 0 {
+                if a_sig.args < b_sig.outputs {
                     self.emit_diagnostic(
                         format!(
                             "{}'s second function has more outputs \

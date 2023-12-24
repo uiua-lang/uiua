@@ -26,21 +26,6 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             *xs.shape_mut() = new_shape;
             env.push(xs);
         }
-        (Some((Primitive::Join, flipped)), xs) => {
-            let rows = xs.into_rows().map(|row| {
-                if env.unpack_boxes() {
-                    row.unpacked()
-                } else {
-                    row
-                }
-            });
-            let rows: Vec<_> = if flipped {
-                rows.rev().flat_map(|row| row.into_rows()).collect()
-            } else {
-                rows.flat_map(|row| row.into_rows()).collect()
-            };
-            env.push(Value::from_row_values(rows, env)?);
-        }
         (Some((prim, flipped)), Value::Num(nums)) => {
             if let Err(nums) = reduce_nums(prim, flipped, nums, env) {
                 return generic_reduce(f, Value::Num(nums), env);

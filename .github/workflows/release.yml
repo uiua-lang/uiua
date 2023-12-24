@@ -35,7 +35,6 @@ jobs:
       matrix:
         include:
           - { os: macos-latest,   target: x86_64-apple-darwin            }
-          - { os: macos-latest,   target: x86_64h-apple-darwin           }
           - { os: macos-latest,   target: aarch64-apple-darwin           }
           - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu       }
           - { os: ubuntu-latest,  target: armv7-unknown-linux-gnueabihf  }
@@ -48,6 +47,19 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      # Install dependencies
+      - if: matrix.target == 'armv7-unknown-linux-gnueabihf'
+        run: apt install -y gcc-arm-linux-gnueabihf
+      - if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: apt install -y gcc-aarch64-linux-gnu
+      - if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: apt install -y musl-tools
+      - if: matrix.target == 'armv7-unknown-linux-musleabihf'
+        run: apt install -y musl-tools
+      - if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: apt install -y musl-tools
+
+      # Build
       - name: Install target
         run: rustup target add ${{ matrix.target }}
       - name: Build

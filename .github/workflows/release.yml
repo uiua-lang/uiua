@@ -1,0 +1,62 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Create the release without assets, saves the upload url for later jobs to upload assets to
+  create_release:
+    name: Create release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+  create_binaries:
+    name: Create binaries
+    needs: create_release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest,   target: x86_64-apple-darwin            }
+          - { os: macos-latest,   target: x86_64h-apple-darwin           }
+          - { os: macos-latest,   target: aarch64-apple-darwin           }
+          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu       }
+          - { os: ubuntu-latest,  target: armv7-unknown-linux-gnueabihf  }
+          - { os: ubuntu-latest,  target: aarch64-unknown-linux-gnu      }
+          - { os: ubuntu-latest,  target: x86_64-unknown-linux-musl      }
+          - { os: ubuntu-latest,  target: armv7-unknown-linux-musleabihf }
+          - { os: ubuntu-latest,  target: aarch64-unknown-linux-musl     }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc         }
+          - { os: windows-latest, target: aarch64-pc-windows-msvc        }
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      # - name: Upload release assets
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ needs.create_release.outputs.upload_url }}
+      #     asset_name: ${{ matrix.target }}
+      #     asset_path: ./target/uiua
+      #     asset_content_type: application/octet-stream

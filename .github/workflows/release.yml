@@ -16,16 +16,24 @@ jobs:
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
+      - name: Ensure tag matches cargo version
+        run: |
+          CARGO_PKG_VERSION=$(cargo pkgid | cut -d# -f2)
+          if [ "${{ github.ref_name }}" != "$CARGO_PKG_VERSION" ]; then
+            echo "Tag ${{ github.ref_name }} does not match cargo version $CARGO_PKG_VERSION"
+            exit 1
+          fi
+      - name: Prepare release notes
+        run: node .github/scripts/get-release-notes.js ${{ github.ref_name }} >> release_notes.md
       - name: Create release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
+          tag_name: ${{ github.ref_name }}
+          body_path: ./release_notes.md
+
   create_binaries:
     name: Create binaries
     needs: create_release
@@ -37,26 +45,14 @@ jobs:
           - { os: macos-latest,   target: x86_64-apple-darwin            }
           - { os: macos-latest,   target: aarch64-apple-darwin           }
           - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu       }
-          - { os: ubuntu-latest,  target: armv7-unknown-linux-gnueabihf  }
-          - { os: ubuntu-latest,  target: aarch64-unknown-linux-gnu      }
           - { os: ubuntu-latest,  target: x86_64-unknown-linux-musl      }
-          - { os: ubuntu-latest,  target: armv7-unknown-linux-musleabihf }
-          - { os: ubuntu-latest,  target: aarch64-unknown-linux-musl     }
           - { os: windows-latest, target: x86_64-pc-windows-msvc         }
           - { os: windows-latest, target: aarch64-pc-windows-msvc        }
     steps:
       - uses: actions/checkout@v3
 
       # Install dependencies
-      - if: matrix.target == 'armv7-unknown-linux-gnueabihf'
-        run: sudo apt-get install -y gcc-arm-linux-gnueabihf
-      - if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: sudo apt-get install -y gcc-aarch64-linux-gnu
       - if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: sudo apt-get install -y musl-tools
-      - if: matrix.target == 'armv7-unknown-linux-musleabihf'
-        run: sudo apt-get install -y musl-tools
-      - if: matrix.target == 'aarch64-unknown-linux-musl'
         run: sudo apt-get install -y musl-tools
 
       # Build

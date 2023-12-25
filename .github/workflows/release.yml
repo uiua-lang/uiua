@@ -16,11 +16,12 @@ jobs:
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
+      - uses: actions/checkout@v3
       - name: Ensure tag matches cargo version
         run: |
-          UIUA_VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages | .[] | select(.name == "uiua") | .version')
-          if [ "${{ github.ref_name }}" != "$UIUA_VERSION" ]; then
-            echo "Tag ${{ github.ref_name }} does not match uiua version $UIUA_VERSION"
+          CARGO_PKG_VERSION=$(cargo pkgid | cut -d# -f2)
+          if [ "${{ github.ref_name }}" != "$CARGO_PKG_VERSION" ]; then
+            echo "Tag ${{ github.ref_name }} does not match cargo version $CARGO_PKG_VERSION"
             exit 1
           fi
       - name: Prepare release notes

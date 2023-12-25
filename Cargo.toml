@@ -15,7 +15,7 @@ version = "0.7.1"
 bitflags = "2"
 bufreaderwriter = "0.2.4"
 colored = "2"
-crossbeam-channel = "0.5.9"
+crossbeam-channel = "0.5.10"
 dashmap = {version = "5", features = ["serde"]}
 ecow = {version = "0.2.0", features = ["serde"]}
 enum-iterator = "1.4.1"

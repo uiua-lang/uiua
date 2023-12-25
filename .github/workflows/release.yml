@@ -13,8 +13,6 @@ jobs:
   create_release:
     name: Create release
     runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - uses: actions/checkout@v3
       # - name: Ensure tag matches cargo version
@@ -27,7 +25,6 @@ jobs:
       - name: Prepare release notes
         run: node .github/scripts/get-release-notes.js ${{ github.ref_name }} >> release_notes.md
       - name: Create release
-        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           # tag_name: ${{ github.ref_name }}
@@ -58,27 +55,17 @@ jobs:
       - name: Install target
         run: rustup target add ${{ matrix.target }}
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }} --verbose
+        run: cargo build --bin uiua --release --target ${{ matrix.target }} --verbose
 
       - if: matrix.os == 'windows-latest'
         name: Zip (Windows)
-        run: 7z a -tzip uiua-bin-${{matrix.target}}.zip ./target/release/uiua.exe
+        run: 7z a -tzip uiua-bin-${{matrix.target}}.zip ./target/${{matrix.target}}/release/uiua.exe
       - if: matrix.os != 'windows-latest'
         name: Zip (Linux/MacOS)
-        run: 7z a -tzip uiua-bin-${{matrix.target}}.zip ./target/release/uiua
+        run: 7z a -tzip uiua-bin-${{matrix.target}}.zip ./target/${{matrix.target}}/release/uiua
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
             uiua-bin-${{matrix.target}}.zip
-
-      # - name: Upload release assets
-      #   uses: actions/upload-release-asset@v1
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     upload_url: ${{ needs.create_release.outputs.upload_url }}
-      #     asset_name: ${{ matrix.target }}
-      #     asset_path: ./target/uiua
-      #     asset_content_type: application/octet-stream

@@ -1,0 +1,70 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Create the release without assets
+  create_release:
+    name: Create release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Ensure tag matches cargo version
+        run: |
+          CARGO_PKG_VERSION=$(cargo pkgid | cut -d# -f2)
+          if [ "${{ github.ref_name }}" != "$CARGO_PKG_VERSION" ]; then
+            echo "Tag ${{ github.ref_name }} does not match cargo version $CARGO_PKG_VERSION"
+            exit 1
+          fi
+      - name: Prepare release notes
+        run: node .github/scripts/get-release-notes.js ${{ github.ref_name }} >> release_notes.md
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: ./release_notes.md
+
+  # Create the binaries and upload them as release assets
+  create_binaries:
+    name: Create binary
+    needs: create_release
+    runs-on: ${{ matrix.os }}
+    env:
+      BINARY_EXT: ${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest,   target: x86_64-apple-darwin            }
+          - { os: macos-latest,   target: aarch64-apple-darwin           }
+          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu       }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc         }
+          - { os: windows-latest, target: aarch64-pc-windows-msvc        }
+    steps:
+      - uses: actions/checkout@v3
+
+      # Install dependencies
+      - if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get install -y musl-tools
+      - if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get install -y libasound2-dev libudev-dev
+
+      # Build
+      - name: Install target
+        run: rustup target add ${{ matrix.target }}
+      - name: Build
+        run: cargo build --bin uiua --features audio --release --target ${{ matrix.target }} --verbose
+
+      - name: Zip
+        run: 7z a -tzip uiua-bin-${{matrix.target}}.zip ./target/${{matrix.target}}/release/uiua${{env.BINARY_EXT}}
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            uiua-bin-${{matrix.target}}.zip

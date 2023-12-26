@@ -9,31 +9,33 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Create the release without assets, saves the upload url for later jobs to upload assets to
+  # Create the release without assets
   create_release:
     name: Create release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      # - name: Ensure tag matches cargo version
-      #   run: |
-      #     CARGO_PKG_VERSION=$(cargo pkgid | cut -d# -f2)
-      #     if [ "${{ github.ref_name }}" != "$CARGO_PKG_VERSION" ]; then
-      #       echo "Tag ${{ github.ref_name }} does not match cargo version $CARGO_PKG_VERSION"
-      #       exit 1
-      #     fi
+      - name: Ensure tag matches cargo version
+        run: |
+          CARGO_PKG_VERSION=$(cargo pkgid | cut -d# -f2)
+          if [ "${{ github.ref_name }}" != "$CARGO_PKG_VERSION" ]; then
+            echo "Tag ${{ github.ref_name }} does not match cargo version $CARGO_PKG_VERSION"
+            exit 1
+          fi
       - name: Prepare release notes
         run: node .github/scripts/get-release-notes.js ${{ github.ref_name }} >> release_notes.md
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
-          # tag_name: ${{ github.ref_name }}
           body_path: ./release_notes.md
 
+  # Create the binaries and upload them as release assets
   create_binaries:
-    name: Create binaries
+    name: Create binary
     needs: create_release
     runs-on: ${{ matrix.os }}
+    env:
+      BINARY_EXT: ${{ matrix.os == 'windows-latest' && '.exe' || '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -57,12 +59,8 @@ jobs:
       - name: Build
         run: cargo build --bin uiua --release --target ${{ matrix.target }} --verbose
 
-      - if: matrix.os == 'windows-latest'
-        name: Zip (Windows)
-        run: 7z a -tzip uiua-bin-${{matrix.target}}.zip ./target/${{matrix.target}}/release/uiua.exe
-      - if: matrix.os != 'windows-latest'
-        name: Zip (Linux/MacOS)
-        run: 7z a -tzip uiua-bin-${{matrix.target}}.zip ./target/${{matrix.target}}/release/uiua
+      - name: Zip
+        run: 7z a -tzip uiua-bin-${{matrix.target}}.zip ./target/${{matrix.target}}/release/uiua${{env.BINARY_EXT}}
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v1

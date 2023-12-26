@@ -343,3 +343,5 @@ Maps ← ∩(remove 1) Maps
 ∩(⍤. has 3) Maps
 ∩(⍤. has "hi") Maps
 ∩(⍤. has [1 2 3]) Maps
+
+⍤⊃⋅∘≍ [2 3 4 1] ≡(get)[2 3 4 5]¤ ∧(insert) [5 2 3 4] [1 2 3 4] {}

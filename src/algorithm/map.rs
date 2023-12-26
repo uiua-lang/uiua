@@ -66,9 +66,9 @@ pub const EMPTY_NAN: f64 =
 pub const TOMBSTONE_NAN: f64 =
     unsafe { std::mem::transmute(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000_0002) };
 
-fn hash_start<T: Hash>(value: &T, capacity: usize) -> usize {
+fn hash_start<T: ArrayValue>(arr: &Array<T>, capacity: usize) -> usize {
     let mut hasher = DefaultHasher::new();
-    value.hash(&mut hasher);
+    arr.hash(&mut hasher);
     hasher.finish() as usize % capacity
 }
 
@@ -319,7 +319,13 @@ impl<'a> Pair<'a> {
         self.keys.row_count()
     }
     fn hash_start(&self, key: &Value) -> usize {
-        hash_start(key, self.capacity())
+        key.generic_ref_shallow(
+            |arr| hash_start(arr, self.capacity()),
+            |arr| hash_start(arr, self.capacity()),
+            |arr| hash_start(arr, self.capacity()),
+            |arr| hash_start(arr, self.capacity()),
+            |arr| hash_start(arr, self.capacity()),
+        )
     }
     fn get(&self, key: &Value) -> Option<Value> {
         if self.keys.shape() == [0] {

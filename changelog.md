@@ -13,6 +13,9 @@ Uiua is not yet stable.
   - [`get`](https://uiua.org/docs/get)
   - [`insert`](https://uiua.org/docs/insert)
   - [`remove`](https://uiua.org/docs/remove)
+- Add experimental local bindings
+  - [`they`](https://uiua.org/docs/they) and [`with`](https://uiua.org/docs/with) to bind local values
+  - [`him`](https://uiua.org/docs/him), [`her`](https://uiua.org/docs/her), [`them`](https://uiua.org/docs/them), and [`it`](https://uiua.org/docs/it) to refer to local values
 ### Interpreter
 - The internal byte array type is now used in more places, which should improve performance a bit
 - Bug and crash fixes

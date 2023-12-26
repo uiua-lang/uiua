@@ -395,6 +395,7 @@ impl Allowed {
                 ("stream", &[PrimClass::Sys(SysOpClass::Stream)]),
                 ("stdio", &[PrimClass::Sys(SysOpClass::StdIO)]),
                 ("map", &[PrimClass::Map]),
+                ("local", &[PrimClass::Local]),
                 ("misc", &[PrimClass::Sys(SysOpClass::Misc)]),
             ] {
                 if pattern.split_whitespace().any(|pat| pat.starts_with(part)) {
@@ -437,6 +438,7 @@ impl Allowed {
                 PrimClass::OtherModifier => "other-modifiers",
                 PrimClass::Planet => "planet-modifiers",
                 PrimClass::Map => "map-functions",
+                PrimClass::Local => "locals",
                 PrimClass::Misc => "misc-functions",
                 PrimClass::Sys(_) => "system-functions",
             };
@@ -500,6 +502,7 @@ impl Allowed {
                     "Advanced stack manipulation",
                 ),
                 PrimClass::Map => ("Map".into_view(), "Use arrays as hash maps"),
+                PrimClass::Local => ("Local".into_view(), "Bind local values"),
                 PrimClass::Misc => ("Miscellaneous".into_view(), ""),
                 PrimClass::Sys(class) => {
                     match class {

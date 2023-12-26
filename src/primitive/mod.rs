@@ -32,7 +32,7 @@ use crate::{
     lex::AsciiToken,
     sys::*,
     value::*,
-    FunctionId, Signature, Uiua, UiuaError, UiuaResult,
+    FunctionId, Signature, Uiua, UiuaError, UiuaResult, MAX_LOCALS,
 };
 
 /// Categories of primitives
@@ -51,6 +51,7 @@ pub enum PrimClass {
     OtherModifier,
     Planet,
     Map,
+    Local,
     Misc,
     Sys(SysOpClass),
 }
@@ -295,7 +296,22 @@ impl Primitive {
         use Primitive::*;
         matches!(
             self,
-            Rectify | This | Recur | All | Cascade | Map | Insert | Has | Get | Remove
+            Rectify
+                | This
+                | Recur
+                | All
+                | Cascade
+                | Map
+                | Insert
+                | Has
+                | Get
+                | Remove
+                | They
+                | With
+                | Him
+                | Her
+                | Them
+                | It
         )
     }
     /// Check if this primitive is deprecated
@@ -735,6 +751,91 @@ impl Primitive {
                 let map = keys.map(vals, env)?;
                 env.push(map);
             }
+            Primitive::They => {
+                let f = env.pop_function()?;
+                let g = env.pop_function()?;
+                let f_sig = f.signature();
+                let g_sig = g.signature();
+                let bound_count = g_sig.outputs;
+                if bound_count < 2 {
+                    return Err(env.error(format!(
+                        "{} would bind {} locals because its function returns \
+                        {} values, but the minimum allowed is 2",
+                        Primitive::They,
+                        bound_count,
+                        g_sig.outputs
+                    )));
+                } else if bound_count > MAX_LOCALS {
+                    return Err(env.error(format!(
+                        "{} would bind {} locals because its function returns \
+                        {} values, but the maximum allowed is {}",
+                        Primitive::They,
+                        bound_count,
+                        g_sig.outputs,
+                        MAX_LOCALS
+                    )));
+                }
+                let non_bound_count = f_sig.args;
+                let mut non_bound = Vec::with_capacity(non_bound_count);
+                for i in 0..non_bound_count {
+                    non_bound.push(env.pop(i + 1)?);
+                }
+                env.call(g)?;
+                for i in 0..bound_count {
+                    let value = env.pop(i + 1 + non_bound_count)?;
+                    env.rt.locals[i].push(value);
+                }
+                for val in non_bound.into_iter().rev() {
+                    env.push(val);
+                }
+                env.call(f)?;
+                for i in 0..bound_count {
+                    env.rt.locals[i].pop();
+                }
+            }
+            Primitive::With => {
+                let f = env.pop_function()?;
+                let sig = f.signature();
+                let bound_count = sig.outputs;
+                if bound_count < 2 {
+                    return Err(env.error(format!(
+                        "{} would bind {} locals because its function returns \
+                        {} values, but the minimum allowed is 2",
+                        Primitive::With,
+                        bound_count,
+                        sig.outputs
+                    )));
+                } else if bound_count > MAX_LOCALS {
+                    return Err(env.error(format!(
+                        "{} would bind {} locals because its function returns \
+                        {} values, but the maximum allowed is {}",
+                        Primitive::With,
+                        bound_count,
+                        sig.outputs,
+                        MAX_LOCALS
+                    )));
+                }
+                let non_bound_count = sig.args;
+                let mut non_bound = Vec::with_capacity(non_bound_count);
+                for i in 0..non_bound_count {
+                    non_bound.push(env.pop(i + 1)?);
+                }
+                for i in 0..bound_count {
+                    let value = env.pop(i + 1 + non_bound_count)?;
+                    env.rt.locals[i].push(value);
+                }
+                for val in non_bound.into_iter().rev() {
+                    env.push(val);
+                }
+                env.call(f)?;
+                for i in 0..bound_count {
+                    env.rt.locals[i].pop();
+                }
+            }
+            Primitive::Him => local(Primitive::Him, 0, env)?,
+            Primitive::Her => local(Primitive::Her, 1, env)?,
+            Primitive::Them => local(Primitive::Them, 2, env)?,
+            Primitive::It => local(Primitive::It, 3, env)?,
             Primitive::Trace => trace(env, false)?,
             Primitive::Stack => stack(env, false)?,
             Primitive::Dump => dump(env, false)?,
@@ -743,6 +844,14 @@ impl Primitive {
         }
         Ok(())
     }
+}
+
+fn local(prim: Primitive, i: usize, env: &mut Uiua) -> UiuaResult {
+    env.push(
+        (env.rt.locals[i].last().cloned())
+            .ok_or_else(|| env.error(format!("{} called outside of {}", prim, Primitive::With)))?,
+    );
+    Ok(())
 }
 
 impl ImplPrimitive {

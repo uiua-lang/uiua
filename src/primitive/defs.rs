@@ -1865,6 +1865,57 @@ primitive!(
     ///   : remove 2 .
     ///   : remove 5 .
     (2, Remove, Map, "remove"),
+    /// Bind some local values
+    ///
+    /// The number of bound values is equal to the number of outputs of the second function.
+    /// Bound values are taken from the stack *below* the number of arguments to the first function.
+    /// The second function is usually a selector consisting of [dip] and [identity].
+    /// Bound values can be referenced within the first function with [him], [her], [them], and [it].
+    /// The number of bound values must be between 2 and 4 inclusive.
+    /// ex: # Experimental!
+    ///   : they[him her him him her]⊙∘ 1 2
+    /// ex: # Experimental!
+    ///   : they[them him it her]⊙⊙⊙∘ 1 2 3 4
+    ([2], They, Local, "they"),
+    /// Bind some local values for a loop
+    ///
+    /// The number of bound values is equal to the number of outputs of the function.
+    /// Bound values are taken from the stack *below* the number of arguments to the function.
+    /// Bound values can be referenced within the function with [him], [her], [them], and [it].
+    /// The number of bound values must be between 2 and 4 inclusive.
+    /// ex: # Experimental!
+    ///   : with(|0.2 ⊂ him ⊢.her) 1_2_3 4_5_6
+    /// ex: # Experimental!
+    ///   : with(|1.2 :her ⊂⊂ him ⊢her) 10 1_2_3 4_5_6
+    /// [with] is meant to be used with [fold], [repeat], or [do].
+    /// Loop state can be stored in the bound values.
+    /// ex: # Experimental!
+    ///   : ∧with⊃(+him|×her) [1 2 3 4 5] 0 1
+    ([1], With, Local, "with"),
+    /// Get the first local value
+    ///
+    /// Local values are bound with [they] or [with].
+    /// ex: # Experimental!
+    ///   : they(him)⊙⊙⊙∘ 1 2 3 4
+    (0, Him, Local, "him"),
+    /// Get the second local value
+    ///
+    /// Local values are bound with [they] or [with].
+    /// ex: # Experimental!
+    ///   : they(her)⊙⊙⊙∘ 1 2 3 4
+    (0, Her, Local, "her"),
+    /// Get the third local value
+    ///
+    /// Local values are bound with [they] or [with].
+    /// ex: # Experimental!
+    ///   : they(them)⊙⊙⊙∘ 1 2 3 4
+    (0, Them, Local, "them"),
+    /// Get the fourth local value
+    ///
+    /// Local values are bound with [they] or [with].
+    /// ex: # Experimental!
+    ///   : they(it)⊙⊙⊙∘ 1 2 3 4
+    (0, It, Local, "it"),
     /// Debug print all stack values without popping them
     ///
     /// This is equivalent to [dump][identity], but is easier to type.

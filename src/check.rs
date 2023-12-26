@@ -530,6 +530,19 @@ impl<'a> VirtualEnv<'a> {
                 Dump => {
                     self.pop_func()?;
                 }
+                They => {
+                    let f = self.pop_func()?;
+                    let g = self.pop_func()?;
+                    let args = f.signature().args + g.signature().args;
+                    let outputs = f.signature().outputs;
+                    self.handle_args_outputs(args, outputs)?;
+                }
+                With => {
+                    let f = self.pop_func()?;
+                    let sig = f.signature();
+                    let args = sig.args + sig.outputs;
+                    self.handle_args_outputs(args, sig.outputs)?;
+                }
                 prim => {
                     let args = prim
                         .args()

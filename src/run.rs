@@ -12,6 +12,7 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
+use ecow::EcoVec;
 use enum_iterator::{all, Sequence};
 use instant::Duration;
 use thread_local::ThreadLocal;
@@ -71,7 +72,11 @@ pub(crate) struct Runtime {
     pub(crate) output_comments: HashMap<usize, Vec<Vec<Value>>>,
     /// Memoized values
     pub(crate) memo: Arc<ThreadLocal<RefCell<MemoMap>>>,
+    /// Local values
+    pub(crate) locals: [EcoVec<Value>; MAX_LOCALS],
 }
+
+pub(crate) const MAX_LOCALS: usize = 4;
 
 type MemoMap = HashMap<FunctionId, HashMap<Vec<Value>, Vec<Value>>>;
 
@@ -203,6 +208,7 @@ impl Default for Runtime {
             thread: ThisThread::default(),
             output_comments: HashMap::new(),
             memo: Arc::new(ThreadLocal::new()),
+            locals: Default::default(),
         }
     }
 }
@@ -430,27 +436,27 @@ code:
                     self.rt.stack.push(Value::clone(val));
                     Ok(())
                 }
-                &Instr::CallGlobal { index, call, .. } => (|| {
-                    let global = self.asm.bindings[index].global.clone();
-                    match global {
-                        Global::Const(val) => self.rt.stack.push(val),
-                        Global::Func(f) if call => self.call(f)?,
-                        Global::Func(f) => self.rt.function_stack.push(f),
-                        Global::Sig(_) => {
-                            return Err(self.error(
-                                "Signature global was not overwritten. \
-                                This is a bug in the interpreter.",
-                            ))
+                &Instr::CallGlobal { index, call, .. } => {
+                    match self.asm.bindings[index].global.clone() {
+                        Global::Const(val) => {
+                            self.rt.stack.push(val);
+                            Ok(())
                         }
-                        Global::Module { .. } => {
-                            return Err(self.error(
-                                "Called module global. \
-                                This is a bug in the interpreter.",
-                            ))
+                        Global::Func(f) if call => self.call(f),
+                        Global::Func(f) => {
+                            self.rt.function_stack.push(f);
+                            Ok(())
                         }
+                        Global::Sig(_) => Err(self.error(
+                            "Signature global was not overwritten. \
+                            This is a bug in the interpreter.",
+                        )),
+                        Global::Module { .. } => Err(self.error(
+                            "Called module global. \
+                            This is a bug in the interpreter.",
+                        )),
                     }
-                    Ok(())
-                })(),
+                }
                 &Instr::BindGlobal { span, index } => {
                     if let Some(f) = self.rt.function_stack.pop() {
                         // Binding is an imported function
@@ -1231,6 +1237,7 @@ code:
                 execution_start: self.rt.execution_start,
                 output_comments: HashMap::new(),
                 memo: self.rt.memo.clone(),
+                locals: self.rt.locals.clone(),
                 thread,
             },
         };

@@ -43,7 +43,6 @@ jobs:
           - { os: macos-latest,   target: x86_64-apple-darwin            }
           - { os: macos-latest,   target: aarch64-apple-darwin           }
           - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu       }
-          - { os: ubuntu-latest,  target: x86_64-unknown-linux-musl      }
           - { os: windows-latest, target: x86_64-pc-windows-msvc         }
           - { os: windows-latest, target: aarch64-pc-windows-msvc        }
     steps:
@@ -52,12 +51,14 @@ jobs:
       # Install dependencies
       - if: matrix.target == 'x86_64-unknown-linux-musl'
         run: sudo apt-get install -y musl-tools
+      - if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get install -y libasound2-dev libudev-dev
 
       # Build
       - name: Install target
         run: rustup target add ${{ matrix.target }}
       - name: Build
-        run: cargo build --bin uiua --release --target ${{ matrix.target }} --verbose
+        run: cargo build --bin uiua --features audio --release --target ${{ matrix.target }} --verbose
 
       - name: Zip
         run: 7z a -tzip uiua-bin-${{matrix.target}}.zip ./target/${{matrix.target}}/release/uiua${{env.BINARY_EXT}}

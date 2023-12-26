@@ -133,11 +133,18 @@ pub fn parse(
         for line in tokens.split(|t| matches!(t.value, Newline)) {
             let mut heuristic = 0;
             let mut first = None;
-            for tok in line {
+            let mut toks = line.iter().peekable();
+            while let Some(tok) = toks.next() {
                 heuristic += match &tok.value {
                     Spaces | Comment => 0,
                     Simple(CloseBracket | CloseCurly | CloseParen) => 0,
                     Simple(Underscore) => 0,
+                    MultilineString(_) => {
+                        while let Some(MultilineString(_)) = toks.peek().map(|t| &t.value) {
+                            toks.next();
+                        }
+                        1
+                    }
                     _ => {
                         first = first.or(Some(&tok.span));
                         1

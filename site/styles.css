@@ -1027,30 +1027,30 @@ a.clean {
 
 .trans {
     background-image: linear-gradient(180deg,
-            #5BCEFA 36%,
-            #F5A9B8 36%,
-            #F5A9B8 47%,
-            #FFFFFF 47%,
-            #FFFFFF 58%,
-            #F5A9B8 58%,
-            #F5A9B8 69%,
-            #5BCEFA 69%);
+            #5BCEFA 34%,
+            #F5A9B8 34%,
+            #F5A9B8 45%,
+            #FFFFFF 45%,
+            #FFFFFF 56%,
+            #F5A9B8 56%,
+            #F5A9B8 67%,
+            #5BCEFA 67%);
 }
 
 .bi {
     background-image: linear-gradient(180deg,
-            #D60270 48%,
-            #9B4F96 48%,
-            #9B4F96 65%,
-            #0038A8 65%);
+            #D60270 45%,
+            #9B4F96 45%,
+            #9B4F96 64%,
+            #0038A8 64%);
 }
 
 .pan {
     background-image: linear-gradient(180deg,
-            #FF218C 48%,
-            #FFD800 48%,
-            #FFD800 65%,
-            #21B1FF 65%);
+            #FF218C 45%,
+            #FFD800 45%,
+            #FFD800 64%,
+            #21B1FF 64%);
 }
 
 .gay {

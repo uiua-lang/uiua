@@ -113,6 +113,14 @@ impl Compiler {
             ..Self::default()
         }
     }
+    /// Get a reference to the assembly
+    pub fn assembly(&self) -> &Assembly {
+        &self.asm
+    }
+    /// Get a mutable reference to the assembly
+    pub fn assembly_mut(&mut self) -> &mut Assembly {
+        &mut self.asm
+    }
     /// Take a completed assembly from the compiler
     pub fn finish(&mut self) -> Assembly {
         take(&mut self.asm)
@@ -183,7 +191,9 @@ impl Compiler {
         if let InputSrc::File(path) = &src {
             self.current_imports.push(path.to_path_buf());
         }
+
         let res = self.catching_crash(input, |env| env.items(items, false));
+
         if let InputSrc::File(_) = &src {
             self.current_imports.pop();
         }

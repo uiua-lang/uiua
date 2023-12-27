@@ -311,8 +311,8 @@ impl Uiua {
         self.compile_run(|comp| comp.load_file(path))
     }
     /// Run a Uiua assembly
-    pub fn run_asm(&mut self, asm: impl Into<Assembly>) -> UiuaResult {
-        fn run_asm(env: &mut Uiua, asm: Assembly) -> UiuaResult {
+    pub fn run_asm(&mut self, asm: impl Into<Assembly>) -> UiuaResult<Assembly> {
+        fn run_asm(env: &mut Uiua, asm: Assembly) -> UiuaResult<Assembly> {
             env.asm = asm;
             env.rt.execution_start = instant::now();
             let top_slices = take(&mut env.asm.top_slices);
@@ -337,7 +337,8 @@ impl Uiua {
                     ..Runtime::default()
                 };
             }
-            res
+            let asm = take(&mut env.asm);
+            res.map(|_| asm)
         }
         run_asm(self, asm.into())
     }

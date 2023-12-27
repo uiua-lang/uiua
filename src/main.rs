@@ -845,11 +845,21 @@ fn repl(mut rt: Uiua, mut compiler: Compiler, color: bool, config: FormatConfig)
         print!("↪ ");
         println!("{}", color_code(&code));
 
+        let backup = compiler.clone();
         let res = compiler
             .load_str(&code)
             .and_then(|comp| rt.run_asm(comp.finish()));
         print_stack(&rt.take_stack(), color);
-        res.map(|()| true)
+        match res {
+            Ok(asm) => {
+                compiler.assembly_mut().bindings = asm.bindings;
+                Ok(true)
+            }
+            Err(e) => {
+                compiler = backup;
+                Err(e)
+            }
+        }
     };
 
     println!("Uiua {} (end with ctrl+C)\n", env!("CARGO_PKG_VERSION"));

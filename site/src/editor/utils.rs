@@ -773,7 +773,7 @@ fn run_code_single(code: &str) -> Vec<OutputItem> {
         .load_str(code)
         .and_then(|comp| rt.run_asm(comp.finish()))
     {
-        Ok(()) => rt.take_stack(),
+        Ok(_) => rt.take_stack(),
         Err(e) => {
             error = Some(e);
             rt.take_stack()

@@ -968,7 +968,7 @@ pub mod complex {
     }
     #[cfg(feature = "bytes")]
     pub fn num_byte(a: f64, b: u8) -> Complex {
-        Complex::new(a, b.into())
+        Complex::new(b.into(), a)
     }
 
     pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {

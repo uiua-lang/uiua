@@ -199,6 +199,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_group_pattern, "group"),
         &UnderPatternFn(under_setunder_pattern, "setunder"),
         &UnderPatternFn(under_setinverse_setunder_pattern, "setinverse setunder"),
+        &UnderPatternFn(under_trivial_pattern, "trivial"),
         &UnderPatternFn(under_array_pattern, "array"),
         &UnderPatternFn(under_unpack_pattern, "unpack"),
         &UnderPatternFn(under_touch_pattern, "touch"),
@@ -424,6 +425,21 @@ fn invert_trivial_pattern<'a>(
             }
         }
         [Comment(_) | PushSig(_) | PopSig, input @ ..] => return Some((input, EcoVec::new())),
+        _ => {}
+    }
+    None
+}
+
+fn under_trivial_pattern<'a>(
+    input: &'a [Instr],
+    _: Signature,
+    _: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    use Instr::*;
+    match input {
+        [Comment(_) | PushSig(_) | PopSig, input @ ..] => {
+            return Some((input, (EcoVec::new(), EcoVec::new())))
+        }
         _ => {}
     }
     None

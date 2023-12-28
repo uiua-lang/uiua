@@ -1731,7 +1731,7 @@ mod tests {
 		}},
         "characters": {{
             "name": "constant.character.escape",
-            "match": "@\\\\?."
+            "match": "@(\\\\(x[0-9A-Fa-f]{{2}}|u[0-9A-Fa-f]{{4}}|.)|.)"
         }},
 		"numbers": {{
 			"name": "constant.numeric.uiua",

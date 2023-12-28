@@ -186,7 +186,11 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         metagrid.push(vec![key, vec![" → ".chars().collect()], value]);
                     }
                     if empty_entries > 0 {
-                        metagrid.push(vec![vec![format!("… {empty_entries}").chars().collect()]])
+                        metagrid.push(vec![
+                            vec![format!("… {empty_entries}").chars().collect()],
+                            vec![],
+                            vec![],
+                        ])
                     }
                 }
             }
@@ -373,7 +377,7 @@ fn pad_grid_center(width: usize, height: usize, align_numbers: bool, grid: &mut 
         row.truncate(width);
         if row.len() < width {
             let diff = width - row.len();
-            let post_pad = if align_numbers && row.last().map_or(false, char::is_ascii_digit) {
+            let post_pad = if align_numbers && row.last().is_some_and(char::is_ascii_digit) {
                 0
             } else {
                 (diff + 1) / 2

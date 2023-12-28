@@ -501,9 +501,25 @@ pub trait ArrayValue:
     fn format_delims() -> (&'static str, &'static str) {
         ("[", "]")
     }
+    /// Marker for empty lists in grid formatting
+    fn empty_list_inner() -> &'static str {
+        ""
+    }
     /// Separator for formatting
     fn format_sep() -> &'static str {
         " "
+    }
+    /// Delimiters for grid formatting
+    fn grid_fmt_delims(boxed: bool) -> (char, char) {
+        if boxed {
+            ('⟦', '⟧')
+        } else {
+            ('[', ']')
+        }
+    }
+    /// Whether to compress all items of a list when grid formatting
+    fn compress_list_grid() -> bool {
+        false
     }
 }
 
@@ -560,6 +576,16 @@ impl ArrayValue for char {
     fn proxy() -> Self {
         ' '
     }
+    fn grid_fmt_delims(boxed: bool) -> (char, char) {
+        if boxed {
+            ('⌜', '⌟')
+        } else {
+            ('"', '"')
+        }
+    }
+    fn compress_list_grid() -> bool {
+        true
+    }
 }
 
 impl ArrayValue for Boxed {
@@ -573,6 +599,9 @@ impl ArrayValue for Boxed {
     }
     fn proxy() -> Self {
         Boxed(Array::<f64>::new(0, []).into())
+    }
+    fn empty_list_inner() -> &'static str {
+        "□"
     }
 }
 
@@ -589,6 +618,9 @@ impl ArrayValue for Complex {
     }
     fn proxy() -> Self {
         Complex::new(0.0, 0.0)
+    }
+    fn empty_list_inner() -> &'static str {
+        "ℂ"
     }
 }
 

@@ -42,6 +42,10 @@ fn main() {
         }
     });
 
+    // This makes sure the terminal's original mode flags are remembered when disabling raw mode
+    #[cfg(feature = "raw_mode")]
+    rawrrr::save_term();
+
     if let Err(e) = run() {
         println!("{}", e.report());
         exit(1);
@@ -684,9 +688,7 @@ fn uiua_files() -> Vec<PathBuf> {
 const WATCHING: &str = "watching for changes...";
 fn print_watching() {
     #[cfg(feature = "raw_mode")]
-    {
-        _ = crossterm::terminal::disable_raw_mode();
-    }
+    rawrrr::disable_raw();
     eprint!("{}", WATCHING);
     stderr().flush().unwrap();
 }

@@ -36,7 +36,7 @@ toml = "0.8.8"
 unicode-segmentation = "1.10"
 
 # Native dependencies
-crossterm = {version = "0.27.0", optional = true}
+rawrrr = {version = "0.1.0", optional = true}
 httparse = {version = "1.8.0", optional = true}
 open = {version = "5", optional = true}
 rustls = {version = "0.22.1", optional = true, default-features = false, features = [
@@ -109,7 +109,7 @@ invoke = ["open"]
 lsp = ["tower-lsp", "tokio", "native_sys"]
 native_sys = []
 profile = ["serde_yaml", "indexmap"]
-raw_mode = ["crossterm", "native_sys"]
+raw_mode = ["rawrrr", "native_sys"]
 stand = ["native_sys"]
 terminal_image = ["viuer", "image"]
 

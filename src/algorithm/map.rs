@@ -8,8 +8,8 @@ use std::{
 use ecow::EcoVec;
 
 use crate::{
-    algorithm::ArrayCmpSlice, Array, ArrayMeta, ArrayValue, Boxed, Complex, FormatShape, Uiua,
-    UiuaResult, Value,
+    algorithm::ArrayCmpSlice, cowslice::CowSlice, Array, ArrayMeta, ArrayValue, Boxed, Complex,
+    FormatShape, Uiua, UiuaResult, Value,
 };
 
 impl Value {
@@ -24,14 +24,19 @@ impl Value {
         }
         let capacity =
             ((self.row_count() as f64 / LOAD_FACTOR).ceil() as usize).next_power_of_two();
-        let item = Boxed(
-            Array::new(
-                capacity,
-                repeat(EMPTY_NAN).take(capacity).collect::<EcoVec<_>>(),
-            )
-            .into(),
-        );
-        let mut map = Value::Box(Array::new(2, [item.clone(), item]));
+        let mut kv = EcoVec::with_capacity(2);
+        for x in [&self, &values] {
+            kv.push(Boxed(match x {
+                Value::Num(_) => Array::<f64>::new(0, CowSlice::with_capacity(capacity)).into(),
+                #[cfg(feature = "bytes")]
+                Value::Byte(_) => Array::<f64>::new(0, CowSlice::with_capacity(capacity)).into(),
+                Value::Complex(_) => {
+                    Array::<Complex>::new(0, CowSlice::with_capacity(capacity)).into()
+                }
+                _ => Array::<Boxed>::new(0, CowSlice::with_capacity(capacity)).into(),
+            }))
+        }
+        let mut map = Value::Box(Array::new(2, kv));
         map.meta_mut().map_len = Some(0);
         for (key, value) in self.into_rows().zip(values.into_rows()) {
             map.insert(key, value, env)?;
@@ -138,6 +143,34 @@ impl<'a> HashValue<'a> {
         action3: &'static str,
     ) -> Result<HashOwned, String> {
         match (self.as_mut(), owned) {
+            (HashMut::Num(arr), HashOwned::Num(num)) if arr.row_count() == 0 => {
+                let mut shape = num.shape.clone();
+                shape.insert(0, 0);
+                *self.0 = Array::<f64>::new(shape, EcoVec::new()).into();
+                Ok(HashOwned::Num(num))
+            }
+            (HashMut::Num(arr), HashOwned::Comp(comp)) if arr.row_count() == 0 => {
+                let mut shape = comp.shape.clone();
+                shape.insert(0, 0);
+                *self.0 = Array::<Complex>::new(shape, EcoVec::new()).into();
+                Ok(HashOwned::Comp(comp))
+            }
+            (HashMut::Num(arr), owned @ HashOwned::Box(_)) if arr.row_count() == 0 => {
+                *self.0 = Array::<Boxed>::new(0, EcoVec::new()).into();
+                Ok(owned)
+            }
+            (HashMut::Box(arr), HashOwned::Num(num)) if arr.row_count() == 0 => {
+                let mut shape = num.shape.clone();
+                shape.insert(0, 0);
+                *self.0 = Array::<f64>::new(shape, EcoVec::new()).into();
+                Ok(HashOwned::Num(num))
+            }
+            (HashMut::Box(arr), HashOwned::Comp(num)) if arr.row_count() == 0 => {
+                let mut shape = num.shape.clone();
+                shape.insert(0, 0);
+                *self.0 = Array::<Complex>::new(shape, EcoVec::new()).into();
+                Ok(HashOwned::Comp(num))
+            }
             (HashMut::Num(arr), HashOwned::Num(item)) if arr.shape[1..] != item.shape => {
                 Err(format!(
                     "Cannot {action1} shape {} {action2} shape {} {action3}",
@@ -162,26 +195,6 @@ impl<'a> HashValue<'a> {
             (HashMut::Num(_), owned @ HashOwned::Num(_)) => Ok(owned),
             (HashMut::Comp(_), owned @ HashOwned::Comp(_)) => Ok(owned),
             (HashMut::Box(_), owned @ HashOwned::Box(_)) => Ok(owned),
-            (HashMut::Num(arr), owned @ HashOwned::Comp(_)) if arr.row_count() == 0 => {
-                *self.0 = arr.convert_ref::<Complex>().into();
-                Ok(owned)
-            }
-            (HashMut::Num(arr), owned @ HashOwned::Box(_)) if arr.row_count() == 0 => {
-                *self.0 = Array::<Boxed>::new([0], EcoVec::new()).into();
-                Ok(owned)
-            }
-            (HashMut::Box(arr), HashOwned::Num(num)) if arr.row_count() == 0 => {
-                let mut shape = num.shape.clone();
-                shape.insert(0, 0);
-                *self.0 = Array::<f64>::new(shape, EcoVec::new()).into();
-                Ok(HashOwned::Num(num))
-            }
-            (HashMut::Box(arr), HashOwned::Comp(num)) if arr.row_count() == 0 => {
-                let mut shape = num.shape.clone();
-                shape.insert(0, 0);
-                *self.0 = Array::<Complex>::new(shape, EcoVec::new()).into();
-                Ok(HashOwned::Comp(num))
-            }
             (HashMut::Box(_), HashOwned::Num(num)) => {
                 Ok(HashOwned::Box(Array::from(Boxed(Value::from(num)))))
             }

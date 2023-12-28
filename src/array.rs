@@ -406,6 +406,13 @@ impl<T: ArrayValue> Ord for Array<T> {
 
 impl<T: ArrayValue> Hash for Array<T> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
+        if let Some(scalar) = self.as_scalar() {
+            if let Some(value) = scalar.nested_value() {
+                value.hash(hasher);
+                return;
+            }
+        }
+        T::TYPE_ID.hash(hasher);
         self.shape.hash(hasher);
         self.data.iter().for_each(|x| x.array_hash(hasher));
     }
@@ -491,6 +498,8 @@ pub trait ArrayValue:
     const NAME: &'static str;
     /// A glyph indicating the type
     const SYMBOL: char;
+    /// An ID for the type
+    const TYPE_ID: u8;
     /// Get the fill value from the environment
     fn get_fill(env: &Uiua) -> Result<Self, &'static str>;
     /// Hash the value
@@ -521,11 +530,16 @@ pub trait ArrayValue:
     fn compress_list_grid() -> bool {
         false
     }
+    /// Get a nested value
+    fn nested_value(&self) -> Option<&Value> {
+        None
+    }
 }
 
 impl ArrayValue for f64 {
     const NAME: &'static str = "number";
     const SYMBOL: char = 'ℝ';
+    const TYPE_ID: u8 = 0;
     fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.num_fill()
     }
@@ -547,6 +561,7 @@ impl ArrayValue for f64 {
 impl ArrayValue for u8 {
     const NAME: &'static str = "number";
     const SYMBOL: char = 'ℝ';
+    const TYPE_ID: u8 = 0;
     fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.byte_fill()
     }
@@ -561,6 +576,7 @@ impl ArrayValue for u8 {
 impl ArrayValue for char {
     const NAME: &'static str = "character";
     const SYMBOL: char = '@';
+    const TYPE_ID: u8 = 2;
     fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.char_fill()
     }
@@ -591,6 +607,7 @@ impl ArrayValue for char {
 impl ArrayValue for Boxed {
     const NAME: &'static str = "box";
     const SYMBOL: char = '□';
+    const TYPE_ID: u8 = 3;
     fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.box_fill()
     }
@@ -603,11 +620,15 @@ impl ArrayValue for Boxed {
     fn empty_list_inner() -> &'static str {
         "□"
     }
+    fn nested_value(&self) -> Option<&Value> {
+        Some(&self.0)
+    }
 }
 
 impl ArrayValue for Complex {
     const NAME: &'static str = "complex";
     const SYMBOL: char = 'ℂ';
+    const TYPE_ID: u8 = 1;
     fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
         env.complex_fill()
     }

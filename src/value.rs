@@ -66,12 +66,12 @@ impl Value {
     }
     pub(crate) fn type_id(&self) -> u8 {
         match self {
-            Self::Num(_) => 0,
+            Self::Num(_) => f64::TYPE_ID,
             #[cfg(feature = "bytes")]
-            Self::Byte(_) => 0,
-            Self::Complex(_) => 1,
-            Self::Char(_) => 2,
-            Self::Box(_) => 3,
+            Self::Byte(_) => u8::TYPE_ID,
+            Self::Complex(_) => Complex::TYPE_ID,
+            Self::Char(_) => char::TYPE_ID,
+            Self::Box(_) => Boxed::TYPE_ID,
         }
     }
     /// Get a reference to a possible number array
@@ -1564,7 +1564,6 @@ impl Ord for Value {
 
 impl Hash for Value {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.type_id().hash(state);
         match self {
             Value::Num(arr) => arr.hash(state),
             #[cfg(feature = "bytes")]

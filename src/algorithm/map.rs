@@ -623,7 +623,7 @@ impl<'a> PairMut<'a> {
     }
 }
 
-trait MapItem {
+pub(crate) trait MapItem {
     fn num(&self) -> f64;
     fn from_num(num: f64) -> Self;
     fn is_empty_cell(&self) -> bool {
@@ -668,6 +668,7 @@ impl MapItem for Value {
         }
         match self {
             Value::Num(arr) => arr.data[0],
+            Value::Box(arr) => arr.data[0].num(),
             _ => 0.0,
         }
     }

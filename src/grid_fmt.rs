@@ -10,7 +10,7 @@ use std::{
 };
 
 use crate::{
-    algorithm::map::{EMPTY_NAN, TOMBSTONE_NAN},
+    algorithm::map::{MapItem, EMPTY_NAN, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
     boxed::Boxed,
     value::Value,
@@ -152,10 +152,12 @@ impl GridFmt for Boxed {
 
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, boxed: bool) -> Grid {
+        // Scalar
         if self.shape.is_empty() {
             return self.data[0].fmt_grid(boxed);
         }
-        if *self.shape == [0] {
+        // Empty list
+        if self.shape == [0] {
             let (left, right) = T::grid_fmt_delims(boxed);
             let inner = T::empty_list_inner();
             let mut row = vec![left];
@@ -164,12 +166,44 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             return vec![row];
         }
 
-        // Fill the metagrid
-        let mut metagrid = Metagrid::new();
+        let mut metagrid: Option<Metagrid> = None;
 
+        // Hashmap
+        if self.meta().map_len.is_some() && self.shape == [2] {
+            if let Some((keys, values)) =
+                self.data[0].nested_value().zip(self.data[1].nested_value())
+            {
+                if keys.row_count() == values.row_count() {
+                    let mut empty_entries = 0;
+                    let metagrid = metagrid.get_or_insert_with(Metagrid::new);
+                    for (key, value) in keys.rows().zip(values.rows()) {
+                        if key.is_empty_cell() || key.is_tombstone() {
+                            empty_entries += 1;
+                            continue;
+                        }
+                        let key = key.fmt_grid(false);
+                        let value = value.fmt_grid(false);
+                        metagrid.push(vec![key, vec![vec![' ', '→', ' ']], value]);
+                    }
+                    if empty_entries > 0 {
+                        metagrid.push(vec![vec![format!("… {empty_entries} empty")
+                            .chars()
+                            .collect()]])
+                    }
+                }
+            }
+        }
+
+        // Default array formatting
+        let mut metagrid = metagrid.unwrap_or_else(|| {
+            let mut metagrid = Metagrid::new();
+            fmt_array(&self.shape, &self.data, &mut metagrid);
+            metagrid
+        });
+
+        // Synthesize a grid from the metagrid
         let mut grid: Grid = Grid::new();
 
-        fmt_array(&self.shape, &self.data, &mut metagrid);
         // Determine max row heights and column widths
         let metagrid_width = metagrid.iter().map(|row| row.len()).max().unwrap();
         let metagrid_height = metagrid.len();

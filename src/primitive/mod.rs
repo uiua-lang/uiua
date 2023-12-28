@@ -288,6 +288,7 @@ impl Primitive {
                 Primitive::Un.format(),
                 Primitive::Box.format(),
             )),
+            Primitive::Rectify => Some(String::new()),
             _ => None,
         }
     }

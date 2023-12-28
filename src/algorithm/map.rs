@@ -22,7 +22,21 @@ impl Value {
                 values.row_count()
             )));
         }
-        Ok(Array::new(2, [Boxed(self), Boxed(values)]).into())
+        let capacity =
+            ((self.row_count() as f64 / LOAD_FACTOR).ceil() as usize).next_power_of_two();
+        let item = Boxed(
+            Array::new(
+                capacity,
+                repeat(EMPTY_NAN).take(capacity).collect::<EcoVec<_>>(),
+            )
+            .into(),
+        );
+        let mut map = Value::Box(Array::new(2, [item.clone(), item]));
+        map.meta_mut().map_len = Some(0);
+        for (key, value) in self.into_rows().zip(values.into_rows()) {
+            map.insert(key, value, env)?;
+        }
+        Ok(map)
     }
     /// Turn a map array into its keys and values
     pub fn unmap(mut self, env: &Uiua) -> UiuaResult<(Value, Value)> {
@@ -372,7 +386,7 @@ impl<'a> PairMut<'a> {
         len
     }
     fn grow(&mut self) {
-        if self.capacity() == 0 || self.len() as f64 / self.capacity() as f64 > LOAD_FACTOR {
+        if self.capacity() == 0 || (self.len() as f64 / self.capacity() as f64) > LOAD_FACTOR {
             fn grow_impl<K, V>(keys: &mut Array<K>, values: &mut Array<V>, new_capacity: usize)
             where
                 K: MapItem + ArrayValue,

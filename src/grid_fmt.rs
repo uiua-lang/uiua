@@ -183,12 +183,10 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         }
                         let key = key.fmt_grid(false);
                         let value = value.fmt_grid(false);
-                        metagrid.push(vec![key, vec![vec![' ', '→', ' ']], value]);
+                        metagrid.push(vec![key, vec![" → ".chars().collect()], value]);
                     }
                     if empty_entries > 0 {
-                        metagrid.push(vec![vec![format!("… {empty_entries} empty")
-                            .chars()
-                            .collect()]])
+                        metagrid.push(vec![vec![format!("… {empty_entries}").chars().collect()]])
                     }
                 }
             }

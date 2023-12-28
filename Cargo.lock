@@ -2541,6 +2541,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2ff9a1f06a88b01621b7ae906ef0211290d1c8a168a15542486a8f61c0833b9"
 
 [[package]]
+name = "rawrrr"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcfc983a8b7ed9d74314ec9f442b0c571d4adb2d59f9ced62b8e9ab9382fc0bc"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "rayon"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3555,7 +3565,6 @@ dependencies = [
  "color-backtrace",
  "colored",
  "crossbeam-channel",
- "crossterm",
  "ctrlc",
  "dashmap",
  "ecow",
@@ -3576,6 +3585,7 @@ dependencies = [
  "paste",
  "pathdiff",
  "rand",
+ "rawrrr",
  "rayon",
  "regex",
  "rustls",

@@ -132,11 +132,7 @@ impl SysBackend for NativeSys {
 
             match b {
                 #[cfg(feature = "raw_mode")]
-                b'\r'
-                    if crossterm::terminal::is_raw_mode_enabled().map_err(|e| e.to_string())? =>
-                {
-                    break
-                }
+                b'\r' if rawrrr::is_raw() => break,
                 b'\r' => continue,
                 b'\n' | 3 => break,
                 b => buffer.push(b),
@@ -154,11 +150,11 @@ impl SysBackend for NativeSys {
     #[cfg(feature = "raw_mode")]
     fn set_raw_mode(&self, raw_mode: bool) -> Result<(), String> {
         if raw_mode {
-            crossterm::terminal::enable_raw_mode()
+            rawrrr::enable_raw()
         } else {
-            crossterm::terminal::disable_raw_mode()
+            rawrrr::disable_raw()
         }
-        .map_err(|e| e.to_string())
+        Ok(())
     }
     fn var(&self, name: &str) -> Option<String> {
         env::var(name).ok()

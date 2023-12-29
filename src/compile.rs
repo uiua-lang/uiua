@@ -1314,10 +1314,6 @@ code:
                 }
                 _ => {}
             }
-
-            // Handle deprecation and experimental
-            self.handle_primitive_experimental(prim, &modified.modifier.span);
-            self.handle_primitive_deprecation(prim, &modified.modifier.span);
         }
 
         if op_count == modified.modifier.value.args() {
@@ -1759,6 +1755,8 @@ code:
             }
             _ => return Ok(false),
         }
+        self.handle_primitive_experimental(prim, &modified.modifier.span);
+        self.handle_primitive_deprecation(prim, &modified.modifier.span);
         Ok(true)
     }
     fn handle_primitive_deprecation(&mut self, prim: Primitive, span: &CodeSpan) {

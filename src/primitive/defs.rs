@@ -743,7 +743,7 @@ primitive!(
     /// For arrays, a new array is created with the first array as the first row and the second array as the second row.
     /// ex: ⊟ [1 2 3] [4 5 6]
     ///
-    /// By default, arrays with different shapes cannot be [couple]ed.
+    /// By default, arrays with different shapes cannot be [couple]d.
     /// ex! ⊟ [1 2 3] [4 5]
     /// Use [fill] to make their shapes match
     /// ex: ⬚∞⊟ [1 2 3] [4 5]

@@ -1171,48 +1171,6 @@ code:
     }
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
         let op_count = modified.code_operands().count();
-        if let Modifier::Primitive(prim) = modified.modifier.value {
-            // Give advice about redundancy
-            match prim {
-                m @ (Primitive::Each | Primitive::Rows) => {
-                    if let [Sp {
-                        value: Word::Primitive(prim),
-                        span,
-                    }] = modified.operands.as_slice()
-                    {
-                        if prim.class().is_pervasive() {
-                            let span = modified.modifier.span.clone().merge(span.clone());
-                            self.emit_diagnostic(
-                                format!(
-                                    "Using {m} with a pervasive primitive like {p} is \
-                                    redundant. Just use {p} by itself.",
-                                    m = m.format(),
-                                    p = prim.format(),
-                                ),
-                                DiagnosticKind::Advice,
-                                span,
-                            );
-                        }
-                    } else if words_look_pervasive(&modified.operands) {
-                        let span = modified.modifier.span.clone();
-                        self.emit_diagnostic(
-                            format!(
-                                "{m}'s function is pervasive, \
-                                so {m} is redundant here.",
-                                m = m.format()
-                            ),
-                            DiagnosticKind::Advice,
-                            span,
-                        );
-                    }
-                }
-                _ => {}
-            }
-
-            // Handle deprecation and experimental
-            self.handle_primitive_experimental(prim, &modified.modifier.span);
-            self.handle_primitive_deprecation(prim, &modified.modifier.span);
-        }
 
         // De-sugar switched
         if op_count == 1 {
@@ -1317,6 +1275,49 @@ code:
                     _ => {}
                 }
             }
+        }
+
+        if let Modifier::Primitive(prim) = modified.modifier.value {
+            // Give advice about redundancy
+            match prim {
+                m @ (Primitive::Each | Primitive::Rows) => {
+                    if let [Sp {
+                        value: Word::Primitive(prim),
+                        span,
+                    }] = modified.operands.as_slice()
+                    {
+                        if prim.class().is_pervasive() {
+                            let span = modified.modifier.span.clone().merge(span.clone());
+                            self.emit_diagnostic(
+                                format!(
+                                    "Using {m} with a pervasive primitive like {p} is \
+                                    redundant. Just use {p} by itself.",
+                                    m = m.format(),
+                                    p = prim.format(),
+                                ),
+                                DiagnosticKind::Advice,
+                                span,
+                            );
+                        }
+                    } else if words_look_pervasive(&modified.operands) {
+                        let span = modified.modifier.span.clone();
+                        self.emit_diagnostic(
+                            format!(
+                                "{m}'s function is pervasive, \
+                                so {m} is redundant here.",
+                                m = m.format()
+                            ),
+                            DiagnosticKind::Advice,
+                            span,
+                        );
+                    }
+                }
+                _ => {}
+            }
+
+            // Handle deprecation and experimental
+            self.handle_primitive_experimental(prim, &modified.modifier.span);
+            self.handle_primitive_deprecation(prim, &modified.modifier.span);
         }
 
         if op_count == modified.modifier.value.args() {

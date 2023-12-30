@@ -14,6 +14,9 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - UDP Sockets
 
 ## Bugs
+- Fixed pervasive ops with `[1 1]` shape
+- Backwards primitive lexing
+- `⬚i↻1[5 5]`
 - Figure out what is going on with the editor cursor
 
 ## Optimizations

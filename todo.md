@@ -2,6 +2,9 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
+- Allow map keys of any type
+- Deprecate `table` and optimize `cross`?
+- `fill` `get`
 - Change `pop`s glyph to `◌`
 - Multimedia
   - Sound input
@@ -17,6 +20,8 @@ Within each section, items are ordered (roughly) by decreasing priority.
 - Fixed pervasive ops with `[1 1]` shape
 - Backwards primitive lexing
 - `⬚i↻1[5 5]`
+- `&ast` running in examples
+- Output comments in `under`
 - Figure out what is going on with the editor cursor
 
 ## Optimizations

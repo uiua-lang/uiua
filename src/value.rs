@@ -1490,8 +1490,8 @@ macro_rules! cmp_impls {
                 ("bytes", Byte, Num, byte_num, num_num),
                 (Complex, Num, com_x),
                 (Num, Complex, x_com),
-                ("byte", Complex, Byte, com_x),
-                ("byte", Byte, Complex, x_com),
+                ("bytes", Complex, Byte, com_x),
+                ("bytes", Byte, Complex, x_com),
                 // Type comparable
                 (Num, Char, always_less),
                 ("bytes", Byte, Char, always_less),

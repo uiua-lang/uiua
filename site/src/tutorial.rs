@@ -1193,15 +1193,15 @@ fn TutorialAdvancedArray() -> impl IntoView {
         <p>"You can use "<Prim prim=Under/><Prim prim=Both/><Prim prim=Rerank/>" to "<Prim prim=Rerank/>" 2 arrays. Here, we insert one of the ranks for "<Prim prim=Rerank/>" using "<Prim prim=Dip/>"."</p>
         <Editor example="⍜∩☇≡⊂ 1⊙1 ↯6_2⇡12 ↯2_3_4⇡24"/>
 
-        <h2 id="cross"><Prim prim=Cross/></h2>
-        <p><Prim prim=Cross/>" is the row-wise version of "<Prim prim=Table/>". It calls its function on all "<em>"combinations"</em>" of rows of its arguments."</p>
-        <Editor example="⊠⊂ η_π_τ ↯3_3⇡9"/>
-        <p><Prim prim=Cross/>" can be useful when working with "<Prim prim=Rerank/>"ed or "<Prim prim=Fix/>"ed arrays."</p>
+        <h2 id="table">"Multi-dimensional "<Prim prim=Table/></h2>
+        <p><Prim prim=Table/>" called on arrays of multiple dimensions calls its function on all "<em>"combinations"</em>" of rows of its arguments."</p>
+        <Editor example="⊞⊂ η_π_τ ↯3_3⇡9"/>
+        <p><Prim prim=Table/>" can be useful when working with "<Prim prim=Rerank/>"ed or "<Prim prim=Fix/>"ed arrays."</p>
         <p>"In this example, we apply a table of rotations to each matrix cell of a 3D array."</p>
         <Editor example="°⊚ ≡[..]⇡3           # Target array
 [0_0 0_1]_[¯1_1 1_0] # Rotations table
 ,,                   # Copy to see inputs
-⍜(☇1)⊠↻              # All rotation combinations
+⍜(☇1)⊞↻              # All rotation combinations
 ≡≡□                  # Box for display"/>
 
         <h2 id="challenges">"Challenges"</h2>
@@ -1218,8 +1218,8 @@ fn TutorialAdvancedArray() -> impl IntoView {
             number=2
             prompt="rotates all rank 2 arrays in the second argument by all rank 1 arrays in the first"
             example="[¯1_¯2 0_1] [.] ↯3_4⇡12"
-            answer="⊠↻ ☇1⊙(☇2)"
-            best_answer="⊠↻ ∩☇1⊙2"
+            answer="⊞↻ ☇1⊙(☇2)"
+            best_answer="⊞↻ ∩☇1⊙2"
             tests={&["[0_2 2_1 1_1] ⊞×⊞×.↘1.+1⇡3"]}
             hidden="1 [1 2 3]"/>
     }

@@ -1119,16 +1119,14 @@ primitive!(
     ///
     /// [rows] is one of a few modifiers that uses [proxy values](/docs/functions#proxy).
     ([1], Rows, IteratingModifier, ("rows", '≡')),
-    /// Apply a function to each combination of elements of two arrays
+    /// Apply a function to each combination of rows of two arrays
     ///
-    /// This is the element-wise version of [cross].
-    /// This is probably what you want instead of [each].
+    /// This is often what you want instead of [each].
     ///
     /// ex: ⊞+ 1_2_3 4_5_6_7
     /// ex: ⊞⊂ 1_2 3_4
     ///
-    /// The first array's shape becomes the first part of the result's shape, and the second array's shape becomes the next part.
-    /// The end of the result's shape is determined by the function's result.
+    /// The resulting array will always have a shape starting with the lengths of the two inputs.
     /// ex: △⊞+ 1_2 3_4_5
     /// ex: △⊞⊂ 1_2 3_4_5
     /// ex: △⊞+ [1_2_3 4_5_6] [7 8 9 10]
@@ -1136,7 +1134,7 @@ primitive!(
     (2[1], Table, IteratingModifier, ("table", '⊞')),
     /// Apply a function to each combination of rows of arrays
     ///
-    /// This is the row-wise version of [table].
+    /// This *was* the row-wise version of [table].
     ///
     /// ex: [1_2 3_4 5_6]
     ///   : [7_8 9_10]

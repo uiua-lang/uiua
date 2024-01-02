@@ -218,9 +218,9 @@ uiuisms!(
     /// Cross product
     "1_2_3 4_5_6\n↻1-∩(×↻1)⊃:⊙∘",
     /// Matrix product
-    "[7_8_9 10_11_12] [1_2 3_4 5_6]\n⍜⍉⊠(/+×)",
+    "[7_8_9 10_11_12] [1_2 3_4 5_6]\n⍜⍉⊞(/+×)",
     /// Matrix power (Also works with scalars)
-    "4 [1_2 3_4]\n⊙;⍥(⊠(/+×)⊙⍉,):⊞=.⇡⬚1⊢△,",
+    "4 [1_2 3_4]\n⊙;⍥(⊞(/+×)⊙⍉,):⊞=.⇡⬚1⊢△,",
     /// Repeat a function and collect intermediate results into an array
     "[⍥(×2.)] 10 1",
     /// Pad an array with 0s

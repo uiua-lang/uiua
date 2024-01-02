@@ -288,6 +288,7 @@ impl Primitive {
                 Primitive::Un.format(),
                 Primitive::Box.format(),
             )),
+            Primitive::Cross => Some(format!("use {} instead", Primitive::Table.format())),
             Primitive::Rectify => Some(String::new()),
             _ => None,
         }
@@ -498,8 +499,7 @@ impl Primitive {
             Primitive::Fold => reduce::fold(env)?,
             Primitive::Each => zip::each(env)?,
             Primitive::Rows => zip::rows(env)?,
-            Primitive::Table => table::table(env)?,
-            Primitive::Cross => table::cross(env)?,
+            Primitive::Table | Primitive::Cross => table::table(env)?,
             Primitive::Repeat => loops::repeat(env)?,
             Primitive::Do => loops::do_(env)?,
             Primitive::Group => loops::group(env)?,

@@ -7,6 +7,9 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - Add the experimental [`cascade` `⪾`](https://uiua.org/docs/cascade) modifier, which captures some common [`fork` `⊃`](https://uiua.org/docs/fork) patterns
+- [`table` `⊞`](https://uiua.org/docs/table) now works on rows of arrays but keeps it's optimizations for lists
+  - You never wanted element-wise combinations of multi-dimensional arrays anyway
+  - Deprecate [`cross` `⊠`](https://uiua.org/docs/cross), as it is now redundant
 - Add experimental hashmap functions, which operate on a box array as if it is a hashmap
   - [`map`](https://uiua.org/docs/map)
   - [`has`](https://uiua.org/docs/has)

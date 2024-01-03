@@ -110,7 +110,7 @@ impl FillContext for () {
         false
     }
     fn fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
-        Err(". No fill is set")
+        Err(". No fill is set.")
     }
     fn fill_error(error: Self::Error) -> Self::Error {
         error
@@ -125,7 +125,7 @@ impl FillContext for (&CodeSpan, &Inputs) {
         false
     }
     fn fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
-        Err(". No fill is set")
+        Err(". No fill is set.")
     }
     fn fill_error(error: Self::Error) -> Self::Error {
         error

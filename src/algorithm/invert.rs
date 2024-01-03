@@ -419,6 +419,9 @@ fn invert_trivial_pattern<'a>(
                 return Some((input, eco_vec![inv]));
             }
         }
+        [instr @ SetOutputComment { .. }, input @ ..] => {
+            return Some((input, eco_vec![instr.clone()]));
+        }
         [ImplPrim(prim, span), input @ ..] => {
             if let Some(inv) = impl_prim_inverse(*prim, *span).map(|instr| eco_vec![instr]) {
                 return Some((input, inv));
@@ -437,12 +440,12 @@ fn under_trivial_pattern<'a>(
 ) -> Option<(&'a [Instr], Under)> {
     use Instr::*;
     match input {
-        [Comment(_) | PushSig(_) | PopSig, input @ ..] => {
-            return Some((input, (EcoVec::new(), EcoVec::new())))
+        [instr @ SetOutputComment { .. }, input @ ..] => {
+            Some((input, (eco_vec![instr.clone()], eco_vec![])))
         }
-        _ => {}
+        [Comment(_) | PushSig(_) | PopSig, input @ ..] => Some((input, (eco_vec![], eco_vec![]))),
+        _ => None,
     }
-    None
 }
 
 fn invert_invert_pattern<'a>(

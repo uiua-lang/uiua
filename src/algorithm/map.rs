@@ -130,6 +130,12 @@ fn coerce_values(
             *a = Array::<f64>::new(shape, EcoVec::new()).into();
             Ok(Value::Num(num))
         }
+        (Value::Box(arr), Value::Char(ch)) if arr.row_count() == 0 => {
+            let mut shape = ch.shape.clone();
+            shape.insert(0, 0);
+            *a = Array::<char>::new(shape, EcoVec::new()).into();
+            Ok(Value::Char(ch))
+        }
         (Value::Box(arr), Value::Complex(num)) if arr.row_count() == 0 => {
             let mut shape = num.shape.clone();
             shape.insert(0, 0);
@@ -153,10 +159,12 @@ fn coerce_values(
             item.shape(),
             FormatShape(&arr.shape()[1..])
         )),
-        (Value::Num(_), owned @ Value::Num(_)) => Ok(owned),
-        (Value::Complex(_), owned @ Value::Complex(_)) => Ok(owned),
-        (Value::Box(_), owned @ Value::Box(_)) => Ok(owned),
+        (Value::Num(_), owned @ Value::Num(_))
+        | (Value::Complex(_), owned @ Value::Complex(_))
+        | (Value::Char(_), owned @ Value::Char(_))
+        | (Value::Box(_), owned @ Value::Box(_)) => Ok(owned),
         (Value::Box(_), Value::Num(num)) => Ok(Value::Box(Array::from(Boxed(Value::from(num))))),
+        (Value::Box(_), Value::Char(ch)) => Ok(Value::Box(Array::from(Boxed(Value::from(ch))))),
         (Value::Box(_), Value::Complex(num)) => {
             Ok(Value::Box(Array::from(Boxed(Value::from(num)))))
         }

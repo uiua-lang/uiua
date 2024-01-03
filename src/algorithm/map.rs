@@ -424,6 +424,7 @@ impl<'a> PairMut<'a> {
                 (Value::Box(a), Value::Complex(b)) => grow_impl(a, b, new_cap),
                 (Value::Box(a), Value::Char(b)) => grow_impl(a, b, new_cap),
                 (Value::Box(a), Value::Box(b)) => grow_impl(a, b, new_cap),
+                #[cfg(feature = "bytes")]
                 (Value::Num(_), Value::Byte(_))
                 | (Value::Byte(_), Value::Num(_))
                 | (Value::Byte(_), Value::Byte(_))

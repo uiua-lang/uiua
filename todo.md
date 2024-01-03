@@ -22,6 +22,7 @@ Within each section, items are ordered (roughly) by decreasing priority.
 - `⬚i↻1[5 5]`
 - `&ast` running in examples
 - Output comments in `under`
+- `fill reshape` by arrays
 - Figure out what is going on with the editor cursor
 
 ## Optimizations

@@ -548,7 +548,7 @@ primitive!(
     /// [fix]'s name come from the way it "fixes" an array in this way.
     /// See the [Advanced Array Manipulation Tutorial](/docs/advancedarray) for more information on this use case.
     (1, Fix, MonadicArray, ("fix", '¤')),
-    /// Encode an array as bits (MSB-first)
+    /// Encode an array as bits (LSB-first)
     ///
     /// The result will always be 1 rank higher than the input.
     /// ex: ⋯27

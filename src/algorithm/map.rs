@@ -91,142 +91,80 @@ fn hash_start<T: ArrayValue>(arr: &Array<T>, capacity: usize) -> usize {
     hasher.finish() as usize % capacity
 }
 
-enum HashMut<'a> {
-    Num(&'a mut Array<f64>),
-    Comp(&'a mut Array<Complex>),
-    Box(&'a mut Array<Boxed>),
-}
-
-struct HashValue<'a>(&'a mut Value);
-
-#[derive(Debug)]
-enum HashOwned {
-    Num(Array<f64>),
-    Comp(Array<Complex>),
-    Box(Array<Boxed>),
-}
-
-impl<'a> HashMut<'a> {
-    fn type_name(&self) -> &'static str {
-        match self {
-            Self::Num(_) => "number",
-            Self::Comp(_) => "complex",
-            Self::Box(_) => "box",
+fn coerce_values(
+    a: &mut Value,
+    mut b: Value,
+    action1: &'static str,
+    action2: &'static str,
+    action3: &'static str,
+) -> Result<Value, String> {
+    #[cfg(feature = "bytes")]
+    {
+        if let Value::Byte(keys) = a {
+            *a = Value::Num(keys.convert_ref());
+        }
+        if let Value::Byte(values) = b {
+            b = Value::Num(values.convert_ref());
         }
     }
-}
-
-impl<'a> HashValue<'a> {
-    fn as_mut(&mut self) -> HashMut<'_> {
-        match self.0 {
-            Value::Num(arr) => HashMut::Num(arr),
-            #[cfg(feature = "bytes")]
-            Value::Byte(arr) => {
-                let arr: Array<f64> = arr.convert_ref();
-                *self.0 = arr.into();
-                self.as_mut()
-            }
-            Value::Complex(arr) => HashMut::Comp(arr),
-            Value::Char(arr) => {
-                let arr: Array<_> = arr.rows().map(Value::from).map(Boxed).collect();
-                *self.0 = arr.into();
-                self.as_mut()
-            }
-            Value::Box(arr) => HashMut::Box(arr),
+    match (&mut *a, b) {
+        (Value::Num(arr), Value::Num(num)) if arr.row_count() == 0 => {
+            let mut shape = num.shape.clone();
+            shape.insert(0, 0);
+            *a = Array::<f64>::new(shape, EcoVec::new()).into();
+            Ok(Value::Num(num))
         }
-    }
-    fn coerce_with(
-        &mut self,
-        owned: HashOwned,
-        action1: &'static str,
-        action2: &'static str,
-        action3: &'static str,
-    ) -> Result<HashOwned, String> {
-        match (self.as_mut(), owned) {
-            (HashMut::Num(arr), HashOwned::Num(num)) if arr.row_count() == 0 => {
-                let mut shape = num.shape.clone();
-                shape.insert(0, 0);
-                *self.0 = Array::<f64>::new(shape, EcoVec::new()).into();
-                Ok(HashOwned::Num(num))
-            }
-            (HashMut::Num(arr), HashOwned::Comp(comp)) if arr.row_count() == 0 => {
-                let mut shape = comp.shape.clone();
-                shape.insert(0, 0);
-                *self.0 = Array::<Complex>::new(shape, EcoVec::new()).into();
-                Ok(HashOwned::Comp(comp))
-            }
-            (HashMut::Num(arr), owned @ HashOwned::Box(_)) if arr.row_count() == 0 => {
-                *self.0 = Array::<Boxed>::new(0, EcoVec::new()).into();
-                Ok(owned)
-            }
-            (HashMut::Box(arr), HashOwned::Num(num)) if arr.row_count() == 0 => {
-                let mut shape = num.shape.clone();
-                shape.insert(0, 0);
-                *self.0 = Array::<f64>::new(shape, EcoVec::new()).into();
-                Ok(HashOwned::Num(num))
-            }
-            (HashMut::Box(arr), HashOwned::Comp(num)) if arr.row_count() == 0 => {
-                let mut shape = num.shape.clone();
-                shape.insert(0, 0);
-                *self.0 = Array::<Complex>::new(shape, EcoVec::new()).into();
-                Ok(HashOwned::Comp(num))
-            }
-            (HashMut::Num(arr), HashOwned::Num(item)) if arr.shape[1..] != item.shape => {
-                Err(format!(
-                    "Cannot {action1} shape {} {action2} shape {} {action3}",
-                    item.shape(),
-                    FormatShape(&arr.shape()[1..])
-                ))
-            }
-            (HashMut::Comp(arr), HashOwned::Comp(item)) if arr.shape[1..] != item.shape => {
-                Err(format!(
-                    "Cannot {action1} shape {} {action2} shape {} {action3}",
-                    item.shape(),
-                    FormatShape(&arr.shape()[1..])
-                ))
-            }
-            (HashMut::Box(arr), HashOwned::Box(item)) if arr.shape[1..] != item.shape => {
-                Err(format!(
-                    "Cannot {action1} shape {} {action2} shape {} {action3}",
-                    item.shape(),
-                    FormatShape(&arr.shape()[1..])
-                ))
-            }
-            (HashMut::Num(_), owned @ HashOwned::Num(_)) => Ok(owned),
-            (HashMut::Comp(_), owned @ HashOwned::Comp(_)) => Ok(owned),
-            (HashMut::Box(_), owned @ HashOwned::Box(_)) => Ok(owned),
-            (HashMut::Box(_), HashOwned::Num(num)) => {
-                Ok(HashOwned::Box(Array::from(Boxed(Value::from(num)))))
-            }
-            (HashMut::Box(_), HashOwned::Comp(num)) => {
-                Ok(HashOwned::Box(Array::from(Boxed(Value::from(num)))))
-            }
-            (m, owned) => Err(format!(
-                "Cannot {action1} {} {action2} {} {action3}",
-                owned.type_name(),
-                m.type_name()
-            )),
+        (Value::Num(arr), Value::Complex(comp)) if arr.row_count() == 0 => {
+            let mut shape = comp.shape.clone();
+            shape.insert(0, 0);
+            *a = Array::<Complex>::new(shape, EcoVec::new()).into();
+            Ok(Value::Complex(comp))
         }
-    }
-}
-
-impl HashOwned {
-    fn new(value: Value) -> Self {
-        match value {
-            Value::Num(arr) => Self::Num(arr),
-            #[cfg(feature = "bytes")]
-            Value::Byte(arr) => Self::Num(arr.convert()),
-            Value::Complex(arr) => Self::Comp(arr),
-            Value::Char(_) => Self::new(Array::from(Boxed(value)).into()),
-            Value::Box(arr) => Self::Box(arr),
+        (Value::Num(arr), owned @ Value::Box(_)) if arr.row_count() == 0 => {
+            *a = Array::<Boxed>::new(0, EcoVec::new()).into();
+            Ok(owned)
         }
-    }
-    fn type_name(&self) -> &'static str {
-        match self {
-            Self::Num(_) => "number",
-            Self::Comp(_) => "complex",
-            Self::Box(_) => "box",
+        (Value::Box(arr), Value::Num(num)) if arr.row_count() == 0 => {
+            let mut shape = num.shape.clone();
+            shape.insert(0, 0);
+            *a = Array::<f64>::new(shape, EcoVec::new()).into();
+            Ok(Value::Num(num))
         }
+        (Value::Box(arr), Value::Complex(num)) if arr.row_count() == 0 => {
+            let mut shape = num.shape.clone();
+            shape.insert(0, 0);
+            *a = Array::<Complex>::new(shape, EcoVec::new()).into();
+            Ok(Value::Complex(num))
+        }
+        (Value::Num(arr), Value::Num(item)) if arr.shape[1..] != item.shape => Err(format!(
+            "Cannot {action1} shape {} {action2} shape {} {action3}",
+            item.shape(),
+            FormatShape(&arr.shape()[1..])
+        )),
+        (Value::Complex(arr), Value::Complex(item)) if arr.shape[1..] != item.shape => {
+            Err(format!(
+                "Cannot {action1} shape {} {action2} shape {} {action3}",
+                item.shape(),
+                FormatShape(&arr.shape()[1..])
+            ))
+        }
+        (Value::Box(arr), Value::Box(item)) if arr.shape[1..] != item.shape => Err(format!(
+            "Cannot {action1} shape {} {action2} shape {} {action3}",
+            item.shape(),
+            FormatShape(&arr.shape()[1..])
+        )),
+        (Value::Num(_), owned @ Value::Num(_)) => Ok(owned),
+        (Value::Complex(_), owned @ Value::Complex(_)) => Ok(owned),
+        (Value::Box(_), owned @ Value::Box(_)) => Ok(owned),
+        (Value::Box(_), Value::Num(num)) => Ok(Value::Box(Array::from(Boxed(Value::from(num))))),
+        (Value::Box(_), Value::Complex(num)) => {
+            Ok(Value::Box(Array::from(Boxed(Value::from(num)))))
+        }
+        (m, owned) => Err(format!(
+            "Cannot {action1} {} {action2} {} {action3}",
+            owned.type_name(),
+            m.type_name()
+        )),
     }
 }
 
@@ -237,8 +175,8 @@ struct Pair<'a> {
 
 struct PairMut<'a> {
     meta: &'a mut ArrayMeta,
-    keys: HashValue<'a>,
-    values: HashValue<'a>,
+    keys: &'a mut Value,
+    values: &'a mut Value,
 }
 
 fn with_pair<T>(val: &Value, env: &Uiua, f: impl FnOnce(Pair) -> T) -> UiuaResult<T> {
@@ -289,8 +227,8 @@ fn with_pair_mut<T>(val: &mut Value, env: &Uiua, f: impl FnOnce(PairMut) -> T) -
             let (keys, values) = data.split_at_mut(1);
             let res = f(PairMut {
                 meta: Array::<Boxed>::get_meta_mut(&mut arr.meta),
-                keys: HashValue(&mut keys[0].0),
-                values: HashValue(&mut values[0].0),
+                keys: &mut keys[0].0,
+                values: &mut values[0].0,
             });
             Ok(res)
         }
@@ -304,8 +242,8 @@ fn with_pair_mut<T>(val: &mut Value, env: &Uiua, f: impl FnOnce(PairMut) -> T) -
             let (keys, values) = data.split_at_mut(1);
             let res = f(PairMut {
                 meta: Array::<Boxed>::get_meta_mut(&mut arr.meta),
-                keys: HashValue(&mut keys[0].0),
-                values: HashValue(&mut values[0].0),
+                keys: &mut keys[0].0,
+                values: &mut values[0].0,
             });
             *val = arr.into();
             Ok(res)
@@ -316,8 +254,8 @@ fn with_pair_mut<T>(val: &mut Value, env: &Uiua, f: impl FnOnce(PairMut) -> T) -
                 let (keys, values) = data.split_at_mut(1);
                 let res = f(PairMut {
                     meta: Array::<Boxed>::get_meta_mut(&mut arr.meta),
-                    keys: HashValue(&mut keys[0].0),
-                    values: HashValue(&mut values[0].0),
+                    keys: &mut keys[0].0,
+                    values: &mut values[0].0,
                 });
                 Ok(res)
             }
@@ -327,8 +265,8 @@ fn with_pair_mut<T>(val: &mut Value, env: &Uiua, f: impl FnOnce(PairMut) -> T) -
                 let (keys, values) = data.split_at_mut(1);
                 let res = f(PairMut {
                     meta: Array::<Boxed>::get_meta_mut(&mut arr.meta),
-                    keys: HashValue(&mut keys[0].0),
-                    values: HashValue(&mut values[0].0),
+                    keys: &mut keys[0].0,
+                    values: &mut values[0].0,
                 });
                 *value = arr.into();
                 Ok(res)
@@ -378,20 +316,25 @@ impl<'a> Pair<'a> {
 
 impl<'a> PairMut<'a> {
     fn capacity(&self) -> usize {
-        self.keys.0.row_count()
+        self.keys.row_count()
     }
     fn len(&mut self) -> usize {
         if let Some(len) = self.meta.map_len {
             return len;
         }
-        let len = match self.keys.as_mut() {
-            HashMut::Num(arr) => (arr.rows())
+        let len = match self.keys {
+            Value::Num(arr) => (arr.rows())
                 .filter(|row| !(row.data[0].is_empty_cell() || row.data[0].is_tombstone()))
                 .count(),
-            HashMut::Comp(arr) => (arr.rows())
+            #[cfg(feature = "bytes")]
+            Value::Byte(arr) => arr.row_count(),
+            Value::Complex(arr) => (arr.rows())
                 .filter(|row| !(row.data[0].is_empty_cell() || row.data[0].is_tombstone()))
                 .count(),
-            HashMut::Box(arr) => (arr.rows())
+            Value::Char(arr) => (arr.rows())
+                .filter(|row| !(row.data[0].is_empty_cell() || row.data[0].is_tombstone()))
+                .count(),
+            Value::Box(arr) => (arr.rows())
                 .filter(|row| !(row.data[0].is_empty_cell() || row.data[0].is_tombstone()))
                 .count(),
         };
@@ -415,13 +358,13 @@ impl<'a> PairMut<'a> {
                 let old_values = take(values).into_rows();
                 *keys = Array::new(
                     keys_shape,
-                    repeat(K::from_num(EMPTY_NAN))
+                    repeat(K::empty_cell())
                         .take(new_capacity * key_row_len)
                         .collect::<EcoVec<_>>(),
                 );
                 *values = Array::new(
                     values_shape,
-                    repeat(V::from_num(EMPTY_NAN))
+                    repeat(V::empty_cell())
                         .take(new_capacity * value_row_len)
                         .collect::<EcoVec<_>>(),
                 );
@@ -447,16 +390,41 @@ impl<'a> PairMut<'a> {
             let new_cap = (self.capacity() * 2).max(1);
             let len = self.len();
             self.meta.map_len = Some(len);
-            match (self.keys.as_mut(), self.values.as_mut()) {
-                (HashMut::Num(keys), HashMut::Num(values)) => grow_impl(keys, values, new_cap),
-                (HashMut::Num(keys), HashMut::Comp(values)) => grow_impl(keys, values, new_cap),
-                (HashMut::Num(keys), HashMut::Box(values)) => grow_impl(keys, values, new_cap),
-                (HashMut::Comp(keys), HashMut::Num(values)) => grow_impl(keys, values, new_cap),
-                (HashMut::Comp(keys), HashMut::Comp(values)) => grow_impl(keys, values, new_cap),
-                (HashMut::Comp(keys), HashMut::Box(values)) => grow_impl(keys, values, new_cap),
-                (HashMut::Box(keys), HashMut::Num(values)) => grow_impl(keys, values, new_cap),
-                (HashMut::Box(keys), HashMut::Comp(values)) => grow_impl(keys, values, new_cap),
-                (HashMut::Box(keys), HashMut::Box(values)) => grow_impl(keys, values, new_cap),
+            #[cfg(feature = "bytes")]
+            {
+                if let Value::Byte(keys) = self.keys {
+                    *self.keys = Value::Num(keys.convert_ref());
+                }
+                if let Value::Byte(values) = self.values {
+                    *self.values = Value::Num(values.convert_ref());
+                }
+            }
+            match (&mut *self.keys, &mut *self.values) {
+                (Value::Num(a), Value::Num(b)) => grow_impl(a, b, new_cap),
+                (Value::Num(a), Value::Complex(b)) => grow_impl(a, b, new_cap),
+                (Value::Num(a), Value::Char(b)) => grow_impl(a, b, new_cap),
+                (Value::Num(a), Value::Box(b)) => grow_impl(a, b, new_cap),
+                (Value::Complex(a), Value::Num(b)) => grow_impl(a, b, new_cap),
+                (Value::Complex(a), Value::Complex(b)) => grow_impl(a, b, new_cap),
+                (Value::Complex(a), Value::Char(b)) => grow_impl(a, b, new_cap),
+                (Value::Complex(a), Value::Box(b)) => grow_impl(a, b, new_cap),
+                (Value::Char(a), Value::Num(b)) => grow_impl(a, b, new_cap),
+                (Value::Char(a), Value::Complex(b)) => grow_impl(a, b, new_cap),
+                (Value::Char(a), Value::Char(b)) => grow_impl(a, b, new_cap),
+                (Value::Char(a), Value::Box(b)) => grow_impl(a, b, new_cap),
+                (Value::Box(a), Value::Num(b)) => grow_impl(a, b, new_cap),
+                (Value::Box(a), Value::Complex(b)) => grow_impl(a, b, new_cap),
+                (Value::Box(a), Value::Char(b)) => grow_impl(a, b, new_cap),
+                (Value::Box(a), Value::Box(b)) => grow_impl(a, b, new_cap),
+                (Value::Num(_), Value::Byte(_))
+                | (Value::Byte(_), Value::Num(_))
+                | (Value::Byte(_), Value::Byte(_))
+                | (Value::Byte(_), Value::Complex(_))
+                | (Value::Byte(_), Value::Char(_))
+                | (Value::Byte(_), Value::Box(_))
+                | (Value::Complex(_), Value::Byte(_))
+                | (Value::Char(_), Value::Byte(_))
+                | (Value::Box(_), Value::Byte(_)) => unreachable!(),
             }
         }
     }
@@ -498,29 +466,26 @@ impl<'a> PairMut<'a> {
                 }
             }
         }
-        let key = self
-            .keys
-            .coerce_with(HashOwned::new(key), "insert", "key into map with", "keys")
+        let key = coerce_values(self.keys, key, "insert", "key into map with", "keys")
             .map_err(|e| env.error(e))?;
-        let value = self
-            .values
-            .coerce_with(
-                HashOwned::new(value),
-                "insert",
-                "value into map with",
-                "values",
-            )
-            .map_err(|e| env.error(e))?;
+        let value = coerce_values(
+            self.values,
+            value,
+            "insert",
+            "value into map with",
+            "values",
+        )
+        .map_err(|e| env.error(e))?;
         if self.capacity() == 0 {
             self.grow();
         }
         let capacity = self.capacity();
         macro_rules! do_insert {
             ($(($k:ident, $v:ident),)*) => {
-                match ((self.keys.as_mut(), key), (self.values.as_mut(), value)) {
+                match ((&mut *self.keys, key), (&mut *self.values, value)) {
                     $((
-                        (HashMut::$k(keys), HashOwned::$k(key)),
-                        (HashMut::$v(values), HashOwned::$v(value)),
+                        (Value::$k(keys), Value::$k(key)),
+                        (Value::$v(values), Value::$v(value)),
                     ) => {
                         if let Some((key, value)) =
                             insert_impl(keys, values, key, value, self.meta, capacity)
@@ -550,13 +515,16 @@ impl<'a> PairMut<'a> {
         }
         do_insert!(
             (Num, Num),
-            (Num, Comp),
+            (Num, Complex),
             (Num, Box),
-            (Comp, Num),
-            (Comp, Comp),
-            (Comp, Box),
+            (Complex, Num),
+            (Complex, Complex),
+            (Complex, Box),
+            (Char, Char),
+            (Char, Box),
             (Box, Num),
-            (Box, Comp),
+            (Box, Complex),
+            (Box, Char),
             (Box, Box),
         );
         self.grow();
@@ -586,11 +554,11 @@ impl<'a> PairMut<'a> {
                         meta.map_len = Some(len - 1);
                     }
                     for elem in cell_key {
-                        *elem = K::from_num(TOMBSTONE_NAN);
+                        *elem = K::tombstone_cell();
                     }
                     for elem in &mut value_data[index * value_row_len..(index + 1) * value_row_len]
                     {
-                        *elem = V::from_num(EMPTY_NAN);
+                        *elem = V::empty_cell();
                     }
                     break;
                 }
@@ -603,17 +571,15 @@ impl<'a> PairMut<'a> {
                 }
             }
         }
-        let key = self
-            .keys
-            .coerce_with(HashOwned::new(key), "remove", "key from map with", "keys")
+        let key = coerce_values(self.keys, key, "remove", "key from map with", "keys")
             .map_err(|e| env.error(e))?;
         let capacity = self.capacity();
         macro_rules! do_remove {
             ($(($k:ident, $v:ident),)*) => {
-                match ((self.keys.as_mut(), key), self.values.as_mut()) {
+                match ((&mut *self.keys, key), &mut *self.values) {
                     $((
-                        (HashMut::$k(keys), HashOwned::$k(key)),
-                        HashMut::$v(values)
+                        (Value::$k(keys), Value::$k(key)),
+                        Value::$v(values)
                     ) => {
                         remove_impl(keys, values, key, self.meta, capacity);
                     })*
@@ -637,13 +603,16 @@ impl<'a> PairMut<'a> {
         }
         do_remove!(
             (Num, Num),
-            (Num, Comp),
+            (Num, Complex),
             (Num, Box),
-            (Comp, Num),
-            (Comp, Comp),
-            (Comp, Box),
+            (Complex, Num),
+            (Complex, Complex),
+            (Complex, Box),
+            (Char, Char),
+            (Char, Box),
             (Box, Num),
-            (Box, Comp),
+            (Box, Complex),
+            (Box, Char),
             (Box, Box),
         );
         Ok(())
@@ -651,55 +620,97 @@ impl<'a> PairMut<'a> {
 }
 
 pub(crate) trait MapItem {
-    fn num(&self) -> f64;
-    fn from_num(num: f64) -> Self;
-    fn is_empty_cell(&self) -> bool {
-        self.num().to_bits() == EMPTY_NAN.to_bits()
-    }
-    fn is_tombstone(&self) -> bool {
-        self.num().to_bits() == TOMBSTONE_NAN.to_bits()
-    }
+    fn empty_cell() -> Self;
+    fn is_empty_cell(&self) -> bool;
+    fn tombstone_cell() -> Self;
+    fn is_tombstone(&self) -> bool;
 }
 
 impl MapItem for f64 {
-    fn num(&self) -> f64 {
-        *self
+    fn empty_cell() -> Self {
+        EMPTY_NAN
     }
-    fn from_num(num: f64) -> Self {
-        num
+    fn is_empty_cell(&self) -> bool {
+        self.to_bits() == EMPTY_NAN.to_bits()
+    }
+    fn tombstone_cell() -> Self {
+        TOMBSTONE_NAN
+    }
+    fn is_tombstone(&self) -> bool {
+        self.to_bits() == TOMBSTONE_NAN.to_bits()
     }
 }
 
 impl MapItem for Complex {
-    fn num(&self) -> f64 {
-        self.re
+    fn empty_cell() -> Self {
+        Complex::new(EMPTY_NAN, 0.0)
     }
-    fn from_num(num: f64) -> Self {
-        Self::new(num, 0.0)
+    fn is_empty_cell(&self) -> bool {
+        self.re.to_bits() == EMPTY_NAN.to_bits()
+    }
+    fn tombstone_cell() -> Self {
+        Complex::new(TOMBSTONE_NAN, 0.0)
+    }
+    fn is_tombstone(&self) -> bool {
+        self.re.to_bits() == TOMBSTONE_NAN.to_bits()
+    }
+}
+
+impl MapItem for char {
+    fn empty_cell() -> Self {
+        '\0'
+    }
+    fn is_empty_cell(&self) -> bool {
+        *self == '\0'
+    }
+    fn tombstone_cell() -> Self {
+        '\u{1}'
+    }
+    fn is_tombstone(&self) -> bool {
+        *self == '\u{1}'
     }
 }
 
 impl MapItem for Boxed {
-    fn num(&self) -> f64 {
-        self.0.num()
+    fn empty_cell() -> Self {
+        Boxed(Value::empty_cell())
     }
-    fn from_num(num: f64) -> Self {
-        Self(Value::from(num))
+    fn is_empty_cell(&self) -> bool {
+        self.0.is_empty_cell()
+    }
+    fn tombstone_cell() -> Self {
+        Boxed(Value::tombstone_cell())
+    }
+    fn is_tombstone(&self) -> bool {
+        self.0.is_tombstone()
     }
 }
 
 impl MapItem for Value {
-    fn num(&self) -> f64 {
-        if self.element_count() == 0 {
-            return 0.0;
-        }
+    fn empty_cell() -> Self {
+        Value::from(EMPTY_NAN)
+    }
+    fn is_empty_cell(&self) -> bool {
         match self {
-            Value::Num(arr) => arr.data[0],
-            Value::Box(arr) => arr.data[0].num(),
-            _ => 0.0,
+            Value::Num(num) => num.as_scalar().is_some_and(f64::is_empty_cell),
+            #[cfg(feature = "bytes")]
+            Value::Byte(_) => false,
+            Value::Complex(num) => num.as_scalar().is_some_and(Complex::is_empty_cell),
+            Value::Char(num) => num.as_scalar().is_some_and(char::is_empty_cell),
+            Value::Box(num) => num.as_scalar().is_some_and(Boxed::is_empty_cell),
         }
     }
-    fn from_num(num: f64) -> Self {
-        Self::from(num)
+    fn tombstone_cell() -> Self {
+        Value::from(TOMBSTONE_NAN)
+    }
+    fn is_tombstone(&self) -> bool {
+        match self {
+            Value::Num(num) => num.as_scalar().is_some_and(f64::is_tombstone),
+            #[cfg(feature = "bytes")]
+            Value::Byte(_) => false,
+            Value::Complex(num) => num.as_scalar().is_some_and(Complex::is_tombstone),
+            Value::Char(num) => num.as_scalar().is_some_and(char::is_tombstone),
+            Value::Box(num) => num.as_scalar().is_some_and(Boxed::is_tombstone),
+        }
     }
 }

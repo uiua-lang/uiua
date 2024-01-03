@@ -2,7 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- `fill` `get`
 - Change `pop`s glyph to `◌`
 - Multimedia
   - Sound input
@@ -15,8 +14,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - UDP Sockets
 
 ## Bugs
-- Backwards primitive lexing
-- `fill reshape` by arrays
 - Figure out what is going on with the editor cursor
 
 ## Optimizations

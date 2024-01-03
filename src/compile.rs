@@ -1007,7 +1007,17 @@ code:
                 .insert(span.clone().sp(ident), index);
             self.global_index(index, span, call);
         } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
-            self.push_instr(Instr::push(constant.value.clone()));
+            let instr = Instr::push(constant.value.clone());
+            if call {
+                self.push_instr(instr);
+            } else {
+                let f = self.add_function(
+                    FunctionId::Anonymous(span.clone()),
+                    Signature::new(0, 1),
+                    vec![instr],
+                );
+                self.push_instr(Instr::PushFunc(f));
+            }
         } else {
             return Err(self.fatal_error(span, format!("Unknown identifier `{ident}`")));
         }

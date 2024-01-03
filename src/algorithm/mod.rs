@@ -153,11 +153,15 @@ where
         return Ok(());
     }
     if a.row_count() == 1 && ctx.fill::<A>().is_err() {
-        let fixes = a.shape.iter().take_while(|&&dim| dim == 1).count();
-        if b.shape.len() >= fixes
-            && (b.shape[fixes..].iter().rev())
-                .zip(a.shape[fixes..].iter().rev())
-                .all(|(a, b)| a == b)
+        let fixes = a
+            .shape
+            .iter()
+            .take_while(|&&dim| dim == 1)
+            .count()
+            .min(a.shape.len());
+        if (b.shape[fixes..].iter().rev())
+            .zip(a.shape[fixes..].iter().rev())
+            .all(|(a, b)| a == b)
         {
             a.shape.drain(..fixes);
             for &dim in b.shape[..fixes].iter().rev() {
@@ -166,11 +170,15 @@ where
         }
     }
     if b.row_count() == 1 && ctx.fill::<B>().is_err() {
-        let fixes = b.shape.iter().take_while(|&&dim| dim == 1).count();
-        if a.shape.len() >= fixes
-            && (a.shape[fixes..].iter().rev())
-                .zip(b.shape[fixes..].iter().rev())
-                .all(|(a, b)| a == b)
+        let fixes = b
+            .shape
+            .iter()
+            .take_while(|&&dim| dim == 1)
+            .count()
+            .min(a.shape.len());
+        if (a.shape[fixes..].iter().rev())
+            .zip(b.shape[fixes..].iter().rev())
+            .all(|(a, b)| a == b)
         {
             b.shape.drain(..fixes);
             for &dim in a.shape[..fixes].iter().rev() {

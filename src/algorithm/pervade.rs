@@ -396,7 +396,6 @@ pub mod not {
     pub fn bool(a: u8) -> u8 {
         a ^ 1u8
     }
-
     pub fn com(a: Complex) -> Complex {
         1.0 - a
     }
@@ -414,7 +413,6 @@ pub mod neg {
     pub fn byte(a: u8) -> f64 {
         -f64::from(a)
     }
-
     pub fn com(a: Complex) -> Complex {
         -a
     }
@@ -431,7 +429,6 @@ pub mod abs {
     pub fn byte(a: u8) -> u8 {
         a
     }
-
     pub fn com(a: Complex) -> f64 {
         a.abs()
     }
@@ -454,7 +451,6 @@ pub mod sign {
     pub fn byte(a: u8) -> u8 {
         (a > 0) as u8
     }
-
     pub fn com(a: Complex) -> Complex {
         a.normalize()
     }
@@ -475,7 +471,6 @@ pub mod sqrt {
     pub fn bool(a: u8) -> u8 {
         a
     }
-
     pub fn com(a: Complex) -> Complex {
         a.sqrt()
     }
@@ -492,7 +487,6 @@ pub mod sin {
     pub fn byte(a: u8) -> f64 {
         f64::from(a).sin()
     }
-
     pub fn com(a: Complex) -> Complex {
         a.sin()
     }
@@ -509,7 +503,6 @@ pub mod cos {
     pub fn byte(a: u8) -> f64 {
         f64::from(a).cos()
     }
-
     pub fn com(a: Complex) -> Complex {
         a.cos()
     }
@@ -526,7 +519,6 @@ pub mod asin {
     pub fn byte(a: u8) -> f64 {
         f64::from(a).asin()
     }
-
     pub fn com(a: Complex) -> Complex {
         a.asin()
     }
@@ -543,7 +535,6 @@ pub mod acos {
     pub fn byte(a: u8) -> f64 {
         f64::from(a).acos()
     }
-
     pub fn com(a: Complex) -> Complex {
         a.acos()
     }
@@ -560,7 +551,6 @@ pub mod floor {
     pub fn byte(a: u8) -> u8 {
         a
     }
-
     pub fn com(a: Complex) -> Complex {
         a.floor()
     }
@@ -577,7 +567,6 @@ pub mod ceil {
     pub fn byte(a: u8) -> u8 {
         a
     }
-
     pub fn com(a: Complex) -> Complex {
         a.ceil()
     }
@@ -594,7 +583,6 @@ pub mod round {
     pub fn byte(a: u8) -> u8 {
         a
     }
-
     pub fn com(a: Complex) -> Complex {
         a.round()
     }
@@ -750,11 +738,9 @@ pub mod add {
     pub fn num_byte(a: f64, b: u8) -> f64 {
         a + f64::from(b)
     }
-
     pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
         b.into() + a
     }
-
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b + a.into()
     }
@@ -794,11 +780,9 @@ pub mod sub {
     pub fn num_byte(a: f64, b: u8) -> f64 {
         f64::from(b) - a
     }
-
     pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
         b.into() - a
     }
-
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b - a.into()
     }
@@ -929,12 +913,10 @@ pub mod pow {
         let b = (f64::from)(b);
         b.powf(a)
     }
-
     pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
         let b = b.into();
         b.powc(a)
     }
-
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         let a = a.into();
         b.powc(a)
@@ -970,15 +952,12 @@ pub mod complex {
     pub fn num_byte(a: f64, b: u8) -> Complex {
         Complex::new(b.into(), a)
     }
-
     pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
         b.into() * Complex::I + a
     }
-
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         b * Complex::I + a.into()
     }
-
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the form a complex number with {b} as the real part and {a} as the imaginary part"))
     }
@@ -1008,11 +987,9 @@ pub mod max {
     pub fn byte_num(a: u8, b: f64) -> f64 {
         num_num(a.into(), b)
     }
-
     pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
         a.max(b.into())
     }
-
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         a.into().max(b)
     }
@@ -1045,11 +1022,9 @@ pub mod min {
     pub fn byte_num(a: u8, b: f64) -> f64 {
         num_num(a.into(), b)
     }
-
     pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
         a.min(b.into())
     }
-
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         a.into().min(b)
     }

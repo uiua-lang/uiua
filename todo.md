@@ -2,8 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Allow map keys of any type
-- Deprecate `table` and optimize `cross`?
 - `fill` `get`
 - Change `pop`s glyph to `◌`
 - Multimedia
@@ -17,7 +15,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - UDP Sockets
 
 ## Bugs
-- Fixed pervasive ops with `[1 1]` shape
 - Backwards primitive lexing
 - `⬚i↻1[5 5]`
 - `&ast` running in examples

@@ -22,8 +22,6 @@ use crate::{
     Shape, Uiua, UiuaResult,
 };
 
-#[cfg(feature = "bytes")]
-use super::op_bytes_retry_fill;
 use super::{ArrayCmpSlice, FillContext};
 
 impl Value {
@@ -162,18 +160,14 @@ impl Value {
                 Value::Num(a) => a.reshape(&target_shape, env),
                 #[cfg(feature = "bytes")]
                 Value::Byte(a) => {
-                    *self = op_bytes_retry_fill(
-                        take(a),
-                        |mut a| {
-                            a.reshape(&target_shape, env)?;
-                            Ok(a.into())
-                        },
-                        |mut a| {
-                            a.reshape(&target_shape, env)?;
-                            Ok(a.into())
-                        },
-                    )?;
-                    Ok(())
+                    if env.num_fill().is_ok() && env.byte_fill().is_err() {
+                        let mut arr: Array<f64> = a.convert_ref();
+                        arr.reshape(&target_shape, env)?;
+                        *self = arr.into();
+                        Ok(())
+                    } else {
+                        a.reshape(&target_shape, env)
+                    }
                 }
                 Value::Complex(a) => a.reshape(&target_shape, env),
                 Value::Char(a) => a.reshape(&target_shape, env),

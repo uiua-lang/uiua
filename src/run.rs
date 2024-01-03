@@ -221,7 +221,7 @@ impl Uiua {
     }
     /// Create a new Uiua runtime with no IO capabilities
     pub fn with_safe_sys() -> Self {
-        Self::default()
+        Self::with_backend(SafeSys)
     }
     /// Create a new Uiua runtime with a custom IO backend
     pub fn with_backend(backend: impl IntoSysBackend) -> Self {

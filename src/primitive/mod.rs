@@ -1284,7 +1284,7 @@ impl PrimExample {
     }
     /// Check whether the example should run automatically in certain contexts
     pub fn should_run(&self) -> bool {
-        !["&sl", "&tcpc", "&ast"]
+        !["&sl", "&tcpc", "&ast", "&p", "&fwa"]
             .iter()
             .any(|prim| self.input.contains(prim))
     }
@@ -1462,7 +1462,7 @@ mod tests {
                         continue;
                     }
                     println!("{prim} example:\n{}", ex.input);
-                    match Uiua::with_native_sys().run_str(&ex.input) {
+                    match Uiua::with_safe_sys().run_str(&ex.input) {
                         Ok(mut comp) => {
                             if let Some(diag) = comp.take_diagnostics().into_iter().next() {
                                 if !ex.should_error {

@@ -16,7 +16,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Bugs
 - Backwards primitive lexing
-- `&ast` running in examples
 - Output comments in `under`
 - `fill reshape` by arrays
 - Figure out what is going on with the editor cursor

@@ -173,7 +173,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             if let Some((keys, values)) =
                 self.data[0].nested_value().zip(self.data[1].nested_value())
             {
-                if keys.row_count() == values.row_count() {
+                if keys.row_count() > 0 && keys.row_count() == values.row_count() {
                     let mut empty_entries = 0;
                     let metagrid = metagrid.get_or_insert_with(Metagrid::new);
                     for (key, value) in keys.rows().zip(values.rows()) {

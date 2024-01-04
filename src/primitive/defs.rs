@@ -714,6 +714,7 @@ primitive!(
     ///
     /// ex: ⋕ "17"
     /// ex: ⋕ "3.1415926535897932"
+    /// ex: ⋕ "1/2"
     /// ex! ⋕ "dog"
     ///
     /// [parse] is semi-pervasive. It works on multidimensional arrays of characters or boxes.

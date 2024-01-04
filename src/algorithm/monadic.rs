@@ -84,9 +84,14 @@ impl Value {
                 if s.contains('∞') {
                     s = s.replace('∞', &f64::INFINITY.to_string());
                 }
-                s.parse::<f64>()
-                    .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))?
-                    .into()
+                match s.split_once('/') {
+                    Some((numer, denom)) => numer
+                        .parse::<f64>()
+                        .and_then(|n| denom.parse::<f64>().map(|d| n / d)),
+                    None => s.parse::<f64>(),
+                }
+                .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))?
+                .into()
             }
             (Value::Box(arr), []) => {
                 let value = &arr.data[0].0;

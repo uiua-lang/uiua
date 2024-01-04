@@ -12,7 +12,6 @@ use std::{
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
-use ecow::EcoVec;
 use enum_iterator::{all, Sequence};
 use instant::Duration;
 use thread_local::ThreadLocal;
@@ -72,11 +71,7 @@ pub(crate) struct Runtime {
     pub(crate) output_comments: HashMap<usize, Vec<Vec<Value>>>,
     /// Memoized values
     pub(crate) memo: Arc<ThreadLocal<RefCell<MemoMap>>>,
-    /// Local values
-    pub(crate) locals: [EcoVec<Value>; MAX_LOCALS],
 }
-
-pub(crate) const MAX_LOCALS: usize = 4;
 
 type MemoMap = HashMap<FunctionId, HashMap<Vec<Value>, Vec<Value>>>;
 
@@ -208,7 +203,6 @@ impl Default for Runtime {
             thread: ThisThread::default(),
             output_comments: HashMap::new(),
             memo: Arc::new(ThreadLocal::new()),
-            locals: Default::default(),
         }
     }
 }
@@ -1216,9 +1210,7 @@ code:
         let mut env = Uiua {
             asm: self.asm.clone(),
             rt: Runtime {
-                stack: self
-                    .rt
-                    .stack
+                stack: (self.rt.stack)
                     .drain(self.rt.stack.len() - capture_count..)
                     .collect(),
                 function_stack: Vec::new(),
@@ -1238,7 +1230,6 @@ code:
                 execution_start: self.rt.execution_start,
                 output_comments: HashMap::new(),
                 memo: self.rt.memo.clone(),
-                locals: self.rt.locals.clone(),
                 thread,
             },
         };

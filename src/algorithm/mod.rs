@@ -158,7 +158,8 @@ where
             .iter()
             .take_while(|&&dim| dim == 1)
             .count()
-            .min(a.shape.len());
+            .min(a.shape.len())
+            .min(b.shape.len());
         if (b.shape[fixes..].iter().rev())
             .zip(a.shape[fixes..].iter().rev())
             .all(|(a, b)| a == b)
@@ -175,7 +176,8 @@ where
             .iter()
             .take_while(|&&dim| dim == 1)
             .count()
-            .min(a.shape.len());
+            .min(a.shape.len())
+            .min(b.shape.len());
         if (a.shape[fixes..].iter().rev())
             .zip(b.shape[fixes..].iter().rev())
             .all(|(a, b)| a == b)

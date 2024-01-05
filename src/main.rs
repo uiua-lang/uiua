@@ -853,8 +853,9 @@ fn repl(mut rt: Uiua, mut compiler: Compiler, color: bool, config: FormatConfig)
             .and_then(|comp| rt.run_asm(comp.finish()));
         print_stack(&rt.take_stack(), color);
         match res {
-            Ok(asm) => {
-                compiler.assembly_mut().bindings = asm.bindings;
+            Ok(mut asm) => {
+                asm.remove_top_level();
+                *compiler.assembly_mut() = asm;
                 Ok(true)
             }
             Err(e) => {

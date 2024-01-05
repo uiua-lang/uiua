@@ -114,6 +114,10 @@ impl Assembly {
             self.bindings.push(binding);
         }
     }
+    /// Make top-level expressions not run
+    pub fn remove_top_level(&mut self) {
+        self.top_slices.clear();
+    }
 }
 
 impl AsRef<Assembly> for Assembly {

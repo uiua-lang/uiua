@@ -579,7 +579,14 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
-                bytes.data[0] != 0
+                let num = bytes.data[0];
+                if num == 0 {
+                    false
+                } else if num == 1 {
+                    true
+                } else {
+                    return Err(env.error(format!("{requirement}, but it is {num}")));
+                }
             }
             value => {
                 return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))

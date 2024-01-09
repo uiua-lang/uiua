@@ -844,13 +844,19 @@ impl<'a> Formatter<'a> {
         if lines.is_empty() {
             return;
         }
-        let last_word_comment = lines
+        let prevent_compact = lines
+            .iter()
+            .flatten()
+            .filter(|word| !matches!(word.value, Word::Spaces))
             .last()
-            .unwrap()
-            .last()
-            .is_some_and(|word| matches!(word.value, Word::Comment(_)));
+            .is_some_and(|word| {
+                matches!(
+                    word.value,
+                    Word::Comment(_) | Word::OutputComment { .. } | Word::MultilineString(_)
+                )
+            });
         if lines.len() == 1
-            && !last_word_comment
+            && !prevent_compact
             && !lines[0].iter().any(|word| word_is_multiline(&word.value))
         {
             self.format_words(&lines[0], true, depth);
@@ -863,7 +869,7 @@ impl<'a> Formatter<'a> {
             curr_line.chars().count()
         };
         let compact = allow_compact
-            && !last_word_comment
+            && !prevent_compact
             && match self.config.compact_multiline_mode {
                 CompactMultilineMode::Always => true,
                 CompactMultilineMode::Never => false,
@@ -890,6 +896,9 @@ impl<'a> Formatter<'a> {
             self.format_words(line, true, depth);
         }
         if !compact {
+            if prevent_compact {
+                self.output.push('\n');
+            }
             for _ in 0..self.config.multiline_indent * depth.saturating_sub(1) {
                 self.output.push(' ');
             }

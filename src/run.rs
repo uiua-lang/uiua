@@ -47,8 +47,10 @@ pub(crate) struct Runtime {
     call_stack: Vec<StackFrame>,
     /// The recur stack
     this_stack: Vec<usize>,
-    /// The shape fix stack
+    /// The fill stack
     fill_stack: Vec<Fill>,
+    /// The locals stack
+    pub(crate) locals_stack: Vec<Vec<Value>>,
     /// Whether to unpack boxed values
     pub unpack_boxes: bool,
     /// A limit on the execution duration in milliseconds
@@ -192,6 +194,7 @@ impl Default for Runtime {
             }],
             this_stack: Vec::new(),
             fill_stack: Vec::new(),
+            locals_stack: Vec::new(),
             unpack_boxes: false,
             backend: Arc::new(SafeSys),
             time_instrs: false,
@@ -513,6 +516,29 @@ code:
                 &Instr::Switch { count, sig, span } => {
                     self.with_span(span, |env| algorithm::switch(count, sig, env))
                 }
+                &Instr::PushLocals { count, span } => self.with_span(span, |env| {
+                    let mut locals = Vec::new();
+                    for i in 0..count {
+                        locals.push(env.pop(i + 1)?);
+                    }
+                    env.rt.locals_stack.push(locals);
+                    Ok(())
+                }),
+                Instr::PopLocals => self.rt.locals_stack.pop().map(drop).ok_or_else(|| {
+                    self.error("No locals to pop. This is a bug in the interpreter.")
+                }),
+                &Instr::GetLocal { index, span } => self.with_span(span, |env| {
+                    let locals = env.rt.locals_stack.last().ok_or_else(|| {
+                        env.error("No locals to get. This is a bug in the interpreter.")
+                    })?;
+                    let val = locals.get(index).cloned().ok_or_else(|| {
+                        env.error(format!(
+                            "Local {index} does not exist. This is a bug in the interpreter."
+                        ))
+                    })?;
+                    env.push(val);
+                    Ok(())
+                }),
                 &Instr::PushTempFunctions(n) => (|| {
                     for _ in 0..n {
                         let f = self.pop_function()?;
@@ -1219,6 +1245,7 @@ code:
                 array_stack: Vec::new(),
                 fill_stack: Vec::new(),
                 this_stack: self.rt.this_stack.clone(),
+                locals_stack: Vec::new(),
                 call_stack: Vec::new(),
                 unpack_boxes: self.rt.unpack_boxes,
                 time_instrs: self.rt.time_instrs,

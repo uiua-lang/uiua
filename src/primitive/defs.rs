@@ -1614,6 +1614,16 @@ primitive!(
     /// Use [multiply] and [floor] to generate a random integer in a range.
     /// ex: ⌊×10 [⍥⚂5]
     (0, Rand, Misc, ("random", '⚂')),
+    /// Bind local values
+    ///
+    /// The values can be accessed in the function with lowercase letters.
+    /// ex: # Experimental!
+    ///   : bind(⊂ b + a c) 1 2 3
+    /// Here is a simple quadratic formula function.
+    /// ex: # Experimental!
+    ///   : Quad ← bind(÷×2a -b ⊟¯.√ -××4 a c ×.b)
+    ///   : Quad 1 2 0
+    ([1], Bind, OtherModifier, "bind"),
     /// Memoize a function
     ///
     /// If a function is [memo]ized, then its results are cached.

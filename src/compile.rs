@@ -89,6 +89,8 @@ pub(crate) struct Scope {
     pub experimental: bool,
     /// The stack height between top-level statements
     pub stack_height: Result<usize, Sp<SigCheckError>>,
+    /// The stack of referenced locals
+    pub locals: Vec<HashSet<usize>>,
 }
 
 impl Default for Scope {
@@ -97,6 +99,7 @@ impl Default for Scope {
             names: HashMap::new(),
             experimental: false,
             stack_height: Ok(0),
+            locals: Vec::new(),
         }
     }
 }
@@ -997,7 +1000,15 @@ code:
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if let Some(index) = (self.scope.names.get(&ident))
+        if let (Some(locals), true) = (
+            self.scope.locals.last_mut(),
+            ident.len() == 1 && ident.chars().next().unwrap().is_ascii_lowercase(),
+        ) {
+            let index = ident.chars().next().unwrap() as usize - 'a' as usize;
+            locals.insert(index);
+            let span = self.add_span(span);
+            self.push_instr(Instr::GetLocal { index, span });
+        } else if let Some(index) = (self.scope.names.get(&ident))
             .or_else(|| self.higher_scopes.last()?.names.get(&ident))
             .copied()
         {
@@ -1714,6 +1725,46 @@ code:
                     self.push_instr(Instr::PushSig(sig));
                     self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
+                } else {
+                    let func = self.add_function(
+                        FunctionId::Anonymous(modified.modifier.span.clone()),
+                        sig,
+                        instrs,
+                    );
+                    self.push_instr(Instr::PushFunc(func));
+                }
+            }
+            Bind => {
+                let operand = modified.code_operands().next().cloned().unwrap();
+                let operand_span = operand.span.clone();
+                self.scope.locals.push(HashSet::new());
+                let (mut instrs, mut sig) = self.compile_operand_words(vec![operand])?;
+                let locals = self.scope.locals.pop().unwrap();
+                let local_count = locals.into_iter().max().map_or(0, |i| i + 1);
+                let span = self.add_span(modified.modifier.span.clone());
+                sig.args += local_count;
+                if sig.args < 3 {
+                    self.emit_diagnostic(
+                        format!(
+                            "{} should be reserved for functions with at least 3 arguments, \
+                            but this function has {} arguments",
+                            Bind.format(),
+                            sig.args
+                        ),
+                        DiagnosticKind::Advice,
+                        operand_span,
+                    );
+                }
+                instrs.insert(
+                    0,
+                    Instr::PushLocals {
+                        count: sig.args,
+                        span,
+                    },
+                );
+                instrs.push(Instr::PopLocals);
+                if call {
+                    self.push_all_instrs(instrs);
                 } else {
                     let func = self.add_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),

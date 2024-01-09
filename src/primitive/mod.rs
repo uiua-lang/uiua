@@ -297,7 +297,7 @@ impl Primitive {
         use Primitive::*;
         matches!(
             self,
-            Rectify | This | Recur | All | Cascade | Map | Insert | Has | Get | Remove
+            Rectify | This | Recur | All | Cascade | Map | Insert | Has | Get | Remove | Bind
         )
     }
     /// Check if this primitive is deprecated
@@ -548,6 +548,9 @@ impl Primitive {
             }
             Primitive::Under => {
                 return Err(env.error("Under was not inlined. This is a bug in the interpreter"))
+            }
+            Primitive::Bind => {
+                return Err(env.error("Bind was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Unpack => {
                 let f = env.pop_function()?;

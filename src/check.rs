@@ -222,6 +222,9 @@ impl<'a> VirtualEnv<'a> {
                 let sig = self.pop_func()?.signature();
                 self.handle_sig(sig)?
             }
+            Instr::PushLocals { count, .. } => self.handle_args_outputs(*count, 0)?,
+            Instr::PopLocals => {}
+            Instr::GetLocal { .. } => self.stack.push(BasicValue::Other),
             Instr::PushTemp { count, stack, .. } => {
                 for _ in 0..*count {
                     let val = self.pop()?;

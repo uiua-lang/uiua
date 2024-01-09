@@ -65,6 +65,17 @@ pub enum Instr {
     },
     /// Call a dynamic function
     Dynamic(DynamicFunction),
+    /// Bind some local values
+    PushLocals {
+        count: usize,
+        span: usize,
+    },
+    PopLocals,
+    /// Get a local value
+    GetLocal {
+        index: usize,
+        span: usize,
+    },
     Unpack {
         count: usize,
         span: usize,
@@ -232,6 +243,9 @@ impl fmt::Display for Instr {
                 write!(f, "\"")
             }
             Instr::Dynamic(df) => write!(f, "{df:?}"),
+            Instr::PushLocals { count, .. } => write!(f, "<push {count} locals>"),
+            Instr::PopLocals => write!(f, "<pop locals>"),
+            Instr::GetLocal { index, .. } => write!(f, "<get local {index}>"),
             Instr::Unpack { count, .. } => write!(f, "<unpack {count}>"),
             Instr::TouchStack { count, .. } => write!(f, "<touch {count}>"),
             Instr::PushTemp { stack, count, .. } => write!(f, "<push {stack} {count}>"),

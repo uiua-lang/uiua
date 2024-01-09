@@ -13,9 +13,10 @@ Uiua is not yet stable.
   - [`get`](https://uiua.org/docs/get)
   - [`insert`](https://uiua.org/docs/insert)
   - [`remove`](https://uiua.org/docs/remove)
+- Add experimental [`bind`](https://uiua.org/docs/bind) modifier, which binds local values within a function
 ### Interpreter
 - The internal byte array type is now used in more places, which should improve performance a bit
-- Bug and crash fixes
+- Lots of bug and crash fixes
 
 ## 0.7.1 - 2023-12-18
 ### Interpreter

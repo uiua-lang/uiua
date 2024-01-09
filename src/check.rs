@@ -278,7 +278,7 @@ impl<'a> VirtualEnv<'a> {
                 }
                 self.handle_args_outputs(sig.args + 1, sig.outputs)?;
             }
-            Instr::Format(parts, _) => {
+            Instr::Format { parts, .. } => {
                 self.handle_args_outputs(parts.len().saturating_sub(1), 1)?
             }
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,

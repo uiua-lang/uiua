@@ -796,7 +796,7 @@ code:
                 let signature = Signature::new(frags.len() - 1, 1);
                 let parts = frags.into_iter().map(Into::into).collect();
                 let span = self.add_span(word.span.clone());
-                let instr = Instr::Format(parts, span);
+                let instr = Instr::Format { parts, span };
                 if call {
                     self.push_instr(instr)
                 } else {
@@ -825,7 +825,7 @@ code:
                     }
                 }
                 parts.push(curr_part);
-                let instr = Instr::Format(parts, span);
+                let instr = Instr::Format { parts, span };
                 if call {
                     self.push_instr(instr)
                 } else {

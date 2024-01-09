@@ -547,7 +547,7 @@ code:
                     env.rt.function_stack.push(f.clone());
                     Ok(())
                 }),
-                Instr::Format(parts, span) => {
+                Instr::Format { parts, span } => {
                     let parts = parts.clone();
                     self.with_span(*span, |env| {
                         let mut s = String::new();

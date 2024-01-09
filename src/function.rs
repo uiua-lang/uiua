@@ -58,7 +58,11 @@ pub enum Instr {
         sig: Signature,
         span: usize,
     },
-    Format(EcoVec<EcoString>, usize),
+    /// Do a format string
+    Format {
+        parts: EcoVec<EcoString>,
+        span: usize,
+    },
     /// Call a dynamic function
     Dynamic(DynamicFunction),
     Unpack {
@@ -140,7 +144,7 @@ impl PartialEq for Instr {
             (Self::Prim(a, _), Self::Prim(b, _)) => a == b,
             (Self::ImplPrim(a, _), Self::ImplPrim(b, _)) => a == b,
             (Self::Call(a), Self::Call(b)) => a == b,
-            (Self::Format(a, _), Self::Format(b, _)) => a == b,
+            (Self::Format { parts: a, .. }, Self::Format { parts: b, .. }) => a == b,
             (Self::PushFunc(a), Self::PushFunc(b)) => a == b,
             (Self::PushTemp { count: a, .. }, Self::PushTemp { count: b, .. }) => a == b,
             (Self::PopTemp { count: a, .. }, Self::PopTemp { count: b, .. }) => a == b,
@@ -217,7 +221,7 @@ impl fmt::Display for Instr {
             Instr::PushTempFunctions(count) => write!(f, "<push {count} functions>"),
             Instr::PopTempFunctions(count) => write!(f, "<pop {count} functions>"),
             Instr::GetTempFunction { offset, .. } => write!(f, "<get function at {offset}>"),
-            Instr::Format(parts, _) => {
+            Instr::Format { parts, .. } => {
                 write!(f, "$\"")?;
                 for (i, part) in parts.iter().enumerate() {
                     if i > 0 {

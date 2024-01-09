@@ -1179,6 +1179,7 @@ code:
         }
         Ok(())
     }
+    #[allow(clippy::collapsible_match)]
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
         let op_count = modified.code_operands().count();
 
@@ -1290,7 +1291,7 @@ code:
         if let Modifier::Primitive(prim) = modified.modifier.value {
             // Give advice about redundancy
             match prim {
-                m @ (Primitive::Each | Primitive::Rows) => {
+                m @ Primitive::Each => {
                     if let [Sp {
                         value: Word::Primitive(prim),
                         span,

@@ -136,7 +136,7 @@ impl FillContext for (&CodeSpan, &Inputs) {
 }
 
 pub(crate) fn shape_prefixes_match(a: &[usize], b: &[usize]) -> bool {
-    a.iter().zip(b.iter()).all(|(a, b)| a == b)
+    a.iter().zip(b).all(|(a, b)| a == b)
 }
 
 pub(crate) fn fill_array_shapes<A, B, C>(
@@ -153,16 +153,13 @@ where
         return Ok(());
     }
     if a.row_count() == 1 && ctx.fill::<A>().is_err() {
-        let fixes = a
-            .shape
-            .iter()
+        let fixes = (a.shape.iter())
             .take_while(|&&dim| dim == 1)
             .count()
-            .min(a.shape.len())
-            .min(b.shape.len());
-        if (b.shape[fixes..].iter().rev())
+            .min(a.shape.len());
+        if (b.shape.iter().rev())
             .zip(a.shape[fixes..].iter().rev())
-            .all(|(a, b)| a == b)
+            .all(|(b, a)| b == a)
         {
             a.shape.drain(..fixes);
             for &dim in b.shape[..fixes].iter().rev() {
@@ -171,14 +168,11 @@ where
         }
     }
     if b.row_count() == 1 && ctx.fill::<B>().is_err() {
-        let fixes = b
-            .shape
-            .iter()
+        let fixes = (b.shape.iter())
             .take_while(|&&dim| dim == 1)
             .count()
-            .min(a.shape.len())
             .min(b.shape.len());
-        if (a.shape[fixes..].iter().rev())
+        if (a.shape.iter().rev())
             .zip(b.shape[fixes..].iter().rev())
             .all(|(a, b)| a == b)
         {

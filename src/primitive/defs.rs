@@ -1619,9 +1619,12 @@ primitive!(
     /// The values can be accessed in the function with lowercase letters.
     /// ex: # Experimental!
     ///   : bind(⊂ b + a c) 1 2 3
+    /// Adjacent letters can be part of a single identifier.
+    /// ex: # Experimental!
+    ///   : bind[[beef][babe]] 1 2 3 4 5 6
     /// Here is a simple quadratic formula function.
     /// ex: # Experimental!
-    ///   : Quad ← bind(÷×2a -b ⊟¯.√ -××4 a c ×.b)
+    ///   : Quad ← bind(÷×2a -b ⊟¯.√ -××4ac ×.b)
     ///   : Quad 1 2 0
     ([1], Bind, OtherModifier, "bind"),
     /// Memoize a function

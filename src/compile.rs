@@ -1000,14 +1000,13 @@ code:
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if let (Some(locals), true) = (
-            self.scope.locals.last_mut(),
-            ident.len() == 1 && ident.chars().next().unwrap().is_ascii_lowercase(),
-        ) {
-            let index = ident.chars().next().unwrap() as usize - 'a' as usize;
-            locals.insert(index);
+        if !self.scope.locals.is_empty() && ident.chars().all(|c| c.is_ascii_lowercase()) {
             let span = self.add_span(span);
-            self.push_instr(Instr::GetLocal { index, span });
+            for c in ident.chars().rev() {
+                let index = c as usize - 'a' as usize;
+                self.scope.locals.last_mut().unwrap().insert(index);
+                self.push_instr(Instr::GetLocal { index, span });
+            }
         } else if let Some(index) = (self.scope.names.get(&ident))
             .or_else(|| self.higher_scopes.last()?.names.get(&ident))
             .copied()

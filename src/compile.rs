@@ -1001,6 +1001,7 @@ code:
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
         if !self.scope.locals.is_empty() && ident.chars().all(|c| c.is_ascii_lowercase()) {
+            // Name is a local variable
             let span = self.add_span(span);
             for c in ident.chars().rev() {
                 let index = c as usize - 'a' as usize;
@@ -1012,11 +1013,10 @@ code:
             .copied()
         {
             // Name exists in scope
-            self.asm
-                .global_references
-                .insert(span.clone().sp(ident), index);
+            (self.asm.global_references).insert(span.clone().sp(ident), index);
             self.global_index(index, span, call);
         } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
+            // Name is a built-in constant
             let instr = Instr::push(constant.value.clone());
             if call {
                 self.push_instr(instr);

@@ -2,9 +2,9 @@
 
 Uiua is not yet stable.
 
-<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
-## 0.8.0 - 202?-??-??
+## 0.8.0 - 2024-??-??
+This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - Add the experimental [`cascade` `⪾`](https://uiua.org/docs/cascade) modifier, which captures some common [`fork` `⊃`](https://uiua.org/docs/fork) patterns
 - Add experimental hashmap functions, which operate on a box array as if it is a hashmap

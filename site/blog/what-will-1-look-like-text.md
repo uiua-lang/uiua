@@ -18,7 +18,7 @@ I think working with the stack, at least for up to 3 values, has become mostly p
 
 ### Box Ergonomics
 
-I've come to the conclusion that nested arrays are a necessary pest. The data we work with is often nested or ragged, and while there are ways to represent such data with flat structures, those representations are cumbersom in their own ways.
+I've come to the conclusion that nested arrays are a necessary pest. The data we work with is often nested or ragged, and while there are ways to represent such data with flat structures, those representations are cumbersome in their own ways.
 
 And so boxes are likely here to stay. However, I do think some design work can be done to improve their ergonomics. Currently, Uiua's boxes are very similar to J's, but I think it may be worth it to make their usage a bit more implicit in some cases, closer to the nested arrays of APL or BQN.
 

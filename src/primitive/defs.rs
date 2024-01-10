@@ -1626,6 +1626,11 @@ primitive!(
     /// ex: # Experimental!
     ///   : Quad ← bind(÷×2a -b ⊟¯.√ -××4ac ×.b)
     ///   : Quad 1 2 0
+    ///
+    /// [bind] is not really a true modifier. [bind]'s function does not make sense without it.
+    /// ex! # Experimental!
+    ///   : F ← ×b +ac
+    ///   : bindF 1 2 3
     ([1], Bind, OtherModifier, "bind"),
     /// Memoize a function
     ///

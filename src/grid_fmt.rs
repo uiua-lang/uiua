@@ -338,7 +338,6 @@ fn fmt_array<T: GridFmt + ArrayValue>(shape: &[usize], data: &[T], metagrid: &mu
     let row_shape = &shape[1..];
     let cell_size = data.len() / cell_count;
     let row_height: usize = row_shape.iter().rev().skip(1).product();
-    dbg!(row_height);
     for (i, cell) in data.chunks(cell_size).enumerate() {
         if i > 0 && rank > 2 {
             for _ in 0..rank - 2 {

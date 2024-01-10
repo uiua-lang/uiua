@@ -162,7 +162,7 @@ where
             .all(|(b, a)| b == a)
         {
             a.shape.drain(..fixes);
-            for &dim in b.shape[..fixes].iter().rev() {
+            for &dim in b.shape.iter().take(fixes).rev() {
                 a.reshape_scalar(dim);
             }
         }
@@ -177,7 +177,7 @@ where
             .all(|(a, b)| a == b)
         {
             b.shape.drain(..fixes);
-            for &dim in a.shape[..fixes].iter().rev() {
+            for &dim in a.shape.iter().take(fixes).rev() {
                 b.reshape_scalar(dim);
             }
         }

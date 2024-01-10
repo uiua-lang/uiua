@@ -335,17 +335,18 @@ fn fmt_array<T: GridFmt + ArrayValue>(shape: &[usize], data: &[T], metagrid: &mu
         metagrid.push(vec![vec![vec![' ']]]);
         return;
     }
-    let shape = &shape[1..];
+    let row_shape = &shape[1..];
     let cell_size = data.len() / cell_count;
-    let row_size: usize = shape.iter().take(shape.len().saturating_sub(1)).product();
+    let row_height: usize = row_shape.iter().rev().skip(1).product();
+    dbg!(row_height);
     for (i, cell) in data.chunks(cell_size).enumerate() {
         if i > 0 && rank > 2 {
             for _ in 0..rank - 2 {
                 metagrid.push(vec![vec![vec![' ']]; metagrid.last().unwrap().len()]);
             }
         }
-        fmt_array(shape, cell, metagrid);
-        if i * row_size > 1000 {
+        fmt_array(row_shape, cell, metagrid);
+        if i * row_height >= 100 {
             let mut elipses_row = Vec::new();
             for prev_grid in metagrid.last().unwrap() {
                 let prev_row = &prev_grid[0];

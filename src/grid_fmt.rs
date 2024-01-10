@@ -337,6 +337,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(shape: &[usize], data: &[T], metagrid: &mu
     }
     let shape = &shape[1..];
     let cell_size = data.len() / cell_count;
+    let row_size: usize = shape.iter().take(shape.len().saturating_sub(1)).product();
     for (i, cell) in data.chunks(cell_size).enumerate() {
         if i > 0 && rank > 2 {
             for _ in 0..rank - 2 {
@@ -344,7 +345,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(shape: &[usize], data: &[T], metagrid: &mu
             }
         }
         fmt_array(shape, cell, metagrid);
-        if i * cell_size > 1000 {
+        if i * row_size > 1000 {
             let mut elipses_row = Vec::new();
             for prev_grid in metagrid.last().unwrap() {
                 let prev_row = &prev_grid[0];

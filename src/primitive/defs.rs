@@ -1031,6 +1031,12 @@ primitive!(
     /// ex: /↧ []
     /// ex: /∠ []
     /// ex! /⊡ []
+    ///
+    /// A default value can be set with [fill].
+    /// ex:   /↥ []
+    /// ex: ⬚5/↥ []
+    /// ex:   /↥ [1 2 3]
+    /// ex: ⬚5/↥ [1 2 3]
     (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Apply a function to aggregate arrays
     ///

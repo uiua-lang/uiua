@@ -14,7 +14,9 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(1)?;
 
     match (f.as_flipped_primitive(env), xs) {
-        (Some((Primitive::Join, false)), mut xs) if !env.unpack_boxes() => {
+        (Some((Primitive::Join, false)), mut xs)
+            if !env.unpack_boxes() && env.box_fill().is_err() =>
+        {
             if xs.rank() < 2 {
                 env.push(xs);
                 return Ok(());
@@ -38,28 +40,41 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
             }
         }
         #[cfg(feature = "bytes")]
-        (Some((prim, flipped)), Value::Byte(bytes)) => env.push(match prim {
-            Primitive::Add => fast_reduce(bytes.convert(), 0.0, add::num_num),
-            Primitive::Sub if flipped => fast_reduce(bytes.convert(), 0.0, flip(sub::num_num)),
-            Primitive::Sub => fast_reduce(bytes.convert(), 0.0, sub::num_num),
-            Primitive::Mul => fast_reduce(bytes.convert(), 1.0, mul::num_num),
-            Primitive::Div if flipped => fast_reduce(bytes.convert(), 1.0, flip(div::num_num)),
-            Primitive::Div => fast_reduce(bytes.convert(), 1.0, div::num_num),
-            Primitive::Mod if flipped => fast_reduce(bytes.convert(), 1.0, flip(modulus::num_num)),
-            Primitive::Mod => fast_reduce(bytes.convert(), 1.0, modulus::num_num),
-            Primitive::Atan if flipped => fast_reduce(bytes.convert(), 0.0, flip(atan2::num_num)),
-            Primitive::Atan => fast_reduce(bytes.convert(), 0.0, atan2::num_num),
-            Primitive::Max => fast_reduce(bytes.convert(), f64::NEG_INFINITY, max::num_num),
-            Primitive::Min => fast_reduce(bytes.convert(), f64::INFINITY, min::num_num),
-            _ => return generic_reduce(f, Value::Byte(bytes), env),
-        }),
+        (Some((prim, flipped)), Value::Byte(bytes)) => {
+            let fill = env.num_fill().ok();
+            env.push(match prim {
+                Primitive::Add => fast_reduce(bytes.convert(), 0.0, fill, add::num_num),
+                Primitive::Sub if flipped => {
+                    fast_reduce(bytes.convert(), 0.0, fill, flip(sub::num_num))
+                }
+                Primitive::Sub => fast_reduce(bytes.convert(), 0.0, fill, sub::num_num),
+                Primitive::Mul => fast_reduce(bytes.convert(), 1.0, fill, mul::num_num),
+                Primitive::Div if flipped => {
+                    fast_reduce(bytes.convert(), 1.0, fill, flip(div::num_num))
+                }
+                Primitive::Div => fast_reduce(bytes.convert(), 1.0, fill, div::num_num),
+                Primitive::Mod if flipped => {
+                    fast_reduce(bytes.convert(), 1.0, fill, flip(modulus::num_num))
+                }
+                Primitive::Mod => fast_reduce(bytes.convert(), 1.0, fill, modulus::num_num),
+                Primitive::Atan if flipped => {
+                    fast_reduce(bytes.convert(), 0.0, fill, flip(atan2::num_num))
+                }
+                Primitive::Atan => fast_reduce(bytes.convert(), 0.0, fill, atan2::num_num),
+                Primitive::Max => {
+                    fast_reduce(bytes.convert(), f64::NEG_INFINITY, fill, max::num_num)
+                }
+                Primitive::Min => fast_reduce(bytes.convert(), f64::INFINITY, fill, min::num_num),
+                _ => return generic_reduce(f, Value::Byte(bytes), env),
+            })
+        }
         (_, xs) => generic_reduce(f, xs, env)?,
     }
     Ok(())
 }
 
 macro_rules! reduce_math {
-    ($fname:ident, $ty:ty, $f:ident) => {
+    ($fname:ident, $ty:ty, $f:ident, $fill:ident) => {
         #[allow(clippy::result_large_err)]
         fn $fname(
             prim: Primitive,
@@ -70,19 +85,20 @@ macro_rules! reduce_math {
         where
             $ty: From<f64>,
         {
+            let fill = env.$fill().ok();
             env.push(match prim {
-                Primitive::Add => fast_reduce(xs, 0.0.into(), add::$f),
-                Primitive::Sub if flipped => fast_reduce(xs, 0.0.into(), flip(sub::$f)),
-                Primitive::Sub => fast_reduce(xs, 0.0.into(), sub::$f),
-                Primitive::Mul => fast_reduce(xs, 1.0.into(), mul::$f),
-                Primitive::Div if flipped => fast_reduce(xs, 1.0.into(), flip(div::$f)),
-                Primitive::Div => fast_reduce(xs, 1.0.into(), div::$f),
-                Primitive::Mod if flipped => fast_reduce(xs, 1.0.into(), flip(modulus::$f)),
-                Primitive::Mod => fast_reduce(xs, 1.0.into(), modulus::$f),
-                Primitive::Atan if flipped => fast_reduce(xs, 0.0.into(), flip(atan2::$f)),
-                Primitive::Atan => fast_reduce(xs, 0.0.into(), atan2::$f),
-                Primitive::Max => fast_reduce(xs, f64::NEG_INFINITY.into(), max::$f),
-                Primitive::Min => fast_reduce(xs, f64::INFINITY.into(), min::$f),
+                Primitive::Add => fast_reduce(xs, 0.0.into(), fill, add::$f),
+                Primitive::Sub if flipped => fast_reduce(xs, 0.0.into(), fill, flip(sub::$f)),
+                Primitive::Sub => fast_reduce(xs, 0.0.into(), fill, sub::$f),
+                Primitive::Mul => fast_reduce(xs, 1.0.into(), fill, mul::$f),
+                Primitive::Div if flipped => fast_reduce(xs, 1.0.into(), fill, flip(div::$f)),
+                Primitive::Div => fast_reduce(xs, 1.0.into(), fill, div::$f),
+                Primitive::Mod if flipped => fast_reduce(xs, 1.0.into(), fill, flip(modulus::$f)),
+                Primitive::Mod => fast_reduce(xs, 1.0.into(), fill, modulus::$f),
+                Primitive::Atan if flipped => fast_reduce(xs, 0.0.into(), fill, flip(atan2::$f)),
+                Primitive::Atan => fast_reduce(xs, 0.0.into(), fill, atan2::$f),
+                Primitive::Max => fast_reduce(xs, f64::NEG_INFINITY.into(), fill, max::$f),
+                Primitive::Min => fast_reduce(xs, f64::INFINITY.into(), fill, min::$f),
                 _ => return Err(xs),
             });
             Ok(())
@@ -90,11 +106,15 @@ macro_rules! reduce_math {
     };
 }
 
-reduce_math!(reduce_nums, f64, num_num);
+reduce_math!(reduce_nums, f64, num_num, num_fill);
+reduce_math!(reduce_coms, crate::Complex, com_x, complex_fill);
 
-reduce_math!(reduce_coms, crate::Complex, com_x);
-
-pub fn fast_reduce<T>(mut arr: Array<T>, identity: T, f: impl Fn(T, T) -> T) -> Array<T>
+pub fn fast_reduce<T>(
+    mut arr: Array<T>,
+    identity: T,
+    default: Option<T>,
+    f: impl Fn(T, T) -> T,
+) -> Array<T>
 where
     T: ArrayValue + Copy,
 {
@@ -102,10 +122,14 @@ where
         0 => arr,
         1 => {
             let data = arr.data.as_mut_slice();
-            let reduced = data.iter().copied().reduce(f);
+            let reduced = default.into_iter().chain(data.iter().copied()).reduce(f);
             if let Some(reduced) = reduced {
-                data[0] = reduced;
-                arr.data.truncate(1);
+                if data.is_empty() {
+                    arr.data.extend(Some(reduced));
+                } else {
+                    data[0] = reduced;
+                    arr.data.truncate(1);
+                }
             } else {
                 arr.data.extend(Some(identity));
             }
@@ -126,6 +150,11 @@ where
             }
             let sliced = arr.data.as_mut_slice();
             let (acc, rest) = sliced.split_at_mut(row_len);
+            if let Some(default) = default {
+                for acc in &mut *acc {
+                    *acc = f(default, *acc);
+                }
+            }
             rest.chunks_exact(row_len).fold(acc, |acc, row| {
                 for (a, b) in acc.iter_mut().zip(row) {
                     *a = f(*a, *b);
@@ -150,9 +179,11 @@ fn generic_reduce(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
         }
         (2, 1) => {
             let mut rows = xs.into_rows();
-            let mut acc = rows.next().ok_or_else(|| {
-                env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
-            })?;
+            let mut acc = (env.box_fill().ok().map(|b| b.0))
+                .or_else(|| rows.next())
+                .ok_or_else(|| {
+                    env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
+                })?;
             if env.unpack_boxes() {
                 acc.unpack();
             }

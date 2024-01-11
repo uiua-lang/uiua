@@ -95,7 +95,6 @@ enum Fill {
     Complex(Complex),
     Char(char),
     Box(Boxed),
-    None,
 }
 
 #[derive(Clone)]
@@ -1157,27 +1156,20 @@ code:
     /// Do something with the fill context set
     pub(crate) fn with_fill(
         &mut self,
-        fill: Value,
+        mut fill: Value,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
     ) -> UiuaResult {
-        if fill.shape() == [0] {
-            self.rt.fill_stack.push(Fill::None)
-        } else {
-            if !fill.shape().is_empty() {
-                return Err(self.error(format!(
-                    "Fill values must be scalar or an empty list, but its shape is {}",
-                    fill.shape()
-                )));
-            }
-            self.rt.fill_stack.push(match fill {
-                Value::Num(n) => Fill::Num(n.data.into_iter().next().unwrap()),
-                #[cfg(feature = "bytes")]
-                Value::Byte(b) => Fill::Num(b.data.into_iter().next().unwrap() as f64),
-                Value::Char(c) => Fill::Char(c.data.into_iter().next().unwrap()),
-                Value::Box(b) => Fill::Box(b.data.into_iter().next().unwrap()),
-                Value::Complex(c) => Fill::Complex(c.data.into_iter().next().unwrap()),
-            });
+        if !fill.shape().is_empty() {
+            fill = Array::from(Boxed(fill)).into();
         }
+        self.rt.fill_stack.push(match fill {
+            Value::Num(n) => Fill::Num(n.data.into_iter().next().unwrap()),
+            #[cfg(feature = "bytes")]
+            Value::Byte(b) => Fill::Num(b.data.into_iter().next().unwrap() as f64),
+            Value::Char(c) => Fill::Char(c.data.into_iter().next().unwrap()),
+            Value::Box(b) => Fill::Box(b.data.into_iter().next().unwrap()),
+            Value::Complex(c) => Fill::Complex(c.data.into_iter().next().unwrap()),
+        });
         let res = in_ctx(self);
         self.rt.fill_stack.pop();
         res

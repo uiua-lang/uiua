@@ -1880,6 +1880,11 @@ primitive!(
     /// ex: # Experimental!
     ///   : map 1_2 3_4
     ///   : (⋅⋅0|get) has,, 5 .
+    /// You can provide a default value with [fill].
+    /// ex: # Experimental!
+    ///   : map 1_2 3_4
+    ///   : ⬚0get 1 .
+    ///   : ⬚0get 5 :
     (2, Get, Map, "get"),
     /// Remove the value corresponding to a key from a map array
     ///

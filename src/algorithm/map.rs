@@ -60,7 +60,15 @@ impl Value {
     }
     /// Get a value from a map array
     pub fn get(&self, key: &Value, env: &Uiua) -> UiuaResult<Value> {
-        with_pair(self, env, |pair| pair.get(key))?.ok_or_else(|| env.error("Key not found in map"))
+        let value = with_pair(self, env, |pair| pair.get(key))?;
+        if let Some(value) = value {
+            Ok(value)
+        } else {
+            match env.box_fill() {
+                Ok(fill) => Ok(fill.0),
+                Err(e) => Err(env.error(format!("Key not found in map{e}"))),
+            }
+        }
     }
     /// Check if a map array contains a key
     pub fn has_key(&self, key: &Value, env: &Uiua) -> UiuaResult<bool> {

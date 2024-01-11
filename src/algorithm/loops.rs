@@ -340,10 +340,18 @@ fn collapse_groups(
             }
         }
         (2, 1) => {
-            let mut acc = env.pop(1)?;
-            let indices = env.pop(2)?.as_ints(env, red_indices_error)?;
-            let values = env.pop(3)?;
-            let groups = get_groups(values, &indices, env)?;
+            let indices = env.pop(1)?.as_ints(env, red_indices_error)?;
+            let values = env.pop(2)?;
+            let mut groups = get_groups(values, &indices, env)?.into_iter();
+            let mut acc = match env.box_fill() {
+                Ok(acc) => acc.0,
+                Err(e) => groups.next().ok_or_else(|| {
+                    env.error(format!(
+                        "Cannot do aggregating {} with no groups{e}",
+                        prim.format()
+                    ))
+                })?,
+            };
             for row in groups {
                 env.push(row);
                 env.push(acc);

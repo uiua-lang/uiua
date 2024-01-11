@@ -14,7 +14,8 @@ This version is not yet released. If you are reading this on the website, then t
   - [`insert`](https://uiua.org/docs/insert)
   - [`remove`](https://uiua.org/docs/remove)
 - Add experimental [`bind`](https://uiua.org/docs/bind) modifier, which binds local values within a function
-- [`fill` `⬚`](https://uiua.org/docs/fill) can now be used to specify default accumulators for [`reduce` `/`](https://uiua.org/docs/reduce)
+- [`fill` `⬚`](https://uiua.org/docs/fill) can now be used to specify default accumulators for [`reduce` `/`](https://uiua.org/docs/reduce), [`group` `⊕`](https://uiua.org/docs/group), and [`partition` `⊜`](https://uiua.org/docs/partition)
+  - Reducing [`group` `⊕`](https://uiua.org/docs/group) and [`partition` `⊜`](https://uiua.org/docs/partition) no longer take a required accumulator
 ### Interpreter
 - The internal byte array type is now used in more places, which should improve performance a bit
 - Lots of bug and crash fixes

@@ -336,19 +336,7 @@ impl<'a> VirtualEnv<'a> {
                 }
                 Group | Partition => {
                     let sig = self.pop_func()?.signature();
-                    let args = match sig.args {
-                        0 => 2,
-                        1 => 2,
-                        2 => 3,
-                        _ => {
-                            return Err(format!(
-                                "{prim}'s function must take at most 2 arguments, \
-                                    but its signature is {sig}",
-                            )
-                            .into())
-                        }
-                    };
-                    self.handle_args_outputs(args, sig.outputs)?;
+                    self.handle_args_outputs(2, sig.outputs)?;
                 }
                 Spawn => {
                     let sig = self.pop_func()?.signature();

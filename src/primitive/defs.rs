@@ -1168,8 +1168,8 @@ primitive!(
     /// The function then processes each group in order. The result depends on what the function is.
     /// If the function takes 0 or 1 arguments, then [group] behaves like [rows]. This is called *iterating* [group].
     /// ex: ⊕∘ [0 2 2 1 0 1] [1 2 3 4 5 6]
-    /// If the function takes 2 or more arguments, then [group] requires an accumulator and behaves like [fold]. This is called *accumulating* [group].
-    /// ex: ⊕⊂ [] [0 2 2 1 0 1] [1 2 3 4 5 6]
+    /// If the function takes 2 or more arguments, then [group] behaves like [reduce]. This is called *reducing* [group].
+    /// ex: ⊕⊂ [0 2 2 1 0 1] [1 2 3 4 5 6]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
     /// ex! ⊕∘ [0 1 0 2 1 1] [1 2 3 4 5 6]
     /// It is common to use [box] to encapsulate groups of different [shape]s.
@@ -1198,8 +1198,8 @@ primitive!(
     /// The function then processes each group in order. The result depends on what the function is.
     /// If the function takes 0 or 1 arguments, then [partition] behaves like [rows]. This is called *iterating* [partition].
     /// ex: ⊜∘ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
-    /// If the function takes 2 or more arguments, then [partition] requires an accumulator and behaves like [fold]. This is called *accumulating* [partition].
-    /// ex: ⊜⊂ [] [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
+    /// If the function takes 2 or more arguments, then [partition] behaves like [reduce]. This is called *reducing* [partition].
+    /// ex: ⊜⊂ [0 0 2 2 1 1 3 3] [1 2 3 4 5 6 7 8]
     /// If the values returned by the function do not have the same [shape], concatenation will fail.
     /// ex! ⊜∘ [0 2 3 3 3 0 1 1] [1 2 3 4 5 6 7 8]
     /// It is common to use [box] to encapsulate groups of different [shape]s.

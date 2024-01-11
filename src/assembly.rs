@@ -257,7 +257,7 @@ impl Serialize for Instr {
 
 impl<'de> Deserialize<'de> for Instr {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        dbg!(InstrRep::deserialize(deserializer).map(Self::from))
+        InstrRep::deserialize(deserializer).map(Self::from)
     }
 }
 

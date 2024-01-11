@@ -257,7 +257,7 @@ impl Serialize for Instr {
 
 impl<'de> Deserialize<'de> for Instr {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        InstrRep::deserialize(deserializer).map(Self::from)
+        dbg!(InstrRep::deserialize(deserializer).map(Self::from))
     }
 }
 
@@ -266,7 +266,7 @@ enum InstrRep {
     Comment(Ident),
     CallGlobal(usize, bool, Signature),
     BindGlobal(usize, usize),
-    BeginArray,
+    BeginArray(()),
     EndArray(bool, usize),
     Call(usize),
     PushFunc(Function),
@@ -274,7 +274,7 @@ enum InstrRep {
     Format(EcoVec<EcoString>, usize),
     Dynamic(DynamicFunction),
     PushLocals(usize, usize),
-    PopLocals,
+    PopLocals(()),
     GetLocal(usize, usize),
     Unpack(usize, usize, bool),
     PushTempFunctions(usize),
@@ -287,7 +287,7 @@ enum InstrRep {
     CopyFromTemp(TempStack, usize, usize, usize),
     DropTemp(TempStack, usize, usize),
     PushSig(Signature),
-    PopSig,
+    PopSig(()),
     SetOutputComment(usize, usize),
     #[serde(untagged)]
     Push(Value),
@@ -304,7 +304,7 @@ impl From<Instr> for InstrRep {
             Instr::Push(value) => Self::Push(value),
             Instr::CallGlobal { index, call, sig } => Self::CallGlobal(index, call, sig),
             Instr::BindGlobal { span, index } => Self::BindGlobal(span, index),
-            Instr::BeginArray => Self::BeginArray,
+            Instr::BeginArray => Self::BeginArray(()),
             Instr::EndArray { boxed, span } => Self::EndArray(boxed, span),
             Instr::Prim(prim, span) => Self::Prim(prim, span),
             Instr::ImplPrim(prim, span) => Self::ImplPrim(prim, span),
@@ -314,7 +314,7 @@ impl From<Instr> for InstrRep {
             Instr::Format { parts, span } => Self::Format(parts, span),
             Instr::Dynamic(func) => Self::Dynamic(func),
             Instr::PushLocals { count, span } => Self::PushLocals(count, span),
-            Instr::PopLocals => Self::PopLocals,
+            Instr::PopLocals => Self::PopLocals(()),
             Instr::GetLocal { index, span } => Self::GetLocal(index, span),
             Instr::Unpack { count, span, unbox } => Self::Unpack(count, span, unbox),
             Instr::PushTempFunctions(count) => Self::PushTempFunctions(count),
@@ -334,7 +334,7 @@ impl From<Instr> for InstrRep {
             } => Self::CopyFromTemp(stack, offset, count, span),
             Instr::DropTemp { stack, count, span } => Self::DropTemp(stack, count, span),
             Instr::PushSig(sig) => Self::PushSig(sig),
-            Instr::PopSig => Self::PopSig,
+            Instr::PopSig => Self::PopSig(()),
             Instr::SetOutputComment { i, n } => Self::SetOutputComment(i, n),
         }
     }
@@ -347,7 +347,7 @@ impl From<InstrRep> for Instr {
             InstrRep::Push(value) => Self::Push(value),
             InstrRep::CallGlobal(index, call, sig) => Self::CallGlobal { index, call, sig },
             InstrRep::BindGlobal(span, index) => Self::BindGlobal { span, index },
-            InstrRep::BeginArray => Self::BeginArray,
+            InstrRep::BeginArray(()) => Self::BeginArray,
             InstrRep::EndArray(boxed, span) => Self::EndArray { boxed, span },
             InstrRep::Prim(prim, span) => Self::Prim(prim, span),
             InstrRep::ImplPrim(prim, span) => Self::ImplPrim(prim, span),
@@ -357,7 +357,7 @@ impl From<InstrRep> for Instr {
             InstrRep::Format(parts, span) => Self::Format { parts, span },
             InstrRep::Dynamic(func) => Self::Dynamic(func),
             InstrRep::PushLocals(count, span) => Self::PushLocals { count, span },
-            InstrRep::PopLocals => Self::PopLocals,
+            InstrRep::PopLocals(()) => Self::PopLocals,
             InstrRep::GetLocal(index, span) => Self::GetLocal { index, span },
             InstrRep::Unpack(count, span, unbox) => Self::Unpack { count, span, unbox },
             InstrRep::PushTempFunctions(count) => Self::PushTempFunctions(count),
@@ -377,7 +377,7 @@ impl From<InstrRep> for Instr {
             },
             InstrRep::DropTemp(stack, count, span) => Self::DropTemp { stack, count, span },
             InstrRep::PushSig(sig) => Self::PushSig(sig),
-            InstrRep::PopSig => Self::PopSig,
+            InstrRep::PopSig(()) => Self::PopSig,
             InstrRep::SetOutputComment(i, n) => Self::SetOutputComment { i, n },
         }
     }

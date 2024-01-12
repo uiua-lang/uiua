@@ -87,7 +87,7 @@ pub fn Editor<'a>(
     let (line_count, set_line_count) = create_signal(1);
 
     let (initial_code, set_initial_code) = create_signal(Some(
-        examples.get(0).cloned().unwrap_or_else(|| example.into()),
+        examples.first().cloned().unwrap_or_else(|| example.into()),
     ));
 
     let (example, set_example) = create_signal(0);

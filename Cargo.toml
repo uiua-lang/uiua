@@ -8,7 +8,7 @@ license = "MIT"
 name = "uiua"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
-version = "0.7.1"
+version = "0.8.0"
 
 [dependencies]
 # Core dependencies
@@ -36,9 +36,9 @@ toml = "0.8.8"
 unicode-segmentation = "1.10"
 
 # Native dependencies
-rawrrr = {version = "0.1.0", optional = true}
 httparse = {version = "1.8.0", optional = true}
 open = {version = "5", optional = true}
+rawrrr = {version = "0.1.0", optional = true}
 rustls = {version = "0.22.2", optional = true, default-features = false, features = [
   "tls12",
   "ring",

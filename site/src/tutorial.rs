@@ -216,7 +216,8 @@ fn TutorialBasic() -> impl IntoView {
         <h2><Prim prim=Pop/></h2>
         <p><Prim prim=Pop/>" removes the top item from the stack."</p>
         <p>"This is useful when you want to discard a value that you do not need."</p>
-        <Editor example="1 ; 2 3 4 ; 5 6"/>
+        <p>"The formatter converts "<code>";"</code>"s into "<Prim prim=Pop glyph_only=true/>"s."</p>
+        <Editor example="1 ; 2 3 4 ◌ 5 6"/>
         <h2><Prim prim=Stack/>" and "<Prim prim=Trace/></h2>
         <p><Prim prim=Stack/>" prints the entire stack."</p>
         <p>"It also attaches line and column numbers."</p>
@@ -986,7 +987,7 @@ fn TutorialInverses() -> impl IntoView {
         <Editor example="⍜⊡× 2 [1 2 3 4] 10"/>
         <p>"This works because "<Prim prim=Under/>" keeps track of the original array and passes it to the inversion of "<Prim prim=Pick/>"."</p>
         <p>"If you wanted to set a value in an array rather than modifying it, you could use "<Prim prim=Pop/>" or "<Prim prim=Gap/>" instead of "<Prim prim=Mul/>"."</p>
-        <Editor example="⍜(⊡2)⋅∞ [1 2 3 4]\n⍜⊡; 2 [1 2 3 4] ∞"/>
+        <Editor example="⍜(⊡2)⋅∞ [1 2 3 4]\n⍜⊡◌ 2 [1 2 3 4] ∞"/>
         <p>"It's not just "<Prim prim=Pick/>"! Many functions work with "<Prim prim=Under/>"!"</p>
         <Editor example="⍜(↙2)/× [3 5 4 2]"/>
         <Editor example="⍜(↻3|⊂0) [1 2 3 4 5]"/>
@@ -1086,7 +1087,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p><Prim prim=Repeat/>"'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation."</p>
         <p>"The "<Prim prim=Do/>" modifier takes a loop function and a condition function. It repeatedly calls the loop function as long as the condition function returns "<code>"1"</code>"."</p>
         <Editor example="⍢(×2)(<1000) 1"/>
-        <Editor example=";⍢(⊃(×2)⊂)(<100) 1 []"/>
+        <Editor example="◌⍢(⊃(×2)⊂)(<100) 1 []"/>
         <p>"While "<Prim prim=Do/>" is very powerful, it should only be used when necessary."</p>
 
         <h2 id="try">"Catching errors with "<Prim prim=Try/></h2>
@@ -1114,7 +1115,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
 
         <h2 id="assert"><Prim prim=Assert/></h2>
         <p>"The "<Prim prim=Assert/>" function takes any value and a condition. If the condition is anything but "<code>"1"</code>", the value is thrown as an error that can be caught with "<Prim prim=Try/>"."</p>
-        <Editor example="F ← ⍣(¯⍤10≤10.);\nF 5\nF 12"/>
+        <Editor example="F ← ⍣(¯⍤10≤10.)◌\nF 5\nF 12"/>
         <p>"If the "<Prim prim=Assert/>"ed value is never caught, it becomes an error."</p>
         <Editor example="F ← ¯⍤\"too big!\"≤10.\nF 5\nF 12"/> // Should fail
         <p>"Using "<Prim prim=Assert/>" for this purpose will be covered more in the "<A href="/docs/testing">"section on testing"</A>"."</p>

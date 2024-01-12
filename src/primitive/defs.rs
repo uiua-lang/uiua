@@ -208,8 +208,8 @@ primitive!(
     ///
     /// For example, [gen] returns both a random number and a seed for the next call.
     /// When you have all the random numbers you need, you often want to discard the seed.
-    /// ex: ⌊×10[;⍥gen10 0]
-    (1(0), Pop, Stack, ("pop", ';')),
+    /// ex: ⌊×10[◌⍥gen10 0]
+    (1(0), Pop, Stack, ("pop", AsciiToken::Semicolon, '◌')),
     /// Do nothing with one value
     ///
     /// [identity] is mostly useless on its own. See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) to understand what it is for.
@@ -801,7 +801,7 @@ primitive!(
     /// This works with multiple and/or deeper indices.
     /// ex: ⍜⊡(×10) [2_1 0_2] +1↯3_4⇡12
     /// To simply set a value, you can use [under][pick][pop].
-    /// ex: ⍜⊡; 2 [8 3 9 2 0] 42
+    /// ex: ⍜⊡◌ 2 [8 3 9 2 0] 42
     ///
     /// For index rank `2` or greater, it should hold that `pick``range``shape``duplicate``x` is equivalent to `x`.
     /// ex: ⊡⇡△. [1_2_3 4_5_6]
@@ -1326,9 +1326,9 @@ primitive!(
     /// The first function is the uninverted function, and the second function is the inverse.
     /// ex: # Experimental!
     ///   : F ← setinv(&p$"Forward _" .)(&p$"Backward _" .)
-    ///   : ;F   @A
-    ///   : ;°F  @B
-    ///   : ;⍜F∘ @C
+    ///   : ◌F   @A
+    ///   : ◌°F  @B
+    ///   : ◌⍜F∘ @C
     ///
     /// Unlike built-in functions, [setinv] cannot properly make inverses that save context for use in [under].
     /// This can lead to errors if you are unaware of it.
@@ -1359,8 +1359,8 @@ primitive!(
     ///   : | &p$"Do:   set ctx = _, value = _" ,, +1.
     ///   : | &p$"Undo: get ctx = _, value = _" ⊙.
     ///   : )
-    ///   : ;F 5
-    ///   : ;⍜F(×10) 5
+    ///   : ◌F 5
+    ///   : ◌⍜F(×10) 5
     ///
     /// Inverses set with [setund] cannot be used with [un]. For simpler inverse defining, see [setinv].
     ([3], SetUnder, InversionModifier, "setund"),
@@ -1483,7 +1483,7 @@ primitive!(
     /// Here is an example that evaluates a [Collatz sequence](https://en.wikipedia.org/wiki/Collatz_conjecture).
     /// The next number in the sequence is calculated in the condition function but [join]ed to the sequence in the loop function.
     /// ex: C ← (+1×3|÷2)=0◿2.
-    ///   : ;⍢⊂(¬∊,,C⊢.) [7]
+    ///   : ◌⍢⊂(¬∊,,C⊢.) [7]
     /// If the condition function consumes its only arguments to evaluate the condition, then those arguments will be implicitly copied.
     /// Consider this equivalence:
     /// ex: ⍢(×3)(<100)  1
@@ -1492,7 +1492,7 @@ primitive!(
     /// ex! ⍢(×2.)(<1000) 1
     /// This means that unlike [repeat], [do] cannot be wrapped in `[]`s to collect items into an array.
     /// Instead, [join] the items to an initial list.
-    /// ex: ;⍢(⊃(×2)⊂)(<100) 1 []
+    /// ex: ◌⍢(⊃(×2)⊂)(<100) 1 []
     ([2], Do, IteratingModifier, ("do", '⍢')),
     /// Set the fill value for a function
     ///
@@ -1556,9 +1556,9 @@ primitive!(
     /// ex: ⍣(⍤5 0 3)(×5)
     /// If the first function has the signature `|n.r`, then the second function must have the signature `|(n+1).r`. The additional value is the error.
     /// If you don't care about the input values, you can simply [pop] them.
-    /// ex: ⍣⋕; "dog"
-    /// ex: ⍣⋕(0;;) "dog"
-    /// ex: ⍣⋕(0;;) "5"
+    /// ex: ⍣⋕◌ "dog"
+    /// ex: ⍣⋕(0◌◌) "dog"
+    /// ex: ⍣⋕(0◌◌) "5"
     /// [gap] can often look nicer.
     /// ex: ⍣⋕⋅⋅0 "dog"
     /// ex: ⍣⋕⋅⋅0 "5"
@@ -1712,12 +1712,12 @@ primitive!(
     /// If you don't care about a seed, you can use [random].
     ///
     /// The same seed will always produce the same random number.
-    /// ex: [;gen gen gen 0]
-    /// ex: [;⍥gen3 0]
-    /// ex: [;⍥gen3 1]
+    /// ex: [◌gen gen gen 0]
+    /// ex: [◌⍥gen3 0]
+    /// ex: [◌⍥gen3 1]
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
-    /// ex: ⌊*10[;⍥gen5 0]
+    /// ex: ⌊*10[◌⍥gen5 0]
     (1(2), Gen, Misc, "gen"),
     /// Randomly reorder the rows of an array with a seed
     ///

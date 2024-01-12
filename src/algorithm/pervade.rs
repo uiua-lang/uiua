@@ -874,15 +874,38 @@ pub mod mul {
 }
 
 bin_op_mod!(div, a, b, f64::from, f64, b / a, "Cannot divide {b} by {a}");
-bin_op_mod!(
-    modulus,
-    a,
-    b,
-    f64::from,
-    f64,
-    (b % a + a) % a,
-    "Cannot take the modulus of {a} by {b}"
-);
+
+pub mod modulus {
+    use super::*;
+    pub fn num_num(a: f64, b: f64) -> f64 {
+        (b % a + a) % a
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
+        (b % a) as f64
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_num(a: u8, b: f64) -> f64 {
+        num_num(a.into(), b)
+    }
+    #[cfg(feature = "bytes")]
+    pub fn num_byte(a: f64, b: u8) -> f64 {
+        num_num(a, b.into())
+    }
+    pub fn com_com(a: Complex, b: Complex) -> Complex {
+        (b % a + a) % a
+    }
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        (b.into() % a + a) % a
+    }
+    pub fn x_com(a: impl Into<f64>, b: Complex) -> Complex {
+        let a = a.into();
+        (b % a + a) % a
+    }
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot multiply {a} and {b}"))
+    }
+}
 bin_op_mod!(
     atan2,
     a,

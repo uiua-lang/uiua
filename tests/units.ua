@@ -300,6 +300,10 @@ $ Multi _
 $ _ line
 ⍤⊃⋅∘≍ "Multi foo\nbar line"
 
+# Complex
+⍤⊃⋅∘≍ i ℂ0
+⍤⊃⋅∘≍ ℂ0 4 ◿ 5 ℂ0 ¯1
+
 # Memo
 F ← memo(+⌊×10⚂)
 ⍤⊃⋅∘≍ F1 F1

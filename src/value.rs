@@ -1415,7 +1415,7 @@ value_bin_math_impl!(
     ],
 );
 value_bin_math_impl!(div);
-value_bin_math_impl!(modulus);
+value_bin_math_impl!(modulus, (Complex, Complex, com_com));
 value_bin_math_impl!(pow);
 value_bin_math_impl!(log);
 value_bin_math_impl!(atan2);

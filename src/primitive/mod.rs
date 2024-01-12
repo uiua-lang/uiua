@@ -361,7 +361,7 @@ impl Primitive {
                     start += len;
                     continue 'outer;
                 } else if sub_name
-                    .strip_suffix('i')
+                    .strip_suffix(['i', 'p'])
                     .unwrap_or(sub_name)
                     .chars()
                     .all(|c| "gd".contains(c))
@@ -372,6 +372,7 @@ impl Primitive {
                             'g' => prims.push((Primitive::Gap, &sub_name[i..i + 1])),
                             'd' => prims.push((Primitive::Dip, &sub_name[i..i + 1])),
                             'i' => prims.push((Primitive::Identity, &sub_name[i..i + 1])),
+                            'p' => prims.push((Primitive::Pop, &sub_name[i..i + 1])),
                             _ => unreachable!(),
                         }
                     }

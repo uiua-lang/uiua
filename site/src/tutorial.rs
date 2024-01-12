@@ -909,9 +909,10 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p>"Alternatively, you can use a function pack."</p>
         <Editor example="×⊃(+⊙⋅⋅∘|-⊃⋅⋅∘(×⋅⊙⋅∘)) 1 2 3 4"/>
         <p>"And there you have it! A readable syntax juggling lots of values without any names!"</p>
-        <p>"It's annoying to write long lists of names like "<code>"gapdipgapgapide"</code>", so those three functions have a special rule in the parser that allows you to write them with only 1 character as long as there are at least 2 characters in the sequence. Also, 'i' for "<Prim prim=Identity/>" only works if it is the last character."</p>
+        <p>"It's annoying to write long lists of names like "<code>"gapdipgapgapide"</code>", so those three functions (plus "<Prim prim=Pop/>") have a special rule in the parser that allows you to write them with only 1 character as long as there are at least 2 characters in the sequence. Also, 'i' and 'p' for "<Prim prim=Identity/>" and "<Prim prim=Pop/>" only work if they are the last character."</p>
         <p>"Try it out!"</p>
         <Editor example="+gdggi 1 2 3 4 5"/>
+        <Editor example="+dggdp 1 2 3 4 5"/>
         <p>"In general, planet notation as complex as the mathematical function example above should only be used when it is necessary. For examples like that with 4+ values, it is. However, when working with fewer values, you can get very far with just "<Prim prim=Dup/>" and "<Prim prim=Flip/>". Maybe sprinkle some "<Prim prim=Over/>"s and "<Prim prim=Dip/>"s in there too."</p>
 
         <h2 id="challenges">"Challenges"</h2>

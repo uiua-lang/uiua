@@ -38,7 +38,7 @@ NotFound ← Response "404 Not Found" "text/plain" utf"Not Found"
 ServerError ← Response "500 Internal Server Error" "text/plain"
 HandlePageLoadError ← ⋅(
   /↥⌕"The system cannot find the file specified".
-  (NotFound;|ServerError)
+  (NotFound◌|ServerError)
 )
 Page ← |1 ⍣(
   ExtMime GetExt :&frab.
@@ -46,14 +46,14 @@ Page ← |1 ⍣(
 )HandlePageLoadError ⊂"docs"
 Home ← |0 Page "/index.html"
 
-Respond ← ;spawn(
+Respond ← ◌spawn(
   # Extract path from request
   °□⊡1 ⊜□≠@ . &ru "\r\n\r\n".
   &p "Request:"
   &p.
 
   # Route to handler
-  (Page|Home;) ≍"/".
+  (Page|Home◌) ≍"/".
   &p "Response:"
   &pf⧻.
   &p " bytes"

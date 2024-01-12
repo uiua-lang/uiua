@@ -489,7 +489,7 @@ code:
                         Array::<Boxed>::default().into()
                     } else {
                         let elems: usize = values.iter().map(Value::element_count).sum();
-                        let elem_size = values.get(0).map_or(size_of::<f64>(), Value::elem_size);
+                        let elem_size = values.first().map_or(size_of::<f64>(), Value::elem_size);
                         let max_mega = if cfg!(target_arch = "wasm32") {
                             256
                         } else {

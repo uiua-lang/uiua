@@ -247,7 +247,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             grid[0].insert(0, left);
             grid[0].push(right);
         } else {
-            if T::compress_list_grid() {
+            if T::compress_list_grid() && self.element_count() > 0 {
                 // Add quotes arround char array rows
                 let (left, right) = T::grid_fmt_delims(false);
                 for row in grid.iter_mut() {

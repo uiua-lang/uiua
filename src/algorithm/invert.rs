@@ -1185,7 +1185,7 @@ impl InvertPattern for Primitive {
         input: &'a [Instr],
         _: &mut Compiler,
     ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-        let next = input.get(0)?;
+        let next = input.first()?;
         match next {
             Instr::Prim(prim, span) if prim == self => {
                 Some((&input[1..], eco_vec![Instr::Prim(*prim, *span)]))
@@ -1401,7 +1401,7 @@ impl InvertPattern for Val {
                 }
             }
         }
-        match input.get(0) {
+        match input.first() {
             Some(instr @ Instr::Push(_)) => Some((&input[1..], eco_vec![instr.clone()])),
             Some(instr @ Instr::Prim(prim, _))
                 if prim.args() == Some(0) && prim.outputs() == Some(0) =>

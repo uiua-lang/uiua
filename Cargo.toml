@@ -29,6 +29,7 @@ rand = {version = "0.8.5", features = ["small_rng"]}
 rayon = "1.8.0"
 serde = {version = "1", features = ["derive"]}
 serde_json = "1"
+serde_tuple = "0.5.0"
 term_size = "=1.0.0-beta.2"
 thread_local = "1"
 tinyvec = {version = "1", features = ["alloc", "serde"]}
@@ -62,7 +63,6 @@ tower-lsp = {version = "0.20.0", optional = true}
 
 # Profiling dependencies
 indexmap = {version = "2", optional = true, features = ["serde"]}
-serde_tuple = "0.5.0"
 serde_yaml = {version = "0.9.30", optional = true}
 
 # Feature dependencies

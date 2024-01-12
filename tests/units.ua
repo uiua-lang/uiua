@@ -301,7 +301,7 @@ $ _ line
 ⍤⊃⋅∘≍ "Multi foo\nbar line"
 
 # Complex
-⍤⊃⋅∘≍ i ℂ0
+⍤⊃⋅∘≍ i ℂ1 0
 ⍤⊃⋅∘≍ ℂ0 4 ◿ 5 ℂ0 ¯1
 
 # Memo

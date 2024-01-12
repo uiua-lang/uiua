@@ -1792,15 +1792,15 @@ code:
                 let start = asm.instrs.len();
                 let len = instrs.len();
                 asm.instrs.extend(instrs);
-                asm.top_slices = vec![FuncSlice { start, len }];
+                asm.top_slices.push(FuncSlice { start, len });
                 let mut env = Uiua::with_backend(self.backend.clone());
                 env.run_asm(&asm)?;
                 let values = env.take_stack();
                 if !call {
                     self.new_functions.push(EcoVec::new());
                 }
-                let val_count = values.len();
-                for value in values {
+                let val_count = sig.outputs;
+                for value in values.into_iter().rev().take(val_count).rev() {
                     self.push_instr(Instr::push(value));
                 }
                 if !call {

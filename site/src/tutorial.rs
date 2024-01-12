@@ -620,6 +620,8 @@ fn TutorialTypes() -> impl IntoView {
         <p>"Characters in character or string literals can also be specified with 2 or 4 hex digits by using escape codes "<code>"\\x"</code>" and "<code>"\\u"</code>" respectively."</p>
         <Editor example="\"\\x41\\x42\\x43\""/>
         <Editor example="@\\u2665"/>
+        <p>"Longer (or shorter) sequences can be specified between "<code>"{}"</code>"s after a "<code>"\\u"</code>"."</p>
+        <Editor example="@\\u{1f600}"/>
         <br/>
 
         <h2 id="character-arithmetic">"Character Arithmetic"</h2>

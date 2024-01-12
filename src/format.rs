@@ -896,7 +896,7 @@ impl<'a> Formatter<'a> {
             self.format_words(line, true, depth);
         }
         if !compact {
-            if prevent_compact && start_line_pos > 0 {
+            if prevent_compact && start_line_pos > 0 && !self.output.ends_with('\n') {
                 self.output.push('\n');
             }
             for _ in 0..self.config.multiline_indent * depth.saturating_sub(1) {

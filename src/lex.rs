@@ -929,11 +929,30 @@ impl<'a> Lexer<'a> {
                 }
                 "u" => {
                     let mut code = 0;
-                    for _ in 0..4 {
-                        let c = self
-                            .next_char_if_all(|c| c.is_ascii_hexdigit())
-                            .ok_or("u")?;
-                        code = code << 4 | c.chars().next().unwrap().to_digit(16).unwrap();
+                    match self.peek_char().ok_or("u")? {
+                        "{" => {
+                            self.next_char_if(|c| c == "{").ok_or("u")?;
+                            for _ in 0..7 {
+                                match self
+                                    .next_char_if_all(|c| c.is_ascii_hexdigit() || c == '}')
+                                    .ok_or("u")?
+                                {
+                                    "}" => break,
+                                    c => {
+                                        code = code << 4
+                                            | c.chars().next().unwrap().to_digit(16).unwrap()
+                                    }
+                                }
+                            }
+                        }
+                        _ => {
+                            for _ in 0..4 {
+                                let c = self
+                                    .next_char_if_all(|c| c.is_ascii_hexdigit())
+                                    .ok_or("u")?;
+                                code = code << 4 | c.chars().next().unwrap().to_digit(16).unwrap();
+                            }
+                        }
                     }
                     std::char::from_u32(code).ok_or("u")?.into()
                 }

@@ -435,23 +435,15 @@ impl Value {
         if self.rank() == 0 {
             return Err(env.error("Cannot invert scalar keep"));
         }
-        Ok(match (kept, into) {
-            (Value::Num(a), Value::Num(b)) => a.unkeep(&counts, b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Byte(b)) => a.unkeep(&counts, b, env)?.into(),
-            (Value::Char(a), Value::Char(b)) => a.unkeep(&counts, b, env)?.into(),
-            (Value::Box(a), Value::Box(b)) => a.unkeep(&counts, b, env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Num(a), Value::Byte(b)) => a.unkeep(&counts, b.convert(), env)?.into(),
-            #[cfg(feature = "bytes")]
-            (Value::Byte(a), Value::Num(b)) => a.convert().unkeep(&counts, b, env)?.into(),
-            (a, b) => a.bin_coerce_to_boxes(
-                b,
-                env,
-                |a, b, env| Ok(a.unkeep(&counts, b, env)?.into()),
-                |a, b| format!("Cannot unkeep {a} array with {b} array"),
-            )?,
-        })
+        kept.generic_bin_into(
+            into,
+            |a, b| a.unkeep(&counts, b, env).map(Into::into),
+            |a, b| a.unkeep(&counts, b, env).map(Into::into),
+            |a, b| a.unkeep(&counts, b, env).map(Into::into),
+            |a, b| a.unkeep(&counts, b, env).map(Into::into),
+            |a, b| a.unkeep(&counts, b, env).map(Into::into),
+            |a, b| env.error(format!("Cannot unkeep {a} array with {b} array")),
+        )
     }
 }
 

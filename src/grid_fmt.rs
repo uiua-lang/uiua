@@ -72,9 +72,15 @@ impl GridFmt for Complex {
         if self.im == 0.0 {
             self.re.fmt_grid(boxed)
         } else if self.re == 0.0 {
-            let mut grid = self.im.fmt_grid(boxed);
-            grid[0].push('i');
-            grid
+            if self.im == 1.0 {
+                vec![boxed_scalar(boxed).chain(['i']).collect()]
+            } else if self.im == -1.0 {
+                vec![boxed_scalar(boxed).chain(['-', 'i']).collect()]
+            } else {
+                let mut grid = self.im.fmt_grid(boxed);
+                grid[0].push('i');
+                grid
+            }
         } else {
             let mut re = self.re.fmt_grid(boxed);
             let im = if self.im.abs() == 1.0 {

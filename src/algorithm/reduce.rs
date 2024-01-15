@@ -328,12 +328,7 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
         acc = env.pop("scanned function result")?;
         scanned.push(acc.clone());
     }
-    let val = if rows.len() == 0 {
-        Value::from_row_values(scanned, env)?
-    } else {
-        let rows: Vec<Value> = scanned.into_iter().chain(rows).collect();
-        Value::from_row_values(rows, env)?
-    };
+    let val = Value::from_row_values(scanned, env)?;
     env.push(val);
     Ok(())
 }

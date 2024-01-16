@@ -453,7 +453,14 @@ impl<'a> Formatter<'a> {
                     line.push_str(&comment);
                 }
             }
-            self.output = lines.join("\n");
+            let mut new_output = String::new();
+            for (i, line) in lines.into_iter().enumerate() {
+                if i > 0 && !new_output.ends_with('\n') {
+                    new_output.push('\n');
+                }
+                new_output.push_str(&line);
+            }
+            self.output = new_output;
         }
     }
     fn format_item(&mut self, item: &Item) {

@@ -4,7 +4,7 @@ name = "site"
 version = "0.1.0"
 
 [dependencies]
-base64 = "0.21.5"
+base64 = "0.21.7"
 comrak = "0.20.0"
 console_error_panic_hook = "0.1.7"
 enum-iterator = "1.4.1"

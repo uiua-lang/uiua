@@ -9,7 +9,7 @@ comrak = "0.20.0"
 console_error_panic_hook = "0.1.7"
 enum-iterator = "1.4.1"
 hound = "3.5.1"
-image = "0.24.5"
+image = "0.24.8"
 instant = {version = "0.1.12", features = ['wasm-bindgen']}
 js-sys = "0.3"
 leptos = "0.5.0"

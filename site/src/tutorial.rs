@@ -20,6 +20,7 @@ pub enum TutorialPage {
     Inverses,
     ControlFlow,
     AdvancedArray,
+    ThinkingWithArrays,
     CustomModifiers,
     Modules,
     Testing,
@@ -41,6 +42,7 @@ impl TutorialPage {
             Self::Inverses => "Inverses",
             Self::ControlFlow => "Control Flow",
             Self::AdvancedArray => "Advanced Array Manipulation",
+            Self::ThinkingWithArrays => "Thinking With Arrays",
             Self::CustomModifiers => "Custom Modifiers",
             Self::Modules => "Modules",
             Self::Testing => "Testing",
@@ -61,6 +63,7 @@ pub fn Tutorial(page: TutorialPage) -> impl IntoView {
         TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
         TutorialPage::Inverses => TutorialInverses().into_view(),
         TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
+        TutorialPage::ThinkingWithArrays => TutorialThinkingWithArrays().into_view(),
         TutorialPage::CustomModifiers => TutorialCustomModifiers().into_view(),
         TutorialPage::Modules => TutorialModules().into_view(),
         TutorialPage::Testing => TutorialTesting().into_view(),
@@ -1228,6 +1231,38 @@ fn TutorialAdvancedArray() -> impl IntoView {
 }
 
 #[component]
+fn TutorialThinkingWithArrays() -> impl IntoView {
+    use Primitive::*;
+    view! {
+        <Title text="Thinking with Arrays - Uiua Docs"/>
+        <p>"So far, we've covered the mechanics of working with arrays in Uiua. However, if you are new to the array paradigm, it may not be clear how to use arrays to solve problems."</p>
+
+        <h2 id="masks-and-keep">"Masks and "<Prim prim=Keep/></h2>
+        <p>"Many languages have some sort of "<code>"filter"</code>" function that takes a predicate and a list and returns a list of all the elements that satisfy the predicate. In array languages, we take a different approach."</p>
+        <p>"First, we create a "<em>"mask"</em>" array. A mask array is an array of 0s and 1s where 1s represent the riws that satisfy the predicate. For pervasive functions, this is extremely simple."</p>
+        <p>"For example, if we wanted to create a mask of all numbers greater that 4, we simply treat the whole array as a single unit."</p>
+        <Editor example=">4. [2 8 3 9 1 7 2]"/>
+        <p>"The "<Prim prim=Keep/>" function takes a mask array and an array and returns an array of all the rows that have a 1 in the mask. This is essentially a filter."</p>
+        <Editor example="▽ >4. [2 8 3 9 1 7 2]"/>
+        <p><Prim prim=Keep/>" also works with "<Prim prim=Under/>" so that you can modify the rows that have a 1 in the mask."</p>
+        <Editor example="⍜▽(×10) >4. [2 8 3 9 1 7 2]"/>
+        <p><Prim prim=Keep/>" has a few other use cases with non-masks. See its documentation for more."</p>
+
+        <h2 id="where"><Prim prim=Where/></h2>
+        <p>"The "<Prim prim=Where/>" function converts a mask array into an array of indices where the mask is 1."</p>
+        <Editor example="⊚ >4. [2 8 3 9 1 7 2]"/>
+        <p>"This works with multi-dimensional arrays as well."</p>
+        <Editor example="⊚. >4. [2_8_3 9_1_7]"/>
+        <p><Prim prim=Un/><Prim prim=Where/>" converts an array of indices into a mask array."</p>
+        <Editor example="°⊚ [3 9 5 8]"/>
+        <Editor example="°⊚ [1_2 3_4]"/>
+        <p><Prim prim=Pick/><Prim prim=Where/>" is equivalent to "<Prim prim=Keep/>" (at least for boolean predicates)."</p>
+        <Editor example="⊡⊚ =0⊿2. [2 8 3 9 1 7 2]"/>
+        <Editor example="▽  =0⊿2. [2 8 3 9 1 7 2]"/>
+    }
+}
+
+#[component]
 fn TutorialCustomModifiers() -> impl IntoView {
     use Primitive::*;
     view! {
@@ -1291,8 +1326,6 @@ fn EndOfTutorialList() -> impl IntoView {
             <li>
                 "Some important functions that were not covered:"
                 <ul>
-                    <li><Prim prim=Keep/></li>
-                    <li><Prim prim=Where/></li>
                     <li><Prim prim=Partition/></li>
                     <li><Prim prim=Fold/></li>
                 </ul>

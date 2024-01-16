@@ -54,11 +54,11 @@ f "LVII"
 f "MCMXCIV""#;
 const MANDELBROT: &str = "\
 ×2 ⊞ℂ∶-1/4. ÷⊙-⊃⊃∘(÷2)⇡ 300 # Init
->2 ⌵ ⊙;⍥⊃(+×.)⋅∘ 50 0       # Run";
+>2 ⌵ ⊙◌⍥⊃(+×.)⋅∘ 50 0       # Run";
 const LIFE: &str = "\
 Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3¤.
 ⁅×0.6∵⋅⚂↯⊟.30 0       # Init
-⇌;⍥(⊃∘⊂Life)100⊃∘(↯1) # Run
+⇌◌⍥(⊃∘⊂Life)100⊃∘(↯1) # Run
 ≡(▽↯⧻,:⍉▽↯⧻,,:5)    # Upscale";
 
 pub const EXAMPLES: &[&str] = &[

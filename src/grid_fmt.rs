@@ -230,7 +230,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 .iter_mut()
                 .flat_map(|row| row.get(col)?.iter().map(|cell| cell.len()).max())
                 .max()
-                .unwrap();
+                .unwrap_or(0);
             column_widths[col] = max_col_width;
         }
         // Pad each metagrid cell to its row's max height and column's max width

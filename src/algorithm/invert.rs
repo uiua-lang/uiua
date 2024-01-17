@@ -837,89 +837,55 @@ fn under_rows_pattern<'a>(
     Some((input, (befores, afters)))
 }
 
-fn under_partition_pattern<'a>(
-    input: &'a [Instr],
-    g_sig: Signature,
-    comp: &mut Compiler,
-) -> Option<(&'a [Instr], Under)> {
-    let &[Instr::PushFunc(ref f), Instr::Prim(Primitive::Partition, span), ref input @ ..] = input
-    else {
-        return None;
+macro_rules! partition_group {
+    ($name:ident, $prim:ident, $impl_prim:ident) => {
+        fn $name<'a>(
+            input: &'a [Instr],
+            g_sig: Signature,
+            comp: &mut Compiler,
+        ) -> Option<(&'a [Instr], Under)> {
+            let &[Instr::PushFunc(ref f), Instr::Prim(Primitive::$prim, span), ref input @ ..] =
+                input
+            else {
+                return None;
+            };
+            let instrs = f.instrs(comp).to_vec();
+            let (f_before, f_after) = under_instrs(&instrs, g_sig, comp)?;
+            let befores = eco_vec![
+                Instr::CopyToTemp {
+                    stack: TempStack::Under,
+                    count: 2,
+                    span,
+                },
+                Instr::PushFunc(make_fn(f_before, span, comp)?),
+                Instr::Prim(Primitive::$prim, span),
+            ];
+            let afters = eco_vec![
+                Instr::PushTemp {
+                    stack: TempStack::Inline,
+                    count: 1,
+                    span
+                },
+                Instr::PopTemp {
+                    stack: TempStack::Under,
+                    count: 2,
+                    span
+                },
+                Instr::PopTemp {
+                    stack: TempStack::Inline,
+                    count: 1,
+                    span
+                },
+                Instr::PushFunc(make_fn(f_after, span, comp)?),
+                Instr::ImplPrim(ImplPrimitive::$impl_prim, span),
+            ];
+            Some((input, (befores, afters)))
+        }
     };
-    let instrs = f.instrs(comp).to_vec();
-    let (f_before, f_after) = under_instrs(&instrs, g_sig, comp)?;
-    let befores = eco_vec![
-        Instr::CopyToTemp {
-            stack: TempStack::Under,
-            count: 2,
-            span,
-        },
-        Instr::PushFunc(make_fn(f_before, span, comp)?),
-        Instr::Prim(Primitive::Partition, span),
-    ];
-    let afters = eco_vec![
-        Instr::PushTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            span
-        },
-        Instr::PopTemp {
-            stack: TempStack::Under,
-            count: 2,
-            span
-        },
-        Instr::PopTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            span
-        },
-        Instr::PushFunc(make_fn(f_after, span, comp)?),
-        Instr::ImplPrim(ImplPrimitive::Unpartition, span),
-    ];
-    Some((input, (befores, afters)))
 }
 
-fn under_group_pattern<'a>(
-    input: &'a [Instr],
-    g_sig: Signature,
-    comp: &mut Compiler,
-) -> Option<(&'a [Instr], Under)> {
-    let &[Instr::PushFunc(ref f), Instr::Prim(Primitive::Group, span), ref input @ ..] = input
-    else {
-        return None;
-    };
-    let instrs = f.instrs(comp).to_vec();
-    let (f_before, f_after) = under_instrs(&instrs, g_sig, comp)?;
-    let befores = eco_vec![
-        Instr::CopyToTemp {
-            stack: TempStack::Under,
-            count: 2,
-            span,
-        },
-        Instr::PushFunc(make_fn(f_before, span, comp)?),
-        Instr::Prim(Primitive::Group, span),
-    ];
-    let afters = eco_vec![
-        Instr::PushTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            span
-        },
-        Instr::PopTemp {
-            stack: TempStack::Under,
-            count: 2,
-            span
-        },
-        Instr::PopTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            span
-        },
-        Instr::PushFunc(make_fn(f_after, span, comp)?),
-        Instr::ImplPrim(ImplPrimitive::Ungroup, span),
-    ];
-    Some((input, (befores, afters)))
-}
+partition_group!(under_partition_pattern, Partition, Unpartition);
+partition_group!(under_group_pattern, Group, Ungroup);
 
 fn try_array_wrap<'a>(
     input: &'a [Instr],

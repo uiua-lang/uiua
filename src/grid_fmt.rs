@@ -47,8 +47,9 @@ impl GridFmt for u8 {
 
 impl GridFmt for f64 {
     fn fmt_grid(&self, boxed: bool) -> Grid {
+        let round_to = 3.0 * f64::EPSILON;
         let positive = self.abs();
-        let minus = if *self < -0.0 { "¯" } else { "" };
+        let minus = if *self < -round_to { "¯" } else { "" };
         let s = if (positive - PI).abs() < f64::EPSILON {
             format!("{minus}π")
         } else if (positive - TAU).abs() < f64::EPSILON {
@@ -60,6 +61,8 @@ impl GridFmt for f64 {
         } else if self.to_bits() == EMPTY_NAN.to_bits() || self.to_bits() == TOMBSTONE_NAN.to_bits()
         {
             return vec![vec!['⋅']];
+        } else if positive.fract() < round_to || 1.0 - positive.fract() < round_to {
+            format!("{minus}{positive:.0}")
         } else {
             format!("{minus}{positive}")
         };

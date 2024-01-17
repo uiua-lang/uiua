@@ -289,7 +289,7 @@ sys_op! {
     (2(0), FWriteAll, Filesystem, "&fwa", "file - write all"),
     /// Decode an image from a byte array
     ///
-    /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
+    /// Supported formats are `jpg`, `png`, `bmp`, `gif`, `ico`, and `qoi`.
     ///
     /// See also: [&ime]
     (1, ImDecode, Images, "&imd", "image - decode"),
@@ -307,7 +307,7 @@ sys_op! {
     /// A length 3 last axis is an RGB image.
     /// A length 4 last axis is an RGB image with an alpha channel.
     ///
-    /// Supported formats are `jpg`, `png`, `bmp`, `gif`, and `ico`.
+    /// Supported formats are `jpg`, `png`, `bmp`, `gif`, `ico`, and `qoi`.
     ///
     /// See also: [&ims] [&imd]
     (2, ImEncode, Images, "&ime", "image - encode"),
@@ -1102,6 +1102,7 @@ impl SysOp {
                         "bmp" => ImageOutputFormat::Bmp,
                         "gif" => ImageOutputFormat::Gif,
                         "ico" => ImageOutputFormat::Ico,
+                        "qoi" => ImageOutputFormat::Qoi,
                         format => {
                             return Err(env.error(format!("Invalid image format: {}", format)))
                         }

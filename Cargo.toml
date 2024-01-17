@@ -68,7 +68,7 @@ serde_yaml = {version = "0.9.30", optional = true}
 # Feature dependencies
 gif = {version = "0.12.0", optional = true}
 hound = {version = "3", optional = true}
-image = {version = "0.24.8", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png"]}
+image = {version = "0.24.8", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "qoi"]}
 regex = {version = "1.10.2", optional = true}
 
 [features]

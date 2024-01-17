@@ -1256,9 +1256,9 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
         <p><Prim prim=Un/><Prim prim=Where/>" converts an array of indices into a mask array."</p>
         <Editor example="°⊚ [3 9 5 8]"/>
         <Editor example="°⊚ [1_2 3_4]"/>
-        <p><Prim prim=Pick/><Prim prim=Where/>" is equivalent to "<Prim prim=Keep/>" (at least for boolean predicates)."</p>
-        <Editor example="⊡⊚ =0⊿2. [2 8 3 9 1 7 2]"/>
-        <Editor example="▽  =0⊿2. [2 8 3 9 1 7 2]"/>
+        <p><Prim prim=Select/><Prim prim=Where/>" is equivalent to "<Prim prim=Keep/>" (at least for boolean predicates)."</p>
+        <Editor example="⊏⊚ =0◿2. [2 8 3 9 1 7 2]"/>
+        <Editor example="▽  =0◿2. [2 8 3 9 1 7 2]"/>
     }
 }
 

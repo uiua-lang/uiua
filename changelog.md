@@ -25,6 +25,8 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - The internal byte array type is now used in more places, which should improve performance a bit
 - Lots of bug and crash fixes
+### Website
+- Add a new tutorial: [Thinking With Arrays](https://uiua.org/docs/thinkingwitharrays)
 
 ## 0.7.1 - 2023-12-18
 ### Interpreter

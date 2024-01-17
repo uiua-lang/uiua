@@ -1235,22 +1235,24 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
     use Primitive::*;
     view! {
         <Title text="Thinking with Arrays - Uiua Docs"/>
+        <h1>"Thinking with Arrays"</h1>
         <p>"So far, we've covered the mechanics of working with arrays in Uiua. However, if you are new to the array paradigm, it may not be clear how to use arrays to solve problems."</p>
+        <p>"This section covers some of the common functions and modifiers that pop up when solving many different problems."</p>
 
         <h2 id="masks-and-keep">"Masks and "<Prim prim=Keep/></h2>
         <p>"Many languages have some sort of "<code>"filter"</code>" function that takes a predicate and a list and returns a list of all the elements that satisfy the predicate. In array languages, we take a different approach."</p>
-        <p>"First, we create a "<em>"mask"</em>" array. A mask array is an array of 0s and 1s where 1s represent the riws that satisfy the predicate. For pervasive functions, this is extremely simple."</p>
+        <p>"First, we create a "<em>"mask"</em>" array. A mask array is an array of "<code>"0"</code>"s and "<code>"1"</code>"s where "<code>"1"</code>"s represent the riws that satisfy the predicate. For pervasive functions, this is extremely simple."</p>
         <p>"For example, if we wanted to create a mask of all numbers greater that 4, we simply treat the whole array as a single unit."</p>
         <Editor example=">4. [2 8 3 9 1 7 2]"/>
-        <p>"The "<Prim prim=Keep/>" function takes a mask array and an array and returns an array of all the rows that have a 1 in the mask. This is essentially a filter."</p>
+        <p>"The "<Prim prim=Keep/>" function takes a mask array and an array and returns an array of all the rows that have a "<code>"1"</code>" in the mask. This is essentially a filter."</p>
         <Editor example="▽ >4. [2 8 3 9 1 7 2]"/>
-        <p><Prim prim=Keep/>" also works with "<Prim prim=Under/>" so that you can modify the rows that have a 1 in the mask."</p>
+        <p><Prim prim=Keep/>" also works with "<Prim prim=Under/>" so that you can modify the rows that have a "<code>"1"</code>" in the mask."</p>
         <Editor example="⍜▽(×10) >4. [2 8 3 9 1 7 2]"/>
         <p><Prim prim=Keep/>" has a few other use cases with non-masks. See its documentation for more."</p>
 
         <h2 id="where"><Prim prim=Where/></h2>
-        <p>"The "<Prim prim=Where/>" function converts a mask array into an array of indices where the mask is 1."</p>
-        <Editor example="⊚ >4. [2 8 3 9 1 7 2]"/>
+        <p>"The "<Prim prim=Where/>" function converts a mask array into an array of indices where the mask is "<code>"1"</code>"."</p>
+        <Editor example="⊚. >4. [2 8 3 9 1 7 2]"/>
         <p>"This works with multi-dimensional arrays as well."</p>
         <Editor example="⊚. >4. [2_8_3 9_1_7]"/>
         <p><Prim prim=Un/><Prim prim=Where/>" converts an array of indices into a mask array."</p>
@@ -1259,6 +1261,78 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
         <p><Prim prim=Select/><Prim prim=Where/>" is equivalent to "<Prim prim=Keep/>" (at least for boolean predicates)."</p>
         <Editor example="⊏⊚ =0◿2. [2 8 3 9 1 7 2]"/>
         <Editor example="▽  =0◿2. [2 8 3 9 1 7 2]"/>
+
+        <h2 id="scan"><Prim prim=Scan/></h2>
+        <p>"The "<Prim prim=Scan/>" modifier is similar to "<Prim prim=Reduce/>", but it returns an array of all the intermediate results."</p>
+        <Editor example="/+ [1 2 3 4]\n\\+ [1 2 3 4]"/>
+        <p>"This can be useful when used on a mask."</p>
+        <p>"For example, if we wanted to get the first word of a string, we could start my creating a mask of all the non-space characters."</p>
+        <p>"Then we can use "<Prim prim=Scan/><Prim prim=Mul/>" to zero the mask after the first word."</p>
+        <p>"Finally, we can use "<Prim prim=Keep/>" to apply the mask and get the first word."</p>
+        <p>"Use the arrows to see how the mask changes."</p>
+        <Editor example=r#"▽ \× ≠@ . "What's the first word?""#/>
+
+        <h2 id="fill"><Prim prim=Fill/></h2>
+        <p>"Recall that the "<Prim prim=Fill/>" modifier sets a \"fill value\" that can be used by certain functions."</p>
+        <p>"One common use is to set a default value that will be used when the shapes of arrays do not match."</p>
+        <Editor example="⬚0+ 10_20 3_4_5_6"/>
+        <p>"For example, if you wanted to logical OR two masks with different shapes, you could use "<Prim prim=Fill/>" with a different fill value depending on what you want to do when the mismatched parts."</p>
+        <Editor example="⬚0↥ 1_0_0_1_0 0_1_0\n⬚1↥ 1_0_0_1_0 0_1_0"/>
+        <p>"Another interesting use is a "<Prim prim=Fill/>"ed "<Prim prim=Rotate/>". Instead of wrapping values around, it fills in one side of the array with the fill value."</p>
+        <Editor example="  ↻¯2 [1 2 3 4 5]\n⬚0↻¯2 [1 2 3 4 5]"/>
+
+        <h2 id="partition"><Prim prim=Partition/></h2>
+        <p><Prim prim=Partition/>" is a powerful modifier that splits up an array based on a list of consecutive keys. Before explaining it further, let's look at a simple example of a very common use case: splitting a string into words."</p>
+        <Editor example=r#"⊜□ ≠@ . "Look at that!""#/>
+        <p>"First, we create a mask of all the non-space characters. Then, "<Prim prim=Partition/>" calls "<Prim prim=Box/>" on each section of the string that corresponds to a run of "<code>"1"</code>"s in the mask."</p>
+        <p>"Here is another example using "<Prim prim=Partition/><Prim prim=Box/>" with the inputs explicitly defined."</p>
+        <Editor example="[1 2 3 4 5 6 7 8]\n[1 1 0 5 6 6 0 1]\n⊜□"/>
+        <p>"Notice that "<code>"0"</code>"s in the keys array cause the corresponding sections of the input array to be skipped."</p>
+        <p>"We use "<Prim prim=Box/>" here because the resulting sections have different lengths. If we expect the sections to have the same lengths, we can use "<Prim prim=Identity/>" instead."</p>
+        <Editor example="[1 2 3 4 5 6 7 8]\n[1 1 2 2 0 0 3 3]\n⊜∘"/>
+        <p>"A hint for one of the challenges below: "<Prim prim=Partition/>" works with "<Prim prim=Under/>"!"</p>
+
+        <h2 id="challenges">"Challenges"</h2>
+
+        <Challenge
+            number=1
+            prompt="negates each number in an list that is not a multiple of 3"
+            example="[1 2 3 4 5 6 7 8 9]"
+            answer="⍜▽¯ ≠0◿3."
+            tests={&["[3 0 1 8]", "[3 6 9 12 15 18 21 25 27]"]}
+            hidden="[3 6 9 4]"/>
+
+        <Challenge
+            number=2
+            prompt="returns the last word of a string"
+            example=r#""What's the last word?""#
+            answer=r#"▽ ⍜⇌\× ≠@ ."#
+            tests={&[r#""Um, I um, arrays""#, r#""I like trains""#]}
+            hidden=r#"Wow"#/>
+
+        <Challenge
+            number=3
+            prompt="multiplies by 10 each number that comes after a multiple of 3 (the first number is never multiplied)"
+            example="[1 2 3 4 5 6 7]"
+            answer="⍜▽(×10) ⬚0↻¯1 =0◿3."
+            tests={&["[2 9 3 8 7 1]", "[3 3 3 3]"]}
+            hidden="[]"/>
+
+        <Challenge
+            number=4
+            prompt="given a matrix of 0s an 1s, only keeps the 1s that have even x and y coordinates"
+            example="[1_1_0 0_1_1 0_1_1]"
+            answer="⬚0×°⊚▽≡/×=0◿2.⊚."
+            tests={&["↯3_4 1_0_1", "↯4_4 1_0_0_1_0"]}
+            hidden="[1_1 1_1]"/>
+
+        <Challenge
+            number=5
+            prompt="reverses each word in a string but keeps the words in the same order"
+            example=r#""get in the racecar""#
+            answer="⍜⊜□≡⇌ ≠@ ."
+            tests={&[r#""arrays are neat""#, r#""wow mom""#]}
+            hidden=r#""Wow, mom!""#/>
     }
 }
 
@@ -1320,16 +1394,8 @@ ReduceAll!+[1_2_3 4_5_6]"/>
 
 #[component]
 fn EndOfTutorialList() -> impl IntoView {
-    use Primitive::*;
     view! {
         <ul>
-            <li>
-                "Some important functions that were not covered:"
-                <ul>
-                    <li><Prim prim=Partition/></li>
-                    <li><Prim prim=Fold/></li>
-                </ul>
-            </li>
             <li><A href="/docs#functions">"The list of all functions"</A></li>
             <li><A href="/docs#other-docs">"Other language topics"</A></li>
             <li>"The online "<A href="/pad">"pad"</A>" for writing longer code"</li>

@@ -282,7 +282,7 @@ pub(crate) fn under_instrs(
         &pat!(
             Deshape,
             (Dup, Shape, PushTempN(1), Deshape),
-            (PopTempN(1), Reshape),
+            (PopTempN(1), 0, Unrerank),
         ),
         &pat!(
             Rerank,

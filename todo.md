@@ -2,8 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Change `pop`s glyph to `◌`
-- Use unrerank for undeshape
 - Multimedia
   - Sound input
   - Webcam input

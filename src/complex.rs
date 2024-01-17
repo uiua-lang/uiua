@@ -324,8 +324,8 @@ impl Rem for Complex {
     type Output = Self;
     fn rem(self, rhs: Self) -> Self::Output {
         Self {
-            re: self.re % rhs.re,
-            im: self.im % rhs.im,
+            re: self.re.rem_euclid(rhs.re),
+            im: self.im.rem_euclid(rhs.im),
         }
     }
 }
@@ -334,8 +334,8 @@ impl Rem<f64> for Complex {
     type Output = Self;
     fn rem(self, rhs: f64) -> Self::Output {
         Self {
-            re: self.re % rhs,
-            im: self.im % rhs,
+            re: self.re.rem_euclid(rhs),
+            im: self.im.rem_euclid(rhs),
         }
     }
 }

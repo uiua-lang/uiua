@@ -1241,7 +1241,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
 
         <h2 id="masks-and-keep">"Masks and "<Prim prim=Keep/></h2>
         <p>"Many languages have some sort of "<code>"filter"</code>" function that takes a predicate and a list and returns a list of all the elements that satisfy the predicate. In array languages, we take a different approach."</p>
-        <p>"First, we create a "<em>"mask"</em>" array. A mask array is an array of "<code>"0"</code>"s and "<code>"1"</code>"s where "<code>"1"</code>"s represent the riws that satisfy the predicate. For pervasive functions, this is extremely simple."</p>
+        <p>"First, we create a "<em>"mask"</em>" array. A mask array is an array of "<code>"0"</code>"s and "<code>"1"</code>"s where "<code>"1"</code>"s represent the rows that satisfy the predicate. For pervasive functions, this is extremely simple."</p>
         <p>"For example, if we wanted to create a mask of all numbers greater that 4, we simply treat the whole array as a single unit."</p>
         <Editor example=">4. [2 8 3 9 1 7 2]"/>
         <p>"The "<Prim prim=Keep/>" function takes a mask array and an array and returns an array of all the rows that have a "<code>"1"</code>" in the mask. This is essentially a filter."</p>

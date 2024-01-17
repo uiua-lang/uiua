@@ -1266,7 +1266,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
         <p>"The "<Prim prim=Scan/>" modifier is similar to "<Prim prim=Reduce/>", but it returns an array of all the intermediate results."</p>
         <Editor example="/+ [1 2 3 4]\n\\+ [1 2 3 4]"/>
         <p>"This can be useful when used on a mask."</p>
-        <p>"For example, if we wanted to get the first word of a string, we could start my creating a mask of all the non-space characters."</p>
+        <p>"For example, if we wanted to get the first word of a string, we could start by creating a mask of all the non-space characters."</p>
         <p>"Then we can use "<Prim prim=Scan/><Prim prim=Mul/>" to zero the mask after the first word."</p>
         <p>"Finally, we can use "<Prim prim=Keep/>" to apply the mask and get the first word."</p>
         <p>"Use the arrows to see how the mask changes."</p>

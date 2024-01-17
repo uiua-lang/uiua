@@ -25,7 +25,7 @@ jobs:
     - name: Run interpreter tests
       run: cargo test --lib
     - name: Check feature combinations
-      run: cargo run ./features.ua
+      run: cargo run ./.github/features.ua
     - name: Run site tests
       run: cargo test -p site 
     - name: Check site

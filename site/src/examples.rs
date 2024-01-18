@@ -22,7 +22,7 @@ pub const LOGO: &str = "\
 Xy ← °⍉⊞⊟. ÷÷2: -÷2,⇡.200
 Rgb ← [:°⊟×.Xy ↯△⊢Xy0.5]
 u ← ↥<0.2:>0.7.+×2 ×.:°⊟Xy
-c ← <:⍜°√/+ Xy
+c ← <:⌵/ℂ Xy
 ⍉⊂:-¬u c1 +0.1 ↧¤c0.95Rgb";
 const CHORD: &str = "\
 [0 4 7 10]       # Notes

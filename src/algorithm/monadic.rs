@@ -555,6 +555,17 @@ impl Value {
             Array::deduplicate,
         )
     }
+    /// Mask the `unique` rows of the value
+    pub fn unique(&self) -> Self {
+        self.generic_ref_deep(
+            Array::unique,
+            Array::unique,
+            Array::unique,
+            Array::unique,
+            Array::unique,
+        )
+        .into()
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -666,6 +677,21 @@ impl<T: ArrayValue> Array<T> {
         }
         self.data = deduped;
         self.shape[0] = new_len;
+    }
+    /// Mask the `unique` rows of the array
+    pub fn unique(&self) -> Array<u8> {
+        if self.rank() == 0 {
+            return 1u8.into();
+        }
+        let mut seen = HashSet::new();
+        let mut mask = eco_vec![0u8; self.row_count()];
+        let mask_slice = mask.make_mut();
+        for (i, row) in self.row_slices().enumerate() {
+            if seen.insert(ArrayCmpSlice(row)) {
+                mask_slice[i] = 1;
+            }
+        }
+        Array::new([self.row_count()], mask)
     }
 }
 

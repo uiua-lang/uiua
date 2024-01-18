@@ -96,7 +96,8 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         }
         NodeValue::Link(link) => {
             let text = leaf_text(node).unwrap_or_default();
-            if let Some(prim) = Primitive::from_name(&text) {
+            let name = text.split_whitespace().next().unwrap_or_default();
+            if let Some(prim) = Primitive::from_name(name) {
                 view!(<Prim prim=prim/>).into_view()
             } else {
                 view!(<a href={&link.url} title={&link.title}>{text}</a>).into_view()

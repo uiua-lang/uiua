@@ -234,14 +234,14 @@ sys_op! {
     ///
     /// The file can be read from with [&rs], [&rb], or [&ru].
     /// The file can be written to with [&w].
-    /// The file may not be written to until it is closed with [&cl].
+    /// In some cases, the file may not be actually written to until it is closed with [&cl].
     /// [under][&fo] calls [&cl] automatically.
     (1, FOpen, Filesystem, "&fo", "file - open"),
     /// Create a file and return a handle to it
     ///
     /// The file can be read from with [&rs], [&rb], or [&ru].
     /// The file can be written to with [&w].
-    /// The file may not be written to until it is closed with [&cl].
+    /// In some cases, the file may not be actually written to until it is closed with [&cl].
     /// [under][&fc] calls [&cl] automatically.
     (1, FCreate, Filesystem, "&fc", "file - create"),
     /// Delete a file or directory

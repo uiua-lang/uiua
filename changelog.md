@@ -6,8 +6,8 @@ Uiua is not yet stable.
 ## 0.8.0 - 2024-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
-- Add the [`unique ◰`](https://uiua.org/docs/unique) function, which creates a mask of the first occurrence of each unique value in an array
-  - Change [`deduplicate ◴`](https://uiua.org/docs/deduplicate)'s glyph to reflect its relationship with [`unique ◰`](https://uiua.org/docs/unique). Code using `⊖` will continue to work and will be formatted as `◴`.
+- Add the [`unique` `◰`](https://uiua.org/docs/unique) function, which creates a mask of the first occurrence of each unique value in an array
+  - Change [`deduplicate` `◴`](https://uiua.org/docs/deduplicate)'s glyph to reflect its relationship with [`unique` `◰`](https://uiua.org/docs/unique). Code using `⊖` will continue to work and will be formatted as `◴`.
 - Add the experimental [`cascade` `⪾`](https://uiua.org/docs/cascade) modifier, which captures some common [`fork` `⊃`](https://uiua.org/docs/fork) patterns
 - [`table` `⊞`](https://uiua.org/docs/table) now works on rows of arrays but keeps it's optimizations for lists
   - You never wanted element-wise combinations of multi-dimensional arrays anyway

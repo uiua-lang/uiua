@@ -196,7 +196,7 @@ pub fn set_top_at_top(top_at_top: bool) {
 }
 
 pub fn get_font_name() -> String {
-    get_local_var("font-name", || "DejaVuSansMono".into())
+    get_local_var("font-name", || "Uiua386".into())
 }
 pub fn set_font_name(name: &str) {
     set_local_var("font-name", name);

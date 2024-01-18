@@ -691,7 +691,9 @@ impl<T: ArrayValue> Array<T> {
                 mask_slice[i] = 1;
             }
         }
-        Array::new([self.row_count()], mask)
+        let mut arr = Array::new([self.row_count()], mask);
+        arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+        arr
     }
 }
 
@@ -740,7 +742,7 @@ impl Array<f64> {
         }
         let mut new_data = EcoVec::from_elem(0, self.data.len() * max_bits);
         let new_data_slice = new_data.make_mut();
-        // Big endian
+        // LSB first
         for (i, n) in nats.into_iter().enumerate() {
             for j in 0..max_bits {
                 let index = i * max_bits + j;
@@ -782,7 +784,7 @@ impl Array<u8> {
         let bit_string_len = shape.pop().unwrap();
         let mut new_data = EcoVec::from_elem(0.0, self.data.len() / bit_string_len);
         let new_data_slice = new_data.make_mut();
-        // Big endian
+        // LSB first
         for (i, bits) in bools.chunks_exact(bit_string_len).enumerate() {
             let mut n: u128 = 0;
             for (j, b) in bits.iter().enumerate() {

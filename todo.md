@@ -2,8 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Add something like BQN's `mark firsts`
-  - Maybe deprecate `deduplicate`
 - Explore deprecating `keep` in favor of `select where`
   - Would need to make `under` work properly with it
 - Multimedia

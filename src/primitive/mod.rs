@@ -454,6 +454,7 @@ impl Primitive {
             Primitive::Where => env.monadic_ref_env(Value::wher)?,
             Primitive::Classify => env.monadic_ref_env(Value::classify)?,
             Primitive::Deduplicate => env.monadic_mut(Value::deduplicate)?,
+            Primitive::Unique => env.monadic_ref(Value::unique)?,
             Primitive::Member => env.dyadic_rr_env(Value::member)?,
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,

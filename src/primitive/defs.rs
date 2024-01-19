@@ -637,10 +637,21 @@ primitive!(
     (1, Classify, MonadicArray, ("classify", '⊛')),
     /// Remove duplicate elements from an array
     ///
-    /// ex: ⊝7_7_8_0_1_2_0
-    /// ex: ⊝"Hello, World!"
-    /// ex: ⊝[3_2 1_4 3_2 5_6 1_4 7_8]
-    (1, Deduplicate, MonadicArray, ("deduplicate", '⊝')),
+    /// ex: ◴ 7_7_8_0_1_2_0
+    /// ex: ◴ "Hello, World!"
+    /// ex: ◴ [3_2 1_4 3_2 5_6 1_4 7_8]
+    (1, Deduplicate, MonadicArray, ("deduplicate", '◴')),
+    /// Get a mask of first occurrences of items in an array
+    ///
+    /// ex: ◰ 7_7_8_0_1_2_0
+    /// ex: ◰ "Hello, World!"
+    /// ex: ◰ [3_2 1_4 3_2 5_6 1_4 7_8]
+    /// [keep][unique][duplicate] deduplicates an array and keeps the first occurrence of each element.
+    /// ex: ▽◰. 7_7_8_0_1_2_0
+    /// This can also be used to deduplicate by a certain property.
+    /// Here, we deduplicate by the [absolute value] of the elements.
+    /// ex: ▽◰⌵. [1 ¯2 ¯5 2 3 1 5]
+    (1, Unique, MonadicArray, ("unique", '◰')),
     /// Turn an array into a box
     ///
     /// This is Uiua's primary way to create nested or mixed-type arrays.
@@ -993,7 +1004,7 @@ primitive!(
     // ///   : ⊘ [1 1 2 2 3 3 4 4] [2 2 1 4 1 2 3 4]
     // ///
     // /// One use of this is to find the first occurence of each row.
-    // /// ex: > ⊃⊘⋅⧻ ⊃∘⊝ . [1 4 3 3 2 1 3 5 2 1]
+    // /// ex: > ⊃⊘⋅⧻ ⊃∘◴ . [1 4 3 3 2 1 3 5 2 1]
     // ///
     // /// The [progressive indexof] an array in itself is the [range][length] of the array.
     // /// ex: ⊘. [1 4 3 3 2 1 3 5 2 1]
@@ -1424,7 +1435,7 @@ primitive!(
     /// [fork] is one of the most important functions for working with the stack.
     /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding as to why.
     ///
-    /// ex: ⊃⇌⊝ 1_2_2_3
+    /// ex: ⊃⇌◴ 1_2_2_3
     /// [fork] can be chained to apply more functions to the arguments. `n` functions require the chaining of `subtract``1n` [fork].
     /// ex: [⊃⊃⊃+-×÷ 5 8]
     /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
@@ -1447,7 +1458,7 @@ primitive!(
     ([2], Cascade, Planet, ("cascade", '⪾')),
     /// Call two functions on two distinct sets of values
     ///
-    /// ex: ⊓⇌⊝ 1_2_3 [1 4 2 4 2]
+    /// ex: ⊓⇌◴ 1_2_3 [1 4 2 4 2]
     /// Each function will always be called on its own set of values.
     /// ex: ⊓+× 1 2 3 4
     /// The functions' signatures need not be the same.

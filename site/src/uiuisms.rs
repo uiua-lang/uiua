@@ -182,7 +182,7 @@ uiuisms!(
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
     /// Find the most common row in an array
-    r#"⊏⊢⍖°⊚⊛:⊝. "Hello World!""#,
+    r#"⊏⊢⍖°⊚⊛:◴. "Hello World!""#,
     /// Convert a string to uppercase
     r#"-×32×≥@a,≤@z. "These are Words""#,
     /// Convert a string to lowercase

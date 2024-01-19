@@ -1586,6 +1586,7 @@ impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::Char(c) if c.rank() < 2 => c.fmt(f),
+            Value::Box(arr) if arr.rank() == 0 => arr.fmt(f),
             value => value.grid_string().fmt(f),
         }
     }

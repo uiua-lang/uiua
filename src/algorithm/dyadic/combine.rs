@@ -110,6 +110,7 @@ impl Value {
             (Value::Byte(a), Value::Byte(b)) => op2_bytes_retry_fill::<_, C>(
                 a,
                 b,
+                ctx,
                 |a, b| Ok(a.join_impl(b, ctx)?.into()),
                 |a, b| Ok(a.join_impl(b, ctx)?.into()),
             )?,
@@ -152,6 +153,7 @@ impl Value {
                 *self = op2_bytes_retry_fill::<_, C>(
                     a.clone(),
                     b,
+                    ctx,
                     |mut a, b| {
                         a.append(b, ctx)?;
                         Ok(a.into())
@@ -361,6 +363,7 @@ impl Value {
                 *self = op2_bytes_retry_fill::<_, C>(
                     a.clone(),
                     b,
+                    ctx,
                     |mut a, b| {
                         a.couple_impl(b, ctx)?;
                         Ok(a.into())

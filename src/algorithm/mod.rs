@@ -427,13 +427,18 @@ fn op_bytes_ref_retry_fill<T>(
 fn op2_bytes_retry_fill<T, C: FillContext>(
     a: Array<u8>,
     b: Array<u8>,
+    ctx: &C,
     on_bytes: impl FnOnce(Array<u8>, Array<u8>) -> Result<T, C::Error>,
     on_nums: impl FnOnce(Array<f64>, Array<f64>) -> Result<T, C::Error>,
 ) -> Result<T, C::Error> {
-    match on_bytes(a.clone(), b.clone()) {
-        Ok(res) => Ok(res),
-        Err(err) if C::is_fill_error(&err) => on_nums(a.convert(), b.convert()),
-        Err(err) => Err(err),
+    if ctx.fill::<f64>().is_ok() {
+        match on_bytes(a.clone(), b.clone()) {
+            Ok(res) => Ok(res),
+            Err(err) if C::is_fill_error(&err) => on_nums(a.convert(), b.convert()),
+            Err(err) => Err(err),
+        }
+    } else {
+        on_bytes(a, b)
     }
 }
 

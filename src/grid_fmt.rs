@@ -62,7 +62,9 @@ impl GridFmt for f64 {
         } else if self.to_bits() == EMPTY_NAN.to_bits() || self.to_bits() == TOMBSTONE_NAN.to_bits()
         {
             return vec![vec!['⋅']];
-        } else if positive.fract() < ROUND_TO || 1.0 - positive.fract() < ROUND_TO {
+        } else if positive.fract() != 0.0 && positive.fract() < ROUND_TO
+            || 1.0 - positive.fract() < ROUND_TO
+        {
             format!("{minus}{positive:.0}")
         } else {
             format!("{minus}{positive}")

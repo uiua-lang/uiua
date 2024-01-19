@@ -1313,7 +1313,7 @@ primitive!(
     /// ex: [⊙⊙∘] 1 2 3
     /// ex: °[⊙⊙∘] [1 2 3]
     ///
-    /// `un``reduce``mul` finds the prime factors of a number. It also works with arrays, filling in the shape with `1`s.
+    /// `un``reduce``multiply` finds the prime factors of a number. It also works with arrays, filling in the shape with `1`s.
     /// ex: °/× 42
     /// ex: °/× +1⇡10
     ///

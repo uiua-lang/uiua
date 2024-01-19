@@ -1135,15 +1135,15 @@ impl Array<f64> {
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         let mut primes: Vec<Vec<u64>> = Vec::new();
         for &n in &self.data {
-            if n.fract() != 0.0 || n < 0.0 {
+            if n.fract() != 0.0 || n <= 0.0 {
                 return Err(env.error(format!(
-                    "Cannot get primes of non-natural number {}",
+                    "Cannot get primes of non-positive number {}",
                     n.grid_string()
                 )));
             }
             let mut m = n as u64;
-            if m < 2 {
-                primes.push(vec![m]);
+            if m == 1 {
+                primes.push(Vec::new());
                 continue;
             }
             let mut factors = Vec::new();

@@ -1313,6 +1313,10 @@ primitive!(
     /// ex: [⊙⊙∘] 1 2 3
     /// ex: °[⊙⊙∘] [1 2 3]
     ///
+    /// `un``reduce``mul` finds the prime factors of a number. It also works with arrays, filling in the shape with `1`s.
+    /// ex: °/× 42
+    /// ex: °/× +1⇡10
+    ///
     /// While more inverses exists, most of them are not useful on their own.
     /// [under] also uses inverses, but is more powerful.
     /// A function's inverse can be set with [setinv].
@@ -2005,6 +2009,7 @@ impl_primitive!(
     (1, InvTrace),
     (0, InvStack),
     (0[1], InvDump),
+    (1, Primes),
     // Unders
     (3, Unselect),
     (3, Unpick),

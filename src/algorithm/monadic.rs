@@ -1119,3 +1119,62 @@ impl<T: ArrayValue> Array<T> {
         Ok(index as f64)
     }
 }
+
+impl Value {
+    pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        match self {
+            Value::Num(n) => n.primes(env),
+            #[cfg(feature = "bytes")]
+            Value::Byte(b) => b.convert_ref::<f64>().primes(env),
+            value => Err(env.error(format!("Cannot get primes of {} array", value.type_name()))),
+        }
+    }
+}
+
+impl Array<f64> {
+    pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        let mut primes: Vec<Vec<u64>> = Vec::new();
+        for &n in &self.data {
+            if n.fract() != 0.0 || n < 0.0 {
+                return Err(env.error(format!(
+                    "Cannot get primes of non-natural number {}",
+                    n.grid_string()
+                )));
+            }
+            let mut m = n as u64;
+            if m < 2 {
+                primes.push(vec![m]);
+                continue;
+            }
+            let mut factors = Vec::new();
+            let mut i = 2;
+            while i * i <= m {
+                while m % i == 0 {
+                    factors.push(i);
+                    m /= i;
+                }
+                i += 1;
+            }
+            if m > 1 {
+                factors.push(m);
+            }
+            primes.push(factors);
+        }
+        let longest = primes.iter().map(Vec::len).max().unwrap_or(0);
+        for factors in &mut primes {
+            while factors.len() < longest {
+                factors.insert(0, 1);
+            }
+        }
+        let mut data = eco_vec![1.0; self.data.len() * longest];
+        let data_slice = data.make_mut();
+        for (i, factors) in primes.into_iter().enumerate() {
+            for (j, factor) in factors.into_iter().enumerate() {
+                data_slice[i + self.data.len() * j] = factor as f64;
+            }
+        }
+        let mut shape = self.shape.clone();
+        shape.insert(0, longest);
+        Ok(Array::new(shape, data))
+    }
+}

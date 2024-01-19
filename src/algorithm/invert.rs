@@ -102,6 +102,8 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         &invert_unpack_pattern,
         &invert_scan_pattern,
         &invert_repeat_pattern,
+        &invert_reduce_mul_pattern,
+        &invert_primes_pattern,
         &(Val, invert_repeat_pattern),
         &(Val, ([Rotate], [Neg, Rotate])),
         &([Rotate], [Neg, Rotate]),
@@ -1081,6 +1083,34 @@ fn under_repeat_pattern<'a>(
         }
         _ => return None,
     })
+}
+
+fn invert_reduce_mul_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::PushFunc(f), Instr::Prim(Primitive::Reduce, span), input @ ..] = input else {
+        return None;
+    };
+    let Some((Primitive::Mul, _)) = f.as_flipped_primitive(comp) else {
+        return None;
+    };
+    let instrs = eco_vec![Instr::ImplPrim(ImplPrimitive::Primes, *span)];
+    Some((input, instrs))
+}
+
+fn invert_primes_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::ImplPrim(ImplPrimitive::Primes, span), input @ ..] = input else {
+        return None;
+    };
+    let f = make_fn(eco_vec![Instr::Prim(Primitive::Mul, *span)], *span, comp)?;
+    Some((
+        input,
+        eco_vec![Instr::PushFunc(f), Instr::Prim(Primitive::Reduce, *span)],
+    ))
 }
 
 impl<A: InvertPattern, B: InvertPattern> InvertPattern for (A, B) {

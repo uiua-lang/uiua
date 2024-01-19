@@ -111,3 +111,7 @@ G ← setinvsetund("normal"|"do"|"undo")"inverse"
 ⍤⊃⋅∘≍ "normal" G
 ⍤⊃⋅∘≍ "inverse" °G
 ⍤⊃⋅∘≍ {"undo""do"} {⍜G∘}
+
+⍤⊃⋅∘≍ : ⍜°/×∘ . 70
+⍤⊃⋅∘≍ : ⍜°/×∘ . ⇡100
+⍤⊃⋅∘≍ : ⍜°/×∘ . ↯2_3_4⇡24

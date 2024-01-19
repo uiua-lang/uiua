@@ -692,6 +692,7 @@ code:
                 )
             })?
         };
+        let instrs = optimize_instrs(instrs, false);
         Ok((instrs, sig))
     }
     fn words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult {

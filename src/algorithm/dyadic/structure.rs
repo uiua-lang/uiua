@@ -481,17 +481,14 @@ impl<T: ArrayValue> Array<T> {
                 let row_count = self.row_count();
                 let abs_dropping = dropping.unsigned_abs();
                 self.data.modify(|data| {
-                    *data = if dropping >= 0 {
-                        take(data)
+                    if dropping >= 0 {
+                        *data = take(data)
                             .into_iter()
                             .skip(abs_dropping * row_len)
-                            .collect()
+                            .collect();
                     } else {
-                        take(data)
-                            .into_iter()
-                            .take((row_count.saturating_sub(abs_dropping)) * row_len)
-                            .collect()
-                    };
+                        data.truncate((row_count.saturating_sub(abs_dropping)) * row_len);
+                    }
                 });
                 if self.shape.is_empty() {
                     self.shape.push(1);

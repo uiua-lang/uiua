@@ -344,7 +344,7 @@ impl Value {
         unsafe { self.repr_mut() }.arr.reset_meta_flags()
     }
     pub(crate) fn validate_shape(&self) {
-        self.generic_ref_shallow(
+        self.generic_ref(
             Array::validate_shape,
             Array::validate_shape,
             Array::validate_shape,
@@ -354,7 +354,7 @@ impl Value {
     }
     /// Get the row at the given index
     pub fn row(&self, i: usize) -> Self {
-        self.generic_ref_shallow(
+        self.generic_ref(
             |arr| arr.row(i).into(),
             |arr| arr.row(i).into(),
             |arr| arr.row(i).into(),
@@ -362,7 +362,7 @@ impl Value {
             |arr| arr.row(i).into(),
         )
     }
-    pub(crate) fn generic_into_deep<T>(
+    pub(crate) fn generic_into<T>(
         self,
         n: impl FnOnce(Array<f64>) -> T,
         _b: impl FnOnce(Array<u8>) -> T,
@@ -376,13 +376,10 @@ impl Value {
             Self::Byte(array) => _b(array),
             Self::Complex(array) => _co(array),
             Self::Char(array) => ch(array),
-            Self::Box(array) => match array.into_unboxed() {
-                Ok(value) => value.generic_into_deep(n, _b, _co, ch, f),
-                Err(array) => f(array),
-            },
+            Self::Box(array) => f(array),
         }
     }
-    pub(crate) fn generic_ref_shallow<'a, T: 'a>(
+    pub(crate) fn generic_ref<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>) -> T,
         _b: impl FnOnce(&'a Array<u8>) -> T,
@@ -399,30 +396,7 @@ impl Value {
             Self::Box(array) => f(array),
         }
     }
-    pub(crate) fn generic_ref_deep<'a, T: 'a>(
-        &'a self,
-        n: impl FnOnce(&'a Array<f64>) -> T,
-        _b: impl FnOnce(&'a Array<u8>) -> T,
-        _co: impl FnOnce(&'a Array<Complex>) -> T,
-        ch: impl FnOnce(&'a Array<char>) -> T,
-        f: impl FnOnce(&'a Array<Boxed>) -> T,
-    ) -> T {
-        match self {
-            Self::Num(array) => n(array),
-            #[cfg(feature = "bytes")]
-            Self::Byte(array) => _b(array),
-            Self::Complex(array) => _co(array),
-            Self::Char(array) => ch(array),
-            Self::Box(array) => {
-                if let Some(bx) = array.as_scalar() {
-                    bx.as_value().generic_ref_deep(n, _b, _co, ch, f)
-                } else {
-                    f(array)
-                }
-            }
-        }
-    }
-    pub(crate) fn generic_ref_env_deep<'a, T: 'a>(
+    pub(crate) fn generic_ref_env<'a, T: 'a>(
         &'a self,
         n: impl FnOnce(&'a Array<f64>, &Uiua) -> UiuaResult<T>,
         b: impl FnOnce(&'a Array<u8>, &Uiua) -> UiuaResult<T>,
@@ -431,7 +405,7 @@ impl Value {
         f: impl FnOnce(&'a Array<Boxed>, &Uiua) -> UiuaResult<T>,
         env: &Uiua,
     ) -> UiuaResult<T> {
-        self.generic_ref_deep(
+        self.generic_ref(
             |a| n(a, env),
             |a| b(a, env),
             |a| co(a, env),
@@ -439,7 +413,7 @@ impl Value {
             |a| f(a, env),
         )
     }
-    pub(crate) fn generic_mut_deep<T>(
+    pub(crate) fn generic_mut<T>(
         &mut self,
         n: impl FnOnce(&mut Array<f64>) -> T,
         _b: impl FnOnce(&mut Array<u8>) -> T,
@@ -453,13 +427,7 @@ impl Value {
             Self::Byte(array) => _b(array),
             Self::Complex(array) => _co(array),
             Self::Char(array) => ch(array),
-            Self::Box(array) => {
-                if let Some(bx) = array.as_scalar_mut() {
-                    bx.as_value_mut().generic_mut_deep(n, _b, _co, ch, f)
-                } else {
-                    f(array)
-                }
-            }
+            Self::Box(array) => f(array),
         }
     }
     #[allow(clippy::too_many_arguments)]

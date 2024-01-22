@@ -475,17 +475,9 @@ impl Primitive {
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,
             Primitive::Fix => env.monadic_mut(Value::fix)?,
             Primitive::First => env.monadic_env(Value::first)?,
-            Primitive::Len => env.monadic_ref(|val| {
-                val.generic_ref_deep(
-                    Array::row_count,
-                    Array::row_count,
-                    Array::row_count,
-                    Array::row_count,
-                    Array::row_count,
-                )
-            })?,
+            Primitive::Len => env.monadic_ref(Value::row_count)?,
             Primitive::Shape => env.monadic_ref(|v| {
-                v.generic_ref_deep(
+                v.generic_ref(
                     Array::shape,
                     Array::shape,
                     Array::shape,

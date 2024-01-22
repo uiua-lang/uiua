@@ -300,7 +300,7 @@ impl<'a> Pair<'a> {
         self.keys.row_count()
     }
     fn hash_start(&self, key: &Value) -> usize {
-        key.generic_ref_shallow(
+        key.generic_ref(
             |arr| hash_start(arr, self.capacity()),
             |arr| hash_start(arr, self.capacity()),
             |arr| hash_start(arr, self.capacity()),

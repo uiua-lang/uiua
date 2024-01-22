@@ -491,20 +491,20 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example=r#"["Uiua" "APL" "J" "BQN" "K" "Q"]"#/>
         <Editor example=r#"{"Uiua" "APL" "J" "BQN" "K" "Q"}"#/>
         <p>"The "<code>"⌜⌟"</code>"s indicate that a string is "<Prim prim=Box/>"ed."</p>
-        <p>"Many simple functions will work on "<Prim prim=Box/>" elements without needing to use "<Prim prim=Un/><Prim prim=Box/>"."</p>
-        <Editor example=
-r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
-⧻⊢Langs
-+1Langs"#/>
-        <p>"However, more complex functions usually need both operands to be the same type, so you must either "<Prim prim=Un/><Prim prim=Box/>" the boxed elements or "<Prim prim=Box/>" the normal ones."</p>
-        <p>"For example, to check if a string is in the list with "<Prim prim=Member/>", you would need to "<Prim prim=Box/>" the string first."</p>
+        <p>"Non-pervasive functions often require "<Prim prim=Un/><Prim prim=Box/>"ing the arguments to get at the value you want."</p>
+        <p>"Consider these differences:"</p>
+        <Editor example="△    □[1 2 3]\n△ °□ □[1 2 3]"/>
+        <Editor example="⊂    □[1 2 3] □[4 5 6]\n⊂ °□ □[1 2 3] □[4 5 6]"/>
+        <p>"Additionally, functions that require their arguments to have matching types may require "<Prim prim=Box/>"ing an argument."</p>
+        <p>"For example, to check if a string is in a list of "<Prim prim=Box/>"ed strings with "<Prim prim=Member/>", you would need to "<Prim prim=Box/>" the string first."</p>
         <Editor example=
 r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 ∊ □"APL" Langs"#/>
         <p>"Pervasive functions work through boxes and preserve the maximum "<Prim prim=Box/>" depth of their arguments."</p>
         <Editor example="¯ 1\n¯ □1\n¯ □□1"/>
         <Editor example="+1 4\n+1 □4\n+1 □□4\n+□□1 □4"/>
-        <p>"There is an exception for comparison functions, which compare lexographically."</p>
+        <Editor example="×10 {1_2_3 4_5 6}"/>
+        <p>"There is an exception for comparison functions, which compare lexicographically."</p>
         <Editor example=r#"=  [1 2 3]  [1 2 5]
 = □[1 2 3] □[1 2 5]
 >  [1 2 3]  [1 2 5]
@@ -564,7 +564,7 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
             prompt="boxes two strings and puts them in an array"
             example="\"Hello\" \"World\""
             answer="⊟□:□:"
-            best_answer="⊟∩□"
+            best_answer="{⊙∘}"
             tests={&["\"ui\" \"ua\"", "\"dog\" \"cat\""]}
             hidden="\"a\" \"b\""/>
     }
@@ -1330,7 +1330,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
             number=5
             prompt="reverses each word in a string but keeps the words in the same order"
             example=r#""get in the racecar""#
-            answer="⍜⊜□≡⇌ ≠@ ."
+            answer="⍜⊜□≡⍜°□⇌ ≠@ ."
             tests={&[r#""arrays are neat""#, r#""wow mom""#]}
             hidden=r#""Wow, mom!""#/>
     }

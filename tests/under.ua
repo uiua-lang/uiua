@@ -68,7 +68,7 @@
 
 ⍤⊃⋅∘≍ "World! Hello" ⍜⊜□⇌ ≠@ . "Hello World!"
 ⍤⊃⋅∘≍ {"Hello" "World!"} {⍜∩⊜□∘ ∩(≠@l.) "Hello" "World!"}
-⍤⊃⋅∘≍ "sdrow emo sera esehT" ⍜⊕□≡⇌ ≠@ . $ These are some words
+⍤⊃⋅∘≍ "sdrow emo sera esehT" ⍜⊕□≡⍜°□⇌ ≠@ . $ These are some words
 
 ⍤⊃⋅∘≍ ⍜⍉∘. ↯3_3⇡9
 ⍤⊃⋅∘≍ ⍜⍉∘. ↯2_3_4_5⇡120

@@ -135,8 +135,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="[□1 □2_3_4 □5_6]"/>
         <p>"Having to use "<Prim prim=Box/>" on every value is kind of annoying, so there is a special syntax for "<Prim prim=Box/>" arrays that uses "<code>"{}"</code>"s instead of "<code>"[]"</code>"s."</p>
         <Editor example="{1 2_3_4 5_6}"/>
-        <p>"Many simple functions work on "<Prim prim=Box/>"ed elements without needing to "<Prim prim=Un/><Prim prim=Box/>" them."</p>
-        <Editor example="{1 2_3_4 5_6}\n∵⇌.\n∵⧻."/>
+        <p>"Pervasive functions work on "<Prim prim=Box/>"ed elements without needing to "<Prim prim=Un/><Prim prim=Box/>" them."</p>
         <Editor example="+5 {1 2_3_4 5_6}"/>
         <p>"For more complex operations, though, you'll need to use "<Prim prim=Un/><Prim prim=Box/>". Using it with "<Prim prim=Under/>" will re-"<Prim prim=Box/>" the result."</p>
         <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜°□(⊂:⇌.)."/>

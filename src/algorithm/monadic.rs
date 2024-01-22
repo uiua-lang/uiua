@@ -224,7 +224,7 @@ fn range(shape: &[usize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
 impl Value {
     /// Get the first row of the value
     pub fn first(self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_into_deep(
+        self.generic_into(
             |a| a.first(env).map(Into::into),
             |a| {
                 op_bytes_retry_fill(
@@ -240,7 +240,7 @@ impl Value {
     }
     /// Get the last row of the value
     pub fn last(self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_into_deep(
+        self.generic_into(
             |a| a.last(env).map(Into::into),
             |a| {
                 op_bytes_retry_fill(
@@ -360,17 +360,7 @@ impl Value {
             Value::Byte(b) => b.reverse_depth(depth),
             Value::Complex(c) => c.reverse_depth(depth),
             Value::Char(c) => c.reverse_depth(depth),
-            Value::Box(b) => {
-                if let Some(bx) = b.as_scalar_mut() {
-                    bx.as_value_mut().reverse_depth(depth);
-                } else if depth > 0 && b.rank() <= 1 {
-                    for b in b.data.as_mut_slice() {
-                        b.as_value_mut().reverse_depth(depth - 1);
-                    }
-                } else {
-                    b.reverse_depth(depth);
-                }
-            }
+            Value::Box(b) => b.reverse_depth(depth),
         }
     }
 }
@@ -410,7 +400,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Transpose the value
     pub fn transpose(&mut self) {
-        self.generic_mut_deep(
+        self.generic_mut(
             Array::transpose,
             Array::transpose,
             Array::transpose,
@@ -493,7 +483,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Get the `rise` of the value
     pub fn rise(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
-        self.generic_ref_env_deep(
+        self.generic_ref_env(
             Array::rise,
             Array::rise,
             Array::rise,
@@ -504,7 +494,7 @@ impl Value {
     }
     /// Get the `fall` of the value
     pub fn fall(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
-        self.generic_ref_env_deep(
+        self.generic_ref_env(
             Array::fall,
             Array::fall,
             Array::fall,
@@ -515,7 +505,7 @@ impl Value {
     }
     /// Sort the value ascending
     pub fn sort_up(&mut self, env: &Uiua) -> UiuaResult {
-        self.generic_mut_deep(
+        self.generic_mut(
             |a| a.sort_up(env),
             |a| a.sort_up(env),
             |a| a.sort_up(env),
@@ -525,7 +515,7 @@ impl Value {
     }
     /// Sort the value descending
     pub fn sort_down(&mut self, env: &Uiua) -> UiuaResult {
-        self.generic_mut_deep(
+        self.generic_mut(
             |a| a.sort_down(env),
             |a| a.sort_down(env),
             |a| a.sort_down(env),
@@ -535,7 +525,7 @@ impl Value {
     }
     /// `classify` the rows of the value
     pub fn classify(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env_deep(
+        self.generic_ref_env(
             Array::classify,
             Array::classify,
             Array::classify,
@@ -547,7 +537,7 @@ impl Value {
     }
     /// `deduplicate` the rows of the value
     pub fn deduplicate(&mut self) {
-        self.generic_mut_deep(
+        self.generic_mut(
             Array::deduplicate,
             Array::deduplicate,
             Array::deduplicate,
@@ -557,7 +547,7 @@ impl Value {
     }
     /// Mask the `unique` rows of the value
     pub fn unique(&self) -> Self {
-        self.generic_ref_deep(
+        self.generic_ref(
             Array::unique,
             Array::unique,
             Array::unique,
@@ -1000,7 +990,7 @@ impl Value {
 
 impl Value {
     pub(crate) fn first_min_index(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env_deep(
+        self.generic_ref_env(
             Array::first_min_index,
             Array::first_min_index,
             Array::first_min_index,
@@ -1011,7 +1001,7 @@ impl Value {
         .map(Into::into)
     }
     pub(crate) fn first_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env_deep(
+        self.generic_ref_env(
             Array::first_max_index,
             Array::first_max_index,
             Array::first_max_index,
@@ -1022,7 +1012,7 @@ impl Value {
         .map(Into::into)
     }
     pub(crate) fn last_min_index(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env_deep(
+        self.generic_ref_env(
             Array::last_min_index,
             Array::last_min_index,
             Array::last_min_index,
@@ -1033,7 +1023,7 @@ impl Value {
         .map(Into::into)
     }
     pub(crate) fn last_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env_deep(
+        self.generic_ref_env(
             Array::last_max_index,
             Array::last_max_index,
             Array::last_max_index,

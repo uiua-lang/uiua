@@ -2,8 +2,8 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Explore deprecating `keep` in favor of `select where`
-  - Would need to make `under` work properly with it
+- Make `unpack` only unbox the arguments to its function
+- Remove some implicit unboxing behavior
 - Multimedia
   - Sound input
   - Webcam input

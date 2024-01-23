@@ -713,13 +713,6 @@ primitive!(
     /// ex: ⊐/⊂       {"Join" "these" "strings"}
     /// ex: ⊐/(⊂⊂:@ ) {"Join" "these" "strings"}
     (1, Box, MonadicArray, ("box", '□')),
-    /// Take an array out of a box
-    ///
-    /// ex: ⊔□5
-    /// ex: ∵⊔{1_2_3 4_5_6}
-    ///
-    /// Boxes are created with [box].
-    (1, Unbox, MonadicArray, ("unbox", '⊔')),
     /// Parse a string as a number
     ///
     /// ex: ⋕ "17"
@@ -2022,6 +2015,7 @@ impl_primitive!(
     (0, InvStack),
     (0[1], InvDump),
     (1, Primes),
+    (1, InvBox),
     // Unders
     (3, Unselect),
     (3, Unpick),

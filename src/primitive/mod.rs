@@ -143,6 +143,7 @@ impl fmt::Display for ImplPrimitive {
             InvTrace => write!(f, "{Un}{Trace}"),
             InvStack => write!(f, "{Un}{Stack}"),
             InvDump => write!(f, "{Un}{Dump}"),
+            InvBox => write!(f, "{Un}{Box}"),
             Untake => write!(f, "{Un}{Take}"),
             Undrop => write!(f, "{Un}{Drop}"),
             Unselect => write!(f, "{Un}{Select}"),
@@ -284,11 +285,6 @@ impl Primitive {
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         match self {
-            Primitive::Unbox => Some(format!(
-                "use {} {} instead",
-                Primitive::Un.format(),
-                Primitive::Box.format(),
-            )),
             Primitive::Cross => Some(format!("use {} instead", Primitive::Table.format())),
             Primitive::Rectify => Some(String::new()),
             _ => None,
@@ -463,10 +459,6 @@ impl Primitive {
             Primitive::Box => {
                 let val = env.pop(1)?;
                 env.push(Boxed(val));
-            }
-            Primitive::Unbox => {
-                let val = env.pop(1)?;
-                env.push(val.unboxed());
             }
             Primitive::Parse => env.monadic_ref_env(Value::parse_num)?,
             Primitive::Utf => env.monadic_ref_env(Value::utf8)?,
@@ -841,6 +833,10 @@ impl ImplPrimitive {
             ImplPrimitive::InvStack => stack(env, true)?,
             ImplPrimitive::InvDump => dump(env, true)?,
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
+            ImplPrimitive::InvBox => {
+                let val = env.pop(1)?;
+                env.push(val.unboxed());
+            }
             // Optimizations
             ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Last => env.monadic_env(Value::last)?,

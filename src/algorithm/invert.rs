@@ -25,8 +25,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Transpose => Instr::ImplPrim(TransposeN(-1), span),
         Bits => Instr::ImplPrim(InverseBits, span),
         Couple => Instr::ImplPrim(InvCouple, span),
-        Box => Instr::Prim(Unbox, span),
-        Unbox => Instr::Prim(Box, span),
+        Box => Instr::ImplPrim(InvBox, span),
         Where => Instr::ImplPrim(InvWhere, span),
         Utf => Instr::ImplPrim(InvUtf, span),
         Parse => Instr::ImplPrim(InvParse, span),
@@ -57,6 +56,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         InvMap => Instr::Prim(Map, span),
         InvTrace => Instr::Prim(Trace, span),
         InvStack => Instr::Prim(Stack, span),
+        InvBox => Instr::Prim(Box, span),
         _ => return None,
     })
 }

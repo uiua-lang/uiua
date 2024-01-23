@@ -103,6 +103,8 @@
 ⍤⊃⋅∘≍ ¯18 ⍜(⍥(+1)4)¯ 10
 ⍤⊃⋅∘≍ ¯18 ⍜⍥(+1)¯ 4 10
 
+⍤⊃⋅∘≍ @l ⍜⊛(⊢⍖°⊚) "Hello World!"
+
 F ← setund(setinv"normal""inverse"|"do"|"undo")
 ⍤⊃⋅∘≍ "normal" F
 ⍤⊃⋅∘≍ "inverse" °F

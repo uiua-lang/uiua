@@ -312,6 +312,11 @@ pub(crate) fn under_instrs(
                 (PopTempN(1), Unreshape),
             ),
         ),
+        &pat!(
+            Classify,
+            (CopyToTempN(1), Classify, CopyToTempN(1)),
+            (PopTempN(1), Flip, IndexOf, PopTempN(1), Flip, Select)
+        ),
         &pat!((Now), (Now, PushTempN(1)), (PopTempN(1), Now, Flip, Sub)),
         &pat!(
             Sys(SysOp::FOpen),

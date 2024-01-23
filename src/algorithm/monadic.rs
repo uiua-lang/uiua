@@ -524,16 +524,19 @@ impl Value {
         )
     }
     /// `classify` the rows of the value
-    pub fn classify(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env(
+    pub fn classify(&self) -> Self {
+        if self.rank() == 0 {
+            return 0.into();
+        }
+        self.generic_ref(
             Array::classify,
             Array::classify,
             Array::classify,
             Array::classify,
             Array::classify,
-            env,
         )
-        .map(Self::from_iter)
+        .into_iter()
+        .collect()
     }
     /// `deduplicate` the rows of the value
     pub fn deduplicate(&mut self) {
@@ -638,10 +641,7 @@ impl<T: ArrayValue> Array<T> {
         Ok(())
     }
     /// `classify` the rows of the array
-    pub fn classify(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
-        if self.rank() == 0 {
-            return Err(env.error("Cannot classify a rank-0 array"));
-        }
+    pub fn classify(&self) -> Vec<usize> {
         let mut classes = HashMap::new();
         let mut classified = Vec::with_capacity(self.row_count());
         for row in self.row_slices() {
@@ -649,7 +649,7 @@ impl<T: ArrayValue> Array<T> {
             let class = *classes.entry(ArrayCmpSlice(row)).or_insert(new_class);
             classified.push(class);
         }
-        Ok(classified)
+        classified
     }
     /// `deduplicate` the rows of the array
     pub fn deduplicate(&mut self) {

@@ -450,7 +450,7 @@ impl Primitive {
             Primitive::Select => env.dyadic_rr_env(Value::select)?,
             Primitive::Windows => env.dyadic_rr_env(Value::windows)?,
             Primitive::Where => env.monadic_ref_env(Value::wher)?,
-            Primitive::Classify => env.monadic_ref_env(Value::classify)?,
+            Primitive::Classify => env.monadic_ref(Value::classify)?,
             Primitive::Deduplicate => env.monadic_mut(Value::deduplicate)?,
             Primitive::Unique => env.monadic_ref(Value::unique)?,
             Primitive::Member => env.dyadic_rr_env(Value::member)?,

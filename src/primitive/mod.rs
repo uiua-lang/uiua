@@ -285,6 +285,7 @@ impl Primitive {
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         match self {
+            Primitive::Unpack => Some(format!("use {} instead", Primitive::Content.format())),
             Primitive::Cross => Some(format!("use {} instead", Primitive::Table.format())),
             Primitive::Rectify => Some(String::new()),
             _ => None,
@@ -542,6 +543,13 @@ impl Primitive {
             Primitive::Unpack => {
                 let f = env.pop_function()?;
                 env.with_pack(|env| env.call(f))?;
+            }
+            Primitive::Content => {
+                let f = env.pop_function()?;
+                for val in env.stack_mut().iter_mut().rev().take(f.signature().args) {
+                    val.unbox();
+                }
+                env.call(f)?;
             }
             Primitive::Fill => {
                 let fill = env.pop_function()?;

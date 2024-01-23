@@ -951,6 +951,14 @@ impl Value {
         }
     }
     /// Remove a single layer of boxing
+    pub fn unbox(&mut self) {
+        if let Value::Box(boxed) = self {
+            if boxed.rank() == 0 {
+                *self = take(boxed).data.into_iter().next().unwrap().0;
+            }
+        }
+    }
+    /// Remove a single layer of boxing
     pub fn unboxed(self) -> Self {
         match self {
             Value::Box(boxed) => match boxed.into_scalar() {

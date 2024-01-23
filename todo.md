@@ -2,8 +2,8 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Make `unpack` only unbox the arguments to its function
-- Add `valve` modifier
+- `under` `classify`
+- Add `valve` modifier?
 - Multimedia
   - Sound input
   - Webcam input

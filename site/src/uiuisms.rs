@@ -166,7 +166,7 @@ uiuisms!(
     /// Split an array into groups of contiguous equal elements
     "⊜□. [1 1 1 2 2 1 1 4]",
     /// Join a list of boxed strings
-    r#"⊐/⊂ {"a" "bc" "def"}"#,
+    r#"/⊔⊂ {"a" "bc" "def"}"#,
     /// Find the nth fibonacci number
     "◌⍥(+,:)⊙.:1 10",
     /// Find the GCD of two numbers

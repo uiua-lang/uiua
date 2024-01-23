@@ -8,6 +8,9 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - **Breaking Change** - Non-pervasive monadic functions no longer implicitely unbox their argument
   - This impliciteness led to some unexpected behavior, particularly when getting the [`length ⧻`](https://uiua.org/docs/length) or [`shape △`](https://uiua.org/docs/shape) of a boxed array
+- Add the [`content ⊔`](https://uiua.org/docs/content) modifier, which unboxes its function's arguments before calling it
+  - Deprecate [`unpack ⊐`](https://uiua.org/docs/unpack) in favor of [`content ⊔`](https://uiua.org/docs/content)
+  - The behavior of [`content ⊔`](https://uiua.org/docs/content) is less implicit and is not prone to some of the potential unexpected behavior of [`unpack ⊐`](https://uiua.org/docs/unpack)
 - Add the [`unique ◰`](https://uiua.org/docs/unique) function, which creates a mask of the first occurrence of each unique value in an array
   - Change [`deduplicate ◴`](https://uiua.org/docs/deduplicate)'s glyph to reflect its relationship with [`unique ◰`](https://uiua.org/docs/unique). Code using `⊖` will continue to work and will be formatted as `◴`.
 - Add the experimental [`cascade ⪾`](https://uiua.org/docs/cascade) modifier, which captures some common [`fork ⊃`](https://uiua.org/docs/fork) patterns

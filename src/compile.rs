@@ -975,7 +975,7 @@ code:
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
-            Word::Func(func) => self.func(func, word.span)?,
+            Word::Func(func) => self.func(func, word.span, call)?,
             Word::Switch(sw) => self.switch(sw, word.span, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,
@@ -1079,7 +1079,12 @@ code:
             Global::Module { .. } => self.add_error(span, "Cannot import module item here."),
         }
     }
-    fn func(&mut self, func: Func, span: CodeSpan) -> UiuaResult {
+    fn func(&mut self, func: Func, span: CodeSpan, call: bool) -> UiuaResult {
+        if (func.lines.iter().flatten().filter(|w| w.value.is_code())).count() == 1 {
+            // Inline single item
+            let word = (func.lines.into_iter().flatten().find(|w| w.value.is_code())).unwrap();
+            return self.word(word, call);
+        }
         let function = self.compile_func(func, span)?;
         self.push_instr(Instr::PushFunc(function));
         Ok(())

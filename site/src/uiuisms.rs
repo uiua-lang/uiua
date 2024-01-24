@@ -170,7 +170,7 @@ uiuisms!(
     /// Find the nth fibonacci number
     "◌⍥(+,:)⊙.:1 10",
     /// Find the GCD of two numbers
-    "◌⍢(⊃◿∘|≠0) 35 360",
+    "◌⍢⊃◿∘± 35 360",
     /// Remove all instances of an element from a list
     "▽≠, 4 [1 4 2 0 5 4 3]",
     /// Remove first instance of an element from an array

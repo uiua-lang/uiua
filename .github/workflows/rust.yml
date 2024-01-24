@@ -16,8 +16,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: sed
+      run: sudo sed -i 's/azure\.//' /etc/apt/sources.list
+    - name: apt update
+      run: sudo apt-get update
     - name: Install deps
-      run: sudo apt install libasound2-dev libudev-dev pkg-config
+      run: sudo apt-get install libasound2-dev libudev-dev pkg-config
     - name: Install WASM target
       run: rustup target add wasm32-unknown-unknown
     - name: Build

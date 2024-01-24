@@ -116,6 +116,14 @@ pub fn Site() -> impl IntoView {
         .unwrap_or(0);
     let subtitle = subtitles[visits % subtitles.len()].clone();
     visits = visits.overflowing_add(1).0;
+
+    // Change the favicon to favicon-crayon.ico every 10 visits
+    if visits % 10 == 0 {
+        let link = document().create_element("link").unwrap();
+        link.set_attribute("rel", "icon").unwrap();
+        link.set_attribute("href", "/favicon-crayon.ico").unwrap();
+        document().head().unwrap().append_child(&link).unwrap();
+    }
     local_storage
         .set_item("visits", &visits.to_string())
         .unwrap();

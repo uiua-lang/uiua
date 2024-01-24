@@ -317,7 +317,7 @@ pub(crate) fn under_instrs(
             (CopyToTempN(1), Classify, CopyToTempN(1)),
             (PopTempN(1), Flip, IndexOf, PopTempN(1), Flip, Select)
         ),
-        &pat!((Now), (Now, PushTempN(1)), (PopTempN(1), Now, Flip, Sub)),
+        &pat!(Now, (Now, PushTempN(1)), (PopTempN(1), Now, Flip, Sub)),
         &pat!(
             Sys(SysOp::FOpen),
             (Sys(SysOp::FOpen), Dup, PushTempN(1)),

@@ -23,7 +23,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Unicode escape sequences that are not 2 or 4 bytes long can now be specified with `\u{…}`
 - Change [`pop ◌`](https://uiua.org/docs/pop)'s glyph to make it look good in planet notation. Code using `;` will continue to work and will be formatted as `◌`.
 - [`un °`](https://uiua.org/docs/un)[`reduce /`](https://uiua.org/docs/reduce)[`multiply ×`](https://uiua.org/docs/multiply) now gives the prime factorization of a number
-- [`classify ⊛`](https://uiua.org/docs/classify) now works with [`under ⍜`](https://uiua.org/docs/under)
+- [`classify ⊛`](https://uiua.org/docs/classify) and [`deduplicate ◴`](https://uiua.org/docs/deduplicate) now work with [`under ⍜`](https://uiua.org/docs/under)
 - [`&fras`](https://uiua.org/docs/&fras) and [`&frab`](https://uiua.org/docs/&frab) now work with [`under ⍜`](https://uiua.org/docs/under)
 - Completely remove the deprecated `unbox ⊔`
 - Add the experimental [`cascade ⪾`](https://uiua.org/docs/cascade) modifier, which captures some common [`fork ⊃`](https://uiua.org/docs/fork) patterns

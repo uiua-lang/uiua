@@ -276,8 +276,13 @@ pub(crate) fn under_instrs(
         )),
         &pat!(
             Classify,
-            (CopyToTempN(1), Classify, CopyToTempN(1)),
-            (PopTempN(1), Flip, IndexOf, PopTempN(1), Flip, Select)
+            (Dup, Deduplicate, PushTempN(1), Classify),
+            (PopTempN(1), Flip, Select),
+        ),
+        &pat!(
+            Deduplicate,
+            (Dup, Classify, PushTempN(1), Deduplicate),
+            (PopTempN(1), Select),
         ),
         &pat!(Now, (Now, PushTempN(1)), (PopTempN(1), Now, Flip, Sub)),
         &pat!(

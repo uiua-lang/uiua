@@ -6,17 +6,27 @@ Uiua is not yet stable.
 ## 0.8.0 - 2024-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
-- **Breaking Change** - Non-pervasive monadic functions no longer implicitely unbox their argument
-  - This impliciteness led to some unexpected behavior, particularly when getting the [`length ⧻`](https://uiua.org/docs/length) or [`shape △`](https://uiua.org/docs/shape) of a boxed array
 - Add the [`content ⊔`](https://uiua.org/docs/content) modifier, which unboxes its function's arguments before calling it
   - Deprecate [`unpack ⊐`](https://uiua.org/docs/unpack) in favor of [`content ⊔`](https://uiua.org/docs/content)
   - The behavior of [`content ⊔`](https://uiua.org/docs/content) is less implicit and is not prone to some of the potential unexpected behavior of [`unpack ⊐`](https://uiua.org/docs/unpack)
 - Add the [`unique ◰`](https://uiua.org/docs/unique) function, which creates a mask of the first occurrence of each unique value in an array
   - Change [`deduplicate ◴`](https://uiua.org/docs/deduplicate)'s glyph to reflect its relationship with [`unique ◰`](https://uiua.org/docs/unique). Code using `⊖` will continue to work and will be formatted as `◴`.
-- Add the experimental [`cascade ⪾`](https://uiua.org/docs/cascade) modifier, which captures some common [`fork ⊃`](https://uiua.org/docs/fork) patterns
 - [`table ⊞`](https://uiua.org/docs/table) now works on rows of arrays but keeps it's optimizations for lists
   - You never wanted element-wise combinations of multi-dimensional arrays anyway
   - Deprecate [`cross ⊠`](https://uiua.org/docs/cross), as it is now redundant
+  - This is technically a breaking change, but it is unlikely to break much code
+- [`fill ⬚`](https://uiua.org/docs/fill) can now be used to specify default accumulators for [`reduce /`](https://uiua.org/docs/reduce), [`group ⊕`](https://uiua.org/docs/group), and [`partition ⊜`](https://uiua.org/docs/partition)
+  - **Breaking Change** - Reducing [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) no longer take a required accumulator
+  - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill) can no longer be temporarily disabled. Try to scope it to the smallest function.
+- **Breaking Change** - Non-pervasive monadic functions no longer implicitely unbox their argument
+  - This impliciteness led to some unexpected behavior, particularly when getting the [`length ⧻`](https://uiua.org/docs/length) or [`shape △`](https://uiua.org/docs/shape) of a boxed array
+- Unicode escape sequences that are not 2 or 4 bytes long can now be specified with `\u{…}`
+- Change [`pop ◌`](https://uiua.org/docs/pop)'s glyph to make it look good in planet notation. Code using `;` will continue to work and will be formatted as `◌`.
+- [`un °`](https://uiua.org/docs/un)[`reduce /`](https://uiua.org/docs/reduce)[`multiply ×`](https://uiua.org/docs/multiply) now gives the prime factorization of a number
+- [`classify ⊛`](https://uiua.org/docs/classify) now works with [`under ⍜`](https://uiua.org/docs/under)
+- [`&fras`](https://uiua.org/docs/&fras) and [`&frab`](https://uiua.org/docs/&frab) now work with [`under ⍜`](https://uiua.org/docs/under)
+- Completely remove the deprecated `unbox ⊔`
+- Add the experimental [`cascade ⪾`](https://uiua.org/docs/cascade) modifier, which captures some common [`fork ⊃`](https://uiua.org/docs/fork) patterns
 - Add experimental hashmap functions, which operate on a box array as if it is a hashmap
   - [`map`](https://uiua.org/docs/map)
   - [`has`](https://uiua.org/docs/has)
@@ -24,15 +34,7 @@ This version is not yet released. If you are reading this on the website, then t
   - [`insert`](https://uiua.org/docs/insert)
   - [`remove`](https://uiua.org/docs/remove)
 - Add experimental [`bind`](https://uiua.org/docs/bind) modifier, which binds local values within a function
-- [`fill ⬚`](https://uiua.org/docs/fill) can now be used to specify default accumulators for [`reduce /`](https://uiua.org/docs/reduce), [`group ⊕`](https://uiua.org/docs/group), and [`partition ⊜`](https://uiua.org/docs/partition)
-  - Reducing [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) no longer take a required accumulator
-  - [`fill ⬚`](https://uiua.org/docs/fill) can no longer be temporarily disabled. Try to scope it to the smallest function.
-- Unicode escape sequences that are not 2 or 4 bytes long can now be specified with `\u{…}`
-- Change [`pop ◌`](https://uiua.org/docs/pop)'s glyph to make it look good in planet notation. Code using `;` will continue to work and will be formatted as `◌`.
-- [`un °`](https://uiua.org/docs/un)[`reduce /`](https://uiua.org/docs/reduce)[`multiply ×`](https://uiua.org/docs/multiply) now gives the prime factorization of a number
-- [`classify ⊛`](https://uiua.org/docs/classify) now works with [`under ⍜`](https://uiua.org/docs/under)
-- [`&fras`](https://uiua.org/docs/&fras) and [`&frab`](https://uiua.org/docs/&frab) now work with [`under ⍜`](https://uiua.org/docs/under)
-- Completely remove the deprecated `unbox ⊔`
+  - This introduces some non-tacitness to the language
 ### Interpreter
 - The internal byte array type is now used in more places, which should improve performance a bit
 - [`&ime`](https://uiua.org/docs/&ime), [`&imd`](https://uiua.org/docs/&imd), and [`&ims`](https://uiua.org/docs/&imc) now support the QOI image format

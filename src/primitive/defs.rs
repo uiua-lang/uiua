@@ -1134,6 +1134,12 @@ primitive!(
     /// ex: △⊞⊂ 1_2 3_4_5
     /// ex: △⊞+ [1_2_3 4_5_6] [7 8 9 10]
     /// ex: △⊞⊂ [1_2_3 4_5_6] [7 8 9 10]
+    ///
+    /// [table] also works with more than two arrays.
+    /// ex: ⊞(⊂⊂) 1_2 3_4 5_6
+    /// If you want to fix one of the arrays so that it is present in every call of the function, you can simply add a dimension to it, though you may need to collapse it later.
+    /// Here, we add a dimension to the second array to [fix] it, then collapse with `reduce``join`.
+    /// ex: /⊂ ⊞(⊂⊂) ⊙¤ 1_2 3_4 5_6
     (2[1], Table, IteratingModifier, ("table", '⊞')),
     /// Apply a function to each combination of rows of arrays
     ///

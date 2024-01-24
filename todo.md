@@ -2,7 +2,7 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- `under` `classify`
+- Make crayon icon only appear sometimes
 - Add `valve` modifier?
 - Multimedia
   - Sound input

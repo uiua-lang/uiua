@@ -101,7 +101,7 @@ fn hash_start<T: ArrayValue>(arr: &Array<T>, capacity: usize) -> usize {
 
 fn coerce_values(
     a: &mut Value,
-    mut b: Value,
+    #[allow(unused_mut)] mut b: Value,
     action1: &'static str,
     action2: &'static str,
     action3: &'static str,

@@ -140,6 +140,7 @@ mod sys;
 mod sys_native;
 mod value;
 
+#[allow(unused_imports)]
 pub use self::{
     array::*,
     assembly::*,

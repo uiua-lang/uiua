@@ -1860,7 +1860,7 @@ primitive!(
     ///
     /// Map array are just normal box arrays. Their shape is usually `[2]`; one element is the boxed keys, and the other is the boxed values.
     /// Performing non-map operations on a map array will work, but it will usually break the mapping.
-    /// ex: # Experimental!
+    /// ex! # Experimental!
     ///   : map 1_2_3 4_5_6
     ///   : get 1 ⇌
     (2, Map, Map, "map"),

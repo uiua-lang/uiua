@@ -266,6 +266,9 @@ sys_op! {
     /// Expects a path and returns a rank-`1` character array.
     ///
     /// ex: &fras "example.ua"
+    /// You can use [under][&fras] to write back to the file after modifying the string.
+    /// ex: ⍜&fras(⊂:"\n# Wow!") "example.ua"
+    ///   : &p&fras "example.ua"
     ///
     /// See [&frab] for reading into a byte array.
     (1, FReadAllStr, Filesystem, "&fras", "file - read all to string"),
@@ -274,6 +277,9 @@ sys_op! {
     /// Expects a path and returns a rank-`1` numeric array.
     ///
     /// ex: &frab "example.ua"
+    /// You can use [under][&frab] to write back to the file after modifying the array.
+    /// ex: ⍜&frab(⊂:-@\0"\n# Wow!") "example.ua"
+    ///   : &p&fras "example.ua"
     ///
     /// See [&fras] for reading into a rank-`1` character array.
     (1, FReadAllBytes, Filesystem, "&frab", "file - read all to bytes"),

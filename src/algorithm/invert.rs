@@ -81,6 +81,12 @@ macro_rules! pat {
     };
 }
 
+macro_rules! maybe_val {
+    ($pat:expr) => {
+        Either($pat, (Val, $pat))
+    };
+}
+
 pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<EcoVec<Instr>> {
     use Primitive::*;
 
@@ -214,67 +220,39 @@ pub(crate) fn under_instrs(
         &bin!(Sub, Add),
         &bin!(Mul, Div),
         &bin!(Div, Mul),
-        &pat!((Flip, Pow), (CopyToTempN(1), Flip, Pow), (PopTempN(1), Log)),
-        &(
-            Val,
-            pat!((Flip, Pow), (CopyToTempN(1), Flip, Pow), (PopTempN(1), Log)),
-        ),
-        &pat!(Pow, (CopyToTempN(1), Pow), (PopTempN(1), 1, Flip, Div, Pow)),
-        &pat!(
+        &maybe_val!(pat!(
+            (Flip, Pow),
+            (CopyToTempN(1), Flip, Pow),
+            (PopTempN(1), Log)
+        )),
+        &maybe_val!(pat!(
+            Pow,
+            (CopyToTempN(1), Pow),
+            (PopTempN(1), 1, Flip, Div, Pow)
+        )),
+        &maybe_val!(pat!(Log, (CopyToTempN(1), Log), (PopTempN(1), Flip, Pow))),
+        &maybe_val!(pat!(
             (Flip, Log),
             (CopyToTempN(1), Flip, Log),
             (1, Flip, Div, PopTempN(1), Flip, Pow)
-        ),
-        &pat!(Log, (CopyToTempN(1), Log), (PopTempN(1), Flip, Pow)),
-        &(
-            Val,
-            pat!(Log, (CopyToTempN(1), Log), (PopTempN(1), Flip, Pow)),
-        ),
-        &(
-            Val,
-            pat!(
-                (Flip, Log),
-                (CopyToTempN(1), Flip, Log),
-                (1, Flip, Div, PopTempN(1), Flip, Pow)
-            ),
-        ),
+        )),
         &round!(Floor),
         &round!(Ceil),
         &round!(Round),
-        &(Val, stash2!(Take, Untake)),
-        &stash2!(Take, Untake),
-        &(Val, stash2!(Drop, Undrop)),
-        &stash2!(Drop, Undrop),
-        &(Val, stash2!(Select, Unselect)),
-        &stash2!(Select, Unselect),
-        &(Val, stash2!(Pick, Unpick)),
-        &stash2!(Pick, Unpick),
-        &(
-            Val,
-            pat!(
-                Get,
-                (CopyToTempN(2), Get),
-                (PopTempN(1), Flip, PopTempN(1), Insert),
-            ),
-        ),
-        &pat!(
+        &maybe_val!(stash2!(Take, Untake)),
+        &maybe_val!(stash2!(Drop, Undrop)),
+        &maybe_val!(stash2!(Select, Unselect)),
+        &maybe_val!(stash2!(Pick, Unpick)),
+        &maybe_val!(pat!(
             Get,
             (CopyToTempN(2), Get),
             (PopTempN(1), Flip, PopTempN(1), Insert),
-        ),
-        &(
-            Val,
-            pat!(
-                Keep,
-                (CopyToTempN(2), Keep),
-                (PopTempN(1), Flip, PopTempN(1), Unkeep)
-            ),
-        ),
-        &pat!(
+        )),
+        &maybe_val!(pat!(
             Keep,
             (CopyToTempN(2), Keep),
             (PopTempN(1), Flip, PopTempN(1), Unkeep),
-        ),
+        )),
         &pat!(Rotate, (CopyToTempN(1), Rotate), (PopTempN(1), Neg, Rotate)),
         &pat!(Abs, (CopyToTempN(1), Abs), (PopTempN(1), Sign, Mul)),
         &pat!(Sign, (Dup, Abs, PushTempN(1), Sign), (PopTempN(1), Mul)),
@@ -286,32 +264,16 @@ pub(crate) fn under_instrs(
             (Dup, Shape, PushTempN(1), Deshape),
             (PopTempN(1), 0, Unrerank),
         ),
-        &pat!(
+        &maybe_val!(pat!(
             Rerank,
             (Over, Shape, Over, PushTempN(2), Rerank),
             (PopTempN(2), Unrerank),
-        ),
-        &(
-            Val,
-            pat!(
-                Rerank,
-                (Over, Shape, Over, PushTempN(2), Rerank),
-                (PopTempN(2), Unrerank),
-            ),
-        ),
-        &pat!(
+        )),
+        &maybe_val!(pat!(
             Reshape,
             (Over, Shape, PushTempN(1), Reshape),
             (PopTempN(1), Unreshape),
-        ),
-        &(
-            Val,
-            pat!(
-                Reshape,
-                (Over, Shape, PushTempN(1), Reshape),
-                (PopTempN(1), Unreshape),
-            ),
-        ),
+        )),
         &pat!(
             Classify,
             (CopyToTempN(1), Classify, CopyToTempN(1)),
@@ -320,24 +282,34 @@ pub(crate) fn under_instrs(
         &pat!(Now, (Now, PushTempN(1)), (PopTempN(1), Now, Flip, Sub)),
         &pat!(
             Sys(SysOp::FOpen),
-            (Sys(SysOp::FOpen), Dup, PushTempN(1)),
+            (Sys(SysOp::FOpen), CopyToTempN(1)),
             (PopTempN(1), Sys(SysOp::Close)),
         ),
         &pat!(
             Sys(SysOp::FCreate),
-            (Sys(SysOp::FCreate), Dup, PushTempN(1)),
+            (Sys(SysOp::FCreate), CopyToTempN(1)),
             (PopTempN(1), Sys(SysOp::Close)),
         ),
         &pat!(
             Sys(SysOp::TcpConnect),
-            (Sys(SysOp::TcpConnect), Dup, PushTempN(1)),
+            (Sys(SysOp::TcpConnect), CopyToTempN(1)),
             (PopTempN(1), Sys(SysOp::Close)),
         ),
         &pat!(
             Sys(SysOp::TcpAccept),
-            (Sys(SysOp::TcpAccept), Dup, PushTempN(1)),
+            (Sys(SysOp::TcpAccept), CopyToTempN(1)),
             (PopTempN(1), Sys(SysOp::Close)),
         ),
+        &maybe_val!(pat!(
+            Sys(SysOp::FReadAllStr),
+            (CopyToTempN(1), Sys(SysOp::FReadAllStr)),
+            (PopTempN(1), Sys(SysOp::FWriteAll)),
+        )),
+        &maybe_val!(pat!(
+            Sys(SysOp::FReadAllBytes),
+            (CopyToTempN(1), Sys(SysOp::FReadAllBytes)),
+            (PopTempN(1), Sys(SysOp::FWriteAll)),
+        )),
         &UnderPatternFn(under_temp_pattern, "temp"),
         &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // This must come last!
     ];
@@ -1129,6 +1101,21 @@ impl<A: InvertPattern, B: InvertPattern> InvertPattern for (A, B) {
         let (input, b) = b.invert_extract(input, comp)?;
         a.extend(b);
         Some((input, a))
+    }
+}
+
+#[derive(Debug)]
+struct Either<A, B>(A, B);
+impl<A: UnderPattern, B: UnderPattern> UnderPattern for Either<A, B> {
+    fn under_extract<'a>(
+        &self,
+        input: &'a [Instr],
+        g_sig: Signature,
+        comp: &mut Compiler,
+    ) -> Option<(&'a [Instr], Under)> {
+        let Either(a, b) = self;
+        a.under_extract(input, g_sig, comp)
+            .or_else(|| b.under_extract(input, g_sig, comp))
     }
 }
 

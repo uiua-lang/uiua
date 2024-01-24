@@ -1832,9 +1832,14 @@ primitive!(
     (0, Infinity, Constant, ("infinity", '∞')),
     /// Create a hashmap from lists of keys and values
     ///
+    /// A hashmap is a normal array that is used as a mapping from keys to values.
+    /// The related map functions [insert], [has], [get], and [remove] all treat the array as an actual hashmap, so they have O(1) amortized time complexity.
+    ///
     /// ex: # Experimental!
     ///   : map 1_2 3_4
     ///   : map {"Alice" "Bob" "Carol"} [3_8 12_2 4_5]
+    /// The `…n` annotion in the output indicates the number of empty entries in the hashmap.
+    ///
     /// Use [get] to get the value corresponding to a key.
     /// ex: # Experimental!
     ///   : map 1_2 3_4
@@ -1852,8 +1857,16 @@ primitive!(
     ///   : insert 4 5_6
     ///   : insert 7 8_9
     ///   : °map .
+    ///
+    /// Map array are just normal box arrays. Their shape is usually `[2]`; one element is the boxed keys, and the other is the boxed values.
+    /// Performing non-map operations on a map array will work, but it will usually break the mapping.
+    /// ex: # Experimental!
+    ///   : map 1_2_3 4_5_6
+    ///   : get 1 ⇌
     (2, Map, Map, "map"),
     /// Insert a key-value pair into a map array
+    ///
+    /// See [map] for an overview of map arrays.
     ///
     /// The array is used as an actual hashmap, so some entries may be empty.
     /// ex: # Experimental!
@@ -1875,14 +1888,22 @@ primitive!(
     /// ex: # Experimental!
     ///   : insert □1 □2 {}
     ///   : insert □"hi" □"there"
+    ///
+    /// See also: [has], [get], [remove]
     (3, Insert, Map, "insert"),
     /// Check if a map array has a key
+    ///
+    /// See [map] for an overview of map arrays.
     ///
     /// ex: # Experimental!
     ///   : map 1_2 3_4
     ///   : [fork(has 2|has 5)].
+    ///
+    /// See also: [insert], [get], [remove]
     (2, Has, Map, "has"),
     /// Get the value corresponding to a key in a map array
+    ///
+    /// See [map] for an overview of map arrays.
     ///
     /// ex: # Experimental!
     ///   : map 1_2 3_4
@@ -1903,8 +1924,12 @@ primitive!(
     ///   : map 1_2 3_4
     ///   : ⬚0get 1 .
     ///   : ⬚0get 5 :
+    ///
+    /// See also: [insert], [has], [remove]
     (2, Get, Map, "get"),
     /// Remove the value corresponding to a key from a map array
+    ///
+    /// See [map] for an overview of map arrays.
     ///
     /// If the key is present, it is replaced with a tombstone NaN value.
     /// If the key is not present, the array is unchanged.
@@ -1912,6 +1937,8 @@ primitive!(
     ///   : map 1_2 3_4
     ///   : remove 2 .
     ///   : remove 5 .
+    ///
+    /// See also: [insert], [has], [get]
     (2, Remove, Map, "remove"),
     /// Debug print all stack values without popping them
     ///

@@ -37,7 +37,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This introduces some non-tacitness to the language
 ### Interpreter
 - The internal byte array type is now used in more places, which should improve performance a bit
-- [`&ime`](https://uiua.org/docs/&ime), [`&imd`](https://uiua.org/docs/&imd), and [`&ims`](https://uiua.org/docs/&imc) now support the QOI image format
+- [`&ime`](https://uiua.org/docs/&ime) and [`&imd`](https://uiua.org/docs/&imd) now support the QOI image format
 - Lots of bug and crash fixes
 ### Website
 - Add a new tutorial: [Thinking With Arrays](https://uiua.org/docs/thinkingwitharrays)

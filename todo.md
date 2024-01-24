@@ -2,15 +2,17 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Add `valve` modifier?
+- 0.9
+  - Annotation functions
+    - Names
+    - Types
+    - Shapes
+  - FFI
+  - Basic package management
 - Multimedia
   - Sound input
   - Webcam input
-  - Canvas
-    - Windowing
-    - Input handling
 - System APIs
-  - FFI
   - UDP Sockets
 
 ## Bugs
@@ -23,5 +25,3 @@ Within each section, items are ordered (roughly) by decreasing priority.
 ## Documentation
 - System functions
 
-## Tooling
-- Discord bot

@@ -1276,7 +1276,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
         <p>"Recall that the "<Prim prim=Fill/>" modifier sets a \"fill value\" that can be used by certain functions."</p>
         <p>"One common use is to set a default value that will be used when the shapes of arrays do not match."</p>
         <Editor example="⬚0+ 10_20 3_4_5_6"/>
-        <p>"For example, if you wanted to logical OR two masks with different shapes, you could use "<Prim prim=Fill/>" with a different fill value depending on what you want to do when the mismatched parts."</p>
+        <p>"For example, if you wanted to logical OR two masks with different shapes, you could use "<Prim prim=Fill/>" with a different fill value depending on what you want to do with the mismatched parts."</p>
         <Editor example="⬚0↥ 1_0_0_1_0 0_1_0\n⬚1↥ 1_0_0_1_0 0_1_0"/>
         <p>"Another interesting use is a "<Prim prim=Fill/>"ed "<Prim prim=Rotate/>". Instead of wrapping values around, it fills in one side of the array with the fill value."</p>
         <Editor example="  ↻¯2 [1 2 3 4 5]\n⬚0↻¯2 [1 2 3 4 5]"/>

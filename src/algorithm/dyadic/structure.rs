@@ -466,7 +466,13 @@ impl<T: ArrayValue> Array<T> {
                     }
                     arr
                 };
-                arr.shape[0] = abs_taking;
+                let mut shape = self.shape;
+                for (s, t) in (shape.iter_mut())
+                    .zip(once(abs_taking).chain(sub_index.iter().map(|&i| i.unsigned_abs())))
+                {
+                    *s = t;
+                }
+                arr.shape = shape;
                 arr.validate_shape();
                 arr
             }
@@ -518,7 +524,18 @@ impl<T: ArrayValue> Array<T> {
                         new_rows.push(row.drop(sub_index, env)?);
                     }
                 };
-                Array::from_row_arrays(new_rows, env)?
+                if row_count == abs_dropping {
+                    let mut shape = self.shape;
+                    for (s, n) in shape
+                        .iter_mut()
+                        .zip(once(abs_dropping).chain(sub_index.iter().map(|&i| i.unsigned_abs())))
+                    {
+                        *s = s.saturating_sub(n);
+                    }
+                    Array::new(shape, CowSlice::new())
+                } else {
+                    Array::from_row_arrays(new_rows, env)?
+                }
             }
         })
     }

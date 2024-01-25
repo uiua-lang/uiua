@@ -168,39 +168,42 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
 
 fn each1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, ..)) = f_un_fast_fn(&f, env) {
-        let rank = xs.rank();
-        let val = f(xs, rank, env)?;
-        env.push(val);
+        let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= 1);
+        if !maybe_through_boxes {
+            let rank = xs.rank();
+            let val = f(xs, rank, env)?;
+            env.push(val);
+            return Ok(());
+        }
+    }
+    let outputs = f.signature().outputs;
+    let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
+    let new_shape = xs.shape().clone();
+    let is_empty = outputs > 0 && xs.row_count() == 0;
+    if is_empty {
+        env.push(xs.proxy_scalar(env));
+        _ = env.call_maintain_sig(f);
+        for i in 0..outputs {
+            new_values[i].push(env.pop("each's function result")?);
+        }
     } else {
-        let outputs = f.signature().outputs;
-        let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
-        let new_shape = xs.shape().clone();
-        let is_empty = outputs > 0 && xs.row_count() == 0;
-        if is_empty {
-            env.push(xs.proxy_scalar(env));
-            _ = env.call_maintain_sig(f);
+        for val in xs.into_elements() {
+            env.push(val);
+            env.call(f.clone())?;
             for i in 0..outputs {
                 new_values[i].push(env.pop("each's function result")?);
             }
-        } else {
-            for val in xs.into_elements() {
-                env.push(val);
-                env.call(f.clone())?;
-                for i in 0..outputs {
-                    new_values[i].push(env.pop("each's function result")?);
-                }
-            }
         }
-        for new_values in new_values.into_iter().rev() {
-            let mut new_shape = new_shape.clone();
-            let mut eached = Value::from_row_values(new_values, env)?;
-            if is_empty {
-                eached.pop_row();
-            }
-            new_shape.extend_from_slice(&eached.shape()[1..]);
-            *eached.shape_mut() = new_shape;
-            env.push(eached);
+    }
+    for new_values in new_values.into_iter().rev() {
+        let mut new_shape = new_shape.clone();
+        let mut eached = Value::from_row_values(new_values, env)?;
+        if is_empty {
+            eached.pop_row();
         }
+        new_shape.extend_from_slice(&eached.shape()[1..]);
+        *eached.shape_mut() = new_shape;
+        env.push(eached);
     }
     Ok(())
 }
@@ -369,38 +372,42 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
 
 fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, d)) = f_un_fast_fn(&f, env) {
-        let val = f(xs, d + 1, env)?;
-        env.push(val);
+        let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
+        if !maybe_through_boxes {
+            let val = f(xs, d + 1, env)?;
+            env.push(val);
+            return Ok(());
+        }
+    }
+    let outputs = f.signature().outputs;
+    let is_empty = outputs > 0 && xs.row_count() == 0;
+    let mut new_rows = multi_output(
+        outputs,
+        Vec::with_capacity(xs.row_count() + is_empty as usize),
+    );
+    if is_empty {
+        env.push(xs.proxy_row(env));
+        _ = env.call_maintain_sig(f);
+        for i in 0..outputs {
+            new_rows[i].push(env.pop("rows' function result")?);
+        }
     } else {
-        let outputs = f.signature().outputs;
-        let is_empty = outputs > 0 && xs.row_count() == 0;
-        let mut new_rows = multi_output(
-            outputs,
-            Vec::with_capacity(xs.row_count() + is_empty as usize),
-        );
-        if is_empty {
-            env.push(xs.proxy_row(env));
-            _ = env.call_maintain_sig(f);
+        for row in xs.into_rows() {
+            env.push(row);
+            env.call(f.clone())?;
             for i in 0..outputs {
                 new_rows[i].push(env.pop("rows' function result")?);
             }
-        } else {
-            for row in xs.into_rows() {
-                env.push(row);
-                env.call(f.clone())?;
-                for i in 0..outputs {
-                    new_rows[i].push(env.pop("rows' function result")?);
-                }
-            }
-        }
-        for new_rows in new_rows.into_iter().rev() {
-            let mut val = Value::from_row_values(new_rows, env)?;
-            if is_empty {
-                val.pop_row();
-            }
-            env.push(val);
         }
     }
+    for new_rows in new_rows.into_iter().rev() {
+        let mut val = Value::from_row_values(new_rows, env)?;
+        if is_empty {
+            val.pop_row();
+        }
+        env.push(val);
+    }
+
     Ok(())
 }
 
@@ -411,36 +418,36 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             if let Some((f, a, b)) = f_bin_fast_fn(f.instrs(env), env) {
                 let val = f(xs, ys, a + 1, b + 1, env)?;
                 env.push(val);
+                return Ok(());
+            }
+            let is_empty = outputs > 0 && (xs.row_count() == 0 || ys.row_count() == 0);
+            let mut new_rows = multi_output(
+                outputs,
+                Vec::with_capacity(xs.row_count() + is_empty as usize),
+            );
+            if is_empty {
+                env.push(ys.proxy_row(env));
+                env.push(xs.proxy_row(env));
+                _ = env.call_maintain_sig(f);
+                for i in 0..outputs {
+                    new_rows[i].push(env.pop("rows's function result")?);
+                }
             } else {
-                let is_empty = outputs > 0 && (xs.row_count() == 0 || ys.row_count() == 0);
-                let mut new_rows = multi_output(
-                    outputs,
-                    Vec::with_capacity(xs.row_count() + is_empty as usize),
-                );
-                if is_empty {
-                    env.push(ys.proxy_row(env));
-                    env.push(xs.proxy_row(env));
-                    _ = env.call_maintain_sig(f);
+                for (x, y) in xs.into_rows().zip(ys.into_rows()) {
+                    env.push(y);
+                    env.push(x);
+                    env.call(f.clone())?;
                     for i in 0..outputs {
                         new_rows[i].push(env.pop("rows's function result")?);
                     }
-                } else {
-                    for (x, y) in xs.into_rows().zip(ys.into_rows()) {
-                        env.push(y);
-                        env.push(x);
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?);
-                        }
-                    }
                 }
-                for new_rows in new_rows.into_iter().rev() {
-                    let mut val = Value::from_row_values(new_rows, env)?;
-                    if is_empty {
-                        val.pop_row();
-                    }
-                    env.push(val);
+            }
+            for new_rows in new_rows.into_iter().rev() {
+                let mut val = Value::from_row_values(new_rows, env)?;
+                if is_empty {
+                    val.pop_row();
                 }
+                env.push(val);
             }
             Ok(())
         }

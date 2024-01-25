@@ -413,7 +413,7 @@ impl Value {
             |a| f(a, env),
         )
     }
-    pub(crate) fn generic_mut<T>(
+    pub(crate) fn generic_mut_shallow<T>(
         &mut self,
         n: impl FnOnce(&mut Array<f64>) -> T,
         _b: impl FnOnce(&mut Array<u8>) -> T,
@@ -428,6 +428,29 @@ impl Value {
             Self::Complex(array) => _co(array),
             Self::Char(array) => ch(array),
             Self::Box(array) => f(array),
+        }
+    }
+    pub(crate) fn generic_mut_deep<T>(
+        &mut self,
+        n: impl FnOnce(&mut Array<f64>) -> T,
+        _b: impl FnOnce(&mut Array<u8>) -> T,
+        _co: impl FnOnce(&mut Array<Complex>) -> T,
+        ch: impl FnOnce(&mut Array<char>) -> T,
+        f: impl FnOnce(&mut Array<Boxed>) -> T,
+    ) -> T {
+        match self {
+            Self::Num(array) => n(array),
+            #[cfg(feature = "bytes")]
+            Self::Byte(array) => _b(array),
+            Self::Complex(array) => _co(array),
+            Self::Char(array) => ch(array),
+            Self::Box(array) => {
+                if let Some(Boxed(value)) = array.as_scalar_mut() {
+                    value.generic_mut_deep(n, _b, _co, ch, f)
+                } else {
+                    f(array)
+                }
+            }
         }
     }
     #[allow(clippy::too_many_arguments)]

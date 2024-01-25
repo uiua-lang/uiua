@@ -354,14 +354,13 @@ impl Value {
         self.reverse_depth(0);
     }
     pub(crate) fn reverse_depth(&mut self, depth: usize) {
-        match self {
-            Value::Num(n) => n.reverse_depth(depth),
-            #[cfg(feature = "bytes")]
-            Value::Byte(b) => b.reverse_depth(depth),
-            Value::Complex(c) => c.reverse_depth(depth),
-            Value::Char(c) => c.reverse_depth(depth),
-            Value::Box(b) => b.reverse_depth(depth),
-        }
+        self.generic_mut_deep(
+            |a| a.reverse_depth(depth),
+            |a| a.reverse_depth(depth),
+            |a| a.reverse_depth(depth),
+            |a| a.reverse_depth(depth),
+            |a| a.reverse_depth(depth),
+        )
     }
 }
 
@@ -400,7 +399,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Transpose the value
     pub fn transpose(&mut self) {
-        self.generic_mut(
+        self.generic_mut_deep(
             Array::transpose,
             Array::transpose,
             Array::transpose,
@@ -505,7 +504,7 @@ impl Value {
     }
     /// Sort the value ascending
     pub fn sort_up(&mut self, env: &Uiua) -> UiuaResult {
-        self.generic_mut(
+        self.generic_mut_shallow(
             |a| a.sort_up(env),
             |a| a.sort_up(env),
             |a| a.sort_up(env),
@@ -515,7 +514,7 @@ impl Value {
     }
     /// Sort the value descending
     pub fn sort_down(&mut self, env: &Uiua) -> UiuaResult {
-        self.generic_mut(
+        self.generic_mut_shallow(
             |a| a.sort_down(env),
             |a| a.sort_down(env),
             |a| a.sort_down(env),
@@ -540,7 +539,7 @@ impl Value {
     }
     /// `deduplicate` the rows of the value
     pub fn deduplicate(&mut self) {
-        self.generic_mut(
+        self.generic_mut_shallow(
             Array::deduplicate,
             Array::deduplicate,
             Array::deduplicate,

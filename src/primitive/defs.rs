@@ -520,6 +520,9 @@ primitive!(
     ///
     /// ex: ⇌1_2_3_9
     /// ex: ⇌[1_2 3_4 5_6]
+    /// [reverse] works through boxes.
+    /// ex: ⇌ □[1 2 3]
+    /// ex: ≡⇌ {1_2_3_4 5_6_7 8_9}
     (1, Reverse, MonadicArray, ("reverse", '⇌')),
     /// Make an array 1-dimensional
     ///
@@ -566,6 +569,9 @@ primitive!(
     ///
     /// ex: ⍉.[1_2 3_4 5_6]
     /// ex: ⍉.[[1_2 3_4] [5_6 7_8]]
+    /// [transpose] works through boxes.
+    /// ex: ⍉ □[1_2_3 4_5_6]
+    /// ex: ≡⍉ {[1_2 3_4] [1_2_3 4_5_6]}
     ///
     /// `shape``transpose` is always equivalent to `rotate``1``shape`.
     /// ex: [1_2 3_4 5_6]
@@ -1220,7 +1226,8 @@ primitive!(
     ///   : ⊜(⊜⋕≠@ .)≠@\n.
     ///
     /// [under][partition] works if [partition]'s function is [under]able.
-    /// ex: ⍜⊜□⇌ ≠@ . $ These are some words
+    /// ex: ⍜⊜□⇌  ≠@ . $ These are some words
+    /// ex: ⍜⊜□≡⇌ ≠@ . $ These are some words
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),

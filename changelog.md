@@ -18,8 +18,9 @@ This version is not yet released. If you are reading this on the website, then t
 - [`fill ⬚`](https://uiua.org/docs/fill) can now be used to specify default accumulators for [`reduce /`](https://uiua.org/docs/reduce), [`group ⊕`](https://uiua.org/docs/group), and [`partition ⊜`](https://uiua.org/docs/partition)
   - **Breaking Change** - Reducing [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) no longer take a required accumulator
   - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill) can no longer be temporarily disabled. Try to scope it to the smallest function.
-- **Breaking Change** - Non-pervasive monadic functions no longer implicitely unbox their argument
+- **Breaking Change** - Most non-pervasive monadic functions no longer implicitely unbox their argument
   - This impliciteness led to some unexpected behavior, particularly when getting the [`length ⧻`](https://uiua.org/docs/length) or [`shape △`](https://uiua.org/docs/shape) of a boxed array
+  - Exceptions are [`reverse ⇌`](https://uiua.org/docs/reverse) and [`transpose ⍉`](https://uiua.org/docs/transpose), which work on box elements without unboxing them
 - Unicode escape sequences that are not 2 or 4 bytes long can now be specified with `\u{…}`
 - Change [`pop ◌`](https://uiua.org/docs/pop)'s glyph to make it look good in planet notation. Code using `;` will continue to work and will be formatted as `◌`.
 - [`un °`](https://uiua.org/docs/un)[`reduce /`](https://uiua.org/docs/reduce)[`multiply ×`](https://uiua.org/docs/multiply) now gives the prime factorization of a number

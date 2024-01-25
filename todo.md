@@ -2,7 +2,6 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- Let some functions go through boxes
 - 0.9
   - Annotation functions
     - Names

@@ -390,7 +390,11 @@ fn pad_grid_center(width: usize, height: usize, align_numbers: bool, grid: &mut 
         row.truncate(width);
         if row.len() < width {
             let diff = width - row.len();
-            let post_pad = if align_numbers && row.last().is_some_and(char::is_ascii_digit) {
+            let post_pad = if align_numbers
+                && row
+                    .last()
+                    .is_some_and(|c| c.is_ascii_digit() || "ηπτ".contains(*c))
+            {
                 0
             } else {
                 (diff + 1) / 2

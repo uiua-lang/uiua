@@ -166,13 +166,11 @@ impl Complex {
     }
     /// Calculate the arc sine of a complex number
     pub fn asin(self) -> Self {
-        let z = Self::new(-self.im, self.re);
-        (Self::ONE - (Self::ONE - self * self).sqrt()).log(z) / z
+        -Self::I * ((Self::ONE - self * self).sqrt() + Self::I * self).ln()
     }
     /// Calculate the arc cosine of a complex number
     pub fn acos(self) -> Self {
-        let z = Self::new(-self.im, self.re);
-        (z - (self - Self::ONE) * (self + Self::ONE).sqrt()).log(z) / z
+        -Self::I * (Self::I * (Self::ONE - self * self).sqrt() + self).ln()
     }
 }
 

@@ -1077,9 +1077,16 @@ code:
     }
     fn func(&mut self, func: Func, span: CodeSpan, call: bool) -> UiuaResult {
         if (func.lines.iter().flatten().filter(|w| w.value.is_code())).count() == 1 {
-            // Inline single item
-            let word = (func.lines.into_iter().flatten().find(|w| w.value.is_code())).unwrap();
-            return self.word(word, call);
+            // Inline single ident
+            if let Some(
+                word @ Sp {
+                    value: Word::Ident(_),
+                    ..
+                },
+            ) = func.lines.iter().flatten().find(|w| w.value.is_code())
+            {
+                return self.word(word.clone(), call);
+            }
         }
         let function = self.compile_func(func, span)?;
         self.push_instr(Instr::PushFunc(function));

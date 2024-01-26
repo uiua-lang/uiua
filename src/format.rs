@@ -455,7 +455,7 @@ impl<'a> Formatter<'a> {
             }
             let mut new_output = String::new();
             for (i, line) in lines.into_iter().enumerate() {
-                if i > 0 && !new_output.ends_with('\n') {
+                if i > 0 {
                     new_output.push('\n');
                 }
                 new_output.push_str(&line);
@@ -906,9 +906,6 @@ impl<'a> Formatter<'a> {
             self.format_words(line, true, depth);
         }
         if !compact {
-            if prevent_compact && start_line_pos > 0 && !self.output.ends_with('\n') {
-                self.output.push('\n');
-            }
             for _ in 0..self.config.multiline_indent * depth.saturating_sub(1) {
                 self.output.push(' ');
             }

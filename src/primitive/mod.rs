@@ -167,6 +167,7 @@ impl fmt::Display for ImplPrimitive {
             SortUp => write!(f, "{Select}{Rise}{Dup}"),
             SortDown => write!(f, "{Select}{Fall}{Dup}"),
             Primes => write!(f, "{Un}{Reduce}{Mul}"),
+            ReduceContent => write!(f, "{Reduce}{Content}"),
             &TransposeN(n) => {
                 if n < 0 {
                     write!(f, "{Un}(")?;
@@ -855,6 +856,7 @@ impl ImplPrimitive {
             ImplPrimitive::FirstWhere => env.monadic_ref_env(Value::first_where)?,
             ImplPrimitive::SortUp => env.monadic_mut_env(Value::sort_up)?,
             ImplPrimitive::SortDown => env.monadic_mut_env(Value::sort_down)?,
+            ImplPrimitive::ReduceContent => reduce::reduce_content(env)?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
         }
         Ok(())

@@ -6,7 +6,7 @@ use crate::{
     array::Array,
     function::{Function, FunctionId, Instr, Signature},
     value::Value,
-    FuncSlice, Primitive, TempStack,
+    FuncSlice, ImplPrimitive, Primitive, TempStack,
 };
 
 const START_HEIGHT: usize = 16;
@@ -540,6 +540,22 @@ impl<'a> VirtualEnv<'a> {
                     }
                 }
             },
+            Instr::ImplPrim(prim @ ImplPrimitive::ReduceContent, _) => {
+                let sig = self.pop_func()?.signature();
+                let outputs = match (sig.args, sig.outputs) {
+                    (0, _) => return Err(format!("{prim}'s function has no args").into()),
+                    (1, 0) => 0,
+                    (1, _) => {
+                        return Err(SigCheckError::from(format!(
+                            "{prim}'s function's signature is {sig}"
+                        ))
+                        .ambiguous())
+                    }
+                    (_, 1) => 1,
+                    _ => return Err(format!("{prim}'s function's signature is {sig}").into()),
+                };
+                self.handle_args_outputs(1, outputs)?;
+            }
             Instr::ImplPrim(prim, _) => {
                 let args = prim.args();
                 for _ in 0..prim.modifier_args().unwrap_or(0) {

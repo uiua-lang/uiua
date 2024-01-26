@@ -1248,6 +1248,8 @@ primitive!(
     ///   :  ⊂ □[1 2 3] □[4 5 6]
     /// A common use of [content] is to collapse a list of [box]ed arrays with [reduce].
     /// ex: /⊔⊂ {1_2_3 4_5 6}
+    /// This case will still unbox a single element.
+    /// ex: /⊔⊂ {"Hi"}
     ([1], Content, OtherModifier, ("content", '⊔')),
     /// Discard the top stack value then call a function
     ///
@@ -2085,4 +2087,5 @@ impl_primitive!(
     (1, FirstWhere),
     (1, SortUp),
     (1, SortDown),
+    (1[1], ReduceContent),
 );

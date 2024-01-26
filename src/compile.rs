@@ -287,11 +287,7 @@ code:
                         continue;
                     }
                     if can_run || words_have_import(&line) {
-                        let span = line
-                            .first()
-                            .unwrap()
-                            .span
-                            .clone()
+                        let span = (line.first().unwrap().span.clone())
                             .merge(line.last().unwrap().span.clone());
                         if count_placeholders(&line) > 0 {
                             self.add_error(
@@ -1818,6 +1814,28 @@ code:
                         instrs,
                     );
                     self.push_instr(Instr::PushFunc(func));
+                }
+            }
+            Reduce => {
+                let operand = modified.code_operands().next().cloned().unwrap();
+                let mut instrs = self.compile_operand_words(vec![operand])?.0;
+                if let [Instr::PushFunc(_), Instr::Prim(Content, span)] = instrs.as_slice() {
+                    let span = *span;
+                    *instrs.make_mut().last_mut().unwrap() =
+                        Instr::ImplPrim(ImplPrimitive::ReduceContent, span);
+                    let sig = instrs_signature(&instrs).unwrap_or(Signature::new(1, 1));
+                    if call {
+                        self.push_all_instrs(instrs);
+                    } else {
+                        let func = self.add_function(
+                            FunctionId::Anonymous(modified.modifier.span.clone()),
+                            sig,
+                            instrs,
+                        );
+                        self.push_instr(Instr::PushFunc(func));
+                    }
+                } else {
+                    return Ok(false);
                 }
             }
             _ => return Ok(false),

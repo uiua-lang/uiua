@@ -1,5 +1,7 @@
 //! Algorithms for reducing modifiers
 
+use std::convert::identity;
+
 use ecow::EcoVec;
 
 use crate::{
@@ -169,11 +171,26 @@ where
 }
 
 fn generic_reduce(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
+    generic_reduce_impl(f, xs, identity, env)
+}
+
+pub fn reduce_content(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop_function()?;
+    let xs = env.pop(1)?;
+    generic_reduce_impl(f, xs, Value::unboxed, env)
+}
+
+fn generic_reduce_impl(
+    f: Function,
+    xs: Value,
+    process: impl Fn(Value) -> Value,
+    env: &mut Uiua,
+) -> UiuaResult {
     let sig = f.signature();
     match (sig.args, sig.outputs) {
         (0 | 1, 1) => {
             for row in xs.into_rows() {
-                env.push(row);
+                env.push(process(row));
                 env.call(f.clone())?;
             }
         }
@@ -184,11 +201,12 @@ fn generic_reduce(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
                 .ok_or_else(|| {
                     env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
                 })?;
+            acc = process(acc);
             if env.unpack_boxes() {
                 acc.unpack();
             }
             for row in rows {
-                env.push(row);
+                env.push(process(row));
                 env.push(acc);
                 env.call(f.clone())?;
                 acc = env.pop("reduced function result")?;

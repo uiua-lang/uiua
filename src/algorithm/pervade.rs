@@ -975,10 +975,10 @@ pub mod complex {
         Complex::new(b.into(), a)
     }
     pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
-        b.into() * Complex::I + a
+        b.into() + a * Complex::I
     }
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
-        b * Complex::I + a.into()
+        b + a.into() * Complex::I
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the form a complex number with {b} as the real part and {a} as the imaginary part"))

@@ -77,13 +77,10 @@ impl Complex {
         self.re.hypot(self.im)
     }
     /// Get the arctangent of a complex number
-    pub fn atan2(self, rhs: impl Into<Self>) -> Complex {
-        let rhs = rhs.into();
-        let denom = self.re * self.re + self.im * self.im;
-        Self::new(
-            (self.re * rhs.re + self.im * rhs.im) / denom,
-            (self.im * rhs.re - self.re * rhs.im) / denom,
-        )
+    pub fn atan2(self, x: impl Into<Self>) -> Complex {
+        let y = self;
+        let x = x.into();
+        -Complex::I * ((x + Complex::I * y) / (y * y + x * x).sqrt()).ln()
     }
     /// Normalize a complex number
     pub fn normalize(self) -> Self {

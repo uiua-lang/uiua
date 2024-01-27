@@ -7,6 +7,7 @@ use std::{
 
 use bitflags::bitflags;
 use ecow::EcoVec;
+use serde::*;
 
 use crate::{
     cowslice::{cowslice, CowSlice},
@@ -15,26 +16,60 @@ use crate::{
 };
 
 /// Uiua's array type
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(bound(
+    serialize = "T: Clone + Serialize",
+    deserialize = "T: Clone + Deserialize<'de>"
+))]
 #[repr(C)]
 pub struct Array<T> {
+    #[serde(rename = "s", default, skip_serializing_if = "<[_]>::is_empty")]
     pub(crate) shape: Shape,
+    #[serde(rename = "d", default, skip_serializing_if = "<[_]>::is_empty")]
     pub(crate) data: CowSlice<T>,
+    #[serde(
+        rename = "m",
+        flatten,
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "meta_ser"
+    )]
     pub(crate) meta: Option<Arc<ArrayMeta>>,
 }
 
+mod meta_ser {
+    use super::*;
+    pub fn serialize<S: Serializer>(
+        meta: &Option<Arc<ArrayMeta>>,
+        s: S,
+    ) -> Result<S::Ok, S::Error> {
+        if let Some(meta) = meta {
+            meta.serialize(s)
+        } else {
+            s.serialize_none()
+        }
+    }
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        d: D,
+    ) -> Result<Option<Arc<ArrayMeta>>, D::Error> {
+        Ok(Option::<ArrayMeta>::deserialize(d)?.map(Arc::new))
+    }
+}
+
 /// Non-shape metadata for an array
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct ArrayMeta {
     /// Flags for the array
+    #[serde(default, skip_serializing_if = "ArrayFlags::is_empty")]
     pub flags: ArrayFlags,
     /// The length of a map array
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub map_len: Option<usize>,
 }
 
 bitflags! {
     /// Flags for an array
-    #[derive(Clone, Copy, Default)]
+    #[derive(Clone, Copy, Default, Serialize, Deserialize)]
     pub struct ArrayFlags: u8 {
         /// No flags
         const NONE = 0;
@@ -270,6 +305,43 @@ impl<T: ArrayValue> Array<T> {
         let end = start + row_len;
         Self::new(&self.shape[1..], self.data.slice(start..end))
     }
+    /// Consume the array and get an iterator over its rows
+    pub fn into_rows(self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator {
+        (0..self.row_count()).map(move |i| self.row(i))
+    }
+    pub(crate) fn first_dim_zero(&self) -> Self {
+        if self.rank() == 0 {
+            return self.clone();
+        }
+        let mut shape = self.shape.clone();
+        shape[0] = 0;
+        Array::new(shape, CowSlice::new())
+    }
+    /// Get a pretty-printed string representing the array
+    ///
+    /// This is what is printed by the `&s` function
+    pub fn show(&self) -> String {
+        self.grid_string()
+    }
+    pub(crate) fn pop_row(&mut self) -> Option<Self> {
+        if self.row_count() == 0 {
+            return None;
+        }
+        let data = self.data.split_off(self.data.len() - self.row_len());
+        self.shape[0] -= 1;
+        let shape: Shape = self.shape[1..].into();
+        self.validate_shape();
+        Some(Self::new(shape, data))
+    }
+    /// Get a mutable slice of a row
+    #[track_caller]
+    pub fn row_slice_mut(&mut self, row: usize) -> &mut [T] {
+        let row_len = self.row_len();
+        &mut self.data.as_mut_slice()[row * row_len..(row + 1) * row_len]
+    }
+}
+
+impl<T: Clone> Array<T> {
     /// Convert the elements of the array
     pub fn convert<U>(self) -> Array<U>
     where
@@ -312,40 +384,6 @@ impl<T: ArrayValue> Array<T> {
             data: self.data.iter().cloned().map(f).collect(),
             meta: self.meta.clone(),
         }
-    }
-    /// Consume the array and get an iterator over its rows
-    pub fn into_rows(self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator {
-        (0..self.row_count()).map(move |i| self.row(i))
-    }
-    pub(crate) fn first_dim_zero(&self) -> Self {
-        if self.rank() == 0 {
-            return self.clone();
-        }
-        let mut shape = self.shape.clone();
-        shape[0] = 0;
-        Array::new(shape, CowSlice::new())
-    }
-    /// Get a pretty-printed string representing the array
-    ///
-    /// This is what is printed by the `&s` function
-    pub fn show(&self) -> String {
-        self.grid_string()
-    }
-    pub(crate) fn pop_row(&mut self) -> Option<Self> {
-        if self.row_count() == 0 {
-            return None;
-        }
-        let data = self.data.split_off(self.data.len() - self.row_len());
-        self.shape[0] -= 1;
-        let shape: Shape = self.shape[1..].into();
-        self.validate_shape();
-        Some(Self::new(shape, data))
-    }
-    /// Get a mutable slice of a row
-    #[track_caller]
-    pub fn row_slice_mut(&mut self, row: usize) -> &mut [T] {
-        let row_len = self.row_len();
-        &mut self.data.as_mut_slice()[row * row_len..(row + 1) * row_len]
     }
 }
 

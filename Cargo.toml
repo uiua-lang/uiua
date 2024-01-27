@@ -12,7 +12,7 @@ version = "0.8.0"
 
 [dependencies]
 # Core dependencies
-bitflags = "2"
+bitflags = {version = "2", features = ["serde"]}
 bufreaderwriter = "0.2.4"
 colored = "2"
 crossbeam-channel = "0.5.11"

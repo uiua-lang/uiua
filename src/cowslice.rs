@@ -7,6 +7,8 @@ use std::{
     ptr,
 };
 
+use serde::*;
+
 macro_rules! cowslice {
     ($($item:expr),* $(,)?) => {
         $crate::cowslice::CowSlice::from([$($item),*])
@@ -357,5 +359,23 @@ impl<T: Clone> FromIterator<T> for CowSlice<T> {
 impl<T: Clone> Extend<T> for CowSlice<T> {
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
         self.modify(|vec| vec.extend(iter))
+    }
+}
+
+impl<T: Clone> Serialize for CowSlice<T>
+where
+    T: Serialize,
+{
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        (**self).serialize(serializer)
+    }
+}
+
+impl<'de, T: Clone> Deserialize<'de> for CowSlice<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Ok(Self::from(EcoVec::<T>::deserialize(deserializer)?))
     }
 }

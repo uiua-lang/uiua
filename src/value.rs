@@ -11,7 +11,11 @@ use ecow::EcoVec;
 use serde::*;
 
 use crate::{
-    algorithm::{pervade::*, FillContext},
+    algorithm::{
+        map::{EMPTY_NAN, TOMBSTONE_NAN},
+        pervade::*,
+        FillContext,
+    },
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
@@ -21,7 +25,8 @@ use crate::{
 /// A generic array value
 ///
 /// This enum is used to represent all possible array types.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(from = "ValueRep", into = "ValueRep")]
 #[repr(C)]
 pub enum Value {
     /// Common number array
@@ -1622,69 +1627,100 @@ impl ValueBuilder {
     }
 }
 
-impl Serialize for Value {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match self {
-            Value::Num(arr) if arr.rank() == 0 => arr.data[0].serialize(serializer),
-            Value::Num(arr) => (0, &arr.shape, arr.data.as_slice()).serialize(serializer),
-            #[cfg(feature = "bytes")]
-            Value::Byte(arr) if arr.rank() == 0 => arr.data[0].serialize(serializer),
-            #[cfg(feature = "bytes")]
-            Value::Byte(arr) => (0, &arr.shape, arr.data.as_slice()).serialize(serializer),
-            Value::Complex(arr) => (1, &arr.shape, arr.data.as_slice()).serialize(serializer),
-            Value::Char(arr) if arr.rank() == 1 => {
-                arr.data.iter().collect::<String>().serialize(serializer)
+#[derive(Clone, Copy, Serialize, Deserialize)]
+enum MapNumRep {
+    #[serde(rename = "NaN")]
+    NaN,
+    #[serde(rename = "empty")]
+    MapEmpty,
+    #[serde(rename = "tomb")]
+    MapTombstone,
+    #[serde(untagged)]
+    Num(f64),
+}
+
+impl From<f64> for MapNumRep {
+    fn from(n: f64) -> Self {
+        if n.is_nan() {
+            if n.to_bits() == EMPTY_NAN.to_bits() {
+                Self::MapEmpty
+            } else if n.to_bits() == TOMBSTONE_NAN.to_bits() {
+                Self::MapTombstone
+            } else {
+                Self::NaN
             }
-            Value::Char(arr) => (2, &arr.shape, arr.data.as_slice()).serialize(serializer),
-            Value::Box(arr) => (3, &arr.shape, arr.data.as_slice()).serialize(serializer),
+        } else {
+            Self::Num(n)
         }
     }
 }
 
-impl<'de> Deserialize<'de> for Value {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value: serde_json::Value = Deserialize::deserialize(deserializer)?;
-        match &value {
-            serde_json::Value::String(s) => return Ok(s.clone().into()),
-            serde_json::Value::Number(n) => {
-                if let Some(n) = n.as_f64() {
-                    return Ok(n.into());
-                }
-            }
-            _ => {}
+impl From<MapNumRep> for f64 {
+    fn from(rep: MapNumRep) -> Self {
+        match rep {
+            MapNumRep::NaN => f64::NAN,
+            MapNumRep::MapEmpty => EMPTY_NAN,
+            MapNumRep::MapTombstone => TOMBSTONE_NAN,
+            MapNumRep::Num(n) => n,
         }
-        let (tag, shape, data): (u8, Shape, serde_json::Value) =
-            serde_json::from_value(value).map_err(|e| de::Error::custom(format!("{}", e)))?;
-        let mut value = match tag {
-            0 => Value::Num(Array::new(
-                shape,
-                serde_json::from_value::<EcoVec<_>>(data)
-                    .map_err(|e| de::Error::custom(format!("invalid number array: {}", e)))?,
-            )),
-            1 => Value::Complex(Array::new(
-                shape,
-                serde_json::from_value::<EcoVec<_>>(data)
-                    .map_err(|e| de::Error::custom(format!("invalid complex array: {}", e)))?,
-            )),
-            2 => Value::Char(Array::new(
-                shape,
-                serde_json::from_value::<EcoVec<_>>(data)
-                    .map_err(|e| de::Error::custom(format!("invalid char array: {}", e)))?,
-            )),
-            3 => Value::Box(Array::new(
-                shape,
-                serde_json::from_value::<EcoVec<_>>(data)
-                    .map_err(|e| de::Error::custom(format!("invalid box array: {}", e)))?,
-            )),
-            tag => return Err(de::Error::custom(format!("invalid value tag: {tag}"))),
-        };
-        value.compress();
-        Ok(value)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+enum ValueRep {
+    #[cfg(feature = "bytes")]
+    Byte(Array<u8>),
+    Num(Array<MapNumRep>),
+    Complex(Array<Complex>),
+    Char {
+        #[serde(rename = "s", default, skip_serializing_if = "<[_]>::is_empty")]
+        shape: Shape,
+        #[serde(rename = "d", default, skip_serializing_if = "String::is_empty")]
+        data: String,
+        #[serde(
+            rename = "m",
+            flatten,
+            default,
+            skip_serializing_if = "Option::is_none"
+        )]
+        meta: Option<ArrayMeta>,
+    },
+    Box(Array<Boxed>),
+}
+
+impl From<ValueRep> for Value {
+    fn from(value: ValueRep) -> Self {
+        match value {
+            #[cfg(feature = "bytes")]
+            ValueRep::Byte(arr) => arr.into(),
+            ValueRep::Num(arr) => arr.convert::<f64>().into(),
+            ValueRep::Complex(arr) => arr.into(),
+            ValueRep::Char { shape, data, meta } => {
+                let mut arr = Array::new(shape, data.chars().collect::<EcoVec<_>>());
+                if let Some(meta) = meta {
+                    *arr.meta_mut() = meta;
+                }
+                arr.into()
+            }
+            ValueRep::Box(arr) => arr.into(),
+        }
+    }
+}
+
+impl From<Value> for ValueRep {
+    fn from(value: Value) -> Self {
+        match value {
+            #[cfg(feature = "bytes")]
+            Value::Byte(arr) => Self::Byte(arr),
+            Value::Num(arr) => Self::Num(arr.convert_with(MapNumRep::from)),
+            Value::Complex(arr) => Self::Complex(arr),
+            Value::Char(arr) => Self::Char {
+                shape: arr.shape().clone(),
+                data: arr.data().iter().collect(),
+                meta: arr.meta.map(|m| (*m).clone()),
+            },
+            Value::Box(arr) => Self::Box(arr),
+        }
     }
 }

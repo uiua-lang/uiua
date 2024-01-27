@@ -210,6 +210,13 @@ impl<T: ArrayValue> Array<T> {
         Ok(into)
     }
     fn unpick_single(self, index: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
+        if into.rank() < index.len() {
+            return Err(env.error(format!(
+                "Cannot unpick into rank {} array with index of length {}",
+                into.rank(),
+                index.len()
+            )));
+        }
         let expected_shape = &into.shape()[index.len()..];
         if self.shape != expected_shape {
             return Err(env.error(format!(

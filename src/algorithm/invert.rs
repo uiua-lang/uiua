@@ -335,7 +335,7 @@ pub(crate) fn under_instrs(
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
-                    // println!("under {:?} to {:?} {:?}", instrs, befores, afters);
+                    // println!("undered {:?} to {:?} {:?}", instrs, befores, afters);
                     return Some((befores, afters));
                 }
                 curr_instrs = input;
@@ -686,6 +686,19 @@ fn under_temp_pattern<'a>(
             let inner_iter = inner.iter().filter(|instr| !instr.is_compile_only());
             let both = input_iter.clone().count() >= inner_iter.clone().count()
                 && input_iter.zip(inner_iter).all(|(a, b)| a == b);
+
+            if both {
+                // Very dirty fix for stuff like: ⍜⊡(⍜∩×↥,) 2 [⍥9]3 ¯1 5
+                while let Some(Instr::CopyToTemp {
+                    stack: TempStack::Under,
+                    count: 1, // This check properlty ignores things like: ⍜∩⊜□∘ ∩(≠@l.) "Hello" "World!"
+                    ..
+                }) = befores.get(1)
+                {
+                    befores.remove(1);
+                }
+            }
+
             if both && g_args > 1 {
                 EcoVec::new()
             } else {

@@ -29,6 +29,10 @@
 ⍤⊃⋅∘≍ ℂ0η °○ ℂ0 1
 ⍤⊃⋅∘≍ η °(○+η) 0
 ⍤⊃⋅∘≍ ℂ0η °(○+η) ℂ0 0
+⍤⊃⋅∘≍ η ∠ 1 0
+⍤⊃⋅∘≍ ℂ0η ∠ 1 ℂ0 0
+⍤⊃⋅∘≍ ℂ0η ∠ ℂ0 1 0
+⍤⊃⋅∘≍ ℂ0η ∠ ℂ0 1 ℂ0 0
 
 # Bytes integrity - ensure the the boolean flag is properly set and unset
 ⍤⊃⋅∘≍ ¯4 ¬5

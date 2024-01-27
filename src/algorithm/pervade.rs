@@ -905,15 +905,35 @@ pub mod modulus {
         env.error(format!("Cannot modulo {a} and {b}"))
     }
 }
-bin_op_mod!(
-    atan2,
-    a,
-    b,
-    f64::from,
-    f64,
-    a.atan2(b),
-    "Cannot get the atan2 of {a} and {b}"
-);
+pub mod atan2 {
+    use super::*;
+    pub fn num_num(a: f64, b: f64) -> f64 {
+        a.atan2(b)
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
+        f64::from(a).atan2(f64::from(b))
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_num(a: u8, b: f64) -> f64 {
+        f64::from(a).atan2(b)
+    }
+    #[cfg(feature = "bytes")]
+    pub fn num_byte(a: f64, b: u8) -> f64 {
+        let b = (f64::from)(b);
+        a.atan2(b)
+    }
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        let b = b.into();
+        -Complex::I * ((b + Complex::I * a) / (a * a + b * b).sqrt()).ln()
+    }
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        com_x(a.into(), b)
+    }
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot get the atan2 of {a} and {b}"))
+    }
+}
 pub mod pow {
     use super::*;
     pub fn num_num(a: f64, b: f64) -> f64 {

@@ -27,7 +27,6 @@ This version is not yet released. If you are reading this on the website, then t
 - [`classify ⊛`](https://uiua.org/docs/classify) and [`deduplicate ◴`](https://uiua.org/docs/deduplicate) now work with [`under ⍜`](https://uiua.org/docs/under)
 - [`&fras`](https://uiua.org/docs/&fras) and [`&frab`](https://uiua.org/docs/&frab) now work with [`under ⍜`](https://uiua.org/docs/under)
 - Completely remove the deprecated `unbox ⊔`
-- Add the experimental [`cascade ⪾`](https://uiua.org/docs/cascade) modifier, which captures some common [`fork ⊃`](https://uiua.org/docs/fork) patterns
 - Add experimental hashmap functions, which operate on a box array as if it is a hashmap
   - [`map`](https://uiua.org/docs/map)
   - [`has`](https://uiua.org/docs/has)

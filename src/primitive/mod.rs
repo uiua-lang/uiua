@@ -288,6 +288,7 @@ impl Primitive {
         match self {
             Primitive::Unpack => Some(format!("use {} instead", Primitive::Content.format())),
             Primitive::Cross => Some(format!("use {} instead", Primitive::Table.format())),
+            Primitive::Cascade => Some(format!("use {} instead", Primitive::Fork.format())),
             Primitive::Rectify => Some(String::new()),
             _ => None,
         }

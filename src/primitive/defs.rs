@@ -2061,7 +2061,7 @@ impl_primitive!(
     (1[1], InvScan),
     (1(2), InvMap),
     (1, InvTrace),
-    (0, InvStack),
+    (0(0), InvStack),
     (0[1], InvDump),
     (1, Primes),
     (1, InvBox),

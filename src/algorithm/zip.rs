@@ -168,7 +168,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
 
 fn each1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, ..)) = f_un_fast_fn(&f, env) {
-        let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= 1);
+        let maybe_through_boxes = matches!(&xs, Value::Box(..));
         if !maybe_through_boxes {
             let rank = xs.rank();
             let val = f(xs, rank, env)?;

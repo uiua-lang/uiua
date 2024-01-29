@@ -17,7 +17,7 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
     value::Value,
-    Boxed, Shape, Uiua, UiuaResult,
+    Boxed, Primitive, Shape, Uiua, UiuaResult,
 };
 
 use super::{op_bytes_retry_fill, ArrayCmpSlice, FillContext};
@@ -712,10 +712,18 @@ impl Array<f64> {
     pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
         let mut nats = Vec::new();
         for &n in &self.data {
-            if n.fract() != 0.0 {
-                return Err(env.error("Array must be a list of naturals"));
+            if n.fract().abs() > f64::EPSILON || n < 0.0 {
+                return Err(env.error(format!(
+                    "Array must be a list of naturals, but {n} is not natural"
+                )));
             }
-            nats.push(n as u128);
+            if n > u128::MAX as f64 {
+                return Err(env.error(format!(
+                    "{n} is too large for the {} algorithm",
+                    Primitive::Bits.format()
+                )));
+            }
+            nats.push(n.round() as u128);
         }
         let mut max = if let Some(max) = nats.iter().max() {
             *max

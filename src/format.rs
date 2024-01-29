@@ -441,7 +441,7 @@ impl<'a> Formatter<'a> {
             for (max, group) in groups {
                 for (line_number, comment) in group {
                     let line = &mut lines[line_number - 1];
-                    let spaces = max + 1 - line.chars().count();
+                    let spaces = (max + 1).saturating_sub(line.chars().count());
                     line.push_str(&" ".repeat(spaces));
                     line.push('#');
                     if !comment.starts_with(' ')
@@ -651,8 +651,12 @@ impl<'a> Formatter<'a> {
                 self.output.push('(');
                 let any_multiline = sw.branches.iter().any(|br| {
                     br.value.lines.len() > 1
-                        || (br.value.lines.iter())
-                            .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
+                        || br
+                            .value
+                            .lines
+                            .iter()
+                            .flatten()
+                            .any(|word| word_is_multiline(&word.value))
                 });
                 for (i, br) in sw.branches.iter().enumerate() {
                     let add_leading_newline = i == 0
@@ -967,7 +971,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::Primitive(_) => false,
         Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),
         Word::Placeholder(_) => false,
-        Word::Comment(_) => false,
+        Word::Comment(_) => true,
         Word::Spaces => false,
         Word::BreakLine | Word::UnbreakLine => false,
         Word::OutputComment { .. } => true,

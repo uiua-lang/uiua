@@ -10,6 +10,8 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - FFI
   - Basic package management
   - `above` and `below` modifiers
+  - `under join`
+  - pad link from Gist
 - Multimedia
   - Sound input
   - Webcam input

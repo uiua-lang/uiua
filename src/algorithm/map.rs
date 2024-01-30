@@ -167,10 +167,20 @@ fn coerce_values(
             item.shape(),
             FormatShape(&arr.shape()[1..])
         )),
-        (Value::Num(_), owned @ Value::Num(_))
-        | (Value::Complex(_), owned @ Value::Complex(_))
-        | (Value::Char(_), owned @ Value::Char(_))
-        | (Value::Box(_), owned @ Value::Box(_)) => Ok(owned),
+        (val @ Value::Num(_), owned @ Value::Num(_))
+        | (val @ Value::Complex(_), owned @ Value::Complex(_))
+        | (val @ Value::Char(_), owned @ Value::Char(_))
+        | (val @ Value::Box(_), owned @ Value::Box(_)) => {
+            if &val.shape()[1..] != owned.shape() {
+                Err(format!(
+                    "Cannot {action1} shape {} {action2} shape {} {action3}",
+                    owned.shape(),
+                    FormatShape(&val.shape()[1..])
+                ))
+            } else {
+                Ok(owned)
+            }
+        }
         (Value::Box(_), Value::Num(num)) => Ok(Value::Box(Array::from(Boxed(Value::from(num))))),
         (Value::Box(_), Value::Char(ch)) => Ok(Value::Box(Array::from(Boxed(Value::from(ch))))),
         (Value::Box(_), Value::Complex(num)) => {

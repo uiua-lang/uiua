@@ -681,7 +681,7 @@ fn under_temp_pattern<'a>(
     befores.push(end_instr.clone());
 
     let afters = match (g_sig.args, g_sig.outputs) {
-        (g_args, 1) => {
+        (g_args, g_outputs) if g_args > g_outputs || g_args == 1 && g_outputs == 1 => {
             let input_iter = input.iter().filter(|instr| !instr.is_compile_only());
             let inner_iter = inner.iter().filter(|instr| !instr.is_compile_only());
             let both = input_iter.clone().count() >= inner_iter.clone().count()
@@ -734,8 +734,8 @@ fn under_temp_pattern<'a>(
             let mut start_instr = start_instr.clone();
             let mut end_instr = end_instr.clone();
             let (start_count, end_count) = temp_pair_counts(&mut start_instr, &mut end_instr)?;
-            *start_count = inner_afters_sig.outputs;
-            *end_count = inner_befores_sig.outputs;
+            *start_count = 1;
+            *end_count = 1;
             let mut afters = inner_afters;
             afters.insert(0, start_instr.clone());
             afters.push(end_instr.clone());

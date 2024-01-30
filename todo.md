@@ -12,7 +12,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - `above` and `below` modifiers
   - `under join`
   - Pad link from Gist
-  - Better complex `↥`/`↧` implementation?
 - Multimedia
   - Sound input
   - Webcam input
@@ -31,6 +30,7 @@ These features are not strictly on the roadmap, but PRs that implement them will
 Feel free to make PRs to the list itself as well.
 
 - `⍜◿`
+- Better complex `⌈`/`⌊`/`⁅` implementation
 - Additional optimizations
   - `≡/f◫`
   - `≡f◫`

@@ -11,7 +11,8 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - Basic package management
   - `above` and `below` modifiers
   - `under join`
-  - pad link from Gist
+  - Pad link from Gist
+  - Better complex `↥`/`↧` implementation?
 - Multimedia
   - Sound input
   - Webcam input
@@ -21,10 +22,18 @@ Within each section, items are ordered (roughly) by decreasing priority.
 ## Bugs
 - Figure out what is going on with the editor cursor
 
-## Optimizations
-- Row windows - `≡f◫` for scalar window size should be optimized to not materialize all the windows
-- Reduce windows? - `/f◫` for scalar window size could be optimized, but is it necessary?
-
 ## Documentation
 - System functions
 
+## Open to Implementation
+These features are not strictly on the roadmap, but PRs that implement them will likely be accepted.
+
+Feel free to make PRs to the list itself as well.
+
+- `⍜◿`
+- Additional optimizations
+  - `≡/f◫`
+  - `≡f◫`
+  - `/f◫`
+  - `/f⇌`
+  - `⍜⇌/f`

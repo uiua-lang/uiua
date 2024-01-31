@@ -2,9 +2,9 @@
 
 Uiua is not yet stable.
 
+<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
-## 0.8.0 - 2024-??-??
-This version is not yet released. If you are reading this on the website, then these changes are live here.
+## 0.8.0 - 2024-01-31
 ### Language
 - Add the [`content ⊔`](https://uiua.org/docs/content) modifier, which unboxes its function's arguments before calling it
   - Deprecate [`unpack ⊐`](https://uiua.org/docs/unpack) in favor of [`content ⊔`](https://uiua.org/docs/content)

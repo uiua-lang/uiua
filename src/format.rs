@@ -566,13 +566,7 @@ impl<'a> Formatter<'a> {
                 }
                 self.push(&word.span, &formatted);
             }
-            Word::Char(_) => self
-                .output
-                .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
-            Word::String(_) => self
-                .output
-                .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
-            Word::FormatString(_) => self
+            Word::Char(_) | Word::String(_) | Word::Label(_) | Word::FormatString(_) => self
                 .output
                 .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
             Word::MultilineString(lines) => {
@@ -947,6 +941,7 @@ fn word_is_multiline(word: &Word) -> bool {
     match word {
         Word::Number(..) => false,
         Word::Char(_) => false,
+        Word::Label(_) => false,
         Word::String(_) => false,
         Word::FormatString(_) => false,
         Word::MultilineString(_) => true,

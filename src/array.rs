@@ -6,7 +6,7 @@ use std::{
 };
 
 use bitflags::bitflags;
-use ecow::EcoVec;
+use ecow::{EcoString, EcoVec};
 use serde::*;
 
 use crate::{
@@ -59,6 +59,9 @@ mod meta_ser {
 /// Non-shape metadata for an array
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct ArrayMeta {
+    /// The label
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<EcoString>,
     /// Flags for the array
     #[serde(default, skip_serializing_if = "ArrayFlags::is_empty")]
     pub flags: ArrayFlags,
@@ -91,6 +94,7 @@ impl ArrayFlags {
 
 /// Default metadata for an array
 pub static DEFAULT_META: ArrayMeta = ArrayMeta {
+    label: None,
     flags: ArrayFlags::NONE,
     map_len: None,
 };
@@ -203,6 +207,15 @@ impl<T> Array<T> {
     /// Get a mutable reference to the metadata of the array
     pub fn meta_mut(&mut self) -> &mut ArrayMeta {
         Self::get_meta_mut(&mut self.meta)
+    }
+    /// Take the label from the metadata
+    pub fn take_label(&mut self) -> Option<EcoString> {
+        if let Some(meta) = self.meta.as_mut() {
+            let meta = Arc::make_mut(meta);
+            meta.label.take()
+        } else {
+            None
+        }
     }
     /// Reset all metadata
     pub fn reset_meta(&mut self) {

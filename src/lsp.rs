@@ -68,7 +68,7 @@ impl Spanner {
         for word in words {
             match &word.value {
                 Word::Number(..) => spans.push(word.span.clone().sp(SpanKind::Number)),
-                Word::Char(_) | Word::String(_) | Word::FormatString(_) => {
+                Word::Char(_) | Word::String(_) | Word::Label(_) | Word::FormatString(_) => {
                     spans.push(word.span.clone().sp(SpanKind::String))
                 }
                 Word::MultilineString(lines) => {

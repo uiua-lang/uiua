@@ -14,7 +14,7 @@ use crate::{
     array::{Array, ArrayValue},
     boxed::Boxed,
     value::Value,
-    Complex, Primitive,
+    ArrayMeta, Complex, Primitive,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -162,11 +162,31 @@ impl GridFmt for Boxed {
     }
 }
 
+fn add_label(grid: &mut Grid, meta: &ArrayMeta) {
+    // Add label
+    if let Some(label) = &meta.label {
+        if grid.len() == 1 {
+            grid[0] = (label.chars().chain([':', ' ']))
+                .chain(take(&mut grid[0]))
+                .collect();
+        } else {
+            grid[0].truncate(2);
+            grid[0].push(' ');
+            grid[0].extend(label.chars());
+            while grid[0].len() < grid[1].len() {
+                grid[0].push(' ');
+            }
+        }
+    }
+}
+
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, boxed: bool) -> Grid {
         // Scalar
         if self.shape.is_empty() {
-            return self.data[0].fmt_grid(boxed);
+            let mut grid = self.data[0].fmt_grid(boxed);
+            add_label(&mut grid, self.meta());
+            return grid;
         }
         // Empty list
         if self.shape == [0] {
@@ -175,7 +195,9 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             let mut row = vec![left];
             row.extend(inner.chars());
             row.push(right);
-            return vec![row];
+            let mut grid = vec![row];
+            add_label(&mut grid, self.meta());
+            return grid;
         }
 
         let mut metagrid: Option<Metagrid> = None;
@@ -282,7 +304,12 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 grid[i + 1][0] = if boxed { '╟' } else { '╷' };
             }
             *grid.last_mut().unwrap().last_mut().unwrap() = if boxed { '╜' } else { '╯' };
-            // Handle really big grid
+        }
+
+        add_label(&mut grid, self.meta());
+
+        // Handle really big grid
+        if self.rank() > 1 {
             let max_width = term_size::dimensions().map_or(54, |(w, _)| w);
             for row in grid.iter_mut() {
                 if row.len() > max_width {
@@ -296,6 +323,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 }
             }
         }
+
         grid
     }
 }

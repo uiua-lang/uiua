@@ -63,6 +63,11 @@ pub enum Instr {
         parts: EcoVec<EcoString>,
         span: usize,
     },
+    /// Label an array
+    Label {
+        label: EcoString,
+        span: usize,
+    },
     /// Call a dynamic function
     Dynamic(DynamicFunction),
     /// Bind some local values
@@ -242,6 +247,7 @@ impl fmt::Display for Instr {
                 }
                 write!(f, "\"")
             }
+            Instr::Label { label, .. } => write!(f, "${label}"),
             Instr::Dynamic(df) => write!(f, "{df:?}"),
             Instr::PushLocals { count, .. } => write!(f, "<push {count} locals>"),
             Instr::PopLocals => write!(f, "<pop locals>"),

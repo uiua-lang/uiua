@@ -738,6 +738,8 @@ impl<'i> Parser<'i> {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
             s.map(Into::into).map(Word::String)
+        } else if let Some(label) = self.next_token_map(Token::as_label) {
+            label.map(Into::into).map(Word::Label)
         } else if let Some(frags) = self.next_token_map(Token::as_format_string) {
             frags.map(Word::FormatString)
         } else if let Some(line) = self.next_token_map(Token::as_multiline_string) {

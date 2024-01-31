@@ -405,6 +405,7 @@ pub enum Token {
     Number,
     Char(String),
     Str(String),
+    Label(String),
     FormatStr(Vec<String>),
     MultilineString(Vec<String>),
     Simple(AsciiToken),
@@ -442,6 +443,12 @@ impl Token {
     pub(crate) fn as_output_comment(&self) -> Option<usize> {
         match self {
             Token::OutputComment(n) => Some(*n),
+            _ => None,
+        }
+    }
+    pub(crate) fn as_label(&self) -> Option<&str> {
+        match self {
+            Token::Label(label) => Some(label),
             _ => None,
         }
     }
@@ -728,17 +735,17 @@ impl<'a> Lexer<'a> {
                         }
                         continue;
                     }
-                    let mut errored = false;
                     if format && !self.next_char_exact("\"") {
-                        self.errors.push(
-                            self.end_span(start)
-                                .sp(LexError::ExpectedCharacter(vec!['"', ' '])),
-                        );
-                        errored = true;
+                        let mut label = String::new();
+                        while let Some(c) = self.next_char_if(|c| c.chars().all(is_ident_char)) {
+                            label.push_str(c);
+                        }
+                        self.end(Label(label), start);
+                        continue;
                     }
                     // Single-line strings
                     let inner = self.parse_string_contents(start, Some('"'));
-                    if !self.next_char_exact("\"") && !errored {
+                    if !self.next_char_exact("\"") {
                         self.errors.push(
                             self.end_span(start)
                                 .sp(LexError::ExpectedCharacter(vec!['"'])),

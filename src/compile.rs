@@ -792,6 +792,29 @@ code:
                     self.push_instr(Instr::PushFunc(f));
                 }
             }
+            Word::Label(label) => {
+                if !self.scope.experimental {
+                    self.add_error(
+                        word.span.clone(),
+                        "Labels are experimental. To use them, add \
+                        `# Experimental!` to the top of the file.",
+                    );
+                }
+                let instr = Instr::Label {
+                    label: label.into(),
+                    span: self.add_span(word.span.clone()),
+                };
+                if call {
+                    self.push_instr(instr);
+                } else {
+                    let f = self.add_function(
+                        FunctionId::Anonymous(word.span),
+                        Signature::new(1, 1),
+                        vec![instr],
+                    );
+                    self.push_instr(Instr::PushFunc(f));
+                }
+            }
             Word::FormatString(frags) => {
                 let signature = Signature::new(frags.len() - 1, 1);
                 let parts = frags.into_iter().map(Into::into).collect();

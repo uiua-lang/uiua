@@ -586,6 +586,12 @@ code:
                         Ok(())
                     })
                 }
+                Instr::Label { label, span } => {
+                    let label = label.clone();
+                    self.with_span(*span, |env| {
+                        env.monadic_mut(|val| val.meta_mut().label = Some(label.clone()))
+                    })
+                }
                 &Instr::Dynamic(df) => (|| {
                     self.asm
                         .dynamic_functions

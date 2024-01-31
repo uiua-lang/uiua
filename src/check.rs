@@ -274,6 +274,7 @@ impl<'a> VirtualEnv<'a> {
                 }
                 self.set_min_height();
             }
+            Instr::Label { .. } => self.handle_args_outputs(1, 1)?,
             Instr::PushFunc(f) => self.function_stack.push(Cow::Borrowed(f)),
             &Instr::Switch { count, sig, .. } => {
                 for _ in 0..count {

@@ -73,6 +73,7 @@ pub enum Word {
     Number(String, f64),
     Char(String),
     String(String),
+    Label(String),
     FormatString(Vec<String>),
     MultilineString(Vec<Sp<Vec<String>>>),
     Ident(Ident),
@@ -96,6 +97,7 @@ impl PartialEq for Word {
             (Self::Number(_, a), Self::Number(_, b)) => a == b,
             (Self::Char(a), Self::Char(b)) => a == b,
             (Self::String(a), Self::String(b)) => a == b,
+            (Self::Label(a), Self::Label(b)) => a == b,
             (Self::FormatString(a), Self::FormatString(b)) => a == b,
             (Self::MultilineString(a), Self::MultilineString(b)) => a == b,
             (Self::Ident(a), Self::Ident(b)) => a == b,
@@ -154,6 +156,7 @@ impl fmt::Debug for Word {
             Word::Number(s, ..) => write!(f, "{s:?}"),
             Word::Char(char) => write!(f, "{char:?}"),
             Word::String(string) => write!(f, "{string:?}"),
+            Word::Label(label) => write!(f, "${label}"),
             Word::FormatString(parts) => {
                 write!(f, "$\"")?;
                 for part in parts {

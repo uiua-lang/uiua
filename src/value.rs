@@ -7,7 +7,7 @@ use std::{
     mem::{size_of, take},
 };
 
-use ecow::EcoVec;
+use ecow::{EcoString, EcoVec};
 use serde::*;
 
 use crate::{
@@ -335,6 +335,10 @@ impl Value {
     /// Get a mutable reference to the value's metadata
     pub fn meta_mut(&mut self) -> &mut ArrayMeta {
         unsafe { self.repr_mut() }.arr.meta_mut()
+    }
+    /// Take the label from the value
+    pub fn take_label(&mut self) -> Option<EcoString> {
+        unsafe { self.repr_mut() }.arr.take_label()
     }
     /// Combine this value's metadata with another
     pub fn combine_meta(&mut self, other: &ArrayMeta) {
@@ -1078,6 +1082,29 @@ impl Value {
             Value::Box(arr) => Cow::Borrowed(arr),
         }
     }
+    /// Propogate a value's label accross an operation
+    pub fn keep_label(mut self, f: impl FnOnce(Self) -> UiuaResult<Self>) -> UiuaResult<Self> {
+        let label = self.take_label();
+        let mut result = f(self)?;
+        if let Some(label) = label {
+            result.meta_mut().label = Some(label);
+        }
+        Ok(result)
+    }
+    /// Propogate values' labels accross an operation
+    pub fn keep_labels(
+        mut self,
+        mut other: Self,
+        f: impl FnOnce(Self, Self) -> UiuaResult<Self>,
+    ) -> UiuaResult<Self> {
+        let label = self.take_label();
+        let other_label = other.take_label();
+        let mut result = f(self, other)?;
+        if let Some(label) = label.xor(other_label) {
+            result.meta_mut().label = Some(label);
+        }
+        Ok(result)
+    }
 }
 
 macro_rules! value_from {
@@ -1190,7 +1217,7 @@ macro_rules! value_un_impl {
         impl Value {
             #[allow(clippy::redundant_closure_call)]
             pub(crate) fn $name(self, env: &Uiua) -> UiuaResult<Self> {
-                Ok(match self {
+                self.keep_label(|val| Ok(match val {
                     $($($(#[cfg(feature = $feature1)])* Self::$in_place(mut array) $(if (|$meta: &ArrayMeta| $pred)(array.meta()))* => {
                         for val in &mut array.data {
                             *val = $name::$f(*val);
@@ -1214,7 +1241,7 @@ macro_rules! value_un_impl {
                     }
                     #[allow(unreachable_patterns)]
                     val => return Err($name::error(val.type_name(), env))
-                })
+                }))
             }
         }
     }
@@ -1275,7 +1302,7 @@ macro_rules! value_bin_impl {
         impl Value {
             #[allow(unreachable_patterns, unused_mut, clippy::wrong_self_convention)]
             pub(crate) fn $name(self, other: Self, a_depth: usize, b_depth: usize, env: &Uiua) -> UiuaResult<Self> {
-                Ok(match (self, other) {
+                self.keep_labels(other, |a, b| { Ok(match (a, b) {
                     $($($(#[cfg(feature = $feature2)])* (Value::$ip(mut a), Value::$ip(b)) $(if {
                         let f = |$meta: &ArrayMeta| $pred;
                         f(a.meta()) && f(b.meta())
@@ -1363,7 +1390,7 @@ macro_rules! value_bin_impl {
                         val
                     },
                     (a, b) => return Err($name::error(a.type_name(), b.type_name(), env)),
-                })
+                })})
             }
         }
     };

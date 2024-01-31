@@ -3,6 +3,7 @@ use std::{
     fmt,
     io::{stderr, stdin, Read, Write},
     path::Path,
+    str::FromStr,
     sync::{Arc, OnceLock},
     time::Duration,
 };
@@ -460,6 +461,31 @@ sys_op! {
     /// - The HTTP version
     /// - The `Host` header (if not defined)
     (2, HttpsWrite, Tcp, "&httpsw", "http - Make an HTTP request"),
+    /// Call a foreign function interface
+    ///
+    /// *Warning ⚠️: Using FFI is deeply unsafe. Calling a function incorrectly is undefined behavior.*
+    ///
+    /// The first argument is a list of boxed strings specifying the source and signature of the foreign function.
+    /// The second argument is a list of values to pass to the foreign function.
+    ///
+    /// The first function must be of the form `{"lib_path" "return_type" "function_name" "arg1_type" "arg2_type" …}`.
+    /// The lib path is the path to the shared library or DLL that contains the function.
+    /// Type names roughly match C types. The available primitive types are:
+    /// - `void`
+    /// - `char`
+    /// - `short`
+    /// - `int`
+    /// - `long`
+    /// - `long long`
+    /// - `float`
+    /// - `double`
+    /// - `unsigned char`
+    /// - `unsigned short`
+    /// - `unsigned int`
+    /// - `unsigned long`
+    /// - `unsigned long long`
+    /// Suffixing any of these with `*` makes them a pointer type.
+    (2, FFI, Misc, "&ffi", "foreign function interface"),
 }
 
 /// A handle to an IO stream
@@ -487,6 +513,55 @@ impl From<usize> for Handle {
 impl From<Handle> for Value {
     fn from(handle: Handle) -> Self {
         (handle.0 as f64).into()
+    }
+}
+
+/// Types for FFI
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[allow(missing_docs)]
+pub enum FfiType {
+    Void,
+    Char,
+    Short,
+    Int,
+    Long,
+    LongLong,
+    Float,
+    Double,
+    UChar,
+    UShort,
+    UInt,
+    ULong,
+    ULongLong,
+    Ptr(Box<Self>),
+}
+
+impl FromStr for FfiType {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, String> {
+        let mut s = s;
+        let mut ptr = 0;
+        while s.ends_with('*') {
+            s = &s[..s.len() - 1];
+            ptr += 1;
+        }
+        let ty = match s {
+            "void" => FfiType::Void,
+            "char" => FfiType::Char,
+            "short" => FfiType::Short,
+            "int" => FfiType::Int,
+            "long" => FfiType::Long,
+            "long long" => FfiType::LongLong,
+            "float" => FfiType::Float,
+            "double" => FfiType::Double,
+            "unsigned char" => FfiType::UChar,
+            "unsigned short" => FfiType::UShort,
+            "unsigned int" => FfiType::UInt,
+            "unsigned long" => FfiType::ULong,
+            "unsigned long long" => FfiType::ULongLong,
+            _ => return Err(format!("Unknown FFI type: {}", s)),
+        };
+        Ok((0..ptr).fold(ty, |ty, _| FfiType::Ptr(Box::new(ty))))
     }
 }
 
@@ -686,6 +761,17 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Make an HTTPS request on a TCP socket
     fn https_get(&self, request: &str, handle: Handle) -> Result<String, String> {
         Err("Making HTTPS requests is not supported in this environment".into())
+    }
+    /// Call a foreign function interface
+    fn ffi(
+        &self,
+        file: &str,
+        result_ty: FfiType,
+        name: &str,
+        arg_tys: &[FfiType],
+        args: &[Value],
+    ) -> Result<Value, String> {
+        Err("FFI is not supported in this environment".into())
     }
 }
 
@@ -1388,6 +1474,48 @@ impl SysOp {
                     .backend
                     .change_directory(&path)
                     .map_err(|e| env.error(e))?;
+            }
+            SysOp::FFI => {
+                let sig_def = env.pop(1)?;
+                let sig_def = match sig_def {
+                    Value::Box(arr) => arr,
+                    val => {
+                        return Err(env.error(format!(
+                            "FFI signature must be a box array, but it is a {}",
+                            val.type_name_plural()
+                        )))
+                    }
+                };
+                if sig_def.rank() != 1 {
+                    return Err(env.error(format!(
+                        "FFI signature must be a rank 1 array, but it is rank {}",
+                        sig_def.rank()
+                    )));
+                }
+                if sig_def.row_count() < 3 {
+                    return Err(env.error("FFI signature array must have at least two elements"));
+                }
+                let mut sig_frags = sig_def.data.into_iter().map(|b| b.0);
+                let file_name =
+                    (sig_frags.next().unwrap()).as_string(env, "FFI file name must be a string")?;
+                let result_ty = (sig_frags.next().unwrap())
+                    .as_string(env, "FFI result type must be a string")?
+                    .parse::<FfiType>()
+                    .map_err(|e| env.error(e))?;
+                let name =
+                    (sig_frags.next().unwrap()).as_string(env, "FFI name must be a string")?;
+                let arg_tys = sig_frags
+                    .map(|frag| {
+                        frag.as_string(env, "FFI argument type must be a string")
+                            .and_then(|ty| ty.parse::<FfiType>().map_err(|e| env.error(e)))
+                    })
+                    .collect::<UiuaResult<Vec<_>>>()?;
+                let args = env.pop(2)?;
+                let args: Vec<Value> = args.into_rows().map(Value::unpacked).collect();
+                let result = (env.rt.backend)
+                    .ffi(&file_name, result_ty, &name, &arg_tys, &args)
+                    .map_err(|e| env.error(e))?;
+                env.push(result);
             }
         }
         Ok(())

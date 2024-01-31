@@ -10,6 +10,7 @@ site/dist
 
 main.ua
 *.uasm
+*.dll
 profile.yaml
 uiua.tmLanguage.json
 

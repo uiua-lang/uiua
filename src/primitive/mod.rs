@@ -298,7 +298,18 @@ impl Primitive {
         use Primitive::*;
         matches!(
             self,
-            Rectify | This | Recur | All | Cascade | Map | Insert | Has | Get | Remove | Bind
+            Rectify
+                | This
+                | Recur
+                | All
+                | Cascade
+                | Map
+                | Insert
+                | Has
+                | Get
+                | Remove
+                | Bind
+                | Sys(SysOp::FFI)
         )
     }
     /// Check if this primitive is deprecated

@@ -81,7 +81,6 @@ batteries = [
   "image",
   "regex",
   "audio_encode",
-  "ffi",
 ]
 binary = [
   "ctrlc",
@@ -90,6 +89,7 @@ binary = [
   "color-backtrace",
   "rustyline",
   "native_sys",
+  "ffi",
 ]
 bytes = []
 debug = []

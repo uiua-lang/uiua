@@ -406,7 +406,7 @@ impl Report {
                 let color: String = line
                     .chars()
                     .skip(start_char_pos as usize)
-                    .take((end_char_pos - start_char_pos) as usize)
+                    .take(end_char_pos.saturating_sub(start_char_pos).max(1) as usize)
                     .collect();
                 let post_color: String = line.chars().skip(end_char_pos as usize).collect();
                 fragments.push(ReportFragment::Faint(pre_color));
@@ -418,7 +418,7 @@ impl Report {
                 ));
                 fragments.push(ReportFragment::Plain(" ".repeat(start_char_pos as usize)));
                 fragments.push(ReportFragment::Colored(
-                    "─".repeat((end_char_pos - start_char_pos) as usize),
+                    "─".repeat(end_char_pos.saturating_sub(start_char_pos).max(1) as usize),
                 ));
             }
         }

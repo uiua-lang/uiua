@@ -680,84 +680,57 @@ fn under_temp_pattern<'a>(
     befores.insert(0, start_instr.clone());
     befores.push(end_instr.clone());
 
-    let afters = match (g_sig.args, g_sig.outputs) {
-        (g_args, g_outputs) if g_args > g_outputs || g_args == 1 && g_outputs == 1 => {
-            let input_iter = input.iter().filter(|instr| !instr.is_compile_only());
-            let inner_iter = inner.iter().filter(|instr| !instr.is_compile_only());
-            let both = input_iter.clone().count() >= inner_iter.clone().count()
-                && input_iter.zip(inner_iter).all(|(a, b)| a == b);
+    if g_sig.args < g_sig.outputs {
+        return None;
+    }
 
-            if both {
-                // Very dirty fix for stuff like: ⍜⊡(⍜∩×↥,) 2 [⍥9]3 ¯1 5
-                while let Some(Instr::CopyToTemp {
-                    stack: TempStack::Under,
-                    count: 1, // This check properlty ignores things like: ⍜∩⊜□∘ ∩(≠@l.) "Hello" "World!"
-                    ..
-                }) = befores.get(1)
-                {
-                    befores.remove(1);
+    let input_iter = input.iter().filter(|instr| !instr.is_compile_only());
+    let inner_iter = inner.iter().filter(|instr| !instr.is_compile_only());
+    let both = input_iter.clone().count() >= inner_iter.clone().count()
+        && input_iter.zip(inner_iter).all(|(a, b)| a == b);
+
+    if both {
+        // Very dirty fix for stuff like: ⍜⊡(⍜∩×↥,) 2 [⍥9]3 ¯1 5
+        while let Some(Instr::CopyToTemp {
+            stack: TempStack::Under,
+            count: 1, // This check properly ignores things like: ⍜∩⊜□∘ ∩(≠@l.) "Hello" "World!"
+            ..
+        }) = befores.get(1)
+        {
+            befores.remove(1);
+        }
+    }
+
+    let afters = if both && g_sig.args > g_sig.outputs {
+        EcoVec::new()
+    } else {
+        let mut afters = inner_afters;
+        let mut start_instr = start_instr.clone();
+        let mut end_instr = end_instr.clone();
+        match g_sig.args.cmp(&g_sig.outputs) {
+            Ordering::Equal if both || inner_befores_sig.args <= inner_afters_sig.args => {
+                if inner_befores_sig.args != inner_afters_sig.outputs {
+                    let (start_count, end_count) =
+                        temp_pair_counts(&mut start_instr, &mut end_instr)?;
+                    *start_count = (*start_count).min(inner_afters_sig.outputs);
+                    *end_count = (*end_count).min(inner_befores_sig.outputs);
+                }
+                afters.insert(0, start_instr);
+                afters.push(end_instr);
+            }
+            Ordering::Greater => {
+                let (start_count, end_count) = temp_pair_counts(&mut start_instr, &mut end_instr)?;
+                let diff = g_sig.args - g_sig.outputs;
+                *start_count = start_count.saturating_sub(diff);
+                *end_count = end_count.saturating_sub(diff);
+                if *start_count > 0 || *end_count > 0 {
+                    afters.insert(0, start_instr);
+                    afters.push(end_instr);
                 }
             }
-
-            if both && g_args > 1 {
-                EcoVec::new()
-            } else {
-                let mut afters = inner_afters;
-                let mut start_instr = start_instr.clone();
-                let mut end_instr = end_instr.clone();
-                match g_args.cmp(&1) {
-                    Ordering::Equal if both || inner_befores_sig.args <= inner_afters_sig.args => {
-                        let (start_count, end_count) =
-                            temp_pair_counts(&mut start_instr, &mut end_instr)?;
-                        *start_count = (*start_count).min(inner_afters_sig.outputs);
-                        *end_count = (*end_count).min(inner_befores_sig.outputs);
-                        afters.insert(0, start_instr);
-                        afters.push(end_instr);
-                    }
-                    Ordering::Greater => {
-                        let (start_count, end_count) =
-                            temp_pair_counts(&mut start_instr, &mut end_instr)?;
-                        let diff = g_args - 1;
-                        *start_count = start_count.saturating_sub(diff);
-                        *end_count = end_count.saturating_sub(diff);
-                        if *start_count > 0 || *end_count > 0 {
-                            afters.insert(0, start_instr);
-                            afters.push(end_instr);
-                        }
-                    }
-                    _ => {}
-                }
-                afters
-            }
+            _ => {}
         }
-        (0, 0) | (2, 2) => {
-            let mut start_instr = start_instr.clone();
-            let mut end_instr = end_instr.clone();
-            let (start_count, end_count) = temp_pair_counts(&mut start_instr, &mut end_instr)?;
-            *start_count = 1;
-            *end_count = 1;
-            let mut afters = inner_afters;
-            afters.insert(0, start_instr.clone());
-            afters.push(end_instr.clone());
-            afters
-        }
-        (args, outputs) if args >= outputs => {
-            let mut start_instr = start_instr.clone();
-            let mut end_instr = end_instr.clone();
-            let (start_count, end_count) = temp_pair_counts(&mut start_instr, &mut end_instr)?;
-            let diff = args - outputs;
-            if *start_count >= diff && *end_count >= diff {
-                *start_count -= diff;
-                *end_count -= diff;
-            } else {
-                return None;
-            }
-            let mut afters = inner_afters;
-            afters.insert(0, start_instr);
-            afters.push(end_instr);
-            afters
-        }
-        _ => return None,
+        afters
     };
     Some((input, (befores, afters)))
 }

@@ -25,6 +25,7 @@ Default: `1`
 Whether to add a trailing newline to the output.
 
 ---
+
 ### CommentSpaceAfterHash
 Type: boolean
 
@@ -33,6 +34,7 @@ Default: `1`
 Whether to add a space after the `#` in comments.
 
 ---
+
 ### MultilineIndent
 Type: natural number
 
@@ -41,6 +43,7 @@ Default: `2`
 The number of spaces to indent multiline arrays and functions
 
 ---
+
 ### CompactMultilineMode
 Type: `"always"`, `"never"`, or `"auto"`
 
@@ -53,6 +56,7 @@ The mode for formatting multiline arrays and functions.
 - `"auto"`: Format multiline expressions in compact mode if they exceed `MultilineCompactThreshold`.
 
 ---
+
 ### MultilineCompactThreshold
 Type: natural number
 
@@ -61,6 +65,7 @@ Default: `10`
 The number of characters on line preceding a multiline array or function, at or before which the multiline will be compact.
 
 ---
+
 ### AlignComments
 Type: boolean
 
@@ -69,6 +74,7 @@ Default: `1`
 Whether to align consecutive end-of-line comments
 
 ---
+
 ### IndentItemImports
 Type: boolean
 
@@ -77,3 +83,4 @@ Default: `1`
 Whether to indent item imports
 
 ---
+

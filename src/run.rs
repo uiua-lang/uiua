@@ -587,9 +587,13 @@ code:
                     })
                 }
                 Instr::Label { label, span } => {
-                    let label = label.clone();
+                    let label = if label.is_empty() {
+                        None
+                    } else {
+                        Some(label.clone())
+                    };
                     self.with_span(*span, |env| {
-                        env.monadic_mut(|val| val.meta_mut().label = Some(label.clone()))
+                        env.monadic_mut(|val| val.meta_mut().label = label)
                     })
                 }
                 &Instr::Dynamic(df) => (|| {

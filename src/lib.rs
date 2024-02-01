@@ -120,6 +120,7 @@ mod compile;
 mod complex;
 mod cowslice;
 mod error;
+mod ffi;
 pub mod format;
 mod function;
 mod grid_fmt;
@@ -147,6 +148,7 @@ pub use self::{
     boxed::*,
     compile::*,
     error::*,
+    ffi::*,
     function::*,
     lex::is_ident_char,
     lex::*,

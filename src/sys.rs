@@ -3,7 +3,6 @@ use std::{
     fmt,
     io::{stderr, stdin, Read, Write},
     path::Path,
-    str::FromStr,
     sync::{Arc, OnceLock},
     time::Duration,
 };
@@ -18,7 +17,8 @@ use parking_lot::Mutex;
 use serde::*;
 
 use crate::{
-    cowslice::cowslice, primitive::PrimDoc, Array, Boxed, Signature, Uiua, UiuaResult, Value,
+    cowslice::cowslice, primitive::PrimDoc, Array, Boxed, FfiType, Signature, Uiua, UiuaResult,
+    Value,
 };
 
 /// Access the built-in `example.ua` file
@@ -517,55 +517,6 @@ impl From<usize> for Handle {
 impl From<Handle> for Value {
     fn from(handle: Handle) -> Self {
         (handle.0 as f64).into()
-    }
-}
-
-/// Types for FFI
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[allow(missing_docs)]
-pub enum FfiType {
-    Void,
-    Char,
-    Short,
-    Int,
-    Long,
-    LongLong,
-    Float,
-    Double,
-    UChar,
-    UShort,
-    UInt,
-    ULong,
-    ULongLong,
-    Ptr(Box<Self>),
-}
-
-impl FromStr for FfiType {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, String> {
-        let mut s = s;
-        let mut ptr = 0;
-        while s.ends_with('*') {
-            s = &s[..s.len() - 1];
-            ptr += 1;
-        }
-        let ty = match s {
-            "void" => FfiType::Void,
-            "char" => FfiType::Char,
-            "short" => FfiType::Short,
-            "int" => FfiType::Int,
-            "long" => FfiType::Long,
-            "long long" => FfiType::LongLong,
-            "float" => FfiType::Float,
-            "double" => FfiType::Double,
-            "unsigned char" => FfiType::UChar,
-            "unsigned short" => FfiType::UShort,
-            "unsigned int" => FfiType::UInt,
-            "unsigned long" => FfiType::ULong,
-            "unsigned long long" => FfiType::ULongLong,
-            _ => return Err(format!("Unknown FFI type: {}", s)),
-        };
-        Ok((0..ptr).fold(ty, |ty, _| FfiType::Ptr(Box::new(ty))))
     }
 }
 

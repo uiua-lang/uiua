@@ -191,7 +191,7 @@ impl Value {
         match self {
             Self::Num(_) => "numbers",
             #[cfg(feature = "bytes")]
-            Self::Byte(_) => "number",
+            Self::Byte(_) => "numbers",
             Self::Complex(_) => "complexes",
             Self::Char(_) => "characters",
             Self::Box(_) => "boxes",

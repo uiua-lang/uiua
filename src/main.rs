@@ -907,6 +907,7 @@ fn color_code(code: &str) -> String {
             SpanKind::Comment => (127, 127, 127),
             SpanKind::Strand => (200, 200, 200),
             SpanKind::Ident
+            | SpanKind::Label
             | SpanKind::Signature
             | SpanKind::Whitespace
             | SpanKind::Placeholder

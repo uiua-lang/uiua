@@ -630,6 +630,12 @@ fn set_code_html(id: &str, code: &str) {
                         format!("{kind:?}").to_lowercase(),
                         escape_html(text)
                     ),
+                    SpanKind::Label => format!(
+                        r#"<span 
+                        class="code-span code-hover {color_class}"
+                        data-title="label">{}</span>"#,
+                        escape_html(text)
+                    ),
                     _ => format!(
                         r#"<span class="code-span {color_class}">{}</span>"#,
                         escape_html(text)

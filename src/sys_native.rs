@@ -611,15 +611,10 @@ impl SysBackend for NativeSys {
                 (FfiType::Ptr(inner), Value::Char(arr))
                     if **inner == FfiType::Char && arr.rank() == 1 =>
                 {
-                    let s: String = arr.data.iter().copied().collect();
+                    let s: CString =
+                        CString::new(arr.data.iter().copied().collect::<String>()).unwrap();
                     dyn_args.push(Box::new(s));
-                    args.push(Arg::new(unsafe {
-                        &*dyn_args[i]
-                            .downcast_ref::<String>()
-                            .unwrap()
-                            .as_bytes()
-                            .as_ptr()
-                    }));
+                    args.push(Arg::new(dyn_args[i].downcast_ref::<CString>().unwrap()));
                 }
                 (ty, arg) => {
                     return Err(format!(

@@ -3248,6 +3248,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tests_ffi"
+version = "0.1.0"
+dependencies = [
+ "uiua",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"

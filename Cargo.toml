@@ -121,7 +121,7 @@ terminal_image = ["viuer", "image"]
 name = "uiua"
 
 [workspace]
-members = ["site"]
+members = ["site", "tests_ffi"]
 
 [profile.dev]
 incremental = true

@@ -483,39 +483,57 @@ impl<'i> Parser<'i> {
         let mut words: Vec<Sp<Word>> = Vec::new();
         while let Some(word) = self.try_word() {
             if let Some(prev) = words.last() {
-                // Style diagnostics
+                // Diagnostics
                 use Primitive::*;
                 let span = || prev.span.clone().merge(word.span.clone());
-                if let (Word::Primitive(a), Word::Primitive(b)) = (&prev.value, &word.value) {
-                    match (a, b) {
-                        (Flip, Over) => self.diagnostics.push(Diagnostic::new(
-                            format!("Prefer `{Dip}{Dup}` over `{Flip}{Over}` for clarity"),
-                            span(),
-                            DiagnosticKind::Style,
-                            self.inputs.clone(),
-                        )),
-                        // Not comparisons
-                        (Not, prim) => {
-                            for (a, b) in [(Eq, Ne), (Lt, Ge), (Gt, Le)] {
-                                if *prim == a {
-                                    self.diagnostics.push(Diagnostic::new(
-                                        format!("Prefer `{b}` over `{Not}{prim}` for clarity"),
-                                        span(),
-                                        DiagnosticKind::Style,
-                                        self.inputs.clone(),
-                                    ));
-                                } else if *prim == b {
-                                    self.diagnostics.push(Diagnostic::new(
-                                        format!("Prefer `{a}` over `{Not}{prim}` for clarity"),
-                                        span(),
-                                        DiagnosticKind::Style,
-                                        self.inputs.clone(),
-                                    ));
+                match (&prev.value, &word.value) {
+                    (Word::Primitive(a), Word::Primitive(b)) => {
+                        match (a, b) {
+                            (Flip, Over) => self.diagnostics.push(Diagnostic::new(
+                                format!("Prefer `{Dip}{Dup}` over `{Flip}{Over}` for clarity"),
+                                span(),
+                                DiagnosticKind::Style,
+                                self.inputs.clone(),
+                            )),
+                            // Not comparisons
+                            (Not, prim) => {
+                                for (a, b) in [(Eq, Ne), (Lt, Ge), (Gt, Le)] {
+                                    if *prim == a {
+                                        self.diagnostics.push(Diagnostic::new(
+                                            format!("Prefer `{b}` over `{Not}{prim}` for clarity"),
+                                            span(),
+                                            DiagnosticKind::Style,
+                                            self.inputs.clone(),
+                                        ));
+                                    } else if *prim == b {
+                                        self.diagnostics.push(Diagnostic::new(
+                                            format!("Prefer `{a}` over `{Not}{prim}` for clarity"),
+                                            span(),
+                                            DiagnosticKind::Style,
+                                            self.inputs.clone(),
+                                        ));
+                                    }
                                 }
                             }
+                            _ => {}
                         }
-                        _ => {}
                     }
+                    (Word::Primitive(Primitive::Flip), Word::Modified(m))
+                        if matches!(m.modifier.value, Modifier::Primitive(Primitive::Fork)) =>
+                    {
+                        self.diagnostics.push(Diagnostic::new(
+                            format!(
+                                "Swap {}'s functions instead of using {}{}",
+                                Primitive::Fork.format(),
+                                Primitive::Flip,
+                                Primitive::Fork,
+                            ),
+                            span(),
+                            DiagnosticKind::Advice,
+                            self.inputs.clone(),
+                        ));
+                    }
+                    _ => {}
                 }
             }
 

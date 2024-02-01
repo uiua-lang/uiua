@@ -417,7 +417,7 @@ code:
             //         println!();
             //     }
             // }
-            // println!("    {:?}", instr);
+            // println!("\n    {:?}", instr);
 
             if self.rt.time_instrs {
                 formatted_instr = format!("{instr:?}");

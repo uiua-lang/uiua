@@ -40,7 +40,7 @@ pub enum DocsPage {
     Constants,
     StackIdioms,
     Optimizations,
-    Test,
+    FormatConfig,
 }
 
 impl IntoParam for DocsPage {
@@ -64,7 +64,7 @@ impl IntoParam for DocsPage {
                 "constants" => Some(Self::Constants),
                 "stack-idioms" => Some(Self::StackIdioms),
                 "optimizations" => Some(Self::Optimizations),
-                "test" => Some(Self::Test),
+                "format-config" => Some(Self::FormatConfig),
                 value => Some(Self::Search(value.into())),
             })
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
@@ -99,7 +99,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Constants => Constants().into_view(),
             DocsPage::StackIdioms => StackIdioms().into_view(),
             DocsPage::Optimizations => Optimizations().into_view(),
-            DocsPage::Test => view! {<Markdown src="/md/test.md"/>}.into_view(),
+            DocsPage::FormatConfig => view!(<Markdown src="/format_config.md"/>).into_view(),
         };
 
         view! {
@@ -235,6 +235,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/stack-idioms">"Stack Idioms"</A>" - common ways of manipulating the stack"</li>
             <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
             <li><A href="/docs/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
+            <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the Uiua formatter"</li>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
             <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about Uiua's design gets its own page"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>

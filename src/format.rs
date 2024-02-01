@@ -88,9 +88,35 @@ macro_rules! requirement {
     };
 }
 
+#[cfg(test)]
+macro_rules! param_type {
+    (bool) => {
+        "boolean"
+    };
+    (usize) => {
+        "natural number"
+    };
+    (CompactMultilineMode) => {
+        r#"`"always"`, `"never"`, or `"auto"`"#
+    };
+}
+
+#[cfg(test)]
+macro_rules! default_to_uiua {
+    ($default:expr) => {{
+        let default = format!("{:?}", $default);
+        match default.as_str() {
+            "true" => "1".into(),
+            "false" => "0".into(),
+            s if s.chars().all(|c| c.is_ascii_digit()) => s.into(),
+            s => format!("{:?}", s.to_lowercase()),
+        }
+    }};
+}
+
 macro_rules! create_config {
     ($(
-        $(#[doc = $doc:literal])*
+        $(#[doc = $doc:literal])+
         (
             $name:ident,
             $ty:ident, // this should ideally be ty, not ident, but that doesn't work with the requirement macro
@@ -102,6 +128,39 @@ macro_rules! create_config {
             $(
                 $name: Option<$ty>,
             )*
+        }
+
+        #[test]
+        fn generate_format_cfg_docs() {
+            paste! {
+                let mut s: String = r#"
+# Uiua Formatter Configuration
+
+You can configure Uiua's formatter by creating a file called `.fmt.ua` in the directory from which you run the interpreter. This configuration file is also a Uiua program.
+
+Configuration options are specified by binding values to specific names.
+
+Example with default values:
+```uiua
+"#.into();
+                $(
+                    s.push_str(&format!("{} ← {}\n", stringify!([<$name:camel>]), default_to_uiua!($default)));
+                )*
+                s.push_str(r#"```
+The following configuration options are available:
+
+"#);
+
+                $(
+                    s.push_str(&format!("### {}\n", stringify!([<$name:camel>])));
+                    s.push_str(&format!("Type: {}\n\n", param_type!($ty)));
+                    s.push_str(&format!("Default: `{}`\n\n", default_to_uiua!($default)));
+                    $(s.push_str(&format!("{}\n", $doc.trim()));)*
+                    s.push_str("\n---\n\n");
+                )*
+
+                fs::write("site/format_config.md", s).unwrap();
+            }
         }
 
         impl PartialFormatConfig {
@@ -194,6 +253,10 @@ create_config!(
     /// The number of spaces to indent multiline arrays and functions
     (multiline_indent, usize, 2),
     /// The mode for formatting multiline arrays and functions.
+    ///
+    /// - `"always"`: Always format multiline expressions in compact mode.
+    /// - `"never"`: Never format multiline expressions in compact mode.
+    /// - `"auto"`: Format multiline expressions in compact mode if they exceed `MultilineCompactThreshold`.
     (
         compact_multiline_mode,
         CompactMultilineMode,

@@ -171,7 +171,9 @@ impl Compiler {
         &mut self,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<HashMap<Ident, usize>> {
+        let experimental = self.scope.experimental;
         self.higher_scopes.push(take(&mut self.scope));
+        self.scope.experimental = experimental;
         let res = f(self);
         let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
         res?;
@@ -247,10 +249,11 @@ code:
         in_test: bool,
         prev_comment: &mut Option<Arc<str>>,
     ) -> UiuaResult {
-        fn words_have_import(words: &[Sp<Word>]) -> bool {
-            words
-                .iter()
-                .any(|w| matches!(w.value, Word::Primitive(Primitive::Sys(SysOp::Import))))
+        fn words_should_run_anyway(words: &[Sp<Word>]) -> bool {
+            words.iter().any(|w| {
+                matches!(&w.value, Word::Primitive(Primitive::Sys(SysOp::Import)))
+                    || matches!(&w.value, Word::Comment(com) if com.trim() == "Experimental!")
+            })
         }
         let prev_com = prev_comment.take();
         match item {
@@ -286,7 +289,7 @@ code:
                     if line.is_empty() {
                         continue;
                     }
-                    if can_run || words_have_import(&line) {
+                    if can_run || words_should_run_anyway(&line) {
                         let span = (line.first().unwrap().span.clone())
                             .merge(line.last().unwrap().span.clone());
                         if count_placeholders(&line) > 0 {
@@ -319,7 +322,7 @@ code:
                     RunMode::Normal => !in_test,
                     RunMode::All | RunMode::Test => true,
                 };
-                if can_run || words_have_import(&binding.words) {
+                if can_run || words_should_run_anyway(&binding.words) {
                     self.binding(binding, prev_com)?;
                 }
             }

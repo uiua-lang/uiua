@@ -118,6 +118,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
                 view!(<code class="code-block">{&block.literal}</code>).into_view()
             }
         }
+        NodeValue::ThematicBreak => view!(<hr/>).into_view(),
         _ => children.into_view(),
     }
 }

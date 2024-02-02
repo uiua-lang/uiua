@@ -12,7 +12,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{FfiType, Handle, SysBackend, Value};
+use crate::{Handle, SysBackend};
 use bufreaderwriter::seq::BufReaderWriterSeq;
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
@@ -527,11 +527,11 @@ impl SysBackend for NativeSys {
     fn ffi(
         &self,
         file: &str,
-        return_ty: FfiType,
+        return_ty: crate::FfiType,
         name: &str,
-        arg_tys: &[FfiType],
-        arg_values: &[Value],
-    ) -> Result<Value, String> {
+        arg_tys: &[crate::FfiType],
+        arg_values: &[crate::Value],
+    ) -> Result<crate::Value, String> {
         crate::do_ffi(file, return_ty, name, arg_tys, arg_values)
     }
 }

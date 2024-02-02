@@ -374,6 +374,8 @@ impl Primitive {
                     start += len;
                     continue 'outer;
                 } else if sub_name
+                    .strip_prefix('f')
+                    .unwrap_or(sub_name)
                     .strip_suffix(['i', 'p'])
                     .unwrap_or(sub_name)
                     .chars()
@@ -381,13 +383,15 @@ impl Primitive {
                 {
                     // 1-letter planet notation
                     for (i, c) in sub_name.char_indices() {
-                        match c {
-                            'g' => prims.push((Primitive::Gap, &sub_name[i..i + 1])),
-                            'd' => prims.push((Primitive::Dip, &sub_name[i..i + 1])),
-                            'i' => prims.push((Primitive::Identity, &sub_name[i..i + 1])),
-                            'p' => prims.push((Primitive::Pop, &sub_name[i..i + 1])),
+                        let prim = match c {
+                            'f' => Primitive::Fork,
+                            'g' => Primitive::Gap,
+                            'd' => Primitive::Dip,
+                            'i' => Primitive::Identity,
+                            'p' => Primitive::Pop,
                             _ => unreachable!(),
-                        }
+                        };
+                        prims.push((prim, &sub_name[i..i + 1]))
                     }
                     start += len;
                     continue 'outer;

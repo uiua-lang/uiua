@@ -319,7 +319,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // This must come last!
     ];
 
-    println!("undering {:?}", instrs);
+    // println!("undering {:?}", instrs);
 
     let mut befores = EcoVec::new();
     let mut afters = EcoVec::new();
@@ -327,15 +327,15 @@ pub(crate) fn under_instrs(
     'find_pattern: loop {
         for pattern in patterns {
             if let Some((input, (bef, aft))) = pattern.under_extract(curr_instrs, g_sig, comp) {
-                println!(
-                    "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
-                    pattern,
-                    &curr_instrs[..curr_instrs.len() - input.len()],
-                );
+                // println!(
+                //     "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
+                //     pattern,
+                //     &curr_instrs[..curr_instrs.len() - input.len()],
+                // );
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
-                    println!("undered {:?} to {:?} {:?}", instrs, befores, afters);
+                    // println!("undered {:?} to {:?} {:?}", instrs, befores, afters);
                     return Some((befores, afters));
                 }
                 curr_instrs = input;

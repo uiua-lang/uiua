@@ -534,7 +534,7 @@ impl Value {
     pub fn format(&self) -> String {
         match self {
             Value::Char(c) if c.rank() < 2 => c.to_string(),
-            Value::Box(arr) if arr.rank() == 0 => arr.grid_string(false),
+            Value::Box(arr) if arr.rank() == 0 => arr.as_scalar().unwrap().0.format(),
             value => value.grid_string(false),
         }
     }

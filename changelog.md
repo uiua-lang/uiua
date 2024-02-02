@@ -9,6 +9,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental labels, denoted by a `$` immediately followed by an identifier, which attach a name to an array. This has two uses:
   - Labels are visible in output and in [`stack`](https://uiua.org/docs/stack) diagnostics
   - Labels in code make it easier to understand when reading
+### Interpreter
+- Numbers that seem to have a floating-point epsilon rounding error will be output with the epsilon noted
 
 ## 0.8.0 - 2024-01-31
 ### Language

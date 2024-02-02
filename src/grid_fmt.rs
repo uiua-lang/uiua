@@ -49,8 +49,9 @@ const ROUND_TO: f64 = 3.0 * f64::EPSILON;
 
 impl GridFmt for f64 {
     fn fmt_grid(&self, boxed: bool, _label: bool) -> Grid {
-        let positive = self.abs();
-        let minus = if *self < -ROUND_TO { "¯" } else { "" };
+        let f = *self;
+        let positive = f.abs();
+        let minus = if f < 0.0 { "¯" } else { "" };
         let s = if (positive - PI).abs() < f64::EPSILON {
             format!("{minus}π")
         } else if (positive - TAU).abs() < f64::EPSILON {
@@ -59,15 +60,34 @@ impl GridFmt for f64 {
             format!("{minus}η")
         } else if positive == INFINITY {
             format!("{minus}∞")
-        } else if self.to_bits() == EMPTY_NAN.to_bits() || self.to_bits() == TOMBSTONE_NAN.to_bits()
-        {
+        } else if f.to_bits() == EMPTY_NAN.to_bits() || f.to_bits() == TOMBSTONE_NAN.to_bits() {
             return vec![vec!['⋅']];
-        } else if positive.fract() != 0.0 && positive.fract() < ROUND_TO
-            || 1.0 - positive.fract() < ROUND_TO
-        {
-            format!("{minus}{positive:.0}")
-        } else {
+        } else if positive.fract() == 0.0 {
             format!("{minus}{positive}")
+        } else {
+            let mut rounded = f;
+            let mut epsilons = 0.0;
+            for i in 0..16 {
+                let mul = 10f64.powf((i + 1) as f64);
+                rounded = (f * mul).round() / mul;
+                epsilons = ((f - rounded).abs() / f64::EPSILON + 0.3).round();
+                if epsilons > 0.0 && epsilons <= 5.0 {
+                    break;
+                }
+            }
+            if epsilons <= 0.0 {
+                format!("{minus}{positive}")
+            } else if f < rounded {
+                if epsilons == 1.0 {
+                    format!("{minus}{}-ε", rounded.abs())
+                } else {
+                    format!("{minus}{}-{epsilons}ε", rounded.abs())
+                }
+            } else if epsilons == 1.0 {
+                format!("{minus}{}+ε", rounded.abs())
+            } else {
+                format!("{minus}{}+{epsilons}ε", rounded.abs())
+            }
         };
         vec![boxed_scalar(boxed).chain(s.chars()).collect()]
     }

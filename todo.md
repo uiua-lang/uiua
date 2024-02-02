@@ -4,7 +4,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
 ## Features
 - 0.9
   - Annotation functions
-    - Names
     - Types
     - Shapes
   - FFI

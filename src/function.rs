@@ -156,7 +156,7 @@ impl PartialEq for Instr {
         match (self, other) {
             (Self::Push(a), Self::Push(b)) => a == b,
             (Self::BeginArray, Self::BeginArray) => true,
-            (Self::EndArray { .. }, Self::EndArray { .. }) => true,
+            (Self::EndArray { boxed: a, .. }, Self::EndArray { boxed: b, .. }) => a == b,
             (Self::Prim(a, _), Self::Prim(b, _)) => a == b,
             (Self::ImplPrim(a, _), Self::ImplPrim(b, _)) => a == b,
             (Self::Call(a), Self::Call(b)) => a == b,
@@ -177,6 +177,7 @@ impl PartialEq for Instr {
                 },
             ) => ao == bo && ac == bc,
             (Self::DropTemp { count: a, .. }, Self::DropTemp { count: b, .. }) => a == b,
+            (Self::TouchStack { count: a, .. }, Self::TouchStack { count: b, .. }) => a == b,
             _ => false,
         }
     }
@@ -227,7 +228,8 @@ impl fmt::Display for Instr {
             Instr::CallGlobal { index, .. } => write!(f, "<call global {index}>"),
             Instr::BindGlobal { index, .. } => write!(f, "<bind global {index}>"),
             Instr::BeginArray => write!(f, "begin array"),
-            Instr::EndArray { .. } => write!(f, "end array"),
+            Instr::EndArray { boxed: false, .. } => write!(f, "end array"),
+            Instr::EndArray { boxed: true, .. } => write!(f, "end box array"),
             Instr::Prim(prim @ Primitive::Over, _) => write!(f, "`{prim}`"),
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::ImplPrim(prim, _) => write!(f, "{prim}"),
@@ -252,7 +254,14 @@ impl fmt::Display for Instr {
             Instr::PushLocals { count, .. } => write!(f, "<push {count} locals>"),
             Instr::PopLocals => write!(f, "<pop locals>"),
             Instr::GetLocal { index, .. } => write!(f, "<get local {index}>"),
-            Instr::Unpack { count, .. } => write!(f, "<unpack {count}>"),
+            Instr::Unpack {
+                count,
+                unbox: false,
+                ..
+            } => write!(f, "<unpack {count}>"),
+            Instr::Unpack {
+                count, unbox: true, ..
+            } => write!(f, "<unpack (unbox) {count}>"),
             Instr::TouchStack { count, .. } => write!(f, "<touch {count}>"),
             Instr::PushTemp { stack, count, .. } => write!(f, "<push {stack} {count}>"),
             Instr::PopTemp { stack, count, .. } => write!(f, "<pop {stack} {count}>"),

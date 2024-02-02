@@ -300,7 +300,7 @@ impl<T: ArrayValue> Array<T> {
     pub fn first(mut self, env: &Uiua) -> UiuaResult<Self> {
         match &*self.shape {
             [] => Err(env.error("Cannot take first of a scalar")),
-            [0, rest @ ..] => match env.fill() {
+            [0, rest @ ..] => match env.scalar_fill() {
                 Ok(fill) => {
                     self.data.extend(repeat(fill).take(self.row_len()));
                     self.shape = rest.into();
@@ -322,7 +322,7 @@ impl<T: ArrayValue> Array<T> {
     pub fn last(mut self, env: &Uiua) -> UiuaResult<Self> {
         match &*self.shape {
             [] => Err(env.error("Cannot take last of a scalar")),
-            [0, rest @ ..] => match env.fill() {
+            [0, rest @ ..] => match env.scalar_fill() {
                 Ok(fill) => {
                     self.data.extend(repeat(fill).take(self.row_len()));
                     self.shape = rest.into();
@@ -842,7 +842,7 @@ impl Value {
                             return Ok(Array::scalar(i as f64));
                         }
                     }
-                    env.fill::<f64>()
+                    env.scalar_fill::<f64>()
                         .map(Array::scalar)
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
@@ -853,7 +853,7 @@ impl Value {
                             return Ok(Array::scalar(i as f64));
                         }
                     }
-                    env.fill::<f64>()
+                    env.scalar_fill::<f64>()
                         .map(Array::scalar)
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
@@ -879,7 +879,7 @@ impl Value {
                             return Ok(Array::from_iter(res));
                         }
                     }
-                    env.fill::<f64>()
+                    env.scalar_fill::<f64>()
                         .map(Array::scalar)
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
@@ -896,7 +896,7 @@ impl Value {
                             return Ok(Array::from_iter(res));
                         }
                     }
-                    env.fill::<f64>()
+                    env.scalar_fill::<f64>()
                         .map(Array::scalar)
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
@@ -1050,7 +1050,7 @@ impl<T: ArrayValue> Array<T> {
         }
         if self.row_count() == 0 {
             return env
-                .fill::<f64>()
+                .scalar_fill::<f64>()
                 .map_err(|e| env.error(format!("Cannot get min index of an empty array{e}")));
         }
         let index = self
@@ -1068,7 +1068,7 @@ impl<T: ArrayValue> Array<T> {
         }
         if self.row_count() == 0 {
             return env
-                .fill::<f64>()
+                .scalar_fill::<f64>()
                 .map_err(|e| env.error(format!("Cannot get max index of an empty array{e}")));
         }
         let index = self
@@ -1086,7 +1086,7 @@ impl<T: ArrayValue> Array<T> {
         }
         if self.row_count() == 0 {
             return env
-                .fill::<f64>()
+                .scalar_fill::<f64>()
                 .map_err(|e| env.error(format!("Cannot get min index of an empty array{e}")));
         }
         let index = self
@@ -1104,7 +1104,7 @@ impl<T: ArrayValue> Array<T> {
         }
         if self.row_count() == 0 {
             return env
-                .fill::<f64>()
+                .scalar_fill::<f64>()
                 .map_err(|e| env.error(format!("Cannot get max index of an empty array{e}")));
         }
         let index = self

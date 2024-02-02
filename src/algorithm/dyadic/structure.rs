@@ -141,7 +141,7 @@ impl<T: ArrayValue> Array<T> {
             let row_len: usize = self.shape[d + 1..].iter().product();
             let s = s as isize;
             if i >= s || i < -s {
-                match env.fill::<T>() {
+                match env.scalar_fill::<T>() {
                     Ok(fill) => {
                         picked = cowslice![fill; row_len];
                         continue;
@@ -738,7 +738,7 @@ impl<T: ArrayValue> Array<T> {
             let i = if i >= 0 {
                 let ui = i as usize;
                 if ui >= row_count {
-                    match env.fill::<T>() {
+                    match env.scalar_fill::<T>() {
                         Ok(fill) => {
                             selected.extend(repeat(fill).take(row_len));
                             continue;
@@ -757,7 +757,7 @@ impl<T: ArrayValue> Array<T> {
             } else {
                 let pos_i = (row_count as isize + i) as usize;
                 if pos_i >= row_count {
-                    match env.fill::<T>() {
+                    match env.scalar_fill::<T>() {
                         Ok(fill) => {
                             selected.extend(repeat(fill).take(row_len));
                             continue;

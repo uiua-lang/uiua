@@ -3,7 +3,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
 - 0.9  
-  - Make `pop` `|2.1` inside `fork`
   - Non-scalar fill
     - Modifier for fill-or-default
   - `under join`

@@ -62,7 +62,7 @@ impl GridFmt for f64 {
             format!("{minus}∞")
         } else if f.to_bits() == EMPTY_NAN.to_bits() || f.to_bits() == TOMBSTONE_NAN.to_bits() {
             return vec![vec!['⋅']];
-        } else if positive.fract() == 0.0 {
+        } else if positive.fract() == 0.0 || positive.is_nan() {
             format!("{minus}{positive}")
         } else {
             let mut rounded = f;

@@ -85,7 +85,7 @@ impl ErrorContext for () {
 
 pub trait FillContext: ErrorContext {
     fn unpack_boxes(&self) -> bool;
-    fn fill<T: ArrayValue>(&self) -> Result<T, &'static str>;
+    fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str>;
     fn fill_error(error: Self::Error) -> Self::Error;
     fn is_fill_error(error: &Self::Error) -> bool;
 }
@@ -94,7 +94,7 @@ impl FillContext for Uiua {
     fn unpack_boxes(&self) -> bool {
         self.unpack_boxes()
     }
-    fn fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
+    fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
         T::get_fill(self)
     }
     fn fill_error(error: Self::Error) -> Self::Error {
@@ -109,7 +109,7 @@ impl FillContext for () {
     fn unpack_boxes(&self) -> bool {
         false
     }
-    fn fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
+    fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
         Err(". No fill is set.")
     }
     fn fill_error(error: Self::Error) -> Self::Error {
@@ -124,7 +124,7 @@ impl FillContext for (&CodeSpan, &Inputs) {
     fn unpack_boxes(&self) -> bool {
         false
     }
-    fn fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
+    fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
         Err(". No fill is set.")
     }
     fn fill_error(error: Self::Error) -> Self::Error {
@@ -152,7 +152,7 @@ where
     if shape_prefixes_match(&a.shape, &b.shape) {
         return Ok(());
     }
-    if a.row_count() == 1 && ctx.fill::<A>().is_err() {
+    if a.row_count() == 1 && ctx.scalar_fill::<A>().is_err() {
         let fixes = (a.shape.iter())
             .take_while(|&&dim| dim == 1)
             .count()
@@ -167,7 +167,7 @@ where
             }
         }
     }
-    if b.row_count() == 1 && ctx.fill::<B>().is_err() {
+    if b.row_count() == 1 && ctx.scalar_fill::<B>().is_err() {
         let fixes = (b.shape.iter())
             .take_while(|&&dim| dim == 1)
             .count()
@@ -188,7 +188,7 @@ where
     let mut fill_error = None;
     // Fill in missing rows
     match a.row_count().cmp(&b.row_count()) {
-        Ordering::Less => match ctx.fill() {
+        Ordering::Less => match ctx.scalar_fill() {
             Ok(fill) => {
                 let mut target_shape = a.shape().to_vec();
                 target_shape[0] = b.row_count();
@@ -196,7 +196,7 @@ where
             }
             Err(e) => fill_error = Some(e),
         },
-        Ordering::Greater => match ctx.fill() {
+        Ordering::Greater => match ctx.scalar_fill() {
             Ok(fill) => {
                 let mut target_shape = b.shape().to_vec();
                 target_shape[0] = a.row_count();
@@ -211,7 +211,7 @@ where
     }
     // Fill in missing dimensions
     match a.rank().cmp(&b.rank()) {
-        Ordering::Less => match ctx.fill() {
+        Ordering::Less => match ctx.scalar_fill() {
             Ok(fill) => {
                 let mut target_shape = a.shape.clone();
                 target_shape.insert(0, b.row_count());
@@ -220,7 +220,7 @@ where
             }
             Err(e) => fill_error = Some(e),
         },
-        Ordering::Greater => match ctx.fill() {
+        Ordering::Greater => match ctx.scalar_fill() {
             Ok(fill) => {
                 let mut target_shape = b.shape.clone();
                 target_shape.insert(0, a.row_count());
@@ -232,7 +232,7 @@ where
         Ordering::Equal => {
             let target_shape = max_shape(a.shape(), b.shape());
             if a.shape() != *target_shape {
-                match ctx.fill() {
+                match ctx.scalar_fill() {
                     Ok(fill) => {
                         a.fill_to_shape(&target_shape, fill);
                         fill_error = None;
@@ -241,7 +241,7 @@ where
                 }
             }
             if b.shape() != *target_shape {
-                match ctx.fill() {
+                match ctx.scalar_fill() {
                     Ok(fill) => {
                         b.fill_to_shape(&target_shape, fill);
                         fill_error = None;
@@ -431,7 +431,7 @@ fn op2_bytes_retry_fill<T, C: FillContext>(
     on_bytes: impl FnOnce(Array<u8>, Array<u8>) -> Result<T, C::Error>,
     on_nums: impl FnOnce(Array<f64>, Array<f64>) -> Result<T, C::Error>,
 ) -> Result<T, C::Error> {
-    if ctx.fill::<f64>().is_ok() {
+    if ctx.scalar_fill::<f64>().is_ok() {
         match on_bytes(a.clone(), b.clone()) {
             Ok(res) => Ok(res),
             Err(err) if C::is_fill_error(&err) => on_nums(a.convert(), b.convert()),

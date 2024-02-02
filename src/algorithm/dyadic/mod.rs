@@ -216,11 +216,11 @@ impl<T: Clone> Array<T> {
 impl<T: ArrayValue> Array<T> {
     /// `reshape` the array
     pub fn reshape(&mut self, dims: &[isize], env: &Uiua) -> UiuaResult {
-        let fill = env.fill::<T>();
+        let fill = env.scalar_fill::<T>();
         let shape = derive_shape(&self.shape, dims, fill.is_ok(), env)?;
         let target_len: usize = shape.iter().product();
         if self.data.len() < target_len {
-            match env.fill::<T>() {
+            match env.scalar_fill::<T>() {
                 Ok(fill) => {
                     let start = self.data.len();
                     self.data.modify(|data| {
@@ -490,7 +490,7 @@ impl<T: ArrayValue> Array<T> {
         let mut amount = Cow::Borrowed(counts);
         match amount.len().cmp(&self.row_count()) {
             Ordering::Equal => {}
-            Ordering::Less => match env.fill::<f64>() {
+            Ordering::Less => match env.scalar_fill::<f64>() {
                 Ok(fill) => {
                     if fill < 0.0 || fill.fract() != 0.0 {
                         return Err(env.error(format!(
@@ -512,7 +512,7 @@ impl<T: ArrayValue> Array<T> {
                 }
             },
             Ordering::Greater => {
-                return Err(env.error(match env.fill::<f64>() {
+                return Err(env.error(match env.scalar_fill::<f64>() {
                     Ok(_) => {
                         format!(
                             "Cannot keep array with shape {} with array of shape {}.\
@@ -623,7 +623,7 @@ impl Value {
     pub fn rotate(&self, mut rotated: Self, env: &Uiua) -> UiuaResult<Self> {
         let by = self.as_ints(env, "Rotation amount must be a list of integers")?;
         #[cfg(feature = "bytes")]
-        if env.fill::<f64>().is_ok() {
+        if env.scalar_fill::<f64>().is_ok() {
             if let Value::Byte(bytes) = &rotated {
                 rotated = bytes.convert_ref::<f64>().into();
             }
@@ -647,7 +647,7 @@ impl Value {
     ) -> UiuaResult<Self> {
         let by = self.as_integer_array(env, "Rotation amount must be an array of integers")?;
         #[cfg(feature = "bytes")]
-        if env.fill::<f64>().is_ok() {
+        if env.scalar_fill::<f64>().is_ok() {
             if let Value::Byte(bytes) = &rotated {
                 rotated = bytes.convert_ref::<f64>().into();
             }
@@ -676,7 +676,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let data = self.data.as_mut_slice();
         rotate(by, &self.shape, data);
-        if let Ok(fill) = env.fill::<T>() {
+        if let Ok(fill) = env.scalar_fill::<T>() {
             fill_shift(by, &self.shape, data, fill);
             self.reset_meta_flags();
         }
@@ -893,7 +893,7 @@ impl<T: ArrayValue> Array<T> {
             .any(|(a, b)| a > b);
         if self.rank() > searched.rank() || any_dim_greater {
             // Fill
-            match env.fill() {
+            match env.scalar_fill() {
                 Ok(fill) => {
                     let mut target_shape = searched.shape.clone();
                     target_shape[0] = searched_for.row_count();

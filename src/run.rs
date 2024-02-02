@@ -48,7 +48,7 @@ pub(crate) struct Runtime {
     /// The recur stack
     this_stack: Vec<usize>,
     /// The fill stack
-    fill_stack: Vec<Fill>,
+    fill_stack: Vec<Value>,
     /// The locals stack
     pub(crate) locals_stack: Vec<Vec<Value>>,
     /// Whether to unpack boxed values
@@ -87,14 +87,6 @@ impl AsMut<Assembly> for Uiua {
     fn as_mut(&mut self) -> &mut Assembly {
         &mut self.asm
     }
-}
-
-#[derive(Clone)]
-enum Fill {
-    Num(f64),
-    Complex(Complex),
-    Char(char),
-    Box(Boxed),
 }
 
 #[derive(Clone)]
@@ -1124,66 +1116,92 @@ code:
     }
     pub(crate) fn num_fill(&self) -> Result<f64, &'static str> {
         match self.rt.fill_stack.last() {
-            Some(Fill::Num(n)) => Ok(*n),
-            _ => Err(self.fill_error()),
+            Some(Value::Num(n)) if n.rank() == 0 => Ok(n.data[0]),
+            Some(Value::Num(_)) => Err(self.fill_error(true)),
+            #[cfg(feature = "bytes")]
+            Some(Value::Byte(n)) if n.rank() == 0 => Ok(n.data[0] as f64),
+            Some(Value::Byte(_)) => Err(self.fill_error(true)),
+            _ => Err(self.fill_error(false)),
         }
     }
     pub(crate) fn byte_fill(&self) -> Result<u8, &'static str> {
         match self.rt.fill_stack.last() {
-            Some(Fill::Num(n)) if (n.fract() == 0.0 && (0.0..=255.0).contains(n)) => Ok(*n as u8),
-            _ => Err(self.fill_error()),
+            Some(Value::Num(n))
+                if n.rank() == 0
+                    && n.data[0].fract() == 0.0
+                    && (0.0..=255.0).contains(&n.data[0]) =>
+            {
+                Ok(n.data[0] as u8)
+            }
+            Some(Value::Num(n)) if n.rank() == 0 => Err(self.fill_error(false)),
+            Some(Value::Num(_)) => Err(self.fill_error(true)),
+            #[cfg(feature = "bytes")]
+            Some(Value::Byte(n)) if n.rank() == 0 => Ok(n.data[0]),
+            Some(Value::Byte(_)) => Err(self.fill_error(true)),
+            _ => Err(self.fill_error(false)),
         }
     }
     pub(crate) fn char_fill(&self) -> Result<char, &'static str> {
         match self.rt.fill_stack.last() {
-            Some(Fill::Char(c)) => Ok(*c),
-            _ => Err(self.fill_error()),
+            Some(Value::Char(c)) if c.rank() == 0 => Ok(c.data[0]),
+            Some(Value::Char(_)) => Err(self.fill_error(true)),
+            _ => Err(self.fill_error(false)),
         }
     }
     pub(crate) fn box_fill(&self) -> Result<Boxed, &'static str> {
-        match self.rt.fill_stack.last().cloned() {
-            Some(Fill::Num(n)) => Ok(Value::from(n).into()),
-            Some(Fill::Char(c)) => Ok(Value::from(c).into()),
-            Some(Fill::Complex(c)) => Ok(Value::from(c).into()),
-            Some(Fill::Box(b)) => Ok(b),
-            _ => Err(self.fill_error()),
+        match self.rt.fill_stack.last() {
+            Some(Value::Box(b)) if b.rank() == 0 => Ok(b.data[0].clone()),
+            Some(Value::Box(_)) => Err(self.fill_error(true)),
+            Some(val) => Ok(Boxed(val.clone())),
+            None => Err(self.fill_error(false)),
         }
     }
     pub(crate) fn complex_fill(&self) -> Result<Complex, &'static str> {
         match self.rt.fill_stack.last() {
-            Some(Fill::Num(n)) => Ok(Complex::new(*n, 0.0)),
-            Some(Fill::Complex(c)) => Ok(*c),
-            _ => Err(self.fill_error()),
+            Some(Value::Num(n)) if n.rank() == 0 => Ok(Complex::new(n.data[0], 0.0)),
+            Some(Value::Num(_)) => Err(self.fill_error(true)),
+            #[cfg(feature = "bytes")]
+            Some(Value::Byte(n)) if n.rank() == 0 => Ok(Complex::new(n.data[0] as f64, 0.0)),
+            Some(Value::Byte(_)) => Err(self.fill_error(true)),
+            Some(Value::Complex(c)) if c.rank() == 0 => Ok(c.data[0]),
+            Some(Value::Complex(_)) => Err(self.fill_error(true)),
+            _ => Err(self.fill_error(false)),
         }
     }
-    fn fill_error(&self) -> &'static str {
-        match self.rt.fill_stack.last() {
-            Some(Fill::Num(_)) => ". A number fill is set, but the array is not numbers.",
-            Some(Fill::Char(_)) => ". A character fill is set, but the array is not characters.",
-            Some(Fill::Complex(_)) => {
-                ". A complex fill is set, but the array is not complex numbers."
+    fn fill_error(&self, scalar: bool) -> &'static str {
+        if scalar {
+            match self.rt.fill_stack.last() {
+                Some(Value::Num(_)) => ". A number fill is set, but is is not a scalar.",
+                #[cfg(feature = "bytes")]
+                Some(Value::Byte(_)) => ". A number fill is set, but is is not a scalar.",
+                Some(Value::Char(_)) => ". A character fill is set, but is is not a scalar.",
+                Some(Value::Complex(_)) => ". A complex fill is set, but is is not a scalar.",
+                Some(Value::Box(_)) => ". A box fill is set, but is is not a scalar.",
+                None => "",
             }
-            Some(Fill::Box(_)) => ". A box fill is set, but the array is not boxed values.",
-            _ => "",
+        } else {
+            match self.rt.fill_stack.last() {
+                Some(Value::Num(_)) => ". A number fill is set, but the array is not numbers.",
+                #[cfg(feature = "bytes")]
+                Some(Value::Byte(_)) => ". A number fill is set, but the array is not numbers.",
+                Some(Value::Char(_)) => {
+                    ". A character fill is set, but the array is not characters."
+                }
+                Some(Value::Complex(_)) => {
+                    ". A complex fill is set, but the array is not complex numbers."
+                }
+                Some(Value::Box(_)) => ". A box fill is set, but the array is not boxed values.",
+                None => "",
+            }
         }
     }
     /// Do something with the fill context set
     pub(crate) fn with_fill(
         &mut self,
-        mut fill: Value,
+        fill: Value,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
     ) -> UiuaResult {
-        if !fill.shape().is_empty() {
-            fill = Array::from(Boxed(fill)).into();
-        }
-        self.rt.fill_stack.push(match fill {
-            Value::Num(n) => Fill::Num(n.data.into_iter().next().unwrap()),
-            #[cfg(feature = "bytes")]
-            Value::Byte(b) => Fill::Num(b.data.into_iter().next().unwrap() as f64),
-            Value::Char(c) => Fill::Char(c.data.into_iter().next().unwrap()),
-            Value::Box(b) => Fill::Box(b.data.into_iter().next().unwrap()),
-            Value::Complex(c) => Fill::Complex(c.data.into_iter().next().unwrap()),
-        });
+        self.rt.fill_stack.push(fill);
         let res = in_ctx(self);
         self.rt.fill_stack.pop();
         res

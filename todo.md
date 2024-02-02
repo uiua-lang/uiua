@@ -6,6 +6,8 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - Make `pop` `|2.1` inside `fork`
   - `fork` shorthand
   - Number epsilon formatting
+  - Non-scalar fill
+    - Modifier for fill-or-default
   - `under join`
   - `under fill`?
   - Color labels in pad
@@ -24,6 +26,7 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - UDP Sockets
 
 ## Bugs
+- Fix new `flip fork` diagnostic
 - Figure out what is going on with the editor cursor
 
 ## Documentation

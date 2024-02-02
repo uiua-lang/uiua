@@ -518,21 +518,6 @@ impl<'i> Parser<'i> {
                             _ => {}
                         }
                     }
-                    (Word::Primitive(Primitive::Flip), Word::Modified(m))
-                        if matches!(m.modifier.value, Modifier::Primitive(Primitive::Fork)) =>
-                    {
-                        self.diagnostics.push(Diagnostic::new(
-                            format!(
-                                "Swap {}'s functions instead of using {}{}",
-                                Primitive::Fork.format(),
-                                Primitive::Flip,
-                                Primitive::Fork,
-                            ),
-                            span(),
-                            DiagnosticKind::Advice,
-                            self.inputs.clone(),
-                        ));
-                    }
                     _ => {}
                 }
             }

@@ -8,7 +8,8 @@ Within each section, items are ordered (roughly) by decreasing priority.
     - Shapes
   - FFI
   - Basic package management
-  - `above` and `below` modifiers
+  - `of` and `on` modifiers
+  - Make `pop` `|2.1` inside `fork`
   - `under join`
   - Pad link from Gist
 - Multimedia

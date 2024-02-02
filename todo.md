@@ -2,15 +2,20 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- 0.9
+- 0.9  
+  - Make `pop` `|2.1` inside `fork`
+  - `fork` shorthand
+  - Number epsilon formatting
+  - `under join`
+  - `under fill`?
+  - Color labels in pad
   - Annotation functions
     - Types
     - Shapes
   - FFI
   - Basic package management
   - `of` and `on` modifiers
-  - Make `pop` `|2.1` inside `fork`
-  - `under join`
+  - Diagnostic specification
   - Pad link from Gist
 - Multimedia
   - Sound input

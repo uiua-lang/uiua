@@ -533,7 +533,7 @@ impl Value {
     /// Get the pretty-printed string representation of the value that appears when formatted
     pub fn format(&self) -> String {
         match self {
-            Value::Char(c) if c.rank() < 2 => c.grid_string(false),
+            Value::Char(c) if c.rank() < 2 => c.to_string(),
             Value::Box(arr) if arr.rank() == 0 => arr.grid_string(false),
             value => value.grid_string(false),
         }

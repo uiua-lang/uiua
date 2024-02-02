@@ -48,19 +48,6 @@ impl Default for Value {
     }
 }
 
-impl fmt::Debug for Value {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Num(array) => array.fmt(f),
-            #[cfg(feature = "bytes")]
-            Self::Byte(array) => array.fmt(f),
-            Self::Complex(array) => array.fmt(f),
-            Self::Char(array) => array.fmt(f),
-            Self::Box(array) => array.fmt(f),
-        }
-    }
-}
-
 /// A combination of [`ExactSizeIterator`] and [`DoubleEndedIterator`]
 pub trait ExactDoubleIterator: ExactSizeIterator + DoubleEndedIterator {}
 impl<T: ExactSizeIterator + DoubleEndedIterator> ExactDoubleIterator for T {}
@@ -539,9 +526,17 @@ impl Value {
             Self::Box(arr) => arr.data.reserve_min(min),
         }
     }
-    /// Get the pretty-printed string representation of the value
+    /// Get the pretty-printed string representation of the value that appears in output
     pub fn show(&self) -> String {
-        self.grid_string()
+        self.grid_string(true)
+    }
+    /// Get the pretty-printed string representation of the value that appears when formatted
+    pub fn format(&self) -> String {
+        match self {
+            Value::Char(c) if c.rank() < 2 => c.grid_string(false),
+            Value::Box(arr) if arr.rank() == 0 => arr.grid_string(false),
+            value => value.grid_string(false),
+        }
     }
     /// Attempt to convert the array to a list of integers
     ///
@@ -1613,12 +1608,25 @@ impl Hash for Value {
     }
 }
 
+impl fmt::Debug for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Num(array) => array.fmt(f),
+            #[cfg(feature = "bytes")]
+            Self::Byte(array) => array.fmt(f),
+            Self::Complex(array) => array.fmt(f),
+            Self::Char(array) => array.fmt(f),
+            Self::Box(array) => array.fmt(f),
+        }
+    }
+}
+
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::Char(c) if c.rank() < 2 => c.fmt(f),
             Value::Box(arr) if arr.rank() == 0 => arr.fmt(f),
-            value => value.grid_string().fmt(f),
+            value => value.grid_string(true).fmt(f),
         }
     }
 }

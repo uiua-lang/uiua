@@ -111,12 +111,12 @@ impl Value {
         if self.rank() == 0 {
             return match self {
                 Value::Box(b) => b.as_scalar().unwrap().as_value().inv_parse(env),
-                value => Ok(value.show().into()),
+                value => Ok(value.format().into()),
             };
         }
         Ok(match self {
             Value::Num(nums) => {
-                let new_data: CowSlice<Boxed> = (nums.data.iter().map(GridFmt::grid_string))
+                let new_data: CowSlice<Boxed> = (nums.data.iter().map(|v| v.grid_string(false)))
                     .map(Value::from)
                     .map(Boxed)
                     .collect();
@@ -124,17 +124,18 @@ impl Value {
             }
             #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
-                let new_data: CowSlice<Boxed> = (bytes.data.iter().map(GridFmt::grid_string))
+                let new_data: CowSlice<Boxed> = (bytes.data.iter().map(|v| v.grid_string(false)))
                     .map(Value::from)
                     .map(Boxed)
                     .collect();
                 Array::new(bytes.shape.clone(), new_data).into()
             }
             Value::Complex(complexes) => {
-                let new_data: CowSlice<Boxed> = (complexes.data.iter().map(GridFmt::grid_string))
-                    .map(Value::from)
-                    .map(Boxed)
-                    .collect();
+                let new_data: CowSlice<Boxed> =
+                    (complexes.data.iter().map(|v| v.grid_string(false)))
+                        .map(Value::from)
+                        .map(Boxed)
+                        .collect();
                 Array::new(complexes.shape.clone(), new_data).into()
             }
             val => return Err(env.error(format!("Cannot invert parse {} array", val.type_name()))),
@@ -1135,7 +1136,7 @@ impl Array<f64> {
             if n.fract() != 0.0 || n <= 0.0 {
                 return Err(env.error(format!(
                     "Cannot get primes of non-positive number {}",
-                    n.grid_string()
+                    n.grid_string(true)
                 )));
             }
             let mut m = n as u64;

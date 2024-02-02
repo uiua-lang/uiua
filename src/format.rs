@@ -615,7 +615,7 @@ impl<'a> Formatter<'a> {
     fn format_word(&mut self, word: &Sp<Word>, depth: usize) {
         match &word.value {
             Word::Number(s, n) => {
-                let grid_str = n.grid_string();
+                let grid_str = n.grid_string(false);
                 let formatted =
                     if grid_str.chars().count() < s.trim_end_matches('i').chars().count() {
                         grid_str

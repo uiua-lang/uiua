@@ -786,14 +786,14 @@ impl SysOp {
                 let val = env.pop(1)?;
                 env.rt
                     .backend
-                    .print_str_stdout(&val.to_string())
+                    .print_str_stdout(&val.format())
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Print => {
                 let val = env.pop(1)?;
                 env.rt
                     .backend
-                    .print_str_stdout(&val.to_string())
+                    .print_str_stdout(&val.format())
                     .map_err(|e| env.error(e))?;
                 env.rt
                     .backend

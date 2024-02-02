@@ -578,7 +578,7 @@ code:
                         let mut s = String::new();
                         for (i, part) in parts.into_iter().enumerate() {
                             if i > 0 {
-                                s.push_str(&env.pop(("format argument", i))?.to_string());
+                                s.push_str(&env.pop(("format argument", i))?.format());
                             }
                             s.push_str(&part);
                         }

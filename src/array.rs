@@ -114,7 +114,7 @@ where
     Array<T>: GridFmt,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.grid_string())
+        write!(f, "{}", self.grid_string(true))
     }
 }
 
@@ -137,7 +137,7 @@ where
                 write!(f, "{}", end)
             }
             _ => {
-                write!(f, "\n{}", self.grid_string())
+                write!(f, "\n{}", self.grid_string(false))
             }
         }
     }
@@ -334,7 +334,7 @@ impl<T: ArrayValue> Array<T> {
     ///
     /// This is what is printed by the `&s` function
     pub fn show(&self) -> String {
-        self.grid_string()
+        self.grid_string(true)
     }
     pub(crate) fn pop_row(&mut self) -> Option<Self> {
         if self.row_count() == 0 {

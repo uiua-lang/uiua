@@ -14,17 +14,17 @@ use crate::{
     array::{Array, ArrayValue},
     boxed::Boxed,
     value::Value,
-    ArrayMeta, Complex, Primitive,
+    Complex, Primitive,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
 type Metagrid = Grid<Grid>;
 
 pub trait GridFmt {
-    fn fmt_grid(&self, boxed: bool) -> Grid;
-    fn grid_string(&self) -> String {
+    fn fmt_grid(&self, boxed: bool, label: bool) -> Grid;
+    fn grid_string(&self, label: bool) -> String {
         let mut s: String = self
-            .fmt_grid(false)
+            .fmt_grid(false, label)
             .into_iter()
             .flat_map(|v| v.into_iter().chain(once('\n')))
             .collect();
@@ -38,7 +38,7 @@ fn boxed_scalar(boxed: bool) -> impl Iterator<Item = char> {
 }
 
 impl GridFmt for u8 {
-    fn fmt_grid(&self, boxed: bool) -> Grid {
+    fn fmt_grid(&self, boxed: bool, _label: bool) -> Grid {
         vec![boxed_scalar(boxed)
             .chain(self.to_string().chars())
             .collect()]
@@ -48,7 +48,7 @@ impl GridFmt for u8 {
 const ROUND_TO: f64 = 3.0 * f64::EPSILON;
 
 impl GridFmt for f64 {
-    fn fmt_grid(&self, boxed: bool) -> Grid {
+    fn fmt_grid(&self, boxed: bool, _label: bool) -> Grid {
         let positive = self.abs();
         let minus = if *self < -ROUND_TO { "¯" } else { "" };
         let s = if (positive - PI).abs() < f64::EPSILON {
@@ -74,25 +74,25 @@ impl GridFmt for f64 {
 }
 
 impl GridFmt for Complex {
-    fn fmt_grid(&self, boxed: bool) -> Grid {
+    fn fmt_grid(&self, boxed: bool, label: bool) -> Grid {
         if self.im.abs() < ROUND_TO {
-            self.re.fmt_grid(boxed)
+            self.re.fmt_grid(boxed, label)
         } else if self.re.abs() < ROUND_TO {
             if self.im == 1.0 {
                 vec![boxed_scalar(boxed).chain(['i']).collect()]
             } else if self.im == -1.0 {
                 vec![boxed_scalar(boxed).chain(['-', 'i']).collect()]
             } else {
-                let mut grid = self.im.fmt_grid(boxed);
+                let mut grid = self.im.fmt_grid(boxed, label);
                 grid[0].push('i');
                 grid
             }
         } else {
-            let mut re = self.re.fmt_grid(boxed);
+            let mut re = self.re.fmt_grid(boxed, label);
             let im = if self.im.abs() == 1.0 {
                 String::new()
             } else {
-                self.im.abs().grid_string()
+                self.im.abs().grid_string(label)
             };
             let sign = if self.im < 0.0 { '-' } else { '+' };
             re[0].push(sign);
@@ -104,14 +104,14 @@ impl GridFmt for Complex {
 }
 
 impl GridFmt for Value {
-    fn fmt_grid(&self, boxed: bool) -> Grid {
+    fn fmt_grid(&self, boxed: bool, label: bool) -> Grid {
         match self {
-            Value::Num(n) => n.fmt_grid(boxed),
+            Value::Num(n) => n.fmt_grid(boxed, label),
             #[cfg(feature = "bytes")]
-            Value::Byte(b) => b.fmt_grid(boxed),
-            Value::Complex(c) => c.fmt_grid(boxed),
-            Value::Box(v) => v.fmt_grid(boxed),
-            Value::Char(c) => c.fmt_grid(boxed),
+            Value::Byte(b) => b.fmt_grid(boxed, label),
+            Value::Complex(c) => c.fmt_grid(boxed, label),
+            Value::Box(v) => v.fmt_grid(boxed, label),
+            Value::Char(c) => c.fmt_grid(boxed, label),
         }
     }
 }
@@ -136,7 +136,7 @@ pub fn format_char_inner(c: char) -> String {
 }
 
 impl GridFmt for char {
-    fn fmt_grid(&self, boxed: bool) -> Grid {
+    fn fmt_grid(&self, boxed: bool, _label: bool) -> Grid {
         vec![once(if boxed { '⌞' } else { '@' })
             .chain(format_char_inner(*self).chars())
             .collect()]
@@ -144,14 +144,14 @@ impl GridFmt for char {
 }
 
 impl GridFmt for Boxed {
-    fn fmt_grid(&self, boxed: bool) -> Grid {
+    fn fmt_grid(&self, boxed: bool, label: bool) -> Grid {
         let mut grid = match self.as_value() {
-            Value::Num(array) => array.fmt_grid(true),
+            Value::Num(array) => array.fmt_grid(true, label),
             #[cfg(feature = "bytes")]
-            Value::Byte(array) => array.fmt_grid(true),
-            Value::Complex(array) => array.fmt_grid(true),
-            Value::Char(array) => array.fmt_grid(true),
-            Value::Box(array) => array.fmt_grid(true),
+            Value::Byte(array) => array.fmt_grid(true, label),
+            Value::Complex(array) => array.fmt_grid(true, label),
+            Value::Char(array) => array.fmt_grid(true, label),
+            Value::Box(array) => array.fmt_grid(true, label),
         };
         if boxed && grid.len() == 1 {
             grid = vec![boxed_scalar(true)
@@ -162,151 +162,144 @@ impl GridFmt for Boxed {
     }
 }
 
-fn add_label(grid: &mut Grid, meta: &ArrayMeta) {
-    // Add label
-    if let Some(label) = &meta.label {
-        if grid.len() == 1 {
-            grid[0] = (label.chars().chain([':', ' ']))
-                .chain(take(&mut grid[0]))
-                .collect();
-        } else {
-            grid[0].truncate(2);
-            grid[0].push(' ');
-            grid[0].extend(label.chars());
-            while grid[0].len() < grid[1].len() {
-                grid[0].push(' ');
-            }
-        }
-    }
-}
-
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
-    fn fmt_grid(&self, boxed: bool) -> Grid {
-        // Scalar
-        if self.shape.is_empty() {
-            let mut grid = self.data[0].fmt_grid(boxed);
-            add_label(&mut grid, self.meta());
-            return grid;
-        }
-        // Empty list
-        if self.shape == [0] {
+    fn fmt_grid(&self, boxed: bool, label: bool) -> Grid {
+        let mut grid = if self.shape.is_empty() {
+            // Scalar
+            self.data[0].fmt_grid(boxed, label)
+        } else if self.shape == [0] {
+            // Empty list
             let (left, right) = T::grid_fmt_delims(boxed);
             let inner = T::empty_list_inner();
             let mut row = vec![left];
             row.extend(inner.chars());
             row.push(right);
-            let mut grid = vec![row];
-            add_label(&mut grid, self.meta());
-            return grid;
-        }
-
-        let mut metagrid: Option<Metagrid> = None;
-
-        // Hashmap
-        if self.meta().map_len.is_some() && self.shape == [2] {
-            if let Some((keys, values)) =
-                self.data[0].nested_value().zip(self.data[1].nested_value())
-            {
-                if keys.row_count() > 0 && keys.row_count() == values.row_count() {
-                    let mut empty_entries = 0;
-                    let metagrid = metagrid.get_or_insert_with(Metagrid::new);
-                    for (key, value) in keys.rows().zip(values.rows()) {
-                        if key.is_empty_cell() || key.is_tombstone() {
-                            empty_entries += 1;
-                            continue;
-                        }
-                        let key = key.fmt_grid(false);
-                        let value = value.fmt_grid(false);
-                        metagrid.push(vec![key, vec![" → ".chars().collect()], value]);
-                    }
-                    if empty_entries > 0 {
-                        metagrid.push(vec![
-                            vec![format!("… {empty_entries}").chars().collect()],
-                            vec![],
-                            vec![],
-                        ])
-                    }
-                }
-            }
-        }
-
-        // Default array formatting
-        let mut metagrid = metagrid.unwrap_or_else(|| {
-            let mut metagrid = Metagrid::new();
-            fmt_array(&self.shape, &self.data, &mut metagrid);
-            metagrid
-        });
-
-        // Synthesize a grid from the metagrid
-        let mut grid: Grid = Grid::new();
-
-        // Determine max row heights and column widths
-        let metagrid_width = metagrid.iter().map(|row| row.len()).max().unwrap();
-        let metagrid_height = metagrid.len();
-        let mut column_widths = vec![0; metagrid_width];
-        let mut row_heights = vec![0; metagrid_height];
-        for row in 0..metagrid_height {
-            let max_row_height = metagrid[row]
-                .iter()
-                .map(|cell| cell.len())
-                .max()
-                .unwrap_or(1);
-            row_heights[row] = max_row_height;
-        }
-        for col in 0..metagrid_width {
-            let max_col_width = metagrid
-                .iter_mut()
-                .flat_map(|row| row.get(col)?.iter().map(|cell| cell.len()).max())
-                .max()
-                .unwrap_or(0);
-            column_widths[col] = max_col_width;
-        }
-        // Pad each metagrid cell to its row's max height and column's max width
-        for row in 0..metagrid_height {
-            let row_height = row_heights[row];
-            let mut subrows = vec![vec![]; row_height];
-            for (col_width, cell) in column_widths.iter().zip(&mut metagrid[row]) {
-                pad_grid_center(*col_width, row_height, true, cell);
-                for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
-                    subrow.extend(cell_row);
-                }
-            }
-            grid.extend(subrows);
-        }
-        // Outline the grid
-        let grid_row_count = grid.len();
-        if grid_row_count == 1 && self.rank() == 1 {
-            // Add brackets to lists
-            let (left, right) = T::grid_fmt_delims(boxed);
-            grid[0].insert(0, left);
-            grid[0].push(right);
+            vec![row]
         } else {
-            if T::compress_list_grid() && self.element_count() > 0 {
-                // Add quotes arround char array rows
-                let (left, right) = T::grid_fmt_delims(false);
-                for row in grid.iter_mut() {
-                    row.insert(0, left);
-                    row.push(right);
+            let mut metagrid: Option<Metagrid> = None;
+            // Hashmap
+            if self.meta().map_len.is_some() && self.shape == [2] {
+                if let Some((keys, values)) =
+                    self.data[0].nested_value().zip(self.data[1].nested_value())
+                {
+                    if keys.row_count() > 0 && keys.row_count() == values.row_count() {
+                        let mut empty_entries = 0;
+                        let metagrid = metagrid.get_or_insert_with(Metagrid::new);
+                        for (key, value) in keys.rows().zip(values.rows()) {
+                            if key.is_empty_cell() || key.is_tombstone() {
+                                empty_entries += 1;
+                                continue;
+                            }
+                            let key = key.fmt_grid(false, label);
+                            let value = value.fmt_grid(false, label);
+                            metagrid.push(vec![key, vec![" → ".chars().collect()], value]);
+                        }
+                        if empty_entries > 0 {
+                            metagrid.push(vec![
+                                vec![format!("… {empty_entries}").chars().collect()],
+                                vec![],
+                                vec![],
+                            ])
+                        }
+                    }
                 }
             }
-            // Add corners to non-vectors
-            let width = grid[0].len();
-            let height = grid.len();
-            pad_grid_center(
-                width + 4,
-                (height + 2).max(self.rank() + 1),
-                false,
-                &mut grid,
-            );
-            grid[0][0] = if boxed { '╓' } else { '╭' };
-            grid[0][1] = '─';
-            for i in 0..self.rank().saturating_sub(1) {
-                grid[i + 1][0] = if boxed { '╟' } else { '╷' };
-            }
-            *grid.last_mut().unwrap().last_mut().unwrap() = if boxed { '╜' } else { '╯' };
-        }
 
-        add_label(&mut grid, self.meta());
+            // Default array formatting
+            let mut metagrid = metagrid.unwrap_or_else(|| {
+                let mut metagrid = Metagrid::new();
+                fmt_array(&self.shape, &self.data, label, &mut metagrid);
+                metagrid
+            });
+
+            // Synthesize a grid from the metagrid
+            let mut grid: Grid = Grid::new();
+
+            // Determine max row heights and column widths
+            let metagrid_width = metagrid.iter().map(|row| row.len()).max().unwrap();
+            let metagrid_height = metagrid.len();
+            let mut column_widths = vec![0; metagrid_width];
+            let mut row_heights = vec![0; metagrid_height];
+            for row in 0..metagrid_height {
+                let max_row_height = metagrid[row]
+                    .iter()
+                    .map(|cell| cell.len())
+                    .max()
+                    .unwrap_or(1);
+                row_heights[row] = max_row_height;
+            }
+            for col in 0..metagrid_width {
+                let max_col_width = metagrid
+                    .iter_mut()
+                    .flat_map(|row| row.get(col)?.iter().map(|cell| cell.len()).max())
+                    .max()
+                    .unwrap_or(0);
+                column_widths[col] = max_col_width;
+            }
+            // Pad each metagrid cell to its row's max height and column's max width
+            for row in 0..metagrid_height {
+                let row_height = row_heights[row];
+                let mut subrows = vec![vec![]; row_height];
+                for (col_width, cell) in column_widths.iter().zip(&mut metagrid[row]) {
+                    pad_grid_center(*col_width, row_height, true, cell);
+                    for (subrow, cell_row) in subrows.iter_mut().zip(take(cell)) {
+                        subrow.extend(cell_row);
+                    }
+                }
+                grid.extend(subrows);
+            }
+            // Outline the grid
+            let grid_row_count = grid.len();
+            if grid_row_count == 1 && self.rank() == 1 {
+                // Add brackets to lists
+                let (left, right) = T::grid_fmt_delims(boxed);
+                grid[0].insert(0, left);
+                grid[0].push(right);
+            } else {
+                if T::compress_list_grid() && self.element_count() > 0 {
+                    // Add quotes arround char array rows
+                    let (left, right) = T::grid_fmt_delims(false);
+                    for row in grid.iter_mut() {
+                        row.insert(0, left);
+                        row.push(right);
+                    }
+                }
+                // Add corners to non-vectors
+                let width = grid[0].len();
+                let height = grid.len();
+                pad_grid_center(
+                    width + 4,
+                    (height + 2).max(self.rank() + 1),
+                    false,
+                    &mut grid,
+                );
+                grid[0][0] = if boxed { '╓' } else { '╭' };
+                grid[0][1] = '─';
+                for i in 0..self.rank().saturating_sub(1) {
+                    grid[i + 1][0] = if boxed { '╟' } else { '╷' };
+                }
+                *grid.last_mut().unwrap().last_mut().unwrap() = if boxed { '╜' } else { '╯' };
+            }
+            grid
+        };
+
+        // Add label
+        if label {
+            if let Some(label) = &self.meta().label {
+                if grid.len() == 1 {
+                    grid[0] = (label.chars().chain([':', ' ']))
+                        .chain(take(&mut grid[0]))
+                        .collect();
+                } else {
+                    grid[0].truncate(2);
+                    grid[0].push(' ');
+                    grid[0].extend(label.chars());
+                    while grid[0].len() < grid[1].len() {
+                        grid[0].push(' ');
+                    }
+                }
+            }
+        }
 
         // Handle really big grid
         if self.rank() > 1 {
@@ -328,7 +321,12 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     }
 }
 
-fn fmt_array<T: GridFmt + ArrayValue>(shape: &[usize], data: &[T], metagrid: &mut Metagrid) {
+fn fmt_array<T: GridFmt + ArrayValue>(
+    shape: &[usize],
+    data: &[T],
+    label: bool,
+    metagrid: &mut Metagrid,
+) {
     if data.is_empty() {
         let mut shape_row = Vec::new();
         for (i, dim) in shape.iter().enumerate() {
@@ -344,7 +342,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(shape: &[usize], data: &[T], metagrid: &mu
     }
     let rank = shape.len();
     if rank == 0 {
-        metagrid.push(vec![data[0].fmt_grid(false)]);
+        metagrid.push(vec![data[0].fmt_grid(false, label)]);
         return;
     }
     if rank == 1 {
@@ -360,7 +358,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(shape: &[usize], data: &[T], metagrid: &mu
             row.push(vec![s.chars().collect()]);
         } else {
             for (i, val) in data.iter().enumerate() {
-                let mut grid = val.fmt_grid(false);
+                let mut grid = val.fmt_grid(false, label);
                 if i > 0 {
                     pad_grid_min(grid[0].len() + 1, grid.len(), &mut grid)
                 }
@@ -384,7 +382,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(shape: &[usize], data: &[T], metagrid: &mu
                 metagrid.push(vec![vec![vec![' ']]; metagrid.last().unwrap().len()]);
             }
         }
-        fmt_array(row_shape, cell, metagrid);
+        fmt_array(row_shape, cell, label, metagrid);
         if i * row_height >= 100 {
             let mut elipses_row = Vec::new();
             for prev_grid in metagrid.last().unwrap() {

@@ -167,6 +167,8 @@ impl fmt::Display for ImplPrimitive {
             SortUp => write!(f, "{Select}{Rise}{Dup}"),
             SortDown => write!(f, "{Select}{Fall}{Dup}"),
             Primes => write!(f, "{Un}{Reduce}{Mul}"),
+            ReplaceRand => write!(f, "{Gap}{Rand}"),
+            ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
             &TransposeN(n) => {
                 if n < 0 {
@@ -616,12 +618,7 @@ impl Primitive {
                     ));
                 }
             }
-            Primitive::Rand => {
-                thread_local! {
-                    static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::seed_from_u64(instant::now().to_bits()));
-                }
-                env.push(RNG.with(|rng| rng.borrow_mut().gen::<f64>()));
-            }
+            Primitive::Rand => env.push(random()),
             Primitive::Gen => {
                 let seed = env.pop(1)?;
                 let mut rng =
@@ -869,6 +866,15 @@ impl ImplPrimitive {
             ImplPrimitive::SortUp => env.monadic_mut_env(Value::sort_up)?,
             ImplPrimitive::SortDown => env.monadic_mut_env(Value::sort_down)?,
             ImplPrimitive::ReduceContent => reduce::reduce_content(env)?,
+            ImplPrimitive::ReplaceRand => {
+                env.pop(1)?;
+                env.push(random());
+            }
+            ImplPrimitive::ReplaceRand2 => {
+                env.pop(1)?;
+                env.pop(2)?;
+                env.push(random());
+            }
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
         }
         Ok(())
@@ -921,6 +927,14 @@ fn regex(env: &mut Uiua) -> UiuaResult {
         env.push(matches);
         Ok(())
     })
+}
+
+/// Generate a random number, equivalent to [`Primitive::Rand`]
+pub fn random() -> f64 {
+    thread_local! {
+        static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::seed_from_u64(instant::now().to_bits()));
+    }
+    RNG.with(|rng| rng.borrow_mut().gen::<f64>())
 }
 
 fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {

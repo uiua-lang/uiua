@@ -122,6 +122,23 @@ pub(crate) fn optimize_instrs_mut(instrs: &mut EcoVec<Instr>, mut new: Instr, ma
             instrs.pop();
             instrs.push(Instr::ImplPrim(SortDown, span));
         }
+        // Replace rand
+        ([.., Instr::Prim(Pop, span), Instr::Prim(Pop, _)], Instr::Prim(Rand, _)) => {
+            let span = *span;
+            instrs.pop();
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(ReplaceRand2, span));
+        }
+        ([.., Instr::Prim(Pop, span)], Instr::ImplPrim(ReplaceRand, _)) => {
+            let span = *span;
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(ReplaceRand2, span));
+        }
+        ([.., Instr::Prim(Pop, span)], Instr::Prim(Rand, _)) => {
+            let span = *span;
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(ReplaceRand, span));
+        }
         (_, instr) => instrs.push(instr),
     }
 }

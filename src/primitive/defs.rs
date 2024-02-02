@@ -2088,4 +2088,6 @@ impl_primitive!(
     (1, SortUp),
     (1, SortDown),
     (1[1], ReduceContent),
+    (1, ReplaceRand),
+    (2, ReplaceRand2),
 );

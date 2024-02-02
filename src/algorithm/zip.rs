@@ -2,9 +2,11 @@
 
 use std::slice;
 
+use ecow::eco_vec;
+
 use crate::{
-    algorithm::pervade::bin_pervade_generic, function::Function, value::Value, FormatShape,
-    ImplPrimitive, Instr, Primitive, Uiua, UiuaResult,
+    algorithm::pervade::bin_pervade_generic, function::Function, random, value::Value, Array,
+    FormatShape, ImplPrimitive, Instr, Primitive, Uiua, UiuaResult,
 };
 
 use super::{multi_output, MultiOutput};
@@ -52,6 +54,15 @@ fn impl_prim_un_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> {
         TransposeN(n) => spanned_un_fn(span, move |mut v, d, _| {
             Value::transpose_depth(&mut v, d, n);
             Ok(v)
+        }),
+        ReplaceRand => spanned_un_fn(span, |v, d, _| {
+            let shape = &v.shape()[..d.min(v.rank())];
+            let elem_count: usize = shape.iter().product();
+            let mut data = eco_vec![0.0; elem_count];
+            for n in data.make_mut() {
+                *n = random();
+            }
+            Ok(Array::new(shape, data).into())
         }),
         _ => return None,
     })

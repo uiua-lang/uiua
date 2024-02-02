@@ -1,10 +1,10 @@
 //! Algorithms for tabling modifiers
 
-use ecow::EcoVec;
+use ecow::{eco_vec, EcoVec};
 
 use crate::{
-    algorithm::pervade::*, function::Function, value::Value, Array, ArrayValue, Primitive, Shape,
-    Uiua, UiuaResult,
+    algorithm::pervade::*, function::Function, random, value::Value, Array, ArrayValue,
+    ImplPrimitive, Primitive, Shape, Uiua, UiuaResult,
 };
 
 use super::{loops::flip, multi_output};
@@ -204,7 +204,17 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
             Value::Char(xs),
             Value::Char(ys),
         ) => env.push(fast_table_list_join_or_couple(xs, ys, flipped)),
-        (_, xs, ys) => generic_table(f, xs, ys, env)?,
+        (_, xs, ys) => match f.as_flipped_impl_primitive(env) {
+            Some((ImplPrimitive::ReplaceRand2, _)) => {
+                let shape = [xs.row_count(), ys.row_count()];
+                let mut data = eco_vec![0.0; xs.row_count() * ys.row_count()];
+                for n in data.make_mut() {
+                    *n = random();
+                }
+                env.push(Array::new(shape, data));
+            }
+            _ => generic_table(f, xs, ys, env)?,
+        },
     }
     Ok(())
 }

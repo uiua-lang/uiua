@@ -526,6 +526,16 @@ impl Function {
             },
         }
     }
+    pub(crate) fn as_flipped_impl_primitive(
+        &self,
+        env: &impl AsRef<Assembly>,
+    ) -> Option<(ImplPrimitive, bool)> {
+        match self.instrs(env.as_ref()) {
+            [Instr::ImplPrim(prim, _)] => Some((*prim, false)),
+            [Instr::Prim(Primitive::Flip, _), Instr::ImplPrim(prim, _)] => Some((*prim, true)),
+            _ => None,
+        }
+    }
 }
 
 /// A Uiua function id

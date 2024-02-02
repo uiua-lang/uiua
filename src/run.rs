@@ -1168,6 +1168,9 @@ code:
             _ => Err(self.fill_error(false)),
         }
     }
+    pub(crate) fn value_fill(&self) -> Option<&Value> {
+        self.rt.fill_stack.last()
+    }
     fn fill_error(&self, scalar: bool) -> &'static str {
         if scalar {
             match self.rt.fill_stack.last() {
@@ -1204,6 +1207,13 @@ code:
         self.rt.fill_stack.push(fill);
         let res = in_ctx(self);
         self.rt.fill_stack.pop();
+        res
+    }
+    /// Do something with the top fill context unset
+    pub(crate) fn without_fill<T>(&mut self, in_ctx: impl FnOnce(&mut Self) -> T) -> T {
+        let fill = self.rt.fill_stack.pop();
+        let res = in_ctx(self);
+        self.rt.fill_stack.extend(fill);
         res
     }
     pub(crate) fn with_pack(&mut self, in_ctx: impl FnOnce(&mut Self) -> UiuaResult) -> UiuaResult {

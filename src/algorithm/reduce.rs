@@ -196,7 +196,7 @@ fn generic_reduce_impl(
         }
         (2, 1) => {
             let mut rows = xs.into_rows();
-            let mut acc = (env.box_fill().ok().map(|b| b.0))
+            let mut acc = (env.value_fill().cloned())
                 .or_else(|| rows.next())
                 .ok_or_else(|| {
                     env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
@@ -205,13 +205,16 @@ fn generic_reduce_impl(
             if env.unpack_boxes() {
                 acc.unpack();
             }
-            for row in rows {
-                env.push(process(row));
+            env.without_fill(|env| -> UiuaResult {
+                for row in rows {
+                    env.push(process(row));
+                    env.push(acc);
+                    env.call(f.clone())?;
+                    acc = env.pop("reduced function result")?;
+                }
                 env.push(acc);
-                env.call(f.clone())?;
-                acc = env.pop("reduced function result")?;
-            }
-            env.push(acc);
+                Ok(())
+            })?;
         }
         _ => {
             return Err(env.error(format!(
@@ -339,13 +342,16 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut acc = rows.next().unwrap();
     let mut scanned = Vec::with_capacity(row_count);
     scanned.push(acc.clone());
-    for row in rows.by_ref() {
-        env.push(row);
-        env.push(acc.clone());
-        env.call(f.clone())?;
-        acc = env.pop("scanned function result")?;
-        scanned.push(acc.clone());
-    }
+    env.without_fill(|env| -> UiuaResult {
+        for row in rows.by_ref() {
+            env.push(row);
+            env.push(acc.clone());
+            env.call(f.clone())?;
+            acc = env.pop("scanned function result")?;
+            scanned.push(acc.clone());
+        }
+        Ok(())
+    })?;
     let val = Value::from_row_values(scanned, env)?;
     env.push(val);
     Ok(())
@@ -369,13 +375,16 @@ pub fn invscan(env: &mut Uiua) -> UiuaResult {
     let mut rows = xs.into_rows();
     let mut curr = rows.next().unwrap();
     unscanned.push(curr.clone());
-    for row in rows {
-        env.push(row.clone());
-        env.push(curr);
-        env.call(f.clone())?;
-        unscanned.push(env.pop("unscanned function result")?);
-        curr = row;
-    }
+    env.without_fill(|env| -> UiuaResult {
+        for row in rows {
+            env.push(row.clone());
+            env.push(curr);
+            env.call(f.clone())?;
+            unscanned.push(env.pop("unscanned function result")?);
+            curr = row;
+        }
+        Ok(())
+    })?;
     env.push(Value::from_row_values(unscanned, env)?);
     Ok(())
 }

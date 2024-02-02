@@ -33,16 +33,19 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
             let outputs = sig.outputs;
             let mut items = multi_output(outputs, Value::builder(xs.row_count() * ys.row_count()));
             let y_rows = ys.into_rows().collect::<Vec<_>>();
-            for x_row in xs.into_rows() {
-                for y_row in y_rows.iter().cloned() {
-                    env.push(y_row);
-                    env.push(x_row.clone());
-                    env.call(f.clone())?;
-                    for i in 0..outputs {
-                        items[i].add_row(env.pop("tabled function result")?, env)?;
+            env.without_fill(|env| -> UiuaResult {
+                for x_row in xs.into_rows() {
+                    for y_row in y_rows.iter().cloned() {
+                        env.push(y_row);
+                        env.push(x_row.clone());
+                        env.call(f.clone())?;
+                        for i in 0..outputs {
+                            items[i].add_row(env.pop("tabled function result")?, env)?;
+                        }
                     }
                 }
-            }
+                Ok(())
+            })?;
             for items in items.into_iter().rev() {
                 let mut tabled = items.finish();
                 let mut new_shape = new_shape.clone();
@@ -73,26 +76,29 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
                     xs.row_count() * ys.row_count() * zs.row_count() * other_rows_product,
                 ),
             );
-            for x_row in xs.into_rows() {
-                for y_row in ys.rows() {
-                    for z_row in zs.rows() {
-                        for mut i in 0..other_rows_product {
-                            for arg in others.iter().rev() {
-                                let j = i % arg.row_count();
-                                env.push(arg.row(j));
-                                i /= arg.row_count();
-                            }
-                            env.push(z_row.clone());
-                            env.push(y_row.clone());
-                            env.push(x_row.clone());
-                            env.call(f.clone())?;
-                            for i in 0..outputs {
-                                items[i].add_row(env.pop("crossed function result")?, env)?;
+            env.without_fill(|env| -> UiuaResult {
+                for x_row in xs.into_rows() {
+                    for y_row in ys.rows() {
+                        for z_row in zs.rows() {
+                            for mut i in 0..other_rows_product {
+                                for arg in others.iter().rev() {
+                                    let j = i % arg.row_count();
+                                    env.push(arg.row(j));
+                                    i /= arg.row_count();
+                                }
+                                env.push(z_row.clone());
+                                env.push(y_row.clone());
+                                env.push(x_row.clone());
+                                env.call(f.clone())?;
+                                for i in 0..outputs {
+                                    items[i].add_row(env.pop("crossed function result")?, env)?;
+                                }
                             }
                         }
                     }
                 }
-            }
+                Ok(())
+            })?;
             for items in items.into_iter().rev() {
                 let mut tabled = items.finish();
                 let mut new_shape = new_shape.clone();

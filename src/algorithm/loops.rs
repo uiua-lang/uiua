@@ -325,16 +325,19 @@ fn collapse_groups(
             let values = env.pop(2)?;
             let groups = get_groups(values, &indices, env)?;
             let mut rows = multi_output(outputs, Vec::with_capacity(groups.len()));
-            for group in groups {
-                env.push(group);
-                env.call(f.clone())?;
-                for i in 0..outputs.max(1) {
-                    let value = env.pop(|| format!("{}'s function result", prim.format()))?;
-                    if sig.args == 1 {
-                        rows[i].push(value);
+            env.without_fill(|env| -> UiuaResult {
+                for group in groups {
+                    env.push(group);
+                    env.call(f.clone())?;
+                    for i in 0..outputs.max(1) {
+                        let value = env.pop(|| format!("{}'s function result", prim.format()))?;
+                        if sig.args == 1 {
+                            rows[i].push(value);
+                        }
                     }
                 }
-            }
+                Ok(())
+            })?;
             for rows in rows.into_iter().rev() {
                 env.push(Value::from_row_values(rows, env)?);
             }
@@ -343,22 +346,25 @@ fn collapse_groups(
             let indices = env.pop(1)?.as_ints(env, red_indices_error)?;
             let values = env.pop(2)?;
             let mut groups = get_groups(values, &indices, env)?.into_iter();
-            let mut acc = match env.box_fill() {
-                Ok(acc) => acc.0,
-                Err(e) => groups.next().ok_or_else(|| {
+            let mut acc = match env.value_fill().cloned() {
+                Some(acc) => acc,
+                None => groups.next().ok_or_else(|| {
                     env.error(format!(
-                        "Cannot do aggregating {} with no groups{e}",
+                        "Cannot do aggregating {} with no groups",
                         prim.format()
                     ))
                 })?,
             };
-            for row in groups {
-                env.push(row);
+            env.without_fill(|env| -> UiuaResult {
+                for row in groups {
+                    env.push(row);
+                    env.push(acc);
+                    env.call(f.clone())?;
+                    acc = env.pop("reduced function result")?;
+                }
                 env.push(acc);
-                env.call(f.clone())?;
-                acc = env.pop("reduced function result")?;
-            }
-            env.push(acc);
+                Ok(())
+            })?;
         }
         _ => {
             return Err(env.error(format!(

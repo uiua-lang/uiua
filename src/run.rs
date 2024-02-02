@@ -1120,6 +1120,7 @@ code:
             Some(Value::Num(_)) => Err(self.fill_error(true)),
             #[cfg(feature = "bytes")]
             Some(Value::Byte(n)) if n.rank() == 0 => Ok(n.data[0] as f64),
+            #[cfg(feature = "bytes")]
             Some(Value::Byte(_)) => Err(self.fill_error(true)),
             _ => Err(self.fill_error(false)),
         }
@@ -1137,6 +1138,7 @@ code:
             Some(Value::Num(_)) => Err(self.fill_error(true)),
             #[cfg(feature = "bytes")]
             Some(Value::Byte(n)) if n.rank() == 0 => Ok(n.data[0]),
+            #[cfg(feature = "bytes")]
             Some(Value::Byte(_)) => Err(self.fill_error(true)),
             _ => Err(self.fill_error(false)),
         }
@@ -1162,6 +1164,7 @@ code:
             Some(Value::Num(_)) => Err(self.fill_error(true)),
             #[cfg(feature = "bytes")]
             Some(Value::Byte(n)) if n.rank() == 0 => Ok(Complex::new(n.data[0] as f64, 0.0)),
+            #[cfg(feature = "bytes")]
             Some(Value::Byte(_)) => Err(self.fill_error(true)),
             Some(Value::Complex(c)) if c.rank() == 0 => Ok(c.data[0]),
             Some(Value::Complex(_)) => Err(self.fill_error(true)),

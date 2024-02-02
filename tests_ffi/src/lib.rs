@@ -38,8 +38,11 @@ fn ffi_test() {
         .status()
         .unwrap();
 
-    let lib_path =
-        Path::new("../target/debug/ffi_lib").with_extension(std::env::consts::DLL_EXTENSION);
+    #[cfg(windows)]
+    let dll_path = "../target/debug/ffi_lib.dll";
+    #[cfg(unix)]
+    let dll_path = "../target/debug/libffi_lib.so";
+    let lib_path = Path::new(dll_path);
 
     let mut uiua = Uiua::with_native_sys().with_args(vec![lib_path.to_string_lossy().into_owned()]);
     uiua.run_file("test.ua").unwrap_or_else(|e| panic!("{e}"));

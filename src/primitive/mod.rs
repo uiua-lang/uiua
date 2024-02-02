@@ -1645,7 +1645,7 @@ mod tests {
         }},
 		"numbers": {{
 			"name": "constant.numeric.uiua",
-			"match": "[`¯]?\\d+([./]\\d+(e[+-]?\\d+)?)?"
+			"match": "[`¯]?\\d+([./]\\d+)?(e[+-]?\\d+)?"
 		}},
 		"strand": {{
 			"name": "comment.line",

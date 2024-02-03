@@ -17,7 +17,7 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
 
     match (f.as_flipped_primitive(env), xs) {
         (Some((Primitive::Join, false)), mut xs)
-            if !env.unpack_boxes() && env.box_fill().is_err() =>
+            if !env.unpack_boxes() && env.value_fill().is_none() =>
         {
             if xs.rank() < 2 {
                 env.push(xs);

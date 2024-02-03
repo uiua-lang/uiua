@@ -64,10 +64,9 @@ impl Value {
         if let Some(value) = value {
             Ok(value)
         } else {
-            match env.box_fill() {
-                Ok(fill) => Ok(fill.0),
-                Err(e) => Err(env.error(format!("Key not found in map{e}"))),
-            }
+            env.value_fill()
+                .cloned()
+                .ok_or_else(|| env.error("Key not found in map"))
         }
     }
     /// Check if a map array contains a key

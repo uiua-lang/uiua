@@ -922,7 +922,7 @@ fn regex(env: &mut Uiua) -> UiuaResult {
                 .iter()
                 .flat_map(|m| {
                     m.map(|m| Boxed(Value::from(m.as_str())))
-                        .or_else(|| env.box_fill().ok())
+                        .or_else(|| env.value_fill().cloned().map(Value::boxed_if_not))
                 })
                 .collect();
             matches.append(row.into(), env)?;

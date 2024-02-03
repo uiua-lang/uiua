@@ -2075,6 +2075,7 @@ impl_primitive!(
     (3, Unkeep),
     (3, Unrerank),
     (2, Unreshape),
+    (3(2), Unjoin),
     (3[1], Unpartition),
     (3[1], Ungroup),
     // Optimizations

@@ -197,6 +197,28 @@ impl Value {
         }
         Ok(())
     }
+    pub(crate) fn unjoin(self, a_rank: Self, b_rank: Self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        let a_rank = a_rank.as_nat(env, "Rank must be a natural number")?;
+        let b_rank = b_rank.as_nat(env, "Rank must be a natural number")?;
+        match self {
+            Value::Num(a) => a
+                .unjoin(a_rank, b_rank, env)
+                .map(|(a, b)| (a.into(), b.into())),
+            #[cfg(feature = "bytes")]
+            Value::Byte(a) => a
+                .unjoin(a_rank, b_rank, env)
+                .map(|(a, b)| (a.into(), b.into())),
+            Value::Complex(a) => a
+                .unjoin(a_rank, b_rank, env)
+                .map(|(a, b)| (a.into(), b.into())),
+            Value::Char(a) => a
+                .unjoin(a_rank, b_rank, env)
+                .map(|(a, b)| (a.into(), b.into())),
+            Value::Box(a) => a
+                .unjoin(a_rank, b_rank, env)
+                .map(|(a, b)| (a.into(), b.into())),
+        }
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -327,6 +349,39 @@ impl<T: ArrayValue> Array<T> {
         self.shape[0] += 1;
         self.validate_shape();
         Ok(())
+    }
+    pub(crate) fn unjoin(
+        self,
+        a_rank: usize,
+        b_rank: usize,
+        env: &Uiua,
+    ) -> UiuaResult<(Self, Self)> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot unjoin scalar"));
+        }
+        match a_rank.cmp(&b_rank) {
+            Ordering::Equal => Err(env.error("Cannot unjoin arrays with the same rank")),
+            Ordering::Less => {
+                if self.row_count() == 0 {
+                    return Ok((self.clone(), self));
+                }
+                let left_shape = &self.shape[1..];
+                let left_data = self.data.slice(..self.row_len());
+                let left = Array::new(left_shape, left_data);
+                let right = self.drop(&[1], env)?;
+                Ok((left, right))
+            }
+            Ordering::Greater => {
+                if self.row_count() == 0 {
+                    return Ok((self.clone(), self));
+                }
+                let right_shape = &self.shape[1..];
+                let right_data = self.data.slice((self.row_count() - 1) * self.row_len()..);
+                let right = Array::new(right_shape, right_data);
+                let left = self.drop(&[-1], env)?;
+                Ok((left, right))
+            }
+        }
     }
 }
 

@@ -5,7 +5,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
 - 0.9  
   - Non-scalar fill
     - Modifier for fill-or-default
-  - `under join`
   - `under fill`?
   - Color labels in pad
   - Annotation functions

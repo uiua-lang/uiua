@@ -159,6 +159,7 @@ impl fmt::Display for ImplPrimitive {
             Unrerank => write!(f, "{Un}{Rerank}"),
             Unreshape => write!(f, "{Un}{Reshape}"),
             Ungroup => write!(f, "{Un}{Group}"),
+            Unjoin => write!(f, "{Un}{Join}"),
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
             LastMinIndex => write!(f, "{First}{Reverse}{Rise}"),
@@ -834,6 +835,14 @@ impl ImplPrimitive {
             ImplPrimitive::InverseBits => env.monadic_ref_env(Value::inv_bits)?,
             ImplPrimitive::Unpartition => loops::unpartition(env)?,
             ImplPrimitive::Ungroup => loops::ungroup(env)?,
+            ImplPrimitive::Unjoin => {
+                let b_rank = env.pop(1)?;
+                let a_rank = env.pop(2)?;
+                let val = env.pop(3)?;
+                let (left, right) = val.unjoin(a_rank, b_rank, env)?;
+                env.push(right);
+                env.push(left);
+            }
             ImplPrimitive::InvAtan => {
                 let x = env.pop(1)?;
                 let sin = x.clone().sin(env)?;

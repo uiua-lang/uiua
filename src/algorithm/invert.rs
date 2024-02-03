@@ -274,6 +274,23 @@ pub(crate) fn under_instrs(
             (Over, Shape, PushTempN(1), Reshape),
             (PopTempN(1), Unreshape),
         )),
+        &maybe_val!(pat!(
+            Join,
+            (
+                Flip,
+                Dup,
+                Shape,
+                Len,
+                PushTempN(1),
+                Flip,
+                Dup,
+                Shape,
+                Len,
+                PushTempN(1),
+                Join
+            ),
+            (PopTempN(2), Unjoin),
+        )),
         &pat!(
             Classify,
             (Dup, Deduplicate, PushTempN(1), Classify),

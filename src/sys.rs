@@ -486,7 +486,8 @@ sys_op! {
     /// - `unsigned long long`
     /// Suffixing any of these with `*` makes them a pointer type.
     ///
-    /// ex! Lib ← &ffi ⊂□"example.dll"
+    /// ex! # Experimental!
+    ///   : Lib ← &ffi ⊂□"example.dll"
     ///   : Add ← Lib {"int" "add" "int" "int"}
     ///   : Add {2 3} # 5
     (2, FFI, Misc, "&ffi", "foreign function interface"),

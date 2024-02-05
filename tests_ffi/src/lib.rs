@@ -24,7 +24,7 @@ pub unsafe extern "C" fn reversed(list: *const i32, len: i32) -> *const i32 {
     let slice = std::slice::from_raw_parts(list, len as usize);
     let mut reversed = slice.to_vec();
     reversed.reverse();
-    reversed.as_ptr()
+    reversed.leak().as_ptr()
 }
 
 #[test]

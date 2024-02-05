@@ -300,16 +300,21 @@ mod enabled {
                 macro_rules! ret_list {
                     ($c_ty:ty) => {
                         unsafe {
+                            // Call
                             let ptr = cif.call::<*const $c_ty>(fptr, args);
+                            // Construct a list from the pointer and length
                             let len = *bindings.get::<c_int>(*len_index) as usize;
                             let slice = slice::from_raw_parts(ptr, len);
+                            // Copy the slice into a new array
                             results.push(
                                 Array::new(
                                     len,
                                     slice.iter().map(|&i| i as f64).collect::<EcoVec<_>>(),
                                 )
                                 .into(),
-                            )
+                            );
+                            // Clean up the pointer's memory
+                            drop(Box::from_raw(slice.as_ptr() as *mut $c_ty));
                         }
                     };
                 }

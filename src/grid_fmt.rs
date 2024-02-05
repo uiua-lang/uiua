@@ -276,14 +276,6 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                 grid[0].insert(0, left);
                 grid[0].push(right);
             } else {
-                if T::compress_list_grid() && self.element_count() > 0 {
-                    // Add quotes arround char array rows
-                    let (left, right) = T::grid_fmt_delims(false);
-                    for row in grid.iter_mut() {
-                        row.insert(0, left);
-                        row.push(right);
-                    }
-                }
                 // Add corners to non-vectors
                 let width = grid[0].len();
                 let height = grid.len();
@@ -375,7 +367,11 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                 .chars()
                 .map(format_char_inner)
                 .collect();
-            row.push(vec![s.chars().collect()]);
+            let (left, right) = T::grid_fmt_delims(false);
+            let mut cell = vec![left];
+            cell.extend(s.chars());
+            cell.push(right);
+            row.push(vec![cell]);
         } else {
             for (i, val) in data.iter().enumerate() {
                 let mut grid = val.fmt_grid(false, label);

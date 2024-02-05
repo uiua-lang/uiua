@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{mem::forget, mem::take, str::FromStr};
 
 /// Types for FFI
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -259,17 +259,53 @@ mod enabled {
         // Call and get return value
         let cif = Cif::new(cif_arg_tys, ffity_to_cty(&return_ty));
         let fptr = CodePtr::from_fun(*fptr);
-        let args = &bindings.args;
         let mut results = Vec::new();
 
         macro_rules! call {
             ($ty:ty) => {
-                results.push((unsafe { cif.call::<$ty>(fptr, args) } as f64).into())
+                results.push((unsafe { cif.call::<$ty>(fptr, &bindings.args) } as f64).into())
+            };
+        }
+        macro_rules! ret_list {
+            ($c_ty:ty, $len_index:expr) => {
+                unsafe {
+                    // Call
+                    let ptr = cif.call::<*const $c_ty>(fptr, &bindings.args);
+                    // Construct a list from the pointer and length
+                    let len = *bindings.get::<c_int>(*$len_index) as usize;
+                    let slice = slice::from_raw_parts(ptr, len);
+                    // Copy the slice into a new array
+                    results.push(
+                        Array::new(len, slice.iter().map(|&i| i as f64).collect::<EcoVec<_>>())
+                            .into(),
+                    );
+                    // Clean up the pointer's memory
+                    drop(Vec::from_raw_parts(ptr as *mut $c_ty, len, len));
+                }
+            };
+        }
+        macro_rules! out_param_list {
+            ($c_ty:ty, $len_index:expr, $i:expr) => {
+                unsafe {
+                    let len = *bindings.get::<c_int>(*$len_index) as usize;
+                    let (ptr, vec) = bindings.get_list_mut::<$c_ty>($i);
+                    // Construct a list from the pointer and length
+                    let slice = slice::from_raw_parts(ptr, len);
+                    // Copy the slice into a new array
+                    results.push(
+                        Array::new(len, slice.iter().map(|&i| i as f64).collect::<EcoVec<_>>())
+                            .into(),
+                    );
+                    // Forget the vector
+                    forget(take(vec));
+                    // Clean up the pointer's memory
+                    drop(Vec::from_raw_parts(ptr as *mut $c_ty, len, len));
+                }
             };
         }
 
         match &return_ty {
-            FfiType::Void => unsafe { cif.call::<()>(fptr, args) },
+            FfiType::Void => unsafe { cif.call::<()>(fptr, &bindings.args) },
             FfiType::Char => call!(c_schar),
             FfiType::Short => call!(c_short),
             FfiType::Int => call!(c_int),
@@ -284,7 +320,7 @@ mod enabled {
             FfiType::Double => call!(c_double),
             FfiType::Ptr { inner, .. } => match &**inner {
                 FfiType::Char => unsafe {
-                    let ptr = cif.call::<*const c_char>(fptr, args);
+                    let ptr = cif.call::<*const c_char>(fptr, &bindings.args);
                     let s = CStr::from_ptr(ptr).to_str().map_err(|e| e.to_string())?;
                     results.push(Value::from(s))
                 },
@@ -296,46 +332,69 @@ mod enabled {
             },
             FfiType::List {
                 len_index, inner, ..
-            } => {
-                macro_rules! ret_list {
-                    ($c_ty:ty) => {
-                        unsafe {
-                            // Call
-                            let ptr = cif.call::<*const $c_ty>(fptr, args);
-                            // Construct a list from the pointer and length
-                            let len = *bindings.get::<c_int>(*len_index) as usize;
-                            let slice = slice::from_raw_parts(ptr, len);
-                            // Copy the slice into a new array
-                            results.push(
-                                Array::new(
-                                    len,
-                                    slice.iter().map(|&i| i as f64).collect::<EcoVec<_>>(),
-                                )
-                                .into(),
-                            );
-                            // Clean up the pointer's memory
-                            drop(Box::from_raw(slice.as_ptr() as *mut $c_ty));
-                        }
-                    };
+            } => match &**inner {
+                FfiType::Char => ret_list!(c_char, len_index),
+                FfiType::Short => ret_list!(c_short, len_index),
+                FfiType::UShort => ret_list!(c_ushort, len_index),
+                FfiType::Int => ret_list!(c_int, len_index),
+                FfiType::UInt => ret_list!(c_uint, len_index),
+                FfiType::Long => ret_list!(c_long, len_index),
+                FfiType::ULong => ret_list!(c_ulong, len_index),
+                FfiType::LongLong => ret_list!(c_longlong, len_index),
+                FfiType::ULongLong => ret_list!(c_ulonglong, len_index),
+                FfiType::Float => ret_list!(c_float, len_index),
+                FfiType::Double => ret_list!(c_double, len_index),
+                _ => {
+                    return Err(format!(
+                        "Invalid or unsupported FFI return type {return_ty:?}"
+                    ))
                 }
-                match &**inner {
-                    FfiType::Char => ret_list!(c_char),
-                    FfiType::Short => ret_list!(c_short),
-                    FfiType::UShort => ret_list!(c_ushort),
-                    FfiType::Int => ret_list!(c_int),
-                    FfiType::UInt => ret_list!(c_uint),
-                    FfiType::Long => ret_list!(c_long),
-                    FfiType::ULong => ret_list!(c_ulong),
-                    FfiType::LongLong => ret_list!(c_longlong),
-                    FfiType::ULongLong => ret_list!(c_ulonglong),
-                    FfiType::Float => ret_list!(c_float),
-                    FfiType::Double => ret_list!(c_double),
+            },
+        }
+
+        // Get out parameters
+        for (i, ty) in arg_tys.iter().enumerate() {
+            match ty {
+                FfiType::Ptr {
+                    mutable: true,
+                    inner,
+                } => match &**inner {
+                    FfiType::Char => unsafe {
+                        let ptr = cif.call::<*const c_char>(fptr, &bindings.args);
+                        let s = CStr::from_ptr(ptr).to_str().map_err(|e| e.to_string())?;
+                        results.push(Value::from(s))
+                    },
                     _ => {
                         return Err(format!(
-                            "Invalid or unsupported FFI return type {return_ty:?}"
+                            "Invalid or unsupported FFI out parameter type {ty:?}"
                         ))
                     }
-                }
+                },
+                FfiType::List {
+                    mutable: true,
+                    inner,
+                    len_index,
+                } => match &**inner {
+                    FfiType::Char => out_param_list!(c_char, len_index, i),
+                    FfiType::Short => out_param_list!(c_short, len_index, i),
+                    FfiType::UShort => out_param_list!(c_ushort, len_index, i),
+                    FfiType::Int => out_param_list!(c_int, len_index, i),
+                    FfiType::UInt => out_param_list!(c_uint, len_index, i),
+                    FfiType::Long => out_param_list!(c_long, len_index, i),
+                    FfiType::ULong => out_param_list!(c_ulong, len_index, i),
+                    FfiType::LongLong => out_param_list!(c_longlong, len_index, i),
+                    FfiType::ULongLong => out_param_list!(c_ulonglong, len_index, i),
+                    FfiType::Float => out_param_list!(c_float, len_index, i),
+                    FfiType::Double => out_param_list!(c_double, len_index, i),
+                    _ => {
+                        return Err(format!(
+                            "FFI parameter {i} has type {ty:?}, which is \
+                            not valid as an out parameter. \
+                            If this is not an out parameter, annotate it as `const`."
+                        ))
+                    }
+                },
+                _ => {}
             }
         }
 
@@ -391,6 +450,12 @@ mod enabled {
             any.downcast_ref::<T>()
                 .or_else(|| any.downcast_ref::<Box<T>>().map(|b| &**b))
                 .unwrap()
+        }
+        fn get_list_mut<T: 'static>(&mut self, index: usize) -> (*const T, &mut Vec<T>) {
+            let (ptr, vec) = self.data[index]
+                .downcast_mut::<(*const T, Vec<T>)>()
+                .unwrap();
+            (*ptr, vec)
         }
     }
 

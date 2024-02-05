@@ -27,6 +27,15 @@ pub unsafe extern "C" fn reversed(list: *const i32, len: i32) -> *const i32 {
     reversed.leak().as_ptr()
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn head_tail(list: *mut i32, len: *mut i32) -> i32 {
+    let slice = std::slice::from_raw_parts_mut(list, *len as usize);
+    let head = slice[0];
+    *len -= 1;
+    slice.rotate_left(1);
+    head
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

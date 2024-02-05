@@ -1041,7 +1041,7 @@ primitive!(
     /// ex: /∠ []
     /// ex! /⊡ []
     ///
-    /// A default value can be set with [fill].
+    /// An initial value can be set with [fill].
     /// ex:   /↥ []
     /// ex: ⬚5/↥ []
     /// ex:   /↥ [1 2 3]

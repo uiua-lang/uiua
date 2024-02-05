@@ -2,9 +2,7 @@
 Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
-- 0.9  
-  - Non-scalar fill
-    - Modifier for fill-or-default
+- 0.9
   - `under fill`?
   - Color labels in pad
   - Annotation functions
@@ -13,7 +11,7 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - FFI
   - Basic package management
   - `of` and `on` modifiers
-  - Diagnostic specification
+  - Diagnostic specification?
   - Pad link from Gist
 - Multimedia
   - Sound input

@@ -138,7 +138,7 @@ uiuisms!(
     /// Check if character is numberic [0-9]
     "/=⊂⊃(≥@0)(≤@9)",
     /// Check if character is letter [a-zA-Z]
-    "≥3/+⊂⊂⊂⊃⊃⊃(≥@a)(≤@z)(≥@A)(≤@Z)",
+    "=3/+⊂⊂⊂⊃⊃⊃(≥@a)(≤@z)(≥@A)(≤@Z)",
     /// Check if an array is a palindrome
     r#"≍⇌. "racecar""#,
     /// Convert a number to a string

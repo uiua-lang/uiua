@@ -199,6 +199,7 @@ pub(crate) fn under_instrs(
     }
 
     let patterns: &[&dyn UnderPattern] = &[
+        &maybe_val!(UnderPatternFn(under_fill_pattern, "fill")),
         &UnderPatternFn(under_call_pattern, "call"),
         &UnderPatternFn(under_dump_pattern, "dump"),
         &UnderPatternFn(under_rows_pattern, "rows"),
@@ -362,7 +363,7 @@ pub(crate) fn under_instrs(
         break;
     }
 
-    // println!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
+    println!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
 
     None
 }
@@ -842,6 +843,37 @@ fn under_rows_pattern<'a>(
         Instr::Prim(Primitive::Reverse, span),
         Instr::Prim(Primitive::Rows, span),
         Instr::Prim(Primitive::Reverse, span),
+    ];
+    Some((input, (befores, afters)))
+}
+
+fn under_fill_pattern<'a>(
+    input: &'a [Instr],
+    g_sig: Signature,
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    let [Instr::PushFunc(g), Instr::PushFunc(f), Instr::Prim(Primitive::Fill, span), input @ ..] =
+        input
+    else {
+        return None;
+    };
+    let span = *span;
+    if f.signature() != (0, 1) {
+        return None;
+    }
+    let g_instrs = g.instrs(comp).to_vec();
+    let (g_before, g_after) = under_instrs(&g_instrs, g_sig, comp)?;
+    let g_before = make_fn(g_before, span, comp)?;
+    let g_after = make_fn(g_after, span, comp)?;
+    let befores = eco_vec![
+        Instr::PushFunc(g_before),
+        Instr::PushFunc(f.clone()),
+        Instr::Prim(Primitive::Fill, span),
+    ];
+    let afters = eco_vec![
+        Instr::PushFunc(g_after),
+        Instr::PushFunc(f.clone()),
+        Instr::Prim(Primitive::Fill, span),
     ];
     Some((input, (befores, afters)))
 }
@@ -1414,7 +1446,12 @@ impl InvertPattern for Val {
         for len in (1..input.len()).rev() {
             let chunk = &input[..len];
             if let Ok(sig) = instrs_signature(chunk) {
-                if sig.args == 0 && sig.outputs == 1 && !chunk.iter().any(Instr::is_temp) {
+                if sig.args == 0
+                    && sig.outputs == 1
+                    && !chunk
+                        .iter()
+                        .any(|instr| instr.is_temp() || matches!(instr, Instr::PushFunc(_)))
+                {
                     return Some((&input[len..], chunk.into()));
                 }
             }

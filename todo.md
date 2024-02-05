@@ -3,7 +3,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
 - 0.9
-  - `under fill`?
   - Color labels in pad
   - Annotation functions
     - Types

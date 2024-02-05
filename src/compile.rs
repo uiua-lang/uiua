@@ -701,8 +701,8 @@ code:
             .filter(|word| word.value.is_code() || matches!(&word.value, Word::Comment(_)))
             .peekable();
         while let Some(word) = words.next() {
-            // Handle imports
             if let Some(next) = words.peek() {
+                // Handle imports
                 if let Word::Ident(name) = &next.value {
                     if let Some(index) = self.scope.names.get(name) {
                         if let Global::Module { module } = &self.asm.bindings[*index].global {
@@ -733,6 +733,20 @@ code:
                             }
                         }
                     }
+                }
+                // First select diagnostic
+                if let (Word::Primitive(Primitive::Select), Word::Primitive(Primitive::First)) =
+                    (&word.value, &next.value)
+                {
+                    self.emit_diagnostic(
+                        format!(
+                            "Flip the order of {} and {} to improve performance",
+                            Primitive::First.format(),
+                            Primitive::Select.format()
+                        ),
+                        DiagnosticKind::Advice,
+                        word.span.clone(),
+                    );
                 }
             }
             self.word(word, call)?;

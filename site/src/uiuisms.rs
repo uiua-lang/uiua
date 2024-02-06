@@ -135,6 +135,10 @@ uiuisms!(
     "↥⇌.⊞=.⇡ 5",
     /// Create a zero matrix of the same shape as another
     "≠. [1_1 2_2]",
+    /// Check if character is numberic [0-9]
+    "×⊃(≥@0|≤@9)",
+    /// Check if character is letter [a-zA-Z]
+    "↥∩×⊃(≥@a|≤@z|≥@A|≤@Z)",
     /// Check if an array is a palindrome
     r#"≍⇌. "racecar""#,
     /// Convert a number to a string

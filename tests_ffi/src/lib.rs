@@ -1,26 +1,29 @@
 #![allow(clippy::missing_safety_doc)]
 
+use std::ffi::*;
+
 #[no_mangle]
-pub extern "C" fn add(a: i32, b: i32) -> i32 {
+pub extern "C" fn add(a: c_int, b: c_int) -> c_int {
     a + b
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn strlen(s: *const u8) -> i32 {
+pub unsafe extern "C" fn strlen(s: *const c_char) -> c_int {
+    // println!("s ptr: {:p}", s);
     let mut len = 0;
     while unsafe { *s.offset(len) } != 0 {
         len += 1;
     }
-    len as i32
+    len as c_int
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn reverse(list: *mut i32, len: i32) {
+pub unsafe extern "C" fn reverse(list: *mut c_int, len: c_int) {
     std::slice::from_raw_parts_mut(list, len as usize).reverse();
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn reversed(list: *const i32, len: i32) -> *const i32 {
+pub unsafe extern "C" fn reversed(list: *const c_int, len: c_int) -> *const c_int {
     let slice = std::slice::from_raw_parts(list, len as usize);
     let mut reversed = slice.to_vec();
     reversed.reverse();
@@ -28,7 +31,7 @@ pub unsafe extern "C" fn reversed(list: *const i32, len: i32) -> *const i32 {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn head_tail(list: *mut i32, len: *mut i32) -> i32 {
+pub unsafe extern "C" fn head_tail(list: *mut c_int, len: *mut c_int) -> c_int {
     // println!("list ptr b: {:p}", list);
     // println!("len ptr b: {:p}", len);
     // println!("len: {}", *len);
@@ -86,14 +89,22 @@ pub unsafe extern "C" fn vec2_normalize(v: *mut Vec2) {
 
 #[repr(C)]
 pub struct Person {
-    pub name: *const u8,
-    pub age: i32,
+    pub name: *const c_char,
+    pub age: c_int,
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn person_new(name: *const u8, age: i32) -> *mut Person {
-    let person = Box::new(Person { name, age });
-    Box::into_raw(person)
+pub unsafe extern "C" fn person_new(name: *const c_char, age: c_int) -> Person {
+    // println!("name ptr: {:p}", name);
+    // println!("age: {}", age);
+    Person { name, age }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn person_new_ptr(name: *const c_char, age: c_int) -> *const Person {
+    // println!("name ptr: {:p}", name);
+    // println!("age: {}", age);
+    Box::into_raw(Box::new(Person { name, age }))
 }
 
 #[test]

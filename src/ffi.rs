@@ -1,4 +1,9 @@
-use std::{fmt, mem::size_of, str::FromStr};
+use std::{
+    ffi::*,
+    fmt,
+    mem::{align_of, size_of},
+    str::FromStr,
+};
 
 /// Types for FFI
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -133,7 +138,7 @@ impl fmt::Display for FfiType {
                 write!(f, "{{")?;
                 for (i, field) in fields.iter().enumerate() {
                     if i > 0 {
-                        write!(f, " ")?;
+                        write!(f, "; ")?;
                     }
                     write!(f, "{}", field)?;
                 }
@@ -148,27 +153,50 @@ impl FfiType {
     pub fn size_align(&self) -> (usize, usize) {
         match self {
             FfiType::Void => (0, 1),
-            FfiType::Char | FfiType::UChar => (1, 1),
-            FfiType::Short | FfiType::UShort => (2, 2),
-            FfiType::Int | FfiType::UInt => (4, 4),
-            FfiType::Long | FfiType::ULong => (size_of::<usize>(), size_of::<usize>()),
-            FfiType::LongLong | FfiType::ULongLong => (8, size_of::<usize>()),
-            FfiType::Float => (4, 4),
-            FfiType::Double => (8, size_of::<usize>()),
-            FfiType::Ptr { .. } | FfiType::List { .. } => (size_of::<usize>(), size_of::<usize>()),
-            FfiType::Struct { fields } => fields
-                .iter()
-                .map(Self::size_align)
-                .fold((0, 1), |(size, align), (s, a)| (size + s, align.max(a))),
+            FfiType::Char => (size_of::<c_char>(), align_of::<c_char>()),
+            FfiType::Short => (size_of::<c_short>(), align_of::<c_short>()),
+            FfiType::Int => (size_of::<c_int>(), align_of::<c_int>()),
+            FfiType::Long => (size_of::<c_long>(), align_of::<c_long>()),
+            FfiType::LongLong => (size_of::<c_longlong>(), align_of::<c_longlong>()),
+            FfiType::Float => (size_of::<c_float>(), align_of::<c_float>()),
+            FfiType::Double => (size_of::<c_double>(), align_of::<c_double>()),
+            FfiType::UChar => (size_of::<c_uchar>(), align_of::<c_uchar>()),
+            FfiType::UShort => (size_of::<c_ushort>(), align_of::<c_ushort>()),
+            FfiType::UInt => (size_of::<c_uint>(), align_of::<c_uint>()),
+            FfiType::ULong => (size_of::<c_ulong>(), align_of::<c_ulong>()),
+            FfiType::ULongLong => (size_of::<c_ulonglong>(), align_of::<c_ulonglong>()),
+            FfiType::Ptr { .. } | FfiType::List { .. } => (size_of::<usize>(), align_of::<usize>()),
+            FfiType::Struct { fields } => struct_fields_size_align(fields),
         }
     }
+}
+
+fn struct_fields_size_align(fields: &[FfiType]) -> (usize, usize) {
+    let mut size = 0;
+    let mut align = 1;
+    for field in fields {
+        let (field_size, field_align) = field.size_align();
+        // println!("size_align of field {field}: {field_size}, {field_align}");
+        align = align.max(field_align);
+        if size % field_align != 0 {
+            size += field_align - (size % field_align);
+        }
+        size += field_size;
+    }
+    size = (size + align - 1) / align * align;
+    // println!("size_align of struct {fields:?}: {size}, {align}");
+    (size, align)
 }
 
 #[cfg(feature = "ffi")]
 pub(crate) use enabled::*;
 #[cfg(feature = "ffi")]
 mod enabled {
-    use std::{any::Any, ffi::*, mem::forget, mem::take, slice};
+    use std::{
+        any::Any,
+        mem::{forget, take, transmute},
+        slice,
+    };
 
     use ecow::EcoVec;
     use libffi::middle::*;
@@ -245,14 +273,14 @@ mod enabled {
                 match (arg_ty, arg) {
                     (FfiType::Void, _) => return Err("Cannot pass void to a function".into()),
                     (FfiType::Char | FfiType::UChar, Value::Char(arr)) if arr.rank() == 0 => {
-                        scalar!(arr, i8)
+                        scalar!(arr, c_char)
                     }
                     (FfiType::Char | FfiType::UChar, Value::Num(arr)) if arr.rank() == 0 => {
-                        scalar!(arr, u8)
+                        scalar!(arr, c_char)
                     }
                     #[cfg(feature = "bytes")]
                     (FfiType::Char | FfiType::UChar, Value::Byte(arr)) if arr.rank() == 0 => {
-                        scalar!(arr, u8)
+                        scalar!(arr, c_char)
                     }
                     (FfiType::Short | FfiType::UShort, Value::Num(arr)) if arr.rank() == 0 => {
                         scalar!(arr, c_short)
@@ -421,6 +449,14 @@ mod enabled {
                     let ptr = cif.call::<*const c_char>(fptr, &bindings.args);
                     let s = CStr::from_ptr(ptr).to_str().map_err(|e| e.to_string())?;
                     results.push(Value::from(s))
+                },
+                FfiType::Struct { fields } => unsafe {
+                    let ptr = cif.call::<*const u8>(fptr, &bindings.args);
+                    let (size, _) = struct_fields_size_align(fields);
+                    let slice = slice::from_raw_parts(ptr, size);
+                    results.push(struct_repr_to_value(slice, fields)?);
+                    // Clean up the pointer's memory
+                    drop(Vec::from_raw_parts(ptr as *mut u8, size, size));
                 },
                 _ => {
                     return Err(format!(
@@ -608,20 +644,20 @@ mod enabled {
             ));
         }
         fn push_string(&mut self, arg: String) {
-            let s: CString =
-                CString::new(arg.chars().take_while(|&c| c != '\0').collect::<String>()).unwrap();
-            self.data.push(Box::new(s));
-            self.args.push(Arg::new(
-                self.data.last().unwrap().downcast_ref::<CString>().unwrap(),
-            ));
+            let list: Box<[c_char]> = arg
+                .chars()
+                .map(|c| c as c_char)
+                .chain(['\0' as c_char])
+                .collect();
+            self.push_list::<c_char>(list);
         }
         fn push_list<T: Any + 'static>(&mut self, mut arg: Box<[T]>) {
             let ptr = &mut arg[0] as *mut T;
             // println!("list ptr a: {:p}", ptr);
             self.data.push(Box::new((ptr, arg)));
             self.args.push(Arg::new(
-                &(self.data.last().unwrap())
-                    .downcast_ref::<(*mut T, Box<[T]>)>()
+                &(self.data.last_mut().unwrap())
+                    .downcast_mut::<(*mut T, Box<[T]>)>()
                     .unwrap()
                     .0,
             ));
@@ -686,14 +722,14 @@ mod enabled {
                 fields.len()
             ));
         }
-        let mut repr = Vec::new();
+        let (size, _) = struct_fields_size_align(fields);
+        let mut repr = vec![0; size];
         let mut offset = 0;
         for (i, (row, field)) in value.rows().map(Value::unboxed).zip(fields).enumerate() {
             let (size, align) = field.size_align();
             if offset % align != 0 {
                 offset += align - (offset % align);
             }
-            repr.resize(offset + size, 0);
             macro_rules! scalar {
                 ($arr:expr, $ty:ty) => {
                     repr[offset..offset + size]
@@ -753,6 +789,8 @@ mod enabled {
             }
             offset += size;
         }
+        // println!("repr: {:?}", repr);
+        // println!("repr: {:x?}", repr);
         Ok(repr)
     }
 
@@ -790,6 +828,18 @@ mod enabled {
                 FfiType::Struct { fields } => {
                     rows.push(struct_repr_to_value(&repr[offset..offset + size], fields)?);
                 }
+                // Pointers
+                FfiType::Ptr { inner, .. } => match &**inner {
+                    FfiType::Char => {
+                        let mut bytes: [u8; size_of::<*const c_char>()] = Default::default();
+                        bytes.copy_from_slice(&repr[offset..offset + size_of::<*const c_char>()]);
+                        let ptr = unsafe { transmute::<_, *const c_char>(bytes) };
+                        let c_str = unsafe { CStr::from_ptr(ptr) };
+                        let s = c_str.to_str().map_err(|e| e.to_string())?;
+                        rows.push(Value::from(s));
+                    }
+                    _ => return Err(format!("Invalid or unsupported field {i} type {field}")),
+                },
                 FfiType::Void => return Err("Cannot have void fields in a struct".into()),
                 _ => return Err(format!("Invalid or unsupported field {i} type {field}")),
             }

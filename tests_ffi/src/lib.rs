@@ -29,12 +29,12 @@ pub unsafe extern "C" fn reversed(list: *const i32, len: i32) -> *const i32 {
 
 #[no_mangle]
 pub unsafe extern "C" fn head_tail(list: *mut i32, len: *mut i32) -> i32 {
-    println!("list ptr b: {:p}", list);
-    println!("len ptr b: {:p}", len);
-    println!("len: {}", *len);
-    println!("first: {}", *list);
-    println!("second: {}", *list.offset(1));
-    println!("third: {}", *list.offset(2));
+    // println!("list ptr b: {:p}", list);
+    // println!("len ptr b: {:p}", len);
+    // println!("len: {}", *len);
+    // println!("first: {}", *list);
+    // println!("second: {}", *list.offset(1));
+    // println!("third: {}", *list.offset(2));
     let slice = std::slice::from_raw_parts_mut(list, *len as usize);
     let head = slice[0];
     slice.rotate_left(1);

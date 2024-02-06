@@ -437,16 +437,17 @@ mod enabled {
 
     impl FfiBindings {
         fn push_ptr<T: Any + Copy + std::fmt::Debug>(&mut self, arg: T) {
-            self.data.push(Box::new(Box::<T>::new(arg)));
-            let ptr: *mut T = &mut **self
-                .data
-                .last_mut()
-                .unwrap()
-                .downcast_mut::<Box<T>>()
-                .unwrap();
-            println!("len ptr a: {:p}", ptr);
+            let mut bx = Box::<T>::new(arg);
+            let ptr: *mut T = &mut *bx;
+            self.data.push(Box::new((ptr, bx)));
+            // println!("len ptr a: {:p}", ptr);
             // println!("ptr val: {:?}", unsafe { *ptr });
-            self.args.push(Arg::new(&ptr));
+            self.args.push(Arg::new(
+                &(self.data.last().unwrap())
+                    .downcast_ref::<(*mut T, Box<T>)>()
+                    .unwrap()
+                    .0,
+            ));
         }
         fn push_value<T: Any>(&mut self, arg: T) {
             self.data.push(Box::new(arg));
@@ -475,7 +476,7 @@ mod enabled {
         fn get<T: Any>(&self, index: usize) -> &T {
             let any = &self.data[index];
             any.downcast_ref::<T>()
-                .or_else(|| any.downcast_ref::<Box<T>>().map(|b| &**b))
+                .or_else(|| any.downcast_ref::<(*mut T, Box<T>)>().map(|(_, b)| &**b))
                 .unwrap()
         }
         fn get_list_mut<T: 'static>(&mut self, index: usize) -> (*mut T, &mut Box<[T]>) {

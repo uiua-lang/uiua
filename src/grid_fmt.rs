@@ -272,9 +272,11 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             let grid_row_count = grid.len();
             if grid_row_count == 1 && self.rank() == 1 {
                 // Add brackets to lists
-                let (left, right) = T::grid_fmt_delims(boxed);
-                grid[0].insert(0, left);
-                grid[0].push(right);
+                if !T::compress_list_grid() {
+                    let (left, right) = T::grid_fmt_delims(boxed);
+                    grid[0].insert(0, left);
+                    grid[0].push(right);
+                }
             } else {
                 // Add corners to non-vectors
                 let width = grid[0].len();

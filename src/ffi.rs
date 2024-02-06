@@ -1,4 +1,4 @@
-use std::{mem::forget, mem::take, str::FromStr};
+use std::str::FromStr;
 
 /// Types for FFI
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -79,8 +79,7 @@ impl FromStr for FfiType {
 pub(crate) use enabled::*;
 #[cfg(feature = "ffi")]
 mod enabled {
-    use core::slice;
-    use std::{any::Any, ffi::*};
+    use std::{any::Any, ffi::*, mem::forget, mem::take, slice};
 
     use ecow::EcoVec;
     use libffi::middle::*;

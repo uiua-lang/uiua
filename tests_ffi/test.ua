@@ -12,3 +12,4 @@ VecII ← "{double double}"
 ⍤⊃⋅∘≍ 5 Lib {"double" "vec2_len" VecII} {[3 4]}
 ⍤⊃⋅∘≍ 5 Lib {"double" "vec2_len_ref" $"const _*"VecII} {[3 4]}
 ⍤⊃⋅∘≍ [4 6] Lib {VecII "vec2_add" VecII VecII} {[1 2] [3 4]}
+⍤⊃⋅∘≍ [1 0] Lib {"void" "vec2_normalize" $"_*" VecII} {[5 0]}

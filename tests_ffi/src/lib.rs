@@ -71,6 +71,19 @@ pub unsafe extern "C" fn vec2_add(a: Vec2, b: Vec2) -> Vec2 {
     }
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn vec2_normalize(v: *mut Vec2) {
+    let v = &mut *v;
+    let len = (v.x * v.x + v.y * v.y).sqrt();
+    if len == 0.0 {
+        v.x = 0.0;
+        v.y = 0.0;
+    } else {
+        v.x /= len;
+        v.y /= len;
+    }
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

@@ -103,7 +103,7 @@ impl fmt::Display for FfiType {
             FfiType::ULong => write!(f, "unsigned long"),
             FfiType::ULongLong => write!(f, "unsigned long long"),
             FfiType::Ptr { mutable, inner } => {
-                write!(f, "{}{}*", if *mutable { " " } else { "const " }, inner)
+                write!(f, "{}{}*", if *mutable { "" } else { "const " }, inner)
             }
             FfiType::List {
                 mutable,
@@ -493,6 +493,10 @@ mod enabled {
                         FfiType::ULongLong => out_param_scalar!(c_ulonglong, i),
                         FfiType::Float => out_param_scalar!(c_float, i),
                         FfiType::Double => out_param_scalar!(c_double, i),
+                        FfiType::Struct { fields } => {
+                            let repr = bindings.get_repr(i);
+                            results.push(struct_repr_to_value(repr, fields)?);
+                        }
                         _ => {
                             return Err(format!(
                                 "Invalid or unsupported FFI out parameter type {ty}"
@@ -571,12 +575,12 @@ mod enabled {
                     .unwrap()[0],
             ));
         }
-        fn push_repr_ptr(&mut self, arg: Vec<u8>) {
-            let ptr = arg.as_ptr();
+        fn push_repr_ptr(&mut self, mut arg: Vec<u8>) {
+            let ptr = arg.as_mut_ptr();
             self.data.push(Box::new((ptr, arg)));
             self.args.push(Arg::new(
                 &(self.data.last().unwrap())
-                    .downcast_ref::<(*const u8, Vec<u8>)>()
+                    .downcast_ref::<(*mut u8, Vec<u8>)>()
                     .unwrap()
                     .0,
             ));
@@ -611,6 +615,13 @@ mod enabled {
                 .downcast_mut::<(*mut T, Box<[T]>)>()
                 .unwrap();
             (*ptr, vec)
+        }
+        fn get_repr(&self, index: usize) -> &[u8] {
+            self.data[index]
+                .downcast_ref::<(*mut u8, Vec<u8>)>()
+                .unwrap()
+                .1
+                .as_slice()
         }
     }
 

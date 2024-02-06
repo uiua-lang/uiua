@@ -524,6 +524,8 @@ sys_op! {
     ///   : VecII ← "{float; float}"
     ///   : Add ← Lib {VecII "vec2_add" VecII VecII}
     ///   : Add {[1 2] [3 4]} # [4 6]
+    ///
+    /// One thing of note that is currently unsupported is structs which contains pointers other than `const char*`.
     (2, FFI, Misc, "&ffi", "foreign function interface"),
 }
 

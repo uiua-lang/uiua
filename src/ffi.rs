@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 /// Types for FFI
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -26,6 +26,9 @@ pub enum FfiType {
         len_index: usize,
         inner: Box<Self>,
     },
+    Struct {
+        fields: Vec<Self>,
+    },
 }
 
 impl FromStr for FfiType {
@@ -37,7 +40,7 @@ impl FromStr for FfiType {
             s = t;
             mutable = false;
         }
-        if let Some((mut a, mut b)) = s.split_once(':') {
+        if let Some((mut a, mut b)) = s.rsplit_once(':') {
             a = a.trim();
             b = b.trim();
             let len_index = b
@@ -56,6 +59,14 @@ impl FromStr for FfiType {
                 inner: Box::new(s.parse()?),
             });
         }
+        if let Some(mut s) = s.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
+            s = s.trim();
+            let fields = s
+                .split_whitespace()
+                .map(|s| s.trim().parse())
+                .collect::<Result<_, _>>()?;
+            return Ok(FfiType::Struct { fields });
+        }
         Ok(match s {
             "void" => FfiType::Void,
             "char" => FfiType::Char,
@@ -72,6 +83,50 @@ impl FromStr for FfiType {
             "unsigned long long" => FfiType::ULongLong,
             _ => return Err(format!("Unknown FFI type: {}", s)),
         })
+    }
+}
+
+impl fmt::Display for FfiType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FfiType::Void => write!(f, "void"),
+            FfiType::Char => write!(f, "char"),
+            FfiType::Short => write!(f, "short"),
+            FfiType::Int => write!(f, "int"),
+            FfiType::Long => write!(f, "long"),
+            FfiType::LongLong => write!(f, "long long"),
+            FfiType::Float => write!(f, "float"),
+            FfiType::Double => write!(f, "double"),
+            FfiType::UChar => write!(f, "unsigned char"),
+            FfiType::UShort => write!(f, "unsigned short"),
+            FfiType::UInt => write!(f, "unsigned int"),
+            FfiType::ULong => write!(f, "unsigned long"),
+            FfiType::ULongLong => write!(f, "unsigned long long"),
+            FfiType::Ptr { mutable, inner } => {
+                write!(f, "{}{}*", if *mutable { " " } else { "const " }, inner)
+            }
+            FfiType::List {
+                mutable,
+                len_index,
+                inner,
+            } => write!(
+                f,
+                "{}{}:{}",
+                if *mutable { "" } else { "const " },
+                inner,
+                len_index,
+            ),
+            FfiType::Struct { fields } => {
+                write!(f, "{{")?;
+                for (i, field) in fields.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " ")?;
+                    }
+                    write!(f, "{}", field)?;
+                }
+                write!(f, "}}")
+            }
+        }
     }
 }
 
@@ -134,9 +189,9 @@ mod enabled {
                         FfiType::ULong => bindings.push_ptr(len as c_ulong),
                         FfiType::LongLong => bindings.push_ptr(len as c_longlong),
                         FfiType::ULongLong => bindings.push_ptr(len as c_ulonglong),
-                        _ => return Err(format!("{arg_ty:?} is not a valid FFI type for lengths")),
+                        _ => return Err(format!("{arg_ty} is not a valid FFI type for lengths")),
                     },
-                    ty => return Err(format!("{ty:?} is not a valid FFI type for lengths")),
+                    ty => return Err(format!("{ty} is not a valid FFI type for lengths")),
                 }
             } else {
                 // Bind normal argument
@@ -204,7 +259,7 @@ mod enabled {
                         (ty, arg) => {
                             return Err(format!(
                                 "Array of {} with shape {} is not a valid \
-                                argument {i} for FFI type {ty:?}",
+                                argument {i} for FFI type {ty}",
                                 arg.type_name_plural(),
                                 arg.shape()
                             ))
@@ -239,7 +294,7 @@ mod enabled {
                         (ty, arg) => {
                             return Err(format!(
                                 "Array of {} with shape {} is not a valid \
-                                argument {i} for FFI type {ty:?}",
+                                argument {i} for FFI type {ty}",
                                 arg.type_name_plural(),
                                 arg.shape()
                             ))
@@ -248,7 +303,7 @@ mod enabled {
                     (ty, arg) => {
                         return Err(format!(
                             "Array of {} with shape {} is not a valid \
-                            argument {i} for FFI type {ty:?}",
+                            argument {i} for FFI type {ty}",
                             arg.type_name_plural(),
                             arg.shape()
                         ))
@@ -327,7 +382,7 @@ mod enabled {
                 },
                 _ => {
                     return Err(format!(
-                        "Invalid or unsupported FFI return type {return_ty:?}"
+                        "Invalid or unsupported FFI return type {return_ty}"
                     ))
                 }
             },
@@ -347,10 +402,11 @@ mod enabled {
                 FfiType::Double => ret_list!(c_double, len_index),
                 _ => {
                     return Err(format!(
-                        "Invalid or unsupported FFI return type {return_ty:?}"
+                        "Invalid or unsupported FFI return type {return_ty}"
                     ))
                 }
             },
+            FfiType::Struct { .. } => todo!("FFI struct return type"),
         }
 
         // Get out parameters
@@ -386,7 +442,7 @@ mod enabled {
                         FfiType::Double => out_param_scalar!(c_double, i),
                         _ => {
                             return Err(format!(
-                                "Invalid or unsupported FFI out parameter type {ty:?}"
+                                "Invalid or unsupported FFI out parameter type {ty}"
                             ))
                         }
                     }
@@ -409,7 +465,7 @@ mod enabled {
                     FfiType::Double => out_param_list!(c_double, len_index, i),
                     _ => {
                         return Err(format!(
-                            "FFI parameter {i} has type {ty:?}, which is \
+                            "FFI parameter {i} has type {ty}, which is \
                             not valid as an out parameter. \
                             If this is not an out parameter, annotate it as `const`."
                         ))
@@ -505,6 +561,13 @@ mod enabled {
             FfiType::Double => Type::f64(),
             FfiType::Ptr { .. } => Type::pointer(),
             FfiType::List { .. } => Type::pointer(),
+            FfiType::Struct { fields } => {
+                let mut types = Vec::with_capacity(fields.len());
+                for field in fields {
+                    types.push(ffity_to_cty(field));
+                }
+                Type::structure(types)
+            }
         }
     }
 }

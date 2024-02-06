@@ -42,6 +42,21 @@ pub unsafe extern "C" fn head_tail(list: *mut i32, len: *mut i32) -> i32 {
     head
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy)]
+pub struct Vec2 {
+    pub x: f64,
+    pub y: f64,
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vec2_add(a: Vec2, b: Vec2) -> Vec2 {
+    Vec2 {
+        x: a.x + b.x,
+        y: a.y + b.y,
+    }
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

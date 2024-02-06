@@ -50,6 +50,20 @@ pub struct Vec2 {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn vec2_len(v: Vec2) -> f64 {
+    // println!("v: {:?}", v);
+    // println!("v.x bytes: {:?}", v.x.to_ne_bytes());
+    // println!("v.y bytes: {:?}", v.y.to_ne_bytes());
+    (v.x * v.x + v.y * v.y).sqrt()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vec2_len_ref(v: *const Vec2) -> f64 {
+    let v = &*v;
+    (v.x * v.x + v.y * v.y).sqrt()
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn vec2_add(a: Vec2, b: Vec2) -> Vec2 {
     Vec2 {
         x: a.x + b.x,

@@ -9,4 +9,6 @@ Lib ← &ffi ⊂LibPath
 ⍤⊃⋅∘≍ [3 2 1] Lib {"int:1" "reversed" "const int:1" "int"} {[1 2 3]}
 ⍤⊃⋅∘≍ {1 [2 3]} Lib {"int" "head_tail" "int:1" "int*"} {[1 2 3]}
 VecII ← "{double double}"
-# ⍤⊃⋅∘≍ {4 6} Lib {VecII "add" VecII VecII} {[1 2] [3 4]}
+⍤⊃⋅∘≍ 5 Lib {"double" "vec2_len" VecII} {[3 4]}
+⍤⊃⋅∘≍ 5 Lib {"double" "vec2_len_ref" $"const _*"VecII} {[3 4]}
+⍤⊃⋅∘≍ [4 6] Lib {VecII "vec2_add" VecII VecII} {[1 2] [3 4]}

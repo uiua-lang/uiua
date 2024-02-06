@@ -8,6 +8,8 @@ Within each section, items are ordered (roughly) by decreasing priority.
     - Types
     - Shapes
   - Basic package management
+    - `&i "git:path"`
+  - Multiple imports
   - Diagnostic specification?
   - Pad link from Gist
 - Multimedia

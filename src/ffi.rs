@@ -61,10 +61,23 @@ impl FromStr for FfiType {
         }
         if let Some(mut s) = s.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
             s = s.trim();
-            let fields = s
-                .split_whitespace()
-                .map(|s| s.trim().parse())
-                .collect::<Result<_, _>>()?;
+            let mut fields = Vec::new();
+            let mut curr = String::new();
+            let mut depth = 0;
+            for c in s.chars() {
+                match c {
+                    '{' => depth += 1,
+                    '}' => depth -= 1,
+                    ';' if depth == 0 => {
+                        fields.push(curr.parse()?);
+                        curr.clear();
+                    }
+                    _ => curr.push(c),
+                }
+            }
+            if !curr.is_empty() {
+                fields.push(curr.parse()?);
+            }
             return Ok(FfiType::Struct { fields });
         }
         Ok(match s {
@@ -444,11 +457,20 @@ mod enabled {
                     2 => struct_repr_to_value(&unsafe { cif.call::<[u8; 2]>(fptr, args) }, fields)?,
                     4 => struct_repr_to_value(&unsafe { cif.call::<[u8; 4]>(fptr, args) }, fields)?,
                     8 => struct_repr_to_value(&unsafe { cif.call::<[u8; 8]>(fptr, args) }, fields)?,
+                    12 => {
+                        struct_repr_to_value(&unsafe { cif.call::<[u8; 12]>(fptr, args) }, fields)?
+                    }
                     16 => {
                         struct_repr_to_value(&unsafe { cif.call::<[u8; 16]>(fptr, args) }, fields)?
                     }
+                    24 => {
+                        struct_repr_to_value(&unsafe { cif.call::<[u8; 24]>(fptr, args) }, fields)?
+                    }
                     32 => {
                         struct_repr_to_value(&unsafe { cif.call::<[u8; 32]>(fptr, args) }, fields)?
+                    }
+                    48 => {
+                        struct_repr_to_value(&unsafe { cif.call::<[u8; 48]>(fptr, args) }, fields)?
                     }
                     64 => {
                         struct_repr_to_value(&unsafe { cif.call::<[u8; 64]>(fptr, args) }, fields)?
@@ -745,25 +767,25 @@ mod enabled {
                 offset += align - (offset % align);
             }
             macro_rules! scalar {
-                ($ty:ty, $size:expr) => {{
-                    let mut bytes: [u8; $size] = Default::default();
-                    bytes.copy_from_slice(&repr[offset..offset + $size]);
+                ($ty:ty) => {{
+                    let mut bytes: [u8; size_of::<$ty>()] = Default::default();
+                    bytes.copy_from_slice(&repr[offset..offset + size_of::<$ty>()]);
                     rows.push((<$ty>::from_ne_bytes(bytes) as f64).into());
                 }};
             }
             match field {
                 FfiType::Char => rows.push((repr[offset] as char).into()),
-                FfiType::Short => scalar!(c_short, 2),
-                FfiType::Int => scalar!(c_int, 4),
-                FfiType::Long => scalar!(c_long, 4),
-                FfiType::LongLong => scalar!(c_longlong, 8),
-                FfiType::UChar => scalar!(c_uchar, 1),
-                FfiType::UShort => scalar!(c_ushort, 2),
-                FfiType::UInt => scalar!(c_uint, 4),
-                FfiType::ULong => scalar!(c_ulong, 4),
-                FfiType::ULongLong => scalar!(c_ulonglong, 8),
-                FfiType::Float => scalar!(c_float, 4),
-                FfiType::Double => scalar!(c_double, 8),
+                FfiType::Short => scalar!(c_short),
+                FfiType::Int => scalar!(c_int),
+                FfiType::Long => scalar!(c_long),
+                FfiType::LongLong => scalar!(c_longlong),
+                FfiType::UChar => scalar!(c_uchar),
+                FfiType::UShort => scalar!(c_ushort),
+                FfiType::UInt => scalar!(c_uint),
+                FfiType::ULong => scalar!(c_ulong),
+                FfiType::ULongLong => scalar!(c_ulonglong),
+                FfiType::Float => scalar!(c_float),
+                FfiType::Double => scalar!(c_double),
                 // Structs
                 FfiType::Struct { fields } => {
                     rows.push(struct_repr_to_value(&repr[offset..offset + size], fields)?);

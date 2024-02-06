@@ -84,6 +84,18 @@ pub unsafe extern "C" fn vec2_normalize(v: *mut Vec2) {
     }
 }
 
+#[repr(C)]
+pub struct Person {
+    pub name: *const u8,
+    pub age: i32,
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn person_new(name: *const u8, age: i32) -> *mut Person {
+    let person = Box::new(Person { name, age });
+    Box::into_raw(person)
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

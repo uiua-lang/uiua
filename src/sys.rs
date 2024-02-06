@@ -485,7 +485,7 @@ sys_op! {
     /// - `unsigned long`
     /// - `unsigned long long`
     /// Suffixing any of these with `*` makes them a pointer type.
-    /// Struct types are defined as a list of types between `{}`s, i.e. `{"int" "float"}`.
+    /// Struct types are defined as a list of types between `{}`s separated by `;`s, i.e. `{int; float}`. A trailing `;` is optional.
     ///
     /// Arguments are passed as a list of boxed values.
     /// If we have a C function `int add(int a, int b)` in a shared library `example.dll`, we can call it like this:
@@ -521,7 +521,7 @@ sys_op! {
     /// If we have a C struct `struct Vec2 { float x; float y; }` and a function `Vec2 vec2_add(Vec2 a, Vec2 b)` in a shared library `example.dll`, we can call it like this:
     /// ex! # Experimental!
     ///   : Lib ← &ffi ⊂□"example.dll"
-    ///   : VecII ← "{float float}"
+    ///   : VecII ← "{float; float}"
     ///   : Add ← Lib {VecII "vec2_add" VecII VecII}
     ///   : Add {[1 2] [3 4]} # [4 6]
     (2, FFI, Misc, "&ffi", "foreign function interface"),

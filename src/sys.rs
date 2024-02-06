@@ -1574,11 +1574,7 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
         ));
     }
     let bytes = match value {
-        Value::Num(nums) => nums
-            .data
-            .iter()
-            .map(|f| (*f * 255.0).floor() as u8)
-            .collect(),
+        Value::Num(nums) => nums.data.iter().map(|f| (*f * 255.0) as u8).collect(),
         #[cfg(feature = "bytes")]
         Value::Byte(bytes) => bytes.data.iter().map(|&b| (b > 0) as u8 * 255).collect(),
         _ => return Err("Image must be a numeric array".into()),

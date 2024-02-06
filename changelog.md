@@ -7,6 +7,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - [`join ⊂`](https://uiua.org/docs/join) can now be used with [`under ⍜`](https://uiua.org/docs/under)
   - This only works when the joined arrays have different ranks
+- [`join ⊂`](https://uiua.org/docs/join) can now be used with [`un °`](https://uiua.org/docs/un) to separate the first row of an array from the rest
 - A [`fill ⬚`](https://uiua.org/docs/fill) value set outside a looping modifier will now no longer be available inside the loop
   - This should make it easier to scope [`fill ⬚`](https://uiua.org/docs/fill) correctly
 - `f` can now be used at the beginning of planet notation shorthand for [`fork ⊃`](https://uiua.org/docs/fork)

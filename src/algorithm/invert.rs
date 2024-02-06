@@ -33,6 +33,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Map => Instr::ImplPrim(InvMap, span),
         Trace => Instr::ImplPrim(InvTrace, span),
         Stack => Instr::ImplPrim(InvStack, span),
+        Join => Instr::ImplPrim(InvJoin, span),
         _ => return None,
     })
 }
@@ -57,6 +58,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         InvTrace => Instr::Prim(Trace, span),
         InvStack => Instr::Prim(Stack, span),
         InvBox => Instr::Prim(Box, span),
+        InvJoin => Instr::Prim(Join, span),
         _ => return None,
     })
 }

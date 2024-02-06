@@ -2065,6 +2065,7 @@ impl_primitive!(
     (0[1], InvDump),
     (1, Primes),
     (1, InvBox),
+    (1(2), InvJoin),
     // Unders
     (3, Unselect),
     (3, Unpick),

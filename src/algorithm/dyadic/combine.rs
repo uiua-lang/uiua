@@ -1,5 +1,7 @@
 use std::{cmp::Ordering, mem::take};
 
+use ecow::EcoVec;
+
 #[cfg(feature = "bytes")]
 use crate::algorithm::op2_bytes_retry_fill;
 use crate::{
@@ -197,7 +199,12 @@ impl Value {
         }
         Ok(())
     }
-    pub(crate) fn unjoin(self, a_rank: Self, b_rank: Self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub(crate) fn undo_join(
+        self,
+        a_rank: Self,
+        b_rank: Self,
+        env: &Uiua,
+    ) -> UiuaResult<(Self, Self)> {
         let a_rank = a_rank.as_nat(env, "Rank must be a natural number")?;
         let b_rank = b_rank.as_nat(env, "Rank must be a natural number")?;
         match self {
@@ -218,6 +225,15 @@ impl Value {
                 .unjoin(a_rank, b_rank, env)
                 .map(|(a, b)| (a.into(), b.into())),
         }
+    }
+    pub(crate) fn unjoin(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        self.generic_into(
+            |arr| arr.inv_join(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.inv_join(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.inv_join(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.inv_join(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.inv_join(env).map(|(a, b)| (a.into(), b.into())),
+        )
     }
 }
 
@@ -382,6 +398,24 @@ impl<T: ArrayValue> Array<T> {
                 Ok((left, right))
             }
         }
+    }
+    pub(crate) fn inv_join(mut self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot unjoin a scalar"));
+        }
+        if self.row_count() == 0 {
+            return Err(env.error("Cannot unjoin an empty array"));
+        }
+        let row_len = self.row_len();
+        let data_slice = self.data.as_mut_slice();
+        let first_data = EcoVec::from(&data_slice[..row_len]);
+        data_slice.rotate_left(row_len);
+        let new_data_len = data_slice.len() - row_len;
+        self.data.truncate(new_data_len);
+        let first = Array::new(&self.shape[1..], first_data);
+        self.shape[0] -= 1;
+        self.validate_shape();
+        Ok((first, self))
     }
 }
 

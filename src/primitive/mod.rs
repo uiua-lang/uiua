@@ -159,7 +159,7 @@ impl fmt::Display for ImplPrimitive {
             Unrerank => write!(f, "{Un}{Rerank}"),
             Unreshape => write!(f, "{Un}{Reshape}"),
             Ungroup => write!(f, "{Un}{Group}"),
-            Unjoin => write!(f, "{Un}{Join}"),
+            Unjoin | InvJoin => write!(f, "{Un}{Join}"),
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
             LastMinIndex => write!(f, "{First}{Reverse}{Rise}"),
@@ -839,9 +839,15 @@ impl ImplPrimitive {
                 let b_rank = env.pop(1)?;
                 let a_rank = env.pop(2)?;
                 let val = env.pop(3)?;
-                let (left, right) = val.unjoin(a_rank, b_rank, env)?;
+                let (left, right) = val.undo_join(a_rank, b_rank, env)?;
                 env.push(right);
                 env.push(left);
+            }
+            ImplPrimitive::InvJoin => {
+                let val = env.pop(1)?;
+                let (first, rest) = val.unjoin(env)?;
+                env.push(rest);
+                env.push(first);
             }
             ImplPrimitive::InvAtan => {
                 let x = env.pop(1)?;

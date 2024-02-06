@@ -7,9 +7,7 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - Annotation functions
     - Types
     - Shapes
-  - FFI
   - Basic package management
-  - `of` and `on` modifiers
   - Diagnostic specification?
   - Pad link from Gist
 - Multimedia

@@ -107,6 +107,12 @@ pub unsafe extern "C" fn person_new_ptr(name: *const c_char, age: c_int) -> *con
     Box::into_raw(Box::new(Person { name, age }))
 }
 
+#[repr(C)]
+pub struct TwoPeople {
+    pub a: Person,
+    pub b: Person,
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

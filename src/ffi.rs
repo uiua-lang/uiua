@@ -169,6 +169,14 @@ impl FfiType {
             FfiType::Struct { fields } => struct_fields_size_align(fields),
         }
     }
+    /// Check if a type is a scalar type
+    pub fn is_scalar(&self) -> bool {
+        match self {
+            FfiType::Void | FfiType::Ptr { .. } | FfiType::List { .. } => false,
+            FfiType::Struct { fields } => fields.iter().all(|f| f.is_scalar() && *f == fields[0]),
+            _ => false,
+        }
+    }
 }
 
 fn struct_fields_size_align(fields: &[FfiType]) -> (usize, usize) {
@@ -846,7 +854,7 @@ mod enabled {
             offset += size;
         }
         Ok(
-            if fields.iter().all(|f| fields[0] == *f)
+            if fields.iter().all(|f| f.is_scalar() && fields[0] == *f)
                 && rows.iter().all(|r| r.shape() == rows[0].shape())
             {
                 Value::from_row_values_infallible(rows)

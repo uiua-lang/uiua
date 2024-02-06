@@ -121,17 +121,19 @@ mod enabled {
                 // Bind length
                 // println!("bind {i} len: {len}");
                 match arg_ty {
-                    FfiType::Int | FfiType::UInt => bindings.push_value(len as c_int),
-                    FfiType::Long | FfiType::ULong => bindings.push_value(len as c_long),
-                    FfiType::LongLong | FfiType::ULongLong => {
-                        bindings.push_value(len as c_longlong)
-                    }
+                    FfiType::Int => bindings.push_value(len as c_int),
+                    FfiType::UInt => bindings.push_value(len as c_uint),
+                    FfiType::Long => bindings.push_value(len as c_long),
+                    FfiType::ULong => bindings.push_value(len as c_ulong),
+                    FfiType::LongLong => bindings.push_value(len as c_longlong),
+                    FfiType::ULongLong => bindings.push_value(len as c_ulonglong),
                     FfiType::Ptr { inner, .. } => match &**inner {
-                        FfiType::Int | FfiType::UInt => bindings.push_ptr(len as c_int),
-                        FfiType::Long | FfiType::ULong => bindings.push_ptr(len as c_long),
-                        FfiType::LongLong | FfiType::ULongLong => {
-                            bindings.push_ptr(len as c_longlong)
-                        }
+                        FfiType::Int => bindings.push_ptr(len as c_int),
+                        FfiType::UInt => bindings.push_ptr(len as c_uint),
+                        FfiType::Long => bindings.push_ptr(len as c_long),
+                        FfiType::ULong => bindings.push_ptr(len as c_ulong),
+                        FfiType::LongLong => bindings.push_ptr(len as c_longlong),
+                        FfiType::ULongLong => bindings.push_ptr(len as c_ulonglong),
                         _ => return Err(format!("{arg_ty:?} is not a valid FFI type for lengths")),
                     },
                     ty => return Err(format!("{ty:?} is not a valid FFI type for lengths")),
@@ -147,9 +149,9 @@ mod enabled {
                     }};
                 }
                 macro_rules! list {
-                    ($arr:expr, $ty:ty) => {{
-                        bindings.push_list($arr.data.iter().map(|&i| i as $ty).collect());
-                    }};
+                    ($arr:expr, $ty:ty) => {
+                        bindings.push_list($arr.data.iter().map(|&i| i as $ty).collect())
+                    };
                 }
                 match (arg_ty, arg) {
                     (FfiType::Void, _) => return Err("Cannot pass void to a function".into()),
@@ -352,23 +354,43 @@ mod enabled {
         }
 
         // Get out parameters
+        macro_rules! out_param_scalar {
+            ($ty:ty, $i:expr) => {
+                results.push((*bindings.get::<$ty>($i) as f64).into())
+            };
+        }
         for (i, ty) in arg_tys.iter().enumerate() {
             match ty {
                 FfiType::Ptr {
                     mutable: true,
                     inner,
-                } => match &**inner {
-                    FfiType::Char => unsafe {
-                        let ptr = cif.call::<*const c_char>(fptr, &bindings.args);
-                        let s = CStr::from_ptr(ptr).to_str().map_err(|e| e.to_string())?;
-                        results.push(Value::from(s))
-                    },
-                    _ => {
-                        return Err(format!(
-                            "Invalid or unsupported FFI out parameter type {ty:?}"
-                        ))
+                } => {
+                    if lengths[i].is_some() {
+                        continue;
                     }
-                },
+                    match &**inner {
+                        FfiType::Char => unsafe {
+                            let ptr = bindings.get::<c_char>(i);
+                            let s = CStr::from_ptr(ptr).to_str().map_err(|e| e.to_string())?;
+                            results.push(Value::from(s))
+                        },
+                        FfiType::Short => out_param_scalar!(c_short, i),
+                        FfiType::UShort => out_param_scalar!(c_ushort, i),
+                        FfiType::Int => out_param_scalar!(c_int, i),
+                        FfiType::UInt => out_param_scalar!(c_uint, i),
+                        FfiType::Long => out_param_scalar!(c_long, i),
+                        FfiType::ULong => out_param_scalar!(c_ulong, i),
+                        FfiType::LongLong => out_param_scalar!(c_longlong, i),
+                        FfiType::ULongLong => out_param_scalar!(c_ulonglong, i),
+                        FfiType::Float => out_param_scalar!(c_float, i),
+                        FfiType::Double => out_param_scalar!(c_double, i),
+                        _ => {
+                            return Err(format!(
+                                "Invalid or unsupported FFI out parameter type {ty:?}"
+                            ))
+                        }
+                    }
+                }
                 FfiType::List {
                     mutable: true,
                     inner,
@@ -414,9 +436,16 @@ mod enabled {
     }
 
     impl FfiBindings {
-        fn push_ptr<T: Any>(&mut self, arg: T) {
+        fn push_ptr<T: Any + Copy + std::fmt::Debug>(&mut self, arg: T) {
             self.data.push(Box::new(Box::<T>::new(arg)));
-            let ptr: *const T = &**self.data.last().unwrap().downcast_ref::<Box<T>>().unwrap();
+            let ptr: *mut T = &mut **self
+                .data
+                .last_mut()
+                .unwrap()
+                .downcast_mut::<Box<T>>()
+                .unwrap();
+            println!("len ptr a: {:p}", ptr);
+            // println!("ptr val: {:?}", unsafe { *ptr });
             self.args.push(Arg::new(&ptr));
         }
         fn push_value<T: Any>(&mut self, arg: T) {
@@ -432,14 +461,13 @@ mod enabled {
                 self.data.last().unwrap().downcast_ref::<CString>().unwrap(),
             ));
         }
-        fn push_list<T: 'static>(&mut self, arg: Vec<T>) {
-            self.data.push(Box::new((arg.as_ptr(), arg)));
+        fn push_list<T: Any + 'static>(&mut self, mut arg: Box<[T]>) {
+            let ptr = &mut arg[0] as *mut T;
+            // println!("list ptr a: {:p}", ptr);
+            self.data.push(Box::new((ptr, arg)));
             self.args.push(Arg::new(
-                &self
-                    .data
-                    .last()
-                    .unwrap()
-                    .downcast_ref::<(*const T, Vec<T>)>()
+                &(self.data.last().unwrap())
+                    .downcast_ref::<(*mut T, Box<[T]>)>()
                     .unwrap()
                     .0,
             ));
@@ -450,9 +478,9 @@ mod enabled {
                 .or_else(|| any.downcast_ref::<Box<T>>().map(|b| &**b))
                 .unwrap()
         }
-        fn get_list_mut<T: 'static>(&mut self, index: usize) -> (*const T, &mut Vec<T>) {
+        fn get_list_mut<T: 'static>(&mut self, index: usize) -> (*mut T, &mut Box<[T]>) {
             let (ptr, vec) = self.data[index]
-                .downcast_mut::<(*const T, Vec<T>)>()
+                .downcast_mut::<(*mut T, Box<[T]>)>()
                 .unwrap();
             (*ptr, vec)
         }

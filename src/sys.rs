@@ -485,11 +485,45 @@ sys_op! {
     /// - `unsigned long`
     /// - `unsigned long long`
     /// Suffixing any of these with `*` makes them a pointer type.
+    /// Struct types are defined as a list of types between `{}`s, i.e. `{"int" "float"}`.
     ///
+    /// Arguments are passed as a list of boxed values.
+    /// If we have a C function `int add(int a, int b)` in a shared library `example.dll`, we can call it like this:
     /// ex! # Experimental!
     ///   : Lib ← &ffi ⊂□"example.dll"
     ///   : Add ← Lib {"int" "add" "int" "int"}
     ///   : Add {2 3} # 5
+    ///
+    /// Uiua arrays can be passed to foreign functions as pointer-length pairs.
+    /// To do this, specify the type of the list items followed by `:n`, where `n` is the index of the parameter that corresponds to the length.
+    /// The interpreter will automatically pass the number of elements in the array to this parameter.
+    /// Arrays passed in this way will be implicitely [deshape]ed.
+    /// If we wave a C function `int sum(const int* arr, int len)` in a shared library `example.dll`, we can call it like this:
+    /// ex! # Experimental!
+    ///   : Lib ← &ffi ⊂□"example.dll"
+    ///   : Sum ← Lib {"int" "sum" "const int:1" "int"}
+    ///   : Sum {[1 2 3 4 5]} # 15
+    ///
+    /// [&ffi] calls can return multiple values.
+    /// In addition to the return value, any non-`const` pointer parameters will be interpreted as out-parameters.
+    /// If there is more than one output value (including the return value), [&ffi] will return a list of the boxed output values.
+    /// If we have a C function `int split_head(int* list, int len)` in a shared library `example.dll`, we can call it like this:
+    /// ex! # Experimental!
+    ///   : Lib ← &ffi ⊂□"example.dll"
+    ///   : SplitHead ← Lib {"int" "split_head" "int:1" "*int"}
+    ///   : SplitHead {[1 2 3 4 5]} # {1 [2 3 4 5]}
+    /// Note that the length parameter is a non-`const` pointer. This is because the function will modify it.
+    ///
+    /// `const char*` parameters and return types are interpreted as null-terminated strings, without an associated length parameter.
+    ///
+    /// Structs can be passed either as lists of boxed values or, if all fields are of the same type, as a normal array.
+    /// If all fields of a struct returned by a foreign function are of the same type, the interpreter will automatically interpret it as an array rather than a list of boxed values.
+    /// If we have a C struct `struct Vec2 { float x; float y; }` and a function `Vec2 vec2_add(Vec2 a, Vec2 b)` in a shared library `example.dll`, we can call it like this:
+    /// ex! # Experimental!
+    ///   : Lib ← &ffi ⊂□"example.dll"
+    ///   : VecII ← "{float float}"
+    ///   : Add ← Lib {VecII "vec2_add" VecII VecII}
+    ///   : Add {[1 2] [3 4]} # [4 6]
     (2, FFI, Misc, "&ffi", "foreign function interface"),
 }
 

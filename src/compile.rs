@@ -543,7 +543,8 @@ code:
                 if is_import {
                 } else if let Some(sig) = binding.signature {
                     // Binding is a normal function
-                    let func = make_fn(instrs, sig.value, self);
+                    let mut func = make_fn(instrs, sig.value, self);
+                    func.inlinable = false;
                     self.compile_bind_function(&name, global_index, func, span_index, comment)?;
                 } else {
                     self.add_error(
@@ -1087,7 +1088,8 @@ code:
                 self.push_instr(Instr::PushFunc(f));
             }
             Global::Func(f)
-                if self.count_temp_functions(f.instrs(self), &mut HashSet::new()) == 0
+                if f.inlinable
+                    && self.count_temp_functions(f.instrs(self), &mut HashSet::new()) == 0
                     && !self.has_tracing(f.instrs(self)) =>
             {
                 if call {

@@ -71,7 +71,7 @@ impl GridFmt for f64 {
                 let mul = 10f64.powf((i + 1) as f64);
                 rounded = (f * mul).round() / mul;
                 epsilons = ((f - rounded).abs() / f64::EPSILON + 0.3).round();
-                if epsilons > 0.0 && epsilons <= 5.0 {
+                if epsilons > 0.0 && epsilons <= 1.0 {
                     break;
                 }
             }

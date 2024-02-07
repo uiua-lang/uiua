@@ -272,11 +272,9 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             let grid_row_count = grid.len();
             if grid_row_count == 1 && self.rank() == 1 {
                 // Add brackets to lists
-                if !T::compress_list_grid() {
-                    let (left, right) = T::grid_fmt_delims(boxed);
-                    grid[0].insert(0, left);
-                    grid[0].push(right);
-                }
+                let (left, right) = T::grid_fmt_delims(boxed);
+                grid[0].insert(0, left);
+                grid[0].push(right);
             } else {
                 // Add corners to non-vectors
                 let width = grid[0].len();
@@ -369,11 +367,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                 .chars()
                 .map(format_char_inner)
                 .collect();
-            let (left, right) = T::grid_fmt_delims(false);
-            let mut cell = vec![left];
-            cell.extend(s.chars());
-            cell.push(right);
-            row.push(vec![cell]);
+            row.push(vec![s.chars().collect()]);
         } else {
             for (i, val) in data.iter().enumerate() {
                 let mut grid = val.fmt_grid(false, label);
@@ -401,6 +395,15 @@ fn fmt_array<T: GridFmt + ArrayValue>(
             }
         }
         fmt_array(row_shape, cell, label, metagrid);
+        if T::compress_list_grid() && rank == 2 {
+            let (left, right) = T::grid_fmt_delims(false);
+            for grid in metagrid.last_mut().unwrap() {
+                for row in grid.iter_mut() {
+                    row.insert(0, left);
+                    row.push(right);
+                }
+            }
+        }
         if i * row_height >= 100 {
             let mut elipses_row = Vec::new();
             for prev_grid in metagrid.last().unwrap() {

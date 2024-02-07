@@ -512,10 +512,10 @@ sys_op! {
     /// [&ffi] calls can return multiple values.
     /// In addition to the return value, any non-`const` pointer parameters will be interpreted as out-parameters.
     /// If there is more than one output value (including the return value), [&ffi] will return a list of the boxed output values.
-    /// If we have a C function `int split_head(int* list, int len)` in a shared library `example.dll`, we can call it like this:
+    /// If we have a C function `int split_head(int* list, int* len)` in a shared library `example.dll`, we can call it like this:
     /// ex! # Experimental!
     ///   : Lib ← &ffi ⊂□"example.dll"
-    ///   : SplitHead ← Lib {"int" "split_head" "int:1" "*int"}
+    ///   : SplitHead ← Lib {"int" "split_head" "int:1" "int*"}
     ///   : SplitHead {[1 2 3 4 5]} # {1 [2 3 4 5]}
     /// Note that the length parameter is a non-`const` pointer. This is because the function will modify it.
     ///

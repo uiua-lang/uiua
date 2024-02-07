@@ -112,19 +112,30 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
 
 #[component]
 pub fn AllFunctions() -> impl IntoView {
+    let (list, set_list) =
+        create_signal(view!(<h3 class="running-text">"Generating list..."</h3>).into_view());
+    set_timeout(
+        move || {
+            set_list.set(
+                Primitive::non_deprecated()
+                    .map(|p| {
+                        view! {
+                            <br/>
+                            <hr/>
+                            <PrimDocs prim=p/>
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .into_view(),
+            )
+        },
+        Default::default(),
+    );
     view! {
         <Title text="All Functions - Uiua Docs"/>
         <h1>"All Functions"</h1>
         <p>"This is a list of every built-in function in Uiua, provided for your scrolling pleasure."</p>
         <p>"For a searchable list, see the "<A href="/docs#functions">"main docs page"</A>"."</p>
-        {
-            Primitive::all().map(|p| {
-                view! {
-                    <br/>
-                    <hr/>
-                    <PrimDocs prim=p/>
-                }
-            }).collect::<Vec<_>>()
-        }
+        { move || list.get() }
     }
 }

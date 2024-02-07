@@ -48,6 +48,7 @@ h2 {
     border-color: #888a;
 }
 
+h1>a>code,
 h2>a>code {
     font-weight: normal;
 }

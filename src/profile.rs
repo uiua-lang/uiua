@@ -266,12 +266,12 @@ Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3¤.
             // Average total duration
             let avg_total_dur_change =
                 percent_change(previous.avg_total_dur, profile.avg_total_dur) * 100.0;
-            println!("{:<24} | {:+.0}%", "Total duration", avg_total_dur_change);
+            println!("{:<26} | {:+.0}%", "Total duration", avg_total_dur_change);
 
             // Scopes
             println!("{}", "-".repeat(56));
             println!(
-                "{:<24} | {:>7} {:>5} | {:>5} {:>5} |",
+                "{:<26} | {:>7} {:>5} | {:>5} {:>5} |",
                 "scope", "median", "%Δ", "share", "%Δ"
             );
             println!("{}", "-".repeat(56));
@@ -297,7 +297,7 @@ Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3¤.
                     }
                 }
                 println!(
-                    "{:<24} | {:>7} {:>5} | {:>5} {:>5} |",
+                    "{:<26} | {:>7} {:>5} | {:>5} {:>5} |",
                     name, median_dur, media_dur_change, share, share_change
                 );
             }

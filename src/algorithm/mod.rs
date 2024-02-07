@@ -392,6 +392,51 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
     }
 }
 
+pub fn try_(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop_function()?;
+    let handler = env.pop_function()?;
+    let f_sig = f.signature();
+    let handler_sig = handler.signature();
+    if f_sig.outputs != handler_sig.outputs {
+        return Err(env.error(format!(
+            "Tried function and handler function must have the same number of outputs, \
+            but their signatures are {f_sig} and {handler_sig} respectively."
+        )));
+    }
+    let backup_count = if handler_sig.args == 0 || handler_sig.args == 1 {
+        0
+    } else if handler_sig.args == f_sig.args + 1 {
+        f_sig.args
+    } else {
+        return Err(env.error(if f_sig.args == 0 {
+            format!(
+                "Handler function must take, 0 or 1 arguments, but it takes {}.",
+                handler_sig.args
+            )
+        } else {
+            format!(
+                "Handler function must take, 0, 1, or {} arguments, but it takes {}.",
+                f_sig.args + 1,
+                handler_sig.args
+            )
+        }));
+    };
+    let backup = env.clone_stack_top(backup_count);
+    if let Err(e) = env.call_clean_stack(f) {
+        if handler_sig.args > 0 {
+            env.rt
+                .backend
+                .save_error_color(e.message(), e.report().to_string());
+            env.push(e.value());
+        }
+        for val in backup {
+            env.push(val);
+        }
+        env.call(handler)?;
+    }
+    Ok(())
+}
+
 /// If a function fails on a byte array because no fill byte is defined,
 /// convert the byte array to a number array and try again.
 fn op_bytes_retry_fill<T>(

@@ -1097,12 +1097,16 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p>"While "<Prim prim=Do/>" is very powerful, it should only be used when necessary."</p>
 
         <h2 id="try">"Catching errors with "<Prim prim=Try/></h2>
-        <p>"The "<Prim prim=Try/>" modifier takes two functions. If the first function throws an error, the second function is called with the same arguments plus an error message."</p>
+        <p>"The "<Prim prim=Try/>" modifier takes two functions. If the first function throws an error, the second function is called to handle it."</p>
+        <p>"The function must have the same number of outputs."</p>
+        <p>"The handler function must have a number of arguments equal to 0, 1, or 1 + the number of arguments to the first function."</p>
         <p>"We can see how this works by using it with "<Prim prim=Parse/>"."</p>
-        <p>"If the parsing fails, we put the argument and the error message together into a box array."</p>
-        <Editor example="F ← ⍣⋕{⊙∘}\nF \"5\"\nF \"dog\""/>
-        <p>"If we don't care about an error and just want to supply a default value, we can use "<Prim prim=Gap/>" to discard the argument and error message."</p>
-        <Editor example="F ← ⍣⋕⋅⋅0\nF \"5\"\nF \"dog\""/>
+        <p>"If the handler function has 0 arguments, then it is simply called. This is a nice way to provide default values in the event of a failure."</p>
+        <Editor example="⍣⋕0 \"5\"\n⍣⋕0 \"dog\""/>
+        <p>"If the handler function has 1 argument, then the error is passed to it."</p>
+        <Editor example="⍣⋕∘ \"5\"\n⍣⋕∘ \"dog\""/>
+        <p>"If the handler function has 1 + the number of arguments to the first function, then the error is passed to it along with the original arguments."</p>
+        <Editor example="⍣⋕{⊙∘} \"5\"\n⍣⋕{⊙∘} \"dog\""/>
 
         <h2 id="switch">"Switch Functions"</h2>
         <p>"A "<A href="/docs/advancedstack#function-packs">"function pack"</A>" that is used outside a modifier becomes a "<em>"switch function"</em>". Switch functions take an array of natural numbers called the "<em>"selector"</em>" and call the function at the corresponding index in the pack."</p>
@@ -1122,7 +1126,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
 
         <h2 id="assert"><Prim prim=Assert/></h2>
         <p>"The "<Prim prim=Assert/>" function takes any value and a condition. If the condition is anything but "<code>"1"</code>", the value is thrown as an error that can be caught with "<Prim prim=Try/>"."</p>
-        <Editor example="F ← ⍣(¯⍤10≤10.)◌\nF 5\nF 12"/>
+        <Editor example="F ← ⍣(¯⍤10≤10.)∘\nF 5\nF 12"/>
         <p>"If the "<Prim prim=Assert/>"ed value is never caught, it becomes an error."</p>
         <Editor example="F ← ¯⍤\"too big!\"≤10.\nF 5\nF 12"/> // Should fail
         <p>"Using "<Prim prim=Assert/>" for this purpose will be covered more in the "<A href="/docs/testing">"section on testing"</A>"."</p>

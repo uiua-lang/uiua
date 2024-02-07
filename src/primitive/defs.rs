@@ -1594,16 +1594,19 @@ primitive!(
     /// ex: ⍣(+1 2)$"Error: _"
     /// ex: ⍣(+@a @b)$"Error: _"
     /// Errors thrown with [assert] can be any value.
-    /// ex: ⍣(⍤5 1 3)(×5)
-    /// ex: ⍣(⍤5 0 3)(×5)
-    /// If the first function has the signature `|n.r`, then the second function must have the signature `|(n+1).r`. The additional value is the error.
-    /// If you don't care about the input values, you can simply [pop] them.
-    /// ex: ⍣⋕◌ "dog"
-    /// ex: ⍣⋕(0◌◌) "dog"
-    /// ex: ⍣⋕(0◌◌) "5"
-    /// [gap] can often look nicer.
-    /// ex: ⍣⋕⋅⋅0 "dog"
-    /// ex: ⍣⋕⋅⋅0 "5"
+    /// ex: ⍣(⍤5 1 3|×5)
+    /// ex: ⍣(⍤5 0 3|×5)
+    /// The functions must have the same number of outputs.
+    /// The handler function must have a number of arguments equal to 0, 1, or 1 + the number of arguments to the first function.
+    /// If the handler function has 0 arguments, then it is simply called.
+    /// ex: ⍣⋕0 "5"
+    ///   : ⍣⋕0 "dog"
+    /// If the handler function has 1 argument, then the error is passed to it.
+    /// ex: ⍣⋕∘ "5"
+    ///   : ⍣⋕∘ "dog"
+    /// If the handler function has 1 + the number of arguments to the first function, then the error is passed to it along with the original arguments.
+    /// ex: ⍣⋕{⊙∘} "5"
+    ///   : ⍣⋕{⊙∘} "dog"
     ([2], Try, Misc, ("try", '⍣')),
     /// Throw an error if a condition is not met
     ///
@@ -1930,7 +1933,7 @@ primitive!(
     /// You can use [try] or [has] to avoid the error.
     /// ex: # Experimental!
     ///   : map 1_2 3_4
-    ///   : tryget⋅⋅⋅0 5 .
+    ///   : ⍣get0 5 .
     /// ex: # Experimental!
     ///   : map 1_2 3_4
     ///   : (⋅⋅0|get) has,, 5 .

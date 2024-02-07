@@ -740,7 +740,7 @@ fn TutorialFunctions() -> impl IntoView {
         <Editor example="/+ 1_2_3_4"/>
         <p><Prim prim=Scan/>" is similar, but it returns all the intermediate results."</p>
         <Editor example="\\+ 1_2_3_4"/>
-        <p><Prim prim=Table/>" applies a function between all combinations of elements of two arrays. This is sometimes called the "<em>"outer product"</em>"."</p>
+        <p><Prim prim=Table/>" applies a function between all combinations of rows of two arrays. This is sometimes called the "<em>"outer product"</em>"."</p>
         <Editor example="⊞+ [5 6 7 8] [10 20 30 40]"/>
         <p>"In the same way that \"monadic\" and \"dyadic\" functions refer to functions that take one or two array arguments respectively, \"monadic\" and \"dyadic\" "<em>"modifiers"</em>" refer to modifiers that take one or two "<em>"functions"</em>" respectively."</p>
         <p>"On this site, monadic modifiers are in "<span class="monadic-modifier">"yellow"</span>" and dyadic modifiers are in "<span class="dyadic-modifier">"purple"</span>"."</p>

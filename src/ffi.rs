@@ -174,7 +174,7 @@ impl FfiType {
         match self {
             FfiType::Void | FfiType::Ptr { .. } | FfiType::List { .. } => false,
             FfiType::Struct { fields } => fields.iter().all(|f| f.is_scalar() && *f == fields[0]),
-            _ => false,
+            _ => true,
         }
     }
 }

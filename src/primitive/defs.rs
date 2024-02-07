@@ -1244,8 +1244,8 @@ primitive!(
     ([1], Unpack, OtherModifier, ("unpack", '⊐')),
     /// Unbox the arguments to a function before calling it
     ///
-    /// ex: ⊔⊂ □[1 2 3] □[4 5 6]
-    ///   :  ⊂ □[1 2 3] □[4 5 6]
+    /// ex:  ⊂ □[1 2 3] □[4 5 6]
+    ///   : ⊔⊂ □[1 2 3] □[4 5 6]
     /// A common use of [content] is to collapse a list of [box]ed arrays with [reduce].
     /// ex: /⊔⊂ {1_2_3 4_5 6}
     /// This case will still unbox a single element.

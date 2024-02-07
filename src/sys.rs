@@ -259,8 +259,13 @@ sys_op! {
     /// Check if a file exists at a path
     (1, FExists, Filesystem, "&fe", "file - exists"),
     /// List the contents of a directory
+    ///
+    /// The result is a list of boxed strings.
+    /// ex: &fld "."
     (1, FListDir, Filesystem, "&fld", "file - list directory"),
     /// Check if a path is a file
+    ///
+    /// ex: &fif "example.ua"
     (1, FIsFile, Filesystem, "&fif", "file - is file"),
     /// Read all the contents of a file into a string
     ///

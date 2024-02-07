@@ -3,6 +3,9 @@ Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
 - 0.9
+  - Fix `un map` not removing non-scalar empty keys
+  - Make `try` signature more permissive
+    - Update related examples in `try`, `gap`, `parse`, and control flow tutorial
   - Color labels in pad
   - Annotation functions
     - Types
@@ -19,7 +22,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
   - UDP Sockets
 
 ## Bugs
-- Fix new `flip fork` diagnostic
 - Figure out what is going on with the editor cursor
 
 ## Documentation

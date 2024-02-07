@@ -48,6 +48,10 @@ h2 {
     border-color: #888a;
 }
 
+h2>a>code {
+    font-weight: normal;
+}
+
 button {
     border-width: 0;
     border-radius: 0.5em;

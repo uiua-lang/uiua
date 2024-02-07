@@ -1028,7 +1028,7 @@ FmtPerson PassYear Dan"#/>
         <Editor example=r#"F ← setund(setinv("normal"|"inverse")|"do"|"undo")
 F
 °F
-⍜F"G""#/>
+{⍜F"G"}"#/>
 
         <h2 id="challenges">"Challenges"</h2>
 
@@ -1085,26 +1085,29 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
 
         <h2 id="repeat-do">"Looping with "<Prim prim=Repeat/>" and "<Prim prim=Do/></h2>
         <p>"The "<Prim prim=Repeat/>" modifier takes a function and a number and calls the function that many times."</p>
+        <p>"Here, we "<Prim prim=Mul/>" a number by "<code>"2"</code>", "<code>"10"</code>" times."</p>
         <Editor example="⍥(×2)10 5"/>
-        <Editor example="⁅[⍥⚂5]"/>
         <Editor example="⍥/+2 ↯3_3⇡9"/>
+        <p><Prim prim=Repeat/><Prim prim=Rand/>" inside "<code>"[]"</code>"s is a common pattern for generating a list of random numbers."</p>
+        <Editor example="⁅[⍥⚂]5"/>
         <p><Prim prim=Repeat/>"'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation."</p>
         <p>"The "<Prim prim=Do/>" modifier takes a loop function and a condition function. It repeatedly calls the loop function as long as the condition function returns "<code>"1"</code>"."</p>
-        <Editor example="⍢(×2)(<1000) 1"/>
-        <Editor example="◌⍢(⊃(×2)⊂)(<100) 1 []"/>
+        <Editor example="⍢(×2|<1000) 1"/>
+        <Editor example="◌⍢(⊃(×2)⊂|<100) 1 []"/>
         <p>"While "<Prim prim=Do/>" is very powerful, it should only be used when necessary."</p>
 
         <h2 id="try">"Catching errors with "<Prim prim=Try/></h2>
         <p>"The "<Prim prim=Try/>" modifier takes two functions. If the first function throws an error, the second function is called with the same arguments plus an error message."</p>
         <p>"We can see how this works by using it with "<Prim prim=Parse/>"."</p>
-        <p>"If the parsing fails, we "<Prim prim=Box/>" "<Prim prim=Both/>" the argument and the error message and put them in an array."</p>
-        <Editor example="F ← ⍣⋕[∩□]\nF \"5\"\nF \"dog\""/>
+        <p>"If the parsing fails, we put the argument and the error message together into a box array."</p>
+        <Editor example="F ← ⍣⋕{⊙∘}\nF \"5\"\nF \"dog\""/>
         <p>"If we don't care about an error and just want to supply a default value, we can use "<Prim prim=Gap/>" to discard the argument and error message."</p>
         <Editor example="F ← ⍣⋕⋅⋅0\nF \"5\"\nF \"dog\""/>
 
         <h2 id="switch">"Switch Functions"</h2>
         <p>"A "<A href="/docs/advancedstack#function-packs">"function pack"</A>" that is used outside a modifier becomes a "<em>"switch function"</em>". Switch functions take an array of natural numbers called the "<em>"selector"</em>" and call the function at the corresponding index in the pack."</p>
         <Editor example="(3|5) 0\n(3|5) 1"/>
+        <p>"The selector goes above the arguments on the stack."</p>
         <Editor example="(+|-) 0 3 5\n(+|-) 1 3 5"/>
         <p>"Non-scalar selectors are allowed. They allow the switch function to be evaluated for each row of the input arrays."</p>
         <Editor example="(+|-) [1 0 1] [1 2 3] [4 5 6]"/>
@@ -1287,7 +1290,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
         <p>"First, we create a mask of all the non-space characters. Then, "<Prim prim=Partition/>" calls "<Prim prim=Box/>" on each section of the string that corresponds to a run of "<code>"1"</code>"s in the mask."</p>
         <p>"Here is another example using "<Prim prim=Partition/><Prim prim=Box/>" with the inputs explicitly defined."</p>
         <Editor example="[1 2 3 4 5 6 7 8]\n[1 1 0 5 6 6 0 1]\n⊜□"/>
-        <p>"Notice that "<code>"0"</code>"s in the keys array cause the corresponding sections of the input array to be skipped."</p>
+        <p>"Notice that "<code>"0"</code>"s in the keys array cause the corresponding sections of the input array to be skipped, so "<code>"3"</code>" and "<code>"7"</code>" are omitted from the output."</p>
         <p>"We use "<Prim prim=Box/>" here because the resulting sections have different lengths. If we expect the sections to have the same lengths, we can use "<Prim prim=Identity/>" instead."</p>
         <Editor example="[1 2 3 4 5 6 7 8]\n[1 1 2 2 0 0 3 3]\n⊜∘"/>
         <p>"A hint for one of the challenges below: "<Prim prim=Partition/>" works with "<Prim prim=Under/>"!"</p>
@@ -1322,7 +1325,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
             number=4
             prompt="given a matrix of 0s an 1s, only keeps the 1s that have even x and y coordinates"
             example="[1_1_0 0_1_1 0_1_1]"
-            answer="⬚0×°⊚▽≡/×=0◿2.⊚."
+            answer="⬚0× °⊚ ▽≡/× =0◿2. ⊚."
             tests={&["↯3_4 1_0_1", "↯4_4 1_0_0_1_0"]}
             hidden="[1_1 1_1]"/>
 

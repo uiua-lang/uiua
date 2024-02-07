@@ -128,6 +128,9 @@ impl SysBackend for WebBackend {
         }
         Ok(in_dir)
     }
+    fn is_file(&self, path: &str) -> Result<bool, String> {
+        Ok(self.files.lock().unwrap().contains_key(Path::new(path)))
+    }
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
         self.files
             .lock()

@@ -193,10 +193,11 @@ mod server {
     use super::*;
 
     use crate::{
+        algorithm::invert::{invert_instrs, under_instrs},
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Assembly, BindingInfo, Compiler, PrimDocLine, Uiua,
+        Assembly, BindingInfo, Compiler, Global, PrimDocLine, Signature, Uiua,
     };
 
     pub struct LspDoc {
@@ -348,33 +349,58 @@ mod server {
                     }
                 }
             }
-            let mut binding_range = None;
+
+            #[derive(Debug)]
+            struct BindingDocs {
+                ident: String,
+                signature: Option<Signature>,
+                comment: Option<Arc<str>>,
+                range: Range,
+                invertible_underable: Option<(bool, bool)>,
+            }
+
+            let invertible_underable = |binding: &BindingInfo| {
+                if let Global::Func(f) = &binding.global {
+                    let instrs = f.instrs(&doc.asm);
+                    let mut compiler = Compiler::new().with_assembly(doc.asm.clone());
+                    Some((
+                        invert_instrs(instrs, &mut compiler).is_some(),
+                        under_instrs(instrs, (1, 1).into(), &mut compiler).is_some(),
+                    ))
+                } else {
+                    None
+                }
+            };
+
+            let mut binding_docs = None;
             // Hovering the name of the binding itself
             for binding in &doc.asm.bindings {
                 if let Some(span) = &binding.span {
                     if span.contains_line_col(line, col) {
                         let ident = span.as_str(&doc.asm.inputs, |s| s.into());
-                        binding_range = Some((
+                        binding_docs = Some(BindingDocs {
                             ident,
-                            binding.global.signature(),
-                            binding.comment.clone(),
-                            uiua_span_to_lsp(span),
-                        ));
+                            signature: binding.global.signature(),
+                            comment: binding.comment.clone(),
+                            range: uiua_span_to_lsp(span),
+                            invertible_underable: invertible_underable(binding),
+                        });
                         break;
                     }
                 }
             }
             // Hovering the name of a binding reference
-            if binding_range.is_none() {
+            if binding_docs.is_none() {
                 for (name, index) in &doc.asm.global_references {
                     let binding = &doc.asm.bindings[*index];
                     if name.span.contains_line_col(line, col) {
-                        binding_range = Some((
-                            name.value.to_string(),
-                            binding.global.signature(),
-                            binding.comment.clone(),
-                            uiua_span_to_lsp(&name.span),
-                        ));
+                        binding_docs = Some(BindingDocs {
+                            ident: name.value.to_string(),
+                            signature: binding.global.signature(),
+                            comment: binding.comment.clone(),
+                            range: uiua_span_to_lsp(&name.span),
+                            invertible_underable: invertible_underable(binding),
+                        });
                         break;
                     }
                 }
@@ -433,12 +459,30 @@ mod server {
                     }),
                     range: Some(range),
                 }
-            } else if let Some((ident, signature, comment, range)) = binding_range {
-                let mut value = ident;
-                if let Some(sig) = signature {
+            } else if let Some(info) = binding_docs {
+                let mut value = info.ident;
+                if let Some(sig) = info.signature {
                     value.push_str(&format!(" `{sig}`"));
                 }
-                if let Some(comment) = comment {
+                if let Some((invertible, underable)) = info.invertible_underable {
+                    value.push_str("\n\n");
+                    if !invertible {
+                        value.push_str("~~");
+                    }
+                    value.push_str("[`° un`](https://uiua.org/docs/un)");
+                    if !invertible {
+                        value.push_str("~~");
+                    }
+                    value.push_str(" | ");
+                    if !underable {
+                        value.push_str("~~");
+                    }
+                    value.push_str("[`⍜ under`](https://uiua.org/docs/under)");
+                    if !underable {
+                        value.push_str("~~");
+                    }
+                }
+                if let Some(comment) = info.comment {
                     value.push_str("\n\n");
                     value.push_str(&comment);
                 }
@@ -447,7 +491,7 @@ mod server {
                         kind: MarkupKind::Markdown,
                         value,
                     }),
-                    range: Some(range),
+                    range: Some(info.range),
                 }
             } else {
                 return Ok(None);

@@ -116,6 +116,10 @@ impl Compiler {
             ..Self::default()
         }
     }
+    /// Set the compiler's assembly
+    pub fn with_assembly(self, asm: Assembly) -> Self {
+        Self { asm, ..self }
+    }
     /// Get a reference to the assembly
     pub fn assembly(&self) -> &Assembly {
         &self.asm

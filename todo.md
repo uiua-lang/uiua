@@ -4,8 +4,6 @@ Within each section, items are ordered (roughly) by decreasing priority.
 ## Features
 - 0.9
   - Tutorial introduction
-  - Make `try` signature more permissive
-    - Update related examples in `try`, `gap`, `parse`, and control flow tutorial
   - Color labels in pad
   - Annotation functions
     - Types

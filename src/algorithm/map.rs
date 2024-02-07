@@ -726,12 +726,12 @@ impl MapItem for Value {
     }
     fn is_empty_cell(&self) -> bool {
         match self {
-            Value::Num(num) => num.as_scalar().is_some_and(f64::is_empty_cell),
+            Value::Num(num) => num.data.iter().any(|v| v.is_empty_cell()),
             #[cfg(feature = "bytes")]
             Value::Byte(_) => false,
-            Value::Complex(num) => num.as_scalar().is_some_and(Complex::is_empty_cell),
-            Value::Char(num) => num.as_scalar().is_some_and(char::is_empty_cell),
-            Value::Box(num) => num.as_scalar().is_some_and(Boxed::is_empty_cell),
+            Value::Complex(num) => num.data.iter().any(|v| v.is_empty_cell()),
+            Value::Char(num) => num.data.iter().any(|v| v.is_empty_cell()),
+            Value::Box(num) => num.data.iter().any(|v| v.is_empty_cell()),
         }
     }
     fn tombstone_cell() -> Self {
@@ -739,12 +739,12 @@ impl MapItem for Value {
     }
     fn is_tombstone(&self) -> bool {
         match self {
-            Value::Num(num) => num.as_scalar().is_some_and(f64::is_tombstone),
+            Value::Num(num) => num.data.iter().any(|v| v.is_tombstone()),
             #[cfg(feature = "bytes")]
             Value::Byte(_) => false,
-            Value::Complex(num) => num.as_scalar().is_some_and(Complex::is_tombstone),
-            Value::Char(num) => num.as_scalar().is_some_and(char::is_tombstone),
-            Value::Box(num) => num.as_scalar().is_some_and(Boxed::is_tombstone),
+            Value::Complex(num) => num.data.iter().any(|v| v.is_tombstone()),
+            Value::Char(num) => num.data.iter().any(|v| v.is_tombstone()),
+            Value::Box(num) => num.data.iter().any(|v| v.is_tombstone()),
         }
     }
 }

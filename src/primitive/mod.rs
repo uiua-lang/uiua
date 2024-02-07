@@ -1629,7 +1629,7 @@ mod tests {
         }},
 		"comments": {{
 			"name": "comment.line.uiua",
-			"match": "#.*$"
+			"match": "(#.*$|$[a-zA-Z]*)"
 		}},
 		"strings-normal": {{
 			"name": "constant.character.escape",

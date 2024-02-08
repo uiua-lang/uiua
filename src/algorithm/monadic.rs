@@ -116,7 +116,7 @@ impl Value {
         }
         Ok(match self {
             Value::Num(nums) => {
-                let new_data: CowSlice<Boxed> = (nums.data.iter().map(|v| v.grid_string(false)))
+                let new_data: CowSlice<Boxed> = (nums.data.iter().map(|v| v.to_string()))
                     .map(Value::from)
                     .map(Boxed)
                     .collect();
@@ -124,18 +124,17 @@ impl Value {
             }
             #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
-                let new_data: CowSlice<Boxed> = (bytes.data.iter().map(|v| v.grid_string(false)))
+                let new_data: CowSlice<Boxed> = (bytes.data.iter().map(|v| v.to_string()))
                     .map(Value::from)
                     .map(Boxed)
                     .collect();
                 Array::new(bytes.shape.clone(), new_data).into()
             }
             Value::Complex(complexes) => {
-                let new_data: CowSlice<Boxed> =
-                    (complexes.data.iter().map(|v| v.grid_string(false)))
-                        .map(Value::from)
-                        .map(Boxed)
-                        .collect();
+                let new_data: CowSlice<Boxed> = (complexes.data.iter().map(|v| v.to_string()))
+                    .map(Value::from)
+                    .map(Boxed)
+                    .collect();
                 Array::new(complexes.shape.clone(), new_data).into()
             }
             val => return Err(env.error(format!("Cannot invert parse {} array", val.type_name()))),

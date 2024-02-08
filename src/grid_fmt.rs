@@ -65,28 +65,43 @@ impl GridFmt for f64 {
         } else if positive.fract() == 0.0 || positive.is_nan() {
             format!("{minus}{positive}")
         } else {
-            let mut rounded = f;
-            let mut epsilons = 0.0;
-            for i in 0..16 {
-                let mul = 10f64.powf((i + 1) as f64);
-                rounded = (f * mul).round() / mul;
-                epsilons = ((f - rounded).abs() / f64::EPSILON + 0.3).round();
-                if epsilons > 0.0 && epsilons <= 1.0 {
-                    break;
+            let formatted = format!("{minus}{positive}");
+            let consecutive = |c: char| {
+                let mut max = 0;
+                let mut curr = 0;
+                for ch in formatted.chars() {
+                    if ch == c {
+                        curr += 1;
+                        max = max.max(curr);
+                    } else {
+                        curr = 0;
+                    }
                 }
-            }
-            if epsilons <= 0.0 {
-                format!("{minus}{positive}")
-            } else if f < rounded {
-                if epsilons == 1.0 {
-                    format!("{minus}{}-ε", rounded.abs())
+                max
+            };
+            if consecutive('0') > 5 || consecutive('9') > 5 {
+                let mut rounded = f;
+                let mut epsilon = false;
+                for i in 0..16 {
+                    let mul = 10f64.powf((i + 1) as f64);
+                    rounded = (f * mul).round() / mul;
+                    let diff = (f - rounded).abs();
+                    if diff > 0.0 && diff < f64::EPSILON {
+                        epsilon = true;
+                        break;
+                    }
+                }
+                if epsilon {
+                    if f < rounded {
+                        format!("{minus}{}-ε", rounded.abs())
+                    } else {
+                        format!("{minus}{}+ε", rounded.abs())
+                    }
                 } else {
-                    format!("{minus}{}-{epsilons}ε", rounded.abs())
+                    formatted
                 }
-            } else if epsilons == 1.0 {
-                format!("{minus}{}+ε", rounded.abs())
             } else {
-                format!("{minus}{}+{epsilons}ε", rounded.abs())
+                formatted
             }
         };
         vec![boxed_scalar(boxed).chain(s.chars()).collect()]

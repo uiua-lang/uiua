@@ -1960,6 +1960,10 @@ primitive!(
     ///
     /// See also: [insert], [has], [get]
     (2, Remove, Map, "remove"),
+    /// Validate the shapes of some arrays
+    (0(0)[1], Shapes, Misc, "shapes"),
+    /// Validate the types of some arrays
+    (0(0)[1], Types, Misc, "types"),
     /// Debug print all stack values without popping them
     ///
     /// This is equivalent to [dump][identity], but is easier to type.

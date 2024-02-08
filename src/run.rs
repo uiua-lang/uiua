@@ -89,7 +89,7 @@ impl AsMut<Assembly> for Uiua {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct StackFrame {
     /// The function being executed
     pub(crate) slice: FuncSlice,
@@ -1021,6 +1021,8 @@ code:
         bindings
     }
     /// Clone `n` values from the top of the stack
+    ///
+    /// Values are cloned in the order they were pushed
     pub fn clone_stack_top(&self, n: usize) -> Vec<Value> {
         self.rt.stack.iter().rev().take(n).rev().cloned().collect()
     }

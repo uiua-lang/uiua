@@ -1988,7 +1988,12 @@ code:
         for instr in instrs {
             match instr {
                 Instr::Prim(
-                    Primitive::Trace | Primitive::Dump | Primitive::Stack | Primitive::Assert,
+                    Primitive::Trace
+                    | Primitive::Dump
+                    | Primitive::Stack
+                    | Primitive::Assert
+                    | Primitive::Shapes
+                    | Primitive::Types,
                     _,
                 ) => return true,
                 Instr::ImplPrim(

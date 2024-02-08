@@ -10,6 +10,7 @@ use crate::{editor::*, Prim, Prims};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum TutorialPage {
+    Introduction,
     Basic,
     Math,
     Arrays,
@@ -32,6 +33,7 @@ impl TutorialPage {
     }
     pub fn title(&self) -> &'static str {
         match self {
+            Self::Introduction => "Introduction",
             Self::Basic => "Basic Stack Operations and Formatting",
             Self::Math => "Math and Comparison",
             Self::Arrays => "Arrays",
@@ -53,6 +55,7 @@ impl TutorialPage {
 #[component]
 pub fn Tutorial(page: TutorialPage) -> impl IntoView {
     let tut_view = match page {
+        TutorialPage::Introduction => TutorialIntroduction().into_view(),
         TutorialPage::Basic => TutorialBasic().into_view(),
         TutorialPage::Math => TutorialMath().into_view(),
         TutorialPage::Arrays => TutorialArrays().into_view(),
@@ -109,6 +112,22 @@ fn TutorialNav(page: TutorialPage) -> impl IntoView {
             { previous }
             { next }
         </div>
+    }
+}
+
+#[component]
+fn TutorialIntroduction() -> impl IntoView {
+    view! {
+        <Title text="Introduction - Uiua Docs"/>
+        <h1>"Introduction"</h1>
+        <p>"Welcome to the Uiua tutorial! Each page of this tutorial will introduce you to a new concept in the Uiua programming language. The tutorial is designed to be read in order, but you can jump around if you want."</p>
+        <p>"Uiua is an array programming language in the same family as APL, J, and BQN. Uiua focuses particularly on tacit programming, that is, writing code without naming variables. It does this by putting all values on a global stack."</p>
+
+        <h2 id="array-programming">"What is Array Programming?"</h2>
+        <p>"Before jumping into Uiua, it may be helpful to understand the paradigm of which it is a part."</p>
+
+        <h2 id="who">"Who is this tutorial for?"</h2>
+        <p>"This tutorial is targeted at people who have at least a little bit of experience with programming. While you don't need to be proficient in any particular language, it will be helpful to understand concepts like variables and functions."</p>
     }
 }
 

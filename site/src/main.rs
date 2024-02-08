@@ -210,6 +210,7 @@ pub fn MainPage() -> impl IntoView {
                     <h2>"A Loving Union"</h2>
                     <p>"Uiua combines the stack-based and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
                     <Editor example="⇌[⍥⊃+⊙∘9 1 1]"/>
+                    <p>"If this code seems weird and unreadable, that's okay! It's important to remember that "<a href="https://vector-of-bool.github.io/2018/10/31/become-perl.html">"foreign ≠ confusing"</a>"."</p>
                 </div>
                 <div>
                     <h2>"True Arrays"</h2>

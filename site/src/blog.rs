@@ -61,6 +61,8 @@ fn BlogPage(name: String) -> impl IntoView {
         <A href="/blog">"Back to Blog Home"</A>
         <br/>
         <br/>
+        <p>"Click "<a href={format!("/blog/{name}-text")}>here</a>" for a lightweight markdown version of this page."</p>
+        <br/>
         <Markdown src={format!("/blog/{name}-text.md")}/>
         <br/>
         <br/>

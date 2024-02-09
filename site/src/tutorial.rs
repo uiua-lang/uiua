@@ -140,6 +140,7 @@ fn TutorialIntroduction() -> impl IntoView {
         <p>""<code>"+ 1 2"</code>", "<code>"×4-2"</code>", etc."</p>
         <p>"This allows Uiua to be, in most cases, even more terse than other array languages. That being said, Uiua has been designed to remain readable as much as possible, even without named local variables. While writing tacit code can quickly become unwieldy in other array languages, Uiua embraces tacitness as the only way."</p>
         <p>"Uiua also features built-in functionality for working with images, audio, and GIFs, so once you know the language, you can very quickly get started writing programs that do interesting things!"</p>
+        <p>"Note that Uiua is not yet stable. While most of the core features are unlikely to change much, more complex ones are still in flux. This tutorial is based on the current state of the language, and it is updated as the language changes."</p>
 
         <h2 id="who">"Who is this tutorial for?"</h2>
         <p>"This tutorial is targeted at people who have at least a little bit of experience with programming. While you don't need to be proficient in any particular language, it will be helpful to understand concepts like variables and functions. However, even if you are a beginner, you can likely find your way through by taking the time to understand each example."</p>

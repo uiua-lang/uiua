@@ -461,6 +461,12 @@ primitive!(
     /// ex: ∠ 1 0
     /// ex: ∠ ¯1 0
     /// ex: ∠ √2 √2
+    ///
+    /// [un][atan] gives the [sine] and `cosine` of an angle.
+    /// ex: °∠ 0
+    /// ex: °∠ η
+    /// ex: °∠ π
+    /// ex: °∠ ÷3π
     (2, Atan, DyadicPervasive, ("atangent", '∠')),
     /// Make a complex number
     ///

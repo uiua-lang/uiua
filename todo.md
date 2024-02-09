@@ -1,27 +1,20 @@
 # Uiua Todo
-Within each section, items are ordered (roughly) by decreasing priority.
 
 ## Features
 - 0.9
-  - Attach identifier info to SpanKinds
-  - Fix cursor mapping with end-of-line comments
+  - Multiple imports
   - Basic package management
     - `&i "git:path"`
+  - Fix cursor mapping with end-of-line comments
   - Color labels in pad
-  - Multiple imports
-  - Diagnostic specification?
   - Pad link from Gist
 - Multimedia
   - Sound input
   - Webcam input
 - System APIs
   - UDP Sockets
-
-## Bugs
-- Figure out what is going on with the editor cursor
-
-## Documentation
-- System functions
+- Documentation
+  - System functions
 
 ## Open to Implementation
 These features are not strictly on the roadmap, but PRs that implement them will likely be accepted.

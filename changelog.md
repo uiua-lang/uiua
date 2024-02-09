@@ -18,6 +18,10 @@ This version is not yet released. If you are reading this on the website, then t
   - Labels in code make it easier to understand when reading
 - Add experimental [`shapes`](https://uiua.org/docs/shapes) and [`types`](https://uiua.org/docs/types) modifiers, which validate the shape and type of an array or arrays
   - These both check array properties at runtime and serve as a form of documentation
+- Add experimental [`inventory ⎏`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
+  - This shortens a lot of box array code
+- Deprecate [`all ⋔`](https://uiua.org/docs/all)
+  - It was rarely used and hard to reason about
 ### Interpreter
 - Numbers that seem to have a floating-point epsilon rounding error will be output with the epsilon noted
 - When hovering a user-defined function's name, the language server will now show whether it is compatible with [`un °`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under)

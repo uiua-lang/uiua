@@ -294,6 +294,7 @@ impl Primitive {
             Primitive::Cross => Some(format!("use {} instead", Primitive::Table.format())),
             Primitive::Cascade => Some(format!("use {} instead", Primitive::Fork.format())),
             Primitive::Rectify => Some(String::new()),
+            Primitive::All => Some(String::new()),
             _ => None,
         }
     }

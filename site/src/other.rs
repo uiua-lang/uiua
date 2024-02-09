@@ -145,16 +145,19 @@ pub fn Install() -> impl IntoView {
         <p>"If you want the most recent development version of Uiua, you can install from the git repository."</p>
         <code class="code-block">"cargo install --git https://github.com/uiua-lang/uiua uiua"</code>
 
-        <h2>"Font"</h2>
+        <h2 id="fonts">"Fonts"</h2>
         <p>"Uiua was originally designed to be used with stock "<a href="https://dejavu-fonts.github.io">"DejaVu Sans Mono"</a>". However, it now supports two custom fonts:"</p>
         <ul>
-            <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/DejaVuSansMono.ttf">"DejaVuSansMono"</a>" - a modified version"</li>
             <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/Uiua386.ttf">"Uiua386"</a>" - inspired by APL386. Thanks to Gifti for making it!"</li>
+            <li>"Jonathan Perret's"<a href="https://github.com/jonathanperret/uiua386color">"Uiua386Color"</a>" - a colored version of Uiua386"</li>
+            <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/DejaVuSansMono.ttf">"DejaVuSansMono"</a>" - a modified version"</li>
         </ul>
 
-        <h2>"Editor Support"</h2>
+        <h2 id="editor-support">"Editor Support"</h2>
         <p>"An official "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">"Uiua language extension for VSCode"</a>" is available."</p>
         <p>"For Neovim, Apeiros-46B maintains "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/syntax/uiua.vim">"syntax"</a>" and "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/ftplugin/uiua.lua">"LSP"</a>" scripts."</p>
+        <p>"For Vim, sputnick1124 maintains a "<a href="https://github.com/sputnick1124/uiua.vim">"Uiua plugin"</a>"."</p>
+        <p>"For Emacs, crmsnbleyd maintains a "<a href="https://github.com/crmsnbleyd/uiua-ts-mode">"Uiua mode"</a>"."</p>
         <p>"These require Uiua to be installed and in your "<code>"PATH"</code>"."</p>
 
         <h2>"Basic Usage"</h2>

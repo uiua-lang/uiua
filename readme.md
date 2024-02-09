@@ -36,10 +36,10 @@ This requires [Rust](https://www.rust-lang.org/tools/install) to be installed.
   cargo install --git https://github.com/uiua-lang/uiua uiua
   ```
 
-## Language Server
+## Language and Font Support
 
-The interpreter has a built-in language server that implements the [Language Server Protocol](https://microsoft.github.io/language-server-protocol/).
+The Uiua native interpreter has a built-in language server that can be used by editor extensions.
 
-A language client extension is available for VSCode [here](https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode).
+You can find a list of editor extensions [here](https://uiua.org/docs/editor-extensions).
 
-The language client requires that the interpreter is installed locally and available on your PATH.
+You can find a list of fonts that support Uiua's characters [here](https://uiua.org/docs/fonts).

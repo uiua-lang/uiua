@@ -307,6 +307,7 @@ impl Primitive {
                 | Recur
                 | All
                 | Cascade
+                | Inventory
                 | Map
                 | Insert
                 | Has
@@ -511,6 +512,7 @@ impl Primitive {
             Primitive::Each => zip::each(env)?,
             Primitive::Rows => zip::rows(env)?,
             Primitive::Table | Primitive::Cross => table::table(env)?,
+            Primitive::Inventory => zip::inventory(env)?,
             Primitive::Repeat => loops::repeat(env)?,
             Primitive::Do => loops::do_(env)?,
             Primitive::Group => loops::group(env)?,

@@ -40,6 +40,6 @@ This requires [Rust](https://www.rust-lang.org/tools/install) to be installed.
 
 The Uiua native interpreter has a built-in language server that can be used by editor extensions.
 
-You can find a list of editor extensions [here](https://uiua.org/docs/editor-extensions).
+You can find a list of editor extensions [here](https://uiua.org/docs/install#editor-extensions).
 
-You can find a list of fonts that support Uiua's characters [here](https://uiua.org/docs/fonts).
+You can find a list of fonts that support Uiua's characters [here](https://uiua.org/docs/install#fonts).

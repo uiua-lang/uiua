@@ -364,3 +364,67 @@ pub fn Changelog() -> impl IntoView {
         { markdown(include_str!("../../changelog.md")) }
     }
 }
+
+#[component]
+pub fn Combinators() -> impl IntoView {
+    use Primitive::*;
+    let combinators = [
+        (
+            view!(<Prim prim=Dup/>).into_view(),
+            ("⊂.", 1, "W", "Warbler"),
+        ),
+        (
+            view!(<Prim prim=Flip/>).into_view(),
+            ("⊂:", 2, "C", "Cardinal"),
+        ),
+        (View::default(), ("⊢⇌", 1, "B", "Bluebird")),
+        (View::default(), ("⇌⊂", 2, "B1", "Blackbird")),
+        (View::default(), ("⊟⇌", 2, "Δ", "Zebra Dove")),
+        (view!(<Prim prim=Dip/>).into_view(), ("⊟⊙⇌", 2, "D", "Dove")),
+        (
+            view!(<Prim prim=Fork/>).into_view(),
+            ("⊟⊃¯⇌", 1, "Φ", "Phoenix"),
+        ),
+        (view!(<Prim prim=Dip/>).into_view(), ("⊟¯⊙⇌", 2, "Ψ", "Psi")),
+    ];
+    let combinators = combinators
+        .into_iter()
+        .map(|(code, (example, inputs, symbol, bird))| {
+            let mut example = example.to_string();
+            for i in 0..inputs {
+                let a = i * 3 + 1;
+                example.push_str(&format!(" {}_{}_{}", a, a + 1, a + 2));
+            }
+            let diagram = format!("/combinators/{symbol}.svg");
+            view! {
+                <tr>
+                    <td>{ symbol }</td>
+                    <td>{ bird }</td>
+                    <td>{ code }</td>
+                    <td><Editor example={&example} /></td>
+                    <td><img src={diagram} alt={bird} class="combinator-diagram"/></td>
+                </tr>
+            }
+        })
+        .collect::<Vec<_>>();
+    view! {
+        <Title text="Combinators - Uiua Docs"/>
+        <h1>"Combinators"</h1>
+        <p>"This page contains a list of implementations of common combinators in Uiua. While it's not really necessary to know these to write Uiua programs, you may find the information interesting."</p>
+        <p>"A combinator is a function that only refers to its arguments. "<a href="https://en.wikipedia.org/wiki/Combinatory_logic">"Combinatory logic"</a>" is the branch of logic that deals with combinators."</p>
+        <p>"Ever since Raymond Smullyan's book "<a href="https://en.wikipedia.org/wiki/To_Mock_a_Mockingbird">"To Mock a Mockingbird"</a>", people have been calling combinators by bird names. These bird names are included in the table."</p>
+        <br/>
+        <hr/>
+        <br/>
+        <table class="header-cnetered-table cell-centered-table" style="width: 100%">
+            <tr>
+                <th>"Symbol"</th>
+                <th>"Bird"</th>
+                <th>"Code"</th>
+                <th>"Example"</th>
+                <th>"Diagram"</th>
+            </tr>
+            { combinators }
+        </table>
+    }
+}

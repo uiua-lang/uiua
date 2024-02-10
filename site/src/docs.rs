@@ -39,6 +39,7 @@ pub enum DocsPage {
     RightToLeft,
     Constants,
     StackIdioms,
+    Combinators,
     Optimizations,
     FormatConfig,
 }
@@ -63,6 +64,7 @@ impl IntoParam for DocsPage {
                 "rtl" => Some(Self::RightToLeft),
                 "constants" => Some(Self::Constants),
                 "stack-idioms" => Some(Self::StackIdioms),
+                "combinators" => Some(Self::Combinators),
                 "optimizations" => Some(Self::Optimizations),
                 "format-config" => Some(Self::FormatConfig),
                 value => Some(Self::Search(value.into())),
@@ -98,6 +100,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::RightToLeft => RightToLeft().into_view(),
             DocsPage::Constants => Constants().into_view(),
             DocsPage::StackIdioms => StackIdioms().into_view(),
+            DocsPage::Combinators => Combinators().into_view(),
             DocsPage::Optimizations => Optimizations().into_view(),
             DocsPage::FormatConfig => view!(<Markdown src="/format_config.md"/>).into_view(),
         };
@@ -233,6 +236,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/changelog">"Changelog"</A>" - what's new in each version"</li>
             <li><A href="/docs/constants">"Constants"</A>" - a list of the shadowable constants"</li>
             <li><A href="/docs/stack-idioms">"Stack Idioms"</A>" - common ways of manipulating the stack"</li>
+            <li><A href="/docs/combinators">"Combinators"</A>" - a list of common combinators implemented in Uiua"</li>
             <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
             <li><A href="/docs/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
             <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the Uiua formatter"</li>

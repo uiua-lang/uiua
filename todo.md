@@ -2,7 +2,8 @@
 
 ## Features
 - 0.9
-  - `sip` modifier
+  - Optimize `≡/f◫`
+  - `primitives.json` on site
   - Named recursion
   - Multiple imports
   - Basic package management
@@ -26,7 +27,6 @@ Feel free to make PRs to the list itself as well.
 - `⍜◿`
 - Better complex `⌈`/`⌊`/`⁅` implementation
 - Additional optimizations
-  - `≡/f◫`
   - `≡f◫`
   - `/f◫`
   - `/f⇌`

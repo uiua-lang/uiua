@@ -653,8 +653,8 @@ impl ArrayValue for char {
         ("\"", "\"")
     }
     fn debug_string(&self, _depth: usize, prefix: bool) -> String {
-        if prefix { 
-            format!("@{self}") 
+        if prefix {
+            format!("@{self}")
         } else {
             format!("{self}")
         }
@@ -728,7 +728,7 @@ impl ArrayValue for Complex {
         "ℂ"
     }
     fn debug_string(&self, _depth: usize, _prefix: bool) -> String {
-        format!("ℂ{} {}", self.im, self.re) 
+        format!("ℂ{} {}", self.im, self.re)
     }
 }
 
@@ -810,17 +810,14 @@ impl<'a> fmt::Display for FormatShape<'a> {
     }
 }
 
-//TODO: breaks on empty
-//TODO: doesn't work on boxed
-
 /// Convert value into a string that can be understood by the interpreter
 pub(crate) fn dbg_value (value: &Value, depth: Option<usize>, prefix: bool) -> String {
     value.generic_ref(
-                |a| dbg_array::<f64>(a, depth, prefix), 
+                |a| dbg_array::<f64>(a, depth, prefix),
                 |a| dbg_array::<u8>(a, depth, prefix),
                 |a| dbg_array::<crate::complex::Complex>(a, depth, prefix),
-                |a| dbg_array::<char>(a, depth, prefix), 
-                |a| dbg_array::<Boxed>(a, depth, prefix), 
+                |a| dbg_array::<char>(a, depth, prefix),
+                |a| dbg_array::<Boxed>(a, depth, prefix),
                 )
 }
 
@@ -837,24 +834,24 @@ fn dbg_array_inner<T: ArrayValue>(
     buffer: &mut String,
     array: &[T],
     shape: &[usize],
-    depth: usize, 
+    depth: usize,
     prefix: bool
-    ) 
+    )
 {
     let (delims, separator) = match shape.len() {
-        0 => { 
-            if !array.is_empty() { 
+        0 => {
+            if !array.is_empty() {
                 buffer.push_str(&array[0].debug_string(depth, prefix))
-            }; 
+            };
             return
         },
         1 => (T::debug_delims(), T::debug_sep()),
         _ => (("[", "]"), "\n"),
     };
     let padding = if separator == "\n" {
-        " ".repeat(depth + 1) 
+        " ".repeat(depth + 1)
     } else {
-        "".into() 
+        "".into()
     };
     let row_size = shape.iter().skip(1).product();
     let row_count = shape[0];

@@ -1161,7 +1161,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : ∵⍜°□(⊂:@!) {"a" "bc" "def"}
     ///   :    ⎏(⊂:@!) {"a" "bc" "def"}
-    /// For non-box array, [inventory] works identically to [rows].
+    /// For non-box array, [inventory] works identically to [rows], except it [box]es each result row.
     /// ex: # Experimental!
     ///   : ≡⇌ [1_2_3 4_5_6]
     ///   : ⎏⇌ [1_2_3 4_5_6]

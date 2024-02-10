@@ -1,12 +1,12 @@
 //! Algorithms for zipping modifiers
 
-use std::slice;
+use std::{mem::take, slice};
 
 use ecow::{eco_vec, EcoVec};
 
 use crate::{
     algorithm::pervade::bin_pervade_generic, function::Function, random, value::Value, Array,
-    Boxed, FormatShape, ImplPrimitive, Instr, Primitive, Uiua, UiuaResult,
+    Boxed, FormatShape, ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult,
 };
 
 use super::{multi_output, MultiOutput};
@@ -631,22 +631,33 @@ pub fn inventory(env: &mut Uiua) -> UiuaResult {
 }
 
 fn inventory1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
-    let xs = match xs {
-        Value::Box(xs) => xs,
-        xs => return rows1(f, xs, env),
-    };
     let outputs = f.signature().outputs;
     let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
-    let shape = xs.shape().clone();
-    env.without_fill(|env| -> UiuaResult {
-        for Boxed(x) in xs.data.into_iter() {
-            env.push(x);
-            env.call(f.clone())?;
-            for i in 0..outputs {
-                new_values[i].push(Boxed(env.pop("inventory's function result")?));
+    let shape = env.without_fill(|env| -> UiuaResult<Shape> {
+        Ok(match xs {
+            Value::Box(xs) => {
+                let shape = xs.shape().clone();
+                for Boxed(x) in xs.data.into_iter() {
+                    env.push(x);
+                    env.call(f.clone())?;
+                    for i in 0..outputs {
+                        new_values[i].push(Boxed(env.pop("inventory's function result")?));
+                    }
+                }
+                shape
             }
-        }
-        Ok(())
+            value => {
+                let shape = value.row_count().into();
+                for val in value.into_rows() {
+                    env.push(val);
+                    env.call(f.clone())?;
+                    for i in 0..outputs {
+                        new_values[i].push(Boxed(env.pop("inventory's function result")?));
+                    }
+                }
+                shape
+            }
+        })
     })?;
     for new_values in new_values.into_iter().rev() {
         let new_arr = Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
@@ -739,9 +750,32 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 ys.shape()
             ))),
         },
+        (Value::Box(xs), ys) if ys.shape().starts_with(xs.shape()) => {
+            let shape = xs.shape().clone();
+            let ys_row_shape = ys.shape()[xs.rank()..].into();
+            env.without_fill(|env| -> UiuaResult {
+                for (Boxed(x), y) in
+                    (xs.data.into_iter()).zip(ys.into_row_shaped_slices(ys_row_shape))
+                {
+                    env.push(y);
+                    env.push(x);
+                    env.call(f.clone())?;
+                    for i in 0..outputs {
+                        new_values[i].push(Boxed(env.pop("inventory's function result")?));
+                    }
+                }
+                Ok(())
+            })?;
+            for new_values in new_values.into_iter().rev() {
+                let new_arr =
+                    Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
+                env.push(new_arr);
+            }
+            Ok(())
+        }
         (Value::Box(xs), ys) if xs.rank() <= 1 => match (xs.row_count(), ys.row_count()) {
             (a, b) if a == b => {
-                let shape = ys.shape().clone();
+                let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
                     for (Boxed(x), y) in xs.data.into_iter().zip(ys.into_rows()) {
                         env.push(y);
@@ -812,9 +846,33 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 Primitive::Inventory.format()
             ))),
         },
+        (xs, Value::Box(ys)) if xs.shape().starts_with(ys.shape()) => {
+            let shape = ys.shape().clone();
+            let xs_row_shape = xs.shape()[ys.rank()..].into();
+            env.without_fill(|env| -> UiuaResult {
+                for (x, Boxed(y)) in xs
+                    .into_row_shaped_slices(xs_row_shape)
+                    .zip(ys.data.into_iter())
+                {
+                    env.push(y);
+                    env.push(x);
+                    env.call(f.clone())?;
+                    for i in 0..outputs {
+                        new_values[i].push(Boxed(env.pop("inventory's function result")?));
+                    }
+                }
+                Ok(())
+            })?;
+            for new_values in new_values.into_iter().rev() {
+                let new_arr =
+                    Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
+                env.push(new_arr);
+            }
+            Ok(())
+        }
         (xs, Value::Box(ys)) if ys.rank() <= 1 => match (xs.row_count(), ys.row_count()) {
             (a, b) if a == b => {
-                let shape = xs.shape().clone();
+                let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
                     for (x, Boxed(y)) in xs.into_rows().zip(ys.data.into_iter()) {
                         env.push(y);
@@ -885,6 +943,16 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 Primitive::Inventory.format()
             ))),
         },
-        (xs, ys) => rows2(f, xs, ys, env),
+        (xs, ys) => {
+            rows2(f, xs, ys, env)?;
+            for val in env.stack_mut().iter_mut().take(outputs) {
+                *val = take(val)
+                    .into_rows()
+                    .map(Boxed)
+                    .collect::<EcoVec<_>>()
+                    .into();
+            }
+            Ok(())
+        }
     }
 }

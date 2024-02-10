@@ -436,7 +436,7 @@ pub fn Combinators() -> impl IntoView {
                     <td>{ symbol }</td>
                     <td>{ bird }</td>
                     <td>{ code }</td>
-                    <td><Editor example={&ex} /></td>
+                    <td><Editor example={&ex} nonprogressive=true/></td>
                     <td><img src={diagram} alt={bird} class="combinator-diagram"/></td>
                 </tr>
             }

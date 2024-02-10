@@ -46,6 +46,7 @@ pub fn Editor<'a>(
     #[prop(optional)] help: &'a [&'a str],
     #[prop(optional)] no_run: bool,
     #[prop(optional)] challenge: Option<ChallengeDef>,
+    #[prop(optional)] nonprogressive: bool,
 ) -> impl IntoView {
     let no_run = no_run
         || mode == EditorMode::Pad && !get_autorun()
@@ -60,9 +61,9 @@ pub fn Editor<'a>(
     let help: Vec<String> = help.iter().map(|s| s.to_string()).collect();
     // Initialize all the examples
     let examples = match mode {
-        EditorMode::Example => progressive_strings(example),
+        EditorMode::Example if !nonprogressive => progressive_strings(example),
         EditorMode::Front => EXAMPLES.iter().map(ToString::to_string).collect(),
-        EditorMode::Pad => vec![example.into()],
+        _ => vec![example.into()],
     };
     let code_max_lines = if let EditorMode::Pad = mode {
         10

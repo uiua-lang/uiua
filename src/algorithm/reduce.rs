@@ -553,8 +553,8 @@ fn generic_adjacent(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     let mut new_rows = Vec::with_capacity(rows.len());
     env.without_fill(|env| -> UiuaResult {
         for row in rows {
-            env.push(prev);
             env.push(row.clone());
+            env.push(prev);
             env.call(f.clone())?;
             prev = row;
             new_rows.push(env.pop("adjacent function result")?);

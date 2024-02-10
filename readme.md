@@ -18,7 +18,7 @@ You can try the language without installing anything on [the website](https://ui
 If you want to install the interpreter locally there are 2 options:
 - If you are on Windows, you can simply download the [latest release](https://github.com/uiua-lang/uiua/releases).
 - If you are not on Windows, you will need to install via Cargo.
-This requires [Rust](https://www.rust-lang.org/tools/install) to be installed.
+This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.76) to be installed.
 
   You can install with:
   ```

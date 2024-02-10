@@ -131,7 +131,7 @@ pub fn Install() -> impl IntoView {
         <h2>"Installing Uiua"</h2>
         <p>"If you are on Windows, then the newest version of the Uiua interpreter can be downloaded from the "<a href="https://github.com/uiua-lang/uiua/releases">"releases"</a>" page."</p>
         <p>"Otherwise, the native Uiua interpreter can be installed via Cargo."</p>
-        <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation."</p>
+        <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation (>=1.76)."</p>
         <p>"Once you have that, run the following command:"</p>
         <code class="code-block">"cargo install uiua"</code>
         <p>"The following optional features are available (enabled by passing "<code>"--features <feature>"</code>"):"</p>

@@ -29,6 +29,7 @@ This version is not yet released. If you are reading this on the website, then t
   - It it as much as 800x faster in some cases
 ### Website
 - Add [Tutorial Introduction](https://uiua.org/docs/introduction)
+- Add [primitives.json](https://uiua.org/primitives.json) for use with tooling
 
 ## 0.8.0 - 2024-01-31
 ### Language

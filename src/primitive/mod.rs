@@ -37,7 +37,7 @@ use crate::{
 };
 
 /// Categories of primitives
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Sequence)]
 #[allow(missing_docs)]
 pub enum PrimClass {
     Stack,
@@ -72,6 +72,29 @@ impl PrimClass {
     /// Get an iterator over all primitives in this class
     pub fn primitives(self) -> impl Iterator<Item = Primitive> {
         Primitive::all().filter(move |prim| prim.class() == self)
+    }
+}
+
+impl fmt::Debug for PrimClass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use PrimClass::*;
+        match self {
+            Stack => write!(f, "Stack"),
+            Constant => write!(f, "Constant"),
+            MonadicPervasive => write!(f, "MonadicPervasive"),
+            DyadicPervasive => write!(f, "DyadicPervasive"),
+            MonadicArray => write!(f, "MonadicArray"),
+            DyadicArray => write!(f, "DyadicArray"),
+            IteratingModifier => write!(f, "IteratingModifier"),
+            AggregatingModifier => write!(f, "AggregatingModifier"),
+            InversionModifier => write!(f, "InversionModifier"),
+            OtherModifier => write!(f, "OtherModifier"),
+            Planet => write!(f, "Planet"),
+            Map => write!(f, "Map"),
+            Local => write!(f, "Local"),
+            Misc => write!(f, "Misc"),
+            Sys(op) => op.fmt(f),
+        }
     }
 }
 

@@ -2978,6 +2978,8 @@ dependencies = [
  "leptos_meta",
  "leptos_router",
  "pathdiff",
+ "serde",
+ "serde_json",
  "uiua",
  "urlencoding",
  "wasm-bindgen",

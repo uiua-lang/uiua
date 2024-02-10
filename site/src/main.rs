@@ -565,3 +565,51 @@ fn site() {
         }
     }
 }
+
+#[cfg(test)]
+#[test]
+fn gen_primitives_json() {
+    use serde::*;
+    use std::{collections::BTreeMap, fs, ops::Not};
+
+    #[derive(Serialize)]
+    struct PrimDef {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        ascii: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        glyph: Option<char>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        args: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        outputs: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        modifier_args: Option<usize>,
+        class: String,
+        description: String,
+        #[serde(skip_serializing_if = "Not::not")]
+        experimental: bool,
+        #[serde(skip_serializing_if = "Not::not")]
+        deprecated: bool,
+    }
+
+    let mut prims = BTreeMap::new();
+    for prim in Primitive::all() {
+        let doc = prim.doc();
+        prims.insert(
+            prim.name(),
+            PrimDef {
+                ascii: prim.ascii().map(|a| a.to_string()),
+                glyph: prim.glyph(),
+                args: prim.args(),
+                outputs: prim.outputs(),
+                modifier_args: prim.modifier_args(),
+                class: format!("{:?}", prim.class()),
+                description: doc.short_text().into(),
+                experimental: prim.is_experimental(),
+                deprecated: prim.is_deprecated(),
+            },
+        );
+    }
+    let json = serde_json::to_string_pretty(&prims).unwrap();
+    fs::write("primitives.json", json).unwrap();
+}

@@ -1,0 +1,1185 @@
+{
+  "&ad": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Audio",
+    "description": "Decode audio from a byte array"
+  },
+  "&ae": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Audio",
+    "description": "Encode audio into a byte array"
+  },
+  "&ap": {
+    "args": 1,
+    "outputs": 0,
+    "class": "Audio",
+    "description": "Play some audio"
+  },
+  "&args": {
+    "args": 0,
+    "outputs": 1,
+    "class": "Env",
+    "description": "Get the command line arguments"
+  },
+  "&asr": {
+    "args": 0,
+    "outputs": 1,
+    "class": "Audio",
+    "description": "Get the sample rate of the audio output backend"
+  },
+  "&ast": {
+    "args": 0,
+    "outputs": 0,
+    "modifier_args": 1,
+    "class": "Audio",
+    "description": "Synthesize and stream audio"
+  },
+  "&cd": {
+    "args": 1,
+    "outputs": 0,
+    "class": "Filesystem",
+    "description": "Change the current directory"
+  },
+  "&cl": {
+    "args": 1,
+    "outputs": 0,
+    "class": "Stream",
+    "description": "Close a stream by its handle"
+  },
+  "&fc": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Filesystem",
+    "description": "Create a file and return a handle to it"
+  },
+  "&fde": {
+    "args": 1,
+    "outputs": 0,
+    "class": "Filesystem",
+    "description": "Delete a file or directory"
+  },
+  "&fe": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Filesystem",
+    "description": "Check if a file exists at a path"
+  },
+  "&ffi": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Call a foreign function interface",
+    "experimental": true
+  },
+  "&fif": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Filesystem",
+    "description": "Check if a path is a file"
+  },
+  "&fld": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Filesystem",
+    "description": "List the contents of a directory"
+  },
+  "&fo": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Filesystem",
+    "description": "Open a file and return a handle to it"
+  },
+  "&frab": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Filesystem",
+    "description": "Read all the contents of a file into a byte array"
+  },
+  "&fras": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Filesystem",
+    "description": "Read all the contents of a file into a string"
+  },
+  "&ftr": {
+    "args": 1,
+    "outputs": 0,
+    "class": "Filesystem",
+    "description": "Move a file or directory to the trash"
+  },
+  "&fwa": {
+    "args": 2,
+    "outputs": 0,
+    "class": "Filesystem",
+    "description": "Write the entire contents of an array to a file"
+  },
+  "&gifd": {
+    "args": 1,
+    "outputs": 2,
+    "class": "Gifs",
+    "description": "Decode a gif from a byte array"
+  },
+  "&gife": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Gifs",
+    "description": "Encode a gif into a byte array"
+  },
+  "&gifs": {
+    "args": 2,
+    "outputs": 0,
+    "class": "Gifs",
+    "description": "Show a gif"
+  },
+  "&httpsw": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Tcp",
+    "description": "Make an HTTP request"
+  },
+  "&i": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Filesystem",
+    "description": "Import an item from a file"
+  },
+  "&imd": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Images",
+    "description": "Decode an image from a byte array"
+  },
+  "&ime": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Images",
+    "description": "Encode an image into a byte array with the specified format"
+  },
+  "&ims": {
+    "args": 1,
+    "outputs": 0,
+    "class": "Images",
+    "description": "Show an image"
+  },
+  "&invk": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Command",
+    "description": "Invoke a path with the system's default program"
+  },
+  "&p": {
+    "args": 1,
+    "outputs": 0,
+    "class": "StdIO",
+    "description": "Print a value to stdout followed by a newline"
+  },
+  "&pf": {
+    "args": 1,
+    "outputs": 0,
+    "class": "StdIO",
+    "description": "Print a value to stdout"
+  },
+  "&raw": {
+    "args": 1,
+    "outputs": 0,
+    "class": "Env",
+    "description": "Set the terminal to raw mode"
+  },
+  "&rb": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Stream",
+    "description": "Read at most n bytes from a stream"
+  },
+  "&rs": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Stream",
+    "description": "Read at most n bytes from a stream"
+  },
+  "&ru": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Stream",
+    "description": "Read from a stream until a delimiter is reached"
+  },
+  "&runc": {
+    "args": 1,
+    "outputs": 3,
+    "class": "Command",
+    "description": "Run a command and wait for it to finish"
+  },
+  "&runi": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Command",
+    "description": "Run a command and wait for it to finish"
+  },
+  "&s": {
+    "args": 1,
+    "outputs": 0,
+    "class": "StdIO",
+    "description": "Print a nicely formatted representation of a value to stdout"
+  },
+  "&sc": {
+    "args": 0,
+    "outputs": 1,
+    "class": "StdIO",
+    "description": "Read a line from stdin"
+  },
+  "&sl": {
+    "args": 1,
+    "outputs": 0,
+    "class": "Misc",
+    "description": "Sleep for n seconds"
+  },
+  "&tcpa": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Tcp",
+    "description": "Accept a connection with a TCP listener"
+  },
+  "&tcpaddr": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Tcp",
+    "description": "Get the connection address of a TCP socket"
+  },
+  "&tcpc": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Tcp",
+    "description": "Create a TCP socket and connect it to an address"
+  },
+  "&tcpl": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Tcp",
+    "description": "Create a TCP listener and bind it to an address"
+  },
+  "&tcpsnb": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Tcp",
+    "description": "Set a TCP socket to non-blocking mode"
+  },
+  "&tcpsrt": {
+    "args": 2,
+    "outputs": 0,
+    "class": "Tcp",
+    "description": "Set the read timeout of a TCP socket in seconds"
+  },
+  "&tcpswt": {
+    "args": 2,
+    "outputs": 0,
+    "class": "Tcp",
+    "description": "Set the write timeout of a TCP socket in seconds"
+  },
+  "&ts": {
+    "args": 0,
+    "outputs": 1,
+    "class": "Env",
+    "description": "Get the size of the terminal"
+  },
+  "&var": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Env",
+    "description": "Get the value of an environment variable"
+  },
+  "&w": {
+    "args": 2,
+    "outputs": 0,
+    "class": "Stream",
+    "description": "Write an array to a stream"
+  },
+  "absolute value": {
+    "glyph": "⌵",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Get the absolute value of a number"
+  },
+  "add": {
+    "glyph": "+",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Add values"
+  },
+  "all": {
+    "glyph": "⋔",
+    "outputs": 1,
+    "modifier_args": 2,
+    "class": "Planet",
+    "description": "Call a function on many distinct sets of values",
+    "experimental": true,
+    "deprecated": true
+  },
+  "assert": {
+    "glyph": "⍤",
+    "args": 2,
+    "outputs": 0,
+    "class": "Misc",
+    "description": "Throw an error if a condition is not met"
+  },
+  "atangent": {
+    "glyph": "∠",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Take the arctangent of two numbers"
+  },
+  "bind": {
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "OtherModifier",
+    "description": "Bind local values",
+    "experimental": true
+  },
+  "bits": {
+    "glyph": "⋯",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Encode an array as bits (LSB-first)"
+  },
+  "both": {
+    "glyph": "∩",
+    "args": 2,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Planet",
+    "description": "Call a function on two sets of values"
+  },
+  "box": {
+    "glyph": "□",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Turn an array into a box"
+  },
+  "bracket": {
+    "glyph": "⊓",
+    "outputs": 1,
+    "modifier_args": 2,
+    "class": "Planet",
+    "description": "Call two functions on two distinct sets of values"
+  },
+  "cascade": {
+    "glyph": "⪾",
+    "outputs": 1,
+    "modifier_args": 2,
+    "class": "Planet",
+    "description": "Call one function after another, reusing some values",
+    "experimental": true,
+    "deprecated": true
+  },
+  "ceiling": {
+    "glyph": "⌈",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Round to the nearest integer towards ∞"
+  },
+  "classify": {
+    "glyph": "⊛",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Assign a unique index to each unique element in an array"
+  },
+  "complex": {
+    "glyph": "ℂ",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Make a complex number"
+  },
+  "comptime": {
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "OtherModifier",
+    "description": "Run a function at compile time"
+  },
+  "content": {
+    "glyph": "⊔",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "OtherModifier",
+    "description": "Unbox the arguments to a function before calling it"
+  },
+  "couple": {
+    "glyph": "⊟",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Combine two arrays as rows of a new array"
+  },
+  "cross": {
+    "glyph": "⊠",
+    "args": 2,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "IteratingModifier",
+    "description": "Apply a function to each combination of rows of arrays",
+    "deprecated": true
+  },
+  "deal": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Randomly reorder the rows of an array with a seed"
+  },
+  "deduplicate": {
+    "glyph": "◴",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Remove duplicate elements from an array"
+  },
+  "deshape": {
+    "glyph": "♭",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Make an array 1-dimensional"
+  },
+  "dip": {
+    "glyph": "⊙",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Planet",
+    "description": "Temporarily pop the top value off the stack and call a function"
+  },
+  "divide": {
+    "ascii": "%",
+    "glyph": "÷",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Divide values"
+  },
+  "do": {
+    "glyph": "⍢",
+    "outputs": 1,
+    "modifier_args": 2,
+    "class": "IteratingModifier",
+    "description": "Repeat a function while a condition holds"
+  },
+  "drop": {
+    "glyph": "↘",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Drop the first n elements of an array"
+  },
+  "dump": {
+    "args": 0,
+    "outputs": 0,
+    "modifier_args": 1,
+    "class": "Stack",
+    "description": "Debug print all the values currently on stack without popping them"
+  },
+  "duplicate": {
+    "glyph": ".",
+    "args": 1,
+    "outputs": 2,
+    "class": "Stack",
+    "description": "Duplicate the top value on the stack"
+  },
+  "each": {
+    "glyph": "∵",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "IteratingModifier",
+    "description": "Apply a function to each element of an array or arrays."
+  },
+  "equals": {
+    "ascii": "=",
+    "glyph": "=",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Compare for equality"
+  },
+  "eta": {
+    "glyph": "η",
+    "args": 0,
+    "outputs": 1,
+    "class": "Constant",
+    "description": "The number of radians in a quarter circle"
+  },
+  "fall": {
+    "glyph": "⍖",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Get the indices into an array if it were sorted descending"
+  },
+  "fill": {
+    "glyph": "⬚",
+    "outputs": 1,
+    "modifier_args": 2,
+    "class": "OtherModifier",
+    "description": "Set the fill value for a function"
+  },
+  "find": {
+    "glyph": "⌕",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Find the occurences of one array in another"
+  },
+  "first": {
+    "glyph": "⊢",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Get the first row of an array"
+  },
+  "fix": {
+    "glyph": "¤",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Add a length-1 axis to an array"
+  },
+  "flip": {
+    "glyph": ":",
+    "args": 2,
+    "outputs": 2,
+    "class": "Stack",
+    "description": "Swap the top two values on the stack"
+  },
+  "floor": {
+    "glyph": "⌊",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Round to the nearest integer towards ¯∞"
+  },
+  "fold": {
+    "glyph": "∧",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "AggregatingModifier",
+    "description": "Apply a function to aggregate arrays"
+  },
+  "fork": {
+    "glyph": "⊃",
+    "outputs": 1,
+    "modifier_args": 2,
+    "class": "Planet",
+    "description": "Call two functions on the same values"
+  },
+  "gap": {
+    "glyph": "⋅",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Planet",
+    "description": "Discard the top stack value then call a function"
+  },
+  "gen": {
+    "args": 1,
+    "outputs": 2,
+    "class": "Misc",
+    "description": "Generate a random number between 0 and 1 from a seed, as well as the next seed"
+  },
+  "get": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Map",
+    "description": "Get the value corresponding to a key in a map array",
+    "experimental": true
+  },
+  "greater or equal": {
+    "ascii": ">=",
+    "glyph": "≥",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Compare for greater than or equal"
+  },
+  "greater than": {
+    "glyph": ">",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Compare for greater than"
+  },
+  "group": {
+    "glyph": "⊕",
+    "args": 2,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "AggregatingModifier",
+    "description": "Group elements of an array into buckets by index"
+  },
+  "has": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Map",
+    "description": "Check if a map array has a key",
+    "experimental": true
+  },
+  "identity": {
+    "glyph": "∘",
+    "args": 1,
+    "outputs": 1,
+    "class": "Planet",
+    "description": "Do nothing with one value"
+  },
+  "indexof": {
+    "glyph": "⊗",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Find the first index of each row of one array in another"
+  },
+  "infinity": {
+    "glyph": "∞",
+    "args": 0,
+    "outputs": 1,
+    "class": "Constant",
+    "description": "The biggest number"
+  },
+  "insert": {
+    "args": 3,
+    "outputs": 1,
+    "class": "Map",
+    "description": "Insert a key-value pair into a map array",
+    "experimental": true
+  },
+  "inventory": {
+    "glyph": "⎏",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "IteratingModifier",
+    "description": "Apply a function to each unboxed row of an array and re-box the results",
+    "experimental": true
+  },
+  "join": {
+    "glyph": "⊂",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Append two arrays end-to-end"
+  },
+  "keep": {
+    "glyph": "▽",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Discard or copy some rows of an array"
+  },
+  "length": {
+    "glyph": "⧻",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Get the number of rows in an array"
+  },
+  "less or equal": {
+    "ascii": "<=",
+    "glyph": "≤",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Compare for less than or equal"
+  },
+  "less than": {
+    "glyph": "<",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Compare for less than"
+  },
+  "logarithm": {
+    "glyph": "ₙ",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Get the based logarithm of a number"
+  },
+  "map": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Map",
+    "description": "Create a hashmap from lists of keys and values",
+    "experimental": true
+  },
+  "match": {
+    "glyph": "≍",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Check if two arrays are exactly the same"
+  },
+  "maximum": {
+    "glyph": "↥",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Take the maximum of two arrays"
+  },
+  "member": {
+    "glyph": "∊",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Check if each row of one array exists in another"
+  },
+  "memo": {
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "OtherModifier",
+    "description": "Memoize a function"
+  },
+  "minimum": {
+    "glyph": "↧",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Take the minimum of two arrays"
+  },
+  "modulus": {
+    "glyph": "◿",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Modulo values"
+  },
+  "multiply": {
+    "ascii": "*",
+    "glyph": "×",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Multiply values"
+  },
+  "negate": {
+    "ascii": "`",
+    "glyph": "¯",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Negate a number"
+  },
+  "not": {
+    "glyph": "¬",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Logical not"
+  },
+  "not equals": {
+    "ascii": "!=",
+    "glyph": "≠",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Compare for inequality"
+  },
+  "now": {
+    "args": 0,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Get the current time in seconds"
+  },
+  "on": {
+    "glyph": "⚇",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Planet",
+    "description": "Call a function but keep its first argument on the top of the stack",
+    "experimental": true
+  },
+  "over": {
+    "glyph": ",",
+    "args": 2,
+    "outputs": 3,
+    "class": "Stack",
+    "description": "Duplicate the second-to-top value to the top of the stack"
+  },
+  "parse": {
+    "glyph": "⋕",
+    "args": 1,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Parse a string as a number"
+  },
+  "partition": {
+    "glyph": "⊜",
+    "args": 2,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "AggregatingModifier",
+    "description": "Group sequential sections of an array"
+  },
+  "pi": {
+    "glyph": "π",
+    "args": 0,
+    "outputs": 1,
+    "class": "Constant",
+    "description": "The ratio of a circle's circumference to its diameter"
+  },
+  "pick": {
+    "glyph": "⊡",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Index a row or elements from an array"
+  },
+  "pop": {
+    "ascii": ";",
+    "glyph": "◌",
+    "args": 1,
+    "outputs": 0,
+    "class": "Stack",
+    "description": "Discard the top stack value"
+  },
+  "power": {
+    "glyph": "ⁿ",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Raise a value to a power"
+  },
+  "random": {
+    "glyph": "⚂",
+    "args": 0,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Generate a random number in the range [0, 1)"
+  },
+  "range": {
+    "glyph": "⇡",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Make an array of all natural numbers less than a number"
+  },
+  "rectify": {
+    "glyph": "⌅",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "InversionModifier",
+    "description": "Set a function as its own inverse",
+    "experimental": true,
+    "deprecated": true
+  },
+  "recur": {
+    "glyph": "↫",
+    "args": 0,
+    "class": "Misc",
+    "description": "Call a function recursively",
+    "experimental": true
+  },
+  "recv": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Receive a value from a thread"
+  },
+  "reduce": {
+    "glyph": "/",
+    "args": 1,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "AggregatingModifier",
+    "description": "Apply a reducing function to an array"
+  },
+  "regex": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Match a regex pattern"
+  },
+  "remove": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Map",
+    "description": "Remove the value corresponding to a key from a map array",
+    "experimental": true
+  },
+  "repeat": {
+    "glyph": "⍥",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "IteratingModifier",
+    "description": "Repeat a function a number of times"
+  },
+  "rerank": {
+    "glyph": "☇",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Change the rank of an array's rows"
+  },
+  "reshape": {
+    "glyph": "↯",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Change the shape of an array"
+  },
+  "reverse": {
+    "glyph": "⇌",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Reverse the rows of an array"
+  },
+  "rise": {
+    "glyph": "⍏",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Get the indices into an array if it were sorted ascending"
+  },
+  "rotate": {
+    "glyph": "↻",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Rotate the elements of an array by n"
+  },
+  "round": {
+    "glyph": "⁅",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Round to the nearest integer"
+  },
+  "rows": {
+    "glyph": "≡",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "IteratingModifier",
+    "description": "Apply a function to each row of an array or arrays"
+  },
+  "scan": {
+    "glyph": "\\",
+    "args": 1,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "AggregatingModifier",
+    "description": "Reduce, but keep intermediate values"
+  },
+  "select": {
+    "glyph": "⊏",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Select multiple rows from an array"
+  },
+  "send": {
+    "args": 2,
+    "outputs": 0,
+    "class": "Misc",
+    "description": "Send a value to a thread"
+  },
+  "setinv": {
+    "outputs": 1,
+    "modifier_args": 2,
+    "class": "InversionModifier",
+    "description": "Set the un-compatible inverse of a function"
+  },
+  "setund": {
+    "outputs": 1,
+    "modifier_args": 3,
+    "class": "InversionModifier",
+    "description": "Set the under-compatible inverse of a function"
+  },
+  "shape": {
+    "glyph": "△",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Get the dimensions of an array"
+  },
+  "shapes": {
+    "args": 0,
+    "outputs": 0,
+    "modifier_args": 1,
+    "class": "Misc",
+    "description": "Validate the shapes of some arrays",
+    "experimental": true
+  },
+  "sign": {
+    "glyph": "±",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Numerical sign (1, ¯1, or 0)"
+  },
+  "sine": {
+    "glyph": "○",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Get the sine of a number"
+  },
+  "spawn": {
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "OtherModifier",
+    "description": "Spawn a thread"
+  },
+  "sqrt": {
+    "glyph": "√",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicPervasive",
+    "description": "Take the square root of a number"
+  },
+  "stack": {
+    "glyph": "?",
+    "args": 0,
+    "outputs": 0,
+    "class": "Stack",
+    "description": "Debug print all stack values without popping them"
+  },
+  "subtract": {
+    "glyph": "-",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicPervasive",
+    "description": "Subtract values"
+  },
+  "table": {
+    "glyph": "⊞",
+    "args": 2,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "IteratingModifier",
+    "description": "Apply a function to each combination of rows of two arrays"
+  },
+  "tag": {
+    "args": 0,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Generate a unique tag"
+  },
+  "take": {
+    "glyph": "↙",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Take the first n elements of an array"
+  },
+  "tau": {
+    "glyph": "τ",
+    "args": 0,
+    "outputs": 1,
+    "class": "Constant",
+    "description": "The ratio of a circle's circumference to its radius"
+  },
+  "this": {
+    "glyph": "↬",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Misc",
+    "description": "Set a function to recur to",
+    "experimental": true
+  },
+  "trace": {
+    "glyph": "⸮",
+    "args": 1,
+    "outputs": 1,
+    "class": "Stack",
+    "description": "Debug print the top value on the stack without popping it"
+  },
+  "transpose": {
+    "glyph": "⍉",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Rotate the shape of an array"
+  },
+  "try": {
+    "glyph": "⍣",
+    "outputs": 1,
+    "modifier_args": 2,
+    "class": "Misc",
+    "description": "Call a function and catch errors"
+  },
+  "tryrecv": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Try to receive a value from a thread"
+  },
+  "type": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Check the type of an array"
+  },
+  "types": {
+    "args": 0,
+    "outputs": 0,
+    "modifier_args": 1,
+    "class": "Misc",
+    "description": "Validate the types of some arrays",
+    "experimental": true
+  },
+  "un": {
+    "glyph": "°",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "InversionModifier",
+    "description": "Invert the behavior of a function"
+  },
+  "under": {
+    "glyph": "⍜",
+    "outputs": 1,
+    "modifier_args": 2,
+    "class": "InversionModifier",
+    "description": "Apply a function under another"
+  },
+  "unique": {
+    "glyph": "◰",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Get a mask of first occurrences of items in an array"
+  },
+  "unpack": {
+    "glyph": "⊐",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "OtherModifier",
+    "description": "Apply a function with implicit unboxing",
+    "deprecated": true
+  },
+  "utf": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Convert a string to UTF-8 bytes"
+  },
+  "wait": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Wait for a thread to finish and push its results to the stack"
+  },
+  "where": {
+    "glyph": "⊚",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Get indices where array values are not equal to zero"
+  },
+  "windows": {
+    "glyph": "◫",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "The n-wise windows of an array"
+  }
+}

@@ -3,6 +3,7 @@
 ## Features
 - 0.9
   - `sip` modifier
+  - Named recursion
   - Multiple imports
   - Basic package management
     - `&i "git:path"`

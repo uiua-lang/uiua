@@ -20,6 +20,7 @@ uiua = {path = "..", default-features = false, features = ["bytes", "batteries"]
 urlencoding = "2"
 wasm-bindgen = "0.2.89"
 wasm-bindgen-futures = "0.4.40"
+getrandom = { version = "0.2", features = ["js"] }
 
 [dependencies.web-sys]
 features = [

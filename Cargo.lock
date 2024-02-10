@@ -2969,6 +2969,7 @@ dependencies = [
  "comrak",
  "console_error_panic_hook",
  "enum-iterator",
+ "getrandom",
  "hound",
  "image",
  "instant",

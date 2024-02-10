@@ -944,7 +944,7 @@ fn regex(env: &mut Uiua) -> UiuaResult {
 /// Generate a random number, equivalent to [`Primitive::Rand`]
 pub fn random() -> f64 {
     thread_local! {
-        static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::seed_from_u64(instant::now().to_bits()));
+        static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
     }
     RNG.with(|rng| rng.borrow_mut().gen::<f64>())
 }

@@ -561,6 +561,10 @@ pub trait ArrayValue:
     fn format_delims() -> (&'static str, &'static str) {
         ("[", "]")
     }
+    /// Marker for empty lists in grid formatting
+    fn empty_list_inner() -> &'static str {
+        ""
+    }
     /// Separator for formatting
     fn format_sep() -> &'static str {
         " "
@@ -576,10 +580,6 @@ pub trait ArrayValue:
     /// Separator for repr
     fn debug_sep() -> &'static str {
         Self::format_sep()
-    }
-    /// Marker for empty lists in grid formatting
-    fn empty_list_inner() -> &'static str {
-        ""
     }
     /// Delimiters for grid formatting
     fn grid_fmt_delims(boxed: bool) -> (char, char) {

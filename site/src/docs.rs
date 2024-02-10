@@ -235,16 +235,22 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
             <li><A href="/docs/changelog">"Changelog"</A>" - what's new in each version"</li>
             <li><A href="/docs/constants">"Constants"</A>" - a list of the shadowable constants"</li>
-            <li><A href="/docs/stack-idioms">"Stack Idioms"</A>" - common ways of manipulating the stack"</li>
-            <li><A href="/docs/combinators">"Combinators"</A>" - a list of common combinators implemented in Uiua"</li>
             <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
             <li><A href="/docs/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
             <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the Uiua formatter"</li>
+            <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
+            <li><A href="/docs/stack-idioms">"Stack Idioms"</A>" - common ways of manipulating the stack"</li>
+        </ul>
+
+        <h2 id="other-pages">"Other Pages"</h2>
+        <ul>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
             <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about Uiua's design gets its own page"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
-            <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
+            <li><A href="/docs/combinators">"Combinators"</A>" - a list of common combinators implemented in Uiua"</li>
+            <li><a href="/primitives.json">"Primitives JSON"</a>" - a JSON file containing all the primitives, for tooling and other projects"</li>
         </ul>
+
         <h2 id="uiuisms">"Uiuisms"</h2>
         <p><A href="/docs/isms">"Uiuisms"</A>" is a curated list of Uiua functions for solving common problems."</p>
 

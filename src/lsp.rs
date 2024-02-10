@@ -92,7 +92,14 @@ impl Spanner {
                                     signature: comp_binding.global.signature(),
                                     comment: comp_binding.comment.clone(),
                                     invertible_underable: self.invertible_underable(comp_binding),
-                                    constant: matches!(comp_binding.global, Global::Const(_)),
+                                    constant: matches!(
+                                        comp_binding.global,
+                                        Global::Const(_)
+                                            | Global::Sig(Signature {
+                                                args: 0,
+                                                outputs: 1
+                                            })
+                                    ),
                                 });
                                 break;
                             }
@@ -133,7 +140,14 @@ impl Spanner {
                                     signature: binding.global.signature(),
                                     comment: binding.comment.clone(),
                                     invertible_underable: self.invertible_underable(binding),
-                                    constant: matches!(binding.global, Global::Const(_)),
+                                    constant: matches!(
+                                        binding.global,
+                                        Global::Const(_)
+                                            | Global::Sig(Signature {
+                                                args: 0,
+                                                outputs: 1
+                                            })
+                                    ),
                                 });
                                 break;
                             }

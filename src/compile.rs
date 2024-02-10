@@ -1483,7 +1483,7 @@ code:
             return Ok(false);
         };
         match prim {
-            Dip | Gap => {
+            Dip | Gap | On => {
                 // Compile operands
                 let (mut instrs, sig) = self.compile_operand_words(modified.operands.clone())?;
                 // Dip (|1 …) . diagnostic
@@ -1522,6 +1522,22 @@ code:
                     Gap => {
                         instrs.insert(0, Instr::Prim(Pop, span));
                         Signature::new(sig.args + 1, sig.outputs)
+                    }
+                    On => {
+                        instrs.insert(
+                            0,
+                            Instr::CopyToTemp {
+                                stack: TempStack::Inline,
+                                count: 1,
+                                span,
+                            },
+                        );
+                        instrs.push(Instr::PopTemp {
+                            stack: TempStack::Inline,
+                            count: 1,
+                            span,
+                        });
+                        Signature::new(sig.args, sig.outputs + 1)
                     }
                     _ => unreachable!(),
                 };

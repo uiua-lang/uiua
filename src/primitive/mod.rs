@@ -317,6 +317,7 @@ impl Primitive {
                 | Bind
                 | Shapes
                 | Types
+                | On
                 | Sys(SysOp::FFI)
         )
     }
@@ -553,6 +554,9 @@ impl Primitive {
             }
             Primitive::Dip => {
                 return Err(env.error("Dip was not inlined. This is a bug in the interpreter"))
+            }
+            Primitive::On => {
+                return Err(env.error("On was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Gap => {
                 return Err(env.error("Gap was not inlined. This is a bug in the interpreter"))

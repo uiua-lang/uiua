@@ -2011,7 +2011,7 @@ primitive!(
     /// Stringify any value
     ///
     /// ex: repr π
-    /// use [&p][repr] to produce a representation that can be pasted directly into the interpreter
+    /// Use [&p][repr] to produce a representation that can be pasted directly into the interpreter
     /// ex: &p repr ↯2_2_2 0
     /// ex: &p repr {"Uiua" @A [1 2 3] □4}
     /// [map]s need to me unmapped before calling [repr]

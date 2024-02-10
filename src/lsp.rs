@@ -237,6 +237,7 @@ impl Spanner {
                     spans.push(word.span.clone().sp(SpanKind::Primitive(*prim)))
                 }
                 Word::Modified(m) => {
+                    let modifier_span = &m.modifier.span;
                     spans.push(m.modifier.clone().map(|m| match m {
                         Modifier::Primitive(p) => SpanKind::Primitive(p),
                         Modifier::Ident(_) => {
@@ -244,7 +245,7 @@ impl Spanner {
                             for (name, index) in &self.asm.global_references {
                                 let binding = &self.asm.bindings[*index];
                                 if let Some(comp_span) = &binding.span {
-                                    if name.span == word.span {
+                                    if name.span == *modifier_span {
                                         binding_docs = Some(BindingDocs {
                                             src_span: comp_span.clone(),
                                             signature: binding.global.signature(),

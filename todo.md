@@ -2,7 +2,6 @@
 
 ## Features
 - 0.9
-  - Fix identifier lookups for custom modifiers
   - `primitives.json` on site
   - Named recursion
   - Multiple imports
@@ -27,7 +26,8 @@ Feel free to make PRs to the list itself as well.
 - `⍜◿`
 - Better complex `⌈`/`⌊`/`⁅` implementation
 - Additional optimizations
-  - `≡f◫`
-  - `/f◫`
-  - `/f⇌`
-  - `⍜⇌/f`
+  - `≡/F`
+  - `≡F◫`
+  - `/F◫`
+  - `/F⇌`
+  - `⍜⇌/F`

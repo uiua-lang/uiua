@@ -2,7 +2,7 @@
 
 ## Features
 - 0.9
-  - Optimize `≡/f◫`
+  - Fix identifier lookups for custom modifiers
   - `primitives.json` on site
   - Named recursion
   - Multiple imports

@@ -172,6 +172,7 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand => write!(f, "{Gap}{Rand}"),
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
+            Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
             &TransposeN(n) => {
                 if n < 0 {
                     write!(f, "{Un}(")?;
@@ -891,6 +892,7 @@ impl ImplPrimitive {
                 env.pop(2)?;
                 env.push(random());
             }
+            ImplPrimitive::Adjacent => reduce::adjacent(env)?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
         }
         Ok(())

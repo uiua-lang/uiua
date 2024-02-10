@@ -2,14 +2,20 @@ use std::fmt;
 
 use ecow::EcoVec;
 
-use crate::{ImplPrimitive, Instr, Primitive};
+use crate::{Assembly, ImplPrimitive, Instr, Primitive};
 
-pub(crate) fn optimize_instrs_mut(instrs: &mut EcoVec<Instr>, mut new: Instr, maximal: bool) {
+pub(crate) fn optimize_instrs_mut(
+    instrs: &mut EcoVec<Instr>,
+    mut new: Instr,
+    maximal: bool,
+    asm: impl AsRef<Assembly>,
+) {
     use ImplPrimitive::*;
     use Primitive::*;
     if let Instr::Push(val) = &mut new {
         val.compress();
     }
+    let asm = asm.as_ref();
     match (instrs.make_mut(), new) {
         // Cosine
         ([.., Instr::Prim(Eta, _), Instr::Prim(Add, _)], Instr::Prim(Sin, span)) => {
@@ -139,11 +145,36 @@ pub(crate) fn optimize_instrs_mut(instrs: &mut EcoVec<Instr>, mut new: Instr, ma
             instrs.pop();
             instrs.push(Instr::ImplPrim(ReplaceRand, span));
         }
+        // Adjacent
+        (
+            [.., Instr::Push(size), Instr::Prim(Windows, _), Instr::PushFunc(f)],
+            instr @ Instr::Prim(Rows, _),
+        ) if (size
+            .as_num_array()
+            .is_some_and(|size| size.rank() == 0 && size.data[0] == 2.0)
+            || size
+                .as_byte_array()
+                .is_some_and(|size| size.rank() == 0 && size.data[0] == 2)) =>
+        {
+            if let [Instr::PushFunc(f), Instr::Prim(Reduce, span)] = f.instrs(asm) {
+                instrs.pop();
+                instrs.pop();
+                instrs.pop();
+                instrs.push(Instr::PushFunc(f.clone()));
+                instrs.push(Instr::ImplPrim(ImplPrimitive::Adjacent, *span));
+            } else {
+                instrs.push(instr);
+            }
+        }
         (_, instr) => instrs.push(instr),
     }
 }
 
-pub(crate) fn optimize_instrs<I>(instrs: I, maximal: bool) -> EcoVec<Instr>
+pub(crate) fn optimize_instrs<I>(
+    instrs: I,
+    maximal: bool,
+    asm: impl AsRef<Assembly>,
+) -> EcoVec<Instr>
 where
     I: IntoIterator<Item = Instr> + fmt::Debug,
     I::IntoIter: ExactSizeIterator,
@@ -155,7 +186,7 @@ where
         if instr.is_compile_only() {
             continue;
         }
-        optimize_instrs_mut(&mut new, instr, maximal);
+        optimize_instrs_mut(&mut new, instr, maximal, asm.as_ref());
     }
     // println!("to       {:?}", new);
     new

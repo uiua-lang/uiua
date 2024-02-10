@@ -316,7 +316,9 @@ code:
                             Err(e) => self.scope.stack_height = Err(span.sp(e)),
                         }
                         let start = self.asm.instrs.len();
-                        self.asm.instrs.extend(optimize_instrs(instrs, true));
+                        self.asm
+                            .instrs
+                            .extend(optimize_instrs(instrs, true, &self.asm));
                         let end = self.asm.instrs.len();
                         self.asm.top_slices.push(FuncSlice {
                             start,
@@ -343,7 +345,7 @@ code:
         I: IntoIterator<Item = Instr> + fmt::Debug,
         I::IntoIter: ExactSizeIterator,
     {
-        let instrs = optimize_instrs(instrs, true);
+        let instrs = optimize_instrs(instrs, true, &self.asm);
         let len = instrs.len();
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
@@ -531,7 +533,9 @@ code:
                         index: global_index,
                     });
                     let start = self.asm.instrs.len();
-                    self.asm.instrs.extend(optimize_instrs(instrs, true));
+                    self.asm
+                        .instrs
+                        .extend(optimize_instrs(instrs, true, &self.asm));
                     let end = self.asm.instrs.len();
                     self.asm.top_slices.push(FuncSlice {
                         start,
@@ -700,7 +704,7 @@ code:
                 )
             })?
         };
-        let instrs = optimize_instrs(instrs, false);
+        let instrs = optimize_instrs(instrs, false, &self.asm);
         Ok((instrs, sig))
     }
     fn words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult {
@@ -768,7 +772,7 @@ code:
     /// instruction form some known pattern
     fn push_instr(&mut self, instr: Instr) {
         let instrs = self.new_functions.last_mut().unwrap();
-        optimize_instrs_mut(instrs, instr, false);
+        optimize_instrs_mut(instrs, instr, false, &self.asm);
     }
     fn push_all_instrs(&mut self, instrs: impl IntoIterator<Item = Instr>) {
         for instr in instrs {
@@ -1862,7 +1866,7 @@ code:
                     );
                     return Ok(false);
                 }
-                let instrs = optimize_instrs(instrs, true);
+                let instrs = optimize_instrs(instrs, true, &self.asm);
                 let mut asm = self.asm.clone();
                 let start = asm.instrs.len();
                 let len = instrs.len();

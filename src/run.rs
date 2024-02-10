@@ -967,7 +967,7 @@ code:
         }
     }
     /// Push a value onto the stack
-    pub fn push(&mut self, val: impl Into<Value>) {
+    pub fn push<V: Into<Value>>(&mut self, val: V) {
         self.rt.stack.push(val.into());
     }
     fn push_temp(&mut self, temp: TempStack, val: impl Into<Value>) {

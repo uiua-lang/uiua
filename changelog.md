@@ -25,6 +25,8 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - Numbers that seem to have a floating-point epsilon rounding error will be output with the epsilon noted
 - When hovering a user-defined function's name, the language server will now show whether it is compatible with [`un °`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under)
+- Optimize the pattern for adjacency: `≡/F◫2`
+  - It it as much as 800x faster in some cases
 ### Website
 - Add [Tutorial Introduction](https://uiua.org/docs/introduction)
 

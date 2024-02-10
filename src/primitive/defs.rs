@@ -1169,7 +1169,7 @@ primitive!(
     /// ex: # Experimental!
     ///   : ⎏⊂ {"a" "bc" "def"} "123"
     ///
-    /// A common use case is to in conjunction with [under] and boxing array notation as a sort of n-wise [both]
+    /// A common use case is in conjunction with [under] and boxing array notation as a sort of n-wise [both]
     /// ex: # Experimental!
     ///   : {⍜ {⊙⊙∘}⎏⊂    1_2 3_4_5 6_7_8_9 10}
     ///   : {⍜⊙{⊙⊙∘}⎏⊂ 10 1_2 3_4_5 6_7_8_9   }

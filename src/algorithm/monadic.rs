@@ -140,6 +140,11 @@ impl Value {
             val => return Err(env.error(format!("Cannot invert parse {} array", val.type_name()))),
         })
     }
+    // maybe make this the debug formatter?
+    /// Convert array into a string that can be understood by the interpreter
+    pub fn representation(&self) -> Self {
+        dbg_value(self, None, true).into()
+    }
 }
 
 impl<T: ArrayValue> Array<T> {

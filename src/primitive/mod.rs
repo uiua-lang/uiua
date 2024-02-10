@@ -481,6 +481,7 @@ impl Primitive {
                 let val = env.pop(1)?;
                 env.push(Boxed(val));
             }
+            Primitive::Repr => env.monadic_ref(Value::representation)?,
             Primitive::Parse => env.monadic_ref_env(Value::parse_num)?,
             Primitive::Utf => env.monadic_ref_env(Value::utf8)?,
             Primitive::Range => env.monadic_ref_env(Value::range)?,

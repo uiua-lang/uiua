@@ -2008,6 +2008,14 @@ primitive!(
     /// ex: 1_2_3 4 5_6_7
     ///   : dump⊢
     (0(0)[1], Dump, Stack, "dump"),
+    /// Stringify a value
+    /// 
+    /// ex: repr π
+    ///
+    /// [&p][repr] can be used to produce a representation of a value that can be pasted directly into the interpreter
+    /// ex: &p repr ↯2_2_2 0
+    /// ex: &p repr {"Uiua" @A [1 2 3] □4}
+    (1, Repr, Misc, "repr"), 
 );
 
 macro_rules! impl_primitive {

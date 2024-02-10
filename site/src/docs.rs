@@ -248,7 +248,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about Uiua's design gets its own page"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
             <li><A href="/docs/combinators">"Combinators"</A>" - a list of common combinators implemented in Uiua"</li>
-            <li><a href="/primitives.json">"Primitives JSON"</a>" - a JSON file containing all the primitives, for tooling and other projects"</li>
+            <li><a href="/primitives.json">"Primitives JSON"</a>" - a JSON file of all the primitives, for tooling and other projects (click then refresh)"</li>
         </ul>
 
         <h2 id="uiuisms">"Uiuisms"</h2>

@@ -2008,13 +2008,16 @@ primitive!(
     /// ex: 1_2_3 4 5_6_7
     ///   : dump⊢
     (0(0)[1], Dump, Stack, "dump"),
-    /// Stringify a value
+    /// Stringify any value
     ///
     /// ex: repr π
-    ///
-    /// [&p][repr] can be used to produce a representation of a value that can be pasted directly into the interpreter
+    /// use [&p][repr] to produce a representation that can be pasted directly into the interpreter
     /// ex: &p repr ↯2_2_2 0
     /// ex: &p repr {"Uiua" @A [1 2 3] □4}
+    /// [map]s need to me unmapped before calling [repr]
+    /// ex: # Experimental!
+    ///   : map {"Alice" "Bob" "Carol"} [3_8 12_2 4_5]
+    ///   : &p repr{°map}
     (1, Repr, Misc, "repr"),
 );
 

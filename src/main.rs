@@ -241,7 +241,7 @@ fn run() -> UiuaResult {
                 }
             }
             #[cfg(feature = "lsp")]
-            App::Lsp => uiua::run_language_server(),
+            App::Lsp => uiua::lsp::run_language_server(),
             App::Repl {
                 formatter_options,
                 #[cfg(feature = "audio")]

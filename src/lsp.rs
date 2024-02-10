@@ -1,3 +1,7 @@
+//! Uiua's Language Server Protocol (LSP) implementation
+//!
+//! Even without the `lsp` feature enabled, this module still provides some useful types and functions for working with Uiua code in an IDE or text editor.
+
 use std::{slice, sync::Arc};
 
 use crate::{

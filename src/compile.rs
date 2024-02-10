@@ -42,6 +42,8 @@ pub struct Compiler {
     pub(crate) imports: HashMap<PathBuf, HashMap<Ident, usize>>,
     /// Accumulated errors
     pub(crate) errors: Vec<UiuaError>,
+    /// Primitives that have emitted errors because they are experimental
+    experimental_prim_errors: HashSet<Primitive>,
     /// Accumulated diagnostics
     pub(crate) diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
@@ -62,6 +64,7 @@ impl Default for Compiler {
             current_imports: Vec::new(),
             imports: HashMap::new(),
             errors: Vec::new(),
+            experimental_prim_errors: HashSet::new(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             backend: Arc::new(SafeSys),
@@ -1940,7 +1943,10 @@ code:
         }
     }
     fn handle_primitive_experimental(&mut self, prim: Primitive, span: &CodeSpan) {
-        if prim.is_experimental() && !self.scope.experimental {
+        if prim.is_experimental()
+            && !self.scope.experimental
+            && self.experimental_prim_errors.insert(prim)
+        {
             self.add_error(
                 span.clone(),
                 format!(

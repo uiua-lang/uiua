@@ -392,7 +392,7 @@ pub fn Combinators() -> impl IntoView {
         (View::default(), ("⊢⇌", 1, "B", "Bluebird")),
         (View::default(), ("⇌⊂", 2, "B1", "Blackbird")),
         (
-            view!(<Prims prims=[Fork, Identity]/>" or ("<Prim prim=Flip glyph_only=true/>" and "<Prim prim=Dup glyph_only=true/>")").into_view(),
+            view!(<Prims prims=[Fork, Identity]/>" or ("<Prim prim=Flip glyph_only=true/>" & "<Prim prim=Dup glyph_only=true/>")").into_view(),
             ("⊂⊃∘¯\n⊂:¯.", 1, "S", "Starling"),
         ),
         (
@@ -457,7 +457,7 @@ pub fn Combinators() -> impl IntoView {
         <br/>
         <table class="header-centered-table cell-centered-table" style="width: 100%">
             <tr>
-                <th>"Symbol"</th>
+                <th title="Symbol">"Sym."</th>
                 <th>"Bird"</th>
                 <th>"Code"</th>
                 <th>"Example"</th>

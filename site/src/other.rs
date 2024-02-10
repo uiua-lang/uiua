@@ -370,6 +370,18 @@ pub fn Combinators() -> impl IntoView {
     use Primitive::*;
     let combinators = [
         (
+            view!(<Prim prim=Identity/>).into_view(),
+            ("∘", 1, "I", "Identity"),
+        ),
+        (
+            view!(<Prims prims=[Dip, Pop]/>).into_view(),
+            ("⊙◌", 2, "K", "Kestrel"),
+        ),
+        (
+            view!(<Prims prims=[Pop]/>" or "<Prims prims=[Gap, Identity]/>).into_view(),
+            ("◌\n⋅∘", 2, "KI", "Kite"),
+        ),
+        (
             view!(<Prim prim=Dup/>).into_view(),
             ("⊂.", 1, "W", "Warbler"),
         ),
@@ -379,21 +391,44 @@ pub fn Combinators() -> impl IntoView {
         ),
         (View::default(), ("⊢⇌", 1, "B", "Bluebird")),
         (View::default(), ("⇌⊂", 2, "B1", "Blackbird")),
-        (View::default(), ("⊟⇌", 2, "Δ", "Zebra Dove")),
+        (
+            view!(<Prims prims=[Fork, Identity]/>" or ("<Prim prim=Flip glyph_only=true/>" and "<Prim prim=Dup glyph_only=true/>")").into_view(),
+            ("⊂⊃∘¯\n⊂:¯.", 1, "S", "Starling"),
+        ),
+        (
+            view!(<Prim prim=Dup/>).into_view(),
+            ("≍⇌.", 1, "Σ", "Violet Starling"),
+        ),
         (view!(<Prim prim=Dip/>).into_view(), ("⊟⊙⇌", 2, "D", "Dove")),
+        (View::default(), ("⊟⇌", 2, "Δ", "Zebra Dove")),
         (
             view!(<Prim prim=Fork/>).into_view(),
             ("⊟⊃¯⇌", 1, "Φ", "Phoenix"),
         ),
-        (view!(<Prim prim=Dip/>).into_view(), ("⊟¯⊙⇌", 2, "Ψ", "Psi")),
+        (view!(<Prim prim=Both/>).into_view(), ("⊂∩□", 2, "Ψ", "Psi")),
+        (
+            view!(<Prim prim=Dip/>).into_view(),
+            ("⊟¯⊙⇌", 2, "D2", "Dovekies"),
+        ),
+        (
+            view!(<Prim prim=Dip/>).into_view(),
+            ("⊟⊙+", 3, "E", "Eagle"),
+        ),
+        (View::default(), ("⊟+", 3, "ε", "Golden Eagle")),
     ];
     let combinators = combinators
         .into_iter()
         .map(|(code, (example, inputs, symbol, bird))| {
-            let mut example = example.to_string();
-            for i in 0..inputs {
-                let a = i * 3 + 1;
-                example.push_str(&format!(" {}_{}_{}", a, a + 1, a + 2));
+            let mut ex = String::new();
+            for (i, line) in example.lines().enumerate() {
+                if i > 0 {
+                    ex.push('\n');
+                }
+                ex.push_str(line);
+                for i in 0..inputs {
+                    let a = i * 3 + 1;
+                    ex.push_str(&format!(" {}_{}_{}", a, a + 1, a + 2));
+                }
             }
             let diagram = format!("/combinators/{symbol}.svg");
             view! {
@@ -401,7 +436,7 @@ pub fn Combinators() -> impl IntoView {
                     <td>{ symbol }</td>
                     <td>{ bird }</td>
                     <td>{ code }</td>
-                    <td><Editor example={&example} /></td>
+                    <td><Editor example={&ex} /></td>
                     <td><img src={diagram} alt={bird} class="combinator-diagram"/></td>
                 </tr>
             }
@@ -413,10 +448,14 @@ pub fn Combinators() -> impl IntoView {
         <p>"This page contains a list of implementations of common combinators in Uiua. While it's not really necessary to know these to write Uiua programs, you may find the information interesting."</p>
         <p>"A combinator is a function that only refers to its arguments. "<a href="https://en.wikipedia.org/wiki/Combinatory_logic">"Combinatory logic"</a>" is the branch of logic that deals with combinators."</p>
         <p>"Ever since Raymond Smullyan's book "<a href="https://en.wikipedia.org/wiki/To_Mock_a_Mockingbird">"To Mock a Mockingbird"</a>", people have been calling combinators by bird names. These bird names are included in the table."</p>
+        <h2 id="reading">"Reading the Table"</h2>
+        <p>"Each entry in the table contains a diagram of the combinator. The letters "<code>"F"</code>", "<code>"G"</code>", and "<code>"H"</code>" represent the first, second, and third functions involved in the combinator. The letters "<code>"a"</code>", "<code>"b"</code>", and "<code>"c"</code>" represent the first and second arguments."</p>
+        <p>"For the purpose of the examples, "<code>"a"</code>" is always the array "<code>"1_2_3"</code>", "<code>"b"</code>" is always the array "<code>"4_5_6"</code>", and "<code>"c"</code>" is always the array "<code>"7_8_9"</code>"."</p>
+        <p>"The left-most function in the example stands in for "<code>"F"</code>", the \"top-most\" function in the combinator."</p>
         <br/>
         <hr/>
         <br/>
-        <table class="header-cnetered-table cell-centered-table" style="width: 100%">
+        <table class="header-centered-table cell-centered-table" style="width: 100%">
             <tr>
                 <th>"Symbol"</th>
                 <th>"Bird"</th>
@@ -426,5 +465,7 @@ pub fn Combinators() -> impl IntoView {
             </tr>
             { combinators }
         </table>
+        <p>"This page is inspired by the "<a href="https://mlochbaum.github.io/BQN/doc/birds.html">"similar page"</a>" on the BQN website. The diagrams are also inspired by "<a href="https://mlochbaum.github.io/BQN/tutorial/combinator.html">"BQN's combinator diagrams"</a>"."</p>
+        <p>"I referenced "<a href="https://combinatorylogic.com/table.html">"these"</a>" "<a href="https://www.angelfire.com/tx4/cus/combinator/birds.html">"lists"</a>" of combinators when making this page."</p>
     }
 }

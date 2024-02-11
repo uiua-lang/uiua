@@ -594,7 +594,41 @@ impl<'a> Formatter<'a> {
                     );
                 }
             }
-            Item::Import(_) => todo!(),
+            Item::Import(import) => {
+                if let Some(name) = &import.name {
+                    self.push(&name.span, &name.value);
+                    self.output.push(' ');
+                }
+                self.output.push_str("~ ");
+                self.push(&import.path.span, &format!("{:?}", import.path.value));
+
+                let mut items = import.items.clone();
+                items.retain(|line| !line.is_empty());
+                for line in items.iter_mut() {
+                    line.sort_by_key(|item| item.name.value.clone());
+                }
+                items.sort_by_key(|line| line.first().unwrap().name.value.clone());
+                if items.len() == 1 {
+                    for item in &items[0] {
+                        self.output.push(' ');
+                        self.push(&item.tilde_span, "~");
+                        self.output.push(' ');
+                        self.push(&item.name.span, &item.name.value);
+                    }
+                } else {
+                    for line in items {
+                        self.output.push('\n');
+                        for (i, item) in line.iter().enumerate() {
+                            if i > 0 {
+                                self.output.push(' ');
+                            }
+                            self.push(&item.tilde_span, "~");
+                            self.output.push(' ');
+                            self.push(&item.name.span, &item.name.value);
+                        }
+                    }
+                }
+            }
         }
     }
     fn format_signature(&mut self, init_char: char, sig: Signature, trailing_space: bool) {

@@ -354,7 +354,7 @@ code:
                     self.binding(binding, prev_com)?;
                 }
             }
-            Item::Import(_) => todo!(),
+            Item::Import(_) => {}
         }
         Ok(())
     }

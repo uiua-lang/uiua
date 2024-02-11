@@ -394,6 +394,15 @@ impl<'i> Parser<'i> {
             self.validate_words(&words, false);
         }
         // Check for uncapitalized binding names
+        self.validate_binding_name(&name);
+        Some(Binding {
+            name,
+            arrow_span,
+            words,
+            signature,
+        })
+    }
+    fn validate_binding_name(&mut self, name: &Sp<Ident>) {
         if name.value.trim_end_matches('!').chars().count() >= 2
             && name.value.chars().next().unwrap().is_ascii_lowercase()
         {
@@ -417,12 +426,6 @@ impl<'i> Parser<'i> {
                 self.inputs.clone(),
             ));
         }
-        Some(Binding {
-            name,
-            arrow_span,
-            words,
-            signature,
-        })
     }
     fn try_import(&mut self) -> Option<Import> {
         let start = self.index;
@@ -461,6 +464,13 @@ impl<'i> Parser<'i> {
                 Spaces => {}
                 _ => break,
             }
+            self.index += 1;
+        }
+        if !line.is_empty() {
+            items.push(line);
+        }
+        if let Some(name) = &name {
+            self.validate_binding_name(name);
         }
         Some(Import { name, path, items })
     }

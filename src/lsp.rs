@@ -118,7 +118,7 @@ impl Spanner {
                     }
                     spans.extend(self.words_spans(&binding.words));
                 }
-                Item::Import(_) => todo!(),
+                Item::Import(_) => {}
             }
         }
         spans

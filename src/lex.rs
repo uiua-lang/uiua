@@ -630,6 +630,7 @@ impl<'a> Lexer<'a> {
                 ";" => self.end(Semicolon, start),
                 "'" if self.next_char_exact("'") => self.end(Quote2, start),
                 "'" => self.end(Quote, start),
+                "~" => self.end(Tilde, start),
                 "`" => {
                     if self.number("-") {
                         self.end(Number, start)

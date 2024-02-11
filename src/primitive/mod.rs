@@ -320,7 +320,7 @@ impl Primitive {
             Primitive::Rectify => Some(String::new()),
             Primitive::All => Some(String::new()),
             Primitive::This | Primitive::Recur => {
-                Some("Use the name of a binding to recur instead".into())
+                Some("use the name of a binding to recur instead".into())
             }
             _ => None,
         }

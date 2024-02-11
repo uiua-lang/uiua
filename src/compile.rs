@@ -50,6 +50,8 @@ pub struct Compiler {
     errors: Vec<UiuaError>,
     /// Primitives that have emitted errors because they are experimental
     experimental_prim_errors: HashSet<Primitive>,
+    /// Primitives that have emitted errors because they are deprecated
+    deprecated_prim_errors: HashSet<Primitive>,
     /// Accumulated diagnostics
     diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
@@ -73,6 +75,7 @@ impl Default for Compiler {
             imports: HashMap::new(),
             errors: Vec::new(),
             experimental_prim_errors: HashSet::new(),
+            deprecated_prim_errors: HashSet::new(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             backend: Arc::new(SafeSys),
@@ -1962,6 +1965,9 @@ code:
     }
     fn handle_primitive_deprecation(&mut self, prim: Primitive, span: &CodeSpan) {
         if let Some(suggestion) = prim.deprecation_suggestion() {
+            if !self.deprecated_prim_errors.insert(prim) {
+                return;
+            }
             let suggestion = if suggestion.is_empty() {
                 String::new()
             } else {

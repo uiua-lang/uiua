@@ -790,7 +790,7 @@
     "description": "Get the current time in seconds"
   },
   "on": {
-    "glyph": "⚇",
+    "glyph": "⟜",
     "outputs": 1,
     "modifier_args": 1,
     "class": "Planet",

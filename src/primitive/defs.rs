@@ -1320,20 +1320,20 @@ primitive!(
     /// Call a function but keep its first argument on the top of the stack
     ///
     /// ex: # Experimental!
-    ///   : [⚇- 2 10]
+    ///   : [⟜- 2 10]
     /// ex: # Experimental!
-    ///   : ÷⚇⇡ 10
+    ///   : ÷⟜⇡ 10
     /// ex: # Experimental!
-    ///   : +⚇(⇡-) 4 10
+    ///   : +⟜(⇡-) 4 10
     ///
     /// [on] in planet notation acts as a way of [duplicate]ing a value.
     /// ex: # Experimental!
-    ///   : [⚇⊙⋅⊙◌ 1 2 3 4]
+    ///   : [⟜⊙⋅⊙◌ 1 2 3 4]
     /// ex: # Experimental!
-    ///   : [⚇⊙⚇⊙⋅∘ 1 2 3 4]
+    ///   : [⟜⊙⟜⊙⋅∘ 1 2 3 4]
     ///
     /// [on] is equivalent to [fork][id].
-    ([1], On, Planet, ("on", '⚇')),
+    ([1], On, Planet, ("on", '⟜')),
     /// Call a function on two sets of values
     ///
     /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.

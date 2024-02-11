@@ -1563,7 +1563,7 @@ code:
                         let span = Span::Code(modified.modifier.span.clone())
                             .merge(self.get_span(*dup_span));
                         self.emit_diagnostic(
-                            "Prefer `⊃∘(…)` over `⊙(…).` for clarity",
+                            "Prefer `⟜(…)` over `⊙(…).` for clarity",
                             DiagnosticKind::Style,
                             span,
                         );
@@ -1625,8 +1625,16 @@ code:
             }
             Fork => {
                 let mut operands = modified.code_operands().cloned();
-                let (a_instrs, a_sig) =
-                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let first_op = operands.next().unwrap();
+                // ⊃∘ diagnostic
+                if let Word::Primitive(Primitive::Identity) = first_op.value {
+                    self.emit_diagnostic(
+                        "Prefer `⟜` over `⊃∘` for clarity",
+                        DiagnosticKind::Style,
+                        modified.modifier.span.clone().merge(first_op.span.clone()),
+                    );
+                }
+                let (a_instrs, a_sig) = self.compile_operand_words(vec![first_op])?;
                 let (b_instrs, b_sig) =
                     self.compile_operand_words(vec![operands.next().unwrap()])?;
                 let span = self.add_span(modified.modifier.span.clone());

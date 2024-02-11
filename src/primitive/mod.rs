@@ -344,7 +344,6 @@ impl Primitive {
                 | Bind
                 | Shapes
                 | Types
-                | On
                 | Sys(SysOp::FFI)
         )
     }
@@ -413,7 +412,7 @@ impl Primitive {
                     .strip_suffix(['i', 'p'])
                     .unwrap_or(sub_name)
                     .chars()
-                    .all(|c| "gd".contains(c))
+                    .all(|c| "gdo".contains(c))
                 {
                     // 1-letter planet notation
                     for (i, c) in sub_name.char_indices() {
@@ -423,6 +422,7 @@ impl Primitive {
                             'd' => Primitive::Dip,
                             'i' => Primitive::Identity,
                             'p' => Primitive::Pop,
+                            'o' => Primitive::On,
                             _ => unreachable!(),
                         };
                         prims.push((prim, &sub_name[i..i + 1]))

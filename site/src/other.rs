@@ -393,8 +393,8 @@ pub fn Combinators() -> impl IntoView {
         (View::default(), ("⊢⇌", 1, "B", "Bluebird")),
         (View::default(), ("⇌⊂", 2, "B1", "Blackbird")),
         (
-            view!(<Prims prims=[Fork, Identity]/>" or ("<Prim prim=Flip glyph_only=true/>" & "<Prim prim=Dup glyph_only=true/>")").into_view(),
-            ("⊂⊃∘¯\n⊂:¯.", 1, "S", "Starling"),
+            view!(<Prim prim=On/>).into_view(),
+            ("⊂⟜¯", 1, "S", "Starling"),
         ),
         (
             view!(<Prim prim=Dup/>).into_view(),

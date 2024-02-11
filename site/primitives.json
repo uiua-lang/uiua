@@ -794,8 +794,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Planet",
-    "description": "Call a function but keep its first argument on the top of the stack",
-    "experimental": true
+    "description": "Call a function but keep its first argument on the top of the stack"
   },
   "over": {
     "glyph": ",",

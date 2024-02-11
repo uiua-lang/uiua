@@ -204,8 +204,8 @@ primitive!(
     (2(2), Flip, Stack, ("flip", ':')),
     /// Discard the top stack value
     ///
+    /// [◌ 1 2 ◌ 3 4]
     /// This is usually used to discard values that are no longer needed.
-    ///
     /// For example, [gen] returns both a random number and a seed for the next call.
     /// When you have all the random numbers you need, you often want to discard the seed.
     /// ex: ⌊×10[◌⍥gen10 0]
@@ -1010,7 +1010,7 @@ primitive!(
     // ///   : ⊘ [1 1 2 2 3 3 4 4] [2 2 1 4 1 2 3 4]
     // ///
     // /// One use of this is to find the first occurence of each row.
-    // /// ex: > ⊃⊘⋅⧻ ⊃∘◴ . [1 4 3 3 2 1 3 5 2 1]
+    // /// ex: > ⊃⊘⋅⧻ ⟜◴ . [1 4 3 3 2 1 3 5 2 1]
     // ///
     // /// The [progressive indexof] an array in itself is the [range][length] of the array.
     // /// ex: ⊘. [1 4 3 3 2 1 3 5 2 1]
@@ -1289,7 +1289,7 @@ primitive!(
     /// ex: [⊃⋅⋅∘(++) 3 5 10]
     /// By using fewer `gap`s, you can select a different value.
     /// ex: [⊃⋅∘(++) 3 5 10]
-    /// ex: [⊃∘(++) 3 5 10]
+    /// ex! [⊃∘(++) 3 5 10]
     /// By replacing a `gap` with a `dip`, you keep the argument in that spot instead of popping it:
     /// ex: [⊃⊙⋅∘(++) 3 5 10]
     /// ex: [⊃⋅⊙∘(++) 3 5 10]
@@ -1319,26 +1319,23 @@ primitive!(
     ([1], Dip, Planet, ("dip", '⊙')),
     /// Call a function but keep its first argument on the top of the stack
     ///
-    /// ex: # Experimental!
-    ///   : [⟜+ 2 5]
+    /// ex: [⟜+ 2 5]
     ///   : [⟜- 2 5]
-    /// ex: # Experimental!
-    ///   : ÷⟜⇡ 10
-    /// ex: # Experimental!
-    ///   : +⟜(⇡-) 4 10
-    /// ex: # Experimental!
-    ///   : +⟜(×-) 10 20 0.3
-    /// ex: # Experimental!
-    ///   : ↯⟜⊚ 4
+    /// ex: ÷⟜⇡ 10
+    /// ex: +⟜(⇡-) 4 10
+    /// ex: +⟜(×-) 10 20 0.3
+    /// ex: ↯⟜⊚ 4
+    ///
+    /// [on] can be thought of as a compliment of [duplicate].
+    /// ex: [¯. 1]
+    ///   : [⟜¯ 1]
     ///
     /// [on] in planet notation acts as a way of [duplicate]ing a value.
     /// You can read `on``dip` or `on``identity` as a single unit that keeps 2 copies of the value at that position.
-    /// ex: # Experimental!
-    ///   : [⟜⊙⋅⟜⊙◌   1 2 3 4] # Easy to read with ⟜
+    /// ex: [⟜⊙⋅⟜⊙◌   1 2 3 4] # Easy to read with ⟜
     ///   : [.⊙⋅(.⊙◌) 1 2 3 4] # Hard to read with .
     ///   : [∩⊓.◌     1 2 3 4] # Shorter, maybe hard to read
-    /// ex: # Experimental!
-    ///   : [⊙⟜⊙⋅⟜∘  1 2 3 4] # Easy to read with ⟜
+    /// ex: [⊙⟜⊙⋅⟜∘  1 2 3 4] # Easy to read with ⟜
     ///   : [⊙(.⊙⋅.) 1 2 3 4] # Hard to read with .
     ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
     ///
@@ -1444,7 +1441,7 @@ primitive!(
     ///
     /// For example, here is a manual re-implementation of [add]'s [under] behavior. Note that the second function has 2 outputs. The extra output is saved as context.
     /// ex: # Experimental!
-    ///   : F ← setund(+|⊃∘+|-)
+    ///   : F ← setund(+|⟜+|-)
     ///   : ⍜+(×10) 1 2
     ///   : ⍜F(×10) 1 2
     ///
@@ -1530,7 +1527,7 @@ primitive!(
     ///
     /// [cascade]'s second function is called, then its first argument(s) are reused, along with its output, as arguments to the first function.
     /// ex: # Experimental!
-    ///   : ×⊃∘+ 5 2
+    ///   : ×⟜+ 5 2
     ///   :  ⪾×+ 5 2
     /// Nesting [cascade] can be useful, and doing so is equivalent to using a function pack.
     /// ex: # Experimental!
@@ -2026,11 +2023,11 @@ primitive!(
     /// ex: # Experimental!
     ///   : Omnipend ← (
     ///   :   shapes(≍⊙(↘1))
-    ///   :   ⊂:⊃∘⊂
+    ///   :   ⊂:⟜⊂
     ///   : )
     ///   : Omnipend 5 [1 2 3]
     /// ex! # Experimental!
-    ///   : Omnipend ← ⊂:⊃∘⊂ shapes(≍⊙(↘1))
+    ///   : Omnipend ← ⊂:⟜⊂ shapes(≍⊙(↘1))
     ///   : Omnipend [5 6] [1 2 3]
     ///
     /// See also: [types]
@@ -2050,11 +2047,11 @@ primitive!(
     /// ex: # Experimental!
     ///   : Omnipend ← (
     ///   :   types=
-    ///   :   ⊂:⊃∘⊂
+    ///   :   ⊂:⟜⊂
     ///   : )
     ///   : Omnipend 5 [1 2 3]
     /// ex! # Experimental!
-    ///   : Omnipend ← ⊂:⊃∘⊂ types=
+    ///   : Omnipend ← ⊂:⟜⊂ types=
     ///   : Omnipend "hi!" [1 2 3]
     ///
     /// See also: [shapes]

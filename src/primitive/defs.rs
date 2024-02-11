@@ -276,7 +276,7 @@ primitive!(
     /// You can get an arccosine function by [un]ing the cosine.
     /// ex: °(○+η) 1
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
-    /// ex: ÷○+η:○. 0
+    /// ex: ÷∩○+η. 0
     (1, Sin, MonadicPervasive, ("sine", '○')),
     /// Round to the nearest integer towards `¯∞`
     ///

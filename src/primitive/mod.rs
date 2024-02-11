@@ -319,6 +319,9 @@ impl Primitive {
             Primitive::Cascade => Some(format!("use {} instead", Primitive::Fork.format())),
             Primitive::Rectify => Some(String::new()),
             Primitive::All => Some(String::new()),
+            Primitive::This | Primitive::Recur => {
+                Some("Use the name of a binding to recur instead".into())
+            }
             _ => None,
         }
     }

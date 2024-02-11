@@ -4,6 +4,7 @@ use std::{
     mem::{replace, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
+    rc::Rc,
     sync::Arc,
 };
 
@@ -28,28 +29,33 @@ use crate::{
 pub struct Compiler {
     pub(crate) asm: Assembly,
     /// Functions which are under construction
-    pub(crate) new_functions: Vec<EcoVec<Instr>>,
-    pub(crate) next_global: usize,
+    new_functions: Vec<EcoVec<Instr>>,
+    /// The name of the current binding
+    current_binding: Option<(Ident, Option<Signature>)>,
+    /// Whether the current binding referenced itself
+    self_referenced: bool,
+    /// The index of the next global binding
+    next_global: usize,
     /// The current scope
-    pub(crate) scope: Scope,
+    scope: Scope,
     /// Ancestor scopes of the current one
-    pub(crate) higher_scopes: Vec<Scope>,
+    higher_scopes: Vec<Scope>,
     /// Determines which How test scopes are run
-    pub(crate) mode: RunMode,
+    mode: RunMode,
     /// The paths of files currently being imported (used to detect import cycles)
-    pub(crate) current_imports: Vec<PathBuf>,
+    current_imports: Vec<PathBuf>,
     /// The bindings of imported files
-    pub(crate) imports: HashMap<PathBuf, HashMap<Ident, usize>>,
+    imports: HashMap<PathBuf, HashMap<Ident, usize>>,
     /// Accumulated errors
-    pub(crate) errors: Vec<UiuaError>,
+    errors: Vec<UiuaError>,
     /// Primitives that have emitted errors because they are experimental
     experimental_prim_errors: HashSet<Primitive>,
     /// Accumulated diagnostics
-    pub(crate) diagnostics: BTreeSet<Diagnostic>,
+    diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
-    pub(crate) print_diagnostics: bool,
+    print_diagnostics: bool,
     /// The backend used to run comptime code
-    pub(crate) backend: Arc<dyn SysBackend>,
+    backend: Arc<dyn SysBackend>,
 }
 
 impl Default for Compiler {
@@ -57,6 +63,8 @@ impl Default for Compiler {
         Compiler {
             asm: Assembly::default(),
             new_functions: Vec::new(),
+            current_binding: None,
+            self_referenced: false,
             next_global: 0,
             scope: Scope::default(),
             higher_scopes: Vec::new(),
@@ -87,13 +95,13 @@ impl AsMut<Assembly> for Compiler {
 #[derive(Clone)]
 pub(crate) struct Scope {
     /// Map local names to global indices
-    pub names: HashMap<Ident, usize>,
+    names: HashMap<Ident, usize>,
     /// Whether to allow experimental features
-    pub experimental: bool,
+    experimental: bool,
     /// The stack height between top-level statements
-    pub stack_height: Result<usize, Sp<SigCheckError>>,
+    stack_height: Result<usize, Sp<SigCheckError>>,
     /// The stack of referenced locals
-    pub locals: Vec<HashSet<usize>>,
+    locals: Vec<HashSet<usize>>,
 }
 
 impl Default for Scope {
@@ -365,38 +373,54 @@ code:
         let span = &binding.name.span;
         let placeholder_count = count_placeholders(&binding.words);
 
-        let make_fn = |mut instrs: EcoVec<Instr>, sig: Signature, comp: &mut Self| {
-            // Diagnostic for function that doesn't consume its arguments
-            if let Some((Instr::Prim(Primitive::Dup, span), rest)) = instrs.split_first() {
-                if let Ok(rest_sig) = instrs_signature(rest) {
-                    if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs {
-                        comp.emit_diagnostic(
-                            "Functions should consume their arguments. \
+        let mut make_fn: Rc<dyn Fn(_, _, &mut Compiler) -> _> = Rc::new(
+            |mut instrs: EcoVec<Instr>, sig: Signature, comp: &mut Compiler| {
+                // Diagnostic for function that doesn't consume its arguments
+                if let Some((Instr::Prim(Primitive::Dup, span), rest)) = instrs.split_first() {
+                    if let Ok(rest_sig) = instrs_signature(rest) {
+                        if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs {
+                            comp.emit_diagnostic(
+                                "Functions should consume their arguments. \
                             Try removing this duplicate.",
-                            DiagnosticKind::Style,
-                            comp.get_span(*span),
-                        );
-                        comp.flush_diagnostics();
+                                DiagnosticKind::Style,
+                                comp.get_span(*span),
+                            );
+                            comp.flush_diagnostics();
+                        }
                     }
                 }
-            }
 
-            // Handle placeholders
-            if placeholder_count > 0 {
-                instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
-                instrs.push(Instr::PopTempFunctions(placeholder_count));
-            }
-            let f = comp.add_function(FunctionId::Named(name.clone()), sig, instrs);
-            if placeholder_count > 0 {
-                comp.increment_placeholders(&f, &mut 0, &mut HashMap::new());
-            }
-            f
-        };
+                // Handle placeholders
+                if placeholder_count > 0 {
+                    instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
+                    instrs.push(Instr::PopTempFunctions(placeholder_count));
+                }
+                let f = comp.add_function(FunctionId::Named(name.clone()), sig, instrs);
+                if placeholder_count > 0 {
+                    comp.increment_placeholders(&f, &mut 0, &mut HashMap::new());
+                }
+                f
+            },
+        );
         // Compile the body
-        let mut instrs = self.compile_words(binding.words, true)?;
+        self.current_binding = Some((name.clone(), binding.signature.as_ref().map(|s| s.value)));
+        let instrs = self.compile_words(binding.words, true);
+        self.current_binding = None;
+        let self_referenced = take(&mut self.self_referenced);
+        let mut instrs = instrs?;
         let span_index = self.add_span(span.clone());
         let global_index = self.next_global;
         self.next_global += 1;
+
+        if self_referenced {
+            let name = name.clone();
+            let make = make_fn.clone();
+            make_fn = Rc::new(move |instrs, sig, comp: &mut Compiler| {
+                let f = make(instrs, sig, comp);
+                let instrs = vec![Instr::PushFunc(f), Instr::Prim(Primitive::This, span_index)];
+                comp.add_function(FunctionId::Named(name.clone()), sig, instrs)
+            });
+        }
 
         // Check if binding is an import
         let mut is_import = false;
@@ -1053,7 +1077,19 @@ code:
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if !self.scope.locals.is_empty() && ident.chars().all(|c| c.is_ascii_lowercase()) {
+        if let Some((_, sig)) = self.current_binding.as_ref().filter(|(b, _)| b == &ident) {
+            let Some(sig) = sig else {
+                return Err(self.fatal_error(
+                    span, 
+                    format!("Recursive function `{ident}` must have a signature declared after the `←`.")
+                ));
+            };
+            self.push_instr(Instr::PushSig(*sig));
+            let span = self.add_span(span);
+            self.push_instr(Instr::Prim(Primitive::Recur, span));
+            self.push_instr(Instr::PopSig);
+            self.self_referenced = true;
+        } else if !self.scope.locals.is_empty() && ident.chars().all(|c| c.is_ascii_lowercase()) {
             // Name is a local variable
             let span = self.add_span(span);
             for c in ident.chars().rev() {

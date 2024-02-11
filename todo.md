@@ -2,8 +2,6 @@
 
 ## Features
 - 0.9
-  - `primitives.json` on site
-  - Named recursion
   - Multiple imports
   - Basic package management
     - `&i "git:path"`

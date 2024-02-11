@@ -833,7 +833,6 @@
     "description": "Index a row or elements from an array"
   },
   "pop": {
-    "ascii": ";",
     "glyph": "◌",
     "args": 1,
     "outputs": 0,

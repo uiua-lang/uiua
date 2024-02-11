@@ -272,8 +272,7 @@ fn TutorialBasic() -> impl IntoView {
         <h2><Prim prim=Pop/></h2>
         <p><Prim prim=Pop/>" removes the top item from the stack."</p>
         <p>"This is useful when you want to discard a value that you do not need."</p>
-        <p>"The formatter converts "<code>";"</code>"s into "<Prim prim=Pop glyph_only=true/>"s."</p>
-        <Editor example="1 ; 2 3 4 ◌ 5 6"/>
+        <Editor example="1 pop 2 3 4 ◌ 5 6"/>
         <h2><Prim prim=Stack/>" and "<Prim prim=Trace/></h2>
         <p><Prim prim=Stack/>" prints the entire stack."</p>
         <p>"It also attaches line and column numbers."</p>

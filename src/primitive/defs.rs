@@ -209,7 +209,7 @@ primitive!(
     /// For example, [gen] returns both a random number and a seed for the next call.
     /// When you have all the random numbers you need, you often want to discard the seed.
     /// ex: ⌊×10[◌⍥gen10 0]
-    (1(0), Pop, Stack, ("pop", AsciiToken::Semicolon, '◌')),
+    (1(0), Pop, Stack, ("pop", '◌')),
     /// Do nothing with one value
     ///
     /// [identity] is mostly useless on its own. See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) to understand what it is for.

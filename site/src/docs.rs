@@ -13,20 +13,13 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
 use crate::{
-    element,
-    markdown::Markdown,
-    other::*,
-    primitive::*,
-    tour::Tour,
-    tutorial::{Tutorial, TutorialPage},
-    uiuisms::Uiuisms,
-    Prim,
+    element, markdown::Markdown, other::*, primitive::*, tour::Tour, tutorial::TutorialPage,
+    uiuisms::Uiuisms, Prim,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DocsPage {
     Tour,
-    Tutorial(TutorialPage),
     Search(String),
     Design,
     Technical,
@@ -47,29 +40,25 @@ pub enum DocsPage {
 impl IntoParam for DocsPage {
     fn into_param(value: Option<&str>, name: &str) -> Result<Self, ParamsError> {
         let value = value.unwrap_or("");
-        all::<TutorialPage>()
-            .find(|p| p.path() == value)
-            .map(Self::Tutorial)
-            .or(match value {
-                "" => None,
-                "tour" => Some(Self::Tour),
-                "design" => Some(Self::Design),
-                "technical" => Some(Self::Technical),
-                "install" => Some(Self::Install),
-                "audio" => Some(Self::Audio),
-                "images" => Some(Self::ImagesAndGifs),
-                "all-functions" => Some(Self::AllFunctions),
-                "isms" => Some(Self::Uiuisms),
-                "changelog" => Some(Self::Changelog),
-                "rtl" => Some(Self::RightToLeft),
-                "constants" => Some(Self::Constants),
-                "stack-idioms" => Some(Self::StackIdioms),
-                "combinators" => Some(Self::Combinators),
-                "optimizations" => Some(Self::Optimizations),
-                "format-config" => Some(Self::FormatConfig),
-                value => Some(Self::Search(value.into())),
-            })
-            .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
+        match value {
+            "" => Err(ParamsError::MissingParam(name.to_string())),
+            "tour" => Ok(Self::Tour),
+            "design" => Ok(Self::Design),
+            "technical" => Ok(Self::Technical),
+            "install" => Ok(Self::Install),
+            "audio" => Ok(Self::Audio),
+            "images" => Ok(Self::ImagesAndGifs),
+            "all-functions" => Ok(Self::AllFunctions),
+            "isms" => Ok(Self::Uiuisms),
+            "changelog" => Ok(Self::Changelog),
+            "rtl" => Ok(Self::RightToLeft),
+            "constants" => Ok(Self::Constants),
+            "stack-idioms" => Ok(Self::StackIdioms),
+            "combinators" => Ok(Self::Combinators),
+            "optimizations" => Ok(Self::Optimizations),
+            "format-config" => Ok(Self::FormatConfig),
+            value => Ok(Self::Search(value.into())),
+        }
     }
 }
 
@@ -87,7 +76,6 @@ pub fn Docs() -> impl IntoView {
         let page = params.page;
         let page_view = match page {
             DocsPage::Tour => Tour().into_view(),
-            DocsPage::Tutorial(tut) => view!( <Tutorial page=tut/>).into_view(),
             DocsPage::Search(search) => return view!( <DocsHome search=search/>).into_view(),
             DocsPage::Design => Design().into_view(),
             DocsPage::Technical => Technical().into_view(),
@@ -226,7 +214,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <p>"These pages introduce Uiua concepts one at a time, each tutorial building on the previous. They go into much more depth than the language tour."</p>
         <p>"They are meant to be read in order, but feel free to skip around!"</p>
         <ul>{ all::<TutorialPage>()
-            .map(|p| view!( <li><A href={format!("/docs/{}", p.path())}>{p.title()}</A></li>))
+            .map(|p| view!( <li><A href={format!("/tutorial/{}", p.path())}>{p.title()}</A></li>))
             .collect::<Vec<_>>()
         }</ul>
 

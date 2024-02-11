@@ -52,31 +52,48 @@ impl TutorialPage {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Params)]
+pub struct TutorialParams {
+    page: TutorialPage,
+}
+
 #[component]
-pub fn Tutorial(page: TutorialPage) -> impl IntoView {
-    let tut_view = match page {
-        TutorialPage::Introduction => TutorialIntroduction().into_view(),
-        TutorialPage::Basic => TutorialBasic().into_view(),
-        TutorialPage::Math => TutorialMath().into_view(),
-        TutorialPage::Arrays => TutorialArrays().into_view(),
-        TutorialPage::Types => TutorialTypes().into_view(),
-        TutorialPage::Bindings => TutorialBindings().into_view(),
-        TutorialPage::Functions => TutorialFunctions().into_view(),
-        TutorialPage::ControlFlow => TutorialControlFlow().into_view(),
-        TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
-        TutorialPage::Inverses => TutorialInverses().into_view(),
-        TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
-        TutorialPage::ThinkingWithArrays => TutorialThinkingWithArrays().into_view(),
-        TutorialPage::CustomModifiers => TutorialCustomModifiers().into_view(),
-        TutorialPage::Modules => TutorialModules().into_view(),
-        TutorialPage::Testing => TutorialTesting().into_view(),
-    };
-    view! {
-        <TutorialNav page=page/>
-        { tut_view }
-        <br/>
-        <br/>
-        <TutorialNav page=page/>
+pub fn Tutorial() -> impl IntoView {
+    move || {
+        let Ok(params) = use_params::<TutorialParams>().get() else {
+            return view!(<Redirect path="/404"/>).into_view();
+        };
+        let tut_view = match params.page {
+            TutorialPage::Introduction => TutorialIntroduction().into_view(),
+            TutorialPage::Basic => TutorialBasic().into_view(),
+            TutorialPage::Math => TutorialMath().into_view(),
+            TutorialPage::Arrays => TutorialArrays().into_view(),
+            TutorialPage::Types => TutorialTypes().into_view(),
+            TutorialPage::Bindings => TutorialBindings().into_view(),
+            TutorialPage::Functions => TutorialFunctions().into_view(),
+            TutorialPage::ControlFlow => TutorialControlFlow().into_view(),
+            TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
+            TutorialPage::Inverses => TutorialInverses().into_view(),
+            TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
+            TutorialPage::ThinkingWithArrays => TutorialThinkingWithArrays().into_view(),
+            TutorialPage::CustomModifiers => TutorialCustomModifiers().into_view(),
+            TutorialPage::Modules => TutorialModules().into_view(),
+            TutorialPage::Testing => TutorialTesting().into_view(),
+        };
+        view! {
+            <A href="/docs">"Back to Docs Home"</A>
+            <br/>
+            <br/>
+            <TutorialNav page=params.page/>
+            { tut_view }
+            <br/>
+            <br/>
+            <TutorialNav page=params.page/>
+            <br/>
+            <br/>
+            <A href="/docs">"Back to Docs Home"</A>
+        }
+        .into_view()
     }
 }
 
@@ -93,7 +110,7 @@ fn TutorialNav(page: TutorialPage) -> impl IntoView {
     let next = move || {
         page.next()
             .map(|p| {
-                view!( <div>"Next: "<A href=format!("/docs/{}", p.path())>{p.title()}</A>" 〉"</div>)
+                view!( <div>"Next: "<A href=format!("/tutorial/{}", p.path())>{p.title()}</A>" 〉"</div>)
                     .into_view()
             })
             .unwrap_or_else(|| view!( <div/>).into_view())
@@ -101,7 +118,7 @@ fn TutorialNav(page: TutorialPage) -> impl IntoView {
     let previous = move || {
         page.previous()
             .map(|p| {
-                view!( <div>"〈 Previous: "<A href=format!("/docs/{}", p.path())>{p.title()}</A></div>)
+                view!( <div>"〈 Previous: "<A href=format!("/tutorial/{}", p.path())>{p.title()}</A></div>)
                     .into_view()
             })
             .unwrap_or_else(|| view!( <div/>).into_view())

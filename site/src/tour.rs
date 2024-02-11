@@ -162,7 +162,7 @@ pub fn Tour() -> impl IntoView {
         <p>"GIFs can be explicitly rendered with the "<Prim prim={Sys(SysOp::GifShow)}/>" function."</p>
 
         <h2 id="next-steps">"Next Steps"</h2>
-        <p>"If you want a more in-depth introduction to Uiua, you can check out the "<A href="/docs/basic">"tutorial"</A>"."</p>
+        <p>"If you want a more in-depth introduction to Uiua, you can check out the "<A href="/tutorial/introduction">"tutorial"</A>"."</p>
         <p>"For information on installing the native Uiua interpreter, see the "<A href="/install">"install page"</A>"."</p>
         <p>"For information on specific functions and modifiers, see the "<A href="/docs#functions">"functions section"</A>" of the main docs page."</p>
         <p>"To see some cool examples, click through the editor at the top of the "<A href="/">"home page"</A>". There are also some interesting, longer examples in the "<a href="https://github.com/uiua-lang/uiua/tree/main/examples">" main Uiua repository on GitHub"</a>"."</p>

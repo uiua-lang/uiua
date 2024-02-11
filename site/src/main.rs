@@ -20,7 +20,7 @@ use uiua::{ConstantDef, PrimClass, Primitive, Signature};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
-use crate::{blog::*, docs::*, editor::*, other::*, tour::*, uiuisms::*};
+use crate::{blog::*, docs::*, editor::*, other::*, tour::*, tutorial::Tutorial, uiuisms::*};
 
 pub fn main() {
     console_error_panic_hook::set_once();
@@ -151,6 +151,7 @@ pub fn Site() -> impl IntoView {
                         </main>
                     }>
                         <Route path="" view=MainPage/>
+                        <Route path="tutorial/:page" view=Tutorial/>
                         <Route path="docs/:page?" view=Docs/>
                         <Route path="isms/:search?" view=Uiuisms/>
                         <Route path="pad" view=Pad/>
@@ -188,7 +189,7 @@ pub fn MainPage() -> impl IntoView {
                 <A href="/tour">"Language Tour"</A>
             </div>
             <div>
-                <A href="/docs/introduction" class="slow-pulse">"Tutorial"</A>
+                <A href="/tutorial/introduction" class="slow-pulse">"Tutorial"</A>
                 <A href="/pad">"Pad"</A>
                 <A href="/blog">"Blog"</A>
                 <a href="https://discord.gg/3r9nrfYhCc">"Discord"</a>

@@ -204,12 +204,12 @@ primitive!(
     (2(2), Flip, Stack, ("flip", ':')),
     /// Discard the top stack value
     ///
+    /// [◌ 1 2 ◌ 3 4]
     /// This is usually used to discard values that are no longer needed.
-    ///
     /// For example, [gen] returns both a random number and a seed for the next call.
     /// When you have all the random numbers you need, you often want to discard the seed.
     /// ex: ⌊×10[◌⍥gen10 0]
-    (1(0), Pop, Stack, ("pop", AsciiToken::Semicolon, '◌')),
+    (1(0), Pop, Stack, ("pop", '◌')),
     /// Do nothing with one value
     ///
     /// [identity] is mostly useless on its own. See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) to understand what it is for.
@@ -276,7 +276,7 @@ primitive!(
     /// You can get an arccosine function by [un]ing the cosine.
     /// ex: °(○+η) 1
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
-    /// ex: ÷○+η:○. 0
+    /// ex: ÷∩○+η. 0
     (1, Sin, MonadicPervasive, ("sine", '○')),
     /// Round to the nearest integer towards `¯∞`
     ///
@@ -461,6 +461,12 @@ primitive!(
     /// ex: ∠ 1 0
     /// ex: ∠ ¯1 0
     /// ex: ∠ √2 √2
+    ///
+    /// [un][atangent] gives the [sine] and `cosine` of an angle.
+    /// ex: °∠ 0
+    /// ex: °∠ η
+    /// ex: °∠ π
+    /// ex: °∠ ÷3π
     (2, Atan, DyadicPervasive, ("atangent", '∠')),
     /// Make a complex number
     ///
@@ -1004,7 +1010,7 @@ primitive!(
     // ///   : ⊘ [1 1 2 2 3 3 4 4] [2 2 1 4 1 2 3 4]
     // ///
     // /// One use of this is to find the first occurence of each row.
-    // /// ex: > ⊃⊘⋅⧻ ⊃∘◴ . [1 4 3 3 2 1 3 5 2 1]
+    // /// ex: > ⊃⊘⋅⧻ ⟜◴ . [1 4 3 3 2 1 3 5 2 1]
     // ///
     // /// The [progressive indexof] an array in itself is the [range][length] of the array.
     // /// ex: ⊘. [1 4 3 3 2 1 3 5 2 1]
@@ -1149,6 +1155,25 @@ primitive!(
     /// Here, we add a dimension to the second array to [fix] it, then collapse with `reduce``join`.
     /// ex: /⊂ ⊞(⊂⊂) ⊙¤ 1_2 3_4 5_6
     (2[1], Table, IteratingModifier, ("table", '⊞')),
+    /// Apply a function to each unboxed row of an array and re-box the results
+    ///
+    /// For box arrays, this is roughly equivalent to `each``under``un``box`.
+    /// ex: # Experimental!
+    ///   : ∵⍜°□(⊂:@!) {"a" "bc" "def"}
+    ///   :    ⎏(⊂:@!) {"a" "bc" "def"}
+    /// For non-box array, [inventory] works identically to [rows], except it [box]es each result row.
+    /// ex: # Experimental!
+    ///   : ≡⇌ [1_2_3 4_5_6]
+    ///   : ⎏⇌ [1_2_3 4_5_6]
+    /// For a box and non-box array, [inventory] will unbox the box array's rows and then re-box the results.
+    /// ex: # Experimental!
+    ///   : ⎏⊂ {"a" "bc" "def"} "123"
+    ///
+    /// A common use case is in conjunction with [under] and boxing array notation as a sort of n-wise [both].
+    /// ex: # Experimental!
+    ///   : {⍜ {⊙⊙∘}⎏⊂    1_2 3_4_5 6_7_8_9 10}
+    ///   : {⍜⊙{⊙⊙∘}⎏⊂ 10 1_2 3_4_5 6_7_8_9   }
+    ([1], Inventory, IteratingModifier, ("inventory", '⎏')),
     /// Apply a function to each combination of rows of arrays
     ///
     /// This *was* the row-wise version of [table].
@@ -1264,7 +1289,7 @@ primitive!(
     /// ex: [⊃⋅⋅∘(++) 3 5 10]
     /// By using fewer `gap`s, you can select a different value.
     /// ex: [⊃⋅∘(++) 3 5 10]
-    /// ex: [⊃∘(++) 3 5 10]
+    /// ex! [⊃∘(++) 3 5 10]
     /// By replacing a `gap` with a `dip`, you keep the argument in that spot instead of popping it:
     /// ex: [⊃⊙⋅∘(++) 3 5 10]
     /// ex: [⊃⋅⊙∘(++) 3 5 10]
@@ -1292,6 +1317,30 @@ primitive!(
     /// ex: +⊙(×⊙(↙⊙↘)) 2 10 3 1 [1 2 3 4 5]
     /// ex: +⊙(×|↙|↘)   2 10 3 1 [1 2 3 4 5]
     ([1], Dip, Planet, ("dip", '⊙')),
+    /// Call a function but keep its first argument on the top of the stack
+    ///
+    /// ex: [⟜+ 2 5]
+    ///   : [⟜- 2 5]
+    /// ex: ÷⟜⇡ 10
+    /// ex: +⟜(⇡-) 4 10
+    /// ex: +⟜(×-) 10 20 0.3
+    /// ex: ↯⟜⊚ 4
+    ///
+    /// [on] can be thought of as a compliment of [duplicate].
+    /// ex: [¯. 1]
+    ///   : [⟜¯ 1]
+    ///
+    /// [on] in planet notation acts as a way of [duplicate]ing a value.
+    /// You can read `on``dip` or `on``identity` as a single unit that keeps 2 copies of the value at that position.
+    /// ex: [⟜⊙⋅⟜⊙◌   1 2 3 4] # Easy to read with ⟜
+    ///   : [.⊙⋅(.⊙◌) 1 2 3 4] # Hard to read with .
+    ///   : [∩⊓.◌     1 2 3 4] # Shorter, maybe hard to read
+    /// ex: [⊙⟜⊙⋅⟜∘  1 2 3 4] # Easy to read with ⟜
+    ///   : [⊙(.⊙⋅.) 1 2 3 4] # Hard to read with .
+    ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
+    ///
+    /// [on] is equivalent to [fork][identity], but can often be easier to read.
+    ([1], On, Planet, ("on", '⟜')),
     /// Call a function on two sets of values
     ///
     /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.
@@ -1392,7 +1441,7 @@ primitive!(
     ///
     /// For example, here is a manual re-implementation of [add]'s [under] behavior. Note that the second function has 2 outputs. The extra output is saved as context.
     /// ex: # Experimental!
-    ///   : F ← setund(+|⊃∘+|-)
+    ///   : F ← setund(+|⟜+|-)
     ///   : ⍜+(×10) 1 2
     ///   : ⍜F(×10) 1 2
     ///
@@ -1478,7 +1527,7 @@ primitive!(
     ///
     /// [cascade]'s second function is called, then its first argument(s) are reused, along with its output, as arguments to the first function.
     /// ex: # Experimental!
-    ///   : ×⊃∘+ 5 2
+    ///   : ×⟜+ 5 2
     ///   :  ⪾×+ 5 2
     /// Nesting [cascade] can be useful, and doing so is equivalent to using a function pack.
     /// ex: # Experimental!
@@ -1960,6 +2009,53 @@ primitive!(
     ///
     /// See also: [insert], [has], [get]
     (2, Remove, Map, "remove"),
+    /// Validate the shapes of some arrays
+    ///
+    /// The shapes of as many values as the function takes will be pushed to the stack before the function is called.
+    /// The values themselves will *not* be consumed.
+    /// The function is expected to return a scalar or list of booleans corresponding to the validity of the shapes.
+    /// This has two purposes:
+    /// - Validate the shapes at runtime
+    /// - Serve as documentation for the reader
+    /// While [shapes] is usually used near the beginning of a function, it can be used anywhere.
+    ///
+    /// For example, if you have a function that both appends and prepends a row to an array, you may want to ensure that the row's shape is the same as the tail of the array's shape.
+    /// ex: # Experimental!
+    ///   : Omnipend ← (
+    ///   :   shapes(≍⊙(↘1))
+    ///   :   ⊂:⟜⊂
+    ///   : )
+    ///   : Omnipend 5 [1 2 3]
+    /// ex! # Experimental!
+    ///   : Omnipend ← ⊂:⟜⊂ shapes(≍⊙(↘1))
+    ///   : Omnipend [5 6] [1 2 3]
+    ///
+    /// See also: [types]
+    (0(0)[1], Shapes, Misc, "shapes"),
+    /// Validate the types of some arrays
+    ///
+    /// The types of as many values as the function takes will be pushed to the stack before the function is called.
+    /// The values themselves will *not* be consumed.
+    /// The types are integers corresponding to those returned by [type].
+    /// The function is expected to return a scalar or list of booleans corresponding to the validity of the types.
+    /// This has two purposes:
+    /// - Validate the types at runtime
+    /// - Serve as documentation for the reader
+    /// While [types] is usually used near the beginning of a function, it can be used anywhere.
+    ///
+    /// For example, if you have a function that both appends and prepends a row to an array, you may want to ensure that the row's type is the same as the array's type.
+    /// ex: # Experimental!
+    ///   : Omnipend ← (
+    ///   :   types=
+    ///   :   ⊂:⟜⊂
+    ///   : )
+    ///   : Omnipend 5 [1 2 3]
+    /// ex! # Experimental!
+    ///   : Omnipend ← ⊂:⟜⊂ types=
+    ///   : Omnipend "hi!" [1 2 3]
+    ///
+    /// See also: [shapes]
+    (0(0)[1], Types, Misc, "types"),
     /// Debug print all stack values without popping them
     ///
     /// This is equivalent to [dump][identity], but is easier to type.
@@ -2118,4 +2214,5 @@ impl_primitive!(
     (1[1], ReduceContent),
     (1, ReplaceRand),
     (2, ReplaceRand2),
+    (1, Adjacent),
 );

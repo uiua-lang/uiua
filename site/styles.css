@@ -91,6 +91,11 @@ tr:nth-child(even) {
     border-radius: 0.5em;
 }
 
+.header-centered-table>tr>th {
+    text-align: center;
+
+}
+
 .cell-centered-table>tr>td {
     text-align: center;
 }
@@ -163,7 +168,8 @@ li {
         background-color: #0001;
     }
 
-    .glyph-button:hover {
+    .glyph-button:hover,
+    .combinator-diagram {
         background-color: #0003;
     }
 
@@ -240,7 +246,8 @@ li {
         background-color: #fff1;
     }
 
-    .glyph-button:hover {
+    .glyph-button:hover,
+    .combinator-diagram {
         background-color: #fffa;
     }
 
@@ -431,6 +438,7 @@ input[type=number] {
 }
 
 .code {
+    text-align: left;
     border-radius: 0.5em;
     width: 100%;
     resize: vertical;
@@ -713,6 +721,7 @@ input[type=number] {
 }
 
 @media (prefers-color-scheme: dark) {
+
     .glyph-doc {
         background-color: #000c;
     }
@@ -723,6 +732,7 @@ input[type=number] {
 }
 
 @media (prefers-color-scheme: light) {
+
     .glyph-doc {
         background-color: #fffd;
     }
@@ -738,6 +748,11 @@ input[type=number] {
 
 .code-font {
     font-family: "Code Font", monospace;
+}
+
+.combinator-diagram {
+    border-radius: 0.5em;
+    height: 8em;
 }
 
 @media (prefers-color-scheme: dark) {

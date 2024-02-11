@@ -52,31 +52,48 @@ impl TutorialPage {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Params)]
+pub struct TutorialParams {
+    page: TutorialPage,
+}
+
 #[component]
-pub fn Tutorial(page: TutorialPage) -> impl IntoView {
-    let tut_view = match page {
-        TutorialPage::Introduction => TutorialIntroduction().into_view(),
-        TutorialPage::Basic => TutorialBasic().into_view(),
-        TutorialPage::Math => TutorialMath().into_view(),
-        TutorialPage::Arrays => TutorialArrays().into_view(),
-        TutorialPage::Types => TutorialTypes().into_view(),
-        TutorialPage::Bindings => TutorialBindings().into_view(),
-        TutorialPage::Functions => TutorialFunctions().into_view(),
-        TutorialPage::ControlFlow => TutorialControlFlow().into_view(),
-        TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
-        TutorialPage::Inverses => TutorialInverses().into_view(),
-        TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
-        TutorialPage::ThinkingWithArrays => TutorialThinkingWithArrays().into_view(),
-        TutorialPage::CustomModifiers => TutorialCustomModifiers().into_view(),
-        TutorialPage::Modules => TutorialModules().into_view(),
-        TutorialPage::Testing => TutorialTesting().into_view(),
-    };
-    view! {
-        <TutorialNav page=page/>
-        { tut_view }
-        <br/>
-        <br/>
-        <TutorialNav page=page/>
+pub fn Tutorial() -> impl IntoView {
+    move || {
+        let Ok(params) = use_params::<TutorialParams>().get() else {
+            return view!(<Redirect path="/404"/>).into_view();
+        };
+        let tut_view = match params.page {
+            TutorialPage::Introduction => TutorialIntroduction().into_view(),
+            TutorialPage::Basic => TutorialBasic().into_view(),
+            TutorialPage::Math => TutorialMath().into_view(),
+            TutorialPage::Arrays => TutorialArrays().into_view(),
+            TutorialPage::Types => TutorialTypes().into_view(),
+            TutorialPage::Bindings => TutorialBindings().into_view(),
+            TutorialPage::Functions => TutorialFunctions().into_view(),
+            TutorialPage::ControlFlow => TutorialControlFlow().into_view(),
+            TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
+            TutorialPage::Inverses => TutorialInverses().into_view(),
+            TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
+            TutorialPage::ThinkingWithArrays => TutorialThinkingWithArrays().into_view(),
+            TutorialPage::CustomModifiers => TutorialCustomModifiers().into_view(),
+            TutorialPage::Modules => TutorialModules().into_view(),
+            TutorialPage::Testing => TutorialTesting().into_view(),
+        };
+        view! {
+            <A href="/docs">"Back to Docs Home"</A>
+            <br/>
+            <br/>
+            <TutorialNav page=params.page/>
+            { tut_view }
+            <br/>
+            <br/>
+            <TutorialNav page=params.page/>
+            <br/>
+            <br/>
+            <A href="/docs">"Back to Docs Home"</A>
+        }
+        .into_view()
     }
 }
 
@@ -93,7 +110,7 @@ fn TutorialNav(page: TutorialPage) -> impl IntoView {
     let next = move || {
         page.next()
             .map(|p| {
-                view!( <div>"Next: "<A href=format!("/docs/{}", p.path())>{p.title()}</A>" 〉"</div>)
+                view!( <div>"Next: "<A href=format!("/tutorial/{}", p.path())>{p.title()}</A>" 〉"</div>)
                     .into_view()
             })
             .unwrap_or_else(|| view!( <div/>).into_view())
@@ -101,7 +118,7 @@ fn TutorialNav(page: TutorialPage) -> impl IntoView {
     let previous = move || {
         page.previous()
             .map(|p| {
-                view!( <div>"〈 Previous: "<A href=format!("/docs/{}", p.path())>{p.title()}</A></div>)
+                view!( <div>"〈 Previous: "<A href=format!("/tutorial/{}", p.path())>{p.title()}</A></div>)
                     .into_view()
             })
             .unwrap_or_else(|| view!( <div/>).into_view())
@@ -140,6 +157,7 @@ fn TutorialIntroduction() -> impl IntoView {
         <p>""<code>"+ 1 2"</code>", "<code>"×4-2"</code>", etc."</p>
         <p>"This allows Uiua to be, in most cases, even more terse than other array languages. That being said, Uiua has been designed to remain readable as much as possible, even without named local variables. While writing tacit code can quickly become unwieldy in other array languages, Uiua embraces tacitness as the only way."</p>
         <p>"Uiua also features built-in functionality for working with images, audio, and GIFs, so once you know the language, you can very quickly get started writing programs that do interesting things!"</p>
+        <p>"Note that Uiua is not yet stable. While most of the core features are unlikely to change much, more complex ones are still in flux. This tutorial is based on the current state of the language, and it is updated as the language changes."</p>
 
         <h2 id="who">"Who is this tutorial for?"</h2>
         <p>"This tutorial is targeted at people who have at least a little bit of experience with programming. While you don't need to be proficient in any particular language, it will be helpful to understand concepts like variables and functions. However, even if you are a beginner, you can likely find your way through by taking the time to understand each example."</p>
@@ -254,8 +272,7 @@ fn TutorialBasic() -> impl IntoView {
         <h2><Prim prim=Pop/></h2>
         <p><Prim prim=Pop/>" removes the top item from the stack."</p>
         <p>"This is useful when you want to discard a value that you do not need."</p>
-        <p>"The formatter converts "<code>";"</code>"s into "<Prim prim=Pop glyph_only=true/>"s."</p>
-        <Editor example="1 ; 2 3 4 ◌ 5 6"/>
+        <Editor example="1 pop 2 3 4 ◌ 5 6"/>
         <h2><Prim prim=Stack/>" and "<Prim prim=Trace/></h2>
         <p><Prim prim=Stack/>" prints the entire stack."</p>
         <p>"It also attaches line and column numbers."</p>

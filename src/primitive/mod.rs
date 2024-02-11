@@ -4,6 +4,7 @@
 
 mod defs;
 pub use defs::*;
+use ecow::EcoString;
 
 use std::{
     borrow::{BorrowMut, Cow},
@@ -36,7 +37,7 @@ use crate::{
 };
 
 /// Categories of primitives
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Sequence)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Sequence)]
 #[allow(missing_docs)]
 pub enum PrimClass {
     Stack,
@@ -71,6 +72,29 @@ impl PrimClass {
     /// Get an iterator over all primitives in this class
     pub fn primitives(self) -> impl Iterator<Item = Primitive> {
         Primitive::all().filter(move |prim| prim.class() == self)
+    }
+}
+
+impl fmt::Debug for PrimClass {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use PrimClass::*;
+        match self {
+            Stack => write!(f, "Stack"),
+            Constant => write!(f, "Constant"),
+            MonadicPervasive => write!(f, "MonadicPervasive"),
+            DyadicPervasive => write!(f, "DyadicPervasive"),
+            MonadicArray => write!(f, "MonadicArray"),
+            DyadicArray => write!(f, "DyadicArray"),
+            IteratingModifier => write!(f, "IteratingModifier"),
+            AggregatingModifier => write!(f, "AggregatingModifier"),
+            InversionModifier => write!(f, "InversionModifier"),
+            OtherModifier => write!(f, "OtherModifier"),
+            Planet => write!(f, "Planet"),
+            Map => write!(f, "Map"),
+            Local => write!(f, "Local"),
+            Misc => write!(f, "Misc"),
+            Sys(op) => op.fmt(f),
+        }
     }
 }
 
@@ -171,6 +195,7 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand => write!(f, "{Gap}{Rand}"),
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
+            Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
             &TransposeN(n) => {
                 if n < 0 {
                     write!(f, "{Un}(")?;
@@ -293,6 +318,10 @@ impl Primitive {
             Primitive::Cross => Some(format!("use {} instead", Primitive::Table.format())),
             Primitive::Cascade => Some(format!("use {} instead", Primitive::Fork.format())),
             Primitive::Rectify => Some(String::new()),
+            Primitive::All => Some(String::new()),
+            Primitive::This | Primitive::Recur => {
+                Some("use the name of a binding to recur instead".into())
+            }
             _ => None,
         }
     }
@@ -306,12 +335,15 @@ impl Primitive {
                 | Recur
                 | All
                 | Cascade
+                | Inventory
                 | Map
                 | Insert
                 | Has
                 | Get
                 | Remove
                 | Bind
+                | Shapes
+                | Types
                 | Sys(SysOp::FFI)
                 | Repr
         )
@@ -381,7 +413,7 @@ impl Primitive {
                     .strip_suffix(['i', 'p'])
                     .unwrap_or(sub_name)
                     .chars()
-                    .all(|c| "gd".contains(c))
+                    .all(|c| "gdo".contains(c))
                 {
                     // 1-letter planet notation
                     for (i, c) in sub_name.char_indices() {
@@ -391,6 +423,7 @@ impl Primitive {
                             'd' => Primitive::Dip,
                             'i' => Primitive::Identity,
                             'p' => Primitive::Pop,
+                            'o' => Primitive::On,
                             _ => unreachable!(),
                         };
                         prims.push((prim, &sub_name[i..i + 1]))
@@ -510,6 +543,7 @@ impl Primitive {
             Primitive::Each => zip::each(env)?,
             Primitive::Rows => zip::rows(env)?,
             Primitive::Table | Primitive::Cross => table::table(env)?,
+            Primitive::Inventory => zip::inventory(env)?,
             Primitive::Repeat => loops::repeat(env)?,
             Primitive::Do => loops::do_(env)?,
             Primitive::Group => loops::group(env)?,
@@ -549,6 +583,9 @@ impl Primitive {
             }
             Primitive::Dip => {
                 return Err(env.error("Dip was not inlined. This is a bug in the interpreter"))
+            }
+            Primitive::On => {
+                return Err(env.error("On was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Gap => {
                 return Err(env.error("Gap was not inlined. This is a bug in the interpreter"))
@@ -737,6 +774,8 @@ impl Primitive {
                 let map = keys.map(vals, env)?;
                 env.push(map);
             }
+            Primitive::Shapes => shapes(env)?,
+            Primitive::Types => types(env)?,
             Primitive::Trace => trace(env, false)?,
             Primitive::Stack => stack(env, false)?,
             Primitive::Dump => dump(env, false)?,
@@ -881,6 +920,7 @@ impl ImplPrimitive {
                 env.pop(2)?;
                 env.push(random());
             }
+            ImplPrimitive::Adjacent => reduce::adjacent(env)?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
         }
         Ok(())
@@ -938,9 +978,91 @@ fn regex(env: &mut Uiua) -> UiuaResult {
 /// Generate a random number, equivalent to [`Primitive::Rand`]
 pub fn random() -> f64 {
     thread_local! {
-        static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::seed_from_u64(instant::now().to_bits()));
+        static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
     }
     RNG.with(|rng| rng.borrow_mut().gen::<f64>())
+}
+
+fn shapes(env: &mut Uiua) -> UiuaResult {
+    validate_impl(env, "Shapes", "Shapes", "Shape", "Shape", |val| {
+        val.shape().iter().copied().collect()
+    })
+}
+
+fn types(env: &mut Uiua) -> UiuaResult {
+    validate_impl(env, "Types", "Types", "Type", "Type", |val| {
+        val.type_id().into()
+    })
+}
+
+fn validate_impl(
+    env: &mut Uiua,
+    name: &'static str,
+    cap_name: &'static str,
+    kind: &'static str,
+    cap_kind: &'static str,
+    get_val: impl Fn(&Value) -> Value,
+) -> UiuaResult {
+    let f = env.pop_function()?;
+    let sig = f.signature();
+    if sig.outputs != 1 {
+        return Err(env.error(format!(
+            "{cap_name} expects a function with 1 output, \
+            but its signature is {sig}",
+        )));
+    }
+    if sig.args == 0 {
+        return Err(env.error(format!(
+            "{cap_name} expects a function at least 1 argument, \
+            but its signature is {sig}",
+        )));
+    }
+    let args = env.clone_stack_top(sig.args);
+    let labels: Vec<Option<EcoString>> = args
+        .iter()
+        .rev()
+        .map(|val| val.meta().label.clone())
+        .collect();
+    for arg in args {
+        env.push(get_val(&arg));
+    }
+    env.call(f)?;
+    let res = env.pop(1)?;
+    let rank = res.rank();
+    let res = res.as_bools(env, "Output should be a single boolean or a boolean array")?;
+    if rank == 0 && sig.args > 1 {
+        if res.iter().any(|b| !*b) {
+            let mut args = String::new();
+            for (i, label) in labels.iter().enumerate() {
+                if i > 0 {
+                    args.push_str(", ");
+                }
+                if let Some(label) = label {
+                    args.push_str(&format!("${label}"));
+                } else {
+                    args.push_str(&format!("arg {}", i + 1))
+                }
+            }
+            return Err(env.error(format!("{cap_kind} validation failed for {}", args)));
+        }
+    } else if res.len() != sig.args {
+        return Err(env.error(format!(
+            "This {name} output should have length {}, but it has length {}",
+            sig.args,
+            res.len(),
+        )));
+    } else {
+        for (i, (b, label)) in res.iter().zip(labels).enumerate() {
+            if !b {
+                return Err(env.error(if let Some(label) = label {
+                    format!("{kind} validation failed for ${label}")
+                } else {
+                    format!("{kind} validation failed for arg {}", i + 1)
+                }));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
@@ -1536,7 +1658,7 @@ mod tests {
             literal_names.sort_by_key(|s| s.len());
             literal_names.reverse();
             let literal_names = literal_names.join("");
-            format!(r#"[{glyphs}]|(?<![a-zA-Z])({format_names}{literal_names})(?![a-zA-Z])"#)
+            format!(r#"[{glyphs}]|(?<![a-zA-Z$])({format_names}{literal_names})(?![a-zA-Z])"#)
         }
 
         let stack_functions = gen_group(

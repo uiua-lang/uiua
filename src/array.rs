@@ -774,8 +774,6 @@ impl<'a> fmt::Display for FormatShape<'a> {
     }
 }
 
-use crate::algorithm::map::MapItem;
-
 /// Convert value into a string that can be understood by the interpreter
 /// Prefer to use `Value::representation()`
 pub(crate) fn dbg_value(value: &Value, depth: Option<usize>, prefix: bool) -> String {

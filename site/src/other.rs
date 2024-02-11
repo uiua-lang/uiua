@@ -409,13 +409,21 @@ pub fn Combinators() -> impl IntoView {
         (view!(<Prim prim=Both/>).into_view(), ("⊂∩□", 2, "Ψ", "Psi")),
         (
             view!(<Prim prim=Bracket/>).into_view(),
-            ("⊟⊓¯⇌", 2, "D2", "Dovekies"),
+            ("⊟⊓¯⇌", 2, "D2", "Dovekie"),
         ),
         (
             view!(<Prim prim=Dip/>).into_view(),
             ("⊟⊙+", 3, "E", "Eagle"),
         ),
         (View::default(), ("⊟+", 3, "ε", "Golden Eagle")),
+        (
+            view!(<Prim prim=Fork/>).into_view(),
+            ("⊟⊃+-", 2, "Φ1", "Pheasant"),
+        ),
+        (
+            view!(<Prim prim=Bracket/>).into_view(),
+            ("⊟⊓-+", 4, "Ê", "Bald Eagle"),
+        )
     ];
     let combinators = combinators
         .into_iter()
@@ -426,9 +434,12 @@ pub fn Combinators() -> impl IntoView {
                     ex.push('\n');
                 }
                 ex.push_str(line);
-                for i in 0..inputs {
-                    let a = i * 3 + 1;
-                    ex.push_str(&format!(" {}_{}_{}", a, a + 1, a + 2));
+                if !line.starts_with('#') {
+                    for i in 0..inputs {
+                        let a = i * 3 + 1;
+                        ex.push_str(&format!(" {}_{}_{}", a, a + 1, a + 2));
+                    }
+                    ex.push_str("  ");
                 }
             }
             let diagram = format!("/combinators/{symbol}.svg");
@@ -450,8 +461,8 @@ pub fn Combinators() -> impl IntoView {
         <p>"A combinator is a function that only refers to its arguments. "<a href="https://en.wikipedia.org/wiki/Combinatory_logic">"Combinatory logic"</a>" is the branch of logic that deals with combinators."</p>
         <p>"Ever since Raymond Smullyan's book "<a href="https://en.wikipedia.org/wiki/To_Mock_a_Mockingbird">"To Mock a Mockingbird"</a>", people have been calling combinators by bird names. These bird names are included in the table."</p>
         <h2 id="reading">"Reading the Table"</h2>
-        <p>"Each entry in the table contains a diagram of the combinator. The letters "<code>"F"</code>", "<code>"G"</code>", and "<code>"H"</code>" represent the first, second, and third functions involved in the combinator. The letters "<code>"a"</code>", "<code>"b"</code>", and "<code>"c"</code>" represent the first, second, and third arguments."</p>
-        <p>"For the purpose of the examples, "<code>"a"</code>" is always the array "<code>"1_2_3"</code>", "<code>"b"</code>" is always the array "<code>"4_5_6"</code>", and "<code>"c"</code>" is always the array "<code>"7_8_9"</code>"."</p>
+        <p>"Each entry in the table contains a diagram of the combinator. The letters "<code>"F"</code>", "<code>"G"</code>", and "<code>"H"</code>" represent the first, second, and third functions involved in the combinator. The letters "<code>"a"</code>", "<code>"b"</code>", "<code>"c"</code>", and "<code>"d"</code>" represent the arguments."</p>
+        <p>"For the purpose of the examples, "<code>"a"</code>" is always the array "<code>"1_2_3"</code>", "<code>"b"</code>" is always the array "<code>"4_5_6"</code>", etc."</p>
         <p>"The left-most function in the example stands in for "<code>"F"</code>", the \"top-most\" function in the combinator."</p>
         <br/>
         <hr/>

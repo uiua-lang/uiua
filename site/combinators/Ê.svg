@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+    <style>
+        .arg {
+            fill: black;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .arg {
+                fill: white;
+            }
+        }
+    </style>
+    <text x="90" y="40" font-family="Uiua386" font-size="40" fill="#54b0fc">F</text>
+    <text x="50" y="110" font-family="Uiua386" font-size="40" fill="#54b0fc">G</text>
+    <text x="125" y="110" font-family="Uiua386" font-size="40" fill="#54b0fc">H</text>
+    <text x="25" y="190" font-family="Uiua386" font-size="40" class="arg">a</text>
+    <text x="70" y="190" font-family="Uiua386" font-size="40" class="arg">b</text>
+    <text x="110" y="190" font-family="Uiua386" font-size="40" class="arg">c</text>
+    <text x="155" y="190" font-family="Uiua386" font-size="40" class="arg">d</text>
+    <path stroke="#888a" fill-opacity="0" stroke-width="6" d="M 120 40 Q 130 50 135 75" />
+    <path stroke="#888a" fill-opacity="0" stroke-width="6" d="M 80 40 Q 70 50 65 75" />
+    <path stroke="#888a" fill-opacity="0" stroke-width="6" d="M 150 120 Q 160 135 165 160" />
+    <path stroke="#888a" fill-opacity="0" stroke-width="6" d="M 50 120 Q 40 135 35 160" />
+    <path stroke="#888a" fill-opacity="0" stroke-width="6" d="M 130 120 Q 120 130 120 160" />
+    <path stroke="#888a" fill-opacity="0" stroke-width="6" d="M 70 120 Q 80 130 80 155" />
+</svg>

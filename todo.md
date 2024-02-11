@@ -2,10 +2,6 @@
 
 ## Features
 - 0.9
-  - Some arithmetic operators on characters
-    - `sign` for getting the case
-    - `abs` for uppercasing
-    - `neg` for toggling case
   - Redo modules and imports completely
   - Add other `on` combinators
   - Fix cursor mapping with end-of-line comments

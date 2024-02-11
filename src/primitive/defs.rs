@@ -234,6 +234,12 @@ primitive!(
     /// ex: ± [¯2 ¯1 0 1 2]
     /// [sign] on a [complex] number normalizes it to a magnitude of 1.
     /// ex: ± ℂ3 4
+    ///
+    /// [sign] also works on characters to get their case.
+    /// - `¯1` for lowercase
+    /// - `1` for uppercase
+    /// - `0` for caseless
+    /// ex: ± "Hello, World!"
     (1, Sign, MonadicPervasive, ("sign", '±')),
     /// Negate a number
     ///
@@ -242,6 +248,12 @@ primitive!(
     /// ex: ¯ 1
     /// ex: ¯ ¯3
     /// ex: ¯ [1 2 ¯3]
+    /// ex: ¯ ℂ3 5
+    ///
+    /// [negate] also works on characters to toggle their case.
+    /// ex: ¯ "Hello, World!"
+    /// Use this with [absolute value] to lowercase a string.
+    /// ex: ¯⌵ "Hello, World!"
     (
         1,
         Neg,
@@ -254,6 +266,9 @@ primitive!(
     /// ex: ⌵ 1
     /// [absolute value] converts complex numbers to their magnitude.
     /// ex: ⌵ ℂ3 4
+    ///
+    /// [absolute value] works on characters to uppercase them.
+    /// ex: ⌵ "Hello, World!"
     ///
     /// The glyph looks like the graph of `|x|`.
     (1, Abs, MonadicPervasive, ("absolute value", '⌵')),

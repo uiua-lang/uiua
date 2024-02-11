@@ -2104,7 +2104,7 @@ primitive!(
     /// ex: 1_2_3 4 5_6_7
     ///   : dump⊢
     (0(0)[1], Dump, Stack, "dump"),
-    /// Stringify any value
+    /// Convert a value to its code representation
     ///
     /// ex: # Experimental!
     ///   : repr π

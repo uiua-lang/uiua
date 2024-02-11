@@ -17,29 +17,10 @@ pub enum Item {
     Words(Vec<Vec<Sp<Word>>>),
     /// A binding
     Binding(Binding),
+    /// An import
+    Import(Import),
     /// A test scope
     TestScope(Sp<Vec<Item>>),
-}
-
-impl Item {
-    /// Get the span of this item
-    pub fn span(&self) -> CodeSpan {
-        match self {
-            Item::TestScope(items) => items.span.clone(),
-            Item::Words(words) => {
-                let first = (words.iter().flatten().next())
-                    .expect("empty words")
-                    .span
-                    .clone();
-                let last = (words.iter().flatten().last())
-                    .expect("empty words")
-                    .span
-                    .clone();
-                first.merge(last)
-            }
-            Item::Binding(binding) => binding.span(),
-        }
-    }
 }
 
 /// A binding
@@ -63,6 +44,39 @@ impl Binding {
         } else {
             self.arrow_span.clone()
         })
+    }
+}
+
+/// An import
+#[derive(Debug, Clone)]
+pub struct Import {
+    /// The name given to the imported module
+    pub name: Option<Sp<Ident>>,
+    /// The import path
+    pub path: Sp<String>,
+    /// The imported items
+    pub items: Vec<Vec<ImportItem>>,
+}
+
+/// An import item
+#[derive(Debug, Clone)]
+pub struct ImportItem {
+    /// The name of the item
+    pub name: Sp<Ident>,
+    /// The span of the ~
+    pub tilde_span: CodeSpan,
+}
+
+impl Import {
+    /// The full span of the import
+    pub fn span(&self) -> CodeSpan {
+        let first = (self.name.as_ref())
+            .map(|n| n.span.clone())
+            .unwrap_or_else(|| self.path.span.clone());
+        let last = (self.items.iter().flatten().last())
+            .map(|i| i.name.span.clone())
+            .unwrap_or_else(|| self.path.span.clone());
+        first.merge(last)
     }
 }
 

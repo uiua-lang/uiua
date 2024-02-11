@@ -1,4 +1,8 @@
-use std::{error::Error, fmt, mem::replace};
+use std::{
+    error::Error,
+    fmt,
+    mem::{replace, take},
+};
 
 use ecow::EcoString;
 
@@ -296,6 +300,8 @@ impl<'i> Parser<'i> {
         self.try_spaces();
         Some(if let Some(binding) = self.try_binding() {
             Item::Binding(binding)
+        } else if let Some(import) = self.try_import() {
+            Item::Import(import)
         } else {
             let lines = self.multiline_words();
             // Convert multiline words into multiple items
@@ -417,6 +423,46 @@ impl<'i> Parser<'i> {
             words,
             signature,
         })
+    }
+    fn try_import(&mut self) -> Option<Import> {
+        let start = self.index;
+        let name = self.try_ident();
+        self.try_spaces();
+        if self.try_exact(Tilde).is_none() {
+            self.index = start;
+            return None;
+        }
+        self.try_spaces();
+        let Some(path) = self.next_token_map(Token::as_string) else {
+            self.index = start;
+            return None;
+        };
+        let path = path.map(Into::into);
+        self.try_spaces();
+        let mut items = Vec::new();
+        let mut line = Vec::new();
+        let mut tilde_span = None;
+        while let Some(token) = self.tokens.get(self.index).cloned() {
+            let span = token.span;
+            let token = token.value;
+            match token {
+                Token::Ident if tilde_span.is_some() => {
+                    let ident = Ident::from(&self.input[span.byte_range()]);
+                    let name = span.clone().sp(ident);
+                    let tilde_span = tilde_span.take().unwrap();
+                    line.push(ImportItem { name, tilde_span });
+                }
+                Simple(Tilde) => tilde_span = Some(span.clone()),
+                Newline => {
+                    if !line.is_empty() {
+                        items.push(take(&mut line));
+                    }
+                }
+                Spaces => {}
+                _ => break,
+            }
+        }
+        Some(Import { name, path, items })
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         let span = self.try_exact(Token::Ident)?;

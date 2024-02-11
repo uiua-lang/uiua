@@ -594,6 +594,7 @@ impl<'a> Formatter<'a> {
                     );
                 }
             }
+            Item::Import(_) => todo!(),
         }
     }
     fn format_signature(&mut self, init_char: char, sig: Signature, trailing_space: bool) {

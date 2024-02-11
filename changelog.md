@@ -23,7 +23,7 @@ This version is not yet released. If you are reading this on the website, then t
   - These both check array properties at runtime and serve as a form of documentation
 - Add experimental [`inventory ⎏`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
   - This shortens a lot of box array code
-- [`pop ◌`](https://uiua.org/docs/pop) no longer formats from `;`
+- Deprecate [`pop ◌`](https://uiua.org/docs/pop) formatting from `;`
 - Deprecate [`all ⋔`](https://uiua.org/docs/all)
   - It was rarely used and hard to reason about
 - Add an experimental `repr` function that produces a string representation of a value in a format that can be read by the interpreter

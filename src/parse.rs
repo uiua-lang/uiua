@@ -804,6 +804,17 @@ impl<'i> Parser<'i> {
             span.sp(Word::BreakLine)
         } else if let Some(span) = self.try_exact(Quote2) {
             span.sp(Word::UnbreakLine)
+        } else if let Some(span) = self.try_exact(Semicolon) {
+            self.diagnostics.push(Diagnostic::new(
+                format!(
+                    "`;` for {} is deprecated and will be removed in the future",
+                    Primitive::Pop.format(),
+                ),
+                span.clone(),
+                DiagnosticKind::Style,
+                self.inputs.clone(),
+            ));
+            span.sp(Word::Primitive(Primitive::Pop))
         } else {
             return None;
         })

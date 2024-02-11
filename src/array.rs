@@ -773,3 +773,162 @@ impl<'a> fmt::Display for FormatShape<'a> {
         write!(f, "]")
     }
 }
+
+use crate::algorithm::map::MapItem;
+
+/// Convert value into a string that can be understood by the interpreter
+/// Prefer to use `Value::representation()`
+pub(crate) fn dbg_value(value: &Value, depth: Option<usize>, prefix: bool) -> String {
+    value.generic_ref(
+        |a| dbg_array::<f64>(a, depth, prefix),
+        |a| dbg_array::<u8>(a, depth, prefix),
+        |a| dbg_array::<Complex>(a, depth, prefix),
+        |a| dbg_array::<char>(a, depth, prefix),
+        |a| {
+            if a.meta().map_len.is_none() {
+                dbg_array::<Boxed>(a, depth, prefix)
+            } else {
+                // can't use unmap here because it needs an env
+                let remove_empty_rows = |data: &Boxed| {
+                    Value::from_row_values_infallible(
+                        data.as_value()
+                            .rows()
+                            .filter(|row| !(row.is_empty_cell() || row.is_tombstone()))
+                            .collect::<Vec<_>>(),
+                    )
+                };
+                let data = a.data.as_slice();
+                let keys = remove_empty_rows(&data[0]);
+                let values = remove_empty_rows(&data[1]);
+                let depth = depth.map_or(1, |d| d + 1);
+                format!(
+                    "{{{}\n{padding}{}}}",
+                    dbg_value(&keys, Some(depth), true),
+                    dbg_value(&values, Some(depth), true),
+                    padding = " ".repeat(depth)
+                )
+            }
+        },
+    )
+}
+
+/// Convert array into a string that can be understood by the interpreter
+/// * `depth` - recursion/indentation depth. Pass in None
+/// * `prefix` - whether singular chars and boxes need a prefix. Pass in true
+pub(crate) fn dbg_array<T: DebugArrayValue>(
+    array: &Array<T>,
+    depth: Option<usize>,
+    prefix: bool,
+) -> String {
+    let mut buffer = String::with_capacity(array.element_count());
+    dbg_array_inner(
+        &mut buffer,
+        array.data.as_slice(),
+        array.shape(),
+        depth.unwrap_or(0),
+        prefix,
+    );
+    buffer
+}
+
+/// Recursive inner function for representation printing
+fn dbg_array_inner<T: DebugArrayValue>(
+    buffer: &mut String,
+    array: &[T],
+    shape: &[usize],
+    depth: usize,
+    prefix: bool,
+) {
+    let (delims, separator) = match shape.len() {
+        0 => {
+            if !array.is_empty() {
+                buffer.push_str(&array[0].debug_string(depth, prefix))
+            };
+            return;
+        }
+        1 => (T::debug_delims(), T::debug_separator()),
+        _ => (("[", "]"), "\n"),
+    };
+    let padding = if separator == "\n" {
+        " ".repeat(depth + 1)
+    } else {
+        "".into()
+    };
+    let row_size = shape.iter().skip(1).product();
+    let row_count = shape[0];
+    buffer.push_str(delims.0);
+    if row_size == 0 {
+        for i in 0..row_count {
+            if i != 0 {
+                buffer.push_str(&padding);
+            }
+            dbg_array_inner(buffer, array, &shape[1..], depth + 1, false);
+            if i != row_count - 1 {
+                buffer.push_str(separator);
+            }
+        }
+    } else {
+        for (i, row) in array.chunks(row_size).enumerate() {
+            if i != 0 {
+                buffer.push_str(&padding);
+            }
+            dbg_array_inner(buffer, row, &shape[1..], depth + 1, false);
+            if i != row_count - 1 {
+                buffer.push_str(separator);
+            }
+        }
+    }
+    buffer.push_str(delims.1);
+}
+
+/// A trait for ArrayValue types that can be debug formatted
+pub trait DebugArrayValue: ArrayValue {
+    /// Row delimiters that can be read by the interpreter
+    fn debug_delims() -> (&'static str, &'static str) {
+        ("[", "]")
+    }
+    /// String representation that can be read by the interpreter
+    fn debug_string(&self, _depth: usize, _prefix: bool) -> String {
+        self.to_string()
+    }
+    /// Separator that can be read by the interpreter
+    fn debug_separator() -> &'static str {
+        Self::format_sep()
+    }
+}
+impl DebugArrayValue for f64 {}
+impl DebugArrayValue for u8 {}
+impl DebugArrayValue for char {
+    fn debug_delims() -> (&'static str, &'static str) {
+        ("\"", "\"")
+    }
+    fn debug_string(&self, _depth: usize, prefix: bool) -> String {
+        if prefix {
+            format!("@{self}")
+        } else {
+            format!("{self}")
+        }
+    }
+}
+impl DebugArrayValue for Boxed {
+    fn debug_delims() -> (&'static str, &'static str) {
+        ("{", "}")
+    }
+    fn debug_string(&self, depth: usize, prefix: bool) -> String {
+        let mut buffer = String::from(if prefix { "□" } else { "" });
+        buffer.push_str(&dbg_value(
+            &self.0,
+            Some(depth + if prefix { 1 } else { 0 }),
+            true,
+        ));
+        buffer
+    }
+    fn debug_separator() -> &'static str {
+        "\n"
+    }
+}
+impl DebugArrayValue for Complex {
+    fn debug_string(&self, _depth: usize, _prefix: bool) -> String {
+        format!("ℂ{} {}", self.im, self.re)
+    }
+}

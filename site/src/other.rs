@@ -439,7 +439,7 @@ pub fn Combinators() -> impl IntoView {
         (
             view!(<Prim prim=Bracket/>).into_view(),
             ("⊟⊓-+", 4, "Ê", "Bald Eagle"),
-        )
+        ),
     ];
     let combinators = combinators
         .into_iter()
@@ -460,8 +460,8 @@ pub fn Combinators() -> impl IntoView {
             }
             let diagram = format!("/combinators/{symbol}.svg");
             let note = ["X", "χ", "P", "ρ"].contains(&symbol).then(|| {
-                view! { 
-                    <sup>" "<span 
+                view! {
+                    <sup>" "<span
                         style="text-decoration: underline dotted; font-size: 0.8em; cursor: help;"
                         title="X, χ, P, and ρ are not standard named combinators. They are included here because Uiua can express them easily.">
                         "*"

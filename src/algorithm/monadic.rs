@@ -140,6 +140,10 @@ impl Value {
             val => return Err(env.error(format!("Cannot unparse {} array", val.type_name()))),
         })
     }
+    /// Convert value into a string that can be understood by the interpreter
+    pub fn representation(&self) -> Self {
+        dbg_value(self, None, true).into()
+    }
 }
 
 impl<T: ArrayValue> Array<T> {

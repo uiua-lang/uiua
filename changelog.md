@@ -26,6 +26,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`pop ◌`](https://uiua.org/docs/pop) no longer formats from `;`
 - Deprecate [`all ⋔`](https://uiua.org/docs/all)
   - It was rarely used and hard to reason about
+- Add an experimental `repr` function that produces a string representation of a value in a format that can be read by the interpreter
 ### Interpreter
 - Numbers that seem to have a floating-point epsilon rounding error will be output with the epsilon noted
 - When hovering a user-defined function's name, the language server will now show whether it is compatible with [`un °`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under)

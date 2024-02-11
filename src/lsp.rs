@@ -1,22 +1,27 @@
-use std::slice;
+//! Uiua's Language Server Protocol (LSP) implementation
+//!
+//! Even without the `lsp` feature enabled, this module still provides some useful types and functions for working with Uiua code in an IDE or text editor.
+
+use std::{slice, sync::Arc};
 
 use crate::{
+    algorithm::invert::{invert_instrs, under_instrs},
     ast::{Item, Modifier, Word},
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    InputSrc, Inputs, Primitive,
+    Assembly, BindingInfo, Compiler, Global, InputSrc, Inputs, Primitive, Signature,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
 #[allow(missing_docs)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SpanKind {
     Primitive(Primitive),
     String,
     Number,
     Comment,
     Strand,
-    Ident,
+    Ident(Option<BindingDocs>),
     Label,
     Signature,
     Whitespace,
@@ -24,22 +29,52 @@ pub enum SpanKind {
     Delimiter,
 }
 
+/// Documentation information for a binding
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BindingDocs {
+    /// The span of the binding name where it was defined
+    pub src_span: CodeSpan,
+    /// The signature of the binding
+    pub signature: Option<Signature>,
+    /// The comment of the binding
+    pub comment: Option<Arc<str>>,
+    /// Whether the binding is invertible and underable
+    pub invertible_underable: Option<(bool, bool)>,
+    /// Whether the binding is a constant
+    pub constant: bool,
+}
+
 /// Get spans and their kinds from Uiua code
 pub fn spans(input: &str) -> (Vec<Sp<SpanKind>>, Inputs) {
-    let mut inputs = Inputs::default();
-    let (items, _, _) = parse(input, InputSrc::Str(0), &mut inputs);
-    (Spanner::new(input).items_spans(&items), inputs)
+    let (items, _, _) = parse(input, InputSrc::Str(0), &mut Inputs::default());
+    let spanner = Spanner::new(input);
+    (spanner.items_spans(&items), spanner.asm.inputs)
 }
 
 struct Spanner {
-    inputs: Inputs,
+    asm: Assembly,
 }
 
 impl Spanner {
     fn new(input: &str) -> Self {
-        let mut inputs = Inputs::default();
-        inputs.strings.push(input.into());
-        Self { inputs }
+        let mut compiler = Compiler::new();
+        _ = compiler.load_str(input);
+        Self { asm: compiler.asm }
+    }
+    fn inputs(&self) -> &Inputs {
+        &self.asm.inputs
+    }
+    fn invertible_underable(&self, binding: &BindingInfo) -> Option<(bool, bool)> {
+        if let Global::Func(f) = &binding.global {
+            let instrs = f.instrs(&self.asm);
+            let mut compiler = Compiler::new().with_assembly(self.asm.clone());
+            Some((
+                invert_instrs(instrs, &mut compiler).is_some(),
+                under_instrs(instrs, (1, 1).into(), &mut compiler).is_some(),
+            ))
+        } else {
+            None
+        }
     }
     fn items_spans(&self, items: &[Item]) -> Vec<Sp<SpanKind>> {
         let mut spans = Vec::new();
@@ -52,7 +87,31 @@ impl Spanner {
                     }
                 }
                 Item::Binding(binding) => {
-                    spans.push(binding.name.span.clone().sp(SpanKind::Ident));
+                    let mut binding_docs = None;
+                    for comp_binding in &self.asm.bindings {
+                        let Some(comp_span) = &comp_binding.span else {
+                            continue;
+                        };
+                        if comp_span != &binding.name.span {
+                            continue;
+                        }
+                        binding_docs = Some(BindingDocs {
+                            src_span: comp_span.clone(),
+                            signature: comp_binding.global.signature(),
+                            comment: comp_binding.comment.clone(),
+                            invertible_underable: self.invertible_underable(comp_binding),
+                            constant: matches!(
+                                comp_binding.global,
+                                Global::Const(_)
+                                    | Global::Sig(Signature {
+                                        args: 0,
+                                        outputs: 1
+                                    })
+                            ),
+                        });
+                        break;
+                    }
+                    spans.push(binding.name.span.clone().sp(SpanKind::Ident(binding_docs)));
                     spans.push(binding.arrow_span.clone().sp(SpanKind::Delimiter));
                     if let Some(sig) = &binding.signature {
                         spans.push(sig.span.clone().sp(SpanKind::Signature));
@@ -76,7 +135,36 @@ impl Spanner {
                 Word::MultilineString(lines) => {
                     spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
                 }
-                Word::Ident(_) => spans.push(word.span.clone().sp(SpanKind::Ident)),
+                Word::Ident(_) => {
+                    let mut binding_docs = None;
+                    for (name, index) in &self.asm.global_references {
+                        let Some(binding) = self.asm.bindings.get(*index) else {
+                            continue;
+                        };
+                        let Some(comp_span) = &binding.span else {
+                            continue;
+                        };
+                        if name.span != word.span {
+                            continue;
+                        }
+                        binding_docs = Some(BindingDocs {
+                            src_span: comp_span.clone(),
+                            signature: binding.global.signature(),
+                            comment: binding.comment.clone(),
+                            invertible_underable: self.invertible_underable(binding),
+                            constant: matches!(
+                                binding.global,
+                                Global::Const(_)
+                                    | Global::Sig(Signature {
+                                        args: 0,
+                                        outputs: 1
+                                    })
+                            ),
+                        });
+                        break;
+                    }
+                    spans.push(word.span.clone().sp(SpanKind::Ident(binding_docs)))
+                }
                 Word::Strand(items) => {
                     for (i, word) in items.iter().enumerate() {
                         let item_spans = self.words_spans(slice::from_ref(word));
@@ -102,41 +190,41 @@ impl Spanner {
                     }
                 }
                 Word::Array(arr) => {
-                    spans.push(word.span.just_start(&self.inputs).sp(SpanKind::Delimiter));
+                    spans.push(word.span.just_start(self.inputs()).sp(SpanKind::Delimiter));
                     spans.extend(arr.lines.iter().flat_map(|w| self.words_spans(w)));
                     if arr.closed {
-                        let end = word.span.just_end(&self.inputs);
-                        if end.as_str(&self.inputs, |s| s == "]")
-                            || end.as_str(&self.inputs, |s| s == "}")
+                        let end = word.span.just_end(self.inputs());
+                        if end.as_str(self.inputs(), |s| s == "]")
+                            || end.as_str(self.inputs(), |s| s == "}")
                         {
                             spans.push(end.sp(SpanKind::Delimiter));
                         }
                     }
                 }
                 Word::Func(func) => {
-                    spans.push(word.span.just_start(&self.inputs).sp(SpanKind::Delimiter));
+                    spans.push(word.span.just_start(self.inputs()).sp(SpanKind::Delimiter));
                     if let Some(sig) = &func.signature {
                         spans.push(sig.span.clone().sp(SpanKind::Signature));
                     }
                     spans.extend(func.lines.iter().flat_map(|w| self.words_spans(w)));
                     if func.closed {
-                        let end = word.span.just_end(&self.inputs);
-                        if end.as_str(&self.inputs, |s| s == ")")
-                            || end.as_str(&self.inputs, |s| s == "}")
+                        let end = word.span.just_end(self.inputs());
+                        if end.as_str(self.inputs(), |s| s == ")")
+                            || end.as_str(self.inputs(), |s| s == "}")
                         {
                             spans.push(end.sp(SpanKind::Delimiter));
                         }
                     }
                 }
                 Word::Switch(sw) => {
-                    if word.span.as_str(&self.inputs, |s| s.starts_with('?')) {
+                    if word.span.as_str(self.inputs(), |s| s.starts_with('?')) {
                         spans.push(word.span.clone().sp(SpanKind::Delimiter));
                         continue;
                     }
-                    spans.push(word.span.just_start(&self.inputs).sp(SpanKind::Delimiter));
+                    spans.push(word.span.just_start(self.inputs()).sp(SpanKind::Delimiter));
                     for (i, branch) in sw.branches.iter().enumerate() {
-                        let start_span = branch.span.just_start(&self.inputs);
-                        if i > 0 && start_span.as_str(&self.inputs, |s| s == "|") {
+                        let start_span = branch.span.just_start(self.inputs());
+                        if i > 0 && start_span.as_str(self.inputs(), |s| s == "|") {
                             spans.push(start_span.sp(SpanKind::Delimiter));
                         }
                         if let Some(sig) = &branch.value.signature {
@@ -145,8 +233,8 @@ impl Spanner {
                         spans.extend(branch.value.lines.iter().flat_map(|w| self.words_spans(w)));
                     }
                     if sw.closed {
-                        let end = word.span.just_end(&self.inputs);
-                        if end.as_str(&self.inputs, |s| s == ")") {
+                        let end = word.span.just_end(self.inputs());
+                        if end.as_str(self.inputs(), |s| s == ")") {
                             spans.push(end.sp(SpanKind::Delimiter));
                         }
                     }
@@ -155,9 +243,30 @@ impl Spanner {
                     spans.push(word.span.clone().sp(SpanKind::Primitive(*prim)))
                 }
                 Word::Modified(m) => {
+                    let modifier_span = &m.modifier.span;
                     spans.push(m.modifier.clone().map(|m| match m {
                         Modifier::Primitive(p) => SpanKind::Primitive(p),
-                        Modifier::Ident(_) => SpanKind::Ident,
+                        Modifier::Ident(_) => {
+                            let mut binding_docs = None;
+                            for (name, index) in &self.asm.global_references {
+                                let binding = &self.asm.bindings[*index];
+                                let Some(comp_span) = &binding.span else {
+                                    continue;
+                                };
+                                if name.span != *modifier_span {
+                                    continue;
+                                }
+                                binding_docs = Some(BindingDocs {
+                                    src_span: comp_span.clone(),
+                                    signature: binding.global.signature(),
+                                    comment: binding.comment.clone(),
+                                    invertible_underable: self.invertible_underable(binding),
+                                    constant: false,
+                                });
+                                break;
+                            }
+                            SpanKind::Ident(binding_docs)
+                        }
                     }));
                     spans.extend(self.words_spans(&m.operands));
                 }
@@ -170,7 +279,7 @@ impl Spanner {
                 Word::Placeholder(_) => spans.push(word.span.clone().sp(SpanKind::Placeholder)),
             }
         }
-        spans.retain(|sp| !sp.span.as_str(&self.inputs, str::is_empty));
+        spans.retain(|sp| !sp.span.as_str(self.inputs(), str::is_empty));
         spans
     }
 }
@@ -193,11 +302,10 @@ mod server {
     use super::*;
 
     use crate::{
-        algorithm::invert::{invert_instrs, under_instrs},
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Assembly, BindingInfo, Compiler, Global, PrimDocLine, Signature, Uiua,
+        Assembly, BindingInfo, PrimDocLine, Uiua,
     };
 
     pub struct LspDoc {
@@ -212,9 +320,7 @@ mod server {
             let (items, _, _) = parse(&input, InputSrc::Str(0), &mut Inputs::default());
             let spanner = Spanner::new(&input);
             let spans = spanner.items_spans(&items);
-            let compiler = &mut Compiler::new();
-            _ = compiler.load_str(&input);
-            let asm = compiler.finish();
+            let asm = spanner.asm;
             Self {
                 input,
                 items,
@@ -349,58 +455,12 @@ mod server {
                     }
                 }
             }
-
-            #[derive(Debug)]
-            struct BindingDocs {
-                ident: String,
-                signature: Option<Signature>,
-                comment: Option<Arc<str>>,
-                range: Range,
-                invertible_underable: Option<(bool, bool)>,
-            }
-
-            let invertible_underable = |binding: &BindingInfo| {
-                if let Global::Func(f) = &binding.global {
-                    let instrs = f.instrs(&doc.asm);
-                    let mut compiler = Compiler::new().with_assembly(doc.asm.clone());
-                    Some((
-                        invert_instrs(instrs, &mut compiler).is_some(),
-                        under_instrs(instrs, (1, 1).into(), &mut compiler).is_some(),
-                    ))
-                } else {
-                    None
-                }
-            };
-
-            let mut binding_docs = None;
-            // Hovering the name of the binding itself
-            for binding in &doc.asm.bindings {
-                if let Some(span) = &binding.span {
-                    if span.contains_line_col(line, col) {
-                        let ident = span.as_str(&doc.asm.inputs, |s| s.into());
-                        binding_docs = Some(BindingDocs {
-                            ident,
-                            signature: binding.global.signature(),
-                            comment: binding.comment.clone(),
-                            range: uiua_span_to_lsp(span),
-                            invertible_underable: invertible_underable(binding),
-                        });
-                        break;
-                    }
-                }
-            }
-            // Hovering the name of a binding reference
-            if binding_docs.is_none() {
-                for (name, index) in &doc.asm.global_references {
-                    let binding = &doc.asm.bindings[*index];
-                    if name.span.contains_line_col(line, col) {
-                        binding_docs = Some(BindingDocs {
-                            ident: name.value.to_string(),
-                            signature: binding.global.signature(),
-                            comment: binding.comment.clone(),
-                            range: uiua_span_to_lsp(&name.span),
-                            invertible_underable: invertible_underable(binding),
-                        });
+            // Hovering a binding
+            let mut binding_docs: Option<Sp<&BindingDocs>> = None;
+            for span_kind in &doc.spans {
+                if let SpanKind::Ident(Some(docs)) = &span_kind.value {
+                    if span_kind.span.contains_line_col(line, col) {
+                        binding_docs = Some(span_kind.span.clone().sp(docs));
                         break;
                     }
                 }
@@ -460,7 +520,9 @@ mod server {
                     range: Some(range),
                 }
             } else if let Some(info) = binding_docs {
-                let mut value = info.ident;
+                let span = info.span;
+                let info = info.value;
+                let mut value: String = span.as_str(&doc.asm.inputs, |s| s.into());
                 if let Some(sig) = info.signature {
                     value.push_str(&format!(" `{sig}`"));
                 }
@@ -482,16 +544,16 @@ mod server {
                         value.push_str("~~");
                     }
                 }
-                if let Some(comment) = info.comment {
+                if let Some(comment) = &info.comment {
                     value.push_str("\n\n");
-                    value.push_str(&comment);
+                    value.push_str(comment);
                 }
                 Hover {
                     contents: HoverContents::Markup(MarkupContent {
                         kind: MarkupKind::Markdown,
                         value,
                     }),
-                    range: Some(info.range),
+                    range: Some(uiua_span_to_lsp(&span)),
                 }
             } else {
                 return Ok(None);

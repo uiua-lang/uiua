@@ -13,20 +13,13 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
 use crate::{
-    element,
-    markdown::Markdown,
-    other::*,
-    primitive::*,
-    tour::Tour,
-    tutorial::{Tutorial, TutorialPage},
-    uiuisms::Uiuisms,
-    Prim,
+    element, markdown::Markdown, other::*, primitive::*, tour::Tour, tutorial::TutorialPage,
+    uiuisms::Uiuisms, Prim,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DocsPage {
     Tour,
-    Tutorial(TutorialPage),
     Search(String),
     Design,
     Technical,
@@ -39,6 +32,7 @@ pub enum DocsPage {
     RightToLeft,
     Constants,
     StackIdioms,
+    Combinators,
     Optimizations,
     FormatConfig,
 }
@@ -46,28 +40,25 @@ pub enum DocsPage {
 impl IntoParam for DocsPage {
     fn into_param(value: Option<&str>, name: &str) -> Result<Self, ParamsError> {
         let value = value.unwrap_or("");
-        all::<TutorialPage>()
-            .find(|p| p.path() == value)
-            .map(Self::Tutorial)
-            .or(match value {
-                "" => None,
-                "tour" => Some(Self::Tour),
-                "design" => Some(Self::Design),
-                "technical" => Some(Self::Technical),
-                "install" => Some(Self::Install),
-                "audio" => Some(Self::Audio),
-                "images" => Some(Self::ImagesAndGifs),
-                "all-functions" => Some(Self::AllFunctions),
-                "isms" => Some(Self::Uiuisms),
-                "changelog" => Some(Self::Changelog),
-                "rtl" => Some(Self::RightToLeft),
-                "constants" => Some(Self::Constants),
-                "stack-idioms" => Some(Self::StackIdioms),
-                "optimizations" => Some(Self::Optimizations),
-                "format-config" => Some(Self::FormatConfig),
-                value => Some(Self::Search(value.into())),
-            })
-            .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
+        match value {
+            "" => Err(ParamsError::MissingParam(name.to_string())),
+            "tour" => Ok(Self::Tour),
+            "design" => Ok(Self::Design),
+            "technical" => Ok(Self::Technical),
+            "install" => Ok(Self::Install),
+            "audio" => Ok(Self::Audio),
+            "images" => Ok(Self::ImagesAndGifs),
+            "all-functions" => Ok(Self::AllFunctions),
+            "isms" => Ok(Self::Uiuisms),
+            "changelog" => Ok(Self::Changelog),
+            "rtl" => Ok(Self::RightToLeft),
+            "constants" => Ok(Self::Constants),
+            "stack-idioms" => Ok(Self::StackIdioms),
+            "combinators" => Ok(Self::Combinators),
+            "optimizations" => Ok(Self::Optimizations),
+            "format-config" => Ok(Self::FormatConfig),
+            value => Ok(Self::Search(value.into())),
+        }
     }
 }
 
@@ -85,7 +76,6 @@ pub fn Docs() -> impl IntoView {
         let page = params.page;
         let page_view = match page {
             DocsPage::Tour => Tour().into_view(),
-            DocsPage::Tutorial(tut) => view!( <Tutorial page=tut/>).into_view(),
             DocsPage::Search(search) => return view!( <DocsHome search=search/>).into_view(),
             DocsPage::Design => Design().into_view(),
             DocsPage::Technical => Technical().into_view(),
@@ -98,6 +88,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::RightToLeft => RightToLeft().into_view(),
             DocsPage::Constants => Constants().into_view(),
             DocsPage::StackIdioms => StackIdioms().into_view(),
+            DocsPage::Combinators => Combinators().into_view(),
             DocsPage::Optimizations => Optimizations().into_view(),
             DocsPage::FormatConfig => view!(<Markdown src="/format_config.md"/>).into_view(),
         };
@@ -223,7 +214,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <p>"These pages introduce Uiua concepts one at a time, each tutorial building on the previous. They go into much more depth than the language tour."</p>
         <p>"They are meant to be read in order, but feel free to skip around!"</p>
         <ul>{ all::<TutorialPage>()
-            .map(|p| view!( <li><A href={format!("/docs/{}", p.path())}>{p.title()}</A></li>))
+            .map(|p| view!( <li><A href={format!("/tutorial/{}", p.path())}>{p.title()}</A></li>))
             .collect::<Vec<_>>()
         }</ul>
 
@@ -232,15 +223,22 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
             <li><A href="/docs/changelog">"Changelog"</A>" - what's new in each version"</li>
             <li><A href="/docs/constants">"Constants"</A>" - a list of the shadowable constants"</li>
-            <li><A href="/docs/stack-idioms">"Stack Idioms"</A>" - common ways of manipulating the stack"</li>
             <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
             <li><A href="/docs/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
             <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the Uiua formatter"</li>
+            <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
+            <li><A href="/docs/stack-idioms">"Stack Idioms"</A>" - common ways of manipulating the stack"</li>
+        </ul>
+
+        <h2 id="other-pages">"Other Pages"</h2>
+        <ul>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
             <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about Uiua's design gets its own page"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
-            <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
+            <li><A href="/docs/combinators">"Combinators"</A>" - a list of common combinators implemented in Uiua"</li>
+            <li><a href="/primitives.json">"Primitives JSON"</a>" - a JSON file of all the primitives, for tooling and other projects (click then refresh)"</li>
         </ul>
+
         <h2 id="uiuisms">"Uiuisms"</h2>
         <p><A href="/docs/isms">"Uiuisms"</A>" is a curated list of Uiua functions for solving common problems."</p>
 

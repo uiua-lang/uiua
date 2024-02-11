@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+    <style>
+        .arg {
+            fill: black;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .arg {
+                fill: white;
+            }
+        }
+    </style>
+    <text x="90" y="40" font-family="Uiua386" font-size="40" fill="#54b0fc">F</text>
+    <text x="55" y="110" font-family="Uiua386" font-size="40" fill="#54b0fc">G</text>
+    <text x="45" y="190" font-family="Uiua386" font-size="40" class="arg">a</text>
+    <text x="90" y="190" font-family="Uiua386" font-size="40" class="arg">b</text>
+    <text x="135" y="190" font-family="Uiua386" font-size="40" class="arg">c</text>
+    <path stroke="#888a" fill-opacity="0" stroke-width="6" d="M 120 40 Q 170 80 145 160" />
+    <path stroke="#888a" fill-opacity="0" stroke-width="6" d="M 80 40 Q 70 50 70 75" />
+    <path stroke="#888a" fill-opacity="0" stroke-width="6" d="M 80 115 Q 100 130 100 155" />
+    <path stroke="#888a" fill-opacity="0" stroke-width="6" d="M 60 120 Q 50 140 50 160" />
+</svg>

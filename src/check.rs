@@ -327,7 +327,7 @@ impl<'a> VirtualEnv<'a> {
                     };
                     self.handle_args_outputs(1, outputs)?;
                 }
-                Each | Rows => {
+                Each | Rows | Inventory => {
                     let sig = self.pop_func()?.signature();
                     self.handle_sig(sig)?
                 }

@@ -468,10 +468,6 @@ fn set_code_html(id: &str, code: &str) {
 
     let chars: Vec<char> = code.chars().collect();
 
-    let mut comp = Compiler::new();
-    _ = comp.load_str(code);
-    let asm = comp.finish();
-
     let push_unspanned = |html: &mut String, mut target: usize, curr: &mut usize| {
         target = target.min(chars.len());
         if *curr >= target {
@@ -551,37 +547,27 @@ fn set_code_html(id: &str, code: &str) {
                             escape_html(text)
                         )
                     }
-                    SpanKind::Ident if text == "i" => r#"<span 
+                    SpanKind::Ident(None) if text == "i" => r#"<span 
                             class="code-span code-hover noadic-function" 
                             data-title="i: The imaginary unit">i</span>"#
                         .into(),
-                    SpanKind::Ident if text == "e" => r#"<span 
+                    SpanKind::Ident(None) if text == "e" => r#"<span 
                             class="code-span code-hover noadic-function" 
                             data-title="e: Euler's constant">e</span>"#
                         .into(),
-                    SpanKind::Ident => {
-                        if let Some(binding) = asm
-                            .bindings
-                            .iter()
-                            .find(|b| b.span.as_ref().map(|sp| &sp.start) == Some(&span.start))
-                            .or_else(|| {
-                                asm.global_references.iter().find_map(|(name, index)| {
-                                    (name.span.start == span.start).then(|| &asm.bindings[*index])
-                                })
-                            })
-                        {
-                            let mut title = binding
-                                .global
-                                .signature()
+                    SpanKind::Ident(ref docs) => {
+                        if let Some(docs) = docs {
+                            let mut title = docs
+                                .signature
                                 .map(|sig| sig.to_string())
                                 .unwrap_or_default();
-                            let class = if let Some(sig) = binding.global.signature() {
+                            let class = if let Some(sig) = docs.signature {
                                 let margs = text.chars().rev().take_while(|c| *c == '!').count();
-                                binding_class(text, sig, margs, binding.global.is_constant())
+                                binding_class(text, sig, margs, docs.constant)
                             } else {
                                 ""
                             };
-                            if let Some(comment) = &binding.comment {
+                            if let Some(comment) = &docs.comment {
                                 if !title.is_empty() {
                                     title.push(' ');
                                 }
@@ -917,8 +903,32 @@ pub fn report_view(report: &Report) -> impl IntoView {
         ReportKind::Diagnostic(DiagnosticKind::Advice) => "output-report output-advice",
         ReportKind::Diagnostic(DiagnosticKind::Style) => "output-report output-style",
     };
+    let mut newline_indices = Vec::new();
+    for (i, frag) in report.fragments.iter().enumerate() {
+        if matches!(frag, ReportFragment::Newline) {
+            newline_indices.push(i);
+        }
+    }
+    let mut snip_range = None;
+    if newline_indices.len() > 20 {
+        snip_range = Some(newline_indices[12]..newline_indices[newline_indices.len() - 8]);
+    }
     let mut frags = Vec::new();
-    for frag in &report.fragments {
+    for (i, frag) in report.fragments.iter().enumerate() {
+        if let Some(range) = &snip_range {
+            if range.contains(&i) {
+                if range.start == i {
+                    let omitted_count = newline_indices.len() - 20;
+                    frags.push(view!(<br/>).into_view());
+                    frags.push(view!(<br/>).into_view());
+                    frags.push(view! {
+                        <span class="output-report">{format!("     ...{omitted_count} omitted...")}</span>
+                    }.into_view());
+                    frags.push(view!(<br/>).into_view());
+                }
+                continue;
+            }
+        }
         frags.push(match frag {
             ReportFragment::Plain(s) => view!(<span class="output-report">{s}</span>).into_view(),
             ReportFragment::Faint(s) => {

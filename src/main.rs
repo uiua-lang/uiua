@@ -241,7 +241,7 @@ fn run() -> UiuaResult {
                 }
             }
             #[cfg(feature = "lsp")]
-            App::Lsp => uiua::run_language_server(),
+            App::Lsp => uiua::lsp::run_language_server(),
             App::Repl {
                 formatter_options,
                 #[cfg(feature = "audio")]
@@ -906,7 +906,7 @@ fn color_code(code: &str) -> String {
             SpanKind::Number => (255, 136, 68),
             SpanKind::Comment => (127, 127, 127),
             SpanKind::Strand => (200, 200, 200),
-            SpanKind::Ident
+            SpanKind::Ident(_)
             | SpanKind::Label
             | SpanKind::Signature
             | SpanKind::Whitespace

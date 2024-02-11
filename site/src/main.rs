@@ -20,7 +20,7 @@ use uiua::{ConstantDef, PrimClass, Primitive, Signature};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
-use crate::{blog::*, docs::*, editor::*, other::*, tour::*, uiuisms::*};
+use crate::{blog::*, docs::*, editor::*, other::*, tour::*, tutorial::Tutorial, uiuisms::*};
 
 pub fn main() {
     console_error_panic_hook::set_once();
@@ -151,6 +151,7 @@ pub fn Site() -> impl IntoView {
                         </main>
                     }>
                         <Route path="" view=MainPage/>
+                        <Route path="tutorial/:page" view=Tutorial/>
                         <Route path="docs/:page?" view=Docs/>
                         <Route path="isms/:search?" view=Uiuisms/>
                         <Route path="pad" view=Pad/>
@@ -188,7 +189,7 @@ pub fn MainPage() -> impl IntoView {
                 <A href="/tour">"Language Tour"</A>
             </div>
             <div>
-                <A href="/docs/introduction" class="slow-pulse">"Tutorial"</A>
+                <A href="/tutorial/introduction" class="slow-pulse">"Tutorial"</A>
                 <A href="/pad">"Pad"</A>
                 <A href="/blog">"Blog"</A>
                 <a href="https://discord.gg/3r9nrfYhCc">"Discord"</a>
@@ -265,10 +266,10 @@ pub fn MainPage() -> impl IntoView {
                         } else {
                             Some(view!{
                                 <Editor example="⍉⊞<⊞+⇡3○∩(÷25)⇡240⇡80"/>
-                                <Editor example="÷3/+○⊞×⊟×1.5.220×τ÷:⇡.&asr"/>
-                                <Editor example="Xy ← ⍉⍉⊞⊟.÷:⇡.100\n\
+                                <Editor example="÷3/+○⊞×⊟×1.5.220×τ÷⟜⇡&asr"/>
+                                <Editor example="Xy ← ⍉⍉⊞⊟.÷⟜⇡100\n\
                                     F ← ⍉◿1⊂⊃(+/÷|÷3+1○×τ+)Xy\n\
-                                    ∵F÷:⇡.10"/>
+                                    ∵F÷⟜⇡10"/>
                             })
                         }
                     }
@@ -564,4 +565,52 @@ fn site() {
             }
         }
     }
+}
+
+#[cfg(test)]
+#[test]
+fn gen_primitives_json() {
+    use serde::*;
+    use std::{collections::BTreeMap, fs, ops::Not};
+
+    #[derive(Serialize)]
+    struct PrimDef {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        ascii: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        glyph: Option<char>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        args: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        outputs: Option<usize>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        modifier_args: Option<usize>,
+        class: String,
+        description: String,
+        #[serde(skip_serializing_if = "Not::not")]
+        experimental: bool,
+        #[serde(skip_serializing_if = "Not::not")]
+        deprecated: bool,
+    }
+
+    let mut prims = BTreeMap::new();
+    for prim in Primitive::all() {
+        let doc = prim.doc();
+        prims.insert(
+            prim.name(),
+            PrimDef {
+                ascii: prim.ascii().map(|a| a.to_string()),
+                glyph: prim.glyph(),
+                args: prim.args(),
+                outputs: prim.outputs(),
+                modifier_args: prim.modifier_args(),
+                class: format!("{:?}", prim.class()),
+                description: doc.short_text().into(),
+                experimental: prim.is_experimental(),
+                deprecated: prim.is_deprecated(),
+            },
+        );
+    }
+    let json = serde_json::to_string_pretty(&prims).unwrap();
+    fs::write("primitives.json", json).unwrap();
 }

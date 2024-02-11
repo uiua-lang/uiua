@@ -25,15 +25,15 @@ u ← ↥<0.2:>0.7.+×2 ×.:°⊟Xy
 c ← >⌵/ℂ Xy
 ⍉⊂:-¬u c1 +0.1 ↧¤c0.95Rgb";
 const CHORD: &str = "\
-[0 4 7 10]       # Notes
-×220 ⁿ:2÷12      # Freqs
-○×τ ⊞× ÷:⇡.&asr. # Generate
-÷⧻: ≡/+          # Mix";
+[0 4 7 10]      # Notes
+×220 ⁿ:2÷12     # Freqs
+○×τ ⊞× ÷⟜⇡&asr. # Generate
+÷⧻: ≡/+         # Mix";
 const SPIRAL: &str = "\
-⇌×τ÷⊃∘⇡20            # Frame times
-⍉.↯:×20-1×2÷:⇡..200  # x and y
-≡(-⊃∠(-π◿τ+⍜∩°√+))∩¤ # Generate
-<0.2⌵                # Threshold";
+⇌×τ÷⟜⇡20           # Frame times
+⍉.↯:×20-1×2÷⟜⇡.200 # x and y
+-≡⊃∠(-π◿τ+⍜∩°√+)∩¤ # Generate
+<0.2⌵              # Threshold";
 const QUADRATIC: &str = "\
 Disc ← ⊟¯.√ℂ0-⊃(××4⊙⋅∘)⋅(×.)
 Quad ← ÷⊙+⊃(×2|⋅¯|Disc)
@@ -44,22 +44,22 @@ const STRIPES: &str = "\
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ⬚@ ⊜(⊂⊏:"❌✅" ≍⇌..)≠@ ."#;
 const AUTOMATA: &str = "\
-Rule ← /+⊞= ⊓(⊚⋯|°⋯⇌◫3⇌ ⊂:0⊂0)
-=⌊÷2:⇡.500         # Init
+Rule ← /+⊞= ⊓(⊚⋯|°⋯⇌◫3⇌ ⊂⊂0:0)
+=⌊÷2⟜⇡ 500         # Init
 ⇌[⍥(Rule30.)⌊÷2⧻.] # Run";
 const ROMAN: &str = r#"k ← "IVXLCDM"
 n ← [1 5 10 50 100 500 1000]
-f ← /+-⊃(↻1×|×¬)≡/>◫2⊂:0.⊏:n⊗:k
-f "LVII"
-f "MCMXCIV""#;
+F ← /+-⊃(↻1×|×¬)≡/>◫2⊂:0.⊏⊗:k:n
+F "LVII"
+F "MCMXCIV""#;
 const MANDELBROT: &str = "\
-×2 ⊞ℂ∶-1/4. ÷⊙-⊃⊃∘(÷2)⇡ 300 # Init
->2 ⌵ ⊙◌⍥⊃(+×.)⋅∘ 50 0       # Run";
+×2 ⊞ℂ:-1/4. ÷:-÷2,⇡.300 # Init
+>2 ⌵ ⊙◌⍥⊃(+×.)⋅∘ 50 0   # Run";
 const LIFE: &str = "\
 Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3¤.
-⁅×0.6∵⋅⚂↯⊟.30 0       # Init
-⇌◌⍥(⊃∘⊂Life)100⊃∘(↯1) # Run
-≡(▽↯⧻,:⍉▽↯⧻,,:5)      # Upscale";
+⁅×0.6 ∵⋅⚂ ↯⟜⊚ 30 # Init
+⇌◌⍥(⟜⊂Life)100⟜¤ # Run
+≡(▽▽⧻,:⍉▽▽⧻,,):5 # Upscale";
 
 pub const EXAMPLES: &[&str] = &[
     AVG, D3, UIUA, PRIMES, LOGO, CHORD, SPIRAL, QUADRATIC, STRIPES, PALINDROME, AUTOMATA, ROMAN,

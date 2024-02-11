@@ -341,11 +341,15 @@ Y ← comptime(X)
 Z ← comptime(+1Y)
 ⍤⊃⋅∘≍ Z +1 X
 
+# Recursion
+Fact ← |1 (×Fact-1.|1)<2.
+⍤⊃⋅∘≍ 120 Fact 5
+
 # Experimental!
 
-# Recursion
-⍤⊃⋅∘≍ 120 ↬((|1 ×↫-1.|1)<2.) 5
-⍤⊃⋅∘≍ 8 ↬((+∩(|2 ↫ -)1,2|1)<2.) 5
+# On
+⍤⊃⋅∘≍ [1 1 3] [⟜⊙⋅⊙◌ 1 2 3 4]
+⍤⊃⋅∘≍ [1 1 2 2 4] [⟜⊙⟜⊙⋅∘ 1 2 3 4]
 
 # Maps
 {1 3 "hi" [1 2 3]}
@@ -353,23 +357,23 @@ Z ← comptime(+1Y)
 map:
 MapA ←
 MapB ← insert 5 6 MapA
-Maps ← MapA MapB
+MapsI ← MapA MapB
 
-∩(⍤. has 1) Maps
-∩(⍤. has 3) Maps
-∩(⍤. has "hi") Maps
-∩(⍤. has [1 2 3]) Maps
+∩(⍤. has 1) MapsI
+∩(⍤. has 3) MapsI
+∩(⍤. has "hi") MapsI
+∩(⍤. has [1 2 3]) MapsI
 
-∩(⍤⊃⋅∘≍ □2 get 1) Maps
-∩(⍤⊃⋅∘≍ □4 get 3) Maps
-∩(⍤⊃⋅∘≍ □"there" get "hi") Maps
-∩(⍤⊃⋅∘≍ □[4 5 6] get [1 2 3]) Maps
+∩(⍤⊃⋅∘≍ □2 get 1) MapsI
+∩(⍤⊃⋅∘≍ □4 get 3) MapsI
+∩(⍤⊃⋅∘≍ □"there" get "hi") MapsI
+∩(⍤⊃⋅∘≍ □[4 5 6] get [1 2 3]) MapsI
 
-Maps ← ∩(remove 1) Maps
-∩(⍤. ¬has 1) Maps
-∩(⍤. has 3) Maps
-∩(⍤. has "hi") Maps
-∩(⍤. has [1 2 3]) Maps
+MapsII ← ∩(remove 1) MapsI
+∩(⍤. ¬has 1) MapsII
+∩(⍤. has 3) MapsII
+∩(⍤. has "hi") MapsII
+∩(⍤. has [1 2 3]) MapsII
 
 ⍤⊃⋅∘≍ 5 get 1_2 map [1_2 3_4] 5_6
 ⍤⊃⋅∘≍ 6 get 3_4 map [1_2 3_4] 5_6

@@ -137,7 +137,7 @@ impl Value {
                     .collect();
                 Array::new(complexes.shape.clone(), new_data).into()
             }
-            val => return Err(env.error(format!("Cannot invert parse {} array", val.type_name()))),
+            val => return Err(env.error(format!("Cannot unparse {} array", val.type_name()))),
         })
     }
     /// Convert value into a string that can be understood by the interpreter
@@ -269,7 +269,7 @@ impl Value {
                 |a, b| a.unfirst(b, env).map(Into::into),
                 |a, b| {
                     env.error(format!(
-                        "Cannot invert first of {} into {}",
+                        "Cannot unfirst {} into {}",
                         a.type_name(),
                         b.type_name()
                     ))
@@ -288,7 +288,7 @@ impl Value {
                 |a, b| a.unlast(b, env).map(Into::into),
                 |a, b| {
                     env.error(format!(
-                        "Cannot invert last of {} into {}",
+                        "Cannot unlast {} into {}",
                         a.type_name(),
                         b.type_name()
                     ))
@@ -978,9 +978,7 @@ impl Value {
                 }
                 Array::new(shape, data).into()
             }
-            shape => {
-                return Err(env.error(format!("Cannot invert where of rank-{} array", shape.len())))
-            }
+            shape => return Err(env.error(format!("Cannot unwhere rank-{} array", shape.len()))),
         })
     }
 }

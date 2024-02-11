@@ -89,7 +89,7 @@ impl AsMut<Assembly> for Uiua {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub(crate) struct StackFrame {
     /// The function being executed
     pub(crate) slice: FuncSlice,
@@ -967,7 +967,7 @@ code:
         }
     }
     /// Push a value onto the stack
-    pub fn push(&mut self, val: impl Into<Value>) {
+    pub fn push<V: Into<Value>>(&mut self, val: V) {
         self.rt.stack.push(val.into());
     }
     fn push_temp(&mut self, temp: TempStack, val: impl Into<Value>) {
@@ -1021,6 +1021,8 @@ code:
         bindings
     }
     /// Clone `n` values from the top of the stack
+    ///
+    /// Values are cloned in the order they were pushed
     pub fn clone_stack_top(&self, n: usize) -> Vec<Value> {
         self.rt.stack.iter().rev().take(n).rev().cloned().collect()
     }

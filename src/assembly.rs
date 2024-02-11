@@ -207,8 +207,10 @@ impl Inputs {
                 self.files.insert(path.to_path_buf(), input.into());
             }
             InputSrc::Str(i) => {
-                *i = self.strings.len();
-                self.strings.push(input.into())
+                while self.strings.len() <= *i {
+                    self.strings.push(EcoString::default());
+                }
+                self.strings.make_mut()[*i] = input.into();
             }
         }
         src

@@ -131,7 +131,7 @@ pub fn Install() -> impl IntoView {
         <h2>"Installing Uiua"</h2>
         <p>"If you are on Windows, then the newest version of the Uiua interpreter can be downloaded from the "<a href="https://github.com/uiua-lang/uiua/releases">"releases"</a>" page."</p>
         <p>"Otherwise, the native Uiua interpreter can be installed via Cargo."</p>
-        <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation."</p>
+        <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation (>=1.75)."</p>
         <p>"Once you have that, run the following command:"</p>
         <code class="code-block">"cargo install uiua"</code>
         <p>"The following optional features are available (enabled by passing "<code>"--features <feature>"</code>"):"</p>
@@ -145,16 +145,19 @@ pub fn Install() -> impl IntoView {
         <p>"If you want the most recent development version of Uiua, you can install from the git repository."</p>
         <code class="code-block">"cargo install --git https://github.com/uiua-lang/uiua uiua"</code>
 
-        <h2>"Font"</h2>
+        <h2 id="fonts">"Fonts"</h2>
         <p>"Uiua was originally designed to be used with stock "<a href="https://dejavu-fonts.github.io">"DejaVu Sans Mono"</a>". However, it now supports two custom fonts:"</p>
         <ul>
-            <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/DejaVuSansMono.ttf">"DejaVuSansMono"</a>" - a modified version"</li>
             <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/Uiua386.ttf">"Uiua386"</a>" - inspired by APL386. Thanks to Gifti for making it!"</li>
+            <li>"Jonathan Perret's"<a href="https://github.com/jonathanperret/uiua386color">"Uiua386Color"</a>" - a colored version of Uiua386"</li>
+            <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/DejaVuSansMono.ttf">"DejaVuSansMono"</a>" - a modified version"</li>
         </ul>
 
-        <h2>"Editor Support"</h2>
+        <h2 id="editor-support">"Editor Support"</h2>
         <p>"An official "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">"Uiua language extension for VSCode"</a>" is available."</p>
         <p>"For Neovim, Apeiros-46B maintains "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/syntax/uiua.vim">"syntax"</a>" and "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/ftplugin/uiua.lua">"LSP"</a>" scripts."</p>
+        <p>"For Vim, sputnick1124 maintains a "<a href="https://github.com/sputnick1124/uiua.vim">"Uiua plugin"</a>"."</p>
+        <p>"For Emacs, crmsnbleyd maintains a "<a href="https://github.com/crmsnbleyd/uiua-ts-mode">"Uiua mode"</a>"."</p>
         <p>"These require Uiua to be installed and in your "<code>"PATH"</code>"."</p>
 
         <h2>"Basic Usage"</h2>
@@ -350,6 +353,7 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[Dip, Dip, Dip]/>"…"</th><td><Prim prim=Dip/>" n times"</td><td>"Single "<Prim prim=Dip/>" of n values"</td></tr>
             <tr><th><Prims prims=[Transpose, Transpose, Transpose]/>"…"</th><td><Prim prim=Transpose/>" n times"</td><td>"Single "<Prim prim=Transpose/></td></tr>
             <tr><th><Prims prims=[Rows, Transpose]/></th><td><Prim prim=Transpose/>" each row"</td><td>"Single "<Prim prim=Transpose/></td></tr>
+            <tr><th><Prims prims=[Rows, Reduce]/><code>"F"</code><Prims prims=[Windows]/><code>"2"</code></th><td>"Make "<Prim prim=Windows/>" then "<Prim prim=Reduce/>" each row"</td><td>"Apply "<code>"F"</code>" to adjacent rows"</td></tr>
         </table>
     }
 }
@@ -359,5 +363,152 @@ pub fn Changelog() -> impl IntoView {
     view! {
         <Title text="Changelog - Uiua Docs"/>
         { markdown(include_str!("../../changelog.md")) }
+    }
+}
+
+#[component]
+pub fn Combinators() -> impl IntoView {
+    use Primitive::*;
+    let combinators = [
+        (
+            view!(<Prim prim=Identity/>).into_view(),
+            ("∘", 1, "I", "Identity"),
+        ),
+        (
+            view!(<Prims prims=[Dip, Pop]/>).into_view(),
+            ("⊙◌", 2, "K", "Kestrel"),
+        ),
+        (
+            view!(<Prims prims=[Pop]/>" or "<Prims prims=[Gap, Identity]/>).into_view(),
+            ("◌\n⋅∘", 2, "KI", "Kite"),
+        ),
+        (
+            view!(<Prim prim=Dup/>).into_view(),
+            ("⊂.", 1, "W", "Warbler"),
+        ),
+        (
+            view!(<Prim prim=Flip/>).into_view(),
+            ("⊂:", 2, "C", "Cardinal"),
+        ),
+        (View::default(), ("⊢⇌", 1, "B", "Bluebird")),
+        (View::default(), ("⇌⊂", 2, "B1", "Blackbird")),
+        (
+            view!(<Prim prim=On/>).into_view(),
+            ("⊂⟜¯", 1, "S", "Starling"),
+        ),
+        (
+            view!(<Prim prim=Dup/>).into_view(),
+            ("≍⇌.", 1, "Σ", "Violet Starling"),
+        ),
+        (view!(<Prim prim=Dip/>).into_view(), ("⊟⊙⇌", 2, "D", "Dove")),
+        (View::default(), ("⊟⇌", 2, "Δ", "Zebra Dove")),
+        (
+            view!(<Prim prim=Fork/>).into_view(),
+            ("⊟⊃¯⇌", 1, "Φ", "Phoenix"),
+        ),
+        (view!(<Prim prim=Both/>).into_view(), ("⊂∩□", 2, "Ψ", "Psi")),
+        (
+            view!(<Prim prim=Bracket/>).into_view(),
+            ("⊟⊓¯⇌", 2, "D2", "Dovekie"),
+        ),
+        (
+            view!(<Prim prim=Dip/>).into_view(),
+            ("⊟⊙+", 3, "E", "Eagle"),
+        ),
+        (View::default(), ("⊟+", 3, "ε", "Golden Eagle")),
+        (
+            view!(<Prim prim=Fork/>).into_view(),
+            ("⊟⊃¯+", 2, "X", "Eastern Kingbird"),
+        ),
+        (
+            view!(<Prim prim=Fork/>).into_view(),
+            ("⊟⊃+¯", 2, "χ", "Western Kingbird"),
+        ),
+        (
+            view!(<Prim prim=Bracket/>).into_view(),
+            ("⊟⊓¯+", 3, "P", "Eastern Parotia"),
+        ),
+        (
+            view!(<Prim prim=Bracket/>).into_view(),
+            ("⊟⊓+¯", 3, "ρ", "Western Parotia"),
+        ),
+        (
+            view!(<Prim prim=Fork/>).into_view(),
+            ("⊟⊃+-", 2, "Φ1", "Pheasant"),
+        ),
+        (
+            view!(<Prim prim=Bracket/>).into_view(),
+            ("⊟⊓-+", 4, "Ê", "Bald Eagle"),
+        )
+    ];
+    let combinators = combinators
+        .into_iter()
+        .map(|(code, (example, inputs, symbol, bird))| {
+            let mut ex = String::new();
+            for (i, line) in example.lines().enumerate() {
+                if i > 0 {
+                    ex.push('\n');
+                }
+                ex.push_str(line);
+                if !line.starts_with('#') {
+                    for i in 0..inputs {
+                        let a = i * 3 + 1;
+                        ex.push_str(&format!(" {}_{}_{}", a, a + 1, a + 2));
+                    }
+                    ex.push_str("  ");
+                }
+            }
+            let diagram = format!("/combinators/{symbol}.svg");
+            let note = ["X", "χ", "P", "ρ"].contains(&symbol).then(|| {
+                view! { 
+                    <sup>" "<span 
+                        style="text-decoration: underline dotted; font-size: 0.8em; cursor: help;"
+                        title="X, χ, P, and ρ are not standard named combinators. They are included here because Uiua can express them easily.">
+                        "*"
+                    </span></sup>
+                }
+            });
+            let symbol = if let Some(sym) = symbol.strip_suffix(|c: char| c.is_ascii_digit()) {
+                let sub = symbol.chars().rev().take_while(char::is_ascii_digit).collect::<String>();
+                view!({ sym }<sub>{ sub }</sub>).into_view()
+            } else {
+                symbol.into_view()
+            };
+            view! {
+                <tr>
+                    <td>{ symbol }{ note }</td>
+                    <td>{ bird }</td>
+                    <td>{ code }</td>
+                    <td><Editor example={&ex} nonprogressive=true/></td>
+                    <td><img src={diagram} alt={bird} class="combinator-diagram"/></td>
+                </tr>
+            }
+        })
+        .collect::<Vec<_>>();
+    view! {
+        <Title text="Combinators - Uiua Docs"/>
+        <h1>"Combinators"</h1>
+        <p>"This page contains a list of implementations of common combinators in Uiua. While it's not really necessary to know these to write Uiua programs, you may find the information interesting."</p>
+        <p>"A combinator is a function that only refers to its arguments. "<a href="https://en.wikipedia.org/wiki/Combinatory_logic">"Combinatory logic"</a>" is the branch of logic that deals with combinators."</p>
+        <p>"Ever since Raymond Smullyan's book "<a href="https://en.wikipedia.org/wiki/To_Mock_a_Mockingbird">"To Mock a Mockingbird"</a>", people have been calling combinators by bird names. These bird names are included in the table."</p>
+        <h2 id="reading">"Reading the Table"</h2>
+        <p>"Each entry in the table contains a diagram of the combinator. The letters "<code>"F"</code>", "<code>"G"</code>", and "<code>"H"</code>" represent the first, second, and third functions involved in the combinator. The letters "<code>"a"</code>", "<code>"b"</code>", "<code>"c"</code>", and "<code>"d"</code>" represent the arguments."</p>
+        <p>"For the purpose of the examples, "<code>"a"</code>" is always the array "<code>"1_2_3"</code>", "<code>"b"</code>" is always the array "<code>"4_5_6"</code>", etc."</p>
+        <p>"The left-most function in the example stands in for "<code>"F"</code>", the \"top-most\" function in the combinator."</p>
+        <br/>
+        <hr/>
+        <br/>
+        <table class="header-centered-table cell-centered-table" style="width: 100%">
+            <tr>
+                <th title="Symbol">"Sym."</th>
+                <th>"Bird"</th>
+                <th>"Code"</th>
+                <th>"Example"</th>
+                <th>"Diagram"</th>
+            </tr>
+            { combinators }
+        </table>
+        <p>"This page is inspired by the "<a href="https://mlochbaum.github.io/BQN/doc/birds.html">"similar page"</a>" on the BQN website. The diagrams are also inspired by "<a href="https://mlochbaum.github.io/BQN/doc/tacit.html#combinators">"BQN's combinator diagrams"</a>"."</p>
+        <p>"I referenced "<a href="https://combinatorylogic.com/table.html">"these"</a>" "<a href="https://www.angelfire.com/tx4/cus/combinator/birds.html">"lists"</a>" of combinators when making this page."</p>
     }
 }

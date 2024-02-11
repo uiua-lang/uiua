@@ -4,6 +4,7 @@ use std::{
     mem::{replace, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
+    rc::Rc,
     sync::Arc,
 };
 
@@ -28,26 +29,33 @@ use crate::{
 pub struct Compiler {
     pub(crate) asm: Assembly,
     /// Functions which are under construction
-    pub(crate) new_functions: Vec<EcoVec<Instr>>,
-    pub(crate) next_global: usize,
+    new_functions: Vec<EcoVec<Instr>>,
+    /// The name of the current binding
+    current_binding: Option<CurrentBinding>,
+    /// The index of the next global binding
+    next_global: usize,
     /// The current scope
-    pub(crate) scope: Scope,
+    scope: Scope,
     /// Ancestor scopes of the current one
-    pub(crate) higher_scopes: Vec<Scope>,
+    higher_scopes: Vec<Scope>,
     /// Determines which How test scopes are run
-    pub(crate) mode: RunMode,
+    mode: RunMode,
     /// The paths of files currently being imported (used to detect import cycles)
-    pub(crate) current_imports: Vec<PathBuf>,
+    current_imports: Vec<PathBuf>,
     /// The bindings of imported files
-    pub(crate) imports: HashMap<PathBuf, HashMap<Ident, usize>>,
+    imports: HashMap<PathBuf, HashMap<Ident, usize>>,
     /// Accumulated errors
-    pub(crate) errors: Vec<UiuaError>,
+    errors: Vec<UiuaError>,
+    /// Primitives that have emitted errors because they are experimental
+    experimental_prim_errors: HashSet<Primitive>,
+    /// Primitives that have emitted errors because they are deprecated
+    deprecated_prim_errors: HashSet<Primitive>,
     /// Accumulated diagnostics
-    pub(crate) diagnostics: BTreeSet<Diagnostic>,
+    diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
-    pub(crate) print_diagnostics: bool,
+    print_diagnostics: bool,
     /// The backend used to run comptime code
-    pub(crate) backend: Arc<dyn SysBackend>,
+    backend: Arc<dyn SysBackend>,
 }
 
 impl Default for Compiler {
@@ -55,6 +63,7 @@ impl Default for Compiler {
         Compiler {
             asm: Assembly::default(),
             new_functions: Vec::new(),
+            current_binding: None,
             next_global: 0,
             scope: Scope::default(),
             higher_scopes: Vec::new(),
@@ -62,6 +71,8 @@ impl Default for Compiler {
             current_imports: Vec::new(),
             imports: HashMap::new(),
             errors: Vec::new(),
+            experimental_prim_errors: HashSet::new(),
+            deprecated_prim_errors: HashSet::new(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             backend: Arc::new(SafeSys),
@@ -82,15 +93,23 @@ impl AsMut<Assembly> for Compiler {
 }
 
 #[derive(Clone)]
+struct CurrentBinding {
+    name: Ident,
+    signature: Option<Signature>,
+    referenced: bool,
+    global_index: usize,
+}
+
+#[derive(Clone)]
 pub(crate) struct Scope {
     /// Map local names to global indices
-    pub names: HashMap<Ident, usize>,
+    names: HashMap<Ident, usize>,
     /// Whether to allow experimental features
-    pub experimental: bool,
+    experimental: bool,
     /// The stack height between top-level statements
-    pub stack_height: Result<usize, Sp<SigCheckError>>,
+    stack_height: Result<usize, Sp<SigCheckError>>,
     /// The stack of referenced locals
-    pub locals: Vec<HashSet<usize>>,
+    locals: Vec<HashSet<usize>>,
 }
 
 impl Default for Scope {
@@ -152,6 +171,7 @@ impl Compiler {
         let input: EcoString = fs::read_to_string(path)
             .map_err(|e| UiuaError::Load(path.into(), e.into()))?
             .into();
+        _ = crate::lsp::spans(&input);
         self.asm.inputs.files.insert(path.into(), input.clone());
         self.load_impl(&input, InputSrc::File(path.into()))
     }
@@ -272,10 +292,13 @@ code:
                             comment.clear();
                             continue;
                         }
+                        if i > 0 {
+                            comment.push('\n');
+                        }
                         for word in line {
                             if let Word::Comment(c) = &word.value {
-                                if i > 0 {
-                                    comment.push('\n');
+                                if c.trim() == "Experimental!" {
+                                    continue;
                                 }
                                 comment.push_str(c);
                             }
@@ -312,7 +335,9 @@ code:
                             Err(e) => self.scope.stack_height = Err(span.sp(e)),
                         }
                         let start = self.asm.instrs.len();
-                        self.asm.instrs.extend(optimize_instrs(instrs, true));
+                        self.asm
+                            .instrs
+                            .extend(optimize_instrs(instrs, true, &self.asm));
                         let end = self.asm.instrs.len();
                         self.asm.top_slices.push(FuncSlice {
                             start,
@@ -339,7 +364,7 @@ code:
         I: IntoIterator<Item = Instr> + fmt::Debug,
         I::IntoIter: ExactSizeIterator,
     {
-        let instrs = optimize_instrs(instrs, true);
+        let instrs = optimize_instrs(instrs, true, &self.asm);
         let len = instrs.len();
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
@@ -356,38 +381,58 @@ code:
         let span = &binding.name.span;
         let placeholder_count = count_placeholders(&binding.words);
 
-        let make_fn = |mut instrs: EcoVec<Instr>, sig: Signature, comp: &mut Self| {
-            // Diagnostic for function that doesn't consume its arguments
-            if let Some((Instr::Prim(Primitive::Dup, span), rest)) = instrs.split_first() {
-                if let Ok(rest_sig) = instrs_signature(rest) {
-                    if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs {
-                        comp.emit_diagnostic(
-                            "Functions should consume their arguments. \
+        let mut make_fn: Rc<dyn Fn(_, _, &mut Compiler) -> _> = Rc::new(
+            |mut instrs: EcoVec<Instr>, sig: Signature, comp: &mut Compiler| {
+                // Diagnostic for function that doesn't consume its arguments
+                if let Some((Instr::Prim(Primitive::Dup, span), rest)) = instrs.split_first() {
+                    if let Ok(rest_sig) = instrs_signature(rest) {
+                        if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs {
+                            comp.emit_diagnostic(
+                                "Functions should consume their arguments. \
                             Try removing this duplicate.",
-                            DiagnosticKind::Style,
-                            comp.get_span(*span),
-                        );
-                        comp.flush_diagnostics();
+                                DiagnosticKind::Style,
+                                comp.get_span(*span),
+                            );
+                            comp.flush_diagnostics();
+                        }
                     }
                 }
-            }
 
-            // Handle placeholders
-            if placeholder_count > 0 {
-                instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
-                instrs.push(Instr::PopTempFunctions(placeholder_count));
-            }
-            let f = comp.add_function(FunctionId::Named(name.clone()), sig, instrs);
-            if placeholder_count > 0 {
-                comp.increment_placeholders(&f, &mut 0, &mut HashMap::new());
-            }
-            f
-        };
+                // Handle placeholders
+                if placeholder_count > 0 {
+                    instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
+                    instrs.push(Instr::PopTempFunctions(placeholder_count));
+                }
+                let f = comp.add_function(FunctionId::Named(name.clone()), sig, instrs);
+                if placeholder_count > 0 {
+                    comp.increment_placeholders(&f, &mut 0, &mut HashMap::new());
+                }
+                f
+            },
+        );
         // Compile the body
-        let mut instrs = self.compile_words(binding.words, true)?;
+        self.current_binding = Some(CurrentBinding {
+            name: name.clone(),
+            signature: binding.signature.as_ref().map(|s| s.value),
+            referenced: false,
+            global_index: self.next_global,
+        });
+        let instrs = self.compile_words(binding.words, true);
+        let self_referenced = self.current_binding.take().unwrap().referenced;
+        let mut instrs = instrs?;
         let span_index = self.add_span(span.clone());
         let global_index = self.next_global;
         self.next_global += 1;
+
+        if self_referenced {
+            let name = name.clone();
+            let make = make_fn.clone();
+            make_fn = Rc::new(move |instrs, sig, comp: &mut Compiler| {
+                let f = make(instrs, sig, comp);
+                let instrs = vec![Instr::PushFunc(f), Instr::Prim(Primitive::This, span_index)];
+                comp.add_function(FunctionId::Named(name.clone()), sig, instrs)
+            });
+        }
 
         // Check if binding is an import
         let mut is_import = false;
@@ -527,7 +572,9 @@ code:
                         index: global_index,
                     });
                     let start = self.asm.instrs.len();
-                    self.asm.instrs.extend(optimize_instrs(instrs, true));
+                    self.asm
+                        .instrs
+                        .extend(optimize_instrs(instrs, true, &self.asm));
                     let end = self.asm.instrs.len();
                     self.asm.top_slices.push(FuncSlice {
                         start,
@@ -696,7 +743,7 @@ code:
                 )
             })?
         };
-        let instrs = optimize_instrs(instrs, false);
+        let instrs = optimize_instrs(instrs, false, &self.asm);
         Ok((instrs, sig))
     }
     fn words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult {
@@ -764,7 +811,7 @@ code:
     /// instruction form some known pattern
     fn push_instr(&mut self, instr: Instr) {
         let instrs = self.new_functions.last_mut().unwrap();
-        optimize_instrs_mut(instrs, instr, false);
+        optimize_instrs_mut(instrs, instr, false, &self.asm);
     }
     fn push_all_instrs(&mut self, instrs: impl IntoIterator<Item = Instr>) {
         for instr in instrs {
@@ -1042,7 +1089,33 @@ code:
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if !self.scope.locals.is_empty() && ident.chars().all(|c| c.is_ascii_lowercase()) {
+        if let Some(curr) = self
+            .current_binding
+            .as_mut()
+            .filter(|curr| curr.name == ident)
+        {
+            // Name is a recursive call
+            let Some(sig) = curr.signature else {
+                return Err(self.fatal_error(
+                    span,
+                    format!(
+                        "Recursive function `{ident}` must have a \
+                        signature declared after the `←`."
+                    ),
+                ));
+            };
+            curr.referenced = true;
+            self.asm
+                .global_references
+                .insert(span.clone().sp(ident), curr.global_index);
+            let instr = Instr::Prim(Primitive::Recur, self.add_span(span.clone()));
+            if call {
+                self.push_all_instrs([Instr::PushSig(sig), instr, Instr::PopSig]);
+            } else {
+                let f = self.add_function(FunctionId::Anonymous(span), sig, [instr]);
+                self.push_instr(Instr::PushFunc(f));
+            }
+        } else if !self.scope.locals.is_empty() && ident.chars().all(|c| c.is_ascii_lowercase()) {
             // Name is a local variable
             let span = self.add_span(span);
             for c in ident.chars().rev() {
@@ -1479,7 +1552,7 @@ code:
             return Ok(false);
         };
         match prim {
-            Dip | Gap => {
+            Dip | Gap | On => {
                 // Compile operands
                 let (mut instrs, sig) = self.compile_operand_words(modified.operands.clone())?;
                 // Dip (|1 …) . diagnostic
@@ -1490,7 +1563,7 @@ code:
                         let span = Span::Code(modified.modifier.span.clone())
                             .merge(self.get_span(*dup_span));
                         self.emit_diagnostic(
-                            "Prefer `⊃∘(…)` over `⊙(…).` for clarity",
+                            "Prefer `⟜(…)` over `⊙(…).` for clarity",
                             DiagnosticKind::Style,
                             span,
                         );
@@ -1519,6 +1592,22 @@ code:
                         instrs.insert(0, Instr::Prim(Pop, span));
                         Signature::new(sig.args + 1, sig.outputs)
                     }
+                    On => {
+                        instrs.insert(
+                            0,
+                            Instr::CopyToTemp {
+                                stack: TempStack::Inline,
+                                count: 1,
+                                span,
+                            },
+                        );
+                        instrs.push(Instr::PopTemp {
+                            stack: TempStack::Inline,
+                            count: 1,
+                            span,
+                        });
+                        Signature::new(sig.args, sig.outputs + 1)
+                    }
                     _ => unreachable!(),
                 };
                 if call {
@@ -1536,8 +1625,16 @@ code:
             }
             Fork => {
                 let mut operands = modified.code_operands().cloned();
-                let (a_instrs, a_sig) =
-                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let first_op = operands.next().unwrap();
+                // ⊃∘ diagnostic
+                if let Word::Primitive(Primitive::Identity) = first_op.value {
+                    self.emit_diagnostic(
+                        "Prefer `⟜` over `⊃∘` for clarity",
+                        DiagnosticKind::Style,
+                        modified.modifier.span.clone().merge(first_op.span.clone()),
+                    );
+                }
+                let (a_instrs, a_sig) = self.compile_operand_words(vec![first_op])?;
                 let (b_instrs, b_sig) =
                     self.compile_operand_words(vec![operands.next().unwrap()])?;
                 let span = self.add_span(modified.modifier.span.clone());
@@ -1842,7 +1939,7 @@ code:
                     );
                     return Ok(false);
                 }
-                let instrs = optimize_instrs(instrs, true);
+                let instrs = optimize_instrs(instrs, true, &self.asm);
                 let mut asm = self.asm.clone();
                 let start = asm.instrs.len();
                 let len = instrs.len();
@@ -1899,6 +1996,9 @@ code:
     }
     fn handle_primitive_deprecation(&mut self, prim: Primitive, span: &CodeSpan) {
         if let Some(suggestion) = prim.deprecation_suggestion() {
+            if !self.deprecated_prim_errors.insert(prim) {
+                return;
+            }
             let suggestion = if suggestion.is_empty() {
                 String::new()
             } else {
@@ -1916,7 +2016,10 @@ code:
         }
     }
     fn handle_primitive_experimental(&mut self, prim: Primitive, span: &CodeSpan) {
-        if prim.is_experimental() && !self.scope.experimental {
+        if prim.is_experimental()
+            && !self.scope.experimental
+            && self.experimental_prim_errors.insert(prim)
+        {
             self.add_error(
                 span.clone(),
                 format!(
@@ -1988,7 +2091,12 @@ code:
         for instr in instrs {
             match instr {
                 Instr::Prim(
-                    Primitive::Trace | Primitive::Dump | Primitive::Stack | Primitive::Assert,
+                    Primitive::Trace
+                    | Primitive::Dump
+                    | Primitive::Stack
+                    | Primitive::Assert
+                    | Primitive::Shapes
+                    | Primitive::Types,
                     _,
                 ) => return true,
                 Instr::ImplPrim(

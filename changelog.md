@@ -5,6 +5,7 @@ Uiua is not yet stable.
 ## 0.9.0 - 2024-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- Add the [`on ⟜`](https://uiua.org/docs/on) modifier, which captures a common [`fork ⊃`](https://uiua.org/docs/fork) pattern in a more readable way
 - [`join ⊂`](https://uiua.org/docs/join) can now be used with [`under ⍜`](https://uiua.org/docs/under)
   - This only works when the joined arrays have different ranks
 - [`join ⊂`](https://uiua.org/docs/join) can now be used with [`un °`](https://uiua.org/docs/un) to separate the first row of an array from the rest
@@ -12,15 +13,28 @@ This version is not yet released. If you are reading this on the website, then t
   - This makes it easier to either provide a default value, process the error itself, or do something different with the inputs
 - A [`fill ⬚`](https://uiua.org/docs/fill) value set outside a looping modifier will now no longer be available inside the loop
   - This should make it easier to scope [`fill ⬚`](https://uiua.org/docs/fill) correctly
+- Add recursion via refering to a binding's name within its body
+  - Deprecate [`this ↬`](https://uiua.org/docs/this) and [`recur ↫`](https://uiua.org/docs/recur), as they are no longer necessary
 - `f` can now be used at the beginning of planet notation shorthand for [`fork ⊃`](https://uiua.org/docs/fork)
 - Add experimental labels, denoted by a `$` immediately followed by an identifier, which attach a name to an array. This has two uses:
   - Labels are visible in output and in [`stack`](https://uiua.org/docs/stack) diagnostics
   - Labels in code make it easier to understand when reading
+- Add experimental [`shapes`](https://uiua.org/docs/shapes) and [`types`](https://uiua.org/docs/types) modifiers, which validate the shape and type of an array or arrays
+  - These both check array properties at runtime and serve as a form of documentation
+- Add experimental [`inventory ⎏`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
+  - This shortens a lot of box array code
+- [`pop ◌`](https://uiua.org/docs/pop) no longer formats from `;`
+- Deprecate [`all ⋔`](https://uiua.org/docs/all)
+  - It was rarely used and hard to reason about
 ### Interpreter
 - Numbers that seem to have a floating-point epsilon rounding error will be output with the epsilon noted
 - When hovering a user-defined function's name, the language server will now show whether it is compatible with [`un °`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under)
+- Optimize the pattern for adjacency: `≡/F◫2`
+  - It it as much as 800x faster in some cases
 ### Website
-- Add [Tutorial Introduction](https://uiua.org/docs/introduction)
+- Add [Tutorial Introduction](https://uiua.org/tutorial/introduction)
+- Add [primitives.json](https://uiua.org/primitives.json) for use with tooling
+- Tutorials are now in a `/tutorial` route instead of `/docs`
 
 ## 0.8.0 - 2024-01-31
 ### Language
@@ -58,7 +72,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`&ime`](https://uiua.org/docs/&ime) and [`&imd`](https://uiua.org/docs/&imd) now support the QOI image format
 - Lots of bug and crash fixes
 ### Website
-- Add a new tutorial: [Thinking With Arrays](https://uiua.org/docs/thinkingwitharrays)
+- Add a new tutorial: [Thinking With Arrays](https://uiua.org/tutorial/thinkingwitharrays)
 
 ## 0.7.1 - 2023-12-18
 ### Interpreter
@@ -92,7 +106,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Bug and crash fixes
 - Performance improvements
 ### Website
-- Add an [Inverses](https://uiua.org/docs/inverses) tutorial
+- Add an [Inverses](https://uiua.org/tutorial/inverses) tutorial
 - Each tutorial challenge now contains 1 or 2 answers
 
 ## 0.6.1 - 2023-12-07
@@ -250,7 +264,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the `uiua stand` command, which creates a standalone executable
 ### Website
 - Add [Optimizations](https://uiua.org/docs/optimizations) page
-- Add [Images and GIFs](https://uiua.org/docs/images) tutorial
+- Add [Images and GIFs](https://uiua.org/tutorial/images) tutorial
 
 ## 0.0.25 - 2023-10-29
 ### Interpreter
@@ -332,9 +346,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Some mathematical functions that previously did not work with [`invert ⍘`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under) when accompanied by [`flip :`](https://uiua.org/docs/flip) now do
 ### Website
 - Add 3 new tutorials
-  - [Control Flow](https://uiua.org/docs/controlflow)
-  - [Advanced Array Manipulation](https://uiua.org/docs/advancedarray)
-  - [Custom Modifiers](https://uiua.org/docs/custommodifiers)
+  - [Control Flow](https://uiua.org/tutorial/controlflow)
+  - [Advanced Array Manipulation](https://uiua.org/tutorial/advancedarray)
+  - [Custom Modifiers](https://uiua.org/tutorial/custommodifiers)
 - The orientation of stack values in the output can be flipped in the settings
 
 ## 0.0.20 - 2023-10-16
@@ -489,7 +503,7 @@ You may want to read the new version of the [Advanced Stack Manipulation Tutoria
 ## 2023-09-29
 ### Language
 - Make binding names case-sensitive
-- Add `^` syntax to terminate modifier parsing. There is a basic example [in the tutorial](http://uiua.org/docs/functions#terminating-modifiers).
+- Add `^` syntax to terminate modifier parsing. There is a basic example [in the tutorial](http://uiua.org/tutorial/functions#terminating-modifiers).
 - Add [`&runi`](https://uiua.org/docs/&runi) and [`&runc`](https://uiua.org/docs/&runc) functions for running commands
 - Add [`&cd`](https://uiua.org/docs/&cd) function for changing the current working directory
 - Add shadowable [constants](https://uiua.org/docs/constants) like `e` and `os`

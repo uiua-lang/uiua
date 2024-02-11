@@ -125,7 +125,7 @@ pub mod format;
 mod function;
 mod grid_fmt;
 mod lex;
-mod lsp;
+pub mod lsp;
 mod optimize;
 mod parse;
 mod primitive;
@@ -152,7 +152,6 @@ pub use self::{
     function::*,
     lex::is_ident_char,
     lex::*,
-    lsp::*,
     lsp::{spans, SpanKind},
     parse::{parse, ParseError},
     primitive::*,

@@ -408,8 +408,8 @@ pub fn Combinators() -> impl IntoView {
         ),
         (view!(<Prim prim=Both/>).into_view(), ("⊂∩□", 2, "Ψ", "Psi")),
         (
-            view!(<Prim prim=Dip/>).into_view(),
-            ("⊟¯⊙⇌", 2, "D2", "Dovekies"),
+            view!(<Prim prim=Bracket/>).into_view(),
+            ("⊟⊓¯⇌", 2, "D2", "Dovekies"),
         ),
         (
             view!(<Prim prim=Dip/>).into_view(),
@@ -466,7 +466,7 @@ pub fn Combinators() -> impl IntoView {
             </tr>
             { combinators }
         </table>
-        <p>"This page is inspired by the "<a href="https://mlochbaum.github.io/BQN/doc/birds.html">"similar page"</a>" on the BQN website. The diagrams are also inspired by "<a href="https://mlochbaum.github.io/BQN/tutorial/combinator.html">"BQN's combinator diagrams"</a>"."</p>
+        <p>"This page is inspired by the "<a href="https://mlochbaum.github.io/BQN/doc/birds.html">"similar page"</a>" on the BQN website. The diagrams are also inspired by "<a href="https://mlochbaum.github.io/BQN/doc/tacit.html#combinators">"BQN's combinator diagrams"</a>"."</p>
         <p>"I referenced "<a href="https://combinatorylogic.com/table.html">"these"</a>" "<a href="https://www.angelfire.com/tx4/cus/combinator/birds.html">"lists"</a>" of combinators when making this page."</p>
     }
 }

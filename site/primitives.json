@@ -876,7 +876,8 @@
     "args": 0,
     "class": "Misc",
     "description": "Call a function recursively",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "recv": {
     "args": 1,
@@ -1084,7 +1085,8 @@
     "modifier_args": 1,
     "class": "Misc",
     "description": "Set a function to recur to",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "trace": {
     "glyph": "⸮",

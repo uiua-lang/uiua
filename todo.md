@@ -2,7 +2,6 @@
 
 ## Features
 - 0.9
-  - Style diagnostic for `,:`
   - Some arithmetic operators on characters
     - `sign` for getting the case
     - `abs` for uppercasing

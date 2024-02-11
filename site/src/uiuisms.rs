@@ -172,7 +172,7 @@ uiuisms!(
     /// Join a list of boxed strings
     r#"/⊔⊂ {"a" "bc" "def"}"#,
     /// Find the nth fibonacci number
-    "◌⍥(+,:)⊙.:1 10",
+    "◌⍥(+⟜:)⊙.:1 10",
     /// Find the GCD of two numbers
     "◌⍢⊃◿∘± 35 360",
     /// Remove all instances of an element from a list
@@ -204,9 +204,9 @@ uiuisms!(
     /// Trim whitespace
     r#"▽×⍜(⊟⇌)≡\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a 2d matrix
-    "30 [0_1 1_0]\n▽▽⧻,:⍉▽▽⧻,,:",
+    "30 [0_1 1_0]\n▽▽⧻⟜:⍉▽▽⧻,⟜:",
     /// Upscale a colored image
-    "30 [[0_0_1 0_1_0] [1_0_0 0_0_0]]\n°⍉▽▽⧻,:⍉▽▽⧻,,:",
+    "30 [[0_0_1 0_1_0] [1_0_0 0_0_0]]\n°⍉▽▽⧻⟜:⍉▽▽⧻,⟜:",
     /// Linearly interpolate between two values
     "⍜-× 10 0 0.2\n⍜⊙-× 0.2 10 0",
     /// Set the value of an array at an index

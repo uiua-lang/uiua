@@ -1360,11 +1360,11 @@ primitive!(
     /// - `fab fac`
     /// Both involve applying a stack idiom before calling [both].
     /// For `fac fbc`, the idiom is `dip``over`.
-    /// For `fab fac`, the idiom is `over``flip`.
+    /// For `fab fac`, the idiom is `on``flip`.
     /// For example, if you wanted to check that a number is divisible by two other numbers:
     /// ex: F ← ∩(=0◿) ⊙,
     ///   : F 3 5 ⇡16
-    /// ex: G ← ∩(=0◿:) ,:
+    /// ex: G ← ∩(=0◿:) ⟜:
     ///   : G ⇡16 3 5
     (2[1], Both, Planet, ("both", '∩')),
     /// Invert the behavior of a function

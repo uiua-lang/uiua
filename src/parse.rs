@@ -495,6 +495,12 @@ impl<'i> Parser<'i> {
                                 DiagnosticKind::Style,
                                 self.inputs.clone(),
                             )),
+                            (Over, Flip) => self.diagnostics.push(Diagnostic::new(
+                                format!("Prefer `{On}{Flip}` over `{Over}{Flip}` for clarity"),
+                                span(),
+                                DiagnosticKind::Style,
+                                self.inputs.clone(),
+                            )),
                             // Not comparisons
                             (Not, prim) => {
                                 for (a, b) in [(Eq, Ne), (Lt, Ge), (Gt, Le)] {

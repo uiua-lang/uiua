@@ -31,9 +31,7 @@ pub struct Compiler {
     /// Functions which are under construction
     new_functions: Vec<EcoVec<Instr>>,
     /// The name of the current binding
-    current_binding: Option<(Ident, Option<Signature>)>,
-    /// Whether the current binding referenced itself
-    self_referenced: bool,
+    current_binding: Option<CurrentBinding>,
     /// The index of the next global binding
     next_global: usize,
     /// The current scope
@@ -66,7 +64,6 @@ impl Default for Compiler {
             asm: Assembly::default(),
             new_functions: Vec::new(),
             current_binding: None,
-            self_referenced: false,
             next_global: 0,
             scope: Scope::default(),
             higher_scopes: Vec::new(),
@@ -93,6 +90,14 @@ impl AsMut<Assembly> for Compiler {
     fn as_mut(&mut self) -> &mut Assembly {
         &mut self.asm
     }
+}
+
+#[derive(Clone)]
+struct CurrentBinding {
+    name: Ident,
+    signature: Option<Signature>,
+    referenced: bool,
+    global_index: usize,
 }
 
 #[derive(Clone)]
@@ -406,10 +411,14 @@ code:
             },
         );
         // Compile the body
-        self.current_binding = Some((name.clone(), binding.signature.as_ref().map(|s| s.value)));
+        self.current_binding = Some(CurrentBinding {
+            name: name.clone(),
+            signature: binding.signature.as_ref().map(|s| s.value),
+            referenced: false,
+            global_index: self.next_global,
+        });
         let instrs = self.compile_words(binding.words, true);
-        self.current_binding = None;
-        let self_referenced = take(&mut self.self_referenced);
+        let self_referenced = self.current_binding.take().unwrap().referenced;
         let mut instrs = instrs?;
         let span_index = self.add_span(span.clone());
         let global_index = self.next_global;
@@ -1080,18 +1089,19 @@ code:
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if let Some((_, sig)) = self.current_binding.as_ref().filter(|(b, _)| b == &ident) {
-            let Some(sig) = sig else {
+        if let Some(curr) = self.current_binding.as_mut().filter(|curr| curr.name == ident) {
+            let Some(sig) = curr.signature else {
                 return Err(self.fatal_error(
                     span, 
                     format!("Recursive function `{ident}` must have a signature declared after the `←`.")
                 ));
             };
-            self.push_instr(Instr::PushSig(*sig));
+            curr.referenced = true;
+            self.asm.global_references.insert(span.clone().sp(ident), curr.global_index);
+            self.push_instr(Instr::PushSig(sig));
             let span = self.add_span(span);
             self.push_instr(Instr::Prim(Primitive::Recur, span));
             self.push_instr(Instr::PopSig);
-            self.self_referenced = true;
         } else if !self.scope.locals.is_empty() && ident.chars().all(|c| c.is_ascii_lowercase()) {
             // Name is a local variable
             let span = self.add_span(span);

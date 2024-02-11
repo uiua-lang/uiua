@@ -1089,19 +1089,32 @@ code:
         Ok(())
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if let Some(curr) = self.current_binding.as_mut().filter(|curr| curr.name == ident) {
+        if let Some(curr) = self
+            .current_binding
+            .as_mut()
+            .filter(|curr| curr.name == ident)
+        {
+            // Name is a recursive call
             let Some(sig) = curr.signature else {
                 return Err(self.fatal_error(
-                    span, 
-                    format!("Recursive function `{ident}` must have a signature declared after the `←`.")
+                    span,
+                    format!(
+                        "Recursive function `{ident}` must have a \
+                        signature declared after the `←`."
+                    ),
                 ));
             };
             curr.referenced = true;
-            self.asm.global_references.insert(span.clone().sp(ident), curr.global_index);
-            self.push_instr(Instr::PushSig(sig));
-            let span = self.add_span(span);
-            self.push_instr(Instr::Prim(Primitive::Recur, span));
-            self.push_instr(Instr::PopSig);
+            self.asm
+                .global_references
+                .insert(span.clone().sp(ident), curr.global_index);
+            let instr = Instr::Prim(Primitive::Recur, self.add_span(span.clone()));
+            if call {
+                self.push_all_instrs([Instr::PushSig(sig), instr, Instr::PopSig]);
+            } else {
+                let f = self.add_function(FunctionId::Anonymous(span), sig, [instr]);
+                self.push_instr(Instr::PushFunc(f));
+            }
         } else if !self.scope.locals.is_empty() && ident.chars().all(|c| c.is_ascii_lowercase()) {
             // Name is a local variable
             let span = self.add_span(span);

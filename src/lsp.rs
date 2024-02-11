@@ -89,25 +89,27 @@ impl Spanner {
                 Item::Binding(binding) => {
                     let mut binding_docs = None;
                     for comp_binding in &self.asm.bindings {
-                        if let Some(comp_span) = &comp_binding.span {
-                            if comp_span == &binding.name.span {
-                                binding_docs = Some(BindingDocs {
-                                    src_span: comp_span.clone(),
-                                    signature: comp_binding.global.signature(),
-                                    comment: comp_binding.comment.clone(),
-                                    invertible_underable: self.invertible_underable(comp_binding),
-                                    constant: matches!(
-                                        comp_binding.global,
-                                        Global::Const(_)
-                                            | Global::Sig(Signature {
-                                                args: 0,
-                                                outputs: 1
-                                            })
-                                    ),
-                                });
-                                break;
-                            }
+                        let Some(comp_span) = &comp_binding.span else {
+                            continue;
+                        };
+                        if comp_span != &binding.name.span {
+                            continue;
                         }
+                        binding_docs = Some(BindingDocs {
+                            src_span: comp_span.clone(),
+                            signature: comp_binding.global.signature(),
+                            comment: comp_binding.comment.clone(),
+                            invertible_underable: self.invertible_underable(comp_binding),
+                            constant: matches!(
+                                comp_binding.global,
+                                Global::Const(_)
+                                    | Global::Sig(Signature {
+                                        args: 0,
+                                        outputs: 1
+                                    })
+                            ),
+                        });
+                        break;
                     }
                     spans.push(binding.name.span.clone().sp(SpanKind::Ident(binding_docs)));
                     spans.push(binding.arrow_span.clone().sp(SpanKind::Delimiter));
@@ -136,26 +138,30 @@ impl Spanner {
                 Word::Ident(_) => {
                     let mut binding_docs = None;
                     for (name, index) in &self.asm.global_references {
-                        let binding = &self.asm.bindings[*index];
-                        if let Some(comp_span) = &binding.span {
-                            if name.span == word.span {
-                                binding_docs = Some(BindingDocs {
-                                    src_span: comp_span.clone(),
-                                    signature: binding.global.signature(),
-                                    comment: binding.comment.clone(),
-                                    invertible_underable: self.invertible_underable(binding),
-                                    constant: matches!(
-                                        binding.global,
-                                        Global::Const(_)
-                                            | Global::Sig(Signature {
-                                                args: 0,
-                                                outputs: 1
-                                            })
-                                    ),
-                                });
-                                break;
-                            }
+                        let Some(binding) = self.asm.bindings.get(*index) else {
+                            continue;
+                        };
+                        let Some(comp_span) = &binding.span else {
+                            continue;
+                        };
+                        if name.span != word.span {
+                            continue;
                         }
+                        binding_docs = Some(BindingDocs {
+                            src_span: comp_span.clone(),
+                            signature: binding.global.signature(),
+                            comment: binding.comment.clone(),
+                            invertible_underable: self.invertible_underable(binding),
+                            constant: matches!(
+                                binding.global,
+                                Global::Const(_)
+                                    | Global::Sig(Signature {
+                                        args: 0,
+                                        outputs: 1
+                                    })
+                            ),
+                        });
+                        break;
                     }
                     spans.push(word.span.clone().sp(SpanKind::Ident(binding_docs)))
                 }
@@ -244,19 +250,20 @@ impl Spanner {
                             let mut binding_docs = None;
                             for (name, index) in &self.asm.global_references {
                                 let binding = &self.asm.bindings[*index];
-                                if let Some(comp_span) = &binding.span {
-                                    if name.span == *modifier_span {
-                                        binding_docs = Some(BindingDocs {
-                                            src_span: comp_span.clone(),
-                                            signature: binding.global.signature(),
-                                            comment: binding.comment.clone(),
-                                            invertible_underable: self
-                                                .invertible_underable(binding),
-                                            constant: false,
-                                        });
-                                        break;
-                                    }
+                                let Some(comp_span) = &binding.span else {
+                                    continue;
+                                };
+                                if name.span != *modifier_span {
+                                    continue;
                                 }
+                                binding_docs = Some(BindingDocs {
+                                    src_span: comp_span.clone(),
+                                    signature: binding.global.signature(),
+                                    comment: binding.comment.clone(),
+                                    invertible_underable: self.invertible_underable(binding),
+                                    constant: false,
+                                });
+                                break;
                             }
                             SpanKind::Ident(binding_docs)
                         }

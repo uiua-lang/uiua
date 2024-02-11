@@ -2119,11 +2119,6 @@ primitive!(
     /// ex: # Experimental!
     ///   : ↯2_2_3⇡12
     ///   : &p ⍜⊜□⎏(⊂@,)∊," \n" repr
-    ///
-    /// [map]s need to me unmapped before calling [repr].
-    /// ex: # Experimental!
-    ///   : map {"Alice" "Bob" "Carol"} [3_8 12_2 4_5]
-    ///   : &p repr{°map}
     (1, Repr, Misc, "repr"),
 );
 

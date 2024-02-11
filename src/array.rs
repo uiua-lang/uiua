@@ -788,7 +788,7 @@ pub(crate) fn dbg_value(value: &Value, depth: Option<usize>, prefix: bool) -> St
             if a.meta().map_len.is_none() {
                 dbg_array::<Boxed>(a, depth, prefix)
             } else {
-                // can't use unmap because it needs an env
+                // can't use unmap here because it needs an env
                 let remove_empty_rows = |data: &Boxed| {
                     Value::from_row_values_infallible(
                         data.as_value()
@@ -800,11 +800,12 @@ pub(crate) fn dbg_value(value: &Value, depth: Option<usize>, prefix: bool) -> St
                 let data = a.data.as_slice();
                 let keys = remove_empty_rows(&data[0]);
                 let values = remove_empty_rows(&data[1]);
+                let depth = depth.map_or(1, |d| d + 1);
                 format!(
-                    "{}\n{}{}",
-                    dbg_value(&keys, depth, true),
-                    " ".repeat(depth.unwrap_or(0)),
-                    dbg_value(&values, depth, true),
+                    "{{{}\n{padding}{}}}",
+                    dbg_value(&keys, Some(depth), true),
+                    dbg_value(&values, Some(depth), true),
+                    padding = " ".repeat(depth)
                 )
             }
         },
@@ -813,7 +814,7 @@ pub(crate) fn dbg_value(value: &Value, depth: Option<usize>, prefix: bool) -> St
 
 /// Convert array into a string that can be understood by the interpreter
 /// * `depth` - recursion/indentation depth. Pass in None
-/// * `prefix` - whether chars and boxes need a prefix. Pass in true
+/// * `prefix` - whether singular chars and boxes need a prefix. Pass in true
 pub(crate) fn dbg_array<T: DebugArrayValue>(
     array: &Array<T>,
     depth: Option<usize>,

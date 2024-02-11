@@ -418,6 +418,22 @@ pub fn Combinators() -> impl IntoView {
         (View::default(), ("⊟+", 3, "ε", "Golden Eagle")),
         (
             view!(<Prim prim=Fork/>).into_view(),
+            ("⊟⊃¯+", 2, "X", "Eastern Kingbird"),
+        ),
+        (
+            view!(<Prim prim=Fork/>).into_view(),
+            ("⊟⊃+¯", 2, "χ", "Western Kingbird"),
+        ),
+        (
+            view!(<Prim prim=Bracket/>).into_view(),
+            ("⊟⊓¯+", 3, "P", "Eastern Parotia"),
+        ),
+        (
+            view!(<Prim prim=Bracket/>).into_view(),
+            ("⊟⊓+¯", 3, "ρ", "Western Parotia"),
+        ),
+        (
+            view!(<Prim prim=Fork/>).into_view(),
             ("⊟⊃+-", 2, "Φ1", "Pheasant"),
         ),
         (
@@ -443,9 +459,24 @@ pub fn Combinators() -> impl IntoView {
                 }
             }
             let diagram = format!("/combinators/{symbol}.svg");
+            let note = ["X", "χ", "P", "ρ"].contains(&symbol).then(|| {
+                view! { 
+                    <sup>" "<span 
+                        style="text-decoration: underline dotted; font-size: 0.8em; cursor: help;"
+                        title="X, χ, P, and ρ are not standard named combinators. They are included here because Uiua can express them easily.">
+                        "*"
+                    </span></sup>
+                }
+            });
+            let symbol = if let Some(sym) = symbol.strip_suffix(|c: char| c.is_ascii_digit()) {
+                let sub = symbol.chars().rev().take_while(char::is_ascii_digit).collect::<String>();
+                view!({ sym }<sub>{ sub }</sub>).into_view()
+            } else {
+                symbol.into_view()
+            };
             view! {
                 <tr>
-                    <td>{ symbol }</td>
+                    <td>{ symbol }{ note }</td>
                     <td>{ bird }</td>
                     <td>{ code }</td>
                     <td><Editor example={&ex} nonprogressive=true/></td>

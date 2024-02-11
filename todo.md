@@ -2,6 +2,10 @@
 
 ## Features
 - 0.9
+  - Some arithmetic operators on characters
+    - `sign` for getting the case
+    - `abs` for uppercasing
+    - `neg` for toggling case
   - Multiple imports
   - Basic package management
     - `&i "git:path"`

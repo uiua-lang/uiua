@@ -1320,19 +1320,29 @@ primitive!(
     /// Call a function but keep its first argument on the top of the stack
     ///
     /// ex: # Experimental!
-    ///   : [⟜- 2 10]
+    ///   : [⟜+ 2 5]
+    ///   : [⟜- 2 5]
     /// ex: # Experimental!
     ///   : ÷⟜⇡ 10
     /// ex: # Experimental!
     ///   : +⟜(⇡-) 4 10
+    /// ex: # Experimental!
+    ///   : +⟜(×-) 10 20 0.3
+    /// ex: # Experimental!
+    ///   : ↯⟜⊚ 4
     ///
     /// [on] in planet notation acts as a way of [duplicate]ing a value.
+    /// You can read `on``dip` or `on``identity` as a single unit that keeps 2 copies of the value at that position.
     /// ex: # Experimental!
-    ///   : [⟜⊙⋅⊙◌ 1 2 3 4]
+    ///   : [⟜⊙⋅⟜⊙◌   1 2 3 4] # Easy to read with ⟜
+    ///   : [.⊙⋅(.⊙◌) 1 2 3 4] # Hard to read with .
+    ///   : [∩⊓.◌     1 2 3 4] # Shorter, maybe hard to read
     /// ex: # Experimental!
-    ///   : [⟜⊙⟜⊙⋅∘ 1 2 3 4]
+    ///   : [⊙⟜⊙⋅⟜∘  1 2 3 4] # Easy to read with ⟜
+    ///   : [⊙(.⊙⋅.) 1 2 3 4] # Hard to read with .
+    ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
     ///
-    /// [on] is equivalent to [fork][id].
+    /// [on] is equivalent to [fork][identity], but can often be easier to read.
     ([1], On, Planet, ("on", '⟜')),
     /// Call a function on two sets of values
     ///

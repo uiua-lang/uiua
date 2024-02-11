@@ -903,8 +903,32 @@ pub fn report_view(report: &Report) -> impl IntoView {
         ReportKind::Diagnostic(DiagnosticKind::Advice) => "output-report output-advice",
         ReportKind::Diagnostic(DiagnosticKind::Style) => "output-report output-style",
     };
+    let mut newline_indices = Vec::new();
+    for (i, frag) in report.fragments.iter().enumerate() {
+        if matches!(frag, ReportFragment::Newline) {
+            newline_indices.push(i);
+        }
+    }
+    let mut snip_range = None;
+    if newline_indices.len() > 20 {
+        snip_range = Some(newline_indices[12]..newline_indices[newline_indices.len() - 8]);
+    }
     let mut frags = Vec::new();
-    for frag in &report.fragments {
+    for (i, frag) in report.fragments.iter().enumerate() {
+        if let Some(range) = &snip_range {
+            if range.contains(&i) {
+                if range.start == i {
+                    let omitted_count = newline_indices.len() - 20;
+                    frags.push(view!(<br/>).into_view());
+                    frags.push(view!(<br/>).into_view());
+                    frags.push(view! {
+                        <span class="output-report">{format!("     ...{omitted_count} omitted...")}</span>
+                    }.into_view());
+                    frags.push(view!(<br/>).into_view());
+                }
+                continue;
+            }
+        }
         frags.push(match frag {
             ReportFragment::Plain(s) => view!(<span class="output-report">{s}</span>).into_view(),
             ReportFragment::Faint(s) => {

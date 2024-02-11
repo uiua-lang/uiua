@@ -313,6 +313,7 @@ impl Primitive {
                 | Remove
                 | Bind
                 | Sys(SysOp::FFI)
+                | Repr
         )
     }
     /// Check if this primitive is deprecated

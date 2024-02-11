@@ -2010,11 +2010,21 @@ primitive!(
     (0(0)[1], Dump, Stack, "dump"),
     /// Stringify any value
     ///
-    /// ex: repr π
-    /// Use [&p][repr] to produce a representation that can be pasted directly into the interpreter
-    /// ex: &p repr ↯2_2_2 0
-    /// ex: &p repr {"Uiua" @A [1 2 3] □4}
-    /// [map]s need to me unmapped before calling [repr]
+    /// ex: # Experimental!
+    ///   : repr π
+    /// Use [&p][repr] to produce a representation that can be pasted directly into the
+    /// interpreter.
+    /// ex: # Experimental!
+    ///   : &p repr ↯2_2_2 0
+    /// ex: # Experimental!
+    ///   : &p repr {"Uiua" @A [1 2 3] □4}
+    ///
+    /// Append commas to whitespace for a more traditional look.
+    /// ex: # Experimental!
+    ///   : ↯2_2_3⇡12
+    ///   : &p ⍜⊜□⎏(⊂@,)∊," \n" repr
+    ///
+    /// [map]s need to me unmapped before calling [repr].
     /// ex: # Experimental!
     ///   : map {"Alice" "Bob" "Carol"} [3_8 12_2 4_5]
     ///   : &p repr{°map}

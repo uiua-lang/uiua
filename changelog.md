@@ -16,6 +16,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental labels, denoted by a `$` immediately followed by an identifier, which attach a name to an array. This has two uses:
   - Labels are visible in output and in [`stack`](https://uiua.org/docs/stack) diagnostics
   - Labels in code make it easier to understand when reading
+- Add an experimental `repr` function that produces a string representation of a value in a format that can be read by the interpreter
 ### Interpreter
 - Numbers that seem to have a floating-point epsilon rounding error will be output with the epsilon noted
 - When hovering a user-defined function's name, the language server will now show whether it is compatible with [`un °`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under)

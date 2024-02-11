@@ -2003,8 +2003,51 @@ primitive!(
     /// See also: [insert], [has], [get]
     (2, Remove, Map, "remove"),
     /// Validate the shapes of some arrays
+    ///
+    /// The shapes of as many values as the function takes will be pushed to the stack before the function is called.
+    /// The values themselves will *not* be consumed.
+    /// The function is expected to return a scalar or list of booleans corresponding to the validity of the shapes.
+    /// This has two purposes:
+    /// - Validate the shapes at runtime
+    /// - Serve as documentation for the reader
+    /// While [shapes] is usually used near the beginning of a function, it can be used anywhere.
+    ///
+    /// For example, if you have a function that both appends and prepends a row to an array, you may want to ensure that the row's shape is the same as the tail of the array's shape.
+    /// ex: # Experimental!
+    ///   : Omnipend ← (
+    ///   :   shapes(≍⊙(↘1))
+    ///   :   ⊂:⊃∘⊂
+    ///   : )
+    ///   : Omnipend 5 [1 2 3]
+    /// ex! # Experimental!
+    ///   : Omnipend ← ⊂:⊃∘⊂ shapes(≍⊙(↘1))
+    ///   : Omnipend [5 6] [1 2 3]
+    ///
+    /// See also: [types]
     (0(0)[1], Shapes, Misc, "shapes"),
     /// Validate the types of some arrays
+    ///
+    /// The types of as many values as the function takes will be pushed to the stack before the function is called.
+    /// The values themselves will *not* be consumed.
+    /// The types are integers corresponding to those returned by [type].
+    /// The function is expected to return a scalar or list of booleans corresponding to the validity of the types.
+    /// This has two purposes:
+    /// - Validate the types at runtime
+    /// - Serve as documentation for the reader
+    /// While [types] is usually used near the beginning of a function, it can be used anywhere.
+    ///
+    /// For example, if you have a function that both appends and prepends a row to an array, you may want to ensure that the row's type is the same as the array's type.
+    /// ex: # Experimental!
+    ///   : Omnipend ← (
+    ///   :   types=
+    ///   :   ⊂:⊃∘⊂
+    ///   : )
+    ///   : Omnipend 5 [1 2 3]
+    /// ex! # Experimental!
+    ///   : Omnipend ← ⊂:⊃∘⊂ types=
+    ///   : Omnipend "hi!" [1 2 3]
+    ///
+    /// See also: [shapes]
     (0(0)[1], Types, Misc, "types"),
     /// Debug print all stack values without popping them
     ///

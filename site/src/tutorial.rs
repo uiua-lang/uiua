@@ -908,7 +908,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p><Prim prim=Fork/>" is also good because it does not require that its values be in an array together, so they can be different shapes or types."</p>
         <Editor example="⊃+- 1 @b"/>
         <Editor example="⊃⊃⊃↻↙↘⊡ 2 [1 2 3 4 5]"/>
-        <p>"We'll see just how important "<Prim prim=Fork/>" is later is this section."</p>
+        <p>"We'll see just how important "<Prim prim=Fork/>" is later in this section."</p>
 
         <h2 id="both"><Prim prim=Both/></h2>
         <p><Prim prim=Both/>" is a monadic modifier and a sort of complement to "<Prim prim=Fork/>". While "<Prim prim=Fork/>" calls multiple functions on the same set of arguments, "<Prim prim=Both/>" calls a "<em>"single"</em>" function on "<em>"multiple"</em>" sets of arguments."</p>

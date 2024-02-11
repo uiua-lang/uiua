@@ -2,13 +2,13 @@
 
 ## Features
 - 0.9
+  - Style diagnostic for `,:`
   - Some arithmetic operators on characters
     - `sign` for getting the case
     - `abs` for uppercasing
     - `neg` for toggling case
-  - Multiple imports
-  - Basic package management
-    - `&i "git:path"`
+  - Redo modules and imports completely
+  - Add other `on` combinators
   - Fix cursor mapping with end-of-line comments
   - Color labels in pad
   - Pad link from Gist

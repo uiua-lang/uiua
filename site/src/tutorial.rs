@@ -1482,28 +1482,27 @@ fn TutorialModules() -> impl IntoView {
         <h1>"Modules"</h1>
         <p>"Modules are a way to organize your code in Uiua. Any Uiua file can be used as a module."</p>
 
-        <h2 id="import"><Prim prim=Sys(SysOp::Import)/></h2>
-        <p>"The "<Prim prim=Sys(SysOp::Import)/>" function allows you to import items from modules. It expects a file path and a binding name from that file, both as strings."</p>
-        <p>"The website has a virtual file system. You can write to virtual files with "<Prim prim=Sys(SysOp::FWriteAll)/>". You can also drag and drop files from your computer into the editor to make them available to import."</p>
+        <h3 id="web-files">"Files on the Website"</h3>
+        <p>"Using modules involves loading files from the file system."</p>
+        <p>"This website has a virtual file system. You can write to virtual files with "<Prim prim=Sys(SysOp::FWriteAll)/>". You can also drag and drop files from your computer into the editor to make them available to import."</p>
         <p>"There is also a test module that can always be imported as "<code>"example.ua"</code>". Its contents is:"</p>
         <Editor example={&example_ua(|ex| ex.clone())}/>
-        <p>"The "<code>"Increment"</code>" function defined in the example module can be imported with "<Prim prim=Sys(SysOp::Import)/>" then immediately bound so that it can be used locally."</p>
-        <Editor example="Inc ← &i \"example.ua\" \"Increment\"\nInc 5"/>
-        <p>"Lets import and use them all."</p>
-        <Editor example="\
-Inc ← &i \"example.ua\" \"Increment\"
-Dub ← &i \"example.ua\" \"Double\"
-Sqr ← &i \"example.ua\" \"Square\"
-Inc Sqr Dub 5"/>
-        <p>"This is a little verbose, so we can make a function that imports a given item."</p>
-        <Editor example="\
-Ex ← &i \"example.ua\"
-Inc ← Ex \"Increment\"
-Dub ← Ex \"Double\"
-Sqr ← Ex \"Square\"
-Inc Sqr Dub 5"/>
-        <p>"When you write code like this that imports several items, the formatter will automatically indent each item. Try it out!"</p>
 
+        <h2 id="importing">"Importing Modules"</h2>
+        <p>"Modules can be imported by file path with "<code>"~"</code>"."</p>
+        <Editor example="~ \"example.ua\""/>
+        <p>"This is not very useful on its own. We can bind items from the module in the current scope by listing them after the file path, separated by additional "<code>"~"</code>"s."</p>
+        <Editor example="~ \"example.ua\" ~ Increment ~ Square\n\nIncrement Square 3"/>
+        <p>"If we have a lot of items to import, we can use multiple lines."</p>
+        <Editor example="~ \"example.ua\"\n~ Increment ~ Square\n~ Foo ~ Bar\n\nIncrement Square Foo"/>
+        <p>"The formatter will automatically indent the imports if they are on multiple lines. Try it out!"</p>
+
+        <h2 id="binding">"Binding Modules"</h2>
+        <p>"If we put a name before the import, we can bind the module to that name."</p>
+        <p>"We can then reference items from that module anywhere using a "<code>"~"</code>"."</p>
+        <Editor example="Ex ~ \"example.ua\"\n\nEx~Increment 10"/>
+        <p>"This can be mixed and matched with the other import syntax."</p>
+        <Editor example="Ex ~ \"example.ua\" ~ Increment ~ Square\n\nEx~Double Increment Square 3\nEx~Mod!×"/>
     }
 }
 

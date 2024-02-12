@@ -47,16 +47,9 @@ impl Value {
     pub fn unmap(mut self, env: &Uiua) -> UiuaResult<(Value, Value)> {
         with_pair_mut(&mut self, env, |_| {})?;
         let mut rows = self.into_rows().map(|row| row.unboxed());
-        let keys = (rows.next().unwrap().into_rows())
-            .filter(|row| !(row.is_empty_cell() || row.is_tombstone()))
-            .collect::<Vec<_>>();
-        let values = (rows.next().unwrap().into_rows())
-            .filter(|row| !(row.is_empty_cell() || row.is_tombstone()))
-            .collect::<Vec<_>>();
-        Ok((
-            Value::from_row_values_infallible(keys),
-            Value::from_row_values_infallible(values),
-        ))
+        let keys = remove_empty_rows(rows.next().unwrap().into_rows());
+        let values = remove_empty_rows(rows.next().unwrap().into_rows());
+        Ok((keys, values))
     }
     /// Get a value from a map array
     pub fn get(&self, key: &Value, env: &Uiua) -> UiuaResult<Value> {
@@ -81,6 +74,14 @@ impl Value {
     pub fn remove(&mut self, key: Value, env: &Uiua) -> UiuaResult {
         with_pair_mut(self, env, |mut pair| pair.remove(key, env))?
     }
+}
+
+/// Filter out placeholder map rows and collect into a new `Value`
+pub fn remove_empty_rows(iter: impl ExactSizeIterator<Item = Value>) -> Value {
+    Value::from_row_values_infallible(
+        iter.filter(|row| !(row.is_empty_cell() || row.is_tombstone()))
+            .collect::<Vec<_>>(),
+    )
 }
 
 const LOAD_FACTOR: f64 = 0.75;

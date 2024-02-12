@@ -484,7 +484,7 @@ impl<'a> Formatter<'a> {
             let mut lines: Vec<String> = self
                 .output
                 .split('\n')
-                .map(|s| s.trim_end().into())
+                .map(|s| s.trim_end_matches(' ').into())
                 .collect();
             for (line_number, comment) in self.end_of_line_comments.drain(..) {
                 let line = &lines[line_number - 1];

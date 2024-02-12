@@ -5,6 +5,9 @@ Uiua is not yet stable.
 ## 0.9.0 - 2024-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- Overhaul the module system
+  - Details can be found in the updated [Modules](https://uiua.org/tutorial/modules) tutorial
+  - Deprecate [`&i`](https://uiua.org/docs/&i), as it is no longer necessary
 - Add the [`on ⟜`](https://uiua.org/docs/on) modifier, which captures a common [`fork ⊃`](https://uiua.org/docs/fork) pattern in a more readable way
 - [`join ⊂`](https://uiua.org/docs/join) can now be used with [`under ⍜`](https://uiua.org/docs/under)
   - This only works when the joined arrays have different ranks

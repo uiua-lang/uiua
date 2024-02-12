@@ -322,6 +322,7 @@ impl Primitive {
             Primitive::This | Primitive::Recur => {
                 Some("use the name of a binding to recur instead".into())
             }
+            Primitive::Sys(SysOp::Import) => Some("use new ~ syntax instead".into()),
             _ => None,
         }
     }

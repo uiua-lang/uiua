@@ -475,6 +475,7 @@ pub enum AsciiToken {
     LessEqual,
     GreaterEqual,
     Backtick,
+    Tilde,
     TripleMinus,
     Quote,
     Quote2,
@@ -500,6 +501,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::LessEqual => write!(f, "<="),
             AsciiToken::GreaterEqual => write!(f, ">="),
             AsciiToken::Backtick => write!(f, "`"),
+            AsciiToken::Tilde => write!(f, "~"),
             AsciiToken::TripleMinus => write!(f, "---"),
             AsciiToken::Quote => write!(f, "'"),
             AsciiToken::Quote2 => write!(f, "''"),
@@ -628,6 +630,7 @@ impl<'a> Lexer<'a> {
                 ";" => self.end(Semicolon, start),
                 "'" if self.next_char_exact("'") => self.end(Quote2, start),
                 "'" => self.end(Quote, start),
+                "~" => self.end(Tilde, start),
                 "`" => {
                     if self.number("-") {
                         self.end(Number, start)

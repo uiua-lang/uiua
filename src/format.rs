@@ -550,13 +550,18 @@ impl<'a> Formatter<'a> {
                     {
                         self.prev_import_function = Some(binding.name.value.clone());
                     }
-                    Some(Word::Ident(ident)) => {
-                        if (self.prev_import_function.as_ref()).is_some_and(|prev| prev == ident) {
-                            for _ in 0..self.config.multiline_indent {
-                                self.output.push(' ');
-                            }
-                        } else {
-                            self.prev_import_function = None;
+                    Some(Word::Ident(ident))
+                        if self.prev_import_function.as_ref() == Some(ident) =>
+                    {
+                        for _ in 0..self.config.multiline_indent {
+                            self.output.push(' ');
+                        }
+                    }
+                    Some(Word::ModuleItem(item))
+                        if self.prev_import_function.as_ref() == Some(&item.module.value) =>
+                    {
+                        for _ in 0..self.config.multiline_indent {
+                            self.output.push(' ');
                         }
                     }
                     _ => self.prev_import_function = None,
@@ -594,6 +599,65 @@ impl<'a> Formatter<'a> {
                     );
                 }
             }
+            Item::Import(import) => {
+                self.prev_import_function = None;
+                if let Some(name) = &import.name {
+                    self.push(&name.span, &name.value);
+                    self.output.push(' ');
+                    self.prev_import_function = Some(name.value.clone());
+                }
+                self.output.push_str("~ ");
+                self.push(&import.path.span, &format!("{:?}", import.path.value));
+
+                let mut import = import.clone();
+                let lines = &mut import.lines;
+                // Sort each line
+                for line in lines.iter_mut().flatten() {
+                    line.items.sort_by_key(|item| item.value.clone());
+                }
+                // Sort contiguous slices of non-empty lines
+                let mut i = 0;
+                while i < lines.len() {
+                    while i < lines.len() && lines[i].is_none() {
+                        i += 1;
+                    }
+                    let start = i;
+                    while i < lines.len() && lines[i].is_some() {
+                        i += 1;
+                    }
+                    lines[start..i]
+                        .sort_by_key(|line| line.as_ref().unwrap().items[0].value.clone());
+                }
+                if lines.iter().flatten().count() == 1 {
+                    let line = lines.iter().flatten().next().unwrap();
+                    self.output.push(' ');
+                    self.push(&line.tilde_span, "~");
+                    for item in &line.items {
+                        self.output.push(' ');
+                        self.push(&item.span, &item.value);
+                    }
+                    if lines.last().unwrap().is_none() {
+                        self.output.push('\n');
+                    }
+                } else {
+                    for line in lines {
+                        self.output.push('\n');
+                        if let Some(line) = line {
+                            if self.config.indent_item_imports {
+                                for _ in 0..self.config.multiline_indent {
+                                    self.output.push(' ');
+                                }
+                            }
+                            self.push(&line.tilde_span, "~");
+                            self.output.push(' ');
+                            for item in &line.items {
+                                self.output.push(' ');
+                                self.push(&item.span, &item.value);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     fn format_signature(&mut self, init_char: char, sig: Signature, trailing_space: bool) {
@@ -606,6 +670,11 @@ impl<'a> Formatter<'a> {
         if trailing_space {
             self.output.push(' ');
         }
+    }
+    fn format_module_item(&mut self, item: &ModuleItem) {
+        self.push(&item.module.span, &item.module.value);
+        self.output.push('~');
+        self.push(&item.name.span, &item.name.value);
     }
     fn format_words(&mut self, words: &[Sp<Word>], trim_end: bool, depth: usize) {
         for word in trim_spaces(words, trim_end) {
@@ -667,6 +736,7 @@ impl<'a> Formatter<'a> {
                 }
                 self.output.push_str(ident)
             }
+            Word::ModuleItem(item) => self.format_module_item(item),
             Word::Strand(items) => {
                 for (i, item) in items.iter().enumerate() {
                     if i > 0 {
@@ -764,13 +834,11 @@ impl<'a> Formatter<'a> {
             }
             Word::Primitive(prim) => self.push(&word.span, &prim.to_string()),
             Word::Modified(m) => {
-                self.push(
-                    &m.modifier.span,
-                    &match &m.modifier.value {
-                        Modifier::Primitive(prim) => prim.to_string(),
-                        Modifier::Ident(ident) => ident.to_string(),
-                    },
-                );
+                match &m.modifier.value {
+                    Modifier::Primitive(prim) => self.push(&m.modifier.span, &prim.to_string()),
+                    Modifier::Ident(ident) => self.push(&m.modifier.span, ident),
+                    Modifier::ModuleItem(item) => self.format_module_item(item),
+                }
                 self.format_words(&m.operands, true, depth);
             }
             Word::Placeholder(sig) => self.format_signature(
@@ -1010,6 +1078,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::FormatString(_) => false,
         Word::MultilineString(_) => true,
         Word::Ident(_) => false,
+        Word::ModuleItem(_) => false,
         Word::Strand(_) => false,
         Word::Array(arr) => {
             arr.lines.len() > 1

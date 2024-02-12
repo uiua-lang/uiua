@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.9
-  - Redo modules and imports completely
   - Add other `on` combinators
   - Fix cursor mapping with end-of-line comments
   - Color labels in pad

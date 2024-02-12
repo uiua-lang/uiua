@@ -20,6 +20,7 @@ pub enum ParseError {
     InvalidArgCount(String),
     InvalidOutCount(String),
     AmpersandBindingName,
+    ModifierImportName,
     FunctionNotAllowed,
     SplitInModifier,
     UnsplitInModifier,
@@ -30,6 +31,7 @@ pub enum ParseError {
 pub enum Expectation {
     Term,
     ArgOutCount,
+    ItemName,
     Simple(AsciiToken),
 }
 
@@ -44,6 +46,7 @@ impl fmt::Display for Expectation {
         match self {
             Expectation::Term => write!(f, "term"),
             Expectation::ArgOutCount => write!(f, "argument/output count"),
+            Expectation::ItemName => write!(f, "item name"),
             Expectation::Simple(s) => write!(f, "`{s}`"),
         }
     }
@@ -79,6 +82,9 @@ impl fmt::Display for ParseError {
             ParseError::InvalidArgCount(n) => write!(f, "Invalid argument count `{n}`"),
             ParseError::InvalidOutCount(n) => write!(f, "Invalid output count `{n}`"),
             ParseError::AmpersandBindingName => write!(f, "Binding names may not contain `&`"),
+            ParseError::ModifierImportName => {
+                write!(f, "Modifier names may not be used as import names")
+            }
             ParseError::FunctionNotAllowed => write!(
                 f,
                 "Inline functions are only allowed in modifiers \
@@ -296,6 +302,8 @@ impl<'i> Parser<'i> {
         self.try_spaces();
         Some(if let Some(binding) = self.try_binding() {
             Item::Binding(binding)
+        } else if let Some(import) = self.try_import() {
+            Item::Import(import)
         } else {
             let lines = self.multiline_words();
             // Convert multiline words into multiple items
@@ -353,13 +361,28 @@ impl<'i> Parser<'i> {
         }
         Some((name, arrow_span))
     }
+    fn try_import_init(&mut self) -> Option<(Option<Sp<Ident>>, CodeSpan, Sp<String>)> {
+        let start = self.index;
+        // Name
+        let name = self.try_ident();
+        self.try_spaces();
+        // Tilde
+        let Some(tilde_span) = self.try_exact(Tilde) else {
+            self.index = start;
+            return None;
+        };
+        self.try_spaces();
+        // Path
+        let Some(path) = self.next_token_map(Token::as_string) else {
+            self.index = start;
+            return None;
+        };
+        let path = path.map(Into::into);
+        self.try_spaces();
+        Some((name, tilde_span, path))
+    }
     fn try_binding(&mut self) -> Option<Binding> {
         let (name, arrow_span) = self.try_binding_init()?;
-        // Check for invalid binding names
-        if name.value.contains('&') {
-            self.errors
-                .push(name.span.clone().sp(ParseError::AmpersandBindingName));
-        }
         // Bad name advice
         if ["\u{200b}", "\u{200c}", "\u{200d}"]
             .iter()
@@ -387,7 +410,19 @@ impl<'i> Parser<'i> {
         } else {
             self.validate_words(&words, false);
         }
-        // Check for uncapitalized binding names
+        self.validate_binding_name(&name);
+        Some(Binding {
+            name,
+            arrow_span,
+            words,
+            signature,
+        })
+    }
+    fn validate_binding_name(&mut self, name: &Sp<Ident>) {
+        if name.value.contains('&') {
+            self.errors
+                .push(name.span.clone().sp(ParseError::AmpersandBindingName));
+        }
         if name.value.trim_end_matches('!').chars().count() >= 2
             && name.value.chars().next().unwrap().is_ascii_lowercase()
         {
@@ -411,11 +446,55 @@ impl<'i> Parser<'i> {
                 self.inputs.clone(),
             ));
         }
-        Some(Binding {
+    }
+    fn try_import(&mut self) -> Option<Import> {
+        let (name, tilde_span, path) = self.try_import_init()?;
+        // Items
+        let mut lines: Vec<Option<ImportLine>> = Vec::new();
+        let mut line: Option<ImportLine> = None;
+        self.try_exact(Newline);
+        while let Some(token) = self.tokens.get(self.index).cloned() {
+            let span = token.span;
+            let token = token.value;
+            match token {
+                Token::Ident if line.is_some() => {
+                    let line = line.as_mut().unwrap();
+                    let ident = Ident::from(&self.input[span.byte_range()]);
+                    let name = span.clone().sp(ident);
+                    line.items.push(name);
+                }
+                Simple(Tilde) if line.is_none() => {
+                    line = Some(ImportLine {
+                        tilde_span: span.clone(),
+                        items: Vec::new(),
+                    })
+                }
+                Simple(Tilde) => self
+                    .errors
+                    .push(span.sp(ParseError::Unexpected(Simple(Tilde)))),
+                Newline => {
+                    lines.push(line.take());
+                }
+                Spaces => {}
+                _ => break,
+            }
+            self.index += 1;
+        }
+        if line.is_some() {
+            lines.push(line);
+        }
+        if let Some(name) = &name {
+            self.validate_binding_name(name);
+            if name.value.contains('!') {
+                self.errors
+                    .push(name.span.clone().sp(ParseError::ModifierImportName));
+            }
+        }
+        Some(Import {
             name,
-            arrow_span,
-            words,
-            signature,
+            tilde_span,
+            path,
+            lines,
         })
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
@@ -431,6 +510,24 @@ impl<'i> Parser<'i> {
             return None;
         }
         Some(ident)
+    }
+    fn try_module_item(&mut self) -> Option<Sp<ModuleItem>> {
+        let start = self.index;
+        let module = self.try_ident()?;
+        let Some(tilde_span) = self.try_exact(Tilde) else {
+            self.index = start;
+            return None;
+        };
+        let Some(name) = self.try_ident() else {
+            self.index = start;
+            return None;
+        };
+        let span = module.span.clone().merge(name.span.clone());
+        Some(span.sp(ModuleItem {
+            module,
+            tilde_span,
+            name,
+        }))
     }
     fn try_signature(&mut self, initial_token: AsciiToken) -> Option<Sp<Signature>> {
         let start = self.try_exact(initial_token)?;
@@ -541,7 +638,7 @@ impl<'i> Parser<'i> {
         while self.try_spaces().is_some() {}
         loop {
             let curr = self.index;
-            if self.try_binding_init().is_some() {
+            if self.try_binding_init().is_some() || self.try_import_init().is_some() {
                 self.index = curr;
                 break;
             }
@@ -624,7 +721,15 @@ impl<'i> Parser<'i> {
         } else if let Some(ident) = self.try_modifier_ident() {
             (Modifier::Ident(ident.value), ident.span)
         } else {
-            return self.try_term();
+            let term = self.try_term()?;
+            if let Word::ModuleItem(item) = term.value {
+                if ident_modifier_args(&item.name.value) == 0 {
+                    return Some(term.span.sp(Word::ModuleItem(item)));
+                }
+                (Modifier::ModuleItem(item), term.span)
+            } else {
+                return Some(term);
+            }
         };
         let mut args = Vec::new();
         self.try_spaces();
@@ -739,6 +844,8 @@ impl<'i> Parser<'i> {
     fn try_term(&mut self) -> Option<Sp<Word>> {
         Some(if let Some(prim) = self.try_prim() {
             prim.map(Word::Primitive)
+        } else if let Some(item) = self.try_module_item() {
+            item.map(Word::ModuleItem)
         } else if let Some(ident) = self.try_ident() {
             ident.map(Word::Ident)
         } else if let Some(sn) = self.try_num() {
@@ -1110,9 +1217,10 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
     })
 }
 
-pub(crate) fn ident_modifier_args(ident: &Ident) -> usize {
+/// Get the number of modifier arguments implied by an identifier
+pub fn ident_modifier_args(ident: &str) -> usize {
     let mut count: usize = 0;
-    let mut prefix = ident.as_ref();
+    let mut prefix = ident;
     while let Some(pre) = prefix.strip_suffix('!') {
         prefix = pre;
         count = count.saturating_add(1);

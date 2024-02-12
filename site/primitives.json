@@ -143,7 +143,8 @@
     "args": 2,
     "outputs": 1,
     "class": "Filesystem",
-    "description": "Import an item from a file"
+    "description": "Import an item from a file",
+    "deprecated": true
   },
   "&imd": {
     "args": 1,
@@ -654,7 +655,7 @@
     "experimental": true
   },
   "inventory": {
-    "glyph": "⎏",
+    "glyph": "⍚",
     "outputs": 1,
     "modifier_args": 1,
     "class": "IteratingModifier",

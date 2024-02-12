@@ -298,15 +298,14 @@ Dyad!! ← ^1^1
 ⍤⊃⋅∘≍ 12 Dyad!!(×2|+1) 5
 
 # Imports
-Ex ← &i "example.ua"
-  Foo ← Ex "Foo"
-  Incr ← Ex "Increment"
-  Dub ← Ex "Double"
-  Mod! ← Ex "Mod!"
+Ex ~ "example.ua"
+  Foo ← Ex~Foo
+  Incr ← Ex~Increment
+  Dub ← Ex~Double
 ⍤⊃⋅∘≍ 12 Dub Incr Foo
-Square ← &i "example.ua" "Square"
+~ "example" ~ Square
 ⍤⊃⋅∘≍ 25 Square 5
-⍤⊃⋅∘≍ 15 Mod!+
+⍤⊃⋅∘≍ 15 Ex~Mod!+
 
 # Euler's identity
 ⍤⊃⋅∘≍ 0 ⍜(×1e12)⁅ ⌵+1 ⁿ×iπ e

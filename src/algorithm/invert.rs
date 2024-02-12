@@ -341,6 +341,8 @@ pub(crate) fn under_instrs(
 
     // println!("undering {:?}", instrs);
 
+    let comp_instrs_backup = comp.asm.instrs.clone();
+
     let mut befores = EcoVec::new();
     let mut afters = EcoVec::new();
     let mut curr_instrs = instrs;
@@ -365,6 +367,7 @@ pub(crate) fn under_instrs(
         break;
     }
 
+    comp.asm.instrs = comp_instrs_backup;
     // println!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
 
     None

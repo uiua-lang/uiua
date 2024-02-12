@@ -3,6 +3,7 @@
 - 0.9
   - Allow 1 `~` per line in imports
   - Sort imports by signature before name
+  - Add doc comments to modules themselves
   - Add other `on` combinators
   - Fix cursor mapping with end-of-line comments
   - Color labels in pad

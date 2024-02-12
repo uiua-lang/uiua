@@ -41,9 +41,9 @@ pub struct BindingDocs {
     /// Whether the binding is invertible and underable
     pub invertible_underable: Option<(bool, bool)>,
     /// Whether the binding is a constant
-    pub constant: bool,
+    pub is_constant: bool,
     /// Whether the binding is a module
-    pub module: bool,
+    pub is_module: bool,
 }
 
 /// Get spans and their kinds from Uiua code
@@ -128,7 +128,7 @@ impl Spanner {
                 signature: binding.global.signature(),
                 comment: binding.comment.clone(),
                 invertible_underable: self.invertible_underable(binding),
-                constant: matches!(
+                is_constant: matches!(
                     binding.global,
                     Global::Const(_)
                         | Global::Sig(Signature {
@@ -136,7 +136,7 @@ impl Spanner {
                             outputs: 1
                         })
                 ),
-                module: matches!(binding.global, Global::Module { .. }),
+                is_module: matches!(binding.global, Global::Module { .. }),
             });
         }
         None
@@ -158,7 +158,7 @@ impl Spanner {
                 signature: binding.global.signature(),
                 comment: binding.comment.clone(),
                 invertible_underable: self.invertible_underable(binding),
-                constant: matches!(
+                is_constant: matches!(
                     binding.global,
                     Global::Const(_)
                         | Global::Sig(Signature {
@@ -166,7 +166,7 @@ impl Spanner {
                             outputs: 1
                         })
                 ),
-                module: matches!(binding.global, Global::Module { .. }),
+                is_module: matches!(binding.global, Global::Module { .. }),
             });
         }
         None

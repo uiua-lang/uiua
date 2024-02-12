@@ -401,8 +401,8 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
         "Nb" | "Enby" => code_font!("nb text-gradient"),
         "Fluid" => code_font!("fluid text-gradient"),
         "Queer" => code_font!("queer text-gradient"),
-        _ if docs.module => code_font!("module"),
-        _ if docs.constant => code_font!(""),
+        _ if docs.is_module => code_font!("module"),
+        _ if docs.is_constant => code_font!(""),
         _ => match uiua::ident_modifier_args(name) {
             0 => {
                 if let Some(sig) = docs.signature {

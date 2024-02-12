@@ -603,13 +603,28 @@ impl<'a> Formatter<'a> {
                 self.push(&import.path.span, &format!("{:?}", import.path.value));
 
                 let mut items = import.items.clone();
-                items.retain(|line| !line.is_empty());
+                while items.first().is_some_and(|item| item.is_empty()) {
+                    items.remove(0);
+                }
+                // Sort each line
                 for line in items.iter_mut() {
                     line.sort_by_key(|item| item.name.value.clone());
                 }
-                items.sort_by_key(|line| line.first().unwrap().name.value.clone());
-                if items.len() == 1 {
-                    for item in &items[0] {
+                // Sort contiguous slices of non-empty lines
+                let mut i = 0;
+                while i < items.len() {
+                    while i < items.len() && items[i].is_empty() {
+                        i += 1;
+                    }
+                    let start = i;
+                    while i < items.len() && !items[i].is_empty() {
+                        i += 1;
+                    }
+                    items[start..i].sort_by_key(|line| line[0].name.value.clone());
+                }
+
+                if items.iter().filter(|line| !line.is_empty()).count() == 1 {
+                    for item in items.iter().flatten() {
                         self.output.push(' ');
                         self.push(&item.tilde_span, "~");
                         self.output.push(' ');

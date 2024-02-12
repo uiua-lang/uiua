@@ -24,6 +24,7 @@ pub enum ParseError {
     InvalidArgCount(String),
     InvalidOutCount(String),
     AmpersandBindingName,
+    ModifierImportName,
     FunctionNotAllowed,
     SplitInModifier,
     UnsplitInModifier,
@@ -83,6 +84,9 @@ impl fmt::Display for ParseError {
             ParseError::InvalidArgCount(n) => write!(f, "Invalid argument count `{n}`"),
             ParseError::InvalidOutCount(n) => write!(f, "Invalid output count `{n}`"),
             ParseError::AmpersandBindingName => write!(f, "Binding names may not contain `&`"),
+            ParseError::ModifierImportName => {
+                write!(f, "Modifier names may not be used as import names")
+            }
             ParseError::FunctionNotAllowed => write!(
                 f,
                 "Inline functions are only allowed in modifiers \
@@ -361,11 +365,6 @@ impl<'i> Parser<'i> {
     }
     fn try_binding(&mut self) -> Option<Binding> {
         let (name, arrow_span) = self.try_binding_init()?;
-        // Check for invalid binding names
-        if name.value.contains('&') {
-            self.errors
-                .push(name.span.clone().sp(ParseError::AmpersandBindingName));
-        }
         // Bad name advice
         if ["\u{200b}", "\u{200c}", "\u{200d}"]
             .iter()
@@ -393,7 +392,6 @@ impl<'i> Parser<'i> {
         } else {
             self.validate_words(&words, false);
         }
-        // Check for uncapitalized binding names
         self.validate_binding_name(&name);
         Some(Binding {
             name,
@@ -403,6 +401,10 @@ impl<'i> Parser<'i> {
         })
     }
     fn validate_binding_name(&mut self, name: &Sp<Ident>) {
+        if name.value.contains('&') {
+            self.errors
+                .push(name.span.clone().sp(ParseError::AmpersandBindingName));
+        }
         if name.value.trim_end_matches('!').chars().count() >= 2
             && name.value.chars().next().unwrap().is_ascii_lowercase()
         {
@@ -442,9 +444,10 @@ impl<'i> Parser<'i> {
         };
         let path = path.map(Into::into);
         self.try_spaces();
-        let mut items = Vec::new();
+        let mut items: Vec<Vec<_>> = Vec::new();
         let mut line = Vec::new();
         let mut tilde_span = None;
+        self.try_exact(Newline);
         while let Some(token) = self.tokens.get(self.index).cloned() {
             let span = token.span;
             let token = token.value;
@@ -455,9 +458,12 @@ impl<'i> Parser<'i> {
                     let tilde_span = tilde_span.take().unwrap();
                     line.push(ImportItem { name, tilde_span });
                 }
-                Simple(Tilde) => tilde_span = Some(span.clone()),
+                Simple(Tilde) if tilde_span.is_none() => tilde_span = Some(span.clone()),
+                Simple(Tilde) => self
+                    .errors
+                    .push(span.sp(ParseError::Unexpected(Simple(Tilde)))),
                 Newline => {
-                    if !line.is_empty() {
+                    if !(line.is_empty() && items.last().is_some_and(|line| line.is_empty())) {
                         items.push(take(&mut line));
                     }
                 }
@@ -471,6 +477,10 @@ impl<'i> Parser<'i> {
         }
         if let Some(name) = &name {
             self.validate_binding_name(name);
+            if name.value.contains('!') {
+                self.errors
+                    .push(name.span.clone().sp(ParseError::ModifierImportName));
+            }
         }
         Some(Import { name, path, items })
     }

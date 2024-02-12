@@ -354,7 +354,36 @@ code:
                     self.binding(binding, prev_com)?;
                 }
             }
-            Item::Import(_) => {}
+            Item::Import(import) => {
+                // Import module
+                let module = self.import_compile(import.path.value.as_ref(), &import.path.span)?;
+                // Bind name
+                if let Some(name) = &import.name {
+                    let global_index = self.next_global;
+                    self.next_global += 1;
+                    self.asm.add_global_at(
+                        global_index,
+                        Global::Module {
+                            module: module.clone(),
+                        },
+                        Some(name.span.clone()),
+                        None,
+                    );
+                    self.scope.names.insert(name.value.clone(), global_index);
+                }
+                // Bind items
+                for item in import.items.into_iter().flatten() {
+                    let name = item.name.value;
+                    if let Some(index) = self.imports[&module].get(name.as_str()).copied() {
+                        self.scope.names.insert(name, index);
+                    } else {
+                        self.add_error(
+                            item.name.span.clone(),
+                            format!("Item `{name}` not found in module {}", module.display()),
+                        );
+                    }
+                }
+            }
         }
         Ok(())
     }

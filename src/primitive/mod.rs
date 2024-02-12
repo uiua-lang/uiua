@@ -373,6 +373,9 @@ impl Primitive {
         if let Some(prim) = Primitive::non_deprecated().find(|p| p.name() == name) {
             return Some(prim);
         }
+        if let Some(prim) = SysOp::ALL.iter().find(|s| s.name() == name) {
+            return Some(Primitive::Sys(*prim));
+        }
         if name.len() < 3 {
             return None;
         }

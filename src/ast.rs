@@ -56,17 +56,17 @@ pub struct Import {
     pub tilde_span: CodeSpan,
     /// The import path
     pub path: Sp<String>,
-    /// The imported items
-    pub items: Vec<Vec<ImportItem>>,
+    /// The import lines
+    pub lines: Vec<Option<ImportLine>>,
 }
 
-/// An import item
 #[derive(Debug, Clone)]
-pub struct ImportItem {
-    /// The name of the item
-    pub name: Sp<Ident>,
+/// A line of imported items
+pub struct ImportLine {
     /// The span of the ~
     pub tilde_span: CodeSpan,
+    /// The imported items
+    pub items: Vec<Sp<Ident>>,
 }
 
 impl Import {
@@ -75,10 +75,14 @@ impl Import {
         let first = (self.name.as_ref())
             .map(|n| n.span.clone())
             .unwrap_or_else(|| self.path.span.clone());
-        let last = (self.items.iter().flatten().last())
-            .map(|i| i.name.span.clone())
+        let last = (self.items().last())
+            .map(|i| i.span.clone())
             .unwrap_or_else(|| self.path.span.clone());
         first.merge(last)
+    }
+    /// The imported items
+    pub fn items(&self) -> impl Iterator<Item = &Sp<Ident>> {
+        self.lines.iter().flatten().flat_map(|line| &line.items)
     }
 }
 

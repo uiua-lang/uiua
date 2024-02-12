@@ -104,10 +104,12 @@ impl Spanner {
                     }
                     spans.push(import.tilde_span.clone().sp(SpanKind::Delimiter));
                     spans.push(import.path.span.clone().sp(SpanKind::String));
-                    for item in import.items.iter().flatten() {
-                        spans.push(item.tilde_span.clone().sp(SpanKind::Delimiter));
-                        let binding_docs = self.reference_docs(&item.name.span);
-                        spans.push(item.name.span.clone().sp(SpanKind::Ident(binding_docs)));
+                    for line in import.lines.iter().flatten() {
+                        spans.push(line.tilde_span.clone().sp(SpanKind::Delimiter));
+                        for item in &line.items {
+                            let binding_docs = self.reference_docs(&item.span);
+                            spans.push(item.span.clone().sp(SpanKind::Ident(binding_docs)));
+                        }
                     }
                 }
             }

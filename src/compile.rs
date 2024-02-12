@@ -372,21 +372,21 @@ code:
                     self.scope.names.insert(name.value.clone(), global_index);
                 }
                 // Bind items
-                for item in import.items.into_iter().flatten() {
+                for item in import.items() {
                     if let Some(index) = self
                         .imports
                         .get(&module)
-                        .and_then(|m| m.get(item.name.value.as_str()))
+                        .and_then(|m| m.get(item.value.as_str()))
                         .copied()
                     {
-                        self.asm.global_references.insert(item.name.clone(), index);
-                        self.scope.names.insert(item.name.value.clone(), index);
+                        self.asm.global_references.insert(item.clone(), index);
+                        self.scope.names.insert(item.value.clone(), index);
                     } else {
                         self.add_error(
-                            item.name.span.clone(),
+                            item.span.clone(),
                             format!(
                                 "Item `{}` not found in module {}",
-                                item.name.value,
+                                item.value,
                                 module.display()
                             ),
                         );

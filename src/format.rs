@@ -609,48 +609,51 @@ impl<'a> Formatter<'a> {
                 self.output.push_str("~ ");
                 self.push(&import.path.span, &format!("{:?}", import.path.value));
 
-                let mut items = import.items.clone();
+                let mut import = import.clone();
+                let lines = &mut import.lines;
                 // Sort each line
-                for line in items.iter_mut() {
-                    line.sort_by_key(|item| item.name.value.clone());
+                for line in lines.iter_mut().flatten() {
+                    line.items.sort_by_key(|item| item.value.clone());
                 }
                 // Sort contiguous slices of non-empty lines
                 let mut i = 0;
-                while i < items.len() {
-                    while i < items.len() && items[i].is_empty() {
+                while i < lines.len() {
+                    while i < lines.len() && lines[i].is_none() {
                         i += 1;
                     }
                     let start = i;
-                    while i < items.len() && !items[i].is_empty() {
+                    while i < lines.len() && lines[i].is_some() {
                         i += 1;
                     }
-                    items[start..i].sort_by_key(|line| line[0].name.value.clone());
+                    lines[start..i]
+                        .sort_by_key(|line| line.as_ref().unwrap().items[0].value.clone());
                 }
-                if items.iter().filter(|line| !line.is_empty()).count() == 1 {
-                    for item in items.iter().flatten() {
+                if lines.iter().flatten().count() == 1 {
+                    let line = lines.iter().flatten().next().unwrap();
+                    self.output.push(' ');
+                    self.push(&line.tilde_span, "~");
+                    for item in &line.items {
                         self.output.push(' ');
-                        self.push(&item.tilde_span, "~");
-                        self.output.push(' ');
-                        self.push(&item.name.span, &item.name.value);
+                        self.push(&item.span, &item.value);
                     }
-                    if items.last().unwrap().is_empty() {
+                    if lines.last().unwrap().is_none() {
                         self.output.push('\n');
                     }
                 } else {
-                    for line in items {
+                    for line in lines {
                         self.output.push('\n');
-                        if self.config.indent_item_imports {
-                            for _ in 0..self.config.multiline_indent {
-                                self.output.push(' ');
+                        if let Some(line) = line {
+                            if self.config.indent_item_imports {
+                                for _ in 0..self.config.multiline_indent {
+                                    self.output.push(' ');
+                                }
                             }
-                        }
-                        for (i, item) in line.iter().enumerate() {
-                            if i > 0 {
-                                self.output.push(' ');
-                            }
-                            self.push(&item.tilde_span, "~");
+                            self.push(&line.tilde_span, "~");
                             self.output.push(' ');
-                            self.push(&item.name.span, &item.name.value);
+                            for item in &line.items {
+                                self.output.push(' ');
+                                self.push(&item.span, &item.value);
+                            }
                         }
                     }
                 }

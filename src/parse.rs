@@ -1,8 +1,4 @@
-use std::{
-    error::Error,
-    fmt,
-    mem::{replace, take},
-};
+use std::{error::Error, fmt, mem::replace};
 
 use ecow::EcoString;
 
@@ -454,36 +450,38 @@ impl<'i> Parser<'i> {
     fn try_import(&mut self) -> Option<Import> {
         let (name, tilde_span, path) = self.try_import_init()?;
         // Items
-        let mut items: Vec<Vec<_>> = Vec::new();
-        let mut line = Vec::new();
-        let mut item_tilde_span = None;
+        let mut lines: Vec<Option<ImportLine>> = Vec::new();
+        let mut line: Option<ImportLine> = None;
         self.try_exact(Newline);
         while let Some(token) = self.tokens.get(self.index).cloned() {
             let span = token.span;
             let token = token.value;
             match token {
-                Token::Ident if item_tilde_span.is_some() => {
+                Token::Ident if line.is_some() => {
+                    let line = line.as_mut().unwrap();
                     let ident = Ident::from(&self.input[span.byte_range()]);
                     let name = span.clone().sp(ident);
-                    let tilde_span = item_tilde_span.take().unwrap();
-                    line.push(ImportItem { name, tilde_span });
+                    line.items.push(name);
                 }
-                Simple(Tilde) if item_tilde_span.is_none() => item_tilde_span = Some(span.clone()),
+                Simple(Tilde) if line.is_none() => {
+                    line = Some(ImportLine {
+                        tilde_span: span.clone(),
+                        items: Vec::new(),
+                    })
+                }
                 Simple(Tilde) => self
                     .errors
                     .push(span.sp(ParseError::Unexpected(Simple(Tilde)))),
                 Newline => {
-                    if !(line.is_empty() && items.last().is_some_and(|line| line.is_empty())) {
-                        items.push(take(&mut line));
-                    }
+                    lines.push(line.take());
                 }
                 Spaces => {}
                 _ => break,
             }
             self.index += 1;
         }
-        if !line.is_empty() {
-            items.push(line);
+        if line.is_some() {
+            lines.push(line);
         }
         if let Some(name) = &name {
             self.validate_binding_name(name);
@@ -496,7 +494,7 @@ impl<'i> Parser<'i> {
             name,
             tilde_span,
             path,
-            items,
+            lines,
         })
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {

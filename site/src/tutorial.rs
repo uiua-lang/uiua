@@ -1491,10 +1491,10 @@ fn TutorialModules() -> impl IntoView {
         <h2 id="importing">"Importing Modules"</h2>
         <p>"Modules can be imported by file path with "<code>"~"</code>"."</p>
         <Editor example="~ \"example.ua\""/>
-        <p>"This is not very useful on its own. We can bind items from the module in the current scope by listing them after the file path, separated by additional "<code>"~"</code>"s."</p>
-        <Editor example="~ \"example.ua\" ~ Increment ~ Square\n\nIncrement Square 3"/>
+        <p>"This is not very useful on its own. We can bind items from the module in the current scope by listing them after the file path, separated by an additional "<code>"~"</code>"."</p>
+        <Editor example="~ \"example.ua\" ~ Increment Square\n\nIncrement Square 3"/>
         <p>"If we have a lot of items to import, we can use multiple lines."</p>
-        <Editor example="~ \"example.ua\"\n~ Increment ~ Square\n~ Span\n~ Foo ~ Bar\n\nIncrement Square Foo\nSpan 4 10"/>
+        <Editor example="~ \"example.ua\"\n~ Increment Square\n~ Span\n~ Foo Bar\n\nIncrement Square Foo\nSpan 4 10"/>
         <p>"The formatter will automatically indent the imports if they are on multiple lines. It will also alphabetize them. Try it out!"</p>
 
         <h2 id="binding">"Binding Modules"</h2>
@@ -1502,7 +1502,7 @@ fn TutorialModules() -> impl IntoView {
         <p>"We can then reference items from that module anywhere using a "<code>"~"</code>"."</p>
         <Editor example="Ex ~ \"example.ua\"\n\nEx~Increment 10"/>
         <p>"This can be mixed and matched with the other import syntax."</p>
-        <Editor example="Ex ~ \"example.ua\" ~ Increment ~ Square\n\nEx~Double Increment Square 3\nEx~Mod!×"/>
+        <Editor example="Ex ~ \"example.ua\" ~ Increment Square\n\nEx~Double Square 3\nEx~Mod!×\nIncrement Ex~Bar"/>
 
         <h2 id="aliasing">"Aliasing Module Items"</h2>
         <p>"If you want to be able to refer to an item from a module with a different name, simply make a binding with the new name."</p>
@@ -1531,7 +1531,7 @@ fn TutorialTesting() -> impl IntoView {
         <p>"One nice pattern for writing tests is to put the expected result before the test computation and use"<Prims prims=[Assert, Fork, Gap, Identity, Match]/>"."</p>
         <p>"If the result does not match the expectation, that incorrect result will be thrown."</p>
         <Editor example="---\n⍤⊃⋅∘≍ 4 +2 2 # Passes\n---"/>
-        <Editor example="---\n⍤⊃⋅∘≍ [2 3 5] +1 [1 2 3]\n--- #  ↓↓↓↓↓↓↓"/> // Should fail
+        <Editor example="---\n⍤⊃⋅∘≍ [2 3 5] +1 [1 2 3]\n--- # ↓↓↓↓↓↓↓"/> // Should fail
 
         <h2 id="run-modes">"Run Modes"</h2>
         <p>"Whether tests will run or not depends on how you run the code."</p>

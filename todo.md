@@ -1,7 +1,8 @@
 # Uiua Todo
 
 - 0.9
-  - Fix `⍜⊜⊢⌵`
+  - Allow 1 `~` per line in imports
+  - Sort imports by signature before name
   - Add other `on` combinators
   - Fix cursor mapping with end-of-line comments
   - Color labels in pad

@@ -956,6 +956,54 @@ code:
                 }
             }
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
+            Word::ModuleItem(item) => {
+                let Some(module_index) = self.scope.names.get(&item.module.value) else {
+                    return Err(self.fatal_error(
+                        item.module.span.clone(),
+                        format!("Unknown import `{}`", item.module.value),
+                    ));
+                };
+                self.asm
+                    .global_references
+                    .insert(item.module.clone(), *module_index);
+                let global = &self.asm.bindings[*module_index].global;
+                let module = match global {
+                    Global::Module { module } => module,
+                    Global::Func(_) => {
+                        return Err(self.fatal_error(
+                            item.module.span.clone(),
+                            format!("`{}` is a function, not a module", item.module.value),
+                        ))
+                    }
+                    Global::Const(_) => {
+                        return Err(self.fatal_error(
+                            item.module.span.clone(),
+                            format!("`{}` is a constant, not a module", item.module.value),
+                        ))
+                    }
+                    Global::Sig(_) => {
+                        return Err(self.fatal_error(
+                            item.module.span.clone(),
+                            format!("`{}` is  not a module", item.module.value),
+                        ))
+                    }
+                };
+                if let Some(item_index) = self.imports[module].get(&item.name.value) {
+                    self.asm
+                        .global_references
+                        .insert(item.name.clone(), *item_index);
+                    self.global_index(*item_index, item.name.span.clone(), call);
+                } else {
+                    return Err(self.fatal_error(
+                        item.name.span.clone(),
+                        format!(
+                            "Item `{}` not found in module `{}`",
+                            item.name.value,
+                            module.display()
+                        ),
+                    ));
+                }
+            }
             Word::Strand(items) => {
                 if !call {
                     self.new_functions.push(EcoVec::new());

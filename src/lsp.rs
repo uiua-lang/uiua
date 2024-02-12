@@ -124,6 +124,35 @@ impl Spanner {
         spans
     }
 
+    fn ident_docs(&self, span: &CodeSpan) -> Option<BindingDocs> {
+        for (name, index) in &self.asm.global_references {
+            let Some(binding) = self.asm.bindings.get(*index) else {
+                continue;
+            };
+            let Some(comp_span) = &binding.span else {
+                continue;
+            };
+            if name.span != *span {
+                continue;
+            }
+            return Some(BindingDocs {
+                src_span: comp_span.clone(),
+                signature: binding.global.signature(),
+                comment: binding.comment.clone(),
+                invertible_underable: self.invertible_underable(binding),
+                constant: matches!(
+                    binding.global,
+                    Global::Const(_)
+                        | Global::Sig(Signature {
+                            args: 0,
+                            outputs: 1
+                        })
+                ),
+            });
+        }
+        None
+    }
+
     fn words_spans(&self, words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
         let mut spans = Vec::new();
         for word in words {
@@ -137,34 +166,17 @@ impl Spanner {
                     spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
                 }
                 Word::Ident(_) => {
-                    let mut binding_docs = None;
-                    for (name, index) in &self.asm.global_references {
-                        let Some(binding) = self.asm.bindings.get(*index) else {
-                            continue;
-                        };
-                        let Some(comp_span) = &binding.span else {
-                            continue;
-                        };
-                        if name.span != word.span {
-                            continue;
-                        }
-                        binding_docs = Some(BindingDocs {
-                            src_span: comp_span.clone(),
-                            signature: binding.global.signature(),
-                            comment: binding.comment.clone(),
-                            invertible_underable: self.invertible_underable(binding),
-                            constant: matches!(
-                                binding.global,
-                                Global::Const(_)
-                                    | Global::Sig(Signature {
-                                        args: 0,
-                                        outputs: 1
-                                    })
-                            ),
-                        });
-                        break;
-                    }
+                    let binding_docs = self.ident_docs(&word.span);
                     spans.push(word.span.clone().sp(SpanKind::Ident(binding_docs)))
+                }
+                Word::ModuleItem(item) => {
+                    let module_docs = self.ident_docs(&item.module.span);
+                    let name_docs = self.ident_docs(&item.name.span);
+                    spans.push(item.module.span.clone().sp(SpanKind::Ident(module_docs)));
+                    spans.push(item.tilde_span.clone().sp(SpanKind::Strand));
+                    if item.finished {
+                        spans.push(item.name.span.clone().sp(SpanKind::Ident(name_docs)));
+                    }
                 }
                 Word::Strand(items) => {
                     for (i, word) in items.iter().enumerate() {

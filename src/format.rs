@@ -603,9 +603,6 @@ impl<'a> Formatter<'a> {
                 self.push(&import.path.span, &format!("{:?}", import.path.value));
 
                 let mut items = import.items.clone();
-                while items.first().is_some_and(|item| item.is_empty()) {
-                    items.remove(0);
-                }
                 // Sort each line
                 for line in items.iter_mut() {
                     line.sort_by_key(|item| item.name.value.clone());
@@ -622,13 +619,15 @@ impl<'a> Formatter<'a> {
                     }
                     items[start..i].sort_by_key(|line| line[0].name.value.clone());
                 }
-
                 if items.iter().filter(|line| !line.is_empty()).count() == 1 {
                     for item in items.iter().flatten() {
                         self.output.push(' ');
                         self.push(&item.tilde_span, "~");
                         self.output.push(' ');
                         self.push(&item.name.span, &item.name.value);
+                    }
+                    if items.last().unwrap().is_empty() {
+                        self.output.push('\n');
                     }
                 } else {
                     for line in items {
@@ -716,6 +715,11 @@ impl<'a> Formatter<'a> {
                     self.output.push(' ');
                 }
                 self.output.push_str(ident)
+            }
+            Word::ModuleItem(item) => {
+                self.push(&item.module.span, &item.module.value);
+                self.output.push('~');
+                self.push(&item.name.span, &item.name.value);
             }
             Word::Strand(items) => {
                 for (i, item) in items.iter().enumerate() {
@@ -1060,6 +1064,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::FormatString(_) => false,
         Word::MultilineString(_) => true,
         Word::Ident(_) => false,
+        Word::ModuleItem(_) => false,
         Word::Strand(_) => false,
         Word::Array(arr) => {
             arr.lines.len() > 1

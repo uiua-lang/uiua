@@ -35,6 +35,7 @@ pub enum ParseError {
 pub enum Expectation {
     Term,
     ArgOutCount,
+    ItemName,
     Simple(AsciiToken),
 }
 
@@ -49,6 +50,7 @@ impl fmt::Display for Expectation {
         match self {
             Expectation::Term => write!(f, "term"),
             Expectation::ArgOutCount => write!(f, "argument/output count"),
+            Expectation::ItemName => write!(f, "item name"),
             Expectation::Simple(s) => write!(f, "`{s}`"),
         }
     }
@@ -806,7 +808,23 @@ impl<'i> Parser<'i> {
         Some(if let Some(prim) = self.try_prim() {
             prim.map(Word::Primitive)
         } else if let Some(ident) = self.try_ident() {
-            ident.map(Word::Ident)
+            if let Some(tilde_span) = self.try_exact(Tilde) {
+                let name = self.try_ident();
+                let finished = name.is_some();
+                if !finished {
+                    self.errors.push(self.expected([Expectation::ItemName]));
+                }
+                let name = name.unwrap_or_else(|| tilde_span.clone().sp(Ident::default()));
+                let span = ident.span.clone().merge(name.span.clone());
+                span.sp(Word::ModuleItem(ModuleItem {
+                    module: ident,
+                    tilde_span,
+                    name,
+                    finished,
+                }))
+            } else {
+                ident.map(Word::Ident)
+            }
         } else if let Some(sn) = self.try_num() {
             sn.map(|(s, n)| Word::Number(s, n))
         } else if let Some(c) = self.next_token_map(Token::as_char) {

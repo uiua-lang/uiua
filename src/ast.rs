@@ -91,6 +91,7 @@ pub enum Word {
     FormatString(Vec<String>),
     MultilineString(Vec<Sp<Vec<String>>>),
     Ident(Ident),
+    ModuleItem(ModuleItem),
     Strand(Vec<Sp<Word>>),
     Array(Arr),
     Func(Func),
@@ -115,6 +116,7 @@ impl PartialEq for Word {
             (Self::FormatString(a), Self::FormatString(b)) => a == b,
             (Self::MultilineString(a), Self::MultilineString(b)) => a == b,
             (Self::Ident(a), Self::Ident(b)) => a == b,
+            (Self::ModuleItem(a), Self::ModuleItem(b)) => a == b,
             (Self::Strand(a), Self::Strand(b)) => {
                 a.iter().map(|w| &w.value).eq(b.iter().map(|w| &w.value))
             }
@@ -192,6 +194,7 @@ impl fmt::Debug for Word {
                 Ok(())
             }
             Word::Ident(ident) => write!(f, "ident({ident})"),
+            Word::ModuleItem(item) => write!(f, "module_item({item})"),
             Word::Array(arr) => arr.fmt(f),
             Word::Strand(items) => write!(f, "strand({items:?})"),
             Word::Func(func) => func.fmt(f),
@@ -326,5 +329,32 @@ impl Modifier {
             Modifier::Primitive(prim) => prim.modifier_args().unwrap_or(0),
             Modifier::Ident(ident) => ident_modifier_args(ident),
         }
+    }
+}
+
+/// A reference to a module item
+#[derive(Debug, Clone)]
+pub struct ModuleItem {
+    /// The imported name of the module
+    pub module: Sp<Ident>,
+    /// The span of the ~
+    pub tilde_span: CodeSpan,
+    /// The name of the item
+    pub name: Sp<Ident>,
+    /// Whether the name was actually given
+    pub finished: bool,
+}
+
+impl PartialEq for ModuleItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.module.value == other.module.value && self.name.value == other.name.value
+    }
+}
+
+impl Eq for ModuleItem {}
+
+impl fmt::Display for ModuleItem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}~{}", self.module.value, self.name.value)
     }
 }

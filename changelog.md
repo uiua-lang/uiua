@@ -28,7 +28,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Labels in code make it easier to understand when reading
 - Add experimental [`shapes`](https://uiua.org/docs/shapes) and [`types`](https://uiua.org/docs/types) modifiers, which validate the shape and type of an array or arrays
   - These both check array properties at runtime and serve as a form of documentation
-- Add experimental [`inventory ⎏`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
+- Add experimental [`inventory ⍚`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
   - This shortens a lot of box array code
 - Deprecate [`pop ◌`](https://uiua.org/docs/pop) formatting from `;`
 - Deprecate [`all ⋔`](https://uiua.org/docs/all)

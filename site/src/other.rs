@@ -412,6 +412,14 @@ pub fn Combinators() -> impl IntoView {
             ("⊟⊓¯⇌", 2, "D2", "Dovekie"),
         ),
         (
+            view!(<Prim prim=On/>).into_view(),
+            ("⊟⟜+", 2, "N", "Eastern Nicator"),
+        ),
+        (
+            view!(<Prim prim=Over/>).into_view(),
+            ("⊟+,", 2, "ν", "Western Nicator"),
+        ),
+        (
             view!(<Prim prim=Dip/>).into_view(),
             ("⊟⊙+", 3, "E", "Eagle"),
         ),
@@ -426,7 +434,7 @@ pub fn Combinators() -> impl IntoView {
         ),
         (
             view!(<Prim prim=Bracket/>).into_view(),
-            ("⊟⊓¯+", 3, "P", "Eastern Parotia"),
+            ("⊟⊓¯+", 3, "R", "Eastern Parotia"),
         ),
         (
             view!(<Prim prim=Bracket/>).into_view(),
@@ -463,7 +471,7 @@ pub fn Combinators() -> impl IntoView {
                 view! {
                     <sup>" "<span
                         style="text-decoration: underline dotted; font-size: 0.8em; cursor: help;"
-                        title="X, χ, P, and ρ are not standard named combinators. They are included here because Uiua can express them easily.">
+                        title="N, ν, X, χ, R, and ρ are not standard named combinators. They are included here because Uiua can express them easily.">
                         "*"
                     </span></sup>
                 }

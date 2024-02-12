@@ -1,12 +1,14 @@
 # Uiua Todo
 
-## Features
 - 0.9
   - Redo modules and imports completely
   - Add other `on` combinators
   - Fix cursor mapping with end-of-line comments
   - Color labels in pad
   - Pad link from Gist
+- Changle how function inlining works
+  - Prevent inlining of large functions
+  - If a function is inlinable, don't actually put it in the assembly instructions
 - Multimedia
   - Sound input
   - Webcam input

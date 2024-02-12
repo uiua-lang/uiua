@@ -467,7 +467,7 @@ pub fn Combinators() -> impl IntoView {
                 }
             }
             let diagram = format!("/combinators/{symbol}.svg");
-            let note = ["X", "χ", "P", "ρ"].contains(&symbol).then(|| {
+            let note = ["N", "ν", "X", "χ", "R", "ρ"].contains(&symbol).then(|| {
                 view! {
                     <sup>" "<span
                         style="text-decoration: underline dotted; font-size: 0.8em; cursor: help;"

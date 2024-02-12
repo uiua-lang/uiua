@@ -365,6 +365,26 @@ impl<'i> Parser<'i> {
         }
         Some((name, arrow_span))
     }
+    fn try_import_init(&mut self) -> Option<(Option<Sp<Ident>>, CodeSpan, Sp<String>)> {
+        let start = self.index;
+        // Name
+        let name = self.try_ident();
+        self.try_spaces();
+        // Tilde
+        let Some(tilde_span) = self.try_exact(Tilde) else {
+            self.index = start;
+            return None;
+        };
+        self.try_spaces();
+        // Path
+        let Some(path) = self.next_token_map(Token::as_string) else {
+            self.index = start;
+            return None;
+        };
+        let path = path.map(Into::into);
+        self.try_spaces();
+        Some((name, tilde_span, path))
+    }
     fn try_binding(&mut self) -> Option<Binding> {
         let (name, arrow_span) = self.try_binding_init()?;
         // Bad name advice
@@ -432,23 +452,7 @@ impl<'i> Parser<'i> {
         }
     }
     fn try_import(&mut self) -> Option<Import> {
-        let start = self.index;
-        // Name
-        let name = self.try_ident();
-        self.try_spaces();
-        // Tilde
-        let Some(tilde_span) = self.try_exact(Tilde) else {
-            self.index = start;
-            return None;
-        };
-        self.try_spaces();
-        // Path
-        let Some(path) = self.next_token_map(Token::as_string) else {
-            self.index = start;
-            return None;
-        };
-        let path = path.map(Into::into);
-        self.try_spaces();
+        let (name, tilde_span, path) = self.try_import_init()?;
         // Items
         let mut items: Vec<Vec<_>> = Vec::new();
         let mut line = Vec::new();
@@ -508,6 +512,24 @@ impl<'i> Parser<'i> {
             return None;
         }
         Some(ident)
+    }
+    fn try_module_item(&mut self) -> Option<Sp<ModuleItem>> {
+        let start = self.index;
+        let module = self.try_ident()?;
+        let Some(tilde_span) = self.try_exact(Tilde) else {
+            self.index = start;
+            return None;
+        };
+        let Some(name) = self.try_ident() else {
+            self.index = start;
+            return None;
+        };
+        let span = module.span.clone().merge(name.span.clone());
+        Some(span.sp(ModuleItem {
+            module,
+            tilde_span,
+            name,
+        }))
     }
     fn try_signature(&mut self, initial_token: AsciiToken) -> Option<Sp<Signature>> {
         let start = self.try_exact(initial_token)?;
@@ -618,7 +640,7 @@ impl<'i> Parser<'i> {
         while self.try_spaces().is_some() {}
         loop {
             let curr = self.index;
-            if self.try_binding_init().is_some() {
+            if self.try_binding_init().is_some() || self.try_import_init().is_some() {
                 self.index = curr;
                 break;
             }
@@ -824,24 +846,10 @@ impl<'i> Parser<'i> {
     fn try_term(&mut self) -> Option<Sp<Word>> {
         Some(if let Some(prim) = self.try_prim() {
             prim.map(Word::Primitive)
+        } else if let Some(item) = self.try_module_item() {
+            item.map(Word::ModuleItem)
         } else if let Some(ident) = self.try_ident() {
-            if let Some(tilde_span) = self.try_exact(Tilde) {
-                let name = self.try_ident();
-                let finished = name.is_some();
-                if !finished {
-                    self.errors.push(self.expected([Expectation::ItemName]));
-                }
-                let name = name.unwrap_or_else(|| tilde_span.clone().sp(Ident::default()));
-                let span = ident.span.clone().merge(name.span.clone());
-                span.sp(Word::ModuleItem(ModuleItem {
-                    module: ident,
-                    tilde_span,
-                    name,
-                    finished,
-                }))
-            } else {
-                ident.map(Word::Ident)
-            }
+            ident.map(Word::Ident)
         } else if let Some(sn) = self.try_num() {
             sn.map(|(s, n)| Word::Number(s, n))
         } else if let Some(c) = self.next_token_map(Token::as_char) {

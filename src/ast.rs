@@ -344,8 +344,6 @@ pub struct ModuleItem {
     pub tilde_span: CodeSpan,
     /// The name of the item
     pub name: Sp<Ident>,
-    /// Whether the name was actually given
-    pub finished: bool,
 }
 
 impl PartialEq for ModuleItem {

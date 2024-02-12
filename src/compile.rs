@@ -373,8 +373,11 @@ code:
                 }
                 // Bind items
                 for item in import.items.into_iter().flatten() {
-                    if let Some(index) =
-                        self.imports[&module].get(item.name.value.as_str()).copied()
+                    if let Some(index) = self
+                        .imports
+                        .get(&module)
+                        .and_then(|m| m.get(item.name.value.as_str()))
+                        .copied()
                     {
                         self.asm.global_references.insert(item.name.clone(), index);
                         self.scope.names.insert(item.name.value.clone(), index);

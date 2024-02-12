@@ -298,9 +298,7 @@ impl Spanner {
         let name_docs = self.reference_docs(&item.name.span);
         spans.push(item.module.span.clone().sp(SpanKind::Ident(module_docs)));
         spans.push(item.tilde_span.clone().sp(SpanKind::Delimiter));
-        if item.finished {
-            spans.push(item.name.span.clone().sp(SpanKind::Ident(name_docs)));
-        }
+        spans.push(item.name.span.clone().sp(SpanKind::Ident(name_docs)));
         spans
     }
 }

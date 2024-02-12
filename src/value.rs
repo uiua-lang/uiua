@@ -1247,7 +1247,13 @@ macro_rules! value_un_impl {
     }
 }
 
-value_un_impl!(neg, [Num, num], ("bytes", Byte, byte), [Complex, com]);
+value_un_impl!(
+    neg,
+    [Num, num],
+    ("bytes", Byte, byte),
+    [Complex, com],
+    [Char, char]
+);
 value_un_impl!(
     not,
     [Num, num],
@@ -1255,8 +1261,20 @@ value_un_impl!(
     ("bytes", Byte, byte),
     [Complex, com]
 );
-value_un_impl!(abs, [Num, num], ("bytes", Byte, byte), (Complex, com));
-value_un_impl!(sign, [Num, num], ["bytes", Byte, byte], [Complex, com]);
+value_un_impl!(
+    abs,
+    [Num, num],
+    ("bytes", Byte, byte),
+    (Complex, com),
+    [Char, char]
+);
+value_un_impl!(
+    sign,
+    [Num, num],
+    ["bytes", Byte, byte],
+    [Complex, com],
+    (Char, char)
+);
 value_un_impl!(
     sqrt,
     [Num, num],

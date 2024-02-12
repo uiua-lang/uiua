@@ -3,7 +3,7 @@
 use crate::{
     array::{Array, ArrayValue},
     value::Value,
-    ExactDoubleIterator, Primitive, Signature, Uiua, UiuaResult,
+    Boxed, Primitive, Signature, Uiua, UiuaResult,
 };
 
 use super::multi_output;
@@ -85,7 +85,7 @@ pub fn partition(env: &mut Uiua) -> UiuaResult {
     )
 }
 
-pub fn unpartition(env: &mut Uiua) -> UiuaResult {
+pub fn unpartition_part1(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let sig = f.signature();
@@ -96,18 +96,24 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
         )));
     }
     let partitioned = env.pop(1)?;
+    // Untransform rows
+    let mut untransformed = Vec::with_capacity(partitioned.row_count());
+    for row in partitioned.into_rows().rev() {
+        env.push(row);
+        env.call(f.clone())?;
+        untransformed.push(Boxed(env.pop("unpartitioned row")?));
+    }
+    untransformed.reverse();
+    env.push(Array::from_iter(untransformed));
+    Ok(())
+}
+
+pub fn unpartition_part2(env: &mut Uiua) -> UiuaResult {
+    let untransformed = env.pop(1)?;
     let markers = env
         .pop(2)?
         .as_ints(env, "⊜ partition markers must be a list of integers")?;
     let original = env.pop(3)?;
-    // Untransform rows
-    let mut untransformed = Vec::with_capacity(partitioned.row_count());
-    for row in partitioned.into_rows() {
-        env.push(row);
-        env.call(f.clone())?;
-        untransformed.push(env.pop("unpartitioned row")?);
-    }
-
     // Count partition markers
     let mut marker_partitions: Vec<(isize, usize)> = Vec::new();
     let mut markers = markers.into_iter();
@@ -123,18 +129,18 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
         }
     }
     let positive_partitions = marker_partitions.iter().filter(|(m, _)| *m > 0).count();
-    if positive_partitions != untransformed.len() {
+    if positive_partitions != untransformed.row_count() {
         return Err(env.error(format!(
             "Cannot undo {} because the partitioned array \
             originally had {} rows, but now it has {}",
             Primitive::Partition.format(),
             positive_partitions,
-            untransformed.len()
+            untransformed.row_count()
         )));
     }
 
     // Unpartition
-    let mut untransformed_rows = untransformed.into_iter();
+    let mut untransformed_rows = untransformed.into_rows().map(Value::unboxed);
     let mut unpartitioned = Vec::with_capacity(marker_partitions.len() * original.row_len());
     let mut original_offset = 0;
     for (marker, part_len) in marker_partitions {
@@ -150,7 +156,7 @@ pub fn unpartition(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn ungroup(env: &mut Uiua) -> UiuaResult {
+pub fn ungroup_part1(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let sig = f.signature();
@@ -161,36 +167,45 @@ pub fn ungroup(env: &mut Uiua) -> UiuaResult {
         )));
     }
     let grouped = env.pop(1)?;
+
+    // Untransform rows
+    let mut ungrouped_rows = Vec::with_capacity(grouped.row_count());
+    for mut row in grouped.into_rows().rev() {
+        env.push(row);
+        env.call(f.clone())?;
+        row = env.pop("ungrouped row")?;
+        ungrouped_rows.push(Boxed(row));
+    }
+    ungrouped_rows.reverse();
+    env.push(Array::from_iter(ungrouped_rows));
+    Ok(())
+}
+
+pub fn ungroup_part2(env: &mut Uiua) -> UiuaResult {
+    let ungrouped_rows = env.pop(1)?;
     let indices = env
         .pop(2)?
         .as_ints(env, "⊕ group indices must be a list of integers")?;
     let original = env.pop(3)?;
 
-    // Untransform rows
-    let mut ungrouped_rows: Vec<Box<dyn ExactDoubleIterator<Item = Value>>> =
-        Vec::with_capacity(grouped.row_count());
-    for mut row in grouped.into_rows().rev() {
-        env.push(row);
-        env.call(f.clone())?;
-        row = env.pop("ungrouped row")?;
-        ungrouped_rows.push(row.into_rows());
-    }
-    ungrouped_rows.reverse();
-
     if indices
         .iter()
-        .any(|&index| index >= 0 && index as usize >= ungrouped_rows.len())
+        .any(|&index| index >= 0 && index as usize >= ungrouped_rows.row_count())
     {
         return Err(env.error(format!(
             "Cannot undo {} because the grouped array's \
             length changed from {} to {}",
             Primitive::Group.format(),
             indices.len(),
-            ungrouped_rows.len(),
+            ungrouped_rows.row_count(),
         )));
     }
 
     // Ungroup
+    let mut ungrouped_rows: Vec<_> = ungrouped_rows
+        .into_rows()
+        .map(|row| row.unboxed().into_rows())
+        .collect();
     let mut ungrouped = Vec::with_capacity(indices.len() * original.row_len());
     for (i, index) in indices.into_iter().enumerate() {
         if index >= 0 {

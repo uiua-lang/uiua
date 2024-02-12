@@ -413,6 +413,25 @@ pub mod neg {
     pub fn byte(a: u8) -> f64 {
         -f64::from(a)
     }
+    pub fn char(a: char) -> char {
+        if a.is_lowercase() {
+            let mut upper = a.to_uppercase();
+            if upper.len() == 1 {
+                upper.next().unwrap()
+            } else {
+                a
+            }
+        } else if a.is_uppercase() {
+            let mut lower = a.to_lowercase();
+            if lower.len() == 1 {
+                lower.next().unwrap()
+            } else {
+                a
+            }
+        } else {
+            a
+        }
+    }
     pub fn com(a: Complex) -> Complex {
         -a
     }
@@ -428,6 +447,18 @@ pub mod abs {
     #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> u8 {
         a
+    }
+    pub fn char(a: char) -> char {
+        if a.is_lowercase() {
+            let mut upper = a.to_uppercase();
+            if upper.len() == 1 {
+                upper.next().unwrap()
+            } else {
+                a
+            }
+        } else {
+            a
+        }
     }
     pub fn com(a: Complex) -> f64 {
         a.abs()
@@ -450,6 +481,15 @@ pub mod sign {
     #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> u8 {
         (a > 0) as u8
+    }
+    pub fn char(a: char) -> f64 {
+        if a.is_uppercase() {
+            1.0
+        } else if a.is_lowercase() {
+            -1.0
+        } else {
+            0.0
+        }
     }
     pub fn com(a: Complex) -> Complex {
         a.normalize()

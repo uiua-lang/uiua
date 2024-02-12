@@ -167,6 +167,9 @@ pub(crate) fn under_instrs(
     if instrs.is_empty() {
         return Some((EcoVec::new(), EcoVec::new()));
     }
+    if instrs.len() > 30 {
+        return None;
+    }
 
     macro_rules! stash2 {
         ($before:expr, $after:expr) => {
@@ -341,6 +344,8 @@ pub(crate) fn under_instrs(
 
     // println!("undering {:?}", instrs);
 
+    let comp_instrs_backup = comp.asm.instrs.clone();
+
     let mut befores = EcoVec::new();
     let mut afters = EcoVec::new();
     let mut curr_instrs = instrs;
@@ -365,6 +370,7 @@ pub(crate) fn under_instrs(
         break;
     }
 
+    comp.asm.instrs = comp_instrs_backup;
     // println!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
 
     None
@@ -881,7 +887,7 @@ fn under_fill_pattern<'a>(
 }
 
 macro_rules! partition_group {
-    ($name:ident, $prim:ident, $impl_prim:ident) => {
+    ($name:ident, $prim:ident, $impl_prim1:ident, $impl_prim2:ident) => {
         fn $name<'a>(
             input: &'a [Instr],
             g_sig: Signature,
@@ -904,6 +910,8 @@ macro_rules! partition_group {
                 Instr::Prim(Primitive::$prim, span),
             ];
             let afters = eco_vec![
+                Instr::PushFunc(make_fn(f_after, span, comp)?),
+                Instr::ImplPrim(ImplPrimitive::$impl_prim1, span),
                 Instr::PushTemp {
                     stack: TempStack::Inline,
                     count: 1,
@@ -919,16 +927,20 @@ macro_rules! partition_group {
                     count: 1,
                     span
                 },
-                Instr::PushFunc(make_fn(f_after, span, comp)?),
-                Instr::ImplPrim(ImplPrimitive::$impl_prim, span),
+                Instr::ImplPrim(ImplPrimitive::$impl_prim2, span),
             ];
             Some((input, (befores, afters)))
         }
     };
 }
 
-partition_group!(under_partition_pattern, Partition, Unpartition);
-partition_group!(under_group_pattern, Group, Ungroup);
+partition_group!(
+    under_partition_pattern,
+    Partition,
+    Unpartition1,
+    Unpartition2
+);
+partition_group!(under_group_pattern, Group, Ungroup1, Ungroup2);
 
 fn try_array_wrap<'a>(
     input: &'a [Instr],

@@ -797,11 +797,11 @@ pub fn Editor<'a>(
             if !doc.is_empty() && (!on_mac && event.ctrl_key() || on_mac && event.meta_key()) {
                 // Open the docs page
                 window()
-                    .open_with_url_and_target(&format!("/docs/{doc}"), "_blank")
+                    .open_with_url_and_target(&format!("/tutorial/{doc}"), "_blank")
                     .unwrap();
             } else if !doc.is_empty() && event.shift_key() {
                 // Redirect to the docs page
-                use_navigate()(&format!("/docs/{doc}"), NavigateOptions::default());
+                use_navigate()(&format!("/tutorial/{doc}"), NavigateOptions::default());
             } else if let Some((open, close)) = surround {
                 surround_code(open, close);
             } else {

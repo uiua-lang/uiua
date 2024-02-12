@@ -28,7 +28,7 @@
 ⍤⊃⋅∘≍ 5 ⍜∩(×.)+ 3 4
 ⍤⊃⋅∘≍ {6 5} [⍜∩°□:□5 □6]
 ⍤⊃⋅∘≍ [9 9 5] ⍜⊡(⍜∩×↥,) 2 [⍥9]3 ¯1 5
-⍤⊃⋅∘≍ [3 2] ⍜∩▽◌,: [1 0] [1 2] [3 4]
+⍤⊃⋅∘≍ [3 2] ⍜∩▽◌⟜: [1 0] [1 2] [3 4]
 
 # Normal Outside
 ⍤⊃⋅∘≍ 5 ⍜+∘ 3 5
@@ -88,6 +88,7 @@
 ⍤⊃⋅∘≍ [1 2 3 4] ⍜↻∘ 1 [1 2 3 4]
 
 ⍤⊃⋅∘≍ "World! Hello" ⍜⊜□⇌ ≠@ . "Hello World!"
+⍤⊃⋅∘≍ "Just A Little Guy" ⍜⊜⊢⌵ ≠@ . "Just a little guy"
 ⍤⊃⋅∘≍ {"Hello" "World!"} {⍜∩⊜□∘ ∩(≠@l.) "Hello" "World!"}
 ⍤⊃⋅∘≍ "sdrow emo sera esehT" ⍜⊕□≡⍜°□⇌ ≠@ . $ These are some words
 

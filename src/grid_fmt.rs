@@ -162,8 +162,10 @@ pub fn format_char_inner(c: char) -> String {
         let n = c as u32;
         if n < 128 {
             format!("\\x{:02x}", n)
-        } else {
+        } else if n < 16u32.pow(4) {
             format!("\\u{:04x}", n)
+        } else {
+            format!("\\u{{{:08x}}}", n)
         }
     } else {
         formatted[1..formatted.len() - 1].to_string()

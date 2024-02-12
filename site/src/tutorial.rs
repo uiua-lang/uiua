@@ -692,13 +692,21 @@ fn TutorialTypes() -> impl IntoView {
                 <p>"You can "<Prim prim=Add/>" "{number}"s and "{character}"s to get another "{character}"."</p>
                 <p>"You can "<Prim prim=Sub/>" a "{number}" from a "{character}" to get another "{character}"."</p>
                 <p>"You can "<Prim prim=Sub/>" two "{character}"s to get a "{number}"."</p>
-                <p><em>"No"</em>" other arithmetic operations can be done on "{character}"s."</p>
+                <p><em>"No"</em>" other binary arithmetic operations can be done on "{character}"s."</p>
             }
         }
         <Editor example="+1 @a"/>
         <Editor example="-8 \"Uiua\""/>
         <Editor example="-@a @z"/>
         <Editor example="+@a @b"/> // Should fail
+        <p><Prim prim=Sign/>" gives the case of a character. It gives "<code>"1"</code>" for uppercase, "<code>"¯1"</code>" for lowercase, and "<code>"0"</code>" for caseless characters."</p>
+        <Editor example="± \"Hello, World!\""/>
+        <p><Prim prim=Abs/>" uppercases a character."</p>
+        <Editor example="⌵ \"Hello, World!\""/>
+        <p><Prim prim=Neg/>" toggles the case of a character."</p>
+        <Editor example="¯ \"Hello, World!\""/>
+        <p>"Use with with "<Prim prim=Abs/>" to lowercase a character."</p>
+        <Editor example="¯⌵ \"Hello, World!\""/>
 
         <h2 id="boxes">"Boxes"</h2>
         <p>"Boxes are containers that can wrap an array of any type or shape. Multiple boxes can be put in the same array, no matter their contents."</p>
@@ -908,7 +916,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p><Prim prim=Fork/>" is also good because it does not require that its values be in an array together, so they can be different shapes or types."</p>
         <Editor example="⊃+- 1 @b"/>
         <Editor example="⊃⊃⊃↻↙↘⊡ 2 [1 2 3 4 5]"/>
-        <p>"We'll see just how important "<Prim prim=Fork/>" is later is this section."</p>
+        <p>"We'll see just how important "<Prim prim=Fork/>" is later in this section."</p>
 
         <h2 id="both"><Prim prim=Both/></h2>
         <p><Prim prim=Both/>" is a monadic modifier and a sort of complement to "<Prim prim=Fork/>". While "<Prim prim=Fork/>" calls multiple functions on the same set of arguments, "<Prim prim=Both/>" calls a "<em>"single"</em>" function on "<em>"multiple"</em>" sets of arguments."</p>

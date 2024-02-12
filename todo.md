@@ -1,17 +1,14 @@
 # Uiua Todo
 
-## Features
 - 0.9
-  - Some arithmetic operators on characters
-    - `sign` for getting the case
-    - `abs` for uppercasing
-    - `neg` for toggling case
-  - Multiple imports
-  - Basic package management
-    - `&i "git:path"`
+  - Redo modules and imports completely
+  - Add other `on` combinators
   - Fix cursor mapping with end-of-line comments
   - Color labels in pad
   - Pad link from Gist
+- Changle how function inlining works
+  - Prevent inlining of large functions
+  - If a function is inlinable, don't actually put it in the assembly instructions
 - Multimedia
   - Sound input
   - Webcam input

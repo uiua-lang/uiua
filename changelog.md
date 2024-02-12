@@ -15,6 +15,10 @@ This version is not yet released. If you are reading this on the website, then t
   - This should make it easier to scope [`fill ⬚`](https://uiua.org/docs/fill) correctly
 - Add recursion via refering to a binding's name within its body
   - Deprecate [`this ↬`](https://uiua.org/docs/this) and [`recur ↫`](https://uiua.org/docs/recur), as they are no longer necessary
+- Extend some math functions to work with characters
+  - [`sign ±`](https://uiua.org/docs/sign) gets the case of a character
+  - [`absolute value ⌵`](https://uiua.org/docs/absolute) uppercases a character
+  - [`negate ¯`](https://uiua.org/docs/negate) toggles the case of a character
 - `f` can now be used at the beginning of planet notation shorthand for [`fork ⊃`](https://uiua.org/docs/fork)
 - Add experimental labels, denoted by a `$` immediately followed by an identifier, which attach a name to an array. This has two uses:
   - Labels are visible in output and in [`stack`](https://uiua.org/docs/stack) diagnostics
@@ -23,7 +27,7 @@ This version is not yet released. If you are reading this on the website, then t
   - These both check array properties at runtime and serve as a form of documentation
 - Add experimental [`inventory ⎏`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
   - This shortens a lot of box array code
-- [`pop ◌`](https://uiua.org/docs/pop) no longer formats from `;`
+- Deprecate [`pop ◌`](https://uiua.org/docs/pop) formatting from `;`
 - Deprecate [`all ⋔`](https://uiua.org/docs/all)
   - It was rarely used and hard to reason about
 - Add an experimental `repr` function that produces a string representation of a value in a format that can be read by the interpreter

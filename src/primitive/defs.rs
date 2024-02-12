@@ -234,6 +234,12 @@ primitive!(
     /// ex: ± [¯2 ¯1 0 1 2]
     /// [sign] on a [complex] number normalizes it to a magnitude of 1.
     /// ex: ± ℂ3 4
+    ///
+    /// [sign] also works on characters to get their case.
+    /// - `¯1` for lowercase
+    /// - `1` for uppercase
+    /// - `0` for caseless
+    /// ex: ± "Hello, World!"
     (1, Sign, MonadicPervasive, ("sign", '±')),
     /// Negate a number
     ///
@@ -242,6 +248,12 @@ primitive!(
     /// ex: ¯ 1
     /// ex: ¯ ¯3
     /// ex: ¯ [1 2 ¯3]
+    /// ex: ¯ ℂ3 5
+    ///
+    /// [negate] also works on characters to toggle their case.
+    /// ex: ¯ "Hello, World!"
+    /// Use this with [absolute value] to lowercase a string.
+    /// ex: ¯⌵ "Hello, World!"
     (
         1,
         Neg,
@@ -254,6 +266,9 @@ primitive!(
     /// ex: ⌵ 1
     /// [absolute value] converts complex numbers to their magnitude.
     /// ex: ⌵ ℂ3 4
+    ///
+    /// [absolute value] works on characters to uppercase them.
+    /// ex: ⌵ "Hello, World!"
     ///
     /// The glyph looks like the graph of `|x|`.
     (1, Abs, MonadicPervasive, ("absolute value", '⌵')),
@@ -1255,6 +1270,7 @@ primitive!(
     /// [under][partition] works if [partition]'s function is [under]able.
     /// ex: ⍜⊜□⇌  ≠@ . $ These are some words
     /// ex: ⍜⊜□≡⇌ ≠@ . $ These are some words
+    /// ex: ⍜⊜⊢⌵  ≠@ . $ These are some words
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
@@ -1360,11 +1376,11 @@ primitive!(
     /// - `fab fac`
     /// Both involve applying a stack idiom before calling [both].
     /// For `fac fbc`, the idiom is `dip``over`.
-    /// For `fab fac`, the idiom is `over``flip`.
+    /// For `fab fac`, the idiom is `on``flip`.
     /// For example, if you wanted to check that a number is divisible by two other numbers:
     /// ex: F ← ∩(=0◿) ⊙,
     ///   : F 3 5 ⇡16
-    /// ex: G ← ∩(=0◿:) ,:
+    /// ex: G ← ∩(=0◿:) ⟜:
     ///   : G ⇡16 3 5
     (2[1], Both, Planet, ("both", '∩')),
     /// Invert the behavior of a function
@@ -2194,8 +2210,10 @@ impl_primitive!(
     (3, Unrerank),
     (2, Unreshape),
     (3(2), Unjoin),
-    (3[1], Unpartition),
-    (3[1], Ungroup),
+    (1[1], Unpartition1),
+    (3, Unpartition2),
+    (1[1], Ungroup1),
+    (3, Ungroup2),
     // Optimizations
     (1, Cos),
     (1, Last),

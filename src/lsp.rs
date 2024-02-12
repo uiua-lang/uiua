@@ -89,7 +89,9 @@ impl Spanner {
                     }
                 }
                 Item::Binding(binding) => {
-                    let binding_docs = self.binding_docs(&binding.name.span);
+                    let binding_docs = self
+                        .binding_docs(&binding.name.span)
+                        .or_else(|| self.reference_docs(&binding.name.span));
                     spans.push(binding.name.span.clone().sp(SpanKind::Ident(binding_docs)));
                     spans.push(binding.arrow_span.clone().sp(SpanKind::Delimiter));
                     if let Some(sig) = &binding.signature {

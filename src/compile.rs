@@ -275,13 +275,19 @@ code:
     pub(crate) fn items(&mut self, items: Vec<Item>, in_test: bool) -> UiuaResult {
         // Set scope comment
         if let Some(Item::Words(lines)) = items.first() {
+            let mut started = false;
             let mut comment = String::new();
             for line in lines {
                 for word in line {
                     match &word.value {
                         Word::Comment(c) => {
                             if c.trim() != "Experimental!" {
+                                let mut c = c.as_str();
+                                if c.starts_with(' ') {
+                                    c = &c[1..];
+                                }
                                 comment.push_str(c);
+                                started = true;
                             }
                         }
                         Word::Spaces => {}
@@ -290,6 +296,9 @@ code:
                             break;
                         }
                     }
+                }
+                if line.is_empty() && started {
+                    break;
                 }
                 comment.push('\n');
             }
@@ -458,6 +467,31 @@ code:
     fn binding(&mut self, binding: Binding, comment: Option<Arc<str>>) -> UiuaResult {
         let name = binding.name.value;
         let span = &binding.name.span;
+
+        // Alias re-bound imports
+        if binding.words.iter().filter(|w| w.value.is_code()).count() == 1 {
+            if let Some(item) = binding.words.iter().find_map(|w| match &w.value {
+                Word::ModuleItem(item) => Some(item),
+                _ => None,
+            }) {
+                if let Some(module_index) = self.scope.names.get(&item.module.value).copied() {
+                    if let Global::Module { module } = &self.asm.bindings[module_index].global {
+                        if let Some(name_index) = self.imports[module]
+                            .names
+                            .get(item.name.value.as_str())
+                            .copied()
+                        {
+                            self.scope.names.insert(name.clone(), name_index);
+                            (self.asm.global_references).insert(item.module.clone(), module_index);
+                            (self.asm.global_references).insert(item.name.clone(), name_index);
+                            (self.asm.global_references).insert(span.clone().sp(name), name_index);
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        }
+
         let placeholder_count = count_placeholders(&binding.words);
 
         let mut make_fn: Rc<dyn Fn(_, _, &mut Compiler) -> _> = Rc::new(

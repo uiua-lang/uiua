@@ -774,7 +774,6 @@ impl<'a> fmt::Display for FormatShape<'a> {
     }
 }
 
-
 /// Convert value into a string that can be understood by the interpreter
 /// Prefer to use `Value::representation()`
 pub(crate) fn dbg_value(value: &Value, depth: usize, prefix: bool) -> String {
@@ -806,11 +805,10 @@ pub(crate) fn dbg_value(value: &Value, depth: usize, prefix: bool) -> String {
 /// Convert array into a string that can be understood by the interpreter
 /// * `depth` - recursion/indentation depth. 0 by default
 /// * `prefix` - whether singular chars and boxes need a prefix. true by default
-pub(crate) fn dbg_array<T: DebugArrayValue>(
-    array: &Array<T>,
-    depth: usize,
-    prefix: bool,
-) -> String {
+pub(crate) fn dbg_array<T>(array: &Array<T>, depth: usize, prefix: bool) -> String
+where
+    T: DebugArrayValue,
+{
     let mut buffer = String::with_capacity(array.element_count());
     dbg_array_inner(
         &mut buffer,
@@ -840,7 +838,7 @@ fn dbg_array_inner<T: DebugArrayValue>(
         1 => (T::debug_delims(), T::debug_separator()),
         _ => (("[", "]"), "\n"),
     };
-    let padding = if separator == "\n" {
+    let padding = if separator.contains('\n') {
         " ".repeat(depth + 1)
     } else {
         "".into()
@@ -887,17 +885,35 @@ pub trait DebugArrayValue: ArrayValue {
         Self::format_sep()
     }
 }
-impl DebugArrayValue for f64 {}
 impl DebugArrayValue for u8 {}
+impl DebugArrayValue for f64 {
+    fn debug_string(&self, _depth: usize, _prefix: bool) -> String {
+        self.to_string().replace('-', "¯")
+    }
+}
+impl DebugArrayValue for Complex {
+    fn debug_string(&self, depth: usize, prefix: bool) -> String {
+        format!(
+            "ℂ{} {}",
+            self.im.debug_string(depth, prefix),
+            self.re.debug_string(depth, prefix),
+        )
+    }
+}
 impl DebugArrayValue for char {
     fn debug_delims() -> (&'static str, &'static str) {
         ("\"", "\"")
     }
     fn debug_string(&self, _depth: usize, prefix: bool) -> String {
+        let mut repr = format!("{self:?}")[1..] // gives repr delimited by single quotes
+            .replace(r"\'", "'") // don't escape single quote
+            .replace('"', r#"\""#) // escape double quote
+            .replace(r"\'", r"\\'"); // escape backslash if it's not escaping anything
+        repr.pop();
         if prefix {
-            format!("@{self}")
+            format!("@{}", repr.replace(' ', "\\s"))
         } else {
-            format!("{self}")
+            format!("{}", repr)
         }
     }
 }
@@ -916,10 +932,5 @@ impl DebugArrayValue for Boxed {
     }
     fn debug_separator() -> &'static str {
         "\n"
-    }
-}
-impl DebugArrayValue for Complex {
-    fn debug_string(&self, _depth: usize, _prefix: bool) -> String {
-        format!("ℂ{} {}", self.im, self.re)
     }
 }

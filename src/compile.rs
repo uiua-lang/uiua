@@ -715,11 +715,15 @@ code:
     }
     /// Resolve a declared import path relative to the path of the file that is being executed
     pub(crate) fn resolve_import_path(&self, path: &Path) -> PathBuf {
-        let target = if let Some(parent) = self.current_imports.last().and_then(|p| p.parent()) {
+        let mut target = if let Some(parent) = self.current_imports.last().and_then(|p| p.parent())
+        {
             parent.join(path)
         } else {
             path.to_path_buf()
         };
+        if !target.exists() && target.extension().is_none() {
+            target = target.with_extension("ua");
+        }
         let base = Path::new(".");
         if let (Ok(canon_target), Ok(canon_base)) = (target.canonicalize(), base.canonicalize()) {
             pathdiff::diff_paths(canon_target, canon_base).unwrap_or(target)

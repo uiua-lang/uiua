@@ -550,13 +550,18 @@ impl<'a> Formatter<'a> {
                     {
                         self.prev_import_function = Some(binding.name.value.clone());
                     }
-                    Some(Word::Ident(ident)) => {
-                        if (self.prev_import_function.as_ref()).is_some_and(|prev| prev == ident) {
-                            for _ in 0..self.config.multiline_indent {
-                                self.output.push(' ');
-                            }
-                        } else {
-                            self.prev_import_function = None;
+                    Some(Word::Ident(ident))
+                        if self.prev_import_function.as_ref() == Some(ident) =>
+                    {
+                        for _ in 0..self.config.multiline_indent {
+                            self.output.push(' ');
+                        }
+                    }
+                    Some(Word::ModuleItem(item))
+                        if self.prev_import_function.as_ref() == Some(&item.module.value) =>
+                    {
+                        for _ in 0..self.config.multiline_indent {
+                            self.output.push(' ');
                         }
                     }
                     _ => self.prev_import_function = None,
@@ -595,9 +600,11 @@ impl<'a> Formatter<'a> {
                 }
             }
             Item::Import(import) => {
+                self.prev_import_function = None;
                 if let Some(name) = &import.name {
                     self.push(&name.span, &name.value);
                     self.output.push(' ');
+                    self.prev_import_function = Some(name.value.clone());
                 }
                 self.output.push_str("~ ");
                 self.push(&import.path.span, &format!("{:?}", import.path.value));

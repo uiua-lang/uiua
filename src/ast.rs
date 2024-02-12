@@ -309,7 +309,7 @@ impl fmt::Debug for Modifier {
         match self {
             Modifier::Primitive(prim) => prim.fmt(f),
             Modifier::Ident(ident) => write!(f, "binding({ident})"),
-            Modifier::ModuleItem(item) => write!(f, "module_item({item})"),
+            Modifier::ModuleItem(item) => write!(f, "mod_module_item({item})"),
         }
     }
 }

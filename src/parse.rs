@@ -703,6 +703,9 @@ impl<'i> Parser<'i> {
         } else {
             let term = self.try_term()?;
             if let Word::ModuleItem(item) = term.value {
+                if ident_modifier_args(&item.name.value) == 0 {
+                    return Some(term.span.sp(Word::ModuleItem(item)));
+                }
                 (Modifier::ModuleItem(item), term.span)
             } else {
                 return Some(term);

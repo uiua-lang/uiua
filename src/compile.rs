@@ -373,13 +373,19 @@ code:
                 }
                 // Bind items
                 for item in import.items.into_iter().flatten() {
-                    let name = item.name.value;
-                    if let Some(index) = self.imports[&module].get(name.as_str()).copied() {
-                        self.scope.names.insert(name, index);
+                    if let Some(index) =
+                        self.imports[&module].get(item.name.value.as_str()).copied()
+                    {
+                        self.asm.global_references.insert(item.name.clone(), index);
+                        self.scope.names.insert(item.name.value.clone(), index);
                     } else {
                         self.add_error(
                             item.name.span.clone(),
-                            format!("Item `{name}` not found in module {}", module.display()),
+                            format!(
+                                "Item `{}` not found in module {}",
+                                item.name.value,
+                                module.display()
+                            ),
                         );
                     }
                 }
@@ -956,54 +962,7 @@ code:
                 }
             }
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
-            Word::ModuleItem(item) => {
-                let Some(module_index) = self.scope.names.get(&item.module.value) else {
-                    return Err(self.fatal_error(
-                        item.module.span.clone(),
-                        format!("Unknown import `{}`", item.module.value),
-                    ));
-                };
-                self.asm
-                    .global_references
-                    .insert(item.module.clone(), *module_index);
-                let global = &self.asm.bindings[*module_index].global;
-                let module = match global {
-                    Global::Module { module } => module,
-                    Global::Func(_) => {
-                        return Err(self.fatal_error(
-                            item.module.span.clone(),
-                            format!("`{}` is a function, not a module", item.module.value),
-                        ))
-                    }
-                    Global::Const(_) => {
-                        return Err(self.fatal_error(
-                            item.module.span.clone(),
-                            format!("`{}` is a constant, not a module", item.module.value),
-                        ))
-                    }
-                    Global::Sig(_) => {
-                        return Err(self.fatal_error(
-                            item.module.span.clone(),
-                            format!("`{}` is  not a module", item.module.value),
-                        ))
-                    }
-                };
-                if let Some(item_index) = self.imports[module].get(&item.name.value) {
-                    self.asm
-                        .global_references
-                        .insert(item.name.clone(), *item_index);
-                    self.global_index(*item_index, item.name.span.clone(), call);
-                } else {
-                    return Err(self.fatal_error(
-                        item.name.span.clone(),
-                        format!(
-                            "Item `{}` not found in module `{}`",
-                            item.name.value,
-                            module.display()
-                        ),
-                    ));
-                }
-            }
+            Word::ModuleItem(item) => self.module_item(item, call)?,
             Word::Strand(items) => {
                 if !call {
                     self.new_functions.push(EcoVec::new());
@@ -1162,6 +1121,55 @@ code:
             }
             Word::OutputComment { i, n } => self.push_instr(Instr::SetOutputComment { i, n }),
             Word::Spaces | Word::BreakLine | Word::UnbreakLine => {}
+        }
+        Ok(())
+    }
+    fn module_item(&mut self, item: ModuleItem, call: bool) -> UiuaResult {
+        let Some(module_index) = self.scope.names.get(&item.module.value) else {
+            return Err(self.fatal_error(
+                item.module.span.clone(),
+                format!("Unknown import `{}`", item.module.value),
+            ));
+        };
+        self.asm
+            .global_references
+            .insert(item.module.clone(), *module_index);
+        let global = &self.asm.bindings[*module_index].global;
+        let module = match global {
+            Global::Module { module } => module,
+            Global::Func(_) => {
+                return Err(self.fatal_error(
+                    item.module.span.clone(),
+                    format!("`{}` is a function, not a module", item.module.value),
+                ))
+            }
+            Global::Const(_) => {
+                return Err(self.fatal_error(
+                    item.module.span.clone(),
+                    format!("`{}` is a constant, not a module", item.module.value),
+                ))
+            }
+            Global::Sig(_) => {
+                return Err(self.fatal_error(
+                    item.module.span.clone(),
+                    format!("`{}` is  not a module", item.module.value),
+                ))
+            }
+        };
+        if let Some(item_index) = self.imports[module].get(&item.name.value) {
+            self.asm
+                .global_references
+                .insert(item.name.clone(), *item_index);
+            self.global_index(*item_index, item.name.span.clone(), call);
+        } else {
+            return Err(self.fatal_error(
+                item.name.span.clone(),
+                format!(
+                    "Item `{}` not found in module `{}`",
+                    item.name.value,
+                    module.display()
+                ),
+            ));
         }
         Ok(())
     }
@@ -1591,6 +1599,7 @@ code:
             match modified.modifier.value {
                 Modifier::Primitive(prim) => self.primitive(prim, modified.modifier.span, true),
                 Modifier::Ident(ident) => self.ident(ident, modified.modifier.span, true)?,
+                Modifier::ModuleItem(item) => self.module_item(item, true)?,
             }
         } else {
             self.new_functions.push(EcoVec::new());
@@ -1602,6 +1611,7 @@ code:
                 Modifier::Ident(ident) => {
                     self.ident(ident, modified.modifier.span.clone(), true)?
                 }
+                Modifier::ModuleItem(item) => self.module_item(item, true)?,
             }
             let instrs = self.new_functions.pop().unwrap();
             match instrs_signature(&instrs) {

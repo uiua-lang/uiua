@@ -16,7 +16,7 @@ use base64::engine::{general_purpose::URL_SAFE, Engine};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{ConstantDef, PrimClass, Primitive, Signature};
+use uiua::{lsp::BindingDocs, ConstantDef, PrimClass, Primitive};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
@@ -391,7 +391,7 @@ fn prim_class(prim: Primitive) -> &'static str {
     }
 }
 
-fn binding_class(name: &str, sig: Signature, margs: usize, constant: bool) -> &'static str {
+fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
     match name {
         "Trans" => code_font!("trans text-gradient"),
         "Bi" => code_font!("bi text-gradient"),
@@ -401,17 +401,24 @@ fn binding_class(name: &str, sig: Signature, margs: usize, constant: bool) -> &'
         "Nb" | "Enby" => code_font!("nb text-gradient"),
         "Fluid" => code_font!("fluid text-gradient"),
         "Queer" => code_font!("queer text-gradient"),
-        _ if constant => code_font!(""),
-        _ => match margs {
-            0 => match (sig.args, sig.outputs) {
-                (0, 1) => code_font!("noadic-function"),
-                (1, 1) => code_font!("monadic-function"),
-                (2, 1) => code_font!("dyadic-function"),
-                (3, _) => code_font!("triadic-function"),
-                (4, _) => code_font!("tetradic-function"),
-                (5, _) => code_font!("pentadic-function"),
-                _ => code_font!(""),
-            },
+        _ if docs.module => code_font!("module"),
+        _ if docs.constant => code_font!(""),
+        _ => match uiua::ident_modifier_args(name) {
+            0 => {
+                if let Some(sig) = docs.signature {
+                    match (sig.args, sig.outputs) {
+                        (0, 1) => code_font!("noadic-function"),
+                        (1, 1) => code_font!("monadic-function"),
+                        (2, 1) => code_font!("dyadic-function"),
+                        (3, _) => code_font!("triadic-function"),
+                        (4, _) => code_font!("tetradic-function"),
+                        (5, _) => code_font!("pentadic-function"),
+                        _ => code_font!(""),
+                    }
+                } else {
+                    code_font!("")
+                }
+            }
             1 => code_font!("monadic-modifier"),
             2 => code_font!("dyadic-modifier"),
             _ => code_font!("triadic-modifier"),

@@ -1494,8 +1494,8 @@ fn TutorialModules() -> impl IntoView {
         <p>"This is not very useful on its own. We can bind items from the module in the current scope by listing them after the file path, separated by additional "<code>"~"</code>"s."</p>
         <Editor example="~ \"example.ua\" ~ Increment ~ Square\n\nIncrement Square 3"/>
         <p>"If we have a lot of items to import, we can use multiple lines."</p>
-        <Editor example="~ \"example.ua\"\n~ Increment ~ Square\n~ Foo ~ Bar\n\nIncrement Square Foo"/>
-        <p>"The formatter will automatically indent the imports if they are on multiple lines. Try it out!"</p>
+        <Editor example="~ \"example.ua\"\n~ Increment ~ Square\n~ Span\n~ Foo ~ Bar\n\nIncrement Square Foo\nSpan 4 10"/>
+        <p>"The formatter will automatically indent the imports if they are on multiple lines. It will also alphabetize them. Try it out!"</p>
 
         <h2 id="binding">"Binding Modules"</h2>
         <p>"If we put a name before the import, we can bind the module to that name."</p>

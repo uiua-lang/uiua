@@ -561,12 +561,7 @@ fn set_code_html(id: &str, code: &str) {
                                 .signature
                                 .map(|sig| sig.to_string())
                                 .unwrap_or_default();
-                            let class = if let Some(sig) = docs.signature {
-                                let margs = text.chars().rev().take_while(|c| *c == '!').count();
-                                binding_class(text, sig, margs, docs.constant)
-                            } else {
-                                ""
-                            };
+                            let class = binding_class(text, docs);
                             if let Some(comment) = &docs.comment {
                                 if !title.is_empty() {
                                     title.push(' ');

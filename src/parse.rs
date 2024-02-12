@@ -433,34 +433,38 @@ impl<'i> Parser<'i> {
     }
     fn try_import(&mut self) -> Option<Import> {
         let start = self.index;
+        // Name
         let name = self.try_ident();
         self.try_spaces();
-        if self.try_exact(Tilde).is_none() {
+        // Tilde
+        let Some(tilde_span) = self.try_exact(Tilde) else {
             self.index = start;
             return None;
-        }
+        };
         self.try_spaces();
+        // Path
         let Some(path) = self.next_token_map(Token::as_string) else {
             self.index = start;
             return None;
         };
         let path = path.map(Into::into);
         self.try_spaces();
+        // Items
         let mut items: Vec<Vec<_>> = Vec::new();
         let mut line = Vec::new();
-        let mut tilde_span = None;
+        let mut item_tilde_span = None;
         self.try_exact(Newline);
         while let Some(token) = self.tokens.get(self.index).cloned() {
             let span = token.span;
             let token = token.value;
             match token {
-                Token::Ident if tilde_span.is_some() => {
+                Token::Ident if item_tilde_span.is_some() => {
                     let ident = Ident::from(&self.input[span.byte_range()]);
                     let name = span.clone().sp(ident);
-                    let tilde_span = tilde_span.take().unwrap();
+                    let tilde_span = item_tilde_span.take().unwrap();
                     line.push(ImportItem { name, tilde_span });
                 }
-                Simple(Tilde) if tilde_span.is_none() => tilde_span = Some(span.clone()),
+                Simple(Tilde) if item_tilde_span.is_none() => item_tilde_span = Some(span.clone()),
                 Simple(Tilde) => self
                     .errors
                     .push(span.sp(ParseError::Unexpected(Simple(Tilde)))),
@@ -484,7 +488,12 @@ impl<'i> Parser<'i> {
                     .push(name.span.clone().sp(ParseError::ModifierImportName));
             }
         }
-        Some(Import { name, path, items })
+        Some(Import {
+            name,
+            tilde_span,
+            path,
+            items,
+        })
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         let span = self.try_exact(Token::Ident)?;
@@ -692,7 +701,12 @@ impl<'i> Parser<'i> {
         } else if let Some(ident) = self.try_modifier_ident() {
             (Modifier::Ident(ident.value), ident.span)
         } else {
-            return self.try_term();
+            let term = self.try_term()?;
+            if let Word::ModuleItem(item) = term.value {
+                (Modifier::ModuleItem(item), term.span)
+            } else {
+                return Some(term);
+            }
         };
         let mut args = Vec::new();
         self.try_spaces();
@@ -1194,9 +1208,10 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
     })
 }
 
-pub(crate) fn ident_modifier_args(ident: &Ident) -> usize {
+/// Get the number of modifier arguments implied by an identifier
+pub fn ident_modifier_args(ident: &str) -> usize {
     let mut count: usize = 0;
-    let mut prefix = ident.as_ref();
+    let mut prefix = ident;
     while let Some(pre) = prefix.strip_suffix('!') {
         prefix = pre;
         count = count.saturating_add(1);

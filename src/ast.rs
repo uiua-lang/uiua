@@ -52,6 +52,8 @@ impl Binding {
 pub struct Import {
     /// The name given to the imported module
     pub name: Option<Sp<Ident>>,
+    /// The span of the ~
+    pub tilde_span: CodeSpan,
     /// The import path
     pub path: Sp<String>,
     /// The imported items
@@ -130,15 +132,11 @@ impl PartialEq for Word {
                 .iter()
                 .flatten()
                 .map(|w| &w.value)),
-            (Self::Switch(a), Self::Switch(b)) => a
-                .branches
-                .iter()
+            (Self::Switch(a), Self::Switch(b)) => (a.branches.iter())
                 .flat_map(|br| &br.value.lines)
                 .flatten()
                 .map(|w| &w.value)
-                .eq(b
-                    .branches
-                    .iter()
+                .eq((b.branches.iter())
                     .flat_map(|br| &br.value.lines)
                     .flatten()
                     .map(|w| &w.value)),
@@ -302,6 +300,8 @@ pub enum Modifier {
     Primitive(Primitive),
     /// A user-defined modifier
     Ident(Ident),
+    /// An imported modifier
+    ModuleItem(ModuleItem),
 }
 
 impl fmt::Debug for Modifier {
@@ -309,6 +309,7 @@ impl fmt::Debug for Modifier {
         match self {
             Modifier::Primitive(prim) => prim.fmt(f),
             Modifier::Ident(ident) => write!(f, "binding({ident})"),
+            Modifier::ModuleItem(item) => write!(f, "module_item({item})"),
         }
     }
 }
@@ -318,6 +319,7 @@ impl fmt::Display for Modifier {
         match self {
             Modifier::Primitive(prim) => prim.format().fmt(f),
             Modifier::Ident(ident) => write!(f, "{ident}"),
+            Modifier::ModuleItem(item) => write!(f, "{item}"),
         }
     }
 }
@@ -328,6 +330,7 @@ impl Modifier {
         match self {
             Modifier::Primitive(prim) => prim.modifier_args().unwrap_or(0),
             Modifier::Ident(ident) => ident_modifier_args(ident),
+            Modifier::ModuleItem(item) => ident_modifier_args(&item.name.value),
         }
     }
 }

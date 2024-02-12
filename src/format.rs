@@ -632,6 +632,11 @@ impl<'a> Formatter<'a> {
                 } else {
                     for line in items {
                         self.output.push('\n');
+                        if self.config.indent_item_imports {
+                            for _ in 0..self.config.multiline_indent {
+                                self.output.push(' ');
+                            }
+                        }
                         for (i, item) in line.iter().enumerate() {
                             if i > 0 {
                                 self.output.push(' ');
@@ -655,6 +660,11 @@ impl<'a> Formatter<'a> {
         if trailing_space {
             self.output.push(' ');
         }
+    }
+    fn format_module_item(&mut self, item: &ModuleItem) {
+        self.push(&item.module.span, &item.module.value);
+        self.output.push('~');
+        self.push(&item.name.span, &item.name.value);
     }
     fn format_words(&mut self, words: &[Sp<Word>], trim_end: bool, depth: usize) {
         for word in trim_spaces(words, trim_end) {
@@ -716,11 +726,7 @@ impl<'a> Formatter<'a> {
                 }
                 self.output.push_str(ident)
             }
-            Word::ModuleItem(item) => {
-                self.push(&item.module.span, &item.module.value);
-                self.output.push('~');
-                self.push(&item.name.span, &item.name.value);
-            }
+            Word::ModuleItem(item) => self.format_module_item(item),
             Word::Strand(items) => {
                 for (i, item) in items.iter().enumerate() {
                     if i > 0 {
@@ -818,13 +824,11 @@ impl<'a> Formatter<'a> {
             }
             Word::Primitive(prim) => self.push(&word.span, &prim.to_string()),
             Word::Modified(m) => {
-                self.push(
-                    &m.modifier.span,
-                    &match &m.modifier.value {
-                        Modifier::Primitive(prim) => prim.to_string(),
-                        Modifier::Ident(ident) => ident.to_string(),
-                    },
-                );
+                match &m.modifier.value {
+                    Modifier::Primitive(prim) => self.push(&m.modifier.span, &prim.to_string()),
+                    Modifier::Ident(ident) => self.push(&m.modifier.span, ident),
+                    Modifier::ModuleItem(item) => self.format_module_item(item),
+                }
                 self.format_words(&m.operands, true, depth);
             }
             Word::Placeholder(sig) => self.format_signature(

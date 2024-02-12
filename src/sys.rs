@@ -26,6 +26,8 @@ pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
     static EXAMPLE_UA: Lazy<Mutex<String>> = Lazy::new(|| {
         Mutex::new(
             "\
+# Uiua's example module
+
 Square ← ×.
 Double ← +.
 Increment ← +1

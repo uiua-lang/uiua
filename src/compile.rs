@@ -43,7 +43,7 @@ pub struct Compiler {
     /// The paths of files currently being imported (used to detect import cycles)
     current_imports: Vec<PathBuf>,
     /// The bindings of imported files
-    imports: HashMap<PathBuf, HashMap<Ident, usize>>,
+    imports: HashMap<PathBuf, Import>,
     /// Accumulated errors
     errors: Vec<UiuaError>,
     /// Primitives that have emitted errors because they are experimental
@@ -80,6 +80,15 @@ impl Default for Compiler {
     }
 }
 
+/// An imported module
+#[derive(Clone)]
+pub struct Import {
+    /// The top level comment
+    pub comment: Option<Arc<str>>,
+    /// Map module-local names to global indices
+    pub names: HashMap<Ident, usize>,
+}
+
 impl AsRef<Assembly> for Compiler {
     fn as_ref(&self) -> &Assembly {
         &self.asm
@@ -102,6 +111,8 @@ struct CurrentBinding {
 
 #[derive(Clone)]
 pub(crate) struct Scope {
+    /// The top level comment
+    comment: Option<Arc<str>>,
     /// Map local names to global indices
     names: HashMap<Ident, usize>,
     /// Whether to allow experimental features
@@ -115,6 +126,7 @@ pub(crate) struct Scope {
 impl Default for Scope {
     fn default() -> Self {
         Self {
+            comment: None,
             names: HashMap::new(),
             experimental: false,
             stack_height: Ok(0),
@@ -193,14 +205,17 @@ impl Compiler {
     pub fn in_scope<T>(
         &mut self,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
-    ) -> UiuaResult<HashMap<Ident, usize>> {
+    ) -> UiuaResult<Import> {
         let experimental = self.scope.experimental;
         self.higher_scopes.push(take(&mut self.scope));
         self.scope.experimental = experimental;
         let res = f(self);
         let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
         res?;
-        Ok(scope.names)
+        Ok(Import {
+            comment: scope.comment,
+            names: scope.names,
+        })
     }
     fn load_impl(&mut self, input: &str, src: InputSrc) -> UiuaResult<&mut Self> {
         let instrs_start = self.asm.instrs.len();
@@ -258,6 +273,31 @@ code:
         }
     }
     pub(crate) fn items(&mut self, items: Vec<Item>, in_test: bool) -> UiuaResult {
+        // Set scope comment
+        if let Some(Item::Words(lines)) = items.first() {
+            let mut comment = String::new();
+            for line in lines {
+                for word in line {
+                    match &word.value {
+                        Word::Comment(c) => {
+                            if c.trim() != "Experimental!" {
+                                comment.push_str(c);
+                            }
+                        }
+                        Word::Spaces => {}
+                        _ => {
+                            comment.clear();
+                            break;
+                        }
+                    }
+                }
+                comment.push('\n');
+            }
+            if !comment.is_empty() {
+                self.scope.comment = Some(comment.trim().into());
+            }
+        }
+
         let mut prev_comment = None;
         for item in items {
             if let Err(e) = self.item(item, in_test, &mut prev_comment) {
@@ -359,6 +399,7 @@ code:
                 let module = self.import_compile(import.path.value.as_ref(), &import.path.span)?;
                 // Bind name
                 if let Some(name) = &import.name {
+                    let imported = self.imports.get(&module).unwrap();
                     let global_index = self.next_global;
                     self.next_global += 1;
                     self.asm.add_global_at(
@@ -367,7 +408,7 @@ code:
                             module: module.clone(),
                         },
                         Some(name.span.clone()),
-                        None,
+                        prev_com.or_else(|| imported.comment.clone()),
                     );
                     self.scope.names.insert(name.value.clone(), global_index);
                 }
@@ -376,7 +417,7 @@ code:
                     if let Some(index) = self
                         .imports
                         .get(&module)
-                        .and_then(|m| m.get(item.value.as_str()))
+                        .and_then(|i| i.names.get(item.value.as_str()))
                         .copied()
                     {
                         self.asm.global_references.insert(item.clone(), index);
@@ -507,7 +548,8 @@ code:
                         match item {
                             Value::Char(arr) if arr.rank() == 1 => {
                                 let item: String = arr.data.iter().copied().collect();
-                                if let Some(&index) = self.imports[&module].get(item.as_str()) {
+                                if let Some(&index) = self.imports[&module].names.get(item.as_str())
+                                {
                                     self.scope.names.insert(name.clone(), index);
                                     if let Some(s) = self.asm.bindings[index].global.signature() {
                                         sig = Some(s);
@@ -802,17 +844,18 @@ code:
                         if let Global::Module { module } = &self.asm.bindings[*index].global {
                             if let Word::String(item_name) = &word.value {
                                 let index = self.imports[module]
+                                    .names
                                     .get(item_name.as_str())
                                     .copied()
                                     .ok_or_else(|| {
-                                    self.fatal_error(
-                                        next.span.clone(),
-                                        format!(
-                                            "Item `{item_name}` not found in module `{}`",
-                                            module.display()
-                                        ),
-                                    )
-                                })?;
+                                        self.fatal_error(
+                                            next.span.clone(),
+                                            format!(
+                                                "Item `{item_name}` not found in module `{}`",
+                                                module.display()
+                                            ),
+                                        )
+                                    })?;
                                 self.global_index(index, next.span.clone(), false);
                                 words.next();
                                 continue;
@@ -1163,7 +1206,7 @@ code:
                 ))
             }
         };
-        if let Some(item_index) = self.imports[module].get(&item.name.value) {
+        if let Some(item_index) = self.imports[module].names.get(&item.name.value) {
             self.asm
                 .global_references
                 .insert(item.name.clone(), *item_index);

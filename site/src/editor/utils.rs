@@ -561,15 +561,14 @@ fn set_code_html(id: &str, code: &str) {
                                 .signature
                                 .map(|sig| sig.to_string())
                                 .unwrap_or_default();
-                            if docs.is_module {
-                                title.push_str("module");
-                            }
                             let class = binding_class(text, docs);
                             if let Some(comment) = &docs.comment {
                                 if !title.is_empty() {
                                     title.push(' ');
                                 }
                                 title.push_str(comment);
+                            } else if docs.is_module {
+                                title.push_str("module");
                             }
                             format!(
                                 r#"<span 

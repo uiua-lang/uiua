@@ -167,6 +167,9 @@ pub(crate) fn under_instrs(
     if instrs.is_empty() {
         return Some((EcoVec::new(), EcoVec::new()));
     }
+    if instrs.len() > 30 {
+        return None;
+    }
 
     macro_rules! stash2 {
         ($before:expr, $after:expr) => {

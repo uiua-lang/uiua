@@ -2209,8 +2209,10 @@ impl_primitive!(
     (3, Unrerank),
     (2, Unreshape),
     (3(2), Unjoin),
-    (3[1], Unpartition),
-    (3[1], Ungroup),
+    (1[1], Unpartition1),
+    (3, Unpartition2),
+    (1[1], Ungroup1),
+    (3, Ungroup2),
     // Optimizations
     (1, Cos),
     (1, Last),

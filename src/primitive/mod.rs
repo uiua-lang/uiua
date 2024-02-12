@@ -172,7 +172,8 @@ impl fmt::Display for ImplPrimitive {
             Undrop => write!(f, "{Un}{Drop}"),
             Unselect => write!(f, "{Un}{Select}"),
             Unpick => write!(f, "{Un}{Pick}"),
-            Unpartition => write!(f, "{Un}{Partition}"),
+            Unpartition1 | Unpartition2 => write!(f, "{Un}{Partition}"),
+            Ungroup1 | Ungroup2 => write!(f, "{Un}{Group}"),
             Cos => write!(f, "{Sin}{Add}{Eta}"),
             Asin => write!(f, "{Un}{Sin}"),
             Acos => write!(f, "{Un}{Cos}"),
@@ -182,7 +183,6 @@ impl fmt::Display for ImplPrimitive {
             Unkeep => write!(f, "{Un}{Keep}"),
             Unrerank => write!(f, "{Un}{Rerank}"),
             Unreshape => write!(f, "{Un}{Reshape}"),
-            Ungroup => write!(f, "{Un}{Group}"),
             Unjoin | InvJoin => write!(f, "{Un}{Join}"),
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
@@ -859,8 +859,10 @@ impl ImplPrimitive {
             ImplPrimitive::InvWhere => env.monadic_ref_env(Value::inverse_where)?,
             ImplPrimitive::InvUtf => env.monadic_ref_env(Value::inv_utf8)?,
             ImplPrimitive::InverseBits => env.monadic_ref_env(Value::inv_bits)?,
-            ImplPrimitive::Unpartition => loops::unpartition(env)?,
-            ImplPrimitive::Ungroup => loops::ungroup(env)?,
+            ImplPrimitive::Unpartition1 => loops::unpartition_part1(env)?,
+            ImplPrimitive::Unpartition2 => loops::unpartition_part2(env)?,
+            ImplPrimitive::Ungroup1 => loops::ungroup_part1(env)?,
+            ImplPrimitive::Ungroup2 => loops::ungroup_part2(env)?,
             ImplPrimitive::Unjoin => {
                 let b_rank = env.pop(1)?;
                 let a_rank = env.pop(2)?;

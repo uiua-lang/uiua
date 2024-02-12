@@ -88,6 +88,7 @@
 ⍤⊃⋅∘≍ [1 2 3 4] ⍜↻∘ 1 [1 2 3 4]
 
 ⍤⊃⋅∘≍ "World! Hello" ⍜⊜□⇌ ≠@ . "Hello World!"
+⍤⊃⋅∘≍ "Just A Little Guy" ⍜⊜⊢⌵ ≠@ . "Just a little guy"
 ⍤⊃⋅∘≍ {"Hello" "World!"} {⍜∩⊜□∘ ∩(≠@l.) "Hello" "World!"}
 ⍤⊃⋅∘≍ "sdrow emo sera esehT" ⍜⊕□≡⍜°□⇌ ≠@ . $ These are some words
 

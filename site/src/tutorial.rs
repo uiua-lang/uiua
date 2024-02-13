@@ -530,9 +530,12 @@ fn TutorialArrays() -> impl IntoView {
         <Editor example="[1 2 [7 8 9]]"/> // Should fail
         <p>"By using "<Prim prim=Box/>", we can turn any value into a box that contains that value. We can then put these boxes into an array together."</p>
         <Editor example="[□1 □2 □[7 8 9]]"/>
-        <p>"The "<code>"⟦⟧"</code>"s indicate that a list is "<Prim prim=Box/>"ed."</p>
+        <p>"The "<code>"{}"</code>"s hint at some syntax that will be introduced shortly."</p>
         <p><Prim prim=Un/><Prim prim=Box/>" extracts a "<Prim prim=Box/>"ed value."</p>
         <Editor example="°□ .□[1 2 3]"/>
+        <p>"The "<code>"⟦⟧"</code>"s indicate that a list is "<Prim prim=Box/>"ed."</p>
+        <p><Prim prim=Box/>"ed strings also have special output delimiters, using "<code>"⌜⌟"</code>"s."</p>
+        <Editor example="□\"banana\""/>
         <p>"Having to write "<Prim prim=Box glyph_only=true/>" everywhere is annoying, and so..."</p>
 
         <h2 id="nested-arrays">"Nested Arrays"</h2>
@@ -542,7 +545,6 @@ fn TutorialArrays() -> impl IntoView {
         <p>"This is very useful for making lists of strings."</p>
         <Editor example=r#"["Uiua" "APL" "J" "BQN" "K" "Q"]"#/>
         <Editor example=r#"{"Uiua" "APL" "J" "BQN" "K" "Q"}"#/>
-        <p>"The "<code>"⌜⌟"</code>"s indicate that a string is "<Prim prim=Box/>"ed."</p>
         <p>"Non-pervasive functions often require "<Prim prim=Un/><Prim prim=Box/>"ing the arguments to get at the value you want."</p>
         <p>"Consider these differences:"</p>
         <Editor example="△    □[1 2 3]\n△ °□ □[1 2 3]"/>

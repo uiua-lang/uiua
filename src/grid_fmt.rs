@@ -140,6 +140,33 @@ impl GridFmt for Complex {
 
 impl GridFmt for Value {
     fn fmt_grid(&self, boxed: bool, label: bool) -> Grid {
+        'box_list: {
+            let Value::Box(b) = self else {
+                break 'box_list;
+            };
+            if b.rank() != 1 {
+                break 'box_list;
+            }
+            let mut item_lines = Vec::new();
+            for Boxed(val) in &b.data {
+                let grid = val.fmt_grid(false, label);
+                if grid.len() == 1 {
+                    item_lines.push(grid.into_iter().next().unwrap());
+                } else {
+                    break 'box_list;
+                }
+            }
+            let mut only_row = Vec::new();
+            only_row.push('{');
+            for (i, line) in item_lines.into_iter().enumerate() {
+                if i > 0 {
+                    only_row.push(' ');
+                }
+                only_row.extend(line);
+            }
+            only_row.push('}');
+            return vec![only_row];
+        }
         match self {
             Value::Num(n) => n.fmt_grid(boxed, label),
             #[cfg(feature = "bytes")]

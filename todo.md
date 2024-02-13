@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.9
-  - Color labels in pad
   - Pad link from Gist
 - Changle how function inlining works
   - Prevent inlining of large functions

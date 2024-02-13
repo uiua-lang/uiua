@@ -613,12 +613,33 @@ fn set_code_html(id: &str, code: &str) {
                         format!("{kind:?}").to_lowercase(),
                         escape_html(text)
                     ),
-                    SpanKind::Label => format!(
-                        r#"<span 
-                        class="code-span code-hover {color_class}"
-                        data-title="label">{}</span>"#,
-                        escape_html(text)
-                    ),
+                    SpanKind::Label => {
+                        let label = text.trim_start_matches('$');
+                        let mut components = [0f32; 3];
+                        for (i, c) in label.bytes().chain(label.bytes().take(2)).enumerate() {
+                            let c = (c.overflowing_add(c % 2 + 1).0)
+                                .overflowing_pow((i as u8 + 1).overflowing_mul(c).0 as u32)
+                                .0;
+                            components[i % 3] += c as f32 / 255.0 / (i / 3 + 1) as f32;
+                            components[i % 3] = components[i % 3].fract();
+                        }
+                        // Normalize to a pastel color
+                        for c in &mut components {
+                            *c = 0.5 + 0.5 * *c;
+                        }
+                        let components = components.map(|c| (c * 255.0).round() as u8);
+                        let style = format!(
+                            "color: rgb({}, {}, {})",
+                            components[0], components[1], components[2]
+                        );
+                        format!(
+                            r#"<span 
+                            class="code-span code-hover"
+                            style={style:?}
+                            data-title="label">{}</span>"#,
+                            escape_html(text)
+                        )
+                    }
                     _ => format!(
                         r#"<span class="code-span {color_class}">{}</span>"#,
                         escape_html(text)

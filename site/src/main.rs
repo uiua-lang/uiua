@@ -205,6 +205,7 @@ pub fn MainPage() -> impl IntoView {
         <br/>
         <p class="main-text">"Uiua "<span class="wee-wuh-span">"("<i>"wee-wuh "</i><button on:click=|_| weewuh() class="sound-button">"🔉"</button>")"</span>" is a general purpose, stack-based, array-oriented programming language with a focus on simplicity, beauty, and "<a href="https://en.wikipedia.org/wiki/Tacit_programming">"tacit"</a>" code."</p>
         <p class="main-text">"Uiua lets you write code that is as short as possible while remaining readable, so you can focus on problems rather than ceremony."</p>
+        <p class="main-text">"The language is not yet stable, as its design space is still being explored. However, it is already quite powerful and fun to use!"</p>
         <div class="features">
             <div>
                 <div>

@@ -29,6 +29,9 @@ This version is not yet released. If you are reading this on the website, then t
 - `f` can now be used at the beginning of planet notation shorthand for [`fork ⊃`](https://uiua.org/docs/fork)
 - Flip the order of [`send`](https://uiua.org/docs/send)'s arguments
 - Add the [`pool`](https://uiua.org/docs/pool) modifier, which is identical to [`spawn`](https://uiua.org/docs/spawn) but spawns a thread in a thread pool
+- Add the experimental [`&ffi`](https://uiua.org/docs/&ffi) system function, which allows calling functions from shared libraries
+  - FFI is still a work in progress, but it is currently useful for foreign functions that aren't too complex
+  - Bindings for [Raylib](https://www.raylib.com/) are being worked on as a proof of concept. You can find them in the [rayua](https://github.com/uiua-lang/rayua) repository.
 - Add experimental labels, denoted by a `$` immediately followed by an identifier, which attach a name to an array. This has two uses:
   - Labels are visible in output and in [`stack`](https://uiua.org/docs/stack) diagnostics
   - Labels in code make it easier to understand when reading

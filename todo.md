@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.9
-  - Spawn thread in pool?
   - Ensure proper label propogation on all primitives
   - Pad link from Gist
 - Changle how function inlining works

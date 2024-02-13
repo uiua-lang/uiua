@@ -204,7 +204,7 @@ primitive!(
     (2(2), Flip, Stack, ("flip", ':')),
     /// Discard the top stack value
     ///
-    /// [◌ 1 2 ◌ 3 4]
+    /// ex: [◌ 1 2 ◌ 3 4]
     /// This is usually used to discard values that are no longer needed.
     /// For example, [gen] returns both a random number and a seed for the next call.
     /// When you have all the random numbers you need, you often want to discard the seed.

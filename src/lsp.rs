@@ -414,6 +414,7 @@ mod server {
                         TextDocumentSyncKind::FULL,
                     )),
                     hover_provider: Some(HoverProviderCapability::Simple(true)),
+                    completion_provider: Some(Default::default()),
                     document_formatting_provider: Some(OneOf::Left(true)),
                     semantic_tokens_provider: Some(
                         SemanticTokensServerCapabilities::SemanticTokensOptions(
@@ -581,6 +582,117 @@ mod server {
             } else {
                 return Ok(None);
             }))
+        }
+
+        async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+            let doc = if let Some(doc) = self
+                .docs
+                .get(&params.text_document_position.text_document.uri)
+            {
+                doc
+            } else {
+                return Ok(None);
+            };
+            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
+            let Some(sp) = doc
+                .spans
+                .iter()
+                .find(|sp| sp.span.contains_line_col(line, col))
+            else {
+                return Ok(None);
+            };
+
+            let Ok(token) = std::str::from_utf8(&doc.input.as_bytes()[sp.span.byte_range()]) else {
+                return Ok(None);
+            };
+
+            // TODO: Search other than primitives
+            let completions = Primitive::all()
+                .filter(|p| p.name().starts_with(token))
+                .map(|prim| {
+                    // TODO: deduplicate a code to generate long doc markdown with hover
+                    let sig = prim
+                        .signature()
+                        .map(|sig| format!(" {}", sig))
+                        .unwrap_or_default();
+                    let mut value = format!("```uiua\n{}{}\n```", prim.format(), sig);
+                    let doc = prim.doc();
+                    value.push_str("\n\n");
+                    for frag in &doc.short {
+                        doc_frag_markdown(&mut value, frag);
+                    }
+                    value.push_str("\n\n");
+                    value.push_str(&format!(
+                        "[Documentation](https://uiua.org/docs/{})",
+                        prim.name()
+                    ));
+                    value.push_str("\n\n");
+                    for line in &doc.lines {
+                        match line {
+                            PrimDocLine::Text(frags) => {
+                                for frag in frags {
+                                    doc_frag_markdown(&mut value, frag);
+                                }
+                                value.push('\n');
+                            }
+                            PrimDocLine::Example(ex) => {
+                                value.push_str(&format!(
+                                    "\
+```uiua
+{}
+```
+> ```
+",
+                                    ex.input()
+                                ));
+                                match ex.output() {
+                                    Ok(lines) => {
+                                        for line in lines.iter().flat_map(|l| l.lines()) {
+                                            value.push_str(&format!("> {line}\n"));
+                                        }
+                                    }
+                                    Err(err) => value.push_str(&format!("> Error: {err}\n")),
+                                }
+                                value.push_str("> ```\n\n");
+                            }
+                        }
+                    }
+
+                    CompletionItem {
+                        label: if let Some(c) = prim.glyph() {
+                            format!("{} {}", prim.name(), c)
+                        } else {
+                            prim.name().to_string()
+                        },
+                        insert_text: prim.glyph().map(|c| c.to_string()),
+                        kind: Some(CompletionItemKind::FUNCTION),
+                        detail: Some(prim.doc().short_text().to_string()),
+                        documentation: Some(Documentation::MarkupContent(MarkupContent {
+                            kind: MarkupKind::Markdown,
+                            value,
+                        })),
+                        tags: prim
+                            .is_deprecated()
+                            .then(|| vec![CompletionItemTag::DEPRECATED]),
+                        text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                            range: uiua_span_to_lsp(&sp.span),
+                            new_text: prim
+                                .glyph()
+                                .map(|c| c.to_string())
+                                .unwrap_or_else(|| prim.name().to_string()),
+                        })),
+                        insert_text_mode: if prim.glyph().is_none() {
+                            // Insert a space before the completion if the token is not a glyph
+                            Some(InsertTextMode::ADJUST_INDENTATION)
+                        } else {
+                            None
+                        },
+                        ..Default::default()
+                    }
+                })
+                .collect();
+
+            Ok(Some(CompletionResponse::Array(completions)))
         }
 
         async fn formatting(

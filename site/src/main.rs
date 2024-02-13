@@ -74,9 +74,9 @@ pub fn Site() -> impl IntoView {
         view! {
             <div class="long-subtitle">
                 <div>
-                    <div style="font-style: normal"><Prim prim=Try/></div>
+                    <div style="font-style: normal"><Prim prim=Try glyph_only=true/></div>
                     " Hey bro! Throw me the error!"
-                    <div style="font-style: normal"><Prim prim=Assert/></div>
+                    <div style="font-style: normal"><Prim prim=Assert glyph_only=true/></div>
                 </div>
                 <div>
                     <div style="font-style: normal"><Prims prims=[Repeat, Do]/></div>

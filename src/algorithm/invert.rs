@@ -343,7 +343,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // This must come last!
     ];
 
-    println!("undering {:?}", instrs);
+    // println!("undering {:?}", instrs);
 
     let comp_instrs_backup = comp.asm.instrs.clone();
 
@@ -353,15 +353,15 @@ pub(crate) fn under_instrs(
     'find_pattern: loop {
         for pattern in patterns {
             if let Some((input, (bef, aft))) = pattern.under_extract(curr_instrs, g_sig, comp) {
-                println!(
-                    "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
-                    pattern,
-                    &curr_instrs[..curr_instrs.len() - input.len()],
-                );
+                // println!(
+                //     "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
+                //     pattern,
+                //     &curr_instrs[..curr_instrs.len() - input.len()],
+                // );
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
-                    println!("undered {:?} to {:?} {:?}", instrs, befores, afters);
+                    // println!("undered {:?} to {:?} {:?}", instrs, befores, afters);
                     return Some((befores, afters));
                 }
                 curr_instrs = input;
@@ -648,22 +648,29 @@ fn try_temp_wrap<'a>(
     };
     // Find end
     let mut depth = 1;
+    let mut max_depth = 1;
     let mut end = 0;
     for (i, instr) in input.iter().enumerate() {
         match instr {
             Instr::PushTemp {
+                count,
                 stack: TempStack::Inline,
                 ..
             }
             | Instr::CopyToTemp {
-                stack: TempStack::Inline,
-                ..
-            } => depth += 1,
-            Instr::PopTemp {
+                count,
                 stack: TempStack::Inline,
                 ..
             } => {
-                depth -= 1;
+                depth += *count;
+                max_depth = max_depth.max(depth);
+            }
+            Instr::PopTemp {
+                count,
+                stack: TempStack::Inline,
+                ..
+            } => {
+                depth = depth.saturating_sub(*count);
                 if depth == 0 {
                     end = i;
                     break;
@@ -733,9 +740,21 @@ fn under_temp_pattern<'a>(
         return None;
     }
 
+    let temp_depth = if let Instr::PopTemp {
+        count,
+        stack: TempStack::Inline,
+        ..
+    } = end_instr
+    {
+        *count
+    } else {
+        return None;
+    };
+
     let input_iter = input.iter().filter(|instr| !instr.is_compile_only());
     let inner_iter = inner.iter().filter(|instr| !instr.is_compile_only());
-    let both = input_iter.clone().count() >= inner_iter.clone().count()
+    let both = inner_befores_sig.args == temp_depth
+        && input_iter.clone().count() >= inner_iter.clone().count()
         && input_iter.zip(inner_iter).all(|(a, b)| a == b);
 
     let afters = if both && g_sig.args > g_sig.outputs {

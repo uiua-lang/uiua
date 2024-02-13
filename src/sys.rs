@@ -477,7 +477,7 @@ sys_op! {
     /// The first argument is a list of boxed strings specifying the source and signature of the foreign function.
     /// The second argument is a list of values to pass to the foreign function.
     ///
-    /// The first function must be of the form `{"lib_path" "return_type" "function_name" "arg1_type" "arg2_type" …}`.
+    /// The first argument must be of the form `{"lib_path" "return_type" "function_name" "arg1_type" "arg2_type" …}`.
     /// The lib path is the path to the shared library or DLL that contains the function.
     /// Type names roughly match C types. The available primitive types are:
     /// - `void`

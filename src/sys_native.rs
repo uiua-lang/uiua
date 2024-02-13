@@ -34,6 +34,8 @@ struct GlobalNativeSys {
     #[cfg(feature = "audio")]
     audio_time_socket: parking_lot::Mutex<Option<std::sync::Arc<std::net::UdpSocket>>>,
     colored_errors: DashMap<String, String>,
+    #[cfg(feature = "ffi")]
+    ffi: crate::FfiState,
 }
 
 enum SysStream<'a> {
@@ -55,6 +57,8 @@ impl Default for GlobalNativeSys {
             #[cfg(feature = "audio")]
             audio_time_socket: parking_lot::Mutex::new(None),
             colored_errors: DashMap::new(),
+            #[cfg(feature = "ffi")]
+            ffi: Default::default(),
         }
     }
 }
@@ -532,7 +536,9 @@ impl SysBackend for NativeSys {
         arg_tys: &[crate::FfiType],
         arg_values: &[crate::Value],
     ) -> Result<crate::Value, String> {
-        crate::do_ffi(file, return_ty, name, arg_tys, arg_values)
+        NATIVE_SYS
+            .ffi
+            .do_ffi(file, return_ty, name, arg_tys, arg_values)
     }
 }
 

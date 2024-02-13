@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.9
+  - Ensure proper label propogation on all primitives
   - Pad link from Gist
 - Changle how function inlining works
   - Prevent inlining of large functions

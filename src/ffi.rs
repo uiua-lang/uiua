@@ -206,406 +206,450 @@ mod enabled {
         slice,
     };
 
+    use dashmap::DashMap;
     use ecow::EcoVec;
     use libffi::middle::*;
 
     use super::*;
     use crate::{Array, Boxed, Value};
 
-    pub(crate) fn do_ffi(
-        file: &str,
-        return_ty: FfiType,
-        name: &str,
-        arg_tys: &[FfiType],
-        args: &[Value],
-    ) -> Result<Value, String> {
-        let lib = unsafe { libloading::Library::new(file) }.map_err(|e| e.to_string())?;
-        let fptr: libloading::Symbol<unsafe extern "C" fn()> =
-            unsafe { lib.get(name.as_bytes()) }.map_err(|e| e.to_string())?;
+    #[derive(Default)]
+    pub struct FfiState {
+        libraries: DashMap<String, libloading::Library>,
+    }
 
-        let mut cif_arg_tys = Vec::new();
-        let mut bindings = FfiBindings::default();
-        let mut lengths: Vec<Option<usize>> = vec![None; arg_tys.len()];
-        // Collect lengths of lists
-        for (i, arg_ty) in arg_tys.iter().enumerate() {
-            if let FfiType::List {
-                len_index: length, ..
-            } = arg_ty
-            {
-                *lengths
-                    .get_mut(*length)
-                    .ok_or_else(|| format!("Invalid length index: {length}"))? =
-                    args.get(i).map(Value::element_count);
+    impl FfiState {
+        pub(crate) fn do_ffi(
+            &self,
+            file: &str,
+            return_ty: FfiType,
+            name: &str,
+            arg_tys: &[FfiType],
+            args: &[Value],
+        ) -> Result<Value, String> {
+            if !self.libraries.contains_key(file) {
+                let lib = unsafe { libloading::Library::new(file) }.map_err(|e| e.to_string())?;
+                self.libraries.insert(file.to_string(), lib);
             }
-        }
-        // Bind arguments
-        let mut args = args.iter();
-        for (i, arg_ty) in arg_tys.iter().enumerate() {
-            cif_arg_tys.push(ffity_to_cty(arg_ty));
-            if let Some(len) = lengths[i] {
-                // Bind length
-                // println!("bind {i} len: {len}");
-                match arg_ty {
-                    FfiType::Int => bindings.push_value(len as c_int),
-                    FfiType::UInt => bindings.push_value(len as c_uint),
-                    FfiType::Long => bindings.push_value(len as c_long),
-                    FfiType::ULong => bindings.push_value(len as c_ulong),
-                    FfiType::LongLong => bindings.push_value(len as c_longlong),
-                    FfiType::ULongLong => bindings.push_value(len as c_ulonglong),
-                    FfiType::Ptr { inner, .. } => match &**inner {
-                        FfiType::Int => bindings.push_ptr(len as c_int),
-                        FfiType::UInt => bindings.push_ptr(len as c_uint),
-                        FfiType::Long => bindings.push_ptr(len as c_long),
-                        FfiType::ULong => bindings.push_ptr(len as c_ulong),
-                        FfiType::LongLong => bindings.push_ptr(len as c_longlong),
-                        FfiType::ULongLong => bindings.push_ptr(len as c_ulonglong),
-                        _ => return Err(format!("{arg_ty} is not a valid FFI type for lengths")),
-                    },
-                    ty => return Err(format!("{ty} is not a valid FFI type for lengths")),
+            let lib = self.libraries.get(file).unwrap();
+            let fptr: libloading::Symbol<unsafe extern "C" fn()> =
+                unsafe { lib.get(name.as_bytes()) }.map_err(|e| e.to_string())?;
+
+            let mut cif_arg_tys = Vec::new();
+            let mut bindings = FfiBindings::default();
+            let mut lengths: Vec<Option<usize>> = vec![None; arg_tys.len()];
+            // Collect lengths of lists
+            for (i, arg_ty) in arg_tys.iter().enumerate() {
+                if let FfiType::List {
+                    len_index: length, ..
+                } = arg_ty
+                {
+                    *lengths
+                        .get_mut(*length)
+                        .ok_or_else(|| format!("Invalid length index: {length}"))? =
+                        args.get(i).map(Value::element_count);
                 }
-            } else {
-                // Bind normal argument
-                let arg = args.next().ok_or("Not enough arguments")?;
-                // println!("bind {i} arg: {arg:?}");
-                macro_rules! scalar {
-                    ($arr:expr, $ty:ty) => {{
-                        let val = $arr.data[0] as $ty;
-                        bindings.push_value(val);
-                    }};
-                }
-                macro_rules! list {
-                    ($arr:expr, $ty:ty) => {
-                        bindings.push_list($arr.data.iter().map(|&i| i as $ty).collect())
-                    };
-                }
-                match (arg_ty, arg) {
-                    (FfiType::Void, _) => return Err("Cannot pass void to a function".into()),
-                    (FfiType::Char | FfiType::UChar, Value::Char(arr)) if arr.rank() == 0 => {
-                        scalar!(arr, c_char)
+            }
+            // Bind arguments
+            let mut args = args.iter();
+            for (i, arg_ty) in arg_tys.iter().enumerate() {
+                cif_arg_tys.push(ffity_to_cty(arg_ty));
+                if let Some(len) = lengths[i] {
+                    // Bind length
+                    // println!("bind {i} len: {len}");
+                    match arg_ty {
+                        FfiType::Int => bindings.push_value(len as c_int),
+                        FfiType::UInt => bindings.push_value(len as c_uint),
+                        FfiType::Long => bindings.push_value(len as c_long),
+                        FfiType::ULong => bindings.push_value(len as c_ulong),
+                        FfiType::LongLong => bindings.push_value(len as c_longlong),
+                        FfiType::ULongLong => bindings.push_value(len as c_ulonglong),
+                        FfiType::Ptr { inner, .. } => match &**inner {
+                            FfiType::Int => bindings.push_ptr(len as c_int),
+                            FfiType::UInt => bindings.push_ptr(len as c_uint),
+                            FfiType::Long => bindings.push_ptr(len as c_long),
+                            FfiType::ULong => bindings.push_ptr(len as c_ulong),
+                            FfiType::LongLong => bindings.push_ptr(len as c_longlong),
+                            FfiType::ULongLong => bindings.push_ptr(len as c_ulonglong),
+                            _ => {
+                                return Err(format!("{arg_ty} is not a valid FFI type for lengths"))
+                            }
+                        },
+                        ty => return Err(format!("{ty} is not a valid FFI type for lengths")),
                     }
-                    (FfiType::Char | FfiType::UChar, Value::Num(arr)) if arr.rank() == 0 => {
-                        scalar!(arr, c_char)
+                } else {
+                    // Bind normal argument
+                    let arg = args.next().ok_or("Not enough arguments")?;
+                    // println!("bind {i} arg: {arg:?}");
+                    macro_rules! scalar {
+                        ($arr:expr, $ty:ty) => {{
+                            let val = $arr.data[0] as $ty;
+                            bindings.push_value(val);
+                        }};
                     }
-                    #[cfg(feature = "bytes")]
-                    (FfiType::Char | FfiType::UChar, Value::Byte(arr)) if arr.rank() == 0 => {
-                        scalar!(arr, c_char)
+                    macro_rules! list {
+                        ($arr:expr, $ty:ty) => {
+                            bindings.push_list($arr.data.iter().map(|&i| i as $ty).collect())
+                        };
                     }
-                    (FfiType::Short | FfiType::UShort, Value::Num(arr)) if arr.rank() == 0 => {
-                        scalar!(arr, c_short)
-                    }
-                    #[cfg(feature = "bytes")]
-                    (FfiType::Short | FfiType::UShort, Value::Byte(arr)) if arr.rank() == 0 => {
-                        scalar!(arr, c_short)
-                    }
-                    (FfiType::Int | FfiType::UInt, Value::Num(arr)) if arr.rank() == 0 => {
-                        scalar!(arr, c_int)
-                    }
-                    #[cfg(feature = "bytes")]
-                    (FfiType::Int | FfiType::UInt, Value::Byte(arr)) if arr.rank() == 0 => {
-                        scalar!(arr, c_int)
-                    }
-                    (FfiType::Long | FfiType::ULong, Value::Num(arr)) if arr.rank() == 0 => {
-                        scalar!(arr, c_long)
-                    }
-                    #[cfg(feature = "bytes")]
-                    (FfiType::Long | FfiType::ULong, Value::Byte(arr)) if arr.rank() == 0 => {
-                        scalar!(arr, c_long)
-                    }
-                    (FfiType::LongLong | FfiType::ULongLong, Value::Num(arr))
-                        if arr.rank() == 0 =>
-                    {
-                        scalar!(arr, c_longlong)
-                    }
-                    #[cfg(feature = "bytes")]
-                    (FfiType::LongLong | FfiType::ULongLong, Value::Byte(arr))
-                        if arr.rank() == 0 =>
-                    {
-                        scalar!(arr, c_longlong)
-                    }
-                    (FfiType::Ptr { inner, .. }, val) => match (&**inner, val) {
-                        (FfiType::Char, Value::Char(arr)) => {
-                            bindings.push_string(arr.data.iter().copied().collect())
+                    match (arg_ty, arg) {
+                        (FfiType::Void, _) => return Err("Cannot pass void to a function".into()),
+                        (FfiType::Char | FfiType::UChar, Value::Char(arr)) if arr.rank() == 0 => {
+                            scalar!(arr, c_char)
                         }
+                        (FfiType::Char | FfiType::UChar, Value::Num(arr)) if arr.rank() == 0 => {
+                            scalar!(arr, c_char)
+                        }
+                        #[cfg(feature = "bytes")]
+                        (FfiType::Char | FfiType::UChar, Value::Byte(arr)) if arr.rank() == 0 => {
+                            scalar!(arr, c_char)
+                        }
+                        (FfiType::Short | FfiType::UShort, Value::Num(arr)) if arr.rank() == 0 => {
+                            scalar!(arr, c_short)
+                        }
+                        #[cfg(feature = "bytes")]
+                        (FfiType::Short | FfiType::UShort, Value::Byte(arr)) if arr.rank() == 0 => {
+                            scalar!(arr, c_short)
+                        }
+                        (FfiType::Int | FfiType::UInt, Value::Num(arr)) if arr.rank() == 0 => {
+                            scalar!(arr, c_int)
+                        }
+                        #[cfg(feature = "bytes")]
+                        (FfiType::Int | FfiType::UInt, Value::Byte(arr)) if arr.rank() == 0 => {
+                            scalar!(arr, c_int)
+                        }
+                        (FfiType::Long | FfiType::ULong, Value::Num(arr)) if arr.rank() == 0 => {
+                            scalar!(arr, c_long)
+                        }
+                        #[cfg(feature = "bytes")]
+                        (FfiType::Long | FfiType::ULong, Value::Byte(arr)) if arr.rank() == 0 => {
+                            scalar!(arr, c_long)
+                        }
+                        (FfiType::LongLong | FfiType::ULongLong, Value::Num(arr))
+                            if arr.rank() == 0 =>
+                        {
+                            scalar!(arr, c_longlong)
+                        }
+                        #[cfg(feature = "bytes")]
+                        (FfiType::LongLong | FfiType::ULongLong, Value::Byte(arr))
+                            if arr.rank() == 0 =>
+                        {
+                            scalar!(arr, c_longlong)
+                        }
+                        (FfiType::Ptr { inner, .. }, val) => match (&**inner, val) {
+                            (FfiType::Char, Value::Char(arr)) => {
+                                bindings.push_string(arr.data.iter().copied().collect())
+                            }
+                            (FfiType::Struct { fields }, val) => {
+                                let repr = value_to_struct_repr(val, fields)?;
+                                bindings.push_repr_ptr(repr);
+                            }
+                            (ty, arg) => {
+                                return Err(format!(
+                                    "Array of {} with shape {} is not a valid \
+                                argument {i} for FFI type {ty}",
+                                    arg.type_name_plural(),
+                                    arg.shape()
+                                ))
+                            }
+                        },
+                        (FfiType::List { inner, .. }, val) => match (&**inner, val) {
+                            (FfiType::Char | FfiType::UChar, Value::Char(arr)) => {
+                                list!(arr, c_char)
+                            }
+                            (FfiType::Short | FfiType::UShort, Value::Num(arr)) => {
+                                list!(arr, c_short)
+                            }
+                            (FfiType::Int | FfiType::UInt, Value::Num(arr)) => list!(arr, c_int),
+                            (FfiType::Long | FfiType::ULong, Value::Num(arr)) => list!(arr, c_long),
+                            (FfiType::LongLong | FfiType::ULongLong, Value::Num(arr)) => {
+                                list!(arr, c_longlong)
+                            }
+                            (FfiType::Float, Value::Num(arr)) => list!(arr, c_float),
+                            (FfiType::Double, Value::Num(arr)) => list!(arr, c_double),
+                            #[cfg(feature = "bytes")]
+                            (FfiType::Char | FfiType::UChar, Value::Byte(arr)) => {
+                                list!(arr, c_char)
+                            }
+                            #[cfg(feature = "bytes")]
+                            (FfiType::Short | FfiType::UShort, Value::Byte(arr)) => {
+                                list!(arr, c_short)
+                            }
+                            #[cfg(feature = "bytes")]
+                            (FfiType::Int | FfiType::UInt, Value::Byte(arr)) => list!(arr, c_int),
+                            #[cfg(feature = "bytes")]
+                            (FfiType::Long | FfiType::ULong, Value::Byte(arr)) => {
+                                list!(arr, c_long)
+                            }
+                            #[cfg(feature = "bytes")]
+                            (FfiType::LongLong | FfiType::ULongLong, Value::Byte(arr)) => {
+                                list!(arr, c_longlong)
+                            }
+                            #[cfg(feature = "bytes")]
+                            (FfiType::Float, Value::Byte(arr)) => list!(arr, c_float),
+                            #[cfg(feature = "bytes")]
+                            (FfiType::Double, Value::Byte(arr)) => list!(arr, c_double),
+                            (ty, arg) => {
+                                return Err(format!(
+                                    "Array of {} with shape {} is not a valid \
+                                argument {i} for FFI type {ty}",
+                                    arg.type_name_plural(),
+                                    arg.shape()
+                                ))
+                            }
+                        },
                         (FfiType::Struct { fields }, val) => {
                             let repr = value_to_struct_repr(val, fields)?;
-                            bindings.push_repr_ptr(repr);
+                            bindings.push_repr(repr);
                         }
                         (ty, arg) => {
                             return Err(format!(
                                 "Array of {} with shape {} is not a valid \
-                                argument {i} for FFI type {ty}",
-                                arg.type_name_plural(),
-                                arg.shape()
-                            ))
-                        }
-                    },
-                    (FfiType::List { inner, .. }, val) => match (&**inner, val) {
-                        (FfiType::Char | FfiType::UChar, Value::Char(arr)) => list!(arr, c_char),
-                        (FfiType::Short | FfiType::UShort, Value::Num(arr)) => list!(arr, c_short),
-                        (FfiType::Int | FfiType::UInt, Value::Num(arr)) => list!(arr, c_int),
-                        (FfiType::Long | FfiType::ULong, Value::Num(arr)) => list!(arr, c_long),
-                        (FfiType::LongLong | FfiType::ULongLong, Value::Num(arr)) => {
-                            list!(arr, c_longlong)
-                        }
-                        (FfiType::Float, Value::Num(arr)) => list!(arr, c_float),
-                        (FfiType::Double, Value::Num(arr)) => list!(arr, c_double),
-                        #[cfg(feature = "bytes")]
-                        (FfiType::Char | FfiType::UChar, Value::Byte(arr)) => list!(arr, c_char),
-                        #[cfg(feature = "bytes")]
-                        (FfiType::Short | FfiType::UShort, Value::Byte(arr)) => list!(arr, c_short),
-                        #[cfg(feature = "bytes")]
-                        (FfiType::Int | FfiType::UInt, Value::Byte(arr)) => list!(arr, c_int),
-                        #[cfg(feature = "bytes")]
-                        (FfiType::Long | FfiType::ULong, Value::Byte(arr)) => list!(arr, c_long),
-                        #[cfg(feature = "bytes")]
-                        (FfiType::LongLong | FfiType::ULongLong, Value::Byte(arr)) => {
-                            list!(arr, c_longlong)
-                        }
-                        #[cfg(feature = "bytes")]
-                        (FfiType::Float, Value::Byte(arr)) => list!(arr, c_float),
-                        #[cfg(feature = "bytes")]
-                        (FfiType::Double, Value::Byte(arr)) => list!(arr, c_double),
-                        (ty, arg) => {
-                            return Err(format!(
-                                "Array of {} with shape {} is not a valid \
-                                argument {i} for FFI type {ty}",
-                                arg.type_name_plural(),
-                                arg.shape()
-                            ))
-                        }
-                    },
-                    (FfiType::Struct { fields }, val) => {
-                        let repr = value_to_struct_repr(val, fields)?;
-                        bindings.push_repr(repr);
-                    }
-                    (ty, arg) => {
-                        return Err(format!(
-                            "Array of {} with shape {} is not a valid \
                             argument {i} for FFI type {ty}",
-                            arg.type_name_plural(),
-                            arg.shape()
-                        ))
-                    }
-                }
-            }
-        }
-
-        // Call and get return value
-        let cif = Cif::new(cif_arg_tys, ffity_to_cty(&return_ty));
-        let fptr = CodePtr::from_fun(*fptr);
-        let mut results = Vec::new();
-
-        macro_rules! call {
-            ($ty:ty) => {
-                results.push((unsafe { cif.call::<$ty>(fptr, &bindings.args) } as f64).into())
-            };
-        }
-        macro_rules! ret_list {
-            ($c_ty:ty, $len_index:expr) => {
-                unsafe {
-                    // Call
-                    let ptr = cif.call::<*const $c_ty>(fptr, &bindings.args);
-                    // Construct a list from the pointer and length
-                    let len = *bindings.get::<c_int>(*$len_index) as usize;
-                    let slice = slice::from_raw_parts(ptr, len);
-                    // Copy the slice into a new array
-                    results.push(
-                        Array::new(len, slice.iter().map(|&i| i as f64).collect::<EcoVec<_>>())
-                            .into(),
-                    );
-                    // Clean up the pointer's memory
-                    drop(Vec::from_raw_parts(ptr as *mut $c_ty, len, len));
-                }
-            };
-        }
-        macro_rules! out_param_list {
-            ($c_ty:ty, $len_index:expr, $i:expr) => {
-                unsafe {
-                    let len = *bindings.get::<c_int>(*$len_index) as usize;
-                    let (ptr, vec) = bindings.get_list_mut::<$c_ty>($i);
-                    // Construct a list from the pointer and length
-                    let slice = slice::from_raw_parts(ptr, len);
-                    // Copy the slice into a new array
-                    results.push(
-                        Array::new(len, slice.iter().map(|&i| i as f64).collect::<EcoVec<_>>())
-                            .into(),
-                    );
-                    // Forget the vector
-                    forget(take(vec));
-                    // Clean up the pointer's memory
-                    drop(Vec::from_raw_parts(ptr as *mut $c_ty, len, len));
-                }
-            };
-        }
-
-        match &return_ty {
-            FfiType::Void => unsafe { cif.call::<()>(fptr, &bindings.args) },
-            FfiType::Char => call!(c_schar),
-            FfiType::Short => call!(c_short),
-            FfiType::Int => call!(c_int),
-            FfiType::Long => call!(c_long),
-            FfiType::LongLong => call!(c_longlong),
-            FfiType::UChar => call!(c_uchar),
-            FfiType::UShort => call!(c_ushort),
-            FfiType::UInt => call!(c_uint),
-            FfiType::ULong => call!(c_ulong),
-            FfiType::ULongLong => call!(c_ulonglong),
-            FfiType::Float => call!(c_float),
-            FfiType::Double => call!(c_double),
-            FfiType::Ptr { inner, .. } => match &**inner {
-                FfiType::Char => unsafe {
-                    let ptr = cif.call::<*const c_char>(fptr, &bindings.args);
-                    let s = CStr::from_ptr(ptr).to_str().map_err(|e| e.to_string())?;
-                    results.push(Value::from(s))
-                },
-                FfiType::Struct { fields } => unsafe {
-                    let ptr = cif.call::<*const u8>(fptr, &bindings.args);
-                    let (size, _) = struct_fields_size_align(fields);
-                    let slice = slice::from_raw_parts(ptr, size);
-                    results.push(struct_repr_to_value(slice, fields)?);
-                    // Clean up the pointer's memory
-                    drop(Vec::from_raw_parts(ptr as *mut u8, size, size));
-                },
-                _ => {
-                    return Err(format!(
-                        "Invalid or unsupported FFI return type {return_ty}"
-                    ))
-                }
-            },
-            FfiType::List {
-                len_index, inner, ..
-            } => match &**inner {
-                FfiType::Char => ret_list!(c_char, len_index),
-                FfiType::Short => ret_list!(c_short, len_index),
-                FfiType::UShort => ret_list!(c_ushort, len_index),
-                FfiType::Int => ret_list!(c_int, len_index),
-                FfiType::UInt => ret_list!(c_uint, len_index),
-                FfiType::Long => ret_list!(c_long, len_index),
-                FfiType::ULong => ret_list!(c_ulong, len_index),
-                FfiType::LongLong => ret_list!(c_longlong, len_index),
-                FfiType::ULongLong => ret_list!(c_ulonglong, len_index),
-                FfiType::Float => ret_list!(c_float, len_index),
-                FfiType::Double => ret_list!(c_double, len_index),
-                _ => {
-                    return Err(format!(
-                        "Invalid or unsupported FFI return type {return_ty}"
-                    ))
-                }
-            },
-            FfiType::Struct { fields } => {
-                let (size, _) = return_ty.size_align();
-                let args = &bindings.args;
-                let val = match size {
-                    0 => Value::default(),
-                    1 => struct_repr_to_value(&unsafe { cif.call::<[u8; 1]>(fptr, args) }, fields)?,
-                    2 => struct_repr_to_value(&unsafe { cif.call::<[u8; 2]>(fptr, args) }, fields)?,
-                    4 => struct_repr_to_value(&unsafe { cif.call::<[u8; 4]>(fptr, args) }, fields)?,
-                    8 => struct_repr_to_value(&unsafe { cif.call::<[u8; 8]>(fptr, args) }, fields)?,
-                    12 => {
-                        struct_repr_to_value(&unsafe { cif.call::<[u8; 12]>(fptr, args) }, fields)?
-                    }
-                    16 => {
-                        struct_repr_to_value(&unsafe { cif.call::<[u8; 16]>(fptr, args) }, fields)?
-                    }
-                    24 => {
-                        struct_repr_to_value(&unsafe { cif.call::<[u8; 24]>(fptr, args) }, fields)?
-                    }
-                    32 => {
-                        struct_repr_to_value(&unsafe { cif.call::<[u8; 32]>(fptr, args) }, fields)?
-                    }
-                    48 => {
-                        struct_repr_to_value(&unsafe { cif.call::<[u8; 48]>(fptr, args) }, fields)?
-                    }
-                    64 => {
-                        struct_repr_to_value(&unsafe { cif.call::<[u8; 64]>(fptr, args) }, fields)?
-                    }
-                    128 => {
-                        struct_repr_to_value(&unsafe { cif.call::<[u8; 128]>(fptr, args) }, fields)?
-                    }
-                    n => return Err(format!("Unsupported return struct size: {n}")),
-                };
-                results.push(val);
-            }
-        }
-
-        // Get out parameters
-        macro_rules! out_param_scalar {
-            ($ty:ty, $i:expr) => {
-                results.push((*bindings.get::<$ty>($i) as f64).into())
-            };
-        }
-        for (i, ty) in arg_tys.iter().enumerate() {
-            match ty {
-                FfiType::Ptr {
-                    mutable: true,
-                    inner,
-                } => {
-                    if lengths[i].is_some() {
-                        continue;
-                    }
-                    match &**inner {
-                        FfiType::Char => unsafe {
-                            let ptr = bindings.get::<c_char>(i);
-                            let s = CStr::from_ptr(ptr).to_str().map_err(|e| e.to_string())?;
-                            results.push(Value::from(s))
-                        },
-                        FfiType::Short => out_param_scalar!(c_short, i),
-                        FfiType::UShort => out_param_scalar!(c_ushort, i),
-                        FfiType::Int => out_param_scalar!(c_int, i),
-                        FfiType::UInt => out_param_scalar!(c_uint, i),
-                        FfiType::Long => out_param_scalar!(c_long, i),
-                        FfiType::ULong => out_param_scalar!(c_ulong, i),
-                        FfiType::LongLong => out_param_scalar!(c_longlong, i),
-                        FfiType::ULongLong => out_param_scalar!(c_ulonglong, i),
-                        FfiType::Float => out_param_scalar!(c_float, i),
-                        FfiType::Double => out_param_scalar!(c_double, i),
-                        FfiType::Struct { fields } => {
-                            let repr = bindings.get_repr(i);
-                            results.push(struct_repr_to_value(repr, fields)?);
-                        }
-                        _ => {
-                            return Err(format!(
-                                "Invalid or unsupported FFI out parameter type {ty}"
+                                arg.type_name_plural(),
+                                arg.shape()
                             ))
                         }
                     }
                 }
-                FfiType::List {
-                    mutable: true,
-                    inner,
-                    len_index,
-                } => match &**inner {
-                    FfiType::Char => out_param_list!(c_char, len_index, i),
-                    FfiType::Short => out_param_list!(c_short, len_index, i),
-                    FfiType::UShort => out_param_list!(c_ushort, len_index, i),
-                    FfiType::Int => out_param_list!(c_int, len_index, i),
-                    FfiType::UInt => out_param_list!(c_uint, len_index, i),
-                    FfiType::Long => out_param_list!(c_long, len_index, i),
-                    FfiType::ULong => out_param_list!(c_ulong, len_index, i),
-                    FfiType::LongLong => out_param_list!(c_longlong, len_index, i),
-                    FfiType::ULongLong => out_param_list!(c_ulonglong, len_index, i),
-                    FfiType::Float => out_param_list!(c_float, len_index, i),
-                    FfiType::Double => out_param_list!(c_double, len_index, i),
+            }
+
+            // Call and get return value
+            let cif = Cif::new(cif_arg_tys, ffity_to_cty(&return_ty));
+            let fptr = CodePtr::from_fun(*fptr);
+            let mut results = Vec::new();
+
+            macro_rules! call {
+                ($ty:ty) => {
+                    results.push((unsafe { cif.call::<$ty>(fptr, &bindings.args) } as f64).into())
+                };
+            }
+            macro_rules! ret_list {
+                ($c_ty:ty, $len_index:expr) => {
+                    unsafe {
+                        // Call
+                        let ptr = cif.call::<*const $c_ty>(fptr, &bindings.args);
+                        // Construct a list from the pointer and length
+                        let len = *bindings.get::<c_int>(*$len_index) as usize;
+                        let slice = slice::from_raw_parts(ptr, len);
+                        // Copy the slice into a new array
+                        results.push(
+                            Array::new(len, slice.iter().map(|&i| i as f64).collect::<EcoVec<_>>())
+                                .into(),
+                        );
+                        // Clean up the pointer's memory
+                        drop(Vec::from_raw_parts(ptr as *mut $c_ty, len, len));
+                    }
+                };
+            }
+            macro_rules! out_param_list {
+                ($c_ty:ty, $len_index:expr, $i:expr) => {
+                    unsafe {
+                        let len = *bindings.get::<c_int>(*$len_index) as usize;
+                        let (ptr, vec) = bindings.get_list_mut::<$c_ty>($i);
+                        // Construct a list from the pointer and length
+                        let slice = slice::from_raw_parts(ptr, len);
+                        // Copy the slice into a new array
+                        results.push(
+                            Array::new(len, slice.iter().map(|&i| i as f64).collect::<EcoVec<_>>())
+                                .into(),
+                        );
+                        // Forget the vector
+                        forget(take(vec));
+                        // Clean up the pointer's memory
+                        drop(Vec::from_raw_parts(ptr as *mut $c_ty, len, len));
+                    }
+                };
+            }
+
+            match &return_ty {
+                FfiType::Void => unsafe { cif.call::<()>(fptr, &bindings.args) },
+                FfiType::Char => call!(c_schar),
+                FfiType::Short => call!(c_short),
+                FfiType::Int => call!(c_int),
+                FfiType::Long => call!(c_long),
+                FfiType::LongLong => call!(c_longlong),
+                FfiType::UChar => call!(c_uchar),
+                FfiType::UShort => call!(c_ushort),
+                FfiType::UInt => call!(c_uint),
+                FfiType::ULong => call!(c_ulong),
+                FfiType::ULongLong => call!(c_ulonglong),
+                FfiType::Float => call!(c_float),
+                FfiType::Double => call!(c_double),
+                FfiType::Ptr { inner, .. } => match &**inner {
+                    FfiType::Char => unsafe {
+                        let ptr = cif.call::<*const c_char>(fptr, &bindings.args);
+                        let s = CStr::from_ptr(ptr).to_str().map_err(|e| e.to_string())?;
+                        results.push(Value::from(s))
+                    },
+                    FfiType::Struct { fields } => unsafe {
+                        let ptr = cif.call::<*const u8>(fptr, &bindings.args);
+                        let (size, _) = struct_fields_size_align(fields);
+                        let slice = slice::from_raw_parts(ptr, size);
+                        results.push(struct_repr_to_value(slice, fields)?);
+                        // Clean up the pointer's memory
+                        drop(Vec::from_raw_parts(ptr as *mut u8, size, size));
+                    },
                     _ => {
                         return Err(format!(
-                            "FFI parameter {i} has type {ty}, which is \
-                            not valid as an out parameter. \
-                            If this is not an out parameter, annotate it as `const`."
+                            "Invalid or unsupported FFI return type {return_ty}"
                         ))
                     }
                 },
-                _ => {}
+                FfiType::List {
+                    len_index, inner, ..
+                } => match &**inner {
+                    FfiType::Char => ret_list!(c_char, len_index),
+                    FfiType::Short => ret_list!(c_short, len_index),
+                    FfiType::UShort => ret_list!(c_ushort, len_index),
+                    FfiType::Int => ret_list!(c_int, len_index),
+                    FfiType::UInt => ret_list!(c_uint, len_index),
+                    FfiType::Long => ret_list!(c_long, len_index),
+                    FfiType::ULong => ret_list!(c_ulong, len_index),
+                    FfiType::LongLong => ret_list!(c_longlong, len_index),
+                    FfiType::ULongLong => ret_list!(c_ulonglong, len_index),
+                    FfiType::Float => ret_list!(c_float, len_index),
+                    FfiType::Double => ret_list!(c_double, len_index),
+                    _ => {
+                        return Err(format!(
+                            "Invalid or unsupported FFI return type {return_ty}"
+                        ))
+                    }
+                },
+                FfiType::Struct { fields } => {
+                    let (size, _) = return_ty.size_align();
+                    let args = &bindings.args;
+                    let val = match size {
+                        0 => Value::default(),
+                        1 => struct_repr_to_value(
+                            &unsafe { cif.call::<[u8; 1]>(fptr, args) },
+                            fields,
+                        )?,
+                        2 => struct_repr_to_value(
+                            &unsafe { cif.call::<[u8; 2]>(fptr, args) },
+                            fields,
+                        )?,
+                        4 => struct_repr_to_value(
+                            &unsafe { cif.call::<[u8; 4]>(fptr, args) },
+                            fields,
+                        )?,
+                        8 => struct_repr_to_value(
+                            &unsafe { cif.call::<[u8; 8]>(fptr, args) },
+                            fields,
+                        )?,
+                        12 => struct_repr_to_value(
+                            &unsafe { cif.call::<[u8; 12]>(fptr, args) },
+                            fields,
+                        )?,
+                        16 => struct_repr_to_value(
+                            &unsafe { cif.call::<[u8; 16]>(fptr, args) },
+                            fields,
+                        )?,
+                        24 => struct_repr_to_value(
+                            &unsafe { cif.call::<[u8; 24]>(fptr, args) },
+                            fields,
+                        )?,
+                        32 => struct_repr_to_value(
+                            &unsafe { cif.call::<[u8; 32]>(fptr, args) },
+                            fields,
+                        )?,
+                        48 => struct_repr_to_value(
+                            &unsafe { cif.call::<[u8; 48]>(fptr, args) },
+                            fields,
+                        )?,
+                        64 => struct_repr_to_value(
+                            &unsafe { cif.call::<[u8; 64]>(fptr, args) },
+                            fields,
+                        )?,
+                        128 => struct_repr_to_value(
+                            &unsafe { cif.call::<[u8; 128]>(fptr, args) },
+                            fields,
+                        )?,
+                        n => return Err(format!("Unsupported return struct size: {n}")),
+                    };
+                    results.push(val);
+                }
             }
+
+            // Get out parameters
+            macro_rules! out_param_scalar {
+                ($ty:ty, $i:expr) => {
+                    results.push((*bindings.get::<$ty>($i) as f64).into())
+                };
+            }
+            for (i, ty) in arg_tys.iter().enumerate() {
+                match ty {
+                    FfiType::Ptr {
+                        mutable: true,
+                        inner,
+                    } => {
+                        if lengths[i].is_some() {
+                            continue;
+                        }
+                        match &**inner {
+                            FfiType::Char => unsafe {
+                                let ptr = bindings.get::<c_char>(i);
+                                let s = CStr::from_ptr(ptr).to_str().map_err(|e| e.to_string())?;
+                                results.push(Value::from(s))
+                            },
+                            FfiType::Short => out_param_scalar!(c_short, i),
+                            FfiType::UShort => out_param_scalar!(c_ushort, i),
+                            FfiType::Int => out_param_scalar!(c_int, i),
+                            FfiType::UInt => out_param_scalar!(c_uint, i),
+                            FfiType::Long => out_param_scalar!(c_long, i),
+                            FfiType::ULong => out_param_scalar!(c_ulong, i),
+                            FfiType::LongLong => out_param_scalar!(c_longlong, i),
+                            FfiType::ULongLong => out_param_scalar!(c_ulonglong, i),
+                            FfiType::Float => out_param_scalar!(c_float, i),
+                            FfiType::Double => out_param_scalar!(c_double, i),
+                            FfiType::Struct { fields } => {
+                                let repr = bindings.get_repr(i);
+                                results.push(struct_repr_to_value(repr, fields)?);
+                            }
+                            _ => {
+                                return Err(format!(
+                                    "Invalid or unsupported FFI out parameter type {ty}"
+                                ))
+                            }
+                        }
+                    }
+                    FfiType::List {
+                        mutable: true,
+                        inner,
+                        len_index,
+                    } => match &**inner {
+                        FfiType::Char => out_param_list!(c_char, len_index, i),
+                        FfiType::Short => out_param_list!(c_short, len_index, i),
+                        FfiType::UShort => out_param_list!(c_ushort, len_index, i),
+                        FfiType::Int => out_param_list!(c_int, len_index, i),
+                        FfiType::UInt => out_param_list!(c_uint, len_index, i),
+                        FfiType::Long => out_param_list!(c_long, len_index, i),
+                        FfiType::ULong => out_param_list!(c_ulong, len_index, i),
+                        FfiType::LongLong => out_param_list!(c_longlong, len_index, i),
+                        FfiType::ULongLong => out_param_list!(c_ulonglong, len_index, i),
+                        FfiType::Float => out_param_list!(c_float, len_index, i),
+                        FfiType::Double => out_param_list!(c_double, len_index, i),
+                        _ => {
+                            return Err(format!(
+                                "FFI parameter {i} has type {ty}, which is \
+                            not valid as an out parameter. \
+                            If this is not an out parameter, annotate it as `const`."
+                            ))
+                        }
+                    },
+                    _ => {}
+                }
+            }
+
+            // Bindings must live until after the call
+            drop(bindings);
+
+            Ok(match results.len() {
+                0 => Value::default(),
+                1 => results.pop().unwrap(),
+                n => Array::new(n, results.into_iter().map(Boxed).collect::<EcoVec<_>>()).into(),
+            })
         }
-
-        // Bindings must live until after the call
-        drop(bindings);
-
-        Ok(match results.len() {
-            0 => Value::default(),
-            1 => results.pop().unwrap(),
-            n => Array::new(n, results.into_iter().map(Boxed).collect::<EcoVec<_>>()).into(),
-        })
     }
 
     #[derive(Default)]

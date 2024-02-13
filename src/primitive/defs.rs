@@ -1666,8 +1666,8 @@ primitive!(
     /// ex: ⍣(+1 2)$"Error: _"
     /// ex: ⍣(+@a @b)$"Error: _"
     /// Errors thrown with [assert] can be any value.
-    /// ex: ⍣(⍤5 1 3|×5)
-    /// ex: ⍣(⍤5 0 3|×5)
+    /// ex: ⍣(⍤5>10.|×5) 12
+    /// ex: ⍣(⍤5>10.|×5) 7
     /// The functions must have the same number of outputs.
     /// The handler function must have a number of arguments equal to 0, 1, or 1 + the number of arguments to the first function.
     /// If the handler function has 0 arguments, then it is simply called.
@@ -1676,9 +1676,17 @@ primitive!(
     /// If the handler function has 1 argument, then the error is passed to it.
     /// ex: ⍣⋕∘ "5"
     ///   : ⍣⋕∘ "dog"
-    /// If the handler function has 1 + the number of arguments to the first function, then the error is passed to it along with the original arguments.
+    /// If the handler function has more than 1 argument, then the error is passed to it along with the original arguments.
     /// ex: ⍣⋕{⊙∘} "5"
     ///   : ⍣⋕{⊙∘} "dog"
+    /// ex: ⍣(⍤0.+)10 3 5
+    ///   : ⍣(⍤0.+)¤  3 5
+    ///   : ⍣(⍤0.+)⊟  3 5
+    ///   : ⍣(⍤0.+)[⊙⊙∘] 3 5
+    /// If we want to provide a default value from the stack, we can use a bit of planet notation.
+    /// Here, we use [gap] to ignore the default value `5` in the tried function, and we also use it to ignore the error in the handler function.
+    /// ex: ⍣⋅⋕⋅∘ 5 "12"
+    ///   : ⍣⋅⋕⋅∘ 5 "dog"
     ([2], Try, Misc, ("try", '⍣')),
     /// Throw an error if a condition is not met
     ///

@@ -426,28 +426,7 @@ impl<'a> VirtualEnv<'a> {
                 }
                 Try => {
                     let f_sig = self.pop_func()?.signature();
-                    let handler_sig = self.pop_func()?.signature();
-                    if handler_sig.args == 0 || handler_sig.args == 1 {
-                        0
-                    } else if handler_sig.args == f_sig.args + 1 {
-                        f_sig.args
-                    } else {
-                        return Err(if f_sig.args == 0 {
-                            format!(
-                                "handler function must take, 0 or 1 arguments, \
-                                but it takes {}.",
-                                handler_sig.args
-                            )
-                        } else {
-                            format!(
-                                "handler function must take, 0, 1, or {} arguments, \
-                                but it takes {}.",
-                                f_sig.args + 1,
-                                handler_sig.args
-                            )
-                        }
-                        .into());
-                    };
+                    let _handler_sig = self.pop_func()?.signature();
                     self.handle_sig(f_sig)?;
                 }
                 Fill => {

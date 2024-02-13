@@ -405,32 +405,19 @@ pub fn try_(env: &mut Uiua) -> UiuaResult {
     }
     let backup_count = if handler_sig.args == 0 || handler_sig.args == 1 {
         0
-    } else if handler_sig.args == f_sig.args + 1 {
-        f_sig.args
     } else {
-        return Err(env.error(if f_sig.args == 0 {
-            format!(
-                "Handler function must take, 0 or 1 arguments, but it takes {}.",
-                handler_sig.args
-            )
-        } else {
-            format!(
-                "Handler function must take, 0, 1, or {} arguments, but it takes {}.",
-                f_sig.args + 1,
-                handler_sig.args
-            )
-        }));
+        handler_sig.args - 1
     };
     let backup = env.clone_stack_top(backup_count);
     if let Err(e) = env.call_clean_stack(f) {
+        for val in backup {
+            env.push(val);
+        }
         if handler_sig.args > 0 {
             env.rt
                 .backend
                 .save_error_color(e.message(), e.report().to_string());
             env.push(e.value());
-        }
-        for val in backup {
-            env.push(val);
         }
         env.call(handler)?;
     }

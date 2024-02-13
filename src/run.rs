@@ -1012,10 +1012,8 @@ code:
         let mut bindings = HashMap::new();
         for binding in &self.asm.bindings {
             if let Global::Const(val) = &binding.global {
-                if let Some(span) = &binding.span {
-                    let name = span.as_str(self.inputs(), |s| s.into());
-                    bindings.insert(name, val.clone());
-                }
+                let name = binding.span.as_str(self.inputs(), |s| s.into());
+                bindings.insert(name, val.clone());
             }
         }
         bindings

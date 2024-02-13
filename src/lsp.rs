@@ -121,14 +121,11 @@ impl Spanner {
 
     fn binding_docs(&self, span: &CodeSpan) -> Option<BindingDocs> {
         for binding in &self.asm.bindings {
-            let Some(comp_span) = &binding.span else {
-                continue;
-            };
-            if comp_span != span {
+            if binding.span != *span {
                 continue;
             }
             return Some(BindingDocs {
-                src_span: comp_span.clone(),
+                src_span: binding.span.clone(),
                 signature: binding.global.signature(),
                 comment: binding.comment.clone(),
                 invertible_underable: self.invertible_underable(binding),
@@ -151,14 +148,11 @@ impl Spanner {
             let Some(binding) = self.asm.bindings.get(*index) else {
                 continue;
             };
-            let Some(comp_span) = &binding.span else {
-                continue;
-            };
             if name.span != *span {
                 continue;
             }
             return Some(BindingDocs {
-                src_span: comp_span.clone(),
+                src_span: binding.span.clone(),
                 signature: binding.global.signature(),
                 comment: binding.comment.clone(),
                 invertible_underable: self.invertible_underable(binding),
@@ -490,56 +484,10 @@ mod server {
                 }
             }
             Ok(Some(if let Some((prim, range)) = prim_range {
-                let sig = prim
-                    .signature()
-                    .map(|sig| format!(" {}", sig))
-                    .unwrap_or_default();
-                let mut value = format!("```uiua\n{}{}\n```", prim.format(), sig);
-                let doc = prim.doc();
-                value.push_str("\n\n");
-                for frag in &doc.short {
-                    doc_frag_markdown(&mut value, frag);
-                }
-                value.push_str("\n\n");
-                value.push_str(&format!(
-                    "[Documentation](https://uiua.org/docs/{})",
-                    prim.name()
-                ));
-                value.push_str("\n\n");
-                for line in &doc.lines {
-                    match line {
-                        PrimDocLine::Text(frags) => {
-                            for frag in frags {
-                                doc_frag_markdown(&mut value, frag);
-                            }
-                            value.push('\n');
-                        }
-                        PrimDocLine::Example(ex) => {
-                            value.push_str(&format!(
-                                "\
-```uiua
-{}
-```
-> ```
-",
-                                ex.input()
-                            ));
-                            match ex.output() {
-                                Ok(lines) => {
-                                    for line in lines.iter().flat_map(|l| l.lines()) {
-                                        value.push_str(&format!("> {line}\n"));
-                                    }
-                                }
-                                Err(err) => value.push_str(&format!("> Error: {err}\n")),
-                            }
-                            value.push_str("> ```\n\n");
-                        }
-                    }
-                }
                 Hover {
                     contents: HoverContents::Markup(MarkupContent {
                         kind: MarkupKind::Markdown,
-                        value,
+                        value: full_prim_doc_markdown(prim),
                     }),
                     range: Some(range),
                 }
@@ -607,69 +555,17 @@ mod server {
             };
 
             // TODO: Search other than primitives
-            let completions = Primitive::all()
+            let mut completions: Vec<_> = Primitive::all()
                 .filter(|p| p.name().starts_with(token))
                 .map(|prim| {
-                    // TODO: deduplicate a code to generate long doc markdown with hover
-                    let sig = prim
-                        .signature()
-                        .map(|sig| format!(" {}", sig))
-                        .unwrap_or_default();
-                    let mut value = format!("```uiua\n{}{}\n```", prim.format(), sig);
-                    let doc = prim.doc();
-                    value.push_str("\n\n");
-                    for frag in &doc.short {
-                        doc_frag_markdown(&mut value, frag);
-                    }
-                    value.push_str("\n\n");
-                    value.push_str(&format!(
-                        "[Documentation](https://uiua.org/docs/{})",
-                        prim.name()
-                    ));
-                    value.push_str("\n\n");
-                    for line in &doc.lines {
-                        match line {
-                            PrimDocLine::Text(frags) => {
-                                for frag in frags {
-                                    doc_frag_markdown(&mut value, frag);
-                                }
-                                value.push('\n');
-                            }
-                            PrimDocLine::Example(ex) => {
-                                value.push_str(&format!(
-                                    "\
-```uiua
-{}
-```
-> ```
-",
-                                    ex.input()
-                                ));
-                                match ex.output() {
-                                    Ok(lines) => {
-                                        for line in lines.iter().flat_map(|l| l.lines()) {
-                                            value.push_str(&format!("> {line}\n"));
-                                        }
-                                    }
-                                    Err(err) => value.push_str(&format!("> Error: {err}\n")),
-                                }
-                                value.push_str("> ```\n\n");
-                            }
-                        }
-                    }
-
                     CompletionItem {
-                        label: if let Some(c) = prim.glyph() {
-                            format!("{} {}", prim.name(), c)
-                        } else {
-                            prim.name().to_string()
-                        },
+                        label: prim.format().to_string(),
                         insert_text: prim.glyph().map(|c| c.to_string()),
                         kind: Some(CompletionItemKind::FUNCTION),
                         detail: Some(prim.doc().short_text().to_string()),
                         documentation: Some(Documentation::MarkupContent(MarkupContent {
                             kind: MarkupKind::Markdown,
-                            value,
+                            value: full_prim_doc_markdown(prim),
                         })),
                         tags: prim
                             .is_deprecated()
@@ -687,10 +583,63 @@ mod server {
                         } else {
                             None
                         },
+                        sort_text: Some(format!(
+                            "{} {}",
+                            if prim.glyph().is_some() { "0" } else { "1" },
+                            prim.name()
+                        )),
                         ..Default::default()
                     }
                 })
                 .collect();
+
+            self.client
+                .log_message(MessageType::INFO, format!("Token: {}", token))
+                .await;
+
+            for binding in &doc.asm.bindings {
+                let name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
+                self.client
+                    .log_message(MessageType::INFO, format!("Binding: {}", name))
+                    .await;
+                if !name.starts_with(token) {
+                    continue;
+                }
+                let binding_doc_uri = match &binding.span.src {
+                    InputSrc::Str(_) => params.text_document_position.text_document.uri.clone(),
+                    InputSrc::File(file) => path_to_uri(file)?,
+                };
+                if params.text_document_position.text_document.uri != binding_doc_uri {
+                    continue;
+                }
+                let kind = match &binding.global {
+                    Global::Const(_) => CompletionItemKind::CONSTANT,
+                    Global::Func(_) => CompletionItemKind::FUNCTION,
+                    Global::Sig(sig) if *sig == (0, 1) => CompletionItemKind::VALUE,
+                    Global::Sig(_) => CompletionItemKind::FUNCTION,
+                    Global::Module { .. } => CompletionItemKind::MODULE,
+                };
+                completions.push(CompletionItem {
+                    label: name.clone(),
+                    kind: Some(kind),
+                    label_details: Some(CompletionItemLabelDetails {
+                        detail: binding.global.signature().map(|sig| sig.to_string()),
+                        ..Default::default()
+                    }),
+                    detail: binding.global.signature().map(|sig| sig.to_string()),
+                    documentation: binding.comment.as_ref().map(|c| {
+                        Documentation::MarkupContent(MarkupContent {
+                            kind: MarkupKind::Markdown,
+                            value: c.to_string(),
+                        })
+                    }),
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: uiua_span_to_lsp(&sp.span),
+                        new_text: name,
+                    })),
+                    ..Default::default()
+                });
+            }
 
             Ok(Some(CompletionResponse::Array(completions)))
         }
@@ -839,11 +788,9 @@ mod server {
             let mut binding: Option<(&BindingInfo, usize)> = None;
             // Check for span in bindings
             for (i, gb) in doc.asm.bindings.iter().enumerate() {
-                if let Some(span) = &gb.span {
-                    if span.contains_line_col(line, col) {
-                        binding = Some((gb, i));
-                        break;
-                    }
+                if gb.span.contains_line_col(line, col) {
+                    binding = Some((gb, i));
+                    break;
                 }
             }
             // Check for span in binding references
@@ -860,7 +807,7 @@ mod server {
             };
             // Collect edits
             let mut edits = vec![TextEdit {
-                range: uiua_span_to_lsp(binding.span.as_ref().unwrap()),
+                range: uiua_span_to_lsp(&binding.span),
                 new_text: params.new_name.clone(),
             }];
             for (name, idx) in &doc.asm.global_references {
@@ -895,18 +842,14 @@ mod server {
             for (name, idx) in &current_doc.asm.global_references {
                 if name.span.contains_line_col(line, col) {
                     let binding = &current_doc.asm.bindings[*idx];
-                    if let Some(span) = &binding.span {
-                        let uri = match &span.src {
-                            InputSrc::Str(_) => {
-                                params.text_document_position_params.text_document.uri
-                            }
-                            InputSrc::File(file) => path_to_uri(file)?,
-                        };
-                        return Ok(Some(GotoDefinitionResponse::Scalar(Location {
-                            uri,
-                            range: uiua_span_to_lsp(span),
-                        })));
-                    }
+                    let uri = match &binding.span.src {
+                        InputSrc::Str(_) => params.text_document_position_params.text_document.uri,
+                        InputSrc::File(file) => path_to_uri(file)?,
+                    };
+                    return Ok(Some(GotoDefinitionResponse::Scalar(Location {
+                        uri,
+                        range: uiua_span_to_lsp(&binding.span),
+                    })));
                 }
             }
             Ok(None)
@@ -961,5 +904,55 @@ mod server {
                 ))
             }
         }
+    }
+
+    fn full_prim_doc_markdown(prim: Primitive) -> String {
+        let sig = prim
+            .signature()
+            .map(|sig| format!(" {}", sig))
+            .unwrap_or_default();
+        let mut value = format!("```uiua\n{}{}\n```", prim.format(), sig);
+        let doc = prim.doc();
+        value.push_str("\n\n");
+        for frag in &doc.short {
+            doc_frag_markdown(&mut value, frag);
+        }
+        value.push_str("\n\n");
+        value.push_str(&format!(
+            "[Documentation](https://uiua.org/docs/{})",
+            prim.name()
+        ));
+        value.push_str("\n\n");
+        for line in &doc.lines {
+            match line {
+                PrimDocLine::Text(frags) => {
+                    for frag in frags {
+                        doc_frag_markdown(&mut value, frag);
+                    }
+                    value.push('\n');
+                }
+                PrimDocLine::Example(ex) => {
+                    value.push_str(&format!(
+                        "\
+```uiua
+{}
+```
+> ```
+",
+                        ex.input()
+                    ));
+                    match ex.output() {
+                        Ok(lines) => {
+                            for line in lines.iter().flat_map(|l| l.lines()) {
+                                value.push_str(&format!("> {line}\n"));
+                            }
+                        }
+                        Err(err) => value.push_str(&format!("> Error: {err}\n")),
+                    }
+                    value.push_str("> ```\n\n");
+                }
+            }
+        }
+        value
     }
 }

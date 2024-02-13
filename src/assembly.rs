@@ -67,7 +67,12 @@ impl Assembly {
         comment: Option<Arc<str>>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(index, Global::Func(function), span.code(), comment);
+        self.add_global_at(
+            index,
+            Global::Func(function),
+            span.code().expect("Cannot bind builtin space"),
+            comment,
+        );
     }
     pub(crate) fn bind_sig(
         &mut self,
@@ -77,7 +82,12 @@ impl Assembly {
         comment: Option<Arc<str>>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(index, Global::Sig(sig), span.code(), comment);
+        self.add_global_at(
+            index,
+            Global::Sig(sig),
+            span.code().expect("Cannot bind builtin space"),
+            comment,
+        );
     }
     pub(crate) fn bind_const(
         &mut self,
@@ -87,15 +97,24 @@ impl Assembly {
         comment: Option<Arc<str>>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(index, Global::Const(value), span.code(), comment);
+        self.add_global_at(
+            index,
+            Global::Const(value),
+            span.code().expect("Cannot bind builtin space"),
+            comment,
+        );
     }
     pub(crate) fn add_global_at(
         &mut self,
         index: usize,
         global: Global,
-        span: Option<CodeSpan>,
+        span: CodeSpan,
         comment: Option<Arc<str>>,
     ) {
+        assert!(
+            index <= self.bindings.len(),
+            "Not enough bindings to add at index {index}"
+        );
         let binding = BindingInfo {
             global,
             span,
@@ -104,13 +123,6 @@ impl Assembly {
         if index < self.bindings.len() {
             self.bindings.make_mut()[index] = binding;
         } else {
-            while self.bindings.len() < index {
-                self.bindings.push(BindingInfo {
-                    global: Global::Const(Value::default()),
-                    span: None,
-                    comment: None,
-                });
-            }
             self.bindings.push(binding);
         }
     }
@@ -138,10 +150,10 @@ impl AsMut<Assembly> for Assembly {
 pub struct BindingInfo {
     /// The global binding type
     pub global: Global,
-    #[serde(skip)]
+    #[serde(skip, default = "CodeSpan::dummy")]
     #[allow(dead_code)]
     /// The span of the original binding name
-    pub span: Option<CodeSpan>,
+    pub span: CodeSpan,
     #[serde(skip)]
     #[allow(dead_code)]
     /// The comment preceding the binding

@@ -416,7 +416,7 @@ code:
                         Global::Module {
                             module: module.clone(),
                         },
-                        Some(name.span.clone()),
+                        name.span.clone(),
                         prev_com.or_else(|| imported.comment.clone()),
                     );
                     self.scope.names.insert(name.value.clone(), global_index);
@@ -567,7 +567,7 @@ code:
                             self.asm.add_global_at(
                                 global_index,
                                 Global::Module { module },
-                                Some(binding.name.span.clone()),
+                                binding.name.span.clone(),
                                 comment.clone(),
                             );
                             self.scope.names.insert(name.clone(), global_index);

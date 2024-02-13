@@ -261,6 +261,13 @@ impl CodeSpan {
     pub(crate) const fn sp<T>(self, value: T) -> Sp<T> {
         Sp { value, span: self }
     }
+    pub(crate) fn dummy() -> Self {
+        Self {
+            src: InputSrc::Str(0),
+            start: Loc::default(),
+            end: Loc::default(),
+        }
+    }
     /// Merge two spans
     pub fn merge(self, end: Self) -> Self {
         CodeSpan {

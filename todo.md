@@ -4,8 +4,8 @@
   - Add a pointer representation for FFI
   - Fix ident= parse bug
   - Spawn thread in pool?
-  - Make `&var` throw
   - Ensure proper label propogation on all primitives
+  - Refactor LSP to tie bindings to docs
   - Pad link from Gist
 - Changle how function inlining works
   - Prevent inlining of large functions

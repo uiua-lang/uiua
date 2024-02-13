@@ -30,6 +30,7 @@ This version is not yet released. If you are reading this on the website, then t
   - These both check array properties at runtime and serve as a form of documentation
 - Add experimental [`inventory ⍚`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
   - This shortens a lot of box array code
+- [`&var`](https://uiua.org/docs/&var) now throws an error if the variable is not found
 - Deprecate [`pop ◌`](https://uiua.org/docs/pop) formatting from `;`
 - Deprecate [`all ⋔`](https://uiua.org/docs/all)
   - It was rarely used and hard to reason about
@@ -39,6 +40,7 @@ This version is not yet released. If you are reading this on the website, then t
 - When hovering a user-defined function's name, the language server will now show whether it is compatible with [`un °`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under)
 - Optimize the pattern for adjacency: `≡/F◫2`
   - It it as much as 800x faster in some cases
+- Add completions to the language server
 ### Website
 - Add [Tutorial Introduction](https://uiua.org/tutorial/introduction)
 - Add [primitives.json](https://uiua.org/primitives.json) for use with tooling

@@ -174,6 +174,9 @@ sys_op! {
     /// The first element will always be the name of your script
     (0, Args, Env, "&args", "arguments"),
     /// Get the value of an environment variable
+    ///
+    /// Expects a string and returns a string.
+    /// If the environment variable does not exist, an error is thrown.
     (1, Var, Env, "&var", "environment variable"),
     /// Run a command and wait for it to finish
     ///
@@ -901,7 +904,10 @@ impl SysOp {
                 let key = env
                     .pop(1)?
                     .as_string(env, "Augument to var must be a string")?;
-                let var = env.rt.backend.var(&key).unwrap_or_default();
+                let var =
+                    env.rt.backend.var(&key).ok_or_else(|| {
+                        env.error(format!("Environment variable `{key}` is not set"))
+                    })?;
                 env.push(var);
             }
             SysOp::FOpen => {

@@ -305,7 +305,7 @@ impl<'i> Parser<'i> {
         } else if let Some(import) = self.try_import() {
             Item::Import(import)
         } else {
-            let lines = self.multiline_words();
+            let lines = self.multiline_words(true);
             // Convert multiline words into multiple items
             if !lines.is_empty() {
                 // Validate words
@@ -633,12 +633,14 @@ impl<'i> Parser<'i> {
             Some(words)
         }
     }
-    fn multiline_words(&mut self) -> Vec<Vec<Sp<Word>>> {
+    fn multiline_words(&mut self, check_for_bindings: bool) -> Vec<Vec<Sp<Word>>> {
         let mut lines = Vec::new();
         while self.try_spaces().is_some() {}
         loop {
             let curr = self.index;
-            if self.try_binding_init().is_some() || self.try_import_init().is_some() {
+            if check_for_bindings
+                && (self.try_binding_init().is_some() || self.try_import_init().is_some())
+            {
                 self.index = curr;
                 break;
             }
@@ -870,7 +872,7 @@ impl<'i> Parser<'i> {
             span.sp(Word::MultilineString(lines))
         } else if let Some(start) = self.try_exact(OpenBracket) {
             while self.try_exact(Newline).is_some() {}
-            let items = self.multiline_words();
+            let items = self.multiline_words(false);
             let end = self.expect_close(CloseBracket);
             let span = start.merge(end.span);
             let arr = Arr {
@@ -895,7 +897,7 @@ impl<'i> Parser<'i> {
             span.sp(Word::Array(arr))
         } else if let Some(start) = self.try_exact(OpenCurly) {
             while self.try_exact(Newline).is_some() {}
-            let items = self.multiline_words();
+            let items = self.multiline_words(false);
             let end = self.expect_close(CloseCurly);
             let span = start.merge(end.span);
             span.sp(Word::Array(Arr {
@@ -1030,7 +1032,7 @@ impl<'i> Parser<'i> {
             }
             break;
         }
-        let mut lines = self.multiline_words();
+        let mut lines = self.multiline_words(false);
         any_newlines |= lines.len() > 1;
         if any_newlines && !lines.last().is_some_and(|line| line.is_empty()) {
             lines.push(Vec::new());

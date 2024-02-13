@@ -67,12 +67,7 @@ impl Assembly {
         comment: Option<Arc<str>>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(
-            index,
-            Global::Func(function),
-            span.code().expect("Cannot bind builtin space"),
-            comment,
-        );
+        self.add_global_at(index, Global::Func(function), span.code(), comment);
     }
     pub(crate) fn bind_sig(
         &mut self,
@@ -82,12 +77,7 @@ impl Assembly {
         comment: Option<Arc<str>>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(
-            index,
-            Global::Sig(sig),
-            span.code().expect("Cannot bind builtin space"),
-            comment,
-        );
+        self.add_global_at(index, Global::Sig(sig), span.code(), comment);
     }
     pub(crate) fn bind_const(
         &mut self,
@@ -97,18 +87,13 @@ impl Assembly {
         comment: Option<Arc<str>>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(
-            index,
-            Global::Const(value),
-            span.code().expect("Cannot bind builtin space"),
-            comment,
-        );
+        self.add_global_at(index, Global::Const(value), span.code(), comment);
     }
     pub(crate) fn add_global_at(
         &mut self,
         index: usize,
         global: Global,
-        span: CodeSpan,
+        span: Option<CodeSpan>,
         comment: Option<Arc<str>>,
     ) {
         assert!(
@@ -117,7 +102,7 @@ impl Assembly {
         );
         let binding = BindingInfo {
             global,
-            span,
+            span: span.unwrap_or_else(CodeSpan::dummy),
             comment,
         };
         if index < self.bindings.len() {

@@ -27,6 +27,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental [`inventory ⍚`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
   - This shortens a lot of box array code
 - `f` can now be used at the beginning of planet notation shorthand for [`fork ⊃`](https://uiua.org/docs/fork)
+- Flip the order of [`send`](https://uiua.org/docs/send)'s arguments
 - Add experimental labels, denoted by a `$` immediately followed by an identifier, which attach a name to an array. This has two uses:
   - Labels are visible in output and in [`stack`](https://uiua.org/docs/stack) diagnostics
   - Labels in code make it easier to understand when reading

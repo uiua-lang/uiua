@@ -1802,7 +1802,7 @@ primitive!(
     (1, Wait, Misc, "wait"),
     /// Send a value to a thread
     ///
-    /// Expects a value to send and a thread id returned by [spawn].
+    /// Expects a thread id returned by [spawn] and a value to send.
     /// The thread id `0` corresponds to the parent thread.
     /// The sent-to thread can receive the value with [recv] or [tryrecv].
     (2(0), Send, Misc, "send"),

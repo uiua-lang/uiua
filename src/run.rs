@@ -129,7 +129,7 @@ impl Default for ThisThread {
 #[derive(Debug, Clone)]
 struct Thread {
     #[cfg(not(target_arch = "wasm32"))]
-    pub handle: Arc<std::thread::JoinHandle<UiuaResult<Vec<Value>>>>,
+    pub recv: Receiver<UiuaResult<Vec<Value>>>,
     #[cfg(target_arch = "wasm32")]
     pub result: UiuaResult<Vec<Value>>,
     pub channel: Channel,
@@ -1252,6 +1252,7 @@ code:
     pub(crate) fn spawn(
         &mut self,
         capture_count: usize,
+        pool: bool,
         f: impl FnOnce(&mut Self) -> UiuaResult + Send + 'static,
     ) -> UiuaResult {
         if self.rt.stack.len() < capture_count {
@@ -1298,12 +1299,17 @@ code:
             },
         };
         #[cfg(not(target_arch = "wasm32"))]
-        let handle = std::thread::Builder::new()
-            .spawn(move || {
-                f(&mut env)?;
-                Ok(env.take_stack())
-            })
-            .map_err(|e| self.error(format!("Error spawning thread: {e}")))?;
+        let recv = {
+            let (send, recv) = crossbeam_channel::unbounded();
+            if pool {
+                rayon::spawn(move || _ = send.send(f(&mut env).map(|_| env.take_stack())));
+            } else {
+                std::thread::Builder::new()
+                    .spawn(move || _ = send.send(f(&mut env).map(|_| env.take_stack())))
+                    .map_err(|e| self.error(format!("Error spawning thread: {e}")))?;
+            }
+            recv
+        };
         #[cfg(target_arch = "wasm32")]
         let result = f(&mut env).map(|_| env.take_stack());
 
@@ -1313,7 +1319,7 @@ code:
             id,
             Thread {
                 #[cfg(not(target_arch = "wasm32"))]
-                handle: handle.into(),
+                recv,
                 #[cfg(target_arch = "wasm32")]
                 result,
                 channel: Channel {
@@ -1331,17 +1337,15 @@ code:
         if ids.shape.is_empty() {
             let handle = ids.data.into_iter().next().unwrap();
             #[cfg(not(target_arch = "wasm32"))]
-            let thread_stack = Arc::into_inner(
-                self.rt
-                    .thread
-                    .children
-                    .remove(&handle)
-                    .ok_or_else(|| self.error("Invalid thread id"))?
-                    .handle,
-            )
-            .ok_or_else(|| self.error("Cannot wait on thread spawned in cloned environment"))?
-            .join()
-            .unwrap()?;
+            let thread_stack = self
+                .rt
+                .thread
+                .children
+                .remove(&handle)
+                .ok_or_else(|| self.error("Invalid thread id"))?
+                .recv
+                .recv()
+                .unwrap()?;
             #[cfg(target_arch = "wasm32")]
             let thread_stack = self
                 .rt
@@ -1355,17 +1359,15 @@ code:
             let mut rows = Vec::new();
             for handle in ids.data {
                 #[cfg(not(target_arch = "wasm32"))]
-                let thread_stack = Arc::into_inner(
-                    self.rt
-                        .thread
-                        .children
-                        .remove(&handle)
-                        .ok_or_else(|| self.error("Invalid thread id"))?
-                        .handle,
-                )
-                .ok_or_else(|| self.error("Cannot wait on thread spawned in cloned environment"))?
-                .join()
-                .unwrap()?;
+                let thread_stack = self
+                    .rt
+                    .thread
+                    .children
+                    .remove(&handle)
+                    .ok_or_else(|| self.error("Invalid thread id"))?
+                    .recv
+                    .recv()
+                    .unwrap()?;
                 #[cfg(target_arch = "wasm32")]
                 let thread_stack = self
                     .rt

@@ -1,6 +1,6 @@
 //! Algorithms for zipping modifiers
 
-use std::{mem::take, slice};
+use std::slice;
 
 use ecow::{eco_vec, EcoVec};
 
@@ -943,16 +943,67 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 Primitive::Inventory.format()
             ))),
         },
-        (xs, ys) => {
-            rows2(f, xs, ys, env)?;
-            for val in env.stack_mut().iter_mut().take(outputs) {
-                *val = take(val)
-                    .into_rows()
-                    .map(Boxed)
-                    .collect::<EcoVec<_>>()
-                    .into();
+        (xs, ys) => match (xs.row_count(), ys.row_count()) {
+            (a, b) if a == b => {
+                let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
+                env.without_fill(|env| -> UiuaResult {
+                    for (x, y) in xs.into_rows().zip(ys.into_rows()) {
+                        env.push(y);
+                        env.push(x);
+                        env.call(f.clone())?;
+                        for i in 0..outputs {
+                            new_rows[i].push(Boxed(env.pop("inventory's function result")?));
+                        }
+                    }
+                    Ok(())
+                })?;
+                for new_rows in new_rows.into_iter().rev() {
+                    env.push(Array::from_iter(new_rows));
+                }
+                Ok(())
             }
-            Ok(())
-        }
+            (_, 1) => {
+                let ys = ys.into_rows().next().unwrap();
+                let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
+                env.without_fill(|env| -> UiuaResult {
+                    for x in xs.into_rows() {
+                        env.push(ys.clone());
+                        env.push(x);
+                        env.call(f.clone())?;
+                        for i in 0..outputs {
+                            new_rows[i].push(Boxed(env.pop("inventory's function result")?));
+                        }
+                    }
+                    Ok(())
+                })?;
+                for new_rows in new_rows.into_iter().rev() {
+                    env.push(Array::from_iter(new_rows));
+                }
+                Ok(())
+            }
+            (1, _) => {
+                let xs = xs.into_rows().next().unwrap();
+                let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
+                env.without_fill(|env| -> UiuaResult {
+                    for y in ys.into_rows() {
+                        env.push(y);
+                        env.push(xs.clone());
+                        env.call(f.clone())?;
+                        for i in 0..outputs {
+                            new_rows[i].push(Boxed(env.pop("inventory's function result")?));
+                        }
+                    }
+                    Ok(())
+                })?;
+                for new_rows in new_rows.into_iter().rev() {
+                    env.push(Array::from_iter(new_rows));
+                }
+                Ok(())
+            }
+            (a, b) => Err(env.error(format!(
+                "Cannot {} arrays with different number of rows {a} and {b}",
+                Primitive::Inventory.format(),
+            ))),
+        },
     }
 }

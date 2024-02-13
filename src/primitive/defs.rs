@@ -1180,6 +1180,11 @@ primitive!(
     /// ex: # Experimental!
     ///   : ≡⇌ [1_2_3 4_5_6]
     ///   : ⍚⇌ [1_2_3 4_5_6]
+    /// This can be useful when you expect the function to yield arrays of different [shape]s.
+    /// ex: # Experimental!
+    ///   : ⍚⇡ [3 8 5 4]
+    /// ex: # Experimental!
+    ///   : ⍚↙⊙¤ [2 0 3 4 1] [4 8 9 2]
     /// For a box and non-box array, [inventory] will unbox the box array's rows and then re-box the results.
     /// ex: # Experimental!
     ///   : ⍚⊂ {"a" "bc" "def"} "123"

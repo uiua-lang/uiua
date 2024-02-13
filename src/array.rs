@@ -68,6 +68,9 @@ pub struct ArrayMeta {
     /// The length of a map array
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub map_len: Option<usize>,
+    /// The pointer value for FFI
+    #[serde(skip)]
+    pub pointer: Option<usize>,
 }
 
 bitflags! {
@@ -97,6 +100,7 @@ pub static DEFAULT_META: ArrayMeta = ArrayMeta {
     label: None,
     flags: ArrayFlags::NONE,
     map_len: None,
+    pointer: None,
 };
 
 impl<T: ArrayValue> Default for Array<T> {

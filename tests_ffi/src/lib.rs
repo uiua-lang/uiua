@@ -107,6 +107,18 @@ pub unsafe extern "C" fn person_new_ptr(name: *const c_char, age: c_int) -> *con
     Box::into_raw(Box::new(Person { name, age }))
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn person_val_age(p: Person) -> c_int {
+    // println!("p ptr: {:p}", p);
+    p.age
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn person_ptr_age(p: *const Person) -> c_int {
+    // println!("p ptr: {:p}", p);
+    (*p).age
+}
+
 #[repr(C)]
 pub struct TwoPeople {
     pub a: Person,

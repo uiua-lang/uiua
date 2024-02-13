@@ -338,11 +338,12 @@ pub(crate) fn under_instrs(
             (CopyToTempN(1), Sys(SysOp::FReadAllBytes)),
             (PopTempN(1), Sys(SysOp::FWriteAll)),
         )),
+        &UnderPatternFn(under_flip_pattern, "flip"),
         &UnderPatternFn(under_temp_pattern, "temp"),
         &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // This must come last!
     ];
 
-    // println!("undering {:?}", instrs);
+    println!("undering {:?}", instrs);
 
     let comp_instrs_backup = comp.asm.instrs.clone();
 
@@ -352,15 +353,15 @@ pub(crate) fn under_instrs(
     'find_pattern: loop {
         for pattern in patterns {
             if let Some((input, (bef, aft))) = pattern.under_extract(curr_instrs, g_sig, comp) {
-                // println!(
-                //     "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
-                //     pattern,
-                //     &curr_instrs[..curr_instrs.len() - input.len()],
-                // );
+                println!(
+                    "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
+                    pattern,
+                    &curr_instrs[..curr_instrs.len() - input.len()],
+                );
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
-                    // println!("undered {:?} to {:?} {:?}", instrs, befores, afters);
+                    println!("undered {:?} to {:?} {:?}", instrs, befores, afters);
                     return Some((befores, afters));
                 }
                 curr_instrs = input;
@@ -689,6 +690,28 @@ fn invert_temp_pattern<'a>(
     instrs.insert(0, instr.clone());
     instrs.push(end_instr.clone());
     Some((input, instrs))
+}
+
+fn under_flip_pattern<'a>(
+    input: &'a [Instr],
+    g_sig: Signature,
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    let [Instr::Prim(Primitive::Flip, span), input @ ..] = input else {
+        return None;
+    };
+    let befores = eco_vec![Instr::Prim(Primitive::Flip, *span)];
+    let (rest_befores, rest_afters) = under_instrs(input, g_sig, &mut comp.clone())?;
+    let rest_befores_sig = instrs_signature(&rest_befores).ok()?;
+    let rest_afters_sig = instrs_signature(&rest_afters).ok()?;
+    let total_args = g_sig.args + rest_befores_sig.args + rest_afters_sig.args;
+    let total_outputs = g_sig.outputs + rest_befores_sig.outputs + rest_afters_sig.outputs;
+    let afters = if total_outputs < total_args {
+        EcoVec::new()
+    } else {
+        eco_vec![Instr::Prim(Primitive::Flip, *span)]
+    };
+    Some((input, (befores, afters)))
 }
 
 fn under_temp_pattern<'a>(

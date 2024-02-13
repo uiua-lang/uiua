@@ -1252,7 +1252,7 @@ code:
     pub(crate) fn spawn(
         &mut self,
         capture_count: usize,
-        pool: bool,
+        _pool: bool,
         f: impl FnOnce(&mut Self) -> UiuaResult + Send + 'static,
     ) -> UiuaResult {
         if self.rt.stack.len() < capture_count {
@@ -1301,7 +1301,7 @@ code:
         #[cfg(not(target_arch = "wasm32"))]
         let recv = {
             let (send, recv) = crossbeam_channel::unbounded();
-            if pool {
+            if _pool {
                 rayon::spawn(move || _ = send.send(f(&mut env).map(|_| env.take_stack())));
             } else {
                 std::thread::Builder::new()

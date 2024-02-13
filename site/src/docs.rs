@@ -444,21 +444,30 @@ impl Allowed {
             let of_class: Vec<_> = Primitive::all()
                 .filter(|p| self.prims.contains(p) && p.class() == class)
                 .map(|p| {
+                    let exp = if p.is_experimental() {
+                        view!(<span class="code-hover" data-title="Experimental">"🧪"</span>)
+                            .into_view()
+                    } else {
+                        View::default()
+                    };
+                    let style = if p.is_deprecated() {
+                        "text-decoration: line-through;"
+                    } else {
+                        ""
+                    };
                     if let Primitive::Sys(sysop) = p {
-                        view!(<div style="display: flex; align-items: center;">
-                            <div style="min-width: 7em;"><Prim prim=p/></div>{sysop.long_name()}
+                        view!(<div style="display: flex;">
+                            <div style="min-width: 7em; display: flex; align-items: center;">
+                                <div style=style><Prim prim=p/></div>{exp}
+                            </div>
+                            {sysop.long_name()}
                         </div>)
                         .into_view()
-                    } else if p.is_deprecated() {
-                        view!(<div style="text-decoration: line-through;"><Prim prim=p/></div>)
-                            .into_view()
-                    } else if p.is_experimental() {
+                    } else {
                         view!(<div style="display: flex; align-items: center;">
-                            <Prim prim=p/><span class="code-hover" data-title="Experimental">"🧪"</span>
-                        </div>).into_view()
-                    }
-                    else {
-                        view!(<Prim prim=p/>).into_view()
+                            <div style=style><Prim prim=p/></div>{exp}
+                        </div>)
+                        .into_view()
                     }
                 })
                 .collect();

@@ -2131,10 +2131,11 @@ primitive!(
     /// ex: # Experimental!
     ///   : &p repr {"Uiua" @A [1 2 3] □4}
     ///
-    /// Append commas to whitespace for a more traditional look.
+    /// Append commas to whitespace for a more traditional notation:
     /// ex: # Experimental!
-    ///   : ↯2_2_3⇡12
-    ///   : &p ⍜⊜□⎏(⊂@,)∊," \n" repr
+    ///   : -5↯2_2_3⇡12
+    ///   : ⍜⊜□⎏(⊂@,)∊," \n" repr # add commas
+    ///   : &p ⍜▽∵⋅@-=@¯.         # replace negate glyphs with minus signs
     (1, Repr, Misc, "repr"),
 );
 

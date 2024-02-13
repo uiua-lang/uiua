@@ -28,6 +28,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This shortens a lot of box array code
 - `f` can now be used at the beginning of planet notation shorthand for [`fork ⊃`](https://uiua.org/docs/fork)
 - Flip the order of [`send`](https://uiua.org/docs/send)'s arguments
+- Add the [`pool`](https://uiua.org/docs/pool) modifier, which is identical to [`spawn`](https://uiua.org/docs/spawn) but spawns a thread in a thread pool
 - Add experimental labels, denoted by a `$` immediately followed by an identifier, which attach a name to an array. This has two uses:
   - Labels are visible in output and in [`stack`](https://uiua.org/docs/stack) diagnostics
   - Labels in code make it easier to understand when reading

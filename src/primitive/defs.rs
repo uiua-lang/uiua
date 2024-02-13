@@ -1785,7 +1785,14 @@ primitive!(
     /// [wait] will call [each] implicitly.
     /// ex: ↯3_3⇡9
     ///   : wait≡spawn/+.
+    ///
+    /// For spawn threads in a thread pool, use [pool].
     ([1], Spawn, OtherModifier, "spawn"),
+    /// Spawn a thread in a thread pool
+    ///
+    /// Has the same functionality as [spawn], but uses a thread pool instead of spawning a new thread.
+    /// While [spawn]'s function will be called immediately, [pool]'s function will be called when a thread in the pool is available.
+    ([1], PoolSpawn, OtherModifier, "pool"),
     /// Wait for a thread to finish and push its results to the stack
     ///
     /// The argument must be a thread id returned by [spawn].

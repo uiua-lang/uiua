@@ -715,6 +715,10 @@ impl Primitive {
                 let f = env.pop_function()?;
                 env.spawn(f.signature().args, false, |env| env.call(f))?;
             }
+            Primitive::PoolSpawn => {
+                let f = env.pop_function()?;
+                env.spawn(f.signature().args, true, |env| env.call(f))?;
+            }
             Primitive::Wait => {
                 let id = env.pop(1)?;
                 env.wait(id)?;

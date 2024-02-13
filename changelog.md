@@ -22,14 +22,16 @@ This version is not yet released. If you are reading this on the website, then t
   - [`sign ±`](https://uiua.org/docs/sign) gets the case of a character
   - [`absolute value ⌵`](https://uiua.org/docs/absolute) uppercases a character
   - [`negate ¯`](https://uiua.org/docs/negate) toggles the case of a character
+- Inline functions are no longer required to be in a binding or modifier
+  - This allows arbitrary code to be wrapped and marked with a signature
+- Add experimental [`inventory ⍚`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
+  - This shortens a lot of box array code
 - `f` can now be used at the beginning of planet notation shorthand for [`fork ⊃`](https://uiua.org/docs/fork)
 - Add experimental labels, denoted by a `$` immediately followed by an identifier, which attach a name to an array. This has two uses:
   - Labels are visible in output and in [`stack`](https://uiua.org/docs/stack) diagnostics
   - Labels in code make it easier to understand when reading
 - Add experimental [`shapes`](https://uiua.org/docs/shapes) and [`types`](https://uiua.org/docs/types) modifiers, which validate the shape and type of an array or arrays
   - These both check array properties at runtime and serve as a form of documentation
-- Add experimental [`inventory ⍚`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
-  - This shortens a lot of box array code
 - [`&var`](https://uiua.org/docs/&var) now throws an error if the variable is not found
 - Deprecate [`pop ◌`](https://uiua.org/docs/pop) formatting from `;`
 - Deprecate [`all ⋔`](https://uiua.org/docs/all)

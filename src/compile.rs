@@ -530,7 +530,10 @@ code:
             referenced: false,
             global_index: self.next_global,
         });
-        let instrs = self.compile_words(binding.words, true);
+        let mut binding_code_words = binding.words.iter().filter(|w| w.value.is_code());
+        let is_single_func = binding_code_words.clone().count() == 1
+            && (binding_code_words.next()).is_some_and(|w| matches!(&w.value, Word::Func(_)));
+        let instrs = self.compile_words(binding.words, !is_single_func);
         let self_referenced = self.current_binding.take().unwrap().referenced;
         let mut instrs = instrs?;
         let span_index = self.add_span(span.clone());
@@ -1376,11 +1379,30 @@ code:
                 return self.word(word.clone(), call);
             }
         }
-        let function = self.compile_func(func, span)?;
-        self.push_instr(Instr::PushFunc(function));
+
+        if call {
+            let (.., instrs) = self.compile_func_instrs(func, span)?;
+            self.push_all_instrs(instrs);
+        } else {
+            let function = self.compile_func(func, span)?;
+            self.push_instr(Instr::PushFunc(function));
+        }
         Ok(())
     }
     fn compile_func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Function> {
+        let (id, sig, instrs) = self.compile_func_instrs(func, span)?;
+
+        if let [Instr::PushFunc(f), Instr::Call(_)] = instrs.as_slice() {
+            return Ok(Function::clone(f));
+        }
+
+        Ok(self.add_function(id, sig, instrs))
+    }
+    fn compile_func_instrs(
+        &mut self,
+        func: Func,
+        span: CodeSpan,
+    ) -> UiuaResult<(FunctionId, Signature, Vec<Instr>)> {
         let mut instrs = Vec::new();
         for line in func.lines {
             instrs.extend(self.compile_words(line, true)?);
@@ -1422,12 +1444,7 @@ code:
                 }
             }
         };
-
-        if let [Instr::PushFunc(f), Instr::Call(_)] = instrs.as_slice() {
-            return Ok(Function::clone(f));
-        }
-
-        Ok(self.add_function(func.id, sig, instrs))
+        Ok((func.id, sig, instrs))
     }
     fn switch(&mut self, sw: Switch, span: CodeSpan, call: bool) -> UiuaResult {
         let count = sw.branches.len();

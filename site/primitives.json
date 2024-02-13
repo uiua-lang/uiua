@@ -833,6 +833,12 @@
     "class": "DyadicArray",
     "description": "Index a row or elements from an array"
   },
+  "pool": {
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Thread",
+    "description": "Spawn a thread in a thread pool"
+  },
   "pop": {
     "glyph": "◌",
     "args": 1,
@@ -881,7 +887,7 @@
   "recv": {
     "args": 1,
     "outputs": 1,
-    "class": "Misc",
+    "class": "Thread",
     "description": "Receive a value from a thread"
   },
   "reduce": {
@@ -986,7 +992,7 @@
   "send": {
     "args": 2,
     "outputs": 0,
-    "class": "Misc",
+    "class": "Thread",
     "description": "Send a value to a thread"
   },
   "setinv": {
@@ -1033,7 +1039,7 @@
   "spawn": {
     "outputs": 1,
     "modifier_args": 1,
-    "class": "OtherModifier",
+    "class": "Thread",
     "description": "Spawn a thread"
   },
   "sqrt": {
@@ -1118,7 +1124,7 @@
   "tryrecv": {
     "args": 1,
     "outputs": 1,
-    "class": "Misc",
+    "class": "Thread",
     "description": "Try to receive a value from a thread"
   },
   "type": {
@@ -1173,7 +1179,7 @@
   "wait": {
     "args": 1,
     "outputs": 1,
-    "class": "Misc",
+    "class": "Thread",
     "description": "Wait for a thread to finish and push its results to the stack"
   },
   "where": {

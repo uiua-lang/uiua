@@ -1787,12 +1787,12 @@ primitive!(
     ///   : wait≡spawn/+.
     ///
     /// For spawn threads in a thread pool, use [pool].
-    ([1], Spawn, OtherModifier, "spawn"),
+    ([1], Spawn, Thread, "spawn"),
     /// Spawn a thread in a thread pool
     ///
     /// Has the same functionality as [spawn], but uses a thread pool instead of spawning a new thread.
     /// While [spawn]'s function will be called immediately, [pool]'s function will be called when a thread in the pool is available.
-    ([1], PoolSpawn, OtherModifier, "pool"),
+    ([1], PoolSpawn, Thread, "pool"),
     /// Wait for a thread to finish and push its results to the stack
     ///
     /// The argument must be a thread id returned by [spawn].
@@ -1806,13 +1806,13 @@ primitive!(
     /// [wait] is pervasive and will call [each] implicitly.
     /// ex: ↯3_3⇡9
     ///   : wait≡spawn/+.
-    (1, Wait, Misc, "wait"),
+    (1, Wait, Thread, "wait"),
     /// Send a value to a thread
     ///
     /// Expects a thread id returned by [spawn] and a value to send.
     /// The thread id `0` corresponds to the parent thread.
     /// The sent-to thread can receive the value with [recv] or [tryrecv].
-    (2(0), Send, Misc, "send"),
+    (2(0), Send, Thread, "send"),
     /// Receive a value from a thread
     ///
     /// Expects a thread id returned by [spawn].
@@ -1820,7 +1820,7 @@ primitive!(
     /// The sending thread can send a value with [send].
     ///
     /// Unlike [tryrecv], [recv] blocks until a value is received.
-    (1, Recv, Misc, "recv"),
+    (1, Recv, Thread, "recv"),
     /// Try to receive a value from a thread
     ///
     /// Expects a thread id returned by [spawn].
@@ -1830,7 +1830,7 @@ primitive!(
     /// Unlike [recv], [tryrecv] does not block.
     /// If no value is available, then an error is thrown.
     /// The error can be caught with [try].
-    (1, TryRecv, Misc, "tryrecv"),
+    (1, TryRecv, Thread, "tryrecv"),
     /// Generate a random number between 0 and 1 from a seed, as well as the next seed
     ///
     /// If you don't care about a seed, you can use [random].

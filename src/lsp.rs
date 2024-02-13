@@ -313,7 +313,7 @@ pub use server::run_language_server;
 
 #[cfg(feature = "lsp")]
 mod server {
-    use std::sync::Arc;
+    use std::{path::Path, sync::Arc};
 
     use dashmap::DashMap;
     use tower_lsp::{
@@ -770,7 +770,7 @@ mod server {
             &self,
             params: GotoDefinitionParams,
         ) -> Result<Option<GotoDefinitionResponse>> {
-            let doc = if let Some(doc) = self
+            let current_doc = if let Some(doc) = self
                 .docs
                 .get(&params.text_document_position_params.text_document.uri)
             {
@@ -780,12 +780,18 @@ mod server {
             };
             let position = params.text_document_position_params.position;
             let (line, col) = lsp_pos_to_uiua(position);
-            for (name, idx) in &doc.asm.global_references {
+            for (name, idx) in &current_doc.asm.global_references {
                 if name.span.contains_line_col(line, col) {
-                    let binding = &doc.asm.bindings[*idx];
+                    let binding = &current_doc.asm.bindings[*idx];
                     if let Some(span) = &binding.span {
+                        let uri = match &span.src {
+                            InputSrc::Str(_) => {
+                                params.text_document_position_params.text_document.uri
+                            }
+                            InputSrc::File(file) => path_to_uri(file)?,
+                        };
                         return Ok(Some(GotoDefinitionResponse::Scalar(Location {
-                            uri: params.text_document_position_params.text_document.uri,
+                            uri,
                             range: uiua_span_to_lsp(span),
                         })));
                     }
@@ -797,6 +803,14 @@ mod server {
         async fn shutdown(&self) -> Result<()> {
             Ok(())
         }
+    }
+
+    fn path_to_uri(path: &Path) -> Result<Url> {
+        Url::from_file_path(
+            path.canonicalize()
+                .map_err(|e| Error::invalid_params(format!("Invalid file path: {}", e)))?,
+        )
+        .map_err(|_| Error::invalid_params("Invalid file path"))
     }
 
     fn lsp_pos_to_uiua(pos: Position) -> (usize, usize) {

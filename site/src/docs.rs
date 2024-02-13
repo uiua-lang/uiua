@@ -5,7 +5,7 @@ use std::{
 
 use enum_iterator::all;
 use instant::Duration;
-use leptos::*;
+use leptos::{leptos_dom::helpers::location, *};
 use leptos_meta::*;
 use leptos_router::*;
 use uiua::{PrimClass, Primitive, SysOpClass};
@@ -250,7 +250,9 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about Uiua's design gets its own page"</li>
             <li><A href="/docs/technical">"Technical Details"</A>" - notes on the implementation of the Uiua interpreter and this website"</li>
             <li><A href="/docs/combinators">"Combinators"</A>" - a list of common combinators implemented in Uiua"</li>
-            <li><a href="/primitives.json">"Primitives JSON"</a>" - a JSON file of all the primitives, for tooling and other projects (click then refresh)"</li>
+            <li>
+                <A href="/primitives.json" on:click = |_| _ = location().set_href("/primitives.json")>"Primitives JSON"</A>
+                " - a JSON file of all the primitives, for tooling and other projects"</li>
         </ul>
 
         <h2 id="functions" class="doc-functions">"Functions"</h2>

@@ -918,7 +918,7 @@ impl<'i> Parser<'i> {
                     Primitive::Pop.format(),
                 ),
                 span.clone(),
-                DiagnosticKind::Style,
+                DiagnosticKind::Warning,
                 self.inputs.clone(),
             ));
             span.sp(Word::Primitive(Primitive::Pop))

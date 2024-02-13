@@ -10,12 +10,12 @@ Features ← (
 )
 
 &p "Checking with no features"
-⍤⊃⋅∘≍ 0 &runi Command
+⍤⟜≍: 0 &runi Command
 
 ↘1⋯⇡ⁿ:2⧻. Features
 ≡(
   ⬚"regex"/$"_,_" ▽
   &p $"Checking with features: _".
   ⊂ Command ⊂ □"--features" □
-  ⍤⊃⋅∘≍ 0 &runi
+  ⍤⟜≍: 0 &runi
 )⊙¤

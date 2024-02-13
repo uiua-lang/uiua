@@ -1,6 +1,10 @@
 # Uiua Todo
 
 - 0.9
+  - Add a pointer representation for FFI
+  - Fix ident= parse bug
+  - Spawn thread in pool?
+  - Make `&var` throw
   - Ensure proper label propogation on all primitives
   - Pad link from Gist
 - Changle how function inlining works

@@ -1376,11 +1376,28 @@ code:
                 return self.word(word.clone(), call);
             }
         }
-        let function = self.compile_func(func, span)?;
-        self.push_instr(Instr::PushFunc(function));
+        if call {
+            let (_, instrs, _) = self.compile_func_words(func, span)?;
+            self.push_all_instrs(instrs);
+        } else {
+            let function = self.compile_func(func, span)?;
+            self.push_instr(Instr::PushFunc(function));
+        }
         Ok(())
     }
     fn compile_func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Function> {
+        let (id, instrs, sig) = self.compile_func_words(func, span)?;
+        if let [Instr::PushFunc(f), Instr::Call(_)] = instrs.as_slice() {
+            return Ok(Function::clone(f));
+        }
+
+        Ok(self.add_function(id, sig, instrs))
+    }
+    fn compile_func_words(
+        &mut self,
+        func: Func,
+        span: CodeSpan,
+    ) -> UiuaResult<(FunctionId, Vec<Instr>, Signature)> {
         let mut instrs = Vec::new();
         for line in func.lines {
             instrs.extend(self.compile_words(line, true)?);
@@ -1422,12 +1439,7 @@ code:
                 }
             }
         };
-
-        if let [Instr::PushFunc(f), Instr::Call(_)] = instrs.as_slice() {
-            return Ok(Function::clone(f));
-        }
-
-        Ok(self.add_function(func.id, sig, instrs))
+        Ok((func.id, instrs, sig))
     }
     fn switch(&mut self, sw: Switch, span: CodeSpan, call: bool) -> UiuaResult {
         let count = sw.branches.len();

@@ -649,7 +649,6 @@ impl<'a> Formatter<'a> {
                                 }
                             }
                             self.push(&line.tilde_span, "~");
-                            self.output.push(' ');
                             for item in &line.items {
                                 self.output.push(' ');
                                 self.push(&item.span, &item.value);

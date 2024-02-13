@@ -913,7 +913,7 @@ impl DebugArrayValue for char {
         if prefix {
             format!("@{}", repr.replace(' ', "\\s"))
         } else {
-            format!("{}", repr)
+            repr
         }
     }
 }

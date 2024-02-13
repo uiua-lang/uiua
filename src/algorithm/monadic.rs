@@ -142,7 +142,7 @@ impl Value {
     }
     /// Convert value into a string that can be understood by the interpreter
     pub fn representation(&self) -> Self {
-        dbg_value(self, None, true).into()
+        dbg_value(self, 0, true).into()
     }
 }
 

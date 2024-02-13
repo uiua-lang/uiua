@@ -774,37 +774,27 @@ impl<'a> fmt::Display for FormatShape<'a> {
     }
 }
 
-use crate::algorithm::map::MapItem;
-
 /// Convert value into a string that can be understood by the interpreter
 /// Prefer to use `Value::representation()`
-pub(crate) fn dbg_value(value: &Value, depth: Option<usize>, prefix: bool) -> String {
+pub(crate) fn dbg_value(value: &Value, depth: usize, prefix: bool) -> String {
     value.generic_ref(
         |a| dbg_array::<f64>(a, depth, prefix),
         |a| dbg_array::<u8>(a, depth, prefix),
         |a| dbg_array::<Complex>(a, depth, prefix),
         |a| dbg_array::<char>(a, depth, prefix),
-        |a| {
+        |a: &Array<Boxed>| {
             if a.meta().map_len.is_none() {
-                dbg_array::<Boxed>(a, depth, prefix)
+                dbg_array(a, depth, prefix)
             } else {
-                // can't use unmap here because it needs an env
-                let remove_empty_rows = |data: &Boxed| {
-                    Value::from_row_values_infallible(
-                        data.as_value()
-                            .rows()
-                            .filter(|row| !(row.is_empty_cell() || row.is_tombstone()))
-                            .collect::<Vec<_>>(),
-                    )
-                };
+                use crate::algorithm::map::remove_empty_rows;
                 let data = a.data.as_slice();
-                let keys = remove_empty_rows(&data[0]);
-                let values = remove_empty_rows(&data[1]);
-                let depth = depth.map_or(1, |d| d + 1);
+                let keys = remove_empty_rows(data[0].as_value().rows());
+                let values = remove_empty_rows(data[1].as_value().rows());
+                let depth = depth + 1;
                 format!(
-                    "{{{}\n{padding}{}}}",
-                    dbg_value(&keys, Some(depth), true),
-                    dbg_value(&values, Some(depth), true),
+                    "{{{keys}\n{padding}{values}}}",
+                    keys = dbg_value(&keys, depth, true),
+                    values = dbg_value(&values, depth, true),
                     padding = " ".repeat(depth)
                 )
             }
@@ -813,19 +803,18 @@ pub(crate) fn dbg_value(value: &Value, depth: Option<usize>, prefix: bool) -> St
 }
 
 /// Convert array into a string that can be understood by the interpreter
-/// * `depth` - recursion/indentation depth. Pass in None
-/// * `prefix` - whether singular chars and boxes need a prefix. Pass in true
-pub(crate) fn dbg_array<T: DebugArrayValue>(
-    array: &Array<T>,
-    depth: Option<usize>,
-    prefix: bool,
-) -> String {
+/// * `depth` - recursion/indentation depth. 0 by default
+/// * `prefix` - whether singular chars and boxes need a prefix. true by default
+pub(crate) fn dbg_array<T>(array: &Array<T>, depth: usize, prefix: bool) -> String
+where
+    T: DebugArrayValue,
+{
     let mut buffer = String::with_capacity(array.element_count());
     dbg_array_inner(
         &mut buffer,
         array.data.as_slice(),
         array.shape(),
-        depth.unwrap_or(0),
+        depth,
         prefix,
     );
     buffer
@@ -849,7 +838,7 @@ fn dbg_array_inner<T: DebugArrayValue>(
         1 => (T::debug_delims(), T::debug_separator()),
         _ => (("[", "]"), "\n"),
     };
-    let padding = if separator == "\n" {
+    let padding = if separator.contains('\n') {
         " ".repeat(depth + 1)
     } else {
         "".into()
@@ -896,17 +885,35 @@ pub trait DebugArrayValue: ArrayValue {
         Self::format_sep()
     }
 }
-impl DebugArrayValue for f64 {}
 impl DebugArrayValue for u8 {}
+impl DebugArrayValue for f64 {
+    fn debug_string(&self, _depth: usize, _prefix: bool) -> String {
+        self.to_string().replace('-', "¯")
+    }
+}
+impl DebugArrayValue for Complex {
+    fn debug_string(&self, depth: usize, prefix: bool) -> String {
+        format!(
+            "ℂ{} {}",
+            self.im.debug_string(depth, prefix),
+            self.re.debug_string(depth, prefix),
+        )
+    }
+}
 impl DebugArrayValue for char {
     fn debug_delims() -> (&'static str, &'static str) {
         ("\"", "\"")
     }
     fn debug_string(&self, _depth: usize, prefix: bool) -> String {
+        let mut repr = format!("{self:?}")[1..] // gives repr delimited by single quotes
+            .replace(r"\'", "'") // don't escape single quote
+            .replace('"', r#"\""#) // escape double quote
+            .replace(r"\'", r"\\'"); // escape backslash if it's not escaping anything
+        repr.pop();
         if prefix {
-            format!("@{self}")
+            format!("@{}", repr.replace(' ', "\\s"))
         } else {
-            format!("{self}")
+            format!("{}", repr)
         }
     }
 }
@@ -918,17 +925,12 @@ impl DebugArrayValue for Boxed {
         let mut buffer = String::from(if prefix { "□" } else { "" });
         buffer.push_str(&dbg_value(
             &self.0,
-            Some(depth + if prefix { 1 } else { 0 }),
+            depth + if prefix { 1 } else { 0 },
             true,
         ));
         buffer
     }
     fn debug_separator() -> &'static str {
         "\n"
-    }
-}
-impl DebugArrayValue for Complex {
-    fn debug_string(&self, _depth: usize, _prefix: bool) -> String {
-        format!("ℂ{} {}", self.im, self.re)
     }
 }

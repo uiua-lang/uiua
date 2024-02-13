@@ -18,7 +18,6 @@ This version is not yet released. If you are reading this on the website, then t
   - This should make it easier to scope [`fill ⬚`](https://uiua.org/docs/fill) correctly
 - Add recursion via refering to a binding's name within its body
   - Deprecate [`this ↬`](https://uiua.org/docs/this) and [`recur ↫`](https://uiua.org/docs/recur), as they are no longer necessary
-- Inline functions are no longer required to be in a binding or modifier
 - Extend some math functions to work with characters
   - [`sign ±`](https://uiua.org/docs/sign) gets the case of a character
   - [`absolute value ⌵`](https://uiua.org/docs/absolute) uppercases a character

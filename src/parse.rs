@@ -21,6 +21,7 @@ pub enum ParseError {
     InvalidOutCount(String),
     AmpersandBindingName,
     ModifierImportName,
+    FunctionNotAllowed,
     SplitInModifier,
     UnsplitInModifier,
     LineTooLong(usize),
@@ -84,6 +85,13 @@ impl fmt::Display for ParseError {
             ParseError::ModifierImportName => {
                 write!(f, "Modifier names may not be used as import names")
             }
+            ParseError::FunctionNotAllowed => write!(
+                f,
+                "Inline functions are only allowed in modifiers \
+                or as the only item in a binding. \
+                If you want to visually separate this code, \
+                use spaces."
+            ),
             ParseError::SplitInModifier => write!(
                 f,
                 "Line splitting is not allowed between modifier arguments"
@@ -300,6 +308,10 @@ impl<'i> Parser<'i> {
             let lines = self.multiline_words();
             // Convert multiline words into multiple items
             if !lines.is_empty() {
+                // Validate words
+                for line in &lines {
+                    self.validate_words(line, false);
+                }
                 Item::Words(lines)
             } else if parse_scopes {
                 let start = self.try_exact(TripleMinus)?;
@@ -387,6 +399,17 @@ impl<'i> Parser<'i> {
         let signature = self.try_signature(Bar);
         // Words
         let words = self.try_words().unwrap_or_default();
+        // Validate words
+        if let (1, Some(Word::Func(func))) = (
+            words.iter().filter(|w| w.value.is_code()).count(),
+            &words.iter().find(|w| w.value.is_code()).map(|w| &w.value),
+        ) {
+            for line in &func.lines {
+                self.validate_words(line, false);
+            }
+        } else {
+            self.validate_words(&words, false);
+        }
         self.validate_binding_name(&name);
         Some(Binding {
             name,
@@ -1035,6 +1058,36 @@ impl<'i> Parser<'i> {
             self.errors
                 .push(self.expected([Expectation::Term, Expectation::Simple(ascii)]));
             self.prev_span().sp(false)
+        }
+    }
+    fn validate_words(&mut self, words: &[Sp<Word>], allow_func: bool) {
+        for word in words {
+            match &word.value {
+                Word::Strand(items) => self.validate_words(items, false),
+                Word::Array(arr) => {
+                    for line in &arr.lines {
+                        self.validate_words(line, false);
+                    }
+                }
+                Word::Func(func) => {
+                    if !allow_func && func.closed {
+                        self.errors
+                            .push(word.span.clone().sp(ParseError::FunctionNotAllowed));
+                    }
+                    for line in &func.lines {
+                        self.validate_words(line, false);
+                    }
+                }
+                Word::Switch(sw) => {
+                    for branch in &sw.branches {
+                        for line in &branch.value.lines {
+                            self.validate_words(line, false);
+                        }
+                    }
+                }
+                Word::Modified(m) => self.validate_words(&m.operands, true),
+                _ => {}
+            }
         }
     }
 }

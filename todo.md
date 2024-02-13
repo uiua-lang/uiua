@@ -5,7 +5,6 @@
   - Fix ident= parse bug
   - Spawn thread in pool?
   - Ensure proper label propogation on all primitives
-  - Refactor LSP to tie bindings to docs
   - Pad link from Gist
 - Changle how function inlining works
   - Prevent inlining of large functions

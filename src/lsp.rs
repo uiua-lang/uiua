@@ -48,8 +48,9 @@ pub struct BindingDocs {
 
 /// Get spans and their kinds from Uiua code
 pub fn spans(input: &str) -> (Vec<Sp<SpanKind>>, Inputs) {
-    let (items, _, _) = parse(input, InputSrc::Str(0), &mut Inputs::default());
-    let spanner = Spanner::new(input);
+    let src = InputSrc::Str(0);
+    let (items, _, _) = parse(input, src.clone(), &mut Inputs::default());
+    let spanner = Spanner::new(src, input);
     (spanner.items_spans(&items), spanner.asm.inputs)
 }
 
@@ -58,9 +59,9 @@ struct Spanner {
 }
 
 impl Spanner {
-    fn new(input: &str) -> Self {
+    fn new(src: InputSrc, input: &str) -> Self {
         let mut compiler = Compiler::new();
-        _ = compiler.load_str(input);
+        _ = compiler.load_str_src(input, src);
         Self { asm: compiler.asm }
     }
     fn inputs(&self) -> &Inputs {
@@ -307,7 +308,10 @@ pub use server::run_language_server;
 
 #[cfg(feature = "lsp")]
 mod server {
-    use std::{path::Path, sync::Arc};
+    use std::{
+        path::{Path, PathBuf},
+        sync::Arc,
+    };
 
     use dashmap::DashMap;
     use tower_lsp::{
@@ -333,9 +337,10 @@ mod server {
     }
 
     impl LspDoc {
-        fn new(input: String) -> Self {
-            let (items, _, _) = parse(&input, InputSrc::Str(0), &mut Inputs::default());
-            let spanner = Spanner::new(&input);
+        fn new(path: impl Into<Arc<Path>>, input: String) -> Self {
+            let src = InputSrc::File(path.into());
+            let (items, _, _) = parse(&input, src.clone(), &mut Inputs::default());
+            let spanner = Spanner::new(src, &input);
             let spans = spanner.items_spans(&items);
             let asm = spanner.asm;
             Self {
@@ -393,9 +398,7 @@ mod server {
     #[tower_lsp::async_trait]
     impl LanguageServer for Backend {
         async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
-            self.client
-                .log_message(MessageType::INFO, "Initializing Uiua language server")
-                .await;
+            self.debug("Initializing Uiua language server").await;
             // self.client
             //     .log_message(
             //         MessageType::INFO,
@@ -432,23 +435,21 @@ mod server {
         }
 
         async fn initialized(&self, _: InitializedParams) {
-            self.client
-                .log_message(MessageType::INFO, "Uiua language server initialized")
-                .await;
+            self.debug("Uiua language server initialized").await;
         }
 
         async fn did_open(&self, param: DidOpenTextDocumentParams) {
+            let path = uri_path(&param.text_document.uri);
             self.docs.insert(
                 param.text_document.uri,
-                LspDoc::new(param.text_document.text),
+                LspDoc::new(path, param.text_document.text),
             );
         }
 
         async fn did_change(&self, params: DidChangeTextDocumentParams) {
-            self.docs.insert(
-                params.text_document.uri,
-                LspDoc::new(params.content_changes[0].text.clone()),
-            );
+            let path = uri_path(&params.text_document.uri);
+            let doc = LspDoc::new(path, params.content_changes[0].text.clone());
+            self.docs.insert(params.text_document.uri, doc);
         }
 
         async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
@@ -533,10 +534,8 @@ mod server {
         }
 
         async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
-            let doc = if let Some(doc) = self
-                .docs
-                .get(&params.text_document_position.text_document.uri)
-            {
+            let doc_uri = &params.text_document_position.text_document.uri;
+            let doc = if let Some(doc) = self.docs.get(doc_uri) {
                 doc
             } else {
                 return Ok(None);
@@ -593,52 +592,61 @@ mod server {
                 })
                 .collect();
 
-            self.client
-                .log_message(MessageType::INFO, format!("Token: {}", token))
-                .await;
-
-            for binding in &doc.asm.bindings {
+            for binding in self.bindings_in_file(doc_uri, &uri_path(doc_uri)) {
                 let name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
-                self.client
-                    .log_message(MessageType::INFO, format!("Binding: {}", name))
-                    .await;
+
+                fn make_completion(
+                    name: String,
+                    span: &CodeSpan,
+                    binding: &BindingInfo,
+                ) -> CompletionItem {
+                    let kind = match &binding.global {
+                        Global::Const(_) => CompletionItemKind::CONSTANT,
+                        Global::Func(_) => CompletionItemKind::FUNCTION,
+                        Global::Sig(sig) if *sig == (0, 1) => CompletionItemKind::VALUE,
+                        Global::Sig(_) => CompletionItemKind::FUNCTION,
+                        Global::Module { .. } => CompletionItemKind::MODULE,
+                    };
+                    CompletionItem {
+                        label: name.clone(),
+                        kind: Some(kind),
+                        label_details: Some(CompletionItemLabelDetails {
+                            detail: binding.global.signature().map(|sig| sig.to_string()),
+                            ..Default::default()
+                        }),
+                        detail: binding.global.signature().map(|sig| sig.to_string()),
+                        documentation: binding.comment.as_ref().map(|c| {
+                            Documentation::MarkupContent(MarkupContent {
+                                kind: MarkupKind::Markdown,
+                                value: c.to_string(),
+                            })
+                        }),
+                        text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                            range: uiua_span_to_lsp(span),
+                            new_text: name,
+                        })),
+                        ..Default::default()
+                    }
+                }
+
+                if let Global::Module { module } = &binding.global {
+                    for binding in self.bindings_in_file(doc_uri, module) {
+                        let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
+                        if !item_name.starts_with(token) {
+                            continue;
+                        }
+                        completions.push(make_completion(
+                            format!("{name}~{item_name}"),
+                            &sp.span,
+                            &binding,
+                        ));
+                    }
+                }
+
                 if !name.starts_with(token) {
                     continue;
                 }
-                let binding_doc_uri = match &binding.span.src {
-                    InputSrc::Str(_) => params.text_document_position.text_document.uri.clone(),
-                    InputSrc::File(file) => path_to_uri(file)?,
-                };
-                if params.text_document_position.text_document.uri != binding_doc_uri {
-                    continue;
-                }
-                let kind = match &binding.global {
-                    Global::Const(_) => CompletionItemKind::CONSTANT,
-                    Global::Func(_) => CompletionItemKind::FUNCTION,
-                    Global::Sig(sig) if *sig == (0, 1) => CompletionItemKind::VALUE,
-                    Global::Sig(_) => CompletionItemKind::FUNCTION,
-                    Global::Module { .. } => CompletionItemKind::MODULE,
-                };
-                completions.push(CompletionItem {
-                    label: name.clone(),
-                    kind: Some(kind),
-                    label_details: Some(CompletionItemLabelDetails {
-                        detail: binding.global.signature().map(|sig| sig.to_string()),
-                        ..Default::default()
-                    }),
-                    detail: binding.global.signature().map(|sig| sig.to_string()),
-                    documentation: binding.comment.as_ref().map(|c| {
-                        Documentation::MarkupContent(MarkupContent {
-                            kind: MarkupKind::Markdown,
-                            value: c.to_string(),
-                        })
-                    }),
-                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                        range: uiua_span_to_lsp(&sp.span),
-                        new_text: name,
-                    })),
-                    ..Default::default()
-                });
+                completions.push(make_completion(name, &sp.span, &binding));
             }
 
             Ok(Some(CompletionResponse::Array(completions)))
@@ -860,12 +868,45 @@ mod server {
         }
     }
 
+    impl Backend {
+        fn bindings_in_file(
+            &self,
+            doc_uri: &Url,
+            path: &Path,
+        ) -> impl Iterator<Item = BindingInfo> + '_ {
+            let doc_uri = doc_uri.clone();
+            let canonical_path = path.canonicalize().ok();
+            self.docs.get(&doc_uri).into_iter().flat_map(move |doc| {
+                (doc.asm.bindings.iter())
+                    .filter(|binfo| {
+                        let path = match &binfo.span.src {
+                            InputSrc::File(file) => file.to_path_buf(),
+                            InputSrc::Str(_) => uri_path(&doc_uri),
+                        };
+                        path.canonicalize().ok() == canonical_path
+                    })
+                    .cloned()
+                    .collect::<Vec<_>>()
+            })
+        }
+        async fn debug(&self, message: impl Into<String>) {
+            self.client
+                .log_message(MessageType::INFO, message.into())
+                .await;
+        }
+    }
+
     fn path_to_uri(path: &Path) -> Result<Url> {
         Url::from_file_path(
             path.canonicalize()
                 .map_err(|e| Error::invalid_params(format!("Invalid file path: {}", e)))?,
         )
         .map_err(|_| Error::invalid_params("Invalid file path"))
+    }
+
+    fn uri_path(uri: &Url) -> PathBuf {
+        let path = uri.path().replace("/c%3A", "C:");
+        PathBuf::from(path)
     }
 
     fn lsp_pos_to_uiua(pos: Position) -> (usize, usize) {

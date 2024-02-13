@@ -153,7 +153,7 @@ pub use self::{
     lex::is_ident_char,
     lex::*,
     lsp::{spans, SpanKind},
-    parse::{parse, ParseError},
+    parse::{ident_modifier_args, parse, ParseError},
     primitive::*,
     run::*,
     shape::*,

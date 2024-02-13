@@ -17,29 +17,10 @@ pub enum Item {
     Words(Vec<Vec<Sp<Word>>>),
     /// A binding
     Binding(Binding),
+    /// An import
+    Import(Import),
     /// A test scope
     TestScope(Sp<Vec<Item>>),
-}
-
-impl Item {
-    /// Get the span of this item
-    pub fn span(&self) -> CodeSpan {
-        match self {
-            Item::TestScope(items) => items.span.clone(),
-            Item::Words(words) => {
-                let first = (words.iter().flatten().next())
-                    .expect("empty words")
-                    .span
-                    .clone();
-                let last = (words.iter().flatten().last())
-                    .expect("empty words")
-                    .span
-                    .clone();
-                first.merge(last)
-            }
-            Item::Binding(binding) => binding.span(),
-        }
-    }
 }
 
 /// A binding
@@ -66,6 +47,45 @@ impl Binding {
     }
 }
 
+/// An import
+#[derive(Debug, Clone)]
+pub struct Import {
+    /// The name given to the imported module
+    pub name: Option<Sp<Ident>>,
+    /// The span of the ~
+    pub tilde_span: CodeSpan,
+    /// The import path
+    pub path: Sp<String>,
+    /// The import lines
+    pub lines: Vec<Option<ImportLine>>,
+}
+
+#[derive(Debug, Clone)]
+/// A line of imported items
+pub struct ImportLine {
+    /// The span of the ~
+    pub tilde_span: CodeSpan,
+    /// The imported items
+    pub items: Vec<Sp<Ident>>,
+}
+
+impl Import {
+    /// The full span of the import
+    pub fn span(&self) -> CodeSpan {
+        let first = (self.name.as_ref())
+            .map(|n| n.span.clone())
+            .unwrap_or_else(|| self.path.span.clone());
+        let last = (self.items().last())
+            .map(|i| i.span.clone())
+            .unwrap_or_else(|| self.path.span.clone());
+        first.merge(last)
+    }
+    /// The imported items
+    pub fn items(&self) -> impl Iterator<Item = &Sp<Ident>> {
+        self.lines.iter().flatten().flat_map(|line| &line.items)
+    }
+}
+
 /// A word
 #[derive(Clone)]
 #[allow(missing_docs)]
@@ -77,6 +97,7 @@ pub enum Word {
     FormatString(Vec<String>),
     MultilineString(Vec<Sp<Vec<String>>>),
     Ident(Ident),
+    ModuleItem(ModuleItem),
     Strand(Vec<Sp<Word>>),
     Array(Arr),
     Func(Func),
@@ -101,6 +122,7 @@ impl PartialEq for Word {
             (Self::FormatString(a), Self::FormatString(b)) => a == b,
             (Self::MultilineString(a), Self::MultilineString(b)) => a == b,
             (Self::Ident(a), Self::Ident(b)) => a == b,
+            (Self::ModuleItem(a), Self::ModuleItem(b)) => a == b,
             (Self::Strand(a), Self::Strand(b)) => {
                 a.iter().map(|w| &w.value).eq(b.iter().map(|w| &w.value))
             }
@@ -114,15 +136,11 @@ impl PartialEq for Word {
                 .iter()
                 .flatten()
                 .map(|w| &w.value)),
-            (Self::Switch(a), Self::Switch(b)) => a
-                .branches
-                .iter()
+            (Self::Switch(a), Self::Switch(b)) => (a.branches.iter())
                 .flat_map(|br| &br.value.lines)
                 .flatten()
                 .map(|w| &w.value)
-                .eq(b
-                    .branches
-                    .iter()
+                .eq((b.branches.iter())
                     .flat_map(|br| &br.value.lines)
                     .flatten()
                     .map(|w| &w.value)),
@@ -178,6 +196,7 @@ impl fmt::Debug for Word {
                 Ok(())
             }
             Word::Ident(ident) => write!(f, "ident({ident})"),
+            Word::ModuleItem(item) => write!(f, "module_item({item})"),
             Word::Array(arr) => arr.fmt(f),
             Word::Strand(items) => write!(f, "strand({items:?})"),
             Word::Func(func) => func.fmt(f),
@@ -285,6 +304,8 @@ pub enum Modifier {
     Primitive(Primitive),
     /// A user-defined modifier
     Ident(Ident),
+    /// An imported modifier
+    ModuleItem(ModuleItem),
 }
 
 impl fmt::Debug for Modifier {
@@ -292,6 +313,7 @@ impl fmt::Debug for Modifier {
         match self {
             Modifier::Primitive(prim) => prim.fmt(f),
             Modifier::Ident(ident) => write!(f, "binding({ident})"),
+            Modifier::ModuleItem(item) => write!(f, "mod_module_item({item})"),
         }
     }
 }
@@ -301,6 +323,7 @@ impl fmt::Display for Modifier {
         match self {
             Modifier::Primitive(prim) => prim.format().fmt(f),
             Modifier::Ident(ident) => write!(f, "{ident}"),
+            Modifier::ModuleItem(item) => write!(f, "{item}"),
         }
     }
 }
@@ -311,6 +334,32 @@ impl Modifier {
         match self {
             Modifier::Primitive(prim) => prim.modifier_args().unwrap_or(0),
             Modifier::Ident(ident) => ident_modifier_args(ident),
+            Modifier::ModuleItem(item) => ident_modifier_args(&item.name.value),
         }
+    }
+}
+
+/// A reference to a module item
+#[derive(Debug, Clone)]
+pub struct ModuleItem {
+    /// The imported name of the module
+    pub module: Sp<Ident>,
+    /// The span of the ~
+    pub tilde_span: CodeSpan,
+    /// The name of the item
+    pub name: Sp<Ident>,
+}
+
+impl PartialEq for ModuleItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.module.value == other.module.value && self.name.value == other.name.value
+    }
+}
+
+impl Eq for ModuleItem {}
+
+impl fmt::Display for ModuleItem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}~{}", self.module.value, self.name.value)
     }
 }

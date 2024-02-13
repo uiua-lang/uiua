@@ -187,7 +187,7 @@ impl Default for Runtime {
             fill_stack: Vec::new(),
             locals_stack: Vec::new(),
             unpack_boxes: false,
-            backend: Arc::new(SafeSys),
+            backend: Arc::new(SafeSys::default()),
             time_instrs: false,
             last_time: 0.0,
             cli_arguments: Vec::new(),
@@ -209,7 +209,7 @@ impl Uiua {
     }
     /// Create a new Uiua runtime with no IO capabilities
     pub fn with_safe_sys() -> Self {
-        Self::with_backend(SafeSys)
+        Self::with_backend(SafeSys::default())
     }
     /// Create a new Uiua runtime with a custom IO backend
     pub fn with_backend(backend: impl IntoSysBackend) -> Self {

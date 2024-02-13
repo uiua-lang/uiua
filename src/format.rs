@@ -167,7 +167,7 @@ The following configuration options are available:
             paste! {
                 fn from_file(file_path: PathBuf) -> UiuaResult<Self> {
                     let asm = Compiler::new().print_diagnostics(true).load_file(file_path)?.finish();
-                    let mut env = Uiua::with_backend(SafeSys);
+                    let mut env = Uiua::with_backend(SafeSys::default());
                     env.run_asm(&asm)?;
                     let mut bindings = env.all_values_in_scope();
                     $(
@@ -226,7 +226,7 @@ The following configuration options are available:
                         $name: $default,
                     )*
                     inputs: Inputs::default(),
-                    backend: Arc::new(SafeSys),
+                    backend: Arc::new(SafeSys::default()),
                 }
             }
         }
@@ -238,7 +238,7 @@ The following configuration options are available:
                         $name: config.$name.unwrap_or($default),
                     )*
                     inputs: Inputs::default(),
-                    backend: Arc::new(SafeSys),
+                    backend: Arc::new(SafeSys::default()),
                 }
             }
         }

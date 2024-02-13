@@ -75,7 +75,7 @@ impl Default for Compiler {
             deprecated_prim_errors: HashSet::new(),
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
-            backend: Arc::new(SafeSys),
+            backend: Arc::new(SafeSys::default()),
         }
     }
 }

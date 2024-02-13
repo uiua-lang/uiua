@@ -2,6 +2,7 @@ use std::{
     any::Any,
     fmt,
     io::{stderr, stdin, Read, Write},
+    mem::take,
     path::Path,
     sync::{Arc, OnceLock},
     time::Duration,
@@ -781,14 +782,41 @@ impl fmt::Debug for dyn SysBackend {
     }
 }
 
-/// A safe backend with no IO
-pub struct SafeSys;
+/// A safe backend with no IO other than captured stdout and stderr
+#[derive(Default)]
+pub struct SafeSys {
+    stdout: Arc<Mutex<Vec<u8>>>,
+    stderr: Arc<Mutex<Vec<u8>>>,
+}
 impl SysBackend for SafeSys {
     fn any(&self) -> &dyn Any {
         self
     }
     fn any_mut(&mut self) -> &mut dyn Any {
         self
+    }
+    fn print_str_stdout(&self, s: &str) -> Result<(), String> {
+        self.stdout.lock().extend_from_slice(s.as_bytes());
+        Ok(())
+    }
+    fn print_str_stderr(&self, s: &str) -> Result<(), String> {
+        self.stderr.lock().extend_from_slice(s.as_bytes());
+        Ok(())
+    }
+}
+
+impl SafeSys {
+    /// Create a new safe system backend
+    pub fn new() -> Self {
+        Self::default()
+    }
+    /// Take the captured stdout
+    pub fn take_stdout(&self) -> Vec<u8> {
+        take(&mut *self.stdout.lock())
+    }
+    /// Take the captured stderr
+    pub fn take_stderr(&self) -> Vec<u8> {
+        take(&mut *self.stderr.lock())
     }
 }
 

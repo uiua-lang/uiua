@@ -2139,7 +2139,7 @@ primitive!(
     /// Append commas to whitespace for a more traditional notation:
     /// ex: # Experimental!
     ///   : -5↯2_2_3⇡12
-    ///   : ⍜⊜□⎏(⊂@,)∊," \n" repr # add commas
+    ///   : ⍜⊜□⍚(⊂@,)∊," \n" repr # add commas
     ///   : &p ⍜▽∵⋅@-=@¯.         # replace negate glyphs with minus signs
     (1, Repr, Misc, "repr"),
 );

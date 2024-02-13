@@ -161,25 +161,29 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Create a `range` array
     pub fn range(&self, env: &Uiua) -> UiuaResult<Self> {
-        let shape = &self.as_nats(
+        let ishape = self.as_ints(
             env,
-            "Range max should be a single natural number \
-            or a list of natural numbers",
+            "Range max should be a single integer \
+            or a list of integers",
         )?;
         if self.rank() == 0 {
-            return Ok((0..shape[0]).collect());
+            return Ok(if ishape[0] >= 0 {
+                (0..ishape[0]).map(|i| i as f64).collect()
+            } else {
+                (ishape[0]..0).map(|i| i as f64).rev().collect()
+            });
         }
-        if shape.is_empty() {
+        if ishape.is_empty() {
             return Ok(Array::<f64>::new(0, CowSlice::new()).into());
         }
-        let mut shape = Shape::from(shape.as_slice());
-        let data = range(&shape, env)?;
+        let mut shape = Shape::from_iter(ishape.iter().map(|d| d.unsigned_abs()));
+        let data = range(&ishape, env)?;
         shape.push(shape.len());
         Ok(Array::new(shape, data).into())
     }
 }
 
-fn range(shape: &[usize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
+fn range(shape: &[isize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
     if shape.is_empty() {
         return Ok(cowslice![0.0]);
     }
@@ -188,13 +192,13 @@ fn range(shape: &[usize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
     }
     let mut len = shape.len();
     for &item in shape {
-        let (new, overflow) = len.overflowing_mul(item);
+        let (new, overflow) = len.overflowing_mul(item.unsigned_abs());
         if overflow || new > 2usize.pow(30) / size_of::<f64>() {
             let len = shape.len() as f64 * shape.iter().map(|d| *d as f64).product::<f64>();
             return Err(env.error(format!(
                 "Attempting to make a range from shape {} would \
                 create an array with {} elements, which is too large",
-                FormatShape(shape),
+                FormatShape(&shape.iter().map(|d| d.unsigned_abs()).collect::<Vec<_>>()),
                 len
             )));
         }
@@ -202,27 +206,25 @@ fn range(shape: &[usize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
     }
     let mut data: EcoVec<f64> = eco_vec![0.0; len];
     let data_slice = data.make_mut();
-    let mut curr = vec![0; shape.len()];
-    let mut i = 0;
-    loop {
-        for d in &curr {
-            data_slice[i] = *d as f64;
-            i += 1;
-        }
-        let mut j = shape.len() - 1;
-        loop {
-            curr[j] += 1;
-            if curr[j] == shape[j] {
-                curr[j] = 0;
-                if j == 0 {
-                    return Ok(data.into());
-                }
-                j -= 1;
-            } else {
-                break;
-            }
+    let mut scan = shape
+        .iter()
+        .rev()
+        .scan(1, |acc, &d| {
+            let old = *acc;
+            *acc *= d.unsigned_abs();
+            Some(old)
+        })
+        .collect::<Vec<usize>>();
+    scan.reverse();
+    for i in 0..shape.len() * shape.iter().map(|d| d.unsigned_abs()).product::<usize>() {
+        let dim = i % shape.len();
+        let index = i / shape.len();
+        data_slice[i] = (index / scan[dim] % shape[dim].unsigned_abs()) as f64;
+        if shape[dim] < 0 {
+            data_slice[i] = -1.0 - data_slice[i];
         }
     }
+    Ok(data.into())
 }
 
 impl Value {

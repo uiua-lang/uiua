@@ -522,12 +522,20 @@ primitive!(
     /// The rank of the input must be `0` or `1`.
     /// ex: ⇡5
     /// ex: ⇡2_3
+    /// ex: ⇡[3]
     ///
     /// When creating ranges with upper bounds that are rank `1`, [pick]ing the generated range array from an array with the [shape] of the input will yield that array.
     /// ex:     [1_2_3 4_5_6]
     ///   :    △[1_2_3 4_5_6]
     ///   :   ⇡△[1_2_3 4_5_6]
     ///   : ⊡⇡△.[1_2_3 4_5_6]
+    ///
+    /// Taking the [range] of a negative number will yield a decreasing starting at `¯1`.
+    /// ex: ⇡¯5
+    /// [pick]ing from an array with the [range] of its [negate]d [shape] will reverse all elements.
+    /// ex:      [1_2_3 4_5_6]
+    ///   : ⊡⇡¯△ [1_2_3 4_5_6]
+    ///   :  ⍜♭⇌ [1_2_3 4_5_6]
     (1, Range, MonadicArray, ("range", '⇡')),
     /// Get the first row of an array
     ///

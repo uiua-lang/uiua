@@ -22,6 +22,7 @@ This version is not yet released. If you are reading this on the website, then t
   - [`sign ±`](https://uiua.org/docs/sign) gets the case of a character
   - [`absolute value ⌵`](https://uiua.org/docs/absolute) uppercases a character
   - [`negate ¯`](https://uiua.org/docs/negate) toggles the case of a character
+- [`range ⇡`](https://uiua.org/docs/range) can now be used with negative numbers
 - Inline functions are no longer required to be in a binding or modifier
   - This allows arbitrary code to be wrapped and marked with a signature
 - Add experimental [`inventory ⍚`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results

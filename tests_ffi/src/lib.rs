@@ -125,6 +125,33 @@ pub struct TwoPeople {
     pub b: Person,
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn two_people_new(a: Person, b: Person) -> TwoPeople {
+    TwoPeople { a, b }
+}
+
+#[repr(C)]
+pub struct TwoPeoplePtrs {
+    pub a: *const Person,
+    pub b: *const Person,
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn two_people_new_ptr(a: *const Person, b: *const Person) -> TwoPeoplePtrs {
+    TwoPeoplePtrs { a, b }
+}
+
+#[repr(C)]
+pub struct TwoInts {
+    pub a: *const c_int,
+    pub b: *const c_int,
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn two_ints_new(a: *const c_int, b: *const c_int) -> TwoInts {
+    TwoInts { a, b }
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

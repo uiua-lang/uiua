@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.9
-  - Fix cursor mapping with end-of-line comments
   - Color labels in pad
   - Pad link from Gist
 - Changle how function inlining works

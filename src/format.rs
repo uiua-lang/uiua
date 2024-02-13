@@ -1,7 +1,7 @@
 //! The Uiua formatter
 
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     env,
     fmt::Display,
     fs,
@@ -349,13 +349,13 @@ pub struct FormatOutput {
     /// The formatted code
     pub output: String,
     /// A map from the original code spans to the formatted code spans
-    pub glyph_map: BTreeMap<CodeSpan, (Loc, Loc)>,
+    pub glyph_map: Vec<(CodeSpan, (Loc, Loc))>,
 }
 
 impl FormatOutput {
     /// Map a cursor position in unfomatted code to glyph start/end positions in formatted code
     pub fn map_char_pos(&self, pos: u32) -> (u32, u32) {
-        let mut pairs = self.glyph_map.iter();
+        let mut pairs = self.glyph_map.iter().cloned();
         let Some((mut a_span, (mut a_start, mut a_end))) = pairs.next() else {
             return (pos, pos);
         };
@@ -376,8 +376,8 @@ impl FormatOutput {
                 return (b_start.char_pos, b_end.char_pos);
             }
             a_span = b_span;
-            a_start = *b_start;
-            a_end = *b_end;
+            a_start = b_start;
+            a_end = b_end;
         }
         (
             a_start.char_pos + (pos - a_span.end.char_pos),
@@ -411,7 +411,7 @@ fn format_impl(input: &str, src: InputSrc, config: &FormatConfig) -> UiuaResult<
             config,
             inputs: &inputs,
             output: String::new(),
-            glyph_map: BTreeMap::new(),
+            glyph_map: Vec::new(),
             end_of_line_comments: Vec::new(),
             prev_import_function: None,
             output_comments: None,
@@ -451,7 +451,7 @@ struct Formatter<'a> {
     config: &'a FormatConfig,
     inputs: &'a Inputs,
     output: String,
-    glyph_map: BTreeMap<CodeSpan, (Loc, Loc)>,
+    glyph_map: Vec<(CodeSpan, (Loc, Loc))>,
     end_of_line_comments: Vec<(usize, String)>,
     prev_import_function: Option<Ident>,
     output_comments: Option<HashMap<usize, Vec<Vec<Value>>>>,
@@ -503,7 +503,10 @@ impl<'a> Formatter<'a> {
             // Append comments to lines
             for (max, group) in groups {
                 for (line_number, comment) in group {
+                    // Add comment back to line
                     let line = &mut lines[line_number - 1];
+                    let start_byte_len = line.len();
+                    let start_char_len = line.chars().count();
                     let spaces = (max + 1).saturating_sub(line.chars().count());
                     line.push_str(&" ".repeat(spaces));
                     line.push('#');
@@ -514,6 +517,17 @@ impl<'a> Formatter<'a> {
                         line.push(' ');
                     }
                     line.push_str(&comment);
+                    // Update subsequent mappings
+                    let byte_len_diff = line.len() - start_byte_len;
+                    let char_len_diff = line.chars().count() - start_char_len;
+                    for (before, after) in self.glyph_map.iter_mut() {
+                        if before.start.line as usize > line_number {
+                            after.0.byte_pos += byte_len_diff as u32;
+                            after.0.char_pos += char_len_diff as u32;
+                            after.1.byte_pos += byte_len_diff as u32;
+                            after.1.char_pos += char_len_diff as u32;
+                        }
+                    }
                 }
             }
             let mut new_output = String::new();
@@ -1045,7 +1059,7 @@ impl<'a> Formatter<'a> {
         self.output.push_str(formatted);
         if &self.inputs.get(&span.src)[span.byte_range()] != formatted {
             let end = end_loc(&self.output);
-            self.glyph_map.insert(span.clone(), (start, end));
+            self.glyph_map.push((span.clone(), (start, end)));
         }
     }
     fn output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {

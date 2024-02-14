@@ -530,12 +530,12 @@ primitive!(
     ///   :   ⇡△[1_2_3 4_5_6]
     ///   : ⊡⇡△.[1_2_3 4_5_6]
     ///
-    /// Taking the [range] of a negative number will yield a decreasing starting at `¯1`.
+    /// Taking the [range] of a negative number will yield a decreasing sequence starting at `¯1`.
     /// ex: ⇡¯5
     /// [pick]ing from an array with the [range] of its [negate]d [shape] will reverse all elements.
-    /// ex:      [1_2_3 4_5_6]
-    ///   : ⊡⇡¯△ [1_2_3 4_5_6]
-    ///   :  ⍜♭⇌ [1_2_3 4_5_6]
+    /// ex:       [1_2_3 4_5_6]
+    ///   : ⊡⇡¯△. [1_2_3 4_5_6]
+    ///   :  ⍜♭⇌  [1_2_3 4_5_6]
     (1, Range, MonadicArray, ("range", '⇡')),
     /// Get the first row of an array
     ///

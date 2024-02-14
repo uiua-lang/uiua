@@ -288,8 +288,8 @@ primitive!(
     /// ex: ○+η 1
     /// You can get an arcsine function with [un].
     /// ex: °○ 1
-    /// You can get an arccosine function by [un]ing the cosine.
-    /// ex: °(○+η) 1
+    /// You can get an arccosine function by [add]ing [eta] to the arcsine.
+    /// ex: +η°○ 0 1
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
     /// ex: ÷∩○+η. 0
     (1, Sin, MonadicPervasive, ("sine", '○')),

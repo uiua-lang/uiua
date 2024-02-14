@@ -1,6 +1,7 @@
 //! The Uiua formatter
 
 use std::{
+    borrow::Cow,
     collections::HashMap,
     env,
     fmt::Display,
@@ -703,7 +704,30 @@ impl<'a> Formatter<'a> {
                 {
                     grid_str
                 } else {
-                    s.replace('`', "¯")
+                    fn format_frag(s: &str) -> Cow<str> {
+                        let mut s = Cow::Borrowed(s);
+                        if s.contains('`') {
+                            s = Cow::Owned(s.replace('`', "¯"));
+                        }
+                        for (name, glyph) in [("eta", "η"), ("pi", "π"), ("tau", "τ")] {
+                            if s.contains(name) {
+                                s = Cow::Owned(s.replace(name, glyph));
+                            }
+                        }
+                        for i in (3..="infinity".len()).rev() {
+                            if s.contains(&"infinity"[..i]) {
+                                s = Cow::Owned(s.replace(&"infinity"[..i], "∞"));
+                            }
+                        }
+                        s
+                    }
+                    if let Some((num, denom)) = s.split_once('/') {
+                        let num = format_frag(num);
+                        let denom = format_frag(denom);
+                        format!("{num}/{denom}")
+                    } else {
+                        format_frag(s).into_owned()
+                    }
                 };
                 if formatted.starts_with(|c: char| c.is_ascii_digit())
                     && self.output.ends_with(|c: char| c.is_ascii_digit())

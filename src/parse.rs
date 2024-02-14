@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, mem::replace};
+use std::{error::Error, f64::consts::PI, fmt, mem::replace};
 
 use ecow::EcoString;
 
@@ -902,8 +902,27 @@ impl<'i> Parser<'i> {
         let span = self.try_exact(Token::Number)?;
         let s = self.input[span.byte_range()].to_string();
         fn parse(s: &str) -> Option<f64> {
-            let parseable = s.replace(['`', '¯'], "-");
-            parseable.parse().ok()
+            let mut s = s.replace(['`', '¯'], "-");
+            // Replace pi multiples
+            for (name, glyph, mul) in [("eta", 'η', 0.5), ("pi", 'π', 1.0), ("tau", 'τ', 2.0)] {
+                if s.contains(glyph) {
+                    s = s.replace(glyph, &(PI * mul).to_string());
+                } else if s.contains(name) {
+                    s = s.replace(name, &(PI * mul).to_string());
+                }
+            }
+            // Replace infinity
+            if s.contains('∞') {
+                s = s.replace('∞', "inf");
+            } else {
+                for i in (3..="infinity".len()).rev() {
+                    if s.contains(&"infinity"[..i]) {
+                        s = s.replace(&"infinity"[..i], "inf");
+                        break;
+                    }
+                }
+            }
+            s.parse().ok()
         }
         let n: f64 = match parse(&s) {
             Some(n) => n,

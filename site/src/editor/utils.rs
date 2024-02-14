@@ -515,7 +515,7 @@ fn set_code_html(id: &str, code: &str) {
         // logging::log!("spanned: {:?} {:?}", kind, text);
         let color_class = match kind {
             SpanKind::Primitive(prim) => prim_class(prim),
-            SpanKind::Number => "number-literal-span",
+            SpanKind::Number => "number-literal",
             SpanKind::String => "string-literal-span",
             SpanKind::Comment => "comment-span",
             SpanKind::Strand => "strand-span",
@@ -547,14 +547,6 @@ fn set_code_html(id: &str, code: &str) {
                             escape_html(text)
                         )
                     }
-                    SpanKind::Ident(None) if text == "i" => r#"<span 
-                            class="code-span code-hover noadic-function" 
-                            data-title="i: The imaginary unit">i</span>"#
-                        .into(),
-                    SpanKind::Ident(None) if text == "e" => r#"<span 
-                            class="code-span code-hover noadic-function" 
-                            data-title="e: Euler's constant">e</span>"#
-                        .into(),
                     SpanKind::Ident(ref docs) => {
                         if let Some(docs) = docs {
                             let mut title = docs

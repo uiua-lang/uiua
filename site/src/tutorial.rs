@@ -689,7 +689,7 @@ fn TutorialTypes() -> impl IntoView {
         <h2 id="character-arithmetic">"Character Arithmetic"</h2>
         <p>"Characters and numbers exist in an "<a href="https://en.wikipedia.org/wiki/Affine_space">"affine space"</a>", the same as in "<a href="https://mlochbaum.github.io/BQN/doc/arithmetic.html#character-arithmetic">"BQN"</a>"."</p>
         {
-            let number = || view!(<span class="number-literal-span">"number"</span>);
+            let number = || view!(<span class="number-literal">"number"</span>);
             let character = || view!(<span class="string-literal-span">"character"</span>);
             view! {
                 <p>"You can "<Prim prim=Add/>" "{number}"s and "{character}"s to get another "{character}"."</p>

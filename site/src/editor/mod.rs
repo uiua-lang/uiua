@@ -764,7 +764,7 @@ pub fn Editor<'a>(
             Some(('(', ')')),
             "functions#inline-functions",
         ),
-        ("¯", "negative (`)", "number-literal-span", None, ""),
+        ("¯", "negative (`)", "number-literal", None, ""),
         (
             "@",
             "character",

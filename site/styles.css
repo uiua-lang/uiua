@@ -842,8 +842,8 @@ input[type=number] {
     }
 }
 
-.number-literal-span {
-    color: #f84;
+.number-literal {
+    color: #f85;
 }
 
 

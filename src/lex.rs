@@ -1,4 +1,5 @@
 use std::{
+    collections::VecDeque,
     error::Error,
     fmt,
     hash::Hash,
@@ -21,6 +22,7 @@ pub fn lex(
 ) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
     let src = inputs.add_src(src, input);
     Lexer {
+        input,
         input_segments: input.graphemes(true).collect(),
         loc: Loc {
             char_pos: 0,
@@ -29,7 +31,7 @@ pub fn lex(
             col: 1,
         },
         src,
-        tokens: Vec::new(),
+        tokens: VecDeque::new(),
         errors: Vec::new(),
     }
     .run()
@@ -529,10 +531,11 @@ impl From<Primitive> for Token {
 }
 
 struct Lexer<'a> {
+    input: &'a str,
     input_segments: Vec<&'a str>,
     loc: Loc,
     src: InputSrc,
-    tokens: Vec<Sp<Token>>,
+    tokens: VecDeque<Sp<Token>>,
     errors: Vec<Sp<LexError>>,
 }
 
@@ -593,7 +596,7 @@ impl<'a> Lexer<'a> {
         self.make_span(start, self.loc)
     }
     fn end(&mut self, token: impl Into<Token>, start: Loc) {
-        self.tokens.push(Sp {
+        self.tokens.push_back(Sp {
             value: token.into(),
             span: self.end_span(start),
         })
@@ -805,7 +808,7 @@ impl<'a> Lexer<'a> {
                                 byte_pos: start.byte_pos + frag.len() as u32,
                                 ..start
                             };
-                            self.tokens.push(Sp {
+                            self.tokens.push_back(Sp {
                                 value: Glyph(prim),
                                 span: self.make_span(start, end),
                             });
@@ -852,7 +855,64 @@ impl<'a> Lexer<'a> {
                 }
             };
         }
-        (self.tokens, self.errors)
+
+        // Combine some tokens
+
+        struct PostLexer<'a> {
+            tokens: VecDeque<Sp<Token>>,
+            input: &'a str,
+        }
+
+        impl<'a> PostLexer<'a> {
+            fn nth_is(&self, n: usize, f: impl Fn(&str) -> bool) -> bool {
+                self.tokens
+                    .get(n)
+                    .is_some_and(|t| f(&self.input[t.span.byte_range()]))
+            }
+            fn next_if(&mut self, f: impl Fn(&str) -> bool) -> Option<Sp<Token>> {
+                if self.nth_is(0, f) {
+                    self.next()
+                } else {
+                    None
+                }
+            }
+            fn next(&mut self) -> Option<Sp<Token>> {
+                self.tokens.pop_front()
+            }
+        }
+
+        let mut post = PostLexer {
+            tokens: self.tokens,
+            input: self.input,
+        };
+
+        let mut processed = Vec::new();
+        while let Some(token) = post.next() {
+            let s = &self.input[token.span.byte_range()];
+            processed.push(
+                if is_numbery(s) || (["`", "¯"].contains(&s) && post.nth_is(0, is_numbery)) {
+                    let mut span = token.span;
+                    if ["`", "¯"].contains(&s) {
+                        let n_tok = post.next().unwrap();
+                        span = span.merge(n_tok.span);
+                    }
+                    if post.nth_is(0, |s| s == "/")
+                        && post.nth_is(1, |s| {
+                            is_numbery(s) || (["`", "¯"].contains(&s) && post.nth_is(2, is_numbery))
+                        })
+                    {
+                        let _slash = post.next().unwrap();
+                        let _neg = post.next_if(|s| ["`", "¯"].contains(&s));
+                        span = span.merge(post.next().unwrap().span);
+                    }
+                    span.sp(Number)
+                } else {
+                    token
+                },
+            );
+        }
+
+        (processed, self.errors)
     }
     fn number(&mut self, init: &str) -> bool {
         // Whole part
@@ -868,7 +928,6 @@ impl<'a> Lexer<'a> {
         }
         // Fractional part
         let before_dot = self.loc;
-        let mut fractional = false;
         if self.next_char_exact(".") {
             let mut has_decimal = false;
             while self
@@ -880,23 +939,10 @@ impl<'a> Lexer<'a> {
             if !has_decimal {
                 self.loc = before_dot;
             }
-        } else if self.next_char_exact("/") {
-            let mut has_fraction = false;
-            while self
-                .next_char_if(|c| c.chars().all(|c| c.is_ascii_digit()))
-                .is_some()
-            {
-                has_fraction = true;
-            }
-            if has_fraction {
-                fractional = true;
-            } else {
-                self.loc = before_dot;
-            }
         }
         // Exponent
         let loc_before_e = self.loc;
-        if !fractional && self.next_char_if(|c| c == "e" || c == "E").is_some() {
+        if self.next_char_if(|c| c == "e" || c == "E").is_some() {
             self.next_char_if(|c| c == "-" || c == "`" || c == "¯");
             let mut got_digit = false;
             while self
@@ -997,6 +1043,28 @@ impl<'a> Lexer<'a> {
         }
         string
     }
+}
+
+fn is_numbery(mut s: &str) -> bool {
+    if s.starts_with(['`', '¯']) {
+        let c_len = s.chars().next().unwrap().len_utf8();
+        s = &s[c_len..];
+    }
+    if s.is_empty() {
+        return false;
+    }
+    s.chars().all(|c| c.is_ascii_digit())
+        || [
+            Primitive::Eta,
+            Primitive::Pi,
+            Primitive::Tau,
+            Primitive::Infinity,
+        ]
+        .iter()
+        .any(|p| {
+            p.name() == s
+                || s.chars().count() == 1 && p.glyph().unwrap() == s.chars().next().unwrap()
+        })
 }
 
 fn parse_format_fragments(s: &str) -> Vec<String> {

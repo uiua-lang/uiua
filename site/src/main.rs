@@ -372,6 +372,7 @@ fn prim_class(prim: Primitive) -> &'static str {
         prim if prim.class() == PrimClass::Stack && prim.modifier_args().is_none() => {
             code_font!("stack-function")
         }
+        prim if prim.class() == PrimClass::Constant => code_font!("number-literal"),
         prim => {
             if let Some(m) = prim.modifier_args() {
                 match m {

@@ -1679,7 +1679,9 @@ mod tests {
                 .chain(Some(Primitive::Identity)),
         );
         let noadic_functions = gen_group(Primitive::non_deprecated().filter(|p| {
-            p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(0)
+            ![PrimClass::Stack, PrimClass::Constant].contains(&p.class())
+                && p.modifier_args().is_none()
+                && p.args() == Some(0)
         }));
         let monadic_functions = gen_group(Primitive::non_deprecated().filter(|p| {
             ![PrimClass::Stack, PrimClass::Planet].contains(&p.class())
@@ -1799,7 +1801,7 @@ mod tests {
         }},
 		"numbers": {{
 			"name": "constant.numeric.uiua",
-			"match": "[`¯]?\\d+([./]\\d+)?(e[+-]?\\d+)?"
+			"match": "[`¯]?(\\d+|eta|pi|tau|inf(i(n(i(t(y)?)?)?)?)?)([./]\\d+)?(e[+-]?\\d+)?"
 		}},
 		"strand": {{
 			"name": "comment.line",

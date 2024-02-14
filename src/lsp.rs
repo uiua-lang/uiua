@@ -6,7 +6,7 @@ use std::{slice, sync::Arc};
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
-    ast::{Item, Modifier, ModuleItem, Word},
+    ast::{Item, Modifier, Ref, Word},
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
     Assembly, BindingInfo, Compiler, Global, InputSrc, Inputs, Primitive, SafeSys, Signature,
@@ -189,11 +189,7 @@ impl Spanner {
                 Word::MultilineString(lines) => {
                     spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
                 }
-                Word::Ident(_) => {
-                    let binding_docs = self.reference_docs(&word.span);
-                    spans.push(word.span.clone().sp(SpanKind::Ident(binding_docs)))
-                }
-                Word::ModuleItem(item) => spans.extend(self.module_item_spans(item)),
+                Word::Ref(r) => spans.extend(self.ref_spans(r)),
                 Word::Strand(items) => {
                     for (i, word) in items.iter().enumerate() {
                         let item_spans = self.words_spans(slice::from_ref(word));
@@ -277,11 +273,7 @@ impl Spanner {
                         Modifier::Primitive(p) => {
                             spans.push(modifier_span.clone().sp(SpanKind::Primitive(*p)))
                         }
-                        Modifier::Ident(_) => {
-                            let binding_docs = self.reference_docs(modifier_span);
-                            spans.push(modifier_span.clone().sp(SpanKind::Ident(binding_docs)));
-                        }
-                        Modifier::ModuleItem(item) => spans.extend(self.module_item_spans(item)),
+                        Modifier::Ref(r) => spans.extend(self.ref_spans(r)),
                     }
                     spans.extend(self.words_spans(&m.operands));
                 }
@@ -297,13 +289,15 @@ impl Spanner {
         spans.retain(|sp| !sp.span.as_str(self.inputs(), str::is_empty));
         spans
     }
-    fn module_item_spans(&self, item: &ModuleItem) -> Vec<Sp<SpanKind>> {
+    fn ref_spans(&self, r: &Ref) -> Vec<Sp<SpanKind>> {
         let mut spans = Vec::new();
-        let module_docs = self.reference_docs(&item.module.span);
-        let name_docs = self.reference_docs(&item.name.span);
-        spans.push(item.module.span.clone().sp(SpanKind::Ident(module_docs)));
-        spans.push(item.tilde_span.clone().sp(SpanKind::Delimiter));
-        spans.push(item.name.span.clone().sp(SpanKind::Ident(name_docs)));
+        for comp in &r.path {
+            let module_docs = self.reference_docs(&comp.module.span);
+            spans.push(comp.module.span.clone().sp(SpanKind::Ident(module_docs)));
+            spans.push(comp.tilde_span.clone().sp(SpanKind::Delimiter));
+        }
+        let name_docs = self.reference_docs(&r.name.span);
+        spans.push(r.name.span.clone().sp(SpanKind::Ident(name_docs)));
         spans
     }
 }

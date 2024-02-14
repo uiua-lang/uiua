@@ -565,18 +565,13 @@ impl<'a> Formatter<'a> {
                     {
                         self.prev_import_function = Some(binding.name.value.clone());
                     }
-                    Some(Word::Ident(ident))
-                        if self.prev_import_function.as_ref() == Some(ident) =>
-                    {
-                        for _ in 0..self.config.multiline_indent {
-                            self.output.push(' ');
-                        }
-                    }
-                    Some(Word::ModuleItem(item))
-                        if self.prev_import_function.as_ref() == Some(&item.module.value) =>
-                    {
-                        for _ in 0..self.config.multiline_indent {
-                            self.output.push(' ');
+                    Some(Word::Ref(r)) => {
+                        if r.root_module() == self.prev_import_function.as_ref() {
+                            for _ in 0..self.config.multiline_indent {
+                                self.output.push(' ');
+                            }
+                        } else {
+                            self.prev_import_function = None;
                         }
                     }
                     _ => self.prev_import_function = None,
@@ -685,10 +680,12 @@ impl<'a> Formatter<'a> {
             self.output.push(' ');
         }
     }
-    fn format_module_item(&mut self, item: &ModuleItem) {
-        self.push(&item.module.span, &item.module.value);
-        self.output.push('~');
-        self.push(&item.name.span, &item.name.value);
+    fn format_ref(&mut self, r: &Ref) {
+        for comp in &r.path {
+            self.push(&comp.module.span, &comp.module.value);
+            self.push(&comp.tilde_span, "~");
+        }
+        self.push(&r.name.span, &r.name.value);
     }
     fn format_words(&mut self, words: &[Sp<Word>], trim_end: bool, depth: usize) {
         for word in trim_spaces(words, trim_end) {
@@ -767,13 +764,12 @@ impl<'a> Formatter<'a> {
                         .push_str(&self.inputs.get(&line.span.src)[line.span.byte_range()]);
                 }
             }
-            Word::Ident(ident) => {
+            Word::Ref(r) => {
                 if self.output.chars().next_back().is_some_and(is_ident_char) {
                     self.output.push(' ');
                 }
-                self.output.push_str(ident)
+                self.format_ref(r);
             }
-            Word::ModuleItem(item) => self.format_module_item(item),
             Word::Strand(items) => {
                 for (i, item) in items.iter().enumerate() {
                     if i > 0 {
@@ -873,8 +869,7 @@ impl<'a> Formatter<'a> {
             Word::Modified(m) => {
                 match &m.modifier.value {
                     Modifier::Primitive(prim) => self.push(&m.modifier.span, &prim.to_string()),
-                    Modifier::Ident(ident) => self.push(&m.modifier.span, ident),
-                    Modifier::ModuleItem(item) => self.format_module_item(item),
+                    Modifier::Ref(r) => self.format_ref(r),
                 }
                 self.format_words(&m.operands, true, depth);
             }
@@ -1114,8 +1109,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::String(_) => false,
         Word::FormatString(_) => false,
         Word::MultilineString(_) => true,
-        Word::Ident(_) => false,
-        Word::ModuleItem(_) => false,
+        Word::Ref(_) => false,
         Word::Strand(_) => false,
         Word::Array(arr) => {
             arr.lines.len() > 1

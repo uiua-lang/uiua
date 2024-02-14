@@ -479,32 +479,24 @@ impl<'i> Parser<'i> {
         let s: Ident = self.input[span.byte_range()].into();
         Some(span.sp(s))
     }
-    fn try_modifier_ident(&mut self) -> Option<Sp<Ident>> {
-        let start = self.index;
-        let ident = self.try_ident()?;
-        if ident_modifier_args(&ident.value) == 0 {
-            self.index = start;
-            return None;
+    fn try_ref(&mut self) -> Option<Sp<Ref>> {
+        let mut checkpoint = self.index;
+        let mut name = self.try_ident()?;
+        let start_span = name.span.clone();
+        let mut path = Vec::new();
+        while let Some(tilde_span) = self.try_exact(Tilde) {
+            let Some(next) = self.try_ident() else {
+                self.index = checkpoint;
+                break;
+            };
+            checkpoint = self.index;
+            path.push(RefComponent {
+                module: name,
+                tilde_span,
+            });
+            name = next;
         }
-        Some(ident)
-    }
-    fn try_module_item(&mut self) -> Option<Sp<ModuleItem>> {
-        let start = self.index;
-        let module = self.try_ident()?;
-        let Some(tilde_span) = self.try_exact(Tilde) else {
-            self.index = start;
-            return None;
-        };
-        let Some(name) = self.try_ident() else {
-            self.index = start;
-            return None;
-        };
-        let span = module.span.clone().merge(name.span.clone());
-        Some(span.sp(ModuleItem {
-            module,
-            tilde_span,
-            name,
-        }))
+        Some(start_span.merge(name.span.clone()).sp(Ref { name, path }))
     }
     fn try_signature(&mut self, initial_token: AsciiToken) -> Option<Sp<Signature>> {
         let start = self.try_exact(initial_token)?;
@@ -696,15 +688,13 @@ impl<'i> Parser<'i> {
                     .map(|span| span.sp(prim))
             }) {
             (Modifier::Primitive(prim.value), prim.span)
-        } else if let Some(ident) = self.try_modifier_ident() {
-            (Modifier::Ident(ident.value), ident.span)
         } else {
             let term = self.try_term()?;
-            if let Word::ModuleItem(item) = term.value {
-                if ident_modifier_args(&item.name.value) == 0 {
-                    return Some(term.span.sp(Word::ModuleItem(item)));
+            if let Word::Ref(item) = term.value {
+                if item.modifier_args() == 0 {
+                    return Some(term.span.sp(Word::Ref(item)));
                 }
-                (Modifier::ModuleItem(item), term.span)
+                (Modifier::Ref(item), term.span)
             } else {
                 return Some(term);
             }
@@ -814,10 +804,8 @@ impl<'i> Parser<'i> {
     fn try_term(&mut self) -> Option<Sp<Word>> {
         Some(if let Some(prim) = self.try_prim() {
             prim.map(Word::Primitive)
-        } else if let Some(item) = self.try_module_item() {
-            item.map(Word::ModuleItem)
-        } else if let Some(ident) = self.try_ident() {
-            ident.map(Word::Ident)
+        } else if let Some(refer) = self.try_ref() {
+            refer.map(Word::Ref)
         } else if let Some(sn) = self.try_num() {
             sn.map(|(s, n)| Word::Number(s, n))
         } else if let Some(c) = self.next_token_map(Token::as_char) {

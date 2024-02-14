@@ -96,8 +96,7 @@ pub enum Word {
     Label(String),
     FormatString(Vec<String>),
     MultilineString(Vec<Sp<Vec<String>>>),
-    Ident(Ident),
-    ModuleItem(ModuleItem),
+    Ref(Ref),
     Strand(Vec<Sp<Word>>),
     Array(Arr),
     Func(Func),
@@ -121,8 +120,7 @@ impl PartialEq for Word {
             (Self::Label(a), Self::Label(b)) => a == b,
             (Self::FormatString(a), Self::FormatString(b)) => a == b,
             (Self::MultilineString(a), Self::MultilineString(b)) => a == b,
-            (Self::Ident(a), Self::Ident(b)) => a == b,
-            (Self::ModuleItem(a), Self::ModuleItem(b)) => a == b,
+            (Self::Ref(a), Self::Ref(b)) => a == b,
             (Self::Strand(a), Self::Strand(b)) => {
                 a.iter().map(|w| &w.value).eq(b.iter().map(|w| &w.value))
             }
@@ -195,8 +193,7 @@ impl fmt::Debug for Word {
                 }
                 Ok(())
             }
-            Word::Ident(ident) => write!(f, "ident({ident})"),
-            Word::ModuleItem(item) => write!(f, "module_item({item})"),
+            Word::Ref(ident) => write!(f, "ref({ident})"),
             Word::Array(arr) => arr.fmt(f),
             Word::Strand(items) => write!(f, "strand({items:?})"),
             Word::Func(func) => func.fmt(f),
@@ -210,6 +207,65 @@ impl fmt::Debug for Word {
             Word::UnbreakLine => write!(f, "''"),
             Word::OutputComment { i, n, .. } => write!(f, "output_comment({i}/{n})"),
         }
+    }
+}
+
+/// A refered-to item
+#[derive(Clone)]
+pub struct Ref {
+    /// The module path of the item
+    pub path: Vec<RefComponent>,
+    /// The name of the item
+    pub name: Sp<Ident>,
+}
+
+/// A component of a reference
+#[derive(Clone)]
+pub struct RefComponent {
+    /// The name of the module
+    pub module: Sp<Ident>,
+    /// The span of the ~
+    pub tilde_span: CodeSpan,
+}
+
+impl Ref {
+    /// Get the number of modifier arguments this reference's name implies
+    pub fn modifier_args(&self) -> usize {
+        ident_modifier_args(&self.name.value)
+    }
+    /// Get the root module of this reference
+    pub fn root_module(&self) -> Option<&Ident> {
+        self.path.first().map(|c| &c.module.value)
+    }
+}
+
+impl PartialEq for Ref {
+    fn eq(&self, other: &Self) -> bool {
+        self.path
+            .iter()
+            .map(|c| &c.module.value)
+            .eq(other.path.iter().map(|c| &c.module.value))
+            && self.name.value == other.name.value
+    }
+}
+
+impl Eq for Ref {}
+
+impl fmt::Debug for Ref {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for comp in &self.path {
+            write!(f, "{}~", comp.module.value)?;
+        }
+        write!(f, "{}", self.name.value)
+    }
+}
+
+impl fmt::Display for Ref {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for comp in &self.path {
+            write!(f, "{}~", comp.module.value)?;
+        }
+        write!(f, "{}", self.name.value)
     }
 }
 
@@ -303,17 +359,14 @@ pub enum Modifier {
     /// A primitive modifier
     Primitive(Primitive),
     /// A user-defined modifier
-    Ident(Ident),
-    /// An imported modifier
-    ModuleItem(ModuleItem),
+    Ref(Ref),
 }
 
 impl fmt::Debug for Modifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Modifier::Primitive(prim) => prim.fmt(f),
-            Modifier::Ident(ident) => write!(f, "binding({ident})"),
-            Modifier::ModuleItem(item) => write!(f, "mod_module_item({item})"),
+            Modifier::Ref(refer) => write!(f, "ref({refer:?})"),
         }
     }
 }
@@ -322,8 +375,7 @@ impl fmt::Display for Modifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Modifier::Primitive(prim) => prim.format().fmt(f),
-            Modifier::Ident(ident) => write!(f, "{ident}"),
-            Modifier::ModuleItem(item) => write!(f, "{item}"),
+            Modifier::Ref(refer) => write!(f, "{refer}"),
         }
     }
 }
@@ -333,33 +385,7 @@ impl Modifier {
     pub fn args(&self) -> usize {
         match self {
             Modifier::Primitive(prim) => prim.modifier_args().unwrap_or(0),
-            Modifier::Ident(ident) => ident_modifier_args(ident),
-            Modifier::ModuleItem(item) => ident_modifier_args(&item.name.value),
+            Modifier::Ref(refer) => refer.modifier_args(),
         }
-    }
-}
-
-/// A reference to a module item
-#[derive(Debug, Clone)]
-pub struct ModuleItem {
-    /// The imported name of the module
-    pub module: Sp<Ident>,
-    /// The span of the ~
-    pub tilde_span: CodeSpan,
-    /// The name of the item
-    pub name: Sp<Ident>,
-}
-
-impl PartialEq for ModuleItem {
-    fn eq(&self, other: &Self) -> bool {
-        self.module.value == other.module.value && self.name.value == other.name.value
-    }
-}
-
-impl Eq for ModuleItem {}
-
-impl fmt::Display for ModuleItem {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}~{}", self.module.value, self.name.value)
     }
 }

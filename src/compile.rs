@@ -468,32 +468,30 @@ code:
         Function::new(id, sig, FuncSlice { start, len })
     }
     fn binding(&mut self, binding: Binding, comment: Option<Arc<str>>) -> UiuaResult {
-        let name = binding.name.value;
-        let span = &binding.name.span;
-
         // Alias re-bound imports
         if binding.words.iter().filter(|w| w.value.is_code()).count() == 1 {
-            if let Some(item) = binding.words.iter().find_map(|w| match &w.value {
-                Word::ModuleItem(item) => Some(item),
+            if let Some(r) = binding.words.iter().find_map(|w| match &w.value {
+                Word::Ref(r) => Some(r),
                 _ => None,
             }) {
-                if let Some(module_index) = self.scope.names.get(&item.module.value).copied() {
-                    if let Global::Module { module } = &self.asm.bindings[module_index].global {
-                        if let Some(name_index) = self.imports[module]
-                            .names
-                            .get(item.name.value.as_str())
-                            .copied()
-                        {
-                            self.scope.names.insert(name.clone(), name_index);
-                            (self.asm.global_references).insert(item.module.clone(), module_index);
-                            (self.asm.global_references).insert(item.name.clone(), name_index);
-                            (self.asm.global_references).insert(span.clone().sp(name), name_index);
-                            return Ok(());
-                        }
+                if let Ok((path_indices, index)) = self.ref_index(r) {
+                    self.asm
+                        .global_references
+                        .insert(binding.name.clone(), index);
+                    for (index, comp) in path_indices.into_iter().zip(&r.path) {
+                        self.asm
+                            .global_references
+                            .insert(comp.module.clone(), index);
                     }
+                    self.asm.global_references.insert(r.name.clone(), index);
+                    self.scope.names.insert(binding.name.value, index);
+                    return Ok(());
                 }
             }
         }
+
+        let name = binding.name.value;
+        let span = &binding.name.span;
 
         let placeholder_count = count_placeholders(&binding.words);
 
@@ -875,35 +873,38 @@ code:
             .peekable();
         while let Some(word) = words.next() {
             if let Some(next) = words.peek() {
-                // Handle imports
-                if let Word::Ident(name) = &next.value {
-                    if let Some(index) = self.scope.names.get(name) {
-                        if let Global::Module { module } = &self.asm.bindings[*index].global {
-                            if let Word::String(item_name) = &word.value {
-                                let index = self.imports[module]
-                                    .names
-                                    .get(item_name.as_str())
-                                    .copied()
-                                    .ok_or_else(|| {
-                                        self.fatal_error(
-                                            next.span.clone(),
-                                            format!(
-                                                "Item `{item_name}` not found in module `{}`",
-                                                module.display()
-                                            ),
-                                        )
-                                    })?;
-                                self.global_index(index, next.span.clone(), false);
-                                words.next();
-                                continue;
-                            } else {
-                                self.add_error(
-                                    next.span.clone(),
-                                    format!(
-                                        "Expected a string after `{name}` \
-                                        to specify an item to import",
-                                    ),
-                                );
+                // Handle legacy imports
+                if let Word::Ref(r) = &next.value {
+                    if r.path.is_empty() {
+                        if let Some(index) = self.scope.names.get(&r.name.value) {
+                            if let Global::Module { module } = &self.asm.bindings[*index].global {
+                                if let Word::String(item_name) = &word.value {
+                                    let index = self.imports[module]
+                                        .names
+                                        .get(item_name.as_str())
+                                        .copied()
+                                        .ok_or_else(|| {
+                                            self.fatal_error(
+                                                next.span.clone(),
+                                                format!(
+                                                    "Item `{item_name}` not found in module `{}`",
+                                                    module.display()
+                                                ),
+                                            )
+                                        })?;
+                                    self.global_index(index, next.span.clone(), false);
+                                    words.next();
+                                    continue;
+                                } else {
+                                    self.add_error(
+                                        next.span.clone(),
+                                        format!(
+                                            "Expected a string after `{}` \
+                                            to specify an item to import",
+                                            r.name.value
+                                        ),
+                                    );
+                                }
                             }
                         }
                     }
@@ -1048,8 +1049,7 @@ code:
                     self.push_instr(Instr::PushFunc(f));
                 }
             }
-            Word::Ident(ident) => self.ident(ident, word.span, call)?,
-            Word::ModuleItem(item) => self.module_item(item, call)?,
+            Word::Ref(r) => self.reference(r, call)?,
             Word::Strand(items) => {
                 // Compile individual items
                 let op_instrs = items
@@ -1253,54 +1253,116 @@ code:
         }
         Ok(())
     }
-    fn module_item(&mut self, item: ModuleItem, call: bool) -> UiuaResult {
-        let Some(module_index) = self.scope.names.get(&item.module.value) else {
-            return Err(self.fatal_error(
-                item.module.span.clone(),
-                format!("Unknown import `{}`", item.module.value),
-            ));
-        };
-        self.asm
-            .global_references
-            .insert(item.module.clone(), *module_index);
-        let global = &self.asm.bindings[*module_index].global;
-        let module = match global {
-            Global::Module { module } => module,
-            Global::Func(_) => {
-                return Err(self.fatal_error(
-                    item.module.span.clone(),
-                    format!("`{}` is a function, not a module", item.module.value),
+    fn ref_index(&self, r: &Ref) -> UiuaResult<(Vec<usize>, usize)> {
+        let mut path_indices = Vec::new();
+        if let Some(first) = r.path.first() {
+            let module_index = self
+                .scope
+                .names
+                .get(&first.module.value)
+                .copied()
+                .ok_or_else(|| {
+                    self.fatal_error(
+                        first.module.span.clone(),
+                        format!("Unknown import `{}`", first.module.value),
+                    )
+                })?;
+            path_indices.push(module_index);
+            let global = &self.asm.bindings[module_index].global;
+            let mut module = match global {
+                Global::Module { module } => module,
+                Global::Func(_) => {
+                    return Err(self.fatal_error(
+                        first.module.span.clone(),
+                        format!("`{}` is a function, not a module", first.module.value),
+                    ))
+                }
+                Global::Const(_) => {
+                    return Err(self.fatal_error(
+                        first.module.span.clone(),
+                        format!("`{}` is a constant, not a module", first.module.value),
+                    ))
+                }
+                Global::Sig(_) => {
+                    return Err(self.fatal_error(
+                        first.module.span.clone(),
+                        format!("`{}` is  not a module", first.module.value),
+                    ))
+                }
+            };
+            for comp in r.path.iter().skip(1) {
+                let submod_index = self.imports[module]
+                    .names
+                    .get(&comp.module.value)
+                    .copied()
+                    .ok_or_else(|| {
+                        self.fatal_error(
+                            comp.module.span.clone(),
+                            format!(
+                                "Module `{}` not found in module `{}`",
+                                comp.module.value,
+                                module.display()
+                            ),
+                        )
+                    })?;
+                path_indices.push(submod_index);
+                let global = &self.asm.bindings[submod_index].global;
+                module = match global {
+                    Global::Module { module } => module,
+                    Global::Func(_) => {
+                        return Err(self.fatal_error(
+                            comp.module.span.clone(),
+                            format!("`{}` is a function, not a module", comp.module.value),
+                        ))
+                    }
+                    Global::Const(_) => {
+                        return Err(self.fatal_error(
+                            comp.module.span.clone(),
+                            format!("`{}` is a constant, not a module", comp.module.value),
+                        ))
+                    }
+                    Global::Sig(_) => {
+                        return Err(self.fatal_error(
+                            comp.module.span.clone(),
+                            format!("`{}` is  not a module", comp.module.value),
+                        ))
+                    }
+                };
+            }
+            if let Some(index) = self.imports[module].names.get(&r.name.value).copied() {
+                Ok((path_indices, index))
+            } else {
+                Err(self.fatal_error(
+                    r.name.span.clone(),
+                    format!(
+                        "Item `{}` not found in module `{}`",
+                        r.name.value,
+                        module.display()
+                    ),
                 ))
             }
-            Global::Const(_) => {
-                return Err(self.fatal_error(
-                    item.module.span.clone(),
-                    format!("`{}` is a constant, not a module", item.module.value),
-                ))
-            }
-            Global::Sig(_) => {
-                return Err(self.fatal_error(
-                    item.module.span.clone(),
-                    format!("`{}` is  not a module", item.module.value),
-                ))
-            }
-        };
-        if let Some(item_index) = self.imports[module].names.get(&item.name.value) {
-            self.asm
-                .global_references
-                .insert(item.name.clone(), *item_index);
-            self.global_index(*item_index, item.name.span.clone(), call);
+        } else if let Some(index) = self.scope.names.get(&r.name.value) {
+            Ok((Vec::new(), *index))
         } else {
-            return Err(self.fatal_error(
-                item.name.span.clone(),
-                format!(
-                    "Item `{}` not found in module `{}`",
-                    item.name.value,
-                    module.display()
-                ),
-            ));
+            Err(self.fatal_error(
+                r.name.span.clone(),
+                format!("Unknown identifier `{}`", r.name.value),
+            ))
         }
-        Ok(())
+    }
+    fn reference(&mut self, r: Ref, call: bool) -> UiuaResult {
+        if r.path.is_empty() {
+            self.ident(r.name.value, r.name.span, call)
+        } else {
+            let (path_indices, index) = self.ref_index(&r)?;
+            for (index, comp) in path_indices.into_iter().zip(&r.path) {
+                self.asm
+                    .global_references
+                    .insert(comp.module.clone(), index);
+            }
+            self.global_index(index, r.name.span, call);
+            Ok(())
+        }
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
         if let Some(curr) = self
@@ -1413,7 +1475,7 @@ code:
             // Inline single ident
             if let Some(
                 word @ Sp {
-                    value: Word::Ident(_),
+                    value: Word::Ref(_),
                     ..
                 },
             ) = func.lines.iter().flatten().find(|w| w.value.is_code())
@@ -1741,8 +1803,7 @@ code:
             self.push_all_instrs(instrs);
             match modified.modifier.value {
                 Modifier::Primitive(prim) => self.primitive(prim, modified.modifier.span, true),
-                Modifier::Ident(ident) => self.ident(ident, modified.modifier.span, true)?,
-                Modifier::ModuleItem(item) => self.module_item(item, true)?,
+                Modifier::Ref(r) => self.reference(r, true)?,
             }
         } else {
             self.new_functions.push(EcoVec::new());
@@ -1751,10 +1812,7 @@ code:
                 Modifier::Primitive(prim) => {
                     self.primitive(prim, modified.modifier.span.clone(), true)
                 }
-                Modifier::Ident(ident) => {
-                    self.ident(ident, modified.modifier.span.clone(), true)?
-                }
-                Modifier::ModuleItem(item) => self.module_item(item, true)?,
+                Modifier::Ref(r) => self.reference(r, true)?,
             }
             let instrs = self.new_functions.pop().unwrap();
             match instrs_signature(&instrs) {

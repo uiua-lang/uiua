@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.9
-  - Pad link from Gist
 - Changle how function inlining works
   - Prevent inlining of large functions
   - If a function is inlinable, don't actually put it in the assembly instructions
@@ -20,6 +19,7 @@ Feel free to make PRs to the list itself as well.
 
 - `⍜◿`
 - Better complex `⌈`/`⌊`/`⁅` implementation
+- Pad link from Gist
 - Additional optimizations
   - `≡/F`
   - `≡F◫`

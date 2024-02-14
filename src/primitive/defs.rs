@@ -813,6 +813,10 @@ primitive!(
     /// Use [fill] to make their shapes compatible.
     /// ex: ⬚0⊂ [1_2 3_4] [5_6_7 8_9_10]
     ///
+    /// [un][join] splits the first row of the array from the rest.
+    /// ex: °⊂ [1 2 3 4]
+    /// ex: °⊂ [1_2 3_4 5_6]
+    ///
     /// [join]'s glyph is `⊂` because it kind of looks like a magnet pulling its two arguments together.
     (2, Join, DyadicArray, ("join", '⊂')),
     /// Select multiple rows from an array

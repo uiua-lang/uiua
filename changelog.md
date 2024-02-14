@@ -37,6 +37,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the experimental [`&ffi`](https://uiua.org/docs/&ffi) system function, which allows calling functions from shared libraries
   - FFI is still a work in progress, but it is currently useful for foreign functions that aren't too complex
   - Bindings for [Raylib](https://www.raylib.com/) are being worked on as a proof of concept. You can find them in the [rayua](https://github.com/uiua-lang/rayua) repository.
+- Add experimental function strands. Putting a `_` between two functions (or a function and a constant), is equivalent to putting them in `()`s
+  - This is experimental because it remains to be seen how this may affect readability
 - Add experimental labels, denoted by a `$` immediately followed by an identifier, which attach a name to an array. This has two uses:
   - Labels are visible in output and in [`stack`](https://uiua.org/docs/stack) diagnostics
   - Labels in code make it easier to understand when reading

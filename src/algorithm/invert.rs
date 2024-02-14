@@ -128,7 +128,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         &(Val, ([Flip, Log], [Pow])),
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
-        &invert_push_temp_pattern,
+        &invert_temp_pattern,
     ];
 
     let mut inverted = EcoVec::new();
@@ -690,11 +690,12 @@ macro_rules! temp_wrap {
 temp_wrap!(try_push_temp_wrap, PushTemp);
 temp_wrap!(try_copy_temp_wrap, CopyToTemp);
 
-fn invert_push_temp_pattern<'a>(
+fn invert_temp_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let (input, instr, inner, end_instr) = try_push_temp_wrap(input, comp)?;
+    let (input, instr, inner, end_instr) =
+        try_push_temp_wrap(input, comp).or_else(|| try_copy_temp_wrap(input, comp))?;
     let mut instrs = invert_instrs(inner, comp)?;
     instrs.insert(0, instr.clone());
     instrs.push(end_instr.clone());

@@ -156,11 +156,14 @@ pub(crate) fn optimize_instrs_mut(
                 .as_byte_array()
                 .is_some_and(|size| size.rank() == 0 && size.data[0] == 2)) =>
         {
-            if let [Instr::PushFunc(f), Instr::Prim(Reduce, span)] = f.instrs(asm) {
+            if let [inner @ (Instr::PushFunc(_) | Instr::GetTempFunction { .. }), Instr::Prim(Reduce, span)] =
+                f.instrs(asm)
+            {
+                let inner = inner.clone();
                 instrs.pop();
                 instrs.pop();
                 instrs.pop();
-                instrs.push(Instr::PushFunc(f.clone()));
+                instrs.push(inner);
                 instrs.push(Instr::ImplPrim(ImplPrimitive::Adjacent, *span));
             } else {
                 instrs.push(instr);

@@ -346,7 +346,6 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[First, Reverse, Rise]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
             <tr><th><Prims prims=[First, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
             <tr><th><Prims prims=[First, Reverse, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
-            <tr><th><Prims prims=[Sin, Add, Eta]/></th><td>"Add and Sine"</td><td>"Cosine"</td></tr>
             <tr><th><Prims prims=[First, Where]/></th><td>"O(n)"</td><td>"O(where the first non-zero is)"</td></tr>
             <tr><th><Prims prims=[Select, Rise, Dup]/></th><td>"Create intermediate "<Prim prim=Rise/>" array"</td><td>"Just sort"</td></tr>
             <tr><th><Prims prims=[Select, Fall, Dup]/></th><td>"Create intermediate "<Prim prim=Fall/>" array"</td><td>"Just sort"</td></tr>

@@ -566,22 +566,6 @@ pub mod asin {
         env.error(format!("Cannot get the arcsine of {a}"))
     }
 }
-pub mod acos {
-    use super::*;
-    pub fn num(a: f64) -> f64 {
-        a.acos()
-    }
-    #[cfg(feature = "bytes")]
-    pub fn byte(a: u8) -> f64 {
-        f64::from(a).acos()
-    }
-    pub fn com(a: Complex) -> Complex {
-        a.acos()
-    }
-    pub fn error<T: Display>(a: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the arccosine of {a}"))
-    }
-}
 pub mod floor {
     use super::*;
     pub fn num(a: f64) -> f64 {

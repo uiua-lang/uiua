@@ -2215,7 +2215,6 @@ macro_rules! impl_primitive {
 impl_primitive!(
     // Inverses
     (1, Asin),
-    (1, Acos),
     (1, InverseBits),
     (1, InvWhere),
     (1(2), InvCouple),
@@ -2248,7 +2247,6 @@ impl_primitive!(
     (1[1], Ungroup1),
     (3, Ungroup2),
     // Optimizations
-    (1, Cos),
     (1, Last),
     (1, FirstMinIndex),
     (1, FirstMaxIndex),

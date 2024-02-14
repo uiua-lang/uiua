@@ -176,9 +176,7 @@ impl fmt::Display for ImplPrimitive {
             Unpick => write!(f, "{Un}{Pick}"),
             Unpartition1 | Unpartition2 => write!(f, "{Un}{Partition}"),
             Ungroup1 | Ungroup2 => write!(f, "{Un}{Group}"),
-            Cos => write!(f, "{Sin}{Add}{Eta}"),
             Asin => write!(f, "{Un}{Sin}"),
-            Acos => write!(f, "{Un}{Cos}"),
             Last => write!(f, "{First}{Reverse}"),
             Unfirst => write!(f, "{Un}{First}"),
             Unlast => write!(f, "{Un}{Last}"),
@@ -800,7 +798,6 @@ impl ImplPrimitive {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
-            ImplPrimitive::Acos => env.monadic_env(Value::acos)?,
             ImplPrimitive::Unkeep => {
                 let from = env.pop(1)?;
                 let counts = env.pop(2)?;
@@ -913,7 +910,6 @@ impl ImplPrimitive {
                 env.push(val.unboxed());
             }
             // Optimizations
-            ImplPrimitive::Cos => env.monadic_env(Value::cos)?,
             ImplPrimitive::Last => env.monadic_env(Value::last)?,
             ImplPrimitive::FirstMinIndex => env.monadic_ref_env(Value::first_min_index)?,
             ImplPrimitive::FirstMaxIndex => env.monadic_ref_env(Value::first_max_index)?,

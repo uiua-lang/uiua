@@ -23,11 +23,15 @@ This version is not yet released. If you are reading this on the website, then t
   - [`absolute value ⌵`](https://uiua.org/docs/absolute) uppercases a character
   - [`negate ¯`](https://uiua.org/docs/negate) toggles the case of a character
 - [`range ⇡`](https://uiua.org/docs/range) can now be used with negative numbers
+- [`eta η`](https://uiua.org/docs/eta), [`pi π`](https://uiua.org/docs/pi), [`tau τ`](https://uiua.org/docs/tau) and [`infinity ∞`](https://uiua.org/docs/infinity) are now parsed as numbers rather than functions
+  - This lets them syntactically bind with `¯` or form fraction literals
 - Inline functions are no longer required to be in a binding or modifier
   - This allows arbitrary code to be wrapped and marked with a signature
 - Add experimental [`inventory ⍚`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
   - This shortens a lot of box array code
 - `f` can now be used at the beginning of planet notation shorthand for [`fork ⊃`](https://uiua.org/docs/fork)
+- Remove cosine and arccosine optimizations
+  - The inverse of the cosine idiom create a logical inconsistency
 - Flip the order of [`send`](https://uiua.org/docs/send)'s arguments
 - Add the [`pool`](https://uiua.org/docs/pool) modifier, which is identical to [`spawn`](https://uiua.org/docs/spawn) but spawns a thread in a thread pool
 - Add the experimental [`&ffi`](https://uiua.org/docs/&ffi) system function, which allows calling functions from shared libraries

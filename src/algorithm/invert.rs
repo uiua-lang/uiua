@@ -42,9 +42,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
     use ImplPrimitive::*;
     use Primitive::*;
     Some(match prim {
-        Cos => Instr::ImplPrim(Acos, span),
         Asin => Instr::Prim(Sin, span),
-        Acos => Instr::ImplPrim(Cos, span),
         TransposeN(n) => Instr::ImplPrim(TransposeN(-n), span),
         InverseBits => Instr::Prim(Bits, span),
         InvWhere => Instr::Prim(Where, span),

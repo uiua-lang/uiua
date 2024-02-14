@@ -17,12 +17,6 @@ pub(crate) fn optimize_instrs_mut(
     }
     let asm = asm.as_ref();
     match (instrs.make_mut(), new) {
-        // Cosine
-        ([.., Instr::Prim(Eta, _), Instr::Prim(Add, _)], Instr::Prim(Sin, span)) => {
-            instrs.pop();
-            instrs.pop();
-            instrs.push(Instr::ImplPrim(Cos, span));
-        }
         // First Rise = FirstMinIndex
         ([.., Instr::Prim(Rise, _)], Instr::Prim(First, span)) => {
             instrs.pop();

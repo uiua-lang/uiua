@@ -1084,7 +1084,7 @@ code:
                             }
                         }
                         Instr::CallGlobal { sig, .. } if *sig == (0, 1) => {}
-                        _ => self.add_error(word.span.clone(), "Strand cannot contain functions"),
+                        _ => {}
                     }
                 }
                 let span_index = self.add_span(word.span.clone());

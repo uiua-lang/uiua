@@ -642,7 +642,6 @@ impl<'i> Parser<'i> {
             .map(|c| c.map(Word::Comment))
             .or_else(|| self.output_comment())
             .or_else(|| self.try_strand())
-            .or_else(|| self.try_placeholder())
     }
     fn try_strand(&mut self) -> Option<Sp<Word>> {
         let word = self.try_modified()?;
@@ -725,11 +724,7 @@ impl<'i> Parser<'i> {
                 }
                 break;
             }
-            if let Some(arg) = self
-                .try_func()
-                .or_else(|| self.try_strand())
-                .or_else(|| self.try_placeholder())
-            {
+            if let Some(arg) = self.try_func().or_else(|| self.try_strand()) {
                 // Parse switch function syntax
                 if let Word::Switch(sw) = &arg.value {
                     if i == 0 && sw.branches.len() >= modifier.args() {
@@ -816,10 +811,6 @@ impl<'i> Parser<'i> {
             operands: args,
         }))))
     }
-    fn try_placeholder(&mut self) -> Option<Sp<Word>> {
-        let sig = self.try_signature(Caret)?;
-        Some(sig.map(Word::Placeholder))
-    }
     fn try_term(&mut self) -> Option<Sp<Word>> {
         Some(if let Some(prim) = self.try_prim() {
             prim.map(Word::Primitive)
@@ -833,6 +824,8 @@ impl<'i> Parser<'i> {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
             s.map(Into::into).map(Word::String)
+        } else if let Some(sig) = self.try_signature(Caret) {
+            sig.map(Word::Placeholder)
         } else if let Some(label) = self.next_token_map(Token::as_label) {
             label.map(Into::into).map(Word::Label)
         } else if let Some(frags) = self.next_token_map(Token::as_format_string) {

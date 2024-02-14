@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.9
-  - Make adjacent work with any window size
   - Try combining tokens between lexing and parsing
   - Ensure proper label propogation on all primitives
   - Pad link from Gist

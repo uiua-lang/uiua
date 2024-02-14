@@ -760,7 +760,7 @@ fn fill_shift<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: T) 
 impl Value {
     /// Use this array to `windows` another
     pub fn windows(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let size_spec = self.as_ints(env, "Window size must be a list of integers")?;
+        let size_spec = self.as_ints(env, "Window size must be an integer or list of integers")?;
         Ok(match from {
             Value::Num(a) => a.windows(&size_spec, env)?.into(),
             #[cfg(feature = "bytes")]

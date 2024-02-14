@@ -2260,5 +2260,5 @@ impl_primitive!(
     (1[1], ReduceContent),
     (1, ReplaceRand),
     (2, ReplaceRand2),
-    (1, Adjacent),
+    (2, Adjacent),
 );

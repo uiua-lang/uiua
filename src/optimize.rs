@@ -146,21 +146,11 @@ pub(crate) fn optimize_instrs_mut(
             instrs.push(Instr::ImplPrim(ReplaceRand, span));
         }
         // Adjacent
-        (
-            [.., Instr::Push(size), Instr::Prim(Windows, _), Instr::PushFunc(f)],
-            instr @ Instr::Prim(Rows, _),
-        ) if (size
-            .as_num_array()
-            .is_some_and(|size| size.rank() == 0 && size.data[0] == 2.0)
-            || size
-                .as_byte_array()
-                .is_some_and(|size| size.rank() == 0 && size.data[0] == 2)) =>
-        {
+        ([.., Instr::Prim(Windows, _), Instr::PushFunc(f)], instr @ Instr::Prim(Rows, _)) => {
             if let [inner @ (Instr::PushFunc(_) | Instr::GetTempFunction { .. }), Instr::Prim(Reduce, span)] =
                 f.instrs(asm)
             {
                 let inner = inner.clone();
-                instrs.pop();
                 instrs.pop();
                 instrs.pop();
                 instrs.push(inner);

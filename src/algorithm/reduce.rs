@@ -1,6 +1,6 @@
 //! Algorithms for reducing modifiers
 
-use std::convert::identity;
+use std::{collections::VecDeque, convert::identity};
 
 use ecow::EcoVec;
 
@@ -453,114 +453,159 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
 
 pub fn adjacent(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
-    let xs = env.pop(1)?;
+    let n = env.pop(1)?;
+    let xs = env.pop(2)?;
+    if n.rank() != 0 {
+        return adjacent_fallback(f, n, xs, env);
+    }
+    let n = n.as_int(env, "Window size must be an integer or list of integers")?;
+    let n_abs = n.unsigned_abs();
+    if n_abs == 0 {
+        return Err(env.error("Window size cannot be zero"));
+    }
+    if n_abs > xs.row_count() {
+        return Err(env.error(format!(
+            "Window size {n} is too large for axis of length {}",
+            xs.row_count()
+        )));
+    }
+    let n = n_abs;
     match (f.as_flipped_primitive(env), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
-            Primitive::Add => fast_adjacent(nums, env, add::num_num),
-            Primitive::Sub if flipped => fast_adjacent(nums, env, flip(sub::num_num)),
-            Primitive::Sub => fast_adjacent(nums, env, sub::num_num),
-            Primitive::Mul => fast_adjacent(nums, env, mul::num_num),
-            Primitive::Div if flipped => fast_adjacent(nums, env, flip(div::num_num)),
-            Primitive::Div => fast_adjacent(nums, env, div::num_num),
-            Primitive::Mod if flipped => fast_adjacent(nums, env, flip(modulus::num_num)),
-            Primitive::Mod => fast_adjacent(nums, env, modulus::num_num),
-            Primitive::Atan if flipped => fast_adjacent(nums, env, flip(atan2::num_num)),
-            Primitive::Atan => fast_adjacent(nums, env, atan2::num_num),
-            Primitive::Max => fast_adjacent(nums, env, max::num_num),
-            Primitive::Min => fast_adjacent(nums, env, min::num_num),
-            _ => return generic_adjacent(f, Value::Num(nums), env),
+            Primitive::Add => fast_adjacent(nums, n, env, add::num_num),
+            Primitive::Sub if flipped => fast_adjacent(nums, n, env, flip(sub::num_num)),
+            Primitive::Sub => fast_adjacent(nums, n, env, sub::num_num),
+            Primitive::Mul => fast_adjacent(nums, n, env, mul::num_num),
+            Primitive::Div if flipped => fast_adjacent(nums, n, env, flip(div::num_num)),
+            Primitive::Div => fast_adjacent(nums, n, env, div::num_num),
+            Primitive::Mod if flipped => fast_adjacent(nums, n, env, flip(modulus::num_num)),
+            Primitive::Mod => fast_adjacent(nums, n, env, modulus::num_num),
+            Primitive::Atan if flipped => fast_adjacent(nums, n, env, flip(atan2::num_num)),
+            Primitive::Atan => fast_adjacent(nums, n, env, atan2::num_num),
+            Primitive::Max => fast_adjacent(nums, n, env, max::num_num),
+            Primitive::Min => fast_adjacent(nums, n, env, min::num_num),
+            _ => return generic_adjacent(f, Value::Num(nums), n, env),
         }?),
         #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(bytes)) => env.push::<Value>(match prim {
-            Primitive::Add => fast_adjacent(bytes.convert(), env, add::num_num)?.into(),
+            Primitive::Add => fast_adjacent(bytes.convert(), n, env, add::num_num)?.into(),
             Primitive::Sub if flipped => {
-                fast_adjacent(bytes.convert(), env, flip(sub::num_num))?.into()
+                fast_adjacent(bytes.convert(), n, env, flip(sub::num_num))?.into()
             }
-            Primitive::Sub => fast_adjacent(bytes.convert(), env, sub::num_num)?.into(),
-            Primitive::Mul => fast_adjacent(bytes.convert(), env, mul::num_num)?.into(),
+            Primitive::Sub => fast_adjacent(bytes.convert(), n, env, sub::num_num)?.into(),
+            Primitive::Mul => fast_adjacent(bytes.convert(), n, env, mul::num_num)?.into(),
             Primitive::Div if flipped => {
-                fast_adjacent(bytes.convert(), env, flip(div::num_num))?.into()
+                fast_adjacent(bytes.convert(), n, env, flip(div::num_num))?.into()
             }
-            Primitive::Div => fast_adjacent(bytes.convert(), env, div::num_num)?.into(),
+            Primitive::Div => fast_adjacent(bytes.convert(), n, env, div::num_num)?.into(),
             Primitive::Mod if flipped => {
-                fast_adjacent(bytes.convert(), env, flip(modulus::num_num))?.into()
+                fast_adjacent(bytes.convert(), n, env, flip(modulus::num_num))?.into()
             }
-            Primitive::Mod => fast_adjacent(bytes.convert(), env, modulus::num_num)?.into(),
+            Primitive::Mod => fast_adjacent(bytes.convert(), n, env, modulus::num_num)?.into(),
             Primitive::Atan if flipped => {
-                fast_adjacent(bytes.convert(), env, flip(atan2::num_num))?.into()
+                fast_adjacent(bytes.convert(), n, env, flip(atan2::num_num))?.into()
             }
-            Primitive::Atan => fast_adjacent(bytes.convert(), env, atan2::num_num)?.into(),
-            Primitive::Max => fast_adjacent(bytes, env, max::byte_byte)?.into(),
-            Primitive::Min => fast_adjacent(bytes, env, min::byte_byte)?.into(),
-            _ => return generic_adjacent(f, Value::Byte(bytes), env),
+            Primitive::Atan => fast_adjacent(bytes.convert(), n, env, atan2::num_num)?.into(),
+            Primitive::Max => fast_adjacent(bytes, n, env, max::byte_byte)?.into(),
+            Primitive::Min => fast_adjacent(bytes, n, env, min::byte_byte)?.into(),
+            _ => return generic_adjacent(f, Value::Byte(bytes), n, env),
         }),
-        (_, xs) => generic_adjacent(f, xs, env)?,
+        (_, xs) => generic_adjacent(f, xs, n, env)?,
     }
     Ok(())
 }
 
-fn fast_adjacent<T>(mut arr: Array<T>, env: &Uiua, f: impl Fn(T, T) -> T) -> UiuaResult<Array<T>>
+fn adjacent_fallback(f: Function, n: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
+    let windows = n.windows(&xs, env)?;
+    let mut new_rows = Vec::with_capacity(windows.row_count());
+    for window in windows.into_rows() {
+        env.push(window);
+        env.push_func(f.clone());
+        reduce(env)?;
+        new_rows.push(env.pop("adjacent function result")?);
+    }
+    env.push(Value::from_row_values(new_rows, env)?);
+    Ok(())
+}
+
+fn fast_adjacent<T>(
+    mut arr: Array<T>,
+    n: usize,
+    env: &Uiua,
+    f: impl Fn(T, T) -> T,
+) -> UiuaResult<Array<T>>
 where
     T: Copy,
 {
     match arr.rank() {
         0 => Err(env.error("Cannot get adjacency of scalar")),
         1 => {
-            if arr.row_count() < 2 {
+            if arr.row_count() < n {
                 return Err(env.error("Cannot get adjacency of array with fewer than 2 rows"));
             }
             let data = arr.data.as_mut_slice();
-            for i in 0..data.len() - 1 {
-                data[i] = f(data[i], data[i + 1]);
+            for i in 0..data.len() - (n - 1) {
+                let start = i;
+                for j in 1..n {
+                    data[start] = f(data[start], data[start + j]);
+                }
             }
-            arr.data.truncate(arr.data.len() - 1);
-            arr.shape[0] -= 1;
+            arr.data.truncate(arr.data.len() - (n - 1));
+            arr.shape[0] -= n - 1;
             Ok(arr)
         }
         _ => {
             let row_len = arr.row_len();
             let row_count = arr.row_count();
-            if row_count < 2 {
+            if row_count < n {
                 return Err(env.error("Cannot get adjacency of array with fewer than 2 rows"));
             }
             let data = arr.data.as_mut_slice();
-            for i in 0..row_count - 1 {
+            for i in 0..row_count - (n - 1) {
                 let start = i * row_len;
-                for j in 0..row_len {
-                    data[start + j] = f(data[start + j], data[start + row_len + j]);
+                for j in 1..n {
+                    let next = (i + j) * row_len;
+                    for k in 0..row_len {
+                        data[start + k] = f(data[start + k], data[next + k]);
+                    }
                 }
             }
-            arr.data.truncate(arr.data.len() - row_len);
-            arr.shape[0] -= 1;
+            arr.data.truncate(arr.data.len() - (n - 1) * row_len);
+            arr.shape[0] -= n - 1;
             Ok(arr)
         }
     }
 }
 
-fn generic_adjacent(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
+fn generic_adjacent(f: Function, xs: Value, n: usize, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig != (2, 1) {
         return Err(env.error(format!(
             "adjacent's function's signature must be |2.1, but it is {sig}"
         )));
     }
+    if xs.row_count() < n {
+        return Err(env.error(format!(
+            "Window size {n} is too large for axis of length {}",
+            xs.row_count()
+        )));
+    }
+    let win_count = xs.row_count() - (n - 1);
     let mut rows = xs.into_rows();
-    let mut prev = env
-        .value_fill()
-        .cloned()
-        .or_else(|| rows.next())
-        .ok_or_else(|| env.error("Cannot get adjacency of empty array"))?;
-    let mut new_rows = Vec::with_capacity(rows.len());
-    env.without_fill(|env| -> UiuaResult {
-        for row in rows {
+    let mut window = VecDeque::with_capacity(n);
+    let mut new_rows = Vec::with_capacity(win_count);
+    window.extend(rows.by_ref().take(n));
+    for _ in 0..win_count {
+        let mut acc = window.pop_front().unwrap();
+        for row in &window {
             env.push(row.clone());
-            env.push(prev);
+            env.push(acc);
             env.call(f.clone())?;
-            prev = row;
-            new_rows.push(env.pop("adjacent function result")?);
+            acc = env.pop("adjacent function result")?;
         }
-        Ok(())
-    })?;
+        new_rows.push(acc);
+        window.extend(rows.next());
+    }
     env.push(Value::from_row_values(new_rows, env)?);
     Ok(())
 }

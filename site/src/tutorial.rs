@@ -60,10 +60,11 @@ pub struct TutorialParams {
 #[component]
 pub fn Tutorial() -> impl IntoView {
     move || {
-        let Ok(params) = use_params::<TutorialParams>().get() else {
-            return view!(<Redirect path="/404"/>).into_view();
+        let page = match use_params::<TutorialParams>().get() {
+            Ok(params) => params.page,
+            Err(_) => TutorialPage::Introduction,
         };
-        let tut_view = match params.page {
+        let tut_view = match page {
             TutorialPage::Introduction => TutorialIntroduction().into_view(),
             TutorialPage::Basic => TutorialBasic().into_view(),
             TutorialPage::Math => TutorialMath().into_view(),
@@ -84,11 +85,11 @@ pub fn Tutorial() -> impl IntoView {
             <A href="/docs">"Back to Docs Home"</A>
             <br/>
             <br/>
-            <TutorialNav page=params.page/>
+            <TutorialNav page=page/>
             { tut_view }
             <br/>
             <br/>
-            <TutorialNav page=params.page/>
+            <TutorialNav page=page/>
             <br/>
             <br/>
             <A href="/docs">"Back to Docs Home"</A>

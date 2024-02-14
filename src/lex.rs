@@ -1054,17 +1054,14 @@ fn is_numbery(mut s: &str) -> bool {
         return false;
     }
     s.chars().all(|c| c.is_ascii_digit())
-        || [
-            Primitive::Eta,
-            Primitive::Pi,
-            Primitive::Tau,
-            Primitive::Infinity,
-        ]
-        .iter()
-        .any(|p| {
-            p.name() == s
-                || s.chars().count() == 1 && p.glyph().unwrap() == s.chars().next().unwrap()
-        })
+        || s == "∞"
+        || (3..="infinity".len()).rev().any(|n| s == &"infinity"[..n])
+        || [Primitive::Eta, Primitive::Pi, Primitive::Tau]
+            .iter()
+            .any(|p| {
+                p.name() == s
+                    || s.chars().count() == 1 && p.glyph().unwrap() == s.chars().next().unwrap()
+            })
 }
 
 fn parse_format_fragments(s: &str) -> Vec<String> {

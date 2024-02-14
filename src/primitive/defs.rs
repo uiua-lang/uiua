@@ -1815,7 +1815,7 @@ primitive!(
     ([1], PoolSpawn, Thread, "pool"),
     /// Wait for a thread to finish and push its results to the stack
     ///
-    /// The argument must be a thread id returned by [spawn].
+    /// The argument must be a thread id returned by [spawn] or [pool].
     /// ex: wait spawn(/+⇡) 10
     ///
     /// If the thread id has already been [wait]ed on, then an error is thrown.
@@ -1829,13 +1829,13 @@ primitive!(
     (1, Wait, Thread, "wait"),
     /// Send a value to a thread
     ///
-    /// Expects a thread id returned by [spawn] and a value to send.
+    /// Expects a thread id returned by [spawn] or [pool] and a value to send.
     /// The thread id `0` corresponds to the parent thread.
     /// The sent-to thread can receive the value with [recv] or [tryrecv].
     (2(0), Send, Thread, "send"),
     /// Receive a value from a thread
     ///
-    /// Expects a thread id returned by [spawn].
+    /// Expects a thread id returned by [spawn] or [pool].
     /// The thread id `0` corresponds to the parent thread.
     /// The sending thread can send a value with [send].
     ///
@@ -1843,7 +1843,7 @@ primitive!(
     (1, Recv, Thread, "recv"),
     /// Try to receive a value from a thread
     ///
-    /// Expects a thread id returned by [spawn].
+    /// Expects a thread id returned by [spawn] or [pool].
     /// The thread id `0` corresponds to the parent thread.
     /// The sending thread can send a value with [send].
     ///

@@ -618,23 +618,23 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     /// List the contents of a directory
     fn list_dir(&self, path: &str) -> Result<Vec<String>, String> {
-        Err("This IO operation is not supported in this environment".into())
+        Err("Listing directories is not supported in this environment".into())
     }
     /// Check if a path is a file
     fn is_file(&self, path: &str) -> Result<bool, String> {
-        Err("This IO operation is not supported in this environment".into())
+        Err("Checking if a path is a file is not supported in this environment".into())
     }
     /// Delete a file or directory
     fn delete(&self, path: &str) -> Result<(), String> {
-        Err("This IO operation is not supported in this environment".into())
+        Err("Deleting files is not supported in this environment".into())
     }
     /// Move a file or directory to the trash
     fn trash(&self, path: &str) -> Result<(), String> {
-        Err("This IO operation is not supported in this environment".into())
+        Err("Trashing files is not supported in this environment".into())
     }
     /// Read at most `count` bytes from a stream
     fn read(&self, handle: Handle, count: usize) -> Result<Vec<u8>, String> {
-        Err("This IO operation is not supported in this environment".into())
+        Err("Reading from streams is not supported in this environment".into())
     }
     /// Read from a stream until a delimiter is reached
     fn read_until(&self, handle: Handle, delim: &[u8]) -> Result<Vec<u8>, String> {
@@ -653,15 +653,15 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     /// Write bytes to a stream
     fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
-        Err("This IO operation is not supported in this environment".into())
+        Err("Writing to streams is not supported in this environment".into())
     }
     /// Create a file
     fn create_file(&self, path: &Path) -> Result<Handle, String> {
-        Err("This IO operation is not supported in this environment".into())
+        Err("Creating files is not supported in this environment".into())
     }
     /// Open a file
     fn open_file(&self, path: &Path) -> Result<Handle, String> {
-        Err("This IO operation is not supported in this environment".into())
+        Err("Opening files is not supported in this environment".into())
     }
     /// Read all bytes from a file
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {

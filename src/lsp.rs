@@ -9,7 +9,8 @@ use crate::{
     ast::{Item, Modifier, ModuleItem, Word},
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    Assembly, BindingInfo, Compiler, Global, InputSrc, Inputs, Primitive, Signature,
+    Assembly, BindingInfo, Compiler, Global, InputSrc, Inputs, Primitive, SafeSys, Signature,
+    SysBackend,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -48,9 +49,14 @@ pub struct BindingDocs {
 
 /// Get spans and their kinds from Uiua code
 pub fn spans(input: &str) -> (Vec<Sp<SpanKind>>, Inputs) {
+    spans_with_backend(input, SafeSys::default())
+}
+
+/// Get spans and their kinds from Uiua code with a custom backend
+pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<SpanKind>>, Inputs) {
     let src = InputSrc::Str(0);
     let (items, _, _) = parse(input, src.clone(), &mut Inputs::default());
-    let spanner = Spanner::new(src, input);
+    let spanner = Spanner::new(src, input, backend);
     (spanner.items_spans(&items), spanner.asm.inputs)
 }
 
@@ -59,8 +65,8 @@ struct Spanner {
 }
 
 impl Spanner {
-    fn new(src: InputSrc, input: &str) -> Self {
-        let mut compiler = Compiler::new();
+    fn new(src: InputSrc, input: &str, backend: impl SysBackend) -> Self {
+        let mut compiler = Compiler::with_backend(backend);
         _ = compiler.load_str_src(input, src);
         Self { asm: compiler.asm }
     }
@@ -340,7 +346,7 @@ mod server {
         fn new(path: impl Into<Arc<Path>>, input: String) -> Self {
             let src = InputSrc::File(path.into());
             let (items, _, _) = parse(&input, src.clone(), &mut Inputs::default());
-            let spanner = Spanner::new(src, &input);
+            let spanner = Spanner::new(src, &input, SafeSys::default());
             let spans = spanner.items_spans(&items);
             let asm = spanner.asm;
             Self {

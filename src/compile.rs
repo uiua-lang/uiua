@@ -770,7 +770,9 @@ code:
         if self.asm.import_inputs.get(&path).is_some() {
             return Ok(path);
         }
-        let bytes = fs::read(&path)
+        let bytes = self
+            .backend
+            .file_read_all(&path)
             .or_else(|e| {
                 if path.ends_with(Path::new("example.ua")) {
                     Ok(example_ua(|ex| ex.as_bytes().to_vec()))

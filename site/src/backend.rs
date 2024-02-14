@@ -132,25 +132,15 @@ impl SysBackend for WebBackend {
         Ok(self.files.lock().unwrap().contains_key(Path::new(path)))
     }
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
-        self.files
-            .lock()
-            .unwrap()
-            .insert(path.into(), contents.to_vec());
+        (self.files.lock().unwrap()).insert(path.into(), contents.to_vec());
         Ok(())
     }
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
-        self.files
-            .lock()
-            .unwrap()
-            .get(path)
-            .cloned()
+        (self.files.lock().unwrap().get(path).cloned())
             .ok_or_else(|| format!("File not found: {}", path.display()))
     }
     fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
-        self.stdout
-            .lock()
-            .unwrap()
-            .push(OutputItem::Audio(wav_bytes));
+        (self.stdout.lock().unwrap()).push(OutputItem::Audio(wav_bytes));
         Ok(())
     }
     fn stream_audio(&self, mut f: uiua::AudioStreamFn) -> Result<(), String> {

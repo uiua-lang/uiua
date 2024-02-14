@@ -12,9 +12,9 @@ use image::ImageOutputFormat;
 use leptos::*;
 
 use uiua::{
-    ast::Item, image_to_bytes, spans, value_to_gif_bytes, value_to_image, value_to_wav_bytes,
-    Compiler, DiagnosticKind, Inputs, Report, ReportFragment, ReportKind, SpanKind, SysBackend,
-    Uiua, UiuaResult, Value,
+    ast::Item, image_to_bytes, lsp::spans_with_backend, value_to_gif_bytes, value_to_image,
+    value_to_wav_bytes, Compiler, DiagnosticKind, Inputs, Report, ReportFragment, ReportKind,
+    SpanKind, SysBackend, Uiua, UiuaResult, Value,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlBrElement, HtmlDivElement, HtmlStyleElement, Node};
@@ -504,7 +504,7 @@ fn set_code_html(id: &str, code: &str) {
 
     let mut end = 0;
     // logging::log!("{:#?}", spans(code));
-    for span in spans(code).0 {
+    for span in spans_with_backend(code, WebBackend::default()).0 {
         let kind = span.value;
         let span = span.span;
         push_unspanned(&mut html, span.start.char_pos as usize, &mut end);
@@ -778,7 +778,7 @@ fn run_code_single(code: &str) -> Vec<OutputItem> {
     // Run
     let mut rt = init_rt();
     let mut error = None;
-    let mut comp = Compiler::new();
+    let mut comp = Compiler::with_backend(WebBackend::default());
     let mut values = match comp
         .load_str(code)
         .and_then(|comp| rt.run_asm(comp.finish()))

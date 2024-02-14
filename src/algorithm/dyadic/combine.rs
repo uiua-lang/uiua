@@ -254,6 +254,9 @@ impl<T: ArrayValue> Array<T> {
         self.combine_meta(other.meta());
         let res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
+                if let Some(label) = other.take_label() {
+                    self.meta_mut().label = Some(label);
+                }
                 if self.shape() == [0] {
                     return Ok(other);
                 }
@@ -322,6 +325,7 @@ impl<T: ArrayValue> Array<T> {
                     }
                     self.data.extend(other.data);
                     self.shape[0] += other.shape[0];
+                    self.take_label();
                     self
                 }
             }
@@ -546,6 +550,7 @@ impl<T: ArrayValue> Array<T> {
         self.data.extend(other.data);
         self.shape.insert(0, 2);
         self.validate_shape();
+        self.take_label();
         Ok(())
     }
     /// Uncouple the array into two arrays

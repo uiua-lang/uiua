@@ -939,9 +939,11 @@ pub fn Editor<'a>(
             drop_file(path.clone(), bytes.to_vec());
             set_drag_message.set("");
             if code_text().trim().is_empty() {
-                let function = if path
+                let function = if path.extension().is_some_and(|ext| ext == "ua") {
+                    "~"
+                } else if path
                     .extension()
-                    .map_or(true, |ext| ["txt", "md", "ua"].iter().any(|e| e == &ext))
+                    .map_or(true, |ext| ["txt", "md"].iter().any(|e| e == &ext))
                 {
                     "&fras"
                 } else {

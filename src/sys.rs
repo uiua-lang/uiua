@@ -229,7 +229,7 @@ sys_op! {
     ///   : Square ← Ex "Square"
     ///   : Square Double 5
     ///
-    /// [import] can only be used as the first function in a binding.
+    /// [&i] can only be used as the first function in a binding.
     /// ex! &i "example.ua" "Double" 5
     (2, Import, Filesystem, "&i", "import"),
     /// Invoke a path with the system's default program

@@ -96,10 +96,6 @@ impl Assembly {
         span: Option<CodeSpan>,
         comment: Option<Arc<str>>,
     ) {
-        assert!(
-            index <= self.bindings.len(),
-            "Not enough bindings to add at index {index}"
-        );
         let binding = BindingInfo {
             global,
             span: span.unwrap_or_else(CodeSpan::dummy),
@@ -108,6 +104,13 @@ impl Assembly {
         if index < self.bindings.len() {
             self.bindings.make_mut()[index] = binding;
         } else {
+            while self.bindings.len() < index {
+                self.bindings.push(BindingInfo {
+                    global: Global::Const(Value::default()),
+                    span: CodeSpan::dummy(),
+                    comment: None,
+                });
+            }
             self.bindings.push(binding);
         }
     }

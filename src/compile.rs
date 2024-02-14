@@ -50,6 +50,8 @@ pub struct Compiler {
     experimental_prim_errors: HashSet<Primitive>,
     /// Primitives that have emitted errors because they are deprecated
     deprecated_prim_errors: HashSet<Primitive>,
+    /// Whether an error has been emitted for experimental function strand
+    experimental_function_strand_error: bool,
     /// Accumulated diagnostics
     diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
@@ -73,6 +75,7 @@ impl Default for Compiler {
             errors: Vec::new(),
             experimental_prim_errors: HashSet::new(),
             deprecated_prim_errors: HashSet::new(),
+            experimental_function_strand_error: false,
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             backend: Arc::new(SafeSys::default()),
@@ -815,8 +818,12 @@ code:
             pathdiff::diff_paths(&target, base).unwrap_or(target)
         }
     }
-    fn compile_words(&mut self, mut words: Vec<Sp<Word>>, call: bool) -> UiuaResult<EcoVec<Instr>> {
-        words = unsplit_words(split_words(words))
+    fn compile_words(
+        &mut self,
+        words: impl IntoIterator<Item = Sp<Word>>,
+        call: bool,
+    ) -> UiuaResult<EcoVec<Instr>> {
+        let words = unsplit_words(split_words(words))
             .into_iter()
             .flatten()
             .collect();
@@ -833,15 +840,9 @@ code:
             }
         }
     }
-    fn compile_operand_words(
-        &mut self,
-        words: Vec<Sp<Word>>,
-    ) -> UiuaResult<(EcoVec<Instr>, Signature)> {
-        let span = words
-            .first()
-            .zip(words.last())
-            .map(|(first, last)| first.span.clone().merge(last.span.clone()));
-        let mut instrs = self.compile_words(words, true)?;
+    fn compile_operand_word(&mut self, word: Sp<Word>) -> UiuaResult<(EcoVec<Instr>, Signature)> {
+        let span = word.span.clone();
+        let mut instrs = self.compile_words([word], true)?;
         let mut sig = None;
         // Extract function instrs if possible
         if let [Instr::PushFunc(f)] = instrs.as_slice() {
@@ -860,10 +861,7 @@ code:
             sig
         } else {
             instrs_signature(&instrs).map_err(|e| {
-                self.fatal_error(
-                    span.unwrap(),
-                    format!("Cannot infer function signature: {e}"),
-                )
+                self.fatal_error(span, format!("Cannot infer function signature: {e}"))
             })?
         };
         let instrs = optimize_instrs(instrs, false, &self.asm);
@@ -1053,11 +1051,53 @@ code:
             Word::Ident(ident) => self.ident(ident, word.span, call)?,
             Word::ModuleItem(item) => self.module_item(item, call)?,
             Word::Strand(items) => {
+                // Compile individual items
+                let op_instrs = items
+                    .into_iter()
+                    .rev()
+                    .map(|word| self.compile_operand_word(word))
+                    .collect::<UiuaResult<Vec<_>>>()?;
+                let item_count = op_instrs.len();
+                // Check item sigs
+                let is_function_strand = op_instrs.iter().any(|(_, sig)| sig.args > 0);
+                // Flatten instrs
+                let inner: Vec<Instr> = op_instrs
+                    .into_iter()
+                    .flat_map(|(instrs, _)| instrs)
+                    .collect();
+
+                // Function strand
+                if is_function_strand {
+                    if item_count > 2 {
+                        self.add_error(
+                            word.span.clone(),
+                            "Function strands cannot contain more than two items",
+                        );
+                    }
+                    if !self.scope.experimental && !self.experimental_function_strand_error {
+                        self.experimental_function_strand_error = true;
+                        self.add_error(
+                            word.span.clone(),
+                            "Function strands are experimental. To use them, add \
+                            `# Experimental!` to the top of the file.",
+                        );
+                    }
+                    let sig = instrs_signature(&inner).unwrap();
+                    if call {
+                        self.push_all_instrs(inner);
+                    } else {
+                        let f =
+                            self.add_function(FunctionId::Anonymous(word.span.clone()), sig, inner);
+                        self.push_instr(Instr::PushFunc(f));
+                    }
+                    return Ok(());
+                }
+
+                // Normal strand
                 if !call {
                     self.new_functions.push(EcoVec::new());
                 }
                 self.push_instr(Instr::BeginArray);
-                let inner = self.compile_words(items, true)?;
                 // Diagnostic for strand of characters
                 if !inner.is_empty()
                     && inner.iter().all(
@@ -1115,7 +1155,7 @@ code:
                 });
                 if !call {
                     let instrs = self.new_functions.pop().unwrap();
-                    let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
+                    let sig = instrs_signature(&instrs).unwrap();
                     let func = self.add_function(FunctionId::Anonymous(word.span), sig, instrs);
                     self.push_instr(Instr::PushFunc(func));
                 }
@@ -1744,7 +1784,7 @@ code:
         match prim {
             Dip | Gap | On => {
                 // Compile operands
-                let (mut instrs, sig) = self.compile_operand_words(modified.operands.clone())?;
+                let (mut instrs, sig) = self.compile_operand_word(modified.operands[0].clone())?;
                 // Dip (|1 …) . diagnostic
                 if prim == Dip && sig == (1, 1) {
                     if let Some(Instr::Prim(Dup, dup_span)) =
@@ -1824,9 +1864,8 @@ code:
                         modified.modifier.span.clone().merge(first_op.span.clone()),
                     );
                 }
-                let (a_instrs, a_sig) = self.compile_operand_words(vec![first_op])?;
-                let (b_instrs, b_sig) =
-                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let (a_instrs, a_sig) = self.compile_operand_word(first_op)?;
+                let (b_instrs, b_sig) = self.compile_operand_word(operands.next().unwrap())?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let count = a_sig.args.max(b_sig.args);
                 let mut instrs = vec![Instr::PushTemp {
@@ -1872,10 +1911,8 @@ code:
             }
             Cascade => {
                 let mut operands = modified.code_operands().cloned();
-                let (a_instrs, a_sig) =
-                    self.compile_operand_words(vec![operands.next().unwrap()])?;
-                let (b_instrs, b_sig) =
-                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let (a_instrs, a_sig) = self.compile_operand_word(operands.next().unwrap())?;
+                let (b_instrs, b_sig) = self.compile_operand_word(operands.next().unwrap())?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let count = a_sig.args.saturating_sub(b_sig.outputs);
                 if a_sig.args < b_sig.outputs {
@@ -1927,10 +1964,8 @@ code:
             }
             Bracket => {
                 let mut operands = modified.code_operands().cloned();
-                let (a_instrs, a_sig) =
-                    self.compile_operand_words(vec![operands.next().unwrap()])?;
-                let (b_instrs, b_sig) =
-                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let (a_instrs, a_sig) = self.compile_operand_word(operands.next().unwrap())?;
+                let (b_instrs, b_sig) = self.compile_operand_word(operands.next().unwrap())?;
                 let span = self.add_span(modified.modifier.span.clone());
                 let mut instrs = vec![Instr::PushTemp {
                     stack: TempStack::Inline,
@@ -1962,7 +1997,7 @@ code:
                 let mut operands = modified.code_operands().cloned();
                 let f = operands.next().unwrap();
                 let span = f.span.clone();
-                let (instrs, _) = self.compile_operand_words(vec![f])?;
+                let (instrs, _) = self.compile_operand_word(f)?;
                 if let Some(inverted) = invert_instrs(&instrs, self) {
                     let sig = instrs_signature(&inverted).map_err(|e| {
                         self.fatal_error(
@@ -1985,9 +2020,8 @@ code:
                 let mut operands = modified.code_operands().cloned();
                 let f = operands.next().unwrap();
                 let f_span = f.span.clone();
-                let (f_instrs, _) = self.compile_operand_words(vec![f])?;
-                let (g_instrs, g_sig) =
-                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let (f_instrs, _) = self.compile_operand_word(f)?;
+                let (g_instrs, g_sig) = self.compile_operand_word(operands.next().unwrap())?;
                 if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig, self) {
                     let before_sig = instrs_signature(&f_before).map_err(|e| {
                         self.fatal_error(
@@ -2042,8 +2076,7 @@ code:
             }
             Both => {
                 let mut operands = modified.code_operands().cloned();
-                let (mut instrs, sig) =
-                    self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let (mut instrs, sig) = self.compile_operand_word(operands.next().unwrap())?;
                 let span = self.add_span(modified.modifier.span.clone());
                 instrs.insert(
                     0,
@@ -2079,7 +2112,7 @@ code:
                 let operand = modified.code_operands().next().cloned().unwrap();
                 let operand_span = operand.span.clone();
                 self.scope.locals.push(HashSet::new());
-                let (mut instrs, mut sig) = self.compile_operand_words(vec![operand])?;
+                let (mut instrs, mut sig) = self.compile_operand_word(operand)?;
                 let locals = self.scope.locals.pop().unwrap();
                 let local_count = locals.into_iter().max().map_or(0, |i| i + 1);
                 let span = self.add_span(modified.modifier.span.clone());
@@ -2117,7 +2150,7 @@ code:
             }
             Comptime => {
                 let mut operands = modified.code_operands().cloned();
-                let (instrs, sig) = self.compile_operand_words(vec![operands.next().unwrap()])?;
+                let (instrs, sig) = self.compile_operand_word(operands.next().unwrap())?;
                 if sig.args > 0 {
                     self.add_error(
                         modified.modifier.span.clone(),
@@ -2158,7 +2191,7 @@ code:
             }
             Reduce => {
                 let operand = modified.code_operands().next().cloned().unwrap();
-                let mut instrs = self.compile_operand_words(vec![operand])?.0;
+                let mut instrs = self.compile_operand_word(operand)?.0;
                 if let [Instr::PushFunc(_), Instr::Prim(Content, span)] = instrs.as_slice() {
                     let span = *span;
                     *instrs.make_mut().last_mut().unwrap() =

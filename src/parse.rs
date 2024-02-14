@@ -1053,7 +1053,7 @@ impl<'i> Parser<'i> {
     }
 }
 
-pub(crate) fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
+pub(crate) fn split_words(words: impl IntoIterator<Item = Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
     let mut lines = vec![Vec::new()];
     for word in words {
         if matches!(word.value, Word::BreakLine) {

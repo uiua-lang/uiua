@@ -443,33 +443,64 @@ impl<T: ArrayValue> Array<T> {
     pub(crate) fn transpose_depth(&mut self, mut depth: usize, amnt: i32) {
         crate::profile_function!();
         depth = depth.min(self.rank());
-        let count = amnt.unsigned_abs() as usize;
-        if self.rank() - depth < 2 || depth + count == self.rank() || count == 0 {
+        let trans_count = amnt.unsigned_abs() as usize;
+        let trans_rank = self.rank() - depth;
+        // Early return if nothing would actually happen
+        if trans_rank < 2 || depth + trans_count == self.rank() || trans_count == 0 {
             return;
         }
         let forward = amnt.is_positive();
+        // Early return if any dimension is 0, because there are no elements
         if self.shape[depth..].iter().any(|&d| d == 0) {
             if forward {
-                self.shape[depth..].rotate_left(count);
+                self.shape[depth..].rotate_left(trans_count);
             } else {
-                self.shape[depth..].rotate_right(count);
+                self.shape[depth..].rotate_right(trans_count);
             }
             return;
         }
+        let square_matrix = trans_rank == 2 && self.shape[depth] == self.shape[depth + 1];
+        let s = self.shape[depth];
+        // Count the number of subarrays
+        let subs: usize = if forward {
+            self.shape[depth..].iter().take(trans_count).product()
+        } else {
+            self.shape[depth..].iter().rev().skip(trans_count).product()
+        };
         let data_slice = self.data.as_mut_slice();
+        // Divide the array into chunks at the given depth
         for data in data_slice.chunks_exact_mut(self.shape[depth..].iter().product()) {
-            let mut temp = data.to_vec();
-            let subs: usize = if forward {
-                self.shape[depth..].iter().take(count).product()
-            } else {
-                self.shape[depth..].iter().rev().skip(count).product()
-            };
+            // Special in-place case for square matrices
+            if square_matrix {
+                if subs > 500 {
+                    // This is pretty unsafe, but no indices should collide, so it's fine? 🤷
+                    let ptr: usize = data.as_mut_ptr() as usize;
+                    (0..s - 1).into_par_iter().for_each(|i| {
+                        let ptr: *mut T = ptr as *mut _;
+                        for j in i + 1..s {
+                            unsafe {
+                                ptr::swap_nonoverlapping(ptr.add(i * s + j), ptr.add(j * s + i), 1);
+                            }
+                        }
+                    });
+                } else {
+                    for i in 0..s - 1 {
+                        for j in i + 1..s {
+                            data.swap(i * s + j, j * s + i);
+                        }
+                    }
+                }
+                continue;
+            }
             let stride = data.len() / subs;
+            // The operation to perform on each subarray
             let op = |(temp_chunk_i, chunk): (usize, &mut [T])| {
                 for (chunk_i, item) in chunk.iter_mut().enumerate() {
                     *item = data[chunk_i * stride + temp_chunk_i].clone();
                 }
             };
+            // Perform the operation on each subarray
+            let mut temp = data.to_vec();
             if subs > 500 {
                 temp.par_chunks_mut(subs).enumerate().for_each(op);
             } else {
@@ -478,9 +509,9 @@ impl<T: ArrayValue> Array<T> {
             data.clone_from_slice(&temp);
         }
         if forward {
-            self.shape[depth..].rotate_left(count);
+            self.shape[depth..].rotate_left(trans_count);
         } else {
-            self.shape[depth..].rotate_right(count);
+            self.shape[depth..].rotate_right(trans_count);
         }
     }
 }

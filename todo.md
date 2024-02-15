@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.9
-  - Transpose square arrays in place
+  - LSP errors and diagnostics
   - Split into crates?
 - Changle how function inlining works
   - Prevent inlining of large functions

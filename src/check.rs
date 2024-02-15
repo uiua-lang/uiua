@@ -375,6 +375,7 @@ impl<'a> VirtualEnv<'a> {
                                     "repeat with infinity and a function with signature {sig}"
                                 )));
                             }
+                            self.handle_sig(sig)?;
                         } else {
                             return Err("repeat without a natural number or infinity".into());
                         }

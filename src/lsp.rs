@@ -360,12 +360,10 @@ mod server {
     impl LspDoc {
         fn new(path: impl AsRef<Path>, input: String) -> Self {
             let path = path.as_ref();
-            dbg!(&path);
             let path = current_dir()
                 .ok()
                 .and_then(|curr| pathdiff::diff_paths(path, curr))
                 .unwrap_or_else(|| path.to_path_buf());
-            dbg!(&path);
             let src = InputSrc::File(path.into());
             let (items, _, _) = parse(&input, src.clone(), &mut Inputs::default());
             let spanner = Spanner::new(src, &input, NativeSys);

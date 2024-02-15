@@ -487,7 +487,7 @@ impl<'i> Parser<'i> {
         while let Some(tilde_span) = self.try_exact(Tilde) {
             let Some(next) = self.try_ident() else {
                 self.index = checkpoint;
-                break;
+                return None;
             };
             checkpoint = self.index;
             path.push(RefComponent {

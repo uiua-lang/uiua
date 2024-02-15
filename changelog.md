@@ -56,8 +56,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Optimize the pattern for adjacency: `≡/F◫2`
   - It it as much as 800x faster in some cases
 - Square matrices are now transposed in-place
-- Add completions to the language server
-- Add diagnostics to the language server
+- Language Server
+  - Add completions
+  - Add diagnostics
+  - Add semantic highlighting
 ### Website
 - Add [Tutorial Introduction](https://uiua.org/tutorial/introduction)
 - Add [primitives.json](https://uiua.org/primitives.json) for use with tooling

@@ -7,6 +7,7 @@ use std::{slice, sync::Arc};
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
     ast::{Item, Modifier, Ref, Word},
+    ident_modifier_args,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
     Assembly, BindingInfo, Compiler, Global, InputSrc, Inputs, Primitive, SafeSys, Signature,
@@ -37,6 +38,8 @@ pub struct BindingDocs {
     pub src_span: CodeSpan,
     /// The signature of the binding
     pub signature: Option<Signature>,
+    /// The number of modifier args for the binding
+    pub modifier_args: usize,
     /// The comment of the binding
     pub comment: Option<Arc<str>>,
     /// Whether the binding is invertible and underable
@@ -145,6 +148,7 @@ impl Spanner {
             return Some(BindingDocs {
                 src_span: binding.span.clone(),
                 signature: binding.global.signature(),
+                modifier_args: binding.span.as_str(self.inputs(), ident_modifier_args),
                 comment: binding.comment.clone(),
                 invertible_underable: self.invertible_underable(binding),
                 is_constant: matches!(
@@ -172,6 +176,7 @@ impl Spanner {
             return Some(BindingDocs {
                 src_span: binding.span.clone(),
                 signature: binding.global.signature(),
+                modifier_args: binding.span.as_str(self.inputs(), ident_modifier_args),
                 comment: binding.comment.clone(),
                 invertible_underable: self.invertible_underable(binding),
                 is_constant: matches!(
@@ -337,7 +342,7 @@ mod server {
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Assembly, BindingInfo, PrimDocLine, Span, Uiua,
+        Assembly, BindingInfo, PrimDocLine, Span,
     };
 
     pub struct LspDoc {
@@ -394,10 +399,14 @@ mod server {
     const NOADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("noadic_function");
     const MONADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("monadic_function");
     const DYADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("dyadic_function");
+    const TRIADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("triadic_function");
+    const TETRADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("tetradic_function");
     const MONADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("monadic_modifier");
     const DYADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("dyadic_modifier");
+    const TRIADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("triadic_modifier");
+    const MODULE_STT: SemanticTokenType = SemanticTokenType::new("module");
 
-    const SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 9] = [
+    const SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 13] = [
         SemanticTokenType::STRING,
         SemanticTokenType::NUMBER,
         SemanticTokenType::COMMENT,
@@ -405,8 +414,12 @@ mod server {
         NOADIC_FUNCTION_STT,
         MONADIC_FUNCTION_STT,
         DYADIC_FUNCTION_STT,
+        TRIADIC_FUNCTION_STT,
+        TETRADIC_FUNCTION_STT,
         MONADIC_MODIFIER_STT,
         DYADIC_MODIFIER_STT,
+        TRIADIC_MODIFIER_STT,
+        MODULE_STT,
     ];
 
     #[tower_lsp::async_trait]
@@ -436,7 +449,7 @@ mod server {
                                     token_types: SEMANTIC_TOKEN_TYPES.to_vec(),
                                     token_modifiers: vec![],
                                 },
-                                range: Some(true),
+                                range: Some(false),
                                 full: Some(SemanticTokensFullOptions::Bool(true)),
                             },
                         ),
@@ -708,38 +721,6 @@ mod server {
             }
         }
 
-        async fn inline_value(
-            &self,
-            params: InlineValueParams,
-        ) -> Result<Option<Vec<InlineValue>>> {
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    format!("Inline value {}", params.text_document.uri),
-                )
-                .await;
-            let doc = if let Some(doc) = self.docs.get(&params.text_document.uri) {
-                doc
-            } else {
-                return Ok(None);
-            };
-            let mut env = Uiua::with_native_sys();
-            Ok(if env.run_str(&doc.input).is_ok() {
-                let stack = env.take_stack();
-                let mut text = String::new();
-                for val in stack {
-                    text.push_str(&val.show());
-                }
-                let range = Range {
-                    start: Position::new(0, 0),
-                    end: Position::new(u32::MAX, u32::MAX),
-                };
-                Some(vec![InlineValue::Text(InlineValueText { range, text })])
-            } else {
-                None
-            })
-        }
-
         async fn semantic_tokens_full(
             &self,
             params: SemanticTokensParams,
@@ -759,7 +740,7 @@ mod server {
             let mut prev_line = 0;
             let mut prev_char = 0;
             for sp in &doc.spans {
-                let token_type = match sp.value {
+                let token_type = match &sp.value {
                     SpanKind::String => SemanticTokenType::STRING,
                     SpanKind::Number => SemanticTokenType::NUMBER,
                     SpanKind::Comment => SemanticTokenType::COMMENT,
@@ -771,9 +752,32 @@ mod server {
                         PrimClass::DyadicPervasive | PrimClass::DyadicArray => DYADIC_FUNCTION_STT,
                         _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,
                         _ if p.modifier_args() == Some(2) => DYADIC_MODIFIER_STT,
+                        _ if p.modifier_args() == Some(3) => TRIADIC_MODIFIER_STT,
                         _ if p.args() == Some(0) => NOADIC_FUNCTION_STT,
                         _ => continue,
                     },
+                    SpanKind::Ident(Some(docs)) => {
+                        if docs.is_constant {
+                            continue;
+                        }
+                        if docs.is_module {
+                            MODULE_STT
+                        } else {
+                            match docs.modifier_args {
+                                1 => MONADIC_MODIFIER_STT,
+                                2 => DYADIC_MODIFIER_STT,
+                                3 => TRIADIC_MODIFIER_STT,
+                                _ => match docs.signature {
+                                    Some(sig) if sig.args == 0 => NOADIC_FUNCTION_STT,
+                                    Some(sig) if sig.args == 1 => MONADIC_FUNCTION_STT,
+                                    Some(sig) if sig.args == 2 => DYADIC_FUNCTION_STT,
+                                    Some(sig) if sig.args == 3 => TRIADIC_FUNCTION_STT,
+                                    Some(sig) if sig.args == 4 => TETRADIC_FUNCTION_STT,
+                                    _ => continue,
+                                },
+                            }
+                        }
+                    }
                     _ => continue,
                 };
                 let token_type = SEMANTIC_TOKEN_TYPES

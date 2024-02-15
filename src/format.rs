@@ -566,7 +566,10 @@ impl<'a> Formatter<'a> {
                         self.prev_import_function = Some(binding.name.value.clone());
                     }
                     Some(Word::Ref(r)) => {
-                        if r.root_module() == self.prev_import_function.as_ref() {
+                        if r.root_module()
+                            .zip(self.prev_import_function.as_ref())
+                            .is_some_and(|(a, b)| a == b)
+                        {
                             for _ in 0..self.config.multiline_indent {
                                 self.output.push(' ');
                             }

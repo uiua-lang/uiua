@@ -745,10 +745,10 @@ primitive!(
     /// If you do not need to re-[box] the result, you can use [content] instead.
     /// [content] [un][box]es all box elements that are passed to a function before calling it.
     /// ex: {1_2_3 9_2 5_5_5_5}
-    ///   : ≡⊔/+
+    ///   : ≡◇/+
     /// This is the main way to [join] a list of [box]ed strings.
-    /// ex: /⊔⊂       {"Join" "these" "strings"}
-    /// ex: /⊔(⊂⊂:@ ) {"Join" "these" "strings"}
+    /// ex: /◇⊂       {"Join" "these" "strings"}
+    /// ex: /◇(⊂⊂:@ ) {"Join" "these" "strings"}
     (1, Box, MonadicArray, ("box", '□')),
     /// Parse a string as a number
     ///
@@ -1305,12 +1305,12 @@ primitive!(
     /// Unbox the arguments to a function before calling it
     ///
     /// ex:  ⊂ □[1 2 3] □[4 5 6]
-    ///   : ⊔⊂ □[1 2 3] □[4 5 6]
+    ///   : ◇⊂ □[1 2 3] □[4 5 6]
     /// A common use of [content] is to collapse a list of [box]ed arrays with [reduce].
-    /// ex: /⊔⊂ {1_2_3 4_5 6}
+    /// ex: /◇⊂ {1_2_3 4_5 6}
     /// This case will still unbox a single element.
-    /// ex: /⊔⊂ {"Hi"}
-    ([1], Content, OtherModifier, ("content", '⊔')),
+    /// ex: /◇⊂ {"Hi"}
+    ([1], Content, OtherModifier, ("content", '◇')),
     /// Discard the top stack value then call a function
     ///
     /// See the [Advanced Stack Manipulation Tutorial](/docs/advancedstack) for a more complete understanding of why [gap] is useful.

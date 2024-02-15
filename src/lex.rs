@@ -628,6 +628,7 @@ impl<'a> Lexer<'a> {
                 "∶" => self.end(Primitive::Flip, start),
                 "⍘" => self.end(Primitive::Un, start),
                 "⊝" => self.end(Primitive::Deduplicate, start),
+                "⊔" => self.end(Primitive::Content, start),
 
                 "(" => self.end(OpenParen, start),
                 ")" => self.end(CloseParen, start),

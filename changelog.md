@@ -29,6 +29,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This allows arbitrary code to be wrapped and marked with a signature
 - Add experimental [`inventory ⍚`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
   - This shortens a lot of box array code
+- Change [`content ◇`](https://uiua.org/docs/content)'s glyph to reflect its relationship with [`inventory ⍚`](https://uiua.org/docs/inventory). Code using `⊔` will continue to work and will be formatted as `◇`.
 - `f` can now be used at the beginning of planet notation shorthand for [`fork ⊃`](https://uiua.org/docs/fork)
 - Remove cosine and arccosine optimizations
   - The inverse of the cosine idiom create a logical inconsistency
@@ -62,9 +63,9 @@ This version is not yet released. If you are reading this on the website, then t
 
 ## 0.8.0 - 2024-01-31
 ### Language
-- Add the [`content ⊔`](https://uiua.org/docs/content) modifier, which unboxes its function's arguments before calling it
-  - Deprecate [`unpack ⊐`](https://uiua.org/docs/unpack) in favor of [`content ⊔`](https://uiua.org/docs/content)
-  - The behavior of [`content ⊔`](https://uiua.org/docs/content) is less implicit and is not prone to some of the potential unexpected behavior of [`unpack ⊐`](https://uiua.org/docs/unpack)
+- Add the [`content ◇`](https://uiua.org/docs/content) modifier, which unboxes its function's arguments before calling it
+  - Deprecate [`unpack ⊐`](https://uiua.org/docs/unpack) in favor of [`content ◇`](https://uiua.org/docs/content)
+  - The behavior of [`content ◇`](https://uiua.org/docs/content) is less implicit and is not prone to some of the potential unexpected behavior of [`unpack ⊐`](https://uiua.org/docs/unpack)
 - Add the [`unique ◰`](https://uiua.org/docs/unique) function, which creates a mask of the first occurrence of each unique value in an array
   - Change [`deduplicate ◴`](https://uiua.org/docs/deduplicate)'s glyph to reflect its relationship with [`unique ◰`](https://uiua.org/docs/unique). Code using `⊖` will continue to work and will be formatted as `◴`.
 - [`table ⊞`](https://uiua.org/docs/table) now works on rows of arrays but keeps it's optimizations for lists

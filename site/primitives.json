@@ -406,7 +406,7 @@
     "description": "Run a function at compile time"
   },
   "content": {
-    "glyph": "⊔",
+    "glyph": "◇",
     "outputs": 1,
     "modifier_args": 1,
     "class": "OtherModifier",

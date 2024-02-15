@@ -63,7 +63,7 @@ pub fn Uiuisms() -> impl IntoView {
         <Title text="Uiuisms - Uiua Docs"/>
         <h1>"Uiuisms"</h1>
         <p>"This is a curated list of Uiua functions for solving common problems."</p>
-        <p>"You can add more by contributing in the "<a href="https://github.com/uiua-lang/uiua">"repo"</a>" to "<a href="https://github.com/uiua-lang/uiua/blob/main/site/src/uiuisms.rs#L112">"this list"</a>"."</p>
+        <p>"You can add more by contributing in the "<a href="https://github.com/uiua-lang/uiua">"repo"</a>" to "<a href="https://github.com/uiua-lang/uiua/blob/main/site/src/uiuisms.rs#L115">"this list"</a>"."</p>
         <div class="input-div">
             <input
                 type="text"
@@ -170,7 +170,7 @@ uiuisms!(
     /// Split an array into groups of contiguous equal elements
     "⊜□. [1 1 1 2 2 1 1 4]",
     /// Join a list of boxed strings
-    r#"/⊔⊂ {"a" "bc" "def"}"#,
+    r#"/◇⊂ {"a" "bc" "def"}"#,
     /// Find the nth fibonacci number
     "◌⍥(+⟜:)⊙.:1 10",
     /// Find the GCD of two numbers
@@ -228,5 +228,5 @@ uiuisms!(
     /// Repeat a function and collect intermediate results into an array
     "[⍥(×2.)] 10 1",
     /// Pad an array with 0s
-    "[1_2_3 4_5_6]\n↻↯⊃(⧻|¯1|⬚0↙+2)△."
+    "[1_2_3 4_5_6]\n↻⊟.¯1⬚0↙+2△."
 );

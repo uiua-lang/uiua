@@ -395,6 +395,8 @@ mod server {
         docs: DashMap<Url, LspDoc>,
     }
 
+    const UIUA_NUMBER_STT: SemanticTokenType = SemanticTokenType::new("uiua_number");
+    const UIUA_STRING_STT: SemanticTokenType = SemanticTokenType::new("uiua_string");
     const STACK_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("stack_function");
     const NOADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("noadic_function");
     const MONADIC_FUNCTION_STT: SemanticTokenType = SemanticTokenType::new("monadic_function");
@@ -407,9 +409,9 @@ mod server {
     const MODULE_STT: SemanticTokenType = SemanticTokenType::new("module");
 
     const SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 13] = [
-        SemanticTokenType::STRING,
-        SemanticTokenType::NUMBER,
         SemanticTokenType::COMMENT,
+        UIUA_NUMBER_STT,
+        UIUA_STRING_STT,
         STACK_FUNCTION_STT,
         NOADIC_FUNCTION_STT,
         MONADIC_FUNCTION_STT,
@@ -741,8 +743,8 @@ mod server {
             let mut prev_char = 0;
             for sp in &doc.spans {
                 let token_type = match &sp.value {
-                    SpanKind::String => SemanticTokenType::STRING,
-                    SpanKind::Number => SemanticTokenType::NUMBER,
+                    SpanKind::String => UIUA_STRING_STT,
+                    SpanKind::Number => UIUA_NUMBER_STT,
                     SpanKind::Comment => SemanticTokenType::COMMENT,
                     SpanKind::Primitive(p) => match p.class() {
                         PrimClass::Stack if p.modifier_args().is_none() => STACK_FUNCTION_STT,

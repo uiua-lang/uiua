@@ -345,13 +345,13 @@ impl<'a> VirtualEnv<'a> {
                 }
                 Repeat => {
                     let f = self.pop_func()?;
+                    let sig = f.signature();
                     let n = self.pop()?;
                     if let BasicValue::Num(n) = n {
                         // If n is a known natural number, then the function can have any signature.
                         if n.fract() == 0.0 && n >= 0.0 {
                             let n = n as usize;
                             if n > 0 {
-                                let sig = f.signature();
                                 let (args, outputs) = match sig.args.cmp(&sig.outputs) {
                                     Ordering::Equal => (sig.args, sig.outputs),
                                     Ordering::Less => {
@@ -369,8 +369,14 @@ impl<'a> VirtualEnv<'a> {
                                     self.stack.push(BasicValue::Other);
                                 }
                             }
+                        } else if n.is_infinite() {
+                            if sig.args != sig.outputs {
+                                return Err(SigCheckError::from(format!(
+                                    "repeat with infinity and a function with signature {sig}"
+                                )));
+                            }
                         } else {
-                            return Err("repeat without a natural number".into());
+                            return Err("repeat without a natural number or infinity".into());
                         }
                     } else {
                         // If n is unknown, then the function must be compatible with |1.1

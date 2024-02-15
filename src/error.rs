@@ -7,7 +7,7 @@ use crate::{
     lex::{Sp, Span},
     parse::ParseError,
     value::Value,
-    InputSrc, Inputs,
+    CodeSpan, InputSrc, Inputs,
 };
 
 /// An error produced when running a Uiua program
@@ -209,7 +209,7 @@ impl UiuaError {
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
     /// The span of the message
-    pub span: Span,
+    pub span: CodeSpan,
     /// The message itself
     pub message: String,
     /// What kind of diagnostic this is
@@ -259,13 +259,13 @@ impl Diagnostic {
     /// Create a new diagnostic
     pub fn new(
         message: impl Into<String>,
-        span: impl Into<Span>,
+        span: CodeSpan,
         kind: DiagnosticKind,
         inputs: Inputs,
     ) -> Self {
         Self {
             message: message.into(),
-            span: span.into(),
+            span,
             kind,
             inputs,
         }
@@ -275,7 +275,7 @@ impl Diagnostic {
         Report::new_multi(
             ReportKind::Diagnostic(self.kind),
             &self.inputs,
-            [(&self.message, self.span.clone())],
+            [(&self.message, self.span.clone().into())],
         )
     }
 }

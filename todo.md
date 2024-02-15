@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.9
-  - LSP errors and diagnostics
+  - Converging `repeat`
   - Split into crates?
 - Changle how function inlining works
   - Prevent inlining of large functions

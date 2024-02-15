@@ -57,6 +57,7 @@ This version is not yet released. If you are reading this on the website, then t
   - It it as much as 800x faster in some cases
 - Square matrices are now transposed in-place
 - Add completions to the language server
+- Add diagnostics to the language server
 ### Website
 - Add [Tutorial Introduction](https://uiua.org/tutorial/introduction)
 - Add [primitives.json](https://uiua.org/primitives.json) for use with tooling

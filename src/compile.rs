@@ -499,15 +499,20 @@ code:
             |mut instrs: EcoVec<Instr>, sig: Signature, comp: &mut Compiler| {
                 // Diagnostic for function that doesn't consume its arguments
                 if let Some((Instr::Prim(Primitive::Dup, span), rest)) = instrs.split_first() {
-                    if let Ok(rest_sig) = instrs_signature(rest) {
-                        if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs {
-                            comp.emit_diagnostic(
-                                "Functions should consume their arguments. \
-                            Try removing this duplicate.",
-                                DiagnosticKind::Style,
-                                comp.get_span(*span),
-                            );
-                            comp.flush_diagnostics();
+                    if let Span::Code(dup_span) = comp.get_span(*span) {
+                        if let Ok(rest_sig) = instrs_signature(rest) {
+                            if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs {
+                                comp.emit_diagnostic(
+                                    format!(
+                                        "Functions should consume their arguments. \
+                                        Try removing this {}.",
+                                        Primitive::Dup.format()
+                                    ),
+                                    DiagnosticKind::Style,
+                                    dup_span,
+                                );
+                                comp.flush_diagnostics();
+                            }
                         }
                     }
                 }
@@ -1848,13 +1853,14 @@ code:
                     if let Some(Instr::Prim(Dup, dup_span)) =
                         self.new_functions.last().and_then(|instrs| instrs.last())
                     {
-                        let span = Span::Code(modified.modifier.span.clone())
-                            .merge(self.get_span(*dup_span));
-                        self.emit_diagnostic(
-                            "Prefer `⟜(…)` over `⊙(…).` for clarity",
-                            DiagnosticKind::Style,
-                            span,
-                        );
+                        if let Span::Code(dup_span) = self.get_span(*dup_span) {
+                            let span = modified.modifier.span.clone().merge(dup_span);
+                            self.emit_diagnostic(
+                                "Prefer `⟜(…)` over `⊙(…).` for clarity",
+                                DiagnosticKind::Style,
+                                span,
+                            );
+                        }
                     }
                 }
 
@@ -2409,7 +2415,7 @@ code:
         &mut self,
         message: impl Into<String>,
         kind: DiagnosticKind,
-        span: impl Into<Span>,
+        span: CodeSpan,
     ) {
         self.diagnostics.insert(Diagnostic::new(
             message.into(),

@@ -10,7 +10,7 @@ use crate::{
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
     Assembly, BindingInfo, Compiler, Global, InputSrc, Inputs, Primitive, SafeSys, Signature,
-    SysBackend,
+    SysBackend, UiuaError,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -62,13 +62,24 @@ pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<Span
 
 struct Spanner {
     asm: Assembly,
+    errors: Vec<UiuaError>,
+    diagnostics: Vec<crate::Diagnostic>,
 }
 
 impl Spanner {
     fn new(src: InputSrc, input: &str, backend: impl SysBackend) -> Self {
         let mut compiler = Compiler::with_backend(backend);
-        _ = compiler.load_str_src(input, src);
-        Self { asm: compiler.asm }
+        let errors = match compiler.load_str_src(input, src) {
+            Ok(_) => Vec::new(),
+            Err(UiuaError::Multi(errors)) => errors,
+            Err(e) => vec![e],
+        };
+        let diagnostics = compiler.take_diagnostics().into_iter().collect();
+        Self {
+            asm: compiler.asm,
+            errors,
+            diagnostics,
+        }
     }
     fn inputs(&self) -> &Inputs {
         &self.asm.inputs
@@ -326,7 +337,7 @@ mod server {
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Assembly, BindingInfo, PrimDocLine, Uiua,
+        Assembly, BindingInfo, PrimDocLine, Span, Uiua,
     };
 
     pub struct LspDoc {
@@ -334,6 +345,8 @@ mod server {
         pub items: Vec<Item>,
         pub spans: Vec<Sp<SpanKind>>,
         pub asm: Assembly,
+        pub errors: Vec<UiuaError>,
+        pub diagnostics: Vec<crate::Diagnostic>,
     }
 
     impl LspDoc {
@@ -342,12 +355,13 @@ mod server {
             let (items, _, _) = parse(&input, src.clone(), &mut Inputs::default());
             let spanner = Spanner::new(src, &input, SafeSys::default());
             let spans = spanner.items_spans(&items);
-            let asm = spanner.asm;
             Self {
                 input,
                 items,
                 spans,
-                asm,
+                asm: spanner.asm,
+                errors: spanner.errors,
+                diagnostics: spanner.diagnostics,
             }
         }
     }
@@ -399,12 +413,13 @@ mod server {
     impl LanguageServer for Backend {
         async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
             self.debug("Initializing Uiua language server").await;
-            // self.client
-            //     .log_message(
-            //         MessageType::INFO,
-            //         format!("Client capabilities: {:#?}", _params.capabilities),
-            //     )
-            //     .await;
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    format!("Client capabilities: {:#?}", _params.capabilities),
+                )
+                .await;
+
             Ok(InitializeResult {
                 capabilities: ServerCapabilities {
                     text_document_sync: Some(TextDocumentSyncCapability::Kind(
@@ -428,6 +443,12 @@ mod server {
                     ),
                     rename_provider: Some(OneOf::Left(true)),
                     definition_provider: Some(OneOf::Left(true)),
+                    diagnostic_provider: Some(DiagnosticServerCapabilities::Options(
+                        DiagnosticOptions {
+                            inter_file_dependencies: true,
+                            ..Default::default()
+                        },
+                    )),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -861,6 +882,96 @@ mod server {
                 }
             }
             Ok(None)
+        }
+
+        async fn diagnostic(
+            &self,
+            params: DocumentDiagnosticParams,
+        ) -> Result<DocumentDiagnosticReportResult> {
+            let mut diagnostics = Vec::new();
+            let Some(doc) = self.docs.get(&params.text_document.uri) else {
+                return Ok(DocumentDiagnosticReportResult::Report(
+                    DocumentDiagnosticReport::Full(RelatedFullDocumentDiagnosticReport {
+                        related_documents: None,
+                        full_document_diagnostic_report: FullDocumentDiagnosticReport {
+                            result_id: None,
+                            items: diagnostics,
+                        },
+                    }),
+                ));
+            };
+            for mut err in &doc.errors {
+                let mut trace = None;
+                match err {
+                    UiuaError::Fill(e) => err = &**e,
+                    UiuaError::Traced { error, trace: tr } => {
+                        err = &**error;
+                        trace = Some(tr);
+                    }
+                    _ => (),
+                }
+                match err {
+                    UiuaError::Run(message, _) => {
+                        let span = match &message.span {
+                            Span::Code(span) => span,
+                            Span::Builtin => {
+                                if let Some(span) = trace.into_iter().flatten().find_map(|frame| {
+                                    match &frame.span {
+                                        Span::Code(span) => Some(span),
+                                        _ => None,
+                                    }
+                                }) {
+                                    span
+                                } else {
+                                    continue;
+                                }
+                            }
+                        };
+                        diagnostics.push(Diagnostic {
+                            severity: Some(DiagnosticSeverity::ERROR),
+                            range: uiua_span_to_lsp(span),
+                            message: message.value.clone(),
+                            ..Default::default()
+                        });
+                    }
+                    UiuaError::Parse(errors, _) => {
+                        for err in errors {
+                            diagnostics.push(Diagnostic {
+                                severity: Some(DiagnosticSeverity::ERROR),
+                                range: uiua_span_to_lsp(&err.span),
+                                message: err.value.to_string(),
+                                ..Default::default()
+                            });
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            for diag in &doc.diagnostics {
+                let sev = match diag.kind {
+                    crate::DiagnosticKind::Warning => DiagnosticSeverity::WARNING,
+                    crate::DiagnosticKind::Advice | crate::DiagnosticKind::Style => {
+                        DiagnosticSeverity::INFORMATION
+                    }
+                };
+                diagnostics.push(Diagnostic {
+                    severity: Some(sev),
+                    range: uiua_span_to_lsp(&diag.span),
+                    message: diag.message.clone(),
+                    ..Default::default()
+                });
+            }
+
+            Ok(DocumentDiagnosticReportResult::Report(
+                DocumentDiagnosticReport::Full(RelatedFullDocumentDiagnosticReport {
+                    related_documents: None,
+                    full_document_diagnostic_report: FullDocumentDiagnosticReport {
+                        result_id: None,
+                        items: diagnostics,
+                    },
+                }),
+            ))
         }
 
         async fn shutdown(&self) -> Result<()> {

@@ -435,11 +435,19 @@ fn watch(
             print_watching();
         }
         const TRIES: u8 = 10;
+        let path = if let Some(path) = std::env::current_dir()
+            .ok()
+            .and_then(|curr| pathdiff::diff_paths(path, curr))
+        {
+            path
+        } else {
+            path.to_path_buf()
+        };
         for i in 0..TRIES {
             let formatted = if let (Some(config), true) = (&config, format) {
-                format_file(path, config, false).map(|f| f.output)
+                format_file(&path, config, false).map(|f| f.output)
             } else {
-                fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e.into()))
+                fs::read_to_string(&path).map_err(|e| UiuaError::Load(path.clone(), e.into()))
             };
             match formatted {
                 Ok(input) => {

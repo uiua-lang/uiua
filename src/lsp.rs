@@ -65,7 +65,9 @@ pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<Span
 
 struct Spanner {
     asm: Assembly,
+    #[allow(dead_code)]
     errors: Vec<UiuaError>,
+    #[allow(dead_code)]
     diagnostics: Vec<crate::Diagnostic>,
 }
 

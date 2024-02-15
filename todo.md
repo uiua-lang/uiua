@@ -1,8 +1,6 @@
 # Uiua Todo
 
 - 0.9
-  - Converging `repeat`
-  - Split into crates?
 - Changle how function inlining works
   - Prevent inlining of large functions
   - If a function is inlinable, don't actually put it in the assembly instructions

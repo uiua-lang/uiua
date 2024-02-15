@@ -2233,8 +2233,18 @@ code:
                 asm.instrs.extend(instrs);
                 asm.top_slices.push(FuncSlice { start, len });
                 let mut env = Uiua::with_backend(self.backend.clone());
-                env.run_asm(&asm)?;
-                let values = env.take_stack();
+                let values = match env.run_asm(&asm) {
+                    Ok(_) => env.take_stack(),
+                    Err(e) => {
+                        if self.errors.is_empty() {
+                            self.add_error(
+                                modified.modifier.span.clone(),
+                                format!("Compile-time evaluation failed: {e}"),
+                            );
+                        }
+                        vec![Value::default(); sig.outputs]
+                    }
+                };
                 if !call {
                     self.new_functions.push(EcoVec::new());
                 }

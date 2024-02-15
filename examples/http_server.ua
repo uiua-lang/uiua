@@ -62,4 +62,4 @@ Respond ← ◌spawn(
   ⊃⋅&cl&w
 )
 
-⍥(⍣Respond⋅&p &tcpa Listener)∞
+⍢(⍣Respond⋅&p &tcpa Listener)1

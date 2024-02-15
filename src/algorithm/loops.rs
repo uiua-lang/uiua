@@ -16,12 +16,37 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let n = env
-        .pop(2)?
+        .pop("repetition count")?
         .as_num(env, "Repetitions must be a natural number or infinity")?;
 
     if n.is_infinite() {
+        let sig = f.signature();
+        if sig.args == 0 {
+            return Err(env.error(format!(
+                "Converging {}'s function must have at least 1 argument",
+                Primitive::Repeat.format()
+            )));
+        }
+        if sig.args != sig.outputs {
+            return Err(env.error(format!(
+                "Converging {}'s function must have a net stack change of 0, \
+                but its signature is {sig}",
+                Primitive::Repeat.format()
+            )));
+        }
+        let mut prev = env.pop(1)?;
+        env.push(prev.clone());
         loop {
             env.call(f.clone())?;
+            let next = env.pop("converging function result")?;
+            let converged = next == prev;
+            if converged {
+                env.push(next);
+                break;
+            } else {
+                env.push(next.clone());
+                prev = next;
+            }
         }
     } else {
         if n < 0.0 || n.fract() != 0.0 {

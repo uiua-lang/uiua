@@ -1161,6 +1161,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="⍢(×2|<1000) 1"/>
         <Editor example="◌⍢(⊃(×2)⊂|<100) 1 []"/>
         <p>"While "<Prim prim=Do/>" is very powerful, it should only be used when necessary."</p>
+        <p><Prim prim=Do/>" is the only way to do an infinite loop in Uiua. To do so, simply use "<code>"1"</code>" as the condition function."</p>
 
         <h2 id="try">"Catching errors with "<Prim prim=Try/></h2>
         <p>"The "<Prim prim=Try/>" modifier takes two functions. If the first function throws an error, the second function is called to handle it."</p>

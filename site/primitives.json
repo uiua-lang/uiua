@@ -659,8 +659,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "IteratingModifier",
-    "description": "Apply a function to each unboxed row of an array and re-box the results",
-    "experimental": true
+    "description": "Apply a function to each unboxed row of an array and re-box the results"
   },
   "join": {
     "glyph": "⊂",

@@ -27,12 +27,12 @@ This version is not yet released. If you are reading this on the website, then t
 - [`range ⇡`](https://uiua.org/docs/range) can now be used with negative numbers
 - [`eta η`](https://uiua.org/docs/eta), [`pi π`](https://uiua.org/docs/pi), [`tau τ`](https://uiua.org/docs/tau) and [`infinity ∞`](https://uiua.org/docs/infinity) are now parsed as numbers rather than functions
   - This lets them syntactically bind with `¯` or form fraction literals
-- Inline functions are no longer required to be in a binding or modifier
-  - This allows arbitrary code to be wrapped and marked with a signature
-- Add experimental [`inventory ⍚`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
+- Add the [`inventory ⍚`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
   - This shortens a lot of box array code
 - Change [`content ◇`](https://uiua.org/docs/content)'s glyph to reflect its relationship with [`inventory ⍚`](https://uiua.org/docs/inventory). Code using `⊔` will continue to work and will be formatted as `◇`.
 - `f` can now be used at the beginning of planet notation shorthand for [`fork ⊃`](https://uiua.org/docs/fork)
+- Inline functions are no longer required to be in a binding or modifier
+  - This allows arbitrary code to be wrapped and marked with a signature
 - Remove cosine and arccosine optimizations
   - The inverse of the cosine idiom create a logical inconsistency
 - Flip the order of [`send`](https://uiua.org/docs/send)'s arguments

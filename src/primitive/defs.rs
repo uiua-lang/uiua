@@ -1185,25 +1185,19 @@ primitive!(
     /// Apply a function to each unboxed row of an array and re-box the results
     ///
     /// For box arrays, this is roughly equivalent to `each``under``un``box`.
-    /// ex: # Experimental!
-    ///   : ∵⍜°□(⊂:@!) {"a" "bc" "def"}
+    /// ex: ∵⍜°□(⊂:@!) {"a" "bc" "def"}
     ///   :    ⍚(⊂:@!) {"a" "bc" "def"}
     /// For non-box array, [inventory] works identically to [rows], except it [box]es each result row.
-    /// ex: # Experimental!
-    ///   : ≡⇌ [1_2_3 4_5_6]
+    /// ex: ≡⇌ [1_2_3 4_5_6]
     ///   : ⍚⇌ [1_2_3 4_5_6]
     /// This can be useful when you expect the function to yield arrays of different [shape]s.
-    /// ex: # Experimental!
-    ///   : ⍚⇡ [3 8 5 4]
-    /// ex: # Experimental!
-    ///   : ⍚↙⊙¤ [2 0 3 4 1] [4 8 9 2]
+    /// ex: ⍚⇡ [3 8 5 4]
+    /// ex: ⍚↙⊙¤ [2 0 3 4 1] [4 8 9 2]
     /// For a box and non-box array, [inventory] will unbox the box array's rows and then re-box the results.
-    /// ex: # Experimental!
-    ///   : ⍚⊂ {"a" "bc" "def"} "123"
+    /// ex: ⍚⊂ {"a" "bc" "def"} "123"
     ///
     /// A common use case is in conjunction with [under] and boxing array notation as a sort of n-wise [both].
-    /// ex: # Experimental!
-    ///   : {⍜ {⊙⊙∘}⍚⊂    1_2 3_4_5 6_7_8_9 10}
+    /// ex: {⍜ {⊙⊙∘}⍚⊂    1_2 3_4_5 6_7_8_9 10}
     ///   : {⍜⊙{⊙⊙∘}⍚⊂ 10 1_2 3_4_5 6_7_8_9   }
     ([1], Inventory, IteratingModifier, ("inventory", '⍚')),
     /// Apply a function to each combination of rows of arrays

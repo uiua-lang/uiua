@@ -336,7 +336,6 @@ impl Primitive {
                 | Recur
                 | All
                 | Cascade
-                | Inventory
                 | Map
                 | Insert
                 | Has

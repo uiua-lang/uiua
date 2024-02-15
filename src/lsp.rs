@@ -327,6 +327,7 @@ pub use server::run_language_server;
 #[cfg(feature = "lsp")]
 mod server {
     use std::{
+        env::current_dir,
         path::{Path, PathBuf},
         sync::Arc,
     };
@@ -344,7 +345,7 @@ mod server {
         format::{format_str, FormatConfig},
         lex::Loc,
         primitive::{PrimClass, PrimDocFragment},
-        Assembly, BindingInfo, PrimDocLine, Span,
+        Assembly, BindingInfo, NativeSys, PrimDocLine, Span,
     };
 
     pub struct LspDoc {
@@ -357,10 +358,17 @@ mod server {
     }
 
     impl LspDoc {
-        fn new(path: impl Into<Arc<Path>>, input: String) -> Self {
+        fn new(path: impl AsRef<Path>, input: String) -> Self {
+            let path = path.as_ref();
+            dbg!(&path);
+            let path = current_dir()
+                .ok()
+                .and_then(|curr| pathdiff::diff_paths(path, curr))
+                .unwrap_or_else(|| path.to_path_buf());
+            dbg!(&path);
             let src = InputSrc::File(path.into());
             let (items, _, _) = parse(&input, src.clone(), &mut Inputs::default());
-            let spanner = Spanner::new(src, &input, SafeSys::default());
+            let spanner = Spanner::new(src, &input, NativeSys);
             let spans = spanner.items_spans(&items);
             Self {
                 input,

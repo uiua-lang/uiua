@@ -1745,7 +1745,7 @@ mod tests {
 	"repository": {{
         "idents": {{
             "name": "variable.parameter.uiua",
-            "match": "\\b[a-zA-Z]+\\b"
+            "match": "\\b[a-zA-Z]+[!‼]*\\b"
         }},
 		"comments": {{
 			"name": "comment.line.uiua",

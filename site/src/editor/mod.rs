@@ -1179,15 +1179,7 @@ pub fn Editor<'a>(
                     <div id="settings-right">
                         <button
                             class="info-button"
-                            data-title=" shift Enter   - Run + Format
-ctrl/⌘ /       - Toggle line comment
-ctrl/⌘ 4       - Toggle multiline string
-   alt Up/Down - Swap lines
- shift Delete  - Delete lines
-ctrl/⌘ Z       - Undo
-ctrl/⌘ Y       - Redo
-replace \"pad\" in links with \"embed\"
-or \"embedpad\" to embed the editor"
+                            data-title=EDITOR_SHORTCUTS
                             disabled>
                             "🛈"
                         </button>
@@ -1299,15 +1291,14 @@ or \"embedpad\" to embed the editor"
             <div id="editor-help">
                 { help.iter().map(|s| view!(<p>{s}</p>)).collect::<Vec<_>>() }
             </div>
-            <div id="editor-help">
-            {
-                if let EditorMode::Pad = mode {
-                    Some("Note: Uiua is not yet stable")
-                } else {
-                    None
-                }
-            }
-            </div>
         </div>
     }
 }
+
+pub const EDITOR_SHORTCUTS: &str = " shift Enter   - Run + Format
+ctrl/⌘ /       - Toggle line comment
+ctrl/⌘ 4       - Toggle multiline string
+   alt Up/Down - Swap lines
+ shift Delete  - Delete lines
+ctrl/⌘ Z       - Undo
+ctrl/⌘ Y       - Redo";

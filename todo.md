@@ -2,7 +2,6 @@
 
 - 0.9
   - Format signature into bare inline functions
-  - Always require extra parens for switch functions in modifiers
 - Changle how function inlining works
   - Prevent inlining of large functions
   - If a function is inlinable, don't actually put it in the assembly instructions

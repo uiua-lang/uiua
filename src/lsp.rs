@@ -544,21 +544,17 @@ mod server {
                     value.push_str(&format!(" `{sig}`"));
                 }
                 if let Some((invertible, underable)) = info.invertible_underable {
-                    value.push_str("\n\n");
-                    if !invertible {
-                        value.push_str("~~");
-                    }
-                    value.push_str("[`° un`](https://uiua.org/docs/un)");
-                    if !invertible {
-                        value.push_str("~~");
-                    }
-                    value.push_str(" | ");
-                    if !underable {
-                        value.push_str("~~");
-                    }
-                    value.push_str("[`⍜ under`](https://uiua.org/docs/under)");
-                    if !underable {
-                        value.push_str("~~");
+                    if invertible || underable {
+                        value.push_str("\n\n");
+                        if invertible {
+                            value.push_str("[`° un`](https://uiua.org/docs/un)");
+                        }
+                        if underable {
+                            if invertible {
+                                value.push_str(" | ");
+                            }
+                            value.push_str("[`⍜ under`](https://uiua.org/docs/under)");
+                        }
                     }
                 }
                 if let Some(comment) = &info.comment {

@@ -408,13 +408,12 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
         _ => match uiua::ident_modifier_args(name) {
             0 => {
                 if let Some(sig) = docs.signature {
-                    match (sig.args, sig.outputs) {
-                        (0, 1) => code_font!("noadic-function"),
-                        (1, 1) => code_font!("monadic-function"),
-                        (2, 1) => code_font!("dyadic-function"),
-                        (3, _) => code_font!("triadic-function"),
-                        (4, _) => code_font!("tetradic-function"),
-                        (5, _) => code_font!("pentadic-function"),
+                    match sig.args {
+                        0 => code_font!("noadic-function"),
+                        1 => code_font!("monadic-function"),
+                        2 => code_font!("dyadic-function"),
+                        3 => code_font!("triadic-function"),
+                        4 => code_font!("tetradic-function"),
                         _ => code_font!(""),
                     }
                 } else {

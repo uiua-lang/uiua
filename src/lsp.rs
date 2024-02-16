@@ -2,7 +2,7 @@
 //!
 //! Even without the `lsp` feature enabled, this module still provides some useful types and functions for working with Uiua code in an IDE or text editor.
 
-use std::{slice, sync::Arc};
+use std::{collections::HashMap, slice, sync::Arc};
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
@@ -29,6 +29,7 @@ pub enum SpanKind {
     Whitespace,
     Placeholder,
     Delimiter,
+    FuncDelim(Signature),
 }
 
 /// Documentation information for a binding
@@ -65,6 +66,7 @@ pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<Span
 
 struct Spanner {
     asm: Assembly,
+    inline_function_sigs: HashMap<CodeSpan, Signature>,
     #[allow(dead_code)]
     errors: Vec<UiuaError>,
     #[allow(dead_code)]
@@ -82,6 +84,7 @@ impl Spanner {
         let diagnostics = compiler.take_diagnostics().into_iter().collect();
         Self {
             asm: compiler.asm,
+            inline_function_sigs: compiler.inline_function_sigs,
             errors,
             diagnostics,
         }
@@ -245,7 +248,12 @@ impl Spanner {
                     }
                 }
                 Word::Func(func) => {
-                    spans.push(word.span.just_start(self.inputs()).sp(SpanKind::Delimiter));
+                    let kind = if let Some(sig) = self.inline_function_sigs.get(&word.span) {
+                        SpanKind::FuncDelim(*sig)
+                    } else {
+                        SpanKind::Delimiter
+                    };
+                    spans.push(word.span.just_start(self.inputs()).sp(kind.clone()));
                     if let Some(sig) = &func.signature {
                         spans.push(sig.span.clone().sp(SpanKind::Signature));
                     }
@@ -255,7 +263,7 @@ impl Spanner {
                         if end.as_str(self.inputs(), |s| s == ")")
                             || end.as_str(self.inputs(), |s| s == "}")
                         {
-                            spans.push(end.sp(SpanKind::Delimiter));
+                            spans.push(end.sp(kind));
                         }
                     }
                 }
@@ -268,7 +276,13 @@ impl Spanner {
                     for (i, branch) in sw.branches.iter().enumerate() {
                         let start_span = branch.span.just_start(self.inputs());
                         if i > 0 && start_span.as_str(self.inputs(), |s| s == "|") {
-                            spans.push(start_span.sp(SpanKind::Delimiter));
+                            let kind =
+                                if let Some(sig) = self.inline_function_sigs.get(&branch.span) {
+                                    SpanKind::FuncDelim(*sig)
+                                } else {
+                                    SpanKind::Delimiter
+                                };
+                            spans.push(start_span.sp(kind));
                         }
                         if let Some(sig) = &branch.value.signature {
                             spans.push(sig.span.clone().sp(SpanKind::Signature));
@@ -353,6 +367,7 @@ mod server {
         pub items: Vec<Item>,
         pub spans: Vec<Sp<SpanKind>>,
         pub asm: Assembly,
+        pub inline_function_sigs: HashMap<CodeSpan, Signature>,
         pub errors: Vec<UiuaError>,
         pub diagnostics: Vec<crate::Diagnostic>,
     }
@@ -373,6 +388,7 @@ mod server {
                 items,
                 spans,
                 asm: spanner.asm,
+                inline_function_sigs: spanner.inline_function_sigs,
                 errors: spanner.errors,
                 diagnostics: spanner.diagnostics,
             }
@@ -520,14 +536,26 @@ mod server {
             }
             // Hovering a binding
             let mut binding_docs: Option<Sp<&BindingDocs>> = None;
-            for span_kind in &doc.spans {
-                if let SpanKind::Ident(Some(docs)) = &span_kind.value {
-                    if span_kind.span.contains_line_col(line, col) {
-                        binding_docs = Some(span_kind.span.clone().sp(docs));
-                        break;
+            if prim_range.is_none() {
+                for span_kind in &doc.spans {
+                    if let SpanKind::Ident(Some(docs)) = &span_kind.value {
+                        if span_kind.span.contains_line_col(line, col) {
+                            binding_docs = Some(span_kind.span.clone().sp(docs));
+                            break;
+                        }
                     }
                 }
             }
+            // Hovering an inline function
+            let mut inline_function_sig: Option<Sp<Signature>> = None;
+            if prim_range.is_none() && binding_docs.is_none() {
+                for (span, sig) in &doc.inline_function_sigs {
+                    if span.contains_line_col(line, col) {
+                        inline_function_sig = Some(span.clone().sp(*sig));
+                    }
+                }
+            }
+
             Ok(Some(if let Some((prim, range)) = prim_range {
                 Hover {
                     contents: HoverContents::Markup(MarkupContent {
@@ -567,6 +595,14 @@ mod server {
                         value,
                     }),
                     range: Some(uiua_span_to_lsp(&span)),
+                }
+            } else if let Some(sig) = inline_function_sig {
+                Hover {
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value: format!("```uiua\n{}\n```", sig.value),
+                    }),
+                    range: Some(uiua_span_to_lsp(&sig.span)),
                 }
             } else {
                 return Ok(None);

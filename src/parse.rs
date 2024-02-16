@@ -968,7 +968,11 @@ impl<'i> Parser<'i> {
                     closed: end.value,
                 }))
             } else {
-                let first_span = first_span.unwrap_or(start);
+                let first_span = if let Some(span) = first_span {
+                    start.merge(span)
+                } else {
+                    start
+                };
                 let first_id = FunctionId::Anonymous(first_span.clone());
                 let first = first_span.sp(Func {
                     id: first_id,

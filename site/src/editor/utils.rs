@@ -632,6 +632,15 @@ fn set_code_html(id: &str, code: &str) {
                             escape_html(text)
                         )
                     }
+                    SpanKind::FuncDelim(sig) => {
+                        let title = sig.to_string();
+                        format!(
+                            r#"<span 
+                            class="code-span code-hover {color_class}" 
+                            data-title={title}>{}</span>"#,
+                            escape_html(text)
+                        )
+                    }
                     _ => format!(
                         r#"<span class="code-span {color_class}">{}</span>"#,
                         escape_html(text)

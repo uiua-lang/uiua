@@ -56,6 +56,10 @@ pub struct Compiler {
     diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
     print_diagnostics: bool,
+    /// Whether to evaluate comptime code
+    comptime: bool,
+    /// Spans of bare inline functions and their signatures
+    pub(crate) inline_function_sigs: HashMap<CodeSpan, Signature>,
     /// The backend used to run comptime code
     backend: Arc<dyn SysBackend>,
 }
@@ -78,6 +82,8 @@ impl Default for Compiler {
             experimental_function_strand_error: false,
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
+            comptime: true,
+            inline_function_sigs: HashMap::new(),
             backend: Arc::new(SafeSys::default()),
         }
     }
@@ -165,6 +171,11 @@ impl Compiler {
     /// Take a completed assembly from the compiler
     pub fn finish(&mut self) -> Assembly {
         take(&mut self.asm)
+    }
+    /// Set whether to evaluate comptime code
+    pub fn comptime(&mut self, comptime: bool) -> &mut Self {
+        self.comptime = comptime;
+        self
     }
     /// Set whether to print diagnostics as they are encountered
     ///
@@ -1490,10 +1501,10 @@ code:
         }
 
         if call {
-            let (.., instrs) = self.compile_func_instrs(func, span)?;
+            let (_, _, instrs) = self.compile_func_instrs(func, span)?;
             self.push_all_instrs(instrs);
         } else {
-            let function = self.compile_func(func, span)?;
+            let function = self.compile_func(func, span.clone())?;
             self.push_instr(Instr::PushFunc(function));
         }
         Ok(())
@@ -1553,6 +1564,7 @@ code:
                 }
             }
         };
+        self.inline_function_sigs.insert(span.clone(), sig);
         Ok((func.id, sig, instrs))
     }
     fn switch(&mut self, sw: Switch, span: CodeSpan, call: bool) -> UiuaResult {

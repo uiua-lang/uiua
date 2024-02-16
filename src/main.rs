@@ -919,7 +919,8 @@ fn color_code(code: &str) -> String {
             | SpanKind::Signature
             | SpanKind::Whitespace
             | SpanKind::Placeholder
-            | SpanKind::Delimiter => (255, 255, 255),
+            | SpanKind::Delimiter
+            | SpanKind::FuncDelim(_) => (255, 255, 255),
         };
         colored.push_str(&format!(
             "{}",

@@ -388,7 +388,30 @@ pub fn Editor<'a>(
                 if os_ctrl(event) || event.shift_key() {
                     run(true, true);
                 } else {
-                    replace_code("\n");
+                    let (start, _) = get_code_cursor().unwrap();
+                    let code = code_text();
+                    let left_char = if start > 0 {
+                        code.chars().nth(start as usize - 1)
+                    } else {
+                        None
+                    };
+                    let right_char = code.chars().nth(start as usize);
+                    let (start_line, _) = line_col(&code, start as usize);
+                    let curr_line_indent = code
+                        .lines()
+                        .nth(start_line - 1)
+                        .unwrap()
+                        .chars()
+                        .take_while(|c| c.is_whitespace())
+                        .count();
+                    let indent = curr_line_indent
+                        + 2 * left_char.is_some_and(|c| "({[".contains(c)) as usize;
+                    replace_code(&format!("\n{}", " ".repeat(indent)));
+                    let (start, _) = get_code_cursor().unwrap();
+                    if right_char.is_some_and(|c| ")}]".contains(c)) {
+                        replace_code(&format!("\n{}", " ".repeat(indent.saturating_sub(2))));
+                        state().set_cursor((start, start));
+                    }
                 }
             }
             "Backspace" => {

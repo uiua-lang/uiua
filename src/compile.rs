@@ -1716,7 +1716,15 @@ code:
                         };
                         return self.modified(new, call);
                     }
-                    _ => {}
+                    modifier => {
+                        return Err(self.fatal_error(
+                            modified.modifier.span.clone().merge(span),
+                            format!(
+                                "{modifier} cannot use a function pack. If you meant to \
+                                use a switch function, add a layer of parentheses."
+                            ),
+                        ));
+                    }
                 }
             }
         }

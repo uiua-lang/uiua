@@ -58,8 +58,8 @@ pub struct Compiler {
     print_diagnostics: bool,
     /// Whether to evaluate comptime code
     comptime: bool,
-    /// Spans of bare inline functions and their signatures
-    pub(crate) inline_function_sigs: HashMap<CodeSpan, Signature>,
+    /// Spans of bare inline functions and their signatures and whether they are explicit
+    pub(crate) inline_function_sigs: HashMap<CodeSpan, (Signature, bool)>,
     /// The backend used to run comptime code
     backend: Arc<dyn SysBackend>,
 }
@@ -1564,7 +1564,8 @@ code:
                 }
             }
         };
-        self.inline_function_sigs.insert(span.clone(), sig);
+        self.inline_function_sigs
+            .insert(span.clone(), (sig, func.signature.is_some()));
         Ok((func.id, sig, instrs))
     }
     fn switch(&mut self, sw: Switch, span: CodeSpan, call: bool) -> UiuaResult {

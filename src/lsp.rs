@@ -66,7 +66,7 @@ pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<Span
 
 struct Spanner {
     asm: Assembly,
-    inline_function_sigs: HashMap<CodeSpan, Signature>,
+    inline_function_sigs: HashMap<CodeSpan, (Signature, bool)>,
     #[allow(dead_code)]
     errors: Vec<UiuaError>,
     #[allow(dead_code)]
@@ -248,7 +248,8 @@ impl Spanner {
                     }
                 }
                 Word::Func(func) => {
-                    let kind = if let Some(sig) = self.inline_function_sigs.get(&word.span) {
+                    let kind = if let Some((sig, false)) = self.inline_function_sigs.get(&word.span)
+                    {
                         SpanKind::FuncDelim(*sig)
                     } else {
                         SpanKind::Delimiter
@@ -276,12 +277,13 @@ impl Spanner {
                     for (i, branch) in sw.branches.iter().enumerate() {
                         let start_span = branch.span.just_start(self.inputs());
                         if i > 0 && start_span.as_str(self.inputs(), |s| s == "|") {
-                            let kind =
-                                if let Some(sig) = self.inline_function_sigs.get(&branch.span) {
-                                    SpanKind::FuncDelim(*sig)
-                                } else {
-                                    SpanKind::Delimiter
-                                };
+                            let kind = if let Some((sig, false)) =
+                                self.inline_function_sigs.get(&branch.span)
+                            {
+                                SpanKind::FuncDelim(*sig)
+                            } else {
+                                SpanKind::Delimiter
+                            };
                             spans.push(start_span.sp(kind));
                         }
                         if let Some(sig) = &branch.value.signature {
@@ -367,7 +369,7 @@ mod server {
         pub items: Vec<Item>,
         pub spans: Vec<Sp<SpanKind>>,
         pub asm: Assembly,
-        pub inline_function_sigs: HashMap<CodeSpan, Signature>,
+        pub inline_function_sigs: HashMap<CodeSpan, (Signature, bool)>,
         pub errors: Vec<UiuaError>,
         pub diagnostics: Vec<crate::Diagnostic>,
     }
@@ -488,6 +490,7 @@ mod server {
                             ..Default::default()
                         },
                     )),
+                    code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -549,8 +552,8 @@ mod server {
             // Hovering an inline function
             let mut inline_function_sig: Option<Sp<Signature>> = None;
             if prim_range.is_none() && binding_docs.is_none() {
-                for (span, sig) in &doc.inline_function_sigs {
-                    if span.contains_line_col(line, col) {
+                for (span, (sig, explicit)) in &doc.inline_function_sigs {
+                    if !*explicit && span.contains_line_col(line, col) {
                         inline_function_sig = Some(span.clone().sp(*sig));
                     }
                 }
@@ -847,6 +850,51 @@ mod server {
                 result_id: None,
                 data: tokens,
             })))
+        }
+
+        async fn code_action(
+            &self,
+            params: CodeActionParams,
+        ) -> Result<Option<CodeActionResponse>> {
+            let Some(doc) = self.docs.get(&params.text_document.uri) else {
+                return Ok(None);
+            };
+            let (line, col) = lsp_pos_to_uiua(params.range.start);
+            let mut actions = Vec::new();
+            // Add explicit signature
+            for (span, (sig, explicit)) in &doc.inline_function_sigs {
+                if span.contains_line_col(line, col) {
+                    if *explicit {
+                        continue;
+                    }
+                    let mut insertion_span = span.just_start(&doc.asm.inputs);
+                    insertion_span.start = insertion_span.end;
+                    actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                        title: "Add explicit signature".into(),
+                        kind: Some(CodeActionKind::QUICKFIX),
+                        edit: Some(WorkspaceEdit {
+                            changes: Some(
+                                [(
+                                    params.text_document.uri,
+                                    vec![TextEdit {
+                                        range: uiua_span_to_lsp(&insertion_span),
+                                        new_text: format!("{sig} "),
+                                    }],
+                                )]
+                                .into(),
+                            ),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }));
+                    break;
+                }
+            }
+            Ok(if actions.is_empty() {
+                None
+            } else {
+                Some(actions)
+            })
         }
 
         async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {

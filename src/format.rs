@@ -768,7 +768,10 @@ impl<'a> Formatter<'a> {
                 }
             }
             Word::Ref(r) => {
-                if self.output.chars().next_back().is_some_and(is_ident_char) {
+                if (self.output.chars().rev())
+                    .take_while(|&c| is_ident_char(c))
+                    .any(|c| c.is_uppercase())
+                {
                     self.output.push(' ');
                 }
                 self.format_ref(r);

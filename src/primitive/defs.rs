@@ -870,14 +870,24 @@ primitive!(
     /// ex:   ↯ 3_5 ⇡9
     ///   : ⬚0↯ 3_5 ⇡9
     ///
-    /// At most one of the dimensions of the new shape may be negative. This indicates that this is a *derived* dimension, and it will be calculated to make the total number of elements in the new shape be `less or equal` the total number of elements in the original shape.
-    /// ex: ↯5_¯1 ⇡15
-    /// ex: ↯¯1_5 ⇡15
-    /// ex: ↯2_2_¯1 ⇡15
-    /// ex: ↯¯1_2_2 ⇡15
-    /// ex: ↯3_¯1_5 ⇡30
+    /// At most one of the dimensions of the new shape may be [infinity]. This indicates that this is a *derived* dimension, and it will be calculated to make the total number of elements in the new shape be `less or equal` the total number of elements in the original shape.
+    /// ex: ↯5_∞ ⇡15
+    /// ex: ↯∞_5 ⇡15
+    /// ex: ↯2_2_∞ ⇡15
+    /// ex: ↯∞_2_2 ⇡15
+    /// ex: ↯3_∞_5 ⇡30
     /// If [fill] is used, the total number of elements in the new shape will always be `greater or equal` the total number of elements in the original shape.
-    /// ex: ⬚0↯ ¯1_5 ⇡12
+    /// ex: ⬚0↯ ∞_5 ⇡12
+    ///
+    /// [under][shape] will [reshape] the array as an inverse.
+    /// ex: ⍜△⇌. ↯2_3_4⇡24
+    ///
+    /// Negative axes in the shape will reverse the corresponding axes of the array.
+    /// ex: ↯[¯3] 1_2_3
+    /// ex: ↯2_3_4⇡24
+    ///   : ⍜△⍜(⊏0_2)¯
+    /// ex: ↯¯3 [1 2 3 4]
+    /// ex: ↯¯∞ [1 2 3 4 5]
     ///
     /// See also: [deshape]
     (2, Reshape, DyadicArray, ("reshape", '↯')),

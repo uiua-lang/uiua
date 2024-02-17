@@ -7,6 +7,8 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - **Breaking Change** - [`repeat ⍥`](https://uiua.org/docs/repeat) with [`infinity ∞`](https://uiua.org/docs/infinity) now does a fixed-point iteration rather than an infinite loop
   - You can still do an infinite loop with [`do ⍢`](https://uiua.org/docs/do)`(…)1`
+- **Breaking Change** - [`reshape ↯`](https://uiua.org/docs/reshape) with a shape with negative dimensions now reverses that axis rather than acting as a "fill" value
+  - The "fill" behavior can still be achieved by setting an axis to [`infinity ∞`](https://uiua.org/docs/infinity)
 - Overhaul the module system
   - Details can be found in the updated [Modules](https://uiua.org/tutorial/modules) tutorial
   - Deprecate [`&i`](https://uiua.org/docs/&i), as it is no longer necessary

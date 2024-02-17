@@ -370,7 +370,7 @@ impl Value {
     }
 }
 
-impl<T: ArrayValue> Array<T> {
+impl<T: Clone> Array<T> {
     /// Reverse the rows of the array
     pub fn reverse(&mut self) {
         self.reverse_depth(0);

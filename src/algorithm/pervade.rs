@@ -132,12 +132,12 @@ where
         Ordering::Equal => {}
         Ordering::Less => {
             for b_dim in b.shape[..b_depth - a_depth].iter().rev() {
-                a.reshape_scalar(*b_dim);
+                a.reshape_scalar(Ok(*b_dim as isize));
             }
         }
         Ordering::Greater => {
             for a_dim in a.shape[..a_depth - b_depth].iter().rev() {
-                b.reshape_scalar(*a_dim);
+                b.reshape_scalar(Ok(*a_dim as isize));
             }
         }
     }

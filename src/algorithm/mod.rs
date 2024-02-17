@@ -163,7 +163,7 @@ where
         {
             a.shape.drain(..fixes);
             for &dim in b.shape.iter().take(fixes).rev() {
-                a.reshape_scalar(dim);
+                a.reshape_scalar(Ok(dim as isize));
             }
         }
     }
@@ -178,7 +178,7 @@ where
         {
             b.shape.drain(..fixes);
             for &dim in a.shape.iter().take(fixes).rev() {
-                b.reshape_scalar(dim);
+                b.reshape_scalar(Ok(dim as isize));
             }
         }
     }

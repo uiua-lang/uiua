@@ -36,7 +36,7 @@ struct GlobalNativeSys {
     colored_errors: DashMap<String, String>,
     #[cfg(feature = "ffi")]
     ffi: crate::FfiState,
-    #[cfg(feature = "gif")]
+    #[cfg(all(feature = "gif", feature = "invoke"))]
     gifs_child: parking_lot::Mutex<Option<Child>>,
 }
 

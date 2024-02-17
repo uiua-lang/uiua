@@ -213,7 +213,7 @@ fn TutorialBasic() -> impl IntoView {
 
         <h2 id="formatting">"Formatting"</h2>
         <p>"Most Uiua built-in functions use special Unicode characters. To type multiplication and division signs, you can use "<code>"*"</code>" and "<code>"%"</code>" respectively. Then, run the code to format the ASCII characters into Unicode."</p>
-        <Editor example="# Click Run to format!\n%6 *3 8" help={&["", "⇡Click⇡"]}/>
+        <Editor example="# Click Run to format!\n%6 *3 8" help={&["", "⇡⇡⇡ Click   "]}/>
         <p>"Most built-in functions have names you can type rather than symbols. Formatting works on these too. "<em><strong>"This is the primary way of entering Uiua's glyphs."</strong></em></p>
         <p>"Try formatting the lines below by clicking "<strong>"Run"</strong>"."</p>
         <Editor example="max sqrt 10 mod 10 pow 2 8"/>
@@ -394,7 +394,7 @@ fn TutorialMath() -> impl IntoView {
         <Editor example="×++1 2 3 4" help={&["", "Click the arrows to see how the expression is built up"]}/>
         <p>"This is not special syntax. All the numbers are pushed to the stack, then the operators work on them."</p>
         <p>"Remember that you can type the names of operators and then run to format them."</p>
-        <Editor example="# Click Run to format!\nmax sqrt2 mod10 abs`31" help={&["", "⇡Click⇡"]}/>
+        <Editor example="# Click Run to format!\nmax sqrt2 mod10 abs`31" help={&["", "⇡⇡⇡ Click   "]}/>
 
         <h2 id="adicity">"Adicity"</h2>
         <p>"Some programming languages use the terms \"unary\" and \"binary\" to refer to functions that take one or two arguments respectively. While these are the Latin terms, many array languages, including Uiua, prefer to use the Greek terms \"monadic\" and \"dyadic\"."</p>

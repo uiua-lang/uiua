@@ -911,6 +911,7 @@ input[type=number] {
 #editor-help>* {
     line-height: 1em;
     margin: 0;
+    white-space: pre;
 }
 
 .sound-button {

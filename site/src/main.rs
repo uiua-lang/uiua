@@ -256,7 +256,7 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <h2>"Unicode Formatter"</h2>
                     <p>"Uiua has the terseness and expressivity afforded by Unicode glyphs without the need for special keyboard or editor support. Instead, the language comes with a formatter that converts the names of built-in functions into glyphs."</p>
-                    <Editor example="floor*10[repeatrand5]" help={&["", "Click to format ⇡⇡⇡⇡"]}/>
+                    <Editor example="floor*10[repeatrand5]" help={&["", "Click to format ⇡⇡⇡            "]}/>
                 </div>
                 <div>
                     <h2>"Multimedia Output"</h2>

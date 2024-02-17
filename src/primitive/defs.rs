@@ -1396,6 +1396,24 @@ primitive!(
     /// ex: G ← ∩(=0◿:) ⟜:
     ///   : G ⇡16 3 5
     (2[1], Both, Planet, ("both", '∩')),
+    /// Bind local values
+    ///
+    /// The values can be accessed in the function with lowercase letters.
+    /// ex: # Experimental!
+    ///   : λ(⊂ b + a c) 1 2 3
+    /// Adjacent letters can be part of a single identifier.
+    /// ex: # Experimental!
+    ///   : λ[[beef][babe]] 1 2 3 4 5 6
+    /// Here is a simple quadratic formula function.
+    /// ex: # Experimental!
+    ///   : Quad ← λ(÷×2a -b ⊟¯.√ -××4ac ×.b)
+    ///   : Quad 1 2 0
+    ///
+    /// [bind] is not really a true modifier. [bind]'s function does not make sense without it.
+    /// ex! # Experimental!
+    ///   : F ← ×b +ac
+    ///   : λF 1 2 3
+    ([1], Bind, OtherModifier, ("bind", 'λ')),
     /// Invert the behavior of a function
     ///
     /// Most functions are not invertible.
@@ -1744,24 +1762,6 @@ primitive!(
     /// Use [multiply] and [floor] to generate a random integer in a range.
     /// ex: ⌊×10 [⍥⚂5]
     (0, Rand, Misc, ("random", '⚂')),
-    /// Bind local values
-    ///
-    /// The values can be accessed in the function with lowercase letters.
-    /// ex: # Experimental!
-    ///   : bind(⊂ b + a c) 1 2 3
-    /// Adjacent letters can be part of a single identifier.
-    /// ex: # Experimental!
-    ///   : bind[[beef][babe]] 1 2 3 4 5 6
-    /// Here is a simple quadratic formula function.
-    /// ex: # Experimental!
-    ///   : Quad ← bind(÷×2a -b ⊟¯.√ -××4ac ×.b)
-    ///   : Quad 1 2 0
-    ///
-    /// [bind] is not really a true modifier. [bind]'s function does not make sense without it.
-    /// ex! # Experimental!
-    ///   : F ← ×b +ac
-    ///   : bindF 1 2 3
-    ([1], Bind, OtherModifier, "bind"),
     /// Memoize a function
     ///
     /// If a function is [memo]ized, then its results are cached.

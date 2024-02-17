@@ -334,6 +334,7 @@
     "description": "Take the arctangent of two numbers"
   },
   "bind": {
+    "glyph": "λ",
     "outputs": 1,
     "modifier_args": 1,
     "class": "OtherModifier",

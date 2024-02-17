@@ -819,6 +819,27 @@ impl<'a> Lexer<'a> {
                         if !rest.is_empty() {
                             self.end(Ident, start);
                         }
+                    } else if ident[..lowercase_end].starts_with("bind") {
+                        let mut start = start;
+                        for (token, a, b) in
+                            [(Glyph(Primitive::Bind), 0, 4), (Ident, 4, lowercase_end)]
+                        {
+                            let end = Loc {
+                                col: start.col + ident[a..b].chars().count() as u16,
+                                char_pos: start.char_pos + ident[a..b].chars().count() as u32,
+                                byte_pos: start.byte_pos + ident[a..b].len() as u32,
+                                ..start
+                            };
+                            self.tokens.push_back(Sp {
+                                value: token,
+                                span: self.make_span(start, end),
+                            });
+                            start = end;
+                        }
+                        let rest = &ident[lowercase_end..];
+                        if !rest.is_empty() {
+                            self.end(Ident, start);
+                        }
                     } else {
                         // Lone ident
                         self.end(Ident, start)

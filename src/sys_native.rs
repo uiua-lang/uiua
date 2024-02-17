@@ -5,7 +5,7 @@ use std::{
     io::{stderr, stdin, stdout, Read, Write},
     net::*,
     path::Path,
-    process::Command,
+    process::{Child, Command},
     slice,
     sync::atomic::{self, AtomicU64},
     thread::sleep,
@@ -36,6 +36,8 @@ struct GlobalNativeSys {
     colored_errors: DashMap<String, String>,
     #[cfg(feature = "ffi")]
     ffi: crate::FfiState,
+    #[cfg(feature = "gif")]
+    gifs_child: parking_lot::Mutex<Option<Child>>,
 }
 
 enum SysStream<'a> {
@@ -59,6 +61,8 @@ impl Default for GlobalNativeSys {
             colored_errors: DashMap::new(),
             #[cfg(feature = "ffi")]
             ffi: Default::default(),
+            #[cfg(all(feature = "gif", feature = "invoke"))]
+            gifs_child: parking_lot::Mutex::new(None),
         }
     }
 }
@@ -280,6 +284,25 @@ impl SysBackend for NativeSys {
         )
         .map(drop)
         .map_err(|e| format!("Failed to show image: {e}"))
+    }
+    #[cfg(all(feature = "gif", feature = "invoke"))]
+    fn show_gif(&self, gif_bytes: Vec<u8>) -> Result<(), String> {
+        (move || -> std::io::Result<()> {
+            let temp_path = std::env::temp_dir().join("show.gif");
+            fs::write("show.gif", gif_bytes)?;
+            let commands = open::commands(&temp_path);
+            if let Some(mut command) = commands.into_iter().next() {
+                if let Some(mut child) = NATIVE_SYS
+                    .gifs_child
+                    .lock()
+                    .replace(command.arg(&temp_path).spawn()?)
+                {
+                    child.kill()?;
+                }
+            }
+            Ok(())
+        })()
+        .map_err(|e| e.to_string())
     }
     #[cfg(feature = "audio")]
     fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {

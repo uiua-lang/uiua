@@ -643,14 +643,14 @@ impl<'i> Parser<'i> {
         // Collect items
         let mut items = Vec::new();
         while self.try_exact(Underscore).is_some() {
-            let item = match self.try_term() {
+            let item = match self.try_modified() {
                 Some(mut item) => {
                     if let Word::Spaces = item.value {
                         if items.is_empty() {
                             break;
                         }
                         self.errors.push(self.expected([Expectation::Term]));
-                        item = match self.try_term() {
+                        item = match self.try_modified() {
                             Some(item) => item,
                             None => {
                                 self.errors.push(self.expected([Expectation::Term]));

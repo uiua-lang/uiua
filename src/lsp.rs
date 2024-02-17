@@ -621,10 +621,7 @@ mod server {
                 return Ok(None);
             };
             let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
-            let Some(sp) = doc
-                .spans
-                .iter()
-                .find(|sp| sp.span.contains_line_col(line, col))
+            let Some(sp) = (doc.spans.iter()).find(|sp| sp.span.contains_line_col(line, col))
             else {
                 return Ok(None);
             };
@@ -633,7 +630,7 @@ mod server {
                 return Ok(None);
             };
 
-            // TODO: Search other than primitives
+            // Collect primitive completions
             let mut completions: Vec<_> = Primitive::all()
                 .filter(|p| p.name().starts_with(token))
                 .map(|prim| {
@@ -672,6 +669,7 @@ mod server {
                 })
                 .collect();
 
+            // Collect binding completions
             for binding in self.bindings_in_file(doc_uri, &uri_path(doc_uri)) {
                 let name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
 
@@ -712,7 +710,7 @@ mod server {
                 if let Global::Module { module } = &binding.global {
                     for binding in self.bindings_in_file(doc_uri, module) {
                         let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
-                        if !item_name.starts_with(token) {
+                        if !item_name.to_lowercase().starts_with(&token.to_lowercase()) {
                             continue;
                         }
                         completions.push(make_completion(
@@ -723,7 +721,7 @@ mod server {
                     }
                 }
 
-                if !name.starts_with(token) {
+                if !name.to_lowercase().starts_with(&token.to_lowercase()) {
                     continue;
                 }
                 completions.push(make_completion(name, &sp.span, &binding));

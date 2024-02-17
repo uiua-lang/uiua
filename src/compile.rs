@@ -1380,20 +1380,15 @@ code:
         } else {
             let (path_indices, index) = self.ref_index(&r)?;
             for (index, comp) in path_indices.into_iter().zip(&r.path) {
-                self.asm
-                    .global_references
-                    .insert(comp.module.clone(), index);
+                (self.asm.global_references).insert(comp.module.clone(), index);
             }
+            self.asm.global_references.insert(r.name.clone(), index);
             self.global_index(index, r.name.span, call);
             Ok(())
         }
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
-        if let Some(curr) = self
-            .current_binding
-            .as_mut()
-            .filter(|curr| curr.name == ident)
-        {
+        if let Some(curr) = (self.current_binding.as_mut()).filter(|curr| curr.name == ident) {
             // Name is a recursive call
             let Some(sig) = curr.signature else {
                 return Err(self.fatal_error(

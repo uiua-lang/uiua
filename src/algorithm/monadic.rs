@@ -943,8 +943,8 @@ impl Value {
             }
         }
     }
-    /// `invert` `where`
-    pub fn inverse_where(&self, env: &Uiua) -> UiuaResult<Self> {
+    /// `un` `where`
+    pub fn inv_where(&self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match self.shape().dims() {
             [] | [_] => {
                 let indices =
@@ -997,8 +997,7 @@ impl Value {
                     acc
                 });
                 let data_len: usize = shape.iter().product();
-                let mut data = EcoVec::with_capacity(data_len);
-                data.extend(repeat(0.0).take(data_len));
+                let mut data = eco_vec![0.0; data_len];
                 let data_slice = data.make_mut();
                 for (key, count) in counts {
                     let mut i = 0;

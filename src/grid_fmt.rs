@@ -144,7 +144,7 @@ impl GridFmt for Value {
             let Value::Box(b) = self else {
                 break 'box_list;
             };
-            if b.rank() != 1 {
+            if b.rank() != 1 || b.meta().map_len.is_some() {
                 break 'box_list;
             }
             let mut item_lines = Vec::new();

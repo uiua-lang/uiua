@@ -410,7 +410,8 @@ impl Primitive {
                     prims.push((p, sub_name));
                     start += len;
                     continue 'outer;
-                } else if sub_name
+                }
+                if sub_name
                     .strip_prefix('f')
                     .unwrap_or(sub_name)
                     .strip_suffix(['i', 'p'])

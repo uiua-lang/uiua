@@ -1015,7 +1015,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
             prompt="for numbers A, B, C, and D calculates (A+C)×(B+D)"
             example="1 2 3 4"
             answer="×⊃(+⊙⋅∘|+⋅⊙⋅∘)"
-            best_answer="×∩+⊃⊙⋅∘⋅⊙⋅∘"
+            best_answer="×∩+⊙:"
             tests={&["10 ¯3 1 0", "3 ¯7 2 2"]}
             hidden="1_2 3_4 5_6 7"/>
     }

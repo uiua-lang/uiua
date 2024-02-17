@@ -2,7 +2,7 @@
 //!
 //! Even without the `lsp` feature enabled, this module still provides some useful types and functions for working with Uiua code in an IDE or text editor.
 
-use std::{collections::HashMap, slice, sync::Arc};
+use std::{slice, sync::Arc};
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
@@ -10,8 +10,8 @@ use crate::{
     ident_modifier_args,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    Assembly, BindingInfo, Compiler, Global, InputSrc, Inputs, Primitive, SafeSys, Signature,
-    SysBackend, UiuaError,
+    Assembly, BindingInfo, Compiler, Global, InlineSig, InlineSigs, InputSrc, Inputs, Primitive,
+    SafeSys, Signature, SysBackend, UiuaError,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -66,7 +66,7 @@ pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<Span
 
 struct Spanner {
     asm: Assembly,
-    inline_function_sigs: HashMap<CodeSpan, (Signature, bool)>,
+    inline_function_sigs: InlineSigs,
     #[allow(dead_code)]
     errors: Vec<UiuaError>,
     #[allow(dead_code)]
@@ -248,9 +248,8 @@ impl Spanner {
                     }
                 }
                 Word::Func(func) => {
-                    let kind = if let Some((sig, false)) = self.inline_function_sigs.get(&word.span)
-                    {
-                        SpanKind::FuncDelim(*sig)
+                    let kind = if let Some(inline) = self.inline_function_sigs.get(&word.span) {
+                        SpanKind::FuncDelim(inline.sig)
                     } else {
                         SpanKind::Delimiter
                     };
@@ -277,8 +276,10 @@ impl Spanner {
                     for (i, branch) in sw.branches.iter().enumerate() {
                         let start_span = branch.span.just_start(self.inputs());
                         if i > 0 && start_span.as_str(self.inputs(), |s| s == "|") {
-                            let kind = if let Some((sig, false)) =
-                                self.inline_function_sigs.get(&branch.span)
+                            let kind = if let Some(InlineSig {
+                                sig,
+                                explicit: false,
+                            }) = self.inline_function_sigs.get(&branch.span)
                             {
                                 SpanKind::FuncDelim(*sig)
                             } else {
@@ -369,7 +370,7 @@ mod server {
         pub items: Vec<Item>,
         pub spans: Vec<Sp<SpanKind>>,
         pub asm: Assembly,
-        pub inline_function_sigs: HashMap<CodeSpan, (Signature, bool)>,
+        pub inline_function_sigs: InlineSigs,
         pub errors: Vec<UiuaError>,
         pub diagnostics: Vec<crate::Diagnostic>,
     }
@@ -552,9 +553,9 @@ mod server {
             // Hovering an inline function
             let mut inline_function_sig: Option<Sp<Signature>> = None;
             if prim_range.is_none() && binding_docs.is_none() {
-                for (span, (sig, explicit)) in &doc.inline_function_sigs {
-                    if !*explicit && span.contains_line_col(line, col) {
-                        inline_function_sig = Some(span.clone().sp(*sig));
+                for (span, inline) in &doc.inline_function_sigs {
+                    if !inline.explicit && span.contains_line_col(line, col) {
+                        inline_function_sig = Some(span.clone().sp(inline.sig));
                     }
                 }
             }
@@ -862,9 +863,9 @@ mod server {
             let (line, col) = lsp_pos_to_uiua(params.range.start);
             let mut actions = Vec::new();
             // Add explicit signature
-            for (span, (sig, explicit)) in &doc.inline_function_sigs {
+            for (span, inline) in &doc.inline_function_sigs {
                 if span.contains_line_col(line, col) {
-                    if *explicit {
+                    if inline.explicit {
                         continue;
                     }
                     let mut insertion_span = span.just_start(&doc.asm.inputs);
@@ -878,7 +879,7 @@ mod server {
                                     params.text_document.uri,
                                     vec![TextEdit {
                                         range: uiua_span_to_lsp(&insertion_span),
-                                        new_text: format!("{sig} "),
+                                        new_text: format!("{} ", inline.sig),
                                     }],
                                 )]
                                 .into(),

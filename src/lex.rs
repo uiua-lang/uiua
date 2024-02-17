@@ -795,8 +795,8 @@ impl<'a> Lexer<'a> {
                         .char_indices()
                         .find(|(_, c)| c.is_ascii_uppercase())
                         .map_or(ident.len(), |(i, _)| i);
-                    if let Some(prims) = Primitive::from_format_name_multi(&ident[..lowercase_end])
-                    {
+                    let lower = &ident[..lowercase_end];
+                    if let Some(prims) = Primitive::from_format_name_multi(lower) {
                         if ambiguous_ne {
                             self.loc.char_pos -= 1;
                             self.loc.byte_pos -= 1;
@@ -819,11 +819,13 @@ impl<'a> Lexer<'a> {
                         if !rest.is_empty() {
                             self.end(Ident, start);
                         }
-                    } else if ident[..lowercase_end].starts_with("bind") {
+                    } else if lower.starts_with("bind") || lower.starts_with("bin") {
+                        let bind_len = if lower.starts_with("bind") { 4 } else { 3 };
                         let mut start = start;
-                        for (token, a, b) in
-                            [(Glyph(Primitive::Bind), 0, 4), (Ident, 4, lowercase_end)]
-                        {
+                        for (token, a, b) in [
+                            (Glyph(Primitive::Bind), 0, bind_len),
+                            (Ident, bind_len, lowercase_end),
+                        ] {
                             let end = Loc {
                                 col: start.col + ident[a..b].chars().count() as u16,
                                 char_pos: start.char_pos + ident[a..b].chars().count() as u32,

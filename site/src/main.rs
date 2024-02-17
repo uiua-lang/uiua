@@ -130,42 +130,42 @@ pub fn Site() -> impl IntoView {
 
     view! {
         <Router>
-                <Routes>
-                    <Route path="embedpad" view=EmbedPad/>
-                    <Route path="embed" view=Embed/>
-                    <Route path="*" view=move || view! {
-                        <main>
-                            <div id="top">
-                                <div id="header">
-                                    <div id="header-left">
-                                        <h1><A id="header-uiua" href="/"><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo" />" Uiua"</A></h1>
-                                        <p id="subtitle">{ subtitle.clone() }</p>
-                                    </div>
-                                    <div id="nav">
-                                        <a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">"Support Uiua's development"</a>
-                                        <a href="/">"Home"</a>
-                                    </div>
+            <Routes>
+                <Route path="embedpad" view=EmbedPad/>
+                <Route path="embed" view=Embed/>
+                <Route path="*" view=move || view! {
+                    <main>
+                        <div id="top">
+                            <div id="header">
+                                <div id="header-left">
+                                    <h1><A id="header-uiua" href="/"><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo" />" Uiua"</A></h1>
+                                    <p id="subtitle">{ subtitle.clone() }</p>
                                 </div>
-                                <Outlet/>
+                                <div id="nav">
+                                    <a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">"Support Uiua's development"</a>
+                                    <a href="/">"Home"</a>
+                                </div>
                             </div>
-                        </main>
-                    }>
-                        <Route path="" view=MainPage/>
-                        <Route path="tutorial/:page?" view=Tutorial/>
-                        <Route path="docs/:page?" view=Docs/>
-                        <Route path="isms/:search?" view=Uiuisms/>
-                        <Route path="pad" view=Pad/>
-                        <Route path="install" view=Install/>
-                        <Route path="tour" view=Tour/>
-                        <Route path="isms" view=Uiuisms/>
-                        <Route path="rtl" view=RightToLeft/>
-                        <Route path="blog/:page?" view=Blog/>
-                        <Route path="*" view=NotFound/>
-                    </Route>
-                </Routes>
-                <br/>
-                <br/>
-                <br/>
+                            <Outlet/>
+                        </div>
+                    </main>
+                }>
+                    <Route path="" view=MainPage/>
+                    <Route path="tutorial/:page?" view=Tutorial/>
+                    <Route path="docs/:page?" view=Docs/>
+                    <Route path="isms/:search?" view=Uiuisms/>
+                    <Route path="pad" view=Pad/>
+                    <Route path="install" view=Install/>
+                    <Route path="tour" view=Tour/>
+                    <Route path="isms" view=Uiuisms/>
+                    <Route path="rtl" view=RightToLeft/>
+                    <Route path="blog/:page?" view=Blog/>
+                    <Route path="*" view=NotFound/>
+                </Route>
+            </Routes>
+            <br/>
+            <br/>
+            <br/>
         </Router>
     }
 }

@@ -396,52 +396,31 @@ mod enabled {
                 FfiType::Struct { fields } => {
                     let (size, _) = return_ty.size_align();
                     let args = &bindings.args;
+                    macro_rules! call_ret_struct {
+                        ($n:literal) => {
+                            bindings.struct_repr_to_value(
+                                &unsafe { cif.call::<[u8; $n]>(fptr, args) },
+                                fields,
+                            )
+                        };
+                    }
                     let val = match size {
                         0 => Value::default(),
-                        1 => bindings.struct_repr_to_value(
-                            &unsafe { cif.call::<[u8; 1]>(fptr, args) },
-                            fields,
-                        )?,
-                        2 => bindings.struct_repr_to_value(
-                            &unsafe { cif.call::<[u8; 2]>(fptr, args) },
-                            fields,
-                        )?,
-                        4 => bindings.struct_repr_to_value(
-                            &unsafe { cif.call::<[u8; 4]>(fptr, args) },
-                            fields,
-                        )?,
-                        8 => bindings.struct_repr_to_value(
-                            &unsafe { cif.call::<[u8; 8]>(fptr, args) },
-                            fields,
-                        )?,
-                        12 => bindings.struct_repr_to_value(
-                            &unsafe { cif.call::<[u8; 12]>(fptr, args) },
-                            fields,
-                        )?,
-                        16 => bindings.struct_repr_to_value(
-                            &unsafe { cif.call::<[u8; 16]>(fptr, args) },
-                            fields,
-                        )?,
-                        24 => bindings.struct_repr_to_value(
-                            &unsafe { cif.call::<[u8; 24]>(fptr, args) },
-                            fields,
-                        )?,
-                        32 => bindings.struct_repr_to_value(
-                            &unsafe { cif.call::<[u8; 32]>(fptr, args) },
-                            fields,
-                        )?,
-                        48 => bindings.struct_repr_to_value(
-                            &unsafe { cif.call::<[u8; 48]>(fptr, args) },
-                            fields,
-                        )?,
-                        64 => bindings.struct_repr_to_value(
-                            &unsafe { cif.call::<[u8; 64]>(fptr, args) },
-                            fields,
-                        )?,
-                        128 => bindings.struct_repr_to_value(
-                            &unsafe { cif.call::<[u8; 128]>(fptr, args) },
-                            fields,
-                        )?,
+                        1 => call_ret_struct!(1)?,
+                        2 => call_ret_struct!(2)?,
+                        4 => call_ret_struct!(4)?,
+                        8 => call_ret_struct!(8)?,
+                        12 => call_ret_struct!(12)?,
+                        16 => call_ret_struct!(16)?,
+                        24 => call_ret_struct!(24)?,
+                        32 => call_ret_struct!(32)?,
+                        48 => call_ret_struct!(48)?,
+                        64 => call_ret_struct!(64)?,
+                        128 => call_ret_struct!(128)?,
+                        192 => call_ret_struct!(192)?,
+                        256 => call_ret_struct!(256)?,
+                        384 => call_ret_struct!(384)?,
+                        512 => call_ret_struct!(512)?,
                         n => return Err(format!("Unsupported return struct size: {n}")),
                     };
                     results.push(val);

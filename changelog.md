@@ -36,7 +36,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Inline functions are no longer required to be in a binding or modifier
   - This allows arbitrary code to be wrapped and marked with a signature
 - Remove cosine and arccosine optimizations
-  - The inverse of the cosine idiom create a logical inconsistency
+  - The inverse of the cosine idiom created a logical inconsistency
 - Flip the order of [`send`](https://uiua.org/docs/send)'s arguments
 - Add the [`pool`](https://uiua.org/docs/pool) modifier, which is identical to [`spawn`](https://uiua.org/docs/spawn) but spawns a thread in a thread pool
 - Add the experimental [`&ffi`](https://uiua.org/docs/&ffi) system function, which allows calling functions from shared libraries
@@ -52,19 +52,19 @@ This version is not yet released. If you are reading this on the website, then t
 - [`&var`](https://uiua.org/docs/&var) now throws an error if the variable is not found
 - Deprecate [`pop ◌`](https://uiua.org/docs/pop) formatting from `;`
 - Deprecate [`all ⋔`](https://uiua.org/docs/all)
-  - It was rarely used and hard to reason about
+  - It was rarely used and was hard to reason about
 - Add an experimental `repr` function that produces a string representation of a value in a format that can be read by the interpreter
 ### Interpreter
 - Numbers that seem to have a floating-point epsilon rounding error will be output with the epsilon noted
-- When hovering a user-defined function's name, the language server will now show whether it is compatible with [`un °`](https://uiua.org/docs/un) and [`under ⍜`](https://uiua.org/docs/under)
-- Optimize the pattern for adjacency: `≡/F◫2`
+- Optimize the pattern for adjacency: `≡/F`[`◫`](https://uiua.org/docs/windows)
   - It it as much as 800x faster in some cases
 - Square matrices are now transposed in-place
 - Language Server
   - Add completions
   - Add diagnostics
   - Add semantic highlighting
-  - Inline function hovering
+  - Add inline function hovering
+  - Show [`un °`](https://uiua.org/docs/un)/[`under ⍜`](https://uiua.org/docs/under) compatibility for user-defined functions
 ### Website
 - Add [Tutorial Introduction](https://uiua.org/tutorial/introduction)
 - Add [primitives.json](https://uiua.org/primitives.json) for use with tooling

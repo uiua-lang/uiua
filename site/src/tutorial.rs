@@ -157,7 +157,7 @@ fn TutorialIntroduction() -> impl IntoView {
         <p>"Uiua puts values on a stack, and operators appear to the left of their arguments."</p>
         <p>""<code>"+ 1 2"</code>", "<code>"×4-2"</code>", etc."</p>
         <p>"This allows Uiua to be, in most cases, even more terse than other array languages. That being said, Uiua has been designed to remain readable as much as possible, even without named local variables. While writing tacit code can quickly become unwieldy in other array languages, Uiua embraces tacitness as the only way."</p>
-        <p>"Uiua also features built-in functionality for working with images, audio, and GIFs, so once you know the language, you can very quickly get started writing programs that do interesting things!"</p>
+        <p>"Uiua also features built-in functionality for working with images, audio, and GIFs, so once you learn the language, you can very quickly get started writing programs that do interesting things!"</p>
         <p>"Note that Uiua is not yet stable. While most of the core features are unlikely to change much, more complex ones are still in flux. This tutorial is based on the current state of the language, and it is updated as the language changes."</p>
 
         <h2 id="who">"Who is this tutorial for?"</h2>

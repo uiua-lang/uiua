@@ -800,6 +800,9 @@ mod enabled {
                 }
                 match (field, row) {
                     (FfiType::Char, Value::Char(arr)) if arr.rank() == 0 => scalar!(arr, c_char),
+                    (FfiType::UChar, Value::Char(arr)) if arr.rank() == 0 => scalar!(arr, c_uchar),
+                    (FfiType::Char, Value::Num(arr)) if arr.rank() == 0 => scalar!(arr, c_char),
+                    (FfiType::UChar, Value::Num(arr)) if arr.rank() == 0 => scalar!(arr, c_uchar),
                     (FfiType::Short, Value::Num(arr)) if arr.rank() == 0 => scalar!(arr, c_short),
                     (FfiType::Int, Value::Num(arr)) if arr.rank() == 0 => scalar!(arr, c_int),
                     (FfiType::Long, Value::Num(arr)) if arr.rank() == 0 => scalar!(arr, c_long),
@@ -817,6 +820,8 @@ mod enabled {
                     (FfiType::Double, Value::Num(arr)) if arr.rank() == 0 => scalar!(arr, c_double),
                     #[cfg(feature = "bytes")]
                     (FfiType::Char, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_char),
+                    #[cfg(feature = "bytes")]
+                    (FfiType::UChar, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_uchar),
                     #[cfg(feature = "bytes")]
                     (FfiType::Short, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_short),
                     #[cfg(feature = "bytes")]

@@ -597,6 +597,17 @@ impl Value {
         if requirement.is_empty() {
             requirement = "Expected value to be a natural number";
         }
+        self.as_nat_or_inf(env, requirement)?
+            .ok_or_else(|| env.error(format!("{requirement}, but it is infinity")))
+    }
+    pub(crate) fn as_nat_or_inf(
+        &self,
+        env: &Uiua,
+        mut requirement: &'static str,
+    ) -> UiuaResult<Option<usize>> {
+        if requirement.is_empty() {
+            requirement = "Expected value to be a natural number or infinity";
+        }
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
@@ -605,13 +616,22 @@ impl Value {
                     );
                 }
                 let num = nums.data[0];
+                if num.is_nan() {
+                    return Err(env.error(format!("{requirement}, but it is NaN")));
+                }
                 if num < 0.0 {
                     return Err(env.error(format!("{requirement}, but it is negative")));
                 }
-                if num.fract() != 0.0 {
-                    return Err(env.error(format!("{requirement}, but it has a fractional part")));
+                if num.is_infinite() {
+                    None
+                } else {
+                    if num.fract() != 0.0 {
+                        return Err(
+                            env.error(format!("{requirement}, but it has a fractional part"))
+                        );
+                    }
+                    Some(num as usize)
                 }
-                num as usize
             }
             #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
@@ -620,7 +640,7 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
-                bytes.data[0] as usize
+                Some(bytes.data[0] as usize)
             }
             value => {
                 return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))
@@ -642,6 +662,12 @@ impl Value {
                     );
                 }
                 let num = nums.data[0];
+                if num.is_infinite() {
+                    return Err(env.error(format!("{requirement}, but it is infinite")));
+                }
+                if num.is_nan() {
+                    return Err(env.error(format!("{requirement}, but it is NaN")));
+                }
                 if num.fract() != 0.0 {
                     return Err(env.error(format!("{requirement}, but it has a fractional part")));
                 }

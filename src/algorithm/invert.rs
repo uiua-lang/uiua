@@ -317,6 +317,11 @@ pub(crate) fn under_instrs(
             (PopTempN(1), Sys(SysOp::Close)),
         ),
         &pat!(
+            Sys(SysOp::RunStream),
+            (Sys(SysOp::RunStream), CopyToTempN(1)),
+            (PopTempN(1), Sys(SysOp::Close)),
+        ),
+        &pat!(
             Sys(SysOp::TcpConnect),
             (Sys(SysOp::TcpConnect), CopyToTempN(1)),
             (PopTempN(1), Sys(SysOp::Close)),

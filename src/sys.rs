@@ -183,13 +183,23 @@ sys_op! {
     /// Standard IO will be inherited. Returns the exit code of the command.
     ///
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
-    (1(1), RunInherit, Command, "&runi", "run command inherit"),
+    (1, RunInherit, Command, "&runi", "run command inherit"),
     /// Run a command and wait for it to finish
     ///
     /// Standard IO will be captured. The exit code, stdout, and stderr will each be pushed to the stack.
     ///
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
     (1(3), RunCapture, Command, "&runc", "run command capture"),
+    /// Run a command with streaming IO
+    ///
+    /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
+    /// Returns a stream handle.
+    /// Writing to the handle with [&w] will send the input to the command's stdin.
+    /// Reading from the handle with [&rs], [&rb], or [&ru] will read from the command's stdout.
+    /// Stderr will be inherited.
+    /// Using [&cl] on the handle will kill the child process.
+    /// [under][&runs] calls [&cl] automatically.
+    (1, RunStream, Command, "&runs", "run command stream"),
     /// Change the current directory
     (1(0), ChangeDirectory, Filesystem, "&cd", "change directory"),
     /// Sleep for n seconds
@@ -201,15 +211,18 @@ sys_op! {
     ///
     /// Expects a count and a stream handle.
     /// The stream handle `0` is stdin.
+    /// Using [infinity] as the count will read until the end of the stream.
     (2, ReadStr, Stream, "&rs", "read to string"),
     /// Read at most n bytes from a stream
     ///
     /// Expects a count and a stream handle.
     /// The stream handle `0` is stdin.
+    /// Using [infinity] as the count will read until the end of the stream.
     (2, ReadBytes, Stream, "&rb", "read to bytes"),
     /// Read from a stream until a delimiter is reached
     ///
     /// Expects a delimiter and a stream handle.
+    /// The result will be a rank-`1` byte or character array. The type will match the type of the delimiter.
     /// The stream handle `0` is stdin.
     (2, ReadUntil, Stream, "&ru", "read until"),
     /// Write an array to a stream
@@ -636,6 +649,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn read(&self, handle: Handle, count: usize) -> Result<Vec<u8>, String> {
         Err("Reading from streams is not supported in this environment".into())
     }
+    /// Read from a stream until the end
+    fn read_all(&self, handle: Handle) -> Result<Vec<u8>, String> {
+        Err("Reading from streams is not supported in this environment".into())
+    }
     /// Read from a stream until a delimiter is reached
     fn read_until(&self, handle: Handle, delim: &[u8]) -> Result<Vec<u8>, String> {
         let mut buffer = Vec::new();
@@ -748,7 +765,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     /// Run a command, inheriting standard IO
     fn run_command_inherit(&self, command: &str, args: &[&str]) -> Result<i32, String> {
-        Err("Running commands is not supported in this environment".into())
+        Err("Running inheritting commands is not supported in this environment".into())
     }
     /// Run a command, capturing standard IO
     fn run_command_capture(
@@ -756,7 +773,11 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         command: &str,
         args: &[&str],
     ) -> Result<(i32, String, String), String> {
-        Err("Running commands is not supported in this environment".into())
+        Err("Running capturing commands is not supported in this environment".into())
+    }
+    /// Run a command and return an IO stream handle
+    fn run_command_stream(&self, command: &str, args: &[&str]) -> Result<Handle, String> {
+        Err("Running streamed commands is not supported in this environment".into())
     }
     /// Change the current directory
     fn change_directory(&self, path: &str) -> Result<(), String> {
@@ -933,7 +954,9 @@ impl SysOp {
                 env.rt.backend.trash(&path).map_err(|e| env.error(e))?;
             }
             SysOp::ReadStr => {
-                let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
+                let count = env
+                    .pop(1)?
+                    .as_nat_or_inf(env, "Count must be an integer or infinity")?;
                 let handle = env
                     .pop(2)?
                     .as_nat(env, "Handle must be an natural number")?
@@ -941,23 +964,36 @@ impl SysOp {
                 let bytes = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
-                    Handle::STDIN => stdin()
-                        .lock()
-                        .bytes()
-                        .take(count)
-                        .collect::<Result<Vec<_>, _>>()
-                        .map_err(|e| env.error(e))?,
-                    _ => env
-                        .rt
-                        .backend
-                        .read(handle, count)
-                        .map_err(|e| env.error(e))?,
+                    Handle::STDIN => {
+                        if let Some(count) = count {
+                            stdin()
+                                .lock()
+                                .bytes()
+                                .take(count)
+                                .collect::<Result<Vec<_>, _>>()
+                                .map_err(|e| env.error(e))?
+                        } else {
+                            return Err(env.error("Cannot read an infinite amount from stdin"));
+                        }
+                    }
+                    _ => {
+                        if let Some(count) = count {
+                            env.rt
+                                .backend
+                                .read(handle, count)
+                                .map_err(|e| env.error(e))?
+                        } else {
+                            env.rt.backend.read_all(handle).map_err(|e| env.error(e))?
+                        }
+                    }
                 };
                 let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
                 env.push(s);
             }
             SysOp::ReadBytes => {
-                let count = env.pop(1)?.as_nat(env, "Count must be an integer")?;
+                let count = env
+                    .pop(1)?
+                    .as_nat_or_inf(env, "Count must be an integer or infinity")?;
                 let handle = env
                     .pop(2)?
                     .as_nat(env, "Handle must be an natural number")?
@@ -965,17 +1001,28 @@ impl SysOp {
                 let bytes = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
-                    Handle::STDIN => stdin()
-                        .lock()
-                        .bytes()
-                        .take(count)
-                        .collect::<Result<Vec<_>, _>>()
-                        .map_err(|e| env.error(e))?,
-                    _ => env
-                        .rt
-                        .backend
-                        .read(handle, count)
-                        .map_err(|e| env.error(e))?,
+                    Handle::STDIN => {
+                        if let Some(count) = count {
+                            stdin()
+                                .lock()
+                                .bytes()
+                                .take(count)
+                                .collect::<Result<Vec<_>, _>>()
+                                .map_err(|e| env.error(e))?
+                        } else {
+                            return Err(env.error("Cannot read an infinite amount from stdin"));
+                        }
+                    }
+                    _ => {
+                        if let Some(count) = count {
+                            env.rt
+                                .backend
+                                .read(handle, count)
+                                .map_err(|e| env.error(e))?
+                        } else {
+                            env.rt.backend.read_all(handle).map_err(|e| env.error(e))?
+                        }
+                    }
                 };
                 env.push(Array::from(bytes.as_slice()));
             }
@@ -1501,6 +1548,14 @@ impl SysOp {
                 env.push(stderr);
                 env.push(stdout);
                 env.push(code);
+            }
+            SysOp::RunStream => {
+                let (command, args) = value_to_command(&env.pop(1)?, env)?;
+                let args: Vec<_> = args.iter().map(|s| s.as_str()).collect();
+                let handle = (env.rt.backend)
+                    .run_command_stream(&command, &args)
+                    .map_err(|e| env.error(e))?;
+                env.push(handle);
             }
             SysOp::ChangeDirectory => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;

@@ -218,6 +218,12 @@
     "class": "Command",
     "description": "Run a command and wait for it to finish"
   },
+  "&runs": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Command",
+    "description": "Run a command with streaming IO"
+  },
   "&s": {
     "args": 1,
     "outputs": 0,

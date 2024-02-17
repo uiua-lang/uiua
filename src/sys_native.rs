@@ -5,7 +5,7 @@ use std::{
     io::{stderr, stdin, stdout, Read, Write},
     net::*,
     path::Path,
-    process::{Child, Command},
+    process::{Child, Command, Stdio},
     slice,
     sync::atomic::{self, AtomicU64},
     thread::sleep,
@@ -26,6 +26,7 @@ type Buffered<T> = BufReaderWriterSeq<T>;
 struct GlobalNativeSys {
     next_handle: AtomicU64,
     files: DashMap<Handle, Buffered<File>>,
+    child_procs: DashMap<Handle, Child>,
     tcp_listeners: DashMap<Handle, TcpListener>,
     tcp_sockets: DashMap<Handle, Buffered<TcpStream>>,
     hostnames: DashMap<Handle, String>,
@@ -42,6 +43,7 @@ struct GlobalNativeSys {
 
 enum SysStream<'a> {
     File(dashmap::mapref::one::RefMut<'a, Handle, Buffered<File>>),
+    Child(dashmap::mapref::one::RefMut<'a, Handle, Child>),
     TcpListener(dashmap::mapref::one::RefMut<'a, Handle, TcpListener>),
     TcpSocket(dashmap::mapref::one::RefMut<'a, Handle, Buffered<TcpStream>>),
 }
@@ -51,6 +53,7 @@ impl Default for GlobalNativeSys {
         Self {
             next_handle: Handle::FIRST_UNRESERVED.0.into(),
             files: DashMap::new(),
+            child_procs: DashMap::new(),
             tcp_listeners: DashMap::new(),
             tcp_sockets: DashMap::new(),
             hostnames: DashMap::new(),
@@ -72,6 +75,7 @@ impl GlobalNativeSys {
         for _ in 0..u64::MAX {
             let handle = Handle(self.next_handle.fetch_add(1, atomic::Ordering::Relaxed));
             if !self.files.contains_key(&handle)
+                && !self.child_procs.contains_key(&handle)
                 && !self.tcp_listeners.contains_key(&handle)
                 && !self.tcp_sockets.contains_key(&handle)
             {
@@ -83,6 +87,8 @@ impl GlobalNativeSys {
     fn get_stream(&self, handle: Handle) -> Result<SysStream, String> {
         Ok(if let Some(file) = self.files.get_mut(&handle) {
             SysStream::File(file)
+        } else if let Some(child) = self.child_procs.get_mut(&handle) {
+            SysStream::Child(child)
         } else if let Some(listener) = self.tcp_listeners.get_mut(&handle) {
             SysStream::TcpListener(listener)
         } else if let Some(socket) = self.tcp_sockets.get_mut(&handle) {
@@ -223,6 +229,13 @@ impl SysBackend for NativeSys {
                     .map_err(|e| e.to_string())?;
                 buf
             }
+            SysStream::Child(mut child) => {
+                let mut buf = vec![0; len];
+                (child.stdout.as_mut().unwrap())
+                    .read_exact(buf.as_mut_slice())
+                    .map_err(|e| e.to_string())?;
+                buf
+            }
             SysStream::TcpListener(_) => return Err("Cannot read from a tcp listener".to_string()),
             SysStream::TcpSocket(mut socket) => {
                 let mut buf = Vec::new();
@@ -230,6 +243,31 @@ impl SysBackend for NativeSys {
                     .take(len as u64)
                     .read_to_end(&mut buf)
                     .map_err(|e| e.to_string())?;
+                buf
+            }
+        })
+    }
+    fn read_all(&self, handle: Handle) -> Result<Vec<u8>, String> {
+        Ok(match NATIVE_SYS.get_stream(handle)? {
+            SysStream::File(mut file) => {
+                let mut buf = Vec::new();
+                file.read_to_end(&mut buf).map_err(|e| e.to_string())?;
+                buf
+            }
+            SysStream::Child(mut child) => {
+                let mut buf = Vec::new();
+                child
+                    .stdout
+                    .as_mut()
+                    .unwrap()
+                    .read_to_end(&mut buf)
+                    .map_err(|e| e.to_string())?;
+                buf
+            }
+            SysStream::TcpListener(_) => return Err("Cannot read from a tcp listener".to_string()),
+            SysStream::TcpSocket(mut socket) => {
+                let mut buf = Vec::new();
+                socket.read_to_end(&mut buf).map_err(|e| e.to_string())?;
                 buf
             }
         })
@@ -248,6 +286,9 @@ impl SysBackend for NativeSys {
         }
         match NATIVE_SYS.get_stream(handle)? {
             SysStream::File(mut file) => file.write_all(conts).map_err(|e| e.to_string()),
+            SysStream::Child(mut child) => (child.stdin.as_mut().unwrap())
+                .write_all(conts)
+                .map_err(|e| e.to_string()),
             SysStream::TcpListener(_) => Err("Cannot write to a tcp listener".to_string()),
             SysStream::TcpSocket(mut socket) => socket.write_all(conts).map_err(|e| e.to_string()),
         }
@@ -468,7 +509,10 @@ impl SysBackend for NativeSys {
         Ok(())
     }
     fn close(&self, handle: Handle) -> Result<(), String> {
-        if NATIVE_SYS.files.remove(&handle).is_some()
+        if let Some((_, mut child)) = NATIVE_SYS.child_procs.remove(&handle) {
+            child.kill().map_err(|e| e.to_string())?;
+            Ok(())
+        } else if NATIVE_SYS.files.remove(&handle).is_some()
             || NATIVE_SYS.tcp_listeners.remove(&handle).is_some()
             || NATIVE_SYS.tcp_sockets.remove(&handle).is_some()
         {
@@ -505,6 +549,18 @@ impl SysBackend for NativeSys {
             String::from_utf8_lossy(&output.stdout).into(),
             String::from_utf8_lossy(&output.stderr).into(),
         ))
+    }
+    fn run_command_stream(&self, command: &str, args: &[&str]) -> Result<Handle, String> {
+        let handle = NATIVE_SYS.new_handle();
+        let child = Command::new(command)
+            .args(args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        NATIVE_SYS.child_procs.insert(handle, child);
+        Ok(handle)
     }
     fn change_directory(&self, path: &str) -> Result<(), String> {
         env::set_current_dir(path).map_err(|e| e.to_string())

@@ -954,10 +954,11 @@ impl Value {
                     .zip(indices.iter().skip(1))
                     .all(|(&a, &b)| a <= b);
                 let size = indices.iter().max().map(|&i| i + 1).unwrap_or(0);
-                let mut data = EcoVec::with_capacity(size);
+                let mut data = eco_vec![0.0; size];
+                let data_slice = data.make_mut();
                 if is_sorted {
                     let mut j = 0;
-                    data.extend((0..size).map(|i| {
+                    for i in 0..size {
                         while indices.get(j).is_some_and(|&n| n < i) {
                             j += 1;
                         }
@@ -966,14 +967,16 @@ impl Value {
                             j += 1;
                             count += 1;
                         }
-                        count as f64
-                    }));
+                        data_slice[i] = count as f64;
+                    }
                 } else {
                     let mut counts = HashMap::new();
                     for &i in &indices {
                         *counts.entry(i).or_insert(0) += 1;
                     }
-                    data.extend((0..size).map(|i| counts.get(&i).copied().unwrap_or(0) as f64));
+                    for i in 0..size {
+                        data_slice[i] = counts.get(&i).copied().unwrap_or(0) as f64;
+                    }
                 }
                 Array::from(data).into()
             }

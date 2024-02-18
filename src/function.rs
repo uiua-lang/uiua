@@ -86,13 +86,6 @@ pub enum Instr {
         span: usize,
         unbox: bool,
     },
-    PushTempFunctions(usize),
-    PopTempFunctions(usize),
-    GetTempFunction {
-        offset: usize,
-        sig: Signature,
-        span: usize,
-    },
     TouchStack {
         count: usize,
         span: usize,
@@ -236,9 +229,6 @@ impl fmt::Display for Instr {
             Instr::Call(_) => write!(f, "call"),
             Instr::PushFunc(func) => write!(f, "push({func})"),
             Instr::Switch { count, .. } => write!(f, "<switch {count}>"),
-            Instr::PushTempFunctions(count) => write!(f, "<push {count} functions>"),
-            Instr::PopTempFunctions(count) => write!(f, "<pop {count} functions>"),
-            Instr::GetTempFunction { offset, .. } => write!(f, "<get function at {offset}>"),
             Instr::Format { parts, .. } => {
                 write!(f, "$\"")?;
                 for (i, part) in parts.iter().enumerate() {

@@ -18,7 +18,7 @@ use crate::{
     function::*,
     lex::{CodeSpan, Sp, Span},
     optimize::{optimize_instrs, optimize_instrs_mut},
-    parse::{count_placeholders, ident_modifier_args, parse, split_words, unsplit_words},
+    parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
     IntoInputSrc, IntoSysBackend, Primitive, RunMode, SafeSys, SysBackend, SysOp, Uiua, UiuaError,
     UiuaResult, Value,
@@ -44,6 +44,8 @@ pub struct Compiler {
     current_imports: Vec<PathBuf>,
     /// The bindings of imported files
     imports: HashMap<PathBuf, Import>,
+    /// Unmonomorphized modifiers
+    modifiers: HashMap<usize, Vec<Sp<Word>>>,
     /// Accumulated errors
     errors: Vec<UiuaError>,
     /// Primitives that have emitted errors because they are experimental
@@ -76,6 +78,7 @@ impl Default for Compiler {
             mode: RunMode::All,
             current_imports: Vec::new(),
             imports: HashMap::new(),
+            modifiers: HashMap::new(),
             errors: Vec::new(),
             experimental_prim_errors: HashSet::new(),
             deprecated_prim_errors: HashSet::new(),
@@ -512,10 +515,25 @@ code:
         let name = binding.name.value;
         let span = &binding.name.span;
 
+        let span_index = self.add_span(span.clone());
+        let global_index = self.next_global;
+        self.next_global += 1;
+
         let placeholder_count = count_placeholders(&binding.words);
+        if placeholder_count > 0 {
+            self.scope.names.insert(name.clone(), global_index);
+            self.asm.add_global_at(
+                global_index,
+                Global::Modifier,
+                Some(span.clone()),
+                comment.clone(),
+            );
+            self.modifiers.insert(global_index, binding.words.clone());
+            return Ok(());
+        }
 
         let mut make_fn: Rc<dyn Fn(_, _, &mut Compiler) -> _> = Rc::new(
-            |mut instrs: EcoVec<Instr>, sig: Signature, comp: &mut Compiler| {
+            |instrs: EcoVec<Instr>, sig: Signature, comp: &mut Compiler| {
                 // Diagnostic for function that doesn't consume its arguments
                 if let Some((Instr::Prim(Primitive::Dup, span), rest)) = instrs.split_first() {
                     if let Span::Code(dup_span) = comp.get_span(*span) {
@@ -536,18 +554,10 @@ code:
                     }
                 }
 
-                // Handle placeholders
-                if placeholder_count > 0 {
-                    instrs.insert(0, Instr::PushTempFunctions(placeholder_count));
-                    instrs.push(Instr::PopTempFunctions(placeholder_count));
-                }
-                let f = comp.add_function(FunctionId::Named(name.clone()), sig, instrs);
-                if placeholder_count > 0 {
-                    comp.increment_placeholders(&f, &mut 0, &mut HashMap::new());
-                }
-                f
+                comp.add_function(FunctionId::Named(name.clone()), sig, instrs)
             },
         );
+
         // Compile the body
         self.current_binding = Some(CurrentBinding {
             name: name.clone(),
@@ -561,9 +571,6 @@ code:
         let instrs = self.compile_words(binding.words, !is_single_func);
         let self_referenced = self.current_binding.take().unwrap().referenced;
         let mut instrs = instrs?;
-        let span_index = self.add_span(span.clone());
-        let global_index = self.next_global;
-        self.next_global += 1;
 
         if self_referenced {
             let name = name.clone();
@@ -772,19 +779,6 @@ code:
         span: usize,
         comment: Option<Arc<str>>,
     ) -> UiuaResult {
-        let temp_function_count =
-            self.count_temp_functions(function.instrs(self), &mut HashSet::new());
-        let name_marg_count = ident_modifier_args(name);
-        if temp_function_count != name_marg_count {
-            let this = crate::parse::place_exclams(name, temp_function_count);
-            self.add_error(
-                self.get_span(span),
-                format!(
-                    "The name {name} implies {name_marg_count} modifier arguments, \
-                    but the binding body references {temp_function_count}. Try `{this}`."
-                ),
-            );
-        }
         self.scope.names.insert(name.clone(), index);
         self.asm.bind_function(index, function, span, comment);
         Ok(())
@@ -1255,16 +1249,11 @@ code:
             Word::Switch(sw) => self.switch(sw, word.span, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,
-            Word::Placeholder(sig) => {
-                let span = self.add_span(word.span);
-                self.push_instr(Instr::GetTempFunction {
-                    offset: 0,
-                    sig,
-                    span,
-                });
-                if call {
-                    self.push_instr(Instr::Call(span));
-                }
+            Word::Placeholder(_) => {
+                return Err(self.fatal_error(
+                    word.span.clone(),
+                    "Attempted to compile a placeholder. This is a bug in the compiler.",
+                ));
             }
             Word::Comment(comment) => {
                 if comment.trim() == "Experimental!" {
@@ -1312,6 +1301,12 @@ code:
                         format!("`{}` is  not a module", first.module.value),
                     ))
                 }
+                Global::Modifier => {
+                    return Err(self.fatal_error(
+                        first.module.span.clone(),
+                        format!("`{}` is a modifier, not a module", first.module.value),
+                    ))
+                }
             };
             for comp in r.path.iter().skip(1) {
                 let submod_index = self.imports[module]
@@ -1348,6 +1343,12 @@ code:
                         return Err(self.fatal_error(
                             comp.module.span.clone(),
                             format!("`{}` is  not a module", comp.module.value),
+                        ))
+                    }
+                    Global::Modifier => {
+                        return Err(self.fatal_error(
+                            comp.module.span.clone(),
+                            format!("`{}` is a modifier, not a module", comp.module.value),
                         ))
                     }
                 };
@@ -1454,11 +1455,7 @@ code:
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
-            Global::Func(f)
-                if f.inlinable
-                    && self.count_temp_functions(f.instrs(self), &mut HashSet::new()) == 0
-                    && !self.has_tracing(f.instrs(self)) =>
-            {
+            Global::Func(f) if f.inlinable && !self.has_tracing(f.instrs(self)) => {
                 if call {
                     // Inline instructions
                     self.push_instr(Instr::PushSig(f.signature()));
@@ -1486,6 +1483,10 @@ code:
                 self.push_instr(Instr::PushFunc(f));
             }
             Global::Module { .. } => self.add_error(span, "Cannot import module item here."),
+            Global::Modifier => self.add_error(
+                span,
+                "Attempted to directly compile a modifier. This is a bug in the compiler.",
+            ),
         }
     }
     fn func(&mut self, func: Func, span: CodeSpan, call: bool) -> UiuaResult {
@@ -1749,45 +1750,6 @@ code:
             }
         }
 
-        if let Modifier::Primitive(prim) = modified.modifier.value {
-            // Give advice about redundancy
-            match prim {
-                m @ Primitive::Each => {
-                    if let [Sp {
-                        value: Word::Primitive(prim),
-                        span,
-                    }] = modified.operands.as_slice()
-                    {
-                        if prim.class().is_pervasive() {
-                            let span = modified.modifier.span.clone().merge(span.clone());
-                            self.emit_diagnostic(
-                                format!(
-                                    "Using {m} with a pervasive primitive like {p} is \
-                                    redundant. Just use {p} by itself.",
-                                    m = m.format(),
-                                    p = prim.format(),
-                                ),
-                                DiagnosticKind::Advice,
-                                span,
-                            );
-                        }
-                    } else if words_look_pervasive(&modified.operands) {
-                        let span = modified.modifier.span.clone();
-                        self.emit_diagnostic(
-                            format!(
-                                "{m}'s function is pervasive, \
-                                so {m} is redundant here.",
-                                m = m.format()
-                            ),
-                            DiagnosticKind::Advice,
-                            span,
-                        );
-                    }
-                }
-                _ => {}
-            }
-        }
-
         if op_count == modified.modifier.value.args() {
             // Inlining
             if self.inline_modifier(&modified, call)? {
@@ -1812,6 +1774,59 @@ code:
             ));
         }
 
+        let prim = match modified.modifier.value {
+            Modifier::Primitive(prim) => prim,
+            Modifier::Ref(r) => {
+                let (_path_indices, index) = self.ref_index(&r)?;
+                self.asm.global_references.insert(r.name.clone(), index);
+                let mut operands = modified.operands.into_iter().filter(|w| w.value.is_code());
+                let mut words = self
+                    .modifiers
+                    .get(&index)
+                    .expect("modifier not found")
+                    .clone();
+                replace_placeholders(&mut words, &mut || operands.next().unwrap());
+                return self.words(words, call);
+            }
+        };
+
+        // Give advice about redundancy
+        match prim {
+            m @ Primitive::Each => {
+                if let [Sp {
+                    value: Word::Primitive(prim),
+                    span,
+                }] = modified.operands.as_slice()
+                {
+                    if prim.class().is_pervasive() {
+                        let span = modified.modifier.span.clone().merge(span.clone());
+                        self.emit_diagnostic(
+                            format!(
+                                "Using {m} with a pervasive primitive like {p} is \
+                                    redundant. Just use {p} by itself.",
+                                m = m.format(),
+                                p = prim.format(),
+                            ),
+                            DiagnosticKind::Advice,
+                            span,
+                        );
+                    }
+                } else if words_look_pervasive(&modified.operands) {
+                    let span = modified.modifier.span.clone();
+                    self.emit_diagnostic(
+                        format!(
+                            "{m}'s function is pervasive, \
+                                so {m} is redundant here.",
+                            m = m.format()
+                        ),
+                        DiagnosticKind::Advice,
+                        span,
+                    );
+                }
+            }
+            _ => {}
+        }
+
         let instrs = self.compile_words(modified.operands, false)?;
 
         // Reduce monadic deprectation message
@@ -1834,19 +1849,11 @@ code:
 
         if call {
             self.push_all_instrs(instrs);
-            match modified.modifier.value {
-                Modifier::Primitive(prim) => self.primitive(prim, modified.modifier.span, true),
-                Modifier::Ref(r) => self.reference(r, true)?,
-            }
+            self.primitive(prim, modified.modifier.span, true);
         } else {
             self.new_functions.push(EcoVec::new());
             self.push_all_instrs(instrs);
-            match modified.modifier.value {
-                Modifier::Primitive(prim) => {
-                    self.primitive(prim, modified.modifier.span.clone(), true)
-                }
-                Modifier::Ref(r) => self.reference(r, true)?,
-            }
+            self.primitive(prim, modified.modifier.span.clone(), true);
             let instrs = self.new_functions.pop().unwrap();
             match instrs_signature(&instrs) {
                 Ok(sig) => {
@@ -2374,44 +2381,6 @@ code:
             }
         }
     }
-
-    fn increment_placeholders(
-        &mut self,
-        f: &Function,
-        curr: &mut usize,
-        map: &mut HashMap<usize, usize>,
-    ) {
-        let len = f.instrs(self).len();
-        for i in 0..len {
-            match &mut f.instrs_mut(self)[i] {
-                Instr::GetTempFunction { offset, span, .. } => {
-                    *offset = *map.entry(*span).or_insert_with(|| {
-                        let new = *curr;
-                        *curr += 1;
-                        new
-                    });
-                }
-                Instr::PushFunc(f) => {
-                    let f = f.clone();
-                    self.increment_placeholders(&f, curr, map);
-                }
-                _ => (),
-            }
-        }
-    }
-    fn count_temp_functions(&self, instrs: &[Instr], counted: &mut HashSet<usize>) -> usize {
-        let mut count = 0;
-        for instr in instrs {
-            match instr {
-                Instr::GetTempFunction { span, .. } => count += counted.insert(*span) as usize,
-                Instr::PushFunc(f) if matches!(f.id, FunctionId::Anonymous(_)) => {
-                    count += self.count_temp_functions(f.instrs(self), counted);
-                }
-                _ => {}
-            }
-        }
-        count
-    }
     fn has_tracing(&self, instrs: &[Instr]) -> bool {
         for instr in instrs {
             match instr {
@@ -2539,4 +2508,32 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
         Word::Modified(m) if m.modifier.value == Modifier::Primitive(Primitive::Each) => true,
         _ => false,
     })
+}
+
+fn replace_placeholders(words: &mut [Sp<Word>], next: &mut dyn FnMut() -> Sp<Word>) {
+    for word in words {
+        match &mut word.value {
+            Word::Placeholder(_) => word.value = next().value,
+            Word::Strand(items) => replace_placeholders(items, next),
+            Word::Array(arr) => {
+                for line in &mut arr.lines {
+                    replace_placeholders(line, next);
+                }
+            }
+            Word::Func(func) => {
+                for line in &mut func.lines {
+                    replace_placeholders(line, next);
+                }
+            }
+            Word::Modified(m) => replace_placeholders(&mut m.operands, next),
+            Word::Switch(sw) => {
+                for branch in &mut sw.branches {
+                    for line in &mut branch.value.lines {
+                        replace_placeholders(line, next);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
 }

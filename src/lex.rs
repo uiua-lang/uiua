@@ -331,7 +331,7 @@ impl CodeSpan {
 }
 
 /// A span wrapping a value
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Sp<T, S = CodeSpan> {
     /// The value
     pub value: T,
@@ -781,15 +781,13 @@ impl<'a> Lexer<'a> {
                         ident.push_str(c);
                     }
                     let mut exclam_count = 0;
-                    while let Some((ch, count)) =
-                        if self.next_char_exact("!") {
-                            Some(('!', 1))
-                        } else if self.next_char_exact("‼") {
-                            Some(('‼', 2))
-                        } else {
-                            None
-                        }
-                    {
+                    while let Some((ch, count)) = if self.next_char_exact("!") {
+                        Some(('!', 1))
+                    } else if self.next_char_exact("‼") {
+                        Some(('‼', 2))
+                    } else {
+                        None
+                    } {
                         ident.push(ch);
                         exclam_count += count;
                     }

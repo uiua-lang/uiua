@@ -161,6 +161,8 @@ pub enum Global {
     /// A module
     #[allow(missing_docs)]
     Module { module: PathBuf },
+    /// A modifier
+    Modifier,
 }
 
 impl Global {
@@ -171,6 +173,7 @@ impl Global {
             Self::Func(func) => Some(func.signature()),
             Self::Sig(sig) => Some(*sig),
             Self::Module { .. } => None,
+            Self::Modifier => None,
         }
     }
     /// Check if the global is a once-bound constant
@@ -280,9 +283,6 @@ enum InstrRep {
     PopLocals(()),
     GetLocal(usize, usize),
     Unpack(usize, usize, bool),
-    PushTempFunctions(usize),
-    PopTempFunctions(usize),
-    GetTempFunction(usize, Signature, usize),
     TouchStack(usize, usize),
     PushTemp(TempStack, usize, usize),
     PopTemp(TempStack, usize, usize),
@@ -321,11 +321,6 @@ impl From<Instr> for InstrRep {
             Instr::PopLocals => Self::PopLocals(()),
             Instr::GetLocal { index, span } => Self::GetLocal(index, span),
             Instr::Unpack { count, span, unbox } => Self::Unpack(count, span, unbox),
-            Instr::PushTempFunctions(count) => Self::PushTempFunctions(count),
-            Instr::PopTempFunctions(count) => Self::PopTempFunctions(count),
-            Instr::GetTempFunction { offset, sig, span } => {
-                Self::GetTempFunction(offset, sig, span)
-            }
             Instr::TouchStack { count, span } => Self::TouchStack(count, span),
             Instr::PushTemp { stack, count, span } => Self::PushTemp(stack, count, span),
             Instr::PopTemp { stack, count, span } => Self::PopTemp(stack, count, span),
@@ -365,11 +360,6 @@ impl From<InstrRep> for Instr {
             InstrRep::PopLocals(()) => Self::PopLocals,
             InstrRep::GetLocal(index, span) => Self::GetLocal { index, span },
             InstrRep::Unpack(count, span, unbox) => Self::Unpack { count, span, unbox },
-            InstrRep::PushTempFunctions(count) => Self::PushTempFunctions(count),
-            InstrRep::PopTempFunctions(count) => Self::PopTempFunctions(count),
-            InstrRep::GetTempFunction(offset, sig, span) => {
-                Self::GetTempFunction { offset, sig, span }
-            }
             InstrRep::TouchStack(count, span) => Self::TouchStack { count, span },
             InstrRep::PushTemp(stack, count, span) => Self::PushTemp { stack, count, span },
             InstrRep::PopTemp(stack, count, span) => Self::PopTemp { stack, count, span },

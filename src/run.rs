@@ -39,8 +39,6 @@ pub(crate) struct Runtime {
     pub(crate) function_stack: Vec<Function>,
     /// The thread's temp stack for inlining
     temp_stacks: [Vec<Value>; TempStack::CARDINALITY],
-    /// The thread's temp stack for functions
-    temp_function_stack: Vec<Function>,
     /// The stack height at the start of each array currently being built
     array_stack: Vec<usize>,
     /// The call stack
@@ -173,7 +171,6 @@ impl Default for Runtime {
             stack: Vec::new(),
             function_stack: Vec::new(),
             temp_stacks: [Vec::new(), Vec::new()],
-            temp_function_stack: Vec::new(),
             array_stack: Vec::new(),
             call_stack: vec![StackFrame {
                 slice: FuncSlice::default(),
@@ -444,6 +441,10 @@ code:
                             "Called module global. \
                             This is a bug in the interpreter.",
                         )),
+                        Global::Modifier => Err(self.error(
+                            "Called modifier global. \
+                            This is a bug in the interpreter.",
+                        )),
                     }
                 }
                 &Instr::BindGlobal { span, index } => {
@@ -528,40 +529,6 @@ code:
                         ))
                     })?;
                     env.push(val);
-                    Ok(())
-                }),
-                &Instr::PushTempFunctions(n) => (|| {
-                    for _ in 0..n {
-                        let f = self.pop_function()?;
-                        self.rt.temp_function_stack.push(f);
-                    }
-                    Ok(())
-                })(),
-                &Instr::PopTempFunctions(n) => {
-                    self.rt
-                        .temp_function_stack
-                        .truncate(self.rt.temp_function_stack.len() - n);
-                    Ok(())
-                }
-                &Instr::GetTempFunction { offset, sig, span } => self.with_span(span, |env| {
-                    let f = env
-                        .rt
-                        .temp_function_stack
-                        .get(env.rt.temp_function_stack.len() - 1 - offset)
-                        .ok_or_else(|| {
-                            env.error(
-                                "Error getting placeholder function. \
-                                This is a bug in the interpreter.",
-                            )
-                        })?;
-                    let f_sig = f.signature();
-                    if f_sig != sig {
-                        return Err(env.error(format!(
-                            "Function signature {f_sig} does not match \
-                            placeholder signature {sig}"
-                        )));
-                    }
-                    env.rt.function_stack.push(f.clone());
                     Ok(())
                 }),
                 Instr::Format { parts, span } => {
@@ -986,7 +953,6 @@ code:
         for stack in &mut self.rt.temp_stacks {
             stack.clear();
         }
-        self.rt.temp_function_stack.clear();
         self.rt.function_stack.clear();
         take(&mut self.rt.stack)
     }
@@ -1279,7 +1245,6 @@ code:
                     .collect(),
                 function_stack: Vec::new(),
                 temp_stacks: [Vec::new(), Vec::new()],
-                temp_function_stack: Vec::new(),
                 array_stack: Vec::new(),
                 fill_stack: Vec::new(),
                 this_stack: self.rt.this_stack.clone(),

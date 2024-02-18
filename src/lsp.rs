@@ -684,6 +684,7 @@ mod server {
                         Global::Sig(sig) if *sig == (0, 1) => CompletionItemKind::VALUE,
                         Global::Sig(_) => CompletionItemKind::FUNCTION,
                         Global::Module { .. } => CompletionItemKind::MODULE,
+                        Global::Modifier => CompletionItemKind::FUNCTION,
                     };
                     CompletionItem {
                         label: name.clone(),

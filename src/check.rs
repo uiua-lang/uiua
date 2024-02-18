@@ -4,9 +4,9 @@ use enum_iterator::Sequence;
 
 use crate::{
     array::Array,
-    function::{Function, FunctionId, Instr, Signature},
+    function::{Function, Instr, Signature},
     value::Value,
-    FuncSlice, ImplPrimitive, Primitive, TempStack,
+    ImplPrimitive, Primitive, TempStack,
 };
 
 const START_HEIGHT: usize = 16;
@@ -242,14 +242,6 @@ impl<'a> VirtualEnv<'a> {
                     self.temp_stacks[*stack as usize].push(val.clone());
                     self.stack.push(val);
                 }
-            }
-            Instr::PushTempFunctions(_) | Instr::PopTempFunctions(_) => {}
-            Instr::GetTempFunction { sig, .. } => {
-                self.function_stack.push(Cow::Owned(Function::new(
-                    FunctionId::Unnamed,
-                    *sig,
-                    FuncSlice { start: 0, len: 0 },
-                )));
             }
             Instr::PopTemp { count, stack, .. } => {
                 for _ in 0..*count {

@@ -141,9 +141,7 @@ pub(crate) fn optimize_instrs_mut(
         }
         // Adjacent
         ([.., Instr::Prim(Windows, _), Instr::PushFunc(f)], instr @ Instr::Prim(Rows, _)) => {
-            if let [inner @ (Instr::PushFunc(_) | Instr::GetTempFunction { .. }), Instr::Prim(Reduce, span)] =
-                f.instrs(asm)
-            {
+            if let [inner @ Instr::PushFunc(_), Instr::Prim(Reduce, span)] = f.instrs(asm) {
                 let inner = inner.clone();
                 instrs.pop();
                 instrs.pop();

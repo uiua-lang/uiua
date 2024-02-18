@@ -1,3 +1,5 @@
+//! The backing buffer for Uiua's arrays' data
+
 use std::{
     borrow::Borrow,
     cmp::Ordering,
@@ -24,6 +26,10 @@ macro_rules! cowslice {
 pub(crate) use cowslice;
 use ecow::EcoVec;
 
+/// The backing buffer for Uiua's arrays' data
+///
+/// `CowSlice`s are reference-counted buffers that also have associated start and end indices.
+/// This allows them to be split into chunks without copying the data.
 pub struct CowSlice<T> {
     data: EcoVec<T>,
     start: usize,

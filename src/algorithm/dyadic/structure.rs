@@ -1,8 +1,10 @@
 use std::{
     cmp::Ordering,
     iter::{once, repeat},
-    mem::take,
+    mem::replace,
 };
+
+use ecow::EcoVec;
 
 #[cfg(feature = "bytes")]
 use crate::algorithm::{op_bytes_ref_retry_fill, op_bytes_retry_fill};
@@ -266,9 +268,6 @@ impl Value {
     }
     /// Use this value to `drop` from another
     pub fn drop(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
-        if from.rank() == 0 {
-            return Err(env.error("Cannot drop from scalar"));
-        }
         let index = self.as_ints(env, "Index must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.drop(&index, env)?),
@@ -327,62 +326,56 @@ impl<T: ArrayValue> Array<T> {
                 let row_count = self.row_count();
                 let abs_taking = taking.unsigned_abs();
                 let mut filled = false;
-                self.data.modify(|data| {
-                    if taking >= 0 {
-                        if abs_taking > row_count {
-                            match T::get_fill(env) {
-                                Ok(fill) => {
-                                    filled = true;
-                                    data.extend(
-                                        repeat(fill).take((abs_taking - row_count) * row_len),
-                                    );
-                                }
-                                Err(e) => {
-                                    return Err(env
-                                        .error(format!(
-                                            "Cannot take {} rows from array with {} row{} \
-                                            outside a fill context{e}",
-                                            abs_taking,
-                                            row_count,
-                                            if row_count == 1 { "" } else { "s" }
-                                        ))
-                                        .fill());
-                                }
+                if taking >= 0 {
+                    if abs_taking > row_count {
+                        match T::get_fill(env) {
+                            Ok(fill) => {
+                                filled = true;
+                                self.data.extend_from_slice(&vec![
+                                    fill;
+                                    (abs_taking - row_count)
+                                        * row_len
+                                ]);
                             }
-                        } else {
-                            data.truncate(abs_taking * row_len);
+                            Err(e) => {
+                                return Err(env
+                                    .error(format!(
+                                        "Cannot take {} rows from array with {} row{} \
+                                        outside a fill context{e}",
+                                        taking,
+                                        row_count,
+                                        if row_count == 1 { "" } else { "s" }
+                                    ))
+                                    .fill());
+                            }
                         }
                     } else {
-                        *data = if abs_taking > row_count {
-                            match T::get_fill(env) {
-                                Ok(fill) => {
-                                    filled = true;
-                                    repeat(fill)
-                                        .take((abs_taking - row_count) * row_len)
-                                        .chain(take(data))
-                                        .collect()
-                                }
-                                Err(e) => {
-                                    return Err(env
-                                        .error(format!(
-                                            "Cannot take {} rows from array with {} row{} \
-                                            outside a fill context{e}",
-                                            abs_taking,
-                                            row_count,
-                                            if row_count == 1 { "" } else { "s" }
-                                        ))
-                                        .fill());
-                                }
-                            }
-                        } else {
-                            take(data)
-                                .into_iter()
-                                .skip((row_count - abs_taking) * row_len)
-                                .collect()
-                        };
+                        self.data.truncate(abs_taking * row_len);
                     }
-                    Ok(())
-                })?;
+                } else if abs_taking > row_count {
+                    match T::get_fill(env) {
+                        Ok(fill) => {
+                            filled = true;
+                            let new_data =
+                                EcoVec::from_elem(fill, (abs_taking - row_count) * row_len);
+                            let old_data = replace(&mut self.data, new_data.into());
+                            self.data.extend_from_slice(&old_data);
+                        }
+                        Err(e) => {
+                            return Err(env
+                                .error(format!(
+                                    "Cannot take {} rows from array with {} row{} \
+                                    outside a fill context{e}",
+                                    taking,
+                                    row_count,
+                                    if row_count == 1 { "" } else { "s" }
+                                ))
+                                .fill());
+                        }
+                    }
+                } else {
+                    self.data.truncate(abs_taking * row_len);
+                }
                 if let Some(s) = self.shape.get_mut(0) {
                     *s = if filled {
                         abs_taking
@@ -487,22 +480,20 @@ impl<T: ArrayValue> Array<T> {
     }
     /// `drop` from this array
     pub fn drop(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot drop from scalar"));
+        }
         Ok(match index {
             [] => self,
             &[dropping] => {
                 let row_len = self.row_len();
                 let row_count = self.row_count();
-                let abs_dropping = dropping.unsigned_abs();
-                self.data.modify(|data| {
-                    if dropping >= 0 {
-                        *data = take(data)
-                            .into_iter()
-                            .skip(abs_dropping * row_len)
-                            .collect();
-                    } else {
-                        data.truncate((row_count.saturating_sub(abs_dropping)) * row_len);
-                    }
-                });
+                let abs_dropping = dropping.unsigned_abs().min(row_count);
+                if dropping >= 0 {
+                    self.data.as_mut_slice().rotate_left(abs_dropping * row_len);
+                    self.data.truncate((row_count - abs_dropping) * row_len);
+                }
+                self.data.truncate((row_count - abs_dropping) * row_len);
                 if self.shape.is_empty() {
                     self.shape.push(1);
                 }

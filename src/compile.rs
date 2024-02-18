@@ -16,6 +16,7 @@ use crate::{
     check::{instrs_signature, SigCheckError},
     constants, example_ua,
     function::*,
+    ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, parse, split_words, unsplit_words},
@@ -519,8 +520,32 @@ code:
         let global_index = self.next_global;
         self.next_global += 1;
 
+        // Handle macro
         let placeholder_count = count_placeholders(&binding.words);
-        if placeholder_count > 0 {
+        let ident_margs = ident_modifier_args(&name);
+        match (ident_margs > 0, placeholder_count > 0) {
+            (true, true) | (false, false) => {}
+            (true, false) => {
+                self.add_error(
+                    span.clone(),
+                    format!(
+                        "`{name}`'s name suggests it is a macro, \
+                        but it has no placeholders"
+                    ),
+                );
+            }
+            (false, true) => {
+                self.add_error(
+                    span.clone(),
+                    format!(
+                        "`{name}` has placeholders, but its name \
+                        does not suggest it is a macro"
+                    ),
+                );
+                return Ok(());
+            }
+        }
+        if placeholder_count > 0 || ident_margs > 0 {
             self.scope.names.insert(name.clone(), global_index);
             self.asm.add_global_at(
                 global_index,
@@ -1250,10 +1275,7 @@ code:
             Word::Primitive(p) => self.primitive(p, word.span, call),
             Word::Modified(m) => self.modified(*m, call)?,
             Word::Placeholder(_) => {
-                return Err(self.fatal_error(
-                    word.span.clone(),
-                    "Attempted to compile a placeholder. This is a bug in the compiler.",
-                ));
+                // We could error here, but it's easier to handle it higher up
             }
             Word::Comment(comment) => {
                 if comment.trim() == "Experimental!" {
@@ -1483,11 +1505,9 @@ code:
                 self.push_instr(Instr::PushFunc(f));
             }
             Global::Module { .. } => self.add_error(span, "Cannot import module item here."),
-            Global::Macro => self.add_error(
-                span,
-                "Attempted to directly compile a macro. \
-                This is a bug in the compiler.",
-            ),
+            Global::Macro => {
+                // We could error here, but it's easier to handle it higher up
+            }
         }
     }
     fn func(&mut self, func: Func, span: CodeSpan, call: bool) -> UiuaResult {
@@ -1775,7 +1795,7 @@ code:
             ));
         }
 
-        // Handle custom modifiers
+        // Handle macros
         let prim = match modified.modifier.value {
             Modifier::Primitive(prim) => prim,
             Modifier::Ref(r) => {

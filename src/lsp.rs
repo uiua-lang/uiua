@@ -150,22 +150,7 @@ impl Spanner {
             if binding.span != *span {
                 continue;
             }
-            return Some(BindingDocs {
-                src_span: binding.span.clone(),
-                signature: binding.global.signature(),
-                modifier_args: binding.span.as_str(self.inputs(), ident_modifier_args),
-                comment: binding.comment.clone(),
-                invertible_underable: self.invertible_underable(binding),
-                is_constant: matches!(
-                    binding.global,
-                    Global::Const(_)
-                        | Global::Sig(Signature {
-                            args: 0,
-                            outputs: 1
-                        })
-                ),
-                is_module: matches!(binding.global, Global::Module { .. }),
-            });
+            return Some(self.make_binding_docs(binding));
         }
         None
     }
@@ -178,24 +163,43 @@ impl Spanner {
             if name.span != *span {
                 continue;
             }
-            return Some(BindingDocs {
-                src_span: binding.span.clone(),
-                signature: binding.global.signature(),
-                modifier_args: binding.span.as_str(self.inputs(), ident_modifier_args),
-                comment: binding.comment.clone(),
-                invertible_underable: self.invertible_underable(binding),
-                is_constant: matches!(
-                    binding.global,
-                    Global::Const(_)
-                        | Global::Sig(Signature {
-                            args: 0,
-                            outputs: 1
-                        })
-                ),
-                is_module: matches!(binding.global, Global::Module { .. }),
-            });
+            return Some(self.make_binding_docs(binding));
         }
         None
+    }
+
+    fn make_binding_docs(&self, binfo: &BindingInfo) -> BindingDocs {
+        let modifier_args = binfo.span.as_str(self.inputs(), ident_modifier_args);
+        let is_constant = matches!(
+            binfo.global,
+            Global::Const(_)
+                | Global::Sig(Signature {
+                    args: 0,
+                    outputs: 1
+                })
+        );
+        let is_module = matches!(binfo.global, Global::Module { .. });
+        let comment = binfo.comment.clone().unwrap_or_else(|| {
+            if is_constant {
+                "constant"
+            } else if is_module {
+                "module"
+            } else if modifier_args > 0 {
+                "macro"
+            } else {
+                "function"
+            }
+            .into()
+        });
+        BindingDocs {
+            src_span: binfo.span.clone(),
+            signature: binfo.global.signature(),
+            modifier_args,
+            comment: Some(comment),
+            invertible_underable: self.invertible_underable(binfo),
+            is_constant,
+            is_module,
+        }
     }
 
     fn words_spans(&self, words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {

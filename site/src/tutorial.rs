@@ -1433,7 +1433,7 @@ ReduceRange!×4"/>
 OnRev! ← ≡⍜⇌^1
 OnRev!(↘1) ↯3_4⇡12
 OnRev!(⊂π) ↯3_4⇡12"/>
-        <p>"A custom modifier can take as many functions as you want."</p>
+        <p>"A custom modifier can take as many functions as you want. Modifiers with two or more function arguments will be formatted to use "<code>"‼"</code>"s as needed. Try running the following example to format it."</p>
         <Editor example="\
 F!!! ← ⊂/^2⊃^2^2
 F!!!+×⊂ [1 2 3][4 5 6]"/>

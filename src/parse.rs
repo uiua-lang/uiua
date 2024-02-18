@@ -400,7 +400,7 @@ impl<'i> Parser<'i> {
             self.errors
                 .push(name.span.clone().sp(ParseError::AmpersandBindingName));
         }
-        if name.value.trim_end_matches('!').chars().count() >= 2
+        if name.value.trim_end_matches(['!', '‼']).chars().count() >= 2
             && name.value.chars().next().unwrap().is_ascii_lowercase()
         {
             let captialized: String = name
@@ -436,7 +436,7 @@ impl<'i> Parser<'i> {
             match token {
                 Token::Ident if line.is_some() => {
                     let line = line.as_mut().unwrap();
-                    let ident = Ident::from(&self.input[span.byte_range()]);
+                    let ident = canonicalize_exclams(&self.input[span.byte_range()]);
                     let name = span.clone().sp(ident);
                     line.items.push(name);
                 }
@@ -462,7 +462,7 @@ impl<'i> Parser<'i> {
         }
         if let Some(name) = &name {
             self.validate_binding_name(name);
-            if name.value.contains('!') {
+            if name.value.contains(['!', '‼']) {
                 self.errors
                     .push(name.span.clone().sp(ParseError::ModifierImportName));
             }
@@ -476,7 +476,7 @@ impl<'i> Parser<'i> {
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         let span = self.try_exact(Token::Ident)?;
-        let s: Ident = self.input[span.byte_range()].into();
+        let s: Ident = canonicalize_exclams(&self.input[span.byte_range()]);
         Some(span.sp(s))
     }
     fn try_ref(&mut self) -> Option<Sp<Ref>> {
@@ -1174,11 +1174,35 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
 pub fn ident_modifier_args(ident: &str) -> usize {
     let mut count: usize = 0;
     let mut prefix = ident;
-    while let Some(pre) = prefix.strip_suffix('!') {
+    while let Some((pre, this_count)) = prefix
+        .strip_suffix('!')
+        .zip(Some(1))
+        .or_else(|| prefix.strip_suffix('‼').zip(Some(2)))
+    {
         prefix = pre;
-        count = count.saturating_add(1);
+        count = count.saturating_add(this_count);
     }
     count
+}
+
+/// Rewrite an identifier with the given amount of double and single exclamation points
+pub fn place_exclams(ident: &str, count: usize) -> Ident {
+    let mut new: Ident = ident.trim_end_matches(&['!', '‼']).into();
+    let num_double = count / 2;
+    let trailing_single = count % 2 == 1;
+    for _ in 0..num_double {
+        new.push('‼');
+    }
+    if trailing_single {
+        new.push('!');
+    }
+    new
+}
+
+/// Rewrite the identifier with the same number of exclamation points using double and single exclamation point characters as needed
+pub fn canonicalize_exclams(ident: &str) -> Ident {
+    let num_margs = crate::parse::ident_modifier_args(ident);
+    place_exclams(ident, num_margs)
 }
 
 pub(crate) fn count_placeholders(words: &[Sp<Word>]) -> usize {

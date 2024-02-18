@@ -103,7 +103,7 @@ pub enum Word {
     Switch(Switch),
     Primitive(Primitive),
     Modified(Box<Modified>),
-    Placeholder(Signature),
+    Placeholder(PlaceholderOp),
     Comment(String),
     Spaces,
     BreakLine,
@@ -202,10 +202,34 @@ impl fmt::Debug for Word {
             Word::Modified(modified) => modified.fmt(f),
             Word::Spaces => write!(f, "' '"),
             Word::Comment(comment) => write!(f, "# {comment}"),
-            Word::Placeholder(sig) => write!(f, "^{}.{}", sig.args, sig.outputs),
+            Word::Placeholder(op) => write!(f, "{op}"),
             Word::BreakLine => write!(f, "'"),
             Word::UnbreakLine => write!(f, "''"),
             Word::OutputComment { i, n, .. } => write!(f, "output_comment({i}/{n})"),
+        }
+    }
+}
+
+/// A placeholder operation
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum PlaceholderOp {
+    /// Pop and inline the top expression
+    Call,
+    /// Duplicate the top expression
+    Dup,
+    /// Swap the top two expressions
+    Flip,
+    /// Copy the 2nd-to-top expression to the top
+    Over,
+}
+
+impl fmt::Display for PlaceholderOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PlaceholderOp::Call => write!(f, "^!"),
+            PlaceholderOp::Dup => write!(f, "^."),
+            PlaceholderOp::Flip => write!(f, "^:"),
+            PlaceholderOp::Over => write!(f, "^,"),
         }
     }
 }

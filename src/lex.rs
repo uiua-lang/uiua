@@ -488,6 +488,7 @@ pub enum AsciiToken {
     TripleMinus,
     Quote,
     Quote2,
+    Placeholder(crate::ast::PlaceholderOp),
 }
 
 impl fmt::Display for AsciiToken {
@@ -514,6 +515,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::TripleMinus => write!(f, "---"),
             AsciiToken::Quote => write!(f, "'"),
             AsciiToken::Quote2 => write!(f, "''"),
+            AsciiToken::Placeholder(op) => write!(f, "{op}"),
         }
     }
 }
@@ -659,6 +661,18 @@ impl<'a> Lexer<'a> {
                 }
                 "*" => self.end(Star, start),
                 "%" => self.end(Percent, start),
+                "^" if self.next_char_exact("!") => {
+                    self.end(Placeholder(crate::ast::PlaceholderOp::Call), start)
+                }
+                "^" if self.next_char_exact(".") => {
+                    self.end(Placeholder(crate::ast::PlaceholderOp::Dup), start)
+                }
+                "^" if self.next_char_exact(":") => {
+                    self.end(Placeholder(crate::ast::PlaceholderOp::Flip), start)
+                }
+                "^" if self.next_char_exact(",") => {
+                    self.end(Placeholder(crate::ast::PlaceholderOp::Over), start)
+                }
                 "^" => self.end(Caret, start),
                 "=" => self.end(Equal, start),
                 "<" if self.next_char_exact("=") => self.end(LessEqual, start),

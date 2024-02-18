@@ -1780,12 +1780,55 @@ code:
             Modifier::Ref(r) => {
                 let (_path_indices, index) = self.ref_index(&r)?;
                 self.asm.global_references.insert(r.name.clone(), index);
-                let mut operands = modified.operands.into_iter().filter(|w| w.value.is_code());
                 let mut words = self
                     .modifiers
                     .get(&index)
                     .expect("modifier not found")
                     .clone();
+                let mut ops = collect_placeholder(&words);
+                ops.reverse();
+                let mut ph_stack: Vec<Word> = modified
+                    .operands
+                    .into_iter()
+                    .filter(|w| w.value.is_code())
+                    .map(|w| w.value)
+                    .collect();
+                ph_stack.reverse();
+                let mut replaced = Vec::new();
+                for op in ops {
+                    let span = op.span;
+                    let op = op.value;
+                    let mut pop = || {
+                        ph_stack.pop().ok_or_else(|| {
+                            self.fatal_error(
+                                span.clone(),
+                                "Not enough function arguments to fill all placeholders",
+                            )
+                        })
+                    };
+                    match op {
+                        PlaceholderOp::Call => replaced.push(pop()?),
+                        PlaceholderOp::Dup => {
+                            let a = pop()?;
+                            ph_stack.push(a.clone());
+                            ph_stack.push(a);
+                        }
+                        PlaceholderOp::Flip => {
+                            let a = pop()?;
+                            let b = pop()?;
+                            ph_stack.push(a);
+                            ph_stack.push(b);
+                        }
+                        PlaceholderOp::Over => {
+                            let a = pop()?;
+                            let b = pop()?;
+                            ph_stack.push(b.clone());
+                            ph_stack.push(a);
+                            ph_stack.push(b);
+                        }
+                    }
+                }
+                let mut operands = replaced.into_iter();
                 replace_placeholders(&mut words, &mut || operands.next().unwrap());
                 let instrs = self.compile_words(words, true)?;
                 match instrs_signature(&instrs) {
@@ -2529,10 +2572,40 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
     })
 }
 
-fn replace_placeholders(words: &mut [Sp<Word>], next: &mut dyn FnMut() -> Sp<Word>) {
+fn collect_placeholder(words: &[Sp<Word>]) -> Vec<Sp<PlaceholderOp>> {
+    let mut ops = Vec::new();
     for word in words {
+        match &word.value {
+            Word::Placeholder(op) => ops.push(word.span.clone().sp(*op)),
+            Word::Strand(items) => ops.extend(collect_placeholder(items)),
+            Word::Array(arr) => {
+                for line in &arr.lines {
+                    ops.extend(collect_placeholder(line));
+                }
+            }
+            Word::Func(func) => {
+                for line in &func.lines {
+                    ops.extend(collect_placeholder(line));
+                }
+            }
+            Word::Modified(m) => ops.extend(collect_placeholder(&m.operands)),
+            Word::Switch(sw) => {
+                for branch in &sw.branches {
+                    for line in &branch.value.lines {
+                        ops.extend(collect_placeholder(line));
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    ops
+}
+
+fn replace_placeholders(words: &mut Vec<Sp<Word>>, next: &mut dyn FnMut() -> Word) {
+    for word in &mut *words {
         match &mut word.value {
-            Word::Placeholder(_) => word.value = next().value,
+            Word::Placeholder(PlaceholderOp::Call) => word.value = next(),
             Word::Strand(items) => replace_placeholders(items, next),
             Word::Array(arr) => {
                 for line in &mut arr.lines {
@@ -2555,4 +2628,5 @@ fn replace_placeholders(words: &mut [Sp<Word>], next: &mut dyn FnMut() -> Sp<Wor
             _ => {}
         }
     }
+    words.retain(|word| !matches!(word.value, Word::Placeholder(_)))
 }

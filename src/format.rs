@@ -888,11 +888,7 @@ impl<'a> Formatter<'a> {
                 }
                 self.format_words(&m.operands, true, depth);
             }
-            Word::Placeholder(sig) => self.format_signature(
-                '^',
-                *sig,
-                self.inputs.get(&word.span.src)[word.span.byte_range()].ends_with(' '),
-            ),
+            Word::Placeholder(op) => self.push(&word.span, &op.to_string()),
             Word::Spaces => self.push(&word.span, " "),
             Word::Comment(comment) => {
                 let beginning_of_line = self

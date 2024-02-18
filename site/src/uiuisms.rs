@@ -234,41 +234,41 @@ uiuisms!(
     /// Repeat a function and collect intermediate results into an array
     "[⍥(×2.)] 10 1",
     /// Pad an array with 0s
-    "[1_2_3 4_5_6]\n↻⊟.¯1⬚0↙+2△."
+    "[1_2_3 4_5_6]\n↻⊟.¯1⬚0↙+2△.",
     /// Complex conjugate
-    "⍜°ℂ¯ +i1"
+    "⍜°ℂ¯ +i1",
     /// Cosine
-    "○+η 1"
+    "○+η 1",
     /// Tangent
-    "÷:°∠ 1"
+    "÷:°∠ 1",
     /// Factorial
-    "/×+1⇡ 5"
+    "/×+1⇡ 5",
     /// Rank of an array
-    "⧻△ [[1 2 3 4][5 6 7 8][9 10 11 12]]"
+    "⧻△ [1_2_3_4 5_6_7_8 9_10_11_12]",
     /// Main diagonal of an array
-    "⊡≡↯⊃⧻(⇡/↧)△. [[1 2 3 4][5 6 7 8][9 10 11 12]]"
+    "⊡≡↯⊃⧻(⇡/↧)△. [1_2_3_4 5_6_7_8 9_10_11_12]",
     /// Convert from base, input in little endian
-    "/+×ⁿ⇡⧻, 3 0_2_1_1"
+    "/+×ⁿ⇡⧻, 3 0_2_1_1",
     /// Corner element of an array
-    "⊢♭ [[1 2 3 4][5 6 7 8][9 10 11 12]]"
+    "⊢♭ [1_2_3_4 5_6_7_8 9_10_11_12]",
     /// Test if a positive integer is prime
-    "=1⧻°/× 5"
+    "=1⧻°/× 5",
     /// Inverse modulo m, returns m if it does not exist
-    "⊗1◿:×⇡, 3 7"
+    "⊗1◿:×⇡, 3 7",
     /// Multiplicative order modulo m
-    "⊡1⊚=1◿:ⁿ⇡, 2 7"
+    "⊡1⊚=1◿:ⁿ⇡, 2 7",
     /// Continued fraction to decimal
-    "/(+÷:1)⇌ 2_1_2_1_1_4_1_1_6"
+    "/(+÷:1)⇌ 2_1_2_1_1_4_1_1_6",
     /// Complex argument
-    "∠°ℂ i"
+    "∠°ℂ i",
     /// Successive differences
-    "↘1-↻¯1. 2_3_5_9_4"
+    "↘1-↻¯1. 2_3_5_9_4",
     /// Binomial coefficient
-    "÷××∩∩(/×+1⇡)1⊃-⊙∘ 5 3"
+    "÷××∩∩(/×+1⇡)1⊃-⊙∘ 5 3",
     /// Replace all of one element in a list with another
-    "⍜▽⋅∘⊃=∘ [1 5 8 2] 5 3"
+    "⍜▽⋅∘⊃=∘ [1 5 8 2] 5 3",
     /// Boxed powerset
-    "≡(□▽)☇1⇡↯:2⊃⧻¤ [1 5 8 2]"
+    "≡(□▽)☇1⇡↯:2⊃⧻¤ [1 5 8 2]",
     /// Irrational number to n terms of continued fraction
-    "⊙◌⍥(⊂⊙⊃⌊(÷:1◿1)):[] 10 e"
+    "⊙◌⍥(⊂⊙⊃⌊(÷:1◿1)):[] 10 e",
 );

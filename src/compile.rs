@@ -1774,6 +1774,7 @@ code:
             ));
         }
 
+        // Handle custom modifiers
         let prim = match modified.modifier.value {
             Modifier::Primitive(prim) => prim,
             Modifier::Ref(r) => {
@@ -1786,7 +1787,25 @@ code:
                     .expect("modifier not found")
                     .clone();
                 replace_placeholders(&mut words, &mut || operands.next().unwrap());
-                return self.words(words, call);
+                let instrs = self.compile_words(words, true)?;
+                match instrs_signature(&instrs) {
+                    Ok(sig) => {
+                        let func =
+                            self.add_function(FunctionId::Named(r.name.value.clone()), sig, instrs);
+                        self.push_instr(Instr::PushFunc(func));
+                    }
+                    Err(e) => {
+                        self.add_error(
+                            modified.modifier.span.clone(),
+                            format!("Cannot infer function signature: {e}"),
+                        );
+                    }
+                }
+                if call {
+                    let span = self.add_span(modified.modifier.span);
+                    self.push_instr(Instr::Call(span));
+                }
+                return Ok(());
             }
         };
 

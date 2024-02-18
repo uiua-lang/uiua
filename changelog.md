@@ -12,6 +12,11 @@ This version is not yet released. If you are reading this on the website, then t
 - Overhaul the module system
   - Details can be found in the updated [Modules](https://uiua.org/tutorial/modules) tutorial
   - Deprecate [`&i`](https://uiua.org/docs/&i), as it is no longer necessary
+- Custom modifiers are now called "macros"
+  - Rather than requiring signatures, placeholders are now a sort of function that operates on the macro's arguments
+  - This allows for more complex and flexible code-reuse
+  - Existing code should continue to work. Existing placeholders will be formatted into the new syntax.
+  - You can read more about macros in the updated [Macros](https://uiua.org/tutorial/macros) tutorial
 - Add the [`on ⟜`](https://uiua.org/docs/on) modifier, which captures a common [`fork ⊃`](https://uiua.org/docs/fork) pattern in a more readable way
 - [`join ⊂`](https://uiua.org/docs/join) can now be used with [`under ⍜`](https://uiua.org/docs/under)
   - This only works when the joined arrays have different ranks

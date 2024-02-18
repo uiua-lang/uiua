@@ -441,7 +441,7 @@ code:
                             "Called module global. \
                             This is a bug in the interpreter.",
                         )),
-                        Global::Modifier => Err(self.error(
+                        Global::Macro => Err(self.error(
                             "Called modifier global. \
                             This is a bug in the interpreter.",
                         )),

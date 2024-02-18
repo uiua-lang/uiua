@@ -22,7 +22,7 @@ pub enum TutorialPage {
     ControlFlow,
     AdvancedArray,
     ThinkingWithArrays,
-    CustomModifiers,
+    Macros,
     Modules,
     Testing,
 }
@@ -45,7 +45,7 @@ impl TutorialPage {
             Self::ControlFlow => "Control Flow",
             Self::AdvancedArray => "Advanced Array Manipulation",
             Self::ThinkingWithArrays => "Thinking With Arrays",
-            Self::CustomModifiers => "Custom Modifiers",
+            Self::Macros => "Macros",
             Self::Modules => "Modules",
             Self::Testing => "Testing",
         }
@@ -77,7 +77,7 @@ pub fn Tutorial() -> impl IntoView {
             TutorialPage::Inverses => TutorialInverses().into_view(),
             TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
             TutorialPage::ThinkingWithArrays => TutorialThinkingWithArrays().into_view(),
-            TutorialPage::CustomModifiers => TutorialCustomModifiers().into_view(),
+            TutorialPage::Macros => TutorialMacros().into_view(),
             TutorialPage::Modules => TutorialModules().into_view(),
             TutorialPage::Testing => TutorialTesting().into_view(),
         };
@@ -100,6 +100,9 @@ pub fn Tutorial() -> impl IntoView {
 
 impl IntoParam for TutorialPage {
     fn into_param(value: Option<&str>, name: &str) -> Result<Self, ParamsError> {
+        if value == Some("custommodifiers") {
+            return Ok(TutorialPage::Macros);
+        }
         all::<TutorialPage>()
             .find(|p| p.path() == value.unwrap_or(""))
             .ok_or_else(|| ParamsError::MissingParam(name.to_string()))
@@ -788,7 +791,7 @@ fn TutorialBindings() -> impl IntoView {
         <p>"Notice how the first example here gives the same value every time, while the second one does not."</p>
         <Editor example="F ← ⚂\nF F F"/>
         <Editor example="F ← (⚂)\nF F F"/>
-        <p>"The "<A href="/docs/functions">"next section"</A>" discusses functions in more detail."</p>
+        <p>"The "<A href="/tutorial/functions">"next section"</A>" discusses functions in more detail."</p>
     }
 }
 
@@ -813,7 +816,7 @@ fn TutorialFunctions() -> impl IntoView {
         <p>"The main docs page has "<A href="/docs/modifier">"a list"</A>" of all of the built-in modifiers."</p>
 
         <h2 id="inline-functions">"Inline Functions"</h2>
-        <p>"In addition to creating a new function with a capitalized binding name, as discussed in the "<A href="/docs/bindings">"previous section"</A>", functions in Uiua can also be created by surrounding code with "<code>"()"</code>"s."</p>
+        <p>"In addition to creating a new function with a capitalized binding name, as discussed in the "<A href="/tutorial/bindings">"previous section"</A>", functions in Uiua can also be created by surrounding code with "<code>"()"</code>"s."</p>
         <p>"This is usually only necessary when you need to call multiple functions within a modifier."</p>
         <p>"For example, if you wanted to get the last element of each row of an array, you could use "<Prim prim=Rows/>"."</p>
         <Editor example="≡(⊢⇌) .[2_5_3 0_2_1 0_0_2]"/>
@@ -837,7 +840,7 @@ F 10 11"/>
 
         <h2 id="local-bindings">"A Note on Local Bindings"</h2>
         <p>"Bindings in Uiua can "<em>"only"</em>" be global. There is no way to give a name to a value within an inline function. A "<code>"←"</code>" inside "<code>"()"</code>"s is a syntax error."</p>
-        <p>"This is a deliberate design decision. It forces you to write tacit code, a.k.a. code with functions that do not mention their arguments. Uiua is designed to make writing tacit code as workable as possible. "<em>"How"</em>" it does this will be discussed in "<A href="/docs/advancedstack">"later"</A>" "<A href="/docs/advancedarray">"sections"</A>"."</p>
+        <p>"This is a deliberate design decision. It forces you to write tacit code, a.k.a. code with functions that do not mention their arguments. Uiua is designed to make writing tacit code as workable as possible. "<em>"How"</em>" it does this will be discussed in "<A href="/tutorial/advancedstack">"later"</A>" "<A href="/tutorial/advancedarray">"sections"</A>"."</p>
 
         <h2 id="format-strings">"Format Strings"</h2>
         <p>"Prefixing a string with a "<code>"$"</code>" creates a format string. A format string is a special kind of function. It takes an argument for each "<code>"_"</code>" in the string and replaces it with the stringified version."</p>
@@ -870,7 +873,7 @@ F 10 11"/>
         <Editor example="△≡⇌↯3_4⇡12\n△≡⇌↯0_4⇡12 # Would be [0] without proxy"/>
         <p>"There are some ways to make the proxy value visible."</p>
         <Editor example="≡(&p.) []"/>
-        <p>"To avoid this case, you can conditionally iterate. This example uses a "<A href="/docs/controlflow#switch">"switch function"</A>", which will be explained in a "<A href="/docs/controlflow">"later section"</A>"."</p>
+        <p>"To avoid this case, you can conditionally iterate. This example uses a "<A href="/tutorial/controlflow#switch">"switch function"</A>", which will be explained in a "<A href="/tutorial/controlflow">"later section"</A>"."</p>
         <Editor example="(∘|≡(&p.))±⧻. []"/>
 
         <h2 id="challenges">"Challenges"</h2>
@@ -934,7 +937,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="[⊓⊓⊓+¯×. 1 2 3 4 5 6]"/>
 
         <h2 id="function-packs">"Function Packs"</h2>
-        <p>"All dyadic modifiers allow a special notation with a single set of "<code>"()"</code>"s with a "<code>"|"</code>" in the middle separating the functions. This is called a "<em>"function pack"</em>". It shares syntax with "<A href="/docs/controlflow#switch">"switch functions"</A>", which will be discussed in a "<A href="/docs/controlflow">"later section"</A>"."</p>
+        <p>"All dyadic modifiers allow a special notation with a single set of "<code>"()"</code>"s with a "<code>"|"</code>" in the middle separating the functions. This is called a "<em>"function pack"</em>". It shares syntax with "<A href="/tutorial/controlflow#switch">"switch functions"</A>", which will be discussed in a "<A href="/tutorial/controlflow">"later section"</A>"."</p>
         <Editor example="⊓(+|×) 1 2 3 4"/>
         <p>"While all dyadic modifiers can use function packs, "<Prim prim=Fork/>" and "<Prim prim=Bracket/>" allow more than 2 functions to be used. This can sometimes be shorter and/or more readable than chaining the modifier."</p>
         <Editor example="[⊃(+|-|×|÷) 5 8]"/>
@@ -1035,7 +1038,7 @@ fn TutorialInverses() -> impl IntoView {
         <Editor example="°(+1) 5"/>
         <Editor example="°⊟ [1 2]"/>
         <Editor example="°○ 1"/>
-        <p>"As discussed "<A href="/docs/arrays#array-model">"previously"</A>", "<Prim prim=Un/><Prim prim=Box/>" removes an array from a box."</p>
+        <p>"As discussed "<A href="/tutorial/arrays#array-model">"previously"</A>", "<Prim prim=Un/><Prim prim=Box/>" removes an array from a box."</p>
         <Editor example=r#"°□ ⊢{"unbox" "me!"}"#/>
         <p>"One interesting use of "<Prim prim=Un/>" is to put an array's rows onto the stack by "<Prim prim=Un/>"ing stack array notation with "<Prim prim=Dip/>" and "<Prim prim=Identity/>". The number of rows in the array must match though!"</p>
         <Editor example="[⊙⊙∘] 1 2 3"/>
@@ -1176,7 +1179,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="⍣⋕{⊙∘} \"5\"\n⍣⋕{⊙∘} \"dog\""/>
 
         <h2 id="switch">"Switch Functions"</h2>
-        <p>"A "<A href="/docs/advancedstack#function-packs">"function pack"</A>" that is used outside a modifier becomes a "<em>"switch function"</em>". Switch functions take an array of natural numbers called the "<em>"selector"</em>" and call the function at the corresponding index in the pack."</p>
+        <p>"A "<A href="/tutorial/advancedstack#function-packs">"function pack"</A>" that is used outside a modifier becomes a "<em>"switch function"</em>". Switch functions take an array of natural numbers called the "<em>"selector"</em>" and call the function at the corresponding index in the pack."</p>
         <Editor example="(3|5) 0\n(3|5) 1"/>
         <p>"The selector goes above the arguments on the stack."</p>
         <Editor example="(+|-) 0 3 5\n(+|-) 1 3 5"/>
@@ -1196,7 +1199,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="F ← ⍣(¯⍤10≤10.)∘\nF 5\nF 12"/>
         <p>"If the "<Prim prim=Assert/>"ed value is never caught, it becomes an error."</p>
         <Editor example="F ← ¯⍤\"too big!\"≤10.\nF 5\nF 12"/> // Should fail
-        <p>"Using "<Prim prim=Assert/>" for this purpose will be covered more in the "<A href="/docs/testing">"section on testing"</A>"."</p>
+        <p>"Using "<Prim prim=Assert/>" for this purpose will be covered more in the "<A href="/tutorial/testing">"section on testing"</A>"."</p>
 
         <h2 id="challenges">"Challenges"</h2>
 
@@ -1405,56 +1408,73 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
             prompt="reverses each word in a string but keeps the words in the same order"
             example=r#""get in the racecar""#
             answer="⍜⊜□≡⍜°□⇌ ≠@ ."
+            best_answer="⍜⊜□⍚⇌ ≠@ ."
             tests={&[r#""arrays are neat""#, r#""wow mom""#]}
             hidden=r#""Wow, mom!""#/>
     }
 }
 
 #[component]
-fn TutorialCustomModifiers() -> impl IntoView {
+fn TutorialMacros() -> impl IntoView {
     use Primitive::*;
     view! {
-        <Title text="Custom Modifiers - Uiua Docs"/>
-        <h1>"Custom Modifiers"</h1>
+        <Title text="Macros - Uiua Docs"/>
+        <h1>"Macros"</h1>
         <p>"Defining your own functions that work on arrays is pretty easy. Just a name, a "<code>"←"</code>", and you're done."</p>
         <p>"But what if you want to define functions that use other functions?"</p>
 
         <h2 id="placeholders-and-bangs">"Placeholders and "<code>"!"</code>"s"</h2>
-        <p>"Anywhere you can put a built-in or inline function, you can also put a "<code>"^"</code>". This is called a "<em>"placeholder"</em>". The "<code>"^"</code>" must be followed by a signature declaration, where the "<code>"^"</code>" replaces the "<code>"|"</code>"."</p>
-        <p>"Any named function with "<code>"^"</code>"s in it becomes a modifier."</p>
-        <p>"However, there is one additional requirement: custom modifiers must have names that end in as many "<code>"!"</code>"s as the number of functions they take."</p>
+        <p>"Anywhere you can put a built-in or inline function, you can also put a "<code>"^!"</code>". This is called a "<em>"placeholder"</em>"."</p>
+        <p>"Any named function with "<code>"^!"</code>"s in it is a macro."</p>
+        <p>"However, there is one additional requirement: macros must have names that end in as many "<code>"!"</code>"s as the number of functions they take."</p>
         <p>"Lets look at a simple example using "<Prim prim=Reduce/>". It reduces a function over the numbers up to the given range."</p>
         <Editor example="\
-ReduceRange! ← /^2+1⇡
+ReduceRange! ← /^!+1⇡
 ReduceRange!+5
 ReduceRange!×4"/>
         <p>"Here is another simple example which calls a function on a reversed version of each row of an array."</p>
         <Editor example="\
-OnRev! ← ≡⍜⇌^1
+OnRev! ← ≡⍜⇌^!
 OnRev!(↘1) ↯3_4⇡12
 OnRev!(⊂π) ↯3_4⇡12"/>
-        <p>"A custom modifier can take as many functions as you want. Modifiers with two or more function arguments will be formatted to use "<code>"‼"</code>"s as needed. Try running the following example to format it."</p>
+        <p>"A macro can take as many functions as you want. Modifiers with two or more function arguments will be formatted to use "<code>"‼"</code>"s as needed. Try running the following example to format it."</p>
         <Editor example="\
-F!!! ← ⊂/^2⊃^2^2
+F!!! ← ⊂/^!⊃^!^!
 F!!!+×⊂ [1 2 3][4 5 6]"/>
-        <p>"Each "<code>"^"</code>" refers to a different function. If you want to use that function more than once in the modifier, you'll have to get creative."</p>
-        <p>"Here, we reduce with the same function multiple times by using "<Prim prim=Repeat/>"."</p>
-        <Editor example="\
-ReduceAll! ← ⍥/^2⧻△.
-ReduceAll!+[1_2_3 4_5_6]"/>
+
+        <h2 id="operand-functions">"Operand Functions"</h2>
+        <p>"When Uiua code is compiled, a macro passes its operands as values on a special operand stack. This stack can be manipulated in a few ways to make macros more powerful."</p>
+        <p><code>"^!"</code>" is actually an operand function. It takes the operand at the top of the operand stack and inlines it into its place in the macro."</p>
+        <p>"There are also operand function analogues for "<Prim prim=Dup/>", "<Prim prim=Flip/>", and "<Prim prim=Over/>"."</p>
+        <p>"These are "<code>"^."</code>", "<code>"^:"</code>", and "<code>"^,"</code>" respectively."</p>
+        <p>"Like normal Uiua code, operand functions are evaluated from right to left."</p>
+        <p>"However, operands are initially pushed to the stack in reverse order. This means that the macro operand furthest to the right starts at the top of the operand stack."</p>
+        <p>"Let's look at a simple example to see how this ordering works."</p>
+        <Editor example="F‼ ← ^!^!\nG‼ ← ^!^!^:\nF‼(⊂1|⊂2) []\nG‼(⊂1|⊂2) []"/>
+        <p>"If we wanted to call each of two functions twice, we could use a similar pattern to what we use in normal Uiua code."</p>
+        <Editor example="[,, 1 2]\nF‼ ← ^!^!^!^!^,^,\nF‼(⊂1|⊂2) []"/>
 
         <h2 id="challenges">"Challenges"</h2>
 
         <Challenge
             number=1
-            prompt="creates a custom modifier called F! which calls its function on each row of an array, reverses each row, and reverses the whole array"
+            prompt="creates a macro called F! which calls its function on each row of an array, reverses each row, and reverses the whole array"
             example="F!(⊂.) ↯3_4⇡12"
-            answer="F! ← ⇌≡(⇌^1)"
-            default="F! ← ^1"
+            answer="F! ← ⇌≡(⇌^!)"
+            default="F! ← ^!"
             flip=true
             tests={&["F!(↯3) [1_2_3 4_5_6]", "F!(⊟.) 1_2 3_4"]}
             hidden="5"/>
 
+        <Challenge
+            number=2
+            prompt="creates a macro called F‼ which calls its first function, then its second, then its first again."
+            example="F‼⇌(⊂10) [1 2 3]"
+            answer="F‼ ← ^!^!^!^,^:"
+            default="F‼ ← ^!^!"
+            flip=true
+            tests={&["F‼⇌⍉ [1_2 3_4]", "F‼⊂⇌ 1_2 3_4 5_6"]}
+            hidden="5"/>
 
         <br/>
         <br/>
@@ -1506,7 +1526,7 @@ fn TutorialModules() -> impl IntoView {
         <p>"We can then reference items from that module anywhere using a "<code>"~"</code>"."</p>
         <Editor example="Ex ~ \"example.ua\"\n\nEx~Increment 10"/>
         <p>"This can be mixed and matched with the other import syntax."</p>
-        <Editor example="Ex ~ \"example.ua\" ~ Increment Square\n\nEx~Double Square 3\nEx~Mod!×\nIncrement Ex~Bar"/>
+        <Editor example="Ex ~ \"example.ua\" ~ Increment Square\n\nEx~Double Square 3\nEx~Mac!×\nIncrement Ex~Bar"/>
 
         <h2 id="aliasing">"Aliasing Module Items"</h2>
         <p>"If you want to be able to refer to an item from a module with a different name, simply make a binding with the new name."</p>

@@ -918,7 +918,7 @@ fn color_code(code: &str) -> String {
             | SpanKind::Label
             | SpanKind::Signature
             | SpanKind::Whitespace
-            | SpanKind::Placeholder
+            | SpanKind::Placeholder(_)
             | SpanKind::Delimiter
             | SpanKind::FuncDelim(_) => (255, 255, 255),
         };

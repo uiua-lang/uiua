@@ -524,7 +524,7 @@ code:
             self.scope.names.insert(name.clone(), global_index);
             self.asm.add_global_at(
                 global_index,
-                Global::Modifier,
+                Global::Macro,
                 Some(span.clone()),
                 comment.clone(),
             );
@@ -1301,7 +1301,7 @@ code:
                         format!("`{}` is  not a module", first.module.value),
                     ))
                 }
-                Global::Modifier => {
+                Global::Macro => {
                     return Err(self.fatal_error(
                         first.module.span.clone(),
                         format!("`{}` is a modifier, not a module", first.module.value),
@@ -1345,7 +1345,7 @@ code:
                             format!("`{}` is  not a module", comp.module.value),
                         ))
                     }
-                    Global::Modifier => {
+                    Global::Macro => {
                         return Err(self.fatal_error(
                             comp.module.span.clone(),
                             format!("`{}` is a modifier, not a module", comp.module.value),
@@ -1483,7 +1483,7 @@ code:
                 self.push_instr(Instr::PushFunc(f));
             }
             Global::Module { .. } => self.add_error(span, "Cannot import module item here."),
-            Global::Modifier => self.add_error(
+            Global::Macro => self.add_error(
                 span,
                 "Attempted to directly compile a modifier. This is a bug in the compiler.",
             ),

@@ -598,11 +598,18 @@ fn set_code_html(id: &str, code: &str) {
                             )
                         }
                     }
-                    SpanKind::Signature | SpanKind::Placeholder => format!(
+                    SpanKind::Signature => format!(
                         r#"<span 
                         class="code-span code-hover {color_class}" 
                         data-title="{}">{}</span>"#,
                         format!("{kind:?}").to_lowercase(),
+                        escape_html(text)
+                    ),
+                    SpanKind::Placeholder(op) => format!(
+                        r#"<span 
+                        class="code-span code-hover {color_class}" 
+                        data-title="placeholder {}">{}</span>"#,
+                        op.name(),
                         escape_html(text)
                     ),
                     SpanKind::Label => {

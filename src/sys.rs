@@ -33,7 +33,7 @@ Square ← ×.
 Double ← +.
 Increment ← +1
 Span ← +⟜(⇡-)
-Mod! ← /^2 [1 2 3 4 5]
+Mac! ← /^2 [1 2 3 4 5]
 Foo ← 5
 Bar ← \"bar\""
                 .into(),

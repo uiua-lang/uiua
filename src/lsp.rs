@@ -6,7 +6,7 @@ use std::{slice, sync::Arc};
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
-    ast::{Item, Modifier, Ref, Word},
+    ast::{Item, Modifier, PlaceholderOp, Ref, Word},
     ident_modifier_args,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
@@ -27,7 +27,7 @@ pub enum SpanKind {
     Label,
     Signature,
     Whitespace,
-    Placeholder,
+    Placeholder(PlaceholderOp),
     Delimiter,
     FuncDelim(Signature),
 }
@@ -318,7 +318,9 @@ impl Spanner {
                 Word::Comment(_) | Word::OutputComment { .. } => {
                     spans.push(word.span.clone().sp(SpanKind::Comment))
                 }
-                Word::Placeholder(_) => spans.push(word.span.clone().sp(SpanKind::Placeholder)),
+                Word::Placeholder(op) => {
+                    spans.push(word.span.clone().sp(SpanKind::Placeholder(*op)))
+                }
             }
         }
         spans.retain(|sp| !sp.span.as_str(self.inputs(), str::is_empty));
@@ -684,7 +686,7 @@ mod server {
                         Global::Sig(sig) if *sig == (0, 1) => CompletionItemKind::VALUE,
                         Global::Sig(_) => CompletionItemKind::FUNCTION,
                         Global::Module { .. } => CompletionItemKind::MODULE,
-                        Global::Modifier => CompletionItemKind::FUNCTION,
+                        Global::Macro => CompletionItemKind::FUNCTION,
                     };
                     CompletionItem {
                         label: name.clone(),

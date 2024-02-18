@@ -161,8 +161,8 @@ pub enum Global {
     /// A module
     #[allow(missing_docs)]
     Module { module: PathBuf },
-    /// A modifier
-    Modifier,
+    /// A macro
+    Macro,
 }
 
 impl Global {
@@ -173,7 +173,7 @@ impl Global {
             Self::Func(func) => Some(func.signature()),
             Self::Sig(sig) => Some(*sig),
             Self::Module { .. } => None,
-            Self::Modifier => None,
+            Self::Macro => None,
         }
     }
     /// Check if the global is a once-bound constant

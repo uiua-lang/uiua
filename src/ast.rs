@@ -223,6 +223,18 @@ pub enum PlaceholderOp {
     Over,
 }
 
+impl PlaceholderOp {
+    /// Get the name of this placeholder operation
+    pub fn name(&self) -> &'static str {
+        match self {
+            PlaceholderOp::Call => "call",
+            PlaceholderOp::Dup => "dup",
+            PlaceholderOp::Flip => "flip",
+            PlaceholderOp::Over => "over",
+        }
+    }
+}
+
 impl fmt::Display for PlaceholderOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

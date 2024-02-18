@@ -259,7 +259,7 @@ uiuisms!(
     "⊡1⊚=1◿:ⁿ⇡, 2 7"
     /// Continued fraction to decimal
     "/(+÷:1)⇌ 2_1_2_1_1_4_1_1_6"
-    /// complex argument
+    /// Complex argument
     "∠°ℂ i"
     /// Successive differences
     "↘1-↻¯1. 2_3_5_9_4"

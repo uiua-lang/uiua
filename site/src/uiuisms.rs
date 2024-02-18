@@ -139,8 +139,8 @@ uiuisms!(
     "≠. [1_1 2_2]",
     /// Create a 0xN matrix
     "↯0⊚ 2",
-    /// Check if character is numberic [0-9]
-    r#"×⊃(≥@0|≤@9) "hi-5!""#,
+    /// Check if character is numeric [0-9]
+    r#"×⊃≥≤@0,@9 "hi-5!""#,
     /// Check if character is letter [a-zA-Z]
     r#"↥∩×⊃(≥@a|≤@z|≥@A|≤@Z) "oiCu812""#,
     /// Check if an array is a palindrome

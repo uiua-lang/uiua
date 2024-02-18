@@ -1795,12 +1795,10 @@ code:
                             self.add_function(FunctionId::Named(r.name.value.clone()), sig, instrs);
                         self.push_instr(Instr::PushFunc(func));
                     }
-                    Err(e) => {
-                        self.add_error(
-                            modified.modifier.span.clone(),
-                            format!("Cannot infer function signature: {e}"),
-                        );
-                    }
+                    Err(e) => self.add_error(
+                        modified.modifier.span.clone(),
+                        format!("Cannot infer function signature: {e}"),
+                    ),
                 }
                 if call {
                     let span = self.add_span(modified.modifier.span);
@@ -1884,12 +1882,10 @@ code:
                     );
                     self.push_instr(Instr::PushFunc(func));
                 }
-                Err(e) => {
-                    self.add_error(
-                        modified.modifier.span.clone(),
-                        format!("Cannot infer function signature: {e}"),
-                    );
-                }
+                Err(e) => self.add_error(
+                    modified.modifier.span.clone(),
+                    format!("Cannot infer function signature: {e}"),
+                ),
             }
         }
         Ok(())
@@ -2395,9 +2391,7 @@ code:
                     let func = self.add_function(FunctionId::Primitive(prim), sig, instrs);
                     self.push_instr(Instr::PushFunc(func))
                 }
-                Err(e) => {
-                    self.add_error(span, format!("Cannot infer function signature: {e}"));
-                }
+                Err(e) => self.add_error(span, format!("Cannot infer function signature: {e}")),
             }
         }
     }

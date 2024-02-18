@@ -1775,6 +1775,10 @@ primitive!(
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
     /// ex: ⌊×10 [⍥⚂5]
+    ///
+    /// `each``gap``rand` and `table``gap``gap``rand` are optimized in the interpreter to generate a lot of random numbers very fast.
+    /// ex: ⌊×10 ∵⋅⚂ ⇡10
+    /// ex: ⌊×10 ⊞⋅⋅⚂ .⇡10
     (0, Rand, Misc, ("random", '⚂')),
     /// Memoize a function
     ///

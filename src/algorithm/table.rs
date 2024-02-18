@@ -211,6 +211,7 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
             Value::Char(ys),
         ) => env.push(fast_table_list_join_or_couple(xs, ys, flipped)),
         (_, xs, ys) => match f.as_flipped_impl_primitive(env) {
+            // Random
             Some((ImplPrimitive::ReplaceRand2, _)) => {
                 let shape = [xs.row_count(), ys.row_count()];
                 let mut data = eco_vec![0.0; xs.row_count() * ys.row_count()];

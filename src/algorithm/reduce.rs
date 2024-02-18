@@ -359,7 +359,10 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
 
 pub fn invscan(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
-    let xs = env.pop(1)?;
+    let mut xs = env.pop(1)?;
+    if xs.rank() == 0 {
+        return Err(env.error(format!("Cannot {} rank 0 array", ImplPrimitive::InvScan,)));
+    }
     let sig = f.signature();
     if sig != (2, 1) {
         return Err(env.error(format!(
@@ -371,6 +374,22 @@ pub fn invscan(env: &mut Uiua) -> UiuaResult {
         env.push(xs.first_dim_zero());
         return Ok(());
     }
+
+    match xs {
+        Value::Num(nums) => match f.as_flipped_primitive(env) {
+            Some((Primitive::Sub, false)) => {
+                env.push(fast_invscan(nums, sub::num_num));
+                return Ok(());
+            }
+            Some((Primitive::Div, false)) => {
+                env.push(fast_invscan(nums, div::num_num));
+                return Ok(());
+            }
+            _ => xs = Value::Num(nums),
+        },
+        val => xs = val,
+    }
+
     let mut unscanned = Vec::with_capacity(xs.row_count());
     let mut rows = xs.into_rows();
     let mut curr = rows.next().unwrap();
@@ -387,6 +406,41 @@ pub fn invscan(env: &mut Uiua) -> UiuaResult {
     })?;
     env.push(Value::from_row_values(unscanned, env)?);
     Ok(())
+}
+
+fn fast_invscan<T>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T>
+where
+    T: ArrayValue + Copy,
+{
+    match arr.shape.len() {
+        0 => unreachable!("fast_invscan called on unit array, should have been guarded against"),
+        1 => {
+            if arr.row_count() == 0 {
+                return arr;
+            }
+            let mut acc = arr.data[0];
+            for val in arr.data.as_mut_slice().iter_mut().skip(1) {
+                *val = f(acc, *val);
+                acc = *val;
+            }
+            arr
+        }
+        _ => {
+            if arr.row_count() == 0 {
+                return arr;
+            }
+            let row_len: usize = arr.row_len();
+            let (acc, rest) = arr.data.as_mut_slice().split_at_mut(row_len);
+            let mut acc = acc.to_vec();
+            for row_slice in rest.chunks_exact_mut(row_len) {
+                for (a, b) in acc.iter_mut().zip(row_slice) {
+                    *b = f(*a, *b);
+                    *a = *b;
+                }
+            }
+            arr
+        }
+    }
 }
 
 pub fn fold(env: &mut Uiua) -> UiuaResult {

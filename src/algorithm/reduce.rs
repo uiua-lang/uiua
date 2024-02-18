@@ -387,6 +387,18 @@ pub fn invscan(env: &mut Uiua) -> UiuaResult {
             }
             _ => xs = Value::Num(nums),
         },
+        #[cfg(feature = "bytes")]
+        Value::Byte(bytes) => match f.as_flipped_primitive(env) {
+            Some((Primitive::Sub, false)) => {
+                env.push(fast_invscan(bytes.convert(), sub::num_num));
+                return Ok(());
+            }
+            Some((Primitive::Div, false)) => {
+                env.push(fast_invscan(bytes.convert(), div::num_num));
+                return Ok(());
+            }
+            _ => xs = Value::Byte(bytes),
+        },
         val => xs = val,
     }
 
@@ -420,8 +432,9 @@ where
             }
             let mut acc = arr.data[0];
             for val in arr.data.as_mut_slice().iter_mut().skip(1) {
+                let temp = *val;
                 *val = f(acc, *val);
-                acc = *val;
+                acc = temp;
             }
             arr
         }
@@ -432,11 +445,13 @@ where
             let row_len: usize = arr.row_len();
             let (acc, rest) = arr.data.as_mut_slice().split_at_mut(row_len);
             let mut acc = acc.to_vec();
+            let mut temp = acc.clone();
             for row_slice in rest.chunks_exact_mut(row_len) {
+                temp.copy_from_slice(row_slice);
                 for (a, b) in acc.iter_mut().zip(row_slice) {
                     *b = f(*a, *b);
-                    *a = *b;
                 }
+                acc.copy_from_slice(&temp);
             }
             arr
         }

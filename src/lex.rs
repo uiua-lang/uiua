@@ -781,9 +781,17 @@ impl<'a> Lexer<'a> {
                         ident.push_str(c);
                     }
                     let mut exclam_count = 0;
-                    while self.next_char_exact("!") {
-                        ident.push('!');
-                        exclam_count += 1;
+                    while let Some((ch, count)) =
+                        if self.next_char_exact("!") {
+                            Some(('!', 1))
+                        } else if self.next_char_exact("‼") {
+                            Some(('‼', 2))
+                        } else {
+                            None
+                        }
+                    {
+                        ident.push(ch);
+                        exclam_count += count;
                     }
                     let ambiguous_ne = exclam_count == 1
                         && self.input_segments.get(self.loc.char_pos as usize) == Some(&"=");

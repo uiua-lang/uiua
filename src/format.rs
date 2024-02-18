@@ -580,7 +580,8 @@ impl<'a> Formatter<'a> {
                     _ => self.prev_import_function = None,
                 }
 
-                self.output.push_str(&binding.name.value);
+                self.output
+                    .push_str(&crate::parse::canonicalize_exclams(&binding.name.value));
                 self.output.push_str(" ←");
                 if !binding.words.is_empty() || binding.signature.is_some() {
                     self.output.push(' ');

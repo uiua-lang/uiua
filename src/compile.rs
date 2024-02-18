@@ -776,8 +776,7 @@ code:
             self.count_temp_functions(function.instrs(self), &mut HashSet::new());
         let name_marg_count = ident_modifier_args(name);
         if temp_function_count != name_marg_count {
-            let trimmed = name.trim_end_matches('!');
-            let this = format!("{}{}", trimmed, "!".repeat(temp_function_count));
+            let this = crate::parse::place_exclams(name, temp_function_count);
             self.add_error(
                 self.get_span(span),
                 format!(

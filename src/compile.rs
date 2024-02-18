@@ -1485,7 +1485,8 @@ code:
             Global::Module { .. } => self.add_error(span, "Cannot import module item here."),
             Global::Macro => self.add_error(
                 span,
-                "Attempted to directly compile a modifier. This is a bug in the compiler.",
+                "Attempted to directly compile a macro. \
+                This is a bug in the compiler.",
             ),
         }
     }
@@ -1785,47 +1786,7 @@ code:
                     .get(&index)
                     .expect("modifier not found")
                     .clone();
-                let mut ops = collect_placeholder(&words);
-                ops.reverse();
-                let mut ph_stack: Vec<Word> = modified
-                    .operands
-                    .into_iter()
-                    .filter(|w| w.value.is_code())
-                    .map(|w| w.value)
-                    .collect();
-                ph_stack.reverse();
-                let mut replaced = Vec::new();
-                for op in ops {
-                    let span = op.span;
-                    let op = op.value;
-                    let mut pop = || {
-                        (ph_stack.pop())
-                            .ok_or_else(|| self.fatal_error(span.clone(), "Operand stack is empty"))
-                    };
-                    match op {
-                        PlaceholderOp::Call => replaced.push(pop()?),
-                        PlaceholderOp::Dup => {
-                            let a = pop()?;
-                            ph_stack.push(a.clone());
-                            ph_stack.push(a);
-                        }
-                        PlaceholderOp::Flip => {
-                            let a = pop()?;
-                            let b = pop()?;
-                            ph_stack.push(a);
-                            ph_stack.push(b);
-                        }
-                        PlaceholderOp::Over => {
-                            let a = pop()?;
-                            let b = pop()?;
-                            ph_stack.push(b.clone());
-                            ph_stack.push(a);
-                            ph_stack.push(b);
-                        }
-                    }
-                }
-                let mut operands = replaced.into_iter();
-                replace_placeholders(&mut words, &mut || operands.next().unwrap());
+                self.expand_macro(&mut words, modified.operands)?;
                 let instrs = self.compile_words(words, true)?;
                 match instrs_signature(&instrs) {
                     Ok(sig) => {
@@ -2551,6 +2512,49 @@ code:
     ) -> UiuaResult {
         let function = self.create_function(signature, f);
         self.bind_function(name, function)
+    }
+    fn expand_macro(&self, macro_words: &mut Vec<Sp<Word>>, operands: Vec<Sp<Word>>) -> UiuaResult {
+        let mut ops = collect_placeholder(macro_words);
+        ops.reverse();
+        let mut ph_stack: Vec<Word> = operands
+            .into_iter()
+            .filter(|w| w.value.is_code())
+            .map(|w| w.value)
+            .collect();
+        ph_stack.reverse();
+        let mut replaced = Vec::new();
+        for op in ops {
+            let span = op.span;
+            let op = op.value;
+            let mut pop = || {
+                (ph_stack.pop())
+                    .ok_or_else(|| self.fatal_error(span.clone(), "Operand stack is empty"))
+            };
+            match op {
+                PlaceholderOp::Call => replaced.push(pop()?),
+                PlaceholderOp::Dup => {
+                    let a = pop()?;
+                    ph_stack.push(a.clone());
+                    ph_stack.push(a);
+                }
+                PlaceholderOp::Flip => {
+                    let a = pop()?;
+                    let b = pop()?;
+                    ph_stack.push(a);
+                    ph_stack.push(b);
+                }
+                PlaceholderOp::Over => {
+                    let a = pop()?;
+                    let b = pop()?;
+                    ph_stack.push(b.clone());
+                    ph_stack.push(a);
+                    ph_stack.push(b);
+                }
+            }
+        }
+        let mut operands = replaced.into_iter();
+        replace_placeholders(macro_words, &mut || operands.next().unwrap());
+        Ok(())
     }
 }
 

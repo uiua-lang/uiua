@@ -320,7 +320,7 @@ Ex ~ "example.ua"
 ⍤⟜≍: 12 Dub Incr Foo
 ~ "example" ~ Square
 ⍤⟜≍: 25 Square 5
-⍤⟜≍: 15 Ex~Mod!+
+⍤⟜≍: 15 Ex~Mac!+
 
 # Euler's identity
 ⍤⟜≍: 0 ⍜(×1e12)⁅ ⌵+1 ⁿ×iπ e

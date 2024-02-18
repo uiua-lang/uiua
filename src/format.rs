@@ -482,10 +482,18 @@ impl<'a> Formatter<'a> {
         if self.config.align_comments && !self.end_of_line_comments.is_empty() {
             // Group comments by consecutive lines
             let mut groups: Vec<(usize, Vec<(usize, String)>)> = Vec::new();
-            let mut lines: Vec<String> = self
-                .output
-                .split('\n')
-                .map(|s| s.trim_end_matches(' ').into())
+            let mut lines: Vec<String> = (self.output.split('\n'))
+                .map(|s| {
+                    if s.ends_with(' ') {
+                        let mut s = s.trim_end().to_string();
+                        if s.ends_with('@') {
+                            s.push(' ');
+                        }
+                        s
+                    } else {
+                        s.to_string()
+                    }
+                })
                 .collect();
             for (line_number, comment) in self.end_of_line_comments.drain(..) {
                 let line = &lines[line_number - 1];

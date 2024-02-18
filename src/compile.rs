@@ -1799,12 +1799,8 @@ code:
                     let span = op.span;
                     let op = op.value;
                     let mut pop = || {
-                        ph_stack.pop().ok_or_else(|| {
-                            self.fatal_error(
-                                span.clone(),
-                                "Not enough function arguments to fill all placeholders",
-                            )
-                        })
+                        (ph_stack.pop())
+                            .ok_or_else(|| self.fatal_error(span.clone(), "Operand stack is empty"))
                     };
                     match op {
                         PlaceholderOp::Call => replaced.push(pop()?),

@@ -303,13 +303,13 @@ G ← (⚂)
 ⍤⟜≍: 1 ⧻◴ [F F F]
 ⍤⟜≍: 3 ⧻◴ [G G G]
 
-# Custom modifiers
-F! ← ^1 5
-G! ← F!^1
+# Macros
+F! ← ^!5
+G! ← F!^!
 ⍤⟜≍: ¯5 G!¯
-Four! ← ∩∩^1
+Four! ← ∩∩^!
 ⍤⟜≍: [4 6 8 10] [Four!(×2) 2 3 4 5]
-Dyad‼ ← ^1^1
+Dyad‼ ← ^!^!
 ⍤⟜≍: 12 Dyad‼(×2|+1) 5
 
 # Imports

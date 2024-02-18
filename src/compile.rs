@@ -1779,11 +1779,12 @@ code:
         let prim = match modified.modifier.value {
             Modifier::Primitive(prim) => prim,
             Modifier::Ref(r) => {
-                let (_path_indices, index) = self.ref_index(&r)?;
+                let (path_indices, index) = self.ref_index(&r)?;
                 self.asm.global_references.insert(r.name.clone(), index);
-                let mut words = self
-                    .modifiers
-                    .get(&index)
+                for (index, comp) in path_indices.into_iter().zip(&r.path) {
+                    (self.asm.global_references).insert(comp.module.clone(), index);
+                }
+                let mut words = (self.modifiers.get(&index))
                     .expect("modifier not found")
                     .clone();
                 self.expand_macro(&mut words, modified.operands)?;

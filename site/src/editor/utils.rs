@@ -561,6 +561,8 @@ fn set_code_html(id: &str, code: &str) {
                                 title.push_str(comment);
                             } else if docs.is_module {
                                 title.push_str("module");
+                            } else if docs.modifier_args > 0 {
+                                title.push_str("macro");
                             }
                             format!(
                                 r#"<span 

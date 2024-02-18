@@ -1024,7 +1024,7 @@
     "args": 0,
     "outputs": 0,
     "modifier_args": 1,
-    "class": "Misc",
+    "class": "OtherModifier",
     "description": "Validate the shapes of some arrays",
     "experimental": true
   },
@@ -1061,6 +1061,14 @@
     "outputs": 0,
     "class": "Stack",
     "description": "Debug print all stack values without popping them"
+  },
+  "stringify": {
+    "args": 0,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "OtherModifier",
+    "description": "Convert code into a string instead of running it",
+    "experimental": true
   },
   "subtract": {
     "glyph": "-",
@@ -1143,7 +1151,7 @@
     "args": 0,
     "outputs": 0,
     "modifier_args": 1,
-    "class": "Misc",
+    "class": "OtherModifier",
     "description": "Validate the types of some arrays",
     "experimental": true
   },

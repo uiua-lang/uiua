@@ -1427,6 +1427,7 @@ fn TutorialMacros() -> impl IntoView {
         <p>"Anywhere you can put a built-in or inline function, you can also put a "<code>"^!"</code>". This is called a "<em>"placeholder"</em>"."</p>
         <p>"Any named function with "<code>"^!"</code>"s in it is a macro."</p>
         <p>"However, there is one additional requirement: macros must have names that end in as many "<code>"!"</code>"s as the number of functions they take."</p>
+        <p>"Macros work similarly to modifiers. They take some function arguments and modify how they are used."</p>
         <p>"Lets look at a simple example using "<Prim prim=Reduce/>". It reduces a function over the numbers up to the given range."</p>
         <Editor example="\
 ReduceRange! ← /^!+1⇡
@@ -1444,7 +1445,7 @@ F!!!+×⊂ [1 2 3][4 5 6]"/>
 
         <h2 id="operand-functions">"Operand Functions"</h2>
         <p>"When Uiua code is compiled, a macro passes its operands as values on a special operand stack. This stack can be manipulated in a few ways to make macros more powerful."</p>
-        <p><code>"^!"</code>" is actually an operand function. It takes the operand at the top of the operand stack and inlines it into its place in the macro."</p>
+        <p><code>"^!"</code>" is actually an operand function. It pops the operand at the top of the operand stack and inlines it into its place in the macro."</p>
         <p>"There are also operand function analogues for "<Prim prim=Dup/>", "<Prim prim=Flip/>", and "<Prim prim=Over/>"."</p>
         <p>"These are "<code>"^."</code>", "<code>"^:"</code>", and "<code>"^,"</code>" respectively."</p>
         <p>"Like normal Uiua code, operand functions are evaluated from right to left."</p>

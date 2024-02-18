@@ -138,6 +138,16 @@ impl<T: Clone> CowSlice<T> {
             res
         }
     }
+    /// Clear the buffer
+    pub fn clear(&mut self) {
+        self.modify(|vec| vec.clear());
+        self.start = 0;
+        self.end = 0;
+    }
+    /// Reserve space for at least `additional` more elements
+    pub fn reserve(&mut self, additional: usize) {
+        self.modify(|vec| vec.reserve(additional))
+    }
     /// Ensure that the capacity is at least `min`
     pub fn reserve_min(&mut self, min: usize) {
         if self.data.capacity() < min {

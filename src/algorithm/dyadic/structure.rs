@@ -237,11 +237,12 @@ impl<T: ArrayValue> Array<T> {
             };
             start += ind * into.shape[i + 1..].iter().product::<usize>();
         }
-        into.data.modify(|data| {
-            for (f, i) in data.make_mut().iter_mut().skip(start).zip(self.data) {
-                *f = i;
-            }
-        });
+        for (f, i) in (into.data.as_mut_slice().iter_mut())
+            .skip(start)
+            .zip(self.data)
+        {
+            *f = i;
+        }
         Ok(into)
     }
 }

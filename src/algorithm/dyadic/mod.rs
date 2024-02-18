@@ -209,17 +209,17 @@ impl<T: Clone> Array<T> {
     pub fn reshape_scalar(&mut self, count: Result<isize, bool>) {
         match count {
             Ok(count) => {
-                self.data.modify(|data| {
-                    if count == 0 {
-                        data.clear();
-                        return;
-                    }
-                    data.reserve((count.unsigned_abs() - 1) * data.len());
-                    let row = data.clone();
-                    for _ in 1..count.unsigned_abs() {
-                        data.extend_from_slice(&row);
-                    }
-                });
+                if count == 0 {
+                    self.data.clear();
+                    self.shape.insert(0, 0);
+                    return;
+                }
+                self.data
+                    .reserve((count.unsigned_abs() - 1) * self.data.len());
+                let row = self.data.to_vec();
+                for _ in 1..count.unsigned_abs() {
+                    self.data.extend_from_slice(&row);
+                }
                 if count < 0 {
                     self.reverse();
                 }
@@ -250,9 +250,7 @@ impl<T: ArrayValue> Array<T> {
             match env.scalar_fill::<T>() {
                 Ok(fill) => {
                     let start = self.data.len();
-                    self.data.modify(|data| {
-                        data.extend(repeat(fill).take(target_len - start));
-                    });
+                    self.data.extend(repeat(fill).take(target_len - start));
                 }
                 Err(e) => {
                     if self.data.is_empty() {

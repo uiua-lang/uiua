@@ -289,9 +289,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add multi-dimensional [`where ⊚`](https://uiua.org/docs/where)
 - [`join ⊂`](https://uiua.org/docs/join) to an empty list now always works regardless of rank of the other array
 - [`each ∵`](https://uiua.org/docs/each) and [`rows ≡`](https://uiua.org/docs/rows) now work with [`under ⍜`](https://uiua.org/docs/under)
-- All [ocean functions](https://uiua.org/docs/ocean) now work with [`under ⍜`](https://uiua.org/docs/under)
-- Allow multiple values to be returned from [`each ∵`](https://uiua.org/docs/each), [`rows ≡`](https://uiua.org/docs/rows), [`distribute ∺`](https://uiua.org/docs/distribute), [`tribute ≐`](https://uiua.org/docs/tribute), [`table ⊞`](https://uiua.org/docs/table), and [`cross ⊠`](https://uiua.org/docs/cross)
 - All ocean functions now work with [`under ⍜`](https://uiua.org/docs/under)
+- Allow multiple values to be returned from [`each ∵`](https://uiua.org/docs/each), [`rows ≡`](https://uiua.org/docs/rows), `distribute ∺`, `tribute ≐`, [`table ⊞`](https://uiua.org/docs/table), and [`cross ⊠`](https://uiua.org/docs/cross)
 - [`invert ⍘`](https://uiua.org/docs/un) [`atangent ∠`](https://uiua.org/docs/atangent) now produces the sine and cosine of an angle
 - [`&i`](https://uiua.org/docs/&i) now treats paths as relative to the file calling it rather than the current working directory
 - Rank list functions for the rank-generic modifiers can now take any number of arguments. For any number of aguments greater that 0, an empty numeric list will be pushed before the function is called.

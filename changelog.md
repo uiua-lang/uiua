@@ -58,8 +58,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add an experimental `repr` function that produces a string representation of a value in a format that can be read by the interpreter
 ### Interpreter
 - Numbers that seem to have a floating-point epsilon rounding error will be output with the epsilon noted
-- Optimize the pattern for adjacency: `≡/F`[`◫`](https://uiua.org/docs/windows)
-  - It it as much as 800x faster in some cases
+- Optimize the pattern for adjacency: [`≡`](https://uiua.org/docs/rows)[`/`](https://uiua.org/docs/reduce)`F`[`◫`](https://uiua.org/docs/windows)
+  - It is as much as 800x faster in some cases
 - Square matrices are now transposed in-place
 - Language Server
   - Add completions

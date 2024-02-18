@@ -100,6 +100,11 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
             if let Some(prim) = Primitive::from_name(name) {
                 view!(<Prim prim=prim/>).into_view()
             } else {
+                if name.chars().count() == 1 {
+                    if let Some(prim) = Primitive::from_glyph(name.chars().next().unwrap()) {
+                        return view!(<Prim prim=prim glyph_only=true/>).into_view();
+                    }
+                }
                 view!(<a href={&link.url} title={&link.title}>{text}</a>).into_view()
             }
         }

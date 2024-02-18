@@ -1189,7 +1189,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="F ← (|2 ×||3.2 ⊃(++)×)\n[F 0 2 3 4]\n[F 1 2 3 4]"/>
         <p>"Signatures in switch functions are a bit messy, so try to avoid them when possible."</p>
         <p>"Because a second "<code>"|"</code>" immediately after another indicates a signature, branches that do nothing must contain "<Prim prim=Identity/>"."</p>
-        <Editor example="F ← (+5|∘|÷10)+∩>5,10.\n[F2 F6 F200]"/>
+        <Editor example="F ← (+5|∘|÷10)+∩>5,10.\n[F2 F6 F200]\nF[2 6 200]"/>
 
         <h2 id="assert"><Prim prim=Assert/></h2>
         <p>"The "<Prim prim=Assert/>" function takes any value and a condition. If the condition is anything but "<code>"1"</code>", the value is thrown as an error that can be caught with "<Prim prim=Try/>"."</p>

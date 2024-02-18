@@ -1,7 +1,10 @@
 # Uiua Todo
 
 - 0.9
-- `under` switch function
+  - Release it!
+- 0.10
+  - `under` switch function
+  - Procedural macros
 - Changle how function inlining works
   - Prevent inlining of large functions
   - If a function is inlinable, don't actually put it in the assembly instructions

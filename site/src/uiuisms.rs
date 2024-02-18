@@ -262,7 +262,7 @@ uiuisms!(
     /// Complex argument
     "∠°ℂ i",
     /// Successive differences
-    "↘1-↻¯1. 2_3_5_9_4",
+    "≡/-◫2 2_3_5_9_4",
     /// Binomial coefficient
     "÷××∩∩(/×+1⇡)1⊃-⊙∘ 3 5",
     /// Replace all of one element in a list with another

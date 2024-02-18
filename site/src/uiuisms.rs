@@ -264,7 +264,7 @@ uiuisms!(
     /// Successive differences
     "↘1-↻¯1. 2_3_5_9_4",
     /// Binomial coefficient
-    "÷××∩∩(/×+1⇡)1⊃-⊙∘ 5 3",
+    "÷××∩∩(/×+1⇡)1⊃-⊙∘ 3 5",
     /// Replace all of one element in a list with another
     "⍜▽⋅∘⊃=∘ [1 5 8 2] 5 3",
     /// Boxed powerset

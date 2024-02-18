@@ -126,15 +126,19 @@ uiuisms!(
     /// Sort an array
     "⊏⍏. [1 4 5 3 2]",
     /// Get n numbers between 0 and 1 exclusive
-    "÷:⇡. 10",
+    "÷⟜⇡ 10",
     /// Get n numbers between 0 and 1 inclusive
-    "÷-1:⇡. 11",
+    "÷-1⟜⇡ 11",
+    /// Create a zero matrix
+    "↯⟜⊚ 5",
     /// Create an identity matrix
     "⊞=.⇡ 5",
     /// Create an X matrix
     "↥⇌.⊞=.⇡ 5",
     /// Create a zero matrix of the same shape as another
     "≠. [1_1 2_2]",
+    /// Create a 0xN matrix
+    "↯0⊚ 2",
     /// Check if character is numberic [0-9]
     r#"×⊃(≥@0|≤@9) "hi-5!""#,
     /// Check if character is letter [a-zA-Z]

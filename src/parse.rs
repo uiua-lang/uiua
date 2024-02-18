@@ -500,7 +500,6 @@ impl<'i> Parser<'i> {
     }
     fn try_signature(&mut self, initial_token: AsciiToken) -> Option<Sp<Signature>> {
         let start = self.try_exact(initial_token)?;
-        self.try_spaces();
         let (args, outs) = self.sig_inner();
         let mut end = self.prev_span();
         if let Some(sp) = self.try_spaces() {

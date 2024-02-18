@@ -2093,7 +2093,7 @@ primitive!(
     ///   : Omnipend [5 6] [1 2 3]
     ///
     /// See also: [types]
-    (0(0)[1], Shapes, Misc, "shapes"),
+    (0(0)[1], Shapes, OtherModifier, "shapes"),
     /// Validate the types of some arrays
     ///
     /// The types of as many values as the function takes will be pushed to the stack before the function is called.
@@ -2117,7 +2117,7 @@ primitive!(
     ///   : Omnipend "hi!" [1 2 3]
     ///
     /// See also: [shapes]
-    (0(0)[1], Types, Misc, "types"),
+    (0(0)[1], Types, OtherModifier, "types"),
     /// Debug print all stack values without popping them
     ///
     /// This is equivalent to [dump][identity], but is easier to type.
@@ -2166,6 +2166,13 @@ primitive!(
     /// ex: 1_2_3 4 5_6_7
     ///   : dump⊢
     (0(0)[1], Dump, Stack, "dump"),
+    /// Convert code into a string instead of running it
+    ///
+    /// This is mostly useful when used in a macro.
+    /// ex: # Experimental!
+    ///   : F! ← ^! &p$"Running code: _" stringify^!^.
+    ///   : F!(+ 1 2)
+    (0[1], Stringify, OtherModifier, "stringify"),
     /// Convert a value to its code representation
     ///
     /// ex: # Experimental!

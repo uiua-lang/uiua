@@ -447,6 +447,21 @@ pub fn format_file<P: AsRef<Path>>(
     Ok(formatted)
 }
 
+pub(crate) fn format_word(word: &Sp<Word>, inputs: &Inputs) -> String {
+    let mut formatter = Formatter {
+        src: InputSrc::Str(0),
+        config: &FormatConfig::default(),
+        inputs,
+        output: String::new(),
+        glyph_map: Vec::new(),
+        end_of_line_comments: Vec::new(),
+        prev_import_function: None,
+        output_comments: None,
+    };
+    formatter.format_word(word, 0);
+    formatter.output
+}
+
 struct Formatter<'a> {
     src: InputSrc,
     config: &'a FormatConfig,
@@ -693,6 +708,12 @@ impl<'a> Formatter<'a> {
         }
     }
     fn format_ref(&mut self, r: &Ref) {
+        let first = r.path.first().map(|comp| &comp.module).unwrap_or(&r.name);
+        if first.value.starts_with(|c: char| c.is_lowercase())
+            && self.output.chars().last().is_some_and(|c| c.is_lowercase())
+        {
+            self.output.push(' ');
+        }
         for comp in &r.path {
             self.push(&comp.module.span, &comp.module.value);
             self.push(&comp.tilde_span, "~");

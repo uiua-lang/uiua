@@ -15,6 +15,7 @@ use crate::{
     ast::*,
     check::{instrs_signature, SigCheckError},
     constants, example_ua,
+    format::format_word,
     function::*,
     ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
@@ -2356,6 +2357,21 @@ code:
                     return Ok(false);
                 }
             }
+            Stringify => {
+                let operand = modified.code_operands().next().unwrap();
+                let s = format_word(operand, &self.asm.inputs);
+                let instr = Instr::Push(s.into());
+                if call {
+                    self.push_instr(instr);
+                } else {
+                    let func = self.add_function(
+                        FunctionId::Anonymous(modified.modifier.span.clone()),
+                        Signature::new(0, 1),
+                        vec![instr],
+                    );
+                    self.push_instr(Instr::PushFunc(func));
+                }
+            }
             _ => return Ok(false),
         }
         self.handle_primitive_experimental(prim, &modified.modifier.span);
@@ -2531,11 +2547,8 @@ code:
     fn expand_macro(&self, macro_words: &mut Vec<Sp<Word>>, operands: Vec<Sp<Word>>) -> UiuaResult {
         let mut ops = collect_placeholder(macro_words);
         ops.reverse();
-        let mut ph_stack: Vec<Word> = operands
-            .into_iter()
-            .filter(|w| w.value.is_code())
-            .map(|w| w.value)
-            .collect();
+        let mut ph_stack: Vec<Sp<Word>> =
+            operands.into_iter().filter(|w| w.value.is_code()).collect();
         ph_stack.reverse();
         let mut replaced = Vec::new();
         for op in ops {
@@ -2617,10 +2630,10 @@ fn collect_placeholder(words: &[Sp<Word>]) -> Vec<Sp<PlaceholderOp>> {
     ops
 }
 
-fn replace_placeholders(words: &mut Vec<Sp<Word>>, next: &mut dyn FnMut() -> Word) {
+fn replace_placeholders(words: &mut Vec<Sp<Word>>, next: &mut dyn FnMut() -> Sp<Word>) {
     for word in &mut *words {
         match &mut word.value {
-            Word::Placeholder(PlaceholderOp::Call) => word.value = next(),
+            Word::Placeholder(PlaceholderOp::Call) => *word = next(),
             Word::Strand(items) => replace_placeholders(items, next),
             Word::Array(arr) => {
                 for line in &mut arr.lines {

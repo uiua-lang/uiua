@@ -346,6 +346,7 @@ impl Primitive {
                 | Types
                 | Sys(SysOp::FFI)
                 | Repr
+                | Stringify
         )
     }
     /// Check if this primitive is deprecated
@@ -790,6 +791,9 @@ impl Primitive {
             Primitive::Stack => stack(env, false)?,
             Primitive::Dump => dump(env, false)?,
             Primitive::Regex => regex(env)?,
+            Primitive::Stringify => {
+                return Err(env.error("Stringify was not inlined. This is a bug in the interpreter"))
+            }
             Primitive::Sys(io) => io.run(env)?,
         }
         Ok(())

@@ -142,7 +142,9 @@ uiuisms!(
     /// Check if character is numeric [0-9]
     r#"×⊓≥≤@0,@9 "hi-5!""#,
     /// Check if character is letter [a-zA-Z]
-    r#"↥∩×⊃(≥@a|≤@z|≥@A|≤@Z) "oiCu812""#,
+    r#"↥∩×∩⊓≥≤@a,@z,@A,@Z "oiCu812""#,
+    /// Check if character is alphabetic
+    r#"≠0± "oiCu812""#,
     /// Check if an array is a palindrome
     r#"≍⇌. "racecar""#,
     /// Convert a number to a string

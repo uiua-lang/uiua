@@ -5,6 +5,9 @@
 - 0.10
   - `under` switch function
   - Procedural macros
+  - Alternate switch function brackets? 
+    - `〈 〉` these things
+    - Would format from `((…|…))`?
 - Changle how function inlining works
   - Prevent inlining of large functions
   - If a function is inlinable, don't actually put it in the assembly instructions

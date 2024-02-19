@@ -148,7 +148,7 @@ uiuisms!(
     /// Check if an array is a palindrome
     r#"≍⇌. "racecar""#,
     /// Convert a number to a string
-    r#"$"_" 17"#,
+    r#"°⋕ 17"#,
     /// Convert a string to a number
     r#"⋕ "42""#,
     /// Convert a string to a list of code points
@@ -194,11 +194,11 @@ uiuisms!(
     /// Filter by a fixed predicate
     "▽ =0◿2 . ⇡10",
     /// Find the most common row in an array
-    r#"⊏⊢⍖°⊚⊛:◴. "Hello World!""#,
+    r#"⊡⊢⍖°⊚⊛:◴. "Hello World!""#,
     /// Convert a string to uppercase
-    r#"-×32×≥@a,≤@z. "These are Words""#,
+    r#"⌵ "These are Words""#,
     /// Convert a string to lowercase
-    r#"+×32×≥@A,≤@Z. "These are Words""#,
+    r#"¯⌵ "These are Words""#,
     /// Check if a string is in a list of strings
     r#"∊□ "uiua" {"apl" "bqn" "uiua"}"#,
     /// Trim leading whitespace
@@ -206,9 +206,9 @@ uiuisms!(
     /// Trim trailing whitespace
     r#"▽⍜⇌\↥≠@ . "remove these →   ""#,
     /// Trim prefix-matching characters from a set
-    r#"▽¬\×∊, "abc" "ccab ← remove this""#,
+    r#"▽¬\↧∊, "abc" "ccab ← remove this""#,
     /// Trim suffix-matching characters from a set
-    r#"▽¬⍜⇌\×∊, "abc" "remove this → bcaa""#,
+    r#"▽¬⍜⇌\↧∊, "abc" "remove this → bcaa""#,
     /// Trim whitespace
     r#"▽×⍜(⊟⇌)≡\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a 2d matrix
@@ -218,7 +218,7 @@ uiuisms!(
     /// Linearly interpolate between two values
     "⍜-× 10 0 0.2\n⍜⊙-× 0.2 10 0",
     /// Set the value of an array at an index
-    "⍜⊏◌ 2 1_2_3_4 10",
+    "⍜⊡◌ 2 1_2_3_4 10",
     /// Create a matrix of random 0s or 1s
     "⁅⊞⋅⋅⚂.⊚ 5",
     /// Create a matrix of random numbers
@@ -228,7 +228,7 @@ uiuisms!(
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Cross product
-    "1_2_3 4_5_6\n↻1-∩(×↻1)⊃:⊙∘",
+    "1_2_3 4_5_6\n↻2-∩(×↻2):,,",
     /// Matrix product
     "[7_8_9 10_11_12] [1_2 3_4 5_6]\n⍜⍉⊞(/+×)",
     /// Matrix power (Also works with scalars)
@@ -236,7 +236,7 @@ uiuisms!(
     /// Repeat a function and collect intermediate results into an array
     "[⍥(×2.)] 10 1",
     /// Pad an array with 0s
-    "[1_2_3 4_5_6]\n↻⊟.¯1⬚0↙+2△.",
+    "[1_2_3 4_5_6]\n↻▽:¯1⧻:⬚0↙+2,⟜△",
     /// Complex conjugate
     "⍜°ℂ¯ +i1",
     /// Cosine
@@ -266,11 +266,11 @@ uiuisms!(
     /// Successive differences
     "≡/-◫2 2_3_5_9_4",
     /// Binomial coefficient
-    "÷××∩∩(/×+1⇡)1⊃-⊙∘ 3 5",
+    "÷××∩∩(/×+1⇡)1-,, 3 5",
     /// Replace all of one element in a list with another
-    "⍜▽⋅∘⊃=∘ [1 5 8 2] 5 3",
+    "⍜▽◌⊃=∘ [1 5 8 2] 5 3",
     /// Boxed powerset
-    "≡(□▽)☇1⇡↯:2⊃⧻¤ [1 5 8 2]",
+    "⍚▽⬚0⋯⇡ⁿ:2⊃⧻¤ [1 5 8 2]",
     /// Irrational number to n terms of continued fraction
     "⊙◌⍥(⊂⊙⊃⌊(÷:1◿1)):[] 10 e",
 );

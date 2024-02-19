@@ -228,6 +228,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the Uiua formatter"</li>
             <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
             <li><A href="/docs/stack-idioms">"Stack Idioms"</A>" - common ways of manipulating the stack"</li>
+            <li><A href="/docs/isms">"Uiuisms"</A>" - a curated list of Uiua functions for solving common problems."</li>
         </ul>
 
         <h2 id="other-pages">"Other Pages"</h2>
@@ -238,9 +239,6 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/combinators">"Combinators"</A>" - a list of common combinators implemented in Uiua"</li>
             <li><a href="/primitives.json">"Primitives JSON"</a>" - a JSON file of all the primitives, for tooling and other projects (click then refresh)"</li>
         </ul>
-
-        <h2 id="uiuisms">"Uiuisms"</h2>
-        <p><A href="/docs/isms">"Uiuisms"</A>" is a curated list of Uiua functions for solving common problems."</p>
 
         <h2 id="functions" class="doc-functions">"Functions"</h2>
         <div id="function-search-wrapper">

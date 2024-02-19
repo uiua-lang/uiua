@@ -547,19 +547,13 @@ impl<'i> Parser<'i> {
     fn try_words(&mut self) -> Option<Vec<Sp<Word>>> {
         let mut words: Vec<Sp<Word>> = Vec::new();
         while let Some(word) = self.try_word() {
-            if let Some(prev) = words.last() {
+            if let Some(prev) = words.iter().filter(|w| w.value.is_code()).nth_back(0) {
                 // Diagnostics
                 use Primitive::*;
                 let span = || prev.span.clone().merge(word.span.clone());
                 match (&prev.value, &word.value) {
                     (Word::Primitive(a), Word::Primitive(b)) => {
                         match (a, b) {
-                            (Flip, Over) => self.diagnostics.push(Diagnostic::new(
-                                format!("Prefer `{Dip}{Dup}` over `{Flip}{Over}` for clarity"),
-                                span(),
-                                DiagnosticKind::Style,
-                                self.inputs.clone(),
-                            )),
                             (Over, Flip) => self.diagnostics.push(Diagnostic::new(
                                 format!("Prefer `{On}{Flip}` over `{Over}{Flip}` for clarity"),
                                 span(),

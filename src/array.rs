@@ -298,14 +298,16 @@ impl<T: ArrayValue> Array<T> {
         })
     }
     /// Get an iterator over the row arrays of the array that have the given shape
-    pub fn into_row_shaped_slices(
-        self,
-        row_shape: Shape,
-    ) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator {
+    pub fn into_row_shaped_slices(self, row_shape: Shape) -> impl DoubleEndedIterator<Item = Self> {
         let row_len: usize = row_shape.iter().product();
-        self.data
+        let zero_count = if row_len == 0 { self.row_count() } else { 0 };
+        let row_sh = row_shape.clone();
+        let nonzero = self
+            .data
             .into_slices(row_len)
-            .map(move |data| Self::new(row_shape.clone(), data))
+            .map(move |data| Self::new(row_sh.clone(), data));
+        let zero = (0..zero_count).map(move |_| Self::new(row_shape.clone(), CowSlice::new()));
+        nonzero.chain(zero)
     }
     /// Get a row array
     #[track_caller]

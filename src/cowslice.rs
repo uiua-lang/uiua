@@ -109,12 +109,21 @@ impl<T: Clone> CowSlice<T> {
             end,
         }
     }
+    /// Get an iterator over slices with the given size
+    ///
+    /// # Panics
+    /// Panics if the size is zero or is not a divisor of the length
     pub fn into_slices(
         self,
         size: usize,
     ) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator {
-        assert!(self.len() % size == 0);
-        (0..self.len() / size).map(move |i| {
+        let count = if size == 0 {
+            0
+        } else {
+            assert!(self.len() % size == 0);
+            self.len() / size
+        };
+        (0..count).map(move |i| {
             let start = self.start + (i * size);
             Self {
                 data: self.data.clone(),

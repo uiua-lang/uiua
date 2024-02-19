@@ -128,7 +128,7 @@ impl Value {
     pub fn into_row_shaped_slices(
         self,
         row_shape: Shape,
-    ) -> Box<dyn ExactSizeIterator<Item = Self>> {
+    ) -> Box<dyn DoubleEndedIterator<Item = Self>> {
         match self {
             Self::Num(array) => Box::new(array.into_row_shaped_slices(row_shape).map(Value::from)),
             #[cfg(feature = "bytes")]

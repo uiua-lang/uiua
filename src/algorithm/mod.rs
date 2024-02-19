@@ -342,7 +342,7 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
             let arg = env.pop(i + 1)?;
             if !arg.shape().starts_with(selector.shape()) {
                 return Err(env.error(format!(
-                    "The function's select's shape {} is not compatible \
+                    "The selector's shape {} is not compatible \
                     with the argument {}'s shape {}",
                     selector.shape(),
                     i + 1,

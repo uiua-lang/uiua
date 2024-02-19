@@ -1471,7 +1471,7 @@ F!!!+×⊂ [1 2 3][4 5 6]"/>
             number=2
             prompt="creates a macro called F‼ which calls its first function, then its second, then its first again."
             example="F‼⇌(⊂10) [1 2 3]"
-            answer="F‼ ← ^!^!^!^,^:"
+            answer="F‼ ← ^!^!^!^,"
             default="F‼ ← ^!^!"
             flip=true
             tests={&["F‼⇌⍉ [1_2 3_4]", "F‼⊂⇌ 1_2 3_4 5_6"]}

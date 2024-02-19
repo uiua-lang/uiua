@@ -2544,12 +2544,15 @@ code:
         let function = self.create_function(signature, f);
         self.bind_function(name, function)
     }
-    fn expand_macro(&self, macro_words: &mut Vec<Sp<Word>>, operands: Vec<Sp<Word>>) -> UiuaResult {
+    fn expand_macro(
+        &mut self,
+        macro_words: &mut Vec<Sp<Word>>,
+        operands: Vec<Sp<Word>>,
+    ) -> UiuaResult {
         let mut ops = collect_placeholder(macro_words);
         ops.reverse();
         let mut ph_stack: Vec<Sp<Word>> =
             operands.into_iter().filter(|w| w.value.is_code()).collect();
-        ph_stack.reverse();
         let mut replaced = Vec::new();
         for op in ops {
             let span = op.span;
@@ -2580,7 +2583,20 @@ code:
                 }
             }
         }
-        let mut operands = replaced.into_iter();
+        if !ph_stack.is_empty() {
+            let span = (ph_stack.first().unwrap().span.clone())
+                .merge(ph_stack.last().unwrap().span.clone());
+            self.emit_diagnostic(
+                format!(
+                    "Macro operand stack has {} item{} left",
+                    ph_stack.len(),
+                    if ph_stack.len() == 1 { "" } else { "s" }
+                ),
+                DiagnosticKind::Warning,
+                span,
+            );
+        }
+        let mut operands = replaced.into_iter().rev();
         replace_placeholders(macro_words, &mut || operands.next().unwrap());
         Ok(())
     }

@@ -232,7 +232,7 @@ uiuisms!(
     /// Matrix product
     "[7_8_9 10_11_12] [1_2 3_4 5_6]\n⍜⍉⊞(/+×)",
     /// Matrix power (Also works with scalars)
-    "4 [1_2 3_4]\n⊙◌⍥(⊞(/+×)⊙⍉,):⊞=.⇡⬚1⊢△,",
+    "4 [1_2 3_4]\n⊙◌⍥(⊞(/+×)⊙⍉,):⊞=.⇡⧻,",
     /// Repeat a function and collect intermediate results into an array
     "[⍥(×2.)] 10 1",
     /// Pad an array with 0s

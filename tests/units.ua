@@ -305,7 +305,7 @@ G ← (⚂)
 ⍤⟜≍: 3 ⧻◴ [G G G]
 
 # Unique
-assonmat: 1 1
+⍤⟜≍: 1 1
 
 # Macros
 F! ← ^!5
@@ -327,6 +327,10 @@ Ex ~ "example.ua"
 ~ "example" ~ Square
 ⍤⟜≍: 25 Square 5
 ⍤⟜≍: 15 Ex~Mac!+
+~ "example.ua" ~ Increment
+~ "example.ua" ~ Increment
+~ "example.ua" ~ Increment
+⍤⟜≍: 7 Increment Increment 5
 
 # Euler's identity
 ⍤⟜≍: 0 ⍜(×1e12)⁅ ⌵+1 ⁿ×iπ e

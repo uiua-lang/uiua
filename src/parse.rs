@@ -430,6 +430,7 @@ impl<'i> Parser<'i> {
         let mut lines: Vec<Option<ImportLine>> = Vec::new();
         let mut line: Option<ImportLine> = None;
         self.try_exact(Newline);
+        let mut last_tilde_index = self.index;
         while let Some(token) = self.tokens.get(self.index).cloned() {
             let span = token.span;
             let token = token.value;
@@ -441,6 +442,7 @@ impl<'i> Parser<'i> {
                     line.items.push(name);
                 }
                 Simple(Tilde) if line.is_none() => {
+                    last_tilde_index = self.index;
                     line = Some(ImportLine {
                         tilde_span: span.clone(),
                         items: Vec::new(),
@@ -457,8 +459,12 @@ impl<'i> Parser<'i> {
             }
             self.index += 1;
         }
-        if line.is_some() {
-            lines.push(line);
+        if let Some(line) = line {
+            if line.items.is_empty() {
+                self.index = last_tilde_index;
+            } else {
+                lines.push(Some(line));
+            }
         }
         if let Some(name) = &name {
             self.validate_binding_name(name);

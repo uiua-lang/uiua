@@ -29,7 +29,11 @@ impl Value {
     }
     /// Add a 1-length dimension to the front of the value's shape
     pub fn fix(&mut self) {
-        self.shape_mut().insert(0, 1);
+        self.fix_depth(0);
+    }
+    pub(crate) fn fix_depth(&mut self, depth: usize) {
+        let depth = depth.min(self.rank());
+        self.shape_mut().insert(depth, 1);
     }
     pub(crate) fn inv_fix(&mut self) {
         let shape = self.shape_mut();

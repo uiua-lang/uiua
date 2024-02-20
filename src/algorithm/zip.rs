@@ -14,48 +14,52 @@ use super::{multi_output, MultiOutput};
 type ValueUnFn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
 type ValueBinFn = Box<dyn Fn(Value, Value, usize, usize, &mut Uiua) -> UiuaResult<Value>>;
 
-fn spanned_un_fn(
+fn spanned_mon_fn(
     span: usize,
     f: impl Fn(Value, usize, &Uiua) -> UiuaResult<Value> + 'static,
 ) -> ValueUnFn {
     Box::new(move |v, d, env| env.with_span(span, |env| f(v, d, env)))
 }
 
-fn prim_un_fast_fn(prim: Primitive, span: usize) -> Option<ValueUnFn> {
+fn prim_mon_fast_fn(prim: Primitive, span: usize) -> Option<ValueUnFn> {
     use Primitive::*;
     Some(match prim {
-        Not => spanned_un_fn(span, |v, _, env| Value::not(v, env)),
-        Sign => spanned_un_fn(span, |v, _, env| Value::sign(v, env)),
-        Neg => spanned_un_fn(span, |v, _, env| Value::neg(v, env)),
-        Abs => spanned_un_fn(span, |v, _, env| Value::abs(v, env)),
-        Sqrt => spanned_un_fn(span, |v, _, env| Value::sqrt(v, env)),
-        Floor => spanned_un_fn(span, |v, _, env| Value::floor(v, env)),
-        Ceil => spanned_un_fn(span, |v, _, env| Value::ceil(v, env)),
-        Round => spanned_un_fn(span, |v, _, env| Value::round(v, env)),
-        Deshape => spanned_un_fn(span, |mut v, d, _| {
+        Not => spanned_mon_fn(span, |v, _, env| Value::not(v, env)),
+        Sign => spanned_mon_fn(span, |v, _, env| Value::sign(v, env)),
+        Neg => spanned_mon_fn(span, |v, _, env| Value::neg(v, env)),
+        Abs => spanned_mon_fn(span, |v, _, env| Value::abs(v, env)),
+        Sqrt => spanned_mon_fn(span, |v, _, env| Value::sqrt(v, env)),
+        Floor => spanned_mon_fn(span, |v, _, env| Value::floor(v, env)),
+        Ceil => spanned_mon_fn(span, |v, _, env| Value::ceil(v, env)),
+        Round => spanned_mon_fn(span, |v, _, env| Value::round(v, env)),
+        Deshape => spanned_mon_fn(span, |mut v, d, _| {
             Value::deshape_depth(&mut v, d);
             Ok(v)
         }),
-        Transpose => spanned_un_fn(span, |mut v, d, _| {
+        Transpose => spanned_mon_fn(span, |mut v, d, _| {
             Value::transpose_depth(&mut v, d, 1);
             Ok(v)
         }),
-        Reverse => spanned_un_fn(span, |mut v, d, _| {
+        Reverse => spanned_mon_fn(span, |mut v, d, _| {
             Value::reverse_depth(&mut v, d);
+            Ok(v)
+        }),
+        Fix => spanned_mon_fn(span, |mut v, d, _| {
+            v.fix_depth(d);
             Ok(v)
         }),
         _ => return None,
     })
 }
 
-fn impl_prim_un_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> {
+fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> {
     use ImplPrimitive::*;
     Some(match prim {
-        TransposeN(n) => spanned_un_fn(span, move |mut v, d, _| {
+        TransposeN(n) => spanned_mon_fn(span, move |mut v, d, _| {
             Value::transpose_depth(&mut v, d, n);
             Ok(v)
         }),
-        ReplaceRand => spanned_un_fn(span, |v, d, _| {
+        ReplaceRand => spanned_mon_fn(span, |v, d, _| {
             let shape = &v.shape()[..d.min(v.rank())];
             let elem_count: usize = shape.iter().product();
             let mut data = eco_vec![0.0; elem_count];
@@ -68,19 +72,19 @@ fn impl_prim_un_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> {
     })
 }
 
-fn f_un_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUnFn, usize)> {
+fn f_mon_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUnFn, usize)> {
     use Primitive::*;
     match f.instrs(env) {
         &[Instr::Prim(prim, span)] => {
-            let f = prim_un_fast_fn(prim, span)?;
+            let f = prim_mon_fast_fn(prim, span)?;
             return Some((f, 0));
         }
         &[Instr::ImplPrim(prim, span)] => {
-            let f = impl_prim_un_fast_fn(prim, span)?;
+            let f = impl_prim_mon_fast_fn(prim, span)?;
             return Some((f, 0));
         }
         [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
-            let (f, d) = f_un_fast_fn(f, env)?;
+            let (f, d) = f_mon_fast_fn(f, env)?;
             return Some((f, d + 1));
         }
         _ => (),
@@ -88,34 +92,34 @@ fn f_un_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUnFn, usize)> {
     None
 }
 
-fn spanned_bin_fn(
+fn spanned_dy_fn(
     span: usize,
     f: impl Fn(Value, Value, usize, usize, &Uiua) -> UiuaResult<Value> + 'static,
 ) -> ValueBinFn {
     Box::new(move |a, b, ad, bd, env| env.with_span(span, |env| f(a, b, ad, bd, env)))
 }
 
-fn prim_bin_fast_fn(prim: Primitive, span: usize) -> Option<ValueBinFn> {
+fn prim_dy_fast_fn(prim: Primitive, span: usize) -> Option<ValueBinFn> {
     use std::boxed::Box;
     use Primitive::*;
     Some(match prim {
-        Add => spanned_bin_fn(span, Value::add),
-        Sub => spanned_bin_fn(span, Value::sub),
-        Mul => spanned_bin_fn(span, Value::mul),
-        Div => spanned_bin_fn(span, Value::div),
-        Pow => spanned_bin_fn(span, Value::pow),
-        Mod => spanned_bin_fn(span, Value::modulus),
-        Log => spanned_bin_fn(span, Value::log),
-        Eq => spanned_bin_fn(span, Value::is_eq),
-        Ne => spanned_bin_fn(span, Value::is_ne),
-        Lt => spanned_bin_fn(span, Value::is_lt),
-        Gt => spanned_bin_fn(span, Value::is_gt),
-        Le => spanned_bin_fn(span, Value::is_le),
-        Ge => spanned_bin_fn(span, Value::is_ge),
-        Complex => spanned_bin_fn(span, Value::complex),
-        Max => spanned_bin_fn(span, Value::max),
-        Min => spanned_bin_fn(span, Value::min),
-        Atan => spanned_bin_fn(span, Value::atan2),
+        Add => spanned_dy_fn(span, Value::add),
+        Sub => spanned_dy_fn(span, Value::sub),
+        Mul => spanned_dy_fn(span, Value::mul),
+        Div => spanned_dy_fn(span, Value::div),
+        Pow => spanned_dy_fn(span, Value::pow),
+        Mod => spanned_dy_fn(span, Value::modulus),
+        Log => spanned_dy_fn(span, Value::log),
+        Eq => spanned_dy_fn(span, Value::is_eq),
+        Ne => spanned_dy_fn(span, Value::is_ne),
+        Lt => spanned_dy_fn(span, Value::is_lt),
+        Gt => spanned_dy_fn(span, Value::is_gt),
+        Le => spanned_dy_fn(span, Value::is_le),
+        Ge => spanned_dy_fn(span, Value::is_ge),
+        Complex => spanned_dy_fn(span, Value::complex),
+        Max => spanned_dy_fn(span, Value::max),
+        Min => spanned_dy_fn(span, Value::min),
+        Atan => spanned_dy_fn(span, Value::atan2),
         Rotate => Box::new(move |a, b, ad, bd, env| {
             env.with_span(span, |env| a.rotate_depth(b, ad, bd, env))
         }),
@@ -123,11 +127,11 @@ fn prim_bin_fast_fn(prim: Primitive, span: usize) -> Option<ValueBinFn> {
     })
 }
 
-pub(crate) fn f_bin_fast_fn(instrs: &[Instr], env: &Uiua) -> Option<(ValueBinFn, usize, usize)> {
+pub(crate) fn f_dy_fast_fn(instrs: &[Instr], env: &Uiua) -> Option<(ValueBinFn, usize, usize)> {
     use std::boxed::Box;
     use Primitive::*;
 
-    fn nest_bin_fast<F>(
+    fn nest_dy_fast<F>(
         (f, ad1, bd1): (F, usize, usize),
         ad2: usize,
         bd2: usize,
@@ -140,14 +144,14 @@ pub(crate) fn f_bin_fast_fn(instrs: &[Instr], env: &Uiua) -> Option<(ValueBinFn,
 
     match instrs {
         &[Instr::Prim(prim, span)] => {
-            let f = prim_bin_fast_fn(prim, span)?;
+            let f = prim_dy_fast_fn(prim, span)?;
             return Some((f, 0, 0));
         }
         [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
-            return nest_bin_fast(f_bin_fast_fn(f.instrs(env), env)?, 1, 1)
+            return nest_dy_fast(f_dy_fast_fn(f.instrs(env), env)?, 1, 1)
         }
         [Instr::Prim(Flip, _), rest @ ..] => {
-            let (f, a, b) = f_bin_fast_fn(rest, env)?;
+            let (f, a, b) = f_dy_fast_fn(rest, env)?;
             let f = Box::new(move |a, b, ad, bd, env: &mut Uiua| f(b, a, bd, ad, env));
             return Some((f, a, b));
         }
@@ -178,7 +182,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
 }
 
 fn each1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, ..)) = f_un_fast_fn(&f, env) {
+    if let Some((f, ..)) = f_mon_fast_fn(&f, env) {
         let maybe_through_boxes = matches!(&xs, Value::Box(..));
         if !maybe_through_boxes {
             let rank = xs.rank();
@@ -235,7 +239,7 @@ fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             FormatShape(&ys.shape()[..min_rank])
         )));
     }
-    if let Some((f, ..)) = f_bin_fast_fn(f.instrs(env), env) {
+    if let Some((f, ..)) = f_dy_fast_fn(f.instrs(env), env) {
         let xrank = xs.rank();
         let yrank = ys.rank();
         let val = f(xs, ys, xrank, yrank, env)?;
@@ -390,7 +394,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
 }
 
 fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, d)) = f_un_fast_fn(&f, env) {
+    if let Some((f, d)) = f_mon_fast_fn(&f, env) {
         let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
         if !maybe_through_boxes {
             let val = f(xs, d + 1, env)?;
@@ -437,7 +441,7 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let outputs = f.signature().outputs;
     match (xs.row_count(), ys.row_count()) {
         (a, b) if a == b => {
-            if let Some((f, a, b)) = f_bin_fast_fn(f.instrs(env), env) {
+            if let Some((f, a, b)) = f_dy_fast_fn(f.instrs(env), env) {
                 let val = f(xs, ys, a + 1, b + 1, env)?;
                 env.push(val);
                 return Ok(());

@@ -674,7 +674,7 @@ fn TutorialTypes() -> impl IntoView {
         <p>"Characters like newline or null need to be escaped with "<code>"\\"</code>", but spaces do not."</p>
         <Editor example="[@\\r @\\0 @ ]"/> // Should fail
         <p>"If you don't like the significant whitespace of "<code>"@ "</code>", "<code>"@\\s"</code>" is also space."</p>
-        <p>"String literals, delimited by "<code>"\""</code>"s, create rank 1 character arrays."</p>
+        <p>"As noted in the advice diagnostics above, string literals, delimited by "<code>"\""</code>"s, create rank 1 character arrays."</p>
         <Editor example="△.\"Hello, World!\""/>
         <p>"You can make strings span multiple lines with a "<code>"$"</code>" followed by a space on each line."</p>
         <p>"These do not require "<code>"\""</code>"s."</p>
@@ -986,6 +986,18 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="+gdggi 1 2 3 4 5"/>
         <Editor example="+dggdp 1 2 3 4 5"/>
         <p>"In general, planet notation as complex as the mathematical function example above should only be used when it is necessary. For examples like that with 4+ values, it is. However, when working with fewer values, you can get very far with just "<Prim prim=Dup/>" and "<Prim prim=Flip/>". Maybe sprinkle some "<Prim prim=Over/>"s and "<Prim prim=Dip/>"s in there too."</p>
+
+        <h2 id="on"><Prim prim=On/></h2>
+        <p>"As you write more Uiua code, you'll find that there is a pattern you'll encounter over and over again. It involves calling a function, then calling another function that re-uses an argument to the first function."</p>
+        <p>"One simple example is getting "<code>"n"</code>" numbers between "<code>"0"</code>" and "<code>"1"</code>". One way you may think to solve this is with "<Prim prim=Dup/>" and "<Prim prim=Flip/>"."</p>
+        <Editor example="÷:⇡. 5"/>
+        <p>"This is a perfectly valid solution! However, when the first function you call is dyadic, it can get a little trickier. For example, if you wanted to get all the integers between two numbers, you may try either of the following:"</p>
+        <Editor example="+⇡-,: 3 8\n+⊃∘(⇡-) 3 8"/>
+        <p>"As the style diagnostics tell you, there is a better way."</p>
+        <p>"The "<Prim prim=On/>" modifier calls a function but keeps its first argument on top of the stack. This can be used in both of the above examples."</p>
+        <Editor example="÷⟜⇡ 5"/>
+        <Editor example="+⟜(⇡-) 3 8"/>
+        <p>"Having a single glyph for something that can be written as simply "<Prims prims=[Fork, Identity]/>" may seem unnecessary, but you'll find that because the pattern is so common, it makes code easier to both read and write."</p>
 
         <h2 id="challenges">"Challenges"</h2>
 

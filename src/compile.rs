@@ -213,6 +213,7 @@ impl Compiler {
         let input: EcoString = fs::read_to_string(path)
             .map_err(|e| UiuaError::Load(path.into(), e.into()))?
             .into();
+        _ = crate::lsp::spans(&input);
         self.asm.inputs.files.insert(path.into(), input.clone());
         self.load_impl(&input, InputSrc::File(path.into()))
     }
@@ -339,7 +340,11 @@ code:
 
         let mut prev_comment = None;
         for item in items {
-            self.item(item, in_test, &mut prev_comment)?;
+            if let Err(e) = self.item(item, in_test, &mut prev_comment) {
+                if self.errors.is_empty() {
+                    self.errors.push(e);
+                }
+            }
         }
         Ok(())
     }

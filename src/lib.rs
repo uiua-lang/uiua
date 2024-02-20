@@ -208,6 +208,19 @@ mod tests {
     }
 
     #[test]
+    fn lsp_spans() {
+        use super::*;
+        for entry in std::fs::read_dir("tests").unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.is_file() && path.extension().is_some_and(|s| s == "ua") {
+                let code = std::fs::read_to_string(&path).unwrap();
+                spans(&code);
+            }
+        }
+    }
+
+    #[test]
     fn no_dbgs() {
         fn recurse_dirs(dir: &std::path::Path, f: &impl Fn(&std::path::Path)) {
             for entry in std::fs::read_dir(dir).unwrap() {

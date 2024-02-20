@@ -338,7 +338,7 @@ impl Uiua {
                 "\
 The interpreter has crashed!
 Hooray! You found a bug!
-Please report this at http://github.com/uiua-lang/uiua/issues/new
+Please report this at http://github.com/uiua-lang/uiua/issues/new or on Discord at https://discord.gg/9CU2ME4kmn.
 
 code:
 {}

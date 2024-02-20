@@ -512,9 +512,12 @@ code:
                     self.rt.function_stack.push(f.clone());
                     Ok(())
                 }
-                &Instr::Switch { count, sig, span } => {
-                    self.with_span(span, |env| algorithm::switch(count, sig, env))
-                }
+                &Instr::Switch {
+                    count,
+                    sig,
+                    span,
+                    under_cond,
+                } => self.with_span(span, |env| algorithm::switch(count, sig, under_cond, env)),
                 &Instr::PushLocals { count, span } => self.with_span(span, |env| {
                     let mut locals = Vec::new();
                     for i in 0..count {
@@ -947,7 +950,7 @@ code:
     pub fn push<V: Into<Value>>(&mut self, val: V) {
         self.rt.stack.push(val.into());
     }
-    fn push_temp(&mut self, temp: TempStack, val: impl Into<Value>) {
+    pub(crate) fn push_temp(&mut self, temp: TempStack, val: impl Into<Value>) {
         self.rt.temp_stacks[temp as usize].push(val.into());
     }
     /// Push a function onto the function stack

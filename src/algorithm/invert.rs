@@ -231,6 +231,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_unpack_pattern, "unpack"),
         &UnderPatternFn(under_touch_pattern, "touch"),
         &UnderPatternFn(under_repeat_pattern, "repeat"),
+        &UnderPatternFn(under_switch_pattern, "switch"),
         // Basic math
         &dyad!(Flip, Add, Sub),
         &dyad!(Flip, Mul, Div),
@@ -989,6 +990,80 @@ fn under_fill_pattern<'a>(
         Instr::PushFunc(f.clone()),
         Instr::Prim(Primitive::Fill, span),
     ];
+    Some((input, (befores, afters)))
+}
+
+fn under_switch_pattern<'a>(
+    mut input: &'a [Instr],
+    g_sig: Signature,
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    let mut funcs = Vec::new();
+    while let (Instr::PushFunc(f), rest) = input.split_first()? {
+        funcs.push(f);
+        input = rest;
+    }
+    if funcs.is_empty() {
+        return None;
+    }
+    let [Instr::Switch {
+        count,
+        sig,
+        span,
+        under_cond: false,
+    }, input @ ..] = input
+    else {
+        return None;
+    };
+    if funcs.len() != *count {
+        return None;
+    }
+    let mut f_befores = Vec::with_capacity(funcs.len());
+    let mut f_afters = Vec::with_capacity(funcs.len());
+    let mut undo_sig: Option<Signature> = None;
+    for f in &funcs {
+        // Calc under f
+        let f_instrs = f.instrs(comp).to_vec();
+        let (before, after) = under_instrs(&f_instrs, g_sig, comp)?;
+        f_befores.push(make_fn(before, *span, comp)?);
+        let f_after = make_fn(after, *span, comp)?;
+        let f_after_sig = f_after.signature();
+        f_afters.push(f_after);
+        // Aggregate sigs
+        let undo_sig = undo_sig.get_or_insert(f_after_sig);
+        if f_after_sig.is_compatible_with(*undo_sig) {
+            *undo_sig = undo_sig.max_with(f_after_sig);
+        } else if f_after_sig.outputs == undo_sig.outputs {
+            undo_sig.args = undo_sig.args.max(f_after_sig.args)
+        } else {
+            return None;
+        }
+    }
+
+    let mut befores = EcoVec::with_capacity(funcs.len() + 2);
+    befores.extend(f_befores.into_iter().map(Instr::PushFunc));
+    befores.push(Instr::Switch {
+        count: *count,
+        sig: *sig,
+        span: *span,
+        under_cond: true,
+    });
+
+    let mut afters = EcoVec::with_capacity(funcs.len() + 2);
+    afters.extend(f_afters.into_iter().map(Instr::PushFunc));
+    afters.extend([
+        Instr::PopTemp {
+            stack: TempStack::Under,
+            count: 1,
+            span: *span,
+        },
+        Instr::Switch {
+            count: *count,
+            sig: undo_sig?,
+            span: *span,
+            under_cond: false,
+        },
+    ]);
     Some((input, (befores, afters)))
 }
 

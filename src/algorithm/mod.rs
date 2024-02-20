@@ -9,8 +9,8 @@ use std::{
 use tinyvec::TinyVec;
 
 use crate::{
-    Array, ArrayValue, CodeSpan, Function, Inputs, Shape, Signature, Span, Uiua, UiuaError,
-    UiuaResult, Value,
+    Array, ArrayValue, CodeSpan, Function, Inputs, Shape, Signature, Span, TempStack, Uiua,
+    UiuaError, UiuaResult, Value,
 };
 
 mod dyadic;
@@ -455,11 +455,20 @@ pub fn all(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
+pub fn switch(
+    count: usize,
+    sig: Signature,
+    copy_condition_under: bool,
+    env: &mut Uiua,
+) -> UiuaResult {
     // Get selector
-    let selector = env
-        .pop("switch index")?
-        .as_natural_array(env, "Switch index must be an array of naturals")?;
+    let selector = env.pop("switch index")?;
+    let copied_selector = if copy_condition_under {
+        Some(selector.clone())
+    } else {
+        None
+    };
+    let selector = selector.as_natural_array(env, "Switch index must be an array of naturals")?;
     if let Some(i) = selector.data.iter().find(|&&i| i >= count) {
         return Err(env.error(format!(
             "Switch index {i} is out of bounds for switch of size {count}"
@@ -492,7 +501,7 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
             return Err(env.error("Stack was empty when discarding excess switch arguments."));
         }
         env.rt.stack.drain(discard_start..discard_end);
-        env.call(f)
+        env.call(f)?;
     } else {
         // Array
         // Collect arguments
@@ -547,8 +556,11 @@ pub fn switch(count: usize, sig: Signature, env: &mut Uiua) -> UiuaResult {
             *new_value.shape_mut() = new_shape;
             env.push(new_value);
         }
-        Ok(())
     }
+    if let Some(selector) = copied_selector {
+        env.push_temp(TempStack::Under, selector);
+    }
+    Ok(())
 }
 
 pub fn try_(env: &mut Uiua) -> UiuaResult {

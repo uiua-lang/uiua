@@ -1,5 +1,8 @@
 # Uiua Todo
 
+- 0.10
+  - Procedural macros
+  - `under` same-rank `join`
 - Site pages/tutorials
   - Duality of `pick` and `select`
   - Stack-source locality

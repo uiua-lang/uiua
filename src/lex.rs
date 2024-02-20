@@ -422,6 +422,8 @@ pub enum Token {
     LeftArrow,
     LeftStrokeArrow,
     LeftArrowTilde,
+    OpenAngle,
+    CloseAngle,
     Newline,
     Spaces,
 }
@@ -642,6 +644,8 @@ impl<'a> Lexer<'a> {
                 "}" => self.end(CloseCurly, start),
                 "[" => self.end(OpenBracket, start),
                 "]" => self.end(CloseBracket, start),
+                "〈" => self.end(OpenAngle, start),
+                "〉" => self.end(CloseAngle, start),
                 "_" => self.end(Underscore, start),
                 "|" => self.end(Bar, start),
                 ";" => self.end(Semicolon, start),

@@ -458,7 +458,7 @@ pub(crate) fn format_word(word: &Sp<Word>, inputs: &Inputs) -> String {
         prev_import_function: None,
         output_comments: None,
     };
-    formatter.format_word(word, 0);
+    formatter.format_word(word, 0, true);
     formatter.output
 }
 
@@ -622,7 +622,7 @@ impl<'a> Formatter<'a> {
                     .unwrap_or_else(|| binding.arrow_span.clone());
                 let mut lines = unsplit_words(split_words(binding.words.clone()));
                 if lines.len() == 1 {
-                    self.format_words(&lines[0], true, 0);
+                    self.format_words(&lines[0], true, 0, true);
                 } else {
                     lines.push(Vec::new());
                     self.format_words(
@@ -634,6 +634,7 @@ impl<'a> Formatter<'a> {
                         }))],
                         true,
                         0,
+                        true,
                     );
                 }
             }
@@ -721,12 +722,18 @@ impl<'a> Formatter<'a> {
         }
         self.push(&r.name.span, &r.name.value);
     }
-    fn format_words(&mut self, words: &[Sp<Word>], trim_end: bool, depth: usize) {
+    fn format_words(
+        &mut self,
+        words: &[Sp<Word>],
+        trim_end: bool,
+        depth: usize,
+        angle_switch: bool,
+    ) {
         for word in trim_spaces(words, trim_end) {
-            self.format_word(word, depth);
+            self.format_word(word, depth, angle_switch);
         }
     }
-    fn format_word(&mut self, word: &Sp<Word>, depth: usize) {
+    fn format_word(&mut self, word: &Sp<Word>, depth: usize, angle_switch: bool) {
         match &word.value {
             Word::Number(s, n) => {
                 let grid_str = n.grid_string(false);
@@ -812,7 +819,7 @@ impl<'a> Formatter<'a> {
                     if i > 0 {
                         self.output.push('_');
                     }
-                    self.format_word(item, depth);
+                    self.format_word(item, depth, true);
                 }
                 if items.len() == 1 {
                     self.output.push('_');
@@ -832,6 +839,19 @@ impl<'a> Formatter<'a> {
                 }
             }
             Word::Func(func) => {
+                // Handle nested switch conversion to angle brackets
+                let mut code_words =
+                    (func.lines.iter().flatten()).filter(|word| word.value.is_code());
+                if code_words.clone().count() == 1 {
+                    let word = code_words.next().unwrap();
+                    if let Word::Switch(_) = &word.value {
+                        if word.span.as_str(self.inputs, |s| s.starts_with('(')) {
+                            self.format_word(word, depth, true);
+                            return;
+                        }
+                    }
+                }
+
                 self.output.push('(');
                 if let Some(sig) = &func.signature {
                     let trailing_space = func.lines.len() <= 1
@@ -846,7 +866,8 @@ impl<'a> Formatter<'a> {
                 self.output.push(')');
             }
             Word::Switch(sw) => {
-                self.output.push('(');
+                let use_angle = angle_switch || sw.angled;
+                self.output.push(if use_angle { '〈' } else { '(' });
                 let any_multiline = sw.branches.iter().any(|br| {
                     br.value.lines.len() > 1
                         || br
@@ -900,7 +921,7 @@ impl<'a> Formatter<'a> {
                         }
                     }
                 }
-                self.output.push(')');
+                self.output.push(if use_angle { '〉' } else { ')' });
             }
             Word::Primitive(prim) => self.push(&word.span, &prim.to_string()),
             Word::Modified(m) => {
@@ -908,7 +929,7 @@ impl<'a> Formatter<'a> {
                     Modifier::Primitive(prim) => self.push(&m.modifier.span, &prim.to_string()),
                     Modifier::Ref(r) => self.format_ref(r),
                 }
-                self.format_words(&m.operands, true, depth);
+                self.format_words(&m.operands, true, depth, false);
             }
             Word::Placeholder(op) => self.push(&word.span, &op.to_string()),
             Word::Spaces => self.push(&word.span, " "),
@@ -1064,7 +1085,7 @@ impl<'a> Formatter<'a> {
             && !prevent_compact
             && !lines[0].iter().any(|word| word_is_multiline(&word.value))
         {
-            self.format_words(&lines[0], true, depth);
+            self.format_words(&lines[0], true, depth, true);
             return;
         }
         let curr_line = self.output.split('\n').last().unwrap_or_default();
@@ -1098,7 +1119,7 @@ impl<'a> Formatter<'a> {
                     }
                 }
             }
-            self.format_words(line, true, depth);
+            self.format_words(line, true, depth, true);
         }
         if !compact {
             for _ in 0..self.config.multiline_indent * depth.saturating_sub(1) {

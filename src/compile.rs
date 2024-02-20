@@ -1697,7 +1697,7 @@ code:
         if op_count == 1 {
             let operand = modified.code_operands().next().unwrap().clone();
             if let Sp {
-                value: Word::Switch(sw),
+                value: Word::Switch(sw @ Switch { angled: false, .. }),
                 span,
             } = operand
             {

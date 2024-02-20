@@ -31,12 +31,12 @@ pub enum Expectation {
     Term,
     ArgOutCount,
     ItemName,
-    Simple(AsciiToken),
+    Token(Token),
 }
 
 impl From<AsciiToken> for Expectation {
     fn from(simple: AsciiToken) -> Self {
-        Expectation::Simple(simple)
+        Expectation::Token(simple.into())
     }
 }
 
@@ -46,7 +46,8 @@ impl fmt::Display for Expectation {
             Expectation::Term => write!(f, "term"),
             Expectation::ArgOutCount => write!(f, "argument/output count"),
             Expectation::ItemName => write!(f, "item name"),
-            Expectation::Simple(s) => write!(f, "`{s}`"),
+            Expectation::Token(Simple(s)) => write!(f, "`{s}`"),
+            Expectation::Token(tok) => write!(f, "{:?}", tok),
         }
     }
 }
@@ -725,7 +726,7 @@ impl<'i> Parser<'i> {
             if let Some(arg) = self.try_func().or_else(|| self.try_strand()) {
                 // Parse switch function syntax
                 if let Word::Switch(sw) = &arg.value {
-                    if i == 0 && sw.branches.len() >= modifier.args() {
+                    if i == 0 && !sw.angled && sw.branches.len() >= modifier.args() {
                         args.push(arg);
                         break;
                     }
@@ -955,7 +956,9 @@ impl<'i> Parser<'i> {
     }
     fn try_func(&mut self) -> Option<Sp<Word>> {
         Some(if let Some(start) = self.try_exact(OpenParen) {
+            // Match initial function contents
             let first = self.func_contents();
+            // Try to match switch function branches
             let mut branches = Vec::new();
             while let Some(start) = self.try_exact(Bar) {
                 let (signature, lines, span) = self.func_contents();
@@ -1000,8 +1003,48 @@ impl<'i> Parser<'i> {
                 outer_span.sp(Word::Switch(Switch {
                     branches,
                     closed: end.value,
+                    angled: false,
                 }))
             }
+        } else if let Some(start) = self.try_exact(OpenAngle) {
+            let first = self.func_contents();
+            let mut branches = Vec::new();
+            while let Some(start) = self.try_exact(Bar) {
+                let (signature, lines, span) = self.func_contents();
+                let span = if let Some(span) = span {
+                    start.merge(span)
+                } else {
+                    start
+                };
+                let id = FunctionId::Anonymous(span.clone());
+                branches.push(span.sp(Func {
+                    id,
+                    signature,
+                    lines,
+                    closed: true,
+                }))
+            }
+            let end = self.expect_close(CloseAngle);
+            let (first_sig, first_lines, first_span) = first;
+            let outer_span = start.clone().merge(end.span);
+            let first_span = if let Some(span) = first_span {
+                start.merge(span)
+            } else {
+                start
+            };
+            let first_id = FunctionId::Anonymous(first_span.clone());
+            let first = first_span.sp(Func {
+                id: first_id,
+                signature: first_sig,
+                lines: first_lines,
+                closed: true,
+            });
+            branches.insert(0, first);
+            outer_span.sp(Word::Switch(Switch {
+                branches,
+                closed: end.value,
+                angled: true,
+            }))
         } else {
             return None;
         })
@@ -1050,12 +1093,13 @@ impl<'i> Parser<'i> {
     fn try_spaces(&mut self) -> Option<Sp<Word>> {
         self.try_exact(Spaces).map(|span| span.sp(Word::Spaces))
     }
-    fn expect_close(&mut self, ascii: AsciiToken) -> Sp<bool> {
-        if let Some(span) = self.try_exact(ascii) {
+    fn expect_close(&mut self, token: impl Into<Token>) -> Sp<bool> {
+        let token = token.into();
+        if let Some(span) = self.try_exact(token.clone()) {
             span.sp(true)
         } else {
             self.errors
-                .push(self.expected([Expectation::Term, Expectation::Simple(ascii)]));
+                .push(self.expected([Expectation::Term, Expectation::Token(token)]));
             self.prev_span().sp(false)
         }
     }

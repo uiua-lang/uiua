@@ -710,7 +710,7 @@ impl<'a> Formatter<'a> {
     fn format_ref(&mut self, r: &Ref) {
         let first = r.path.first().map(|comp| &comp.module).unwrap_or(&r.name);
         if first.value.starts_with(|c: char| c.is_lowercase())
-            && self.output.chars().last().is_some_and(|c| c.is_lowercase())
+            && (self.output.chars().last()).is_some_and(|c| c.is_lowercase() && is_ident_char(c))
         {
             self.output.push(' ');
         }

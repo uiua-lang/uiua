@@ -532,12 +532,6 @@ pub fn adjacent(env: &mut Uiua) -> UiuaResult {
     if n_abs == 0 {
         return Err(env.error("Window size cannot be zero"));
     }
-    if n_abs > xs.row_count() {
-        return Err(env.error(format!(
-            "Window size {n} is too large for axis of length {}",
-            xs.row_count()
-        )));
-    }
     let n = n_abs;
     match (f.as_flipped_primitive(env), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
@@ -610,7 +604,7 @@ where
         0 => Err(env.error("Cannot get adjacency of scalar")),
         1 => {
             if arr.row_count() < n {
-                return Err(env.error("Cannot get adjacency of array with fewer than 2 rows"));
+                return Ok(Array::new([0], EcoVec::new()));
             }
             let data = arr.data.as_mut_slice();
             for i in 0..data.len() - (n - 1) {
@@ -627,7 +621,9 @@ where
             let row_len = arr.row_len();
             let row_count = arr.row_count();
             if row_count < n {
-                return Err(env.error("Cannot get adjacency of array with fewer than 2 rows"));
+                let mut shape = arr.shape;
+                shape[0] = 0;
+                return Ok(Array::new(shape, EcoVec::new()));
             }
             let data = arr.data.as_mut_slice();
             for i in 0..row_count - (n - 1) {

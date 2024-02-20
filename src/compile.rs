@@ -46,8 +46,10 @@ pub struct Compiler {
     current_imports: Vec<PathBuf>,
     /// The bindings of imported files
     imports: HashMap<PathBuf, Import>,
-    /// Unmonomorphized modifiers
-    modifiers: HashMap<usize, Vec<Sp<Word>>>,
+    /// Unexpanded macros
+    macros: HashMap<usize, Vec<Sp<Word>>>,
+    /// The depth of macro expansion
+    macro_depth: usize,
     /// Accumulated errors
     errors: Vec<UiuaError>,
     /// Primitives that have emitted errors because they are experimental
@@ -80,7 +82,8 @@ impl Default for Compiler {
             mode: RunMode::All,
             current_imports: Vec::new(),
             imports: HashMap::new(),
-            modifiers: HashMap::new(),
+            macros: HashMap::new(),
+            macro_depth: 0,
             errors: Vec::new(),
             experimental_prim_errors: HashSet::new(),
             deprecated_prim_errors: HashSet::new(),
@@ -545,21 +548,6 @@ code:
             }
         }
         if placeholder_count > 0 || ident_margs > 0 {
-            if let Some(word) = find_word(&binding.words, |w| {
-                if let Word::Modified(m) = w {
-                    if let Modifier::Ref(r) = &m.modifier.value {
-                        if r.path.is_empty() && r.name.value == name {
-                            return true;
-                        }
-                    }
-                }
-                false
-            }) {
-                let Word::Modified(m) = &word.value else {
-                    unreachable!()
-                };
-                return Err(self.fatal_error(m.modifier.span.clone(), "Macros cannot be recursive"));
-            }
             self.scope.names.insert(name.clone(), global_index);
             self.asm.add_global_at(
                 global_index,
@@ -567,7 +555,7 @@ code:
                 Some(span.clone()),
                 comment.clone(),
             );
-            self.modifiers.insert(global_index, binding.words.clone());
+            self.macros.insert(global_index, binding.words.clone());
             return Ok(());
         }
 
@@ -1818,11 +1806,19 @@ code:
                 for (index, comp) in path_indices.into_iter().zip(&r.path) {
                     (self.asm.global_references).insert(comp.module.clone(), index);
                 }
-                let mut words = (self.modifiers.get(&index))
+                let mut words = (self.macros.get(&index))
                     .expect("modifier not found")
                     .clone();
-                self.expand_macro(&mut words, modified.operands)?;
-                let instrs = self.compile_words(words, true)?;
+                if self.macro_depth > 20 {
+                    return Err(self
+                        .fatal_error(modified.modifier.span.clone(), "Macro recursion detected"));
+                }
+                self.macro_depth += 1;
+                let instrs = self
+                    .expand_macro(&mut words, modified.operands)
+                    .and_then(|()| self.compile_words(words, true));
+                self.macro_depth -= 1;
+                let instrs = instrs?;
                 match instrs_signature(&instrs) {
                     Ok(sig) => {
                         let func =
@@ -2686,49 +2682,4 @@ fn replace_placeholders(words: &mut Vec<Sp<Word>>, next: &mut dyn FnMut() -> Sp<
         }
     }
     words.retain(|word| !matches!(word.value, Word::Placeholder(_)))
-}
-
-fn find_word(words: &[Sp<Word>], f: impl Fn(&Word) -> bool + Copy) -> Option<&Sp<Word>> {
-    for word in words {
-        if f(&word.value) {
-            return Some(word);
-        }
-        match &word.value {
-            Word::Strand(items) => {
-                if let Some(word) = find_word(items, f) {
-                    return Some(word);
-                }
-            }
-            Word::Array(arr) => {
-                for line in &arr.lines {
-                    if let Some(word) = find_word(line, f) {
-                        return Some(word);
-                    }
-                }
-            }
-            Word::Func(func) => {
-                for line in &func.lines {
-                    if let Some(word) = find_word(line, f) {
-                        return Some(word);
-                    }
-                }
-            }
-            Word::Modified(m) => {
-                if let Some(word) = find_word(&m.operands, f) {
-                    return Some(word);
-                }
-            }
-            Word::Switch(sw) => {
-                for branch in &sw.branches {
-                    for line in &branch.value.lines {
-                        if let Some(word) = find_word(line, f) {
-                            return Some(word);
-                        }
-                    }
-                }
-            }
-            _ => {}
-        }
-    }
-    None
 }

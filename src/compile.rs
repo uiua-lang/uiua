@@ -336,9 +336,7 @@ code:
 
         let mut prev_comment = None;
         for item in items {
-            if let Err(e) = self.item(item, in_test, &mut prev_comment) {
-                self.errors.push(e);
-            }
+            self.item(item, in_test, &mut prev_comment)?;
         }
         Ok(())
     }
@@ -547,6 +545,21 @@ code:
             }
         }
         if placeholder_count > 0 || ident_margs > 0 {
+            if let Some(word) = find_word(&binding.words, |w| {
+                if let Word::Modified(m) = w {
+                    if let Modifier::Ref(r) = &m.modifier.value {
+                        if r.path.is_empty() && r.name.value == name {
+                            return true;
+                        }
+                    }
+                }
+                false
+            }) {
+                let Word::Modified(m) = &word.value else {
+                    unreachable!()
+                };
+                return Err(self.fatal_error(m.modifier.span.clone(), "Macros cannot be recursive"));
+            }
             self.scope.names.insert(name.clone(), global_index);
             self.asm.add_global_at(
                 global_index,
@@ -2673,4 +2686,49 @@ fn replace_placeholders(words: &mut Vec<Sp<Word>>, next: &mut dyn FnMut() -> Sp<
         }
     }
     words.retain(|word| !matches!(word.value, Word::Placeholder(_)))
+}
+
+fn find_word(words: &[Sp<Word>], f: impl Fn(&Word) -> bool + Copy) -> Option<&Sp<Word>> {
+    for word in words {
+        if f(&word.value) {
+            return Some(word);
+        }
+        match &word.value {
+            Word::Strand(items) => {
+                if let Some(word) = find_word(items, f) {
+                    return Some(word);
+                }
+            }
+            Word::Array(arr) => {
+                for line in &arr.lines {
+                    if let Some(word) = find_word(line, f) {
+                        return Some(word);
+                    }
+                }
+            }
+            Word::Func(func) => {
+                for line in &func.lines {
+                    if let Some(word) = find_word(line, f) {
+                        return Some(word);
+                    }
+                }
+            }
+            Word::Modified(m) => {
+                if let Some(word) = find_word(&m.operands, f) {
+                    return Some(word);
+                }
+            }
+            Word::Switch(sw) => {
+                for branch in &sw.branches {
+                    for line in &branch.value.lines {
+                        if let Some(word) = find_word(line, f) {
+                            return Some(word);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    None
 }

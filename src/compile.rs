@@ -817,7 +817,7 @@ code:
     }
     pub(crate) fn import_compile(&mut self, path: &Path, span: &CodeSpan) -> UiuaResult<PathBuf> {
         let path = self.resolve_import_path(Path::new(&path));
-        if self.asm.import_inputs.get(&path).is_some() {
+        if self.imports.get(&path).is_some() {
             return Ok(path);
         }
         let bytes = self
@@ -834,7 +834,6 @@ code:
         let input: EcoString = String::from_utf8(bytes)
             .map_err(|e| self.fatal_error(span.clone(), format!("Failed to read file: {e}")))?
             .into();
-        self.asm.import_inputs.insert(path.clone(), input.clone());
         if self.current_imports.iter().any(|p| p == &path) {
             return Err(self.fatal_error(
                 span.clone(),

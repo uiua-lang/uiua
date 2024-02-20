@@ -8,11 +8,12 @@ site/dist
 *.png
 !*/uiua-logo.png
 
-main.ua
+*.ua
 *.uasm
 *.dll
 profile.yaml
 uiua.tmLanguage.json
+!/tests
 
 # symlink created by `nix build`
 result

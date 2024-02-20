@@ -280,7 +280,7 @@ pub fn ImagesAndGifs() -> impl IntoView {
         <p>"If you use the native interpreter, arrays will not be automatically converted into images or GIFs like they are on the website. To generate them, you must explicitly call certain system functions."</p>
         <p>"You can find lists of "<A href="/docs/imag">"image"</A>" and "<A href="/docs/gif">"GIF"</A>" system functions on the main docs page."</p>
         <p>"One system function that is particularly useful on the website is "<Prim prim=Sys(SysOp::GifShow)/>", which lets you set the framerate of a GIF."</p>
-        <Editor example="÷2+1○×τ÷:⇡.30\n∵(⍉[⍉..]⊞× ⊃∘(+○) ÷:⇡.80)\n&gifs 30"/>
+        <Editor example="÷2+1○×τ÷:⇡.30\n∵(⍉[⍉..]⊞× ⟜(+○) ÷:⇡.80)\n&gifs 30"/>
     }
 }
 

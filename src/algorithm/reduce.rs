@@ -650,10 +650,8 @@ fn generic_adjacent(f: Function, xs: Value, n: usize, env: &mut Uiua) -> UiuaRes
         )));
     }
     if xs.row_count() < n {
-        return Err(env.error(format!(
-            "Window size {n} is too large for axis of length {}",
-            xs.row_count()
-        )));
+        env.push(xs.first_dim_zero());
+        return Ok(());
     }
     let win_count = xs.row_count() - (n - 1);
     let mut rows = xs.into_rows();

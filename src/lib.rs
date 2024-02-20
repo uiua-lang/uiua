@@ -192,12 +192,16 @@ mod tests {
                     .and_then(|comp| env.run_asm(&comp.finish()))
                 {
                     panic!("Test failed in {}:\n{}", path.display(), e.report());
-                } else if let Some(diag) = comp
+                }
+                if let Some(diag) = comp
                     .take_diagnostics()
                     .into_iter()
                     .find(|d| d.kind < DiagnosticKind::Advice)
                 {
                     panic!("Test failed in {}:\n{}", path.display(), diag.report());
+                }
+                if env.run_str("◌").is_ok() {
+                    panic!("{} had a non-empty stack", path.display());
                 }
             }
         }

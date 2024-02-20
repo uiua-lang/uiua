@@ -992,7 +992,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <p>"One simple example is getting "<code>"n"</code>" numbers between "<code>"0"</code>" and "<code>"1"</code>". One way you may think to solve this is with "<Prim prim=Dup/>" and "<Prim prim=Flip/>"."</p>
         <Editor example="÷:⇡. 5"/>
         <p>"This is a perfectly valid solution! However, when the first function you call is dyadic, it can get a little trickier. For example, if you wanted to get all the integers between two numbers, you may try either of the following:"</p>
-        <Editor example="+⇡-,: 3 8\n+⊃∘(⇡-) 3 8"/>
+        <Editor example="+⇡-,: 3 8\n+⊃∘(⇡-) 3 8"/> // Should fail
         <p>"As the style diagnostics tell you, there is a better way."</p>
         <p>"The "<Prim prim=On/>" modifier calls a function but keeps its first argument on top of the stack. This can be used in both of the above examples."</p>
         <Editor example="÷⟜⇡ 5"/>

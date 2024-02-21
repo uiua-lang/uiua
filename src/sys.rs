@@ -3,7 +3,7 @@ use std::{
     fmt,
     io::{stderr, stdin, Read, Write},
     mem::take,
-    path::Path,
+    path::{Path, PathBuf},
     sync::{Arc, OnceLock},
     time::Duration,
 };
@@ -797,6 +797,12 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         args: &[Value],
     ) -> Result<Value, String> {
         Err("FFI is not supported in this environment".into())
+    }
+    /// Load a git repo as a module
+    ///
+    /// The returned path should be loadable via [`SysBackend::file_read_all`]
+    fn load_git_module(&self, url: &str) -> Result<PathBuf, String> {
+        Err("Loading git modules is not supported in this environment".into())
     }
 }
 

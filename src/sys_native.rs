@@ -4,7 +4,7 @@ use std::{
     fs::{self, File},
     io::{stderr, stdin, stdout, Read, Write},
     net::*,
-    path::Path,
+    path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     slice,
     sync::atomic::{self, AtomicU64},
@@ -30,6 +30,7 @@ struct GlobalNativeSys {
     tcp_listeners: DashMap<Handle, TcpListener>,
     tcp_sockets: DashMap<Handle, Buffered<TcpStream>>,
     hostnames: DashMap<Handle, String>,
+    git_paths: DashMap<String, PathBuf>,
     #[cfg(feature = "audio")]
     audio_stream_time: parking_lot::Mutex<Option<f64>>,
     #[cfg(feature = "audio")]
@@ -57,6 +58,7 @@ impl Default for GlobalNativeSys {
             tcp_listeners: DashMap::new(),
             tcp_sockets: DashMap::new(),
             hostnames: DashMap::new(),
+            git_paths: DashMap::new(),
             #[cfg(feature = "audio")]
             audio_stream_time: parking_lot::Mutex::new(None),
             #[cfg(feature = "audio")]
@@ -618,6 +620,35 @@ impl SysBackend for NativeSys {
         NATIVE_SYS
             .ffi
             .do_ffi(file, return_ty, name, arg_tys, arg_values)
+    }
+    fn load_git_module(&self, url: &str) -> Result<PathBuf, String> {
+        if let Some(path) = NATIVE_SYS.git_paths.get(url) {
+            return Ok(path.clone());
+        }
+        let mut parts = url.rsplitn(3, '/');
+        let repo_name = parts.next().ok_or("Invalid git url")?;
+        let repo_owner = parts.next().ok_or("Invalid git url")?;
+        let parent_path = Path::new("uiua-modules").join(repo_owner);
+        if !parent_path.exists() {
+            fs::create_dir_all(&parent_path).map_err(|e| e.to_string())?;
+        }
+        let current_dir = env::current_dir().map_err(|e| e.to_string())?;
+        let res = (move || {
+            env::set_current_dir(&parent_path).map_err(|e| e.to_string())?;
+            if !Path::new(repo_name).exists() {
+                let status = Command::new("git")
+                    .args(["clone", url])
+                    .spawn()
+                    .and_then(|mut c| c.wait())
+                    .map_err(|e| e.to_string())?;
+                if !status.success() {
+                    return Err("Failed to clone git repository".to_string());
+                }
+            }
+            Ok(parent_path.join(repo_name).join("lib.ua"))
+        })();
+        env::set_current_dir(current_dir).map_err(|e| e.to_string())?;
+        res
     }
 }
 

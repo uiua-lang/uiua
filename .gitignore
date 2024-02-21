@@ -3,6 +3,7 @@
 /target
 /docs
 site/dist
+/uiua_modules
 
 *.wav
 *.png

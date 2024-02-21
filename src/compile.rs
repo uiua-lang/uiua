@@ -438,7 +438,7 @@ code:
             }
             Item::Import(import) => {
                 // Import module
-                let module = self.import_compile(import.path.value.as_ref(), &import.path.span)?;
+                let module = self.import_compile(&import.path.value, &import.path.span)?;
                 // Bind name
                 if let Some(name) = &import.name {
                     let imported = self.imports.get(&module).unwrap();
@@ -815,8 +815,15 @@ code:
         self.asm.bind_function(index, function, span, comment);
         Ok(())
     }
-    pub(crate) fn import_compile(&mut self, path: &Path, span: &CodeSpan) -> UiuaResult<PathBuf> {
-        let path = self.resolve_import_path(Path::new(&path));
+    pub(crate) fn import_compile(&mut self, path: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
+        let path = if let Some(mut url) = path.strip_prefix("git:") {
+            url = url.trim();
+            self.backend
+                .load_git_module(url)
+                .map_err(|e| self.fatal_error(span.clone(), e))?
+        } else {
+            self.resolve_import_path(Path::new(path))
+        };
         if self.imports.get(&path).is_some() {
             return Ok(path);
         }

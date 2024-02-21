@@ -623,7 +623,9 @@ impl SysBackend for NativeSys {
     }
     fn load_git_module(&self, url: &str) -> Result<PathBuf, String> {
         if let Some(path) = NATIVE_SYS.git_paths.get(url) {
-            return path.clone();
+            if path.is_err() || path.as_ref().unwrap().exists() {
+                return path.clone();
+            }
         }
         let mut parts = url.rsplitn(3, '/');
         let repo_name = parts.next().ok_or("Invalid git url")?;

@@ -766,7 +766,7 @@ fn TutorialBindings() -> impl IntoView {
         <h1>"Bindings"</h1>
         <p>"Bindings are global names that can be given to Uiua values. They are denoted with "<code>"←"</code>", which the formatter will convert from "<code>"="</code>" when appropriate."</p>
         <Editor example="a = 3\nb ← 5\n+ a b" help={&["", "Try running to format the ="]}/>
-        <p>"Valid binding names can be made up of any sequence of uppercase or lowercase alphabetic characters OR a single non-alphanumeric character that is not already used for a Uiua function."</p>
+        <p>"Valid binding names can be made up of any sequence of uppercase or lowercase alphabetic characters OR a single non-alphanumeric character that is not already used for a Uiua function or syntax."</p>
         <Editor example="NumOne ← 1\nNumTwo ← 2\n😀 ← \"happy\""/>
         <p><em>"Warning"</em>": It is not guaranteed that any particular non-alphanumeric character will not be used for a built-in function in the future. Use them at your own risk. Emojis are safe though."</p>
         <p>"Unlike most programming languages, binding names in Uiua "<em>"cannot"</em>" contain numbers or underscores."</p>

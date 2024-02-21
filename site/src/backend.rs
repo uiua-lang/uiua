@@ -207,7 +207,7 @@ impl SysBackend for WebBackend {
                 Ok(path)
             }
             Some(Err(err)) => Err(err),
-            None => Err("Waiting for module...".into()),
+            None => Err("Waiting for module, try running to check...".into()),
         }
     }
 }

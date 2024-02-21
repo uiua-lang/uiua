@@ -1,8 +1,6 @@
 # Uiua Todo
 
 - 0.9
-  - `fill` inputs for `inventory`
-  - Make `content` compile to `un` `box`es
   - Release it!
 - Site pages/tutorials
   - Duality of `pick` and `select`

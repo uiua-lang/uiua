@@ -2349,25 +2349,87 @@ code:
                 }
             }
             Reduce => {
+                // Reduce content
                 let operand = modified.code_operands().next().cloned().unwrap();
-                let mut instrs = self.compile_operand_word(operand)?.0;
-                if let [Instr::PushFunc(_), Instr::Prim(Content, span)] = instrs.as_slice() {
-                    let span = *span;
-                    *instrs.make_mut().last_mut().unwrap() =
-                        Instr::ImplPrim(ImplPrimitive::ReduceContent, span);
-                    let sig = instrs_signature(&instrs).unwrap_or(Signature::new(1, 1));
-                    if call {
-                        self.push_all_instrs(instrs);
-                    } else {
-                        let func = self.add_function(
-                            FunctionId::Anonymous(modified.modifier.span.clone()),
-                            sig,
-                            instrs,
-                        );
-                        self.push_instr(Instr::PushFunc(func));
-                    }
-                } else {
+                let Word::Modified(m) = &operand.value else {
                     return Ok(false);
+                };
+                let Modifier::Primitive(Content) = &m.modifier.value else {
+                    return Ok(false);
+                };
+                if m.code_operands().count() != 1 {
+                    return Ok(false);
+                }
+                let operand = m.code_operands().next().cloned().unwrap();
+                let (content_instrs, sig) = self.compile_operand_word(operand)?;
+                if sig.args == 1 {
+                    self.emit_diagnostic(
+                        format!(
+                            "{} with a monadic function is deprecated. \
+                                        Prefer {} with stack array notation, i.e. `°[⊙⊙∘]`",
+                            Primitive::Reduce.format(),
+                            Primitive::Un.format()
+                        ),
+                        DiagnosticKind::Warning,
+                        modified.modifier.span.clone(),
+                    );
+                }
+                let content_func = self.add_function(
+                    FunctionId::Anonymous(m.modifier.span.clone()),
+                    sig,
+                    content_instrs,
+                );
+                let span = self.add_span(modified.modifier.span.clone());
+                let instrs = eco_vec![
+                    Instr::PushFunc(content_func),
+                    Instr::ImplPrim(ImplPrimitive::ReduceContent, span),
+                ];
+                if call {
+                    self.push_all_instrs(instrs);
+                } else {
+                    let func = self.add_function(
+                        FunctionId::Anonymous(modified.modifier.span.clone()),
+                        Signature::new(1, 1),
+                        instrs,
+                    );
+                    self.push_instr(Instr::PushFunc(func));
+                }
+            }
+            Content => {
+                let operand = modified.code_operands().next().cloned().unwrap();
+                let (instrs, sig) = self.compile_operand_word(operand)?;
+                let mut prefix = EcoVec::new();
+                let span = self.add_span(modified.modifier.span.clone());
+                if sig.args > 0 {
+                    if sig.args > 1 {
+                        prefix.push(Instr::PushTemp {
+                            stack: TempStack::Inline,
+                            count: sig.args - 1,
+                            span,
+                        });
+                        for _ in 0..sig.args - 1 {
+                            prefix.extend([
+                                Instr::ImplPrim(ImplPrimitive::InvBox, span),
+                                Instr::PopTemp {
+                                    stack: TempStack::Inline,
+                                    count: 1,
+                                    span,
+                                },
+                            ]);
+                        }
+                    }
+                    prefix.push(Instr::ImplPrim(ImplPrimitive::InvBox, span));
+                }
+                prefix.extend(instrs);
+                if call {
+                    self.push_all_instrs(prefix);
+                } else {
+                    let func = self.add_function(
+                        FunctionId::Anonymous(modified.modifier.span.clone()),
+                        sig,
+                        prefix,
+                    );
+                    self.push_instr(Instr::PushFunc(func));
                 }
             }
             Stringify => {

@@ -611,11 +611,7 @@ impl Primitive {
                 env.with_pack(|env| env.call(f))?;
             }
             Primitive::Content => {
-                let f = env.pop_function()?;
-                for val in env.stack_mut().iter_mut().rev().take(f.signature().args) {
-                    val.unbox();
-                }
-                env.call(f)?;
+                return Err(env.error("Content was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Fill => {
                 let fill = env.pop_function()?;

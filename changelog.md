@@ -25,6 +25,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This makes it easier to either provide a default value, process the error itself, or do something different with the inputs
 - A [`fill ⬚`](https://uiua.org/docs/fill) value set outside a looping modifier will now no longer be available inside the loop
   - This should make it easier to scope [`fill ⬚`](https://uiua.org/docs/fill) correctly
+- [`fill ⬚`](https://uiua.org/docs/fill) can now match the lengths of inputs to [`rows ≡`](https://uiua.org/docs/rows)
 - Add recursion via refering to a binding's name within its body
   - Deprecate [`this ↬`](https://uiua.org/docs/this) and [`recur ↫`](https://uiua.org/docs/recur), as they are no longer necessary
 - Extend some math functions to work with characters

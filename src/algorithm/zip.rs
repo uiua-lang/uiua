@@ -1,15 +1,16 @@
 //! Algorithms for zipping modifiers
 
-use std::slice;
+use std::{iter::repeat, slice};
 
 use ecow::{eco_vec, EcoVec};
 
 use crate::{
     algorithm::pervade::bin_pervade_generic, function::Function, random, value::Value, Array,
-    Boxed, FormatShape, ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult,
+    ArrayValue, Boxed, Complex, FormatShape, ImplPrimitive, Instr, Primitive, Shape, Uiua,
+    UiuaResult,
 };
 
-use super::{multi_output, MultiOutput};
+use super::{multi_output, FillContext, MultiOutput};
 
 type ValueUnFn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
 type ValueBinFn = Box<dyn Fn(Value, Value, usize, usize, &mut Uiua) -> UiuaResult<Value>>;
@@ -437,10 +438,87 @@ fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
+fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
     let outputs = f.signature().outputs;
     match (xs.row_count(), ys.row_count()) {
-        (a, b) if a == b => {
+        (_, 1) if !xs.length_is_fillable(env) => {
+            let ys = ys.into_rows().next().unwrap();
+            let is_empty = outputs > 0 && xs.row_count() == 0;
+            let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
+            env.without_fill(|env| -> UiuaResult {
+                if is_empty {
+                    env.push(ys.proxy_row(env));
+                    env.push(xs.proxy_row(env));
+                    _ = env.call_maintain_sig(f);
+                    for i in 0..outputs {
+                        new_rows[i].push(env.pop("rows's function result")?);
+                    }
+                } else {
+                    for x in xs.into_rows() {
+                        env.push(ys.clone());
+                        env.push(x);
+                        env.call(f.clone())?;
+                        for i in 0..outputs {
+                            new_rows[i].push(env.pop("rows's function result")?);
+                        }
+                    }
+                }
+                Ok(())
+            })?;
+            for new_rows in new_rows.into_iter().rev() {
+                let mut val = Value::from_row_values(new_rows, env)?;
+                if is_empty {
+                    val.pop_row();
+                }
+                env.push(val);
+            }
+            Ok(())
+        }
+        (1, _) if !ys.length_is_fillable(env) => {
+            let xs = xs.into_rows().next().unwrap();
+            let is_empty = outputs > 0 && ys.row_count() == 0;
+            let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
+            env.without_fill(|env| -> UiuaResult {
+                if is_empty {
+                    env.push(ys.proxy_row(env));
+                    env.push(xs.proxy_row(env));
+                    _ = env.call_maintain_sig(f);
+                    for i in 0..outputs {
+                        new_rows[i].push(env.pop("rows's function result")?);
+                    }
+                } else {
+                    for y in ys.into_rows() {
+                        env.push(y);
+                        env.push(xs.clone());
+                        env.call(f.clone())?;
+                        for i in 0..outputs {
+                            new_rows[i].push(env.pop("rows's function result")?);
+                        }
+                    }
+                }
+                Ok(())
+            })?;
+            for new_rows in new_rows.into_iter().rev() {
+                let mut val = Value::from_row_values(new_rows, env)?;
+                if is_empty {
+                    val.pop_row();
+                }
+                env.push(val);
+            }
+            Ok(())
+        }
+        (a, b) => {
+            if a != b {
+                if let Err(e) = xs
+                    .fill_length_to(ys.row_count(), env)
+                    .and_then(|()| ys.fill_length_to(xs.row_count(), env))
+                {
+                    return Err(env.error(format!(
+                        "Cannot {} arrays with different number of rows {a} and {b}{e}",
+                        Primitive::Rows.format(),
+                    )));
+                }
+            }
             if let Some((f, a, b)) = f_dy_fast_fn(f.instrs(env), env) {
                 let val = f(xs, ys, a + 1, b + 1, env)?;
                 env.push(val);
@@ -480,87 +558,26 @@ fn rows2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             }
             Ok(())
         }
-        (_, 1) => {
-            let ys = ys.into_rows().next().unwrap();
-            let is_empty = outputs > 0 && xs.row_count() == 0;
-            let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-            env.without_fill(|env| -> UiuaResult {
-                if is_empty {
-                    env.push(ys.proxy_row(env));
-                    env.push(xs.proxy_row(env));
-                    _ = env.call_maintain_sig(f);
-                    for i in 0..outputs {
-                        new_rows[i].push(env.pop("rows's function result")?);
-                    }
-                } else {
-                    for x in xs.into_rows() {
-                        env.push(ys.clone());
-                        env.push(x);
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?);
-                        }
-                    }
-                }
-                Ok(())
-            })?;
-            for new_rows in new_rows.into_iter().rev() {
-                let mut val = Value::from_row_values(new_rows, env)?;
-                if is_empty {
-                    val.pop_row();
-                }
-                env.push(val);
-            }
-            Ok(())
-        }
-        (1, _) => {
-            let xs = xs.into_rows().next().unwrap();
-            let is_empty = outputs > 0 && ys.row_count() == 0;
-            let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
-            env.without_fill(|env| -> UiuaResult {
-                if is_empty {
-                    env.push(ys.proxy_row(env));
-                    env.push(xs.proxy_row(env));
-                    _ = env.call_maintain_sig(f);
-                    for i in 0..outputs {
-                        new_rows[i].push(env.pop("rows's function result")?);
-                    }
-                } else {
-                    for y in ys.into_rows() {
-                        env.push(y);
-                        env.push(xs.clone());
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?);
-                        }
-                    }
-                }
-                Ok(())
-            })?;
-            for new_rows in new_rows.into_iter().rev() {
-                let mut val = Value::from_row_values(new_rows, env)?;
-                if is_empty {
-                    val.pop_row();
-                }
-                env.push(val);
-            }
-            Ok(())
-        }
-        (a, b) => Err(env.error(format!(
-            "Cannot {} arrays with different number of rows {a} and {b}",
-            Primitive::Rows.format(),
-        ))),
     }
 }
 
-fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+fn rowsn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for a in 0..args.len() {
+        let a_can_fill = args[a].length_is_fillable(env);
         for b in a + 1..args.len() {
-            if !(args[a].row_count() == 1 || args[b].row_count() == 1)
-                && args[a].row_count() != args[b].row_count()
-            {
+            let b_can_fill = args[b].length_is_fillable(env);
+            let mut err = None;
+            if a_can_fill {
+                let b_row_count = args[b].row_count();
+                err = args[a].fill_length_to(b_row_count, env).err();
+            }
+            if err.is_none() && b_can_fill {
+                let a_row_count = args[a].row_count();
+                err = args[b].fill_length_to(a_row_count, env).err();
+            }
+            if let Some(e) = err {
                 return Err(env.error(format!(
-                    "Cannot {} arrays with different number of rows {} and {}",
+                    "Cannot {} arrays with different number of rows {} and {}{e}",
                     Primitive::Rows.format(),
                     args[a].row_count(),
                     args[b].row_count(),
@@ -1009,5 +1026,50 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 Primitive::Inventory.format(),
             ))),
         },
+    }
+}
+
+impl Value {
+    pub(crate) fn length_is_fillable<C>(&self, ctx: &C) -> bool
+    where
+        C: FillContext,
+    {
+        match self {
+            Value::Num(_) => ctx.scalar_fill::<f64>().is_ok(),
+            #[cfg(feature = "bytes")]
+            Value::Byte(_) => ctx.scalar_fill::<u8>().is_ok(),
+            Value::Complex(_) => ctx.scalar_fill::<Complex>().is_ok(),
+            Value::Char(_) => ctx.scalar_fill::<char>().is_ok(),
+            Value::Box(_) => ctx.scalar_fill::<Boxed>().is_ok(),
+        }
+    }
+    pub(crate) fn fill_length_to<C>(&mut self, len: usize, ctx: &C) -> Result<(), &'static str>
+    where
+        C: FillContext,
+    {
+        match self {
+            Value::Num(arr) => arr.fill_length_to(len, ctx),
+            #[cfg(feature = "bytes")]
+            Value::Byte(arr) => arr.fill_length_to(len, ctx),
+            Value::Complex(arr) => arr.fill_length_to(len, ctx),
+            Value::Char(arr) => arr.fill_length_to(len, ctx),
+            Value::Box(arr) => arr.fill_length_to(len, ctx),
+        }
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    pub(crate) fn fill_length_to<C>(&mut self, len: usize, ctx: &C) -> Result<(), &'static str>
+    where
+        C: FillContext,
+    {
+        if self.row_count() >= len {
+            return Ok(());
+        }
+        let fill = ctx.scalar_fill::<T>()?;
+        let more_elems = (len - self.row_count()) * self.row_len();
+        self.data.reserve(more_elems);
+        self.data.extend(repeat(fill).take(more_elems));
+        Ok(())
     }
 }

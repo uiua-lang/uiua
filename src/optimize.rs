@@ -151,13 +151,6 @@ pub(crate) fn optimize_instrs_mut(
                 instrs.push(instr);
             }
         }
-        // Content id
-        ([.., Instr::PushFunc(f)], Instr::Prim(Content, span))
-            if f.as_flipped_primitive(asm) == Some((Identity, false)) =>
-        {
-            instrs.pop();
-            instrs.push(Instr::ImplPrim(ImplPrimitive::InvBox, span));
-        }
         (_, instr) => instrs.push(instr),
     }
 }

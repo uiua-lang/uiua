@@ -37,7 +37,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`inventory ⍚`](https://uiua.org/docs/inventory) modifier, which iterates over the unboxed items of an array and re-boxes the results
   - This shortens a lot of box array code
 - Change [`content ◇`](https://uiua.org/docs/content)'s glyph to reflect its relationship with [`inventory ⍚`](https://uiua.org/docs/inventory). Code using `⊔` will continue to work and will be formatted as `◇`.
-- Custom modifiers with 2 or more arguments can now use `‼` at the end of their names. Modifier names with any combination of `!` and `‼` will be automatically parsed and formatted as `‼`s followed by one `!` if necessary.
+- Macros with 2 or more arguments can now use `‼` at the end of their names. Macro names with any combination of `!` and `‼` will be automatically parsed and formatted as `‼`s followed by one `!` if necessary.
 - `f` can now be used at the beginning of planet notation shorthand for [`fork ⊃`](https://uiua.org/docs/fork)
 - Inline functions are no longer required to be in a binding or modifier
   - This allows arbitrary code to be wrapped and marked with a signature

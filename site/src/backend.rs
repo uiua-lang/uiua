@@ -7,10 +7,12 @@ use std::{
     sync::Mutex,
 };
 
+use crate::{editor::get_ast_time, weewuh};
 use leptos::*;
 use uiua::{example_ua, Report, SysBackend};
-
-use crate::{editor::get_ast_time, weewuh};
+use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::JsFuture;
+use web_sys::{Request, RequestInit, RequestMode, Response};
 
 pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
@@ -24,6 +26,7 @@ thread_local! {
         (PathBuf::from("example.ua"),
         example_ua(|ex| ex.clone()).into())
     ].into());
+    static REQ: RefCell<Option<FetchReq>> = RefCell::new(None);
 }
 
 pub fn drop_file(path: PathBuf, contents: Vec<u8>) {
@@ -175,4 +178,78 @@ impl SysBackend for WebBackend {
         while (instant::now() - start) / 1000.0 < seconds {}
         Ok(())
     }
+    fn load_git_module(&self, url: &str) -> Result<PathBuf, String> {
+        let mut parts = url.rsplitn(3, '/');
+        let repo_name = parts.next().ok_or("Invalid git url")?;
+        let repo_owner = parts.next().ok_or("Invalid git url")?;
+        let path = Path::new("uiua-modules")
+            .join(repo_owner)
+            .join(repo_name)
+            .join("lib.ua");
+        if DROPPED_FILES.with(|dropped_files| dropped_files.borrow().contains_key(&path)) {
+            return Ok(path);
+        }
+        let mut url = url
+            .trim_end_matches('/')
+            .replace("www.", "")
+            .replace("github.com", "raw.githubusercontent.com")
+            .replace("src/branch/master", "raw/branch/master");
+        if !url.ends_with(".ua") {
+            url = format!("{url}/main/lib.ua");
+        }
+        logging::log!("url: {url}");
+        let res = try_fetch_sync(&url);
+        logging::log!("res: {res:?}");
+        match res {
+            Some(Ok(text)) => {
+                let contents = text.as_bytes().to_vec();
+                drop_file(path.clone(), contents);
+                Ok(path)
+            }
+            Some(Err(err)) => Err(err),
+            None => Err("Waiting for module...".into()),
+        }
+    }
+}
+
+struct FetchReq {
+    src: String,
+    resouce: Resource<(), Result<String, String>>,
+}
+
+// M ~ "git: https://github.com/uiua-lang/example_module"
+
+pub fn try_fetch_sync(src: &str) -> Option<Result<String, String>> {
+    REQ.with(|req| {
+        let mut req = req.borrow_mut();
+        if let Some(req) = req.as_mut().filter(|req| req.src == src) {
+            req.resouce.get()
+        } else {
+            let src = src.to_string();
+            *req = Some(FetchReq {
+                src: src.clone(),
+                resouce: create_resource(
+                    || (),
+                    move |_| {
+                        let src = src.clone();
+                        async move { fetch(&src).await.map_err(|e| format!("{e:?}")) }
+                    },
+                ),
+            });
+            None
+        }
+    })
+}
+
+pub async fn fetch(src: &str) -> Result<String, JsValue> {
+    let mut opts = RequestInit::new();
+    opts.method("GET");
+    opts.mode(RequestMode::Cors);
+    let request = Request::new_with_str_and_init(src, &opts)?;
+    let window = web_sys::window().unwrap();
+    let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
+    assert!(resp_value.is_instance_of::<Response>());
+    let resp: Response = resp_value.dyn_into().unwrap();
+    let text = JsFuture::from(resp.text()?).await?.as_string().unwrap();
+    Ok(text)
 }

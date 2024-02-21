@@ -4,11 +4,8 @@ use comrak::{
 };
 use leptos::*;
 use uiua::Primitive;
-use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::JsFuture;
-use web_sys::{Request, RequestInit, RequestMode, Response};
 
-use crate::{editor::Editor, NotFound, Prim};
+use crate::{backend::fetch, editor::Editor, NotFound, Prim};
 
 #[component]
 #[allow(unused_braces)]
@@ -31,19 +28,6 @@ pub fn Fetch<S: Into<String>, F: Fn(&str) -> View + 'static>(src: S, f: F) -> im
             None => view! {<h3 class="running-text">"Loading..."</h3>}.into_view(),
         }
     }}
-}
-
-async fn fetch(src: &str) -> Result<String, JsValue> {
-    let mut opts = RequestInit::new();
-    opts.method("GET");
-    opts.mode(RequestMode::Cors);
-    let request = Request::new_with_str_and_init(src, &opts)?;
-    let window = web_sys::window().unwrap();
-    let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
-    assert!(resp_value.is_instance_of::<Response>());
-    let resp: Response = resp_value.dyn_into().unwrap();
-    let text = JsFuture::from(resp.text()?).await?.as_string().unwrap();
-    Ok(text)
 }
 
 pub fn markdown(text: &str) -> View {

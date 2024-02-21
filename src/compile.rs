@@ -816,10 +816,20 @@ code:
         Ok(())
     }
     pub(crate) fn import_compile(&mut self, path: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
-        let path = if let Some(mut url) = path.strip_prefix("git:") {
-            url = url.trim();
+        let path = if let Some(url) = path.strip_prefix("git:") {
+            if !self.scope.experimental {
+                return Err(self.fatal_error(
+                    span.clone(),
+                    "Git imports are experimental. To use them, add \
+                    `# Experimental!` to the top of the file.",
+                ));
+            }
+            let mut url = url.trim().to_string();
+            if !(url.starts_with("https://") || url.starts_with("http://")) {
+                url = format!("https://{url}");
+            }
             self.backend
-                .load_git_module(url)
+                .load_git_module(&url)
                 .map_err(|e| self.fatal_error(span.clone(), e))?
         } else {
             self.resolve_import_path(Path::new(path))

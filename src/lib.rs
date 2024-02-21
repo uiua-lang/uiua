@@ -175,33 +175,72 @@ pub type Ident = EcoString;
 
 #[cfg(test)]
 mod tests {
+    use std::path::*;
+    fn test_files(filter: impl Fn(&Path) -> bool) -> impl Iterator<Item = PathBuf> {
+        std::fs::read_dir("tests")
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(move |path| {
+                path.is_file() && path.extension().is_some_and(|s| s == "ua") && filter(path)
+            })
+    }
+
     #[test]
     #[cfg(feature = "native_sys")]
     fn suite() {
         use super::*;
-        for entry in std::fs::read_dir("tests").unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            if path.is_file() && path.extension().is_some_and(|s| s == "ua") {
-                let code = std::fs::read_to_string(&path).unwrap();
-                // Run code
+        for path in test_files(|path| {
+            !(path.file_stem().unwrap())
+                .to_string_lossy()
+                .contains("error")
+        }) {
+            let code = std::fs::read_to_string(&path).unwrap();
+            let mut env = Uiua::with_native_sys();
+            let mut comp = Compiler::new();
+            if let Err(e) = comp
+                .load_str_src(&code, &path)
+                .and_then(|comp| env.run_asm(&comp.finish()))
+            {
+                panic!("Test failed in {}:\n{}", path.display(), e.report());
+            }
+            if let Some(diag) = comp
+                .take_diagnostics()
+                .into_iter()
+                .find(|d| d.kind < DiagnosticKind::Advice)
+            {
+                panic!("Test failed in {}:\n{}", path.display(), diag.report());
+            }
+            if env.run_str("◌").is_ok() {
+                panic!("{} had a non-empty stack", path.display());
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "native_sys")]
+    fn errors() {
+        use super::*;
+        for path in test_files(|path| {
+            (path.file_stem().unwrap())
+                .to_string_lossy()
+                .contains("error")
+        }) {
+            let mut code = std::fs::read_to_string(&path).unwrap();
+            if code.contains('\r') {
+                code = code.replace('\r', "");
+            }
+            for section in code.split("\n\n") {
                 let mut env = Uiua::with_native_sys();
                 let mut comp = Compiler::new();
-                if let Err(e) = comp
-                    .load_str_src(&code, &path)
-                    .and_then(|comp| env.run_asm(&comp.finish()))
-                {
-                    panic!("Test failed in {}:\n{}", path.display(), e.report());
-                }
-                if let Some(diag) = comp
-                    .take_diagnostics()
-                    .into_iter()
-                    .find(|d| d.kind < DiagnosticKind::Advice)
-                {
-                    panic!("Test failed in {}:\n{}", path.display(), diag.report());
-                }
-                if env.run_str("◌").is_ok() {
-                    panic!("{} had a non-empty stack", path.display());
+                let res = comp
+                    .load_str_src(section, &path)
+                    .and_then(|comp| env.run_asm(&comp.finish()));
+                if res.is_ok() {
+                    panic!(
+                        "Test succeeded when it should have failed in {}:\n{}",
+                        path.display(),
+                        section
+                    );
                 }
             }
         }
@@ -210,13 +249,9 @@ mod tests {
     #[test]
     fn lsp_spans() {
         use super::*;
-        for entry in std::fs::read_dir("tests").unwrap() {
-            let entry = entry.unwrap();
-            let path = entry.path();
-            if path.is_file() && path.extension().is_some_and(|s| s == "ua") {
-                let code = std::fs::read_to_string(&path).unwrap();
-                spans(&code);
-            }
+        for path in test_files(|_| true) {
+            let code = std::fs::read_to_string(&path).unwrap();
+            spans(&code);
         }
     }
 

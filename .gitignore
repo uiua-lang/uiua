@@ -13,7 +13,7 @@ site/dist
 *.dll
 profile.yaml
 uiua.tmLanguage.json
-!/tests
+!/tests/*
 
 # symlink created by `nix build`
 result

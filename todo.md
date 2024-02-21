@@ -5,7 +5,7 @@
   - Make `content` compile to `un` `box`es
   - Release it!
 - Site pages/tutorials
-  - Duality of `pick` and `fill`
+  - Duality of `pick` and `select`
   - Stack-source locality
 - Changle how function inlining works
   - Prevent inlining of large functions

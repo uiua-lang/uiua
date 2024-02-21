@@ -1889,7 +1889,7 @@ code:
                 self.emit_diagnostic(
                     format!(
                         "{} with a monadic function is deprecated. \
-                        Prefer {} with stack array notation.",
+                        Prefer {} with stack array notation, i.e. `°[⊙⊙∘]`",
                         Primitive::Reduce.format(),
                         Primitive::Un.format()
                     ),

@@ -1,13 +1,12 @@
 # Uiua Todo
 
 - 0.9
+  - `fill` inputs for `each` and `inventory`
+  - Make `content` compile to `un` `box`es
   - Release it!
-- 0.10
-  - `under` switch function
-  - Procedural macros
-  - Alternate switch function brackets? 
-    - `〈 〉` these things
-    - Would format from `((…|…))`?
+- Site pages/tutorials
+  - Duality of `pick` and `select`
+  - Stack-source locality
 - Changle how function inlining works
   - Prevent inlining of large functions
   - If a function is inlinable, don't actually put it in the assembly instructions

@@ -49,7 +49,7 @@ pub fn Site() -> impl IntoView {
         view!(<a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
         view! {
             <div style="font-style: normal">
-                <a href="/docs/advancedstack#planet-notation" style="text-decoration: none">"🌍🪐"</a>" "
+                <a href="/tutorial/advancedstack#planet-notation" style="text-decoration: none">"🌍🪐"</a>" "
                 <code style="font-style: normal">
                     <span class="monadic-modifier">"⋅⋅⊙⋅⋅"</span>
                     <span class="stack-function">"∘"</span>

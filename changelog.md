@@ -12,6 +12,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Overhaul the module system
   - Details can be found in the updated [Modules](https://uiua.org/tutorial/modules) tutorial
   - Deprecate [`&i`](https://uiua.org/docs/&i), as it is no longer necessary
+  - Enabling experimental allows a module path of the form `git: <repo url>` to load a module from a git repository
 - Custom modifiers are now called "macros"
   - Rather than requiring signatures, placeholders are now a sort of function that operates on the macro's arguments
   - This allows for more complex and flexible code-reuse

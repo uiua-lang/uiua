@@ -30,7 +30,7 @@ struct GlobalNativeSys {
     tcp_listeners: DashMap<Handle, TcpListener>,
     tcp_sockets: DashMap<Handle, Buffered<TcpStream>>,
     hostnames: DashMap<Handle, String>,
-    git_paths: DashMap<String, PathBuf>,
+    git_paths: DashMap<String, Result<PathBuf, String>>,
     #[cfg(feature = "audio")]
     audio_stream_time: parking_lot::Mutex<Option<f64>>,
     #[cfg(feature = "audio")]
@@ -623,11 +623,14 @@ impl SysBackend for NativeSys {
     }
     fn load_git_module(&self, url: &str) -> Result<PathBuf, String> {
         if let Some(path) = NATIVE_SYS.git_paths.get(url) {
-            return Ok(path.clone());
+            return path.clone();
         }
         let mut parts = url.rsplitn(3, '/');
         let repo_name = parts.next().ok_or("Invalid git url")?;
         let repo_owner = parts.next().ok_or("Invalid git url")?;
+        if parts.next().map_or(true, |s| s.is_empty()) {
+            return Err("Invalid git url".to_string());
+        }
         let parent_path = Path::new("uiua-modules").join(repo_owner);
         if !parent_path.exists() {
             fs::create_dir_all(&parent_path).map_err(|e| e.to_string())?;
@@ -648,6 +651,7 @@ impl SysBackend for NativeSys {
             Ok(parent_path.join(repo_name).join("lib.ua"))
         })();
         env::set_current_dir(current_dir).map_err(|e| e.to_string())?;
+        NATIVE_SYS.git_paths.insert(url.to_string(), res.clone());
         res
     }
 }

@@ -817,6 +817,7 @@ code:
     }
     pub(crate) fn import_compile(&mut self, path: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
         let path = if let Some(url) = path.strip_prefix("git:") {
+            // Git import
             if !self.scope.experimental {
                 return Err(self.fatal_error(
                     span.clone(),
@@ -824,7 +825,16 @@ code:
                     `# Experimental!` to the top of the file.",
                 ));
             }
-            let mut url = url.trim().to_string();
+            let mut url = url.trim().trim_end_matches(".git").to_string();
+            if ![".com", ".net", ".org", ".io", ".dev"]
+                .iter()
+                .any(|s| url.contains(s))
+            {
+                if !url.starts_with('/') {
+                    url = format!("/{url}");
+                }
+                url = format!("github.com{url}");
+            }
             if !(url.starts_with("https://") || url.starts_with("http://")) {
                 url = format!("https://{url}");
             }
@@ -832,6 +842,7 @@ code:
                 .load_git_module(&url)
                 .map_err(|e| self.fatal_error(span.clone(), e))?
         } else {
+            // Normal import
             self.resolve_import_path(Path::new(path))
         };
         if self.imports.get(&path).is_some() {

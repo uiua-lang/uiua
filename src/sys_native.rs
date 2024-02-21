@@ -634,6 +634,10 @@ impl SysBackend for NativeSys {
             return Err("Invalid git url".to_string());
         }
         let parent_path = Path::new("uiua-modules").join(repo_owner);
+        let path = parent_path.join(repo_name).join("lib.ua");
+        if path.exists() {
+            return Ok(path);
+        }
         if !parent_path.exists() {
             fs::create_dir_all(&parent_path).map_err(|e| e.to_string())?;
         }
@@ -650,7 +654,7 @@ impl SysBackend for NativeSys {
                     return Err("Failed to clone git repository".to_string());
                 }
             }
-            Ok(parent_path.join(repo_name).join("lib.ua"))
+            Ok(path)
         })();
         env::set_current_dir(current_dir).map_err(|e| e.to_string())?;
         NATIVE_SYS.git_paths.insert(url.to_string(), res.clone());

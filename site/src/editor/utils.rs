@@ -14,7 +14,7 @@ use leptos::*;
 use uiua::{
     ast::Item, image_to_bytes, lsp::spans_with_backend, value_to_gif_bytes, value_to_image,
     value_to_wav_bytes, Compiler, DiagnosticKind, Inputs, Report, ReportFragment, ReportKind,
-    SpanKind, SysBackend, Uiua, UiuaResult, Value,
+    SpanKind, SysBackend, Uiua, UiuaError, UiuaResult, Value,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlBrElement, HtmlDivElement, HtmlStyleElement, Node};
@@ -35,6 +35,7 @@ pub struct State {
     pub future: RefCell<Vec<Record>>,
     pub curr: RefCell<Record>,
     pub challenge: Option<ChallengeDef>,
+    pub loading_module: Cell<bool>,
 }
 
 /// A record of a code change
@@ -727,7 +728,8 @@ impl State {
                 &chal.intended_answer,
                 &chal.example,
                 chal.flip,
-            ));
+            ))
+            .0;
             example.insert(0, OutputItem::Faint(format!("Example: {}", chal.example)));
             let mut output_sections = vec![example];
             let mut correct = true;
@@ -742,7 +744,7 @@ impl State {
                         (Err(answer), Err(users)) => answer.to_string() == users.to_string(),
                         _ => false,
                     };
-                let mut output = run_code_single(&user_input);
+                let mut output = run_code_single(&user_input).0;
                 output.insert(0, OutputItem::Faint(format!("Input: {test}")));
                 output_sections.push(output);
             }
@@ -779,12 +781,19 @@ impl State {
             }
             output
         } else {
-            run_code_single(code)
+            let (output, error) = run_code_single(code);
+            self.loading_module.set(false);
+            if let Some(error) = error {
+                if error.to_string().contains("Waiting for module") {
+                    self.loading_module.set(true);
+                }
+            }
+            output
         }
     }
 }
 
-fn run_code_single(code: &str) -> Vec<OutputItem> {
+fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
     // Run
     let mut rt = init_rt();
     let mut error = None;
@@ -895,7 +904,7 @@ fn run_code_single(code: &str) -> Vec<OutputItem> {
         }
         output.extend(stack);
     }
-    if let Some(error) = error {
+    if let Some(error) = &error {
         if !output.is_empty() {
             output.push(OutputItem::String("".into()));
         }
@@ -921,7 +930,7 @@ fn run_code_single(code: &str) -> Vec<OutputItem> {
             output.push(OutputItem::Report(diag.report()));
         }
     }
-    output
+    (output, error)
 }
 
 pub fn report_view(report: &Report) -> impl IntoView {

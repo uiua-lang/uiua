@@ -119,6 +119,7 @@ pub fn Editor<'a>(
         past: Default::default(),
         future: Default::default(),
         challenge,
+        loading_module: Default::default(),
         curr: {
             let code = initial_code.get_untracked().unwrap();
             let len = code.chars().count() as u32;
@@ -200,11 +201,11 @@ pub fn Editor<'a>(
                 formatted.output
             } else {
                 state().set_code(&code_text, cursor);
-                code_text
+                code_text.clone()
             }
         } else {
             state().set_code(&code_text, cursor);
-            code_text
+            code_text.clone()
         };
 
         // Update URL
@@ -222,51 +223,62 @@ pub fn Editor<'a>(
 
         // Run code
         set_output.set(view!(<div class="running-text">"Running"</div>).into_view());
+        let mut allow_autoplay = !matches!(mode, EditorMode::Example);
+        let render_output_item = move |item| match item {
+            OutputItem::String(s) => {
+                if s.is_empty() {
+                    view!(<div class="output-item"><br/></div>).into_view()
+                } else {
+                    view!(<div class="output-item">{s}</div>).into_view()
+                }
+            }
+            OutputItem::Classed(class, s) => {
+                let class = format!("output-item {class}");
+                view!(<div class=class>{s}</div>).into_view()
+            }
+            OutputItem::Faint(s) => {
+                view!(<div class="output-item output-fainter">{s}</div>).into_view()
+            }
+            OutputItem::Image(bytes) => {
+                let encoded = STANDARD.encode(bytes);
+                view!(<div><img class="output-image" src={format!("data:image/png;base64,{encoded}")} /></div>).into_view()
+            }
+            OutputItem::Gif(bytes) => {
+                let encoded = STANDARD.encode(bytes);
+                view!(<div><img class="output-image" src={format!("data:image/gif;base64,{encoded}")} /></div>).into_view()
+            }
+            OutputItem::Audio(bytes) => {
+                let encoded = STANDARD.encode(bytes);
+                let src = format!("data:audio/wav;base64,{}", encoded);
+                if allow_autoplay {
+                    allow_autoplay = false;
+                    view!(<div><audio class="output-audio" controls autoplay src=src/></div>)
+                        .into_view()
+                } else {
+                    view!(<div><audio class="output-audio" controls src=src/></div>).into_view()
+                }
+            }
+            OutputItem::Report(report) => report_view(&report).into_view(),
+            OutputItem::Separator => view!(<div class="output-item"><hr/></div>).into_view(),
+        };
         set_timeout(
             move || {
                 let output = state().run_code(&input);
-                let mut allow_autoplay = !matches!(mode, EditorMode::Example);
-                let render_output_item = |item| match item {
-                    OutputItem::String(s) => {
-                        if s.is_empty() {
-                            view!(<div class="output-item"><br/></div>).into_view()
-                        } else {
-                            view!(<div class="output-item">{s}</div>).into_view()
-                        }
-                    }
-                    OutputItem::Classed(class, s) => {
-                        let class = format!("output-item {class}");
-                        view!(<div class=class>{s}</div>).into_view()
-                    }
-                    OutputItem::Faint(s) => {
-                        view!(<div class="output-item output-fainter">{s}</div>).into_view()
-                    }
-                    OutputItem::Image(bytes) => {
-                        let encoded = STANDARD.encode(bytes);
-                        view!(<div><img class="output-image" src={format!("data:image/png;base64,{encoded}")} /></div>).into_view()
-                    }
-                    OutputItem::Gif(bytes) => {
-                        let encoded = STANDARD.encode(bytes);
-                        view!(<div><img class="output-image" src={format!("data:image/gif;base64,{encoded}")} /></div>).into_view()
-                    }
-                    OutputItem::Audio(bytes) => {
-                        let encoded = STANDARD.encode(bytes);
-                        let src = format!("data:audio/wav;base64,{}", encoded);
-                        if allow_autoplay {
-                            allow_autoplay = false;
-                            view!(<div><audio class="output-audio" controls autoplay src=src/></div>).into_view()
-                        } else {
-                            view!(<div><audio class="output-audio" controls src=src/></div>)
-                                .into_view()
-                        }
-                    }
-                    OutputItem::Report(report) => report_view(&report).into_view(),
-                    OutputItem::Separator => {
-                        view!(<div class="output-item"><hr/></div>).into_view()
-                    }
-                };
-                let items: Vec<_> = output.into_iter().map(render_output_item).collect();
-                set_output.set(items.into_view());
+                if state().loading_module.take() {
+                    set_timeout(
+                        move || {
+                            let output = state().run_code(&input);
+                            let items: Vec<_> =
+                                output.into_iter().map(render_output_item).collect();
+                            set_output.set(items.into_view());
+                            state().set_code(&code_text, cursor);
+                        },
+                        Duration::from_millis(200),
+                    );
+                } else {
+                    let items: Vec<_> = output.into_iter().map(render_output_item).collect();
+                    set_output.set(items.into_view());
+                }
             },
             Duration::ZERO,
         );

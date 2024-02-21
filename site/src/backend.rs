@@ -18,11 +18,10 @@ pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
     pub stderr: Mutex<String>,
     pub trace: Mutex<String>,
-    pub files: Mutex<HashMap<PathBuf, Vec<u8>>>,
 }
 
 thread_local! {
-    static DROPPED_FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = RefCell::new([
+    static FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = RefCell::new([
         (PathBuf::from("example.ua"),
         example_ua(|ex| ex.clone()).into())
     ].into());
@@ -30,7 +29,7 @@ thread_local! {
 }
 
 pub fn drop_file(path: PathBuf, contents: Vec<u8>) {
-    DROPPED_FILES.with(|dropped_files| {
+    FILES.with(|dropped_files| {
         dropped_files.borrow_mut().insert(path, contents);
     });
 }
@@ -41,9 +40,6 @@ impl Default for WebBackend {
             stdout: Vec::new().into(),
             stderr: String::new().into(),
             trace: String::new().into(),
-            files: DROPPED_FILES
-                .with(|dropped_files| dropped_files.borrow().clone())
-                .into(),
         }
     }
 }
@@ -122,25 +118,29 @@ impl SysBackend for WebBackend {
             path = &path[1..];
         }
         let path = Path::new(path);
-        let files = self.files.lock().unwrap();
-        let mut in_dir = Vec::new();
-        for file in files.keys() {
-            if file.parent() == Some(path) {
-                in_dir.push(file.file_name().unwrap().to_string_lossy().into());
+        FILES.with(|files| {
+            let files = files.borrow();
+            let mut in_dir = Vec::new();
+            for file in files.keys() {
+                if file.parent() == Some(path) {
+                    in_dir.push(file.file_name().unwrap().to_string_lossy().into());
+                }
             }
-        }
-        Ok(in_dir)
+            Ok(in_dir)
+        })
     }
     fn is_file(&self, path: &str) -> Result<bool, String> {
-        Ok(self.files.lock().unwrap().contains_key(Path::new(path)))
+        Ok(FILES.with(|files| files.borrow().contains_key(Path::new(path))))
     }
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
-        (self.files.lock().unwrap()).insert(path.into(), contents.to_vec());
+        drop_file(path.to_path_buf(), contents.to_vec());
         Ok(())
     }
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
-        (self.files.lock().unwrap().get(path).cloned())
-            .ok_or_else(|| format!("File not found: {}", path.display()))
+        FILES.with(|files| {
+            (files.borrow().get(path).cloned())
+                .ok_or_else(|| format!("File not found: {}", path.display()))
+        })
     }
     fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
         (self.stdout.lock().unwrap()).push(OutputItem::Audio(wav_bytes));
@@ -186,7 +186,7 @@ impl SysBackend for WebBackend {
             .join(repo_owner)
             .join(repo_name)
             .join("lib.ua");
-        if DROPPED_FILES.with(|dropped_files| dropped_files.borrow().contains_key(&path)) {
+        if FILES.with(|dropped_files| dropped_files.borrow().contains_key(&path)) {
             return Ok(path);
         }
         let mut url = url
@@ -232,7 +232,7 @@ pub fn try_fetch_sync(src: &str) -> Option<Result<String, String>> {
                     || (),
                     move |_| {
                         let src = src.clone();
-                        async move { fetch(&src).await.map_err(|e| format!("{e:?}")) }
+                        async move { fetch(&src).await }
                     },
                 ),
             });
@@ -241,15 +241,24 @@ pub fn try_fetch_sync(src: &str) -> Option<Result<String, String>> {
     })
 }
 
-pub async fn fetch(src: &str) -> Result<String, JsValue> {
+pub async fn fetch(src: &str) -> Result<String, String> {
     let mut opts = RequestInit::new();
     opts.method("GET");
     opts.mode(RequestMode::Cors);
-    let request = Request::new_with_str_and_init(src, &opts)?;
+    let request = Request::new_with_str_and_init(src, &opts).map_err(|e| format!("{e:?}"))?;
     let window = web_sys::window().unwrap();
-    let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
+    let resp_value = JsFuture::from(window.fetch_with_request(&request))
+        .await
+        .map_err(|e| format!("{e:?}"))?;
     assert!(resp_value.is_instance_of::<Response>());
     let resp: Response = resp_value.dyn_into().unwrap();
-    let text = JsFuture::from(resp.text()?).await?.as_string().unwrap();
-    Ok(text)
+    let text = JsFuture::from(resp.text().map_err(|e| format!("{e:?}"))?)
+        .await
+        .map(|s| s.as_string().unwrap())
+        .map_err(|e| format!("{e:?}"))?;
+    if resp.status() == 200 {
+        Ok(text)
+    } else {
+        Err(text)
+    }
 }

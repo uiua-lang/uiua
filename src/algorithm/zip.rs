@@ -1034,6 +1034,9 @@ impl Value {
     where
         C: FillContext,
     {
+        if self.rank() == 0 {
+            return false;
+        }
         match self {
             Value::Num(_) => ctx.scalar_fill::<f64>().is_ok(),
             #[cfg(feature = "bytes")]
@@ -1063,7 +1066,7 @@ impl<T: ArrayValue> Array<T> {
     where
         C: FillContext,
     {
-        if self.row_count() >= len {
+        if self.rank() == 0 || self.row_count() >= len {
             return Ok(());
         }
         let fill = ctx.scalar_fill::<T>()?;

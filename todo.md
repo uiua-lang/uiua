@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.9
-  - `fill` inputs for `each` and `inventory`
+  - `fill` inputs for `inventory`
   - Make `content` compile to `un` `box`es
   - Release it!
 - Site pages/tutorials

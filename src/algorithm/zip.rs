@@ -6,11 +6,10 @@ use ecow::{eco_vec, EcoVec};
 
 use crate::{
     algorithm::pervade::bin_pervade_generic, function::Function, random, value::Value, Array,
-    ArrayValue, Boxed, Complex, FormatShape, ImplPrimitive, Instr, Primitive, Shape, Uiua,
-    UiuaResult,
+    ArrayValue, Boxed, Complex, ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult,
 };
 
-use super::{multi_output, FillContext, MultiOutput};
+use super::{fill_value_shapes, multi_output, FillContext, MultiOutput};
 
 type ValueUnFn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
 type ValueBinFn = Box<dyn Fn(Value, Value, usize, usize, &mut Uiua) -> UiuaResult<Value>>;
@@ -227,19 +226,8 @@ fn each1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
-    if !xs.shape().iter().zip(ys.shape()).all(|(a, b)| a == b) {
-        let min_rank = xs.rank().min(ys.rank());
-        return Err(env.error(format!(
-            "Cannot {} arrays with shapes {} and {} because their \
-            shape prefixes {} and {} are different",
-            Primitive::Each.format(),
-            xs.shape(),
-            ys.shape(),
-            FormatShape(&xs.shape()[..min_rank]),
-            FormatShape(&ys.shape()[..min_rank])
-        )));
-    }
+fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
+    fill_value_shapes(&mut xs, &mut ys, true, env)?;
     if let Some((f, ..)) = f_dy_fast_fn(f.instrs(env), env) {
         let xrank = xs.rank();
         let yrank = ys.rank();
@@ -319,24 +307,24 @@ fn each2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn eachn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
-    for win in args.windows(2) {
-        if win[0].shape() != win[1].shape() {
-            return Err(env.error(format!(
-                "The shapes in each of 3 or more arrays must all match, \
-                but shapes {} and {} cannot be {}ed together. \
-                If you want more flexibility, use rows.",
-                win[0].shape(),
-                win[1].shape(),
-                Primitive::Each.format()
-            )));
+fn eachn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    for a in 0..args.len() - 1 {
+        let (a, b) = args.split_at_mut(a + 1);
+        let a = a.last_mut().unwrap();
+        for b in b {
+            fill_value_shapes(a, b, true, env)?;
         }
     }
     let outputs = f.signature().outputs;
     let is_empty = outputs > 0 && args.iter().any(|v| v.row_count() == 0);
-    let elem_count = args[0].element_count() + is_empty as usize;
+    let elem_count = args.iter().map(Value::element_count).max().unwrap() + is_empty as usize;
     let mut new_values = multi_output(outputs, Vec::with_capacity(elem_count));
-    let new_shape = args[0].shape().clone();
+    let new_shape = args
+        .iter()
+        .map(Value::shape)
+        .max_by_key(|s| s.len())
+        .unwrap()
+        .clone();
     env.without_fill(|env| -> UiuaResult {
         if is_empty {
             for arg in args.into_iter().rev() {
@@ -347,7 +335,16 @@ fn eachn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
                 new_values[i].push(env.pop("each's function result")?);
             }
         } else {
-            let mut arg_elems: Vec<_> = args.into_iter().map(Value::into_elements).collect();
+            let mut arg_elems: Vec<_> = args
+                .into_iter()
+                .map(|val| -> Box<dyn Iterator<Item = _>> {
+                    if val.rank() == 0 {
+                        Box::new(repeat(val).take(elem_count))
+                    } else {
+                        Box::new(val.into_elements())
+                    }
+                })
+                .collect();
             for _ in 0..elem_count {
                 for arg in arg_elems.iter_mut().rev() {
                     env.push(arg.next().unwrap());

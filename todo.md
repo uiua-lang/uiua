@@ -2,6 +2,7 @@
 
 - 0.9
   - `fill` inputs for `each` and `inventory`
+  - Make `content` compile to `un` `box`es
   - Release it!
 - Site pages/tutorials
   - Duality of `pick` and `fill`

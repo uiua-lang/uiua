@@ -441,7 +441,7 @@ fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
 fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
     let outputs = f.signature().outputs;
     match (xs.row_count(), ys.row_count()) {
-        (_, 1) if !xs.length_is_fillable(env) => {
+        (_, 1) if !ys.length_is_fillable(env) => {
             let ys = ys.into_rows().next().unwrap();
             let is_empty = outputs > 0 && xs.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
@@ -474,7 +474,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             }
             Ok(())
         }
-        (1, _) if !ys.length_is_fillable(env) => {
+        (1, _) if !xs.length_is_fillable(env) => {
             let xs = xs.into_rows().next().unwrap();
             let is_empty = outputs > 0 && ys.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
@@ -1070,6 +1070,7 @@ impl<T: ArrayValue> Array<T> {
         let more_elems = (len - self.row_count()) * self.row_len();
         self.data.reserve(more_elems);
         self.data.extend(repeat(fill).take(more_elems));
+        self.shape[0] = len;
         Ok(())
     }
 }

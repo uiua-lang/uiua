@@ -767,6 +767,10 @@ input[type=number] {
     }
 }
 
+.private-binding>* {
+    opacity: 0.75;
+}
+
 .module {
     color: #d7be8c;
 }

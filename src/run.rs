@@ -18,8 +18,8 @@ use thread_local::ThreadLocal;
 
 use crate::{
     algorithm, array::Array, boxed::Boxed, check::instrs_temp_signatures, function::*, lex::Span,
-    value::Value, Assembly, Compiler, Complex, Global, Ident, Inputs, IntoSysBackend, Primitive,
-    SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    value::Value, Assembly, Compiler, Complex, Global, Ident, Inputs, IntoSysBackend, LocalName,
+    Primitive, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
 };
 
 /// The Uiua interpreter
@@ -448,12 +448,16 @@ code:
                     }
                 }
                 &Instr::BindGlobal { span, index } => {
+                    let local = LocalName {
+                        index,
+                        public: false,
+                    };
                     if let Some(f) = self.rt.function_stack.pop() {
                         // Binding is an imported function
-                        self.asm.bind_function(index, f, span, None);
+                        self.asm.bind_function(local, f, span, None);
                     } else if let Some(value) = self.rt.stack.pop() {
                         // Binding is a constant
-                        self.asm.bind_const(index, value, span, None);
+                        self.asm.bind_const(local, value, span, None);
                     } else {
                         // Binding is an empty function
                         let id = match self.get_span(span) {
@@ -462,7 +466,7 @@ code:
                         };
                         let func =
                             Function::new(id, Signature::new(0, 0), FuncSlice { start: 0, len: 0 });
-                        self.asm.bind_function(index, func, span, None);
+                        self.asm.bind_function(local, func, span, None);
                     }
                     Ok(())
                 }

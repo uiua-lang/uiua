@@ -6,7 +6,7 @@ use serde::*;
 
 use crate::{
     lex::Sp, CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc, Instr,
-    IntoInputSrc, Primitive, Signature, Span, TempStack, Uiua, UiuaResult, Value,
+    IntoInputSrc, LocalName, Primitive, Signature, Span, TempStack, Uiua, UiuaResult, Value,
 };
 
 /// A compiled Uiua assembly
@@ -58,52 +58,54 @@ impl Assembly {
     }
     pub(crate) fn bind_function(
         &mut self,
-        index: usize,
+        local: LocalName,
         function: Function,
         span: usize,
         comment: Option<Arc<str>>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(index, Global::Func(function), span.code(), comment);
+        self.add_global_at(local, Global::Func(function), span.code(), comment);
     }
     pub(crate) fn bind_sig(
         &mut self,
-        index: usize,
+        local: LocalName,
         sig: Signature,
         span: usize,
         comment: Option<Arc<str>>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(index, Global::Sig(sig), span.code(), comment);
+        self.add_global_at(local, Global::Sig(sig), span.code(), comment);
     }
     pub(crate) fn bind_const(
         &mut self,
-        index: usize,
+        local: LocalName,
         value: Value,
         span: usize,
         comment: Option<Arc<str>>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(index, Global::Const(value), span.code(), comment);
+        self.add_global_at(local, Global::Const(value), span.code(), comment);
     }
     pub(crate) fn add_global_at(
         &mut self,
-        index: usize,
+        local: LocalName,
         global: Global,
         span: Option<CodeSpan>,
         comment: Option<Arc<str>>,
     ) {
         let binding = BindingInfo {
+            public: local.public,
             global,
             span: span.unwrap_or_else(CodeSpan::dummy),
             comment,
         };
-        if index < self.bindings.len() {
-            self.bindings.make_mut()[index] = binding;
+        if local.index < self.bindings.len() {
+            self.bindings.make_mut()[local.index] = binding;
         } else {
-            while self.bindings.len() < index {
+            while self.bindings.len() < local.index {
                 self.bindings.push(BindingInfo {
                     global: Global::Const(Value::default()),
+                    public: false,
                     span: CodeSpan::dummy(),
                     comment: None,
                 });
@@ -131,10 +133,11 @@ impl AsMut<Assembly> for Assembly {
 
 /// Information about a binding
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(transparent)]
 pub struct BindingInfo {
     /// The global binding type
     pub global: Global,
+    /// Whether the binding is public
+    pub public: bool,
     #[serde(skip, default = "CodeSpan::dummy")]
     #[allow(dead_code)]
     /// The span of the original binding name

@@ -550,11 +550,21 @@ fn set_code_html(id: &str, code: &str) {
                     }
                     SpanKind::Ident(ref docs) => {
                         if let Some(docs) = docs {
+                            let class = binding_class(text, docs);
                             let mut title = docs
                                 .signature
                                 .map(|sig| sig.to_string())
                                 .unwrap_or_default();
-                            let class = binding_class(text, docs);
+
+                            let private = if docs.is_public || docs.is_module {
+                                ""
+                            } else {
+                                if !title.is_empty() {
+                                    title.push(' ');
+                                }
+                                title.push_str("(private) ");
+                                " private-binding"
+                            };
                             if let Some(comment) = &docs.comment {
                                 if !title.is_empty() {
                                     title.push(' ');
@@ -567,7 +577,7 @@ fn set_code_html(id: &str, code: &str) {
                             }
                             format!(
                                 r#"<span 
-                                    class="code-span code-hover {class}" 
+                                    class="code-span code-hover {class}{private}" 
                                     data-title="{title}">{}</span>"#,
                                 escape_html(text)
                             )

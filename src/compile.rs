@@ -161,9 +161,9 @@ impl Default for Scope {
 }
 
 #[derive(Clone, Copy)]
-struct LocalName {
-    index: usize,
-    public: bool,
+pub(crate) struct LocalName {
+    pub index: usize,
+    pub public: bool,
 }
 
 impl Compiler {
@@ -450,21 +450,19 @@ code:
                     let imported = self.imports.get(&module).unwrap();
                     let global_index = self.next_global;
                     self.next_global += 1;
+                    let local = LocalName {
+                        index: global_index,
+                        public: false,
+                    };
                     self.asm.add_global_at(
-                        global_index,
+                        local,
                         Global::Module {
                             module: module.clone(),
                         },
                         Some(name.span.clone()),
                         prev_com.or_else(|| imported.comment.clone()),
                     );
-                    self.scope.names.insert(
-                        name.value.clone(),
-                        LocalName {
-                            index: global_index,
-                            public: false,
-                        },
-                    );
+                    self.scope.names.insert(name.value.clone(), local);
                 }
                 // Bind items
                 for item in import.items() {
@@ -592,12 +590,8 @@ code:
         }
         if placeholder_count > 0 || ident_margs > 0 {
             self.scope.names.insert(name.clone(), local);
-            self.asm.add_global_at(
-                global_index,
-                Global::Macro,
-                Some(span.clone()),
-                comment.clone(),
-            );
+            self.asm
+                .add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
             self.macros.insert(global_index, binding.words.clone());
             return Ok(());
         }
@@ -670,7 +664,7 @@ code:
                             let path: String = arr.data.iter().copied().collect();
                             let module = self.import(path.as_ref(), span)?;
                             self.asm.add_global_at(
-                                global_index,
+                                local,
                                 Global::Module { module },
                                 Some(binding.name.span.clone()),
                                 comment.clone(),
@@ -852,7 +846,7 @@ code:
         comment: Option<Arc<str>>,
     ) -> UiuaResult {
         self.scope.names.insert(name.clone(), local);
-        self.asm.bind_sig(local.index, sig, span, comment);
+        self.asm.bind_sig(local, sig, span, comment);
         Ok(())
     }
     fn compile_bind_function(
@@ -864,7 +858,7 @@ code:
         comment: Option<Arc<str>>,
     ) -> UiuaResult {
         self.scope.names.insert(name.clone(), local);
-        self.asm.bind_function(local.index, function, span, comment);
+        self.asm.bind_function(local, function, span, comment);
         Ok(())
     }
     /// Import a module

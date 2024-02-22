@@ -49,6 +49,8 @@ pub struct BindingDocs {
     pub is_constant: bool,
     /// Whether the binding is a module
     pub is_module: bool,
+    /// Whether the binding is public
+    pub is_public: bool,
 }
 
 /// Get spans and their kinds from Uiua code
@@ -199,6 +201,7 @@ impl Spanner {
             invertible_underable: self.invertible_underable(binfo),
             is_constant,
             is_module,
+            is_public: binfo.public,
         }
     }
 

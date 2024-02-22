@@ -34,6 +34,8 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Trace => Instr::ImplPrim(InvTrace, span),
         Stack => Instr::ImplPrim(InvStack, span),
         Join => Instr::ImplPrim(InvJoin, span),
+        Sys(SysOp::GifDecode) => Instr::Prim(Sys(SysOp::GifEncode), span),
+        Sys(SysOp::GifEncode) => Instr::Prim(Sys(SysOp::GifDecode), span),
         _ => return None,
     })
 }

@@ -1,35 +1,15 @@
 @font-face {
     font-family: "Code Font";
-    src: url(DejaVuSansMono.ttf) format("truetype");
-}
-
-@font-face {
-    font-family: "Main Font";
-    src: url(DejaVuSans.ttf) format("truetype");
-    font-weight: normal;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: "Main Font";
-    src: url(DejaVuSans-Bold.ttf) format("truetype");
-    font-weight: bold;
-    font-style: normal;
-}
-
-@font-face {
-    font-family: "Main Font";
-    src: url(DejaVuSans-Oblique.ttf) format("truetype");
-    font-weight: normal;
-    font-style: italic;
+    src: url(Uiua386.ttf) format("truetype");
 }
 
 html * {
-    font-family: "Main Font", sans-serif;
+    font-family: "Segoe UI", "Arial", sans-serif;
 }
 
 html {
-    font-size: 110%;
+    font-size: 115%;
+    font-weight: 500;
 }
 
 body {

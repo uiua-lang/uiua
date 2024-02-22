@@ -1994,6 +1994,18 @@ primitive!(
     /// ex! # Experimental!
     ///   : map 1_2_3 4_5_6
     ///   : get 1 ⇌
+    ///
+    /// Regardless of the size of the map, operations on it have O(1) amortized time complexity.
+    /// In this example, we time [get] and [insert] operations on maps from 10 entries up to 100,000 entries.
+    /// ex: # Experimental!
+    ///   : Times ← (
+    ///   :   map.⇡
+    ///   :   [⊙◌⍜now(get 5):
+    ///   :    ⊙◌⍜now(insert 1 2).]
+    ///   : )
+    ///   : ⁿ:10+1⇡5
+    ///   : ≡Times.
+    ///
     (2, Map, Map, "map"),
     /// Insert a key-value pair into a map array
     ///

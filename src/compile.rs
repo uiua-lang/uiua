@@ -139,13 +139,13 @@ pub(crate) struct Scope {
     /// The top level comment
     comment: Option<Arc<str>>,
     /// Map local names to global indices
-    names: HashMap<Ident, usize>,
+    names: HashMap<Ident, LocalName>,
     /// Whether to allow experimental features
     experimental: bool,
     /// The stack height between top-level statements
     stack_height: Result<usize, Sp<SigCheckError>>,
-    /// The stack of referenced locals
-    locals: Vec<HashSet<usize>>,
+    /// The stack of referenced bind locals
+    bind_locals: Vec<HashSet<usize>>,
 }
 
 impl Default for Scope {
@@ -155,9 +155,15 @@ impl Default for Scope {
             names: HashMap::new(),
             experimental: false,
             stack_height: Ok(0),
-            locals: Vec::new(),
+            bind_locals: Vec::new(),
         }
     }
+}
+
+#[derive(Clone, Copy)]
+struct LocalName {
+    index: usize,
+    public: bool,
 }
 
 impl Compiler {
@@ -245,7 +251,10 @@ impl Compiler {
         res?;
         Ok(Import {
             comment: scope.comment,
-            names: scope.names,
+            names: (scope.names.into_iter())
+                .filter(|(_, b)| b.public)
+                .map(|(k, v)| (k, v.index))
+                .collect(),
         })
     }
     fn load_impl(&mut self, input: &str, src: InputSrc) -> UiuaResult<&mut Self> {
@@ -438,7 +447,7 @@ code:
             }
             Item::Import(import) => {
                 // Import module
-                let module = self.import_compile(&import.path.value, &import.path.span)?;
+                let module = self.import(&import.path.value, &import.path.span)?;
                 // Bind name
                 if let Some(name) = &import.name {
                     let imported = self.imports.get(&module).unwrap();
@@ -452,7 +461,13 @@ code:
                         Some(name.span.clone()),
                         prev_com.or_else(|| imported.comment.clone()),
                     );
-                    self.scope.names.insert(name.value.clone(), global_index);
+                    self.scope.names.insert(
+                        name.value.clone(),
+                        LocalName {
+                            index: global_index,
+                            public: false,
+                        },
+                    );
                 }
                 // Bind items
                 for item in import.items() {
@@ -463,7 +478,13 @@ code:
                         .copied()
                     {
                         self.asm.global_references.insert(item.clone(), index);
-                        self.scope.names.insert(item.value.clone(), index);
+                        self.scope.names.insert(
+                            item.value.clone(),
+                            LocalName {
+                                index,
+                                public: false,
+                            },
+                        );
                     } else {
                         self.add_error(
                             item.span.clone(),
@@ -498,6 +519,8 @@ code:
         Function::new(id, sig, FuncSlice { start, len })
     }
     fn binding(&mut self, binding: Binding, comment: Option<Arc<str>>) -> UiuaResult {
+        let public = true;
+
         // Alias re-bound imports
         if binding.words.iter().filter(|w| w.value.is_code()).count() == 1 {
             if let Some(r) = binding.words.iter().find_map(|w| match &w.value {
@@ -514,7 +537,13 @@ code:
                             .insert(comp.module.clone(), index);
                     }
                     self.asm.global_references.insert(r.name.clone(), index);
-                    self.scope.names.insert(binding.name.value, index);
+                    self.scope.names.insert(
+                        binding.name.value,
+                        LocalName {
+                            index,
+                            public: true,
+                        },
+                    );
                     return Ok(());
                 }
             }
@@ -525,6 +554,10 @@ code:
 
         let span_index = self.add_span(span.clone());
         let global_index = self.next_global;
+        let local = LocalName {
+            index: global_index,
+            public,
+        };
         self.next_global += 1;
 
         // Handle macro
@@ -553,7 +586,7 @@ code:
             }
         }
         if placeholder_count > 0 || ident_margs > 0 {
-            self.scope.names.insert(name.clone(), global_index);
+            self.scope.names.insert(name.clone(), local);
             self.asm.add_global_at(
                 global_index,
                 Global::Macro,
@@ -630,14 +663,14 @@ code:
                     match path {
                         Value::Char(arr) if arr.rank() == 1 => {
                             let path: String = arr.data.iter().copied().collect();
-                            let module = self.import_compile(path.as_ref(), span)?;
+                            let module = self.import(path.as_ref(), span)?;
                             self.asm.add_global_at(
                                 global_index,
                                 Global::Module { module },
                                 Some(binding.name.span.clone()),
                                 comment.clone(),
                             );
-                            self.scope.names.insert(name.clone(), global_index);
+                            self.scope.names.insert(name.clone(), local);
                         }
                         _ => self.add_error(span.clone(), "Import path must be a string"),
                     }
@@ -645,13 +678,15 @@ code:
                 [Instr::Push(item), Instr::Push(path)] => match path {
                     Value::Char(arr) if arr.rank() == 1 => {
                         let path: String = arr.data.iter().copied().collect();
-                        let module = self.import_compile(path.as_ref(), span)?;
+                        let module = self.import(path.as_ref(), span)?;
                         match item {
                             Value::Char(arr) if arr.rank() == 1 => {
                                 let item: String = arr.data.iter().copied().collect();
                                 if let Some(&index) = self.imports[&module].names.get(item.as_str())
                                 {
-                                    self.scope.names.insert(name.clone(), index);
+                                    self.scope
+                                        .names
+                                        .insert(name.clone(), LocalName { index, public });
                                     if let Some(s) = self.asm.bindings[index].global.signature() {
                                         sig = Some(s);
                                     } else {
@@ -738,7 +773,7 @@ code:
                 } else if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
-                    self.compile_bind_function(&name, global_index, func, span_index, comment)?;
+                    self.compile_bind_function(&name, local, func, span_index, comment)?;
                 } else if sig.args == 0
                     && sig.outputs <= 1
                     && (sig.outputs > 0 || instrs.is_empty())
@@ -746,7 +781,7 @@ code:
                     && !is_setinv
                     && !is_setund
                 {
-                    self.compile_bind_sig(&name, global_index, sig, span_index, comment)?;
+                    self.compile_bind_sig(&name, local, sig, span_index, comment)?;
                     // Add binding instrs to top slices
                     instrs.push(Instr::BindGlobal {
                         span: span_index,
@@ -764,7 +799,7 @@ code:
                 } else {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);
-                    self.compile_bind_function(&name, global_index, func, span_index, comment)?;
+                    self.compile_bind_function(&name, local, func, span_index, comment)?;
                 }
             }
             Err(e) => {
@@ -773,7 +808,7 @@ code:
                     // Binding is a normal function
                     let mut func = make_fn(instrs, sig.value, self);
                     func.inlinable = false;
-                    self.compile_bind_function(&name, global_index, func, span_index, comment)?;
+                    self.compile_bind_function(&name, local, func, span_index, comment)?;
                 } else {
                     self.add_error(
                         binding.name.span.clone(),
@@ -791,31 +826,32 @@ code:
         }
         Ok(())
     }
-    pub(crate) fn compile_bind_sig(
+    fn compile_bind_sig(
         &mut self,
         name: &Ident,
-        index: usize,
+        local: LocalName,
         sig: Signature,
         span: usize,
         comment: Option<Arc<str>>,
     ) -> UiuaResult {
-        self.scope.names.insert(name.clone(), index);
-        self.asm.bind_sig(index, sig, span, comment);
+        self.scope.names.insert(name.clone(), local);
+        self.asm.bind_sig(local.index, sig, span, comment);
         Ok(())
     }
-    pub(crate) fn compile_bind_function(
+    fn compile_bind_function(
         &mut self,
         name: &Ident,
-        index: usize,
+        local: LocalName,
         function: Function,
         span: usize,
         comment: Option<Arc<str>>,
     ) -> UiuaResult {
-        self.scope.names.insert(name.clone(), index);
-        self.asm.bind_function(index, function, span, comment);
+        self.scope.names.insert(name.clone(), local);
+        self.asm.bind_function(local.index, function, span, comment);
         Ok(())
     }
-    pub(crate) fn import_compile(&mut self, path: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
+    /// Import a module
+    pub(crate) fn import(&mut self, path: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
         let path = if let Some(url) = path.strip_prefix("git:") {
             // Git import
             if !self.scope.experimental {
@@ -952,8 +988,10 @@ code:
                 // Handle legacy imports
                 if let Word::Ref(r) = &next.value {
                     if r.path.is_empty() {
-                        if let Some(index) = self.scope.names.get(&r.name.value) {
-                            if let Global::Module { module } = &self.asm.bindings[*index].global {
+                        if let Some(local) = self.scope.names.get(&r.name.value) {
+                            if let Global::Module { module } =
+                                &self.asm.bindings[local.index].global
+                            {
                                 if let Word::String(item_name) = &word.value {
                                     let index = self.imports[module]
                                         .names
@@ -1334,7 +1372,8 @@ code:
                         first.module.span.clone(),
                         format!("Unknown import `{}`", first.module.value),
                     )
-                })?;
+                })?
+                .index;
             path_indices.push(module_index);
             let global = &self.asm.bindings[module_index].global;
             let mut module = match global {
@@ -1421,8 +1460,8 @@ code:
                     ),
                 ))
             }
-        } else if let Some(index) = self.scope.names.get(&r.name.value) {
-            Ok((Vec::new(), *index))
+        } else if let Some(local) = self.scope.names.get(&r.name.value) {
+            Ok((Vec::new(), local.index))
         } else {
             Err(self.fatal_error(
                 r.name.span.clone(),
@@ -1466,21 +1505,23 @@ code:
                 let f = self.add_function(FunctionId::Anonymous(span), sig, [instr]);
                 self.push_instr(Instr::PushFunc(f));
             }
-        } else if !self.scope.locals.is_empty() && ident.chars().all(|c| c.is_ascii_lowercase()) {
+        } else if !self.scope.bind_locals.is_empty()
+            && ident.chars().all(|c| c.is_ascii_lowercase())
+        {
             // Name is a local variable
             let span = self.add_span(span);
             for c in ident.chars().rev() {
                 let index = c as usize - 'a' as usize;
-                self.scope.locals.last_mut().unwrap().insert(index);
+                self.scope.bind_locals.last_mut().unwrap().insert(index);
                 self.push_instr(Instr::GetLocal { index, span });
             }
-        } else if let Some(index) = (self.scope.names.get(&ident))
+        } else if let Some(local) = (self.scope.names.get(&ident))
             .or_else(|| self.higher_scopes.last()?.names.get(&ident))
             .copied()
         {
             // Name exists in scope
-            (self.asm.global_references).insert(span.clone().sp(ident), index);
-            self.global_index(index, span, call);
+            (self.asm.global_references).insert(span.clone().sp(ident), local.index);
+            self.global_index(local.index, span, call);
         } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
             // Name is a built-in constant
             let instr = Instr::push(constant.value.clone());
@@ -2288,9 +2329,9 @@ code:
             Bind => {
                 let operand = modified.code_operands().next().cloned().unwrap();
                 let operand_span = operand.span.clone();
-                self.scope.locals.push(HashSet::new());
+                self.scope.bind_locals.push(HashSet::new());
                 let (mut instrs, mut sig) = self.compile_operand_word(operand)?;
-                let locals = self.scope.locals.pop().unwrap();
+                let locals = self.scope.bind_locals.pop().unwrap();
                 let local_count = locals.into_iter().max().map_or(0, |i| i + 1);
                 let span = self.add_span(modified.modifier.span.clone());
                 sig.args += local_count;
@@ -2629,9 +2670,13 @@ code:
     pub fn bind_function(&mut self, name: impl Into<EcoString>, function: Function) -> UiuaResult {
         let index = self.next_global;
         let name = name.into();
-        self.compile_bind_function(&name, index, function, 0, None)?;
+        let local = LocalName {
+            index,
+            public: true,
+        };
+        self.compile_bind_function(&name, local, function, 0, None)?;
         self.next_global += 1;
-        self.scope.names.insert(name, index);
+        self.scope.names.insert(name, local);
         Ok(())
     }
     /// Create and bind a function in the current scope

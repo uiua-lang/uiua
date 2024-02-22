@@ -560,6 +560,7 @@ input[type=number] {
 .code-button {
     font-size: 1em;
     margin: 0 0 0 0.2em;
+    height: auto;
 }
 
 .important-button {

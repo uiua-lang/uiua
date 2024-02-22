@@ -48,7 +48,9 @@ This version is not yet released. If you are reading this on the website, then t
   - This allows arbitrary code to be wrapped and marked with a signature
 - Remove cosine and arccosine optimizations
   - The inverse of the cosine idiom created a logical inconsistency
-- Flip the order of [`send`](https://uiua.org/docs/send)'s arguments
+- [`pop ◌`](https://uiua.org/docs/pop) can now be used with [`under ⍜`](https://uiua.org/docs/under)
+  - This is only useful when [`pop ◌`](https://uiua.org/docs/pop) is composed with other functions
+- **Breaking Change** - Flip the order of [`send`](https://uiua.org/docs/send)'s arguments
 - Add the [`pool`](https://uiua.org/docs/pool) modifier, which is identical to [`spawn`](https://uiua.org/docs/spawn) but spawns a thread in a thread pool
 - [`&rs`](https://uiua.org/docs/&rs) can now take a count of [`infinity ∞`](https://uiua.org/docs/infinity) to read until the end of the stream
 - Add the [`&runs`](https://uiua.org/docs/&runs) system function, which runs a command and returns an IO stream handle

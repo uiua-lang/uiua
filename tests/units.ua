@@ -297,6 +297,8 @@ X ← |0
 ⍤⟜≍: [1] [X]
 ◌◌
 ⍤⟜≍: [1 10] X_10
+G ↚ +1
+F ← G
 
 # Constant vs Noadic function
 F ← ⚂

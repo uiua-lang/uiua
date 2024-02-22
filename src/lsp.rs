@@ -577,14 +577,19 @@ mod server {
                     }),
                     range: Some(range),
                 }
-            } else if let Some(info) = binding_docs {
-                let span = info.span;
-                let info = info.value;
-                let mut value: String = span.as_str(&doc.asm.inputs, |s| s.into());
-                if let Some(sig) = info.signature {
-                    value.push_str(&format!(" `{sig}`"));
+            } else if let Some(docs) = binding_docs {
+                let span = docs.span;
+                let docs = docs.value;
+                let mut value = "```uiua\n".to_string();
+                span.as_str(&doc.asm.inputs, |s| value.push_str(s));
+                if let Some(sig) = docs.signature {
+                    value.push_str(&format!(" {sig}"));
                 }
-                if let Some((invertible, underable)) = info.invertible_underable {
+                if !docs.is_public && !docs.is_module {
+                    value.push_str(" (private)");
+                }
+                value.push_str("\n```");
+                if let Some((invertible, underable)) = docs.invertible_underable {
                     if invertible || underable {
                         value.push_str("\n\n");
                         if invertible {
@@ -598,7 +603,7 @@ mod server {
                         }
                     }
                 }
-                if let Some(comment) = &info.comment {
+                if let Some(comment) = &docs.comment {
                     value.push_str("\n\n");
                     value.push_str(comment);
                 }
@@ -719,6 +724,9 @@ mod server {
 
                 if let Global::Module { module } = &binding.global {
                     for binding in self.bindings_in_file(doc_uri, module) {
+                        if !binding.public {
+                            continue;
+                        }
                         let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
                         if !item_name.to_lowercase().starts_with(&token.to_lowercase()) {
                             continue;

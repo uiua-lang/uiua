@@ -4,5 +4,8 @@
 
 ∵⊟ [1 2 3] [4 5]
 
+Ex ~ "example"
+Ex~RangeDiff
+
 F! ← F!^!
 F!+

@@ -472,12 +472,7 @@ code:
                         .and_then(|i| i.names.get(item.value.as_str()))
                         .copied()
                     {
-                        if !local.public {
-                            self.add_error(
-                                item.span.clone(),
-                                format!("`{}` is private", item.value),
-                            );
-                        }
+                        self.validate_local(&item.value, local, &item.span);
                         self.asm.global_references.insert(item.clone(), local.index);
                         self.scope.names.insert(
                             item.value.clone(),
@@ -521,16 +516,11 @@ code:
         // Alias re-bound imports
         if binding.words.iter().filter(|w| w.value.is_code()).count() == 1 {
             if let Some(r) = binding.words.iter().find_map(|w| match &w.value {
-                Word::Ref(r) => Some(r),
+                Word::Ref(r) if !r.path.is_empty() => Some(r),
                 _ => None,
             }) {
                 if let Ok((path_locals, local)) = self.ref_local(r) {
-                    if !local.public {
-                        self.add_error(
-                            r.name.span.clone(),
-                            format!("`{}` is private", r.name.value),
-                        );
-                    }
+                    self.validate_local(&r.name.value, local, &r.name.span);
                     self.asm
                         .global_references
                         .insert(binding.name.clone(), local.index);
@@ -683,12 +673,7 @@ code:
                                 let item: String = arr.data.iter().copied().collect();
                                 if let Some(&local) = self.imports[&module].names.get(item.as_str())
                                 {
-                                    if !local.public {
-                                        self.add_error(
-                                            span.clone(),
-                                            format!("`{}` is private", item),
-                                        );
-                                    }
+                                    self.validate_local(&item, local, span);
                                     self.scope.names.insert(
                                         name.clone(),
                                         LocalName {
@@ -1017,25 +1002,19 @@ code:
                                                 ),
                                             )
                                         })?;
-                                    if !local.public {
-                                        self.add_error(
-                                            next.span.clone(),
-                                            format!("`{}` is private", item_name),
-                                        );
-                                    }
+                                    self.validate_local(item_name, local, &next.span);
                                     self.global_index(local.index, next.span.clone(), false);
                                     words.next();
                                     continue;
-                                } else {
-                                    self.add_error(
-                                        next.span.clone(),
-                                        format!(
-                                            "Expected a string after `{}` \
-                                            to specify an item to import",
-                                            r.name.value
-                                        ),
-                                    );
                                 }
+                                self.add_error(
+                                    next.span.clone(),
+                                    format!(
+                                        "Expected a string after `{}` \
+                                            to specify an item to import",
+                                        r.name.value
+                                    ),
+                                );
                             }
                         }
                     }
@@ -1490,12 +1469,7 @@ code:
             self.ident(r.name.value, r.name.span, call)
         } else {
             let (path_locals, local) = self.ref_local(&r)?;
-            if !local.public {
-                self.add_error(
-                    r.name.span.clone(),
-                    format!("`{}` is private", r.name.value),
-                );
-            }
+            self.validate_local(&r.name.value, local, &r.name.span);
             for (local, comp) in path_locals.into_iter().zip(&r.path) {
                 (self.asm.global_references).insert(comp.module.clone(), local.index);
             }
@@ -1899,12 +1873,7 @@ code:
             Modifier::Primitive(prim) => prim,
             Modifier::Ref(r) => {
                 let (path_locals, local) = self.ref_local(&r)?;
-                if !local.public {
-                    self.add_error(
-                        r.name.span.clone(),
-                        format!("`{}` is private", r.name.value),
-                    );
-                }
+                self.validate_local(&r.name.value, local, &r.name.span);
                 self.asm
                     .global_references
                     .insert(r.name.clone(), local.index);
@@ -2657,6 +2626,11 @@ code:
             span.into().sp(message.to_string()),
             self.asm.inputs.clone().into(),
         )
+    }
+    fn validate_local(&mut self, name: &str, local: LocalName, span: &CodeSpan) {
+        if !local.public && (self.scope.names.get(name)).map_or(true, |l| l.index != local.index) {
+            self.add_error(span.clone(), format!("`{}` is private", name));
+        }
     }
     /// Get a span by its index
     pub fn get_span(&self, span: usize) -> Span {

@@ -1998,6 +1998,20 @@ code:
         let Modifier::Primitive(prim) = modified.modifier.value else {
             return Ok(false);
         };
+        macro_rules! finish {
+            ($instrs:expr, $sig:expr) => {{
+                if call {
+                    self.push_all_instrs($instrs);
+                } else {
+                    let func = self.add_function(
+                        FunctionId::Anonymous(modified.modifier.span.clone()),
+                        $sig,
+                        $instrs.to_vec(),
+                    );
+                    self.push_instr(Instr::PushFunc(func));
+                }
+            }};
+        }
         match prim {
             Dip | Gap | On => {
                 // Compile operands
@@ -2355,16 +2369,7 @@ code:
                     },
                 );
                 instrs.push(Instr::PopLocals);
-                if call {
-                    self.push_all_instrs(instrs);
-                } else {
-                    let func = self.add_function(
-                        FunctionId::Anonymous(modified.modifier.span.clone()),
-                        sig,
-                        instrs,
-                    );
-                    self.push_instr(Instr::PushFunc(func));
-                }
+                finish!(instrs, sig);
             }
             Comptime => {
                 let mut operands = modified.code_operands().cloned();
@@ -2453,16 +2458,7 @@ code:
                     Instr::PushFunc(content_func),
                     Instr::ImplPrim(ImplPrimitive::ReduceContent, span),
                 ];
-                if call {
-                    self.push_all_instrs(instrs);
-                } else {
-                    let func = self.add_function(
-                        FunctionId::Anonymous(modified.modifier.span.clone()),
-                        Signature::new(1, 1),
-                        instrs,
-                    );
-                    self.push_instr(Instr::PushFunc(func));
-                }
+                finish!(instrs, Signature::new(1, 1));
             }
             Content => {
                 let operand = modified.code_operands().next().cloned().unwrap();
@@ -2490,31 +2486,22 @@ code:
                     prefix.push(Instr::ImplPrim(ImplPrimitive::InvBox, span));
                 }
                 prefix.extend(instrs);
-                if call {
-                    self.push_all_instrs(prefix);
-                } else {
-                    let func = self.add_function(
-                        FunctionId::Anonymous(modified.modifier.span.clone()),
-                        sig,
-                        prefix,
-                    );
-                    self.push_instr(Instr::PushFunc(func));
-                }
+                finish!(prefix, sig);
             }
             Stringify => {
                 let operand = modified.code_operands().next().unwrap();
                 let s = format_word(operand, &self.asm.inputs);
                 let instr = Instr::Push(s.into());
-                if call {
-                    self.push_instr(instr);
-                } else {
-                    let func = self.add_function(
-                        FunctionId::Anonymous(modified.modifier.span.clone()),
-                        Signature::new(0, 1),
-                        vec![instr],
-                    );
-                    self.push_instr(Instr::PushFunc(func));
-                }
+                finish!([instr], Signature::new(0, 1));
+            }
+            Sig => {
+                let operand = modified.code_operands().next().unwrap().clone();
+                let (_, sig) = self.compile_operand_word(operand)?;
+                let instrs = [
+                    Instr::Push(sig.outputs.into()),
+                    Instr::Push(sig.args.into()),
+                ];
+                finish!(instrs, Signature::new(0, 2));
             }
             _ => return Ok(false),
         }

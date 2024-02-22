@@ -1038,6 +1038,13 @@
     "class": "MonadicPervasive",
     "description": "Numerical sign (1, ¯1, or 0)"
   },
+  "signature": {
+    "args": 0,
+    "outputs": 2,
+    "modifier_args": 1,
+    "class": "OtherModifier",
+    "description": "Get the signature of a function"
+  },
   "sine": {
     "glyph": "○",
     "args": 1,

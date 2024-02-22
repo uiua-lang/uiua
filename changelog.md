@@ -54,6 +54,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`pool`](https://uiua.org/docs/pool) modifier, which is identical to [`spawn`](https://uiua.org/docs/spawn) but spawns a thread in a thread pool
 - [`&rs`](https://uiua.org/docs/&rs) can now take a count of [`infinity ∞`](https://uiua.org/docs/infinity) to read until the end of the stream
 - Add the [`&runs`](https://uiua.org/docs/&runs) system function, which runs a command and returns an IO stream handle
+- Add the experimental [`stringify`](https://uiua.org/docs/stringify) modifier, which turns its function into a string without calling it
+  - This is useful in macros
+- Add the experimental [`signature`](https://uiua.org/docs/signature) modifier, which returns the arguments and output of its function without calling it
+  - This is useful in macros
 - Add the experimental [`&ffi`](https://uiua.org/docs/&ffi) system function, which allows calling functions from shared libraries
   - FFI is still a work in progress, but it is currently useful for foreign functions that aren't too complex
   - Bindings for [Raylib](https://www.raylib.com/) are being worked on as a proof of concept. You can find them in the [rayua](https://github.com/uiua-lang/rayua) repository.

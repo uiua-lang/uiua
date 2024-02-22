@@ -2184,11 +2184,31 @@ primitive!(
     (0(0)[1], Dump, Stack, "dump"),
     /// Convert code into a string instead of running it
     ///
+    /// ex: # Experimental!
+    ///   : stringify(/+ran+1)
     /// This is mostly useful when used in a macro.
     /// ex: # Experimental!
     ///   : F! ← ^! &p$"Running code: _" stringify^!^.
     ///   : F!(+ 1 2)
     (0[1], Stringify, OtherModifier, "stringify"),
+    /// Get the signature of a function
+    ///
+    /// ex: # Experimental!
+    ///   : [signature+]
+    /// ex: # Experimental!
+    ///   : [signature°⊟]
+    /// ex: # Experimental!
+    ///   : [signature(+++++++)]
+    /// ex: # Experimental!
+    ///   : [signature⊙⊙⊙∘]
+    /// ex: # Experimental!
+    ///   : [signature[⊙⊙⊙∘]]
+    /// ex: # Experimental!
+    ///   : [signature°[⊙⊙⊙∘]]
+    ///
+    /// At the moment, this is only useful for debugging.
+    /// While theoretically, it could be used in a macro to choose a branch of a switch function appropriate for the function, this is not yet possible because of the way that macros and signature checking work.
+    (0(2)[1], Sig, OtherModifier, "signature"),
     /// Convert a value to its code representation
     ///
     /// ex: # Experimental!

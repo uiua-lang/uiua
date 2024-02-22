@@ -340,6 +340,8 @@ sys_op! {
     /// A length 3 last axis is an RGB image.
     /// A length 4 last axis is an RGB image with an alpha channel.
     ///
+    /// You can decode a byte array into an image with [un][&ime].
+    ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, `ico`, and `qoi`.
     ///
     /// See also: [&ims] [&imd]
@@ -375,6 +377,8 @@ sys_op! {
     /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
     /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
     ///
+    /// You can decode a byte array into a gif with [un][&gife].
+    ///
     /// See also: [&gifs] [&gifd]
     (2, GifEncode, Gifs, "&gife", "gif - encode"),
     /// Show a gif
@@ -403,6 +407,8 @@ sys_op! {
     ///
     /// The samples must be between -1 and 1.
     /// The sample rate is [&asr].
+    ///
+    /// You can decode a byte array into audio with [un][&ae].
     ///
     /// Only the `wav` format is supported.
     ///

@@ -2,7 +2,6 @@
 
 - 0.9
   - Allow for private module bindings
-  - Add `~` to pad glyph palette
   - Release it!
 - Optimize `≡/F`
 - Site pages/tutorials

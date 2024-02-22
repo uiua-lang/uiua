@@ -2,6 +2,7 @@
 
 - 0.9
   - Release it!
+- Optimize `≡/F`
 - Site pages/tutorials
   - Duality of `pick` and `select`
   - Stack-source locality
@@ -25,7 +26,6 @@ Feel free to make PRs to the list itself as well.
 - Better complex `⌈`/`⌊`/`⁅` implementation
 - Pad link from Gist
 - Additional optimizations
-  - `≡/F`
   - `≡F◫`
   - `/F◫`
   - `/F⇌`

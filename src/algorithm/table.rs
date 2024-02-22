@@ -1,6 +1,6 @@
 //! Algorithms for tabling modifiers
 
-use ecow::{eco_vec, EcoVec};
+use ecow::eco_vec;
 
 use crate::{
     algorithm::pervade::*, function::Function, random, value::Value, Array, ArrayValue,
@@ -279,15 +279,18 @@ table_math!(table_nums, f64, num_num);
 
 table_math!(table_coms, crate::Complex, com_x);
 
-fn fast_table_list<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
+fn fast_table_list<A: ArrayValue, B: ArrayValue, C: ArrayValue + Default>(
     a: Array<A>,
     b: Array<B>,
     f: impl Fn(A, B) -> C,
 ) -> Array<C> {
-    let mut new_data = EcoVec::with_capacity(a.data.len() * b.data.len());
+    let mut new_data = eco_vec![C::default(); a.data.len() * b.data.len()];
+    let data_slice = new_data.make_mut();
+    let mut i = 0;
     for x in a.data {
         for y in b.data.iter().cloned() {
-            new_data.push(f(x.clone(), y));
+            data_slice[i] = f(x.clone(), y);
+            i += 1;
         }
     }
     let mut new_shape = a.shape;
@@ -295,24 +298,30 @@ fn fast_table_list<A: ArrayValue, B: ArrayValue, C: ArrayValue>(
     Array::new(new_shape, new_data)
 }
 
-fn fast_table_list_join_or_couple<T: ArrayValue>(
+fn fast_table_list_join_or_couple<T: ArrayValue + Default>(
     a: Array<T>,
     b: Array<T>,
     flipped: bool,
 ) -> Array<T> {
-    let mut new_data = EcoVec::with_capacity(a.data.len() * b.data.len() * 2);
+    let mut new_data = eco_vec![T::default(); a.data.len() * b.data.len() * 2];
+    let data_slice = new_data.make_mut();
+    let mut i = 0;
     if flipped {
         for x in a.data {
             for y in b.data.iter().cloned() {
-                new_data.push(y);
-                new_data.push(x.clone());
+                data_slice[i] = y;
+                i += 1;
+                data_slice[i] = x.clone();
+                i += 1;
             }
         }
     } else {
         for x in a.data {
             for y in b.data.iter().cloned() {
-                new_data.push(x.clone());
-                new_data.push(y);
+                data_slice[i] = x.clone();
+                i += 1;
+                data_slice[i] = y;
+                i += 1;
             }
         }
     }

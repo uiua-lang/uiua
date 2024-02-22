@@ -2055,6 +2055,10 @@ primitive!(
     ///   : map 1_2 3_4
     ///   : ⬚0get 1 .
     ///   : ⬚0get 5 :
+    /// You can use [under][get] to modify the value at the key.
+    /// ex: # Experimental!
+    ///   : /map⍉ [1_2 3_4 5_6]
+    ///   : ⍜(get3|×10)
     ///
     /// See also: [insert], [has], [remove]
     (2, Get, Map, "get"),

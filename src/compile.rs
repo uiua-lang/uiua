@@ -103,7 +103,7 @@ pub struct Import {
     /// The top level comment
     pub comment: Option<Arc<str>>,
     /// Map module-local names to global indices
-    pub names: HashMap<Ident, usize>,
+    names: HashMap<Ident, LocalName>,
 }
 
 impl AsRef<Assembly> for Compiler {
@@ -251,10 +251,7 @@ impl Compiler {
         res?;
         Ok(Import {
             comment: scope.comment,
-            names: (scope.names.into_iter())
-                .filter(|(_, b)| b.public)
-                .map(|(k, v)| (k, v.index))
-                .collect(),
+            names: scope.names,
         })
     }
     fn load_impl(&mut self, input: &str, src: InputSrc) -> UiuaResult<&mut Self> {
@@ -471,28 +468,30 @@ code:
                 }
                 // Bind items
                 for item in import.items() {
-                    if let Some(index) = self
+                    if let Some(local) = self
                         .imports
                         .get(&module)
                         .and_then(|i| i.names.get(item.value.as_str()))
                         .copied()
                     {
-                        self.asm.global_references.insert(item.clone(), index);
+                        if !local.public {
+                            self.add_error(
+                                item.span.clone(),
+                                format!("`{}` is private", item.value),
+                            );
+                        }
+                        self.asm.global_references.insert(item.clone(), local.index);
                         self.scope.names.insert(
                             item.value.clone(),
                             LocalName {
-                                index,
+                                index: local.index,
                                 public: false,
                             },
                         );
                     } else {
                         self.add_error(
                             item.span.clone(),
-                            format!(
-                                "Item `{}` not found in module {}",
-                                item.value,
-                                module.display()
-                            ),
+                            format!("`{}` not found in module {}", item.value, module.display()),
                         );
                     }
                 }
@@ -519,7 +518,7 @@ code:
         Function::new(id, sig, FuncSlice { start, len })
     }
     fn binding(&mut self, binding: Binding, comment: Option<Arc<str>>) -> UiuaResult {
-        let public = true;
+        let public = binding.public;
 
         // Alias re-bound imports
         if binding.words.iter().filter(|w| w.value.is_code()).count() == 1 {
@@ -527,21 +526,27 @@ code:
                 Word::Ref(r) => Some(r),
                 _ => None,
             }) {
-                if let Ok((path_indices, index)) = self.ref_index(r) {
+                if let Ok((path_locals, local)) = self.ref_local(r) {
+                    if !local.public {
+                        self.add_error(
+                            r.name.span.clone(),
+                            format!("`{}` is private", r.name.value),
+                        );
+                    }
                     self.asm
                         .global_references
-                        .insert(binding.name.clone(), index);
-                    for (index, comp) in path_indices.into_iter().zip(&r.path) {
-                        self.asm
-                            .global_references
-                            .insert(comp.module.clone(), index);
+                        .insert(binding.name.clone(), local.index);
+                    for (local, comp) in path_locals.into_iter().zip(&r.path) {
+                        (self.asm.global_references).insert(comp.module.clone(), local.index);
                     }
-                    self.asm.global_references.insert(r.name.clone(), index);
+                    self.asm
+                        .global_references
+                        .insert(r.name.clone(), local.index);
                     self.scope.names.insert(
                         binding.name.value,
                         LocalName {
-                            index,
-                            public: true,
+                            index: local.index,
+                            public,
                         },
                     );
                     return Ok(());
@@ -682,12 +687,24 @@ code:
                         match item {
                             Value::Char(arr) if arr.rank() == 1 => {
                                 let item: String = arr.data.iter().copied().collect();
-                                if let Some(&index) = self.imports[&module].names.get(item.as_str())
+                                if let Some(&local) = self.imports[&module].names.get(item.as_str())
                                 {
-                                    self.scope
-                                        .names
-                                        .insert(name.clone(), LocalName { index, public });
-                                    if let Some(s) = self.asm.bindings[index].global.signature() {
+                                    if !local.public {
+                                        self.add_error(
+                                            span.clone(),
+                                            format!("`{}` is private", item),
+                                        );
+                                    }
+                                    self.scope.names.insert(
+                                        name.clone(),
+                                        LocalName {
+                                            index: local.index,
+                                            public,
+                                        },
+                                    );
+                                    if let Some(s) =
+                                        self.asm.bindings[local.index].global.signature()
+                                    {
                                         sig = Some(s);
                                     } else {
                                         self.add_error(
@@ -993,7 +1010,7 @@ code:
                                 &self.asm.bindings[local.index].global
                             {
                                 if let Word::String(item_name) = &word.value {
-                                    let index = self.imports[module]
+                                    let local = self.imports[module]
                                         .names
                                         .get(item_name.as_str())
                                         .copied()
@@ -1006,7 +1023,13 @@ code:
                                                 ),
                                             )
                                         })?;
-                                    self.global_index(index, next.span.clone(), false);
+                                    if !local.public {
+                                        self.add_error(
+                                            next.span.clone(),
+                                            format!("`{}` is private", item_name),
+                                        );
+                                    }
+                                    self.global_index(local.index, next.span.clone(), false);
                                     words.next();
                                     continue;
                                 } else {
@@ -1359,10 +1382,10 @@ code:
         }
         Ok(())
     }
-    fn ref_index(&self, r: &Ref) -> UiuaResult<(Vec<usize>, usize)> {
-        let mut path_indices = Vec::new();
+    fn ref_local(&self, r: &Ref) -> UiuaResult<(Vec<LocalName>, LocalName)> {
+        let mut path_locals = Vec::new();
         if let Some(first) = r.path.first() {
-            let module_index = self
+            let module_local = self
                 .scope
                 .names
                 .get(&first.module.value)
@@ -1372,10 +1395,9 @@ code:
                         first.module.span.clone(),
                         format!("Unknown import `{}`", first.module.value),
                     )
-                })?
-                .index;
-            path_indices.push(module_index);
-            let global = &self.asm.bindings[module_index].global;
+                })?;
+            path_locals.push(module_local);
+            let global = &self.asm.bindings[module_local.index].global;
             let mut module = match global {
                 Global::Module { module } => module,
                 Global::Func(_) => {
@@ -1404,7 +1426,7 @@ code:
                 }
             };
             for comp in r.path.iter().skip(1) {
-                let submod_index = self.imports[module]
+                let submod_local = self.imports[module]
                     .names
                     .get(&comp.module.value)
                     .copied()
@@ -1418,8 +1440,8 @@ code:
                             ),
                         )
                     })?;
-                path_indices.push(submod_index);
-                let global = &self.asm.bindings[submod_index].global;
+                path_locals.push(submod_local);
+                let global = &self.asm.bindings[submod_local.index].global;
                 module = match global {
                     Global::Module { module } => module,
                     Global::Func(_) => {
@@ -1448,8 +1470,8 @@ code:
                     }
                 };
             }
-            if let Some(index) = self.imports[module].names.get(&r.name.value).copied() {
-                Ok((path_indices, index))
+            if let Some(local) = self.imports[module].names.get(&r.name.value).copied() {
+                Ok((path_locals, local))
             } else {
                 Err(self.fatal_error(
                     r.name.span.clone(),
@@ -1461,7 +1483,7 @@ code:
                 ))
             }
         } else if let Some(local) = self.scope.names.get(&r.name.value) {
-            Ok((Vec::new(), local.index))
+            Ok((Vec::new(), *local))
         } else {
             Err(self.fatal_error(
                 r.name.span.clone(),
@@ -1473,12 +1495,20 @@ code:
         if r.path.is_empty() {
             self.ident(r.name.value, r.name.span, call)
         } else {
-            let (path_indices, index) = self.ref_index(&r)?;
-            for (index, comp) in path_indices.into_iter().zip(&r.path) {
-                (self.asm.global_references).insert(comp.module.clone(), index);
+            let (path_locals, local) = self.ref_local(&r)?;
+            if !local.public {
+                self.add_error(
+                    r.name.span.clone(),
+                    format!("`{}` is private", r.name.value),
+                );
             }
-            self.asm.global_references.insert(r.name.clone(), index);
-            self.global_index(index, r.name.span, call);
+            for (local, comp) in path_locals.into_iter().zip(&r.path) {
+                (self.asm.global_references).insert(comp.module.clone(), local.index);
+            }
+            self.asm
+                .global_references
+                .insert(r.name.clone(), local.index);
+            self.global_index(local.index, r.name.span, call);
             Ok(())
         }
     }
@@ -1874,12 +1904,20 @@ code:
         let prim = match modified.modifier.value {
             Modifier::Primitive(prim) => prim,
             Modifier::Ref(r) => {
-                let (path_indices, index) = self.ref_index(&r)?;
-                self.asm.global_references.insert(r.name.clone(), index);
-                for (index, comp) in path_indices.into_iter().zip(&r.path) {
-                    (self.asm.global_references).insert(comp.module.clone(), index);
+                let (path_locals, local) = self.ref_local(&r)?;
+                if !local.public {
+                    self.add_error(
+                        r.name.span.clone(),
+                        format!("`{}` is private", r.name.value),
+                    );
                 }
-                let mut words = (self.macros.get(&index))
+                self.asm
+                    .global_references
+                    .insert(r.name.clone(), local.index);
+                for (local, comp) in path_locals.into_iter().zip(&r.path) {
+                    (self.asm.global_references).insert(comp.module.clone(), local.index);
+                }
+                let mut words = (self.macros.get(&local.index))
                     .expect("modifier not found")
                     .clone();
                 if self.macro_depth > 20 {

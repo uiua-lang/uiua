@@ -420,6 +420,8 @@ pub enum Token {
     Simple(AsciiToken),
     Glyph(Primitive),
     LeftArrow,
+    LeftStrokeArrow,
+    LeftArrowTilde,
     Newline,
     Spaces,
 }
@@ -480,6 +482,7 @@ pub enum AsciiToken {
     Percent,
     Caret,
     Equal,
+    EqualTilde,
     BangEqual,
     LessEqual,
     GreaterEqual,
@@ -508,6 +511,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::Caret => write!(f, "^"),
             AsciiToken::Equal => write!(f, "="),
             AsciiToken::BangEqual => write!(f, "!="),
+            AsciiToken::EqualTilde => write!(f, "=~"),
             AsciiToken::LessEqual => write!(f, "<="),
             AsciiToken::GreaterEqual => write!(f, ">="),
             AsciiToken::Backtick => write!(f, "`"),
@@ -674,11 +678,14 @@ impl<'a> Lexer<'a> {
                     self.end(Placeholder(crate::ast::PlaceholderOp::Over), start)
                 }
                 "^" => self.end(Caret, start),
+                "=" if self.next_char_exact("~") => self.end(EqualTilde, start),
                 "=" => self.end(Equal, start),
                 "<" if self.next_char_exact("=") => self.end(LessEqual, start),
                 ">" if self.next_char_exact("=") => self.end(GreaterEqual, start),
                 "!" if self.next_char_exact("=") => self.end(BangEqual, start),
+                "←" if self.next_char_exact("~") => self.end(LeftArrowTilde, start),
                 "←" => self.end(LeftArrow, start),
+                "↚" => self.end(LeftStrokeArrow, start),
                 // Comments
                 "#" => {
                     let mut n = 0;

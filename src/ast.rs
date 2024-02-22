@@ -30,6 +30,8 @@ pub struct Binding {
     pub name: Sp<Ident>,
     /// The span of the arrow
     pub arrow_span: CodeSpan,
+    /// Whether the binding is public
+    pub public: bool,
     /// The signature
     pub signature: Option<Sp<Signature>>,
     /// The code

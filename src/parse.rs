@@ -328,26 +328,34 @@ impl<'i> Parser<'i> {
         self.next_output_comment += 1;
         Some(n.span.sp(Word::OutputComment { i, n: n.value }))
     }
-    fn try_binding_init(&mut self) -> Option<(Sp<Ident>, CodeSpan)> {
+    fn try_binding_init(&mut self) -> Option<(Sp<Ident>, CodeSpan, bool)> {
         let start = self.index;
         let name = self.try_ident()?;
         // Left arrow
         let mut arrow_span = self.try_spaces().map(|w| w.span);
-        if let Some(span) = self.try_exact(Equal).or_else(|| self.try_exact(LeftArrow)) {
-            arrow_span = Some(if let Some(arrow_span) = arrow_span {
-                arrow_span.merge(span)
+        let (glyph_span, public) =
+            if let Some(span) = self.try_exact(Equal).or_else(|| self.try_exact(LeftArrow)) {
+                (span, true)
+            } else if let Some(span) = self
+                .try_exact(EqualTilde)
+                .or_else(|| self.try_exact(LeftArrowTilde))
+                .or_else(|| self.try_exact(LeftStrokeArrow))
+            {
+                (span, false)
             } else {
-                span
-            });
+                self.index = start;
+                return None;
+            };
+        arrow_span = Some(if let Some(arrow_span) = arrow_span {
+            arrow_span.merge(glyph_span)
         } else {
-            self.index = start;
-            return None;
-        }
+            glyph_span
+        });
         let mut arrow_span = arrow_span.unwrap();
         if let Some(span) = self.try_spaces().map(|w| w.span) {
             arrow_span = arrow_span.merge(span);
         }
-        Some((name, arrow_span))
+        Some((name, arrow_span, public))
     }
     fn try_import_init(&mut self) -> Option<(Option<Sp<Ident>>, CodeSpan, Sp<String>)> {
         let start = self.index;
@@ -370,7 +378,7 @@ impl<'i> Parser<'i> {
         Some((name, tilde_span, path))
     }
     fn try_binding(&mut self) -> Option<Binding> {
-        let (name, arrow_span) = self.try_binding_init()?;
+        let (name, arrow_span, public) = self.try_binding_init()?;
         // Bad name advice
         if ["\u{200b}", "\u{200c}", "\u{200d}"]
             .iter()
@@ -391,6 +399,7 @@ impl<'i> Parser<'i> {
         Some(Binding {
             name,
             arrow_span,
+            public,
             words,
             signature,
         })

@@ -605,7 +605,8 @@ impl<'a> Formatter<'a> {
 
                 self.output
                     .push_str(&crate::parse::canonicalize_exclams(&binding.name.value));
-                self.output.push_str(" ←");
+                self.output
+                    .push_str(if binding.public { " ←" } else { " ↚" });
                 if !binding.words.is_empty() || binding.signature.is_some() {
                     self.output.push(' ');
                 }

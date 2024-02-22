@@ -789,8 +789,10 @@ primitive!(
     /// Use [fill] to make their shapes match
     /// ex: ⬚∞⊟ [1 2 3] [4 5]
     ///
-    /// [couple] is compatible with [under].
-    /// ex: ⍜⊟(×2) 3 5
+    /// [couple] is compatible with [un] and [under].
+    /// ex: °⊟ [10 20]
+    /// ex: °⊟ [1_2 3_4]
+    /// ex: ⍜⊟(×2) 3 5 # Works, but maybe use ∩ both in this case
     (2, Couple, DyadicArray, ("couple", '⊟')),
     /// Append two arrays end-to-end
     ///

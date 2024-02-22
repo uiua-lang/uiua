@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.9
-  - Allow for private module bindings
   - Release it!
 - Optimize `≡/F`
 - Site pages/tutorials

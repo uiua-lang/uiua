@@ -137,6 +137,7 @@ pub struct BindingInfo {
     /// The global binding type
     pub global: Global,
     /// Whether the binding is public
+    #[serde(default = "tru", skip_serializing_if = "is_true")]
     pub public: bool,
     #[serde(skip, default = "CodeSpan::dummy")]
     #[allow(dead_code)]
@@ -146,6 +147,14 @@ pub struct BindingInfo {
     #[allow(dead_code)]
     /// The comment preceding the binding
     pub comment: Option<Arc<str>>,
+}
+
+fn is_true(value: &bool) -> bool {
+    *value
+}
+
+fn tru() -> bool {
+    true
 }
 
 /// A type of global binding

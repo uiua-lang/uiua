@@ -1733,7 +1733,7 @@ code:
     fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
         let op_count = modified.code_operands().count();
 
-        // De-sugar switched
+        // De-sugar function pack
         if op_count == 1 {
             let operand = modified.code_operands().next().unwrap().clone();
             if let Sp {
@@ -1948,6 +1948,7 @@ code:
             _ => {}
         }
 
+        // Compile operands
         let instrs = self.compile_words(modified.operands, false)?;
 
         // Reduce monadic deprectation message
@@ -2287,20 +2288,20 @@ code:
                     if call {
                         self.push_all_instrs(instrs);
                     } else {
-                        let sig = Signature::new(
-                            (before_sig.args + g_sig.args + after_sig.args)
-                                .saturating_sub(before_sig.outputs + g_sig.outputs)
-                                .max(before_sig.args),
-                            (before_sig.outputs + g_sig.outputs)
-                                .saturating_sub(g_sig.args + after_sig.args)
-                                + after_sig.outputs,
-                        );
-                        let func = self.add_function(
-                            FunctionId::Anonymous(modified.modifier.span.clone()),
-                            sig,
-                            instrs,
-                        );
-                        self.push_instr(Instr::PushFunc(func));
+                        match instrs_signature(&instrs) {
+                            Ok(sig) => {
+                                let func = self.add_function(
+                                    FunctionId::Anonymous(modified.modifier.span.clone()),
+                                    sig,
+                                    instrs,
+                                );
+                                self.push_instr(Instr::PushFunc(func));
+                            }
+                            Err(e) => self.add_error(
+                                modified.modifier.span.clone(),
+                                format!("Cannot infer function signature: {e}"),
+                            ),
+                        }
                     }
                 } else {
                     return Err(self.fatal_error(f_span, "No inverse found"));

@@ -1043,7 +1043,8 @@
     "outputs": 2,
     "modifier_args": 1,
     "class": "OtherModifier",
-    "description": "Get the signature of a function"
+    "description": "Get the signature of a function",
+    "experimental": true
   },
   "sine": {
     "glyph": "○",

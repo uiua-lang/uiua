@@ -273,4 +273,6 @@ uiuisms!(
     "⍚▽⬚0⋯⇡ⁿ:2⊃⧻¤ [1 5 8 2]",
     /// Irrational number to n terms of continued fraction
     "⊙◌⍥(⊂⊙⊃⌊(÷:1◿1)):[] 10 e",
+    /// Bitwise XOR
+    "⍜(∩⍉∩⋯|↧¬⬚0⊃↧↥) 42 30_65_135",
 );

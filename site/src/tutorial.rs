@@ -1545,6 +1545,16 @@ fn TutorialModules() -> impl IntoView {
         <p>"If you want to be able to refer to an item from a module with a different name, simply make a binding with the new name."</p>
         <Editor example="Ex ~ \"example.ua\"\nSqr ← Ex~Square\nSp ← Ex~Span\n\nSp⟜Sqr 3"/>
         <p>"These bindings will also get indented by the formatter if they immediately follow the import."</p>
+
+        <h2 id="visibility">"Visibility"</h2>
+        <p>"All bindings in a module bound with the normal "<code>"←"</code>" arrow are public and can be used by importers of the module."</p>
+        <p>"However, modules imported in modules, as well as their same-name imports (the names on lines that start with "<code>"~"</code>"), are private."</p>
+        <p>"You may have noticed in the example file that one binding uses a special "<code>"↚"</code>" arrow. This indicates that the binding is private."</p>
+        <p>"Private bindings cannot be accessed from outside the file in which they are defined."</p>
+        <Editor example="~ \"example.ua\" ~ RangeDiff"/> // Should fail
+        <p>"To enter this arrow, you can put a "<code>"~"</code>" after a binding's normal "<code>"←"</code>" or "<code>"="</code>"."</p>
+        <p>"Try formatting the following example to see how this works."</p>
+        <Editor example="A = +1\nB ← +2\nC =~ +3\nD ←~ +4"/>
     }
 }
 

@@ -249,6 +249,7 @@ pub(crate) fn under_instrs(
         &round!(Floor),
         &round!(Ceil),
         &round!(Round),
+        &pat!(Pop, (PushTempN(1)), (PopTempN(1))),
         &maybe_val!(stash2!(Take, Untake)),
         &maybe_val!(stash2!(Drop, Undrop)),
         &maybe_val!(stash2!(Select, Unselect)),
@@ -842,11 +843,13 @@ fn under_push_temp_pattern<'a>(
                 if inner_befores_sig.args != inner_afters_sig.outputs {
                     let (start_count, end_count) =
                         temp_pair_counts(&mut start_instr, &mut end_instr)?;
-                    *start_count = (*start_count).min(inner_afters_sig.outputs);
+                    *start_count -= inner_afters_sig.outputs;
                     *end_count = (*end_count).min(inner_befores_sig.outputs);
                 }
-                afters.insert(0, start_instr);
-                afters.push(end_instr);
+                if inner_afters_sig.outputs > 0 {
+                    afters.insert(0, start_instr);
+                    afters.push(end_instr);
+                }
             }
             Ordering::Greater => {
                 let (start_count, end_count) = temp_pair_counts(&mut start_instr, &mut end_instr)?;

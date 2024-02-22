@@ -1,9 +1,10 @@
 {
   "&ad": {
     "args": 1,
-    "outputs": 1,
+    "outputs": 2,
     "class": "Audio",
-    "description": "Decode audio from a byte array"
+    "description": "Decode audio from a byte array",
+    "deprecated": true
   },
   "&ae": {
     "args": 2,
@@ -119,7 +120,8 @@
     "args": 1,
     "outputs": 2,
     "class": "Gifs",
-    "description": "Decode a gif from a byte array"
+    "description": "Decode a gif from a byte array",
+    "deprecated": true
   },
   "&gife": {
     "args": 2,
@@ -148,9 +150,10 @@
   },
   "&imd": {
     "args": 1,
-    "outputs": 1,
+    "outputs": 2,
     "class": "Images",
-    "description": "Decode an image from a byte array"
+    "description": "Decode an image from a byte array",
+    "deprecated": true
   },
   "&ime": {
     "args": 2,

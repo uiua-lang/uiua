@@ -323,6 +323,21 @@ impl Primitive {
                 Some("use the name of a binding to recur instead".into())
             }
             Primitive::Sys(SysOp::Import) => Some("use new ~ syntax instead".into()),
+            Primitive::Sys(SysOp::GifDecode) => Some(format!(
+                "use {} {} instead",
+                Primitive::Un.format(),
+                Primitive::Sys(SysOp::GifEncode).format()
+            )),
+            Primitive::Sys(SysOp::AudioDecode) => Some(format!(
+                "use {} {} instead",
+                Primitive::Un.format(),
+                Primitive::Sys(SysOp::AudioEncode).format()
+            )),
+            Primitive::Sys(SysOp::ImDecode) => Some(format!(
+                "use {} {} instead",
+                Primitive::Un.format(),
+                Primitive::Sys(SysOp::ImEncode).format()
+            )),
             _ => None,
         }
     }

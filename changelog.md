@@ -9,6 +9,8 @@ This version is not yet released. If you are reading this on the website, then t
   - You can still do an infinite loop with [`do ⍢`](https://uiua.org/docs/do)`(…)1`
 - **Breaking Change** - [`reshape ↯`](https://uiua.org/docs/reshape) with a shape with negative dimensions now reverses that axis rather than acting as a "fill" value
   - The "fill" behavior can still be achieved by setting an axis to [`infinity ∞`](https://uiua.org/docs/infinity)
+- **Breaking Change** - [`&ad`](https://uiua.org/docs/&ad) and [`&imd`](https://uiua.org/docs/&imd) now return an encoding format as a string in addition to the media data
+  - They are also now deprecated in favor of using [`un °`](https://uiua.org/docs/un) with [`&ae`](https://uiua.org/docs/&ae) or [`&ime`](https://uiua.org/docs/&ime)
 - Overhaul the module system
   - Details can be found in the updated [Modules](https://uiua.org/tutorial/modules) tutorial
   - Deprecate [`&i`](https://uiua.org/docs/&i), as it is no longer necessary

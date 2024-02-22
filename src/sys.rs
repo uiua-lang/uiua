@@ -321,10 +321,11 @@ sys_op! {
     (2(0), FWriteAll, Filesystem, "&fwa", "file - write all"),
     /// Decode an image from a byte array
     ///
+    /// Returns the image format as a string and a rank-`3` numeric array.
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, `ico`, and `qoi`.
     ///
     /// See also: [&ime]
-    (1, ImDecode, Images, "&imd", "image - decode"),
+    (1(2), ImDecode, Images, "&imd", "image - decode"),
     /// Encode an image into a byte array with the specified format
     ///
     /// The first argument is the format, and the second is the image.
@@ -386,10 +387,11 @@ sys_op! {
     (2(0), GifShow, Gifs, "&gifs", "gif - show"),
     /// Decode audio from a byte array
     ///
+    /// Returns the audio format as a string and an array representing the audio samples.
     /// Only the `wav` format is supported.
     ///
     /// See also: [&ae]
-    (1, AudioDecode, Audio, "&ad", "audio - decode"),
+    (1(2), AudioDecode, Audio, "&ad", "audio - decode"),
     /// Encode audio into a byte array
     ///
     /// The first argument is the format, and the second is the audio samples.
@@ -1250,6 +1252,8 @@ impl SysOp {
                         }
                         _ => return Err(env.error("Image bytes must be a numeric array")),
                     };
+                    let format = image::guess_format(&bytes)
+                        .map_err(|e| env.error(format!("Failed to read image: {e}")))?;
                     let image = image::load_from_memory(&bytes)
                         .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
                         .into_rgba8();
@@ -1264,6 +1268,10 @@ impl SysOp {
                             .collect::<crate::cowslice::CowSlice<_>>(),
                     );
                     env.push(array);
+                    env.push(match format {
+                        image::ImageFormat::Jpeg => "jpeg".into(),
+                        fmt => format!("{fmt:?}").to_lowercase(),
+                    });
                 }
                 #[cfg(not(feature = "image"))]
                 return Err(env.error("Image decoding is not supported in this environment"));
@@ -1366,6 +1374,7 @@ impl SysOp {
                     };
                     let array = array_from_wav_bytes(&bytes, env).map_err(|e| env.error(e))?;
                     env.push(array);
+                    env.push("wav");
                 }
                 #[cfg(not(feature = "audio_encode"))]
                 return Err(env.error("Audio decoding is not supported in this environment"));
@@ -1381,7 +1390,8 @@ impl SysOp {
                         "wav" => value_to_wav_bytes(&value, env.rt.backend.audio_sample_rate())
                             .map_err(|e| env.error(e))?,
                         format => {
-                            return Err(env.error(format!("Invalid audio format: {}", format)))
+                            return Err(env
+                                .error(format!("Invalid or unsupported audio format: {}", format)))
                         }
                     };
                     env.push(Array::<u8>::from(bytes.as_slice()));

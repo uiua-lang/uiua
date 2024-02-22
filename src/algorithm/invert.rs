@@ -36,6 +36,10 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Join => Instr::ImplPrim(InvJoin, span),
         Sys(SysOp::GifDecode) => Instr::Prim(Sys(SysOp::GifEncode), span),
         Sys(SysOp::GifEncode) => Instr::Prim(Sys(SysOp::GifDecode), span),
+        Sys(SysOp::AudioDecode) => Instr::Prim(Sys(SysOp::AudioEncode), span),
+        Sys(SysOp::AudioEncode) => Instr::Prim(Sys(SysOp::AudioDecode), span),
+        Sys(SysOp::ImDecode) => Instr::Prim(Sys(SysOp::ImEncode), span),
+        Sys(SysOp::ImEncode) => Instr::Prim(Sys(SysOp::ImDecode), span),
         _ => return None,
     })
 }

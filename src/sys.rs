@@ -344,7 +344,7 @@ sys_op! {
     ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, `ico`, and `qoi`.
     ///
-    /// See also: [&ims] [&imd]
+    /// See also: [&ims]
     (2, ImEncode, Images, "&ime", "image - encode"),
     /// Show an image
     ///
@@ -379,7 +379,7 @@ sys_op! {
     ///
     /// You can decode a byte array into a gif with [un][&gife].
     ///
-    /// See also: [&gifs] [&gifd]
+    /// See also: [&gifs]
     (2, GifEncode, Gifs, "&gife", "gif - encode"),
     /// Show a gif
     ///
@@ -412,7 +412,7 @@ sys_op! {
     ///
     /// Only the `wav` format is supported.
     ///
-    /// See also: [&ap] [&ad]
+    /// See also: [&ap]
     (2, AudioEncode, Audio, "&ae", "audio - encode"),
     /// Play some audio
     ///

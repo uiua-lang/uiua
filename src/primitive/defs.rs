@@ -595,6 +595,9 @@ primitive!(
     /// ex: °⋯ [[0 1 1]
     ///   :     [1 0 0]
     ///   :     [1 1 0]]
+    ///
+    /// [under][bits] can be used to perform bit-wise operations.
+    /// ex: ⍜⋯(¬⬚0↙8) 5
     (1, Bits, MonadicArray, ("bits", '⋯')),
     /// Rotate the shape of an array
     ///

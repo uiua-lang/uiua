@@ -78,6 +78,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Lots of performance improvements and optimizations
   - Optimize the pattern for adjacency: [`≡`](https://uiua.org/docs/rows)[`/`](https://uiua.org/docs/reduce)`F`[`◫`](https://uiua.org/docs/windows)
     - It is as much as 800x faster in some cases
+  - Optimize [`≡`](https://uiua.org/docs/rows)[`/`](https://uiua.org/docs/reduce)
   - Square matrices are now transposed in-place
   - ..and more
 - Numbers that seem to have a floating-point epsilon rounding error will be output with the epsilon noted

@@ -10,7 +10,7 @@ use crate::{
     Array, ArrayValue, Function, ImplPrimitive, Primitive, Shape, Uiua, UiuaResult, Value,
 };
 
-pub fn reduce(env: &mut Uiua) -> UiuaResult {
+pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let xs = env.pop(1)?;
@@ -19,70 +19,92 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
         (Some((Primitive::Join, false)), mut xs)
             if !env.unpack_boxes() && env.value_fill().is_none() =>
         {
-            if xs.rank() < 2 {
+            let depth = depth.min(xs.rank());
+            if xs.rank() - depth < 2 {
                 env.push(xs);
                 return Ok(());
             }
             let shape = xs.shape();
             let mut new_shape = Shape::with_capacity(xs.rank() - 1);
-            new_shape.push(shape[0] * shape[1]);
-            new_shape.extend_from_slice(&shape[2..]);
+            new_shape.extend_from_slice(&shape[..depth]);
+            new_shape.push(shape[depth] * shape[depth + 1]);
+            new_shape.extend_from_slice(&shape[depth + 2..]);
             *xs.shape_mut() = new_shape;
             env.push(xs);
         }
         (Some((prim, flipped)), Value::Num(nums)) => {
-            if let Err(nums) = reduce_nums(prim, flipped, nums, env) {
-                return generic_reduce(f, Value::Num(nums), env);
+            if let Err(nums) = reduce_nums(prim, flipped, nums, depth, env) {
+                return generic_reduce(f, Value::Num(nums), depth, env);
             }
         }
 
         (Some((prim, flipped)), Value::Complex(nums)) => {
-            if let Err(nums) = reduce_coms(prim, flipped, nums, env) {
-                return generic_reduce(f, Value::Complex(nums), env);
+            if let Err(nums) = reduce_coms(prim, flipped, nums, depth, env) {
+                return generic_reduce(f, Value::Complex(nums), depth, env);
             }
         }
         #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(bytes)) => {
             let fill = env.num_fill().ok();
             env.push::<Value>(match prim {
-                Primitive::Add => fast_reduce(bytes.convert(), 0.0, fill, add::num_num).into(),
+                Primitive::Add => {
+                    fast_reduce(bytes.convert(), 0.0, fill, depth, add::num_num).into()
+                }
                 Primitive::Sub if flipped => {
-                    fast_reduce(bytes.convert(), 0.0, fill, flip(sub::num_num)).into()
+                    fast_reduce(bytes.convert(), 0.0, fill, depth, flip(sub::num_num)).into()
                 }
-                Primitive::Sub => fast_reduce(bytes.convert(), 0.0, fill, sub::num_num).into(),
-                Primitive::Mul => fast_reduce(bytes.convert(), 1.0, fill, mul::num_num).into(),
+                Primitive::Sub => {
+                    fast_reduce(bytes.convert(), 0.0, fill, depth, sub::num_num).into()
+                }
+                Primitive::Mul => {
+                    fast_reduce(bytes.convert(), 1.0, fill, depth, mul::num_num).into()
+                }
                 Primitive::Div if flipped => {
-                    fast_reduce(bytes.convert(), 1.0, fill, flip(div::num_num)).into()
+                    fast_reduce(bytes.convert(), 1.0, fill, depth, flip(div::num_num)).into()
                 }
-                Primitive::Div => fast_reduce(bytes.convert(), 1.0, fill, div::num_num).into(),
+                Primitive::Div => {
+                    fast_reduce(bytes.convert(), 1.0, fill, depth, div::num_num).into()
+                }
                 Primitive::Mod if flipped => {
-                    fast_reduce(bytes.convert(), 1.0, fill, flip(modulus::num_num)).into()
+                    fast_reduce(bytes.convert(), 1.0, fill, depth, flip(modulus::num_num)).into()
                 }
-                Primitive::Mod => fast_reduce(bytes.convert(), 1.0, fill, modulus::num_num).into(),
+                Primitive::Mod => {
+                    fast_reduce(bytes.convert(), 1.0, fill, depth, modulus::num_num).into()
+                }
                 Primitive::Atan if flipped => {
-                    fast_reduce(bytes.convert(), 0.0, fill, flip(atan2::num_num)).into()
+                    fast_reduce(bytes.convert(), 0.0, fill, depth, flip(atan2::num_num)).into()
                 }
-                Primitive::Atan => fast_reduce(bytes.convert(), 0.0, fill, atan2::num_num).into(),
+                Primitive::Atan => {
+                    fast_reduce(bytes.convert(), 0.0, fill, depth, atan2::num_num).into()
+                }
                 Primitive::Max => {
                     let byte_fill = env.byte_fill().ok();
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
-                        fast_reduce(bytes.convert(), f64::NEG_INFINITY, fill, max::num_num).into()
+                        fast_reduce(
+                            bytes.convert(),
+                            f64::NEG_INFINITY,
+                            fill,
+                            depth,
+                            max::num_num,
+                        )
+                        .into()
                     } else {
-                        fast_reduce(bytes, 0, byte_fill, max::byte_byte).into()
+                        fast_reduce(bytes, 0, byte_fill, depth, max::byte_byte).into()
                     }
                 }
                 Primitive::Min => {
                     let byte_fill = env.byte_fill().ok();
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
-                        fast_reduce(bytes.convert(), f64::INFINITY, fill, min::num_num).into()
+                        fast_reduce(bytes.convert(), f64::INFINITY, fill, depth, min::num_num)
+                            .into()
                     } else {
-                        fast_reduce(bytes, 0, byte_fill, min::byte_byte).into()
+                        fast_reduce(bytes, 0, byte_fill, depth, min::byte_byte).into()
                     }
                 }
-                _ => return generic_reduce(f, Value::Byte(bytes), env),
+                _ => return generic_reduce(f, Value::Byte(bytes), depth, env),
             })
         }
-        (_, xs) => generic_reduce(f, xs, env)?,
+        (_, xs) => generic_reduce(f, xs, depth, env)?,
     }
     Ok(())
 }
@@ -94,6 +116,7 @@ macro_rules! reduce_math {
             prim: Primitive,
             flipped: bool,
             xs: Array<$ty>,
+            depth: usize,
             env: &mut Uiua,
         ) -> Result<(), Array<$ty>>
         where
@@ -101,18 +124,26 @@ macro_rules! reduce_math {
         {
             let fill = env.$fill().ok();
             env.push(match prim {
-                Primitive::Add => fast_reduce(xs, 0.0.into(), fill, add::$f),
-                Primitive::Sub if flipped => fast_reduce(xs, 0.0.into(), fill, flip(sub::$f)),
-                Primitive::Sub => fast_reduce(xs, 0.0.into(), fill, sub::$f),
-                Primitive::Mul => fast_reduce(xs, 1.0.into(), fill, mul::$f),
-                Primitive::Div if flipped => fast_reduce(xs, 1.0.into(), fill, flip(div::$f)),
-                Primitive::Div => fast_reduce(xs, 1.0.into(), fill, div::$f),
-                Primitive::Mod if flipped => fast_reduce(xs, 1.0.into(), fill, flip(modulus::$f)),
-                Primitive::Mod => fast_reduce(xs, 1.0.into(), fill, modulus::$f),
-                Primitive::Atan if flipped => fast_reduce(xs, 0.0.into(), fill, flip(atan2::$f)),
-                Primitive::Atan => fast_reduce(xs, 0.0.into(), fill, atan2::$f),
-                Primitive::Max => fast_reduce(xs, f64::NEG_INFINITY.into(), fill, max::$f),
-                Primitive::Min => fast_reduce(xs, f64::INFINITY.into(), fill, min::$f),
+                Primitive::Add => fast_reduce(xs, 0.0.into(), fill, depth, add::$f),
+                Primitive::Sub if flipped => {
+                    fast_reduce(xs, 0.0.into(), fill, depth, flip(sub::$f))
+                }
+                Primitive::Sub => fast_reduce(xs, 0.0.into(), fill, depth, sub::$f),
+                Primitive::Mul => fast_reduce(xs, 1.0.into(), fill, depth, mul::$f),
+                Primitive::Div if flipped => {
+                    fast_reduce(xs, 1.0.into(), fill, depth, flip(div::$f))
+                }
+                Primitive::Div => fast_reduce(xs, 1.0.into(), fill, depth, div::$f),
+                Primitive::Mod if flipped => {
+                    fast_reduce(xs, 1.0.into(), fill, depth, flip(modulus::$f))
+                }
+                Primitive::Mod => fast_reduce(xs, 1.0.into(), fill, depth, modulus::$f),
+                Primitive::Atan if flipped => {
+                    fast_reduce(xs, 0.0.into(), fill, depth, flip(atan2::$f))
+                }
+                Primitive::Atan => fast_reduce(xs, 0.0.into(), fill, depth, atan2::$f),
+                Primitive::Max => fast_reduce(xs, f64::NEG_INFINITY.into(), fill, depth, max::$f),
+                Primitive::Min => fast_reduce(xs, f64::INFINITY.into(), fill, depth, min::$f),
                 _ => return Err(xs),
             });
             Ok(())
@@ -127,14 +158,16 @@ pub fn fast_reduce<T>(
     mut arr: Array<T>,
     identity: T,
     default: Option<T>,
+    mut depth: usize,
     f: impl Fn(T, T) -> T,
 ) -> Array<T>
 where
     T: ArrayValue + Copy,
 {
-    match arr.rank() {
-        0 => arr,
-        1 => {
+    depth = depth.min(arr.rank());
+    match (arr.rank(), depth) {
+        (r, d) if r == d => arr,
+        (1, 0) => {
             let data = arr.data.as_mut_slice();
             let reduced = default.into_iter().chain(data.iter().copied()).reduce(f);
             if let Some(reduced) = reduced {
@@ -150,7 +183,7 @@ where
             arr.shape = Shape::default();
             arr
         }
-        _ => {
+        (_, 0) => {
             let row_len = arr.row_len();
             if row_len == 0 {
                 arr.shape.remove(0);
@@ -179,63 +212,131 @@ where
             arr.shape.remove(0);
             arr
         }
+        (_, depth) => {
+            let chunk_count: usize = arr.shape[..depth].iter().product();
+            let chunk_len: usize = arr.shape[depth..].iter().product();
+            let chunk_row_len: usize = arr.shape[depth + 1..].iter().product();
+            let data_slice = arr.data.as_mut_slice();
+            if chunk_len == 0 {
+                let val = default.unwrap_or(identity);
+                for i in 0..chunk_len {
+                    data_slice[i] = val;
+                }
+            } else {
+                for c in 0..chunk_count {
+                    let chunk_start = c * chunk_len;
+                    let chunk = &mut data_slice[chunk_start..][..chunk_len];
+                    let (acc, rest) = chunk.split_at_mut(chunk_row_len);
+                    if let Some(default) = default {
+                        for acc in &mut *acc {
+                            *acc = f(default, *acc);
+                        }
+                    }
+                    rest.chunks_exact_mut(chunk_row_len).fold(acc, |acc, row| {
+                        for (a, b) in acc.iter_mut().zip(row) {
+                            *a = f(*a, *b);
+                        }
+                        acc
+                    });
+                    data_slice
+                        .copy_within(chunk_start..chunk_start + chunk_row_len, c * chunk_row_len);
+                }
+            }
+            arr.data.truncate(chunk_count * chunk_row_len);
+            arr.shape.remove(depth);
+            arr
+        }
     }
 }
 
-fn generic_reduce(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
-    generic_reduce_impl(f, xs, identity, env)
+fn generic_reduce(f: Function, xs: Value, depth: usize, env: &mut Uiua) -> UiuaResult {
+    generic_reduce_impl(f, xs, depth, identity, env)
 }
 
 pub fn reduce_content(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let xs = env.pop(1)?;
-    generic_reduce_impl(f, xs, Value::unboxed, env)
+    generic_reduce_impl(f, xs, 0, Value::unboxed, env)
 }
 
 fn generic_reduce_impl(
     f: Function,
     xs: Value,
-    process: impl Fn(Value) -> Value,
+    depth: usize,
+    process: impl Fn(Value) -> Value + Copy,
     env: &mut Uiua,
 ) -> UiuaResult {
     let sig = f.signature();
-    match (sig.args, sig.outputs) {
-        (0 | 1, 1) => {
-            for row in xs.into_rows() {
-                env.push(process(row));
-                env.call(f.clone())?;
-            }
+    if let (0 | 1, 1) = (sig.args, sig.outputs) {
+        // Backwards compatibility for deprecated reduce behavior
+        for row in xs.into_rows() {
+            env.push(process(row));
+            env.call(f.clone())?;
         }
-        (2, 1) => {
-            let mut rows = xs.into_rows();
-            let mut acc = (env.value_fill().cloned())
-                .or_else(|| rows.next())
-                .ok_or_else(|| {
-                    env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
-                })?;
-            acc = process(acc);
-            if env.unpack_boxes() {
-                acc.unpack();
-            }
-            env.without_fill(|env| -> UiuaResult {
-                for row in rows {
-                    env.push(process(row));
-                    env.push(acc);
-                    env.call(f.clone())?;
-                    acc = env.pop("reduced function result")?;
-                }
-                env.push(acc);
-                Ok(())
-            })?;
-        }
-        _ => {
-            return Err(env.error(format!(
-                "{}'s function's signature must be |2.1, but it is {sig}",
-                Primitive::Reduce.format(),
-            )))
-        }
+    } else {
+        let val = generic_reduce_inner(f, xs, depth, process, env)?;
+        env.push(val);
     }
     Ok(())
+}
+
+fn generic_reduce_inner(
+    f: Function,
+    xs: Value,
+    depth: usize,
+    process: impl Fn(Value) -> Value + Copy,
+    env: &mut Uiua,
+) -> UiuaResult<Value> {
+    let sig = f.signature();
+    if sig != (2, 1) {
+        return Err(env.error(format!(
+            "{}'s function's signature must be |2.1, but it is {sig}",
+            Primitive::Reduce.format(),
+        )));
+    }
+    match (sig.args, sig.outputs) {
+        (2, 1) => {
+            let mut rows = xs.into_rows();
+            if depth > 0 {
+                let mut new_rows = Vec::with_capacity(rows.len());
+                for row in rows {
+                    new_rows.push(generic_reduce_inner(
+                        f.clone(),
+                        row,
+                        depth - 1,
+                        process,
+                        env,
+                    )?);
+                }
+                let val = Value::from_row_values(new_rows, env)?;
+                Ok(val)
+            } else {
+                let mut acc = (env.value_fill().cloned())
+                    .or_else(|| rows.next())
+                    .ok_or_else(|| {
+                        env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
+                    })?;
+                acc = process(acc);
+                if env.unpack_boxes() {
+                    acc.unpack();
+                }
+                acc = env.without_fill(|env| -> UiuaResult<Value> {
+                    for row in rows {
+                        env.push(process(row));
+                        env.push(acc);
+                        env.call(f.clone())?;
+                        acc = env.pop("reduced function result")?;
+                    }
+                    Ok(acc)
+                })?;
+                Ok(acc)
+            }
+        }
+        _ => Err(env.error(format!(
+            "{}'s function's signature must be |2.1, but it is {sig}",
+            Primitive::Reduce.format(),
+        ))),
+    }
 }
 
 pub fn scan(env: &mut Uiua) -> UiuaResult {
@@ -596,7 +697,7 @@ fn adjacent_fallback(f: Function, n: Value, xs: Value, env: &mut Uiua) -> UiuaRe
     for window in windows.into_rows() {
         env.push(window);
         env.push_func(f.clone());
-        reduce(env)?;
+        reduce(0, env)?;
         new_rows.push(env.pop("adjacent function result")?);
     }
     env.push(Value::from_row_values(new_rows, env)?);

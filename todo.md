@@ -2,7 +2,6 @@
 
 - 0.9
   - Release it!
-- Optimize `≡/F`
 - Site pages/tutorials
   - Duality of `pick` and `select`
   - Stack-source locality

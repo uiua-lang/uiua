@@ -1100,7 +1100,7 @@ primitive!(
     /// ex: ⬚5/↥ []
     /// ex:   /↥ [1 2 3]
     /// ex: ⬚5/↥ [1 2 3]
-    (1[1], Reduce, AggregatingModifier, ("reduce", '/')),
+    (1(1)[1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Apply a function to aggregate arrays
     ///
     /// Expects as many arguments as its function takes.
@@ -2249,6 +2249,7 @@ macro_rules! impl_primitive {
         pub enum ImplPrimitive {
             $($variant,)*
             TransposeN(i32),
+            ReduceDepth(usize),
         }
 
         impl ImplPrimitive {
@@ -2256,6 +2257,7 @@ macro_rules! impl_primitive {
                 match self {
                     $(ImplPrimitive::$variant => $args,)*
                     ImplPrimitive::TransposeN(_) => 1,
+                    ImplPrimitive::ReduceDepth(_) => 1,
                 }
             }
             pub fn outputs(&self) -> usize {
@@ -2267,6 +2269,7 @@ macro_rules! impl_primitive {
             pub fn modifier_args(&self) -> Option<usize> {
                 match self {
                     $($(ImplPrimitive::$variant => Some($margs),)?)*
+                    ImplPrimitive::ReduceDepth(_) => Some(1),
                     _ => None
                 }
             }

@@ -196,14 +196,24 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
             Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
+            &ReduceDepth(n) => {
+                for _ in 0..n {
+                    write!(f, "{Rows}")?;
+                }
+                write!(f, "{Reduce}(…)")?;
+                Ok(())
+            }
             &TransposeN(n) => {
                 if n < 0 {
-                    write!(f, "{Un}(")?;
+                    write!(f, "{Un}")?;
+                    if n < -1 {
+                        write!(f, "(")?;
+                    }
                 }
                 for _ in 0..n.unsigned_abs() {
                     write!(f, "{Transpose}")?;
                 }
-                if n < 0 {
+                if n < -1 {
                     write!(f, ")")?;
                 }
                 Ok(())
@@ -558,7 +568,7 @@ impl Primitive {
                 .collect::<Value>()
             })?,
             Primitive::Bits => env.monadic_ref_env(Value::bits)?,
-            Primitive::Reduce => reduce::reduce(env)?,
+            Primitive::Reduce => reduce::reduce(0, env)?,
             Primitive::Scan => reduce::scan(env)?,
             Primitive::Fold => reduce::fold(env)?,
             Primitive::Each => zip::each(env)?,
@@ -950,6 +960,7 @@ impl ImplPrimitive {
                 env.push(random());
             }
             ImplPrimitive::Adjacent => reduce::adjacent(env)?,
+            &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(depth, env)?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
         }
         Ok(())

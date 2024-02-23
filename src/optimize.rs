@@ -151,6 +151,27 @@ pub(crate) fn optimize_instrs_mut(
                 instrs.push(instr);
             }
         }
+        // Reduce depth
+        ([.., Instr::PushFunc(f)], instr @ Instr::Prim(Rows, _)) => {
+            if let [inner @ Instr::PushFunc(_), Instr::Prim(Reduce, span)] = f.instrs(asm) {
+                let inner = inner.clone();
+                instrs.pop();
+                instrs.push(inner);
+                instrs.push(Instr::ImplPrim(ImplPrimitive::ReduceDepth(1), *span));
+            } else if let [inner @ Instr::PushFunc(_), Instr::ImplPrim(ImplPrimitive::ReduceDepth(depth), span)] =
+                f.instrs(asm)
+            {
+                let inner = inner.clone();
+                instrs.pop();
+                instrs.push(inner);
+                instrs.push(Instr::ImplPrim(
+                    ImplPrimitive::ReduceDepth(depth + 1),
+                    *span,
+                ));
+            } else {
+                instrs.push(instr);
+            }
+        }
         (_, instr) => instrs.push(instr),
     }
 }

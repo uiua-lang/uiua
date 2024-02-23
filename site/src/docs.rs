@@ -506,7 +506,7 @@ impl Allowed {
                 ),
                 PrimClass::OtherModifier => ("Other Modifiers".into_view(), ""),
                 PrimClass::Planet => (
-                    view!(<a class="clean" href="/docs/advancedstack#planet-notation">"🌎 Planet 🪐"</a>).into_view(),
+                    view!(<a class="clean" href="/tutorial/advancedstack#planet-notation">"🌎 Planet 🪐"</a>).into_view(),
                     "Advanced stack manipulation",
                 ),
                 PrimClass::Thread => ("Thread".into_view(), "Work with OS threads"),

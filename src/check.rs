@@ -568,14 +568,14 @@ impl<'a> VirtualEnv<'a> {
         // println!("{instr:?} -> {}/{}", self.min_height, self.stack.len());
         Ok(())
     }
-    // Simulate popping a value. Errors if the stack is empty, which means the function is too complex.
+    // Simulate popping a value. Errors if the stack is empty, which means the function has too many args.
     fn pop(&mut self) -> Result<BasicValue, String> {
-        Ok(self.stack.pop().ok_or("function is too complex")?)
+        Ok(self.stack.pop().ok_or("function has too many args")?)
     }
     fn pop_temp(&mut self, stack: TempStack) -> Result<BasicValue, String> {
         Ok(self.temp_stacks[stack as usize]
             .pop()
-            .ok_or("function is too complex")?)
+            .ok_or("function has too many args")?)
     }
     fn pop_func(&mut self) -> Result<Cow<'a, Function>, String> {
         self.function_stack

@@ -83,8 +83,8 @@ pub fn do_(env: &mut Uiua) -> UiuaResult {
         )));
     }
     loop {
-        for value in env.clone_stack_top(copy_count) {
-            env.push(value);
+        for _ in 0..copy_count {
+            env.push(env.stack()[env.stack().len() - copy_count].clone());
         }
         env.call(g.clone())?;
         let cond = env

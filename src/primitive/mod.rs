@@ -484,7 +484,7 @@ impl Primitive {
             Primitive::Pi => env.push(pi()),
             Primitive::Tau => env.push(tau()),
             Primitive::Infinity => env.push(inf()),
-            Primitive::Identity => env.touch_array_stack(1),
+            Primitive::Identity => env.touch_array_stack(1)?,
             Primitive::Not => env.monadic_env(Value::not)?,
             Primitive::Neg => env.monadic_env(Value::neg)?,
             Primitive::Abs => env.monadic_env(Value::abs)?,
@@ -716,7 +716,7 @@ impl Primitive {
                 }
                 let id = f.id.clone();
                 env.call(f)?;
-                let outputs = env.clone_stack_top(sig.outputs);
+                let outputs = env.clone_stack_top(sig.outputs)?;
                 let mut memo = env.rt.memo.get_or_default().borrow_mut();
                 memo.borrow_mut()
                     .entry(id)
@@ -1046,7 +1046,7 @@ fn validate_impl(
             but its signature is {sig}",
         )));
     }
-    let args = env.clone_stack_top(sig.args);
+    let args = env.clone_stack_top(sig.args)?;
     let labels: Vec<Option<EcoString>> = args
         .iter()
         .rev()
@@ -1123,7 +1123,7 @@ fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
     } else {
         format!("{} {}", Primitive::Stack, env.span())
     };
-    let items = env.clone_stack_top(env.stack_height());
+    let items = env.stack();
     let max_line_len = span.chars().count() + 2;
     let boundaries = stack_boundaries(env);
     let item_lines: Vec<Vec<String>> = items
@@ -1165,7 +1165,7 @@ fn dump(env: &mut Uiua, inverse: bool) -> UiuaResult {
     } else {
         format!("{} {}", Primitive::Dump, env.span())
     };
-    let unprocessed = env.clone_stack_top(env.stack_height());
+    let unprocessed = env.stack().to_vec();
     let mut items = Vec::new();
     for item in unprocessed {
         env.push(item);

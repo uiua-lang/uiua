@@ -567,7 +567,7 @@ pub fn try_(env: &mut Uiua) -> UiuaResult {
     } else {
         handler_sig.args - 1
     };
-    let backup = env.clone_stack_top(backup_count);
+    let backup = env.clone_stack_top(backup_count)?;
     if let Err(e) = env.call_clean_stack(f) {
         for val in backup {
             env.push(val);

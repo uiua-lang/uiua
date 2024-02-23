@@ -590,16 +590,9 @@ code:
                     }
                     Ok(())
                 }),
-                &Instr::TouchStack { count, span } => self.with_span(span, |env| {
-                    if env.rt.stack.len() < count {
-                        return Err(env.error(format!(
-                            "Stack was empty evaluating argument {}",
-                            count - env.rt.stack.len()
-                        )));
-                    }
-                    env.touch_array_stack(count);
-                    Ok(())
-                }),
+                &Instr::TouchStack { count, span } => {
+                    self.with_span(span, |env| env.touch_array_stack(count))
+                }
                 &Instr::PushTemp { stack, count, span } => self.with_span(span, |env| {
                     for i in 0..count {
                         let value = env.pop(i + 1)?;
@@ -666,7 +659,7 @@ code:
                     This is a bug in the interpreter.",
                 )),
                 &Instr::SetOutputComment { i, n } => {
-                    let values = self.clone_stack_top(n);
+                    let values = self.clone_stack_top(n)?;
                     let stack_values = self.rt.output_comments.entry(i).or_default();
                     if stack_values.is_empty() {
                         *stack_values = values.into_iter().map(|v| vec![v]).collect();
@@ -935,10 +928,17 @@ code:
         self.pop_convert(Value::as_string)
     }
     /// Simulates popping a value and imediately pushing it back
-    pub(crate) fn touch_array_stack(&mut self, n: usize) {
+    pub(crate) fn touch_array_stack(&mut self, n: usize) -> UiuaResult {
+        if self.rt.stack.len() < n {
+            return Err(self.error(format!(
+                "Stack was empty evaluating argument {}",
+                n - self.rt.stack.len()
+            )));
+        }
         for bottom in &mut self.rt.array_stack {
             *bottom = (*bottom).min(self.rt.stack.len().saturating_sub(n));
         }
+        Ok(())
     }
     /// Push a value onto the stack
     pub fn push<V: Into<Value>>(&mut self, val: V) {
@@ -994,8 +994,14 @@ code:
     /// Clone `n` values from the top of the stack
     ///
     /// Values are cloned in the order they were pushed
-    pub fn clone_stack_top(&self, n: usize) -> Vec<Value> {
-        self.rt.stack.iter().rev().take(n).rev().cloned().collect()
+    pub fn clone_stack_top(&self, n: usize) -> UiuaResult<Vec<Value>> {
+        if self.rt.stack.len() < n {
+            return Err(self.error(format!(
+                "Stack was empty evaluating argument {}",
+                n - self.rt.stack.len()
+            )));
+        }
+        Ok(self.rt.stack.iter().rev().take(n).rev().cloned().collect())
     }
     pub(crate) fn monadic_ref<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {
         let value = self.pop(1)?;

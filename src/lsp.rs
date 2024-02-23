@@ -645,7 +645,7 @@ mod server {
             };
 
             // Collect primitive completions
-            let mut completions: Vec<_> = Primitive::all()
+            let mut completions: Vec<_> = Primitive::non_deprecated()
                 .filter(|p| p.name().starts_with(token))
                 .map(|prim| {
                     CompletionItem {

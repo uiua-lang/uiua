@@ -1,4 +1,4 @@
-const { readFileSync } = require("fs");
+import { readFileSync } from "fs";
 let md = readFileSync("changelog.md", "utf-8")
 if (md.includes(`## ${process.argv[2]}`)) {
     let notes = md

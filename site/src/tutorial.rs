@@ -613,7 +613,7 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
             prompt="splits an array into its first row and the rest of its rows"
             example="1_2_3_4"
             answer="⊢:↘1."
-            best_answer="⊃⋅⊢↘1"
+            best_answer="°⊂"
             tests={&["[27 9 3 1]", "↯4_3⇡12"]}
             hidden="[5]"/>
 

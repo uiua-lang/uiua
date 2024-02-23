@@ -274,5 +274,5 @@ uiuisms!(
     /// Irrational number to n terms of continued fraction
     "⊙◌⍥(⊂⊙⊃⌊(÷:1◿1)):[] 10 e",
     /// Bitwise XOR
-    "⍜(∩°⍉∩⋯|↧¬⬚0⊃↧↥) 42 30_65_135",
+    "⍜∩(°⍉⋯)⬚0≠ 42 30_65_135",
 );

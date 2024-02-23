@@ -546,9 +546,8 @@ code:
         let span = &binding.name.span;
 
         let span_index = self.add_span(span.clone());
-        let global_index = self.next_global;
         let local = LocalName {
-            index: global_index,
+            index: self.next_global,
             public,
         };
         self.next_global += 1;
@@ -582,7 +581,7 @@ code:
             self.scope.names.insert(name.clone(), local);
             self.asm
                 .add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
-            self.macros.insert(global_index, binding.words.clone());
+            self.macros.insert(local.index, binding.words.clone());
             return Ok(());
         }
 
@@ -770,18 +769,18 @@ code:
                     // Binding is a single inline function
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
                     self.compile_bind_function(&name, local, func, span_index, comment)?;
-                } else if sig.args == 0
-                    && sig.outputs <= 1
+                } else if (sig.args == 0 && sig.outputs <= 1)
                     && (sig.outputs > 0 || instrs.is_empty())
                     && placeholder_count == 0
                     && !is_setinv
                     && !is_setund
                 {
-                    self.compile_bind_sig(&name, local, sig, span_index, comment)?;
+                    self.asm.bind_const(local, None, span_index, comment);
+                    self.scope.names.insert(name.clone(), local);
                     // Add binding instrs to top slices
                     instrs.push(Instr::BindGlobal {
                         span: span_index,
-                        index: global_index,
+                        index: local.index,
                     });
                     let start = self.asm.instrs.len();
                     self.asm
@@ -820,18 +819,6 @@ code:
                 }
             }
         }
-        Ok(())
-    }
-    fn compile_bind_sig(
-        &mut self,
-        name: &Ident,
-        local: LocalName,
-        sig: Signature,
-        span: usize,
-        comment: Option<Arc<str>>,
-    ) -> UiuaResult {
-        self.scope.names.insert(name.clone(), local);
-        self.asm.bind_sig(local, sig, span, comment);
         Ok(())
     }
     fn compile_bind_function(
@@ -1220,25 +1207,7 @@ code:
                         word.span.clone(),
                     );
                 }
-                // Validate items
-                let mut instrs = inner.iter();
-                while let Some(instr) = instrs.next() {
-                    match instr {
-                        Instr::Push(_) => {}
-                        Instr::Prim(p, _)
-                            if p.args() == Some(0)
-                                && p.outputs() == Some(1)
-                                && p.modifier_args().is_none() => {}
-                        Instr::BeginArray => {
-                            while (instrs.next())
-                                .is_some_and(|instr| !matches!(instr, Instr::EndArray { .. }))
-                            {
-                            }
-                        }
-                        Instr::CallGlobal { sig, .. } if *sig == (0, 1) => {}
-                        _ => {}
-                    }
-                }
+
                 let span_index = self.add_span(word.span.clone());
                 let instrs = self.new_functions.last_mut().unwrap();
                 // Inline constant arrays
@@ -1385,12 +1354,6 @@ code:
                         format!("`{}` is a constant, not a module", first.module.value),
                     ))
                 }
-                Global::Sig(_) => {
-                    return Err(self.fatal_error(
-                        first.module.span.clone(),
-                        format!("`{}` is  not a module", first.module.value),
-                    ))
-                }
                 Global::Macro => {
                     return Err(self.fatal_error(
                         first.module.span.clone(),
@@ -1427,12 +1390,6 @@ code:
                         return Err(self.fatal_error(
                             comp.module.span.clone(),
                             format!("`{}` is a constant, not a module", comp.module.value),
-                        ))
-                    }
-                    Global::Sig(_) => {
-                        return Err(self.fatal_error(
-                            comp.module.span.clone(),
-                            format!("`{}` is  not a module", comp.module.value),
                         ))
                     }
                     Global::Macro => {
@@ -1541,12 +1498,21 @@ code:
     fn global_index(&mut self, index: usize, span: CodeSpan, call: bool) {
         let global = self.asm.bindings[index].global.clone();
         match global {
-            Global::Const(val) if call => self.push_instr(Instr::push(val)),
-            Global::Const(val) => {
+            Global::Const(Some(val)) if call => self.push_instr(Instr::push(val)),
+            Global::Const(Some(val)) => {
                 let f = self.add_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
                     vec![Instr::push(val)],
+                );
+                self.push_instr(Instr::PushFunc(f));
+            }
+            Global::Const(None) if call => self.push_instr(Instr::CallGlobal { index, call }),
+            Global::Const(None) => {
+                let f = self.add_function(
+                    FunctionId::Anonymous(span),
+                    Signature::new(0, 1),
+                    vec![Instr::CallGlobal { index, call }],
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
@@ -1567,15 +1533,6 @@ code:
                     let span = self.add_span(span);
                     self.push_instr(Instr::Call(span));
                 }
-            }
-            Global::Sig(sig) if call => self.push_instr(Instr::CallGlobal { index, call, sig }),
-            Global::Sig(sig) => {
-                let f = self.add_function(
-                    FunctionId::Anonymous(span),
-                    Signature::new(0, 1),
-                    vec![Instr::CallGlobal { index, call, sig }],
-                );
-                self.push_instr(Instr::PushFunc(f));
             }
             Global::Module { .. } => self.add_error(span, "Cannot import module item here."),
             Global::Macro => {

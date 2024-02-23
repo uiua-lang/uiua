@@ -172,14 +172,7 @@ impl Spanner {
 
     fn make_binding_docs(&self, binfo: &BindingInfo) -> BindingDocs {
         let modifier_args = binfo.span.as_str(self.inputs(), ident_modifier_args);
-        let is_constant = matches!(
-            binfo.global,
-            Global::Const(_)
-                | Global::Sig(Signature {
-                    args: 0,
-                    outputs: 1
-                })
-        );
+        let is_constant = matches!(binfo.global, Global::Const(_));
         let is_module = matches!(binfo.global, Global::Module { .. });
         let comment = binfo.comment.clone().unwrap_or_else(|| {
             if is_constant {
@@ -651,15 +644,16 @@ mod server {
                     CompletionItem {
                         label: prim.format().to_string(),
                         insert_text: prim.glyph().map(|c| c.to_string()),
-                        kind: Some(CompletionItemKind::FUNCTION),
+                        kind: Some(if prim.is_constant() {
+                            CompletionItemKind::CONSTANT
+                        } else {
+                            CompletionItemKind::FUNCTION
+                        }),
                         detail: Some(prim.doc().short_text().to_string()),
                         documentation: Some(Documentation::MarkupContent(MarkupContent {
                             kind: MarkupKind::Markdown,
                             value: full_prim_doc_markdown(prim),
                         })),
-                        tags: prim
-                            .is_deprecated()
-                            .then(|| vec![CompletionItemTag::DEPRECATED]),
                         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
                             range: uiua_span_to_lsp(&sp.span),
                             new_text: prim
@@ -695,10 +689,8 @@ mod server {
                     let kind = match &binding.global {
                         Global::Const(_) => CompletionItemKind::CONSTANT,
                         Global::Func(_) => CompletionItemKind::FUNCTION,
-                        Global::Sig(sig) if *sig == (0, 1) => CompletionItemKind::VALUE,
-                        Global::Sig(_) => CompletionItemKind::FUNCTION,
-                        Global::Module { .. } => CompletionItemKind::MODULE,
                         Global::Macro => CompletionItemKind::FUNCTION,
+                        Global::Module { .. } => CompletionItemKind::MODULE,
                     };
                     CompletionItem {
                         label: name.clone(),

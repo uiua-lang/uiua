@@ -424,19 +424,19 @@ code:
                 }
                 &Instr::CallGlobal { index, call, .. } => {
                     match self.asm.bindings[index].global.clone() {
-                        Global::Const(val) => {
+                        Global::Const(Some(val)) => {
                             self.rt.stack.push(val);
                             Ok(())
                         }
+                        Global::Const(None) => Err(self.error(
+                            "Called unbound constant. \
+                            This is a bug in the interpreter.",
+                        )),
                         Global::Func(f) if call => self.call(f),
                         Global::Func(f) => {
                             self.rt.function_stack.push(f);
                             Ok(())
                         }
-                        Global::Sig(_) => Err(self.error(
-                            "Signature global was not overwritten. \
-                            This is a bug in the interpreter.",
-                        )),
                         Global::Module { .. } => Err(self.error(
                             "Called module global. \
                             This is a bug in the interpreter.",
@@ -457,7 +457,7 @@ code:
                         self.asm.bind_function(local, f, span, None);
                     } else if let Some(value) = self.rt.stack.pop() {
                         // Binding is a constant
-                        self.asm.bind_const(local, value, span, None);
+                        self.asm.bind_const(local, Some(value), span, None);
                     } else {
                         // Binding is an empty function
                         let id = match self.get_span(span) {
@@ -984,7 +984,7 @@ code:
     pub fn all_values_in_scope(&self) -> HashMap<Ident, Value> {
         let mut bindings = HashMap::new();
         for binding in &self.asm.bindings {
-            if let Global::Const(val) = &binding.global {
+            if let Global::Const(Some(val)) = &binding.global {
                 let name = binding.span.as_str(self.inputs(), |s| s.into());
                 bindings.insert(name, val.clone());
             }

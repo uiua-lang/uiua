@@ -66,20 +66,10 @@ impl Assembly {
         let span = self.spans[span].clone();
         self.add_global_at(local, Global::Func(function), span.code(), comment);
     }
-    pub(crate) fn bind_sig(
-        &mut self,
-        local: LocalName,
-        sig: Signature,
-        span: usize,
-        comment: Option<Arc<str>>,
-    ) {
-        let span = self.spans[span].clone();
-        self.add_global_at(local, Global::Sig(sig), span.code(), comment);
-    }
     pub(crate) fn bind_const(
         &mut self,
         local: LocalName,
-        value: Value,
+        value: Option<Value>,
         span: usize,
         comment: Option<Arc<str>>,
     ) {
@@ -104,7 +94,7 @@ impl Assembly {
         } else {
             while self.bindings.len() < local.index {
                 self.bindings.push(BindingInfo {
-                    global: Global::Const(Value::default()),
+                    global: Global::Const(None),
                     public: false,
                     span: CodeSpan::dummy(),
                     comment: None,
@@ -162,11 +152,9 @@ fn tru() -> bool {
 #[serde(untagged)]
 pub enum Global {
     /// A constant value
-    Const(Value),
+    Const(Option<Value>),
     /// A function
     Func(Function),
-    /// The signature of something that will be bound at runtime
-    Sig(Signature),
     /// A module
     #[allow(missing_docs)]
     Module { module: PathBuf },
@@ -180,18 +168,13 @@ impl Global {
         match self {
             Self::Const(_) => Some(Signature::new(0, 1)),
             Self::Func(func) => Some(func.signature()),
-            Self::Sig(sig) => Some(*sig),
             Self::Module { .. } => None,
             Self::Macro => None,
         }
     }
     /// Check if the global is a once-bound constant
     pub fn is_constant(&self) -> bool {
-        match self {
-            Self::Const(_) => true,
-            Self::Sig(sig) if *sig == (0, 1) => true,
-            _ => false,
-        }
+        matches!(self, Self::Const(_))
     }
 }
 
@@ -278,7 +261,7 @@ impl<'de> Deserialize<'de> for Instr {
 #[derive(Serialize, Deserialize)]
 enum InstrRep {
     Comment(Ident),
-    CallGlobal(usize, bool, Signature),
+    CallGlobal(usize, bool),
     BindGlobal(usize, usize),
     BeginArray(()),
     EndArray(bool, usize),
@@ -314,7 +297,7 @@ impl From<Instr> for InstrRep {
         match value {
             Instr::Comment(ident) => Self::Comment(ident),
             Instr::Push(value) => Self::Push(value),
-            Instr::CallGlobal { index, call, sig } => Self::CallGlobal(index, call, sig),
+            Instr::CallGlobal { index, call } => Self::CallGlobal(index, call),
             Instr::BindGlobal { span, index } => Self::BindGlobal(span, index),
             Instr::BeginArray => Self::BeginArray(()),
             Instr::EndArray { boxed, span } => Self::EndArray(boxed, span),
@@ -353,7 +336,7 @@ impl From<InstrRep> for Instr {
         match value {
             InstrRep::Comment(ident) => Self::Comment(ident),
             InstrRep::Push(value) => Self::Push(value),
-            InstrRep::CallGlobal(index, call, sig) => Self::CallGlobal { index, call, sig },
+            InstrRep::CallGlobal(index, call) => Self::CallGlobal { index, call },
             InstrRep::BindGlobal(span, index) => Self::BindGlobal { span, index },
             InstrRep::BeginArray(()) => Self::BeginArray,
             InstrRep::EndArray(boxed, span) => Self::EndArray { boxed, span },

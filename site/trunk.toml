@@ -3,4 +3,4 @@ dist = "../docs"
 public_url = "/"
 
 [watch]
-watch = [".."]
+watch = [".", "../src"]

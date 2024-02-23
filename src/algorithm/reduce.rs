@@ -44,29 +44,41 @@ pub fn reduce(env: &mut Uiua) -> UiuaResult {
         #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(bytes)) => {
             let fill = env.num_fill().ok();
-            env.push(match prim {
-                Primitive::Add => fast_reduce(bytes.convert(), 0.0, fill, add::num_num),
+            env.push::<Value>(match prim {
+                Primitive::Add => fast_reduce(bytes.convert(), 0.0, fill, add::num_num).into(),
                 Primitive::Sub if flipped => {
-                    fast_reduce(bytes.convert(), 0.0, fill, flip(sub::num_num))
+                    fast_reduce(bytes.convert(), 0.0, fill, flip(sub::num_num)).into()
                 }
-                Primitive::Sub => fast_reduce(bytes.convert(), 0.0, fill, sub::num_num),
-                Primitive::Mul => fast_reduce(bytes.convert(), 1.0, fill, mul::num_num),
+                Primitive::Sub => fast_reduce(bytes.convert(), 0.0, fill, sub::num_num).into(),
+                Primitive::Mul => fast_reduce(bytes.convert(), 1.0, fill, mul::num_num).into(),
                 Primitive::Div if flipped => {
-                    fast_reduce(bytes.convert(), 1.0, fill, flip(div::num_num))
+                    fast_reduce(bytes.convert(), 1.0, fill, flip(div::num_num)).into()
                 }
-                Primitive::Div => fast_reduce(bytes.convert(), 1.0, fill, div::num_num),
+                Primitive::Div => fast_reduce(bytes.convert(), 1.0, fill, div::num_num).into(),
                 Primitive::Mod if flipped => {
-                    fast_reduce(bytes.convert(), 1.0, fill, flip(modulus::num_num))
+                    fast_reduce(bytes.convert(), 1.0, fill, flip(modulus::num_num)).into()
                 }
-                Primitive::Mod => fast_reduce(bytes.convert(), 1.0, fill, modulus::num_num),
+                Primitive::Mod => fast_reduce(bytes.convert(), 1.0, fill, modulus::num_num).into(),
                 Primitive::Atan if flipped => {
-                    fast_reduce(bytes.convert(), 0.0, fill, flip(atan2::num_num))
+                    fast_reduce(bytes.convert(), 0.0, fill, flip(atan2::num_num)).into()
                 }
-                Primitive::Atan => fast_reduce(bytes.convert(), 0.0, fill, atan2::num_num),
+                Primitive::Atan => fast_reduce(bytes.convert(), 0.0, fill, atan2::num_num).into(),
                 Primitive::Max => {
-                    fast_reduce(bytes.convert(), f64::NEG_INFINITY, fill, max::num_num)
+                    let byte_fill = env.byte_fill().ok();
+                    if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
+                        fast_reduce(bytes.convert(), f64::NEG_INFINITY, fill, max::num_num).into()
+                    } else {
+                        fast_reduce(bytes, 0, byte_fill, max::byte_byte).into()
+                    }
                 }
-                Primitive::Min => fast_reduce(bytes.convert(), f64::INFINITY, fill, min::num_num),
+                Primitive::Min => {
+                    let byte_fill = env.byte_fill().ok();
+                    if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
+                        fast_reduce(bytes.convert(), f64::INFINITY, fill, min::num_num).into()
+                    } else {
+                        fast_reduce(bytes, 0, byte_fill, min::byte_byte).into()
+                    }
+                }
                 _ => return generic_reduce(f, Value::Byte(bytes), env),
             })
         }

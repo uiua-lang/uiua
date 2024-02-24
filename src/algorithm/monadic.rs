@@ -153,6 +153,9 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// Make the array 1-dimensional
     pub fn deshape(&mut self) {
+        if self.rank() == 1 {
+            return;
+        }
         self.shape = self.element_count().into();
     }
     pub(crate) fn deshape_depth(&mut self, mut depth: usize) {

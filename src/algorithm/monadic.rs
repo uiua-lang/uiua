@@ -171,10 +171,15 @@ impl Value {
             or a list of integers",
         )?;
         if self.rank() == 0 {
-            return Ok(if ishape[0] >= 0 {
-                (0..ishape[0]).map(|i| i as f64).collect()
+            let max = ishape[0];
+            return Ok(if max >= 0 {
+                if max <= 256 {
+                    (0..max).map(|i| i as u8).collect()
+                } else {
+                    (0..max).map(|i| i as f64).collect()
+                }
             } else {
-                (ishape[0]..0).map(|i| i as f64).rev().collect()
+                (max..0).map(|i| i as f64).rev().collect()
             });
         }
         if ishape.is_empty() {
@@ -221,12 +226,13 @@ fn range(shape: &[isize], env: &Uiua) -> UiuaResult<Result<CowSlice<f64>, CowSli
         })
         .collect::<Vec<usize>>();
     scan.reverse();
-    let max = shape.len() * shape.iter().map(|d| d.unsigned_abs()).product::<usize>();
+    let elem_count = shape.len() * shape.iter().map(|d| d.unsigned_abs()).product::<usize>();
     let any_neg = shape.iter().any(|&d| d < 0);
-    if max < 256 && !any_neg {
+    let max = shape.iter().map(|d| d.unsigned_abs()).max().unwrap();
+    if max <= 256 && !any_neg {
         let mut data: EcoVec<u8> = eco_vec![0; len];
         let data_slice = data.make_mut();
-        for i in 0..max {
+        for i in 0..elem_count {
             let dim = i % shape.len();
             let index = i / shape.len();
             data_slice[i] = (index / scan[dim] % shape[dim].unsigned_abs()) as u8;
@@ -235,7 +241,7 @@ fn range(shape: &[isize], env: &Uiua) -> UiuaResult<Result<CowSlice<f64>, CowSli
     } else {
         let mut data: EcoVec<f64> = eco_vec![0.0; len];
         let data_slice = data.make_mut();
-        for i in 0..max {
+        for i in 0..elem_count {
             let dim = i % shape.len();
             let index = i / shape.len();
             data_slice[i] = (index / scan[dim] % shape[dim].unsigned_abs()) as f64;

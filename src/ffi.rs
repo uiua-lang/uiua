@@ -681,6 +681,12 @@ mod enabled {
                 (FfiType::LongLong | FfiType::ULongLong, Value::Byte(arr)) if arr.rank() == 0 => {
                     scalar!(arr, c_longlong)
                 }
+                (FfiType::Float, Value::Num(arr)) if arr.rank() == 0 => scalar!(arr, c_float),
+                #[cfg(feature = "bytes")]
+                (FfiType::Float, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_float),
+                (FfiType::Double, Value::Num(arr)) if arr.rank() == 0 => scalar!(arr, c_double),
+                #[cfg(feature = "bytes")]
+                (FfiType::Double, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_double),
                 (FfiType::Ptr { inner, .. }, val) => match (&**inner, val) {
                     (FfiType::Char, Value::Char(arr)) => {
                         self.push_string(arr.data.iter().copied().collect())

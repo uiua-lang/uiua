@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.9
-  - Make small ranges output bytes
   - Release it!
 - Site pages/tutorials
   - Duality of `pick` and `select`

@@ -181,18 +181,21 @@ impl Value {
             return Ok(Array::<f64>::new(0, CowSlice::new()).into());
         }
         let mut shape = Shape::from_iter(ishape.iter().map(|d| d.unsigned_abs()));
-        let data = range(&ishape, env)?;
         shape.push(shape.len());
-        Ok(Array::new(shape, data).into())
+        let data = range(&ishape, env)?;
+        Ok(match data {
+            Ok(data) => Array::new(shape, data).into(),
+            Err(data) => Array::new(shape, data).into(),
+        })
     }
 }
 
-fn range(shape: &[isize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
+fn range(shape: &[isize], env: &Uiua) -> UiuaResult<Result<CowSlice<f64>, CowSlice<u8>>> {
     if shape.is_empty() {
-        return Ok(cowslice![0.0]);
+        return Ok(Err(cowslice![0]));
     }
     if shape.contains(&0) {
-        return Ok(CowSlice::new());
+        return Ok(Err(CowSlice::new()));
     }
     let mut len = shape.len();
     for &item in shape {
@@ -208,8 +211,6 @@ fn range(shape: &[isize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
         }
         len = new;
     }
-    let mut data: EcoVec<f64> = eco_vec![0.0; len];
-    let data_slice = data.make_mut();
     let mut scan = shape
         .iter()
         .rev()
@@ -220,15 +221,30 @@ fn range(shape: &[isize], env: &Uiua) -> UiuaResult<CowSlice<f64>> {
         })
         .collect::<Vec<usize>>();
     scan.reverse();
-    for i in 0..shape.len() * shape.iter().map(|d| d.unsigned_abs()).product::<usize>() {
-        let dim = i % shape.len();
-        let index = i / shape.len();
-        data_slice[i] = (index / scan[dim] % shape[dim].unsigned_abs()) as f64;
-        if shape[dim] < 0 {
-            data_slice[i] = -1.0 - data_slice[i];
+    let max = shape.len() * shape.iter().map(|d| d.unsigned_abs()).product::<usize>();
+    let any_neg = shape.iter().any(|&d| d < 0);
+    if max < 256 && !any_neg {
+        let mut data: EcoVec<u8> = eco_vec![0; len];
+        let data_slice = data.make_mut();
+        for i in 0..max {
+            let dim = i % shape.len();
+            let index = i / shape.len();
+            data_slice[i] = (index / scan[dim] % shape[dim].unsigned_abs()) as u8;
         }
+        Ok(Err(data.into()))
+    } else {
+        let mut data: EcoVec<f64> = eco_vec![0.0; len];
+        let data_slice = data.make_mut();
+        for i in 0..max {
+            let dim = i % shape.len();
+            let index = i / shape.len();
+            data_slice[i] = (index / scan[dim] % shape[dim].unsigned_abs()) as f64;
+            if shape[dim] < 0 {
+                data_slice[i] = -1.0 - data_slice[i];
+            }
+        }
+        Ok(Ok(data.into()))
     }
-    Ok(data.into())
 }
 
 impl Value {

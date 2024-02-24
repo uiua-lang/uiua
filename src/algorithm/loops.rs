@@ -8,7 +8,7 @@ use crate::{
 
 use super::multi_output;
 
-pub fn flip<A, B, C>(f: impl Fn(A, B) -> C) -> impl Fn(B, A) -> C {
+pub fn flip<A, B, C>(f: impl Fn(A, B) -> C + Copy) -> impl Fn(B, A) -> C + Copy {
     move |b, a| f(a, b)
 }
 

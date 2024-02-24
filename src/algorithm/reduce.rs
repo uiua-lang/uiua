@@ -48,44 +48,80 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
             let fill = env.num_fill().ok();
             env.push::<Value>(match prim {
                 Primitive::Add => {
-                    fast_reduce(bytes.convert(), 0.0, fill, depth, add::num_num).into()
+                    fast_reduce_different(bytes, 0.0, fill, depth, add::num_num, add::num_byte)
+                        .into()
                 }
-                Primitive::Sub if flipped => {
-                    fast_reduce(bytes.convert(), 0.0, fill, depth, flip(sub::num_num)).into()
-                }
+                Primitive::Sub if flipped => fast_reduce_different(
+                    bytes,
+                    0.0,
+                    fill,
+                    depth,
+                    flip(sub::num_num),
+                    flip(sub::byte_num),
+                )
+                .into(),
                 Primitive::Sub => {
-                    fast_reduce(bytes.convert(), 0.0, fill, depth, sub::num_num).into()
+                    fast_reduce_different(bytes, 0.0, fill, depth, sub::num_num, sub::num_byte)
+                        .into()
                 }
                 Primitive::Mul => {
-                    fast_reduce(bytes.convert(), 1.0, fill, depth, mul::num_num).into()
+                    fast_reduce_different(bytes, 1.0, fill, depth, mul::num_num, mul::num_byte)
+                        .into()
                 }
-                Primitive::Div if flipped => {
-                    fast_reduce(bytes.convert(), 1.0, fill, depth, flip(div::num_num)).into()
-                }
+                Primitive::Div if flipped => fast_reduce_different(
+                    bytes,
+                    1.0,
+                    fill,
+                    depth,
+                    flip(div::num_num),
+                    flip(div::byte_num),
+                )
+                .into(),
                 Primitive::Div => {
-                    fast_reduce(bytes.convert(), 1.0, fill, depth, div::num_num).into()
+                    fast_reduce_different(bytes, 1.0, fill, depth, div::num_num, div::num_byte)
+                        .into()
                 }
-                Primitive::Mod if flipped => {
-                    fast_reduce(bytes.convert(), 1.0, fill, depth, flip(modulus::num_num)).into()
-                }
-                Primitive::Mod => {
-                    fast_reduce(bytes.convert(), 1.0, fill, depth, modulus::num_num).into()
-                }
-                Primitive::Atan if flipped => {
-                    fast_reduce(bytes.convert(), 0.0, fill, depth, flip(atan2::num_num)).into()
-                }
+                Primitive::Mod if flipped => fast_reduce_different(
+                    bytes,
+                    1.0,
+                    fill,
+                    depth,
+                    flip(modulus::num_num),
+                    flip(modulus::byte_num),
+                )
+                .into(),
+                Primitive::Mod => fast_reduce_different(
+                    bytes,
+                    1.0,
+                    fill,
+                    depth,
+                    modulus::num_num,
+                    modulus::num_byte,
+                )
+                .into(),
+                Primitive::Atan if flipped => fast_reduce_different(
+                    bytes,
+                    0.0,
+                    fill,
+                    depth,
+                    flip(atan2::num_num),
+                    flip(atan2::byte_num),
+                )
+                .into(),
                 Primitive::Atan => {
-                    fast_reduce(bytes.convert(), 0.0, fill, depth, atan2::num_num).into()
+                    fast_reduce_different(bytes, 0.0, fill, depth, atan2::num_num, atan2::num_byte)
+                        .into()
                 }
                 Primitive::Max => {
                     let byte_fill = env.byte_fill().ok();
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
-                        fast_reduce(
-                            bytes.convert(),
+                        fast_reduce_different(
+                            bytes,
                             f64::NEG_INFINITY,
                             fill,
                             depth,
                             max::num_num,
+                            max::num_byte,
                         )
                         .into()
                     } else {
@@ -95,8 +131,15 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
                 Primitive::Min => {
                     let byte_fill = env.byte_fill().ok();
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
-                        fast_reduce(bytes.convert(), f64::INFINITY, fill, depth, min::num_num)
-                            .into()
+                        fast_reduce_different(
+                            bytes,
+                            f64::INFINITY,
+                            fill,
+                            depth,
+                            min::num_num,
+                            min::num_byte,
+                        )
+                        .into()
                     } else {
                         fast_reduce(bytes, 0, byte_fill, depth, min::byte_byte).into()
                     }
@@ -154,22 +197,48 @@ macro_rules! reduce_math {
 reduce_math!(reduce_nums, f64, num_num, num_fill);
 reduce_math!(reduce_coms, crate::Complex, com_x, complex_fill);
 
-pub fn fast_reduce<T>(
-    mut arr: Array<T>,
+fn fast_reduce<T>(
+    arr: Array<T>,
     identity: T,
     default: Option<T>,
-    mut depth: usize,
-    f: impl Fn(T, T) -> T,
+    depth: usize,
+    f: impl Fn(T, T) -> T + Copy,
 ) -> Array<T>
 where
     T: ArrayValue + Copy,
 {
+    fast_reduce_different(arr, identity, default, depth, f, f)
+}
+
+fn fast_reduce_different<T, U>(
+    arr: Array<T>,
+    identity: U,
+    default: Option<U>,
+    mut depth: usize,
+    fuu: impl Fn(U, U) -> U,
+    fut: impl Fn(U, T) -> U,
+) -> Array<U>
+where
+    T: ArrayValue + Copy + Into<U>,
+    U: ArrayValue + Copy,
+{
+    if depth == 0 && arr.rank() == 1 {
+        return if let Some(default) = default {
+            arr.data.into_iter().fold(default, fut).into()
+        } else if arr.row_count() == 0 {
+            identity.into()
+        } else {
+            let first = arr.data[0].into();
+            arr.data.into_iter().skip(1).fold(first, fut).into()
+        };
+    }
+    let mut arr = arr.convert();
     depth = depth.min(arr.rank());
     match (arr.rank(), depth) {
         (r, d) if r == d => arr,
         (1, 0) => {
             let data = arr.data.as_mut_slice();
-            let reduced = default.into_iter().chain(data.iter().copied()).reduce(f);
+            let reduced = default.into_iter().chain(data.iter().copied()).reduce(fuu);
             if let Some(reduced) = reduced {
                 if data.is_empty() {
                     arr.data.extend(Some(reduced));
@@ -199,12 +268,12 @@ where
             let (acc, rest) = sliced.split_at_mut(row_len);
             if let Some(default) = default {
                 for acc in &mut *acc {
-                    *acc = f(default, *acc);
+                    *acc = fuu(default, *acc);
                 }
             }
             rest.chunks_exact(row_len).fold(acc, |acc, row| {
                 for (a, b) in acc.iter_mut().zip(row) {
-                    *a = f(*a, *b);
+                    *a = fuu(*a, *b);
                 }
                 acc
             });
@@ -229,12 +298,12 @@ where
                     let (acc, rest) = chunk.split_at_mut(chunk_row_len);
                     if let Some(default) = default {
                         for acc in &mut *acc {
-                            *acc = f(default, *acc);
+                            *acc = fuu(default, *acc);
                         }
                     }
                     rest.chunks_exact_mut(chunk_row_len).fold(acc, |acc, row| {
                         for (a, b) in acc.iter_mut().zip(row) {
-                            *a = f(*a, *b);
+                            *a = fuu(*a, *b);
                         }
                         acc
                     });

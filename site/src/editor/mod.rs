@@ -508,7 +508,7 @@ pub fn Editor<'a>(
                 }
             }
             "Tab" => {
-                replace_code("\t");
+                replace_code("  ");
             }
             // Select all
             "a" if os_ctrl(event) => {

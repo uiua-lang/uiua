@@ -1871,7 +1871,7 @@ code:
 
         // Give advice about redundancy
         match prim {
-            m @ Primitive::Each => {
+            m @ Primitive::Each if self.macro_depth == 0 => {
                 if let [Sp {
                     value: Word::Primitive(prim),
                     span,
@@ -1882,7 +1882,7 @@ code:
                         self.emit_diagnostic(
                             format!(
                                 "Using {m} with a pervasive primitive like {p} is \
-                                    redundant. Just use {p} by itself.",
+                                redundant. Just use {p} by itself.",
                                 m = m.format(),
                                 p = prim.format(),
                             ),

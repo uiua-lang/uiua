@@ -438,6 +438,7 @@ sys_op! {
     /// Synthesize and stream audio
     ///
     /// Expects a function that takes a list of sample times and returns a list of samples.
+    /// The samples returned from the function must either be a rank 1 array or a rank 2 array with 2 rows.
     /// The function will be called repeatedly to generate the audio.
     /// ex: Sp ← 1.5
     ///   : Bass ← (
@@ -1441,14 +1442,18 @@ impl SysOp {
                     })?;
                     match samples.shape().dims() {
                         [_] => Ok(samples.data.iter().map(|&x| [x, x]).collect()),
-                        [_, 2] => Ok(samples
-                            .data
-                            .chunks(2)
-                            .map(|s| [s[0], s.get(1).copied().unwrap_or(0.0)])
-                            .collect()),
+                        &[2, n] => {
+                            let mut samps: Vec<[f64; 2]> = Vec::with_capacity(n);
+                            for i in 0..n {
+                                samps.push([samples.data[i], samples.data[i + n]]);
+                            }
+                            Ok(samps)
+                        }
                         _ => Err(stream_env.error(format!(
-                            "Audio stream function must return a rank 1 or 2 array, but returned a rank {} array",
-                            samples.rank()
+                            "Audio stream function must return either a \
+                            rank 1 array or a rank 2 array with 2 rows, \
+                            but its shape is {}",
+                            samples.shape()
                         ))),
                     }
                 })) {

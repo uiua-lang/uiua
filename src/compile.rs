@@ -2336,8 +2336,9 @@ code:
                 finish!(instrs, sig);
             }
             Comptime => {
-                let mut operands = modified.code_operands().cloned();
-                let (instrs, sig) = self.compile_operand_word(operands.next().unwrap())?;
+                let word = modified.code_operands().next().unwrap().clone();
+                let mut comp = self.clone();
+                let (instrs, sig) = comp.compile_operand_word(word)?;
                 if sig.args > 0 {
                     self.add_error(
                         modified.modifier.span.clone(),
@@ -2349,14 +2350,13 @@ code:
                     );
                     return Ok(false);
                 }
-                let instrs = optimize_instrs(instrs, true, &self.asm);
-                let mut asm = self.asm.clone();
-                let start = asm.instrs.len();
+                let instrs = optimize_instrs(instrs, true, &comp);
+                let start = comp.asm.instrs.len();
                 let len = instrs.len();
-                asm.instrs.extend(instrs);
-                asm.top_slices.push(FuncSlice { start, len });
+                comp.asm.instrs.extend(instrs);
+                comp.asm.top_slices.push(FuncSlice { start, len });
                 let mut env = Uiua::with_backend(self.backend.clone());
-                let values = match env.run_asm(&asm) {
+                let values = match env.run_asm(&comp.asm) {
                     Ok(_) => env.take_stack(),
                     Err(e) => {
                         if self.errors.is_empty() {

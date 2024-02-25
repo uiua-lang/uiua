@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.10
+  - Improve look of `⟨⟩`s in Uiua386
   - Procedural macros
 - Site pages/tutorials
   - Duality of `pick` and `select`

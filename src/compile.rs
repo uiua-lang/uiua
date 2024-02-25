@@ -288,7 +288,7 @@ impl Compiler {
         match self.errors.len() {
             0 => Ok(self),
             1 => Err(self.errors.pop().unwrap()),
-            _ => Err(UiuaError::Multi(self.errors.drain(..).collect())),
+            _ => Err(UiuaError::Multi(take(&mut self.errors))),
         }
     }
     fn catching_crash<T>(
@@ -557,8 +557,21 @@ code:
         self.next_global += 1;
 
         // Handle macro
-        let placeholder_count = count_placeholders(&binding.words);
         let ident_margs = ident_modifier_args(&name);
+        if binding.array_macro {
+            // Array macro
+            if ident_margs != 1 {
+                self.add_error(
+                    span.clone(),
+                    format!(
+                        "Array macros must take 1 operand, but `{name}`'s \
+                        name suggests it takes {ident_margs}",
+                    ),
+                );
+            }
+            return Err(self.fatal_error(span.clone(), "Array macros are not yet implemented"));
+        }
+        let placeholder_count = count_placeholders(&binding.words);
         match (ident_margs > 0, placeholder_count > 0) {
             (true, true) | (false, false) => {}
             (true, false) => {
@@ -580,13 +593,6 @@ code:
                 );
                 return Ok(());
             }
-        }
-        if placeholder_count > 0 || ident_margs > 0 {
-            self.scope.names.insert(name.clone(), local);
-            self.asm
-                .add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
-            self.macros.insert(local.index, binding.words.clone());
-            return Ok(());
         }
 
         let mut make_fn: Rc<dyn Fn(_, _, &mut Compiler) -> _> = Rc::new(
@@ -775,7 +781,6 @@ code:
                     self.compile_bind_function(&name, local, func, span_index, comment)?;
                 } else if (sig.args == 0 && sig.outputs <= 1)
                     && (sig.outputs > 0 || instrs.is_empty())
-                    && placeholder_count == 0
                     && !is_setinv
                     && !is_setund
                 {

@@ -329,11 +329,11 @@ impl<'i> Parser<'i> {
         self.next_output_comment += 1;
         Some(n.span.sp(Word::OutputComment { i, n: n.value }))
     }
-    fn try_binding_init(&mut self) -> Option<(Sp<Ident>, CodeSpan, bool)> {
+    fn try_binding_init(&mut self) -> Option<(Sp<Ident>, CodeSpan, bool, bool)> {
         let start = self.index;
         let name = self.try_ident()?;
         // Left arrow
-        let mut arrow_span = self.try_spaces().map(|w| w.span);
+        let arrow_span = self.try_spaces().map(|w| w.span);
         let (glyph_span, public) =
             if let Some(span) = self.try_exact(Equal).or_else(|| self.try_exact(LeftArrow)) {
                 (span, true)
@@ -347,16 +347,21 @@ impl<'i> Parser<'i> {
                 self.index = start;
                 return None;
             };
-        arrow_span = Some(if let Some(arrow_span) = arrow_span {
+        let mut arrow_span = if let Some(arrow_span) = arrow_span {
             arrow_span.merge(glyph_span)
         } else {
             glyph_span
-        });
-        let mut arrow_span = arrow_span.unwrap();
+        };
+        let array_macro = if let Some(span) = self.try_exact(Caret) {
+            arrow_span = arrow_span.merge(span);
+            true
+        } else {
+            false
+        };
         if let Some(span) = self.try_spaces().map(|w| w.span) {
             arrow_span = arrow_span.merge(span);
         }
-        Some((name, arrow_span, public))
+        Some((name, arrow_span, public, array_macro))
     }
     fn try_import_init(&mut self) -> Option<(Option<Sp<Ident>>, CodeSpan, Sp<String>)> {
         let start = self.index;
@@ -379,7 +384,7 @@ impl<'i> Parser<'i> {
         Some((name, tilde_span, path))
     }
     fn try_binding(&mut self) -> Option<Binding> {
-        let (name, arrow_span, public) = self.try_binding_init()?;
+        let (name, arrow_span, public, array_macro) = self.try_binding_init()?;
         // Bad name advice
         if ["\u{200b}", "\u{200c}", "\u{200d}"]
             .iter()
@@ -401,6 +406,7 @@ impl<'i> Parser<'i> {
             name,
             arrow_span,
             public,
+            array_macro,
             words,
             signature,
         })

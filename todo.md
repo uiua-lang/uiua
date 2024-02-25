@@ -1,7 +1,5 @@
 # Uiua Todo
 
-- 0.9
-  - Release it!
 - Site pages/tutorials
   - Duality of `pick` and `select`
   - Stack-source locality

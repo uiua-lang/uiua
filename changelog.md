@@ -1,7 +1,13 @@
 # Uiua Changelog
 
 Uiua is not yet stable.
-<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
+
+## 0.10.0 - 2024-??-??
+This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Language
+- Switch functions now format to use `⟨⟩` brackets
+- Switch functions now work with [`under ⍜`](https://uiua.org/docs/under)
+- [`under ⍜`](https://uiua.org/docs/under) [`join ⊂`](https://uiua.org/docs/join) now works with arrays of the same rank as long as the row count does not change
 
 ## 0.9.2 - 2024-02-25
 ### Interpreter

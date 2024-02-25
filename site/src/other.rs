@@ -88,7 +88,7 @@ pub fn Technical() -> impl IntoView {
 
         <h2>"The Interpreter"</h2>
         <p>"The Uiua interpreter is written in Rust."</p>
-        <p>"An entire file is first parsed into an abstract syntax tree. Then, each line is, one after the other, compiled to a simple bytecode and executed."</p>
+        <p>"Uiua code is compiled into a simple bytecode assembly. This assembly is then usually immediately executed by the interpreter."</p>
         <p>"Built-in functions are implemented in Rust so they can be as fast as possible. User-defined functions are passed around as chunks of bytecode."</p>
 
         <h2>"Arrays"</h2>

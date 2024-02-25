@@ -488,14 +488,13 @@ fn pad_src() -> String {
     let mut src = use_query_map()
         .with_untracked(|params| params.get("src").cloned())
         .unwrap_or_default();
-    if let Ok(decoded) = URL_SAFE.decode(src.as_bytes()) {
-        src = String::from_utf8_lossy(&decoded).to_string();
-    } else if let Some((a, b)) = src.split_once("__") {
-        if a.chars().filter(|&c| c == '_').count() == 2 {
-            if let Ok(decoded) = URL_SAFE.decode(b.as_bytes()) {
-                src = String::from_utf8_lossy(&decoded).to_string();
-            }
+    if let Some((_, encoded)) = src.split_once("__") {
+        logging::log!("{:?}", encoded);
+        if let Ok(decoded) = URL_SAFE.decode(encoded.as_bytes()) {
+            src = String::from_utf8_lossy(&decoded).to_string();
         }
+    } else if let Ok(decoded) = URL_SAFE.decode(src.as_bytes()) {
+        src = String::from_utf8_lossy(&decoded).to_string();
     }
     src
 }

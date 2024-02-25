@@ -129,7 +129,7 @@ pub fn Install() -> impl IntoView {
     view! {
         <Title text="Installation - Uiua Docs"/>
         <h2>"Installing Uiua"</h2>
-        <p>"If you are on Windows, then the newest version of the Uiua interpreter can be downloaded from the "<a href="https://github.com/uiua-lang/uiua/releases">"releases"</a>" page."</p>
+        <p>"If your OS is supported, then the newest version of the Uiua interpreter can be downloaded from the "<a href="https://github.com/uiua-lang/uiua/releases">"releases"</a>" page."</p>
         <p>"Otherwise, the native Uiua interpreter can be installed via Cargo."</p>
         <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation (>=1.75)."</p>
         <p>"Once you have that, run the following command:"</p>

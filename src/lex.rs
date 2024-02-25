@@ -12,7 +12,7 @@ use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{Inputs, Primitive};
+use crate::{ast::PlaceholderOp, Inputs, Primitive};
 
 /// Lex a Uiua source file
 pub fn lex(
@@ -465,6 +465,12 @@ impl Token {
             _ => None,
         }
     }
+    pub(crate) fn as_placeholder(&self) -> Option<PlaceholderOp> {
+        match self {
+            Token::Simple(AsciiToken::Placeholder(op)) => Some(*op),
+            _ => None,
+        }
+    }
 }
 
 /// An ASCII lexical token
@@ -493,7 +499,7 @@ pub enum AsciiToken {
     TripleMinus,
     Quote,
     Quote2,
-    Placeholder(crate::ast::PlaceholderOp),
+    Placeholder(PlaceholderOp),
 }
 
 impl fmt::Display for AsciiToken {
@@ -670,16 +676,16 @@ impl<'a> Lexer<'a> {
                 "*" => self.end(Star, start),
                 "%" => self.end(Percent, start),
                 "^" if self.next_char_exact("!") => {
-                    self.end(Placeholder(crate::ast::PlaceholderOp::Call), start)
+                    self.end(Placeholder(PlaceholderOp::Call), start)
                 }
                 "^" if self.next_char_exact(".") => {
-                    self.end(Placeholder(crate::ast::PlaceholderOp::Dup), start)
+                    self.end(Placeholder(PlaceholderOp::Dup), start)
                 }
                 "^" if self.next_char_exact(":") => {
-                    self.end(Placeholder(crate::ast::PlaceholderOp::Flip), start)
+                    self.end(Placeholder(PlaceholderOp::Flip), start)
                 }
                 "^" if self.next_char_exact(",") => {
-                    self.end(Placeholder(crate::ast::PlaceholderOp::Over), start)
+                    self.end(Placeholder(PlaceholderOp::Over), start)
                 }
                 "^" => self.end(Caret, start),
                 "=" if self.next_char_exact("~") => self.end(EqualTilde, start),

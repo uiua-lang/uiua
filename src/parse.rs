@@ -823,14 +823,8 @@ impl<'i> Parser<'i> {
             s.map(Into::into).map(Word::String)
         } else if let Some(sig) = self.try_signature(Caret) {
             sig.span.sp(Word::Placeholder(PlaceholderOp::Call))
-        } else if let Some(span) = self.try_exact(Placeholder(PlaceholderOp::Call)) {
-            span.sp(Word::Placeholder(PlaceholderOp::Call))
-        } else if let Some(span) = self.try_exact(Placeholder(PlaceholderOp::Dup)) {
-            span.sp(Word::Placeholder(PlaceholderOp::Dup))
-        } else if let Some(span) = self.try_exact(Placeholder(PlaceholderOp::Flip)) {
-            span.sp(Word::Placeholder(PlaceholderOp::Flip))
-        } else if let Some(span) = self.try_exact(Placeholder(PlaceholderOp::Over)) {
-            span.sp(Word::Placeholder(PlaceholderOp::Over))
+        } else if let Some(op) = self.next_token_map(Token::as_placeholder) {
+            op.map(Word::Placeholder)
         } else if let Some(label) = self.next_token_map(Token::as_label) {
             label.map(Into::into).map(Word::Label)
         } else if let Some(frags) = self.next_token_map(Token::as_format_string) {

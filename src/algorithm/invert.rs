@@ -282,12 +282,10 @@ pub(crate) fn under_instrs(
                 Flip,
                 Dup,
                 Shape,
-                Len,
                 PushTempN(1),
                 Flip,
                 Dup,
                 Shape,
-                Len,
                 PushTempN(1),
                 Join
             ),

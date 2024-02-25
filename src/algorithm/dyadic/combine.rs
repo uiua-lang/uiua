@@ -201,38 +201,38 @@ impl Value {
     }
     pub(crate) fn undo_join(
         self,
-        a_rank: Self,
-        b_rank: Self,
+        a_shape: Self,
+        b_shape: Self,
         env: &Uiua,
     ) -> UiuaResult<(Self, Self)> {
-        let a_rank = a_rank.as_nat(env, "Rank must be a natural number")?;
-        let b_rank = b_rank.as_nat(env, "Rank must be a natural number")?;
+        let a_shape = a_shape.as_nats(env, "Shape must be a list of natural numbers")?;
+        let b_shape = b_shape.as_nats(env, "Shape must be a list of natural numbers")?;
         match self {
             Value::Num(a) => a
-                .unjoin(a_rank, b_rank, env)
+                .undo_join(&a_shape, &b_shape, env)
                 .map(|(a, b)| (a.into(), b.into())),
             #[cfg(feature = "bytes")]
             Value::Byte(a) => a
-                .unjoin(a_rank, b_rank, env)
+                .undo_join(&a_shape, &b_shape, env)
                 .map(|(a, b)| (a.into(), b.into())),
             Value::Complex(a) => a
-                .unjoin(a_rank, b_rank, env)
+                .undo_join(&a_shape, &b_shape, env)
                 .map(|(a, b)| (a.into(), b.into())),
             Value::Char(a) => a
-                .unjoin(a_rank, b_rank, env)
+                .undo_join(&a_shape, &b_shape, env)
                 .map(|(a, b)| (a.into(), b.into())),
             Value::Box(a) => a
-                .unjoin(a_rank, b_rank, env)
+                .undo_join(&a_shape, &b_shape, env)
                 .map(|(a, b)| (a.into(), b.into())),
         }
     }
     pub(crate) fn unjoin(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         self.generic_into(
-            |arr| arr.inv_join(env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.inv_join(env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.inv_join(env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.inv_join(env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.inv_join(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
         )
     }
 }
@@ -370,17 +370,34 @@ impl<T: ArrayValue> Array<T> {
         self.validate_shape();
         Ok(())
     }
-    pub(crate) fn unjoin(
-        self,
-        a_rank: usize,
-        b_rank: usize,
+    pub(crate) fn undo_join(
+        mut self,
+        ash: &[usize],
+        bsh: &[usize],
         env: &Uiua,
     ) -> UiuaResult<(Self, Self)> {
         if self.rank() == 0 {
             return Err(env.error("Cannot unjoin scalar"));
         }
-        match a_rank.cmp(&b_rank) {
-            Ordering::Equal => Err(env.error("Cannot unjoin arrays with the same rank")),
+        match ash.len().cmp(&bsh.len()) {
+            Ordering::Equal => {
+                if self.row_count() != ash[0] + bsh[0] {
+                    return Err(env.error(format!(
+                        "Attempted to undo join, but the \
+                        array's row count changed from {} to {}",
+                        ash[0] + bsh[0],
+                        self.row_count()
+                    )));
+                }
+                let mut b_shape = self.shape.clone();
+                b_shape[0] = bsh[0];
+                let b_data = self.data.slice((ash[0] * self.row_len())..);
+                self.shape[0] = ash[0];
+                self.data = self.data.slice(..(ash[0] * self.row_len()));
+                self.validate_shape();
+                let b = Array::new(b_shape, b_data);
+                Ok((self, b))
+            }
             Ordering::Less => {
                 if self.row_count() == 0 {
                     return Ok((self.clone(), self));
@@ -403,7 +420,7 @@ impl<T: ArrayValue> Array<T> {
             }
         }
     }
-    pub(crate) fn inv_join(mut self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub(crate) fn unjoin(mut self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         if self.rank() == 0 {
             return Err(env.error("Cannot unjoin a scalar"));
         }

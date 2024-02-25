@@ -1,9 +1,9 @@
 # Uiua Changelog
 
 Uiua is not yet stable.
+<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
-## 0.9.0 - 2024-??-??
-This version is not yet released. If you are reading this on the website, then these changes are live here.
+## 0.9.0 - 2024-02-25
 ### Language
 - **Breaking Change** - [`repeat ⍥`](https://uiua.org/docs/repeat) with [`infinity ∞`](https://uiua.org/docs/infinity) now does a fixed-point iteration rather than an infinite loop
   - You can still do an infinite loop with [`do ⍢`](https://uiua.org/docs/do)`(…)1`

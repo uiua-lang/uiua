@@ -799,6 +799,7 @@ pub fn Editor<'a>(
             Some(('(', ')')),
             "functions#inline-functions",
         ),
+        ("⟨⟩", "switch", "", Some(('⟨', '⟩')), "controlflow#switch"),
         ("¯", "negative (`)", "number-literal", None, ""),
         (
             "@",

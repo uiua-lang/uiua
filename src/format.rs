@@ -870,7 +870,7 @@ impl<'a> Formatter<'a> {
             }
             Word::Switch(sw) => {
                 let use_angle = angle_switch || sw.angled;
-                self.output.push(if use_angle { '〈' } else { '(' });
+                self.output.push(if use_angle { '⟨' } else { '(' });
                 let any_multiline = sw.branches.iter().any(|br| {
                     br.value.lines.len() > 1
                         || br
@@ -924,7 +924,7 @@ impl<'a> Formatter<'a> {
                         }
                     }
                 }
-                self.output.push(if use_angle { '〉' } else { ')' });
+                self.output.push(if use_angle { '⟩' } else { ')' });
             }
             Word::Primitive(prim) => self.push(&word.span, &prim.to_string()),
             Word::Modified(m) => {

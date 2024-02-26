@@ -676,6 +676,7 @@ code:
                     }
                     Ok(())
                 }
+                Instr::NoInline => Ok(()),
             };
             if self.rt.time_instrs {
                 let end_time = instant::now();

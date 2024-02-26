@@ -122,6 +122,7 @@ pub enum Instr {
     },
     PushSig(Signature),
     PopSig,
+    NoInline,
 }
 
 /// A type of temporary stacks
@@ -268,6 +269,7 @@ impl fmt::Display for Instr {
             Instr::SetOutputComment { i, n, .. } => write!(f, "<set output comment {i}({n})>"),
             Instr::PushSig(sig) => write!(f, "{sig}"),
             Instr::PopSig => write!(f, "-|"),
+            Instr::NoInline => write!(f, "<no inline>"),
         }
     }
 }

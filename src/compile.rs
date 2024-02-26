@@ -1379,11 +1379,22 @@ code:
             Word::Placeholder(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
-            Word::Comment(comment) => {
-                if comment.trim() == "Experimental!" {
-                    self.scope.experimental = true;
+            Word::Comment(comment) => match comment.trim() {
+                "Experimental!" => self.scope.experimental = true,
+                "No inline!" => {
+                    if call {
+                        self.push_instr(Instr::NoInline);
+                    } else {
+                        let f = self.add_function(
+                            FunctionId::Anonymous(word.span.clone()),
+                            Signature::new(0, 0),
+                            vec![Instr::NoInline],
+                        );
+                        self.push_instr(Instr::PushFunc(f));
+                    }
                 }
-            }
+                _ => {}
+            },
             Word::OutputComment { i, n } => self.push_instr(Instr::SetOutputComment { i, n }),
             Word::Spaces | Word::BreakLine | Word::UnbreakLine => {}
         }
@@ -1581,7 +1592,7 @@ code:
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
-            Global::Func(f) if f.inlinable && !self.has_tracing(f.instrs(self)) => {
+            Global::Func(f) if f.inlinable && !self.not_inlineable(f.instrs(self)) => {
                 if call {
                     // Inline instructions
                     self.push_instr(Instr::PushSig(f.signature()));
@@ -2694,7 +2705,7 @@ code:
             }
         }
     }
-    fn has_tracing(&self, instrs: &[Instr]) -> bool {
+    fn not_inlineable(&self, instrs: &[Instr]) -> bool {
         for instr in instrs {
             match instr {
                 Instr::Prim(
@@ -2710,7 +2721,8 @@ code:
                     ImplPrimitive::InvTrace | ImplPrimitive::InvDump | ImplPrimitive::InvStack,
                     _,
                 ) => return true,
-                Instr::PushFunc(f) if self.has_tracing(f.instrs(self)) => return true,
+                Instr::PushFunc(f) if self.not_inlineable(f.instrs(self)) => return true,
+                Instr::NoInline => return true,
                 _ => {}
             }
         }

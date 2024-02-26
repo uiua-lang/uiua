@@ -302,6 +302,7 @@ enum InstrRep {
     PushSig(Signature),
     PopSig(()),
     SetOutputComment(usize, usize),
+    NoInline(()),
     #[serde(untagged)]
     Push(Value),
     #[serde(untagged)]
@@ -350,6 +351,7 @@ impl From<Instr> for InstrRep {
             Instr::PushSig(sig) => Self::PushSig(sig),
             Instr::PopSig => Self::PopSig(()),
             Instr::SetOutputComment { i, n } => Self::SetOutputComment(i, n),
+            Instr::NoInline => Self::NoInline(()),
         }
     }
 }
@@ -394,6 +396,7 @@ impl From<InstrRep> for Instr {
             InstrRep::PushSig(sig) => Self::PushSig(sig),
             InstrRep::PopSig(()) => Self::PopSig,
             InstrRep::SetOutputComment(i, n) => Self::SetOutputComment { i, n },
+            InstrRep::NoInline(()) => Self::NoInline,
         }
     }
 }

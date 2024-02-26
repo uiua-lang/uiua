@@ -10,6 +10,8 @@ This version is not yet released. If you are reading this on the website, then t
   - It also allows switch functions to be used as modifier arguments without extra nesting
 - Switch functions now work with [`under ⍜`](https://uiua.org/docs/under)
 - [`under ⍜`](https://uiua.org/docs/under) [`join ⊂`](https://uiua.org/docs/join) now works with arrays of the same rank as long as the row count does not change
+- Add `# No inline!` semantic comment, which prevents a function and its callers from being inlined
+  - This enables stack traces on errors
 
 ## 0.9.2 - 2024-02-25
 ### Interpreter

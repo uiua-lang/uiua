@@ -453,9 +453,11 @@ fn element<T: JsCast>(id: &str) -> T {
 #[component]
 pub fn Pad() -> impl IntoView {
     let src = pad_src();
+    let version = format!("Uiua {}", uiua::VERSION);
+    let help = &["Note: Uiua is not yet stable", &version];
     view! {
         <Title text="Pad - Uiua"/>
-        <Editor mode=EditorMode::Pad example={ &src } help={&["Note: Uiua is not yet stable"]}/>
+        <Editor mode=EditorMode::Pad example={ &src } help=help/>
         <br/>
         <br/>
         <br/>

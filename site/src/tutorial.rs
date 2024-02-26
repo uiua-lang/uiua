@@ -1195,16 +1195,20 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="(3|5) 0\n(3|5) 1"/>
         <p>"The selector goes above the arguments on the stack."</p>
         <Editor example="(+|-) 0 3 5\n(+|-) 1 3 5"/>
+        <p>"Switch functions are formatted to use "<code>"⟨⟩"</code>"s instead of "<code>"()"</code>"s. This is so they are easier to identify and also so that they can be disambiguated from function packs in modifier arguments."</p>
+        <p>"Try running the examples above to format."</p>
         <p>"Non-scalar selectors are allowed. They allow the switch function to be evaluated for each row of the input arrays."</p>
-        <Editor example="(+|-) [1 0 1] [1 2 3] [4 5 6]"/>
+        <Editor example="⟨+|-⟩ [1 0 1] [1 2 3] [4 5 6]"/>
         <p>"Switch functions can have as many branches as you want, and they can also be nested."</p>
-        <Editor example="(+|-|×|÷) [1 2 0 3] [...2] [...5]"/>
-        <Editor example="≡((×10|+1|(∘|¯)=2.) ◿3.) [2 9 4 0 8 3]"/>
+        <Editor example="⟨+|-|×|÷⟩ [1 2 0 3] [...2] [...5]"/>
+        <Editor example="≡(⟨×10|+1|⟨∘|¯⟩=2.⟩ ◿3.) [2 9 4 0 8 3]"/>
         <p>"Each branch can have a signature specified. For the overall switch function to have a valid signature, all branches must either change the height of the stack by the same amount "<em>"or"</em>" return the same number of outputs."</p>
-        <Editor example="F ← (|2 ×||3.2 ⊃(++)×)\n[F 0 2 3 4]\n[F 1 2 3 4]"/>
+        <Editor example="F ← ⟨|2 ×||3.2 ⊃(++)×⟩\n[F 0 2 3 4]\n[F 1 2 3 4]"/>
         <p>"Signatures in switch functions are a bit messy, so try to avoid them when possible."</p>
         <p>"Because a second "<code>"|"</code>" immediately after another indicates a signature, branches that do nothing must contain "<Prim prim=Identity/>"."</p>
-        <Editor example="F ← (+5|∘|÷10)+∩>5,10.\n[F2 F6 F200]\nF[2 6 200]"/>
+        <Editor example="F ← ⟨+5|∘|÷10⟩+∩>5,10.\n[F2 F6 F200]\nF[2 6 200]"/>
+        <p>"To use a switch function as a modifier argument, you must double-nest the "<code>"()"</code>"s. These will get formatted to a single set of "<code>"⟨⟩"</code>"s."</p>
+        <Editor example="[dip((*|+)) 0 1 2 3]"/>
 
         <h2 id="assert"><Prim prim=Assert/></h2>
         <p>"The "<Prim prim=Assert/>" function takes any value and a condition. If the condition is anything but "<code>"1"</code>", the value is thrown as an error that can be caught with "<Prim prim=Try/>"."</p>

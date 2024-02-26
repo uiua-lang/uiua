@@ -15,7 +15,7 @@ instant = {version = "0.1.12", features = ['wasm-bindgen']}
 js-sys = "0.3"
 leptos = "0.6.5"
 leptos_meta = {version = "0.6.5", features = ["csr"]}
-leptos_router = {version = "0.6.5", features = ["csr"]}
+leptos_router = {version = "0.6.6", features = ["csr"]}
 pathdiff = "0.2.1"
 serde = {version = "1", features = ["derive"]}
 serde_json = "1"

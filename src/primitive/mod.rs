@@ -740,7 +740,7 @@ impl Primitive {
                 let f = env.pop_function()?;
                 env.spawn(f.signature().args, false, |env| env.call(f))?;
             }
-            Primitive::PoolSpawn => {
+            Primitive::Pool => {
                 let f = env.pop_function()?;
                 env.spawn(f.signature().args, true, |env| env.call(f))?;
             }

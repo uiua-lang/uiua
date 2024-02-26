@@ -331,7 +331,7 @@ impl<'a> VirtualEnv<'a> {
                     let sig = self.pop_func()?.signature();
                     self.handle_args_outputs(2, sig.outputs)?;
                 }
-                Spawn | PoolSpawn => {
+                Spawn | Pool => {
                     let sig = self.pop_func()?.signature();
                     self.handle_args_outputs(sig.args, 1)?;
                 }

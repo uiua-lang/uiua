@@ -1831,7 +1831,9 @@ primitive!(
     ///
     /// Has the same functionality as [spawn], but uses a thread pool instead of spawning a new thread.
     /// While [spawn]'s function will be called immediately, [pool]'s function will be called when a thread in the pool is available.
-    ([1], PoolSpawn, Thread, "pool"),
+    /// The thread pool has as many threads as the machine has processors.
+    /// If all threads in the pool are busy, then [pool] will block until a thread is available.
+    ([1], Pool, Thread, "pool"),
     /// Wait for a thread to finish and push its results to the stack
     ///
     /// The argument must be a thread id returned by [spawn] or [pool].

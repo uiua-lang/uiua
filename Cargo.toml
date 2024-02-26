@@ -19,7 +19,7 @@ colored = "2"
 crossbeam-channel = "0.5.11"
 dashmap = {version = "5", features = ["serde"]}
 ecow = {version = "0.2.0", features = ["serde"]}
-enum-iterator = "1.5.0"
+enum-iterator = "2.0.0"
 instant = "0.1.12"
 num_cpus = "1.16.0"
 once_cell = "1"

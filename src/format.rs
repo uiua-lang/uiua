@@ -160,7 +160,7 @@ The following configuration options are available:
                     s.push_str("\n---\n\n");
                 )*
 
-                fs::write("site/format_config.md", s).unwrap();
+                fs::write("site/text/format_config.md", s).unwrap();
             }
         }
 

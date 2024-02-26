@@ -90,7 +90,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::StackIdioms => StackIdioms().into_view(),
             DocsPage::Combinators => Combinators().into_view(),
             DocsPage::Optimizations => Optimizations().into_view(),
-            DocsPage::FormatConfig => view!(<Markdown src="/format_config.md"/>).into_view(),
+            DocsPage::FormatConfig => view!(<Markdown src="/text/format_config.md"/>).into_view(),
         };
 
         view! {

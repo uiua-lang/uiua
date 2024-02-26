@@ -531,7 +531,7 @@ You may want to read the new version of the [Advanced Stack Manipulation Tutoria
 - Remove old versions of `fork` and `trident`
 - Add the [`&httpsw`](https://uiua.org/docs/&httpsw) function for making HTTPS requests
 ### Interpreter
-- Add formatter configuration options. See the [readme](https://github.com/uiua-lang/uiua/blob/main/site/format_config.md) for details.
+- Add formatter configuration options. See the [readme](https://github.com/uiua-lang/uiua/blob/main/site/text/format_config.md) for details.
 - Checking for updates is less zealous, and can be disabled with the `--no-update` flag to `uiua run` or `uiua watch`
 ### Website
 - Running code in the Pad editor updates the URL to prevent work from accidentally being lost

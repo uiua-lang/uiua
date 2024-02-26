@@ -69,7 +69,7 @@ serde_yaml = {version = "0.9.32", optional = true}
 # Feature dependencies
 gif = {version = "0.13.1", optional = true}
 hound = {version = "3", optional = true}
-image = {version = "0.24.8", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "qoi"]}
+image = {version = "0.24.9", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "qoi"]}
 libffi = {version = "3", optional = true}
 libloading = {version = "0.8.1", optional = true}
 regex = {version = "1.10.3", optional = true}

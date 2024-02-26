@@ -3,7 +3,12 @@
 Uiua is not yet stable.
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.9.2 - 2024-02-25
+### Interpreter
+- Fix a bug involving patterns like `°°[…]`
+
 ## 0.9.1 - 2024-02-25
+### Crate
 - Improve Rust library API for getting bindings' values
 
 ## 0.9.0 - 2024-02-25

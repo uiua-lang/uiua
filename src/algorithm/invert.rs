@@ -95,8 +95,6 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         return Some(EcoVec::new());
     }
 
-    // println!("inverting {:?}", instrs);
-
     let patterns: &[&dyn InvertPattern] = &[
         &invert_call_pattern,
         &invert_dump_pattern,
@@ -131,6 +129,8 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         &([Dup, Mul], [Sqrt]),
         &invert_temp_pattern,
     ];
+
+    // println!("inverting {:?}", instrs);
 
     let mut inverted = EcoVec::new();
     let mut curr_instrs = instrs;
@@ -1116,7 +1116,7 @@ fn invert_unpack_pattern<'a>(
         span: *span,
         boxed: *unbox,
     });
-    Some((input, instrs))
+    Some((&[], instrs))
 }
 
 fn under_unpack_pattern<'a>(

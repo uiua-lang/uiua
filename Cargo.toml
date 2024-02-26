@@ -9,7 +9,7 @@ name = "uiua"
 readme = "readme.md"
 repository = "https://github.com/uiua-lang/uiua"
 rust-version = "1.75"
-version = "0.10.0-alpha.1"
+version = "0.10.0-dev.1"
 
 [dependencies]
 # Core dependencies

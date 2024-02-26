@@ -975,7 +975,9 @@ mod server {
                 if name.span.contains_line_col(line, col) {
                     let binding = &current_doc.asm.bindings[*idx];
                     let uri = match &binding.span.src {
-                        InputSrc::Str(_) => params.text_document_position_params.text_document.uri,
+                        InputSrc::Str(_) | InputSrc::Macro(_) => {
+                            params.text_document_position_params.text_document.uri
+                        }
                         InputSrc::File(file) => path_to_uri(file)?,
                     };
                     return Ok(Some(GotoDefinitionResponse::Scalar(Location {
@@ -1095,7 +1097,7 @@ mod server {
                     .filter(|binfo| {
                         let path = match &binfo.span.src {
                             InputSrc::File(file) => file.to_path_buf(),
-                            InputSrc::Str(_) => uri_path(&doc_uri),
+                            InputSrc::Str(_) | InputSrc::Macro(_) => uri_path(&doc_uri),
                         };
                         path.canonicalize().ok() == canonical_path
                     })

@@ -46,8 +46,10 @@ pub struct Compiler {
     current_imports: Vec<PathBuf>,
     /// The bindings of imported files
     imports: HashMap<PathBuf, Import>,
-    /// Unexpanded macros
-    macros: HashMap<usize, Vec<Sp<Word>>>,
+    /// Unexpanded stack macros
+    stack_macros: HashMap<usize, Vec<Sp<Word>>>,
+    /// Unexpanded array macros
+    array_macros: HashMap<usize, Function>,
     /// The depth of macro expansion
     macro_depth: usize,
     /// Accumulated errors
@@ -82,7 +84,8 @@ impl Default for Compiler {
             mode: RunMode::All,
             current_imports: Vec::new(),
             imports: HashMap::new(),
-            macros: HashMap::new(),
+            stack_macros: HashMap::new(),
+            array_macros: HashMap::new(),
             macro_depth: 0,
             errors: Vec::new(),
             experimental_prim_errors: HashSet::new(),
@@ -569,8 +572,47 @@ code:
                     ),
                 );
             }
-            return Err(self.fatal_error(span.clone(), "Array macros are not yet implemented"));
+            let instrs = self.compile_words(binding.words, true)?;
+            let sig = match instrs_signature(&instrs) {
+                Ok(s) => s,
+                Err(e) => {
+                    self.add_error(
+                        span.clone(),
+                        format!("Cannot infer array macro signature: {e}"),
+                    );
+                    Signature::new(0, 1)
+                }
+            };
+            if !(sig == (1, 1) || sig == (0, 0)) {
+                return Err(self.fatal_error(
+                    span.clone(),
+                    format!(
+                        "Array macros must have a signature of {}, \
+                        but a signature of {} was inferred",
+                        Signature::new(1, 1),
+                        sig
+                    ),
+                ));
+            }
+            if let Some(sig) = &binding.signature {
+                if !(sig.value == (1, 1) || sig.value == (0, 0)) {
+                    self.add_error(
+                        sig.span.clone(),
+                        format!(
+                            "Array macros must have a signature of {}",
+                            Signature::new(1, 1)
+                        ),
+                    );
+                }
+            }
+            let func = self.add_function(FunctionId::Named(name.clone()), sig, instrs);
+            self.scope.names.insert(name.clone(), local);
+            self.asm
+                .add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
+            self.array_macros.insert(local.index, func);
+            return Ok(());
         }
+        // Stack macro
         let placeholder_count = count_placeholders(&binding.words);
         match (ident_margs > 0, placeholder_count > 0) {
             (true, true) | (false, false) => {}
@@ -593,6 +635,13 @@ code:
                 );
                 return Ok(());
             }
+        }
+        if placeholder_count > 0 || ident_margs > 0 {
+            self.scope.names.insert(name.clone(), local);
+            self.asm
+                .add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
+            self.stack_macros.insert(local.index, binding.words.clone());
+            return Ok(());
         }
 
         let mut make_fn: Rc<dyn Fn(_, _, &mut Compiler) -> _> = Rc::new(
@@ -1798,7 +1847,14 @@ code:
                         };
                         return self.modified(new, call);
                     }
-                    modifier => {
+                    modifier => 'blk: {
+                        if let Modifier::Ref(name) = modifier {
+                            if let Ok((_, local)) = self.ref_local(name) {
+                                if self.array_macros.contains_key(&local.index) {
+                                    break 'blk;
+                                }
+                            }
+                        }
                         return Err(self.fatal_error(
                             modified.modifier.span.clone().merge(span),
                             format!(
@@ -1847,34 +1903,134 @@ code:
                 for (local, comp) in path_locals.into_iter().zip(&r.path) {
                     (self.asm.global_references).insert(comp.module.clone(), local.index);
                 }
-                let mut words = (self.macros.get(&local.index))
-                    .expect("modifier not found")
-                    .clone();
-                if self.macro_depth > 20 {
-                    return Err(self
-                        .fatal_error(modified.modifier.span.clone(), "Macro recursion detected"));
-                }
-                self.macro_depth += 1;
-                let instrs = self
-                    .expand_macro(&mut words, modified.operands)
-                    .and_then(|()| self.compile_words(words, true));
-                self.macro_depth -= 1;
-                let instrs = instrs?;
-                match instrs_signature(&instrs) {
-                    Ok(sig) => {
-                        let func =
-                            self.add_function(FunctionId::Named(r.name.value.clone()), sig, instrs);
-                        self.push_instr(Instr::PushFunc(func));
+                if let Some(mut words) = self.stack_macros.get(&local.index).cloned() {
+                    // Stack macros
+                    if self.macro_depth > 20 {
+                        return Err(self.fatal_error(
+                            modified.modifier.span.clone(),
+                            "Macro recursion detected",
+                        ));
                     }
-                    Err(e) => self.add_error(
-                        modified.modifier.span.clone(),
-                        format!("Cannot infer function signature: {e}"),
-                    ),
+                    self.macro_depth += 1;
+                    let instrs = self
+                        .expand_macro(&mut words, modified.operands)
+                        .and_then(|()| self.compile_words(words, true));
+                    self.macro_depth -= 1;
+                    let instrs = instrs?;
+                    match instrs_signature(&instrs) {
+                        Ok(sig) => {
+                            let func = self.add_function(
+                                FunctionId::Named(r.name.value.clone()),
+                                sig,
+                                instrs,
+                            );
+                            self.push_instr(Instr::PushFunc(func));
+                        }
+                        Err(e) => self.add_error(
+                            modified.modifier.span.clone(),
+                            format!("Cannot infer function signature: {e}"),
+                        ),
+                    }
+                    if call {
+                        let span = self.add_span(modified.modifier.span);
+                        self.push_instr(Instr::Call(span));
+                    }
+                } else if let Some(function) = self.array_macros.get(&local.index) {
+                    // Array macros
+
+                    // Collect operands as strings
+                    let operand = (modified.operands.into_iter())
+                        .find(|w| w.value.is_code())
+                        .unwrap();
+                    let operands: Vec<Sp<Word>> = match operand.value {
+                        Word::Switch(sw) => {
+                            sw.branches.into_iter().map(|b| b.map(Word::Func)).collect()
+                        }
+                        word => vec![operand.span.sp(word)],
+                    };
+                    let formatted: Array<Boxed> = operands
+                        .iter()
+                        .map(|w| Boxed(format_word(w, &self.asm.inputs).into()))
+                        .collect();
+
+                    // Run the macro function
+                    let mut env = Uiua::with_backend(self.backend.clone());
+                    let val = match env.run_asm(&self.asm).and_then(|()| {
+                        env.push(formatted);
+                        env.call(function.clone())?;
+                        env.pop("macro result")
+                    }) {
+                        Ok(val) => val,
+                        Err(e) => {
+                            return Err(self.fatal_error(
+                                modified.modifier.span.clone(),
+                                format!("Macro failed: {e}"),
+                            ));
+                        }
+                    };
+
+                    // Parse the macro output
+                    let mut code = String::new();
+                    for row in val.into_rows() {
+                        let s = row.as_string(&env, "Macro output rows must be strings")?;
+                        if !code.is_empty() {
+                            code.push(' ');
+                        }
+                        code.push_str(&s);
+                    }
+                    let (items, errors, _) = parse(
+                        &code,
+                        InputSrc::Macro(modified.modifier.span.clone().into()),
+                        &mut self.asm.inputs,
+                    );
+                    if let Some(error) = errors.first() {
+                        return Err(self.fatal_error(
+                            modified.modifier.span.clone(),
+                            format!("Macro failed: {error}"),
+                        ));
+                    }
+
+                    // Extract the words
+                    if items.len() != 1 {
+                        return Err(self.fatal_error(
+                            modified.modifier.span.clone(),
+                            format!(
+                                "Macro must generate 1 item, but it generated {}",
+                                items.len()
+                            ),
+                        ));
+                    }
+                    let item = items.into_iter().next().unwrap();
+                    let words = match item {
+                        Item::Words(words) => words,
+                        Item::Binding(_) => {
+                            return Err(self.fatal_error(
+                                modified.modifier.span.clone(),
+                                "Macro must generate words, but it generated a binding",
+                            ));
+                        }
+                        Item::Import(_) => {
+                            return Err(self.fatal_error(
+                                modified.modifier.span.clone(),
+                                "Macro must generate words, but it generated an import",
+                            ));
+                        }
+                        Item::TestScope(_) => {
+                            return Err(self.fatal_error(
+                                modified.modifier.span.clone(),
+                                "Macro must generate words, but it generated a test scope",
+                            ));
+                        }
+                    };
+
+                    // Compile the generated words
+                    for line in words {
+                        self.words(line, call)?;
+                    }
+                } else {
+                    panic!("Macro not found")
                 }
-                if call {
-                    let span = self.add_span(modified.modifier.span);
-                    self.push_instr(Instr::Call(span));
-                }
+
                 return Ok(());
             }
         };

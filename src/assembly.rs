@@ -188,6 +188,9 @@ pub struct Inputs {
     /// A list of input strings without paths
     #[serde(skip_serializing_if = "EcoVec::is_empty")]
     pub strings: EcoVec<EcoString>,
+    /// A map of spans to macro strings
+    #[serde(skip_serializing_if = "DashMap::is_empty")]
+    pub macros: DashMap<CodeSpan, EcoString>,
 }
 
 impl Inputs {
@@ -196,8 +199,8 @@ impl Inputs {
         src: impl IntoInputSrc,
         input: impl Into<EcoString>,
     ) -> InputSrc {
-        let mut src = src.into_input_src(self.strings.len());
-        match &mut src {
+        let src = src.into_input_src(self.strings.len());
+        match &src {
             InputSrc::File(path) => {
                 self.files.insert(path.to_path_buf(), input.into());
             }
@@ -206,6 +209,9 @@ impl Inputs {
                     self.strings.push(EcoString::default());
                 }
                 self.strings.make_mut()[*i] = input.into();
+            }
+            InputSrc::Macro(span) => {
+                self.macros.insert((**span).clone(), input.into());
             }
         }
         src
@@ -222,6 +228,11 @@ impl Inputs {
                 .strings
                 .get(*index)
                 .unwrap_or_else(|| panic!("String {} not found", index))
+                .clone(),
+            InputSrc::Macro(span) => self
+                .macros
+                .get(span)
+                .unwrap_or_else(|| panic!("Macro at {} not found", span))
                 .clone(),
         }
     }
@@ -240,6 +251,13 @@ impl Inputs {
                     f(src)
                 } else {
                     panic!("String {} not found", index)
+                }
+            }
+            InputSrc::Macro(span) => {
+                if let Some(src) = self.macros.get(span) {
+                    f(src.value())
+                } else {
+                    panic!("Macro at {} not found", span)
                 }
             }
         }

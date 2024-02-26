@@ -378,7 +378,10 @@ impl Report {
                 }
                 fragments.push(ReportFragment::Plain(line.into()));
             }
-            if let Span::Code(span) = span {
+            if let Span::Code(mut span) = span {
+                while let InputSrc::Macro(inner) = span.src {
+                    span = *inner;
+                }
                 fragments.push(ReportFragment::Newline);
                 fragments.push(ReportFragment::Fainter("  at ".into()));
                 if let InputSrc::File(path) = &span.src {

@@ -339,7 +339,7 @@ code:
                 }
                 comment.push('\n');
             }
-            if !comment.is_empty() {
+            if !comment.trim().is_empty() {
                 self.scope.comment = Some(comment.trim().into());
             }
         }
@@ -391,8 +391,12 @@ code:
                             }
                         }
                     }
-                    *prev_comment = Some(comment.into());
-                }
+                    *prev_comment = if comment.trim().is_empty() {
+                        None
+                    } else {
+                        Some(comment.trim().into())
+                    };
+                };
                 let can_run = match self.mode {
                     RunMode::Normal => !in_test,
                     RunMode::Test => in_test,

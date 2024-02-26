@@ -7,7 +7,7 @@ version = "0.1.0"
 base64 = "0.21.7"
 comrak = "0.21.0"
 console_error_panic_hook = "0.1.7"
-enum-iterator = "1.5.0"
+enum-iterator = "2.0.0"
 getrandom = {version = "0.2", features = ["js"]}
 hound = "3.5.1"
 image = "0.24.8"

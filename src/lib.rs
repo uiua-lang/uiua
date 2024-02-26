@@ -36,6 +36,7 @@ uiua.run_str("+").unwrap();
 let res = uiua.pop_int().unwrap();
 assert_eq!(res, 3);
 ```
+
 Sometimes, you need to configure the compiler before running.
 
 You can create a new compiler with [`Compiler::new`]. Strings or files can be compiled with [`Compiler::load_str`] or [`Compiler::load_file`] respectively.
@@ -52,6 +53,7 @@ uiua.run_asm(&asm).unwrap();
 let res = uiua.pop_int().unwrap();
 assert_eq!(res, 8);
 ```
+
 This can be shortened a bit with [`Uiua::compile_run`].
 ```rust
 use uiua::*;
@@ -61,6 +63,7 @@ uiua.compile_run(|comp| {
     comp.print_diagnostics(true).load_str("+ 3 5")
 });
 ```
+
 You can create and bind Rust functions with [`Compiler::create_function`], [`Compiler::bind_function`], and [`Compiler::create_bind_function`]
 ```rust
 use uiua::*;
@@ -80,6 +83,32 @@ uiua.run_asm(asm).unwrap();
 let res = uiua.pop_num().unwrap();
 assert_eq!(res, 5.0);
 ```
+
+Bindings can be retrieved with [`Uiua::bound_values`] or [`Uiua::bound_functions`].
+```rust
+use uiua::*;
+
+let mut uiua = Uiua::with_native_sys();
+uiua.run_str("
+    X ← 5
+    F ← +1
+").unwrap();
+
+let x = uiua.bound_values().remove("X").unwrap();
+assert_eq!(x.as_int(&uiua, "").unwrap(), 5);
+
+let f = uiua.bound_functions().remove("F").unwrap();
+let mut comp = Compiler::new().with_assembly(uiua.take_asm());
+comp.create_bind_function("AddTwo", (1, 1), move |uiua| {
+    uiua.call(f.clone())?;
+    uiua.call(f.clone())
+}).unwrap();
+comp.load_str("AddTwo 3").unwrap();
+uiua.run_asm(comp.finish()).unwrap();
+let res = uiua.pop_int().unwrap();
+assert_eq!(res, 5);
+```
+
 You can format Uiua code with the [`mod@format`] module.
 ```rust
 use uiua::format::*;

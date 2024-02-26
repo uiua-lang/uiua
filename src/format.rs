@@ -170,7 +170,7 @@ The following configuration options are available:
                     let asm = Compiler::new().print_diagnostics(true).load_file(file_path)?.finish();
                     let mut env = Uiua::with_backend(SafeSys::default());
                     env.run_asm(&asm)?;
-                    let mut bindings = env.all_values_in_scope();
+                    let mut bindings = env.bound_values();
                     $(
                         let $name = {
                             let requirement = requirement!([<$name:camel>], $ty);

@@ -241,6 +241,10 @@ impl Uiua {
     {
         self.downcast_backend_mut::<T>().map(take)
     }
+    /// Take the assembly
+    pub fn take_asm(&mut self) -> Assembly {
+        take(&mut self.asm)
+    }
     /// Set whether to emit the time taken to execute each instruction
     pub fn time_instrs(mut self, time_instrs: bool) -> Self {
         self.rt.time_instrs = time_instrs;
@@ -296,8 +300,8 @@ impl Uiua {
         self.compile_run(|comp| comp.load_file(path))
     }
     /// Run a Uiua assembly
-    pub fn run_asm(&mut self, asm: impl Into<Assembly>) -> UiuaResult<Assembly> {
-        fn run_asm(env: &mut Uiua, asm: Assembly) -> UiuaResult<Assembly> {
+    pub fn run_asm(&mut self, asm: impl Into<Assembly>) -> UiuaResult {
+        fn run_asm(env: &mut Uiua, asm: Assembly) -> UiuaResult {
             env.asm = asm;
             env.rt.execution_start = instant::now();
             let top_slices = take(&mut env.asm.top_slices);
@@ -322,8 +326,7 @@ impl Uiua {
                     ..Runtime::default()
                 };
             }
-            let asm = take(&mut env.asm);
-            res.map(|_| asm)
+            res
         }
         run_asm(self, asm.into())
     }
@@ -980,13 +983,26 @@ code:
             )
         })
     }
-    /// Get the values for all bindings in the current scope
-    pub fn all_values_in_scope(&self) -> HashMap<Ident, Value> {
+    /// Get all bound values in the assembly
+    ///
+    /// Bindings are only given values once the assembly has been run successfully
+    pub fn bound_values(&self) -> HashMap<Ident, Value> {
         let mut bindings = HashMap::new();
         for binding in &self.asm.bindings {
             if let Global::Const(Some(val)) = &binding.global {
                 let name = binding.span.as_str(self.inputs(), |s| s.into());
                 bindings.insert(name, val.clone());
+            }
+        }
+        bindings
+    }
+    /// Get all bound functions in the assembly
+    pub fn bound_functions(&self) -> HashMap<Ident, Function> {
+        let mut bindings = HashMap::new();
+        for binding in &self.asm.bindings {
+            if let Global::Func(f) = &binding.global {
+                let name = binding.span.as_str(self.inputs(), |s| s.into());
+                bindings.insert(name, f.clone());
             }
         }
         bindings

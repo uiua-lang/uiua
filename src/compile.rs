@@ -1392,7 +1392,11 @@ code:
                         );
                         self.push_instr(Instr::PushFunc(f));
                     }
-                }
+                },
+                "Boo!" => self.add_error(
+                    word.span.clone(),
+                    "The compiler is scared.",
+                ),
                 _ => {}
             },
             Word::OutputComment { i, n } => self.push_instr(Instr::SetOutputComment { i, n }),

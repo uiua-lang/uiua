@@ -169,6 +169,8 @@ uiuisms!(
     "◫⊙⊂⊃⊙∘(↙-1) 3 ⇡7",
     /// Split an array at an index
     "⊃↙↘ 3 [1 2 3 4 5]",
+    /// Insert a value into an array at an index
+    "⍜⊙↻⊂ π 3 [1 2 3 4 5]",
     /// Split an array by a delimiter
     r#"⊜□≠, @, "split,this,up""#,
     /// Split an array by a delimiter with fill elements

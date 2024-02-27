@@ -16,7 +16,7 @@ jobs:
     name: Create release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Ensure tag matches cargo version
         run: |
           CARGO_PKG_VERSION=$(cargo pkgid | cut -d# -f2)

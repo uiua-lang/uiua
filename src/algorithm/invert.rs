@@ -113,8 +113,6 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         &(Val, ([Rotate], [Neg, Rotate])),
         &([Rotate], [Neg, Rotate]),
         &pat!(Sqrt, (2, Pow)),
-        &([Add], [Sub]),
-        &([Mul], [Div]),
         &(Val, IgnoreMany(Flip), ([Add], [Sub])),
         &(Val, ([Sub], [Add])),
         &(Val, ([Flip, Sub], [Flip, Sub])),
@@ -1242,8 +1240,16 @@ fn invert_scan_pattern<'a>(
     let [Instr::PushFunc(f), Instr::Prim(Primitive::Scan, span), input @ ..] = input else {
         return None;
     };
-    let instrs = f.instrs(comp).to_vec();
-    let inverse = invert_instrs(&instrs, comp)?;
+    let inverse = match f.as_flipped_primitive(comp) {
+        Some((Primitive::Add, false)) => eco_vec![Instr::Prim(Primitive::Sub, *span)],
+        Some((Primitive::Mul, false)) => eco_vec![Instr::Prim(Primitive::Div, *span)],
+        Some((Primitive::Eq, false)) => eco_vec![Instr::Prim(Primitive::Eq, *span)],
+        Some((Primitive::Ne, false)) => eco_vec![Instr::Prim(Primitive::Ne, *span)],
+        _ => {
+            let instrs = f.instrs(comp).to_vec();
+            invert_instrs(&instrs, comp)?
+        }
+    };
     let inverse = make_fn(inverse, *span, comp)?;
     Some((
         input,

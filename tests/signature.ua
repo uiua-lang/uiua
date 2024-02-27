@@ -7,7 +7,6 @@ F ← |1 +1
 # Reduction
 F ← |1 /+
 F ← |1 \+
-F ← |1.0 \◌
 # Iteration
 F ← |1 ∵⇌
 F ← |1 ≡⇌

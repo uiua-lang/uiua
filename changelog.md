@@ -17,6 +17,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Add `# No inline!` semantic comment, which prevents a function and its callers from being inlined
   - This enables stack traces on errors
 
+## 0.9.3 - 2024-02-27
+### Interpreter
+- Fix a major bug with negative [`take ↙`](https://uiua.org/docs/take)
+
 ## 0.9.2 - 2024-02-25
 ### Interpreter
 - Fix a bug involving patterns like `°°[…]`

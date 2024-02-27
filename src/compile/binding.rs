@@ -76,15 +76,14 @@ impl Compiler {
                     Signature::new(0, 1)
                 }
             };
-            let sig_is_valid = |sig: Signature| sig == (1, 1) || sig == (2, 1) || sig == (0, 0);
+            let sig_is_valid = |sig: Signature| sig == (1, 1) || sig == (0, 0);
             if !sig_is_valid(sig) {
                 return Err(self.fatal_error(
                     span.clone(),
                     format!(
-                        "Array macros must have a signature of {} or {}, \
+                        "Array macros must have a signature of {} , \
                         but a signature of {} was inferred",
                         Signature::new(1, 1),
-                        Signature::new(2, 1),
                         sig
                     ),
                 ));
@@ -94,9 +93,8 @@ impl Compiler {
                     self.add_error(
                         sig.span.clone(),
                         format!(
-                            "Array macros must have a signature of {} or {}",
-                            Signature::new(1, 1),
-                            Signature::new(2, 1),
+                            "Array macros must have a signature of {}",
+                            Signature::new(1, 1)
                         ),
                     );
                 }

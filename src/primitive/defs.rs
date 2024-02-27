@@ -2189,7 +2189,7 @@ primitive!(
     /// ex: 1_2_3 4 5_6_7
     ///   : dump⊢
     (0(0)[1], Dump, Stack, "dump"),
-    /// Convert code into a string instead of running it
+    /// Convert code into a string instead of compiling it
     ///
     /// ex: # Experimental!
     ///   : stringify(/+ran+1)
@@ -2198,6 +2198,8 @@ primitive!(
     ///   : F! ← ^! &p$"Running code: _" stringify^!^.
     ///   : F!(+ 1 2)
     (0[1], Stringify, OtherModifier, "stringify"),
+    /// Convert a string into code at compile time
+    (0[1], Quote, OtherModifier, "quote"),
     /// Get the signature of a function
     ///
     /// ex: # Experimental!

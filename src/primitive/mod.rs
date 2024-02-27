@@ -372,6 +372,7 @@ impl Primitive {
                 | Sys(SysOp::FFI)
                 | Repr
                 | Stringify
+                | Quote
                 | Sig
         )
     }
@@ -814,10 +815,13 @@ impl Primitive {
             Primitive::Dump => dump(env, false)?,
             Primitive::Regex => regex(env)?,
             Primitive::Stringify => {
-                return Err(env.error("Stringify was not inlined. This is a bug in the interpreter"))
+                return Err(env.error("stringify was not inlined. This is a bug in the interpreter"))
+            }
+            Primitive::Quote => {
+                return Err(env.error("quote was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Sig => {
-                return Err(env.error("Signature was not inlined. This is a bug in the interpreter"))
+                return Err(env.error("signature was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Sys(io) => io.run(env)?,
         }

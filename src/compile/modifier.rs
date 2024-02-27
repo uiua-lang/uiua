@@ -241,55 +241,9 @@ impl Compiler {
                         }
                         code.push_str(&s);
                     }
-                    let (items, errors, _) = parse(
-                        &code,
-                        InputSrc::Macro(modified.modifier.span.clone().into()),
-                        &mut self.asm.inputs,
-                    );
-                    if let Some(error) = errors.first() {
-                        return Err(self.fatal_error(
-                            modified.modifier.span.clone(),
-                            format!("Macro failed: {error}"),
-                        ));
-                    }
 
-                    // Extract the words
-                    if items.len() != 1 {
-                        return Err(self.fatal_error(
-                            modified.modifier.span.clone(),
-                            format!(
-                                "Macro must generate 1 item, but it generated {}",
-                                items.len()
-                            ),
-                        ));
-                    }
-                    let item = items.into_iter().next().unwrap();
-                    let words = match item {
-                        Item::Words(words) => words,
-                        Item::Binding(_) => {
-                            return Err(self.fatal_error(
-                                modified.modifier.span.clone(),
-                                "Macro must generate words, but it generated a binding",
-                            ));
-                        }
-                        Item::Import(_) => {
-                            return Err(self.fatal_error(
-                                modified.modifier.span.clone(),
-                                "Macro must generate words, but it generated an import",
-                            ));
-                        }
-                        Item::TestScope(_) => {
-                            return Err(self.fatal_error(
-                                modified.modifier.span.clone(),
-                                "Macro must generate words, but it generated a test scope",
-                            ));
-                        }
-                    };
-
-                    // Compile the generated words
-                    for line in words {
-                        self.words(line, call)?;
-                    }
+                    // Quote
+                    self.quote(&code, &modified.modifier.span, call)?;
                 } else {
                     panic!("Macro not found")
                 }
@@ -882,6 +836,43 @@ impl Compiler {
                 let instr = Instr::Push(s.into());
                 finish!([instr], Signature::new(0, 1));
             }
+            Quote => {
+                let operand = modified.code_operands().next().unwrap().clone();
+                let (instrs, _) = self.compile_operand_word(operand)?;
+                let code: String = match instrs.as_slice() {
+                    [Instr::Push(Value::Char(chars))] if chars.rank() == 1 => {
+                        chars.data.iter().collect()
+                    }
+                    [Instr::Push(Value::Char(chars))] => {
+                        return Err(self.fatal_error(
+                            modified.modifier.span.clone(),
+                            format!(
+                                "quote's argument compiled to a \
+                                rank {} array rather than a string",
+                                chars.rank()
+                            ),
+                        ))
+                    }
+                    [Instr::Push(value)] => {
+                        return Err(self.fatal_error(
+                            modified.modifier.span.clone(),
+                            format!(
+                                "quote's argument compiled to a \
+                                {} array rather than a string",
+                                value.type_name()
+                            ),
+                        ))
+                    }
+                    _ => {
+                        return Err(self.fatal_error(
+                            modified.modifier.span.clone(),
+                            "quote's argument did not compile to a string. \
+                            Try using comptime to force its evaluation.",
+                        ));
+                    }
+                };
+                self.quote(&code, &modified.modifier.span, call)?;
+            }
             Sig => {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let (_, sig) = self.compile_operand_word(operand)?;
@@ -896,5 +887,54 @@ impl Compiler {
         self.handle_primitive_experimental(prim, &modified.modifier.span);
         self.handle_primitive_deprecation(prim, &modified.modifier.span);
         Ok(true)
+    }
+    fn quote(&mut self, code: &str, span: &CodeSpan, call: bool) -> UiuaResult {
+        let (items, errors, _) = parse(
+            code,
+            InputSrc::Macro(span.clone().into()),
+            &mut self.asm.inputs,
+        );
+        if let Some(error) = errors.first() {
+            return Err(self.fatal_error(span.clone(), format!("Macro failed: {error}")));
+        }
+
+        // Extract the words
+        if items.len() != 1 {
+            return Err(self.fatal_error(
+                span.clone(),
+                format!(
+                    "Macro must generate 1 item, but it generated {}",
+                    items.len()
+                ),
+            ));
+        }
+        let item = items.into_iter().next().unwrap();
+        let words = match item {
+            Item::Words(words) => words,
+            Item::Binding(_) => {
+                return Err(self.fatal_error(
+                    span.clone(),
+                    "Macro must generate words, but it generated a binding",
+                ));
+            }
+            Item::Import(_) => {
+                return Err(self.fatal_error(
+                    span.clone(),
+                    "Macro must generate words, but it generated an import",
+                ));
+            }
+            Item::TestScope(_) => {
+                return Err(self.fatal_error(
+                    span.clone(),
+                    "Macro must generate words, but it generated a test scope",
+                ));
+            }
+        };
+
+        // Compile the generated words
+        for line in words {
+            self.words(line, call)?;
+        }
+        Ok(())
     }
 }

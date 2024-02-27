@@ -10,6 +10,10 @@ This version is not yet released. If you are reading this on the website, then t
   - It also allows switch functions to be used as modifier arguments without extra nesting
 - Switch functions now work with [`under ⍜`](https://uiua.org/docs/under)
 - [`under ⍜`](https://uiua.org/docs/under) [`join ⊂`](https://uiua.org/docs/join) now works with arrays of the same rank as long as the row count does not change
+- Add experimental array macros, which allow code to be generated and manipulated at compile time as strings
+  - These are specified with a `^` immediately following a binding's arrow
+- Add the experimental [`quote`](https://uiua.org/docs/quote) modifier, which converts a string to code at compile time
+  - This is useful in array macros
 - Add `# No inline!` semantic comment, which prevents a function and its callers from being inlined
   - This enables stack traces on errors
 

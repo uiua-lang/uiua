@@ -356,7 +356,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Instead of allowing them to be spelled with 2 characters, they can now be spelled with 1 character as long as there are at least 2 in the sequence. 
   - If present, `'i'` may only come last. 
   - `reach ⟜` is included.
-- Add 2-letter spellings of `deep ≊`, `abyss ≃`, and `seabed ∸` to make them consistent with `rock ⍘`.
+- Add 2-letter spellings of `deep ≊`, `abyss ≃`, and `seabed ∸` to make them consistent with `rock ⋄`.
 ### Interpreter
 - Fix a bunch of bugs and crashes
 - The formatter now indents bindings that start with a bound function that starts with [`&i`](https://uiua.org/docs/&i)
@@ -417,7 +417,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`fold ∧`](https://uiua.org/docs/fold) is now rank-generic and requires a rank list
 - Add the `tribute ≐` modifier, which is a flipped version of `distribute ∺`
 - Change `level ≑`'s glyph to reflect its relationship with [`each ∵`](https://uiua.org/docs/each), [`rows ≡`](https://uiua.org/docs/rows), `distribute ∺`, and `tribute ≐`. Code using `⍚` will continue to work and will be formatted as `≑`.
-- Add `rock ⍘`, `surface ~`, `deep ≊`, `abyss ≃`, and `seabed ∸`, which build rank lists to be used with `level ≑` and the new rank-generic modifiers
+- Add `rock ⋄`, `surface ~`, `deep ≊`, `abyss ≃`, and `seabed ∸`, which build rank lists to be used with `level ≑` and the new rank-generic modifiers
 - Change [`trace ⸮`](https://uiua.org/docs/trace)'s glyph to let `surface ~` use `~`.
 - Change [`match ≍`](https://uiua.org/docs/match)'s glyph to avoid confusion with the new ocean functions' glyphs. Code using `≅` will continue to work and will be formatted as `≍`.
 - Stack signatures found to be incorrect at runtime produce an error

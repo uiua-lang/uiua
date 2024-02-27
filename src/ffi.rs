@@ -246,14 +246,12 @@ mod enabled {
             let mut lengths: Vec<Option<usize>> = vec![None; arg_tys.len()];
             // Collect lengths of lists
             for (i, arg_ty) in arg_tys.iter().enumerate() {
-                if let FfiType::List {
-                    len_index: length, ..
-                } = arg_ty
-                {
+                if let FfiType::List { len_index, .. } = arg_ty {
+                    let j = i - lengths[..i].iter().filter(|l| l.is_some()).count();
                     *lengths
-                        .get_mut(*length)
-                        .ok_or_else(|| format!("Invalid length index: {length}"))? =
-                        args.get(i).map(Value::element_count);
+                        .get_mut(*len_index)
+                        .ok_or_else(|| format!("Invalid length index: {len_index}"))? =
+                        args.get(j).map(Value::element_count);
                 }
             }
             // Bind arguments
@@ -287,8 +285,12 @@ mod enabled {
                     // Bind normal argument
                     let arg = args.next().ok_or("Not enough arguments")?;
                     // println!("bind {i} arg: {arg:?}");
+                    // println!("  as {arg_ty}");
                     bindings.bind_arg(i, arg_ty, arg)?;
                 }
+            }
+            if args.next().is_some() {
+                return Err("Too many arguments".into());
             }
 
             // Call and get return value
@@ -314,25 +316,6 @@ mod enabled {
                             Array::new(len, slice.iter().map(|&i| i as f64).collect::<EcoVec<_>>())
                                 .into(),
                         );
-                        // Clean up the pointer's memory
-                        drop(Vec::from_raw_parts(ptr as *mut $c_ty, len, len));
-                    }
-                };
-            }
-            macro_rules! out_param_list {
-                ($c_ty:ty, $len_index:expr, $i:expr) => {
-                    unsafe {
-                        let len = *bindings.get::<c_int>(*$len_index) as usize;
-                        let (ptr, vec) = bindings.get_list_mut::<$c_ty>($i);
-                        // Construct a list from the pointer and length
-                        let slice = slice::from_raw_parts(ptr, len);
-                        // Copy the slice into a new array
-                        results.push(
-                            Array::new(len, slice.iter().map(|&i| i as f64).collect::<EcoVec<_>>())
-                                .into(),
-                        );
-                        // Forget the vector
-                        forget(take(vec));
                         // Clean up the pointer's memory
                         drop(Vec::from_raw_parts(ptr as *mut $c_ty, len, len));
                     }
@@ -433,7 +416,26 @@ mod enabled {
                     results.push((*bindings.get::<$ty>($i) as f64).into())
                 };
             }
-            for (i, ty) in arg_tys.iter().enumerate() {
+            macro_rules! out_param_list {
+                ($c_ty:ty, $len_index:expr, $i:expr) => {
+                    unsafe {
+                        let len = *bindings.get::<c_int>(*$len_index) as usize;
+                        let (ptr, vec) = bindings.get_list_mut::<$c_ty>($i);
+                        // Construct a list from the pointer and length
+                        let slice = slice::from_raw_parts(ptr, len);
+                        // Copy the slice into a new array
+                        results.push(
+                            Array::new(len, slice.iter().map(|&i| i as f64).collect::<EcoVec<_>>())
+                                .into(),
+                        );
+                        // Forget the vector
+                        forget(take(vec));
+                        // Clean up the pointer's memory
+                        drop(Vec::from_raw_parts(ptr as *mut $c_ty, len, len));
+                    }
+                };
+            }
+            for (i, ty) in arg_tys.iter().enumerate().rev() {
                 match ty {
                     FfiType::Ptr {
                         mutable: true,
@@ -607,6 +609,7 @@ mod enabled {
             self.push_list::<c_char>(list)
         }
         fn push_list<T: Any + 'static>(&mut self, mut arg: Box<[T]>) -> *mut () {
+            // println!("push {} elem list", arg.len());
             let ptr = &mut arg[0] as *mut T;
             // println!("list ptr a: {:p}", ptr);
             self.arg_data.push(Box::new((ptr, arg)));
@@ -627,11 +630,13 @@ mod enabled {
             let any = &self.arg_data[index];
             any.downcast_ref::<T>()
                 .or_else(|| any.downcast_ref::<(*mut T, Box<T>)>().map(|(_, b)| &**b))
+                .or_else(|| any.downcast_ref::<(*mut T, Box<[T]>)>().map(|(_, b)| &b[0]))
                 .unwrap_or_else(|| {
                     panic!(
-                        "Value wasn't expected type {} or {}",
+                        "Value wasn't expected type {}, {}, or {}",
                         type_name::<T>(),
-                        type_name::<(*mut T, Box<T>)>()
+                        type_name::<(*mut T, Box<T>)>(),
+                        type_name::<(*mut T, Box<[T]>)>()
                     )
                 })
         }

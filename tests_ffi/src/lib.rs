@@ -45,6 +45,20 @@ pub unsafe extern "C" fn head_tail(list: *mut c_int, len: *mut c_int) -> c_int {
     head
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn multi_list(
+    _a: *mut c_int,
+    _a_len: c_int,
+    _b: *mut c_int,
+    _b_len: c_int,
+    c: *mut c_int,
+    c_len: c_int,
+) {
+    for i in 0..c_len {
+        *c.offset(i as isize) = i;
+    }
+}
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct Vec2 {

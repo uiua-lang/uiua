@@ -76,7 +76,7 @@ impl Compiler {
                     Signature::new(0, 1)
                 }
             };
-            let sig_is_valid = |sig: Signature| sig == (1, 1) || sig == (0, 0);
+            let sig_is_valid = |sig: Signature| sig == (1, 1) || sig == (2, 1) || sig == (0, 0);
             if !sig_is_valid(sig) {
                 return Err(self.fatal_error(
                     span.clone(),

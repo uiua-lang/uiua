@@ -211,6 +211,17 @@ impl Compiler {
                             word => vec![operand.span.sp(word)],
                         };
                     }
+                    let op_sigs = if function.signature().args == 2 {
+                        let mut comp = self.clone();
+                        let mut sig_data: EcoVec<u8> = EcoVec::with_capacity(operands.len() * 2);
+                        for op in &operands {
+                            let (_, sig) = comp.compile_operand_word(op.clone())?;
+                            sig_data.extend_from_slice(&[sig.args as u8, sig.outputs as u8]);
+                        }
+                        Some(Array::<u8>::new([operands.len(), 2], sig_data))
+                    } else {
+                        None
+                    };
                     let formatted: Array<Boxed> = operands
                         .iter()
                         .map(|w| Boxed(format_word(w, &self.asm.inputs).into()))
@@ -219,6 +230,9 @@ impl Compiler {
                     // Run the macro function
                     let mut env = Uiua::with_backend(self.backend.clone());
                     let val = match env.run_asm(&self.asm).and_then(|()| {
+                        if let Some(sigs) = op_sigs {
+                            env.push(sigs);
+                        }
                         env.push(formatted);
                         env.call(function.clone())?;
                         env.pop("macro result")

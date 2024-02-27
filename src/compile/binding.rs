@@ -56,12 +56,12 @@ impl Compiler {
                     add `# Experimental!` to the top of the file.",
                 );
             }
-            if ident_margs != 1 {
+            if ident_margs == 0 {
                 self.add_error(
                     span.clone(),
                     format!(
-                        "Array macros must take 1 operand, but `{name}`'s \
-                        name suggests it takes {ident_margs}",
+                        "Array macros must take at least 1 operand, \
+                        but `{name}`'s name suggests it takes 0",
                     ),
                 );
             }
@@ -76,24 +76,27 @@ impl Compiler {
                     Signature::new(0, 1)
                 }
             };
-            if !(sig == (1, 1) || sig == (0, 0)) {
+            let sig_is_valid = |sig: Signature| sig == (1, 1) || sig == (2, 1) || sig == (0, 0);
+            if !sig_is_valid(sig) {
                 return Err(self.fatal_error(
                     span.clone(),
                     format!(
-                        "Array macros must have a signature of {}, \
+                        "Array macros must have a signature of {} or {}, \
                         but a signature of {} was inferred",
                         Signature::new(1, 1),
+                        Signature::new(2, 1),
                         sig
                     ),
                 ));
             }
             if let Some(sig) = &binding.signature {
-                if !(sig.value == (1, 1) || sig.value == (0, 0)) {
+                if !sig_is_valid(sig.value) {
                     self.add_error(
                         sig.span.clone(),
                         format!(
-                            "Array macros must have a signature of {}",
-                            Signature::new(1, 1)
+                            "Array macros must have a signature of {} or {}",
+                            Signature::new(1, 1),
+                            Signature::new(2, 1),
                         ),
                     );
                 }

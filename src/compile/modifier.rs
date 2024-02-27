@@ -199,15 +199,18 @@ impl Compiler {
                     // Array macros
 
                     // Collect operands as strings
-                    let operand = (modified.operands.into_iter())
-                        .find(|w| w.value.is_code())
-                        .unwrap();
-                    let operands: Vec<Sp<Word>> = match operand.value {
-                        Word::Switch(sw) => {
-                            sw.branches.into_iter().map(|b| b.map(Word::Func)).collect()
-                        }
-                        word => vec![operand.span.sp(word)],
-                    };
+                    let mut operands: Vec<Sp<Word>> = (modified.operands.into_iter())
+                        .filter(|w| w.value.is_code())
+                        .collect();
+                    if operands.len() == 1 {
+                        let operand = operands.remove(0);
+                        operands = match operand.value {
+                            Word::Switch(sw) => {
+                                sw.branches.into_iter().map(|b| b.map(Word::Func)).collect()
+                            }
+                            word => vec![operand.span.sp(word)],
+                        };
+                    }
                     let formatted: Array<Boxed> = operands
                         .iter()
                         .map(|w| Boxed(format_word(w, &self.asm.inputs).into()))

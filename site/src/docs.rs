@@ -19,8 +19,8 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DocsPage {
-    Tour,
     Search(String),
+    Tour,
     Design,
     Technical,
     Install,
@@ -75,8 +75,8 @@ pub fn Docs() -> impl IntoView {
         };
         let page = params.page;
         let page_view = match page {
-            DocsPage::Tour => Tour().into_view(),
             DocsPage::Search(search) => return view!( <DocsHome search=search/>).into_view(),
+            DocsPage::Tour => Tour().into_view(),
             DocsPage::Design => Design().into_view(),
             DocsPage::Technical => Technical().into_view(),
             DocsPage::Install => Install().into_view(),
@@ -90,7 +90,9 @@ pub fn Docs() -> impl IntoView {
             DocsPage::StackIdioms => StackIdioms().into_view(),
             DocsPage::Combinators => Combinators().into_view(),
             DocsPage::Optimizations => Optimizations().into_view(),
-            DocsPage::FormatConfig => view!(<Markdown src="/text/format_config.md"/>).into_view(),
+            DocsPage::FormatConfig => {
+                title_markdown("Formatter Configuration", "/text/format_config.md").into_view()
+            }
         };
 
         view! {
@@ -103,6 +105,13 @@ pub fn Docs() -> impl IntoView {
             <A href="/docs">"Back to Docs Home"</A>
         }
         .into_view()
+    }
+}
+
+fn title_markdown(title: &str, src: &str) -> impl IntoView {
+    view! {
+        <Title text={format!("{} - Uiua Docs", title)}/>
+        <Markdown src=src/>
     }
 }
 
@@ -218,13 +227,17 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             .collect::<Vec<_>>()
         }</ul>
 
+        <h2 id="other-tutorials">"Other Tutorials"</h2>
+        <ul>
+            <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
+            <li><A href="/docs/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
+        </ul>
+
         <h2 id="other-docs">"Other Docs"</h2>
         <ul>
             <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
             <li><A href="/docs/changelog">"Changelog"</A>" - what's new in each version"</li>
             <li><A href="/docs/constants">"Constants"</A>" - a list of the shadowable constants"</li>
-            <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
-            <li><A href="/docs/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
             <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the Uiua formatter"</li>
             <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
             <li><A href="/docs/stack-idioms">"Stack Idioms"</A>" - common ways of manipulating the stack"</li>

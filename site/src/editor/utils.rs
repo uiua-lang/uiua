@@ -808,10 +808,7 @@ fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
     let mut rt = init_rt();
     let mut error = None;
     let mut comp = Compiler::with_backend(WebBackend::default());
-    let mut values = match comp
-        .load_str(code)
-        .and_then(|comp| rt.run_asm(comp.finish()))
-    {
+    let mut values = match comp.load_str(code).and_then(|comp| rt.run_compiler(comp)) {
         Ok(_) => rt.take_stack(),
         Err(e) => {
             error = Some(e);

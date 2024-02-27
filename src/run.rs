@@ -299,6 +299,13 @@ impl Uiua {
     pub fn run_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<Compiler> {
         self.compile_run(|comp| comp.load_file(path))
     }
+    /// Run from a compiler
+    ///
+    /// The runtime will inherit the system backend from the compiler
+    pub fn run_compiler(&mut self, comp: &mut Compiler) -> UiuaResult {
+        self.rt.backend = comp.backend.clone();
+        self.run_asm(comp.finish())
+    }
     /// Run a Uiua assembly
     pub fn run_asm(&mut self, asm: impl Into<Assembly>) -> UiuaResult {
         fn run_asm(env: &mut Uiua, asm: Assembly) -> UiuaResult {

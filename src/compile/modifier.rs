@@ -241,6 +241,7 @@ impl Compiler {
                         }
                         code.push_str(&s);
                     }
+                    self.backend = env.rt.backend;
 
                     // Quote
                     self.quote(&code, &modified.modifier.span, call)?;
@@ -746,6 +747,7 @@ impl Compiler {
                         vec![Value::default(); sig.outputs]
                     }
                 };
+                self.backend = env.rt.backend;
                 if !call {
                     self.new_functions.push(EcoVec::new());
                 }

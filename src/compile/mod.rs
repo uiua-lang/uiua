@@ -72,7 +72,7 @@ pub struct Compiler {
     /// Spans of bare inline functions and their signatures and whether they are explicit
     pub(crate) inline_function_sigs: InlineSigs,
     /// The backend used to run comptime code
-    backend: Arc<dyn SysBackend>,
+    pub(crate) backend: Arc<dyn SysBackend>,
 }
 
 impl Default for Compiler {

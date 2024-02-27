@@ -169,7 +169,7 @@ impl Compiler {
             name: name.clone(),
             signature: binding.signature.as_ref().map(|s| s.value),
             referenced: false,
-            global_index: self.next_global,
+            global_index: local.index,
         });
         let mut binding_code_words = binding.words.iter().filter(|w| w.value.is_code());
         let is_single_func = binding_code_words.clone().count() == 1

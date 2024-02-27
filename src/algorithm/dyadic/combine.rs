@@ -1,3 +1,5 @@
+//! Code for couple, join, and general array creation
+
 use std::{cmp::Ordering, mem::take};
 
 use ecow::EcoVec;

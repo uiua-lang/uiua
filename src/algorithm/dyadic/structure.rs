@@ -1,3 +1,5 @@
+//! Code for pick, select, take, and drop
+
 use std::{
     cmp::Ordering,
     iter::{once, repeat},

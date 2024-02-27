@@ -9,5 +9,6 @@
     "rust-analyzer.check.features": [
         "audio",
         "bytes"
-    ]
+    ],
+    "rust-analyzer.showUnlinkedFileNotification": false
 }

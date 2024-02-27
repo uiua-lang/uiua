@@ -862,6 +862,14 @@
     "class": "DyadicPervasive",
     "description": "Raise a value to a power"
   },
+  "quote": {
+    "args": 0,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "OtherModifier",
+    "description": "Convert a string into code at compile time",
+    "experimental": true
+  },
   "random": {
     "glyph": "⚂",
     "args": 0,
@@ -1078,7 +1086,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "OtherModifier",
-    "description": "Convert code into a string instead of running it",
+    "description": "Convert code into a string instead of compiling it",
     "experimental": true
   },
   "subtract": {

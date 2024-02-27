@@ -720,55 +720,7 @@ impl Compiler {
             }
             Comptime => {
                 let word = modified.code_operands().next().unwrap().clone();
-                let mut comp = self.clone();
-                let (instrs, sig) = comp.compile_operand_word(word)?;
-                if sig.args > 0 {
-                    self.add_error(
-                        modified.modifier.span.clone(),
-                        format!(
-                            "{}'s function must have no arguments, but it has {}",
-                            Comptime.format(),
-                            sig.args
-                        ),
-                    );
-                    return Ok(false);
-                }
-                let instrs = optimize_instrs(instrs, true, &comp);
-                let start = comp.asm.instrs.len();
-                let len = instrs.len();
-                comp.asm.instrs.extend(instrs);
-                comp.asm.top_slices.push(FuncSlice { start, len });
-                let mut env = Uiua::with_backend(self.backend.clone());
-                let values = match env.run_asm(&comp.asm) {
-                    Ok(_) => env.take_stack(),
-                    Err(e) => {
-                        if self.errors.is_empty() {
-                            self.add_error(
-                                modified.modifier.span.clone(),
-                                format!("Compile-time evaluation failed: {e}"),
-                            );
-                        }
-                        vec![Value::default(); sig.outputs]
-                    }
-                };
-                self.backend = env.rt.backend;
-                if !call {
-                    self.new_functions.push(EcoVec::new());
-                }
-                let val_count = sig.outputs;
-                for value in values.into_iter().rev().take(val_count).rev() {
-                    self.push_instr(Instr::push(value));
-                }
-                if !call {
-                    let instrs = self.new_functions.pop().unwrap();
-                    let sig = Signature::new(0, val_count);
-                    let func = self.add_function(
-                        FunctionId::Anonymous(modified.modifier.span.clone()),
-                        sig,
-                        instrs,
-                    );
-                    self.push_instr(Instr::PushFunc(func));
-                }
+                self.do_comptime(prim, word, &modified.modifier.span, call)?;
             }
             Reduce => {
                 // Reduce content
@@ -844,7 +796,9 @@ impl Compiler {
             }
             Quote => {
                 let operand = modified.code_operands().next().unwrap().clone();
-                let (instrs, _) = self.compile_operand_word(operand)?;
+                self.new_functions.push(EcoVec::new());
+                self.do_comptime(prim, operand, &modified.modifier.span, true)?;
+                let instrs = self.new_functions.pop().unwrap();
                 let code: String = match instrs.as_slice() {
                     [Instr::Push(Value::Char(chars))] if chars.rank() == 1 => {
                         chars.data.iter().collect()
@@ -872,8 +826,7 @@ impl Compiler {
                     _ => {
                         return Err(self.fatal_error(
                             modified.modifier.span.clone(),
-                            "quote's argument did not compile to a string. \
-                            Try using comptime to force its evaluation.",
+                            "quote's argument did not compile to a string",
                         ));
                     }
                 };
@@ -940,6 +893,56 @@ impl Compiler {
         // Compile the generated words
         for line in words {
             self.words(line, call)?;
+        }
+        Ok(())
+    }
+    fn do_comptime(
+        &mut self,
+        prim: Primitive,
+        operand: Sp<Word>,
+        span: &CodeSpan,
+        call: bool,
+    ) -> UiuaResult {
+        let mut comp = self.clone();
+        let (instrs, sig) = comp.compile_operand_word(operand)?;
+        if sig.args > 0 {
+            return Err(self.fatal_error(
+                span.clone(),
+                format!(
+                    "{}'s function must have no arguments, but it has {}",
+                    prim.format(),
+                    sig.args
+                ),
+            ));
+        }
+        let instrs = optimize_instrs(instrs, true, &comp);
+        let start = comp.asm.instrs.len();
+        let len = instrs.len();
+        comp.asm.instrs.extend(instrs);
+        comp.asm.top_slices.push(FuncSlice { start, len });
+        let mut env = Uiua::with_backend(self.backend.clone());
+        let values = match env.run_asm(&comp.asm) {
+            Ok(_) => env.take_stack(),
+            Err(e) => {
+                if self.errors.is_empty() {
+                    self.add_error(span.clone(), format!("Compile-time evaluation failed: {e}"));
+                }
+                vec![Value::default(); sig.outputs]
+            }
+        };
+        self.backend = env.rt.backend;
+        if !call {
+            self.new_functions.push(EcoVec::new());
+        }
+        let val_count = sig.outputs;
+        for value in values.into_iter().rev().take(val_count).rev() {
+            self.push_instr(Instr::push(value));
+        }
+        if !call {
+            let instrs = self.new_functions.pop().unwrap();
+            let sig = Signature::new(0, val_count);
+            let func = self.add_function(FunctionId::Anonymous(span.clone()), sig, instrs);
+            self.push_instr(Instr::PushFunc(func));
         }
         Ok(())
     }

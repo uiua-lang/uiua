@@ -1,4 +1,4 @@
-use leptos::{leptos_dom::helpers::location, *};
+use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 
@@ -56,7 +56,6 @@ fn BlogHome() -> impl IntoView {
 
 #[component]
 fn BlogPage(name: String) -> impl IntoView {
-    let raw_url = format!("/blog/{name}-text.md");
     view! {
         <Title text={format!("{name} - Uiua Blog")}/>
         <A href="/blog">"Back to Blog Home"</A>

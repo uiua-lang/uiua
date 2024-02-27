@@ -2197,8 +2197,15 @@ primitive!(
     /// ex: # Experimental!
     ///   : F! ← ^! &p$"Running code: _" stringify^!^.
     ///   : F!(+ 1 2)
+    ///
+    /// The opposite of [stringify] is [quote].
     (0[1], Stringify, OtherModifier, "stringify"),
     /// Convert a string into code at compile time
+    ///
+    /// ex: # Experimental!
+    ///   : quote("+1") 5
+    ///
+    /// The opposite of [quote] is [stringify].
     (0[1], Quote, OtherModifier, "quote"),
     /// Get the signature of a function
     ///

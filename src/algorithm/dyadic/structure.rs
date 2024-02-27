@@ -377,6 +377,7 @@ impl<T: ArrayValue> Array<T> {
                         }
                     }
                 } else {
+                    self.data.as_mut_slice().rotate_right(abs_taking * row_len);
                     self.data.truncate(abs_taking * row_len);
                 }
                 if let Some(s) = self.shape.get_mut(0) {

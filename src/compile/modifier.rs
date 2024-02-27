@@ -234,12 +234,16 @@ impl Compiler {
 
                     // Parse the macro output
                     let mut code = String::new();
-                    for row in val.into_rows() {
-                        let s = row.as_string(&env, "Macro output rows must be strings")?;
-                        if !code.is_empty() {
-                            code.push(' ');
+                    if let Ok(s) = val.as_string(&env, "") {
+                        code = s;
+                    } else {
+                        for row in val.into_rows() {
+                            let s = row.as_string(&env, "Macro output rows must be strings")?;
+                            if !code.is_empty() {
+                                code.push(' ');
+                            }
+                            code.push_str(&s);
                         }
-                        code.push_str(&s);
                     }
                     self.backend = env.rt.backend;
 

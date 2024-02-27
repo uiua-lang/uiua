@@ -207,7 +207,7 @@ pub(crate) use enabled::*;
 #[cfg(feature = "ffi")]
 mod enabled {
     use std::{
-        any::Any,
+        any::{type_name, Any},
         mem::{forget, take, transmute},
         slice,
     };
@@ -530,7 +530,12 @@ mod enabled {
             self.args.push(Arg::new(
                 &(self.arg_data.last().unwrap())
                     .downcast_ref::<(*mut T, Box<T>)>()
-                    .unwrap()
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Value wasn't expected type {}",
+                            type_name::<(*mut T, Box<T>)>()
+                        )
+                    })
                     .0,
             ));
             ptr as *mut ()
@@ -542,15 +547,26 @@ mod enabled {
                     .last()
                     .unwrap()
                     .downcast_ref::<*mut T>()
-                    .unwrap(),
+                    .unwrap_or_else(|| {
+                        panic!("Value wasn't expected type {}", type_name::<*mut T>())
+                    }),
             ));
         }
         fn push_value<T: Any>(&mut self, arg: T) -> *mut () {
             self.arg_data.push(Box::new(arg));
             self.args.push(Arg::new(
-                self.arg_data.last().unwrap().downcast_ref::<T>().unwrap(),
+                self.arg_data
+                    .last()
+                    .unwrap()
+                    .downcast_ref::<T>()
+                    .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>())),
             ));
-            self.arg_data.last().unwrap().downcast_ref::<T>().unwrap() as *const T as *mut ()
+            self.arg_data
+                .last()
+                .unwrap()
+                .downcast_ref::<T>()
+                .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>()))
+                as *const T as *mut ()
         }
         fn push_repr(&mut self, arg: Vec<u8>) -> *mut () {
             self.arg_data.push(Box::new(arg));
@@ -563,7 +579,7 @@ mod enabled {
                 .last()
                 .unwrap()
                 .downcast_ref::<Vec<u8>>()
-                .unwrap()
+                .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<Vec<u8>>()))
                 .as_ptr() as *mut ()
         }
         fn push_repr_ptr(&mut self, mut arg: Vec<u8>) -> *mut () {
@@ -572,7 +588,12 @@ mod enabled {
             self.args.push(Arg::new(
                 &(self.arg_data.last().unwrap())
                     .downcast_ref::<(*mut u8, Vec<u8>)>()
-                    .unwrap()
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Value wasn't expected type {}",
+                            type_name::<(*mut u8, Vec<u8>)>()
+                        )
+                    })
                     .0,
             ));
             ptr as *mut ()
@@ -592,7 +613,12 @@ mod enabled {
             self.args.push(Arg::new(
                 &(self.arg_data.last_mut().unwrap())
                     .downcast_mut::<(*mut T, Box<[T]>)>()
-                    .unwrap()
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Value wasn't expected type {}",
+                            type_name::<(*mut T, Box<[T]>)>()
+                        )
+                    })
                     .0,
             ));
             ptr as *mut ()
@@ -601,18 +627,34 @@ mod enabled {
             let any = &self.arg_data[index];
             any.downcast_ref::<T>()
                 .or_else(|| any.downcast_ref::<(*mut T, Box<T>)>().map(|(_, b)| &**b))
-                .unwrap()
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Value wasn't expected type {} or {}",
+                        type_name::<T>(),
+                        type_name::<(*mut T, Box<T>)>()
+                    )
+                })
         }
         fn get_list_mut<T: 'static>(&mut self, index: usize) -> (*mut T, &mut Box<[T]>) {
             let (ptr, vec) = self.arg_data[index]
                 .downcast_mut::<(*mut T, Box<[T]>)>()
-                .unwrap();
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Value wasn't expected type {}",
+                        type_name::<(*mut T, Box<[T]>)>()
+                    )
+                });
             (*ptr, vec)
         }
         fn get_repr(&self, index: usize) -> &[u8] {
             self.arg_data[index]
                 .downcast_ref::<(*mut u8, Vec<u8>)>()
-                .unwrap()
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Value wasn't expected type {}",
+                        type_name::<(*mut u8, Vec<u8>)>()
+                    )
+                })
                 .1
                 .as_slice()
         }

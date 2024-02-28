@@ -3381,7 +3381,7 @@ dependencies = [
 
 [[package]]
 name = "uiua"
-version = "0.9.4"
+version = "0.9.5"
 dependencies = [
  "bitflags 2.4.2",
  "bufreaderwriter",

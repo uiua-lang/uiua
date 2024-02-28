@@ -134,6 +134,21 @@ impl UiuaError {
             }
         }
     }
+    pub(crate) fn trace_macro(mut self, span: CodeSpan) -> Self {
+        let frame = TraceFrame {
+            id: FunctionId::Macro(span.clone()),
+            span: Span::Code(span),
+        };
+        if let UiuaError::Traced { trace, .. } = &mut self {
+            trace.push(frame);
+            self
+        } else {
+            UiuaError::Traced {
+                error: Box::new(self),
+                trace: vec![frame],
+            }
+        }
+    }
 }
 
 fn format_trace(trace: &[TraceFrame]) -> Vec<String> {

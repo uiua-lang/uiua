@@ -238,8 +238,7 @@ impl Compiler {
                     let mut env = Uiua::with_backend(self.backend.clone());
                     let mut code = String::new();
                     env.asm = self.asm.clone();
-                    let span_index = env.add_span(modified.modifier.span.clone());
-                    env.with_span(span_index, |env| {
+                    (|| -> UiuaResult {
                         env.run_asm(env.asm.clone())?;
                         // Run the macro function
                         if let Some(sigs) = op_sigs {
@@ -250,11 +249,11 @@ impl Compiler {
                         let val = env.pop("macro result")?;
 
                         // Parse the macro output
-                        if let Ok(s) = val.as_string(env, "") {
+                        if let Ok(s) = val.as_string(&env, "") {
                             code = s;
                         } else {
                             for row in val.into_rows() {
-                                let s = row.as_string(env, "Macro output rows must be strings")?;
+                                let s = row.as_string(&env, "Macro output rows must be strings")?;
                                 if !code.is_empty() {
                                     code.push(' ');
                                 }
@@ -262,7 +261,8 @@ impl Compiler {
                             }
                         }
                         Ok(())
-                    })?;
+                    })()
+                    .map_err(|e| e.trace_macro(modified.modifier.span.clone()))?;
                     self.backend = env.rt.backend;
 
                     // Quote
@@ -873,7 +873,7 @@ impl Compiler {
         );
         if !errors.is_empty() {
             return Err(
-                UiuaError::Parse(errors, self.asm.inputs.clone().into()).trace(span.clone())
+                UiuaError::Parse(errors, self.asm.inputs.clone().into()).trace_macro(span.clone())
             );
         }
 
@@ -882,15 +882,20 @@ impl Compiler {
             match item {
                 Item::Words(words) => {
                     for line in words {
-                        self.words(line, call)?;
+                        self.words(line, call)
+                            .map_err(|e| e.trace_macro(span.clone()))?;
                     }
                 }
-                Item::Binding(binding) => self.binding(binding, None)?,
-                Item::Import(import) => self.import(import, None)?,
+                Item::Binding(binding) => self
+                    .binding(binding, None)
+                    .map_err(|e| e.trace_macro(span.clone()))?,
+                Item::Import(import) => self
+                    .import(import, None)
+                    .map_err(|e| e.trace_macro(span.clone()))?,
                 Item::TestScope(_) => {
                     self.add_error(span.clone(), "Macros may not generate test scopes")
                 }
-            }
+            };
         }
 
         Ok(())

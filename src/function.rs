@@ -574,6 +574,8 @@ pub enum FunctionId {
     Named(Ident),
     /// An anonymous function
     Anonymous(CodeSpan),
+    /// A macro expansion
+    Macro(CodeSpan),
     /// The top-level function
     Main,
     #[doc(hidden)]
@@ -608,6 +610,7 @@ impl fmt::Display for FunctionId {
             FunctionId::Named(name) => write!(f, "{name}"),
             FunctionId::Anonymous(span) => write!(f, "fn from {span}"),
             FunctionId::Primitive(prim) => write!(f, "{prim}"),
+            FunctionId::Macro(_) => write!(f, "macro expansion"),
             FunctionId::Main => write!(f, "main"),
             FunctionId::Unnamed => write!(f, "unnamed"),
         }

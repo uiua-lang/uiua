@@ -3,6 +3,11 @@
 Uiua is not yet stable.
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.9.4 - 2024-02-28
+### Interpreter
+- Fix a bug with filled multi-dimensional [`take ↙`](https://uiua.org/docs/take)
+- Fix a crash in [`rows ≡`](https://uiua.org/docs/rows) of 3 or more arrays
+
 ## 0.9.3 - 2024-02-27
 ### Interpreter
 - Fix a major bug with negative [`take ↙`](https://uiua.org/docs/take)

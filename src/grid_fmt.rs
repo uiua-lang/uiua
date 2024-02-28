@@ -488,7 +488,7 @@ fn pad_grid_center(width: usize, height: usize, align: bool, grid: &mut Grid) {
                     .is_some_and(|c| c.is_ascii_digit() || "ηπτ".contains(*c))
             {
                 (diff, 0)
-            } else if align && no_left.starts_with(&['⟦']) {
+            } else if align && (no_left.starts_with(&['⟦']) || no_left.starts_with(&['⌜'])) {
                 (0, diff)
             } else {
                 let post = (diff + 1) / 2;

@@ -151,6 +151,17 @@ impl Value {
             Self::Box(array) => Box::new(array.into_rows().map(Value::from)),
         }
     }
+    /// Get an iterator over the elements of the value
+    pub fn elements(&self) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
+        match self {
+            Self::Num(array) => Box::new(array.data.iter().copied().map(Value::from)),
+            #[cfg(feature = "bytes")]
+            Self::Byte(array) => Box::new(array.data.iter().copied().map(Value::from)),
+            Self::Complex(array) => Box::new(array.data.iter().copied().map(Value::from)),
+            Self::Char(array) => Box::new(array.data.iter().copied().map(Value::from)),
+            Self::Box(array) => Box::new(array.data.iter().cloned().map(Value::from)),
+        }
+    }
     /// Cosume the value and get an iterator over its elements
     pub fn into_elements(self) -> Box<dyn Iterator<Item = Self>> {
         match self {

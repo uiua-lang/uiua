@@ -212,6 +212,8 @@ primitive!(
     (1(0), Pop, Stack, ("pop", '◌')),
     /// Do nothing with one value
     ///
+    /// ex: ∘ 5
+    ///
     /// [identity] is mostly useless on its own. See the [Advanced Stack Manipulation Tutorial](/tutorial/advancedstack) to understand what it is for.
     (1, Identity, Planet, ("identity", '∘')),
     // Pervasive monadic ops

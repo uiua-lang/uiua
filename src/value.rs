@@ -1042,6 +1042,8 @@ impl Value {
     }
     /// Turn a number array into a byte array if no information is lost.
     ///
+    /// Also sets the boolean flag if the array contains only 0s and 1s.
+    ///
     /// Does nothing without the `bytes` feature enabled.
     pub fn compress(&mut self) {
         #[cfg(feature = "bytes")]

@@ -465,7 +465,8 @@ code:
                     if let Some(f) = self.rt.function_stack.pop() {
                         // Binding is an imported function
                         self.asm.bind_function(local, f, span, None);
-                    } else if let Some(value) = self.rt.stack.pop() {
+                    } else if let Some(mut value) = self.rt.stack.pop() {
+                        value.compress();
                         // Binding is a constant
                         self.asm.bind_const(local, Some(value), span, None);
                     } else {

@@ -464,7 +464,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     }
 }
 
-fn pad_grid_center(width: usize, height: usize, align_numbers: bool, grid: &mut Grid) {
+fn pad_grid_center(width: usize, height: usize, align: bool, grid: &mut Grid) {
     grid.truncate(height);
     if grid.len() < height {
         let diff = height - grid.len();
@@ -480,17 +480,20 @@ fn pad_grid_center(width: usize, height: usize, align_numbers: bool, grid: &mut 
     for row in grid.iter_mut() {
         row.truncate(width);
         if row.len() < width {
+            let no_left = row.strip_prefix(&[' ']).unwrap_or(row);
             let diff = width - row.len();
-            let post_pad = if align_numbers
+            let (pre_pad, post_pad) = if align
                 && row
                     .last()
                     .is_some_and(|c| c.is_ascii_digit() || "ηπτ".contains(*c))
             {
-                0
+                (diff, 0)
+            } else if align && no_left.starts_with(&['⟦']) {
+                (0, diff)
             } else {
-                (diff + 1) / 2
+                let post = (diff + 1) / 2;
+                (diff - post, post)
             };
-            let pre_pad = diff - post_pad;
             for _ in 0..pre_pad {
                 row.insert(0, ' ');
             }

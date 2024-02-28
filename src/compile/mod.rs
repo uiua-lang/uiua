@@ -452,53 +452,7 @@ code:
                     self.binding(binding, prev_com)?;
                 }
             }
-            Item::Import(import) => {
-                // Import module
-                let module = self.import(&import.path.value, &import.path.span)?;
-                // Bind name
-                if let Some(name) = &import.name {
-                    let imported = self.imports.get(&module).unwrap();
-                    let global_index = self.next_global;
-                    self.next_global += 1;
-                    let local = LocalName {
-                        index: global_index,
-                        public: false,
-                    };
-                    self.asm.add_global_at(
-                        local,
-                        Global::Module {
-                            module: module.clone(),
-                        },
-                        Some(name.span.clone()),
-                        prev_com.or_else(|| imported.comment.clone()),
-                    );
-                    self.scope.names.insert(name.value.clone(), local);
-                }
-                // Bind items
-                for item in import.items() {
-                    if let Some(local) = self
-                        .imports
-                        .get(&module)
-                        .and_then(|i| i.names.get(item.value.as_str()))
-                        .copied()
-                    {
-                        self.validate_local(&item.value, local, &item.span);
-                        self.asm.global_references.insert(item.clone(), local.index);
-                        self.scope.names.insert(
-                            item.value.clone(),
-                            LocalName {
-                                index: local.index,
-                                public: false,
-                            },
-                        );
-                    } else {
-                        self.add_error(
-                            item.span.clone(),
-                            format!("`{}` not found in module {}", item.value, module.display()),
-                        );
-                    }
-                }
-            }
+            Item::Import(import) => self.import(import, prev_com)?,
         }
         Ok(())
     }
@@ -533,7 +487,7 @@ code:
         Ok(())
     }
     /// Import a module
-    pub(crate) fn import(&mut self, path: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
+    pub(crate) fn import_module(&mut self, path: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
         let path = if let Some(url) = path.strip_prefix("git:") {
             // Git import
             if !self.scope.experimental {

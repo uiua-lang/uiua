@@ -863,47 +863,26 @@ impl Compiler {
             InputSrc::Macro(span.clone().into()),
             &mut self.asm.inputs,
         );
-        if let Some(error) = errors.first() {
-            return Err(self.fatal_error(span.clone(), format!("Macro failed: {error}")));
+        if !errors.is_empty() {
+            return Err(UiuaError::Parse(errors, self.asm.inputs.clone().into()));
         }
 
-        // Extract the words
-        if items.len() != 1 {
-            return Err(self.fatal_error(
-                span.clone(),
-                format!(
-                    "Macro must generate 1 item, but it generated {}",
-                    items.len()
-                ),
-            ));
+        // Compile the generated items
+        for item in items {
+            match item {
+                Item::Words(words) => {
+                    for line in words {
+                        self.words(line, call)?;
+                    }
+                }
+                Item::Binding(binding) => self.binding(binding, None)?,
+                Item::Import(import) => self.import(import, None)?,
+                Item::TestScope(_) => {
+                    self.add_error(span.clone(), "Macros may not generate test scopes")
+                }
+            }
         }
-        let item = items.into_iter().next().unwrap();
-        let words = match item {
-            Item::Words(words) => words,
-            Item::Binding(_) => {
-                return Err(self.fatal_error(
-                    span.clone(),
-                    "Macro must generate words, but it generated a binding",
-                ));
-            }
-            Item::Import(_) => {
-                return Err(self.fatal_error(
-                    span.clone(),
-                    "Macro must generate words, but it generated an import",
-                ));
-            }
-            Item::TestScope(_) => {
-                return Err(self.fatal_error(
-                    span.clone(),
-                    "Macro must generate words, but it generated a test scope",
-                ));
-            }
-        };
 
-        // Compile the generated words
-        for line in words {
-            self.words(line, call)?;
-        }
         Ok(())
     }
     fn do_comptime(

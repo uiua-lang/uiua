@@ -107,8 +107,7 @@ impl Compiler {
             }
             let func = self.add_function(FunctionId::Named(name.clone()), sig, instrs);
             self.scope.names.insert(name.clone(), local);
-            self.asm
-                .add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
+            (self.asm).add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
             self.array_macros.insert(local.index, func);
             return Ok(());
         }
@@ -210,7 +209,7 @@ impl Compiler {
                     match path {
                         Value::Char(arr) if arr.rank() == 1 => {
                             let path: String = arr.data.iter().copied().collect();
-                            let module = self.import(path.as_ref(), span)?;
+                            let module = self.import_module(path.as_ref(), span)?;
                             self.asm.add_global_at(
                                 local,
                                 Global::Module { module },
@@ -225,7 +224,7 @@ impl Compiler {
                 [Instr::Push(item), Instr::Push(path)] => match path {
                     Value::Char(arr) if arr.rank() == 1 => {
                         let path: String = arr.data.iter().copied().collect();
-                        let module = self.import(path.as_ref(), span)?;
+                        let module = self.import_module(path.as_ref(), span)?;
                         match item {
                             Value::Char(arr) if arr.rank() == 1 => {
                                 let item: String = arr.data.iter().copied().collect();
@@ -375,6 +374,58 @@ impl Compiler {
                         ),
                     );
                 }
+            }
+        }
+        Ok(())
+    }
+    pub(super) fn import(
+        &mut self,
+        import: crate::ast::Import,
+        prev_com: Option<Arc<str>>,
+    ) -> UiuaResult {
+        // Import module
+        let module = self.import_module(&import.path.value, &import.path.span)?;
+        // Bind name
+        if let Some(name) = &import.name {
+            let imported = self.imports.get(&module).unwrap();
+            let global_index = self.next_global;
+            self.next_global += 1;
+            let local = LocalName {
+                index: global_index,
+                public: false,
+            };
+            self.asm.add_global_at(
+                local,
+                Global::Module {
+                    module: module.clone(),
+                },
+                Some(name.span.clone()),
+                prev_com.or_else(|| imported.comment.clone()),
+            );
+            self.scope.names.insert(name.value.clone(), local);
+        }
+        // Bind items
+        for item in import.items() {
+            if let Some(local) = self
+                .imports
+                .get(&module)
+                .and_then(|i| i.names.get(item.value.as_str()))
+                .copied()
+            {
+                self.validate_local(&item.value, local, &item.span);
+                self.asm.global_references.insert(item.clone(), local.index);
+                self.scope.names.insert(
+                    item.value.clone(),
+                    LocalName {
+                        index: local.index,
+                        public: false,
+                    },
+                );
+            } else {
+                self.add_error(
+                    item.span.clone(),
+                    format!("`{}` not found in module {}", item.value, module.display()),
+                );
             }
         }
         Ok(())

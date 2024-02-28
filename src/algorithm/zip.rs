@@ -572,12 +572,19 @@ fn rowsn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
                 let a_row_count = args[a].row_count();
                 err = args[b].fill_length_to(a_row_count, env).err();
             }
+            if err.is_none()
+                && args[a].row_count() != args[b].row_count()
+                && args[a].row_count() != 1
+                && args[b].row_count() != 1
+            {
+                err = Some("");
+            }
             if let Some(e) = err {
                 return Err(env.error(format!(
-                    "Cannot {} arrays with different number of rows {} and {}{e}",
+                    "Cannot {} arrays with different number of rows, shapes {} and {}{e}",
                     Primitive::Rows.format(),
-                    args[a].row_count(),
-                    args[b].row_count(),
+                    args[a].shape(),
+                    args[b].shape(),
                 )));
             }
         }

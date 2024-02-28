@@ -118,6 +118,22 @@ impl UiuaError {
     pub(crate) fn fill(self) -> Self {
         UiuaError::Fill(Box::new(self))
     }
+    /// Add a span to the trace of the error
+    pub fn trace(mut self, span: CodeSpan) -> Self {
+        let frame = TraceFrame {
+            id: FunctionId::Anonymous(span.clone()),
+            span: Span::Code(span),
+        };
+        if let UiuaError::Traced { trace, .. } = &mut self {
+            trace.push(frame);
+            self
+        } else {
+            UiuaError::Traced {
+                error: Box::new(self),
+                trace: vec![frame],
+            }
+        }
+    }
 }
 
 fn format_trace(trace: &[TraceFrame]) -> Vec<String> {

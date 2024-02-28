@@ -227,38 +227,34 @@ impl Compiler {
                         .map(|w| Boxed(format_word(w, &self.asm.inputs).into()))
                         .collect();
 
-                    // Run the macro function
                     let mut env = Uiua::with_backend(self.backend.clone());
-                    let val = match env.run_asm(&self.asm).and_then(|()| {
+                    let mut code = String::new();
+                    env.asm = self.asm.clone();
+                    let span_index = env.add_span(modified.modifier.span.clone());
+                    env.with_span(span_index, |env| {
+                        env.run_asm(env.asm.clone())?;
+                        // Run the macro function
                         if let Some(sigs) = op_sigs {
                             env.push(sigs);
                         }
                         env.push(formatted);
                         env.call(function.clone())?;
-                        env.pop("macro result")
-                    }) {
-                        Ok(val) => val,
-                        Err(e) => {
-                            return Err(self.fatal_error(
-                                modified.modifier.span.clone(),
-                                format!("Macro failed: {e}"),
-                            ));
-                        }
-                    };
+                        let val = env.pop("macro result")?;
 
-                    // Parse the macro output
-                    let mut code = String::new();
-                    if let Ok(s) = val.as_string(&env, "") {
-                        code = s;
-                    } else {
-                        for row in val.into_rows() {
-                            let s = row.as_string(&env, "Macro output rows must be strings")?;
-                            if !code.is_empty() {
-                                code.push(' ');
+                        // Parse the macro output
+                        if let Ok(s) = val.as_string(env, "") {
+                            code = s;
+                        } else {
+                            for row in val.into_rows() {
+                                let s = row.as_string(env, "Macro output rows must be strings")?;
+                                if !code.is_empty() {
+                                    code.push(' ');
+                                }
+                                code.push_str(&s);
                             }
-                            code.push_str(&s);
                         }
-                    }
+                        Ok(())
+                    })?;
                     self.backend = env.rt.backend;
 
                     // Quote

@@ -1203,7 +1203,7 @@ primitive!(
     /// Here, we add a dimension to the second array to [fix] it, then collapse with `reduce``join`.
     /// ex: /⊂ ⊞(⊂⊂) ⊙¤ 1_2 3_4 5_6
     (2[1], Table, IteratingModifier, ("table", '⊞')),
-    /// Apply a function to each unboxed row of an array and re-box the results
+    /// Apply a function to each unboxed item of an array and re-box the results
     ///
     /// For box arrays, this is roughly equivalent to `each``under``un``box`.
     /// ex: ∵⍜°□(⊂:@!) {"a" "bc" "def"}

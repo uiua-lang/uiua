@@ -534,10 +534,7 @@ impl Function {
                 {
                     f.as_flipped_primitive(env.as_ref())
                 }
-                instrs => {
-                    println!("instrs: {:?}", instrs);
-                    None
-                }
+                _ => None,
             },
         }
     }

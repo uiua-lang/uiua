@@ -416,7 +416,8 @@ impl<T: ArrayValue> Array<T> {
                     if abs_taking > arr.row_count() {
                         match T::get_fill(env) {
                             Ok(fill) => {
-                                let row_len = arr.row_len();
+                                let row_len: usize =
+                                    sub_index.iter().map(|&i| i.unsigned_abs()).product();
                                 arr.data.extend(
                                     repeat(fill).take((abs_taking - arr.row_count()) * row_len),
                                 );
@@ -446,7 +447,8 @@ impl<T: ArrayValue> Array<T> {
                     if abs_taking > arr.row_count() {
                         match T::get_fill(env) {
                             Ok(fill) => {
-                                let row_len = arr.row_len();
+                                let row_len: usize =
+                                    sub_index.iter().map(|&i| i.unsigned_abs()).product();
                                 arr.data = repeat(fill)
                                     .take((abs_taking - arr.row_count()) * row_len)
                                     .chain(arr.data)
@@ -467,13 +469,7 @@ impl<T: ArrayValue> Array<T> {
                     }
                     arr
                 };
-                let mut shape = self.shape;
-                for (s, t) in (shape.iter_mut())
-                    .zip(once(abs_taking).chain(sub_index.iter().map(|&i| i.unsigned_abs())))
-                {
-                    *s = t;
-                }
-                arr.shape = shape;
+                arr.shape = index.iter().map(|&i| i.unsigned_abs()).collect();
                 arr.validate_shape();
                 arr
             }

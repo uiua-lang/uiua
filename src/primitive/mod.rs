@@ -326,7 +326,7 @@ impl Primitive {
         match self {
             Primitive::Unpack => Some(format!("use {} instead", Primitive::Content.format())),
             Primitive::Cross => Some(format!("use {} instead", Primitive::Table.format())),
-            Primitive::Cascade => Some(format!("use {} instead", Primitive::Fork.format())),
+            Primitive::Cascade => Some(format!("use {} or {} instead", Primitive::Fork.format(), Primitive::On.format())),
             Primitive::Rectify => Some(String::new()),
             Primitive::All => Some(String::new()),
             Primitive::This | Primitive::Recur => {

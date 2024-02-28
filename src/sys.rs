@@ -449,8 +449,8 @@ sys_op! {
     ///   : )
     ///   : Kick ← ○×τ×40√√◿1
     ///   : Noise ← [⍥⚂10000]
-    ///   : Hit ← ×↯:Noise △.×<0.6:>0.5.÷2◿2
-    ///   : Hat ← ×0.3×↯:Noise △.<0.1÷0.25◿0.25
+    ///   : Hit ← ×↯:Noise △. ×⊓><0.5,0.6 ÷⟜◿2
+    ///   : Hat ← ×0.3×↯:Noise △.<0.1 ÷⟜◿0.25
     ///   : &ast(÷3/+[⊃(Hat|Kick|Hit|Bass)]×Sp)
     /// On the web, this will simply use the function to generate a fixed amount of audio.
     /// How long the audio is can be configure in the editor settings.

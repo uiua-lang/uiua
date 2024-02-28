@@ -337,12 +337,10 @@ fn eachn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         } else {
             let mut arg_elems: Vec<_> = args
                 .into_iter()
-                .map(|val| -> Box<dyn Iterator<Item = _>> {
-                    if val.rank() == 0 {
-                        Box::new(repeat(val).take(elem_count))
-                    } else {
-                        Box::new(val.into_elements())
-                    }
+                .map(|val| {
+                    let repetitions = elem_count / val.element_count();
+                    val.into_elements()
+                        .flat_map(move |elem| repeat(elem).take(repetitions))
                 })
                 .collect();
             for _ in 0..elem_count {

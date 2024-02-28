@@ -479,6 +479,44 @@ impl Token {
     }
 }
 
+impl fmt::Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Token::Comment => write!(f, "comment"),
+            Token::OutputComment(_) => write!(f, "output comment"),
+            Token::Ident => write!(f, "identifier"),
+            Token::Number => write!(f, "number"),
+            Token::Char(c) => {
+                for c in c.chars() {
+                    write!(f, "{c:?}")?;
+                }
+                Ok(())
+            }
+            Token::Str(s) => write!(f, "{s:?}"),
+            Token::Label(s) => write!(f, "${s}"),
+            Token::FormatStr(parts) | Token::MultilineString(parts) => {
+                write!(f, "format string")?;
+                for (i, part) in parts.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, "_")?;
+                    }
+                    write!(f, "{part}")?;
+                }
+                Ok(())
+            }
+            Token::Simple(t) => t.fmt(f),
+            Token::Glyph(p) => p.fmt(f),
+            Token::LeftArrow => write!(f, "←"),
+            Token::LeftStrokeArrow => write!(f, "↚"),
+            Token::LeftArrowTilde => write!(f, "←~"),
+            Token::OpenAngle => write!(f, "⟨"),
+            Token::CloseAngle => write!(f, "⟩"),
+            Token::Newline => write!(f, "newline"),
+            Token::Spaces => write!(f, "space(s)"),
+        }
+    }
+}
+
 /// An ASCII lexical token
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

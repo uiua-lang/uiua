@@ -224,7 +224,15 @@ impl Compiler {
                     };
                     let formatted: Array<Boxed> = operands
                         .iter()
-                        .map(|w| Boxed(format_word(w, &self.asm.inputs).into()))
+                        .map(|w| {
+                            let mut formatted = format_word(w, &self.asm.inputs);
+                            if let Word::Func(_) = &w.value {
+                                if formatted.starts_with('(') && formatted.ends_with(')') {
+                                    formatted = formatted[1..formatted.len() - 1].to_string();
+                                }
+                            }
+                            Boxed(formatted.into())
+                        })
                         .collect();
 
                     let mut env = Uiua::with_backend(self.backend.clone());
@@ -864,7 +872,9 @@ impl Compiler {
             &mut self.asm.inputs,
         );
         if !errors.is_empty() {
-            return Err(UiuaError::Parse(errors, self.asm.inputs.clone().into()));
+            return Err(
+                UiuaError::Parse(errors, self.asm.inputs.clone().into()).trace(span.clone())
+            );
         }
 
         // Compile the generated items

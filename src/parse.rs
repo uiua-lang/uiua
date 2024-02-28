@@ -78,7 +78,7 @@ impl fmt::Display for ParseError {
                 Ok(())
             }
             ParseError::InvalidNumber(s) => write!(f, "Invalid number `{s}`"),
-            ParseError::Unexpected(_) => write!(f, "Unexpected token"),
+            ParseError::Unexpected(token) => write!(f, "Unexpected token {token}"),
             ParseError::InvalidArgCount(n) => write!(f, "Invalid argument count `{n}`"),
             ParseError::InvalidOutCount(n) => write!(f, "Invalid output count `{n}`"),
             ParseError::AmpersandBindingName => write!(f, "Binding names may not contain `&`"),

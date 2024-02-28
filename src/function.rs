@@ -284,7 +284,6 @@ pub struct Function {
     pub id: FunctionId,
     signature: Signature,
     pub(crate) slice: FuncSlice,
-    pub(crate) inlinable: bool,
 }
 
 /// A range of compiled instructions
@@ -483,7 +482,6 @@ impl Function {
             id,
             slice,
             signature,
-            inlinable: true,
         }
     }
     /// Get how many arguments this function pops off the stack and how many it pushes.

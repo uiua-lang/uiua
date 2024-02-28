@@ -359,8 +359,8 @@ impl Compiler {
                 if is_import {
                 } else if let Some(sig) = binding.signature {
                     // Binding is a normal function
-                    let mut func = make_fn(instrs, sig.value, self);
-                    func.inlinable = false;
+                    instrs.insert(0, Instr::NoInline);
+                    let func = make_fn(instrs, sig.value, self);
                     self.compile_bind_function(&name, local, func, span_index, comment)?;
                 } else {
                     self.add_error(

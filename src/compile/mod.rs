@@ -1225,7 +1225,7 @@ code:
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
-            Global::Func(f) if f.inlinable && !self.not_inlineable(f.instrs(self)) => {
+            Global::Func(f) if !self.not_inlinable(f.instrs(self)) => {
                 if call {
                     // Inline instructions
                     self.push_instr(Instr::PushSig(f.signature()));
@@ -1447,7 +1447,7 @@ code:
             }
         }
     }
-    fn not_inlineable(&self, instrs: &[Instr]) -> bool {
+    fn not_inlinable(&self, instrs: &[Instr]) -> bool {
         for instr in instrs {
             match instr {
                 Instr::Prim(
@@ -1463,7 +1463,7 @@ code:
                     ImplPrimitive::InvTrace | ImplPrimitive::InvDump | ImplPrimitive::InvStack,
                     _,
                 ) => return true,
-                Instr::PushFunc(f) if self.not_inlineable(f.instrs(self)) => return true,
+                Instr::PushFunc(f) if self.not_inlinable(f.instrs(self)) => return true,
                 Instr::NoInline => return true,
                 _ => {}
             }

@@ -1,11 +1,11 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 use dashmap::DashMap;
 use ecow::{eco_vec, EcoString, EcoVec};
 use serde::*;
 
 use crate::{
-    lex::Sp, CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc, Instr,
+    CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc, Instr,
     IntoInputSrc, LocalName, Primitive, Signature, Span, TempStack, Uiua, UiuaResult, Value,
 };
 
@@ -17,9 +17,6 @@ pub struct Assembly {
     pub(crate) top_slices: Vec<FuncSlice>,
     /// A list of global bindings
     pub bindings: EcoVec<BindingInfo>,
-    #[serde(skip)]
-    /// A map of references to global bindings
-    pub global_references: HashMap<Sp<Ident>, usize>,
     #[serde(skip)]
     pub(crate) dynamic_functions: EcoVec<DynFn>,
     pub(crate) spans: EcoVec<Span>,
@@ -35,7 +32,6 @@ impl Default for Assembly {
             top_slices: Vec::new(),
             spans: eco_vec![Span::Builtin],
             bindings: EcoVec::new(),
-            global_references: HashMap::new(),
             dynamic_functions: EcoVec::new(),
             inputs: Inputs::default(),
         }

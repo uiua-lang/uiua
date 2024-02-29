@@ -22,6 +22,7 @@ use crate::{
     function::*,
     ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
+    lsp::{CodeMeta, InlineSig},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
@@ -33,6 +34,7 @@ use crate::{
 #[derive(Clone)]
 pub struct Compiler {
     pub(crate) asm: Assembly,
+    pub(crate) code_meta: CodeMeta,
     /// Functions which are under construction
     new_functions: Vec<EcoVec<Instr>>,
     /// The name of the current binding
@@ -71,14 +73,13 @@ pub struct Compiler {
     comptime: bool,
     /// The interpreter used for comptime code
     macro_env: Uiua,
-    /// Spans of bare inline functions and their signatures and whether they are explicit
-    pub(crate) inline_function_sigs: InlineSigs,
 }
 
 impl Default for Compiler {
     fn default() -> Self {
         Compiler {
             asm: Assembly::default(),
+            code_meta: CodeMeta::default(),
             new_functions: Vec::new(),
             current_binding: None,
             next_global: 0,
@@ -98,7 +99,6 @@ impl Default for Compiler {
             print_diagnostics: false,
             comptime: true,
             macro_env: Uiua::default(),
-            inline_function_sigs: HashMap::new(),
         }
     }
 }
@@ -123,14 +123,6 @@ impl AsMut<Assembly> for Compiler {
         &mut self.asm
     }
 }
-
-#[derive(Clone, Copy)]
-pub(crate) struct InlineSig {
-    pub sig: Signature,
-    pub explicit: bool,
-}
-
-pub(crate) type InlineSigs = HashMap<CodeSpan, InlineSig>;
 
 #[derive(Clone)]
 struct CurrentBinding {
@@ -1097,9 +1089,9 @@ code:
             let (path_locals, local) = self.ref_local(&r)?;
             self.validate_local(&r.name.value, local, &r.name.span);
             for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                (self.asm.global_references).insert(comp.module.clone(), local.index);
+                (self.code_meta.global_references).insert(comp.module.clone(), local.index);
             }
-            self.asm
+            self.code_meta
                 .global_references
                 .insert(r.name.clone(), local.index);
             self.global_index(local.index, r.name.span, call);
@@ -1119,7 +1111,7 @@ code:
                 ));
             };
             curr.referenced = true;
-            (self.asm.global_references).insert(span.clone().sp(ident), curr.global_index);
+            (self.code_meta.global_references).insert(span.clone().sp(ident), curr.global_index);
             let instr = Instr::Prim(Primitive::Recur, self.add_span(span.clone()));
             if call {
                 self.push_all_instrs([Instr::PushSig(sig), instr, Instr::PopSig]);
@@ -1142,7 +1134,7 @@ code:
             .copied()
         {
             // Name exists in scope
-            (self.asm.global_references).insert(span.clone().sp(ident), local.index);
+            (self.code_meta.global_references).insert(span.clone().sp(ident), local.index);
             self.global_index(local.index, span, call);
         } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
             // Name is a built-in constant
@@ -1285,7 +1277,7 @@ code:
                 }
             }
         };
-        self.inline_function_sigs.insert(
+        self.code_meta.inline_function_sigs.insert(
             span.clone(),
             InlineSig {
                 sig,

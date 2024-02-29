@@ -157,11 +157,11 @@ impl Compiler {
             Modifier::Ref(r) => {
                 let (path_locals, local) = self.ref_local(&r)?;
                 self.validate_local(&r.name.value, local, &r.name.span);
-                self.asm
+                self.code_meta
                     .global_references
                     .insert(r.name.clone(), local.index);
                 for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                    (self.asm.global_references).insert(comp.module.clone(), local.index);
+                    (self.code_meta.global_references).insert(comp.module.clone(), local.index);
                 }
                 // Handle recursion depth
                 self.macro_depth += 1;

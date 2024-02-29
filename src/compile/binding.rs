@@ -14,13 +14,13 @@ impl Compiler {
             }) {
                 if let Ok((path_locals, local)) = self.ref_local(r) {
                     self.validate_local(&r.name.value, local, &r.name.span);
-                    self.asm
+                    self.code_meta
                         .global_references
                         .insert(binding.name.clone(), local.index);
                     for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                        (self.asm.global_references).insert(comp.module.clone(), local.index);
+                        (self.code_meta.global_references).insert(comp.module.clone(), local.index);
                     }
-                    self.asm
+                    self.code_meta
                         .global_references
                         .insert(r.name.clone(), local.index);
                     self.scope.names.insert(
@@ -413,7 +413,7 @@ impl Compiler {
                 .copied()
             {
                 self.validate_local(&item.value, local, &item.span);
-                self.asm.global_references.insert(item.clone(), local.index);
+                (self.code_meta.global_references).insert(item.clone(), local.index);
                 self.scope.names.insert(
                     item.value.clone(),
                     LocalName {

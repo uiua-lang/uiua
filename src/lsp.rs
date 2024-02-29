@@ -2,7 +2,7 @@
 //!
 //! Even without the `lsp` feature enabled, this module still provides some useful types and functions for working with Uiua code in an IDE or text editor.
 
-use std::{slice, sync::Arc};
+use std::{collections::HashMap, slice, sync::Arc};
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
@@ -10,8 +10,8 @@ use crate::{
     ident_modifier_args,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    Assembly, BindingInfo, Compiler, Global, InlineSig, InlineSigs, InputSrc, Inputs, Primitive,
-    SafeSys, Signature, SysBackend, UiuaError,
+    Assembly, BindingInfo, Compiler, Global, Ident, InputSrc, Inputs, Primitive, SafeSys,
+    Signature, SysBackend, UiuaError,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -66,9 +66,25 @@ pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<Span
     (spanner.items_spans(&items), spanner.asm.inputs)
 }
 
+#[derive(Clone, Default)]
+pub(crate) struct CodeMeta {
+    /// A map of references to global bindings
+    pub global_references: HashMap<Sp<Ident>, usize>,
+    /// Spans of bare inline functions and their signatures and whether they are explicit
+    pub inline_function_sigs: InlineSigs,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct InlineSig {
+    pub sig: Signature,
+    pub explicit: bool,
+}
+
+pub(crate) type InlineSigs = HashMap<CodeSpan, InlineSig>;
+
 struct Spanner {
     asm: Assembly,
-    inline_function_sigs: InlineSigs,
+    code_meta: CodeMeta,
     #[allow(dead_code)]
     errors: Vec<UiuaError>,
     #[allow(dead_code)]
@@ -86,7 +102,7 @@ impl Spanner {
         let diagnostics = compiler.take_diagnostics().into_iter().collect();
         Self {
             asm: compiler.asm,
-            inline_function_sigs: compiler.inline_function_sigs,
+            code_meta: compiler.code_meta,
             errors,
             diagnostics,
         }
@@ -158,7 +174,7 @@ impl Spanner {
     }
 
     fn reference_docs(&self, span: &CodeSpan) -> Option<BindingDocs> {
-        for (name, index) in &self.asm.global_references {
+        for (name, index) in &self.code_meta.global_references {
             let Some(binding) = self.asm.bindings.get(*index) else {
                 continue;
             };
@@ -248,11 +264,12 @@ impl Spanner {
                     }
                 }
                 Word::Func(func) => {
-                    let kind = if let Some(inline) = self.inline_function_sigs.get(&word.span) {
-                        SpanKind::FuncDelim(inline.sig)
-                    } else {
-                        SpanKind::Delimiter
-                    };
+                    let kind =
+                        if let Some(inline) = self.code_meta.inline_function_sigs.get(&word.span) {
+                            SpanKind::FuncDelim(inline.sig)
+                        } else {
+                            SpanKind::Delimiter
+                        };
                     spans.push(word.span.just_start(self.inputs()).sp(kind.clone()));
                     if let Some(sig) = &func.signature {
                         spans.push(sig.span.clone().sp(SpanKind::Signature));
@@ -279,7 +296,7 @@ impl Spanner {
                             let kind = if let Some(InlineSig {
                                 sig,
                                 explicit: false,
-                            }) = self.inline_function_sigs.get(&branch.span)
+                            }) = self.code_meta.inline_function_sigs.get(&branch.span)
                             {
                                 SpanKind::FuncDelim(*sig)
                             } else {
@@ -372,7 +389,7 @@ mod server {
         pub items: Vec<Item>,
         pub spans: Vec<Sp<SpanKind>>,
         pub asm: Assembly,
-        pub inline_function_sigs: InlineSigs,
+        pub code_meta: CodeMeta,
         pub errors: Vec<UiuaError>,
         pub diagnostics: Vec<crate::Diagnostic>,
     }
@@ -393,7 +410,7 @@ mod server {
                 items,
                 spans,
                 asm: spanner.asm,
-                inline_function_sigs: spanner.inline_function_sigs,
+                code_meta: spanner.code_meta,
                 errors: spanner.errors,
                 diagnostics: spanner.diagnostics,
             }
@@ -555,7 +572,7 @@ mod server {
             // Hovering an inline function
             let mut inline_function_sig: Option<Sp<Signature>> = None;
             if prim_range.is_none() && binding_docs.is_none() {
-                for (span, inline) in &doc.inline_function_sigs {
+                for (span, inline) in &doc.code_meta.inline_function_sigs {
                     if !inline.explicit && span.contains_line_col(line, col) {
                         inline_function_sig = Some(span.clone().sp(inline.sig));
                     }
@@ -871,7 +888,7 @@ mod server {
             let (line, col) = lsp_pos_to_uiua(params.range.start);
             let mut actions = Vec::new();
             // Add explicit signature
-            for (span, inline) in &doc.inline_function_sigs {
+            for (span, inline) in &doc.code_meta.inline_function_sigs {
                 if span.contains_line_col(line, col) {
                     if inline.explicit {
                         continue;
@@ -927,7 +944,7 @@ mod server {
             }
             // Check for span in binding references
             if binding.is_none() {
-                for (name, index) in &doc.asm.global_references {
+                for (name, index) in &doc.code_meta.global_references {
                     if name.span.contains_line_col(line, col) {
                         binding = Some((&doc.asm.bindings[*index], *index));
                         break;
@@ -942,7 +959,7 @@ mod server {
                 range: uiua_span_to_lsp(&binding.span),
                 new_text: params.new_name.clone(),
             }];
-            for (name, idx) in &doc.asm.global_references {
+            for (name, idx) in &doc.code_meta.global_references {
                 if *idx == index {
                     edits.push(TextEdit {
                         range: uiua_span_to_lsp(&name.span),
@@ -971,7 +988,7 @@ mod server {
             };
             let position = params.text_document_position_params.position;
             let (line, col) = lsp_pos_to_uiua(position);
-            for (name, idx) in &current_doc.asm.global_references {
+            for (name, idx) in &current_doc.code_meta.global_references {
                 if name.span.contains_line_col(line, col) {
                     let binding = &current_doc.asm.bindings[*idx];
                     let uri = match &binding.span.src {

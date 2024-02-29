@@ -885,6 +885,9 @@ impl SysOp {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             SysOp::Show => {
+                if !env.rt.do_top_io {
+                    return Ok(());
+                }
                 let s = env.pop(1)?.show();
                 env.rt
                     .backend
@@ -896,6 +899,9 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Prin => {
+                if !env.rt.do_top_io {
+                    return Ok(());
+                }
                 let val = env.pop(1)?;
                 env.rt
                     .backend
@@ -903,6 +909,9 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Print => {
+                if !env.rt.do_top_io {
+                    return Ok(());
+                }
                 let val = env.pop(1)?;
                 env.rt
                     .backend
@@ -925,6 +934,9 @@ impl SysOp {
                 env.push(cowslice![height as f64, width as f64])
             }
             SysOp::RawMode => {
+                if !env.rt.do_top_io {
+                    return Ok(());
+                }
                 let raw_mode = env.pop(1)?.as_bool(env, "Raw mode must be a boolean")?;
                 env.rt
                     .backend

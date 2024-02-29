@@ -57,6 +57,8 @@ pub(crate) struct Runtime {
     execution_start: f64,
     /// Whether to print the time taken to execute each instruction
     time_instrs: bool,
+    /// Whether to do top-level IO
+    pub(crate) do_top_io: bool,
     /// The time at which the last instruction was executed
     last_time: f64,
     /// Arguments passed from the command line
@@ -187,6 +189,7 @@ impl Default for Runtime {
             backend: Arc::new(SafeSys::default()),
             time_instrs: false,
             last_time: 0.0,
+            do_top_io: true,
             cli_arguments: Vec::new(),
             cli_file_path: PathBuf::new(),
             execution_limit: None,
@@ -1242,6 +1245,13 @@ code:
     pub(crate) fn call_frames(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {
         self.rt.call_stack.iter()
     }
+    pub(crate) fn no_io<T>(&mut self, f: impl FnOnce(&mut Self) -> UiuaResult<T>) -> UiuaResult<T> {
+        let do_io = self.rt.do_top_io;
+        self.rt.do_top_io = false;
+        let res = f(self);
+        self.rt.do_top_io = do_io;
+        res
+    }
     pub(crate) fn call_with_this(&mut self, f: Function) -> UiuaResult {
         let call_height = self.rt.call_stack.len();
         let with_height = self.rt.this_stack.len();
@@ -1298,6 +1308,7 @@ code:
                 unpack_boxes: self.rt.unpack_boxes,
                 time_instrs: self.rt.time_instrs,
                 last_time: self.rt.last_time,
+                do_top_io: self.rt.do_top_io,
                 cli_arguments: self.rt.cli_arguments.clone(),
                 cli_file_path: self.rt.cli_file_path.clone(),
                 backend: self.rt.backend.clone(),

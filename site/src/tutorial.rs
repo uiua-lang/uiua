@@ -875,7 +875,7 @@ F 10 11"/>
         <p>"There are some ways to make the proxy value visible."</p>
         <Editor example="≡(&p.) []"/>
         <p>"To avoid this case, you can conditionally iterate. This example uses a "<A href="/tutorial/controlflow#switch">"switch function"</A>", which will be explained in a "<A href="/tutorial/controlflow">"later section"</A>"."</p>
-        <Editor example="(∘|≡(&p.))±⧻. []"/>
+        <Editor example="⟨∘|≡(&p.)⟩±⧻. []"/>
 
         <h2 id="challenges">"Challenges"</h2>
 
@@ -1224,7 +1224,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
             number=1
             prompt="pushes \"small\" if a number is less than 10, \"medium\" if it is less than 100, and \"large\" otherwise"
             example="17"
-            answer=r#"("small"|"medium"|"large")/+≥[10 100]"#
+            answer=r#"⟨"small"|"medium"|"large"⟩/+≥[10 100]"#
             tests={&["3", "50", "2357"]}
             hidden="10"/>
 

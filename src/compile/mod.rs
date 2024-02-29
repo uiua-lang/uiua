@@ -25,7 +25,7 @@ use crate::{
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
-    IntoInputSrc, IntoSysBackend, Primitive, RunMode, SafeSys, SysBackend, SysOp, Uiua, UiuaError,
+    IntoInputSrc, IntoSysBackend, Primitive, RunMode, SysBackend, SysOp, Uiua, UiuaError,
     UiuaResult, Value,
 };
 
@@ -69,10 +69,10 @@ pub struct Compiler {
     print_diagnostics: bool,
     /// Whether to evaluate comptime code
     comptime: bool,
+    /// The interpreter used for comptime code
+    macro_env: Uiua,
     /// Spans of bare inline functions and their signatures and whether they are explicit
     pub(crate) inline_function_sigs: InlineSigs,
-    /// The backend used to run comptime code
-    pub(crate) backend: Arc<dyn SysBackend>,
 }
 
 impl Default for Compiler {
@@ -97,8 +97,8 @@ impl Default for Compiler {
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             comptime: true,
+            macro_env: Uiua::default(),
             inline_function_sigs: HashMap::new(),
-            backend: Arc::new(SafeSys::default()),
         }
     }
 }
@@ -180,7 +180,7 @@ impl Compiler {
     /// Create a new compiler with a custom backend for `comptime` code
     pub fn with_backend(backend: impl IntoSysBackend) -> Self {
         Self {
-            backend: backend.into_sys_backend(),
+            macro_env: Uiua::with_backend(backend.into_sys_backend()),
             ..Self::default()
         }
     }
@@ -218,6 +218,10 @@ impl Compiler {
     pub fn mode(&mut self, mode: RunMode) -> &mut Self {
         self.mode = mode;
         self
+    }
+    /// Get the backend
+    pub fn backend(&self) -> Arc<dyn SysBackend> {
+        self.macro_env.rt.backend.clone()
     }
     /// Compile a Uiua file from a file at a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
@@ -510,7 +514,7 @@ code:
             if !(url.starts_with("https://") || url.starts_with("http://")) {
                 url = format!("https://{url}");
             }
-            self.backend
+            self.backend()
                 .load_git_module(&url)
                 .map_err(|e| self.fatal_error(span.clone(), e))?
         } else {
@@ -521,7 +525,7 @@ code:
             return Ok(path);
         }
         let bytes = self
-            .backend
+            .backend()
             .file_read_all(&path)
             .or_else(|e| {
                 if path.ends_with(Path::new("example.ua")) {

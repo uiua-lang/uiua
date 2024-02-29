@@ -13,6 +13,7 @@ use crate::{
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Assembly {
     pub(crate) instrs: EcoVec<Instr>,
+    /// The sections of the instructions that are top-level expressions
     pub(crate) top_slices: Vec<FuncSlice>,
     /// A list of global bindings
     pub bindings: EcoVec<BindingInfo>,

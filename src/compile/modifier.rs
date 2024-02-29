@@ -163,6 +163,7 @@ impl Compiler {
                 for (local, comp) in path_locals.into_iter().zip(&r.path) {
                     (self.asm.global_references).insert(comp.module.clone(), local.index);
                 }
+                // Handle recursion depth
                 self.macro_depth += 1;
                 if self.macro_depth > 20 {
                     return Err(
@@ -193,7 +194,7 @@ impl Compiler {
                         let span = self.add_span(modified.modifier.span);
                         self.push_instr(Instr::Call(span));
                     }
-                } else if let Some(function) = self.array_macros.get(&local.index) {
+                } else if let Some(function) = self.array_macros.get(&local.index).cloned() {
                     // Array macros
 
                     // Collect operands as strings
@@ -233,25 +234,24 @@ impl Compiler {
                         })
                         .collect();
 
-                    let mut env = Uiua::with_backend(self.backend.clone());
                     let mut code = String::new();
-                    env.asm = self.asm.clone();
                     (|| -> UiuaResult {
-                        env.run_asm(env.asm.clone())?;
+                        self.prepare_env()?;
+                        let env = &mut self.macro_env;
                         // Run the macro function
                         if let Some(sigs) = op_sigs {
                             env.push(sigs);
                         }
                         env.push(formatted);
-                        env.call(function.clone())?;
+                        env.call(function)?;
                         let val = env.pop("macro result")?;
 
                         // Parse the macro output
-                        if let Ok(s) = val.as_string(&env, "") {
+                        if let Ok(s) = val.as_string(env, "") {
                             code = s;
                         } else {
                             for row in val.into_rows() {
-                                let s = row.as_string(&env, "Macro output rows must be strings")?;
+                                let s = row.as_string(env, "Macro output rows must be strings")?;
                                 if !code.is_empty() {
                                     code.push(' ');
                                 }
@@ -261,12 +261,17 @@ impl Compiler {
                         Ok(())
                     })()
                     .map_err(|e| e.trace_macro(modified.modifier.span.clone()))?;
-                    self.backend = env.rt.backend;
 
                     // Quote
                     self.quote(&code, &modified.modifier.span, call)?;
                 } else {
-                    panic!("Macro not found")
+                    return Err(self.fatal_error(
+                        modified.modifier.span.clone(),
+                        format!(
+                            "Macro {} not found. This is a bug in the interpreter.",
+                            r.name.value
+                        ),
+                    ));
                 }
                 self.macro_depth -= 1;
 
@@ -923,9 +928,9 @@ impl Compiler {
         let len = instrs.len();
         comp.asm.instrs.extend(instrs);
         comp.asm.top_slices.push(FuncSlice { start, len });
-        let mut env = Uiua::with_backend(self.backend.clone());
-        let values = match env.run_asm(&comp.asm) {
-            Ok(_) => env.take_stack(),
+        comp.prepare_env()?;
+        let values = match comp.macro_env.run_asm(&comp.asm) {
+            Ok(_) => comp.macro_env.take_stack(),
             Err(e) => {
                 if self.errors.is_empty() {
                     self.add_error(span.clone(), format!("Compile-time evaluation failed: {e}"));
@@ -933,7 +938,6 @@ impl Compiler {
                 vec![Value::default(); sig.outputs]
             }
         };
-        self.backend = env.rt.backend;
         if !call {
             self.new_functions.push(EcoVec::new());
         }
@@ -947,6 +951,18 @@ impl Compiler {
             let func = self.add_function(FunctionId::Anonymous(span.clone()), sig, instrs);
             self.push_instr(Instr::PushFunc(func));
         }
+        Ok(())
+    }
+    fn prepare_env(&mut self) -> UiuaResult {
+        let top_slices = take(&mut self.macro_env.asm.top_slices);
+        let mut bindings = take(&mut self.macro_env.asm.bindings);
+        bindings.extend_from_slice(&self.asm.bindings[bindings.len()..]);
+        self.macro_env.asm = self.asm.clone();
+        self.macro_env.asm.bindings = bindings;
+        if let Some(last_slice) = top_slices.last() {
+            (self.macro_env.asm.top_slices).retain(|slice| slice.start > last_slice.start);
+        }
+        self.macro_env.run_top_slices()?;
         Ok(())
     }
 }

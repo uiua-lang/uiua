@@ -303,7 +303,7 @@ impl Uiua {
     ///
     /// The runtime will inherit the system backend from the compiler
     pub fn run_compiler(&mut self, comp: &mut Compiler) -> UiuaResult {
-        self.rt.backend = comp.backend.clone();
+        self.rt.backend = comp.backend();
         self.run_asm(comp.finish())
     }
     /// Run a Uiua assembly
@@ -311,19 +311,7 @@ impl Uiua {
         fn run_asm(env: &mut Uiua, asm: Assembly) -> UiuaResult {
             env.asm = asm;
             env.rt.execution_start = instant::now();
-            let top_slices = take(&mut env.asm.top_slices);
-            let mut res = Ok(());
-            if let Err(e) = env.catching_crash("", |env| {
-                for &slice in &top_slices {
-                    res = env.call_slice(slice);
-                    if res.is_err() {
-                        break;
-                    }
-                }
-            }) {
-                res = Err(e);
-            }
-            env.asm.top_slices = top_slices;
+            let res = env.run_top_slices();
             if res.is_err() {
                 env.rt = Runtime {
                     backend: env.rt.backend.clone(),
@@ -336,6 +324,22 @@ impl Uiua {
             res
         }
         run_asm(self, asm.into())
+    }
+    pub(crate) fn run_top_slices(&mut self) -> UiuaResult {
+        let top_slices = take(&mut self.asm.top_slices);
+        let mut res = Ok(());
+        if let Err(e) = self.catching_crash("", |env| {
+            for &slice in &top_slices {
+                res = env.call_slice(slice);
+                if res.is_err() {
+                    break;
+                }
+            }
+        }) {
+            res = Err(e);
+        }
+        self.asm.top_slices = top_slices;
+        res
     }
     fn catching_crash<T>(
         &mut self,

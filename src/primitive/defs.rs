@@ -1250,8 +1250,7 @@ primitive!(
     /// Group elements of an array into buckets by index
     ///
     /// Takes a function and two arrays.
-    /// The arrays must be the same [length].
-    /// The first array must be rank `1` and contain integers.
+    /// The first array must contain integers and have a shape that is a prefix of the shape of the second array.
     /// Rows in the second array will be grouped into buckets by the indices in the first array.
     /// Keys `less than``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.

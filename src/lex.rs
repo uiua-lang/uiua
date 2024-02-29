@@ -849,12 +849,13 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 // Identifiers and unformatted glyphs
-                c if is_custom_glyph(c) => self.end(Ident, start),
-                c if c.chars().all(is_ident_char) || c == "&" => {
+                c if is_custom_glyph(c) || c.chars().all(is_ident_char) || c == "&" => {
                     let mut ident = c.to_string();
                     // Collect characters
-                    while let Some(c) = self.next_char_if_all(is_ident_char) {
-                        ident.push_str(c);
+                    if !is_custom_glyph(c) {
+                        while let Some(c) = self.next_char_if_all(is_ident_char) {
+                            ident.push_str(c);
+                        }
                     }
                     let mut exclam_count = 0;
                     while let Some((ch, count)) = if self.next_char_exact("!") {

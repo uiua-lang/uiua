@@ -3,6 +3,7 @@
 - 0.10
   - Unicode glyph format by number/name
   - Let bind only take an ident?
+  - Optimize `/◇⊂`
 - Site pages/tutorials
   - Duality of `pick` and `select`
   - Stack-source locality

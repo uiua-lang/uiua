@@ -288,6 +288,12 @@ impl<T: ArrayValue> Array<T> {
     pub fn rows(&self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
         (0..self.row_count()).map(|row| self.row(row))
     }
+    pub(crate) fn row_shaped_slice(&self, index: usize, row_shape: Shape) -> Self {
+        let row_len: usize = row_shape.iter().product();
+        let start = index * row_len;
+        let end = start + row_len;
+        Self::new(row_shape, self.data.slice(start..end))
+    }
     /// Get an iterator over the row arrays of the array that have the given shape
     pub fn row_shaped_slices(
         &self,

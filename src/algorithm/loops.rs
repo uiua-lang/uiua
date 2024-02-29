@@ -3,7 +3,7 @@
 use crate::{
     array::{Array, ArrayValue},
     value::Value,
-    Boxed, Primitive, Signature, Uiua, UiuaResult,
+    Boxed, Primitive, Shape, Signature, Uiua, UiuaResult,
 };
 
 use super::multi_output;
@@ -251,37 +251,13 @@ pub fn ungroup_part2(env: &mut Uiua) -> UiuaResult {
 
 impl Value {
     fn partition_groups(self, markers: Array<isize>, env: &Uiua) -> UiuaResult<Vec<Self>> {
-        if markers.rank() != 1 {
-            return Err(env.error(format!(
-                "{} markers must be a list of integers, \
-                but it is rank {}",
-                Primitive::Partition.format(),
-                markers.rank(),
-            )));
-        }
-        let markers = &markers.data;
         Ok(match self {
-            Value::Num(arr) => arr
-                .partition_groups(markers, env)?
-                .map(Into::into)
-                .collect(),
+            Value::Num(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
             #[cfg(feature = "bytes")]
-            Value::Byte(arr) => arr
-                .partition_groups(markers, env)?
-                .map(Into::into)
-                .collect(),
-            Value::Complex(arr) => arr
-                .partition_groups(markers, env)?
-                .map(Into::into)
-                .collect(),
-            Value::Char(arr) => arr
-                .partition_groups(markers, env)?
-                .map(Into::into)
-                .collect(),
-            Value::Box(arr) => arr
-                .partition_groups(markers, env)?
-                .map(Into::into)
-                .collect(),
+            Value::Byte(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
+            Value::Complex(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
+            Value::Char(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
+            Value::Box(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
         })
     }
 }
@@ -289,29 +265,112 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     fn partition_groups(
         self,
-        markers: &[isize],
+        markers: Array<isize>,
         env: &Uiua,
     ) -> UiuaResult<impl Iterator<Item = Self>> {
-        if markers.len() != self.row_count() {
+        if !self.shape().starts_with(markers.shape()) {
             return Err(env.error(format!(
-                "Cannot partition array of shape {} with markers of length {}",
+                "Cannot partition array of shape {} with markers of shape {}",
                 self.shape(),
-                markers.len()
+                markers.shape()
             )));
         }
         let mut groups = Vec::new();
-        let mut last_marker = isize::MAX;
-        for (row, &marker) in self.into_rows().zip(markers) {
-            if marker > 0 {
-                if marker != last_marker {
-                    groups.push(Vec::new());
+        if markers.rank() == 1 {
+            let mut last_marker = isize::MAX;
+            for (row, marker) in self.into_rows().zip(markers.data) {
+                if marker > 0 {
+                    if marker != last_marker {
+                        groups.push(Vec::new());
+                    }
+                    groups.last_mut().unwrap().push(row);
                 }
-                groups.last_mut().unwrap().push(row);
+                last_marker = marker;
             }
-            last_marker = marker;
+        } else {
+            let row_shape: Shape = self.shape()[markers.rank()..].into();
+            let indices = multi_partition_indices(markers);
+            for indices in indices {
+                let mut group = Vec::with_capacity(indices.len());
+                for index in indices {
+                    group.push(self.row_shaped_slice(index, row_shape.clone()));
+                }
+                groups.push(group);
+            }
         }
         Ok(groups.into_iter().map(Array::from_row_arrays_infallible))
     }
+}
+
+fn multi_partition_indices(markers: Array<isize>) -> Vec<Vec<usize>> {
+    if markers.element_count() == 0 {
+        return Vec::new();
+    }
+    let mut groups: Vec<(isize, Vec<Vec<usize>>)> = Vec::new();
+    let mut curr = vec![0; markers.rank()];
+    for &marker in &markers.data {
+        if marker >= 1 {
+            let mut adjacent_groups = Vec::new();
+            // Find adjacent groups with the same value
+            for (g, (val, group)) in groups.iter().enumerate() {
+                if *val != marker {
+                    continue;
+                }
+                if group.iter().any(|idx| {
+                    idx.iter()
+                        .zip(&curr)
+                        .map(|(a, b)| a.abs_diff(*b))
+                        .sum::<usize>()
+                        == 1
+                }) {
+                    adjacent_groups.push(g);
+                }
+            }
+            // Add the current index to the adjacent group, possibly merging groups
+            match adjacent_groups.len() {
+                0 => {
+                    groups.push((marker, vec![curr.clone()]));
+                }
+                1 => groups[adjacent_groups[0]].1.push(curr.clone()),
+                _ => {
+                    let mut new_group = Vec::new();
+                    for g in adjacent_groups.into_iter().rev() {
+                        new_group.extend(groups.remove(g).1);
+                    }
+                    new_group.push(curr.clone());
+                    groups.push((marker, new_group));
+                }
+            }
+        }
+        // Increment the current index
+        for (i, c) in curr.iter_mut().enumerate().rev() {
+            if *c < markers.shape()[i] - 1 {
+                *c += 1;
+                break;
+            }
+            *c = 0;
+        }
+    }
+    let mut shape_muls: Vec<usize> = markers
+        .shape()
+        .iter()
+        .rev()
+        .scan(1, |mul, &dim| {
+            let prev = *mul;
+            *mul *= dim;
+            Some(prev)
+        })
+        .collect();
+    shape_muls.reverse();
+    groups
+        .into_iter()
+        .map(|(_, group)| {
+            group
+                .into_iter()
+                .map(|index| index.iter().zip(&shape_muls).map(|(i, m)| i * m).sum())
+                .collect()
+        })
+        .collect()
 }
 
 pub fn group(env: &mut Uiua) -> UiuaResult {

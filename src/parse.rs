@@ -115,12 +115,13 @@ pub fn parse(
     src: impl IntoInputSrc,
     inputs: &mut Inputs,
 ) -> (Vec<Item>, Vec<Sp<ParseError>>, Vec<Diagnostic>) {
-    let (tokens, lex_errors) = lex(input, src, inputs);
+    let (tokens, lex_errors, src) = lex(input, src, inputs);
     fn parse(
         input: &str,
         inputs: &mut Inputs,
         tokens: Vec<Sp<crate::lex::Token>>,
         lex_errors: Vec<Sp<LexError>>,
+        src: InputSrc,
     ) -> (Vec<Item>, Vec<Sp<ParseError>>, Vec<Diagnostic>) {
         let mut errors: Vec<_> = lex_errors
             .into_iter()
@@ -129,57 +130,59 @@ pub fn parse(
         let mut diagnostics = Vec::new();
 
         // Check for lines that are too long
-        for line in tokens.split(|t| matches!(t.value, Newline)) {
-            let mut heuristic = 0;
-            let mut first = None;
-            let mut toks = line.iter().peekable();
-            while let Some(tok) = toks.next() {
-                heuristic += match &tok.value {
-                    Spaces | Comment => 0,
-                    Simple(CloseBracket | CloseCurly | CloseParen) => 0,
-                    Simple(Underscore) => 0,
-                    MultilineString(_) => {
-                        while let Some(MultilineString(_)) = toks.peek().map(|t| &t.value) {
-                            toks.next();
+        if !matches!(src, InputSrc::Macro(_)) {
+            for line in tokens.split(|t| matches!(t.value, Newline)) {
+                let mut heuristic = 0;
+                let mut first = None;
+                let mut toks = line.iter().peekable();
+                while let Some(tok) = toks.next() {
+                    heuristic += match &tok.value {
+                        Spaces | Comment => 0,
+                        Simple(CloseBracket | CloseCurly | CloseParen) => 0,
+                        Simple(Underscore) => 0,
+                        MultilineString(_) => {
+                            while let Some(MultilineString(_)) = toks.peek().map(|t| &t.value) {
+                                toks.next();
+                            }
+                            1
                         }
-                        1
-                    }
-                    _ => {
-                        first = first.or(Some(&tok.span));
-                        1
-                    }
+                        _ => {
+                            first = first.or(Some(&tok.span));
+                            1
+                        }
+                    };
+                }
+                if heuristic <= STYLE_MAX_WIDTH {
+                    continue;
+                }
+                let first = first.unwrap().clone();
+                let last = line.last().unwrap().span.clone();
+                let span = first.merge(last);
+                let (kind, face) = if heuristic > ERROR_MAX_WIDTH {
+                    errors.push(span.sp(ParseError::LineTooLong(heuristic)));
+                    continue;
+                } else if heuristic > WARNING_MAX_WIDTH {
+                    (DiagnosticKind::Warning, '😤')
+                } else if heuristic > ADVICE_MAX_WIDTH {
+                    (DiagnosticKind::Advice, '😠')
+                } else {
+                    (DiagnosticKind::Style, '🤨')
                 };
-            }
-            if heuristic <= STYLE_MAX_WIDTH {
-                continue;
-            }
-            let first = first.unwrap().clone();
-            let last = line.last().unwrap().span.clone();
-            let span = first.merge(last);
-            let (kind, face) = if heuristic > ERROR_MAX_WIDTH {
-                errors.push(span.sp(ParseError::LineTooLong(heuristic)));
-                continue;
-            } else if heuristic > WARNING_MAX_WIDTH {
-                (DiagnosticKind::Warning, '😤')
-            } else if heuristic > ADVICE_MAX_WIDTH {
-                (DiagnosticKind::Advice, '😠')
-            } else {
-                (DiagnosticKind::Style, '🤨')
-            };
-            let max = match kind {
-                DiagnosticKind::Style => STYLE_MAX_WIDTH,
-                DiagnosticKind::Advice => ADVICE_MAX_WIDTH,
-                DiagnosticKind::Warning => WARNING_MAX_WIDTH,
-            };
-            diagnostics.push(Diagnostic::new(
-                format!(
-                    "Split this into multiple lines \
+                let max = match kind {
+                    DiagnosticKind::Style => STYLE_MAX_WIDTH,
+                    DiagnosticKind::Advice => ADVICE_MAX_WIDTH,
+                    DiagnosticKind::Warning => WARNING_MAX_WIDTH,
+                };
+                diagnostics.push(Diagnostic::new(
+                    format!(
+                        "Split this into multiple lines \
                     (heuristic: {heuristic}/{max}) {face}"
-                ),
-                span,
-                kind,
-                inputs.clone(),
-            ));
+                    ),
+                    span,
+                    kind,
+                    inputs.clone(),
+                ));
+            }
         }
 
         // Parse
@@ -203,7 +206,7 @@ pub fn parse(
         }
         (items, parser.errors, parser.diagnostics)
     }
-    parse(input, inputs, tokens, lex_errors)
+    parse(input, inputs, tokens, lex_errors, src)
 }
 
 struct Parser<'i> {

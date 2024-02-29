@@ -19,9 +19,9 @@ pub fn lex(
     input: &str,
     src: impl IntoInputSrc,
     inputs: &mut Inputs,
-) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
+) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>, InputSrc) {
     let src = inputs.add_src(src, input);
-    Lexer {
+    let (tokens, errors) = Lexer {
         input,
         input_segments: input.graphemes(true).collect(),
         loc: Loc {
@@ -30,11 +30,12 @@ pub fn lex(
             line: 1,
             col: 1,
         },
-        src,
+        src: src.clone(),
         tokens: VecDeque::new(),
         errors: Vec::new(),
     }
-    .run()
+    .run();
+    (tokens, errors, src)
 }
 
 /// An error that occurred while lexing

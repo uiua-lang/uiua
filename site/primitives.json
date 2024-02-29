@@ -669,7 +669,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "IteratingModifier",
-    "description": "Apply a function to each unboxed row of an array and re-box the results"
+    "description": "Apply a function to each unboxed item of an array and re-box the results"
   },
   "join": {
     "glyph": "⊂",

@@ -2,7 +2,6 @@
 
 - 0.10
   - Unicode glyph format by number/name
-  - See if there is a faster way to do multidimensional `rotate`
   - Let bind only take an ident?
 - Site pages/tutorials
   - Duality of `pick` and `select`

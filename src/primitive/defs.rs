@@ -1266,7 +1266,10 @@ primitive!(
     ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters in this string
-    ///   : ⊕{⊃⊢⧻} ⊛.⊏⍏.
+    ///   : ⊟∩≡□ ⊕⊃⊢⧻ ⊛.
+    ///
+    /// The indices may be multidimensional.
+    /// ex: ⊕□ [0_2 2_1] ["ab" "cd"]
     ///
     /// [under][group] works if [group]'s function is [under]able.
     /// ex: ⍜⊕□≡⇌ ≠@ . $ These are some words

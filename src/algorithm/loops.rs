@@ -210,18 +210,17 @@ pub fn ungroup_part2(env: &mut Uiua) -> UiuaResult {
     let ungrouped_rows = env.pop(1)?;
     let indices = env
         .pop(2)?
-        .as_ints(env, "⊕ group indices must be a list of integers")?;
+        .as_integer_array(env, "⊕ group indices must be an array of integers")?;
     let original = env.pop(3)?;
 
-    if indices
-        .iter()
+    if (indices.data.iter())
         .any(|&index| index >= 0 && index as usize >= ungrouped_rows.row_count())
     {
         return Err(env.error(format!(
             "Cannot undo {} because the grouped array's \
             length changed from {} to {}",
             Primitive::Group.format(),
-            indices.len(),
+            indices.element_count(),
             ungrouped_rows.row_count(),
         )));
     }
@@ -231,8 +230,8 @@ pub fn ungroup_part2(env: &mut Uiua) -> UiuaResult {
         .into_rows()
         .map(|row| row.unboxed().into_rows())
         .collect();
-    let mut ungrouped = Vec::with_capacity(indices.len() * original.row_len());
-    for (i, index) in indices.into_iter().enumerate() {
+    let mut ungrouped = Vec::with_capacity(indices.element_count() * original.row_len());
+    for (i, &index) in indices.data.iter().enumerate() {
         if index >= 0 {
             ungrouped.push(ungrouped_rows[index as usize].next().ok_or_else(|| {
                 env.error("A group's length was modified between grouping and ungrouping")
@@ -241,12 +240,26 @@ pub fn ungroup_part2(env: &mut Uiua) -> UiuaResult {
             ungrouped.push(original.row(i));
         }
     }
-    env.push(Value::from_row_values(ungrouped, env)?);
+    let mut val = Value::from_row_values(ungrouped, env)?;
+    val.shape_mut().remove(0);
+    for &dim in indices.shape().iter().rev() {
+        val.shape_mut().insert(0, dim);
+    }
+    env.push(val);
     Ok(())
 }
 
 impl Value {
-    fn partition_groups(self, markers: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
+    fn partition_groups(self, markers: Array<isize>, env: &Uiua) -> UiuaResult<Vec<Self>> {
+        if markers.rank() != 1 {
+            return Err(env.error(format!(
+                "{} markers must be a list of integers, \
+                but it is rank {}",
+                Primitive::Partition.format(),
+                markers.rank(),
+            )));
+        }
+        let markers = &markers.data;
         Ok(match self {
             Value::Num(arr) => arr
                 .partition_groups(markers, env)?
@@ -306,7 +319,7 @@ pub fn group(env: &mut Uiua) -> UiuaResult {
     collapse_groups(
         Primitive::Group,
         Value::group_groups,
-        "⊕ group indices array must be a list of integers",
+        "⊕ group indices array must be an array of integers",
         "⊕ group's function has signature |2.1, so it is the reducing form. \
         Its indices array must be a list of integers",
         env,
@@ -314,7 +327,7 @@ pub fn group(env: &mut Uiua) -> UiuaResult {
 }
 
 impl Value {
-    fn group_groups(self, indices: &[isize], env: &Uiua) -> UiuaResult<Vec<Self>> {
+    fn group_groups(self, indices: Array<isize>, env: &Uiua) -> UiuaResult<Vec<Self>> {
         Ok(match self {
             Value::Num(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             #[cfg(feature = "bytes")]
@@ -327,23 +340,29 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    fn group_groups(self, indices: &[isize], env: &Uiua) -> UiuaResult<impl Iterator<Item = Self>> {
-        if indices.len() != self.row_count() {
+    fn group_groups(
+        self,
+        indices: Array<isize>,
+        env: &Uiua,
+    ) -> UiuaResult<impl Iterator<Item = Self>> {
+        if !self.shape().starts_with(indices.shape()) {
             return Err(env.error(format!(
-                "Cannot group array of shape {} with indices of length {}",
+                "Cannot {} array of shape {} with indices of shape {}",
+                Primitive::Group.format(),
                 self.shape(),
-                indices.len()
+                indices.shape()
             )));
         }
-        let Some(&max_index) = indices.iter().max() else {
+        let Some(&max_index) = indices.data.iter().max() else {
             return Ok(Vec::<Vec<Self>>::new()
                 .into_iter()
                 .map(Array::from_row_arrays_infallible));
         };
         let mut groups: Vec<Vec<Self>> = vec![Vec::new(); max_index.max(0) as usize + 1];
-        for (r, &g) in indices.iter().enumerate() {
-            if g >= 0 && r < self.row_count() {
-                groups[g as usize].push(self.row(r));
+        let row_shape = self.shape()[indices.rank()..].into();
+        for (g, r) in (indices.data.into_iter()).zip(self.into_row_shaped_slices(row_shape)) {
+            if g >= 0 {
+                groups[g as usize].push(r);
             }
         }
         Ok(groups.into_iter().map(Array::from_row_arrays_infallible))
@@ -352,7 +371,7 @@ impl<T: ArrayValue> Array<T> {
 
 fn collapse_groups(
     prim: Primitive,
-    get_groups: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Vec<Value>>,
+    get_groups: impl Fn(Value, Array<isize>, &Uiua) -> UiuaResult<Vec<Value>>,
     agg_indices_error: &'static str,
     red_indices_error: &'static str,
     env: &mut Uiua,
@@ -361,9 +380,9 @@ fn collapse_groups(
     let sig = f.signature();
     match (sig.args, sig.outputs) {
         (0 | 1, outputs) => {
-            let indices = env.pop(1)?.as_ints(env, agg_indices_error)?;
+            let indices = env.pop(1)?.as_integer_array(env, agg_indices_error)?;
             let values = env.pop(2)?;
-            let groups = get_groups(values, &indices, env)?;
+            let groups = get_groups(values, indices, env)?;
             let mut rows = multi_output(outputs, Vec::with_capacity(groups.len()));
             env.without_fill(|env| -> UiuaResult {
                 for group in groups {
@@ -383,9 +402,9 @@ fn collapse_groups(
             }
         }
         (2, 1) => {
-            let indices = env.pop(1)?.as_ints(env, red_indices_error)?;
+            let indices = env.pop(1)?.as_integer_array(env, red_indices_error)?;
             let values = env.pop(2)?;
-            let mut groups = get_groups(values, &indices, env)?.into_iter();
+            let mut groups = get_groups(values, indices, env)?.into_iter();
             let mut acc = match env.value_fill().cloned() {
                 Some(acc) => acc,
                 None => groups.next().ok_or_else(|| {

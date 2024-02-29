@@ -1,8 +1,10 @@
 # Uiua Todo
 
 - 0.10
+  - Unicode glyph format by number/name
   - See if there is a faster way to do multidimensional `rotate`
   - Let bind only take an ident?
+  - Add more capacity checks
 - Site pages/tutorials
   - Duality of `pick` and `select`
   - Stack-source locality

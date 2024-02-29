@@ -204,13 +204,17 @@ impl<T> Array<T> {
     pub fn meta(&self) -> &ArrayMeta {
         self.meta.as_deref().unwrap_or(&DEFAULT_META)
     }
-    pub(crate) fn get_meta_mut(meta: &mut Option<Arc<ArrayMeta>>) -> &mut ArrayMeta {
+    pub(crate) fn meta_mut_impl(meta: &mut Option<Arc<ArrayMeta>>) -> &mut ArrayMeta {
         let meta = meta.get_or_insert_with(Default::default);
         Arc::make_mut(meta)
     }
+    /// Get a mutable reference to the metadata of the array if it exists
+    pub fn get_meta_mut(&mut self) -> Option<&mut ArrayMeta> {
+        self.meta.as_mut().map(Arc::make_mut)
+    }
     /// Get a mutable reference to the metadata of the array
     pub fn meta_mut(&mut self) -> &mut ArrayMeta {
-        Self::get_meta_mut(&mut self.meta)
+        Self::meta_mut_impl(&mut self.meta)
     }
     /// Take the label from the metadata
     pub fn take_label(&mut self) -> Option<EcoString> {

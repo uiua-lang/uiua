@@ -5,7 +5,6 @@
   - See if there is a faster way to do multidimensional `rotate`
   - Let bind only take an ident?
   - Add more capacity checks
-  - Make uasm a custom format
 - Site pages/tutorials
   - Duality of `pick` and `select`
   - Stack-source locality

@@ -526,6 +526,78 @@ impl Value {
             (a, b) => Err(err(a, b)),
         }
     }
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn generic_bin_mut<T, E>(
+        &mut self,
+        other: &mut Self,
+        n: impl FnOnce(&mut Array<f64>, &mut Array<f64>) -> Result<T, E>,
+        _b: impl FnOnce(&mut Array<u8>, &mut Array<u8>) -> Result<T, E>,
+        _co: impl FnOnce(&mut Array<Complex>, &mut Array<Complex>) -> Result<T, E>,
+        ch: impl FnOnce(&mut Array<char>, &mut Array<char>) -> Result<T, E>,
+        f: impl FnOnce(&mut Array<Boxed>, &mut Array<Boxed>) -> Result<T, E>,
+        err: impl FnOnce(&Self, &Self) -> E,
+    ) -> Result<T, E> {
+        match (&mut *self, &mut *other) {
+            (Self::Num(a), Self::Num(b)) => n(a, b),
+            #[cfg(feature = "bytes")]
+            (Self::Byte(a), Self::Byte(b)) => _b(a, b),
+            #[cfg(feature = "bytes")]
+            (Self::Byte(a), Self::Num(b)) => {
+                let mut a_num = a.convert_ref();
+                let res = n(&mut a_num, b);
+                *self = a_num.into();
+                res
+            }
+            #[cfg(feature = "bytes")]
+            (Self::Num(a), Self::Byte(b)) => {
+                let mut b_num = b.convert_ref();
+                let res = n(a, &mut b_num);
+                *other = b_num.into();
+                res
+            }
+            (Self::Complex(a), Self::Complex(b)) => _co(a, b),
+            (Self::Complex(a), Self::Num(b)) => {
+                let mut b_comp = b.convert_ref();
+                let res = _co(a, &mut b_comp);
+                *other = b_comp.into();
+                res
+            }
+            (Self::Num(a), Self::Complex(b)) => {
+                let mut a_comp = a.convert_ref();
+                let res = _co(&mut a_comp, b);
+                *self = a_comp.into();
+                res
+            }
+            #[cfg(feature = "bytes")]
+            (Self::Complex(a), Self::Byte(b)) => {
+                let mut b_comp = b.convert_ref();
+                let res = _co(a, &mut b_comp);
+                *other = b_comp.into();
+                res
+            }
+            #[cfg(feature = "bytes")]
+            (Self::Byte(a), Self::Complex(b)) => {
+                let mut a_comp = a.convert_ref();
+                let res = _co(&mut a_comp, b);
+                *self = a_comp.into();
+                res
+            }
+            (Self::Char(a), Self::Char(b)) => ch(a, b),
+            (Self::Box(a), b) => {
+                let mut b_box = take(b).coerce_to_boxes();
+                let res = f(a, &mut b_box);
+                *other = b_box.into();
+                res
+            }
+            (a, Self::Box(b)) => {
+                let mut a_box = take(a).coerce_to_boxes();
+                let res = f(&mut a_box, b);
+                *self = a_box.into();
+                res
+            }
+            (a, b) => Err(err(a, b)),
+        }
+    }
     /// Ensure that the capacity is at least `min`
     pub(crate) fn reserve_min(&mut self, min: usize) {
         match self {

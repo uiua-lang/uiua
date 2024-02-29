@@ -605,16 +605,16 @@ impl Value {
     pub fn from_row_values<V, C>(values: V, ctx: &C) -> Result<Self, C::Error>
     where
         V: IntoIterator<Item = Value>,
-        V::IntoIter: ExactSizeIterator,
         C: FillContext,
     {
         let mut row_values = values.into_iter();
-        let total_rows = row_values.len();
         let Some(mut value) = row_values.next() else {
             return Ok(Value::default());
         };
+        let (min, max) = row_values.size_hint();
+        let to_reserve = max.unwrap_or(min);
         if let Some(row) = row_values.next() {
-            let total_elements = total_rows * value.shape().iter().product::<usize>();
+            let total_elements = to_reserve * value.shape().iter().product::<usize>();
             value.reserve_min(total_elements);
             value.couple_impl(row, ctx)?;
             for row in row_values {

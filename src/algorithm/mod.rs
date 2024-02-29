@@ -4,6 +4,7 @@ use std::{
     cmp::Ordering,
     convert::Infallible,
     hash::{Hash, Hasher},
+    mem::size_of,
 };
 
 use tinyvec::TinyVec;
@@ -52,6 +53,20 @@ fn max_shape(a: &[usize], b: &[usize]) -> Shape {
         }
     }
     new_shape
+}
+
+pub fn validate_size<T>(elements: usize, env: &Uiua) -> UiuaResult {
+    let elem_size = size_of::<T>();
+    let size = elements * elem_size;
+    let max_mega = if cfg!(target_arch = "wasm32") {
+        256
+    } else {
+        4096
+    };
+    if size > max_mega * 1024usize.pow(2) {
+        return Err(env.error(format!("Array of {} elements would be too large", elements)));
+    }
+    Ok(())
 }
 
 pub trait ErrorContext {

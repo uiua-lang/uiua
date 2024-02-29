@@ -190,7 +190,7 @@ pub struct Inputs {
     #[serde(skip_serializing_if = "EcoVec::is_empty")]
     pub strings: EcoVec<EcoString>,
     /// A map of spans to macro strings
-    #[serde(skip_serializing_if = "DashMap::is_empty")]
+    #[serde(skip)]
     pub macros: DashMap<CodeSpan, EcoString>,
 }
 

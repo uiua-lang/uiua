@@ -163,19 +163,17 @@ impl Compiler {
                 for (local, comp) in path_locals.into_iter().zip(&r.path) {
                     (self.asm.global_references).insert(comp.module.clone(), local.index);
                 }
+                self.macro_depth += 1;
+                if self.macro_depth > 20 {
+                    return Err(
+                        self.fatal_error(modified.modifier.span.clone(), "Macro recurs too deep")
+                    );
+                }
                 if let Some(mut words) = self.stack_macros.get(&local.index).cloned() {
                     // Stack macros
-                    if self.macro_depth > 20 {
-                        return Err(self.fatal_error(
-                            modified.modifier.span.clone(),
-                            "Macro recursion detected",
-                        ));
-                    }
-                    self.macro_depth += 1;
                     let instrs = self
                         .expand_macro(&mut words, modified.operands)
                         .and_then(|()| self.compile_words(words, true));
-                    self.macro_depth -= 1;
                     let instrs = instrs?;
                     match instrs_signature(&instrs) {
                         Ok(sig) => {
@@ -270,6 +268,7 @@ impl Compiler {
                 } else {
                     panic!("Macro not found")
                 }
+                self.macro_depth -= 1;
 
                 return Ok(());
             }

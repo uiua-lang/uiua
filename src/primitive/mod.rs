@@ -196,6 +196,7 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
             Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
+            TransCouple => write!(f, "{Transpose}{Couple}"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -963,6 +964,12 @@ impl ImplPrimitive {
                 env.push(random());
             }
             ImplPrimitive::Adjacent => reduce::adjacent(env)?,
+            ImplPrimitive::TransCouple => {
+                let mut a = env.pop(1)?;
+                let b = env.pop(2)?;
+                a.transpose_couple(b, env)?;
+                env.push(a);
+            }
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(depth, env)?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
         }

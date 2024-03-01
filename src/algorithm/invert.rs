@@ -125,6 +125,10 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         &(Val, ([Flip, Log], [Pow])),
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
+        &pat!(
+            (ImplPrimitive::TransCouple),
+            (ImplPrimitive::TransposeN(-1), ImplPrimitive::InvCouple)
+        ),
         &invert_temp_pattern,
     ];
 
@@ -1495,6 +1499,36 @@ where
     }
 }
 
+impl<T> InvertPattern for (&[ImplPrimitive], &[T])
+where
+    T: AsInstr,
+{
+    fn invert_extract<'a>(
+        &self,
+        input: &'a [Instr],
+        _: &mut Compiler,
+    ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+        let (a, b) = self;
+        if a.len() > input.len() {
+            return None;
+        }
+        let mut spans = Vec::new();
+        for (instr, prim) in input.iter().zip(a.iter()) {
+            match instr {
+                Instr::ImplPrim(instr_prim, span) if instr_prim == prim => spans.push(*span),
+                _ => return None,
+            }
+        }
+        Some((
+            &input[a.len()..],
+            b.iter()
+                .zip(spans.iter().cycle())
+                .map(|(p, s)| p.as_instr(*s))
+                .collect(),
+        ))
+    }
+}
+
 impl<A, B> UnderPattern for (&[Primitive], &[A], &[B])
 where
     A: AsInstr,
@@ -1572,6 +1606,20 @@ where
 }
 
 impl<T, const A: usize, const B: usize> InvertPattern for ([Primitive; A], [T; B])
+where
+    T: AsInstr,
+{
+    fn invert_extract<'a>(
+        &self,
+        input: &'a [Instr],
+        comp: &mut Compiler,
+    ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+        let (a, b) = self;
+        (a.as_ref(), b.as_ref()).invert_extract(input, comp)
+    }
+}
+
+impl<T, const A: usize, const B: usize> InvertPattern for ([ImplPrimitive; A], [T; B])
 where
     T: AsInstr,
 {

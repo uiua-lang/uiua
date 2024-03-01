@@ -1,6 +1,6 @@
 //! Code for couple, join, and general array creation
 
-use std::{cmp::Ordering, mem::take};
+use std::{cmp::Ordering, mem::take, ptr};
 
 use ecow::EcoVec;
 
@@ -516,6 +516,23 @@ impl Value {
             Value::Box(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
         }
     }
+    pub(crate) fn transpose_couple(&mut self, other: Self, env: &Uiua) -> UiuaResult {
+        self.generic_bin_mut(
+            other,
+            |a, b| a.transpose_couple(b, env),
+            |a, b| a.transpose_couple(b, env),
+            |a, b| a.transpose_couple(b, env),
+            |a, b| a.transpose_couple(b, env),
+            |a, b| a.transpose_couple(b, env),
+            |a, b| {
+                env.error(format!(
+                    "Cannot couple {} array with {} array",
+                    a.type_name(),
+                    b.type_name()
+                ))
+            },
+        )
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -570,6 +587,32 @@ impl<T: ArrayValue> Array<T> {
         let first = rows.next().unwrap();
         let second = rows.next().unwrap();
         Ok((first, second))
+    }
+    pub(crate) fn transpose_couple(&mut self, other: Self, env: &Uiua) -> UiuaResult {
+        if self.shape != other.shape {
+            self.couple_impl(other, env)?;
+            self.transpose();
+            return Ok(());
+        }
+        let row_len = self.row_len();
+        let row_count = self.row_count();
+        self.data.extend_from_slice(&other.data);
+        let data_slice = self.data.as_mut_slice();
+        for i in (1..row_count).rev() {
+            let src_start = i * row_len;
+            let dest_start = (i * 2) * row_len;
+            let src: *mut T = &mut data_slice[src_start];
+            let dest: *mut T = &mut data_slice[dest_start];
+            unsafe { ptr::swap_nonoverlapping(src, dest, row_len) };
+        }
+        for (i, row) in other.row_slices().enumerate() {
+            let dest_start = (i * 2 + 1) * row_len;
+            for (dest, src) in data_slice[dest_start..][..row_len].iter_mut().zip(row) {
+                *dest = src.clone();
+            }
+        }
+        self.shape.push(2);
+        Ok(())
     }
 }
 

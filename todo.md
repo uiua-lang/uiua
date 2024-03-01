@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Optimize `trans couple` 
   - `under dip both`
   - Re-implement map changes -_-
   - `under fold`
@@ -9,6 +8,9 @@
   - Configure grid format height limit
   - Unicode glyph format by number/name
   - Let bind only take an ident?
+  - Optimize bool × num
+  - `uiua repl` with file
+  - `uiua watch` with `--base` file
   - System functions
     - Clipboard
     - Excel

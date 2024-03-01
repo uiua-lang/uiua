@@ -176,6 +176,12 @@ pub(crate) fn optimize_instrs_mut(
         ([.., Instr::Push(_)], Instr::Prim(Pop, _)) => {
             instrs.pop();
         }
+        // Transpose couple
+        ([.., Instr::Prim(Couple, span)], Instr::Prim(Transpose, _)) => {
+            let span = *span;
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(ImplPrimitive::TransCouple, span));
+        }
         (_, instr) => instrs.push(instr),
     }
 }

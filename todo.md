@@ -4,6 +4,7 @@
   - Unicode glyph format by number/name
   - Let bind only take an ident?
   - `mask` primitive?
+  - Re-implement map changes -_-
 - Site pages/tutorials
   - Duality of `pick` and `select`
   - Stack-source locality

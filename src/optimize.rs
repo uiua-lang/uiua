@@ -172,6 +172,10 @@ pub(crate) fn optimize_instrs_mut(
                 instrs.push(instr);
             }
         }
+        // Pop constant
+        ([.., Instr::Push(_)], Instr::Prim(Pop, _)) => {
+            instrs.pop();
+        }
         (_, instr) => instrs.push(instr),
     }
 }

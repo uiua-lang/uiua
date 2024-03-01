@@ -11,11 +11,11 @@ use std::{
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
     ast::{Item, Modifier, PlaceholderOp, Ref, Word},
-    constants, ident_modifier_args,
+    ident_modifier_args,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
     Assembly, BindingInfo, Compiler, Global, Ident, InputSrc, Inputs, Primitive, SafeSys,
-    Signature, SysBackend, UiuaError,
+    Signature, SysBackend, UiuaError, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -195,7 +195,7 @@ impl Spanner {
             if name.span != *span {
                 continue;
             }
-            let Some(constant) = constants().iter().find(|c| c.name == name.value) else {
+            let Some(constant) = CONSTANTS.iter().find(|c| c.name == name.value) else {
                 continue;
             };
             return Some(BindingDocs {
@@ -781,7 +781,7 @@ mod server {
             }
 
             // Collect constant completions
-            for constant in constants() {
+            for constant in &CONSTANTS {
                 if !constant
                     .name
                     .to_lowercase()

@@ -7,14 +7,9 @@ pub struct ConstantDef {
     /// The constant's name
     pub name: &'static str,
     /// The constant's value
-    pub value: Value,
+    pub value: Lazy<Value>,
     /// The constant's documentation
     pub doc: &'static str,
-}
-
-/// Get the list of all shadowable constants
-pub fn constants() -> &'static [ConstantDef] {
-    &*CONSTANTS
 }
 
 macro_rules! constant {
@@ -30,16 +25,16 @@ macro_rules! constant {
             )*
             count
         };
-        static CONSTANTS: Lazy<[ConstantDef; COUNT]> = Lazy::new(|| {
+        /// The list of all shadowable constants
+        pub static CONSTANTS: [ConstantDef; COUNT] =
             [$(
                 $(#[$attr])*
                 ConstantDef {
                     name: $name,
-                    value: $value.into(),
+                    value: Lazy::new(|| {$value.into()}),
                     doc: $doc,
                 },
-            )*]
-        });
+            )*];
     }
 }
 
@@ -108,6 +103,45 @@ constant!(
     (
         "LeapMonthDays",
         [31u8, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    ),
+    /// The planets of the solar system
+    (
+        "Planets",
+        ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"].as_slice()
+    ),
+    /// The symbols of the zodiac
+    (
+        "Zodiac",
+        [
+            "Aries",
+            "Taurus",
+            "Gemini",
+            "Cancer",
+            "Leo",
+            "Virgo",
+            "Libra",
+            "Scorpio",
+            "Sagittarius",
+            "Capricorn",
+            "Aquarius",
+            "Pisces"
+        ]
+        .as_slice()
+    ),
+    /// The suits of a standard deck of playing cards
+    ("Suits", ['♣', '♦', '♥', '♠']),
+    /// The ranks of a standard deck of playing cards
+    (
+        "Cards",
+        ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"].as_slice()
+    ),
+    /// The symbols of the standard chess pieces
+    (
+        "Chess",
+        Array::new(
+            [2, 6],
+            ['♟', '♜', '♞', '♝', '♛', '♚', '♙', '♖', '♘', '♗', '♕', '♔']
+        )
     ),
     ///
     (

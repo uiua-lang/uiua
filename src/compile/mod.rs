@@ -17,7 +17,7 @@ use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
     ast::*,
     check::{instrs_signature, SigCheckError},
-    constants, example_ua,
+    example_ua,
     format::format_word,
     function::*,
     ident_modifier_args,
@@ -27,7 +27,7 @@ use crate::{
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
     IntoInputSrc, IntoSysBackend, Primitive, RunMode, SysBackend, SysOp, Uiua, UiuaError,
-    UiuaResult, Value,
+    UiuaResult, Value, CONSTANTS,
 };
 
 /// The Uiua compiler
@@ -1151,7 +1151,7 @@ code:
             // Name exists in scope
             (self.code_meta.global_references).insert(span.clone().sp(ident), local.index);
             self.global_index(local.index, span, call);
-        } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
+        } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
             // Name is a built-in constant
             let instr = Instr::push(constant.value.clone());
             self.code_meta

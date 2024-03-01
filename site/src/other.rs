@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{constants, Primitive, SysOp};
+use uiua::{Primitive, SysOp, CONSTANTS};
 
 use crate::{editor::Editor, markdown::markdown, Const, Prim, Prims};
 
@@ -287,7 +287,7 @@ pub fn ImagesAndGifs() -> impl IntoView {
 #[component]
 pub fn Constants() -> impl IntoView {
     use Primitive::*;
-    let constants = constants()
+    let constants = CONSTANTS
         .iter()
         .filter(|con| !con.doc.trim().is_empty())
         .map(|con| view!(<p><Const con=con/>" - "{ con.doc }</p>))

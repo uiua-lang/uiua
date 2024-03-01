@@ -1561,8 +1561,9 @@ primitive!(
     /// [pick] and [select] also work.
     /// ex: ⍜⊡(×10) 2_1 ↯3_3⇡9
     /// ex: ⍜⊏(×10) 1_3 1_2_3_4_5
-    /// Although, [under][select] only works if the indices are unique.
-    /// ex! ⍜⊏(×10) 1_3_3 1_2_3_4_5
+    /// Although, [under][select] with duplicate indices only works if the mapping is unambiguous.
+    /// ex: ⍜⊏(×10)    1_3_3 1_2_3_4_5
+    /// ex! ⍜⊏(+1_2_3) 1_3_3 1_2_3_4_5
     /// [under][keep] works as long as the counts list is boolean.
     /// ex: ⍜▽(×10) =0◿3.⇡10
     ///

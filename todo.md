@@ -1,10 +1,12 @@
 # Uiua Todo
 
 - 0.10
+  - Re-implement map changes -_-
+  - `under fold`
+  - `rotate` pierce box
   - Unicode glyph format by number/name
   - Let bind only take an ident?
   - `mask` primitive?
-  - Re-implement map changes -_-
 - Site pages/tutorials
   - Duality of `pick` and `select`
   - Stack-source locality

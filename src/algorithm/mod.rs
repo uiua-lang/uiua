@@ -190,13 +190,19 @@ where
             .take_while(|&&dim| dim == 1)
             .count()
             .min(arr.shape.len());
-        if (target.iter().rev())
+        let same_under_fixes = (target.iter().rev())
             .zip(arr.shape[fixes..].iter().rev())
-            .all(|(b, a)| b == a)
-        {
+            .all(|(b, a)| b == a);
+        if same_under_fixes {
             arr.shape.drain(..fixes);
-            for &dim in target.iter().take(fixes).rev() {
-                arr.reshape_scalar(Ok(dim as isize));
+            if target.len() >= fixes {
+                for &dim in target.iter().take(fixes).rev() {
+                    arr.reshape_scalar(Ok(dim as isize));
+                }
+            } else if arr.shape() == target {
+                for &dim in target.iter().cycle().take(fixes) {
+                    arr.reshape_scalar(Ok(dim as isize));
+                }
             }
         }
         if shape_prefixes_match(&arr.shape, target) {

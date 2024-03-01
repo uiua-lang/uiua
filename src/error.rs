@@ -406,8 +406,9 @@ impl Report {
             }
             fragments.push(ReportFragment::Colored(kind.str().into()));
             fragments.push(ReportFragment::Plain(": ".into()));
-            for (i, line) in message.to_string().lines().enumerate() {
-                if i > 0 {
+            let message = message.to_string();
+            for (i, line) in message.lines().enumerate() {
+                if i > 0 || message.lines().count() > 1 {
                     fragments.push(ReportFragment::Newline);
                     fragments.push(ReportFragment::Plain("  ".into()));
                 }

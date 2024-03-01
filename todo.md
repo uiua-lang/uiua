@@ -7,6 +7,8 @@
   - Unicode glyph format by number/name
   - Let bind only take an ident?
   - `mask` primitive?
+  - Optimize `trans couple`
+  - `under dip both`
   - Configure grid format height limit
   - System functions
     - Clipboard

@@ -949,12 +949,33 @@ fn under_rows_pattern<'a>(
         Instr::PushFunc(make_fn(f_before, span, comp)?),
         Instr::Prim(Primitive::Rows, span),
     ];
-    let afters = eco_vec![
-        Instr::PushFunc(make_fn(f_after, span, comp)?),
+    let after_fn = make_fn(f_after, span, comp)?;
+    let after_sig = after_fn.signature();
+    let mut afters = eco_vec![
+        Instr::PushFunc(after_fn),
         Instr::Prim(Primitive::Reverse, span),
         Instr::Prim(Primitive::Rows, span),
-        Instr::Prim(Primitive::Reverse, span),
     ];
+    if after_sig.outputs > 0 {
+        afters.push(Instr::Prim(Primitive::Reverse, span));
+    }
+    for count in 1..after_sig.outputs {
+        afters.extend([
+            Instr::PushTemp {
+                stack: TempStack::Inline,
+                count,
+                span,
+            },
+            Instr::Prim(Primitive::Reverse, span),
+        ]);
+    }
+    if after_sig.outputs > 0 {
+        afters.push(Instr::PopTemp {
+            stack: TempStack::Inline,
+            count: after_sig.outputs - 1,
+            span,
+        });
+    }
     Some((input, (befores, afters)))
 }
 

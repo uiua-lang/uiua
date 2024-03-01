@@ -1283,6 +1283,18 @@ impl From<Array<u8>> for Value {
     }
 }
 #[cfg(not(feature = "bytes"))]
+impl From<EcoVec<u8>> for Value {
+    fn from(vec: EcoVec<u8>) -> Self {
+        vec.into_iter().map(|b| b as f64).collect()
+    }
+}
+#[cfg(not(feature = "bytes"))]
+impl<const N: usize> From<[u8; N]> for Value {
+    fn from(array: [u8; N]) -> Self {
+        array.iter().map(|&b| b as f64).collect()
+    }
+}
+#[cfg(not(feature = "bytes"))]
 impl FromIterator<u8> for Value {
     fn from_iter<I: IntoIterator<Item = u8>>(iter: I) -> Self {
         iter.into_iter().map(|b| b as f64).collect()

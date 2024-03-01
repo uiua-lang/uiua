@@ -2410,5 +2410,4 @@ impl_primitive!(
     (1, ReplaceRand),
     (2, ReplaceRand2),
     (2, Adjacent),
-    (2, TransCouple),
 );

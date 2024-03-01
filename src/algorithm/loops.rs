@@ -321,10 +321,10 @@ pub fn unpartition_part2(env: &mut Uiua) -> UiuaResult {
                     untransformed_row.row_count(),
                 )));
             }
-            for (index, row) in indices.into_iter().zip(untransformed_row.into_rows()) {
+            for (index, mut row) in indices.into_iter().zip(untransformed_row.into_rows()) {
                 let start = index * row_elem_count;
                 original.generic_bin_mut(
-                    row,
+                    &mut row,
                     |a, b| Ok(update_array_at(a, start, b.data.as_slice())),
                     |a, b| Ok(update_array_at(a, start, b.data.as_slice())),
                     |a, b| Ok(update_array_at(a, start, b.data.as_slice())),

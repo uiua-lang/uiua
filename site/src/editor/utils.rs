@@ -812,14 +812,20 @@ fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
     let mut error = None;
     let mut comp = Compiler::with_backend(WebBackend::default());
     let (mut values, io) = match comp.load_str(code).map(|comp| rt.run_compiler(comp)) {
-        Ok(Ok(_)) => (rt.take_stack(), rt.take_backend::<WebBackend>().unwrap()),
+        Ok(Ok(_)) => (
+            rt.take_stack(),
+            rt.downcast_backend::<WebBackend>().unwrap(),
+        ),
         Ok(Err(e)) => {
             error = Some(e);
-            (rt.take_stack(), rt.take_backend::<WebBackend>().unwrap())
+            (
+                rt.take_stack(),
+                rt.downcast_backend::<WebBackend>().unwrap(),
+            )
         }
         Err(e) => {
             error = Some(e);
-            (Vec::new(), comp.take_backend::<WebBackend>().unwrap())
+            (Vec::new(), rt.downcast_backend::<WebBackend>().unwrap())
         }
     };
     if get_top_at_top() {

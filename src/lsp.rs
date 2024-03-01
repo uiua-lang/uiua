@@ -72,6 +72,8 @@ pub(crate) struct CodeMeta {
     pub global_references: HashMap<Sp<Ident>, usize>,
     /// Spans of bare inline functions and their signatures and whether they are explicit
     pub inline_function_sigs: InlineSigs,
+    /// A map of macro invoations to their expansions
+    pub macro_expansions: HashMap<CodeSpan, (Ident, String)>,
 }
 
 #[derive(Clone, Copy)]
@@ -887,35 +889,60 @@ mod server {
             };
             let (line, col) = lsp_pos_to_uiua(params.range.start);
             let mut actions = Vec::new();
+
             // Add explicit signature
             for (span, inline) in &doc.code_meta.inline_function_sigs {
-                if span.contains_line_col(line, col) {
-                    if inline.explicit {
-                        continue;
-                    }
-                    let mut insertion_span = span.just_start(&doc.asm.inputs);
-                    insertion_span.start = insertion_span.end;
-                    actions.push(CodeActionOrCommand::CodeAction(CodeAction {
-                        title: "Add explicit signature".into(),
-                        kind: Some(CodeActionKind::QUICKFIX),
-                        edit: Some(WorkspaceEdit {
-                            changes: Some(
-                                [(
-                                    params.text_document.uri,
-                                    vec![TextEdit {
-                                        range: uiua_span_to_lsp(&insertion_span),
-                                        new_text: format!("{} ", inline.sig),
-                                    }],
-                                )]
-                                .into(),
-                            ),
-                            ..Default::default()
-                        }),
-                        ..Default::default()
-                    }));
-                    break;
+                if inline.explicit || !span.contains_line_col(line, col) {
+                    continue;
                 }
+                let mut insertion_span = span.just_start(&doc.asm.inputs);
+                insertion_span.start = insertion_span.end;
+                actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                    title: "Add explicit signature".into(),
+                    kind: Some(CodeActionKind::QUICKFIX),
+                    edit: Some(WorkspaceEdit {
+                        changes: Some(
+                            [(
+                                params.text_document.uri.clone(),
+                                vec![TextEdit {
+                                    range: uiua_span_to_lsp(&insertion_span),
+                                    new_text: format!("{} ", inline.sig),
+                                }],
+                            )]
+                            .into(),
+                        ),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }));
+                break;
             }
+
+            // Expand macro
+            for (span, (name, expanded)) in &doc.code_meta.macro_expansions {
+                if !span.contains_line_col(line, col) {
+                    continue;
+                }
+                actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                    title: format!("Expand macro {name}"),
+                    kind: Some(CodeActionKind::REFACTOR_INLINE),
+                    edit: Some(WorkspaceEdit {
+                        changes: Some(
+                            [(
+                                params.text_document.uri.clone(),
+                                vec![TextEdit {
+                                    range: uiua_span_to_lsp(span),
+                                    new_text: expanded.clone(),
+                                }],
+                            )]
+                            .into(),
+                        ),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }));
+            }
+
             Ok(if actions.is_empty() {
                 None
             } else {

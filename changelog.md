@@ -21,6 +21,8 @@ This version is not yet released. If you are reading this on the website, then t
   - This is useful in array macros
 - Add `# No inline!` semantic comment, which prevents a function and its callers from being inlined
   - This enables stack traces on errors
+### Interpreter
+- Add macro expansions as code actions to the language server
 
 ## 0.9.5 - 2024-02-28
 ### Interpreter

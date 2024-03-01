@@ -447,6 +447,21 @@ pub fn format_file<P: AsRef<Path>>(
     Ok(formatted)
 }
 
+pub(crate) fn format_words(words: &[Sp<Word>], inputs: &Inputs) -> String {
+    let mut formatter = Formatter {
+        src: InputSrc::Str(0),
+        config: &FormatConfig::default(),
+        inputs,
+        output: String::new(),
+        glyph_map: Vec::new(),
+        end_of_line_comments: Vec::new(),
+        prev_import_function: None,
+        output_comments: None,
+    };
+    formatter.format_words(words, true, 0, true);
+    formatter.output
+}
+
 pub(crate) fn format_word(word: &Sp<Word>, inputs: &Inputs) -> String {
     let mut formatter = Formatter {
         src: InputSrc::Str(0),

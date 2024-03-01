@@ -1535,62 +1535,6 @@ code:
         let function = self.create_function(signature, f);
         self.bind_function(name, function)
     }
-    fn expand_macro(
-        &mut self,
-        macro_words: &mut Vec<Sp<Word>>,
-        operands: Vec<Sp<Word>>,
-    ) -> UiuaResult {
-        let mut ops = collect_placeholder(macro_words);
-        ops.reverse();
-        let mut ph_stack: Vec<Sp<Word>> =
-            operands.into_iter().filter(|w| w.value.is_code()).collect();
-        let mut replaced = Vec::new();
-        for op in ops {
-            let span = op.span;
-            let op = op.value;
-            let mut pop = || {
-                (ph_stack.pop())
-                    .ok_or_else(|| self.fatal_error(span.clone(), "Operand stack is empty"))
-            };
-            match op {
-                PlaceholderOp::Call => replaced.push(pop()?),
-                PlaceholderOp::Dup => {
-                    let a = pop()?;
-                    ph_stack.push(a.clone());
-                    ph_stack.push(a);
-                }
-                PlaceholderOp::Flip => {
-                    let a = pop()?;
-                    let b = pop()?;
-                    ph_stack.push(a);
-                    ph_stack.push(b);
-                }
-                PlaceholderOp::Over => {
-                    let a = pop()?;
-                    let b = pop()?;
-                    ph_stack.push(b.clone());
-                    ph_stack.push(a);
-                    ph_stack.push(b);
-                }
-            }
-        }
-        if !ph_stack.is_empty() {
-            let span = (ph_stack.first().unwrap().span.clone())
-                .merge(ph_stack.last().unwrap().span.clone());
-            self.emit_diagnostic(
-                format!(
-                    "Macro operand stack has {} item{} left",
-                    ph_stack.len(),
-                    if ph_stack.len() == 1 { "" } else { "s" }
-                ),
-                DiagnosticKind::Warning,
-                span,
-            );
-        }
-        let mut operands = replaced.into_iter().rev();
-        replace_placeholders(macro_words, &mut || operands.next().unwrap());
-        Ok(())
-    }
 }
 
 fn words_look_pervasive(words: &[Sp<Word>]) -> bool {

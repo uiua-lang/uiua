@@ -1,5 +1,7 @@
 //! Compiler code for modifiers
 
+use crate::format::format_words;
+
 use super::*;
 
 impl Compiler {
@@ -173,7 +175,12 @@ impl Compiler {
                 if let Some(mut words) = self.stack_macros.get(&local.index).cloned() {
                     // Stack macros
                     let instrs = self
-                        .expand_macro(&mut words, modified.operands)
+                        .expand_macro(
+                            r.name.value.clone(),
+                            &mut words,
+                            modified.operands,
+                            modified.modifier.span.clone(),
+                        )
                         .and_then(|()| self.compile_words(words, true));
                     let instrs = instrs?;
                     match instrs_signature(&instrs) {
@@ -196,6 +203,8 @@ impl Compiler {
                     }
                 } else if let Some(function) = self.array_macros.get(&local.index).cloned() {
                     // Array macros
+                    let full_span = (modified.modifier.span.clone())
+                        .merge(modified.operands.last().unwrap().span.clone());
 
                     // Collect operands as strings
                     let mut operands: Vec<Sp<Word>> = (modified.operands.into_iter())
@@ -252,7 +261,7 @@ impl Compiler {
                         } else {
                             for row in val.into_rows() {
                                 let s = row.as_string(env, "Macro output rows must be strings")?;
-                                if !code.is_empty() {
+                                if code.chars().last().is_some_and(|c| !c.is_whitespace()) {
                                     code.push(' ');
                                 }
                                 code.push_str(&s);
@@ -263,6 +272,9 @@ impl Compiler {
                     .map_err(|e| e.trace_macro(modified.modifier.span.clone()))?;
 
                     // Quote
+                    self.code_meta
+                        .macro_expansions
+                        .insert(full_span, (r.name.value.clone(), code.clone()));
                     self.quote(&code, &modified.modifier.span, call)?;
                 } else {
                     return Err(self.fatal_error(
@@ -897,6 +909,75 @@ impl Compiler {
         self.handle_primitive_experimental(prim, &modified.modifier.span);
         self.handle_primitive_deprecation(prim, &modified.modifier.span);
         Ok(true)
+    }
+    /// Expand a stack macro
+    fn expand_macro(
+        &mut self,
+        name: Ident,
+        macro_words: &mut Vec<Sp<Word>>,
+        operands: Vec<Sp<Word>>,
+        span: CodeSpan,
+    ) -> UiuaResult {
+        let mut ops = collect_placeholder(macro_words);
+        ops.reverse();
+        let span = span.merge(operands.last().unwrap().span.clone());
+        let mut ph_stack: Vec<Sp<Word>> =
+            operands.into_iter().filter(|w| w.value.is_code()).collect();
+        let mut replaced = Vec::new();
+        for op in ops {
+            let span = op.span;
+            let op = op.value;
+            let mut pop = || {
+                (ph_stack.pop())
+                    .ok_or_else(|| self.fatal_error(span.clone(), "Operand stack is empty"))
+            };
+            match op {
+                PlaceholderOp::Call => replaced.push(pop()?),
+                PlaceholderOp::Dup => {
+                    let a = pop()?;
+                    ph_stack.push(a.clone());
+                    ph_stack.push(a);
+                }
+                PlaceholderOp::Flip => {
+                    let a = pop()?;
+                    let b = pop()?;
+                    ph_stack.push(a);
+                    ph_stack.push(b);
+                }
+                PlaceholderOp::Over => {
+                    let a = pop()?;
+                    let b = pop()?;
+                    ph_stack.push(b.clone());
+                    ph_stack.push(a);
+                    ph_stack.push(b);
+                }
+            }
+        }
+        if !ph_stack.is_empty() {
+            let span = (ph_stack.first().unwrap().span.clone())
+                .merge(ph_stack.last().unwrap().span.clone());
+            self.emit_diagnostic(
+                format!(
+                    "Macro operand stack has {} item{} left",
+                    ph_stack.len(),
+                    if ph_stack.len() == 1 { "" } else { "s" }
+                ),
+                DiagnosticKind::Warning,
+                span,
+            );
+        }
+        let mut operands = replaced.into_iter().rev();
+        replace_placeholders(macro_words, &mut || operands.next().unwrap());
+        let mut words_to_format = Vec::new();
+        for word in &*macro_words {
+            match &word.value {
+                Word::Func(func) => words_to_format.extend(func.lines.iter().flatten().cloned()),
+                _ => words_to_format.push(word.clone()),
+            }
+        }
+        let formatted = format_words(&words_to_format, &self.asm.inputs);
+        (self.code_meta.macro_expansions).insert(span, (name, formatted));
+        Ok(())
     }
     fn quote(&mut self, code: &str, span: &CodeSpan, call: bool) -> UiuaResult {
         let (items, errors, _) = parse(

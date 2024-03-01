@@ -48,30 +48,34 @@ pub(crate) fn optimize_instrs_mut(
         (
             [.., Instr::PushTemp {
                 stack: a_stack,
+                class: a_class,
                 count: a_count,
                 ..
             }],
             Instr::PushTemp {
                 stack: b_stack,
+                class: b_class,
                 count: b_count,
                 ..
             },
-        ) if *a_stack == b_stack => {
+        ) if *a_stack == b_stack && *a_class == b_class => {
             *a_count += b_count;
         }
         // Combine pop temps
         (
             [.., Instr::PopTemp {
                 stack: a_stack,
+                class: a_class,
                 count: a_count,
                 ..
             }],
             Instr::PopTemp {
                 stack: b_stack,
+                class: b_class,
                 count: b_count,
                 ..
             },
-        ) if *a_stack == b_stack => {
+        ) if *a_stack == b_stack && *a_class == b_class => {
             *a_count += b_count;
         }
         // Dips

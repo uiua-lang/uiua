@@ -7,6 +7,10 @@
   - Unicode glyph format by number/name
   - Let bind only take an ident?
   - `mask` primitive?
+  - Configure grid format height limit
+  - System functions
+    - Clipboard
+    - Excel
 - Site pages/tutorials
   - Duality of `pick` and `select`
   - Stack-source locality

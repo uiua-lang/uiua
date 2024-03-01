@@ -381,6 +381,16 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 {
             return Err(env.error("Cannot unjoin scalar"));
         }
+        if ash.is_empty() && bsh.is_empty() {
+            if self.row_count() != 2 {
+                return Err(env.error(format!(
+                    "Attempted to undo join, but the \
+                    array's row count changed from 2 to {}",
+                    self.row_count()
+                )));
+            }
+            return self.uncouple(env);
+        }
         match ash.len().cmp(&bsh.len()) {
             Ordering::Equal => {
                 if self.row_count() != ash[0] + bsh[0] {

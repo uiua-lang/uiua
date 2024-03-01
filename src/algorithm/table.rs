@@ -3,8 +3,11 @@
 use ecow::eco_vec;
 
 use crate::{
-    algorithm::pervade::*, function::Function, random, value::Value, Array, ArrayValue,
-    ImplPrimitive, Primitive, Shape, Uiua, UiuaResult,
+    algorithm::{pervade::*, zip::rows1},
+    function::Function,
+    random,
+    value::Value,
+    Array, ArrayValue, ImplPrimitive, Primitive, Shape, Uiua, UiuaResult,
 };
 
 use super::{loops::flip, multi_output, validate_size};
@@ -16,10 +19,8 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(1)?;
     let ys = env.pop(2)?;
     match sig.args {
-        0 | 1 => Err(env.error(format!(
-            "{}'s function must take at least 2 arguments, but its signature is {sig}",
-            Primitive::Table.format()
-        ))),
+        0 => env.call(f),
+        1 => rows1(f, xs, env),
         2 if xs.rank() <= 1 && ys.rank() <= 1 => table_list(f, xs, ys, env),
         _ => generic_table(f, xs, ys, env),
     }

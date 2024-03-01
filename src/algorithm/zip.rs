@@ -383,7 +383,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
+pub fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, d)) = f_mon_fast_fn(&f, env) {
         let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
         if !maybe_through_boxes {

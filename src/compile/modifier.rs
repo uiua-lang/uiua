@@ -782,6 +782,35 @@ impl Compiler {
                 ];
                 finish!(instrs, Signature::new(1, 1));
             }
+            Table => {
+                // Normalize table compilation, but get some diagnostics
+                let operand = modified.code_operands().next().cloned().unwrap();
+                let op_span = operand.span.clone();
+                let function_id = FunctionId::Anonymous(op_span.clone());
+                let (instrs, sig) = self.compile_operand_word(operand)?;
+                match sig.args {
+                    0 => self.emit_diagnostic(
+                        format!("{} of 0 arguments is redundant", Table.format()),
+                        DiagnosticKind::Advice,
+                        op_span,
+                    ),
+                    1 => self.emit_diagnostic(
+                        format!(
+                            "{} with 1 argument is just {rows}. \
+                            Use {rows} instead.",
+                            Table.format(),
+                            rows = Rows.format()
+                        ),
+                        DiagnosticKind::Advice,
+                        op_span,
+                    ),
+                    _ => {}
+                }
+                let func = self.add_function(function_id, sig, instrs);
+                let span = self.add_span(modified.modifier.span.clone());
+                let instrs = [Instr::PushFunc(func), Instr::Prim(Table, span)];
+                finish!(instrs, sig);
+            }
             Content => {
                 let operand = modified.code_operands().next().cloned().unwrap();
                 let (instrs, sig) = self.compile_operand_word(operand)?;

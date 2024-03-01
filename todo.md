@@ -1,8 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Optimize `trans couple` 
-  - `under dip both`
   - Re-implement map changes -_-
   - `under fold`
   - `mask` primitive?
@@ -13,6 +11,7 @@
     - Clipboard
     - Excel
 - Site pages/tutorials
+  - Working with strings
   - Duality of `pick` and `select`
   - Stack-source locality
 - Changle how function inlining works

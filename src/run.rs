@@ -611,18 +611,14 @@ code:
                 &Instr::TouchStack { count, span } => {
                     self.with_span(span, |env| env.touch_array_stack(count))
                 }
-                &Instr::PushTemp {
-                    stack, count, span, ..
-                } => self.with_span(span, |env| {
+                &Instr::PushTemp { stack, count, span } => self.with_span(span, |env| {
                     for i in 0..count {
                         let value = env.pop(i + 1)?;
                         env.rt.temp_stacks[stack as usize].push(value);
                     }
                     Ok(())
                 }),
-                &Instr::PopTemp {
-                    stack, count, span, ..
-                } => self.with_span(span, |env| {
+                &Instr::PopTemp { stack, count, span } => self.with_span(span, |env| {
                     for _ in 0..count {
                         let value = env.rt.temp_stacks[stack as usize].pop().ok_or_else(|| {
                             env.error(format!(

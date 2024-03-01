@@ -420,14 +420,12 @@ impl Compiler {
                             0,
                             Instr::PushTemp {
                                 stack: TempStack::Inline,
-                                class: TempClass::Any,
                                 count: 1,
                                 span,
                             },
                         );
                         instrs.push(Instr::PopTemp {
                             stack: TempStack::Inline,
-                            class: TempClass::Any,
                             count: 1,
                             span,
                         });
@@ -448,7 +446,6 @@ impl Compiler {
                         );
                         instrs.push(Instr::PopTemp {
                             stack: TempStack::Inline,
-                            class: TempClass::Any,
                             count: 1,
                             span,
                         });
@@ -486,7 +483,6 @@ impl Compiler {
                 let count = a_sig.args.max(b_sig.args);
                 let mut instrs = vec![Instr::PushTemp {
                     stack: TempStack::Inline,
-                    class: TempClass::Any,
                     count,
                     span,
                 }];
@@ -508,7 +504,6 @@ impl Compiler {
                 }
                 instrs.push(Instr::PopTemp {
                     stack: TempStack::Inline,
-                    class: TempClass::Any,
                     count: a_sig.args,
                     span,
                 });
@@ -558,7 +553,6 @@ impl Compiler {
                 if count > 0 {
                     instrs.push(Instr::PopTemp {
                         stack: TempStack::Inline,
-                        class: TempClass::Any,
                         count,
                         span,
                     });
@@ -588,14 +582,12 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 let mut instrs = vec![Instr::PushTemp {
                     stack: TempStack::Inline,
-                    class: TempClass::Any,
                     count: a_sig.args,
                     span,
                 }];
                 instrs.extend(b_instrs);
                 instrs.push(Instr::PopTemp {
                     stack: TempStack::Inline,
-                    class: TempClass::Any,
                     count: a_sig.args,
                     span,
                 });
@@ -703,14 +695,12 @@ impl Compiler {
                     0,
                     Instr::PushTemp {
                         stack: TempStack::Inline,
-                        class: TempClass::Both,
                         count: sig.args,
                         span,
                     },
                 );
                 instrs.push(Instr::PopTemp {
                     stack: TempStack::Inline,
-                    class: TempClass::Both,
                     count: sig.args,
                     span,
                 });
@@ -842,7 +832,6 @@ impl Compiler {
                     if sig.args > 1 {
                         prefix.push(Instr::PushTemp {
                             stack: TempStack::Inline,
-                            class: TempClass::Any,
                             count: sig.args - 1,
                             span,
                         });
@@ -851,7 +840,6 @@ impl Compiler {
                                 Instr::ImplPrim(ImplPrimitive::InvBox, span),
                                 Instr::PopTemp {
                                     stack: TempStack::Inline,
-                                    class: TempClass::Any,
                                     count: 1,
                                     span,
                                 },

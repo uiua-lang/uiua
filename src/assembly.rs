@@ -6,8 +6,7 @@ use serde::*;
 
 use crate::{
     CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc, Instr,
-    IntoInputSrc, LocalName, Primitive, Signature, Span, TempClass, TempStack, Uiua, UiuaResult,
-    Value,
+    IntoInputSrc, LocalName, Primitive, Signature, Span, TempStack, Uiua, UiuaResult, Value,
 };
 
 /// A compiled Uiua assembly
@@ -292,8 +291,8 @@ enum InstrRep {
     GetLocal(usize, usize),
     Unpack(usize, usize, bool),
     TouchStack(usize, usize),
-    PushTemp(TempStack, TempClass, usize, usize),
-    PopTemp(TempStack, TempClass, usize, usize),
+    PushTemp(TempStack, usize, usize),
+    PopTemp(TempStack, usize, usize),
     CopyToTemp(TempStack, usize, usize),
     CopyFromTemp(TempStack, usize, usize, usize),
     DropTemp(TempStack, usize, usize),
@@ -336,18 +335,8 @@ impl From<Instr> for InstrRep {
             Instr::GetLocal { index, span } => Self::GetLocal(index, span),
             Instr::Unpack { count, span, unbox } => Self::Unpack(count, span, unbox),
             Instr::TouchStack { count, span } => Self::TouchStack(count, span),
-            Instr::PushTemp {
-                stack,
-                class,
-                count,
-                span,
-            } => Self::PushTemp(stack, class, count, span),
-            Instr::PopTemp {
-                stack,
-                class,
-                count,
-                span,
-            } => Self::PopTemp(stack, class, count, span),
+            Instr::PushTemp { stack, count, span } => Self::PushTemp(stack, count, span),
+            Instr::PopTemp { stack, count, span } => Self::PopTemp(stack, count, span),
             Instr::CopyToTemp { stack, count, span } => Self::CopyToTemp(stack, count, span),
             Instr::CopyFromTemp {
                 stack,
@@ -391,18 +380,8 @@ impl From<InstrRep> for Instr {
             InstrRep::GetLocal(index, span) => Self::GetLocal { index, span },
             InstrRep::Unpack(count, span, unbox) => Self::Unpack { count, span, unbox },
             InstrRep::TouchStack(count, span) => Self::TouchStack { count, span },
-            InstrRep::PushTemp(stack, class, count, span) => Self::PushTemp {
-                stack,
-                class,
-                count,
-                span,
-            },
-            InstrRep::PopTemp(stack, class, count, span) => Self::PopTemp {
-                stack,
-                class,
-                count,
-                span,
-            },
+            InstrRep::PushTemp(stack, count, span) => Self::PushTemp { stack, count, span },
+            InstrRep::PopTemp(stack, count, span) => Self::PopTemp { stack, count, span },
             InstrRep::CopyToTemp(stack, count, span) => Self::CopyToTemp { stack, count, span },
             InstrRep::CopyFromTemp(stack, offset, count, span) => Self::CopyFromTemp {
                 stack,

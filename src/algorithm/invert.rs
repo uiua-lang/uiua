@@ -7,7 +7,7 @@ use ecow::{eco_vec, EcoVec};
 use crate::{
     check::instrs_signature,
     primitive::{ImplPrimitive, Primitive},
-    Compiler, Function, FunctionId, Instr, Signature, Span, SysOp, TempClass, TempStack, Value,
+    Compiler, Function, FunctionId, Instr, Signature, Span, SysOp, TempStack, Value,
 };
 
 fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
@@ -620,7 +620,6 @@ fn under_setunder_pattern<'a>(
     if to_save > 0 {
         befores.push(Instr::PushTemp {
             stack: TempStack::Under,
-            class: TempClass::Any,
             count: to_save,
             span: *span,
         });
@@ -628,7 +627,6 @@ fn under_setunder_pattern<'a>(
             0,
             Instr::PopTemp {
                 stack: TempStack::Under,
-                class: TempClass::Any,
                 count: to_save,
                 span: *span,
             },
@@ -674,11 +672,6 @@ macro_rules! temp_wrap {
             else {
                 return None;
             };
-            let cl = if let Instr::PushTemp { class, .. } = instr {
-                class
-            } else {
-                &TempClass::Any
-            };
             // Find end
             let mut depth = 1;
             let mut max_depth = 1;
@@ -688,26 +681,21 @@ macro_rules! temp_wrap {
                     Instr::PushTemp {
                         count,
                         stack: TempStack::Inline,
-                        class,
                         ..
-                    } if class == cl => {
-                        depth += *count;
-                        max_depth = max_depth.max(depth);
                     }
-                    Instr::CopyToTemp {
+                    | Instr::CopyToTemp {
                         count,
                         stack: TempStack::Inline,
                         ..
-                    } if *cl == TempClass::Any => {
+                    } => {
                         depth += *count;
                         max_depth = max_depth.max(depth);
                     }
                     Instr::PopTemp {
                         count,
                         stack: TempStack::Inline,
-                        class,
                         ..
-                    } if class == cl => {
+                    } => {
                         depth = depth.saturating_sub(*count);
                         if depth == 0 {
                             end = i;
@@ -975,7 +963,6 @@ fn under_rows_pattern<'a>(
         afters.extend([
             Instr::PushTemp {
                 stack: TempStack::Inline,
-                class: TempClass::Any,
                 count,
                 span,
             },
@@ -985,7 +972,6 @@ fn under_rows_pattern<'a>(
     if after_sig.outputs > 0 {
         afters.push(Instr::PopTemp {
             stack: TempStack::Inline,
-            class: TempClass::Any,
             count: after_sig.outputs - 1,
             span,
         });
@@ -1085,7 +1071,6 @@ fn under_switch_pattern<'a>(
     afters.extend([
         Instr::PopTemp {
             stack: TempStack::Under,
-            class: TempClass::Any,
             count: 1,
             span: *span,
         },
@@ -1127,19 +1112,16 @@ macro_rules! partition_group {
                 Instr::ImplPrim(ImplPrimitive::$impl_prim1, span),
                 Instr::PushTemp {
                     stack: TempStack::Inline,
-                    class: TempClass::Any,
                     count: 1,
                     span
                 },
                 Instr::PopTemp {
                     stack: TempStack::Under,
-                    class: TempClass::Any,
                     count: 2,
                     span
                 },
                 Instr::PopTemp {
                     stack: TempStack::Inline,
-                    class: TempClass::Any,
                     count: 1,
                     span
                 },
@@ -1334,7 +1316,6 @@ fn under_repeat_pattern<'a>(
             let afters = eco_vec![
                 Instr::PopTemp {
                     stack: TempStack::Under,
-                    class: TempClass::Any,
                     count: 1,
                     span: *span
                 },
@@ -1751,7 +1732,6 @@ impl AsInstr for PushTempN {
     fn as_instr(&self, span: usize) -> Instr {
         Instr::PushTemp {
             stack: TempStack::Under,
-            class: TempClass::Any,
             count: self.0,
             span,
         }
@@ -1776,7 +1756,6 @@ impl AsInstr for PopTempN {
     fn as_instr(&self, span: usize) -> Instr {
         Instr::PopTemp {
             stack: TempStack::Under,
-            class: TempClass::Any,
             count: self.0,
             span,
         }

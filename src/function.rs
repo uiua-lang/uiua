@@ -92,13 +92,11 @@ pub enum Instr {
     },
     PushTemp {
         stack: TempStack,
-        class: TempClass,
         count: usize,
         span: usize,
     },
     PopTemp {
         stack: TempStack,
-        class: TempClass,
         count: usize,
         span: usize,
     },
@@ -136,17 +134,6 @@ pub enum TempStack {
     Under,
     /// A stack used when inlining some functions
     Inline,
-}
-
-/// A marker for combinable temp stack instructions
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence, Serialize, Deserialize,
-)]
-pub enum TempClass {
-    /// The generic class
-    Any,
-    /// Both-like temp stack usage
-    Both,
 }
 
 impl fmt::Display for TempStack {

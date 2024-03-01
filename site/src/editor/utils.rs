@@ -628,12 +628,15 @@ fn set_code_html(id: &str, code: &str) {
                     SpanKind::Label => {
                         let label = text.trim_start_matches('$');
                         let mut components = [0f32; 3];
-                        for (i, c) in label.bytes().chain(label.bytes().take(2)).enumerate() {
-                            let c = (c.overflowing_add(c % 2 + 1).0)
-                                .overflowing_pow((i as u8 + 1).overflowing_mul(c).0 as u32)
-                                .0;
-                            components[i % 3] += c as f32 / 255.0 / (i / 3 + 1) as f32;
-                            components[i % 3] = components[i % 3].fract();
+                        const MIN: f32 = 0.2;
+                        const MAX: f32 = 0.8;
+                        let first = label.bytes().next();
+                        for (i, c) in label.bytes().map(|c| c.to_ascii_lowercase()).enumerate() {
+                            let j = (i + first.unwrap().to_ascii_lowercase() as usize) % 3;
+                            let mul = 1.0 - (i / 3 % 3) as f32 * 0.333;
+                            let t = mul * (c.saturating_sub(b'a') as f32 / 26.0);
+                            let target = MIN + (MAX - MIN) * t;
+                            components[j] = components[j].max(target);
                         }
                         // Normalize to a pastel color
                         for c in &mut components {

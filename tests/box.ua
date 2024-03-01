@@ -48,3 +48,6 @@
 ⍤⟜≍: {"olleh" "dlrow"} ∵(⇌){"hello" "world"}
 ⍤⟜≍: ¤{"olleh" "dlrow"} ∵⇌¤{"hello" "world"}
 ⍤⟜≍: ¤{"olleh" "dlrow"} ∵(⇌)¤{"hello" "world"}
+
+⍤⟜≍: □[2 3 1] ↻1 □[1 2 3]
+⍤⟜≍: {2_3_1 5_6_4} ≡↻1 {1_2_3 4_5_6}

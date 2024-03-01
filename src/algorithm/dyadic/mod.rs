@@ -67,7 +67,7 @@ impl<T: Clone + std::fmt::Debug> Array<T> {
         mut a_depth: usize,
         mut b_depth: usize,
         ctx: &C,
-        f: impl Fn(&[usize], &mut [T], &[usize], &[U], &C) -> Result<(), C::Error>,
+        mut f: impl FnMut(&[usize], &mut [T], &[usize], &[U], &C) -> Result<(), C::Error>,
     ) -> Result<(), C::Error> {
         let a = self;
         let mut b = other;
@@ -658,23 +658,8 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// Use this value to `rotate` another
-    pub fn rotate(&self, mut rotated: Self, env: &Uiua) -> UiuaResult<Self> {
-        let by = self.as_ints(env, "Rotation amount must be a list of integers")?;
-        #[cfg(feature = "bytes")]
-        if env.scalar_fill::<f64>().is_ok() {
-            if let Value::Byte(bytes) = &rotated {
-                rotated = bytes.convert_ref::<f64>().into();
-            }
-        }
-        match &mut rotated {
-            Value::Num(a) => a.rotate(&by, env)?,
-            #[cfg(feature = "bytes")]
-            Value::Byte(a) => a.rotate(&by, env)?,
-            Value::Complex(a) => a.rotate(&by, env)?,
-            Value::Char(a) => a.rotate(&by, env)?,
-            Value::Box(a) => a.rotate(&by, env)?,
-        }
-        Ok(rotated)
+    pub fn rotate(&self, rotated: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.rotate_depth(rotated, 0, 0, env)
     }
     pub(crate) fn rotate_depth(
         &self,
@@ -683,7 +668,7 @@ impl Value {
         b_depth: usize,
         env: &Uiua,
     ) -> UiuaResult<Self> {
-        let by = self.as_integer_array(env, "Rotation amount must be an array of integers")?;
+        let by_ints = || self.as_integer_array(env, "Rotation amount must be an array of integers");
         #[cfg(feature = "bytes")]
         if env.scalar_fill::<f64>().is_ok() {
             if let Value::Byte(bytes) = &rotated {
@@ -691,12 +676,17 @@ impl Value {
             }
         }
         match &mut rotated {
-            Value::Num(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            Value::Num(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             #[cfg(feature = "bytes")]
-            Value::Byte(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
-            Value::Complex(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
-            Value::Char(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
-            Value::Box(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            Value::Byte(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
+            Value::Complex(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
+            Value::Char(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
+            Value::Box(a) if a.rank() == a_depth => {
+                for Boxed(val) in a.data.as_mut_slice() {
+                    *val = self.rotate_depth(take(val), a_depth, b_depth, env)?;
+                }
+            }
+            Value::Box(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
         }
         Ok(rotated)
     }
@@ -704,21 +694,8 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     /// `rotate` this array by the given amount
-    pub fn rotate(&mut self, by: &[isize], env: &Uiua) -> UiuaResult {
-        if by.len() > self.rank() {
-            return Err(env.error(format!(
-                "Cannot rotate rank {} array with index of length {}",
-                self.rank(),
-                by.len()
-            )));
-        }
-        let data = self.data.as_mut_slice();
-        rotate(by, &self.shape, data);
-        if let Ok(fill) = env.scalar_fill::<T>() {
-            fill_shift(by, &self.shape, data, fill);
-            self.reset_meta_flags();
-        }
-        Ok(())
+    pub fn rotate(&mut self, by: Array<isize>, env: &Uiua) -> UiuaResult {
+        self.rotate_depth(by, 0, 0, env)
     }
     pub(crate) fn rotate_depth(
         &mut self,
@@ -727,13 +704,30 @@ impl<T: ArrayValue> Array<T> {
         by_depth: usize,
         env: &Uiua,
     ) -> UiuaResult {
+        let mut filled = false;
+        let fill = env.scalar_fill::<T>();
         self.depth_slices(&by, depth, by_depth, env, |ash, a, bsh, b, env| {
             if bsh.len() > 1 {
                 return Err(env.error(format!("Cannot rotate by rank {} array", bsh.len())));
             }
+            if b.len() > ash.len() {
+                return Err(env.error(format!(
+                    "Cannot rotate rank {} array with index of length {}",
+                    ash.len(),
+                    b.len()
+                )));
+            }
             rotate(b, ash, a);
+            if let Ok(fill) = &fill {
+                fill_shift(b, ash, a, fill.clone());
+                filled = true;
+            }
             Ok(())
-        })
+        })?;
+        if filled {
+            self.reset_meta_flags();
+        }
+        Ok(())
     }
 }
 

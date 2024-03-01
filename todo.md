@@ -1,15 +1,14 @@
 # Uiua Todo
 
 - 0.10
+  - Optimize `trans couple` 
+  - `under dip both`
   - Re-implement map changes -_-
   - `under fold`
-  - `rotate` pierce box
+  - `mask` primitive?
+  - Configure grid format height limit
   - Unicode glyph format by number/name
   - Let bind only take an ident?
-  - `mask` primitive?
-  - Optimize `trans couple`
-  - `under dip both`
-  - Configure grid format height limit
   - System functions
     - Clipboard
     - Excel

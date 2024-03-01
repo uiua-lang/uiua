@@ -112,7 +112,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         &(Val, invert_repeat_pattern),
         &(Val, ([Rotate], [Neg, Rotate])),
         &([Rotate], [Neg, Rotate]),
-        &pat!(Sqrt, (2, Pow)),
+        &pat!(Sqrt, (Dup, Mul)),
         &(Val, IgnoreMany(Flip), ([Add], [Sub])),
         &(Val, ([Sub], [Add])),
         &(Val, ([Flip, Sub], [Flip, Sub])),

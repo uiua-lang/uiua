@@ -945,27 +945,21 @@ pub mod pow {
     }
     #[cfg(feature = "bytes")]
     pub fn byte_byte(a: u8, b: u8) -> f64 {
-        let a = (f64::from)(a);
-        let b = (f64::from)(b);
-        b.powf(a)
+        f64::from(b).powf(f64::from(a))
     }
     #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> f64 {
-        let a = (f64::from)(a);
-        b.powf(a)
+        b.powi(a as i32)
     }
     #[cfg(feature = "bytes")]
     pub fn num_byte(a: f64, b: u8) -> f64 {
-        let b = (f64::from)(b);
-        b.powf(a)
+        f64::from(b).powf(a)
     }
     pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
-        let b = b.into();
-        b.powc(a)
+        b.into().powc(a)
     }
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
-        let a = a.into();
-        b.powc(a)
+        b.powc(a.into())
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the power of {a} to {b}"))

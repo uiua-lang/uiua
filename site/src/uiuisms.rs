@@ -176,7 +176,7 @@ uiuisms!(
     /// Split an array by a delimiter with fill elements
     r#"⬚@ ⊜∘≠, @, "split,this,up""#,
     /// Split an array by a delimiter keeping empty segments
-    r#"⊕□⍜▽¯:\+.=, @, "split,this,,up""#,
+    r#"⊕□⍜▽¯⟜\+=, @, "split,this,,up""#,
     /// Split an array into groups of contiguous equal elements
     "⊜□. [1 1 1 2 2 1 1 4]",
     /// Join a list of boxed strings
@@ -243,7 +243,7 @@ uiuisms!(
     "⍜°ℂ¯ +i1",
     /// Cosine
     "○+η 1",
-    /// Tangent
+    /// ⊕
     "÷:°∠ 1",
     /// Factorial
     "/×+1⇡ 5",

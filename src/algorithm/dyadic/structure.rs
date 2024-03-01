@@ -77,8 +77,13 @@ impl Value {
                     sorted_indices.push(index);
                 }
                 sorted_indices.sort_unstable();
-                if sorted_indices.windows(2).any(|w| w[0] == w[1]) {
-                    return Err(env.error("Cannot undo pick with duplicate indices"));
+                if (sorted_indices.windows(2).enumerate())
+                    .any(|(i, w)| w[0] == w[1] && self.row(i) != self.row(i + 1))
+                {
+                    return Err(env.error(
+                        "Cannot undo pick with duplicate \
+                        indices but different values",
+                    ));
                 }
             }
         }
@@ -642,7 +647,8 @@ impl Value {
         let (ind_shape, ind) = index.as_shaped_indices(env)?;
         let mut sorted_indices = ind.clone();
         sorted_indices.sort();
-        if sorted_indices.windows(2).any(|win| {
+        if sorted_indices.windows(2).enumerate().any(|(i, win)| {
+            let j = i + 1;
             let a = win[0];
             let b = win[1];
             let a = if a >= 0 {
@@ -655,9 +661,12 @@ impl Value {
             } else {
                 into.row_count() - b.unsigned_abs()
             };
-            a == b
+            a == b && self.row(i) != self.row(j)
         }) {
-            return Err(env.error("Cannot undo selection with duplicate indices"));
+            return Err(env.error(
+                "Cannot undo selection with duplicate \
+                indices but different values",
+            ));
         }
         self.generic_bin_into(
             into,

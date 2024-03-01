@@ -66,6 +66,49 @@ constant!(
     ("Sep", std::path::MAIN_SEPARATOR),
     /// The number of processors available
     ("NumProcs", num_cpus::get() as f64),
+    /// The days of the week
+    (
+        "Days",
+        [
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday"
+        ]
+        .as_slice()
+    ),
+    /// The months of the year
+    (
+        "Months",
+        [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December"
+        ]
+        .as_slice()
+    ),
+    /// The number of days in each month
+    (
+        "MonthDays",
+        [31u8, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    ),
+    /// The number of days in each month in a leap year
+    (
+        "LeapMonthDays",
+        [31u8, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    ),
     ///
     (
         "⍼",

@@ -1235,6 +1235,11 @@ macro_rules! value_from {
                 Self::$variant(Array::from(vec))
             }
         }
+        impl<const N: usize> From<[$ty; N]> for Value {
+            fn from(array: [$ty; N]) -> Self {
+                Self::$variant(Array::from_iter(array))
+            }
+        }
         impl From<CowSlice<$ty>> for Value {
             fn from(vec: CowSlice<$ty>) -> Self {
                 Self::$variant(Array::from(vec))
@@ -1311,6 +1316,14 @@ impl From<String> for Value {
 impl<'a> From<&'a str> for Value {
     fn from(s: &'a str) -> Self {
         s.chars().collect()
+    }
+}
+
+impl<'a> From<&'a [&str]> for Value {
+    fn from(s: &'a [&str]) -> Self {
+        Value::from(Array::<Boxed>::from_row_arrays_infallible(
+            s.iter().map(|&s| Boxed(Value::from(s)).into()),
+        ))
     }
 }
 

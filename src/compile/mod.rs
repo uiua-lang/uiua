@@ -1154,11 +1154,14 @@ code:
         } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
             // Name is a built-in constant
             let instr = Instr::push(constant.value.clone());
+            self.code_meta
+                .constant_references
+                .insert(span.clone().sp(ident));
             if call {
                 self.push_instr(instr);
             } else {
                 let f = self.add_function(
-                    FunctionId::Anonymous(span.clone()),
+                    FunctionId::Anonymous(span),
                     Signature::new(0, 1),
                     vec![instr],
                 );

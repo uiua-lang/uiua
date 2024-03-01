@@ -2,12 +2,16 @@
 //!
 //! Even without the `lsp` feature enabled, this module still provides some useful types and functions for working with Uiua code in an IDE or text editor.
 
-use std::{collections::HashMap, slice, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    slice,
+    sync::Arc,
+};
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
     ast::{Item, Modifier, PlaceholderOp, Ref, Word},
-    ident_modifier_args,
+    constants, ident_modifier_args,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
     Assembly, BindingInfo, Compiler, Global, Ident, InputSrc, Inputs, Primitive, SafeSys,
@@ -70,6 +74,8 @@ pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<Span
 pub(crate) struct CodeMeta {
     /// A map of references to global bindings
     pub global_references: HashMap<Sp<Ident>, usize>,
+    /// A map of references to shadowable constants
+    pub constant_references: HashSet<Sp<Ident>>,
     /// Spans of bare inline functions and their signatures and whether they are explicit
     pub inline_function_sigs: InlineSigs,
     /// A map of macro invoations to their expansions
@@ -184,6 +190,24 @@ impl Spanner {
                 continue;
             }
             return Some(self.make_binding_docs(binding));
+        }
+        for name in &self.code_meta.constant_references {
+            if name.span != *span {
+                continue;
+            }
+            let Some(constant) = constants().iter().find(|c| c.name == name.value) else {
+                continue;
+            };
+            return Some(BindingDocs {
+                src_span: span.clone(),
+                signature: Some(Signature::new(0, 1)),
+                modifier_args: 0,
+                comment: Some(constant.doc.into()),
+                invertible_underable: None,
+                is_constant: true,
+                is_module: false,
+                is_public: true,
+            });
         }
         None
     }
@@ -754,6 +778,27 @@ mod server {
                     continue;
                 }
                 completions.push(make_completion(name, &sp.span, &binding));
+            }
+
+            // Collect constant completions
+            for constant in constants() {
+                if !constant
+                    .name
+                    .to_lowercase()
+                    .starts_with(&token.to_lowercase())
+                {
+                    continue;
+                }
+                completions.push(CompletionItem {
+                    label: constant.name.into(),
+                    kind: Some(CompletionItemKind::CONSTANT),
+                    detail: Some(constant.doc.into()),
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: uiua_span_to_lsp(&sp.span),
+                        new_text: constant.name.into(),
+                    })),
+                    ..Default::default()
+                });
             }
 
             Ok(Some(CompletionResponse::Array(completions)))

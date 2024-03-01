@@ -16,9 +16,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(1)?;
 
     match (f.as_flipped_primitive(env), xs) {
-        (Some((Primitive::Join, false)), mut xs)
-            if !env.unpack_boxes() && env.value_fill().is_none() =>
-        {
+        (Some((Primitive::Join, false)), mut xs) if env.value_fill().is_none() => {
             let depth = depth.min(xs.rank());
             if xs.rank() - depth < 2 {
                 env.push(xs);
@@ -395,9 +393,6 @@ fn generic_reduce_inner(
                         env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
                     })?;
                 acc = process(acc);
-                if env.unpack_boxes() {
-                    acc.unpack();
-                }
                 acc = env.without_fill(|env| -> UiuaResult<Value> {
                     for row in rows {
                         env.push(process(row));

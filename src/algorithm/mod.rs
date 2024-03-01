@@ -99,16 +99,12 @@ impl ErrorContext for () {
 }
 
 pub trait FillContext: ErrorContext {
-    fn unpack_boxes(&self) -> bool;
     fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str>;
     fn fill_error(error: Self::Error) -> Self::Error;
     fn is_fill_error(error: &Self::Error) -> bool;
 }
 
 impl FillContext for Uiua {
-    fn unpack_boxes(&self) -> bool {
-        self.unpack_boxes()
-    }
     fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
         T::get_fill(self)
     }
@@ -121,9 +117,6 @@ impl FillContext for Uiua {
 }
 
 impl FillContext for () {
-    fn unpack_boxes(&self) -> bool {
-        false
-    }
     fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
         Err(". No fill is set.")
     }
@@ -136,9 +129,6 @@ impl FillContext for () {
 }
 
 impl FillContext for (&CodeSpan, &Inputs) {
-    fn unpack_boxes(&self) -> bool {
-        false
-    }
     fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
         Err(". No fill is set.")
     }

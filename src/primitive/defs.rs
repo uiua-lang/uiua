@@ -1391,17 +1391,6 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
-    /// Apply a function with implicit unboxing
-    ///
-    /// When working with [box]ed data, [unpack] will automatically [un][box] the data for functions like [join].
-    /// ex:  /⊂ {"a" "bc" "def"}
-    /// ex: ⊐/⊂ {"a" "bc" "def"}
-    ///
-    /// Anything that is [box]ed inside the function will be [un][box]ed as soon as it is used.
-    /// This may lead to unexpected behavior if you are not aware of it.
-    /// ex: ⊐(¯□3) # Used
-    /// ex: ⊐( □3) # Not used
-    ([1], Unpack, OtherModifier, ("unpack", '⊐')),
     /// Unbox the arguments to a function before calling it
     ///
     /// ex:  ⊂ □[1 2 3] □[4 5 6]

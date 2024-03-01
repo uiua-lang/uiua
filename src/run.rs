@@ -4,7 +4,7 @@ use std::{
     collections::HashMap,
     fmt,
     hash::Hash,
-    mem::{replace, size_of, take},
+    mem::{size_of, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
     str::FromStr,
@@ -49,8 +49,6 @@ pub(crate) struct Runtime {
     fill_stack: Vec<Value>,
     /// The locals stack
     pub(crate) locals_stack: Vec<Vec<Value>>,
-    /// Whether to unpack boxed values
-    pub unpack_boxes: bool,
     /// A limit on the execution duration in milliseconds
     execution_limit: Option<f64>,
     /// The time at which execution started
@@ -185,7 +183,6 @@ impl Default for Runtime {
             this_stack: Vec::new(),
             fill_stack: Vec::new(),
             locals_stack: Vec::new(),
-            unpack_boxes: false,
             backend: Arc::new(SafeSys::default()),
             time_instrs: false,
             last_time: 0.0,
@@ -893,18 +890,12 @@ code:
     }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
-        let res = match self.rt.stack.pop() {
-            Some(mut val) => {
-                if self.unpack_boxes() {
-                    val.unpack();
-                }
-                Ok(val)
-            }
-            None => Err(self.error(format!(
+        let res = self.rt.stack.pop().ok_or_else(|| {
+            self.error(format!(
                 "Stack was empty when evaluating {}",
                 arg.arg_name()
-            ))),
-        };
+            ))
+        });
         for bottom in &mut self.rt.array_stack {
             *bottom = (*bottom).min(self.rt.stack.len());
         }
@@ -1233,15 +1224,6 @@ code:
         self.rt.fill_stack.extend(fill);
         res
     }
-    pub(crate) fn with_pack(&mut self, in_ctx: impl FnOnce(&mut Self) -> UiuaResult) -> UiuaResult {
-        let upper = replace(&mut self.rt.unpack_boxes, true);
-        let res = in_ctx(self);
-        self.rt.unpack_boxes = upper;
-        res
-    }
-    pub(crate) fn unpack_boxes(&self) -> bool {
-        self.rt.unpack_boxes
-    }
     pub(crate) fn call_frames(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {
         self.rt.call_stack.iter()
     }
@@ -1305,7 +1287,6 @@ code:
                 this_stack: self.rt.this_stack.clone(),
                 locals_stack: Vec::new(),
                 call_stack: Vec::new(),
-                unpack_boxes: self.rt.unpack_boxes,
                 time_instrs: self.rt.time_instrs,
                 last_time: self.rt.last_time,
                 do_top_io: self.rt.do_top_io,

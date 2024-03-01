@@ -100,14 +100,7 @@ impl Value {
     pub fn join_infallible(self, other: Self) -> Self {
         self.join_impl(other, &()).unwrap()
     }
-    fn join_impl<C: FillContext>(mut self, mut other: Self, ctx: &C) -> Result<Self, C::Error> {
-        if ctx.unpack_boxes() {
-            self.unpack();
-            other.unpack();
-        }
-        self.join_impl_impl(other, ctx)
-    }
-    fn join_impl_impl<C: FillContext>(self, other: Self, ctx: &C) -> Result<Self, C::Error> {
+    fn join_impl<C: FillContext>(self, other: Self, ctx: &C) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ctx)?.into(),
             #[cfg(feature = "bytes")]
@@ -138,18 +131,7 @@ impl Value {
             )?,
         })
     }
-    pub(crate) fn append<C: FillContext>(
-        &mut self,
-        mut other: Self,
-        ctx: &C,
-    ) -> Result<(), C::Error> {
-        if ctx.unpack_boxes() {
-            self.unpack();
-            other.unpack();
-        }
-        self.append_impl(other, ctx)
-    }
-    fn append_impl<C: FillContext>(&mut self, other: Self, ctx: &C) -> Result<(), C::Error> {
+    pub(crate) fn append<C: FillContext>(&mut self, other: Self, ctx: &C) -> Result<(), C::Error> {
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.append(b, ctx)?,
             #[cfg(feature = "bytes")]
@@ -468,16 +450,9 @@ impl Value {
     }
     pub(crate) fn couple_impl<C: FillContext>(
         &mut self,
-        mut other: Self,
+        other: Self,
         ctx: &C,
     ) -> Result<(), C::Error> {
-        if ctx.unpack_boxes() {
-            self.unpack();
-            other.unpack();
-        }
-        self.couple_impl_impl(other, ctx)
-    }
-    fn couple_impl_impl<C: FillContext>(&mut self, other: Self, ctx: &C) -> Result<(), C::Error> {
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.couple_impl(b, ctx)?,
             #[cfg(feature = "bytes")]

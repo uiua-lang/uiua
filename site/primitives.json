@@ -1195,14 +1195,6 @@
     "class": "MonadicArray",
     "description": "Get a mask of first occurrences of items in an array"
   },
-  "unpack": {
-    "glyph": "⊐",
-    "outputs": 1,
-    "modifier_args": 1,
-    "class": "OtherModifier",
-    "description": "Apply a function with implicit unboxing",
-    "deprecated": true
-  },
   "utf": {
     "args": 1,
     "outputs": 1,

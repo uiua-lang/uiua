@@ -324,9 +324,12 @@ impl Primitive {
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         match self {
-            Primitive::Unpack => Some(format!("use {} instead", Primitive::Content.format())),
             Primitive::Cross => Some(format!("use {} instead", Primitive::Table.format())),
-            Primitive::Cascade => Some(format!("use {} or {} instead", Primitive::Fork.format(), Primitive::On.format())),
+            Primitive::Cascade => Some(format!(
+                "use {} or {} instead",
+                Primitive::Fork.format(),
+                Primitive::On.format()
+            )),
             Primitive::Rectify => Some(String::new()),
             Primitive::All => Some(String::new()),
             Primitive::This | Primitive::Recur => {
@@ -632,10 +635,6 @@ impl Primitive {
             }
             Primitive::Bind => {
                 return Err(env.error("Bind was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Unpack => {
-                let f = env.pop_function()?;
-                env.with_pack(|env| env.call(f))?;
             }
             Primitive::Content => {
                 return Err(env.error("Content was not inlined. This is a bug in the interpreter"))

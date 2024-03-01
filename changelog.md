@@ -14,6 +14,8 @@ This version is not yet released. If you are reading this on the website, then t
 - [`group ⊕`](https://uiua.org/docs/group) can now take multidimensional index arrays
 - [`partition ⊜`](https://uiua.org/docs/partition) can now take multidimensional marker arrays
 - [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`pick ⊐`](https://uiua.org/docs/pick) now work with duplicate indices if the values at those indices are the same
+- [`rotate ↻`](https://uiua.org/docs/rotate) now works through boxes
+- Remove `unpack ⊐` for good
 - Add more [shadowable constants](https://www.uiua.org/docs/constants)
 - Non-alphabetic identifiers can now be suffixed with `!` to make macros
 - Add experimental array macros, which allow code to be generated and manipulated at compile time as strings

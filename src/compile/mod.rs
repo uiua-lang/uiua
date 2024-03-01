@@ -215,6 +215,21 @@ impl Compiler {
     pub fn backend(&self) -> Arc<dyn SysBackend> {
         self.macro_env.rt.backend.clone()
     }
+    /// Attempt to downcast the system backend to a concrete reference type
+    pub fn downcast_backend<T: SysBackend>(&self) -> Option<&T> {
+        self.macro_env.downcast_backend()
+    }
+    /// Attempt to downcast the system backend to a concrete mutable type
+    pub fn downcast_backend_mut<T: SysBackend>(&mut self) -> Option<&mut T> {
+        self.macro_env.downcast_backend_mut()
+    }
+    /// Take the system backend
+    pub fn take_backend<T: SysBackend>(&mut self) -> Option<T>
+    where
+        T: Default,
+    {
+        self.macro_env.take_backend()
+    }
     /// Compile a Uiua file from a file at a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
         let path = path.as_ref();

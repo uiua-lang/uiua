@@ -811,18 +811,21 @@ fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
     let mut rt = init_rt();
     let mut error = None;
     let mut comp = Compiler::with_backend(WebBackend::default());
-    let mut values = match comp.load_str(code).and_then(|comp| rt.run_compiler(comp)) {
-        Ok(_) => rt.take_stack(),
+    let (mut values, io) = match comp.load_str(code).map(|comp| rt.run_compiler(comp)) {
+        Ok(Ok(_)) => (rt.take_stack(), rt.take_backend::<WebBackend>().unwrap()),
+        Ok(Err(e)) => {
+            error = Some(e);
+            (rt.take_stack(), rt.take_backend::<WebBackend>().unwrap())
+        }
         Err(e) => {
             error = Some(e);
-            rt.take_stack()
+            (Vec::new(), comp.take_backend::<WebBackend>().unwrap())
         }
     };
     if get_top_at_top() {
         values.reverse();
     }
     let diagnostics = comp.take_diagnostics();
-    let io = rt.downcast_backend::<WebBackend>().unwrap();
     // Get stdout and stderr
     let stdout = take(&mut *io.stdout.lock().unwrap());
     let mut stack = Vec::new();

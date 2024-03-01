@@ -69,11 +69,15 @@ impl Compiler {
             let sig = match instrs_signature(&instrs) {
                 Ok(s) => s,
                 Err(e) => {
-                    self.add_error(
-                        span.clone(),
-                        format!("Cannot infer array macro signature: {e}"),
-                    );
-                    Signature::new(0, 1)
+                    if let Some(sig) = binding.signature {
+                        sig.value
+                    } else {
+                        self.add_error(
+                            span.clone(),
+                            format!("Cannot infer array macro signature: {e}"),
+                        );
+                        Signature::new(1, 1)
+                    }
                 }
             };
             const ALLOWED_SIGS: &[Signature] = &[
@@ -82,7 +86,7 @@ impl Compiler {
                 Signature::new(0, 0),
             ];
             if !ALLOWED_SIGS.contains(&sig) {
-                return Err(self.fatal_error(
+                self.add_error(
                     span.clone(),
                     format!(
                         "Array macros must have a signature of {} or {}, \
@@ -91,19 +95,7 @@ impl Compiler {
                         Signature::new(2, 1),
                         sig
                     ),
-                ));
-            }
-            if let Some(sig) = &binding.signature {
-                if !ALLOWED_SIGS.contains(&sig.value) {
-                    self.add_error(
-                        sig.span.clone(),
-                        format!(
-                            "Array macros must have a signature of {} or {}",
-                            Signature::new(1, 1),
-                            Signature::new(2, 1),
-                        ),
-                    );
-                }
+                );
             }
             let func = self.add_function(FunctionId::Named(name.clone()), sig, instrs);
             self.scope.names.insert(name.clone(), local);

@@ -1045,6 +1045,10 @@ primitive!(
     /// ex: ⬚0↻ 2 [1 2 3 4 5]
     ///   :   ↻ 2 [1 2 3 4 5]
     /// ex: ⬚0↻ 1_2 .↯4_5⇡20
+    ///
+    /// [rotate] works through boxes.
+    /// ex: ↻1 □[1 2 3 4]
+    /// ex: ≡↻1 {1_2_3 4_5_6}
     (2, Rotate, DyadicArray, ("rotate", '↻')),
     /// The n-wise windows of an array
     ///

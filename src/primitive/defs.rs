@@ -94,7 +94,7 @@ constant!(
         ]
         .as_slice()
     ),
-    /// The number of days in each month
+    /// The number of days in each month in a non-leap year
     (
         "MonthDays",
         [31u8, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]

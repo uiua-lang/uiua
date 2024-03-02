@@ -760,8 +760,8 @@ fn under_copy_temp_pattern<'a>(
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
     let (input, instr, inner, end_instr) = try_copy_temp_wrap(input, comp)?;
-    let (mut inner_befores, mut inner_afters) = under_instrs(inner, g_sig, comp)?;
-    if let Some((
+    let (mut inner_befores, inner_afters) = under_instrs(inner, g_sig, comp)?;
+    let Some((
         Instr::CopyToTemp {
             stack: TempStack::Under,
             ..
@@ -771,14 +771,12 @@ fn under_copy_temp_pattern<'a>(
             ..
         },
     )) = inner_befores.first().zip(inner_afters.first())
-    {
-        inner_befores.make_mut()[0] = instr.clone();
-        inner_afters.make_mut()[0] = instr.clone();
-        inner_befores.push(end_instr.clone());
-        inner_afters.push(end_instr.clone());
-        return Some((input, (inner_befores, inner_afters)));
-    }
-    None
+    else {
+        return None;
+    };
+    inner_befores.insert(0, instr.clone());
+    inner_befores.push(end_instr.clone());
+    Some((input, (inner_befores, inner_afters)))
 }
 
 fn under_push_temp_pattern<'a>(
@@ -1363,7 +1361,6 @@ fn under_fold_pattern<'a>(
     {
         return None;
     }
-    // inner_afters.insert(0, Instr::Prim(Primitive::Pop, span));
     let befores_func = make_fn(inner_befores, span, comp)?;
     let afters_func = make_fn(inner_afters, span, comp)?;
     let befores = eco_vec![

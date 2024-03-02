@@ -1097,6 +1097,8 @@ primitive!(
     /// If the searched-in array is multidimensional, the `1` marker will be placed in the minimum index "top left" corner.
     /// ex: ⌕ 1_2 . ↯4_4⇡3
     /// ex: ⌕ [1_2 2_0] . ↯4_4⇡3
+    ///
+    /// If you want to mark the entire occurence, use [mask] instead.
     (2, Find, DyadicArray, ("find", '⌕')),
     /// Mask the occurences of one array in another
     ///

@@ -1111,10 +1111,10 @@ primitive!(
     /// Increasing numbers are used so that adjacent occurences can be distinguished.
     /// An occurence that would overlap with a previous occurence is not marked.
     /// ex: # Experimental!
-    ///   : ⍝ [3 4 3 4].[0 3 4 3 4 1 2 0 0 3 4 3 4 0]
+    ///   : ⍝ [3 4 3 4].[0 3 4 3 4 3 4 0 0 3 4 3 4 0]
     ///
-    /// Arbtrary rank arrays are supported.
-    /// The needle's rank must be `less or equal` the haystack's rank.
+    /// Arbitrary rank arrays are supported.
+    /// The first array's rank must be `less or equal` the rank of the second.
     /// ex: # Experimental!
     ///   : ⍝,, 3_4 ↯2_3⇡6
     /// ex: # Experimental!

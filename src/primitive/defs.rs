@@ -7,14 +7,9 @@ pub struct ConstantDef {
     /// The constant's name
     pub name: &'static str,
     /// The constant's value
-    pub value: Value,
+    pub value: Lazy<Value>,
     /// The constant's documentation
     pub doc: &'static str,
-}
-
-/// Get the list of all shadowable constants
-pub fn constants() -> &'static [ConstantDef] {
-    &*CONSTANTS
 }
 
 macro_rules! constant {
@@ -30,16 +25,16 @@ macro_rules! constant {
             )*
             count
         };
-        static CONSTANTS: Lazy<[ConstantDef; COUNT]> = Lazy::new(|| {
+        /// The list of all shadowable constants
+        pub static CONSTANTS: [ConstantDef; COUNT] =
             [$(
                 $(#[$attr])*
                 ConstantDef {
                     name: $name,
-                    value: $value.into(),
+                    value: Lazy::new(|| {$value.into()}),
                     doc: $doc,
                 },
-            )*]
-        });
+            )*];
     }
 }
 
@@ -66,6 +61,88 @@ constant!(
     ("Sep", std::path::MAIN_SEPARATOR),
     /// The number of processors available
     ("NumProcs", num_cpus::get() as f64),
+    /// The days of the week
+    (
+        "Days",
+        [
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday"
+        ]
+        .as_slice()
+    ),
+    /// The months of the year
+    (
+        "Months",
+        [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December"
+        ]
+        .as_slice()
+    ),
+    /// The number of days in each month in a non-leap year
+    (
+        "MonthDays",
+        [31u8, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    ),
+    /// The number of days in each month in a leap year
+    (
+        "LeapMonthDays",
+        [31u8, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    ),
+    /// The planets of the solar system
+    (
+        "Planets",
+        ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"].as_slice()
+    ),
+    /// The symbols of the zodiac
+    (
+        "Zodiac",
+        [
+            "Aries",
+            "Taurus",
+            "Gemini",
+            "Cancer",
+            "Leo",
+            "Virgo",
+            "Libra",
+            "Scorpio",
+            "Sagittarius",
+            "Capricorn",
+            "Aquarius",
+            "Pisces"
+        ]
+        .as_slice()
+    ),
+    /// The suits of a standard deck of playing cards
+    ("Suits", ['♣', '♦', '♥', '♠']),
+    /// The ranks of a standard deck of playing cards
+    (
+        "Cards",
+        ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"].as_slice()
+    ),
+    /// The symbols of the standard chess pieces
+    (
+        "Chess",
+        Array::new(
+            [2, 6],
+            ['♟', '♜', '♞', '♝', '♛', '♚', '♙', '♖', '♘', '♗', '♕', '♔']
+        )
+    ),
     ///
     (
         "⍼",
@@ -968,6 +1045,10 @@ primitive!(
     /// ex: ⬚0↻ 2 [1 2 3 4 5]
     ///   :   ↻ 2 [1 2 3 4 5]
     /// ex: ⬚0↻ 1_2 .↯4_5⇡20
+    ///
+    /// [rotate] works through boxes.
+    /// ex: ↻1 □[1 2 3 4]
+    /// ex: ≡↻1 {1_2_3 4_5_6}
     (2, Rotate, DyadicArray, ("rotate", '↻')),
     /// The n-wise windows of an array
     ///
@@ -1016,7 +1097,29 @@ primitive!(
     /// If the searched-in array is multidimensional, the `1` marker will be placed in the minimum index "top left" corner.
     /// ex: ⌕ 1_2 . ↯4_4⇡3
     /// ex: ⌕ [1_2 2_0] . ↯4_4⇡3
+    ///
+    /// If you want to mark the entire occurence, use [mask] instead.
     (2, Find, DyadicArray, ("find", '⌕')),
+    /// Mask the occurences of one array in another
+    ///
+    /// Occurences of the first array in the second array will be marked with increasing numbers.
+    /// While [find] only marks the start of each occurence, [mask] marks the entire occurence.
+    /// ex: # Experimental!
+    ///   : ⍝ "ab" "abracadabra"
+    /// ex: # Experimental!
+    ///   : ⍝ [1 2 3].[0 1 2 3 1 2 3 4 5 1 2 3 4 5 6]
+    /// Increasing numbers are used so that adjacent occurences can be distinguished.
+    /// An occurence that would overlap with a previous occurence is not marked.
+    /// ex: # Experimental!
+    ///   : ⍝ [3 4 3 4].[0 3 4 3 4 1 2 0 0 3 4 3 4 0]
+    ///
+    /// Arbtrary rank arrays are supported.
+    /// The needle's rank must be `less or equal` the haystack's rank.
+    /// ex: # Experimental!
+    ///   : ⍝,, 3_4 ↯2_3⇡6
+    /// ex: # Experimental!
+    ///   : ⍝,, [1_2 5_6] [1_2_3_4 5_6_1_2 7_8_5_6 4_3_1_2]
+    (2, Mask, DyadicArray, ("mask", '⍝')),
     /// Check if each row of one array exists in another
     ///
     /// ex: ∊ 2 [1 2 3]
@@ -1249,9 +1352,9 @@ primitive!(
     ([1], Repeat, IteratingModifier, ("repeat", '⍥')),
     /// Group elements of an array into buckets by index
     ///
+    /// [group] is similar to `group_by` functions in other languages.
     /// Takes a function and two arrays.
-    /// The arrays must be the same [length].
-    /// The first array must be rank `1` and contain integers.
+    /// The first array must contain integers and have a shape that is a prefix of the shape of the second array.
     /// Rows in the second array will be grouped into buckets by the indices in the first array.
     /// Keys `less than``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.
@@ -1266,7 +1369,10 @@ primitive!(
     ///
     /// When combined with [classify], you can do things like counting the number of occurrences of each character in a string.
     /// ex: $ Count the characters in this string
-    ///   : ⊕{⊃⊢⧻} ⊛.⊏⍏.
+    ///   : ⊟∩≡□ ⊕⊃⊢⧻ ⊛.
+    ///
+    /// The indices may be multidimensional.
+    /// ex: ⊕□ [0_2 2_1] ["ab" "cd"]
     ///
     /// [under][group] works if [group]'s function is [under]able.
     /// ex: ⍜⊕□≡⇌ ≠@ . $ These are some words
@@ -1308,17 +1414,6 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
-    /// Apply a function with implicit unboxing
-    ///
-    /// When working with [box]ed data, [unpack] will automatically [un][box] the data for functions like [join].
-    /// ex:  /⊂ {"a" "bc" "def"}
-    /// ex: ⊐/⊂ {"a" "bc" "def"}
-    ///
-    /// Anything that is [box]ed inside the function will be [un][box]ed as soon as it is used.
-    /// This may lead to unexpected behavior if you are not aware of it.
-    /// ex: ⊐(¯□3) # Used
-    /// ex: ⊐( □3) # Not used
-    ([1], Unpack, OtherModifier, ("unpack", '⊐')),
     /// Unbox the arguments to a function before calling it
     ///
     /// ex:  ⊂ □[1 2 3] □[4 5 6]
@@ -1559,8 +1654,9 @@ primitive!(
     /// [pick] and [select] also work.
     /// ex: ⍜⊡(×10) 2_1 ↯3_3⇡9
     /// ex: ⍜⊏(×10) 1_3 1_2_3_4_5
-    /// Although, [under][select] only works if the indices are unique.
-    /// ex! ⍜⊏(×10) 1_3_3 1_2_3_4_5
+    /// Although, [under][select] with duplicate indices only works if the mapping is unambiguous.
+    /// ex: ⍜⊏(×10)    1_3_3 1_2_3_4_5
+    /// ex! ⍜⊏(+1_2_3) 1_3_3 1_2_3_4_5
     /// [under][keep] works as long as the counts list is boolean.
     /// ex: ⍜▽(×10) =0◿3.⇡10
     ///

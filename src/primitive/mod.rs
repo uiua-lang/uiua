@@ -324,9 +324,12 @@ impl Primitive {
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         match self {
-            Primitive::Unpack => Some(format!("use {} instead", Primitive::Content.format())),
             Primitive::Cross => Some(format!("use {} instead", Primitive::Table.format())),
-            Primitive::Cascade => Some(format!("use {} or {} instead", Primitive::Fork.format(), Primitive::On.format())),
+            Primitive::Cascade => Some(format!(
+                "use {} or {} instead",
+                Primitive::Fork.format(),
+                Primitive::On.format()
+            )),
             Primitive::Rectify => Some(String::new()),
             Primitive::All => Some(String::new()),
             Primitive::This | Primitive::Recur => {
@@ -352,28 +355,18 @@ impl Primitive {
         }
     }
     /// Check if this primitive is experimental
+    #[allow(unused_parens)]
     pub fn is_experimental(&self) -> bool {
         use Primitive::*;
         matches!(
             self,
-            Rectify
-                | This
-                | Recur
-                | All
-                | Cascade
-                | Map
-                | Insert
-                | Has
-                | Get
-                | Remove
+            Mask | (This | Recur)
+                | (Rectify | All | Cascade)
+                | (Map | Insert | Has | Get | Remove)
                 | Bind
-                | Shapes
-                | Types
+                | (Shapes | Types)
                 | Sys(SysOp::FFI)
-                | Repr
-                | Stringify
-                | Quote
-                | Sig
+                | (Repr | Stringify | Quote | Sig)
         )
     }
     /// Check if this primitive is deprecated
@@ -391,6 +384,7 @@ impl Primitive {
         match name {
             "id" => return Some(Primitive::Identity),
             "ga" => return Some(Primitive::Gap),
+            "po" => return Some(Primitive::Pop),
             "pi" => return Some(Primitive::Pi),
             "ran" => return Some(Primitive::Range),
             "tra" => return Some(Primitive::Transpose),
@@ -442,7 +436,7 @@ impl Primitive {
                 if sub_name
                     .strip_prefix('f')
                     .unwrap_or(sub_name)
-                    .strip_suffix(['i', 'p'])
+                    .strip_suffix(['i', 'p', 'f'])
                     .unwrap_or(sub_name)
                     .chars()
                     .all(|c| "gdo".contains(c))
@@ -450,12 +444,31 @@ impl Primitive {
                     // 1-letter planet notation
                     for (i, c) in sub_name.char_indices() {
                         let prim = match c {
-                            'f' => Primitive::Fork,
+                            'f' if i == 0 => Primitive::Fork,
+                            'f' => Primitive::Fix,
                             'g' => Primitive::Gap,
                             'd' => Primitive::Dip,
                             'i' => Primitive::Identity,
                             'p' => Primitive::Pop,
                             'o' => Primitive::On,
+                            _ => unreachable!(),
+                        };
+                        prims.push((prim, &sub_name[i..i + 1]))
+                    }
+                    start += len;
+                    continue 'outer;
+                }
+                if sub_name
+                    .strip_suffix('f')
+                    .unwrap_or(sub_name)
+                    .chars()
+                    .all(|c| c == 'd')
+                {
+                    // Dip fix
+                    for (i, c) in sub_name.char_indices() {
+                        let prim = match c {
+                            'd' => Primitive::Dip,
+                            'f' => Primitive::Fix,
                             _ => unreachable!(),
                         };
                         prims.push((prim, &sub_name[i..i + 1]))
@@ -541,6 +554,7 @@ impl Primitive {
             Primitive::Unique => env.monadic_ref(Value::unique)?,
             Primitive::Member => env.dyadic_rr_env(Value::member)?,
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
+            Primitive::Mask => env.dyadic_rr_env(Value::mask)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
             // Primitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
             Primitive::Box => {
@@ -632,10 +646,6 @@ impl Primitive {
             }
             Primitive::Bind => {
                 return Err(env.error("Bind was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Unpack => {
-                let f = env.pop_function()?;
-                env.with_pack(|env| env.call(f))?;
             }
             Primitive::Content => {
                 return Err(env.error("Content was not inlined. This is a bug in the interpreter"))

@@ -204,13 +204,17 @@ impl<T> Array<T> {
     pub fn meta(&self) -> &ArrayMeta {
         self.meta.as_deref().unwrap_or(&DEFAULT_META)
     }
-    pub(crate) fn get_meta_mut(meta: &mut Option<Arc<ArrayMeta>>) -> &mut ArrayMeta {
+    pub(crate) fn meta_mut_impl(meta: &mut Option<Arc<ArrayMeta>>) -> &mut ArrayMeta {
         let meta = meta.get_or_insert_with(Default::default);
         Arc::make_mut(meta)
     }
+    /// Get a mutable reference to the metadata of the array if it exists
+    pub fn get_meta_mut(&mut self) -> Option<&mut ArrayMeta> {
+        self.meta.as_mut().map(Arc::make_mut)
+    }
     /// Get a mutable reference to the metadata of the array
     pub fn meta_mut(&mut self) -> &mut ArrayMeta {
-        Self::get_meta_mut(&mut self.meta)
+        Self::meta_mut_impl(&mut self.meta)
     }
     /// Take the label from the metadata
     pub fn take_label(&mut self) -> Option<EcoString> {
@@ -283,6 +287,12 @@ impl<T: ArrayValue> Array<T> {
     /// Get an iterator over the row arrays of the array
     pub fn rows(&self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
         (0..self.row_count()).map(|row| self.row(row))
+    }
+    pub(crate) fn row_shaped_slice(&self, index: usize, row_shape: Shape) -> Self {
+        let row_len: usize = row_shape.iter().product();
+        let start = index * row_len;
+        let end = start + row_len;
+        Self::new(row_shape, self.data.slice(start..end))
     }
     /// Get an iterator over the row arrays of the array that have the given shape
     pub fn row_shaped_slices(

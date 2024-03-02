@@ -14,13 +14,13 @@ impl Compiler {
             }) {
                 if let Ok((path_locals, local)) = self.ref_local(r) {
                     self.validate_local(&r.name.value, local, &r.name.span);
-                    self.asm
+                    self.code_meta
                         .global_references
                         .insert(binding.name.clone(), local.index);
                     for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                        (self.asm.global_references).insert(comp.module.clone(), local.index);
+                        (self.code_meta.global_references).insert(comp.module.clone(), local.index);
                     }
-                    self.asm
+                    self.code_meta
                         .global_references
                         .insert(r.name.clone(), local.index);
                     self.scope.names.insert(
@@ -69,11 +69,15 @@ impl Compiler {
             let sig = match instrs_signature(&instrs) {
                 Ok(s) => s,
                 Err(e) => {
-                    self.add_error(
-                        span.clone(),
-                        format!("Cannot infer array macro signature: {e}"),
-                    );
-                    Signature::new(0, 1)
+                    if let Some(sig) = binding.signature {
+                        sig.value
+                    } else {
+                        self.add_error(
+                            span.clone(),
+                            format!("Cannot infer array macro signature: {e}"),
+                        );
+                        Signature::new(1, 1)
+                    }
                 }
             };
             const ALLOWED_SIGS: &[Signature] = &[
@@ -82,7 +86,7 @@ impl Compiler {
                 Signature::new(0, 0),
             ];
             if !ALLOWED_SIGS.contains(&sig) {
-                return Err(self.fatal_error(
+                self.add_error(
                     span.clone(),
                     format!(
                         "Array macros must have a signature of {} or {}, \
@@ -91,19 +95,7 @@ impl Compiler {
                         Signature::new(2, 1),
                         sig
                     ),
-                ));
-            }
-            if let Some(sig) = &binding.signature {
-                if !ALLOWED_SIGS.contains(&sig.value) {
-                    self.add_error(
-                        sig.span.clone(),
-                        format!(
-                            "Array macros must have a signature of {} or {}",
-                            Signature::new(1, 1),
-                            Signature::new(2, 1),
-                        ),
-                    );
-                }
+                );
             }
             let func = self.add_function(FunctionId::Named(name.clone()), sig, instrs);
             self.scope.names.insert(name.clone(), local);
@@ -413,7 +405,7 @@ impl Compiler {
                 .copied()
             {
                 self.validate_local(&item.value, local, &item.span);
-                self.asm.global_references.insert(item.clone(), local.index);
+                (self.code_meta.global_references).insert(item.clone(), local.index);
                 self.scope.names.insert(
                     item.value.clone(),
                     LocalName {

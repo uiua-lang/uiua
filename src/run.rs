@@ -4,7 +4,7 @@ use std::{
     collections::HashMap,
     fmt,
     hash::Hash,
-    mem::{replace, size_of, take},
+    mem::{size_of, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
     str::FromStr,
@@ -49,14 +49,14 @@ pub(crate) struct Runtime {
     fill_stack: Vec<Value>,
     /// The locals stack
     pub(crate) locals_stack: Vec<Vec<Value>>,
-    /// Whether to unpack boxed values
-    pub unpack_boxes: bool,
     /// A limit on the execution duration in milliseconds
     execution_limit: Option<f64>,
     /// The time at which execution started
     execution_start: f64,
     /// Whether to print the time taken to execute each instruction
     time_instrs: bool,
+    /// Whether to do top-level IO
+    pub(crate) do_top_io: bool,
     /// The time at which the last instruction was executed
     last_time: f64,
     /// Arguments passed from the command line
@@ -183,10 +183,10 @@ impl Default for Runtime {
             this_stack: Vec::new(),
             fill_stack: Vec::new(),
             locals_stack: Vec::new(),
-            unpack_boxes: false,
             backend: Arc::new(SafeSys::default()),
             time_instrs: false,
             last_time: 0.0,
+            do_top_io: true,
             cli_arguments: Vec::new(),
             cli_file_path: PathBuf::new(),
             execution_limit: None,
@@ -302,28 +302,27 @@ impl Uiua {
     /// Run from a compiler
     ///
     /// The runtime will inherit the system backend from the compiler
-    pub fn run_compiler(&mut self, comp: &mut Compiler) -> UiuaResult {
-        self.rt.backend = comp.backend.clone();
-        self.run_asm(comp.finish())
+    pub fn run_compiler(&mut self, compiler: &mut Compiler) -> UiuaResult {
+        let backup = compiler.clone();
+        let res = self.run_asm(compiler.finish());
+        let asm = self.take_asm();
+        match res {
+            Ok(()) => {
+                *compiler.assembly_mut() = asm;
+                Ok(())
+            }
+            Err(e) => {
+                *compiler = backup;
+                Err(e)
+            }
+        }
     }
     /// Run a Uiua assembly
     pub fn run_asm(&mut self, asm: impl Into<Assembly>) -> UiuaResult {
         fn run_asm(env: &mut Uiua, asm: Assembly) -> UiuaResult {
             env.asm = asm;
             env.rt.execution_start = instant::now();
-            let top_slices = take(&mut env.asm.top_slices);
-            let mut res = Ok(());
-            if let Err(e) = env.catching_crash("", |env| {
-                for &slice in &top_slices {
-                    res = env.call_slice(slice);
-                    if res.is_err() {
-                        break;
-                    }
-                }
-            }) {
-                res = Err(e);
-            }
-            env.asm.top_slices = top_slices;
+            let res = env.run_top_slices();
             if res.is_err() {
                 env.rt = Runtime {
                     backend: env.rt.backend.clone(),
@@ -336,6 +335,22 @@ impl Uiua {
             res
         }
         run_asm(self, asm.into())
+    }
+    pub(crate) fn run_top_slices(&mut self) -> UiuaResult {
+        let top_slices = take(&mut self.asm.top_slices);
+        let mut res = Ok(());
+        if let Err(e) = self.catching_crash("", |env| {
+            for &slice in &top_slices {
+                res = env.call_slice(slice);
+                if res.is_err() {
+                    break;
+                }
+            }
+        }) {
+            res = Err(e);
+        }
+        self.asm.top_slices = top_slices;
+        res
     }
     fn catching_crash<T>(
         &mut self,
@@ -673,7 +688,7 @@ code:
                     This is a bug in the interpreter.",
                 )),
                 &Instr::SetOutputComment { i, n } => {
-                    let values = self.clone_stack_top(n)?;
+                    let values = self.stack()[self.stack().len().saturating_sub(n)..].to_vec();
                     let stack_values = self.rt.output_comments.entry(i).or_default();
                     if stack_values.is_empty() {
                         *stack_values = values.into_iter().map(|v| vec![v]).collect();
@@ -886,18 +901,12 @@ code:
     }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
-        let res = match self.rt.stack.pop() {
-            Some(mut val) => {
-                if self.unpack_boxes() {
-                    val.unpack();
-                }
-                Ok(val)
-            }
-            None => Err(self.error(format!(
+        let res = self.rt.stack.pop().ok_or_else(|| {
+            self.error(format!(
                 "Stack was empty when evaluating {}",
                 arg.arg_name()
-            ))),
-        };
+            ))
+        });
         for bottom in &mut self.rt.array_stack {
             *bottom = (*bottom).min(self.rt.stack.len());
         }
@@ -1226,17 +1235,15 @@ code:
         self.rt.fill_stack.extend(fill);
         res
     }
-    pub(crate) fn with_pack(&mut self, in_ctx: impl FnOnce(&mut Self) -> UiuaResult) -> UiuaResult {
-        let upper = replace(&mut self.rt.unpack_boxes, true);
-        let res = in_ctx(self);
-        self.rt.unpack_boxes = upper;
-        res
-    }
-    pub(crate) fn unpack_boxes(&self) -> bool {
-        self.rt.unpack_boxes
-    }
     pub(crate) fn call_frames(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {
         self.rt.call_stack.iter()
+    }
+    pub(crate) fn no_io<T>(&mut self, f: impl FnOnce(&mut Self) -> UiuaResult<T>) -> UiuaResult<T> {
+        let do_io = self.rt.do_top_io;
+        self.rt.do_top_io = false;
+        let res = f(self);
+        self.rt.do_top_io = do_io;
+        res
     }
     pub(crate) fn call_with_this(&mut self, f: Function) -> UiuaResult {
         let call_height = self.rt.call_stack.len();
@@ -1291,9 +1298,9 @@ code:
                 this_stack: self.rt.this_stack.clone(),
                 locals_stack: Vec::new(),
                 call_stack: Vec::new(),
-                unpack_boxes: self.rt.unpack_boxes,
                 time_instrs: self.rt.time_instrs,
                 last_time: self.rt.last_time,
+                do_top_io: self.rt.do_top_io,
                 cli_arguments: self.rt.cli_arguments.clone(),
                 cli_file_path: self.rt.cli_file_path.clone(),
                 backend: self.rt.backend.clone(),

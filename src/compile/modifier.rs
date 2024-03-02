@@ -1,5 +1,7 @@
 //! Compiler code for modifiers
 
+use crate::format::format_words;
+
 use super::*;
 
 impl Compiler {
@@ -157,12 +159,13 @@ impl Compiler {
             Modifier::Ref(r) => {
                 let (path_locals, local) = self.ref_local(&r)?;
                 self.validate_local(&r.name.value, local, &r.name.span);
-                self.asm
+                self.code_meta
                     .global_references
                     .insert(r.name.clone(), local.index);
                 for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                    (self.asm.global_references).insert(comp.module.clone(), local.index);
+                    (self.code_meta.global_references).insert(comp.module.clone(), local.index);
                 }
+                // Handle recursion depth
                 self.macro_depth += 1;
                 if self.macro_depth > 20 {
                     return Err(
@@ -172,7 +175,12 @@ impl Compiler {
                 if let Some(mut words) = self.stack_macros.get(&local.index).cloned() {
                     // Stack macros
                     let instrs = self
-                        .expand_macro(&mut words, modified.operands)
+                        .expand_macro(
+                            r.name.value.clone(),
+                            &mut words,
+                            modified.operands,
+                            modified.modifier.span.clone(),
+                        )
                         .and_then(|()| self.compile_words(words, true));
                     let instrs = instrs?;
                     match instrs_signature(&instrs) {
@@ -193,8 +201,10 @@ impl Compiler {
                         let span = self.add_span(modified.modifier.span);
                         self.push_instr(Instr::Call(span));
                     }
-                } else if let Some(function) = self.array_macros.get(&local.index) {
+                } else if let Some(function) = self.array_macros.get(&local.index).cloned() {
                     // Array macros
+                    let full_span = (modified.modifier.span.clone())
+                        .merge(modified.operands.last().unwrap().span.clone());
 
                     // Collect operands as strings
                     let mut operands: Vec<Sp<Word>> = (modified.operands.into_iter())
@@ -233,26 +243,25 @@ impl Compiler {
                         })
                         .collect();
 
-                    let mut env = Uiua::with_backend(self.backend.clone());
                     let mut code = String::new();
-                    env.asm = self.asm.clone();
                     (|| -> UiuaResult {
-                        env.run_asm(env.asm.clone())?;
+                        self.prepare_env()?;
+                        let env = &mut self.macro_env;
                         // Run the macro function
                         if let Some(sigs) = op_sigs {
                             env.push(sigs);
                         }
                         env.push(formatted);
-                        env.call(function.clone())?;
+                        env.call(function)?;
                         let val = env.pop("macro result")?;
 
                         // Parse the macro output
-                        if let Ok(s) = val.as_string(&env, "") {
+                        if let Ok(s) = val.as_string(env, "") {
                             code = s;
                         } else {
                             for row in val.into_rows() {
-                                let s = row.as_string(&env, "Macro output rows must be strings")?;
-                                if !code.is_empty() {
+                                let s = row.as_string(env, "Macro output rows must be strings")?;
+                                if code.chars().last().is_some_and(|c| !c.is_whitespace()) {
                                     code.push(' ');
                                 }
                                 code.push_str(&s);
@@ -261,12 +270,20 @@ impl Compiler {
                         Ok(())
                     })()
                     .map_err(|e| e.trace_macro(modified.modifier.span.clone()))?;
-                    self.backend = env.rt.backend;
 
                     // Quote
+                    self.code_meta
+                        .macro_expansions
+                        .insert(full_span, (r.name.value.clone(), code.clone()));
                     self.quote(&code, &modified.modifier.span, call)?;
                 } else {
-                    panic!("Macro not found")
+                    return Err(self.fatal_error(
+                        modified.modifier.span.clone(),
+                        format!(
+                            "Macro {} not found. This is a bug in the interpreter.",
+                            r.name.value
+                        ),
+                    ));
                 }
                 self.macro_depth -= 1;
 
@@ -777,6 +794,35 @@ impl Compiler {
                 ];
                 finish!(instrs, Signature::new(1, 1));
             }
+            Table => {
+                // Normalize table compilation, but get some diagnostics
+                let operand = modified.code_operands().next().cloned().unwrap();
+                let op_span = operand.span.clone();
+                let function_id = FunctionId::Anonymous(op_span.clone());
+                let (instrs, sig) = self.compile_operand_word(operand)?;
+                match sig.args {
+                    0 => self.emit_diagnostic(
+                        format!("{} of 0 arguments is redundant", Table.format()),
+                        DiagnosticKind::Advice,
+                        op_span,
+                    ),
+                    1 => self.emit_diagnostic(
+                        format!(
+                            "{} with 1 argument is just {rows}. \
+                            Use {rows} instead.",
+                            Table.format(),
+                            rows = Rows.format()
+                        ),
+                        DiagnosticKind::Advice,
+                        op_span,
+                    ),
+                    _ => {}
+                }
+                let func = self.add_function(function_id, sig, instrs);
+                let span = self.add_span(modified.modifier.span.clone());
+                let instrs = [Instr::PushFunc(func), Instr::Prim(Table, span)];
+                finish!(instrs, sig);
+            }
             Content => {
                 let operand = modified.code_operands().next().cloned().unwrap();
                 let (instrs, sig) = self.compile_operand_word(operand)?;
@@ -864,6 +910,75 @@ impl Compiler {
         self.handle_primitive_deprecation(prim, &modified.modifier.span);
         Ok(true)
     }
+    /// Expand a stack macro
+    fn expand_macro(
+        &mut self,
+        name: Ident,
+        macro_words: &mut Vec<Sp<Word>>,
+        operands: Vec<Sp<Word>>,
+        span: CodeSpan,
+    ) -> UiuaResult {
+        let mut ops = collect_placeholder(macro_words);
+        ops.reverse();
+        let span = span.merge(operands.last().unwrap().span.clone());
+        let mut ph_stack: Vec<Sp<Word>> =
+            operands.into_iter().filter(|w| w.value.is_code()).collect();
+        let mut replaced = Vec::new();
+        for op in ops {
+            let span = op.span;
+            let op = op.value;
+            let mut pop = || {
+                (ph_stack.pop())
+                    .ok_or_else(|| self.fatal_error(span.clone(), "Operand stack is empty"))
+            };
+            match op {
+                PlaceholderOp::Call => replaced.push(pop()?),
+                PlaceholderOp::Dup => {
+                    let a = pop()?;
+                    ph_stack.push(a.clone());
+                    ph_stack.push(a);
+                }
+                PlaceholderOp::Flip => {
+                    let a = pop()?;
+                    let b = pop()?;
+                    ph_stack.push(a);
+                    ph_stack.push(b);
+                }
+                PlaceholderOp::Over => {
+                    let a = pop()?;
+                    let b = pop()?;
+                    ph_stack.push(b.clone());
+                    ph_stack.push(a);
+                    ph_stack.push(b);
+                }
+            }
+        }
+        if !ph_stack.is_empty() {
+            let span = (ph_stack.first().unwrap().span.clone())
+                .merge(ph_stack.last().unwrap().span.clone());
+            self.emit_diagnostic(
+                format!(
+                    "Macro operand stack has {} item{} left",
+                    ph_stack.len(),
+                    if ph_stack.len() == 1 { "" } else { "s" }
+                ),
+                DiagnosticKind::Warning,
+                span,
+            );
+        }
+        let mut operands = replaced.into_iter().rev();
+        replace_placeholders(macro_words, &mut || operands.next().unwrap());
+        let mut words_to_format = Vec::new();
+        for word in &*macro_words {
+            match &word.value {
+                Word::Func(func) => words_to_format.extend(func.lines.iter().flatten().cloned()),
+                _ => words_to_format.push(word.clone()),
+            }
+        }
+        let formatted = format_words(&words_to_format, &self.asm.inputs);
+        (self.code_meta.macro_expansions).insert(span, (name, formatted));
+        Ok(())
+    }
     fn quote(&mut self, code: &str, span: &CodeSpan, call: bool) -> UiuaResult {
         let (items, errors, _) = parse(
             code,
@@ -923,9 +1038,9 @@ impl Compiler {
         let len = instrs.len();
         comp.asm.instrs.extend(instrs);
         comp.asm.top_slices.push(FuncSlice { start, len });
-        let mut env = Uiua::with_backend(self.backend.clone());
-        let values = match env.run_asm(&comp.asm) {
-            Ok(_) => env.take_stack(),
+        comp.prepare_env()?;
+        let values = match comp.macro_env.run_asm(&comp.asm) {
+            Ok(_) => comp.macro_env.take_stack(),
             Err(e) => {
                 if self.errors.is_empty() {
                     self.add_error(span.clone(), format!("Compile-time evaluation failed: {e}"));
@@ -933,7 +1048,6 @@ impl Compiler {
                 vec![Value::default(); sig.outputs]
             }
         };
-        self.backend = env.rt.backend;
         if !call {
             self.new_functions.push(EcoVec::new());
         }
@@ -947,6 +1061,18 @@ impl Compiler {
             let func = self.add_function(FunctionId::Anonymous(span.clone()), sig, instrs);
             self.push_instr(Instr::PushFunc(func));
         }
+        Ok(())
+    }
+    fn prepare_env(&mut self) -> UiuaResult {
+        let top_slices = take(&mut self.macro_env.asm.top_slices);
+        let mut bindings = take(&mut self.macro_env.asm.bindings);
+        bindings.extend_from_slice(&self.asm.bindings[bindings.len()..]);
+        self.macro_env.asm = self.asm.clone();
+        self.macro_env.asm.bindings = bindings;
+        if let Some(last_slice) = top_slices.last() {
+            (self.macro_env.asm.top_slices).retain(|slice| slice.start > last_slice.start);
+        }
+        self.macro_env.no_io(Uiua::run_top_slices)?;
         Ok(())
     }
 }

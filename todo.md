@@ -1,11 +1,17 @@
 # Uiua Todo
 
 - 0.10
-  - Unicode glyph format by number/name
-  - See if there is a faster way to do multidimensional `rotate`
+  - Re-implement map changes -_-
+  - Doc comment on last line of single-line function
+  - System for custom glyph formatting
   - Let bind only take an ident?
-  - Add more capacity checks
+  - 3+ argument `inventory`
+  - Allow LSP completions for module items
+  - System functions
+    - Clipboard
+    - Excel
 - Site pages/tutorials
+  - Working with strings
   - Duality of `pick` and `select`
   - Stack-source locality
 - Changle how function inlining works

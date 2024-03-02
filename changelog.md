@@ -11,13 +11,29 @@ This version is not yet released. If you are reading this on the website, then t
 - Switch functions now work with [`under ⍜`](https://uiua.org/docs/under)
 - [`under ⍜`](https://uiua.org/docs/under) [`join ⊂`](https://uiua.org/docs/join) now works with arrays of the same rank as long as the row count does not change
 - [`un °`](https://uiua.org/docs/un) [`scan \\`](https://uiua.org/docs/scan) now works with [`equals =`](https://uiua.org/docs/equals) and [`not equals ≠`](https://www.uiua.org/docs/not%20equals)
+- [`group ⊕`](https://uiua.org/docs/group) can now take multidimensional index arrays
+- [`partition ⊜`](https://uiua.org/docs/partition) can now take multidimensional marker arrays
+- [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`pick ⊐`](https://uiua.org/docs/pick) now work with duplicate indices if the values at those indices are the same
+- [`rotate ↻`](https://uiua.org/docs/rotate) now works through boxes
+- [`fold ∧`](https://uiua.org/docs/fold) now works with [`under ⍜`](https://uiua.org/docs/under) if its function does
+- Remove `unpack ⊐` for good
+- Add more [shadowable constants](https://www.uiua.org/docs/constants)
 - Non-alphabetic identifiers can now be suffixed with `!` to make macros
+- Add `df`, `ddf`, etc shortcuts for [`dip ⊙`](https://uiua.org/docs/dip) [`fix ¤`](https://uiua.org/docs/fix)
+- Add the experimental [`mask ⍝`](https://uiua.org/docs/mask) function, which creates a mask of occurrences of one array in another
+  - This works similarly to [`find ⌕`](https://uiua.org/docs/find), but is better when you need a mask or to distinguish between adjacent occurrences
 - Add experimental array macros, which allow code to be generated and manipulated at compile time as strings
   - These are specified with a `^` immediately following a binding's arrow
 - Add the experimental [`quote`](https://uiua.org/docs/quote) modifier, which converts a string to code at compile time
   - This is useful in array macros
 - Add `# No inline!` semantic comment, which prevents a function and its callers from being inlined
   - This enables stack traces on errors
+### Interpreter
+- Language Server
+  - Add macro expansion as a code action
+  - Add completions for shadowable constants
+- Add the `--file <file>` option to the `uiua repl` command
+  - This runs a file before starting the REPL
 
 ## 0.9.5 - 2024-02-28
 ### Interpreter

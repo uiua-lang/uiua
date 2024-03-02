@@ -20,7 +20,7 @@ use crate::{
     Boxed, Primitive, Shape, Uiua, UiuaResult,
 };
 
-use super::{op_bytes_retry_fill, ArrayCmpSlice, FillContext};
+use super::{op_bytes_retry_fill, validate_size, ArrayCmpSlice, FillContext};
 
 impl Value {
     /// Make the value 1-dimensional
@@ -179,9 +179,11 @@ impl Value {
                 if max <= 256 {
                     (0..max).map(|i| i as u8).collect()
                 } else {
+                    validate_size::<f64>(max.unsigned_abs(), env)?;
                     (0..max).map(|i| i as f64).collect()
                 }
             } else {
+                validate_size::<f64>(max.unsigned_abs(), env)?;
                 (max..0).map(|i| i as f64).rev().collect()
             });
         }
@@ -233,6 +235,7 @@ fn range(shape: &[isize], env: &Uiua) -> UiuaResult<Result<CowSlice<f64>, CowSli
     let any_neg = shape.iter().any(|&d| d < 0);
     let max = shape.iter().map(|d| d.unsigned_abs()).max().unwrap();
     if max <= 256 && !any_neg {
+        validate_size::<u8>(len, env)?;
         let mut data: EcoVec<u8> = eco_vec![0; len];
         let data_slice = data.make_mut();
         for i in 0..elem_count {
@@ -242,6 +245,7 @@ fn range(shape: &[isize], env: &Uiua) -> UiuaResult<Result<CowSlice<f64>, CowSli
         }
         Ok(Err(data.into()))
     } else {
+        validate_size::<f64>(len, env)?;
         let mut data: EcoVec<f64> = eco_vec![0.0; len];
         let data_slice = data.make_mut();
         for i in 0..elem_count {

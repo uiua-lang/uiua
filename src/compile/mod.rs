@@ -17,22 +17,24 @@ use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
     ast::*,
     check::{instrs_signature, SigCheckError},
-    constants, example_ua,
+    example_ua,
     format::format_word,
     function::*,
     ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
+    lsp::{CodeMeta, InlineSig},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
-    IntoInputSrc, IntoSysBackend, Primitive, RunMode, SafeSys, SysBackend, SysOp, Uiua, UiuaError,
-    UiuaResult, Value,
+    IntoInputSrc, IntoSysBackend, Primitive, RunMode, SysBackend, SysOp, Uiua, UiuaError,
+    UiuaResult, Value, CONSTANTS,
 };
 
 /// The Uiua compiler
 #[derive(Clone)]
 pub struct Compiler {
     pub(crate) asm: Assembly,
+    pub(crate) code_meta: CodeMeta,
     /// Functions which are under construction
     new_functions: Vec<EcoVec<Instr>>,
     /// The name of the current binding
@@ -69,16 +71,15 @@ pub struct Compiler {
     print_diagnostics: bool,
     /// Whether to evaluate comptime code
     comptime: bool,
-    /// Spans of bare inline functions and their signatures and whether they are explicit
-    pub(crate) inline_function_sigs: InlineSigs,
-    /// The backend used to run comptime code
-    pub(crate) backend: Arc<dyn SysBackend>,
+    /// The interpreter used for comptime code
+    macro_env: Uiua,
 }
 
 impl Default for Compiler {
     fn default() -> Self {
         Compiler {
             asm: Assembly::default(),
+            code_meta: CodeMeta::default(),
             new_functions: Vec::new(),
             current_binding: None,
             next_global: 0,
@@ -97,8 +98,7 @@ impl Default for Compiler {
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             comptime: true,
-            inline_function_sigs: HashMap::new(),
-            backend: Arc::new(SafeSys::default()),
+            macro_env: Uiua::default(),
         }
     }
 }
@@ -123,14 +123,6 @@ impl AsMut<Assembly> for Compiler {
         &mut self.asm
     }
 }
-
-#[derive(Clone, Copy)]
-pub(crate) struct InlineSig {
-    pub sig: Signature,
-    pub explicit: bool,
-}
-
-pub(crate) type InlineSigs = HashMap<CodeSpan, InlineSig>;
 
 #[derive(Clone)]
 struct CurrentBinding {
@@ -180,7 +172,7 @@ impl Compiler {
     /// Create a new compiler with a custom backend for `comptime` code
     pub fn with_backend(backend: impl IntoSysBackend) -> Self {
         Self {
-            backend: backend.into_sys_backend(),
+            macro_env: Uiua::with_backend(backend.into_sys_backend()),
             ..Self::default()
         }
     }
@@ -218,6 +210,25 @@ impl Compiler {
     pub fn mode(&mut self, mode: RunMode) -> &mut Self {
         self.mode = mode;
         self
+    }
+    /// Get the backend
+    pub fn backend(&self) -> Arc<dyn SysBackend> {
+        self.macro_env.rt.backend.clone()
+    }
+    /// Attempt to downcast the system backend to a concrete reference type
+    pub fn downcast_backend<T: SysBackend>(&self) -> Option<&T> {
+        self.macro_env.downcast_backend()
+    }
+    /// Attempt to downcast the system backend to a concrete mutable type
+    pub fn downcast_backend_mut<T: SysBackend>(&mut self) -> Option<&mut T> {
+        self.macro_env.downcast_backend_mut()
+    }
+    /// Take the system backend
+    pub fn take_backend<T: SysBackend>(&mut self) -> Option<T>
+    where
+        T: Default,
+    {
+        self.macro_env.take_backend()
     }
     /// Compile a Uiua file from a file at a path
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
@@ -510,7 +521,7 @@ code:
             if !(url.starts_with("https://") || url.starts_with("http://")) {
                 url = format!("https://{url}");
             }
-            self.backend
+            self.backend()
                 .load_git_module(&url)
                 .map_err(|e| self.fatal_error(span.clone(), e))?
         } else {
@@ -521,7 +532,7 @@ code:
             return Ok(path);
         }
         let bytes = self
-            .backend
+            .backend()
             .file_read_all(&path)
             .or_else(|e| {
                 if path.ends_with(Path::new("example.ua")) {
@@ -1093,9 +1104,9 @@ code:
             let (path_locals, local) = self.ref_local(&r)?;
             self.validate_local(&r.name.value, local, &r.name.span);
             for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                (self.asm.global_references).insert(comp.module.clone(), local.index);
+                (self.code_meta.global_references).insert(comp.module.clone(), local.index);
             }
-            self.asm
+            self.code_meta
                 .global_references
                 .insert(r.name.clone(), local.index);
             self.global_index(local.index, r.name.span, call);
@@ -1115,7 +1126,7 @@ code:
                 ));
             };
             curr.referenced = true;
-            (self.asm.global_references).insert(span.clone().sp(ident), curr.global_index);
+            (self.code_meta.global_references).insert(span.clone().sp(ident), curr.global_index);
             let instr = Instr::Prim(Primitive::Recur, self.add_span(span.clone()));
             if call {
                 self.push_all_instrs([Instr::PushSig(sig), instr, Instr::PopSig]);
@@ -1138,16 +1149,19 @@ code:
             .copied()
         {
             // Name exists in scope
-            (self.asm.global_references).insert(span.clone().sp(ident), local.index);
+            (self.code_meta.global_references).insert(span.clone().sp(ident), local.index);
             self.global_index(local.index, span, call);
-        } else if let Some(constant) = constants().iter().find(|c| c.name == ident) {
+        } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
             // Name is a built-in constant
             let instr = Instr::push(constant.value.clone());
+            self.code_meta
+                .constant_references
+                .insert(span.clone().sp(ident));
             if call {
                 self.push_instr(instr);
             } else {
                 let f = self.add_function(
-                    FunctionId::Anonymous(span.clone()),
+                    FunctionId::Anonymous(span),
                     Signature::new(0, 1),
                     vec![instr],
                 );
@@ -1281,7 +1295,7 @@ code:
                 }
             }
         };
-        self.inline_function_sigs.insert(
+        self.code_meta.inline_function_sigs.insert(
             span.clone(),
             InlineSig {
                 sig,
@@ -1523,62 +1537,6 @@ code:
     ) -> UiuaResult {
         let function = self.create_function(signature, f);
         self.bind_function(name, function)
-    }
-    fn expand_macro(
-        &mut self,
-        macro_words: &mut Vec<Sp<Word>>,
-        operands: Vec<Sp<Word>>,
-    ) -> UiuaResult {
-        let mut ops = collect_placeholder(macro_words);
-        ops.reverse();
-        let mut ph_stack: Vec<Sp<Word>> =
-            operands.into_iter().filter(|w| w.value.is_code()).collect();
-        let mut replaced = Vec::new();
-        for op in ops {
-            let span = op.span;
-            let op = op.value;
-            let mut pop = || {
-                (ph_stack.pop())
-                    .ok_or_else(|| self.fatal_error(span.clone(), "Operand stack is empty"))
-            };
-            match op {
-                PlaceholderOp::Call => replaced.push(pop()?),
-                PlaceholderOp::Dup => {
-                    let a = pop()?;
-                    ph_stack.push(a.clone());
-                    ph_stack.push(a);
-                }
-                PlaceholderOp::Flip => {
-                    let a = pop()?;
-                    let b = pop()?;
-                    ph_stack.push(a);
-                    ph_stack.push(b);
-                }
-                PlaceholderOp::Over => {
-                    let a = pop()?;
-                    let b = pop()?;
-                    ph_stack.push(b.clone());
-                    ph_stack.push(a);
-                    ph_stack.push(b);
-                }
-            }
-        }
-        if !ph_stack.is_empty() {
-            let span = (ph_stack.first().unwrap().span.clone())
-                .merge(ph_stack.last().unwrap().span.clone());
-            self.emit_diagnostic(
-                format!(
-                    "Macro operand stack has {} item{} left",
-                    ph_stack.len(),
-                    if ph_stack.len() == 1 { "" } else { "s" }
-                ),
-                DiagnosticKind::Warning,
-                span,
-            );
-        }
-        let mut operands = replaced.into_iter().rev();
-        replace_placeholders(macro_words, &mut || operands.next().unwrap());
-        Ok(())
     }
 }
 

@@ -2,7 +2,11 @@
 //!
 //! Even without the `lsp` feature enabled, this module still provides some useful types and functions for working with Uiua code in an IDE or text editor.
 
-use std::{slice, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    slice,
+    sync::Arc,
+};
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
@@ -10,8 +14,8 @@ use crate::{
     ident_modifier_args,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    Assembly, BindingInfo, Compiler, Global, InlineSig, InlineSigs, InputSrc, Inputs, Primitive,
-    SafeSys, Signature, SysBackend, UiuaError,
+    Assembly, BindingInfo, Compiler, Global, Ident, InputSrc, Inputs, Primitive, SafeSys,
+    Signature, SysBackend, UiuaError, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -66,9 +70,29 @@ pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<Span
     (spanner.items_spans(&items), spanner.asm.inputs)
 }
 
+#[derive(Clone, Default)]
+pub(crate) struct CodeMeta {
+    /// A map of references to global bindings
+    pub global_references: HashMap<Sp<Ident>, usize>,
+    /// A map of references to shadowable constants
+    pub constant_references: HashSet<Sp<Ident>>,
+    /// Spans of bare inline functions and their signatures and whether they are explicit
+    pub inline_function_sigs: InlineSigs,
+    /// A map of macro invoations to their expansions
+    pub macro_expansions: HashMap<CodeSpan, (Ident, String)>,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct InlineSig {
+    pub sig: Signature,
+    pub explicit: bool,
+}
+
+pub(crate) type InlineSigs = HashMap<CodeSpan, InlineSig>;
+
 struct Spanner {
     asm: Assembly,
-    inline_function_sigs: InlineSigs,
+    code_meta: CodeMeta,
     #[allow(dead_code)]
     errors: Vec<UiuaError>,
     #[allow(dead_code)]
@@ -86,7 +110,7 @@ impl Spanner {
         let diagnostics = compiler.take_diagnostics().into_iter().collect();
         Self {
             asm: compiler.asm,
-            inline_function_sigs: compiler.inline_function_sigs,
+            code_meta: compiler.code_meta,
             errors,
             diagnostics,
         }
@@ -158,7 +182,7 @@ impl Spanner {
     }
 
     fn reference_docs(&self, span: &CodeSpan) -> Option<BindingDocs> {
-        for (name, index) in &self.asm.global_references {
+        for (name, index) in &self.code_meta.global_references {
             let Some(binding) = self.asm.bindings.get(*index) else {
                 continue;
             };
@@ -166,6 +190,24 @@ impl Spanner {
                 continue;
             }
             return Some(self.make_binding_docs(binding));
+        }
+        for name in &self.code_meta.constant_references {
+            if name.span != *span {
+                continue;
+            }
+            let Some(constant) = CONSTANTS.iter().find(|c| c.name == name.value) else {
+                continue;
+            };
+            return Some(BindingDocs {
+                src_span: span.clone(),
+                signature: Some(Signature::new(0, 1)),
+                modifier_args: 0,
+                comment: Some(constant.doc.into()),
+                invertible_underable: None,
+                is_constant: true,
+                is_module: false,
+                is_public: true,
+            });
         }
         None
     }
@@ -248,11 +290,12 @@ impl Spanner {
                     }
                 }
                 Word::Func(func) => {
-                    let kind = if let Some(inline) = self.inline_function_sigs.get(&word.span) {
-                        SpanKind::FuncDelim(inline.sig)
-                    } else {
-                        SpanKind::Delimiter
-                    };
+                    let kind =
+                        if let Some(inline) = self.code_meta.inline_function_sigs.get(&word.span) {
+                            SpanKind::FuncDelim(inline.sig)
+                        } else {
+                            SpanKind::Delimiter
+                        };
                     spans.push(word.span.just_start(self.inputs()).sp(kind.clone()));
                     if let Some(sig) = &func.signature {
                         spans.push(sig.span.clone().sp(SpanKind::Signature));
@@ -279,7 +322,7 @@ impl Spanner {
                             let kind = if let Some(InlineSig {
                                 sig,
                                 explicit: false,
-                            }) = self.inline_function_sigs.get(&branch.span)
+                            }) = self.code_meta.inline_function_sigs.get(&branch.span)
                             {
                                 SpanKind::FuncDelim(*sig)
                             } else {
@@ -372,7 +415,7 @@ mod server {
         pub items: Vec<Item>,
         pub spans: Vec<Sp<SpanKind>>,
         pub asm: Assembly,
-        pub inline_function_sigs: InlineSigs,
+        pub code_meta: CodeMeta,
         pub errors: Vec<UiuaError>,
         pub diagnostics: Vec<crate::Diagnostic>,
     }
@@ -393,7 +436,7 @@ mod server {
                 items,
                 spans,
                 asm: spanner.asm,
-                inline_function_sigs: spanner.inline_function_sigs,
+                code_meta: spanner.code_meta,
                 errors: spanner.errors,
                 diagnostics: spanner.diagnostics,
             }
@@ -555,7 +598,7 @@ mod server {
             // Hovering an inline function
             let mut inline_function_sig: Option<Sp<Signature>> = None;
             if prim_range.is_none() && binding_docs.is_none() {
-                for (span, inline) in &doc.inline_function_sigs {
+                for (span, inline) in &doc.code_meta.inline_function_sigs {
                     if !inline.explicit && span.contains_line_col(line, col) {
                         inline_function_sig = Some(span.clone().sp(inline.sig));
                     }
@@ -621,123 +664,148 @@ mod server {
         }
 
         async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
-            let doc_uri = &params.text_document_position.text_document.uri;
-            let doc = if let Some(doc) = self.docs.get(doc_uri) {
-                doc
-            } else {
-                return Ok(None);
-            };
-            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
-            let Some(sp) = (doc.spans.iter()).find(|sp| sp.span.contains_line_col(line, col))
-            else {
-                return Ok(None);
-            };
+            self.catch_crash(|| {
+                let doc_uri = &params.text_document_position.text_document.uri;
+                let doc = if let Some(doc) = self.docs.get(doc_uri) {
+                    doc
+                } else {
+                    return Ok(None);
+                };
+                let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
+                let Some(sp) = (doc.spans.iter()).find(|sp| sp.span.contains_line_col(line, col))
+                else {
+                    return Ok(None);
+                };
 
-            let Ok(token) = std::str::from_utf8(&doc.input.as_bytes()[sp.span.byte_range()]) else {
-                return Ok(None);
-            };
+                let Ok(token) = std::str::from_utf8(&doc.input.as_bytes()[sp.span.byte_range()])
+                else {
+                    return Ok(None);
+                };
 
-            // Collect primitive completions
-            let mut completions: Vec<_> = Primitive::non_deprecated()
-                .filter(|p| p.name().starts_with(token))
-                .map(|prim| {
-                    CompletionItem {
-                        label: prim.format().to_string(),
-                        insert_text: prim.glyph().map(|c| c.to_string()),
-                        kind: Some(if prim.is_constant() {
-                            CompletionItemKind::CONSTANT
-                        } else {
-                            CompletionItemKind::FUNCTION
-                        }),
-                        detail: Some(prim.doc().short_text().to_string()),
-                        documentation: Some(Documentation::MarkupContent(MarkupContent {
-                            kind: MarkupKind::Markdown,
-                            value: full_prim_doc_markdown(prim),
-                        })),
+                // Collect primitive completions
+                let mut completions: Vec<_> = Primitive::non_deprecated()
+                    .filter(|p| p.name().starts_with(token))
+                    .map(|prim| {
+                        CompletionItem {
+                            label: prim.format().to_string(),
+                            insert_text: prim.glyph().map(|c| c.to_string()),
+                            kind: Some(if prim.is_constant() {
+                                CompletionItemKind::CONSTANT
+                            } else {
+                                CompletionItemKind::FUNCTION
+                            }),
+                            detail: Some(prim.doc().short_text().to_string()),
+                            documentation: Some(Documentation::MarkupContent(MarkupContent {
+                                kind: MarkupKind::Markdown,
+                                value: full_prim_doc_markdown(prim),
+                            })),
+                            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                                range: uiua_span_to_lsp(&sp.span),
+                                new_text: prim
+                                    .glyph()
+                                    .map(|c| c.to_string())
+                                    .unwrap_or_else(|| prim.name().to_string()),
+                            })),
+                            insert_text_mode: if prim.glyph().is_none() {
+                                // Insert a space before the completion if the token is not a glyph
+                                Some(InsertTextMode::ADJUST_INDENTATION)
+                            } else {
+                                None
+                            },
+                            sort_text: Some(format!(
+                                "{} {}",
+                                if prim.glyph().is_some() { "0" } else { "1" },
+                                prim.name()
+                            )),
+                            ..Default::default()
+                        }
+                    })
+                    .collect();
+
+                // Collect binding completions
+                for binding in self.bindings_in_file(doc_uri, &uri_path(doc_uri)) {
+                    let name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
+
+                    fn make_completion(
+                        name: String,
+                        span: &CodeSpan,
+                        binding: &BindingInfo,
+                    ) -> CompletionItem {
+                        let kind = match &binding.global {
+                            Global::Const(_) => CompletionItemKind::CONSTANT,
+                            Global::Func(_) => CompletionItemKind::FUNCTION,
+                            Global::Macro => CompletionItemKind::FUNCTION,
+                            Global::Module { .. } => CompletionItemKind::MODULE,
+                        };
+                        CompletionItem {
+                            label: name.clone(),
+                            kind: Some(kind),
+                            label_details: Some(CompletionItemLabelDetails {
+                                detail: binding.global.signature().map(|sig| sig.to_string()),
+                                ..Default::default()
+                            }),
+                            detail: binding.global.signature().map(|sig| sig.to_string()),
+                            documentation: binding.comment.as_ref().map(|c| {
+                                Documentation::MarkupContent(MarkupContent {
+                                    kind: MarkupKind::Markdown,
+                                    value: c.to_string(),
+                                })
+                            }),
+                            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                                range: uiua_span_to_lsp(span),
+                                new_text: name,
+                            })),
+                            ..Default::default()
+                        }
+                    }
+
+                    if let Global::Module { module } = &binding.global {
+                        for binding in self.bindings_in_file(doc_uri, module) {
+                            if !binding.public {
+                                continue;
+                            }
+                            let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
+                            if !item_name.to_lowercase().starts_with(&token.to_lowercase()) {
+                                continue;
+                            }
+                            completions.push(make_completion(
+                                format!("{name}~{item_name}"),
+                                &sp.span,
+                                &binding,
+                            ));
+                        }
+                    }
+
+                    if !name.to_lowercase().starts_with(&token.to_lowercase()) {
+                        continue;
+                    }
+                    completions.push(make_completion(name, &sp.span, &binding));
+                }
+
+                // Collect constant completions
+                for constant in &CONSTANTS {
+                    if !constant
+                        .name
+                        .to_lowercase()
+                        .starts_with(&token.to_lowercase())
+                    {
+                        continue;
+                    }
+                    completions.push(CompletionItem {
+                        label: constant.name.into(),
+                        kind: Some(CompletionItemKind::CONSTANT),
+                        detail: Some(constant.doc.into()),
                         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
                             range: uiua_span_to_lsp(&sp.span),
-                            new_text: prim
-                                .glyph()
-                                .map(|c| c.to_string())
-                                .unwrap_or_else(|| prim.name().to_string()),
-                        })),
-                        insert_text_mode: if prim.glyph().is_none() {
-                            // Insert a space before the completion if the token is not a glyph
-                            Some(InsertTextMode::ADJUST_INDENTATION)
-                        } else {
-                            None
-                        },
-                        sort_text: Some(format!(
-                            "{} {}",
-                            if prim.glyph().is_some() { "0" } else { "1" },
-                            prim.name()
-                        )),
-                        ..Default::default()
-                    }
-                })
-                .collect();
-
-            // Collect binding completions
-            for binding in self.bindings_in_file(doc_uri, &uri_path(doc_uri)) {
-                let name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
-
-                fn make_completion(
-                    name: String,
-                    span: &CodeSpan,
-                    binding: &BindingInfo,
-                ) -> CompletionItem {
-                    let kind = match &binding.global {
-                        Global::Const(_) => CompletionItemKind::CONSTANT,
-                        Global::Func(_) => CompletionItemKind::FUNCTION,
-                        Global::Macro => CompletionItemKind::FUNCTION,
-                        Global::Module { .. } => CompletionItemKind::MODULE,
-                    };
-                    CompletionItem {
-                        label: name.clone(),
-                        kind: Some(kind),
-                        label_details: Some(CompletionItemLabelDetails {
-                            detail: binding.global.signature().map(|sig| sig.to_string()),
-                            ..Default::default()
-                        }),
-                        detail: binding.global.signature().map(|sig| sig.to_string()),
-                        documentation: binding.comment.as_ref().map(|c| {
-                            Documentation::MarkupContent(MarkupContent {
-                                kind: MarkupKind::Markdown,
-                                value: c.to_string(),
-                            })
-                        }),
-                        text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                            range: uiua_span_to_lsp(span),
-                            new_text: name,
+                            new_text: constant.name.into(),
                         })),
                         ..Default::default()
-                    }
+                    });
                 }
 
-                if let Global::Module { module } = &binding.global {
-                    for binding in self.bindings_in_file(doc_uri, module) {
-                        if !binding.public {
-                            continue;
-                        }
-                        let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
-                        if !item_name.to_lowercase().starts_with(&token.to_lowercase()) {
-                            continue;
-                        }
-                        completions.push(make_completion(
-                            format!("{name}~{item_name}"),
-                            &sp.span,
-                            &binding,
-                        ));
-                    }
-                }
-
-                if !name.to_lowercase().starts_with(&token.to_lowercase()) {
-                    continue;
-                }
-                completions.push(make_completion(name, &sp.span, &binding));
-            }
-
-            Ok(Some(CompletionResponse::Array(completions)))
+                Ok(Some(CompletionResponse::Array(completions)))
+            })
+            .await
         }
 
         async fn formatting(
@@ -779,12 +847,6 @@ mod server {
             &self,
             params: SemanticTokensParams,
         ) -> Result<Option<SemanticTokensResult>> {
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    format!("Semantic tokens {}", params.text_document.uri),
-                )
-                .await;
             let doc = if let Some(doc) = self.docs.get(&params.text_document.uri) {
                 doc
             } else {
@@ -870,35 +932,60 @@ mod server {
             };
             let (line, col) = lsp_pos_to_uiua(params.range.start);
             let mut actions = Vec::new();
+
             // Add explicit signature
-            for (span, inline) in &doc.inline_function_sigs {
-                if span.contains_line_col(line, col) {
-                    if inline.explicit {
-                        continue;
-                    }
-                    let mut insertion_span = span.just_start(&doc.asm.inputs);
-                    insertion_span.start = insertion_span.end;
-                    actions.push(CodeActionOrCommand::CodeAction(CodeAction {
-                        title: "Add explicit signature".into(),
-                        kind: Some(CodeActionKind::QUICKFIX),
-                        edit: Some(WorkspaceEdit {
-                            changes: Some(
-                                [(
-                                    params.text_document.uri,
-                                    vec![TextEdit {
-                                        range: uiua_span_to_lsp(&insertion_span),
-                                        new_text: format!("{} ", inline.sig),
-                                    }],
-                                )]
-                                .into(),
-                            ),
-                            ..Default::default()
-                        }),
-                        ..Default::default()
-                    }));
-                    break;
+            for (span, inline) in &doc.code_meta.inline_function_sigs {
+                if inline.explicit || !span.contains_line_col(line, col) {
+                    continue;
                 }
+                let mut insertion_span = span.just_start(&doc.asm.inputs);
+                insertion_span.start = insertion_span.end;
+                actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                    title: "Add explicit signature".into(),
+                    kind: Some(CodeActionKind::QUICKFIX),
+                    edit: Some(WorkspaceEdit {
+                        changes: Some(
+                            [(
+                                params.text_document.uri.clone(),
+                                vec![TextEdit {
+                                    range: uiua_span_to_lsp(&insertion_span),
+                                    new_text: format!("{} ", inline.sig),
+                                }],
+                            )]
+                            .into(),
+                        ),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }));
+                break;
             }
+
+            // Expand macro
+            for (span, (name, expanded)) in &doc.code_meta.macro_expansions {
+                if !span.contains_line_col(line, col) {
+                    continue;
+                }
+                actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                    title: format!("Expand macro {name}"),
+                    kind: Some(CodeActionKind::REFACTOR_INLINE),
+                    edit: Some(WorkspaceEdit {
+                        changes: Some(
+                            [(
+                                params.text_document.uri.clone(),
+                                vec![TextEdit {
+                                    range: uiua_span_to_lsp(span),
+                                    new_text: expanded.clone(),
+                                }],
+                            )]
+                            .into(),
+                        ),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }));
+            }
+
             Ok(if actions.is_empty() {
                 None
             } else {
@@ -927,7 +1014,7 @@ mod server {
             }
             // Check for span in binding references
             if binding.is_none() {
-                for (name, index) in &doc.asm.global_references {
+                for (name, index) in &doc.code_meta.global_references {
                     if name.span.contains_line_col(line, col) {
                         binding = Some((&doc.asm.bindings[*index], *index));
                         break;
@@ -942,7 +1029,7 @@ mod server {
                 range: uiua_span_to_lsp(&binding.span),
                 new_text: params.new_name.clone(),
             }];
-            for (name, idx) in &doc.asm.global_references {
+            for (name, idx) in &doc.code_meta.global_references {
                 if *idx == index {
                     edits.push(TextEdit {
                         range: uiua_span_to_lsp(&name.span),
@@ -971,7 +1058,7 @@ mod server {
             };
             let position = params.text_document_position_params.position;
             let (line, col) = lsp_pos_to_uiua(position);
-            for (name, idx) in &current_doc.asm.global_references {
+            for (name, idx) in &current_doc.code_meta.global_references {
                 if name.span.contains_line_col(line, col) {
                     let binding = &current_doc.asm.bindings[*idx];
                     let uri = match &binding.span.src {
@@ -1085,6 +1172,17 @@ mod server {
     }
 
     impl Backend {
+        async fn catch_crash<T>(&self, f: impl FnOnce() -> Result<Option<T>>) -> Result<Option<T>> {
+            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
+                Ok(result) => result,
+                Err(e) => {
+                    self.client
+                        .log_message(MessageType::ERROR, format!("Error: {:?}", e))
+                        .await;
+                    Ok(None)
+                }
+            }
+        }
         fn bindings_in_file(
             &self,
             doc_uri: &Url,

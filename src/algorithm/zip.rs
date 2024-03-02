@@ -165,10 +165,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let sig = f.signature();
     match sig.args {
-        0 => Err(env.error(format!(
-            "{}'s function must take at least 1 argument",
-            Primitive::Each.format()
-        ))),
+        0 => Ok(()),
         1 => each1(f, env.pop(1)?, env),
         2 => each2(f, env.pop(1)?, env.pop(2)?, env),
         n => {
@@ -373,10 +370,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let sig = f.signature();
     match sig.args {
-        0 => Err(env.error(format!(
-            "{}'s function must take at least 1 argument",
-            Primitive::Rows.format()
-        ))),
+        0 => Ok(()),
         1 => rows1(f, env.pop(1)?, env),
         2 => rows2(f, env.pop(1)?, env.pop(2)?, env),
         n => {
@@ -389,7 +383,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
+pub fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     if let Some((f, d)) = f_mon_fast_fn(&f, env) {
         let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
         if !maybe_through_boxes {

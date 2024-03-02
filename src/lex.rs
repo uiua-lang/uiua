@@ -278,12 +278,14 @@ impl CodeSpan {
         }
     }
     /// Merge two spans
-    pub fn merge(self, end: Self) -> Self {
-        CodeSpan {
-            start: self.start.min(end.start),
-            end: self.end.max(end.end),
-            ..self
-        }
+    pub fn merge(mut self, end: Self) -> Self {
+        self.merge_with(end);
+        self
+    }
+    /// Merge two spans
+    pub fn merge_with(&mut self, end: Self) {
+        self.start = self.start.min(end.start);
+        self.end = self.end.max(end.end);
     }
     /// Get the text of the span
     pub fn byte_range(&self) -> Range<usize> {

@@ -886,6 +886,9 @@ impl SysOp {
         match self {
             SysOp::Show => {
                 let s = env.pop(1)?.show();
+                if !env.rt.do_top_io {
+                    return Ok(());
+                }
                 env.rt
                     .backend
                     .print_str_stdout(&s)
@@ -897,6 +900,9 @@ impl SysOp {
             }
             SysOp::Prin => {
                 let val = env.pop(1)?;
+                if !env.rt.do_top_io {
+                    return Ok(());
+                }
                 env.rt
                     .backend
                     .print_str_stdout(&val.format())
@@ -904,6 +910,9 @@ impl SysOp {
             }
             SysOp::Print => {
                 let val = env.pop(1)?;
+                if !env.rt.do_top_io {
+                    return Ok(());
+                }
                 env.rt
                     .backend
                     .print_str_stdout(&val.format())
@@ -926,6 +935,9 @@ impl SysOp {
             }
             SysOp::RawMode => {
                 let raw_mode = env.pop(1)?.as_bool(env, "Raw mode must be a boolean")?;
+                if !env.rt.do_top_io {
+                    return Ok(());
+                }
                 env.rt
                     .backend
                     .set_raw_mode(raw_mode)

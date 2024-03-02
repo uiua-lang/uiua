@@ -628,12 +628,15 @@ fn set_code_html(id: &str, code: &str) {
                     SpanKind::Label => {
                         let label = text.trim_start_matches('$');
                         let mut components = [0f32; 3];
-                        for (i, c) in label.bytes().chain(label.bytes().take(2)).enumerate() {
-                            let c = (c.overflowing_add(c % 2 + 1).0)
-                                .overflowing_pow((i as u8 + 1).overflowing_mul(c).0 as u32)
-                                .0;
-                            components[i % 3] += c as f32 / 255.0 / (i / 3 + 1) as f32;
-                            components[i % 3] = components[i % 3].fract();
+                        const MIN: f32 = 0.2;
+                        const MAX: f32 = 0.8;
+                        let first = label.bytes().next();
+                        for (i, c) in label.bytes().map(|c| c.to_ascii_lowercase()).enumerate() {
+                            let j = (i + first.unwrap().to_ascii_lowercase() as usize) % 3;
+                            let mul = 1.0 - (i / 3 % 3) as f32 * 0.333;
+                            let t = mul * (c.saturating_sub(b'a') as f32 / 26.0);
+                            let target = MIN + (MAX - MIN) * t;
+                            components[j] = components[j].max(target);
                         }
                         // Normalize to a pastel color
                         for c in &mut components {
@@ -808,18 +811,29 @@ fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
     let mut rt = init_rt();
     let mut error = None;
     let mut comp = Compiler::with_backend(WebBackend::default());
-    let mut values = match comp.load_str(code).and_then(|comp| rt.run_compiler(comp)) {
-        Ok(_) => rt.take_stack(),
+    let comp_backend;
+    let (mut values, io) = match comp.load_str(code).map(|comp| rt.run_compiler(comp)) {
+        Ok(Ok(_)) => (
+            rt.take_stack(),
+            rt.downcast_backend::<WebBackend>().unwrap(),
+        ),
+        Ok(Err(e)) => {
+            error = Some(e);
+            (
+                rt.take_stack(),
+                rt.downcast_backend::<WebBackend>().unwrap(),
+            )
+        }
         Err(e) => {
             error = Some(e);
-            rt.take_stack()
+            comp_backend = comp.take_backend::<WebBackend>().unwrap();
+            (Vec::new(), &comp_backend)
         }
     };
     if get_top_at_top() {
         values.reverse();
     }
     let diagnostics = comp.take_diagnostics();
-    let io = rt.downcast_backend::<WebBackend>().unwrap();
     // Get stdout and stderr
     let stdout = take(&mut *io.stdout.lock().unwrap());
     let mut stack = Vec::new();

@@ -73,12 +73,32 @@ impl Value {
                 }
             } else {
                 let mut sorted_indices = Vec::with_capacity(index_data.len() / last_axis_len);
-                for index in index_data.chunks(last_axis_len) {
-                    sorted_indices.push(index);
+                for (i, index) in index_data.chunks(last_axis_len).enumerate() {
+                    sorted_indices.push((i, index));
                 }
-                sorted_indices.sort_unstable();
-                if sorted_indices.windows(2).any(|w| w[0] == w[1]) {
-                    return Err(env.error("Cannot undo pick with duplicate indices"));
+                sorted_indices.sort_unstable_by_key(|(_, index)| *index);
+                if sorted_indices.windows(2).any(|w| {
+                    let (ai, a) = w[0];
+                    let (bi, b) = w[1];
+                    let same = a.iter().zip(b).enumerate().all(|(i, (&a, &b))| {
+                        let a = if a >= 0 {
+                            a as usize
+                        } else {
+                            into.shape()[i] - a.unsigned_abs()
+                        };
+                        let b = if b >= 0 {
+                            b as usize
+                        } else {
+                            into.shape()[i] - b.unsigned_abs()
+                        };
+                        a == b
+                    });
+                    same && self.row(ai) != self.row(bi)
+                }) {
+                    return Err(env.error(
+                        "Cannot undo pick with duplicate \
+                        indices but different values",
+                    ));
                 }
             }
         }
@@ -640,11 +660,11 @@ impl Value {
     }
     pub(crate) fn unselect(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let (ind_shape, ind) = index.as_shaped_indices(env)?;
-        let mut sorted_indices = ind.clone();
-        sorted_indices.sort();
+        let mut sorted_indices: Vec<_> = ind.iter().copied().enumerate().collect();
+        sorted_indices.sort_unstable_by_key(|(_, index)| *index);
         if sorted_indices.windows(2).any(|win| {
-            let a = win[0];
-            let b = win[1];
+            let (ai, a) = win[0];
+            let (bi, b) = win[1];
             let a = if a >= 0 {
                 a as usize
             } else {
@@ -655,9 +675,12 @@ impl Value {
             } else {
                 into.row_count() - b.unsigned_abs()
             };
-            a == b
+            a == b && self.row(ai) != self.row(bi)
         }) {
-            return Err(env.error("Cannot undo selection with duplicate indices"));
+            return Err(env.error(
+                "Cannot undo selection with duplicate \
+                indices but different values",
+            ));
         }
         self.generic_bin_into(
             into,

@@ -252,7 +252,7 @@ fn with_pair_mut<T>(val: &mut Value, env: &Uiua, f: impl FnOnce(PairMut) -> T) -
             let data = arr.data.as_mut_slice();
             let (keys, values) = data.split_at_mut(1);
             let res = f(PairMut {
-                meta: Array::<Boxed>::get_meta_mut(&mut arr.meta),
+                meta: Array::<Boxed>::meta_mut_impl(&mut arr.meta),
                 keys: &mut keys[0].0,
                 values: &mut values[0].0,
             });
@@ -267,7 +267,7 @@ fn with_pair_mut<T>(val: &mut Value, env: &Uiua, f: impl FnOnce(PairMut) -> T) -
             let data = arr.data.as_mut_slice();
             let (keys, values) = data.split_at_mut(1);
             let res = f(PairMut {
-                meta: Array::<Boxed>::get_meta_mut(&mut arr.meta),
+                meta: Array::<Boxed>::meta_mut_impl(&mut arr.meta),
                 keys: &mut keys[0].0,
                 values: &mut values[0].0,
             });
@@ -279,7 +279,7 @@ fn with_pair_mut<T>(val: &mut Value, env: &Uiua, f: impl FnOnce(PairMut) -> T) -
                 let data = arr.data.as_mut_slice();
                 let (keys, values) = data.split_at_mut(1);
                 let res = f(PairMut {
-                    meta: Array::<Boxed>::get_meta_mut(&mut arr.meta),
+                    meta: Array::<Boxed>::meta_mut_impl(&mut arr.meta),
                     keys: &mut keys[0].0,
                     values: &mut values[0].0,
                 });
@@ -290,7 +290,7 @@ fn with_pair_mut<T>(val: &mut Value, env: &Uiua, f: impl FnOnce(PairMut) -> T) -
                 let data = arr.data.as_mut_slice();
                 let (keys, values) = data.split_at_mut(1);
                 let res = f(PairMut {
-                    meta: Array::<Boxed>::get_meta_mut(&mut arr.meta),
+                    meta: Array::<Boxed>::meta_mut_impl(&mut arr.meta),
                     keys: &mut keys[0].0,
                     values: &mut values[0].0,
                 });

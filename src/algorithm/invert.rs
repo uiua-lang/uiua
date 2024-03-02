@@ -112,7 +112,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         &(Val, invert_repeat_pattern),
         &(Val, ([Rotate], [Neg, Rotate])),
         &([Rotate], [Neg, Rotate]),
-        &pat!(Sqrt, (2, Pow)),
+        &pat!(Sqrt, (Dup, Mul)),
         &(Val, IgnoreMany(Flip), ([Add], [Sub])),
         &(Val, ([Sub], [Add])),
         &(Val, ([Flip, Sub], [Flip, Sub])),
@@ -229,6 +229,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_unpack_pattern, "unpack"),
         &UnderPatternFn(under_touch_pattern, "touch"),
         &UnderPatternFn(under_repeat_pattern, "repeat"),
+        &UnderPatternFn(under_fold_pattern, "fold"),
         &UnderPatternFn(under_switch_pattern, "switch"),
         // Basic math
         &dyad!(Flip, Add, Sub),
@@ -661,7 +662,7 @@ macro_rules! temp_wrap {
         fn $name<'a>(
             input: &'a [Instr],
             _: &mut Compiler,
-        ) -> Option<(&'a [Instr], &'a Instr, &'a [Instr], &'a Instr)> {
+        ) -> Option<(&'a [Instr], &'a Instr, &'a [Instr], &'a Instr, usize)> {
             let (
                 instr @ Instr::$variant {
                     stack: TempStack::Inline,
@@ -711,7 +712,7 @@ macro_rules! temp_wrap {
             let (inner, input) = input.split_at(end);
             let end_instr = input.first()?;
             let input = &input[1..];
-            Some((input, instr, inner, end_instr))
+            Some((input, instr, inner, end_instr, max_depth))
         }
     };
 }
@@ -723,7 +724,7 @@ fn invert_temp_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let (input, instr, inner, end_instr) =
+    let (input, instr, inner, end_instr, _) =
         try_push_temp_wrap(input, comp).or_else(|| try_copy_temp_wrap(input, comp))?;
     let mut instrs = invert_instrs(inner, comp)?;
     instrs.insert(0, instr.clone());
@@ -758,26 +759,38 @@ fn under_copy_temp_pattern<'a>(
     g_sig: Signature,
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
-    let (input, instr, inner, end_instr) = try_copy_temp_wrap(input, comp)?;
+    let (input, instr, inner, end_instr, _) = try_copy_temp_wrap(input, comp)?;
     let (mut inner_befores, mut inner_afters) = under_instrs(inner, g_sig, comp)?;
-    if let Some((
+    let Some((
         Instr::CopyToTemp {
             stack: TempStack::Under,
+            count: before_count,
             ..
         },
         Instr::PopTemp {
             stack: TempStack::Under,
+            count: after_count,
             ..
         },
     )) = inner_befores.first().zip(inner_afters.first())
-    {
-        inner_befores.make_mut()[0] = instr.clone();
-        inner_afters.make_mut()[0] = instr.clone();
+    else {
+        return None;
+    };
+    if g_sig.args > g_sig.outputs {
+        inner_befores.insert(0, instr.clone());
         inner_befores.push(end_instr.clone());
+    } else {
+        let mut instr_copy = instr.clone();
+        let mut end_instr_copy = end_instr.clone();
+        let (start_count, end_count) = temp_pair_counts(&mut instr_copy, &mut end_instr_copy)?;
+        *start_count = *before_count;
+        *end_count = *after_count;
+        inner_befores.make_mut()[0] = instr_copy.clone();
+        inner_afters.make_mut()[0] = instr.clone();
+        inner_befores.push(end_instr_copy.clone());
         inner_afters.push(end_instr.clone());
-        return Some((input, (inner_befores, inner_afters)));
     }
-    None
+    Some((input, (inner_befores, inner_afters)))
 }
 
 fn under_push_temp_pattern<'a>(
@@ -785,7 +798,7 @@ fn under_push_temp_pattern<'a>(
     g_sig: Signature,
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
-    let (input, start_instr, inner, end_instr) = try_push_temp_wrap(input, comp)?;
+    let (input, start_instr, inner, end_instr, _) = try_push_temp_wrap(input, comp)?;
     // Calcular inner functions and signatures
     let (inner_befores, inner_afters) = under_instrs(inner, g_sig, comp)?;
     let inner_befores_sig = instrs_signature(&inner_befores).ok()?;
@@ -899,6 +912,14 @@ fn temp_pair_counts<'a, 'b>(
                 count: end_count, ..
             },
         ) => Some((start_count, end_count)),
+        (
+            Instr::CopyToTemp {
+                count: start_count, ..
+            },
+            Instr::PopTemp {
+                count: end_count, ..
+            },
+        ) => Some((start_count, end_count)),
         _ => None,
     }
 }
@@ -949,12 +970,33 @@ fn under_rows_pattern<'a>(
         Instr::PushFunc(make_fn(f_before, span, comp)?),
         Instr::Prim(Primitive::Rows, span),
     ];
-    let afters = eco_vec![
-        Instr::PushFunc(make_fn(f_after, span, comp)?),
+    let after_fn = make_fn(f_after, span, comp)?;
+    let after_sig = after_fn.signature();
+    let mut afters = eco_vec![
+        Instr::PushFunc(after_fn),
         Instr::Prim(Primitive::Reverse, span),
         Instr::Prim(Primitive::Rows, span),
-        Instr::Prim(Primitive::Reverse, span),
     ];
+    if after_sig.outputs > 0 {
+        afters.push(Instr::Prim(Primitive::Reverse, span));
+    }
+    for count in 1..after_sig.outputs {
+        afters.extend([
+            Instr::PushTemp {
+                stack: TempStack::Inline,
+                count,
+                span,
+            },
+            Instr::Prim(Primitive::Reverse, span),
+        ]);
+    }
+    if after_sig.outputs > 0 {
+        afters.push(Instr::PopTemp {
+            stack: TempStack::Inline,
+            count: after_sig.outputs - 1,
+            span,
+        });
+    }
     Some((input, (befores, afters)))
 }
 
@@ -1321,6 +1363,49 @@ fn under_repeat_pattern<'a>(
         }
         _ => return None,
     })
+}
+
+fn under_fold_pattern<'a>(
+    input: &'a [Instr],
+    g_sig: Signature,
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    let [Instr::PushFunc(f), fold @ Instr::Prim(Primitive::Fold, span), input @ ..] = input else {
+        return None;
+    };
+    let span = *span;
+    let inner = f.instrs(comp).to_vec();
+    let (inner_befores, inner_afters) = under_instrs(&inner, g_sig, comp)?;
+    let inner_befores_sig = instrs_signature(&inner_befores).ok()?;
+    let inner_afters_sig = instrs_signature(&inner_afters).ok()?;
+    if inner_befores_sig.outputs > inner_befores_sig.args
+        || inner_afters_sig.outputs > inner_afters_sig.args
+    {
+        return None;
+    }
+    let befores_func = make_fn(inner_befores, span, comp)?;
+    let afters_func = make_fn(inner_afters, span, comp)?;
+    let befores = eco_vec![
+        Instr::Prim(Primitive::Dup, span),
+        Instr::Prim(Primitive::Len, span),
+        Instr::PushTemp {
+            stack: TempStack::Inline,
+            span,
+            count: 1,
+        },
+        Instr::PushFunc(befores_func),
+        fold.clone()
+    ];
+    let afters = eco_vec![
+        Instr::PopTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            span
+        },
+        Instr::PushFunc(afters_func),
+        Instr::Prim(Primitive::Repeat, span)
+    ];
+    Some((input, (befores, afters)))
 }
 
 fn invert_reduce_mul_pattern<'a>(

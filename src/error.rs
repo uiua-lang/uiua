@@ -378,11 +378,15 @@ impl Report {
     }
     /// Create a new report
     pub fn new(kind: ReportKind, message: impl Into<String>) -> Self {
-        let fragments = vec![
+        let message = message.into();
+        let mut fragments = vec![
             ReportFragment::Colored(kind.str().into()),
             ReportFragment::Plain(": ".into()),
-            ReportFragment::Plain(message.into()),
         ];
+        if message.lines().count() > 1 {
+            fragments.push(ReportFragment::Newline);
+        }
+        fragments.push(ReportFragment::Plain(message));
         Self {
             kind,
             fragments,
@@ -402,8 +406,9 @@ impl Report {
             }
             fragments.push(ReportFragment::Colored(kind.str().into()));
             fragments.push(ReportFragment::Plain(": ".into()));
-            for (i, line) in message.to_string().lines().enumerate() {
-                if i > 0 {
+            let message = message.to_string();
+            for (i, line) in message.lines().enumerate() {
+                if i > 0 || message.lines().count() > 1 {
                     fragments.push(ReportFragment::Newline);
                     fragments.push(ReportFragment::Plain("  ".into()));
                 }

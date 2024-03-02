@@ -423,7 +423,7 @@ impl<'a> VirtualEnv<'a> {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }
-                Unpack | Content | Memo | Comptime => {
+                Content | Memo | Comptime => {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }

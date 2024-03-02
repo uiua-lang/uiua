@@ -16,9 +16,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(1)?;
 
     match (f.as_flipped_primitive(env), xs) {
-        (Some((Primitive::Join, false)), mut xs)
-            if !env.unpack_boxes() && env.value_fill().is_none() =>
-        {
+        (Some((Primitive::Join, false)), mut xs) if env.value_fill().is_none() => {
             let depth = depth.min(xs.rank());
             if xs.rank() - depth < 2 {
                 env.push(xs);
@@ -325,6 +323,15 @@ fn generic_reduce(f: Function, xs: Value, depth: usize, env: &mut Uiua) -> UiuaR
 pub fn reduce_content(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let xs = env.pop(1)?;
+    if let (1, Some((Primitive::Join, false))) = (xs.rank(), f.as_flipped_primitive(env)) {
+        let xs = xs
+            .into_rows()
+            .map(Value::unboxed)
+            .flat_map(Value::into_rows);
+        let val = Value::from_row_values(xs, env)?;
+        env.push(val);
+        return Ok(());
+    }
     generic_reduce_impl(f, xs, 0, Value::unboxed, env)
 }
 
@@ -386,9 +393,6 @@ fn generic_reduce_inner(
                         env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
                     })?;
                 acc = process(acc);
-                if env.unpack_boxes() {
-                    acc.unpack();
-                }
                 acc = env.without_fill(|env| -> UiuaResult<Value> {
                     for row in rows {
                         env.push(process(row));

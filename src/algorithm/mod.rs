@@ -4,6 +4,7 @@ use std::{
     cmp::Ordering,
     convert::Infallible,
     hash::{Hash, Hasher},
+    mem::size_of,
 };
 
 use tinyvec::TinyVec;
@@ -54,6 +55,20 @@ fn max_shape(a: &[usize], b: &[usize]) -> Shape {
     new_shape
 }
 
+pub fn validate_size<T>(elements: usize, env: &Uiua) -> UiuaResult {
+    let elem_size = size_of::<T>();
+    let size = elements * elem_size;
+    let max_mega = if cfg!(target_arch = "wasm32") {
+        256
+    } else {
+        4096
+    };
+    if size > max_mega * 1024usize.pow(2) {
+        return Err(env.error(format!("Array of {} elements would be too large", elements)));
+    }
+    Ok(())
+}
+
 pub trait ErrorContext {
     type Error;
     fn error(&self, msg: impl ToString) -> Self::Error;
@@ -84,16 +99,12 @@ impl ErrorContext for () {
 }
 
 pub trait FillContext: ErrorContext {
-    fn unpack_boxes(&self) -> bool;
     fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str>;
     fn fill_error(error: Self::Error) -> Self::Error;
     fn is_fill_error(error: &Self::Error) -> bool;
 }
 
 impl FillContext for Uiua {
-    fn unpack_boxes(&self) -> bool {
-        self.unpack_boxes()
-    }
     fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
         T::get_fill(self)
     }
@@ -106,9 +117,6 @@ impl FillContext for Uiua {
 }
 
 impl FillContext for () {
-    fn unpack_boxes(&self) -> bool {
-        false
-    }
     fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
         Err(". No fill is set.")
     }
@@ -121,9 +129,6 @@ impl FillContext for () {
 }
 
 impl FillContext for (&CodeSpan, &Inputs) {
-    fn unpack_boxes(&self) -> bool {
-        false
-    }
     fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
         Err(". No fill is set.")
     }
@@ -175,13 +180,19 @@ where
             .take_while(|&&dim| dim == 1)
             .count()
             .min(arr.shape.len());
-        if (target.iter().rev())
+        let same_under_fixes = (target.iter().rev())
             .zip(arr.shape[fixes..].iter().rev())
-            .all(|(b, a)| b == a)
-        {
+            .all(|(b, a)| b == a);
+        if same_under_fixes {
             arr.shape.drain(..fixes);
-            for &dim in target.iter().take(fixes).rev() {
-                arr.reshape_scalar(Ok(dim as isize));
+            if target.len() >= fixes {
+                for &dim in target.iter().take(fixes).rev() {
+                    arr.reshape_scalar(Ok(dim as isize));
+                }
+            } else if arr.shape() == target {
+                for &dim in target.iter().cycle().take(fixes) {
+                    arr.reshape_scalar(Ok(dim as isize));
+                }
             }
         }
         if shape_prefixes_match(&arr.shape, target) {

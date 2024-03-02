@@ -979,6 +979,9 @@ impl<'i> Parser<'i> {
                 }))
             }
             let end = self.expect_close(CloseParen);
+            if let Some(last) = branches.last_mut() {
+                last.span.merge_with(end.span.clone());
+            }
             let (first_sig, first_lines, first_span) = first;
             let outer_span = start.clone().merge(end.span);
             if branches.is_empty() {
@@ -1028,6 +1031,9 @@ impl<'i> Parser<'i> {
                 }))
             }
             let end = self.expect_close(CloseAngle);
+            if let Some(last) = branches.last_mut() {
+                last.span.merge_with(end.span.clone());
+            }
             let (first_sig, first_lines, first_span) = first;
             let outer_span = start.clone().merge(end.span);
             let first_span = if let Some(span) = first_span {

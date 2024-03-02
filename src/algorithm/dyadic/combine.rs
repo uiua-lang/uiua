@@ -100,14 +100,7 @@ impl Value {
     pub fn join_infallible(self, other: Self) -> Self {
         self.join_impl(other, &()).unwrap()
     }
-    fn join_impl<C: FillContext>(mut self, mut other: Self, ctx: &C) -> Result<Self, C::Error> {
-        if ctx.unpack_boxes() {
-            self.unpack();
-            other.unpack();
-        }
-        self.join_impl_impl(other, ctx)
-    }
-    fn join_impl_impl<C: FillContext>(self, other: Self, ctx: &C) -> Result<Self, C::Error> {
+    fn join_impl<C: FillContext>(self, other: Self, ctx: &C) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ctx)?.into(),
             #[cfg(feature = "bytes")]
@@ -138,18 +131,7 @@ impl Value {
             )?,
         })
     }
-    pub(crate) fn append<C: FillContext>(
-        &mut self,
-        mut other: Self,
-        ctx: &C,
-    ) -> Result<(), C::Error> {
-        if ctx.unpack_boxes() {
-            self.unpack();
-            other.unpack();
-        }
-        self.append_impl(other, ctx)
-    }
-    fn append_impl<C: FillContext>(&mut self, other: Self, ctx: &C) -> Result<(), C::Error> {
+    pub(crate) fn append<C: FillContext>(&mut self, other: Self, ctx: &C) -> Result<(), C::Error> {
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.append(b, ctx)?,
             #[cfg(feature = "bytes")]
@@ -381,6 +363,16 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 {
             return Err(env.error("Cannot unjoin scalar"));
         }
+        if ash.is_empty() && bsh.is_empty() {
+            if self.row_count() != 2 {
+                return Err(env.error(format!(
+                    "Attempted to undo join, but the \
+                    array's row count changed from 2 to {}",
+                    self.row_count()
+                )));
+            }
+            return self.uncouple(env);
+        }
         match ash.len().cmp(&bsh.len()) {
             Ordering::Equal => {
                 if self.row_count() != ash[0] + bsh[0] {
@@ -458,16 +450,9 @@ impl Value {
     }
     pub(crate) fn couple_impl<C: FillContext>(
         &mut self,
-        mut other: Self,
+        other: Self,
         ctx: &C,
     ) -> Result<(), C::Error> {
-        if ctx.unpack_boxes() {
-            self.unpack();
-            other.unpack();
-        }
-        self.couple_impl_impl(other, ctx)
-    }
-    fn couple_impl_impl<C: FillContext>(&mut self, other: Self, ctx: &C) -> Result<(), C::Error> {
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.couple_impl(b, ctx)?,
             #[cfg(feature = "bytes")]
@@ -605,16 +590,16 @@ impl Value {
     pub fn from_row_values<V, C>(values: V, ctx: &C) -> Result<Self, C::Error>
     where
         V: IntoIterator<Item = Value>,
-        V::IntoIter: ExactSizeIterator,
         C: FillContext,
     {
         let mut row_values = values.into_iter();
-        let total_rows = row_values.len();
         let Some(mut value) = row_values.next() else {
             return Ok(Value::default());
         };
+        let (min, max) = row_values.size_hint();
+        let to_reserve = max.unwrap_or(min);
         if let Some(row) = row_values.next() {
-            let total_elements = total_rows * value.shape().iter().product::<usize>();
+            let total_elements = to_reserve * value.shape().iter().product::<usize>();
             value.reserve_min(total_elements);
             value.couple_impl(row, ctx)?;
             for row in row_values {

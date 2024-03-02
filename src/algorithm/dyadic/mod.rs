@@ -12,7 +12,7 @@ use std::{
     mem::take,
 };
 
-use ecow::EcoVec;
+use ecow::{eco_vec, EcoVec};
 
 use crate::{
     array::*,
@@ -67,7 +67,7 @@ impl<T: Clone + std::fmt::Debug> Array<T> {
         mut a_depth: usize,
         mut b_depth: usize,
         ctx: &C,
-        f: impl Fn(&[usize], &mut [T], &[usize], &[U], &C) -> Result<(), C::Error>,
+        mut f: impl FnMut(&[usize], &mut [T], &[usize], &[U], &C) -> Result<(), C::Error>,
     ) -> Result<(), C::Error> {
         let a = self;
         let mut b = other;
@@ -658,23 +658,8 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// Use this value to `rotate` another
-    pub fn rotate(&self, mut rotated: Self, env: &Uiua) -> UiuaResult<Self> {
-        let by = self.as_ints(env, "Rotation amount must be a list of integers")?;
-        #[cfg(feature = "bytes")]
-        if env.scalar_fill::<f64>().is_ok() {
-            if let Value::Byte(bytes) = &rotated {
-                rotated = bytes.convert_ref::<f64>().into();
-            }
-        }
-        match &mut rotated {
-            Value::Num(a) => a.rotate(&by, env)?,
-            #[cfg(feature = "bytes")]
-            Value::Byte(a) => a.rotate(&by, env)?,
-            Value::Complex(a) => a.rotate(&by, env)?,
-            Value::Char(a) => a.rotate(&by, env)?,
-            Value::Box(a) => a.rotate(&by, env)?,
-        }
-        Ok(rotated)
+    pub fn rotate(&self, rotated: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.rotate_depth(rotated, 0, 0, env)
     }
     pub(crate) fn rotate_depth(
         &self,
@@ -683,7 +668,7 @@ impl Value {
         b_depth: usize,
         env: &Uiua,
     ) -> UiuaResult<Self> {
-        let by = self.as_integer_array(env, "Rotation amount must be an array of integers")?;
+        let by_ints = || self.as_integer_array(env, "Rotation amount must be an array of integers");
         #[cfg(feature = "bytes")]
         if env.scalar_fill::<f64>().is_ok() {
             if let Value::Byte(bytes) = &rotated {
@@ -691,12 +676,17 @@ impl Value {
             }
         }
         match &mut rotated {
-            Value::Num(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            Value::Num(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             #[cfg(feature = "bytes")]
-            Value::Byte(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
-            Value::Complex(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
-            Value::Char(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
-            Value::Box(a) => a.rotate_depth(by, b_depth, a_depth, env)?,
+            Value::Byte(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
+            Value::Complex(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
+            Value::Char(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
+            Value::Box(a) if a.rank() == a_depth => {
+                for Boxed(val) in a.data.as_mut_slice() {
+                    *val = self.rotate_depth(take(val), a_depth, b_depth, env)?;
+                }
+            }
+            Value::Box(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
         }
         Ok(rotated)
     }
@@ -704,21 +694,8 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     /// `rotate` this array by the given amount
-    pub fn rotate(&mut self, by: &[isize], env: &Uiua) -> UiuaResult {
-        if by.len() > self.rank() {
-            return Err(env.error(format!(
-                "Cannot rotate rank {} array with index of length {}",
-                self.rank(),
-                by.len()
-            )));
-        }
-        let data = self.data.as_mut_slice();
-        rotate(by, &self.shape, data);
-        if let Ok(fill) = env.scalar_fill::<T>() {
-            fill_shift(by, &self.shape, data, fill);
-            self.reset_meta_flags();
-        }
-        Ok(())
+    pub fn rotate(&mut self, by: Array<isize>, env: &Uiua) -> UiuaResult {
+        self.rotate_depth(by, 0, 0, env)
     }
     pub(crate) fn rotate_depth(
         &mut self,
@@ -727,13 +704,30 @@ impl<T: ArrayValue> Array<T> {
         by_depth: usize,
         env: &Uiua,
     ) -> UiuaResult {
+        let mut filled = false;
+        let fill = env.scalar_fill::<T>();
         self.depth_slices(&by, depth, by_depth, env, |ash, a, bsh, b, env| {
             if bsh.len() > 1 {
                 return Err(env.error(format!("Cannot rotate by rank {} array", bsh.len())));
             }
+            if b.len() > ash.len() {
+                return Err(env.error(format!(
+                    "Cannot rotate rank {} array with index of length {}",
+                    ash.len(),
+                    b.len()
+                )));
+            }
             rotate(b, ash, a);
+            if let Ok(fill) = &fill {
+                fill_shift(b, ash, a, fill.clone());
+                filled = true;
+            }
             Ok(())
-        })
+        })?;
+        if filled {
+            self.reset_meta_flags();
+        }
+        Ok(())
     }
 }
 
@@ -918,6 +912,24 @@ impl Value {
             },
         )
     }
+    /// Try to `mask` this value in another
+    pub fn mask(&self, searched: &Self, env: &Uiua) -> UiuaResult<Self> {
+        self.generic_bin_ref(
+            searched,
+            |a, b| a.mask(b, env).map(Into::into),
+            |a, b| a.mask(b, env).map(Into::into),
+            |a, b| a.mask(b, env).map(Into::into),
+            |a, b| a.mask(b, env).map(Into::into),
+            |a, b| a.mask(b, env).map(Into::into),
+            |a, b| {
+                env.error(format!(
+                    "Cannot mask {} in {} array",
+                    a.type_name(),
+                    b.type_name()
+                ))
+            },
+        )
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -1031,6 +1043,65 @@ impl<T: ArrayValue> Array<T> {
         arr.validate_shape();
         arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
         Ok(arr)
+    }
+    /// Try to `mask` this array in another
+    pub fn mask(&self, haystack: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        let needle = self;
+        if needle.rank() > haystack.rank() {
+            return Err(env.error(format!(
+                "Cannot look for rank {} array in rank {} array",
+                needle.rank(),
+                haystack.rank()
+            )));
+        }
+        let mut result_data = eco_vec![0u8; haystack.element_count()];
+        if (needle.shape.iter().rev())
+            .zip(haystack.shape.iter().rev())
+            .any(|(n, h)| n > h)
+        {
+            return Ok(Array::new(haystack.shape.clone(), result_data));
+        }
+        let res = result_data.make_mut();
+        let needle_data = needle.data.as_slice();
+        let mut needle_shape = needle.shape.clone();
+        while needle_shape.len() < haystack.shape.len() {
+            needle_shape.insert(0, 1);
+        }
+        let needle_elems = needle.element_count();
+        let mut curr = Vec::new();
+        let mut offset = Vec::new();
+        let mut sum = vec![0; needle_shape.len()];
+        let mut match_num = 0;
+        for i in 0..res.len() {
+            // Check if the needle matches the haystack at the current index
+            haystack.shape.flat_to_dims(i, &mut curr);
+            let mut matches = true;
+            for j in 0..needle_elems {
+                needle_shape.flat_to_dims(j, &mut offset);
+                for ((c, o), s) in curr.iter().zip(&offset).zip(&mut sum) {
+                    *s = *c + *o;
+                }
+                if (haystack.shape.dims_to_flat(&sum)).map_or(true, |k| {
+                    res[k] > 0 || !needle_data[j].array_eq(&haystack.data[k])
+                }) {
+                    matches = false;
+                    break;
+                }
+            }
+            // Fill matches
+            if matches {
+                match_num += 1;
+                for j in 0..needle_elems {
+                    needle_shape.flat_to_dims(j, &mut offset);
+                    for ((c, o), s) in curr.iter().zip(&offset).zip(&mut sum) {
+                        *s = *c + *o;
+                    }
+                    let k = haystack.shape.dims_to_flat(&sum).unwrap();
+                    res[k] = match_num;
+                }
+            }
+        }
+        Ok(Array::new(haystack.shape.clone(), result_data))
     }
 }
 

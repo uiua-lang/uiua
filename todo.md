@@ -2,7 +2,6 @@
 
 - 0.10
   - Re-implement map changes -_-
-  - `under fold`
   - `mask` primitive?
   - Configure grid format height limit
   - Unicode glyph format by number/name

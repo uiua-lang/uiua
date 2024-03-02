@@ -229,6 +229,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_unpack_pattern, "unpack"),
         &UnderPatternFn(under_touch_pattern, "touch"),
         &UnderPatternFn(under_repeat_pattern, "repeat"),
+        &UnderPatternFn(under_fold_pattern, "fold"),
         &UnderPatternFn(under_switch_pattern, "switch"),
         // Basic math
         &dyad!(Flip, Add, Sub),
@@ -1342,6 +1343,50 @@ fn under_repeat_pattern<'a>(
         }
         _ => return None,
     })
+}
+
+fn under_fold_pattern<'a>(
+    input: &'a [Instr],
+    g_sig: Signature,
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    let [Instr::PushFunc(f), fold @ Instr::Prim(Primitive::Fold, span), input @ ..] = input else {
+        return None;
+    };
+    let span = *span;
+    let inner = f.instrs(comp).to_vec();
+    let (inner_befores, inner_afters) = under_instrs(&inner, g_sig, comp)?;
+    let inner_befores_sig = instrs_signature(&inner_befores).ok()?;
+    let inner_afters_sig = instrs_signature(&inner_afters).ok()?;
+    if inner_befores_sig.outputs > inner_befores_sig.args
+        || inner_afters_sig.outputs > inner_afters_sig.args
+    {
+        return None;
+    }
+    // inner_afters.insert(0, Instr::Prim(Primitive::Pop, span));
+    let befores_func = make_fn(inner_befores, span, comp)?;
+    let afters_func = make_fn(inner_afters, span, comp)?;
+    let befores = eco_vec![
+        Instr::Prim(Primitive::Dup, span),
+        Instr::Prim(Primitive::Len, span),
+        Instr::PushTemp {
+            stack: TempStack::Inline,
+            span,
+            count: 1,
+        },
+        Instr::PushFunc(befores_func),
+        fold.clone()
+    ];
+    let afters = eco_vec![
+        Instr::PopTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            span
+        },
+        Instr::PushFunc(afters_func),
+        Instr::Prim(Primitive::Repeat, span)
+    ];
+    Some((input, (befores, afters)))
 }
 
 fn invert_reduce_mul_pattern<'a>(

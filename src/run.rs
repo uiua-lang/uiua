@@ -677,7 +677,7 @@ code:
                     This is a bug in the interpreter.",
                 )),
                 &Instr::SetOutputComment { i, n } => {
-                    let values = self.clone_stack_top(n)?;
+                    let values = self.stack()[self.stack().len().saturating_sub(n)..].to_vec();
                     let stack_values = self.rt.output_comments.entry(i).or_default();
                     if stack_values.is_empty() {
                         *stack_values = values.into_iter().map(|v| vec![v]).collect();

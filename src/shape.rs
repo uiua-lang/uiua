@@ -45,6 +45,12 @@ impl Shape {
     pub fn remove(&mut self, index: usize) -> usize {
         self.dims.remove(index)
     }
+    /// Make the shape its row shape
+    pub fn make_row(&mut self) {
+        if self.len() > 0 {
+            self.dims.remove(0);
+        }
+    }
     /// Extend the shape with the given dimensions
     pub fn extend_from_slice(&mut self, dims: &[usize]) {
         self.dims.extend_from_slice(dims);

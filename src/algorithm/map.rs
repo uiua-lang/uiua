@@ -111,13 +111,16 @@ impl Value {
             .map_keys
             .as_ref()
             .ok_or_else(|| env.error("Value is not a map"))?;
-        let index = keys
-            .get(key)
-            .ok_or_else(|| env.error("Key not found in map"))?;
-        if index >= self.row_count() {
-            return Err(env.error("Map was corrupted"));
+        if let Some(index) = keys.get(key) {
+            if index >= self.row_count() {
+                return Err(env.error("Map was corrupted"));
+            }
+            Ok(self.row(index))
+        } else {
+            env.value_fill()
+                .cloned()
+                .ok_or_else(|| env.error("Key not found in map"))
         }
-        Ok(self.row(index))
     }
     /// Check if a map array contains a key
     pub fn has_key(&self, key: &Value, env: &Uiua) -> UiuaResult<bool> {

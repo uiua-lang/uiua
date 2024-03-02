@@ -431,7 +431,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
     let outputs = f.signature().outputs;
     match (xs.row_count(), ys.row_count()) {
         (_, 1) if !ys.length_is_fillable(env) => {
-            let ys = ys.into_rows().next().unwrap();
+            ys.shape_mut().make_row();
             let is_empty = outputs > 0 && xs.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
             env.without_fill(|env| -> UiuaResult {
@@ -464,7 +464,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             Ok(())
         }
         (1, _) if !xs.length_is_fillable(env) => {
-            let xs = xs.into_rows().next().unwrap();
+            xs.shape_mut().make_row();
             let is_empty = outputs > 0 && ys.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
             env.without_fill(|env| -> UiuaResult {
@@ -588,10 +588,11 @@ fn rowsn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     let is_empty = outputs > 0 && args.iter().any(|v| v.row_count() == 0);
     let mut arg_elems: Vec<_> = args
         .into_iter()
-        .map(|v| {
+        .map(|mut v| {
             all_scalar = all_scalar && v.rank() == 0;
             if v.row_count() == 1 {
-                Err(v.into_rows().next().unwrap())
+                v.shape_mut().make_row();
+                Err(v)
             } else {
                 let proxy = is_empty.then(|| v.proxy_row(env));
                 row_count = row_count.max(v.row_count());
@@ -622,7 +623,7 @@ fn rowsn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for new_values in new_values.into_iter().rev() {
         let mut eached = Value::from_row_values(new_values, env)?;
         if all_scalar {
-            eached.shape_mut().remove(0);
+            eached.shape_mut().make_row();
         } else if is_empty {
             eached.pop_row();
         }
@@ -687,7 +688,8 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let outputs = f.signature().outputs;
     let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
     match (xs, ys) {
-        (Value::Box(xs), Value::Box(ys)) => match (xs.row_count(), ys.row_count()) {
+        // Both box arrays
+        (Value::Box(mut xs), Value::Box(mut ys)) => match (xs.row_count(), ys.row_count()) {
             (a, b) if a == b && xs.shape() == ys.shape() => {
                 let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
@@ -711,14 +713,9 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (_, 1) => {
                 let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    let y = ys
-                        .into_rows()
-                        .next()
-                        .unwrap()
-                        .into_unboxed()
-                        .unwrap_or_else(Into::into);
+                    ys.shape.make_row();
                     for Boxed(x) in xs.data.into_iter() {
-                        env.push(y.clone());
+                        env.push(ys.clone());
                         env.push(x);
                         env.call(f.clone())?;
                         for i in 0..outputs {
@@ -737,15 +734,10 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (1, _) => {
                 let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    let x = xs
-                        .into_rows()
-                        .next()
-                        .unwrap()
-                        .into_unboxed()
-                        .unwrap_or_else(Into::into);
+                    xs.shape.make_row();
                     for Boxed(y) in ys.data.into_iter() {
                         env.push(y);
-                        env.push(x.clone());
+                        env.push(xs.clone());
                         env.call(f.clone())?;
                         for i in 0..outputs {
                             new_values[i].push(Boxed(env.pop("inventory's function result")?));
@@ -767,6 +759,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 ys.shape()
             ))),
         },
+        // Left box array
         (Value::Box(xs), ys) if ys.shape().starts_with(xs.shape()) => {
             let shape = xs.shape().clone();
             let ys_row_shape = ys.shape()[xs.rank()..].into();
@@ -790,7 +783,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             }
             Ok(())
         }
-        (Value::Box(xs), ys) if xs.rank() <= 1 => match (xs.row_count(), ys.row_count()) {
+        (Value::Box(mut xs), mut ys) if xs.rank() <= 1 => match (xs.row_count(), ys.row_count()) {
             (a, b) if a == b => {
                 let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
@@ -814,9 +807,10 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (_, 1) => {
                 let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    let y = ys.into_rows().next().unwrap().unboxed();
+                    ys.shape_mut().make_row();
+                    ys.unbox();
                     for Boxed(x) in xs.data.into_iter() {
-                        env.push(y.clone());
+                        env.push(ys.clone());
                         env.push(x);
                         env.call(f.clone())?;
                         for i in 0..outputs {
@@ -835,15 +829,10 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (1, _) => {
                 let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    let x = xs
-                        .into_rows()
-                        .next()
-                        .unwrap()
-                        .into_unboxed()
-                        .unwrap_or_else(Into::into);
+                    xs.shape.make_row();
                     for y in ys.into_rows() {
                         env.push(y);
-                        env.push(x.clone());
+                        env.push(xs.clone());
                         env.call(f.clone())?;
                         for i in 0..outputs {
                             new_values[i].push(Boxed(env.pop("inventory's function result")?));
@@ -863,6 +852,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 Primitive::Inventory.format()
             ))),
         },
+        // Right box array
         (xs, Value::Box(ys)) if xs.shape().starts_with(ys.shape()) => {
             let shape = ys.shape().clone();
             let xs_row_shape = xs.shape()[ys.rank()..].into();
@@ -887,7 +877,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             }
             Ok(())
         }
-        (xs, Value::Box(ys)) if ys.rank() <= 1 => match (xs.row_count(), ys.row_count()) {
+        (mut xs, Value::Box(mut ys)) if ys.rank() <= 1 => match (xs.row_count(), ys.row_count()) {
             (a, b) if a == b => {
                 let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
@@ -911,14 +901,9 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (_, 1) => {
                 let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    let y = ys
-                        .into_rows()
-                        .next()
-                        .unwrap()
-                        .into_unboxed()
-                        .unwrap_or_else(Into::into);
+                    ys.shape.make_row();
                     for x in xs.into_rows() {
-                        env.push(y.clone());
+                        env.push(ys.clone());
                         env.push(x);
                         env.call(f.clone())?;
                         for i in 0..outputs {
@@ -937,10 +922,11 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (1, _) => {
                 let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    let x = xs.into_rows().next().unwrap().unboxed();
+                    xs.shape_mut().make_row();
+                    xs.unbox();
                     for Boxed(y) in ys.data.into_iter() {
                         env.push(y);
-                        env.push(x.clone());
+                        env.push(xs.clone());
                         env.call(f.clone())?;
                         for i in 0..outputs {
                             new_values[i].push(Boxed(env.pop("inventory's function result")?));
@@ -960,7 +946,8 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 Primitive::Inventory.format()
             ))),
         },
-        (xs, ys) => match (xs.row_count(), ys.row_count()) {
+        // Both non-box arrays
+        (mut xs, mut ys) => match (xs.row_count(), ys.row_count()) {
             (a, b) if a == b => {
                 let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
                 env.without_fill(|env| -> UiuaResult {
@@ -980,7 +967,8 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 Ok(())
             }
             (_, 1) => {
-                let ys = ys.into_rows().next().unwrap();
+                ys.shape_mut().make_row();
+                ys.unbox();
                 let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
                 env.without_fill(|env| -> UiuaResult {
                     for x in xs.into_rows() {
@@ -999,7 +987,8 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 Ok(())
             }
             (1, _) => {
-                let xs = xs.into_rows().next().unwrap();
+                xs.shape_mut().make_row();
+                xs.unbox();
                 let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
                 env.without_fill(|env| -> UiuaResult {
                     for y in ys.into_rows() {

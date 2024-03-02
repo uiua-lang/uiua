@@ -2093,9 +2093,9 @@ primitive!(
     ///   : insert 7 8_9
     ///   : °map .
     ///
-    /// Map array are just normal box arrays. Their shape is usually `[2]`; one element is the boxed keys, and the other is the boxed values.
-    /// Performing non-map operations on a map array will work, but it will usually break the mapping.
-    /// ex! # Experimental!
+    /// The values of a map array are just the array itself. The keys are stored as metadata on the array.
+    /// Performing non-map operations on a map array may work, but they will usually break the mapping.
+    /// ex: # Experimental!
     ///   : map 1_2_3 4_5_6
     ///   : get 1 ⇌
     ///

@@ -1352,6 +1352,7 @@ primitive!(
     ([1], Repeat, IteratingModifier, ("repeat", '⍥')),
     /// Group elements of an array into buckets by index
     ///
+    /// [group] is similar to `group_by` functions in other languages.
     /// Takes a function and two arrays.
     /// The first array must contain integers and have a shape that is a prefix of the shape of the second array.
     /// Rows in the second array will be grouped into buckets by the indices in the first array.

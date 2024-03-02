@@ -355,28 +355,18 @@ impl Primitive {
         }
     }
     /// Check if this primitive is experimental
+    #[allow(unused_parens)]
     pub fn is_experimental(&self) -> bool {
         use Primitive::*;
         matches!(
             self,
-            Rectify
-                | This
-                | Recur
-                | All
-                | Cascade
-                | Map
-                | Insert
-                | Has
-                | Get
-                | Remove
+            Mask | (This | Recur)
+                | (Rectify | All | Cascade)
+                | (Map | Insert | Has | Get | Remove)
                 | Bind
-                | Shapes
-                | Types
+                | (Shapes | Types)
                 | Sys(SysOp::FFI)
-                | Repr
-                | Stringify
-                | Quote
-                | Sig
+                | (Repr | Stringify | Quote | Sig)
         )
     }
     /// Check if this primitive is deprecated
@@ -544,6 +534,7 @@ impl Primitive {
             Primitive::Unique => env.monadic_ref(Value::unique)?,
             Primitive::Member => env.dyadic_rr_env(Value::member)?,
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
+            Primitive::Mask => env.dyadic_rr_env(Value::mask)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
             // Primitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
             Primitive::Box => {

@@ -3,7 +3,6 @@
 - 0.10
   - Re-implement map changes -_-
   - `mask` primitive?
-  - Configure grid format height limit
   - Unicode glyph format by number/name
   - Let bind only take an ident?
   - System functions

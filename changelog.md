@@ -19,6 +19,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Remove `unpack ⊐` for good
 - Add more [shadowable constants](https://www.uiua.org/docs/constants)
 - Non-alphabetic identifiers can now be suffixed with `!` to make macros
+- Add the experimental [`mask ⍝`](https://uiua.org/docs/mask) function, which creates a mask of occurrences of one array in another
+  - This works similarly to [`find ⌕`](https://uiua.org/docs/find), but is better when you need a mask or to distinguish between adjacent occurrences
 - Add experimental array macros, which allow code to be generated and manipulated at compile time as strings
   - These are specified with a `^` immediately following a binding's arrow
 - Add the experimental [`quote`](https://uiua.org/docs/quote) modifier, which converts a string to code at compile time

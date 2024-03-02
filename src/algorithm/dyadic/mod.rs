@@ -12,7 +12,7 @@ use std::{
     mem::take,
 };
 
-use ecow::EcoVec;
+use ecow::{eco_vec, EcoVec};
 
 use crate::{
     array::*,
@@ -912,6 +912,24 @@ impl Value {
             },
         )
     }
+    /// Try to `mask` this value in another
+    pub fn mask(&self, searched: &Self, env: &Uiua) -> UiuaResult<Self> {
+        self.generic_bin_ref(
+            searched,
+            |a, b| a.mask(b, env).map(Into::into),
+            |a, b| a.mask(b, env).map(Into::into),
+            |a, b| a.mask(b, env).map(Into::into),
+            |a, b| a.mask(b, env).map(Into::into),
+            |a, b| a.mask(b, env).map(Into::into),
+            |a, b| {
+                env.error(format!(
+                    "Cannot mask {} in {} array",
+                    a.type_name(),
+                    b.type_name()
+                ))
+            },
+        )
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -1025,6 +1043,65 @@ impl<T: ArrayValue> Array<T> {
         arr.validate_shape();
         arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
         Ok(arr)
+    }
+    /// Try to `mask` this array in another
+    pub fn mask(&self, haystack: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        let needle = self;
+        if needle.rank() > haystack.rank() {
+            return Err(env.error(format!(
+                "Cannot look for rank {} array in rank {} array",
+                needle.rank(),
+                haystack.rank()
+            )));
+        }
+        let mut result_data = eco_vec![0u8; haystack.element_count()];
+        if (needle.shape.iter().rev())
+            .zip(haystack.shape.iter().rev())
+            .any(|(n, h)| n > h)
+        {
+            return Ok(Array::new(haystack.shape.clone(), result_data));
+        }
+        let res = result_data.make_mut();
+        let needle_data = needle.data.as_slice();
+        let mut needle_shape = needle.shape.clone();
+        while needle_shape.len() < haystack.shape.len() {
+            needle_shape.insert(0, 1);
+        }
+        let needle_elems = needle.element_count();
+        let mut curr = Vec::new();
+        let mut offset = Vec::new();
+        let mut sum = vec![0; needle_shape.len()];
+        let mut match_num = 0;
+        for i in 0..res.len() {
+            // Check if the needle matches the haystack at the current index
+            haystack.shape.flat_to_dims(i, &mut curr);
+            let mut matches = true;
+            for j in 0..needle_elems {
+                needle_shape.flat_to_dims(j, &mut offset);
+                for ((c, o), s) in curr.iter().zip(&offset).zip(&mut sum) {
+                    *s = *c + *o;
+                }
+                if (haystack.shape.dims_to_flat(&sum)).map_or(true, |k| {
+                    res[k] > 0 || !needle_data[j].array_eq(&haystack.data[k])
+                }) {
+                    matches = false;
+                    break;
+                }
+            }
+            // Fill matches
+            if matches {
+                match_num += 1;
+                for j in 0..needle_elems {
+                    needle_shape.flat_to_dims(j, &mut offset);
+                    for ((c, o), s) in curr.iter().zip(&offset).zip(&mut sum) {
+                        *s = *c + *o;
+                    }
+                    let k = haystack.shape.dims_to_flat(&sum).unwrap();
+                    res[k] = match_num;
+                }
+            }
+        }
+        Ok(Array::new(haystack.shape.clone(), result_data))
     }
 }
 

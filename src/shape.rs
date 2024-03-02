@@ -63,6 +63,25 @@ impl Shape {
     pub fn dims_mut(&mut self) -> &mut [usize] {
         &mut self.dims
     }
+    pub(crate) fn flat_to_dims(&self, flat: usize, index: &mut Vec<usize>) {
+        index.clear();
+        let mut flat = flat;
+        for &dim in self.dims.iter().rev() {
+            index.push(flat % dim);
+            flat /= dim;
+        }
+        index.reverse();
+    }
+    pub(crate) fn dims_to_flat(&self, index: &[usize]) -> Option<usize> {
+        let mut flat = 0;
+        for (&dim, &i) in self.dims.iter().zip(index) {
+            if i >= dim {
+                return None;
+            }
+            flat = flat * dim + i;
+        }
+        Some(flat)
+    }
 }
 
 impl fmt::Debug for Shape {

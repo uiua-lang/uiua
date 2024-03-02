@@ -3,7 +3,7 @@
 &cd "site"
 ¬∊ □"resume" &args
 ⍥(
-  ✅&runi {"git" "checkout" "site" "-f"}
+  ✅&runi {"git" "checkout" "site"}
   ✅&runi {"git" "reset" "--hard" "origin/site"}
   ✅&runi {"git" "rebase" "main"}
 )

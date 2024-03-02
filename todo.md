@@ -3,8 +3,10 @@
 - 0.10
   - Re-implement map changes -_-
   - Doc comment on last line of single-line function
-  - Unicode glyph format by number/name
+  - System for custom glyph formatting
   - Let bind only take an ident?
+  - 3+ argument `inventory`
+  - Allow LSP completions for module items
   - System functions
     - Clipboard
     - Excel

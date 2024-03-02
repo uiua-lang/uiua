@@ -31,6 +31,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Language Server
   - Add macro expansion as a code action
   - Add completions for shadowable constants
+- Add the `--file <file>` option to the `uiua repl` command
+  - This runs a file before starting the REPL
 
 ## 0.9.5 - 2024-02-28
 ### Interpreter

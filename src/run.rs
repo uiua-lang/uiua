@@ -302,9 +302,20 @@ impl Uiua {
     /// Run from a compiler
     ///
     /// The runtime will inherit the system backend from the compiler
-    pub fn run_compiler(&mut self, comp: &mut Compiler) -> UiuaResult {
-        self.rt.backend = comp.backend();
-        self.run_asm(comp.finish())
+    pub fn run_compiler(&mut self, compiler: &mut Compiler) -> UiuaResult {
+        let backup = compiler.clone();
+        let res = self.run_asm(compiler.finish());
+        let asm = self.take_asm();
+        match res {
+            Ok(()) => {
+                *compiler.assembly_mut() = asm;
+                Ok(())
+            }
+            Err(e) => {
+                *compiler = backup;
+                Err(e)
+            }
+        }
     }
     /// Run a Uiua assembly
     pub fn run_asm(&mut self, asm: impl Into<Assembly>) -> UiuaResult {

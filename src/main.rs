@@ -243,6 +243,7 @@ fn run() -> UiuaResult {
             #[cfg(feature = "lsp")]
             App::Lsp => uiua::lsp::run_language_server(),
             App::Repl {
+                file,
                 formatter_options,
                 #[cfg(feature = "audio")]
                 audio_options,
@@ -255,9 +256,13 @@ fn run() -> UiuaResult {
 
                 #[cfg(feature = "audio")]
                 setup_audio(audio_options);
-                let rt = Uiua::with_native_sys().with_args(args);
-                let mut compiler = Compiler::new();
+                let mut rt = Uiua::with_native_sys().with_args(args);
+                let mut compiler = Compiler::with_backend(NativeSys);
                 compiler.mode(RunMode::Normal).print_diagnostics(true);
+                if let Some(file) = file {
+                    compiler.load_file(file)?;
+                    rt.run_compiler(&mut compiler)?;
+                }
                 repl(rt, compiler, true, config);
             }
             App::Update { main, check } => update(main, check),
@@ -620,6 +625,8 @@ enum App {
     Lsp,
     #[clap(about = "Run the Uiua interpreter in a REPL")]
     Repl {
+        #[clap(short = 'f', long, help = "A Uiua file to run before the REPL starts")]
+        file: Option<PathBuf>,
         #[clap(flatten)]
         formatter_options: FormatterOptions,
         #[cfg(feature = "audio")]
@@ -889,6 +896,13 @@ fn repl(mut rt: Uiua, mut compiler: Compiler, color: bool, config: FormatConfig)
 fn color_code(code: &str) -> String {
     let mut colored = String::new();
     let (spans, inputs) = spans(code);
+
+    let noadic = (237, 94, 106);
+    let monadic = (149, 209, 106);
+    let monadic_mod = (240, 195, 111);
+    let dyadic_mod = (204, 107, 233);
+    let dyadic = (84, 176, 252);
+
     for span in spans {
         let (r, g, b) = match span.value {
             SpanKind::Primitive(prim) => match prim.class() {
@@ -897,25 +911,41 @@ fn color_code(code: &str) -> String {
                 _ => {
                     if let Some(margs) = prim.modifier_args() {
                         if margs == 1 {
-                            (240, 195, 111)
+                            monadic_mod
                         } else {
-                            (204, 107, 233)
+                            dyadic_mod
                         }
                     } else {
                         match prim.args() {
-                            Some(0) => (237, 94, 106),
-                            Some(1) => (149, 209, 106),
-                            Some(2) => (84, 176, 252),
+                            Some(0) => noadic,
+                            Some(1) => monadic,
+                            Some(2) => dyadic,
                             _ => (255, 255, 255),
                         }
                     }
                 }
             },
+            SpanKind::Ident(Some(docs)) => match docs.modifier_args {
+                0 => {
+                    if let Some(sig) = docs.signature {
+                        match sig.args {
+                            0 => noadic,
+                            1 => monadic,
+                            2 => dyadic,
+                            _ => (255, 255, 255),
+                        }
+                    } else {
+                        (255, 255, 255)
+                    }
+                }
+                1 => monadic_mod,
+                _ => dyadic_mod,
+            },
             SpanKind::String => (32, 249, 252),
             SpanKind::Number => (255, 136, 68),
             SpanKind::Comment => (127, 127, 127),
             SpanKind::Strand => (200, 200, 200),
-            SpanKind::Ident(_)
+            SpanKind::Ident(None)
             | SpanKind::Label
             | SpanKind::Signature
             | SpanKind::Whitespace

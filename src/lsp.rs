@@ -847,12 +847,6 @@ mod server {
             &self,
             params: SemanticTokensParams,
         ) -> Result<Option<SemanticTokensResult>> {
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    format!("Semantic tokens {}", params.text_document.uri),
-                )
-                .await;
             let doc = if let Some(doc) = self.docs.get(&params.text_document.uri) {
                 doc
             } else {

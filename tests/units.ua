@@ -412,7 +412,7 @@ MapsII ← ∩(remove 1) MapsI
 ⍤⟜≍: 5 get 1_2 map [1_2 3_4] 5_6
 ⍤⟜≍: 6 get 3_4 map [1_2 3_4] 5_6
 
-⍤⟜≍: [2 3 4 1] ≡(get)[2 3 4 5]¤ ∧(insert) [5 2 3 4] [1 2 3 4] {}
+⍤⟜≍: [2 3 4 1] ≡get[2 3 4 5]¤ ∧(insert) [5 2 3 4] [1 2 3 4] map[][]
 
 # Array Macros
 F! ←^

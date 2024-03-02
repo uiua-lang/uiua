@@ -2085,10 +2085,9 @@ primitive!(
     ///   : map 1_2 3_4
     ///   : insert 5 6
     ///
-    /// A box array `{}` works as an empty map.
     /// You can use [un][map] to get the keys and values back.
     /// ex: # Experimental!
-    ///   : {}
+    ///   : map[][]
     ///   : insert 1 2_3
     ///   : insert 4 5_6
     ///   : insert 7 8_9
@@ -2118,23 +2117,23 @@ primitive!(
     ///
     /// The array is used as an actual hashmap, so some entries may be empty.
     /// ex: # Experimental!
-    ///   : {}
+    ///   : map[][]
     ///   : insert 1 2
     ///   : insert 3 4
     ///   : insert 5 6
     /// If the key is already present, it is replaced.
     /// ex: # Experimental!
-    ///   : {}
+    ///   : map[][]
     ///   : insert 1 2
     ///   : insert 3 4
     ///   : insert 3 5
     /// All keys (and all value) must have the same shape and type.
     /// ex! # Experimental!
-    ///   : insert 1 2 {}
+    ///   : map 1 2
     ///   : insert "hi" "there"
-    /// [box] keys or values if you need to.
+    /// [box] keys or values if you need to. Values will coerce to boxes if necessary.
     /// ex: # Experimental!
-    ///   : insert □1 □2 {}
+    ///   : map 1 2
     ///   : insert □"hi" □"there"
     ///
     /// See also: [has], [get], [remove]

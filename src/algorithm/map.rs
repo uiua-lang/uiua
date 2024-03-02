@@ -6,15 +6,73 @@ use std::{
 };
 
 use ecow::EcoVec;
+use serde::*;
 
 use crate::{
-    algorithm::ArrayCmpSlice, cowslice::CowSlice, Array, ArrayMeta, ArrayValue, Boxed, Complex,
-    FormatShape, Uiua, UiuaResult, Value,
+    algorithm::ArrayCmpSlice, Array, ArrayValue, Boxed, Complex, FormatShape, Uiua, UiuaResult,
+    Value,
 };
 
+impl<T: ArrayValue> Array<T> {
+    /// Check if the array is a map
+    pub fn is_map(&self) -> bool {
+        self.meta().map_keys.is_some()
+    }
+    /// Get the keys and values of a map array
+    pub fn map_kv(&self) -> impl Iterator<Item = (Value, Array<T>)> + '_ {
+        (self.meta().map_keys.as_ref().into_iter()).flat_map(move |keys| {
+            keys.keys.rows().enumerate().filter_map(move |(i, key)| {
+                if key.is_empty_cell() || key.is_tombstone() {
+                    return None;
+                }
+                let index = keys.indices[i];
+                if index < self.row_count() {
+                    Some((key, self.row(index)))
+                } else {
+                    None
+                }
+            })
+        })
+    }
+    /// Get the number of empty entries in a map array
+    pub fn empty_map_entries(&self) -> usize {
+        self.meta()
+            .map_keys
+            .as_ref()
+            .map_or(0, |keys| keys.capacity() - keys.len)
+    }
+}
+
 impl Value {
+    /// Check if the value is a map
+    pub fn is_map(&self) -> bool {
+        self.meta().map_keys.is_some()
+    }
+    /// Get the keys and values of a map array
+    pub fn map_kv(&self) -> impl Iterator<Item = (Value, Value)> + '_ {
+        self.meta().map_keys.as_ref().into_iter().flat_map(|keys| {
+            keys.keys.rows().enumerate().filter_map(|(i, key)| {
+                if key.is_empty_cell() || key.is_tombstone() {
+                    return None;
+                }
+                let index = keys.indices[i];
+                if index < self.row_count() {
+                    Some((key, self.row(index)))
+                } else {
+                    None
+                }
+            })
+        })
+    }
+    /// Get the number of empty entries in a map array
+    pub fn empty_map_entries(&self) -> usize {
+        self.meta()
+            .map_keys
+            .as_ref()
+            .map_or(0, |keys| keys.capacity() - keys.len)
+    }
     /// Create a map array
-    pub fn map(self, values: Self, env: &Uiua) -> UiuaResult<Value> {
+    pub fn map(mut self, mut values: Self, env: &Uiua) -> UiuaResult<Value> {
         if self.row_count() != values.row_count() {
             return Err(env.error(format!(
                 "Map array's keys and values must have the same length, but they have lengths {} and {}",
@@ -22,57 +80,312 @@ impl Value {
                 values.row_count()
             )));
         }
-        let capacity =
-            ((self.row_count() as f64 / LOAD_FACTOR).ceil() as usize).next_power_of_two();
-        let mut kv = EcoVec::with_capacity(2);
-        for x in [&self, &values] {
-            kv.push(Boxed(match x {
-                Value::Num(_) => Array::<f64>::new(0, CowSlice::with_capacity(capacity)).into(),
-                #[cfg(feature = "bytes")]
-                Value::Byte(_) => Array::<f64>::new(0, CowSlice::with_capacity(capacity)).into(),
-                Value::Complex(_) => {
-                    Array::<Complex>::new(0, CowSlice::with_capacity(capacity)).into()
-                }
-                _ => Array::<Boxed>::new(0, CowSlice::with_capacity(capacity)).into(),
-            }))
+        if self.rank() == 0 {
+            self.shape_mut().insert(0, 1);
         }
-        let mut map = Value::Box(Array::new(2, kv));
-        map.meta_mut().map_len = Some(0);
-        for (key, value) in self.into_rows().zip(values.into_rows()) {
-            map.insert(key, value, env)?;
+        if values.rank() == 0 {
+            values.shape_mut().insert(0, 1);
         }
-        Ok(map)
+        let mut keys = MapKeys {
+            keys: self.clone(),
+            indices: Vec::new(),
+            len: 0,
+        };
+        for (i, key) in self.into_rows().enumerate() {
+            keys.insert(key, i, env)?;
+        }
+        values.meta_mut().map_keys = Some(keys);
+        Ok(values)
     }
     /// Turn a map array into its keys and values
     pub fn unmap(mut self, env: &Uiua) -> UiuaResult<(Value, Value)> {
-        with_pair_mut(&mut self, env, |_| {})?;
-        let mut rows = self.into_rows().map(|row| row.unboxed());
-        let keys = remove_empty_rows(rows.next().unwrap().into_rows());
-        let values = remove_empty_rows(rows.next().unwrap().into_rows());
-        Ok((keys, values))
+        let keys = self
+            .take_map_keys()
+            .ok_or_else(|| env.error("Value is not a map"))?;
+        Ok((keys.keys, self))
     }
     /// Get a value from a map array
     pub fn get(&self, key: &Value, env: &Uiua) -> UiuaResult<Value> {
-        let value = with_pair(self, env, |pair| pair.get(key))?;
-        if let Some(value) = value {
-            Ok(value)
-        } else {
-            env.value_fill()
-                .cloned()
-                .ok_or_else(|| env.error("Key not found in map"))
+        let keys = self
+            .meta()
+            .map_keys
+            .as_ref()
+            .ok_or_else(|| env.error("Value is not a map"))?;
+        let index = keys
+            .get(key)
+            .ok_or_else(|| env.error("Key not found in map"))?;
+        if index >= self.row_count() {
+            return Err(env.error("Map was corrupted"));
         }
+        Ok(self.row(index))
     }
     /// Check if a map array contains a key
     pub fn has_key(&self, key: &Value, env: &Uiua) -> UiuaResult<bool> {
-        with_pair(self, env, |pair| pair.get(key).is_some())
+        let keys = self
+            .meta()
+            .map_keys
+            .as_ref()
+            .ok_or_else(|| env.error("Value is not a map"))?;
+        Ok(keys.get(key).is_some())
     }
     /// Insert a key-value pair into a map array
     pub fn insert(&mut self, key: Value, value: Value, env: &Uiua) -> UiuaResult {
-        with_pair_mut(self, env, |mut pair| pair.insert(key, value, env))?
+        let index = self.row_count();
+        let mut keys = self.take_map_keys();
+        keys.as_mut()
+            .ok_or_else(|| env.error("Value is not a map"))?
+            .insert(key, index, env)?;
+        let value = coerce_values(self, value, "insert", "value into map with", "values")
+            .map_err(|e| env.error(e))?;
+        self.append(value, env)?;
+        self.meta_mut().map_keys = keys;
+        Ok(())
     }
     /// Remove a key-value pair from a map array
     pub fn remove(&mut self, key: Value, env: &Uiua) -> UiuaResult {
-        with_pair_mut(self, env, |mut pair| pair.remove(key, env))?
+        let row_count = self.row_count();
+        let keys = (self.get_meta_mut().and_then(|m| m.map_keys.as_mut()))
+            .ok_or_else(|| env.error("Value is not a map"))?;
+        if let Some(index) = keys.remove(key, env)? {
+            if index >= row_count {
+                return Err(env.error("Map was corrupted"));
+            }
+
+            // Decrement indices greater than the removed index
+            for i in &mut keys.indices {
+                if *i > index {
+                    *i -= 1;
+                }
+            }
+
+            fn remove_row<T: Clone>(arr: &mut Array<T>, index: usize) {
+                let row_len = arr.row_len();
+                let data = arr.data.as_mut_slice();
+                let start = index * row_len;
+                for i in start..data.len() - row_len {
+                    data[i] = data[i + row_len].clone();
+                }
+                let new_len = data.len() - row_len;
+                arr.data.truncate(new_len);
+                arr.shape[0] -= 1;
+            }
+
+            match self {
+                Value::Num(arr) => remove_row(arr, index),
+                Value::Complex(arr) => remove_row(arr, index),
+                Value::Char(arr) => remove_row(arr, index),
+                Value::Box(arr) => remove_row(arr, index),
+                #[cfg(feature = "bytes")]
+                Value::Byte(arr) => remove_row(arr, index),
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MapKeys {
+    keys: Value,
+    indices: Vec<usize>,
+    len: usize,
+}
+
+impl MapKeys {
+    fn capacity(&self) -> usize {
+        self.indices.len()
+    }
+    fn grow(&mut self) {
+        if self.capacity() == 0 || (self.len as f64 / self.capacity() as f64) > LOAD_FACTOR {
+            fn grow_impl<K>(keys: &mut Array<K>, indices: &mut Vec<usize>, new_capacity: usize)
+            where
+                K: MapItem + ArrayValue,
+            {
+                let key_row_len = keys.row_len();
+                let mut keys_shape = keys.shape.clone();
+                keys_shape[0] = new_capacity;
+                let old_keys = take(keys).into_rows();
+                let old_indices = take(indices);
+                *keys = Array::new(
+                    keys_shape,
+                    repeat(K::empty_cell())
+                        .take(new_capacity * key_row_len)
+                        .collect::<EcoVec<_>>(),
+                );
+                *indices = vec![0; new_capacity];
+                let key_data = keys.data.as_mut_slice();
+                for (key, index) in old_keys.zip(old_indices) {
+                    let start = hash_start(&key, new_capacity);
+                    let mut key_index = start;
+                    loop {
+                        let cell_key =
+                            &mut key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
+                        if cell_key[0].is_empty_cell() {
+                            cell_key.clone_from_slice(&key.data);
+                            indices[key_index] = index;
+                            break;
+                        }
+                        key_index = (key_index + 1) % new_capacity;
+                    }
+                }
+            }
+
+            let new_cap = (self.capacity() * 2).max(1);
+            #[cfg(feature = "bytes")]
+            {
+                if let Value::Byte(keys) = &self.keys {
+                    self.keys = Value::Num(keys.convert_ref());
+                }
+            }
+            match &mut self.keys {
+                Value::Num(a) => grow_impl(a, &mut self.indices, new_cap),
+                Value::Complex(a) => grow_impl(a, &mut self.indices, new_cap),
+                Value::Char(a) => grow_impl(a, &mut self.indices, new_cap),
+                Value::Box(a) => grow_impl(a, &mut self.indices, new_cap),
+                #[cfg(feature = "bytes")]
+                Value::Byte(_) => unreachable!(),
+            }
+        }
+    }
+    fn insert(&mut self, key: Value, index: usize, env: &Uiua) -> UiuaResult {
+        fn insert_impl<K>(
+            keys: &mut Array<K>,
+            indices: &mut [usize],
+            key: Array<K>,
+            index: usize,
+            len: &mut usize,
+            capacity: usize,
+        ) -> Option<(Array<K>, usize)>
+        where
+            K: MapItem + ArrayValue,
+        {
+            let start = hash_start(&key, capacity);
+            let mut key_index = start;
+            let key_row_len = keys.row_len();
+            let key_data = keys.data.as_mut_slice();
+            loop {
+                let cell_key =
+                    &mut key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
+                let not_present = cell_key[0].is_empty_cell() || cell_key[0].is_tombstone();
+                if not_present || ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
+                    if not_present {
+                        *len += 1;
+                    }
+                    cell_key.clone_from_slice(&key.data);
+                    indices[key_index] = index;
+                    break None;
+                }
+                key_index = (key_index + 1) % capacity;
+                if key_index == start {
+                    break Some((key, index));
+                }
+            }
+        }
+        let key = coerce_values(&mut self.keys, key, "insert", "key into map with", "keys")
+            .map_err(|e| env.error(e))?;
+        if self.capacity() == 0 {
+            self.grow();
+        }
+        let capacity = self.capacity();
+        macro_rules! do_insert {
+            ($($k:ident),*) => {
+                match (&mut self.keys, key) {
+                    $((Value::$k(keys), Value::$k(key)) => {
+                        if let Some((key, value)) =
+                            insert_impl(keys, &mut self.indices, key, index, &mut self.len, capacity)
+                        {
+                            self.grow();
+                            return self.insert(key.into(), value.into(), env);
+                        }
+                    })*
+                    _ => unreachable!(),
+                }
+            }
+        }
+        do_insert!(Num, Complex, Char, Box);
+        self.grow();
+        Ok(())
+    }
+    fn get(&self, key: &Value) -> Option<usize> {
+        if self.keys.shape() == [0] {
+            return None;
+        }
+        let start = match key {
+            Value::Num(a) => hash_start(a, self.capacity()),
+            Value::Complex(a) => hash_start(a, self.capacity()),
+            Value::Char(a) => hash_start(a, self.capacity()),
+            Value::Box(a) => hash_start(a, self.capacity()),
+            #[cfg(feature = "bytes")]
+            Value::Byte(a) => hash_start(a, self.capacity()),
+        };
+        let mut key_index = start;
+        loop {
+            let row_key = self.keys.row(key_index);
+            if key.unpacked_ref() == row_key.unpacked_ref() {
+                return Some(self.indices[key_index]);
+            }
+            if row_key.is_empty_cell() {
+                return None;
+            }
+            key_index = (key_index + 1) % self.capacity();
+            if key_index == start {
+                break None;
+            }
+        }
+    }
+    fn remove(&mut self, key: Value, env: &Uiua) -> UiuaResult<Option<usize>> {
+        fn remove_impl<K>(
+            keys: &mut Array<K>,
+            key: Array<K>,
+            indices: &mut [usize],
+            len: &mut usize,
+            capacity: usize,
+        ) -> Option<usize>
+        where
+            K: MapItem + ArrayValue,
+        {
+            let start = hash_start(&key, capacity);
+            let mut key_index = start;
+            let key_row_len = keys.row_len();
+            let key_data = keys.data.as_mut_slice();
+            loop {
+                let cell_key =
+                    &mut key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
+                if ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
+                    *len -= 1;
+                    for elem in cell_key {
+                        *elem = K::tombstone_cell();
+                    }
+                    break Some(take(&mut indices[key_index]));
+                }
+                if cell_key[0].is_empty_cell() {
+                    break None;
+                }
+                key_index = (key_index + 1) % capacity;
+                if key_index == start {
+                    break None;
+                }
+            }
+        }
+        let key = coerce_values(&mut self.keys, key, "remove", "key from map with", "keys")
+            .map_err(|e| env.error(e))?;
+        let capacity = self.capacity();
+        macro_rules! do_remove {
+            ($($k:ident),*) => {
+                match (&mut self.keys, key) {
+                    $((Value::$k(keys), Value::$k(key)) => {
+                        Ok(remove_impl(keys, key, &mut self.indices, &mut self.len, capacity))
+                    })*
+                    (keys, key) => {
+                        let keys = keys.type_name();
+                        let key = key.type_name();
+                        Err(env.error(format!(
+                            "Cannot remove {key} key from map with {keys} keys",
+                        )))
+                    }
+                }
+            }
+        }
+        do_remove!(Num, Complex, Char, Box)
     }
 }
 
@@ -115,41 +428,24 @@ fn coerce_values(
             b = Value::Num(values.convert_ref());
         }
     }
+    if a.shape() == [0] {
+        let mut b_clone = b.clone();
+        b_clone.shape_mut().insert(0, 1);
+        *a = b_clone.first_dim_zero();
+        return Ok(b);
+    }
+    if let Value::Box(a) = a {
+        if a.rank() == 1 && !matches!(b, Value::Box(_)) {
+            return Ok(Boxed(b).into());
+        }
+    }
+    if let Value::Box(b_arr) = &b {
+        if b_arr.rank() == 0 && !matches!(a, Value::Box(_)) {
+            *a = Array::from_iter(a.rows().map(Boxed)).into();
+            return Ok(b);
+        }
+    }
     match (&mut *a, b) {
-        (Value::Num(arr), Value::Num(num)) if arr.row_count() == 0 => {
-            let mut shape = num.shape.clone();
-            shape.insert(0, 0);
-            *a = Array::<f64>::new(shape, EcoVec::new()).into();
-            Ok(Value::Num(num))
-        }
-        (Value::Num(arr), Value::Complex(comp)) if arr.row_count() == 0 => {
-            let mut shape = comp.shape.clone();
-            shape.insert(0, 0);
-            *a = Array::<Complex>::new(shape, EcoVec::new()).into();
-            Ok(Value::Complex(comp))
-        }
-        (Value::Num(arr), owned @ Value::Box(_)) if arr.row_count() == 0 => {
-            *a = Array::<Boxed>::new(0, EcoVec::new()).into();
-            Ok(owned)
-        }
-        (Value::Box(arr), Value::Num(num)) if arr.row_count() == 0 => {
-            let mut shape = num.shape.clone();
-            shape.insert(0, 0);
-            *a = Array::<f64>::new(shape, EcoVec::new()).into();
-            Ok(Value::Num(num))
-        }
-        (Value::Box(arr), Value::Char(ch)) if arr.row_count() == 0 => {
-            let mut shape = ch.shape.clone();
-            shape.insert(0, 0);
-            *a = Array::<char>::new(shape, EcoVec::new()).into();
-            Ok(Value::Char(ch))
-        }
-        (Value::Box(arr), Value::Complex(num)) if arr.row_count() == 0 => {
-            let mut shape = num.shape.clone();
-            shape.insert(0, 0);
-            *a = Array::<Complex>::new(shape, EcoVec::new()).into();
-            Ok(Value::Complex(num))
-        }
         (Value::Num(arr), Value::Num(item)) if arr.shape[1..] != item.shape => Err(format!(
             "Cannot {action1} shape {} {action2} shape {} {action3}",
             item.shape(),
@@ -191,466 +487,6 @@ fn coerce_values(
             owned.type_name(),
             m.type_name()
         )),
-    }
-}
-
-struct Pair<'a> {
-    keys: &'a Value,
-    values: &'a Value,
-}
-
-struct PairMut<'a> {
-    meta: &'a mut ArrayMeta,
-    keys: &'a mut Value,
-    values: &'a mut Value,
-}
-
-fn with_pair<T>(val: &Value, env: &Uiua, f: impl FnOnce(Pair) -> T) -> UiuaResult<T> {
-    match (val, val.shape().dims()) {
-        (_, [] | [0, ..] | [1, ..]) => Ok(f(Pair {
-            keys: val,
-            values: val,
-        })),
-        (_, [2, ..]) => {
-            let keys = val.row(0);
-            let keys = keys.unpacked_ref();
-            let values = val.row(1);
-            let values = values.unpacked_ref();
-            if keys.row_count() != values.row_count() {
-                return Err(env.error(format!(
-                    "Map array's keys and values must have the same length, but they have lengths {} and {}",
-                    keys.row_count(),
-                    values.row_count()
-                )));
-            }
-            Ok(f(Pair { keys, values }))
-        }
-        (Value::Box(arr), _) if arr.element_count() == 2 => {
-            let keys = arr.data[0].0.unpacked_ref();
-            let values = arr.data[1].0.unpacked_ref();
-            if keys.row_count() != values.row_count() {
-                return Err(env.error(format!(
-                    "Map array's keys and values must have the same length, but they have lengths {} and {}",
-                    keys.row_count(),
-                    values.row_count()
-                )));
-            }
-            Ok(f(Pair { keys, values }))
-        }
-        _ => Err(env.error(format!(
-            "Map array must have a length of 2, but its shape is {}",
-            val.shape()
-        ))),
-    }
-}
-
-fn with_pair_mut<T>(val: &mut Value, env: &Uiua, f: impl FnOnce(PairMut) -> T) -> UiuaResult<T> {
-    let row_count = val.row_count();
-    let elem_count = val.element_count();
-    match (val, row_count, elem_count) {
-        (Value::Box(arr), _, 2) => {
-            let data = arr.data.as_mut_slice();
-            let (keys, values) = data.split_at_mut(1);
-            let res = f(PairMut {
-                meta: Array::<Boxed>::meta_mut_impl(&mut arr.meta),
-                keys: &mut keys[0].0,
-                values: &mut values[0].0,
-            });
-            Ok(res)
-        }
-        (val, 0, _) | (val, _, 0) => {
-            let mut arr: Array<_> = repeat(Boxed(Array::<Boxed>::default().into()))
-                .take(2)
-                .collect();
-            arr.shape = val.shape().clone();
-            arr.shape[0] = 2;
-            let data = arr.data.as_mut_slice();
-            let (keys, values) = data.split_at_mut(1);
-            let res = f(PairMut {
-                meta: Array::<Boxed>::meta_mut_impl(&mut arr.meta),
-                keys: &mut keys[0].0,
-                values: &mut values[0].0,
-            });
-            *val = arr.into();
-            Ok(res)
-        }
-        (val, 2, _) => match val {
-            Value::Box(arr) => {
-                let data = arr.data.as_mut_slice();
-                let (keys, values) = data.split_at_mut(1);
-                let res = f(PairMut {
-                    meta: Array::<Boxed>::meta_mut_impl(&mut arr.meta),
-                    keys: &mut keys[0].0,
-                    values: &mut values[0].0,
-                });
-                Ok(res)
-            }
-            value => {
-                let mut arr: Array<_> = take(value).into_rows().map(Boxed).collect();
-                let data = arr.data.as_mut_slice();
-                let (keys, values) = data.split_at_mut(1);
-                let res = f(PairMut {
-                    meta: Array::<Boxed>::meta_mut_impl(&mut arr.meta),
-                    keys: &mut keys[0].0,
-                    values: &mut values[0].0,
-                });
-                *value = arr.into();
-                Ok(res)
-            }
-        },
-        (val, ..) => Err(env.error(format!(
-            "Map array must have a length of 2, but its shape is {}",
-            val.shape()
-        ))),
-    }
-}
-
-impl<'a> Pair<'a> {
-    fn capacity(&self) -> usize {
-        self.keys.row_count()
-    }
-    fn hash_start(&self, key: &Value) -> usize {
-        key.generic_ref(
-            |arr| hash_start(arr, self.capacity()),
-            |arr| hash_start(arr, self.capacity()),
-            |arr| hash_start(arr, self.capacity()),
-            |arr| hash_start(arr, self.capacity()),
-            |arr| hash_start(arr, self.capacity()),
-        )
-    }
-    fn get(&self, key: &Value) -> Option<Value> {
-        if self.keys.shape() == [0] {
-            return None;
-        }
-        let start = self.hash_start(key);
-        let mut index = start;
-        loop {
-            let row_key = self.keys.row(index);
-            if key.unpacked_ref() == row_key.unpacked_ref() {
-                return Some(self.values.row(index));
-            }
-            if row_key.is_empty_cell() {
-                return None;
-            }
-            index = (index + 1) % self.capacity();
-            if index == start {
-                break None;
-            }
-        }
-    }
-}
-
-impl<'a> PairMut<'a> {
-    fn capacity(&self) -> usize {
-        self.keys.row_count()
-    }
-    fn len(&mut self) -> usize {
-        if let Some(len) = self.meta.map_len {
-            return len;
-        }
-        let len = match self.keys {
-            Value::Num(arr) => (arr.rows())
-                .filter(|row| !(row.data[0].is_empty_cell() || row.data[0].is_tombstone()))
-                .count(),
-            #[cfg(feature = "bytes")]
-            Value::Byte(arr) => arr.row_count(),
-            Value::Complex(arr) => (arr.rows())
-                .filter(|row| !(row.data[0].is_empty_cell() || row.data[0].is_tombstone()))
-                .count(),
-            Value::Char(arr) => (arr.rows())
-                .filter(|row| !(row.data[0].is_empty_cell() || row.data[0].is_tombstone()))
-                .count(),
-            Value::Box(arr) => (arr.rows())
-                .filter(|row| !(row.data[0].is_empty_cell() || row.data[0].is_tombstone()))
-                .count(),
-        };
-        self.meta.map_len = Some(len);
-        len
-    }
-    fn grow(&mut self) {
-        if self.capacity() == 0 || (self.len() as f64 / self.capacity() as f64) > LOAD_FACTOR {
-            fn grow_impl<K, V>(keys: &mut Array<K>, values: &mut Array<V>, new_capacity: usize)
-            where
-                K: MapItem + ArrayValue,
-                V: MapItem + ArrayValue,
-            {
-                let key_row_len = keys.row_len();
-                let value_row_len = values.row_len();
-                let mut keys_shape = keys.shape.clone();
-                keys_shape[0] = new_capacity;
-                let mut values_shape = values.shape.clone();
-                values_shape[0] = new_capacity;
-                let old_keys = take(keys).into_rows();
-                let old_values = take(values).into_rows();
-                *keys = Array::new(
-                    keys_shape,
-                    repeat(K::empty_cell())
-                        .take(new_capacity * key_row_len)
-                        .collect::<EcoVec<_>>(),
-                );
-                *values = Array::new(
-                    values_shape,
-                    repeat(V::empty_cell())
-                        .take(new_capacity * value_row_len)
-                        .collect::<EcoVec<_>>(),
-                );
-                let key_data = keys.data.as_mut_slice();
-                let value_data = values.data.as_mut_slice();
-                for (key, value) in old_keys.zip(old_values) {
-                    let start = hash_start(&key, new_capacity);
-                    let mut index = start;
-                    loop {
-                        let cell_key =
-                            &mut key_data[index * key_row_len..(index + 1) * key_row_len];
-                        if cell_key[0].is_empty_cell() {
-                            cell_key.clone_from_slice(&key.data);
-                            value_data[index * value_row_len..(index + 1) * value_row_len]
-                                .clone_from_slice(&value.data);
-                            break;
-                        }
-                        index = (index + 1) % new_capacity;
-                    }
-                }
-            }
-
-            let new_cap = (self.capacity() * 2).max(1);
-            let len = self.len();
-            self.meta.map_len = Some(len);
-            #[cfg(feature = "bytes")]
-            {
-                if let Value::Byte(keys) = self.keys {
-                    *self.keys = Value::Num(keys.convert_ref());
-                }
-                if let Value::Byte(values) = self.values {
-                    *self.values = Value::Num(values.convert_ref());
-                }
-            }
-            match (&mut *self.keys, &mut *self.values) {
-                (Value::Num(a), Value::Num(b)) => grow_impl(a, b, new_cap),
-                (Value::Num(a), Value::Complex(b)) => grow_impl(a, b, new_cap),
-                (Value::Num(a), Value::Char(b)) => grow_impl(a, b, new_cap),
-                (Value::Num(a), Value::Box(b)) => grow_impl(a, b, new_cap),
-                (Value::Complex(a), Value::Num(b)) => grow_impl(a, b, new_cap),
-                (Value::Complex(a), Value::Complex(b)) => grow_impl(a, b, new_cap),
-                (Value::Complex(a), Value::Char(b)) => grow_impl(a, b, new_cap),
-                (Value::Complex(a), Value::Box(b)) => grow_impl(a, b, new_cap),
-                (Value::Char(a), Value::Num(b)) => grow_impl(a, b, new_cap),
-                (Value::Char(a), Value::Complex(b)) => grow_impl(a, b, new_cap),
-                (Value::Char(a), Value::Char(b)) => grow_impl(a, b, new_cap),
-                (Value::Char(a), Value::Box(b)) => grow_impl(a, b, new_cap),
-                (Value::Box(a), Value::Num(b)) => grow_impl(a, b, new_cap),
-                (Value::Box(a), Value::Complex(b)) => grow_impl(a, b, new_cap),
-                (Value::Box(a), Value::Char(b)) => grow_impl(a, b, new_cap),
-                (Value::Box(a), Value::Box(b)) => grow_impl(a, b, new_cap),
-                #[cfg(feature = "bytes")]
-                (Value::Num(_), Value::Byte(_))
-                | (Value::Byte(_), Value::Num(_))
-                | (Value::Byte(_), Value::Byte(_))
-                | (Value::Byte(_), Value::Complex(_))
-                | (Value::Byte(_), Value::Char(_))
-                | (Value::Byte(_), Value::Box(_))
-                | (Value::Complex(_), Value::Byte(_))
-                | (Value::Char(_), Value::Byte(_))
-                | (Value::Box(_), Value::Byte(_)) => unreachable!(),
-            }
-        }
-    }
-    fn insert(&mut self, key: Value, value: Value, env: &Uiua) -> UiuaResult {
-        fn insert_impl<K, V>(
-            keys: &mut Array<K>,
-            values: &mut Array<V>,
-            key: Array<K>,
-            value: Array<V>,
-            meta: &mut ArrayMeta,
-            capacity: usize,
-        ) -> Option<(Array<K>, Array<V>)>
-        where
-            K: MapItem + ArrayValue,
-            V: MapItem + ArrayValue,
-        {
-            let start = hash_start(&key, capacity);
-            let mut index = start;
-            let key_row_len = keys.row_len();
-            let value_row_len = values.row_len();
-            let key_data = keys.data.as_mut_slice();
-            let value_data = values.data.as_mut_slice();
-            loop {
-                let cell_key = &mut key_data[index * key_row_len..(index + 1) * key_row_len];
-                let not_present = cell_key[0].is_empty_cell() || cell_key[0].is_tombstone();
-                if not_present || ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
-                    if not_present {
-                        let len = meta.map_len.unwrap();
-                        meta.map_len = Some(len + 1);
-                    }
-                    cell_key.clone_from_slice(&key.data);
-                    value_data[index * value_row_len..(index + 1) * value_row_len]
-                        .clone_from_slice(&value.data);
-                    break None;
-                }
-                index = (index + 1) % capacity;
-                if index == start {
-                    break Some((key, value));
-                }
-            }
-        }
-        let key = coerce_values(self.keys, key, "insert", "key into map with", "keys")
-            .map_err(|e| env.error(e))?;
-        let value = coerce_values(
-            self.values,
-            value,
-            "insert",
-            "value into map with",
-            "values",
-        )
-        .map_err(|e| env.error(e))?;
-        if self.capacity() == 0 {
-            self.grow();
-        }
-        let capacity = self.capacity();
-        macro_rules! do_insert {
-            ($(($k:ident, $v:ident),)*) => {
-                match ((&mut *self.keys, key), (&mut *self.values, value)) {
-                    $((
-                        (Value::$k(keys), Value::$k(key)),
-                        (Value::$v(values), Value::$v(value)),
-                    ) => {
-                        if let Some((key, value)) =
-                            insert_impl(keys, values, key, value, self.meta, capacity)
-                        {
-                            self.grow();
-                            return self.insert(key.into(), value.into(), env);
-                        }
-                    })*
-                    ((keys, key), (values, value)) => {
-                        let keys = keys.type_name();
-                        let key = key.type_name();
-                        let values = values.type_name();
-                        let value = value.type_name();
-                        if keys != key {
-                            return Err(env.error(format!(
-                                "Cannot insert {key} key into map with {keys} keys",
-                            )));
-                        }
-                        if values != value {
-                            return Err(env.error(format!(
-                                "Cannot insert {value} value into map with {values} values",
-                            )));
-                        }
-                    }
-                }
-            }
-        }
-        do_insert!(
-            (Num, Num),
-            (Num, Complex),
-            (Num, Char),
-            (Num, Box),
-            (Complex, Num),
-            (Complex, Complex),
-            (Complex, Char),
-            (Complex, Box),
-            (Char, Num),
-            (Char, Complex),
-            (Char, Char),
-            (Char, Box),
-            (Box, Num),
-            (Box, Complex),
-            (Box, Char),
-            (Box, Box),
-        );
-        self.grow();
-        Ok(())
-    }
-    fn remove(&mut self, key: Value, env: &Uiua) -> UiuaResult {
-        fn remove_impl<K, V>(
-            keys: &mut Array<K>,
-            values: &mut Array<V>,
-            key: Array<K>,
-            meta: &mut ArrayMeta,
-            capacity: usize,
-        ) where
-            K: MapItem + ArrayValue,
-            V: MapItem + ArrayValue,
-        {
-            let start = hash_start(&key, capacity);
-            let mut index = start;
-            let key_row_len = keys.row_len();
-            let value_row_len = values.row_len();
-            let key_data = keys.data.as_mut_slice();
-            let value_data = values.data.as_mut_slice();
-            loop {
-                let cell_key = &mut key_data[index * key_row_len..(index + 1) * key_row_len];
-                if ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
-                    if let Some(len) = meta.map_len {
-                        meta.map_len = Some(len - 1);
-                    }
-                    for elem in cell_key {
-                        *elem = K::tombstone_cell();
-                    }
-                    for elem in &mut value_data[index * value_row_len..(index + 1) * value_row_len]
-                    {
-                        *elem = V::empty_cell();
-                    }
-                    break;
-                }
-                if cell_key[0].is_empty_cell() {
-                    break;
-                }
-                index = (index + 1) % capacity;
-                if index == start {
-                    break;
-                }
-            }
-        }
-        let key = coerce_values(self.keys, key, "remove", "key from map with", "keys")
-            .map_err(|e| env.error(e))?;
-        let capacity = self.capacity();
-        macro_rules! do_remove {
-            ($(($k:ident, $v:ident),)*) => {
-                match ((&mut *self.keys, key), &mut *self.values) {
-                    $((
-                        (Value::$k(keys), Value::$k(key)),
-                        Value::$v(values)
-                    ) => {
-                        remove_impl(keys, values, key, self.meta, capacity);
-                    })*
-                    ((keys, key), values) => {
-                        let keys = keys.type_name();
-                        let key = key.type_name();
-                        let values = values.type_name();
-                        if keys != key {
-                            return Err(env.error(format!(
-                                "Cannot remove {key} key from map with {keys} keys",
-                            )));
-                        }
-                        if values != key {
-                            return Err(env.error(format!(
-                                "Cannot remove {key} key from map with {values} values",
-                            )));
-                        }
-                    }
-                }
-            }
-        }
-        do_remove!(
-            (Num, Num),
-            (Num, Complex),
-            (Num, Char),
-            (Num, Box),
-            (Complex, Num),
-            (Complex, Complex),
-            (Complex, Char),
-            (Complex, Box),
-            (Char, Num),
-            (Char, Complex),
-            (Char, Char),
-            (Char, Box),
-            (Box, Num),
-            (Box, Complex),
-            (Box, Char),
-            (Box, Box),
-        );
-        Ok(())
     }
 }
 

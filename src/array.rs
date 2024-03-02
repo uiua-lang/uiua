@@ -10,6 +10,7 @@ use ecow::{EcoString, EcoVec};
 use serde::*;
 
 use crate::{
+    algorithm::map::MapKeys,
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
     Boxed, Complex, Shape, Uiua, Value,
@@ -65,9 +66,9 @@ pub struct ArrayMeta {
     /// Flags for the array
     #[serde(default, skip_serializing_if = "ArrayFlags::is_empty")]
     pub flags: ArrayFlags,
-    /// The length of a map array
+    /// The keys of a map array
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub map_len: Option<usize>,
+    pub map_keys: Option<MapKeys>,
     /// The pointer value for FFI
     #[serde(skip)]
     pub pointer: Option<usize>,
@@ -99,7 +100,7 @@ impl ArrayFlags {
 pub static DEFAULT_META: ArrayMeta = ArrayMeta {
     label: None,
     flags: ArrayFlags::NONE,
-    map_len: None,
+    map_keys: None,
     pointer: None,
 };
 
@@ -218,12 +219,11 @@ impl<T> Array<T> {
     }
     /// Take the label from the metadata
     pub fn take_label(&mut self) -> Option<EcoString> {
-        if let Some(meta) = self.meta.as_mut() {
-            let meta = Arc::make_mut(meta);
-            meta.label.take()
-        } else {
-            None
-        }
+        self.get_meta_mut().and_then(|meta| meta.label.take())
+    }
+    /// Take the map keys from the metadata
+    pub fn take_map_keys(&mut self) -> Option<MapKeys> {
+        self.get_meta_mut().and_then(|meta| meta.map_keys.take())
     }
     /// Reset all metadata
     pub fn reset_meta(&mut self) {
@@ -250,7 +250,7 @@ impl<T> Array<T> {
         if let Some(meta) = self.meta.as_mut() {
             let meta = Arc::make_mut(meta);
             meta.flags &= other.flags;
-            meta.map_len = None;
+            meta.map_keys = None;
         }
     }
 }
@@ -799,7 +799,7 @@ pub(crate) fn dbg_value(value: &Value, depth: usize, prefix: bool) -> String {
         |a| dbg_array::<Complex>(a, depth, prefix),
         |a| dbg_array::<char>(a, depth, prefix),
         |a: &Array<Boxed>| {
-            if a.meta().map_len.is_none() {
+            if a.meta().map_keys.is_none() {
                 dbg_array(a, depth, prefix)
             } else {
                 use crate::algorithm::map::remove_empty_rows;

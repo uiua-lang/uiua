@@ -12,7 +12,7 @@ use serde::*;
 
 use crate::{
     algorithm::{
-        map::{EMPTY_NAN, TOMBSTONE_NAN},
+        map::{MapKeys, EMPTY_NAN, TOMBSTONE_NAN},
         pervade::*,
         FillContext,
     },
@@ -334,9 +334,17 @@ impl Value {
     pub fn meta_mut(&mut self) -> &mut ArrayMeta {
         unsafe { self.repr_mut() }.arr.meta_mut()
     }
+    /// Get a mutable reference to the value's metadata
+    pub fn get_meta_mut(&mut self) -> Option<&mut ArrayMeta> {
+        unsafe { self.repr_mut() }.arr.get_meta_mut()
+    }
     /// Take the label from the value
     pub fn take_label(&mut self) -> Option<EcoString> {
         unsafe { self.repr_mut() }.arr.take_label()
+    }
+    /// Take the map keys from the value
+    pub fn take_map_keys(&mut self) -> Option<MapKeys> {
+        unsafe { self.repr_mut() }.arr.take_map_keys()
     }
     /// Combine this value's metadata with another
     pub fn combine_meta(&mut self, other: &ArrayMeta) {

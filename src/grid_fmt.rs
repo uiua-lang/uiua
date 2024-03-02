@@ -10,7 +10,7 @@ use std::{
 };
 
 use crate::{
-    algorithm::map::{MapItem, EMPTY_NAN, TOMBSTONE_NAN},
+    algorithm::map::{EMPTY_NAN, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
     boxed::Boxed,
     value::Value,
@@ -144,7 +144,7 @@ impl GridFmt for Value {
             let Value::Box(b) = self else {
                 break 'box_list;
             };
-            if b.rank() != 1 || b.meta().map_len.is_some() {
+            if b.rank() != 1 || b.meta().map_keys.is_some() {
                 break 'box_list;
             }
             let mut item_lines = Vec::new();
@@ -242,30 +242,20 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         } else {
             let mut metagrid: Option<Metagrid> = None;
             // Hashmap
-            if self.meta().map_len.is_some() && self.shape == [2] {
-                if let Some((keys, values)) =
-                    self.data[0].nested_value().zip(self.data[1].nested_value())
-                {
-                    if keys.row_count() > 0 && keys.row_count() == values.row_count() {
-                        let mut empty_entries = 0;
-                        let metagrid = metagrid.get_or_insert_with(Metagrid::new);
-                        for (key, value) in keys.rows().zip(values.rows()) {
-                            if key.is_empty_cell() || key.is_tombstone() {
-                                empty_entries += 1;
-                                continue;
-                            }
-                            let key = key.fmt_grid(false, label);
-                            let value = value.fmt_grid(false, label);
-                            metagrid.push(vec![key, vec![" → ".chars().collect()], value]);
-                        }
-                        if empty_entries > 0 {
-                            metagrid.push(vec![
-                                vec![format!("… {empty_entries}").chars().collect()],
-                                vec![],
-                                vec![],
-                            ])
-                        }
-                    }
+            if self.is_map() {
+                let metagrid = metagrid.get_or_insert_with(Metagrid::new);
+                for (key, value) in self.map_kv() {
+                    let key = key.fmt_grid(false, label);
+                    let value = value.fmt_grid(false, label);
+                    metagrid.push(vec![key, vec![" → ".chars().collect()], value]);
+                }
+                let empty_entries = self.empty_map_entries();
+                if empty_entries > 0 {
+                    metagrid.push(vec![
+                        vec![format!("… {empty_entries}").chars().collect()],
+                        vec![],
+                        vec![],
+                    ])
                 }
             }
 

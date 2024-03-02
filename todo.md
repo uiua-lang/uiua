@@ -5,6 +5,7 @@
   - `mask` primitive?
   - Unicode glyph format by number/name
   - Let bind only take an ident?
+  - `uiua repl` file
   - System functions
     - Clipboard
     - Excel

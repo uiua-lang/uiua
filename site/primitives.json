@@ -721,6 +721,14 @@
     "description": "Create a hashmap from lists of keys and values",
     "experimental": true
   },
+  "mask": {
+    "glyph": "⍝",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Mask the occurences of one array in another",
+    "experimental": true
+  },
   "match": {
     "glyph": "≍",
     "args": 2,

@@ -662,7 +662,7 @@ macro_rules! temp_wrap {
         fn $name<'a>(
             input: &'a [Instr],
             _: &mut Compiler,
-        ) -> Option<(&'a [Instr], &'a Instr, &'a [Instr], &'a Instr)> {
+        ) -> Option<(&'a [Instr], &'a Instr, &'a [Instr], &'a Instr, usize)> {
             let (
                 instr @ Instr::$variant {
                     stack: TempStack::Inline,
@@ -712,7 +712,7 @@ macro_rules! temp_wrap {
             let (inner, input) = input.split_at(end);
             let end_instr = input.first()?;
             let input = &input[1..];
-            Some((input, instr, inner, end_instr))
+            Some((input, instr, inner, end_instr, max_depth))
         }
     };
 }
@@ -724,7 +724,7 @@ fn invert_temp_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let (input, instr, inner, end_instr) =
+    let (input, instr, inner, end_instr, _) =
         try_push_temp_wrap(input, comp).or_else(|| try_copy_temp_wrap(input, comp))?;
     let mut instrs = invert_instrs(inner, comp)?;
     instrs.insert(0, instr.clone());
@@ -759,23 +759,37 @@ fn under_copy_temp_pattern<'a>(
     g_sig: Signature,
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
-    let (input, instr, inner, end_instr) = try_copy_temp_wrap(input, comp)?;
-    let (mut inner_befores, inner_afters) = under_instrs(inner, g_sig, comp)?;
+    let (input, instr, inner, end_instr, _) = try_copy_temp_wrap(input, comp)?;
+    let (mut inner_befores, mut inner_afters) = under_instrs(inner, g_sig, comp)?;
     let Some((
         Instr::CopyToTemp {
             stack: TempStack::Under,
+            count: before_count,
             ..
         },
         Instr::PopTemp {
             stack: TempStack::Under,
+            count: after_count,
             ..
         },
     )) = inner_befores.first().zip(inner_afters.first())
     else {
         return None;
     };
-    inner_befores.insert(0, instr.clone());
-    inner_befores.push(end_instr.clone());
+    if g_sig.args > g_sig.outputs {
+        inner_befores.insert(0, instr.clone());
+        inner_befores.push(end_instr.clone());
+    } else {
+        let mut instr_copy = instr.clone();
+        let mut end_instr_copy = end_instr.clone();
+        let (start_count, end_count) = temp_pair_counts(&mut instr_copy, &mut end_instr_copy)?;
+        *start_count = *before_count;
+        *end_count = *after_count;
+        inner_befores.make_mut()[0] = instr_copy.clone();
+        inner_afters.make_mut()[0] = instr.clone();
+        inner_befores.push(end_instr_copy.clone());
+        inner_afters.push(end_instr.clone());
+    }
     Some((input, (inner_befores, inner_afters)))
 }
 
@@ -784,7 +798,7 @@ fn under_push_temp_pattern<'a>(
     g_sig: Signature,
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
-    let (input, start_instr, inner, end_instr) = try_push_temp_wrap(input, comp)?;
+    let (input, start_instr, inner, end_instr, _) = try_push_temp_wrap(input, comp)?;
     // Calcular inner functions and signatures
     let (inner_befores, inner_afters) = under_instrs(inner, g_sig, comp)?;
     let inner_befores_sig = instrs_signature(&inner_befores).ok()?;
@@ -892,6 +906,14 @@ fn temp_pair_counts<'a, 'b>(
     match (start_instr, end_instr) {
         (
             Instr::PushTemp {
+                count: start_count, ..
+            },
+            Instr::PopTemp {
+                count: end_count, ..
+            },
+        ) => Some((start_count, end_count)),
+        (
+            Instr::CopyToTemp {
                 count: start_count, ..
             },
             Instr::PopTemp {

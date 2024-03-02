@@ -1,8 +1,9 @@
 # Uiua Todo
 
 - 0.10
-  - Re-implement map changes -_-
-  - Doc comment on last line of single-line function
+  - Make semantic comments distinct in the AST
+  - Make importing modules that use experimental features require experimental
+  - Lists of structs in FFI
   - System for custom glyph formatting
   - Let bind only take an ident?
   - 3+ argument `inventory`

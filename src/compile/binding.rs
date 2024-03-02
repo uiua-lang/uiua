@@ -45,6 +45,13 @@ impl Compiler {
         };
         self.next_global += 1;
 
+        let comment = comment.or_else(|| {
+            binding.words.iter().last().and_then(|w| match &w.value {
+                Word::Comment(c) => Some(c.as_str().into()),
+                _ => None,
+            })
+        });
+
         // Handle macro
         let ident_margs = ident_modifier_args(&name);
         if binding.array_macro {

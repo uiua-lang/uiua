@@ -149,7 +149,11 @@ impl<T: Clone> CowSlice<T> {
     }
     /// Clear the buffer
     pub fn clear(&mut self) {
-        self.modify(|vec| vec.clear());
+        if self.is_unique() {
+            self.modify(|vec| vec.clear());
+        } else {
+            self.data = EcoVec::new();
+        }
         self.start = 0;
         self.end = 0;
     }

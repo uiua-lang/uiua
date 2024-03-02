@@ -2,6 +2,7 @@
 
 - 0.10
   - Re-implement map changes -_-
+  - Doc comment on last line of single-line function
   - Unicode glyph format by number/name
   - Let bind only take an ident?
   - System functions

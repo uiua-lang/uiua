@@ -41,6 +41,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Language Server
   - Add macro expansion as a code action
   - Add completions for shadowable constants
+  - Add completions for module items when the module reference is partially typed
 - Add the `--file <file>` option to the `uiua repl` command
   - This runs a file before starting the REPL
 - Improve the supported binding type coverage of [`&ffi`](https://uiua.org/docs/&ffi)

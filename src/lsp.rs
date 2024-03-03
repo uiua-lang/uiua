@@ -508,12 +508,12 @@ mod server {
     impl LanguageServer for Backend {
         async fn initialize(&self, _params: InitializeParams) -> Result<InitializeResult> {
             self.debug("Initializing Uiua language server").await;
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    format!("Client capabilities: {:#?}", _params.capabilities),
-                )
-                .await;
+            // self.client
+            //     .log_message(
+            //         MessageType::INFO,
+            //         format!("Client capabilities: {:#?}", _params.capabilities),
+            //     )
+            //     .await;
 
             Ok(InitializeResult {
                 capabilities: ServerCapabilities {
@@ -521,7 +521,10 @@ mod server {
                         TextDocumentSyncKind::FULL,
                     )),
                     hover_provider: Some(HoverProviderCapability::Simple(true)),
-                    completion_provider: Some(Default::default()),
+                    completion_provider: Some(CompletionOptions {
+                        trigger_characters: Some(vec!["~".into()]),
+                        ..Default::default()
+                    }),
                     document_formatting_provider: Some(OneOf::Left(true)),
                     semantic_tokens_provider: Some(
                         SemanticTokensServerCapabilities::SemanticTokensOptions(
@@ -672,148 +675,167 @@ mod server {
         }
 
         async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
-            self.catch_crash(|| {
-                let doc_uri = &params.text_document_position.text_document.uri;
-                let doc = if let Some(doc) = self.docs.get(doc_uri) {
-                    doc
-                } else {
-                    return Ok(None);
+            fn make_completion(
+                name: String,
+                span: &CodeSpan,
+                binding: &BindingInfo,
+            ) -> CompletionItem {
+                let kind = match &binding.global {
+                    Global::Const(_) => CompletionItemKind::CONSTANT,
+                    Global::Func(_) => CompletionItemKind::FUNCTION,
+                    Global::Macro => CompletionItemKind::FUNCTION,
+                    Global::Module { .. } => CompletionItemKind::MODULE,
                 };
-                let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
-                let Some(sp) = (doc.spans.iter()).find(|sp| sp.span.contains_line_col(line, col))
-                else {
-                    return Ok(None);
-                };
-
-                let Ok(token) = std::str::from_utf8(&doc.input.as_bytes()[sp.span.byte_range()])
-                else {
-                    return Ok(None);
-                };
-
-                // Collect primitive completions
-                let mut completions: Vec<_> = Primitive::non_deprecated()
-                    .filter(|p| p.name().starts_with(token))
-                    .map(|prim| {
-                        CompletionItem {
-                            label: prim.format().to_string(),
-                            insert_text: prim.glyph().map(|c| c.to_string()),
-                            kind: Some(if prim.is_constant() {
-                                CompletionItemKind::CONSTANT
-                            } else {
-                                CompletionItemKind::FUNCTION
-                            }),
-                            detail: Some(prim.doc().short_text().to_string()),
-                            documentation: Some(Documentation::MarkupContent(MarkupContent {
-                                kind: MarkupKind::Markdown,
-                                value: full_prim_doc_markdown(prim),
-                            })),
-                            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                                range: uiua_span_to_lsp(&sp.span),
-                                new_text: prim
-                                    .glyph()
-                                    .map(|c| c.to_string())
-                                    .unwrap_or_else(|| prim.name().to_string()),
-                            })),
-                            insert_text_mode: if prim.glyph().is_none() {
-                                // Insert a space before the completion if the token is not a glyph
-                                Some(InsertTextMode::ADJUST_INDENTATION)
-                            } else {
-                                None
-                            },
-                            sort_text: Some(format!(
-                                "{} {}",
-                                if prim.glyph().is_some() { "0" } else { "1" },
-                                prim.name()
-                            )),
-                            ..Default::default()
-                        }
-                    })
-                    .collect();
-
-                // Collect binding completions
-                for binding in self.bindings_in_file(doc_uri, &uri_path(doc_uri)) {
-                    let name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
-
-                    fn make_completion(
-                        name: String,
-                        span: &CodeSpan,
-                        binding: &BindingInfo,
-                    ) -> CompletionItem {
-                        let kind = match &binding.global {
-                            Global::Const(_) => CompletionItemKind::CONSTANT,
-                            Global::Func(_) => CompletionItemKind::FUNCTION,
-                            Global::Macro => CompletionItemKind::FUNCTION,
-                            Global::Module { .. } => CompletionItemKind::MODULE,
-                        };
-                        CompletionItem {
-                            label: name.clone(),
-                            kind: Some(kind),
-                            label_details: Some(CompletionItemLabelDetails {
-                                detail: binding.global.signature().map(|sig| sig.to_string()),
-                                ..Default::default()
-                            }),
-                            detail: binding.global.signature().map(|sig| sig.to_string()),
-                            documentation: binding.comment.as_ref().map(|c| {
-                                Documentation::MarkupContent(MarkupContent {
-                                    kind: MarkupKind::Markdown,
-                                    value: c.to_string(),
-                                })
-                            }),
-                            text_edit: Some(CompletionTextEdit::Edit(TextEdit {
-                                range: uiua_span_to_lsp(span),
-                                new_text: name,
-                            })),
-                            ..Default::default()
-                        }
-                    }
-
-                    if let Global::Module { module } = &binding.global {
-                        for binding in self.bindings_in_file(doc_uri, module) {
-                            if !binding.public {
-                                continue;
-                            }
-                            let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
-                            if !item_name.to_lowercase().starts_with(&token.to_lowercase()) {
-                                continue;
-                            }
-                            completions.push(make_completion(
-                                format!("{name}~{item_name}"),
-                                &sp.span,
-                                &binding,
-                            ));
-                        }
-                    }
-
-                    if !name.to_lowercase().starts_with(&token.to_lowercase()) {
-                        continue;
-                    }
-                    completions.push(make_completion(name, &sp.span, &binding));
+                CompletionItem {
+                    label: name.clone(),
+                    kind: Some(kind),
+                    label_details: Some(CompletionItemLabelDetails {
+                        detail: binding.global.signature().map(|sig| sig.to_string()),
+                        ..Default::default()
+                    }),
+                    detail: binding.global.signature().map(|sig| sig.to_string()),
+                    documentation: binding.comment.as_ref().map(|c| {
+                        Documentation::MarkupContent(MarkupContent {
+                            kind: MarkupKind::Markdown,
+                            value: c.to_string(),
+                        })
+                    }),
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: uiua_span_to_lsp(span),
+                        new_text: name,
+                    })),
+                    ..Default::default()
                 }
+            }
 
-                // Collect constant completions
-                for constant in &CONSTANTS {
-                    if !constant
-                        .name
-                        .to_lowercase()
-                        .starts_with(&token.to_lowercase())
-                    {
-                        continue;
+            let doc_uri = &params.text_document_position.text_document.uri;
+            let doc = if let Some(doc) = self.docs.get(doc_uri) {
+                doc
+            } else {
+                return Ok(None);
+            };
+            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
+
+            // Find an incomplete ref path at the cursor position
+            if let Some((span, index)) =
+                doc.code_meta.incomplete_refs.iter().find(|(span, _)| {
+                    span.end.line as usize == line && span.end.col as usize == col
+                })
+            {
+                if let Global::Module { module } = &doc.asm.bindings[*index].global {
+                    let mut completions = Vec::new();
+                    let mut span = span.clone();
+                    span.start = span.end;
+                    for binding in self.bindings_in_file(doc_uri, module) {
+                        if !binding.public {
+                            continue;
+                        }
+                        let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
+                        completions.push(make_completion(item_name, &span, &binding));
                     }
-                    completions.push(CompletionItem {
-                        label: constant.name.into(),
-                        kind: Some(CompletionItemKind::CONSTANT),
-                        detail: Some(constant.doc.into()),
+                    return Ok(Some(CompletionResponse::Array(completions)));
+                }
+            }
+
+            // Find the span at the cursor position
+            let Some(sp) = (doc.spans.iter()).find(|sp| sp.span.contains_line_col(line, col))
+            else {
+                return Ok(None);
+            };
+
+            let Ok(token) = std::str::from_utf8(&doc.input.as_bytes()[sp.span.byte_range()]) else {
+                return Ok(None);
+            };
+
+            // Collect primitive completions
+            let mut completions: Vec<_> = Primitive::non_deprecated()
+                .filter(|p| p.name().starts_with(token))
+                .map(|prim| {
+                    CompletionItem {
+                        label: prim.format().to_string(),
+                        insert_text: prim.glyph().map(|c| c.to_string()),
+                        kind: Some(if prim.is_constant() {
+                            CompletionItemKind::CONSTANT
+                        } else {
+                            CompletionItemKind::FUNCTION
+                        }),
+                        detail: Some(prim.doc().short_text().to_string()),
+                        documentation: Some(Documentation::MarkupContent(MarkupContent {
+                            kind: MarkupKind::Markdown,
+                            value: full_prim_doc_markdown(prim),
+                        })),
                         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
                             range: uiua_span_to_lsp(&sp.span),
-                            new_text: constant.name.into(),
+                            new_text: prim
+                                .glyph()
+                                .map(|c| c.to_string())
+                                .unwrap_or_else(|| prim.name().to_string()),
                         })),
+                        insert_text_mode: if prim.glyph().is_none() {
+                            // Insert a space before the completion if the token is not a glyph
+                            Some(InsertTextMode::ADJUST_INDENTATION)
+                        } else {
+                            None
+                        },
+                        sort_text: Some(format!(
+                            "{} {}",
+                            if prim.glyph().is_some() { "0" } else { "1" },
+                            prim.name()
+                        )),
                         ..Default::default()
-                    });
+                    }
+                })
+                .collect();
+
+            // Collect binding completions
+            for binding in self.bindings_in_file(doc_uri, &uri_path(doc_uri)) {
+                let name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
+
+                if let Global::Module { module } = &binding.global {
+                    for binding in self.bindings_in_file(doc_uri, module) {
+                        if !binding.public {
+                            continue;
+                        }
+                        let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
+                        if !item_name.to_lowercase().starts_with(&token.to_lowercase()) {
+                            continue;
+                        }
+                        completions.push(make_completion(
+                            format!("{name}~{item_name}"),
+                            &sp.span,
+                            &binding,
+                        ));
+                    }
                 }
 
-                Ok(Some(CompletionResponse::Array(completions)))
-            })
-            .await
+                if !name.to_lowercase().starts_with(&token.to_lowercase()) {
+                    continue;
+                }
+                completions.push(make_completion(name, &sp.span, &binding));
+            }
+
+            // Collect constant completions
+            for constant in &CONSTANTS {
+                if !constant
+                    .name
+                    .to_lowercase()
+                    .starts_with(&token.to_lowercase())
+                {
+                    continue;
+                }
+                completions.push(CompletionItem {
+                    label: constant.name.into(),
+                    kind: Some(CompletionItemKind::CONSTANT),
+                    detail: Some(constant.doc.into()),
+                    text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+                        range: uiua_span_to_lsp(&sp.span),
+                        new_text: constant.name.into(),
+                    })),
+                    ..Default::default()
+                });
+            }
+
+            Ok(Some(CompletionResponse::Array(completions)))
         }
 
         async fn formatting(
@@ -1184,17 +1206,6 @@ mod server {
     }
 
     impl Backend {
-        async fn catch_crash<T>(&self, f: impl FnOnce() -> Result<Option<T>>) -> Result<Option<T>> {
-            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
-                Ok(result) => result,
-                Err(e) => {
-                    self.client
-                        .log_message(MessageType::ERROR, format!("Error: {:?}", e))
-                        .await;
-                    Ok(None)
-                }
-            }
-        }
         fn bindings_in_file(
             &self,
             doc_uri: &Url,

@@ -519,7 +519,7 @@ impl<'i> Parser<'i> {
                 if self
                     .tokens
                     .get(self.index)
-                    .is_some_and(|t| !matches!(t.value, Token::Str(_)))
+                    .map_or(true, |t| !matches!(t.value, Token::Str(_)))
                 {
                     let span = start_span.merge(comp.tilde_span.clone());
                     path.push(comp);

@@ -1,7 +1,7 @@
 use std::{
     any::Any,
     fmt,
-    io::{stderr, stdin, Read, Write},
+    io::{stdin, Read},
     mem::take,
     path::{Path, PathBuf},
     sync::{Arc, OnceLock},
@@ -628,10 +628,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("Printing to stderr is not supported in this environment".into())
     }
     /// Print a string that was create by `trace`
-    fn print_str_trace(&self, s: &str) {
-        eprint!("{s}");
-        _ = stderr().flush();
-    }
+    fn print_str_trace(&self, s: &str) {}
     /// Read a line from stdin
     ///
     /// Should return `Ok(None)` if EOF is reached.

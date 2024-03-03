@@ -135,6 +135,10 @@ impl SysBackend for NativeSys {
         stderr.write_all(s.as_bytes()).map_err(|e| e.to_string())?;
         stderr.flush().map_err(|e| e.to_string())
     }
+    fn print_str_trace(&self, s: &str) {
+        eprint!("{s}");
+        _ = stderr().flush();
+    }
     fn scan_line_stdin(&self) -> Result<Option<String>, String> {
         let mut buffer = Vec::new();
         let mut b = 0u8;

@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.10
+  - Note language server on main page
   - System for custom glyph formatting
   - Let bind only take an ident?
   - Allow LSP completions for module items

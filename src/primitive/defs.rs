@@ -487,10 +487,11 @@ primitive!(
     /// ex: ×3 5
     /// ex: ×2 [1 2 3]
     /// ex: × [1 2 3] [4 5 6]
+    /// ex: × [¯1 0 1] "hey"
     ///
     /// Uiua does not have dedicated boolean logical operators.
     /// [multiply] can be used as a logical AND.
-    /// ex: ×,,≥5:≤8. [6 2 5 9 6 5 0 4]
+    /// ex: ×,,⊓≥≤5,8 . [6 2 5 9 6 5 0 4]
     (2, Mul, DyadicPervasive, ("multiply", AsciiToken::Star, '×')),
     /// Divide values
     ///
@@ -501,6 +502,7 @@ primitive!(
     /// ex: ÷3 12
     /// ex: ÷2 [1 2 3]
     /// ex: ÷ [1 2 3] [4 5 6]
+    /// ex: ÷ [¯1 0 1] "hey"
     (
         2,
         Div,
@@ -1712,6 +1714,9 @@ primitive!(
     /// [bracket] can be chained to apply additional functions to arguments deeper on the stack.
     /// ex: ⊓⊓⇌(↻1)△ 1_2_3 4_5_6 7_8_9
     /// ex: [⊓⊓⊓+-×÷ 10 20 5 8 3 7 2 5]
+    /// ex: [⊓(+|-|×|÷) 10 20 5 8 3 7 2 5]
+    /// [bracket] is a nice way to check if a number is within a range.
+    /// ex: ×,,⊓≥≤5,8 . [6 2 5 9 6 5 0 4]
     ([2], Bracket, Planet, ("bracket", '⊓')),
     /// Call a function on many distinct sets of values
     ///

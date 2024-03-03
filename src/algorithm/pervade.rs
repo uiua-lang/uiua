@@ -404,6 +404,26 @@ pub mod not {
     }
 }
 
+fn toggle_char_case(a: char) -> char {
+    if a.is_lowercase() {
+        let mut upper = a.to_uppercase();
+        if upper.len() == 1 {
+            upper.next().unwrap()
+        } else {
+            a
+        }
+    } else if a.is_uppercase() {
+        let mut lower = a.to_lowercase();
+        if lower.len() == 1 {
+            lower.next().unwrap()
+        } else {
+            a
+        }
+    } else {
+        a
+    }
+}
+
 pub mod neg {
     use super::*;
     pub fn num(a: f64) -> f64 {
@@ -414,23 +434,7 @@ pub mod neg {
         -f64::from(a)
     }
     pub fn char(a: char) -> char {
-        if a.is_lowercase() {
-            let mut upper = a.to_uppercase();
-            if upper.len() == 1 {
-                upper.next().unwrap()
-            } else {
-                a
-            }
-        } else if a.is_uppercase() {
-            let mut lower = a.to_lowercase();
-            if lower.len() == 1 {
-                lower.next().unwrap()
-            } else {
-                a
-            }
-        } else {
-            a
-        }
+        toggle_char_case(a)
     }
     pub fn com(a: Complex) -> Complex {
         -a
@@ -467,6 +471,17 @@ pub mod abs {
         env.error(format!("Cannot take the absolute value of {a}"))
     }
 }
+
+fn character_sign(a: char) -> f64 {
+    if a.is_uppercase() {
+        1.0
+    } else if a.is_lowercase() {
+        -1.0
+    } else {
+        0.0
+    }
+}
+
 pub mod sign {
     use super::*;
     pub fn num(a: f64) -> f64 {
@@ -483,13 +498,7 @@ pub mod sign {
         (a > 0) as u8
     }
     pub fn char(a: char) -> f64 {
-        if a.is_uppercase() {
-            1.0
-        } else if a.is_lowercase() {
-            -1.0
-        } else {
-            0.0
-        }
+        character_sign(a)
     }
     pub fn com(a: Complex) -> Complex {
         a.normalize()
@@ -886,6 +895,28 @@ pub mod mul {
     pub fn num_byte(a: f64, b: u8) -> f64 {
         f64::from(b) * a
     }
+    pub fn num_char(a: f64, b: char) -> char {
+        if a < 0.0 {
+            toggle_char_case(b)
+        } else {
+            b
+        }
+    }
+    pub fn char_num(a: char, b: f64) -> char {
+        if b < 0.0 {
+            toggle_char_case(a)
+        } else {
+            a
+        }
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_char(_: u8, b: char) -> char {
+        b
+    }
+    #[cfg(feature = "bytes")]
+    pub fn char_byte(a: char, _: u8) -> char {
+        a
+    }
     pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
         b.into() * a
     }
@@ -897,7 +928,44 @@ pub mod mul {
     }
 }
 
-bin_op_mod!(div, a, b, f64::from, f64, b / a, "Cannot divide {b} by {a}");
+pub mod div {
+    use super::*;
+    pub fn num_num(a: f64, b: f64) -> f64 {
+        b / a
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_byte(a: u8, b: u8) -> f64 {
+        f64::from(b) / f64::from(a)
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_num(a: u8, b: f64) -> f64 {
+        b / f64::from(a)
+    }
+    #[cfg(feature = "bytes")]
+    pub fn num_byte(a: f64, b: u8) -> f64 {
+        f64::from(b) / a
+    }
+    pub fn num_char(a: f64, b: char) -> char {
+        if a < 0.0 {
+            toggle_char_case(b)
+        } else {
+            b
+        }
+    }
+    #[cfg(feature = "bytes")]
+    pub fn byte_char(_: u8, b: char) -> char {
+        b
+    }
+    pub fn com_x(a: Complex, b: impl Into<Complex>) -> Complex {
+        b.into() / a
+    }
+    pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
+        b / a.into()
+    }
+    pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
+        env.error(format!("Cannot divide {b} by {a}"))
+    }
+}
 
 pub mod modulus {
     use super::*;

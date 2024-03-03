@@ -699,12 +699,14 @@ fn TutorialTypes() -> impl IntoView {
                 <p>"You can "<Prim prim=Add/>" "{number}"s and "{character}"s to get another "{character}"."</p>
                 <p>"You can "<Prim prim=Sub/>" a "{number}" from a "{character}" to get another "{character}"."</p>
                 <p>"You can "<Prim prim=Sub/>" two "{character}"s to get a "{number}"."</p>
+                <p>"You can "<Prim prim=Mul/>" or "<Prim prim=Div/>" a "{character}" by a "{number}" to possibly toggle its case."</p>
                 <p><em>"No"</em>" other binary arithmetic operations can be done on "{character}"s."</p>
             }
         }
         <Editor example="+1 @a"/>
         <Editor example="-8 \"Uiua\""/>
         <Editor example="-@a @z"/>
+        <Editor example="× [1 ¯5 0 ¯2] \"uiua\""/>
         <Editor example="+@a @b"/> // Should fail
         <p><Prim prim=Sign/>" gives the case of a character. It gives "<code>"1"</code>" for uppercase, "<code>"¯1"</code>" for lowercase, and "<code>"0"</code>" for caseless characters."</p>
         <Editor example="± \"Hello, World!\""/>

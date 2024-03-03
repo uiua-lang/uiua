@@ -1598,6 +1598,10 @@ value_bin_math_impl!(
 );
 value_bin_math_impl!(
     mul,
+    (Num, Char, num_char),
+    (Char, Num, char_num),
+    ("bytes", Byte, Char, byte_char),
+    ("bytes", Char, Byte, char_byte),
     [
         "bytes",
         |meta| meta.flags.is_boolean(),
@@ -1606,7 +1610,7 @@ value_bin_math_impl!(
         num_num
     ],
 );
-value_bin_math_impl!(div);
+value_bin_math_impl!(div, (Num, Char, num_char), ("bytes", Byte, Char, byte_char),);
 value_bin_math_impl!(modulus, (Complex, Complex, com_com));
 value_bin_math_impl!(pow);
 value_bin_math_impl!(log);

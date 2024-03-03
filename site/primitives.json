@@ -49,6 +49,18 @@
     "class": "Stream",
     "description": "Close a stream by its handle"
   },
+  "&clget": {
+    "args": 0,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Get the contents of the clipboard"
+  },
+  "&clset": {
+    "args": 1,
+    "outputs": 0,
+    "class": "Misc",
+    "description": "Set the contents of the clipboard"
+  },
   "&fc": {
     "args": 1,
     "outputs": 1,

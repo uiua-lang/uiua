@@ -40,6 +40,8 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Sys(SysOp::AudioEncode) => Instr::Prim(Sys(SysOp::AudioDecode), span),
         Sys(SysOp::ImDecode) => Instr::Prim(Sys(SysOp::ImEncode), span),
         Sys(SysOp::ImEncode) => Instr::Prim(Sys(SysOp::ImDecode), span),
+        Sys(SysOp::ClipboardSet) => Instr::Prim(Sys(SysOp::ClipboardGet), span),
+        Sys(SysOp::ClipboardGet) => Instr::Prim(Sys(SysOp::ClipboardSet), span),
         _ => return None,
     })
 }

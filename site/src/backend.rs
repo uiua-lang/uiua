@@ -173,6 +173,14 @@ impl SysBackend for WebBackend {
         )?;
         self.play_audio(bytes)
     }
+    fn set_clipboard(&self, contents: &str) -> Result<(), String> {
+        _ = window()
+            .navigator()
+            .clipboard()
+            .unwrap()
+            .write_text(contents);
+        Ok(())
+    }
     fn sleep(&self, seconds: f64) -> Result<(), String> {
         let start = instant::now();
         while (instant::now() - start) / 1000.0 < seconds {}

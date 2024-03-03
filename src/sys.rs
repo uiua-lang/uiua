@@ -203,6 +203,20 @@ sys_op! {
     (1, RunStream, Command, "&runs", "run command stream"),
     /// Change the current directory
     (1(0), ChangeDirectory, Filesystem, "&cd", "change directory"),
+    /// Get the contents of the clipboard
+    ///
+    /// Returns a string of the clipboard's contents.
+    /// This is not supported on the web.
+    ///
+    /// See also: [&clset]
+    (0, ClipboardGet, Misc, "&clget", "paste"),
+    /// Set the contents of the clipboard
+    ///
+    /// Expects a string.
+    /// ex: &clset +@A⇡6 # Try running then pasting!
+    ///
+    /// See also: [&clget]
+    (1(0), ClipboardSet, Misc, "&clset", "copy"),
     /// Sleep for n seconds
     ///
     /// On the web, this example will hang for 1 second.
@@ -703,6 +717,14 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         self.write(handle, contents)?;
         self.close(handle)?;
         Ok(())
+    }
+    /// Get the clipboard contents
+    fn clipboard(&self) -> Result<String, String> {
+        Err("Getting the clipboard is not supported in this environment".into())
+    }
+    /// Set the clipboard contents
+    fn set_clipboard(&self, contents: &str) -> Result<(), String> {
+        Err("Setting the clipboard is not supported in this environment".into())
     }
     /// Sleep the current thread for `seconds` seconds
     fn sleep(&self, seconds: f64) -> Result<(), String> {
@@ -1471,6 +1493,17 @@ impl SysOp {
                 })) {
                     return Err(env.error(e));
                 }
+            }
+            SysOp::ClipboardGet => {
+                let contents = env.rt.backend.clipboard().map_err(|e| env.error(e))?;
+                env.push(contents);
+            }
+            SysOp::ClipboardSet => {
+                let contents = env.pop(1)?.as_string(env, "Contents must be a string")?;
+                env.rt
+                    .backend
+                    .set_clipboard(&contents)
+                    .map_err(|e| env.error(e))?;
             }
             SysOp::Sleep => {
                 let seconds = env

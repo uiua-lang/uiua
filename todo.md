@@ -7,9 +7,7 @@
   - 3+ argument `inventory`
   - Allow LSP completions for module items
   - Fix semantic tokens in LSP
-  - Multiply characters by numbers
   - System functions
-    - Clipboard
     - Excel
 - Site pages/tutorials
   - Working with strings

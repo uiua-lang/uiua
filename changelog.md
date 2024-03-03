@@ -16,8 +16,8 @@ This version is not yet released. If you are reading this on the website, then t
 - [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`pick ⊐`](https://uiua.org/docs/pick) now work with duplicate indices if the values at those indices are the same
 - [`rotate ↻`](https://uiua.org/docs/rotate) now works through boxes
 - [`fold ∧`](https://uiua.org/docs/fold) now works with [`under ⍜`](https://uiua.org/docs/under) if its function does
-- Characters can now be [`multiply ×`](https://uiua.org/docs/multiply)d or [`divide ÷`](https://uiua.org/docs/divide)d by numbers to possible toggle their case
-- Remove `unpack ⊐` for good
+- Characters can now be [`multiply ×`](https://uiua.org/docs/multiply)d or [`divide ÷`](https://uiua.org/docs/divide)d by numbers to possibly toggle their case
+- Add the [`&clget`](https://uiua.org/docs/&clget) and [`&clset`](https://uiua.org/docs/&clset) system functions, which allow copying and pasting text to and from the system clipboard
 - Add more [shadowable constants](https://www.uiua.org/docs/constants)
 - Importing modules that use the `# Experimental!` comment now requires the `# Experimental!` comment in the importing file
 - Doc comments may now be placed at the end of single-line functions
@@ -31,6 +31,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This is useful in array macros
 - Add `# No inline!` semantic comment, which prevents a function and its callers from being inlined
   - This enables stack traces on errors
+- Remove `unpack ⊐` for good
 ### Interpreter
 - Language Server
   - Add macro expansion as a code action

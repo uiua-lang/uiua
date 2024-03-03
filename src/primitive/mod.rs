@@ -1389,7 +1389,7 @@ impl PrimExample {
     }
     /// Check whether the example should run automatically in certain contexts
     pub fn should_run(&self) -> bool {
-        !["&sl", "&tcpc", "&ast", "&fwa", "&fld", "&fif"]
+        !["&sl", "&tcpc", "&ast", "&fwa", "&fld", "&fif", "&clset"]
             .iter()
             .any(|prim| self.input.contains(prim))
     }

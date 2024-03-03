@@ -19,20 +19,22 @@ impl<T: ArrayValue> Array<T> {
         self.meta().map_keys.is_some()
     }
     /// Get the keys and values of a map array
-    pub fn map_kv(&self) -> impl Iterator<Item = (Value, Array<T>)> + '_ {
-        (self.meta().map_keys.as_ref().into_iter()).flat_map(move |keys| {
-            keys.keys.rows().enumerate().filter_map(move |(i, key)| {
-                if key.is_empty_cell() || key.is_tombstone() {
-                    return None;
-                }
-                let index = keys.indices[i];
-                if index < self.row_count() {
-                    Some((key, self.row(index)))
-                } else {
-                    None
-                }
-            })
-        })
+    pub fn map_kv(&self) -> Vec<(Value, Array<T>)> {
+        let Some(map_keys) = self.meta().map_keys.as_ref() else {
+            return Vec::new();
+        };
+        let mut kv = Vec::with_capacity(map_keys.len);
+        let mut ki: Vec<_> = (map_keys.keys.rows())
+            .zip(&map_keys.indices)
+            .filter(|(k, _)| !k.is_empty_cell() && !k.is_tombstone())
+            .collect();
+        ki.sort_unstable_by_key(|(_, i)| *i);
+        for (key, index) in ki {
+            if *index < self.row_count() {
+                kv.push((key, self.row(*index)));
+            }
+        }
+        kv
     }
 }
 
@@ -42,20 +44,22 @@ impl Value {
         self.meta().map_keys.is_some()
     }
     /// Get the keys and values of a map array
-    pub fn map_kv(&self) -> impl Iterator<Item = (Value, Value)> + '_ {
-        self.meta().map_keys.as_ref().into_iter().flat_map(|keys| {
-            keys.keys.rows().enumerate().filter_map(|(i, key)| {
-                if key.is_empty_cell() || key.is_tombstone() {
-                    return None;
-                }
-                let index = keys.indices[i];
-                if index < self.row_count() {
-                    Some((key, self.row(index)))
-                } else {
-                    None
-                }
-            })
-        })
+    pub fn map_kv(&self) -> Vec<(Value, Value)> {
+        let Some(map_keys) = self.meta().map_keys.as_ref() else {
+            return Vec::new();
+        };
+        let mut kv = Vec::with_capacity(map_keys.len);
+        let mut ki: Vec<_> = (map_keys.keys.rows())
+            .zip(&map_keys.indices)
+            .filter(|(k, _)| !k.is_empty_cell() && !k.is_tombstone())
+            .collect();
+        ki.sort_unstable_by_key(|(_, i)| *i);
+        for (key, index) in ki {
+            if *index < self.row_count() {
+                kv.push((key, self.row(*index)));
+            }
+        }
+        kv
     }
     /// Create a map array
     pub fn map(mut self, mut values: Self, env: &Uiua) -> UiuaResult<Value> {
@@ -378,6 +382,21 @@ impl MapKeys {
             }
         }
         do_remove!(Num, Complex, Char, Box)
+    }
+    pub(crate) fn reverse(&mut self) {
+        let mut present_indices: Vec<_> = (self.keys.rows().enumerate())
+            .filter(|(_, k)| !k.is_empty_cell() && !k.is_tombstone())
+            .map(|(i, _)| (i, self.indices[i]))
+            .collect();
+        present_indices.sort_unstable_by_key(|(_, i)| *i);
+        let mid = present_indices.len() / 2;
+        for (&(a, _), &(b, _)) in present_indices
+            .iter()
+            .take(mid)
+            .zip(present_indices.iter().rev())
+        {
+            self.indices.swap(a, b);
+        }
     }
 }
 

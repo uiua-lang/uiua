@@ -432,6 +432,15 @@ impl<T: Clone> Array<T> {
                 }
             }
         }
+
+        // Reverse map keys
+        if depth == 0 {
+            if let Some(meta) = self.get_meta_mut() {
+                if let Some(keys) = &mut meta.map_keys {
+                    keys.reverse();
+                }
+            }
+        }
     }
 }
 

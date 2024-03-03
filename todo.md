@@ -2,6 +2,10 @@
 
 - 0.10
   - Pervasives on maps
+  - LSP
+    - Signature hints
+    - Inline values?
+    - Get references
   - System functions
     - Excel
   - System for custom glyph formatting

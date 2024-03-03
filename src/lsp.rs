@@ -170,6 +170,7 @@ impl Spanner {
                 }
             }
         }
+        spans.sort_by_key(|sp| sp.span.start);
         spans
     }
 
@@ -932,7 +933,7 @@ mod server {
                     .unwrap() as u32;
                 let span = &sp.span;
                 let start = uiua_loc_to_lsp(span.start);
-                let delta_start = if start.character > prev_char {
+                let delta_start = if start.line == prev_line {
                     start.character - prev_char
                 } else {
                     start.character

@@ -3,7 +3,6 @@
 - 0.10
   - System for custom glyph formatting
   - Let bind only take an ident?
-  - Fix semantic tokens in LSP
   - System functions
     - Excel
   - Proofread and update tutorial and tour

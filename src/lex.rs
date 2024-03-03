@@ -77,10 +77,10 @@ impl Error for LexError {}
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize_tuple, Deserialize_tuple,
 )]
 pub struct Loc {
-    pub byte_pos: u32,
-    pub char_pos: u32,
     pub line: u16,
     pub col: u16,
+    pub byte_pos: u32,
+    pub char_pos: u32,
 }
 
 impl fmt::Display for Loc {

@@ -306,7 +306,6 @@ impl Display for FormatConfigSource {
 impl FormatConfig {
     /// Load the formatter configuration from the specified file
     pub fn from_file(path: PathBuf) -> UiuaResult<Self> {
-        println!("Loading format config from {}", path.display());
         let partial = PartialFormatConfig::from_file(path);
         partial.map(Into::into)
     }

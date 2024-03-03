@@ -249,14 +249,6 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     let value = value.fmt_grid(false, label);
                     metagrid.push(vec![key, vec![" → ".chars().collect()], value]);
                 }
-                let empty_entries = self.empty_map_entries();
-                if empty_entries > 0 {
-                    metagrid.push(vec![
-                        vec![format!("… {empty_entries}").chars().collect()],
-                        vec![],
-                        vec![],
-                    ])
-                }
             }
 
             // Default array formatting

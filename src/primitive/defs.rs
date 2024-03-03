@@ -2074,8 +2074,6 @@ primitive!(
     /// ex: # Experimental!
     ///   : map 1_2 3_4
     ///   : map {"Alice" "Bob" "Carol"} [3_8 12_2 4_5]
-    /// The `…n` annotion in the output indicates the number of empty entries in the hashmap.
-    ///
     /// Use [get] to get the value corresponding to a key.
     /// ex: # Experimental!
     ///   : map 1_2 3_4
@@ -2084,7 +2082,6 @@ primitive!(
     /// ex: # Experimental!
     ///   : map 1_2 3_4
     ///   : insert 5 6
-    ///
     /// You can use [un][map] to get the keys and values back.
     /// ex: # Experimental!
     ///   : map[][]
@@ -2094,10 +2091,10 @@ primitive!(
     ///   : °map .
     ///
     /// The values of a map array are just the array itself. The keys are stored as metadata on the array.
-    /// Performing non-map operations on a map array may work, but they will usually break the mapping.
+    /// Performing non-map operations on a map array may work, but it will usually break the mapping.
     /// ex: # Experimental!
     ///   : map 1_2_3 4_5_6
-    ///   : get 1 ⇌
+    ///   : get 1 ⇌ .
     ///
     /// Regardless of the size of the map, operations on it have O(1) amortized time complexity.
     /// In this example, we time [get] and [insert] operations on maps from 10 entries up to 100,000 entries.
@@ -2127,14 +2124,17 @@ primitive!(
     ///   : insert 1 2
     ///   : insert 3 4
     ///   : insert 3 5
-    /// All keys (and all value) must have the same shape and type.
+    /// All keys (and all values) must have the same shape and type.
     /// ex! # Experimental!
-    ///   : map 1 2
+    ///   : map 1 ["wow"]
     ///   : insert "hi" "there"
     /// [box] keys or values if you need to. Values will coerce to boxes if necessary.
     /// ex: # Experimental!
-    ///   : map 1 2
+    ///   : map 1 ["wow"]
     ///   : insert □"hi" □"there"
+    /// ex: # Experimental!
+    ///   : map □1 □"wow"
+    ///   : insert "hi" "there"
     ///
     /// See also: [has], [get], [remove]
     (3, Insert, Map, "insert"),
@@ -2182,7 +2182,7 @@ primitive!(
     ///
     /// See [map] for an overview of map arrays.
     ///
-    /// If the key is present, it is replaced with a tombstone NaN value.
+    /// The key is removed if it is present.
     /// If the key is not present, the array is unchanged.
     /// ex: # Experimental!
     ///   : map 1_2 3_4

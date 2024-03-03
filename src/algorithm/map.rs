@@ -34,13 +34,6 @@ impl<T: ArrayValue> Array<T> {
             })
         })
     }
-    /// Get the number of empty entries in a map array
-    pub fn empty_map_entries(&self) -> usize {
-        self.meta()
-            .map_keys
-            .as_ref()
-            .map_or(0, |keys| keys.capacity() - keys.len)
-    }
 }
 
 impl Value {
@@ -63,13 +56,6 @@ impl Value {
                 }
             })
         })
-    }
-    /// Get the number of empty entries in a map array
-    pub fn empty_map_entries(&self) -> usize {
-        self.meta()
-            .map_keys
-            .as_ref()
-            .map_or(0, |keys| keys.capacity() - keys.len)
     }
     /// Create a map array
     pub fn map(mut self, mut values: Self, env: &Uiua) -> UiuaResult<Value> {

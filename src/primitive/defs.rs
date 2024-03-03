@@ -163,7 +163,7 @@ macro_rules! primitive {
                 $(($outputs:expr))?
                 $([$mod_args:expr])?
             ,)?
-            $variant:ident, $class:ident, $names:expr
+            $variant:ident, $class:ident, $names:expr $(,$impure:vis impure)*
         )
     ),* $(,)?) => {
         /// A built-in function
@@ -228,6 +228,14 @@ macro_rules! primitive {
                         DOC.get_or_init(|| PrimDoc::from_lines(doc_str))
                     },)*
                     Primitive::Sys(op) => op.doc(),
+                }
+            }
+            /// Whether the primitive is pure
+            pub fn is_pure(&self) -> bool {
+                match self {
+                    $($(Primitive::$variant => {$impure false},)*)*
+                    Primitive::Sys(op) => op.is_pure(),
+                    _ => true
                 }
             }
         }
@@ -1351,7 +1359,7 @@ primitive!(
     /// ex: ⍥/◇⊂∞ {1 {2 3} {4 {5 6 {7}}}}
     ///
     /// [repeat]'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation.
-    ([1], Repeat, IteratingModifier, ("repeat", '⍥')),
+    ([1], Repeat, IteratingModifier, ("repeat", '⍥'), impure),
     /// Group elements of an array into buckets by index
     ///
     /// [group] is similar to `group_by` functions in other languages.
@@ -1761,7 +1769,7 @@ primitive!(
     /// This means that unlike [repeat], [do] cannot be wrapped in `[]`s to collect items into an array.
     /// Instead, [join] the items to an initial list.
     /// ex: ◌⍢(⊃(×2)⊂)(<100) 1 []
-    ([2], Do, IteratingModifier, ("do", '⍢')),
+    ([2], Do, IteratingModifier, ("do", '⍢'), impure),
     /// Set the fill value for a function
     ///
     /// By default, some operations require that arrays' [shape]s are in some way compatible.
@@ -1893,7 +1901,7 @@ primitive!(
     /// `each``gap``rand` and `table``gap``gap``rand` are optimized in the interpreter to generate a lot of random numbers very fast.
     /// ex: ⌊×10 ∵⋅⚂ ⇡10
     /// ex: ⌊×10 ⊞⋅⋅⚂ .⇡10
-    (0, Rand, Misc, ("random", '⚂')),
+    (0, Rand, Misc, ("random", '⚂'), impure),
     /// Memoize a function
     ///
     /// If a function is [memo]ized, then its results are cached.
@@ -1970,7 +1978,7 @@ primitive!(
     /// The sending thread can send a value with [send].
     ///
     /// Unlike [tryrecv], [recv] blocks until a value is received.
-    (1, Recv, Thread, "recv"),
+    (1, Recv, Thread, "recv", impure),
     /// Try to receive a value from a thread
     ///
     /// Expects a thread id returned by [spawn] or [pool].
@@ -1980,7 +1988,7 @@ primitive!(
     /// Unlike [recv], [tryrecv] does not block.
     /// If no value is available, then an error is thrown.
     /// The error can be caught with [try].
-    (1, TryRecv, Thread, "tryrecv"),
+    (1, TryRecv, Thread, "tryrecv", impure),
     /// Generate a random number between 0 and 1 from a seed, as well as the next seed
     ///
     /// If you don't care about a seed, you can use [random].
@@ -1992,7 +2000,7 @@ primitive!(
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
     /// ex: ⌊*10[◌⍥gen5 0]
-    (1(2), Gen, Misc, "gen"),
+    (1(2), Gen, Misc, "gen", impure),
     /// Randomly reorder the rows of an array with a seed
     ///
     /// ex: deal0 [1 2 3 4 5]
@@ -2000,7 +2008,7 @@ primitive!(
     /// If you don't care about a seed, just seed with [random].
     /// ex: deal⚂ [1 2 3 4 5]
     /// ex: deal⚂ [1_2 3_4 5_6 7_8]
-    (2, Deal, Misc, "deal"),
+    (2, Deal, Misc, "deal", impure),
     /// Match a regex pattern
     ///
     /// Returns a rank-2 array of [box]ed strings, with one string per matching group and one row per match
@@ -2034,7 +2042,7 @@ primitive!(
     /// Tags are just numbers and are unique across multiple threads, but not across multiple runs.
     /// ex: [⍥tag5]
     ///   : [⍥tag5]
-    (0, Tag, Misc, "tag"),
+    (0, Tag, Misc, "tag", impure),
     /// Check the type of an array
     ///
     /// `0` indicates a number array.
@@ -2053,7 +2061,7 @@ primitive!(
     /// ex: now
     /// [under][now] can be used to time a function.
     /// ex: ⍜now(5&sl1)
-    (0, Now, Misc, "now"),
+    (0, Now, Misc, "now", impure),
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`
@@ -2261,7 +2269,7 @@ primitive!(
     ///   : +×-×+
     /// ex: 2_3_10 ? 17 ↯3_4⇡12
     ///   : ++
-    (0(0), Stack, Stack, ("stack", '?')),
+    (0(0), Stack, Stack, ("stack", '?'), impure),
     /// Debug print the top value on the stack without popping it
     ///
     /// ex: ⸮[1 2 3]
@@ -2273,7 +2281,7 @@ primitive!(
     /// To see them, use [trace].
     /// ex: [1 5 2 9 11 0 7 12 8 3]
     ///   : ▽×⸮≥5:⸮≤10..
-    (1, Trace, Stack, ("trace", '⸮')),
+    (1, Trace, Stack, ("trace", '⸮'), impure),
     /// Debug print all the values currently on stack without popping them
     ///
     /// The function is used to preprocess the values before printing.
@@ -2296,7 +2304,7 @@ primitive!(
     /// Errors encountered within [dump]'s function are caught and dumped as strings.
     /// ex: 1_2_3 4 5_6_7
     ///   : dump⊢
-    (0(0)[1], Dump, Stack, "dump"),
+    (0(0)[1], Dump, Stack, "dump", impure),
     /// Convert code into a string instead of compiling it
     ///
     /// ex: # Experimental!

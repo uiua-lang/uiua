@@ -1063,7 +1063,7 @@ impl Compiler {
         }
         Ok(())
     }
-    fn prepare_env(&mut self) -> UiuaResult {
+    pub(super) fn prepare_env(&mut self) -> UiuaResult {
         let top_slices = take(&mut self.macro_env.asm.top_slices);
         let mut bindings = take(&mut self.macro_env.asm.bindings);
         bindings.extend_from_slice(&self.asm.bindings[bindings.len()..]);

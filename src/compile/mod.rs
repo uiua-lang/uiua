@@ -642,9 +642,7 @@ code:
                 if let Word::Ref(r) = &next.value {
                     if r.path.is_empty() {
                         if let Some(local) = self.scope.names.get(&r.name.value) {
-                            if let Global::Module { module } =
-                                &self.asm.bindings[local.index].global
-                            {
+                            if let Global::Module(module) = &self.asm.bindings[local.index].global {
                                 if let Word::String(item_name) = &word.value {
                                     let local = self.imports[module]
                                         .names
@@ -1066,7 +1064,7 @@ code:
         path_locals.push(module_local);
         let global = &self.asm.bindings[module_local.index].global;
         let mut module = match global {
-            Global::Module { module } => module,
+            Global::Module(module) => module,
             Global::Func(_) => {
                 return Err(self.fatal_error(
                     first.module.span.clone(),
@@ -1104,7 +1102,7 @@ code:
             path_locals.push(submod_local);
             let global = &self.asm.bindings[submod_local.index].global;
             module = match global {
-                Global::Module { module } => module,
+                Global::Module(module) => module,
                 Global::Func(_) => {
                     return Err(self.fatal_error(
                         comp.module.span.clone(),
@@ -1569,6 +1567,19 @@ code:
     ) -> UiuaResult {
         let function = self.create_function(signature, f);
         self.bind_function(name, function)
+    }
+
+    fn comptime_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult<Vec<Value>> {
+        let instrs = optimize_instrs(instrs, true, &self.asm);
+        let mut asm = self.asm.clone();
+        asm.top_slices.clear();
+        let start = asm.instrs.len();
+        let len = instrs.len();
+        asm.instrs.extend(instrs);
+        asm.top_slices.push(FuncSlice { start, len });
+        let mut env = Uiua::with_safe_sys();
+        env.run_asm(asm)?;
+        Ok(env.take_stack())
     }
 }
 

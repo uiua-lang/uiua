@@ -14,7 +14,7 @@ use crate::{
     lex::CodeSpan,
     primitive::{ImplPrimitive, Primitive},
     value::Value,
-    Assembly, Ident,
+    Assembly, Global, Ident,
 };
 
 /// A Uiua bytecode instruction
@@ -200,6 +200,48 @@ impl Instr {
     pub(crate) fn is_code(&self) -> bool {
         !matches!(self, Self::NoInline)
     }
+}
+
+pub(crate) fn instrs_are_pure(instrs: &[Instr], env: &impl AsRef<Assembly>) -> bool {
+    for (i, instr) in instrs.iter().enumerate() {
+        match instr {
+            Instr::Comment(_) => {}
+            Instr::Push(_) => {}
+            Instr::CallGlobal { index, .. } => {
+                if let Some(binding) = env.as_ref().bindings.get(*index) {
+                    match &binding.global {
+                        Global::Const(Some(_)) => {}
+                        Global::Func(f) => {
+                            if !instrs_are_pure(f.instrs(env.as_ref()), env.as_ref()) {
+                                return false;
+                            }
+                        }
+                        _ => return false,
+                    }
+                }
+            }
+            Instr::BindGlobal { .. } => return false,
+            Instr::Prim(Primitive::Repeat, _) if i >= 2 => {
+                if !matches!(instrs[i - 2], Instr::Push(_)) {
+                    return false;
+                }
+            }
+            Instr::Prim(prim, _) => {
+                if !prim.is_pure() {
+                    return false;
+                }
+            }
+            Instr::PushFunc(f) => {
+                if !instrs_are_pure(f.instrs(env.as_ref()), env.as_ref()) {
+                    return false;
+                }
+            }
+            Instr::Dynamic(_) => return false,
+            Instr::SetOutputComment { .. } => return false,
+            _ => {}
+        }
+    }
+    true
 }
 
 impl fmt::Debug for Instr {

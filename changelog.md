@@ -38,6 +38,8 @@ This version is not yet released. If you are reading this on the website, then t
   - This enables stack traces on errors
 - Remove `unpack ⊐` for good
 ### Interpreter
+- Functions are now analyzed for purity
+  - A `|0.1` binding will be automatically evaluated at compile time if it is pure
 - Language Server
   - Add macro expansion as a code action
   - Add completions for shadowable constants

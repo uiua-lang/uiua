@@ -11,10 +11,10 @@ use std::{
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
     ast::{Item, Modifier, PlaceholderOp, Ref, RefComponent, Word},
-    ident_modifier_args,
+    ident_modifier_args, instrs_are_pure,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    Assembly, BindingInfo, Compiler, Function, Global, Ident, InputSrc, Inputs, Primitive, SafeSys,
+    Assembly, BindingInfo, Compiler, Global, Ident, InputSrc, Inputs, Primitive, SafeSys,
     Signature, SysBackend, UiuaError, Value, CONSTANTS,
 };
 
@@ -62,6 +62,8 @@ pub enum BindingDocsKind {
         invertible: bool,
         /// Whether the function is underable
         underable: bool,
+        /// Whether the function is pure
+        pure: bool,
     },
     /// A modifier
     Modifier(usize),
@@ -131,16 +133,6 @@ impl Spanner {
     }
     fn inputs(&self) -> &Inputs {
         &self.asm.inputs
-    }
-    fn invertible(&self, f: &Function) -> bool {
-        let instrs = f.instrs(&self.asm);
-        let mut compiler = Compiler::new().with_assembly(self.asm.clone());
-        invert_instrs(instrs, &mut compiler).is_some()
-    }
-    fn underable(&self, f: &Function) -> bool {
-        let instrs = f.instrs(&self.asm);
-        let mut compiler = Compiler::new().with_assembly(self.asm.clone());
-        under_instrs(instrs, (1, 1).into(), &mut compiler).is_some()
     }
     fn items_spans(&self, items: &[Item]) -> Vec<Sp<SpanKind>> {
         let mut spans = Vec::new();
@@ -238,8 +230,17 @@ impl Spanner {
             Global::Const(val) => BindingDocsKind::Constant(val.clone()),
             Global::Func(f) => BindingDocsKind::Function {
                 sig: f.signature(),
-                invertible: self.invertible(f),
-                underable: self.underable(f),
+                invertible: {
+                    let instrs = f.instrs(&self.asm);
+                    let mut compiler = Compiler::new().with_assembly(self.asm.clone());
+                    invert_instrs(instrs, &mut compiler).is_some()
+                },
+                underable: {
+                    let instrs = f.instrs(&self.asm);
+                    let mut compiler = Compiler::new().with_assembly(self.asm.clone());
+                    under_instrs(instrs, (1, 1).into(), &mut compiler).is_some()
+                },
+                pure: instrs_are_pure(f.instrs(&self.asm), &self.asm),
             },
             Global::Macro => {
                 BindingDocsKind::Modifier(binfo.span.as_str(self.inputs(), ident_modifier_args))
@@ -653,7 +654,7 @@ mod server {
                 match &docs.kind {
                     BindingDocsKind::Constant(Some(val)) => {
                         let s = val.show();
-                        if s.len() < 200 {
+                        if s.len() < 250 {
                             value.push('\n');
                             value.push_str(&s);
                         }
@@ -665,11 +666,18 @@ mod server {
                     BindingDocsKind::Function {
                         invertible,
                         underable,
+                        pure,
                         ..
                     } => {
-                        if invertible || underable {
+                        if pure || invertible || underable {
                             value.push_str("\n\n");
+                            if pure {
+                                value.push_str("pure");
+                            }
                             if invertible {
+                                if pure {
+                                    value.push_str(" | ");
+                                }
                                 value.push_str("[`° un`](https://uiua.org/docs/un)");
                             }
                             if underable {
@@ -754,7 +762,7 @@ mod server {
                     span.end.line as usize == line && span.end.col as usize == col
                 })
             {
-                if let Global::Module { module } = &doc.asm.bindings[*index].global {
+                if let Global::Module(module) = &doc.asm.bindings[*index].global {
                     let mut completions = Vec::new();
                     let mut span = span.clone();
                     span.start = span.end;
@@ -823,7 +831,7 @@ mod server {
             for binding in self.bindings_in_file(doc_uri, &uri_path(doc_uri)) {
                 let name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
 
-                if let Global::Module { module } = &binding.global {
+                if let Global::Module(module) = &binding.global {
                     for binding in self.bindings_in_file(doc_uri, module) {
                         if !binding.public {
                             continue;

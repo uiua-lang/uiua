@@ -146,7 +146,6 @@ fn tru() -> bool {
 
 /// A type of global binding
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
 pub enum Global {
     /// A constant value
     Const(Option<Value>),
@@ -154,7 +153,7 @@ pub enum Global {
     Func(Function),
     /// A module
     #[allow(missing_docs)]
-    Module { module: PathBuf },
+    Module(PathBuf),
     /// A macro
     Macro,
 }

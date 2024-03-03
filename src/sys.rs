@@ -49,7 +49,7 @@ macro_rules! sys_op {
         $(#[doc = $doc:literal])*
         (
             $args:literal$(($outputs:expr))?$([$mod_args:expr])?,
-            $variant:ident, $class:ident, $name:literal, $long_name:literal
+            $variant:ident, $class:ident, $name:literal, $long_name:literal $(,$pure:vis pure)*
         )
     ),* $(,)?) => {
         /// A system function
@@ -115,6 +115,13 @@ macro_rules! sys_op {
             pub fn class(&self) -> SysOpClass {
                 match self {
                     $(SysOp::$variant => SysOpClass::$class),*
+                }
+            }
+            /// Whether the system function is pure
+            pub fn is_pure(&self) -> bool {
+                match self {
+                    $($(SysOp::$variant => {$pure true},)*)*
+                    _ => false
                 }
             }
         }
@@ -340,7 +347,7 @@ sys_op! {
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, `ico`, and `qoi`.
     ///
     /// See also: [&ime]
-    (1(2), ImDecode, Images, "&imd", "image - decode"),
+    (1(2), ImDecode, Images, "&imd", "image - decode", pure),
     /// Encode an image into a byte array with the specified format
     ///
     /// The first argument is the format, and the second is the image.
@@ -360,7 +367,7 @@ sys_op! {
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, `ico`, and `qoi`.
     ///
     /// See also: [&ims]
-    (2, ImEncode, Images, "&ime", "image - encode"),
+    (2, ImEncode, Images, "&ime", "image - encode", pure),
     /// Show an image
     ///
     /// How the image is shown depends on the system backend.
@@ -385,7 +392,7 @@ sys_op! {
     /// Returns a framerate in seconds and a rank 4 array of RGBA frames.
     ///
     /// See also: [&gife]
-    (1(2), GifDecode, Gifs, "&gifd", "gif - decode"),
+    (1(2), GifDecode, Gifs, "&gifd", "gif - decode", pure),
     /// Encode a gif into a byte array
     ///
     /// The first argument is a framerate in seconds.
@@ -395,7 +402,7 @@ sys_op! {
     /// You can decode a byte array into a gif with [un][&gife].
     ///
     /// See also: [&gifs]
-    (2, GifEncode, Gifs, "&gife", "gif - encode"),
+    (2, GifEncode, Gifs, "&gife", "gif - encode", pure),
     /// Show a gif
     ///
     /// The first argument is a framerate in seconds.
@@ -410,7 +417,7 @@ sys_op! {
     /// Only the `wav` format is supported.
     ///
     /// See also: [&ae]
-    (1(2), AudioDecode, Audio, "&ad", "audio - decode"),
+    (1(2), AudioDecode, Audio, "&ad", "audio - decode", pure),
     /// Encode audio into a byte array
     ///
     /// The first argument is the format, and the second is the audio samples.
@@ -428,7 +435,7 @@ sys_op! {
     /// Only the `wav` format is supported.
     ///
     /// See also: [&ap]
-    (2, AudioEncode, Audio, "&ae", "audio - encode"),
+    (2, AudioEncode, Audio, "&ae", "audio - encode", pure),
     /// Play some audio
     ///
     /// The audio must be a rank 1 or 2 numeric array.

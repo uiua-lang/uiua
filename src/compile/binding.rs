@@ -178,6 +178,7 @@ impl Compiler {
         let mut binding_code_words = binding.words.iter().filter(|w| w.value.is_code());
         let is_single_func = binding_code_words.clone().count() == 1
             && (binding_code_words.next()).is_some_and(|w| matches!(&w.value, Word::Func(_)));
+        let instrs_start = self.asm.instrs.len();
         let instrs = self.compile_words(binding.words, !is_single_func);
         let self_referenced = self.current_binding.take().unwrap().referenced;
         let mut instrs = instrs?;
@@ -211,7 +212,7 @@ impl Compiler {
                             let module = self.import_module(path.as_ref(), span)?;
                             self.asm.add_global_at(
                                 local,
-                                Global::Module { module },
+                                Global::Module(module),
                                 Some(binding.name.span.clone()),
                                 comment.clone(),
                             );
@@ -334,13 +335,23 @@ impl Compiler {
                     // Binding is a constant or noadic function
                     let val = if let [Instr::Push(v)] = instrs.as_slice() {
                         Some(v.clone())
+                    } else if !instrs.is_empty() && instrs_are_pure(&instrs, &self.asm) {
+                        match self.comptime_instrs(instrs.clone()) {
+                            Ok(vals) => vals.into_iter().next(),
+                            Err(e) => {
+                                self.errors.push(e);
+                                None
+                            }
+                        }
                     } else {
                         None
                     };
                     let is_const = val.is_some();
                     self.asm.bind_const(local, val, span_index, comment);
                     self.scope.names.insert(name.clone(), local);
-                    if !is_const {
+                    if is_const {
+                        self.asm.instrs.truncate(instrs_start);
+                    } else {
                         // Add binding instrs to top slices
                         instrs.push(Instr::BindGlobal {
                             span: span_index,
@@ -404,9 +415,7 @@ impl Compiler {
             };
             self.asm.add_global_at(
                 local,
-                Global::Module {
-                    module: module.clone(),
-                },
+                Global::Module(module.clone()),
                 Some(name.span.clone()),
                 prev_com.or_else(|| imported.comment.clone()),
             );

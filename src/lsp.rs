@@ -535,7 +535,7 @@ mod server {
                     )),
                     hover_provider: Some(HoverProviderCapability::Simple(true)),
                     completion_provider: Some(CompletionOptions {
-                        trigger_characters: Some(vec!["~".into()]),
+                        trigger_characters: Some(vec!["~".into(), "&".into()]),
                         ..Default::default()
                     }),
                     document_formatting_provider: Some(OneOf::Left(true)),
@@ -723,6 +723,9 @@ mod server {
                 binding: &BindingInfo,
             ) -> CompletionItem {
                 let kind = match &binding.global {
+                    Global::Const(Some(val)) if val.meta().map_keys.is_some() => {
+                        CompletionItemKind::STRUCT
+                    }
                     Global::Const(_) => CompletionItemKind::CONSTANT,
                     Global::Func(_) => CompletionItemKind::FUNCTION,
                     Global::Macro => CompletionItemKind::FUNCTION,
@@ -732,10 +735,9 @@ mod server {
                     label: name.clone(),
                     kind: Some(kind),
                     label_details: Some(CompletionItemLabelDetails {
-                        detail: binding.global.signature().map(|sig| sig.to_string()),
+                        description: binding.global.signature().map(|sig| sig.to_string()),
                         ..Default::default()
                     }),
-                    detail: binding.global.signature().map(|sig| sig.to_string()),
                     documentation: binding.comment.as_ref().map(|c| {
                         Documentation::MarkupContent(MarkupContent {
                             kind: MarkupKind::Markdown,
@@ -795,6 +797,21 @@ mod server {
                 .map(|prim| {
                     CompletionItem {
                         label: prim.format().to_string(),
+                        label_details: if let Primitive::Sys(op) = prim {
+                            Some(CompletionItemLabelDetails {
+                                description: Some(format!(
+                                    "{} {}",
+                                    op.long_name(),
+                                    Signature::new(op.args(), op.outputs())
+                                )),
+                                ..Default::default()
+                            })
+                        } else {
+                            prim.signature().map(|sig| CompletionItemLabelDetails {
+                                description: Some(sig.to_string()),
+                                ..Default::default()
+                            })
+                        },
                         insert_text: prim.glyph().map(|c| c.to_string()),
                         kind: Some(if prim.is_constant() {
                             CompletionItemKind::CONSTANT

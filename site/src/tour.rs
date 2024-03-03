@@ -3,7 +3,7 @@ use leptos_meta::*;
 use leptos_router::*;
 use uiua::{Primitive, SysOp};
 
-use crate::{editor::Editor, examples::LOGO, Prim};
+use crate::{editor::Editor, examples::LOGO, Hd, Prim};
 
 #[component]
 pub fn Tour() -> impl IntoView {
@@ -12,7 +12,7 @@ pub fn Tour() -> impl IntoView {
         <Title text="Language Tour - Uiua Docs"/>
         <h1>"Uiua Language Tour"</h1>
 
-        <h2 id="the-union-of-two-paradigms">"The Union of Two Paradigms"</h2>
+        <Hd id="the-union-of-two-paradigms">"The Union of Two Paradigms"</Hd>
         <p>"Uiua is a programming language that incorporates two of the less-common programming paradigms: "<b>"array-oriented"</b>" and "<b>"stack-based"</b>"."</p>
         <p>"An "<b>"array-oriented"</b>" language is one where the primary data structure is the array. In array languages, many operations that can apply to a single value can also apply to every value in an array. This is known as "<em>"rank-polymorphism"</em>"."</p>
         <p>"A "<b>"stack-based"</b>" language is one where all operations manipulate a global stack of values. Functions pop values off the top of the stack, perform their calculation, then push the results back onto the stack."</p>
@@ -32,7 +32,7 @@ pub fn Tour() -> impl IntoView {
         <p>"If you're ever not sure what a glyph is called, you can hover over it to see its name."</p>
         <p>"Click the "<code>"↧"</code>" on the right of the editor to see a list of all the built-in functions."</p>
 
-        <h2 id="the-stack">"The Stack"</h2>
+        <Hd id="the-stack">"The Stack"</Hd>
         <p>"A number in Uiua code pushes its value to the stack. On the website's editor, the values on "<em>"top"</em>" of the stack are displayed at the "<em>"bottom"</em>". This is so that sequential lines of code show their result in the correct order."</p>
         <Editor example="10 11\n@c\n+1 2\n\"Hello, World!\"\n# By the way, comments start with #"/>
         <p>"If you like, you can put values on the stack first, then operate on them."</p>
@@ -49,7 +49,7 @@ pub fn Tour() -> impl IntoView {
         <p>"You can inspect the stack at any point with "<Prim prim=Stack/>"."</p>
         <Editor example="+1?×2?×.-3 5"/>
 
-        <h2 id="arrays">"Arrays"</h2>
+        <Hd id="arrays">"Arrays"</Hd>
         <p>"So far, we have only talked about the stack part of Uiua. Now, let's talk about the most important part: Arrays!"</p>
         <p>"An array is a rectangular collection of elements arranged along some number of axes."</p>
         <p>"An array with no axes is called a scalar. All the numbers in the examples above are scalars."</p>
@@ -79,7 +79,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="×2 [2 3 4]\nx ←\nx"/>
         <p>"Names are case-sensitive and can only contain letters."</p>
 
-        <h2 id="basic-array-operations">"Basic Array Operations"</h2>
+        <Hd id="basic-array-operations">"Basic Array Operations"</Hd>
         <p>"You can reverse an array's rows with "<Prim prim=Reverse/>"."</p>
         <Editor example="rev[1 2 3] # Run to format!"/>
         <Editor example="⇌[1_2_3 4_5_6]"/>
@@ -98,12 +98,12 @@ pub fn Tour() -> impl IntoView {
         <Editor example="trans.[1_2_3 4_5_6]"/>
         <p>"Uiua has a lot of built-in functions like these. You can explore their documentation on the "<A href="/docs#functions">"main docs page"</A>"."</p>
 
-        <h2 id="functions">"Functions"</h2>
+        <Hd id="functions">"Functions"</Hd>
         <p>"If you bind a name with "<code>"←"</code>" and the code on the right does not have enough arguments to run, the code will be bound as a function and will not run until the name is used."</p>
         <Editor example="f ← +1\nf5"/>
         <Editor example="👋 ← ⊂\"Hello, \"\n👋\"World\""/>
 
-        <h2 id="modifiers">"Modifiers"</h2>
+        <Hd id="modifiers">"Modifiers"</Hd>
         <p>"Modifiers (called operators or adverbs in some other array languages) are functions that take other functions as arguments. The built-in modifiers are parsed so that if their function argument(s) immediately follow them, the function is run inside the modifier rather than before it."</p>
         <p><Prim prim=Reduce/>" is a modifier many array-language aficionados will be familiar with. It takes its function and applies it \"between\" the items of an array."</p>
         <p>"One basic use of "<Prim prim=Reduce/>" is to sum an array."</p>
@@ -116,13 +116,13 @@ pub fn Tour() -> impl IntoView {
         <Editor example="≡⊂ [1_2 3_4] [5_6 7_8]"/>
         <p>"There are a bunch of other modifiers that are useful in different situations. You can find a "<A href="/docs/modifier">"list of them"</A>" on the main docs page."</p>
 
-        <h2 id="inline-functions">"Inline Functions"</h2>
+        <Hd id="inline-functions">"Inline Functions"</Hd>
         <p>"If you need a more complex function for a modifier, you can make an inline function by surrounding code with "<code>"()"</code>"s."</p>
         <p>"Let's use "<Prim prim=Each/>" to get the sum of all the numbers up to each element of an array."</p>
         <p>"For "<Prim prim=Each/>" element, we'll "<Prim prim=Add/><code>"1"</code>", get the "<Prim prim=Range/>" up to that number, then "<Prim prim=Reduce/>" it with "<Prim prim=Add/>"."</p>
         <Editor example="∵(/+ ⇡ +1) .[1_2_3 4_5_6 7_8_9]"/>
 
-        <h2 id="fill-and-nested-arrays"><Prim prim=Fill/>" and Nested Arrays"</h2>
+        <Hd id="fill-and-nested-arrays"><Prim prim=Fill/>" and Nested Arrays"</Hd>
         <p>"Here is an array that cannot be constructed normally because its rows have different "<Prim prim=Shape/>"s."</p>
         <Editor example="[1 2_3_4 5_6]"/> // Should fail
         <p>"One way to make this array work is to use the "<Prim prim=Fill/>" modifier. You give it a fill value and a function or array that would fail with mismatched shapes, and it will fill in the missing values with the fill value."</p>
@@ -140,7 +140,7 @@ pub fn Tour() -> impl IntoView {
         <p>"For more complex operations, though, you'll need to use "<Prim prim=Un/><Prim prim=Box/>". Using it with "<Prim prim=Under/>" will re-"<Prim prim=Box/>" the result."</p>
         <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜°□(⊂:⇌.)."/>
 
-        <h2 id="multimedia">"Multimedia"</h2>
+        <Hd id="multimedia">"Multimedia"</Hd>
         <p>"Uiua can natively generate images, audio, and GIFs."</p>
         <p>"On this site, simply leaving an array on the stack that "<em>"looks"</em>" like image or audio data will display it."</p>
         <h3>"Images"</h3>
@@ -161,7 +161,7 @@ pub fn Tour() -> impl IntoView {
         <p>"On this site, arrays that look like they should be GIFs will be displayed as GIFs. You can see some on the "<A href="/">"main page"</A>"."</p>
         <p>"GIFs can be explicitly rendered with the "<Prim prim={Sys(SysOp::GifShow)}/>" function."</p>
 
-        <h2 id="next-steps">"Next Steps"</h2>
+        <Hd id="next-steps">"Next Steps"</Hd>
         <p>"If you want a more in-depth introduction to Uiua, you can check out the "<A href="/tutorial/introduction">"tutorial"</A>"."</p>
         <p>"For information on installing the native Uiua interpreter, see the "<A href="/install">"install page"</A>"."</p>
         <p>"For information on specific functions and modifiers, see the "<A href="/docs#functions">"functions section"</A>" of the main docs page."</p>

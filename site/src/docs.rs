@@ -14,7 +14,7 @@ use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoView
 
 use crate::{
     element, markdown::Markdown, other::*, primitive::*, tour::Tour, tutorial::TutorialPage,
-    uiuisms::Uiuisms, Prim,
+    uiuisms::Uiuisms, Hd, Prim,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -214,11 +214,11 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <Title text=update_title/>
         <h1>"Documentation"</h1>
 
-        <h2>"Language Tour"</h2>
+        <Hd id="language-tour">"Language Tour"</Hd>
         <p>"If you want to jump right in, check out the "<A href="/docs/tour">"Language Tour"</A>" for a high-level overview!"</p>
         <p>"Otherwise, read on for more detailed documentation."</p>
 
-        <h2 id="tutorial">"Tutorial"</h2>
+        <Hd id="tutorial">"Tutorial"</Hd>
         <h3><strong><em>"If you are new to Uiua, you will likely be lost if you don't read this!"</em></strong></h3>
         <p>"These pages introduce Uiua concepts one at a time, each tutorial building on the previous. They go into much more depth than the language tour."</p>
         <p>"They are meant to be read in order, but feel free to skip around!"</p>
@@ -227,13 +227,13 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             .collect::<Vec<_>>()
         }</ul>
 
-        <h2 id="other-tutorials">"Other Tutorials"</h2>
+        <Hd id="other-tutorials">"Other Tutorials"</Hd>
         <ul>
             <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
             <li><A href="/docs/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
         </ul>
 
-        <h2 id="other-docs">"Other Docs"</h2>
+        <Hd id="other-docs">"Other Docs"</Hd>
         <ul>
             <li><A href="/docs/install">"Installation"</A>" - how to install and use Uiua's interpreter"</li>
             <li><A href="/docs/changelog">"Changelog"</A>" - what's new in each version"</li>
@@ -244,7 +244,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/isms">"Uiuisms"</A>" - a curated list of Uiua functions for solving common problems."</li>
         </ul>
 
-        <h2 id="other-pages">"Other Pages"</h2>
+        <Hd id="other-pages">"Other Pages"</Hd>
         <ul>
             <li><A href="/docs/design">"Design"</A>" - reasons for some of Uiua's design decisions"</li>
             <li><A href="/docs/rtl">"Right-to-Left"</A>" - the answer to the most-asked question about Uiua's design gets its own page"</li>
@@ -255,7 +255,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
                 " - a JSON file of all the primitives, for tooling and other projects"</li>
         </ul>
 
-        <h2 id="functions" class="doc-functions">"Functions"</h2>
+        <Hd id="functions" class="doc-functions">"Functions"</Hd>
         <div id="function-search-wrapper">
             <div class="input-div">
                 "⌕ "

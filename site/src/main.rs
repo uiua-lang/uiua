@@ -209,18 +209,18 @@ pub fn MainPage() -> impl IntoView {
         <div class="features">
             <div>
                 <div>
-                    <h2>"A Loving Union"</h2>
+                    <Hd id="a-loving-union">"A Loving Union"</Hd>
                     <p>"Uiua combines the stack-based and array-oriented paradigms in a single language. Combining these already terse paradigms results in code with a very high information density and little syntactic noise."</p>
                     <Editor example="⇌[⍥⊃+⊙∘9 1 1]"/>
                     <p>"If this code seems weird and unreadable, that's okay! It's important to remember that "<a href="https://vector-of-bool.github.io/2018/10/31/become-perl.html">"foreign ≠ confusing"</a>"."</p>
                 </div>
                 <div>
-                    <h2>"True Arrays"</h2>
+                    <Hd id="true-arrays">"True Arrays"</Hd>
                     <p>"Uiua's one and only composite data type, the array, is based on those of APL, J, and BQN. They are multidimensional and rank-polymorphic, meaning that an operation that applies to one item also applies to many items."</p>
                     <Editor example="+2 ↯3_4 ⇡5"/>
                 </div>
                 <div>
-                    <h2>"Rich Primitives"</h2>
+                    <Hd id="rich-primitives">"Rich Primitives"</Hd>
                     <p>"Uiua has lots of built-in functions for all your array manipulation needs. Just a few examples:"</p>
                     <p><Prim prim=Select/>" for re-sequencing array items:"</p>
                     <Editor example=r#"⊏ 2_1_3_0_4 "loco!""#/>
@@ -230,25 +230,25 @@ pub fn MainPage() -> impl IntoView {
                     <Editor example="⍜(↙2|×10) 1_2_3_4_5"/>
                 </div>
                 <div>
-                    <h2>"Syntactic Simplicity"</h2>
+                    <Hd id="syntactic-simplicity">"Syntactic Simplicity"</Hd>
                     <p>"Uiua has a simple, context-free, LL(3) grammar. Code runs from "<A href="/rtl">"right to left"</A>", top to bottom, with only "<A href="/tutorial/functions#modifiers">"one precedence rule"</A>". As operators are to the left of their operands, Uiua code reads a little bit like a Lisp, but with fewer parentheses."</p>
                 </div>
                 <div>
-                    <h2>"System APIs"</h2>
+                    <Hd id="system-apis">"System APIs"</Hd>
                     <p>"Uiua has functions for spawning threads, interacting with the file system, communicating over network sockets, and "<A href="/docs/system">"more"</A>"."</p>
                 </div>
                 <div>
-                    <h2>"Rust Integration"</h2>
+                    <Hd id="rust-ingegration">"Rust Integration"</Hd>
                     <p>"Uiua can be embedded in Rust programs "<a href="https://docs.rs/uiua">"as a library"</a>"."</p>
                 </div>
                 <div>
-                    <h2>"FFI"</h2>
+                    <Hd id="ffi">"FFI"</Hd>
                     <p>"Uiua has experimental support for calling functions from shared libraries through "<Prim prim=Sys(SysOp::FFI)/>"."</p>
                 </div>
             </div>
             <div>
                 <div>
-                    <h2>"Friendly Glyphs"</h2>
+                    <Hd id="friendly-glyphs">"Friendly Glyphs"</Hd>
                     <p>"Uiua uses special characters for built-in functions that remind you what they do!"</p>
                     <Editor example="⚂ # Random number"/>
                     <Editor example="⇡8 # Range up to"/>
@@ -258,12 +258,12 @@ pub fn MainPage() -> impl IntoView {
                     <p>"Unlike other array languages, Uiua does not have monadic and dyadic versions of each glyph. Every glyph does only one thing, so you don't need to parse an entire expression to know which version it is."</p>
                 </div>
                 <div>
-                    <h2>"Unicode Formatter"</h2>
+                    <Hd id="unicode-formatter">"Unicode Formatter"</Hd>
                     <p>"Uiua has the terseness and expressivity afforded by Unicode glyphs without the need for special keyboard or editor support. Instead, the language comes with a formatter that converts the names of built-in functions into glyphs."</p>
                     <Editor example="floor*10[repeatrand5]" help={&["", "Click to format ⇡⇡⇡            "]}/>
                 </div>
                 <div>
-                    <h2>"Multimedia Output"</h2>
+                    <Hd id="multimedia-output">"Multimedia Output"</Hd>
                     <p>"Uiua has built-in facilities for generating images and audio. Just make arrays of the pixel data or audio samples. You can even make GIFs!"</p>
                     {
                         if cfg!(debug_assertions) {
@@ -281,13 +281,13 @@ pub fn MainPage() -> impl IntoView {
                     <p>"The Uiua logo was made with Uiua! Check example 5 at the top of the page."</p>
                 </div>
                 <div>
-                    <h2>"Language Server"</h2>
+                    <Hd id="language-server">"Language Server"</Hd>
                     <p>"The Uiua interpreter has a built-in language server that uses the "<a href="https://microsoft.github.io/language-server-protocol/">"Language Server Protocol"</a>", so you can "<A href="/install#editor-support">"use it with your favorite editor"</A>"."</p>
                 </div>
             </div>
         </div>
         <div>
-            <h2>"Getting Started"</h2>
+            <Hd id="getting-started">"Getting Started"</Hd>
             <p>"For more examples of what Uiua code looks like and what it can do, see the examples in the editor at the top of this page."</p>
             <p>"For a quick overview of how the language works, see the "<A href="/tour">"Language Tour"</A>"."</p>
             <p>"For a full tutorial, see the "<A href="/docs#tutorial">"Tutorial"</A>"."</p>
@@ -590,6 +590,17 @@ fn site() {
                 }
             }
         }
+    }
+}
+
+#[component]
+#[allow(clippy::needless_lifetimes)]
+fn Hd<'a>(id: &'a str, #[prop(optional)] class: &'a str, children: Children) -> impl IntoView {
+    let id = id.to_string();
+    view! {
+        <h2 id={id.clone()}>
+            <a class={format!("header {class}")} href={ format!("#{id}") }>{children()}</a>
+        </h2>
     }
 }
 

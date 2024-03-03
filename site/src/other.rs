@@ -3,7 +3,7 @@ use leptos_meta::*;
 use leptos_router::*;
 use uiua::{Primitive, SysOp, CONSTANTS};
 
-use crate::{editor::Editor, markdown::markdown, Const, Prim, Prims};
+use crate::{editor::Editor, markdown::markdown, Const, Hd, Prim, Prims};
 
 #[component]
 pub fn Design() -> impl IntoView {
@@ -14,7 +14,7 @@ pub fn Design() -> impl IntoView {
         <p>"This page explains the reasons for some of Uiua's design decisions."</p>
         <p>"It serves as a "<a href="https://news.knowledia.com/US/en/articles/more-software-projects-need-defenses-of-design-85ea9e23ffd85f5fde5a2d3d42001393cbce169a">"defense of design"</a>"."</p>
 
-        <h2 id="stack-basing">"Stack Basing"</h2>
+        <Hd id="stack-basing">"Stack Basing"</Hd>
         <h3>"Combinators"</h3>
         <p>"When I first started developing Uiua, it was neither stack-based nor array-oriented. What it "<em>"did"</em>" focus a lot on was "<em>"combinators"</em>". I had this whole hierarchy of language-level operators that let you construct arbitrarily complex combinators relatively succinctly."</p>
         <p>"I discovered what a lot of others have discovered when delving deep into tacit code: it's really hard to read and write and reason about."</p>
@@ -36,13 +36,13 @@ pub fn Design() -> impl IntoView {
         </p>
         <p>"I think this clarity makes writing long tacit expressions much more workable."</p>
 
-        <h2 id="array-model">"The Array Model"</h2>
+        <Hd id="array-model">"The Array Model"</Hd>
         <p>"Uiua's array model went through a lot of iterations during development. At first, it used a flat, vector-based model ala K and Q. Then, I switched to BQN's Based array model. That was really complicated to implement primitives for, so I tried something else."</p>
         <p>"I switched to a flat array model with \"fill elements\". While arrays could not be nested, operations which would create nested arrays in other languages would instead create jagged arrays with special fill elements at the end of some rows. While this worked, the code was scattered everywhere with checks for fill elements, because they had to propagate through everything. It also had the unfortunate effect of making byte arrays take up 2 bytes of space, since a bit had to be used to indicate whether the byte was a fill element or not. Also, a lot of operations, such as "<Prim prim=Transpose/>", don't really make a lot of sense with jagged arrays."</p>
         <p>"Finally, I switched to the current model, which resembles J's Boxed array model. While you can do something resembling J's "<code>"box <"</code>" using "<Prim prim=Box/>" (and "<code>"open >"</code>" with "<Prim prim=Un/><Prim prim=Box/>"), I designed functions like "<Prim prim=Partition/>" and "<Prim prim=Group/>" to allow selecting uniformly-shaped rows from a non-uniform list in an effort to minimize interaction with jagged data."</p>
         <p>"The fact that the stack is always available also makes putting non-uniform data in arrays less necessary."</p>
 
-        <h2 id="glyphs">"The Glyphs"</h2>
+        <Hd id="glyphs">"The Glyphs"</Hd>
         <p>"Most of Uiua's glyphs were chosen for one of a few reasons:"</p>
         <ul>
             <li>"It is a common mathematical symbol, such as "<Prim prim=Add/>", "<Prim prim=Sub/>", and "<Prim prim=Pi/>"."</li>
@@ -54,7 +54,7 @@ pub fn Design() -> impl IntoView {
         </ul>
         <p>"An additional constraint is that every glyph must be present in the "<a href="https://dejavu-fonts.github.io">"DejaVu Sans Mono"</a>" font, which is the best-looking free monospace font I could find that supports the largest number of glyphs."</p>
 
-        <h2 id="no-local-variables">"No Local Variables"</h2>
+        <Hd id="no-local-variables">"No Local Variables"</Hd>
         <p>"Forbidding general local variables has a few benefits:"</p>
         <ul>
             <li>"I don't have to implement them (score!)"</li>
@@ -62,12 +62,12 @@ pub fn Design() -> impl IntoView {
             <li>"It frees you from the burden of naming things."</li>
         </ul>
 
-        <h2 id="identifiers-and-formatting">"Identifiers and Formatting"</h2>
+        <Hd id="identifiers-and-formatting">"Identifiers and Formatting"</Hd>
         <p>"I made the decision to have a formatter that turns names into Unicode glyphs about as soon as I started using Unicode glyphs. I did not want to require special keyboard or editor support like APL and BQN do."</p>
         <p>"The advantage of a file-watching formatter is that the only feature your editor needs is the ability to automatically reload files if they change on disk. You don't need special keybinds or plugins or anything."</p>
         <p>"The other nice thing about a formatter is that it makes it easier to get started with the language. You do not have to memorize a bunch of keyboard shortcuts to type the glyphs. You just need to learn their names."</p>
 
-        <h2 id="inspiration">"Inspiration"</h2>
+        <Hd id="inspiration">"Inspiration"</Hd>
         <h3>"BQN"</h3>
         <p>"The main language that inspired Uiua is "<a href="https://mlochbaum.github.io/BQN/">BQN</a>". While I had heard about APL before, BQN was my first real exposure to the power of the array paradigm. I think the language is an astounding feat of engineering. Marshall is both a genius and a great communicator."</p>
         <p>"However, as you can read above, a lot of Uiua's design decisions are responses to things I "<em>"didn't"</em>" like about BQN. There were a bunch of little pain-points that I thought I could improve on."</p>
@@ -86,18 +86,18 @@ pub fn Technical() -> impl IntoView {
         <Title text="Technical Details - Uiua Docs"/>
         <h1>"Technical Details"</h1>
 
-        <h2>"The Interpreter"</h2>
+        <Hd id="the-interpreter">"The Interpreter"</Hd>
         <p>"The Uiua interpreter is written in Rust."</p>
         <p>"Uiua code is compiled into a simple bytecode assembly. This assembly is then usually immediately executed by the interpreter."</p>
         <p>"Built-in functions are implemented in Rust so they can be as fast as possible. User-defined functions are passed around as chunks of bytecode."</p>
 
-        <h2>"Arrays"</h2>
+        <Hd id="arrays">"Arrays"</Hd>
         <p>"Values on the stack are implemented as Rust "<code>"enum"</code>"s, where each variant contains a different array type."</p>
         <p>"While the language itself only has 4 types, the interpreter can have 1 extra: a byte array. IO streams and some operations which have boolean results return byte arrays for space efficiency. This optimization is only enabled if the interpreter is built with the "<code>"bytes"</code>" feature."</p>
         <p>"Array elements are stored in a reference-counted contiguous-memory container I call a "<em>"CowSlice"</em>" or clone-on-write slice. When an array is modified, its data is only copied if it is shared with another array. In addition, pulling out the rows of an array only increments the reference count of the data, and the row arrays have modified shapes and data offsets."</p>
         <p>"Array shapes are stored in a special array type that only allocates when there are more than 3 items."</p>
 
-        <h2>"The Website"</h2>
+        <Hd id="website">"The Website"</Hd>
         <p>"The Uiua website is written using the "<a href="https://leptos.dev/">Leptos</a>" framework and hosted on GitHub pages."</p>
         <p>"Leptos compiles to webassembly, which allows the entire Uiua interpreter to be compiled and used by the site's editor."</p>
         <p>"The online editor is implemented as a "<code>"contenteditable"</code>" div with lots of custom behaviors."</p>
@@ -128,7 +128,7 @@ pub fn StackIdioms() -> impl IntoView {
 pub fn Install() -> impl IntoView {
     view! {
         <Title text="Installation - Uiua Docs"/>
-        <h2>"Installing Uiua"</h2>
+        <Hd id="installing-uiua">"Installing Uiua"</Hd>
         <p>"If your OS is supported, then the newest version of the Uiua interpreter can be downloaded from the "<a href="https://github.com/uiua-lang/uiua/releases">"releases"</a>" page."</p>
         <p>"Otherwise, the native Uiua interpreter can be installed via Cargo."</p>
         <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation (>=1.75)."</p>
@@ -145,7 +145,7 @@ pub fn Install() -> impl IntoView {
         <p>"If you want the most recent development version of Uiua, you can install from the git repository."</p>
         <code class="code-block">"cargo install --git https://github.com/uiua-lang/uiua uiua"</code>
 
-        <h2 id="fonts">"Fonts"</h2>
+        <Hd id="fonts">"Fonts"</Hd>
         <p>"Uiua was originally designed to be used with stock "<a href="https://dejavu-fonts.github.io">"DejaVu Sans Mono"</a>". However, it now supports two custom fonts:"</p>
         <ul>
             <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/Uiua386.ttf">"Uiua386"</a>" - inspired by APL386. Thanks to Gifti for making it!"</li>
@@ -153,14 +153,14 @@ pub fn Install() -> impl IntoView {
             <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/DejaVuSansMono.ttf">"DejaVuSansMono"</a>" - a modified version"</li>
         </ul>
 
-        <h2 id="editor-support">"Editor Support"</h2>
+        <Hd id="editor-support">"Editor Support"</Hd>
         <p>"An official "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">"Uiua language extension for VSCode"</a>" is available."</p>
         <p>"For Neovim, Apeiros-46B maintains "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/syntax/uiua.vim">"syntax"</a>" and "<a href="https://github.com/Apeiros-46B/nvim/blob/main/after/ftplugin/uiua.lua">"LSP"</a>" scripts."</p>
         <p>"For Vim, sputnick1124 maintains a "<a href="https://github.com/sputnick1124/uiua.vim">"Uiua plugin"</a>"."</p>
         <p>"For Emacs, crmsnbleyd maintains a "<a href="https://github.com/crmsnbleyd/uiua-ts-mode">"Uiua mode"</a>"."</p>
         <p>"These require Uiua to be installed and in your "<code>"PATH"</code>"."</p>
 
-        <h2>"Basic Usage"</h2>
+        <Hd id="basic-usage">"Basic Usage"</Hd>
         <p>"Running just "<code>"uiua"</code>" will display the help message if there are no "<code>".ua"</code>" files in the directory."</p>
         <p>"You can initialize a "<code>"main.ua"</code>" with "<code>"uiua init"</code>"."</p>
         <p>"Once a "<code>".ua"</code>" file exists, running "<code>"uiua"</code>" will begin watching the directory for changes. If you edit and save a "<code>".ua"</code>" file, the interpreter will automatically format and run it."</p>
@@ -176,7 +176,7 @@ pub fn RightToLeft() -> impl IntoView {
     use Primitive::*;
     view! {
         <Title text="Right-to-Left - Uiua Docs"/>
-        <h2>"Right-to-Left"</h2>
+        <Hd id="right-to-left">"Right-to-Left"</Hd>
         <p>"One of the most asked questions about Uiua is \"Why does code execute right-to-left?\" It's a valid question. Every other stack-oriented language I know goes left-to-right."</p>
         <p>"The simple answer is that while Uiua is stack-"<em>"based"</em>", it is not stack-"<em>"oriented"</em>"."</p>
         <p>"The misunderstanding is largely my own fault. The initial version of the website said \"stack-oriented\" everywhere and made references to FORTH. I have since rectified this."</p>
@@ -206,7 +206,7 @@ pub fn Audio() -> impl IntoView {
         <h1>"Audio Output"</h1>
         <p>"Uiua has a built-in support for audio output."</p>
 
-        <h2 id="basic-synthesis">"Basic Synthesis"</h2>
+        <Hd id="basic-synthesis">"Basic Synthesis"</Hd>
         <p>"In the online editor, you need only make an array that looks like audio samples."</p>
         <p>"Audio samples must be either a rank 1 where each element is a sample or a rank 2 array where each row is a channel."</p>
         <p>"The samples must be between "<code>"-1"</code>" and "<code>"1"</code>". We use the "<Prim prim=Sys(SysOp::AudioSampleRate)/>" system function to get the sample rate of the audio output."</p>
@@ -221,7 +221,7 @@ pub fn Audio() -> impl IntoView {
         <p>"If you "<Prim prim=Mul/>" by a non-integer, you may need to use "<Prim prim=Round/>" to prevent an error."</p>
         <Editor example="÷2◿1×220÷:⇡ ⁅×0.5 .&asr"/>
 
-        <h2 id="notes">"Notes"</h2>
+        <Hd id="notes">"Notes"</Hd>
         <p>"My favorite way to make multiple notes is to "<Prim prim=Table/>" different frequencies with the time array."</p>
         <p>"Then, if you want a chord, you can use "<Prim prim=Reduce glyph_only=true/><Prim prim=Add glyph_only=true/>" to add them together."</p>
         <p>"If you want sequence instead, you can use "<Prim prim=Reduce glyph_only=true/><Prim prim=Join glyph_only=true/>"."</p>
@@ -233,7 +233,7 @@ s ← ○×τ⊞×f ÷⟜⇡&asr
 ÷⧻f/+s
 ÷⧻f/⊂s"/>
 
-        <h2 id="native-audio">"Native Audio"</h2>
+        <Hd id="native-audio">"Native Audio"</Hd>
         <p>"If running code in the native Uiua interpreter, arrays will not be automatically turned into audio."</p>
         <p>"Instead, you must use the "<Prim prim=Sys(SysOp::AudioPlay)/>" system function to play it."</p>
         <p><Prim prim=Sys(SysOp::AudioPlay)/>" should work fine on the website as well, but it is not necessary."</p>
@@ -249,7 +249,7 @@ pub fn ImagesAndGifs() -> impl IntoView {
         <h1>"Images and GIFs"</h1>
         <p>"Uiua has built-in support for generating images and GIFs."</p>
 
-        <h2 id="images">"Images"</h2>
+        <Hd id="images">"Images"</Hd>
         <p>"Creating an image is as simple as creating an array of pixel data."</p>
         <p>"To start, we can create a list of numbers from 0 to 1 by dividing a "<Prim prim=Range/>" by its length."</p>
         <Editor example="÷⟜⇡10"/>
@@ -271,12 +271,12 @@ pub fn ImagesAndGifs() -> impl IntoView {
         <p>"Of course, images need not be sqaure."</p>
         <Editor example="⊞< :+1/2÷3○×τ: ∩(÷100⇡) 100 300"/>
 
-        <h2 id="gifs">"GIFs"</h2>
+        <Hd id="gifs">"GIFs"</Hd>
         <p>"To create a GIF, simply create an array where every row is an image."</p>
         <p>"Here, we define a function that takes a frame parameter and generates an image, then evaluate it for each value in a range."</p>
         <Editor example="F ← <⊞×. ÷⟜⇡100 ÷2+1○×τ\n∵F÷⟜⇡30"/>
 
-        <h2 id="system-functions">"System Functions"</h2>
+        <Hd id="system-functions">"System Functions"</Hd>
         <p>"If you use the native interpreter, arrays will not be automatically converted into images or GIFs like they are on the website. To generate them, you must explicitly call certain system functions."</p>
         <p>"You can find lists of "<A href="/docs/imag">"image"</A>" and "<A href="/docs/gif">"GIF"</A>" system functions on the main docs page."</p>
         <p>"One system function that is particularly useful on the website is "<Prim prim=Sys(SysOp::GifShow)/>", which lets you set the framerate of a GIF."</p>
@@ -312,14 +312,14 @@ pub fn Optimizations() -> impl IntoView {
         <h1>"Optimizations"</h1>
         <p>"The Uiua interpreter contains a number of optimizations that you can take advantage of to improve the performance of your code."</p>
 
-        <h2>"Pervasive Functions"</h2>
+        <Hd id="pervasive-functions">"Pervasive Functions"</Hd>
         <p>"All pervasive functions run on arrays in hot loops that should have performance comparable to an implementation in a languages like C or Rust. This includes all mathematical and comparison functions."</p>
         <p>"The interpreter does its best to re-use allocated memory when possible instead of copying. Arrays are reference-counted, so an array's memory is only copied when it is modified "<em>"and"</em>" a duplicate exists somewhere. "<Prim prim=Dup/>" and "<Prim prim=Over/>" do not copy actual array memory. They only copy pointers and increment reference counts."</p>
         <p>"In this example, only the last line results in a copy:"</p>
         <Editor no_run=true example="+1 ⇡10\n×. ⇡10\n×+1⇡10⇡10\n+1.⇡10"/>
         <p>"Using pervasive functions whenever possible, on the largest arrays possible, is the best way to get good performance out of Uiua."</p>
 
-        <h2>"Iterating Modifiers"</h2>
+        <Hd id="iterating-modifiers">"Iterating Modifiers"</Hd>
         <p>"The modifiers "<Prim prim=Reduce/>", "<Prim prim=Scan/>", and "<Prim prim=Table/>" have special-case optimizations when used with certain functions. These optimizations eliminate all interpreter overhead while the loops are running, and are therefore very fast."</p>
         <p>"This table shows which combinations are optimized:"</p>
         <table class="bordered-table cell-centered-table">
@@ -336,7 +336,7 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prim prim=Scan/></th> <td>"✔"</td>  <td>"✔"</td> <td></td> <td></td> <td></td></tr>
         </table>
 
-        <h2>"Complexity"</h2>
+        <Hd id="complexity">"Complexity"</Hd>
         <p>"Some combinations of functions are special-cased in the interpreter to run in less time complexity or in fewer operations than is implied by each function individually."</p>
         <p>"This table shows how various combinations of functions are optimized:"</p>
         <table class="bordered-table cell-centered-table">
@@ -498,7 +498,7 @@ pub fn Combinators() -> impl IntoView {
         <p>"This page contains a list of implementations of common combinators in Uiua. While it's not really necessary to know these to write Uiua programs, you may find the information interesting."</p>
         <p>"A combinator is a function that only refers to its arguments. "<a href="https://en.wikipedia.org/wiki/Combinatory_logic">"Combinatory logic"</a>" is the branch of logic that deals with combinators."</p>
         <p>"Ever since Raymond Smullyan's book "<a href="https://en.wikipedia.org/wiki/To_Mock_a_Mockingbird">"To Mock a Mockingbird"</a>", people have been calling combinators by bird names. These bird names are included in the table."</p>
-        <h2 id="reading">"Reading the Table"</h2>
+        <Hd id="reading">"Reading the Table"</Hd>
         <p>"Each entry in the table contains a diagram of the combinator. The letters "<code>"F"</code>", "<code>"G"</code>", and "<code>"H"</code>" represent the first, second, and third functions involved in the combinator. The letters "<code>"a"</code>", "<code>"b"</code>", "<code>"c"</code>", and "<code>"d"</code>" represent the arguments."</p>
         <p>"For the purpose of the examples, "<code>"a"</code>" is always the array "<code>"1_2_3"</code>", "<code>"b"</code>" is always the array "<code>"4_5_6"</code>", etc."</p>
         <p>"The left-most function in the example stands in for "<code>"F"</code>", the \"top-most\" function in the combinator."</p>

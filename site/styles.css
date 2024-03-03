@@ -28,6 +28,31 @@ h2 {
     border-color: #888a;
 }
 
+.header {
+    position: relative;
+}
+
+a.header,
+a:visited.header,
+a:link.header {
+    text-decoration: none;
+    color: inherit;
+}
+
+a.header::before {
+    position: absolute;
+    left: -1.5em;
+    bottom: 0.4em;
+    content: "🔗";
+    opacity: 0;
+    font-size: 0.6em;
+    transition: opacity 0.2s;
+}
+
+a.header:hover::before {
+    opacity: 0.5;
+}
+
 h1>a>code,
 h2>a>code {
     font-weight: normal;

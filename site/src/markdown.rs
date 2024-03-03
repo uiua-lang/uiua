@@ -5,7 +5,7 @@ use comrak::{
 use leptos::*;
 use uiua::Primitive;
 
-use crate::{backend::fetch, editor::Editor, NotFound, Prim};
+use crate::{backend::fetch, editor::Editor, Hd, NotFound, Prim};
 
 #[component]
 #[allow(unused_braces)]
@@ -58,7 +58,13 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
             let id = leaf_text(node).map(|s| s.to_lowercase().replace(' ', "-"));
             match heading.level {
                 0 | 1 => view!(<h1 id=id>{children}</h1>).into_view(),
-                2 => view!(<h2 id=id>{children}</h2>).into_view(),
+                2 => {
+                    if let Some(id) = id {
+                        view!(<Hd id={&id}>{children}</Hd>).into_view()
+                    } else {
+                        view!(<h2 id=id>{children}</h2>).into_view()
+                    }
+                }
                 3 => view!(<h3 id=id>{children}</h3>).into_view(),
                 4 => view!(<h4 id=id>{children}</h4>).into_view(),
                 5 => view!(<h5 id=id>{children}</h5>).into_view(),

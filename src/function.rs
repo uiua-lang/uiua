@@ -268,6 +268,7 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], env: &impl AsRef<Assembly>) -> b
             }
             Instr::Dynamic(_) => return false,
             Instr::SetOutputComment { .. } => return false,
+            Instr::NoInline => return false,
             _ => {}
         }
     }

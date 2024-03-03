@@ -554,8 +554,14 @@ fn set_code_html(id: &str, code: &str) {
                         if let Some(docs) = docs {
                             let class = binding_class(text, docs);
                             let mut title = String::new();
-                            if let BindingDocsKind::Function { sig, .. } = docs.kind {
-                                title.push_str(&sig.to_string())
+                            match &docs.kind {
+                                BindingDocsKind::Function { sig, .. } => {
+                                    title.push_str(&sig.to_string())
+                                }
+                                BindingDocsKind::Constant(Some(value)) => {
+                                    title.push_str(&value.shape_string())
+                                }
+                                _ => (),
                             }
 
                             let private =
@@ -575,7 +581,7 @@ fn set_code_html(id: &str, code: &str) {
                                 title.push_str(comment);
                             } else {
                                 match docs.kind {
-                                    BindingDocsKind::Constant(_) => title.push_str("constant"),
+                                    BindingDocsKind::Constant(None) => title.push_str("constant"),
                                     BindingDocsKind::Module => title.push_str("module"),
                                     BindingDocsKind::Modifier(_) => title.push_str("macro"),
                                     _ => {}

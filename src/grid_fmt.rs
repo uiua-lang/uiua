@@ -359,6 +359,39 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     }
 }
 
+impl<T: ArrayValue> Array<T> {
+    /// Get a string representation of the shape of the array
+    pub fn shape_string(&self) -> String {
+        shape_row::<T>(&self.shape).into_iter().collect()
+    }
+}
+
+impl Value {
+    /// Get a string representation of the shape of the value
+    pub fn shape_string(&self) -> String {
+        self.generic_ref(
+            Array::shape_string,
+            Array::shape_string,
+            Array::shape_string,
+            Array::shape_string,
+            Array::shape_string,
+        )
+    }
+}
+
+fn shape_row<T: ArrayValue>(shape: &[usize]) -> Vec<char> {
+    let mut shape_row = Vec::new();
+    for (i, dim) in shape.iter().enumerate() {
+        if i > 0 {
+            shape_row.extend("×".chars());
+        }
+        shape_row.extend(dim.to_string().chars());
+    }
+    shape_row.push(' ');
+    shape_row.push(T::SYMBOL);
+    shape_row
+}
+
 fn fmt_array<T: GridFmt + ArrayValue>(
     shape: &[usize],
     data: &[T],
@@ -366,16 +399,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     metagrid: &mut Metagrid,
 ) {
     if data.is_empty() {
-        let mut shape_row = Vec::new();
-        for (i, dim) in shape.iter().enumerate() {
-            if i > 0 {
-                shape_row.extend("×".chars());
-            }
-            shape_row.extend(dim.to_string().chars());
-        }
-        shape_row.push(' ');
-        shape_row.push(T::SYMBOL);
-        metagrid.push(vec![vec![shape_row]]);
+        metagrid.push(vec![vec![shape_row::<T>(shape)]]);
         return;
     }
     let rank = shape.len();

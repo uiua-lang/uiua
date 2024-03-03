@@ -654,9 +654,11 @@ mod server {
                 match &docs.kind {
                     BindingDocsKind::Constant(Some(val)) => {
                         let s = val.show();
+                        value.push('\n');
                         if s.len() < 250 {
-                            value.push('\n');
                             value.push_str(&s);
+                        } else {
+                            value.push_str(&val.shape_string())
                         }
                     }
                     _ => {}

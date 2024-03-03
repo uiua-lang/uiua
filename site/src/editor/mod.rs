@@ -822,6 +822,7 @@ pub fn Editor<'a>(
             Some(('"', '"')),
             "types#characters",
         ),
+        ("!", "macro", "", None, "macros"),
         ("^", "placeholder", "", None, "custommodifiers"),
         ("←", "binding (=)", "", None, "bindings"),
         ("↚", "private binding (=~)", "", None, "modules#visibility"),

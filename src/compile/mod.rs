@@ -110,6 +110,8 @@ pub struct Import {
     pub comment: Option<Arc<str>>,
     /// Map module-local names to global indices
     names: HashMap<Ident, LocalName>,
+    /// Whether the import uses experimental features
+    experimental: bool,
 }
 
 impl AsRef<Assembly> for Compiler {
@@ -269,6 +271,7 @@ impl Compiler {
         Ok(Import {
             comment: scope.comment,
             names: scope.names,
+            experimental: scope.experimental,
         })
     }
     fn load_impl(&mut self, input: &str, src: InputSrc) -> UiuaResult<&mut Self> {
@@ -493,8 +496,9 @@ code:
         Ok(())
     }
     /// Import a module
-    pub(crate) fn import_module(&mut self, path: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
-        let path = if let Some(url) = path.strip_prefix("git:") {
+    pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
+        // Resolve path
+        let path = if let Some(url) = path_str.strip_prefix("git:") {
             // Git import
             if !self.scope.experimental {
                 return Err(self.fatal_error(
@@ -521,34 +525,41 @@ code:
                 .map_err(|e| self.fatal_error(span.clone(), e))?
         } else {
             // Normal import
-            self.resolve_import_path(Path::new(path))
+            self.resolve_import_path(Path::new(path_str))
         };
-        if self.imports.get(&path).is_some() {
-            return Ok(path);
-        }
-        let bytes = self
-            .backend()
-            .file_read_all(&path)
-            .or_else(|e| {
-                if path.ends_with(Path::new("example.ua")) {
-                    Ok(example_ua(|ex| ex.as_bytes().to_vec()))
-                } else {
-                    Err(e)
-                }
-            })
-            .map_err(|e| self.fatal_error(span.clone(), e))?;
-        let input: EcoString = String::from_utf8(bytes)
-            .map_err(|e| self.fatal_error(span.clone(), format!("Failed to read file: {e}")))?
-            .into();
-        if self.current_imports.iter().any(|p| p == &path) {
-            return Err(self.fatal_error(
-                span.clone(),
-                format!("Cycle detected importing {}", path.to_string_lossy()),
-            ));
-        }
-        if !self.imports.contains_key(&path) {
+        if self.imports.get(&path).is_none() {
+            let bytes = self
+                .backend()
+                .file_read_all(&path)
+                .or_else(|e| {
+                    if path.ends_with(Path::new("example.ua")) {
+                        Ok(example_ua(|ex| ex.as_bytes().to_vec()))
+                    } else {
+                        Err(e)
+                    }
+                })
+                .map_err(|e| self.fatal_error(span.clone(), e))?;
+            let input: EcoString = String::from_utf8(bytes)
+                .map_err(|e| self.fatal_error(span.clone(), format!("Failed to read file: {e}")))?
+                .into();
+            if self.current_imports.iter().any(|p| p == &path) {
+                return Err(self.fatal_error(
+                    span.clone(),
+                    format!("Cycle detected importing {}", path.to_string_lossy()),
+                ));
+            }
             let import = self.in_scope(|env| env.load_str_src(&input, &path).map(drop))?;
             self.imports.insert(path.clone(), import);
+        }
+        let import = self.imports.get(&path).unwrap();
+        if import.experimental && !self.scope.experimental {
+            return Err(self.fatal_error(
+                span.clone(),
+                format!(
+                    "Module `{path_str}` is experimental. \
+                    To use it, add `# Experimental!` to the top of this file."
+                ),
+            ));
         }
         Ok(path)
     }

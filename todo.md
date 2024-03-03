@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Make importing modules that use experimental features require experimental
   - Lists of structs in FFI
   - System for custom glyph formatting
   - Let bind only take an ident?

@@ -18,6 +18,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`fold ∧`](https://uiua.org/docs/fold) now works with [`under ⍜`](https://uiua.org/docs/under) if its function does
 - Remove `unpack ⊐` for good
 - Add more [shadowable constants](https://www.uiua.org/docs/constants)
+- Importing modules that use the `# Experimental!` comment now requires the `# Experimental!` comment in the importing file
 - Doc comments may now be placed at the end of single-line functions
 - Non-alphabetic identifiers can now be suffixed with `!` to make macros
 - Add `df`, `ddf`, etc shortcuts for [`dip ⊙`](https://uiua.org/docs/dip) [`fix ¤`](https://uiua.org/docs/fix)

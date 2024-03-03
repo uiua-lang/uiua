@@ -575,7 +575,7 @@ fn set_code_html(id: &str, code: &str) {
                                 title.push_str(comment);
                             } else {
                                 match docs.kind {
-                                    BindingDocsKind::Constant => title.push_str("constant"),
+                                    BindingDocsKind::Constant(_) => title.push_str("constant"),
                                     BindingDocsKind::Module => title.push_str("module"),
                                     BindingDocsKind::Modifier(_) => title.push_str("macro"),
                                     _ => {}

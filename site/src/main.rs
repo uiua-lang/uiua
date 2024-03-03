@@ -415,7 +415,7 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
         "Fluid" => code_font!("fluid text-gradient"),
         "Queer" => code_font!("queer text-gradient"),
         _ => match docs.kind {
-            BindingDocsKind::Constant => code_font!(""),
+            BindingDocsKind::Constant(_) => code_font!(""),
             BindingDocsKind::Function { sig, .. } => match sig.args {
                 0 => code_font!("noadic-function"),
                 1 => code_font!("monadic-function"),

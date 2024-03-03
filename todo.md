@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.10
+  - Analyze purity
   - System for custom glyph formatting
   - Let bind only take an ident?
   - System functions

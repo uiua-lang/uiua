@@ -15,7 +15,7 @@ use crate::{
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
     Assembly, BindingInfo, Compiler, Function, Global, Ident, InputSrc, Inputs, Primitive, SafeSys,
-    Signature, SysBackend, UiuaError, CONSTANTS,
+    Signature, SysBackend, UiuaError, Value, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -53,7 +53,7 @@ pub struct BindingDocs {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindingDocsKind {
     /// A constant
-    Constant,
+    Constant(Option<Value>),
     /// A function
     Function {
         /// The signature of the function
@@ -213,36 +213,29 @@ impl Spanner {
             let Some(constant) = CONSTANTS.iter().find(|c| c.name == name.value) else {
                 continue;
             };
+            let val = constant.value.clone();
             return Some(BindingDocs {
                 src_span: span.clone(),
                 comment: Some(constant.doc.into()),
                 is_public: true,
-                kind: BindingDocsKind::Constant,
+                kind: BindingDocsKind::Constant(Some(val)),
             });
         }
         None
     }
 
     fn make_binding_docs(&self, binfo: &BindingInfo) -> BindingDocs {
-        let modifier_args = binfo.span.as_str(self.inputs(), ident_modifier_args);
-        let is_constant = matches!(binfo.global, Global::Const(_));
-        let is_module = matches!(binfo.global, Global::Module { .. });
-        let comment = binfo.comment.clone().or_else(|| {
-            Some(
-                if is_constant {
-                    "constant"
-                } else if is_module {
-                    "module"
-                } else if modifier_args > 0 {
-                    "macro"
-                } else {
-                    return None;
-                }
-                .into(),
-            )
-        });
+        let mut comment = binfo.comment.clone();
+        if comment.is_none() {
+            match &binfo.global {
+                Global::Const(None) => comment = Some("constant".into()),
+                Global::Module { .. } => comment = Some("macro".into()),
+                Global::Macro => comment = Some("macro".into()),
+                _ => {}
+            }
+        }
         let kind = match &binfo.global {
-            Global::Const(_) => BindingDocsKind::Constant,
+            Global::Const(val) => BindingDocsKind::Constant(val.clone()),
             Global::Func(f) => BindingDocsKind::Function {
                 sig: f.signature(),
                 invertible: self.invertible(f),
@@ -657,6 +650,16 @@ mod server {
                 if !docs.is_public && !matches!(docs.kind, BindingDocsKind::Module) {
                     value.push_str(" (private)");
                 }
+                match &docs.kind {
+                    BindingDocsKind::Constant(Some(val)) => {
+                        let s = val.show();
+                        if s.len() < 200 {
+                            value.push('\n');
+                            value.push_str(&s);
+                        }
+                    }
+                    _ => {}
+                }
                 value.push_str("\n```");
                 match docs.kind {
                     BindingDocsKind::Function {
@@ -932,7 +935,7 @@ mod server {
                         _ => continue,
                     },
                     SpanKind::Ident(Some(docs)) => match docs.kind {
-                        BindingDocsKind::Constant => continue,
+                        BindingDocsKind::Constant(_) => continue,
                         BindingDocsKind::Function { sig, .. } => match sig.args {
                             0 => NOADIC_FUNCTION_STT,
                             1 => MONADIC_FUNCTION_STT,

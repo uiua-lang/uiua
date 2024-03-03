@@ -331,22 +331,31 @@ impl Compiler {
                     && !is_setinv
                     && !is_setund
                 {
-                    self.asm.bind_const(local, None, span_index, comment);
+                    // Binding is a constant or noadic function
+                    let val = if let [Instr::Push(v)] = instrs.as_slice() {
+                        Some(v.clone())
+                    } else {
+                        None
+                    };
+                    let is_const = val.is_some();
+                    self.asm.bind_const(local, val, span_index, comment);
                     self.scope.names.insert(name.clone(), local);
-                    // Add binding instrs to top slices
-                    instrs.push(Instr::BindGlobal {
-                        span: span_index,
-                        index: local.index,
-                    });
-                    let start = self.asm.instrs.len();
-                    self.asm
-                        .instrs
-                        .extend(optimize_instrs(instrs, true, &self.asm));
-                    let end = self.asm.instrs.len();
-                    self.asm.top_slices.push(FuncSlice {
-                        start,
-                        len: end - start,
-                    });
+                    if !is_const {
+                        // Add binding instrs to top slices
+                        instrs.push(Instr::BindGlobal {
+                            span: span_index,
+                            index: local.index,
+                        });
+                        let start = self.asm.instrs.len();
+                        self.asm
+                            .instrs
+                            .extend(optimize_instrs(instrs, true, &self.asm));
+                        let end = self.asm.instrs.len();
+                        self.asm.top_slices.push(FuncSlice {
+                            start,
+                            len: end - start,
+                        });
+                    }
                 } else {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);

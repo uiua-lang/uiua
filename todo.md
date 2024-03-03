@@ -1,10 +1,8 @@
 # Uiua Todo
 
 - 0.10
-  - Lists of structs in FFI
   - System for custom glyph formatting
   - Let bind only take an ident?
-  - 3+ argument `inventory`
   - Allow LSP completions for module items
   - Fix semantic tokens in LSP
   - System functions

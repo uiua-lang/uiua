@@ -621,14 +621,14 @@ fn rowsn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         Ok(())
     })?;
     for new_values in new_values.into_iter().rev() {
-        let mut eached = Value::from_row_values(new_values, env)?;
+        let mut rowsed = Value::from_row_values(new_values, env)?;
         if all_scalar {
-            eached.shape_mut().make_row();
+            rowsed.shape_mut().make_row();
         } else if is_empty {
-            eached.pop_row();
+            rowsed.pop_row();
         }
-        eached.validate_shape();
-        env.push(eached);
+        rowsed.validate_shape();
+        env.push(rowsed);
     }
     Ok(())
 }
@@ -640,11 +640,13 @@ pub fn inventory(env: &mut Uiua) -> UiuaResult {
     match sig.args {
         1 => inventory1(f, env.pop(1)?, env),
         2 => invertory2(f, env.pop(1)?, env.pop(2)?, env),
-        _ => Err(env.error(format!(
-            "{}'s function must take 1 or 2 arguments, but its signature is {}",
-            Primitive::Inventory.format(),
-            sig
-        ))),
+        n => {
+            let mut args = Vec::with_capacity(n);
+            for i in 0..n {
+                args.push(env.pop(i + 1)?);
+            }
+            inventoryn(f, args, env)
+        }
     }
 }
 
@@ -1012,6 +1014,93 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             ))),
         },
     }
+}
+
+fn inventoryn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    for a in 0..args.len() {
+        let a_can_fill = args[a].length_is_fillable(env);
+        for b in a + 1..args.len() {
+            let b_can_fill = args[b].length_is_fillable(env);
+            let mut err = None;
+            if a_can_fill {
+                let b_row_count = args[b].row_count();
+                err = args[a].fill_length_to(b_row_count, env).err();
+            }
+            if err.is_none() && b_can_fill {
+                let a_row_count = args[a].row_count();
+                err = args[b].fill_length_to(a_row_count, env).err();
+            }
+            if err.is_none()
+                && args[a].row_count() != args[b].row_count()
+                && args[a].row_count() != 1
+                && args[b].row_count() != 1
+            {
+                err = Some("");
+            }
+            if let Some(e) = err {
+                return Err(env.error(format!(
+                    "Cannot {} arrays with different number of rows, shapes {} and {}{e}",
+                    Primitive::Inventory.format(),
+                    args[a].shape(),
+                    args[b].shape(),
+                )));
+            }
+        }
+    }
+    let mut row_count = 0;
+    let mut all_scalar = true;
+    let mut all_1 = true;
+    let outputs = f.signature().outputs;
+    let is_empty = outputs > 0 && args.iter().any(|v| v.row_count() == 0);
+    let mut arg_elems: Vec<_> = args
+        .into_iter()
+        .map(|mut v| {
+            all_scalar = all_scalar && v.rank() == 0;
+            if v.row_count() == 1 {
+                if v.rank() == 0 {
+                    v.unbox();
+                } else {
+                    v.shape_mut().make_row();
+                }
+                Err(v)
+            } else {
+                let proxy = is_empty.then(|| v.proxy_row(env));
+                row_count = row_count.max(v.row_count());
+                all_1 = false;
+                Ok(v.into_rows().map(Value::unboxed).chain(proxy))
+            }
+        })
+        .collect();
+    if all_1 {
+        row_count = 1;
+    }
+    let mut new_values = multi_output(outputs, Vec::new());
+    env.without_fill(|env| -> UiuaResult {
+        for _ in 0..row_count + is_empty as usize {
+            for arg in arg_elems.iter_mut().rev() {
+                match arg {
+                    Ok(rows) => env.push(rows.next().unwrap()),
+                    Err(row) => env.push(row.clone()),
+                }
+            }
+            env.call(f.clone())?;
+            for i in 0..outputs {
+                new_values[i].push(Boxed(env.pop("inventory's function result")?));
+            }
+        }
+        Ok(())
+    })?;
+    for new_values in new_values.into_iter().rev() {
+        let mut arr = Array::<Boxed>::from_iter(new_values);
+        if all_scalar {
+            arr.shape.make_row();
+        } else if is_empty {
+            arr.pop_row();
+        }
+        arr.validate_shape();
+        env.push(arr);
+    }
+    Ok(())
 }
 
 impl Value {

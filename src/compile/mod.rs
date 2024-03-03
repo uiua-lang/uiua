@@ -553,13 +553,13 @@ code:
         }
         let import = self.imports.get(&path).unwrap();
         if import.experimental && !self.scope.experimental {
-            return Err(self.fatal_error(
+            self.add_error(
                 span.clone(),
                 format!(
                     "Module `{path_str}` is experimental. \
                     To use it, add `# Experimental!` to the top of this file."
                 ),
-            ));
+            );
         }
         Ok(path)
     }

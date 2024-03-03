@@ -29,7 +29,7 @@ This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.75) to be ins
 
   If you want audio on Linux, you may need to install some dependencies first:
   ```
-  apt install libasound2-dev libudev-dev pkg-config
+  apt install libasound2-dev libudev-dev pkg-config xorg-dev
   ```
 - If you want the most recent development version of Uiua, you can install from the git repository.
   ```

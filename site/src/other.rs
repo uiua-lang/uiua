@@ -139,7 +139,7 @@ pub fn Install() -> impl IntoView {
             <li>
                 <p><code>"audio"</code>" - Enables audio system functions."</p>
                 <p>"On Linux, this may require installing some dependencies:"</p>
-                <code class="code-block">"apt install libasound2-dev libudev-dev pkg-config"</code>
+                <code class="code-block">"apt install libasound2-dev libudev-dev pkg-config xorg-dev"</code>
             </li>
         </ul>
         <p>"If you want the most recent development version of Uiua, you can install from the git repository."</p>

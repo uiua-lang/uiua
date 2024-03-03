@@ -21,7 +21,7 @@ jobs:
     - name: apt update
       run: sudo apt-get update
     - name: Install deps
-      run: sudo apt-get install libasound2-dev libudev-dev pkg-config
+      run: sudo apt-get install libasound2-dev libudev-dev pkg-config xorg-dev
     - name: Install WASM target
       run: rustup target add wasm32-unknown-unknown
     - name: Build

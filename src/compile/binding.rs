@@ -167,6 +167,16 @@ impl Compiler {
                 comp.add_function(FunctionId::Named(name.clone()), sig, instrs)
             },
         );
+        let words_span = binding
+            .words
+            .first()
+            .zip(binding.words.last())
+            .map(|(f, l)| f.span.clone().merge(l.span.clone()))
+            .unwrap_or_else(|| {
+                let mut span = binding.arrow_span;
+                span.start = span.end;
+                span
+            });
 
         // Compile the body
         self.current_binding = Some(CurrentBinding {
@@ -312,6 +322,7 @@ impl Compiler {
                         );
                     }
                 }
+
                 #[rustfmt::skip]
                 let is_setinv = matches!(
                     instrs.as_slice(),
@@ -325,6 +336,7 @@ impl Compiler {
                 if is_import {
                 } else if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
+                    sig = f.signature();
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
                     self.compile_bind_function(&name, local, func, span_index, comment)?;
                 } else if (sig.args == 0 && sig.outputs <= 1)
@@ -372,6 +384,15 @@ impl Compiler {
                     let func = make_fn(instrs, sig, self);
                     self.compile_bind_function(&name, local, func, span_index, comment)?;
                 }
+
+                self.code_meta.function_sigs.insert(
+                    words_span,
+                    SigDecl {
+                        sig,
+                        explicit: binding.signature.is_some(),
+                        inline: false,
+                    },
+                );
             }
             Err(e) => {
                 if is_import {

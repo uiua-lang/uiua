@@ -90,8 +90,8 @@ pub(crate) struct CodeMeta {
     pub global_references: HashMap<Sp<Ident>, usize>,
     /// A map of references to shadowable constants
     pub constant_references: HashSet<Sp<Ident>>,
-    /// Spans of bare inline functions and their signatures and whether they are explicit
-    pub inline_function_sigs: InlineSigs,
+    /// Spans of functions and their signatures and whether they are explicit
+    pub function_sigs: SigDecls,
     /// A map of macro invocations to their expansions
     pub macro_expansions: HashMap<CodeSpan, (Ident, String)>,
     /// A map of incomplete ref paths to their module's index
@@ -99,12 +99,13 @@ pub(crate) struct CodeMeta {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct InlineSig {
+pub(crate) struct SigDecl {
     pub sig: Signature,
     pub explicit: bool,
+    pub inline: bool,
 }
 
-pub(crate) type InlineSigs = HashMap<CodeSpan, InlineSig>;
+pub(crate) type SigDecls = HashMap<CodeSpan, SigDecl>;
 
 struct Spanner {
     asm: Assembly,
@@ -307,12 +308,11 @@ impl Spanner {
                     }
                 }
                 Word::Func(func) => {
-                    let kind =
-                        if let Some(inline) = self.code_meta.inline_function_sigs.get(&word.span) {
-                            SpanKind::FuncDelim(inline.sig)
-                        } else {
-                            SpanKind::Delimiter
-                        };
+                    let kind = if let Some(inline) = self.code_meta.function_sigs.get(&word.span) {
+                        SpanKind::FuncDelim(inline.sig)
+                    } else {
+                        SpanKind::Delimiter
+                    };
                     spans.push(word.span.just_start(self.inputs()).sp(kind.clone()));
                     if let Some(sig) = &func.signature {
                         spans.push(sig.span.clone().sp(SpanKind::Signature));
@@ -336,10 +336,11 @@ impl Spanner {
                     for (i, branch) in sw.branches.iter().enumerate() {
                         let start_span = branch.span.just_start(self.inputs());
                         if i > 0 && start_span.as_str(self.inputs(), |s| s == "|") {
-                            let kind = if let Some(InlineSig {
+                            let kind = if let Some(SigDecl {
                                 sig,
                                 explicit: false,
-                            }) = self.code_meta.inline_function_sigs.get(&branch.span)
+                                ..
+                            }) = self.code_meta.function_sigs.get(&branch.span)
                             {
                                 SpanKind::FuncDelim(*sig)
                             } else {
@@ -426,9 +427,9 @@ mod server {
 
     use crate::{
         format::{format_str, FormatConfig},
-        lex::Loc,
+        lex::{lex, Loc},
         primitive::{PrimClass, PrimDocFragment},
-        Assembly, BindingInfo, NativeSys, PrimDocLine, Span,
+        AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span, Token,
     };
 
     pub struct LspDoc {
@@ -561,6 +562,7 @@ mod server {
                         },
                     )),
                     code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
+                    inlay_hint_provider: Some(OneOf::Left(true)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -622,7 +624,7 @@ mod server {
             // Hovering an inline function
             let mut inline_function_sig: Option<Sp<Signature>> = None;
             if prim_range.is_none() && binding_docs.is_none() {
-                for (span, inline) in &doc.code_meta.inline_function_sigs {
+                for (span, inline) in &doc.code_meta.function_sigs {
                     if !inline.explicit && span.contains_line_col(line, col) {
                         inline_function_sig = Some(span.clone().sp(inline.sig));
                     }
@@ -735,7 +737,7 @@ mod server {
                     label: name.clone(),
                     kind: Some(kind),
                     label_details: Some(CompletionItemLabelDetails {
-                        description: binding.global.signature().map(|sig| sig.to_string()),
+                        description: binding.global.signature().map(|sig| format!("{sig:<4}")),
                         ..Default::default()
                     }),
                     documentation: binding.comment.as_ref().map(|c| {
@@ -800,7 +802,7 @@ mod server {
                         label_details: if let Primitive::Sys(op) = prim {
                             Some(CompletionItemLabelDetails {
                                 description: Some(format!(
-                                    "{} {}",
+                                    "{} {:<4}",
                                     op.long_name(),
                                     Signature::new(op.args(), op.outputs())
                                 )),
@@ -808,7 +810,7 @@ mod server {
                             })
                         } else {
                             prim.signature().map(|sig| CompletionItemLabelDetails {
-                                description: Some(sig.to_string()),
+                                description: Some(format!("{sig:<4}")),
                                 ..Default::default()
                             })
                         },
@@ -1019,7 +1021,7 @@ mod server {
             let mut actions = Vec::new();
 
             // Add explicit signature
-            for (span, inline) in &doc.code_meta.inline_function_sigs {
+            for (span, inline) in &doc.code_meta.function_sigs {
                 if inline.explicit || !span.contains_line_col(line, col) {
                     continue;
                 }
@@ -1253,6 +1255,91 @@ mod server {
                     },
                 }),
             ))
+        }
+
+        async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
+            use serde_json::Value;
+            let Some(doc) = self.docs.get(&params.text_document.uri) else {
+                return Ok(None);
+            };
+            let config = self
+                .client
+                .configuration(
+                    [
+                        "bindingSignatureHints",
+                        "inlineSignatureHints",
+                        "inlineHintMinLength",
+                    ]
+                    .iter()
+                    .map(|s| ConfigurationItem {
+                        scope_uri: Some(params.text_document.uri.clone()),
+                        section: Some(format!("uiua.inlayHints.{s}")),
+                    })
+                    .collect(),
+                )
+                .await
+                .unwrap_or_default();
+            let (binding_sigs, inline_sigs, min_length) = if let [Value::Bool(binding_sigs), Value::Bool(inline_sigs), Value::Number(min_length)] =
+                config.as_slice()
+            {
+                (
+                    *binding_sigs,
+                    *inline_sigs,
+                    min_length.as_u64().unwrap_or(1) as usize,
+                )
+            } else {
+                (true, true, 3)
+            };
+            let mut hints = Vec::new();
+            for (span, decl) in &doc.code_meta.function_sigs {
+                let is_too_short = || {
+                    span.as_str(&doc.asm.inputs, |s| {
+                        let mut tokens = lex(s, (), &mut Inputs::default()).0;
+                        if tokens.first().is_some_and(|t| {
+                            matches!(
+                                t.value,
+                                Token::Simple(AsciiToken::OpenParen | AsciiToken::Bar)
+                            )
+                        }) {
+                            tokens.pop();
+                        }
+                        if tokens
+                            .last()
+                            .is_some_and(|t| t.value == Token::Simple(AsciiToken::CloseParen))
+                        {
+                            tokens.pop();
+                        }
+                        tokens.len() < min_length
+                    })
+                };
+                if decl.explicit
+                    || !decl.inline && decl.sig == (0, 1)
+                    || decl.inline && !inline_sigs
+                    || !decl.inline && !binding_sigs
+                    || is_too_short()
+                {
+                    continue;
+                }
+                let sig = decl.sig.to_string();
+                let mut position = uiua_loc_to_lsp(span.start);
+                if decl.inline {
+                    position.character += 1;
+                }
+                hints.push(InlayHint {
+                    text_edits: Some(vec![TextEdit {
+                        range: Range::new(position, position),
+                        new_text: format!("{sig} "),
+                    }]),
+                    position,
+                    label: InlayHintLabel::String(sig),
+                    kind: None,
+                    tooltip: None,
+                    padding_left: None,
+                    padding_right: Some(true),
+                    data: None,
+                });
+            }
+            Ok(Some(hints))
         }
 
         async fn shutdown(&self) -> Result<()> {

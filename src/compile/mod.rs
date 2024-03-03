@@ -24,7 +24,7 @@ use crate::{
     function::*,
     ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
-    lsp::{CodeMeta, InlineSig},
+    lsp::{CodeMeta, SigDecl},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
@@ -1327,11 +1327,12 @@ code:
                 }
             }
         };
-        self.code_meta.inline_function_sigs.insert(
+        self.code_meta.function_sigs.insert(
             span.clone(),
-            InlineSig {
+            SigDecl {
                 sig,
                 explicit: func.signature.is_some(),
+                inline: true,
             },
         );
         Ok((func.id, sig, instrs))

@@ -471,7 +471,11 @@ impl fmt::Debug for Signature {
 
 impl fmt::Display for Signature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "|{}.{}", self.args, self.outputs)
+        if self.outputs == 1 {
+            write!(f, "|{}", self.args)
+        } else {
+            write!(f, "{self:?}")
+        }
     }
 }
 

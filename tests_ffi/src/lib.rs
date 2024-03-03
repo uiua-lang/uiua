@@ -101,6 +101,21 @@ pub unsafe extern "C" fn vec2_normalize(v: *mut Vec2) {
     }
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn vec2_list_sum(list: *const Vec2, len: c_int) -> Vec2 {
+    let slice = std::slice::from_raw_parts(list, len as usize);
+    slice.iter().fold(Vec2 { x: 0.0, y: 0.0 }, |acc, v| Vec2 {
+        x: acc.x + v.x,
+        y: acc.y + v.y,
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn vec2_list_reverse(list: *mut Vec2, len: c_int) {
+    let slice = std::slice::from_raw_parts_mut(list, len as usize);
+    slice.reverse();
+}
+
 #[repr(C)]
 pub struct Person {
     pub name: *const c_char,

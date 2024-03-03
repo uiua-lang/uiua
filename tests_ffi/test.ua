@@ -15,6 +15,8 @@ VecII ← "{double; double}"
 ⍤⟜≍: 5 Lib {"double" "vec2_len_ref" $"const _*"VecII} {[3 4]}
 ⍤⟜≍: [4 6] Lib {VecII "vec2_add" VecII VecII} {[1 2] [3 4]}
 ⍤⟜≍: [1 0] Lib {"void" "vec2_normalize" $"_*" VecII} {[5 0]}
+⍤⟜≍: [9 12] Lib {VecII "vec2_list_sum" $"const _:1"VecII "int"} {[1_2 3_4 5_6]}
+⍤⟜≍: [5_6 3_4 1_2] Lib {"void" "vec2_list_reverse" $"_:1"VecII "int"} {[1_2 3_4 5_6]}
 
 Person ← "{const char*; int}"
 ⍤⟜≍: {"Dave" 31} Lib {Person "person_new" "const char*" "int"} {"Dave" 31}

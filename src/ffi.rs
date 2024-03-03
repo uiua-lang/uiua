@@ -246,12 +246,20 @@ mod enabled {
             let mut lengths: Vec<Option<usize>> = vec![None; arg_tys.len()];
             // Collect lengths of lists
             for (i, arg_ty) in arg_tys.iter().enumerate() {
-                if let FfiType::List { len_index, .. } = arg_ty {
+                if let FfiType::List {
+                    len_index, inner, ..
+                } = arg_ty
+                {
                     let j = i - lengths[..i].iter().filter(|l| l.is_some()).count();
-                    *lengths
+                    let len = lengths
                         .get_mut(*len_index)
-                        .ok_or_else(|| format!("Invalid length index: {len_index}"))? =
-                        args.get(j).map(Value::element_count);
+                        .ok_or_else(|| format!("Invalid length index: {len_index}"))?;
+                    let arg = args.get(j);
+                    *len = if let FfiType::Struct { .. } = &**inner {
+                        arg.map(Value::row_count)
+                    } else {
+                        arg.map(Value::element_count)
+                    };
                 }
             }
             // Bind arguments
@@ -487,11 +495,26 @@ mod enabled {
                         FfiType::ULongLong => out_param_list!(c_ulonglong, len_index, i),
                         FfiType::Float => out_param_list!(c_float, len_index, i),
                         FfiType::Double => out_param_list!(c_double, len_index, i),
+                        FfiType::Struct { fields } => {
+                            let len = *bindings.get::<c_int>(*len_index) as usize;
+                            let repr = bindings.get_repr(i);
+                            if len > 0 && repr.len() % len != 0 {
+                                return Err(format!(
+                                    "Invalid length for FFI out parameter {i}: {len}"
+                                ));
+                            }
+                            let mut rows = Vec::new();
+                            for chunk in repr.chunks_exact(repr.len() / len) {
+                                rows.push(bindings.struct_repr_to_value(chunk, fields)?);
+                            }
+                            let value = Value::from_row_values_infallible(rows);
+                            results.push(value);
+                        }
                         _ => {
                             return Err(format!(
                                 "FFI parameter {i} has type {ty}, which is \
-                            not valid as an out parameter. \
-                            If this is not an out parameter, annotate it as `const`."
+                                invalid/unsupported as an out parameter. \
+                                If this is not an out parameter, annotate it as `const`."
                             ))
                         }
                     },
@@ -795,6 +818,14 @@ mod enabled {
                     (FfiType::Float, Value::Byte(arr)) => list!(arr, c_float),
                     #[cfg(feature = "bytes")]
                     (FfiType::Double, Value::Byte(arr)) => list!(arr, c_double),
+                    (FfiType::Struct { fields }, val) => {
+                        let mut all_reprs = Vec::new();
+                        for row in val.rows() {
+                            let repr = self.value_to_struct_repr(&row, fields)?;
+                            all_reprs.extend(repr);
+                        }
+                        self.push_repr_ptr(all_reprs)
+                    }
                     (_, arg) => {
                         return Err(format!(
                             "Array of {} with shape {} is not a valid \

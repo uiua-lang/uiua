@@ -10,7 +10,7 @@ use std::{
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
-    ast::{Item, Modifier, PlaceholderOp, Ref, Word},
+    ast::{Item, Modifier, PlaceholderOp, Ref, RefComponent, Word},
     ident_modifier_args,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
@@ -78,8 +78,10 @@ pub(crate) struct CodeMeta {
     pub constant_references: HashSet<Sp<Ident>>,
     /// Spans of bare inline functions and their signatures and whether they are explicit
     pub inline_function_sigs: InlineSigs,
-    /// A map of macro invoations to their expansions
+    /// A map of macro invocations to their expansions
     pub macro_expansions: HashMap<CodeSpan, (Ident, String)>,
+    /// A map of incomplete ref paths to their module's index
+    pub incomplete_refs: HashMap<CodeSpan, usize>,
 }
 
 #[derive(Clone, Copy)]
@@ -254,6 +256,7 @@ impl Spanner {
                     spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
                 }
                 Word::Ref(r) => spans.extend(self.ref_spans(r)),
+                Word::IncompleteRef(path) => spans.extend(self.ref_path_spans(path)),
                 Word::Strand(items) => {
                     for (i, word) in items.iter().enumerate() {
                         let item_spans = self.words_spans(slice::from_ref(word));
@@ -371,14 +374,18 @@ impl Spanner {
         spans
     }
     fn ref_spans(&self, r: &Ref) -> Vec<Sp<SpanKind>> {
+        let mut spans = self.ref_path_spans(&r.path);
+        let name_docs = self.reference_docs(&r.name.span);
+        spans.push(r.name.span.clone().sp(SpanKind::Ident(name_docs)));
+        spans
+    }
+    fn ref_path_spans(&self, path: &[RefComponent]) -> Vec<Sp<SpanKind>> {
         let mut spans = Vec::new();
-        for comp in &r.path {
+        for comp in path {
             let module_docs = self.reference_docs(&comp.module.span);
             spans.push(comp.module.span.clone().sp(SpanKind::Ident(module_docs)));
             spans.push(comp.tilde_span.clone().sp(SpanKind::Delimiter));
         }
-        let name_docs = self.reference_docs(&r.name.span);
-        spans.push(r.name.span.clone().sp(SpanKind::Ident(name_docs)));
         spans
     }
 }

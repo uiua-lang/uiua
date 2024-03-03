@@ -504,24 +504,36 @@ impl<'i> Parser<'i> {
         let s: Ident = canonicalize_exclams(&self.input[span.byte_range()]);
         Some(span.sp(s))
     }
-    fn try_ref(&mut self) -> Option<Sp<Ref>> {
+    fn try_ref(&mut self) -> Option<Sp<Word>> {
         let mut checkpoint = self.index;
         let mut name = self.try_ident()?;
         let start_span = name.span.clone();
         let mut path = Vec::new();
         while let Some(tilde_span) = self.try_exact(Tilde) {
+            let comp = RefComponent {
+                module: name,
+                tilde_span,
+            };
             let Some(next) = self.try_ident() else {
+                self.try_spaces();
+                if self
+                    .tokens
+                    .get(self.index)
+                    .is_some_and(|t| !matches!(t.value, Token::Str(_)))
+                {
+                    let span = start_span.merge(comp.tilde_span.clone());
+                    path.push(comp);
+                    return Some(span.sp(Word::IncompleteRef(path)));
+                }
                 self.index = checkpoint;
                 return None;
             };
             checkpoint = self.index;
-            path.push(RefComponent {
-                module: name,
-                tilde_span,
-            });
+            path.push(comp);
             name = next;
         }
-        Some(start_span.merge(name.span.clone()).sp(Ref { name, path }))
+        let span = start_span.merge(name.span.clone());
+        Some(span.sp(Word::Ref(Ref { name, path })))
     }
     fn try_signature(&mut self, initial_token: AsciiToken) -> Option<Sp<Signature>> {
         let start = self.try_exact(initial_token)?;
@@ -823,7 +835,7 @@ impl<'i> Parser<'i> {
         Some(if let Some(prim) = self.try_prim() {
             prim.map(Word::Primitive)
         } else if let Some(refer) = self.try_ref() {
-            refer.map(Word::Ref)
+            refer
         } else if let Some(sn) = self.try_num() {
             sn.map(|(s, n)| Word::Number(s, n))
         } else if let Some(c) = self.next_token_map(Token::as_char) {

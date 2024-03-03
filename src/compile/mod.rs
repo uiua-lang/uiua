@@ -817,6 +817,23 @@ code:
                 }
             }
             Word::Ref(r) => self.reference(r, call)?,
+            Word::IncompleteRef(comps) => {
+                if let Some((_, locals)) = self.ref_path(&comps)? {
+                    self.add_error(
+                        comps.last().unwrap().tilde_span.clone(),
+                        "Incomplete module reference",
+                    );
+                    for (local, comp) in locals.iter().zip(comps) {
+                        self.validate_local(&comp.module.value, *local, &comp.module.span);
+                        self.code_meta
+                            .global_references
+                            .insert(comp.module, local.index);
+                    }
+                    self.code_meta
+                        .incomplete_refs
+                        .insert(word.span.clone(), locals.last().unwrap().index);
+                }
+            }
             Word::Strand(items) => {
                 // Compile individual items
                 let op_instrs = items
@@ -1008,82 +1025,8 @@ code:
         Ok(())
     }
     fn ref_local(&self, r: &Ref) -> UiuaResult<(Vec<LocalName>, LocalName)> {
-        let mut path_locals = Vec::new();
-        if let Some(first) = r.path.first() {
-            let module_local = self
-                .scope
-                .names
-                .get(&first.module.value)
-                .copied()
-                .ok_or_else(|| {
-                    self.fatal_error(
-                        first.module.span.clone(),
-                        format!("Unknown import `{}`", first.module.value),
-                    )
-                })?;
-            path_locals.push(module_local);
-            let global = &self.asm.bindings[module_local.index].global;
-            let mut module = match global {
-                Global::Module { module } => module,
-                Global::Func(_) => {
-                    return Err(self.fatal_error(
-                        first.module.span.clone(),
-                        format!("`{}` is a function, not a module", first.module.value),
-                    ))
-                }
-                Global::Const(_) => {
-                    return Err(self.fatal_error(
-                        first.module.span.clone(),
-                        format!("`{}` is a constant, not a module", first.module.value),
-                    ))
-                }
-                Global::Macro => {
-                    return Err(self.fatal_error(
-                        first.module.span.clone(),
-                        format!("`{}` is a modifier, not a module", first.module.value),
-                    ))
-                }
-            };
-            for comp in r.path.iter().skip(1) {
-                let submod_local = self.imports[module]
-                    .names
-                    .get(&comp.module.value)
-                    .copied()
-                    .ok_or_else(|| {
-                        self.fatal_error(
-                            comp.module.span.clone(),
-                            format!(
-                                "Module `{}` not found in module `{}`",
-                                comp.module.value,
-                                module.display()
-                            ),
-                        )
-                    })?;
-                path_locals.push(submod_local);
-                let global = &self.asm.bindings[submod_local.index].global;
-                module = match global {
-                    Global::Module { module } => module,
-                    Global::Func(_) => {
-                        return Err(self.fatal_error(
-                            comp.module.span.clone(),
-                            format!("`{}` is a function, not a module", comp.module.value),
-                        ))
-                    }
-                    Global::Const(_) => {
-                        return Err(self.fatal_error(
-                            comp.module.span.clone(),
-                            format!("`{}` is a constant, not a module", comp.module.value),
-                        ))
-                    }
-                    Global::Macro => {
-                        return Err(self.fatal_error(
-                            comp.module.span.clone(),
-                            format!("`{}` is a modifier, not a module", comp.module.value),
-                        ))
-                    }
-                };
-            }
-            if let Some(local) = self.imports[module].names.get(&r.name.value).copied() {
+        if let Some((module, path_locals)) = self.ref_path(&r.path)? {
+            if let Some(local) = self.imports[&module].names.get(&r.name.value).copied() {
                 Ok((path_locals, local))
             } else {
                 Err(self.fatal_error(
@@ -1104,6 +1047,87 @@ code:
             ))
         }
     }
+    fn ref_path(&self, path: &[RefComponent]) -> UiuaResult<Option<(PathBuf, Vec<LocalName>)>> {
+        let Some(first) = path.first() else {
+            return Ok(None);
+        };
+        let mut path_locals = Vec::new();
+        let module_local = self
+            .scope
+            .names
+            .get(&first.module.value)
+            .copied()
+            .ok_or_else(|| {
+                self.fatal_error(
+                    first.module.span.clone(),
+                    format!("Unknown import `{}`", first.module.value),
+                )
+            })?;
+        path_locals.push(module_local);
+        let global = &self.asm.bindings[module_local.index].global;
+        let mut module = match global {
+            Global::Module { module } => module,
+            Global::Func(_) => {
+                return Err(self.fatal_error(
+                    first.module.span.clone(),
+                    format!("`{}` is a function, not a module", first.module.value),
+                ))
+            }
+            Global::Const(_) => {
+                return Err(self.fatal_error(
+                    first.module.span.clone(),
+                    format!("`{}` is a constant, not a module", first.module.value),
+                ))
+            }
+            Global::Macro => {
+                return Err(self.fatal_error(
+                    first.module.span.clone(),
+                    format!("`{}` is a modifier, not a module", first.module.value),
+                ))
+            }
+        };
+        for comp in path.iter().skip(1) {
+            let submod_local = self.imports[module]
+                .names
+                .get(&comp.module.value)
+                .copied()
+                .ok_or_else(|| {
+                    self.fatal_error(
+                        comp.module.span.clone(),
+                        format!(
+                            "Module `{}` not found in module `{}`",
+                            comp.module.value,
+                            module.display()
+                        ),
+                    )
+                })?;
+            path_locals.push(submod_local);
+            let global = &self.asm.bindings[submod_local.index].global;
+            module = match global {
+                Global::Module { module } => module,
+                Global::Func(_) => {
+                    return Err(self.fatal_error(
+                        comp.module.span.clone(),
+                        format!("`{}` is a function, not a module", comp.module.value),
+                    ))
+                }
+                Global::Const(_) => {
+                    return Err(self.fatal_error(
+                        comp.module.span.clone(),
+                        format!("`{}` is a constant, not a module", comp.module.value),
+                    ))
+                }
+                Global::Macro => {
+                    return Err(self.fatal_error(
+                        comp.module.span.clone(),
+                        format!("`{}` is a modifier, not a module", comp.module.value),
+                    ))
+                }
+            };
+        }
+
+        Ok(Some((module.clone(), path_locals)))
+    }
     fn reference(&mut self, r: Ref, call: bool) -> UiuaResult {
         if r.path.is_empty() {
             self.ident(r.name.value, r.name.span, call)
@@ -1111,6 +1135,7 @@ code:
             let (path_locals, local) = self.ref_local(&r)?;
             self.validate_local(&r.name.value, local, &r.name.span);
             for (local, comp) in path_locals.into_iter().zip(&r.path) {
+                self.validate_local(&comp.module.value, local, &comp.module.span);
                 (self.code_meta.global_references).insert(comp.module.clone(), local.index);
             }
             self.code_meta

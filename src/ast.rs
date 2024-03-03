@@ -102,6 +102,7 @@ pub enum Word {
     MultilineFormatString(Vec<Sp<Vec<String>>>),
     Label(String),
     Ref(Ref),
+    IncompleteRef(Vec<RefComponent>),
     Strand(Vec<Sp<Word>>),
     Array(Arr),
     Func(Func),
@@ -201,6 +202,9 @@ impl fmt::Debug for Word {
             }
             Word::Label(label) => write!(f, "${label}"),
             Word::Ref(ident) => write!(f, "ref({ident})"),
+            Word::IncompleteRef(comps) => {
+                write!(f, "incomplete_ref({}~...)", comps[0].module.value)
+            }
             Word::Array(arr) => arr.fmt(f),
             Word::Strand(items) => write!(f, "strand({items:?})"),
             Word::Func(func) => func.fmt(f),

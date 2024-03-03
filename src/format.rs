@@ -728,17 +728,28 @@ impl<'a> Formatter<'a> {
         }
     }
     fn format_ref(&mut self, r: &Ref) {
-        let first = r.path.first().map(|comp| &comp.module).unwrap_or(&r.name);
-        if first.value.starts_with(|c: char| c.is_lowercase())
+        self.format_ref_path(&r.path);
+        if r.path.is_empty()
+            && r.name.value.starts_with(|c: char| c.is_lowercase())
             && (self.output.chars().last()).is_some_and(|c| c.is_lowercase() && is_ident_char(c))
         {
             self.output.push(' ');
         }
-        for comp in &r.path {
+        self.push(&r.name.span, &r.name.value);
+    }
+    fn format_ref_path(&mut self, comps: &[RefComponent]) {
+        if let Some(first) = comps.first() {
+            if first.module.value.starts_with(|c: char| c.is_lowercase())
+                && (self.output.chars().last())
+                    .is_some_and(|c| c.is_lowercase() && is_ident_char(c))
+            {
+                self.output.push(' ');
+            }
+        }
+        for comp in comps {
             self.push(&comp.module.span, &comp.module.value);
             self.push(&comp.tilde_span, "~");
         }
-        self.push(&r.name.span, &r.name.value);
     }
     fn format_words(
         &mut self,
@@ -843,6 +854,15 @@ impl<'a> Formatter<'a> {
                     self.output.push(' ');
                 }
                 self.format_ref(r);
+            }
+            Word::IncompleteRef(path) => {
+                if (self.output.chars().rev())
+                    .take_while(|&c| is_ident_char(c))
+                    .any(|c| c.is_uppercase())
+                {
+                    self.output.push(' ');
+                }
+                self.format_ref_path(path);
             }
             Word::Strand(items) => {
                 for (i, item) in items.iter().enumerate() {
@@ -1198,6 +1218,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::MultilineString(_) => true,
         Word::MultilineFormatString(_) => true,
         Word::Ref(_) => false,
+        Word::IncompleteRef(_) => false,
         Word::Strand(_) => false,
         Word::Array(arr) => {
             arr.lines.len() > 1

@@ -14,7 +14,7 @@ use crate::{
     ident_modifier_args,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    Assembly, BindingInfo, Compiler, Global, Ident, InputSrc, Inputs, Primitive, SafeSys,
+    Assembly, BindingInfo, Compiler, Function, Global, Ident, InputSrc, Inputs, Primitive, SafeSys,
     Signature, SysBackend, UiuaError, CONSTANTS,
 };
 
@@ -41,20 +41,32 @@ pub enum SpanKind {
 pub struct BindingDocs {
     /// The span of the binding name where it was defined
     pub src_span: CodeSpan,
-    /// The signature of the binding
-    pub signature: Option<Signature>,
-    /// The number of modifier args for the binding
-    pub modifier_args: usize,
     /// The comment of the binding
     pub comment: Option<Arc<str>>,
-    /// Whether the binding is invertible and underable
-    pub invertible_underable: Option<(bool, bool)>,
-    /// Whether the binding is a constant
-    pub is_constant: bool,
-    /// Whether the binding is a module
-    pub is_module: bool,
     /// Whether the binding is public
     pub is_public: bool,
+    /// The specific binding kind
+    pub kind: BindingDocsKind,
+}
+
+/// The kind of a binding
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum BindingDocsKind {
+    /// A constant
+    Constant,
+    /// A function
+    Function {
+        /// The signature of the function
+        sig: Signature,
+        /// Whether the function is invertible
+        invertible: bool,
+        /// Whether the function is underable
+        underable: bool,
+    },
+    /// A modifier
+    Modifier(usize),
+    /// A module
+    Module,
 }
 
 /// Get spans and their kinds from Uiua code
@@ -120,17 +132,15 @@ impl Spanner {
     fn inputs(&self) -> &Inputs {
         &self.asm.inputs
     }
-    fn invertible_underable(&self, binding: &BindingInfo) -> Option<(bool, bool)> {
-        if let Global::Func(f) = &binding.global {
-            let instrs = f.instrs(&self.asm);
-            let mut compiler = Compiler::new().with_assembly(self.asm.clone());
-            Some((
-                invert_instrs(instrs, &mut compiler).is_some(),
-                under_instrs(instrs, (1, 1).into(), &mut compiler).is_some(),
-            ))
-        } else {
-            None
-        }
+    fn invertible(&self, f: &Function) -> bool {
+        let instrs = f.instrs(&self.asm);
+        let mut compiler = Compiler::new().with_assembly(self.asm.clone());
+        invert_instrs(instrs, &mut compiler).is_some()
+    }
+    fn underable(&self, f: &Function) -> bool {
+        let instrs = f.instrs(&self.asm);
+        let mut compiler = Compiler::new().with_assembly(self.asm.clone());
+        under_instrs(instrs, (1, 1).into(), &mut compiler).is_some()
     }
     fn items_spans(&self, items: &[Item]) -> Vec<Sp<SpanKind>> {
         let mut spans = Vec::new();
@@ -185,6 +195,7 @@ impl Spanner {
     }
 
     fn reference_docs(&self, span: &CodeSpan) -> Option<BindingDocs> {
+        // Look in global references
         for (name, index) in &self.code_meta.global_references {
             let Some(binding) = self.asm.bindings.get(*index) else {
                 continue;
@@ -194,6 +205,7 @@ impl Spanner {
             }
             return Some(self.make_binding_docs(binding));
         }
+        // Look in constant references
         for name in &self.code_meta.constant_references {
             if name.span != *span {
                 continue;
@@ -203,13 +215,9 @@ impl Spanner {
             };
             return Some(BindingDocs {
                 src_span: span.clone(),
-                signature: Some(Signature::new(0, 1)),
-                modifier_args: 0,
                 comment: Some(constant.doc.into()),
-                invertible_underable: None,
-                is_constant: true,
-                is_module: false,
                 is_public: true,
+                kind: BindingDocsKind::Constant,
             });
         }
         None
@@ -219,27 +227,37 @@ impl Spanner {
         let modifier_args = binfo.span.as_str(self.inputs(), ident_modifier_args);
         let is_constant = matches!(binfo.global, Global::Const(_));
         let is_module = matches!(binfo.global, Global::Module { .. });
-        let comment = binfo.comment.clone().unwrap_or_else(|| {
-            if is_constant {
-                "constant"
-            } else if is_module {
-                "module"
-            } else if modifier_args > 0 {
-                "macro"
-            } else {
-                "function"
-            }
-            .into()
+        let comment = binfo.comment.clone().or_else(|| {
+            Some(
+                if is_constant {
+                    "constant"
+                } else if is_module {
+                    "module"
+                } else if modifier_args > 0 {
+                    "macro"
+                } else {
+                    return None;
+                }
+                .into(),
+            )
         });
+        let kind = match &binfo.global {
+            Global::Const(_) => BindingDocsKind::Constant,
+            Global::Func(f) => BindingDocsKind::Function {
+                sig: f.signature(),
+                invertible: self.invertible(f),
+                underable: self.underable(f),
+            },
+            Global::Macro => {
+                BindingDocsKind::Modifier(binfo.span.as_str(self.inputs(), ident_modifier_args))
+            }
+            Global::Module { .. } => BindingDocsKind::Module,
+        };
         BindingDocs {
             src_span: binfo.span.clone(),
-            signature: binfo.global.signature(),
-            modifier_args,
-            comment: Some(comment),
-            invertible_underable: self.invertible_underable(binfo),
-            is_constant,
-            is_module,
+            comment,
             is_public: binfo.public,
+            kind,
         }
     }
 
@@ -630,26 +648,36 @@ mod server {
                 let docs = docs.value;
                 let mut value = "```uiua\n".to_string();
                 span.as_str(&doc.asm.inputs, |s| value.push_str(s));
-                if let Some(sig) = docs.signature {
-                    value.push_str(&format!(" {sig}"));
+                match docs.kind {
+                    BindingDocsKind::Function { sig, .. } => {
+                        value.push_str(&format!(" {sig}"));
+                    }
+                    _ => {}
                 }
-                if !docs.is_public && !docs.is_module {
+                if !docs.is_public && !matches!(docs.kind, BindingDocsKind::Module) {
                     value.push_str(" (private)");
                 }
                 value.push_str("\n```");
-                if let Some((invertible, underable)) = docs.invertible_underable {
-                    if invertible || underable {
-                        value.push_str("\n\n");
-                        if invertible {
-                            value.push_str("[`° un`](https://uiua.org/docs/un)");
-                        }
-                        if underable {
+                match docs.kind {
+                    BindingDocsKind::Function {
+                        invertible,
+                        underable,
+                        ..
+                    } => {
+                        if invertible || underable {
+                            value.push_str("\n\n");
                             if invertible {
-                                value.push_str(" | ");
+                                value.push_str("[`° un`](https://uiua.org/docs/un)");
                             }
-                            value.push_str("[`⍜ under`](https://uiua.org/docs/under)");
+                            if underable {
+                                if invertible {
+                                    value.push_str(" | ");
+                                }
+                                value.push_str("[`⍜ under`](https://uiua.org/docs/under)");
+                            }
                         }
                     }
+                    _ => {}
                 }
                 if let Some(comment) = &docs.comment {
                     value.push_str("\n\n");
@@ -903,28 +931,24 @@ mod server {
                         _ if p.args() == Some(0) => NOADIC_FUNCTION_STT,
                         _ => continue,
                     },
-                    SpanKind::Ident(Some(docs)) => {
-                        if docs.is_constant {
-                            continue;
-                        }
-                        if docs.is_module {
-                            MODULE_STT
-                        } else {
-                            match docs.modifier_args {
-                                1 => MONADIC_MODIFIER_STT,
-                                2 => DYADIC_MODIFIER_STT,
-                                3 => TRIADIC_MODIFIER_STT,
-                                _ => match docs.signature {
-                                    Some(sig) if sig.args == 0 => NOADIC_FUNCTION_STT,
-                                    Some(sig) if sig.args == 1 => MONADIC_FUNCTION_STT,
-                                    Some(sig) if sig.args == 2 => DYADIC_FUNCTION_STT,
-                                    Some(sig) if sig.args == 3 => TRIADIC_FUNCTION_STT,
-                                    Some(sig) if sig.args == 4 => TETRADIC_FUNCTION_STT,
-                                    _ => continue,
-                                },
-                            }
-                        }
-                    }
+                    SpanKind::Ident(Some(docs)) => match docs.kind {
+                        BindingDocsKind::Constant => continue,
+                        BindingDocsKind::Function { sig, .. } => match sig.args {
+                            0 => NOADIC_FUNCTION_STT,
+                            1 => MONADIC_FUNCTION_STT,
+                            2 => DYADIC_FUNCTION_STT,
+                            3 => TRIADIC_FUNCTION_STT,
+                            4 => TETRADIC_FUNCTION_STT,
+                            _ => continue,
+                        },
+                        BindingDocsKind::Modifier(margs) => match margs {
+                            1 => MONADIC_MODIFIER_STT,
+                            2 => DYADIC_MODIFIER_STT,
+                            3 => TRIADIC_MODIFIER_STT,
+                            _ => continue,
+                        },
+                        BindingDocsKind::Module => MODULE_STT,
+                    },
                     _ => continue,
                 };
                 let token_type = SEMANTIC_TOKEN_TYPES

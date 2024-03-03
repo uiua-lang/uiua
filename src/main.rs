@@ -20,6 +20,7 @@ use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
+    lsp::BindingDocsKind,
     spans, Assembly, Compiler, NativeSys, PrimClass, RunMode, SpanKind, Uiua, UiuaError,
     UiuaResult, Value,
 };
@@ -925,21 +926,18 @@ fn color_code(code: &str) -> String {
                     }
                 }
             },
-            SpanKind::Ident(Some(docs)) => match docs.modifier_args {
-                0 => {
-                    if let Some(sig) = docs.signature {
-                        match sig.args {
-                            0 => noadic,
-                            1 => monadic,
-                            2 => dyadic,
-                            _ => (255, 255, 255),
-                        }
-                    } else {
-                        (255, 255, 255)
-                    }
-                }
-                1 => monadic_mod,
-                _ => dyadic_mod,
+            SpanKind::Ident(Some(docs)) => match docs.kind {
+                BindingDocsKind::Function { sig, .. } => match sig.args {
+                    0 => noadic,
+                    1 => monadic,
+                    2 => dyadic,
+                    _ => (255, 255, 255),
+                },
+                BindingDocsKind::Modifier(margs) => match margs {
+                    1 => monadic_mod,
+                    _ => dyadic_mod,
+                },
+                _ => (255, 255, 255),
             },
             SpanKind::String => (32, 249, 252),
             SpanKind::Number => (255, 136, 68),

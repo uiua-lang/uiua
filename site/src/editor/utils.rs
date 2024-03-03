@@ -12,9 +12,11 @@ use image::ImageOutputFormat;
 use leptos::*;
 
 use uiua::{
-    ast::Item, image_to_bytes, lsp::spans_with_backend, value_to_gif_bytes, value_to_image,
-    value_to_wav_bytes, Compiler, DiagnosticKind, Inputs, Report, ReportFragment, ReportKind,
-    SpanKind, SysBackend, Uiua, UiuaError, UiuaResult, Value,
+    ast::Item,
+    image_to_bytes,
+    lsp::{spans_with_backend, BindingDocsKind},
+    value_to_gif_bytes, value_to_image, value_to_wav_bytes, Compiler, DiagnosticKind, Inputs,
+    Report, ReportFragment, ReportKind, SpanKind, SysBackend, Uiua, UiuaError, UiuaResult, Value,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlBrElement, HtmlDivElement, HtmlStyleElement, Node};
@@ -551,33 +553,37 @@ fn set_code_html(id: &str, code: &str) {
                     SpanKind::Ident(ref docs) => {
                         if let Some(docs) = docs {
                             let class = binding_class(text, docs);
-                            let mut title = docs
-                                .signature
-                                .map(|sig| sig.to_string())
-                                .unwrap_or_default();
+                            let mut title = String::new();
+                            if let BindingDocsKind::Function { sig, .. } = docs.kind {
+                                title.push_str(&sig.to_string())
+                            }
 
-                            let private = if docs.is_public || docs.is_module {
-                                ""
-                            } else {
-                                if !title.is_empty() {
-                                    title.push(' ');
-                                }
-                                title.push_str("(private) ");
-                                " private-binding"
-                            };
+                            let private =
+                                if docs.is_public || matches!(docs.kind, BindingDocsKind::Module) {
+                                    ""
+                                } else {
+                                    if !title.is_empty() {
+                                        title.push(' ');
+                                    }
+                                    title.push_str("(private) ");
+                                    "private-binding"
+                                };
                             if let Some(comment) = &docs.comment {
                                 if !title.is_empty() {
                                     title.push(' ');
                                 }
                                 title.push_str(comment);
-                            } else if docs.is_module {
-                                title.push_str("module");
-                            } else if docs.modifier_args > 0 {
-                                title.push_str("macro");
+                            } else {
+                                match docs.kind {
+                                    BindingDocsKind::Constant => title.push_str("constant"),
+                                    BindingDocsKind::Module => title.push_str("module"),
+                                    BindingDocsKind::Modifier(_) => title.push_str("macro"),
+                                    _ => {}
+                                }
                             }
                             format!(
                                 r#"<span 
-                                    class="code-span code-hover {class}{private}" 
+                                    class="code-span code-hover {class} {private}" 
                                     data-title="{title}">{}</span>"#,
                                 escape_html(text)
                             )

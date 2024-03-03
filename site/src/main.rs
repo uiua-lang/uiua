@@ -16,7 +16,10 @@ use base64::engine::{general_purpose::URL_SAFE, Engine};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{lsp::BindingDocs, ConstantDef, PrimClass, Primitive, SysOp};
+use uiua::{
+    lsp::{BindingDocs, BindingDocsKind},
+    ConstantDef, PrimClass, Primitive, SysOp,
+};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
@@ -411,26 +414,22 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
         "Nb" | "Enby" => code_font!("nb text-gradient"),
         "Fluid" => code_font!("fluid text-gradient"),
         "Queer" => code_font!("queer text-gradient"),
-        _ if docs.is_module => code_font!("module"),
-        _ => match uiua::ident_modifier_args(name) {
-            0 => {
-                if let Some(sig) = docs.signature {
-                    match sig.args {
-                        0 if docs.is_constant => code_font!(""),
-                        0 => code_font!("noadic-function"),
-                        1 => code_font!("monadic-function"),
-                        2 => code_font!("dyadic-function"),
-                        3 => code_font!("triadic-function"),
-                        4 => code_font!("tetradic-function"),
-                        _ => code_font!(""),
-                    }
-                } else {
-                    code_font!("")
-                }
-            }
-            1 => code_font!("monadic-modifier"),
-            2 => code_font!("dyadic-modifier"),
-            _ => code_font!("triadic-modifier"),
+        _ => match docs.kind {
+            BindingDocsKind::Constant => code_font!(""),
+            BindingDocsKind::Function { sig, .. } => match sig.args {
+                0 => code_font!("noadic-function"),
+                1 => code_font!("monadic-function"),
+                2 => code_font!("dyadic-function"),
+                3 => code_font!("triadic-function"),
+                4 => code_font!("tetradic-function"),
+                _ => code_font!(""),
+            },
+            BindingDocsKind::Modifier(margs) => match margs {
+                0 => code_font!("monadic-modifier"),
+                1 => code_font!("dyadic-modifier"),
+                _ => code_font!("triadic-modifier"),
+            },
+            BindingDocsKind::Module => code_font!("module"),
         },
     }
 }

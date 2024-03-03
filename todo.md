@@ -2,7 +2,6 @@
 
 - 0.10
   - Improve some cases of `indexof`
-  - Better errors when `send` and `recv` not supported
   - LSP
     - Signature hints
     - Inline values?

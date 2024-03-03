@@ -1405,6 +1405,9 @@ code:
         Ok(())
     }
     pub(crate) fn send(&self, id: Value, value: Value) -> UiuaResult {
+        if cfg!(target_arch = "wasm32") {
+            return Err(self.error("send is not supported in this environment"));
+        }
         let ids = id.as_natural_array(self, "Thread id must be an array of natural numbers")?;
         for id in ids.data {
             self.channel(id)?
@@ -1415,6 +1418,9 @@ code:
         Ok(())
     }
     pub(crate) fn recv(&mut self, id: Value) -> UiuaResult {
+        if cfg!(target_arch = "wasm32") {
+            return Err(self.error("recv is not supported in this environment"));
+        }
         let ids = id.as_natural_array(self, "Thread id must be an array of natural numbers")?;
         let mut values = Vec::with_capacity(ids.data.len());
         for id in ids.data {
@@ -1434,6 +1440,9 @@ code:
         Ok(())
     }
     pub(crate) fn try_recv(&mut self, id: Value) -> UiuaResult {
+        if cfg!(target_arch = "wasm32") {
+            return Err(self.error("try_recv is not supported in this environment"));
+        }
         let id = id.as_nat(self, "Thread id must be a natural number")?;
         let value = match self.channel(id)?.recv.try_recv() {
             Ok(value) => value,

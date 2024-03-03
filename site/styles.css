@@ -455,6 +455,7 @@ input[type=number] {
     overflow-y: auto;
     display: flex;
     gap: 0.1em;
+    line-height: 1.09em;
 }
 
 .code-block {

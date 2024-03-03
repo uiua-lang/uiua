@@ -1232,7 +1232,7 @@ pub fn Editor<'a>(
                             </button>
                             <div id="example-tracker">{example_text}</div>
                         </div>
-                        <div class="code sized-code">
+                        <div class="code">
                             <div class="line-numbers">
                                 { line_numbers }
                             </div>

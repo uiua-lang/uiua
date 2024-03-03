@@ -1,7 +1,8 @@
 # Uiua Todo
 
 - 0.10
-  - Pervasives on maps
+  - Improve some cases of `indexof`
+  - Better errors when `send` and `recv` not supported
   - LSP
     - Signature hints
     - Inline values?

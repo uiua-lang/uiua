@@ -1224,6 +1224,41 @@ impl Value {
         }
         Ok(result)
     }
+    /// Propogate a value's map keys accross an operation
+    pub fn keep_map_key(mut self, f: impl FnOnce(Self) -> UiuaResult<Self>) -> UiuaResult<Self> {
+        let keys = self.take_map_keys();
+        let mut result = f(self)?;
+        if let Some(keys) = keys {
+            result.meta_mut().map_keys = Some(keys);
+        }
+        Ok(result)
+    }
+    /// Propogate values' map keys accross an operation
+    pub fn keep_map_keys(
+        mut self,
+        mut other: Self,
+        f: impl FnOnce(Self, Self) -> UiuaResult<Self>,
+    ) -> UiuaResult<Self> {
+        let keys = self.take_map_keys();
+        let other_keys = other.take_map_keys();
+        let mut result = f(self, other)?;
+        if let Some(keys) = keys.xor(other_keys) {
+            result.meta_mut().map_keys = Some(keys);
+        }
+        Ok(result)
+    }
+    /// Propogate a value's uncorruptable metadata accross an operation
+    pub fn keep_meta(self, f: impl FnOnce(Self) -> UiuaResult<Self>) -> UiuaResult<Self> {
+        self.keep_label(|val| val.keep_map_key(f))
+    }
+    /// Propogate values' uncorruptable metadata accross an operation
+    pub fn keep_metas(
+        self,
+        other: Self,
+        f: impl FnOnce(Self, Self) -> UiuaResult<Self>,
+    ) -> UiuaResult<Self> {
+        self.keep_labels(other, |a, b| a.keep_map_keys(b, f))
+    }
 }
 
 macro_rules! value_from {
@@ -1361,7 +1396,7 @@ macro_rules! value_un_impl {
         impl Value {
             #[allow(clippy::redundant_closure_call)]
             pub(crate) fn $name(self, env: &Uiua) -> UiuaResult<Self> {
-                self.keep_label(|val| Ok(match val {
+                self.keep_meta(|val| Ok(match val {
                     $($($(#[cfg(feature = $feature1)])* Self::$in_place(mut array) $(if (|$meta: &ArrayMeta| $pred)(array.meta()))* => {
                         for val in &mut array.data {
                             *val = $name::$f(*val);
@@ -1463,7 +1498,7 @@ macro_rules! value_bin_impl {
         impl Value {
             #[allow(unreachable_patterns, unused_mut, clippy::wrong_self_convention)]
             pub(crate) fn $name(self, other: Self, a_depth: usize, b_depth: usize, env: &Uiua) -> UiuaResult<Self> {
-                self.keep_labels(other, |a, b| { Ok(match (a, b) {
+                self.keep_metas(other, |a, b| { Ok(match (a, b) {
                     $($($(#[cfg(feature = $feature2)])* (Value::$ip(mut a), Value::$ip(b)) $(if {
                         let f = |$meta: &ArrayMeta| $pred;
                         f(a.meta()) && f(b.meta())

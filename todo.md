@@ -4,7 +4,6 @@
   - Note language server on main page
   - System for custom glyph formatting
   - Let bind only take an ident?
-  - Allow LSP completions for module items
   - Fix semantic tokens in LSP
   - System functions
     - Excel

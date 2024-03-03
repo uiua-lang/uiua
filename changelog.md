@@ -45,6 +45,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the `--file <file>` option to the `uiua repl` command
   - This runs a file before starting the REPL
 - Improve the supported binding type coverage of [`&ffi`](https://uiua.org/docs/&ffi)
+- Lots of bug and crash fixes
 
 ## 0.9.5 - 2024-02-28
 ### Interpreter

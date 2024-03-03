@@ -739,7 +739,7 @@ code:
                     self.push_instr(Instr::PushFunc(f))
                 }
             }
-            Word::String(s) => {
+            Word::String(s) | Word::MultilineString(s) => {
                 if call {
                     self.push_instr(Instr::push(s));
                 } else {
@@ -787,7 +787,7 @@ code:
                     self.push_instr(Instr::PushFunc(f));
                 }
             }
-            Word::MultilineString(lines) => {
+            Word::MultilineFormatString(lines) => {
                 let signature = Signature::new(
                     lines.iter().map(|l| l.value.len().saturating_sub(1)).sum(),
                     1,

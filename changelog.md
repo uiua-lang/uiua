@@ -5,6 +5,9 @@ Uiua is not yet stable.
 ## 0.10.0 - 2024-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
+- **Breaking Change** - Multiline strings are now also *raw strings* which do not require escaping
+  - They are no longer format strings by default
+  - Raw strings can be made format strings with an extra `$`, i.e. `$$ …`
 - Switch functions now format to use `⟨⟩` brackets
   - This makes them easier to identify when reading
   - It also allows switch functions to be used as modifier arguments without extra nesting

@@ -7,6 +7,7 @@
   - Fix semantic tokens in LSP
   - System functions
     - Excel
+  - Proofread and update tutorial and tour
 - Site pages/tutorials
   - Working with strings
   - Duality of `pick` and `select`

@@ -839,15 +839,24 @@ impl<'i> Parser<'i> {
         } else if let Some(frags) = self.next_token_map(Token::as_format_string) {
             frags.map(Word::FormatString)
         } else if let Some(line) = self.next_token_map(Token::as_multiline_string) {
+            let mut span = line.span.clone();
+            let mut s = line.value;
+            while let Some(line) = self.next_token_map(Token::as_multiline_string) {
+                span = span.merge(line.span);
+                s.push('\n');
+                s.push_str(&line.value);
+            }
+            span.sp(Word::MultilineString(s))
+        } else if let Some(line) = self.next_token_map(Token::as_multiline_format_string) {
             let start = line.span.clone();
             let mut end = start.clone();
             let mut lines = vec![line];
-            while let Some(line) = self.next_token_map(Token::as_multiline_string) {
+            while let Some(line) = self.next_token_map(Token::as_multiline_format_string) {
                 end = line.span.clone();
                 lines.push(line);
             }
             let span = start.merge(end);
-            span.sp(Word::MultilineString(lines))
+            span.sp(Word::MultilineFormatString(lines))
         } else if let Some(start) = self.try_exact(OpenBracket) {
             while self.try_exact(Newline).is_some() {}
             let items = self.multiline_words(false);

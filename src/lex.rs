@@ -427,7 +427,8 @@ pub enum Token {
     Str(String),
     Label(String),
     FormatStr(Vec<String>),
-    MultilineString(Vec<String>),
+    MultilineString(String),
+    MultilineFormatStr(Vec<String>),
     Simple(AsciiToken),
     Glyph(Primitive),
     LeftArrow,
@@ -458,9 +459,15 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_multiline_string(&self) -> Option<Vec<String>> {
+    pub(crate) fn as_multiline_string(&self) -> Option<String> {
         match self {
-            Token::MultilineString(parts) => Some(parts.clone()),
+            Token::MultilineString(s) => Some(s.clone()),
+            _ => None,
+        }
+    }
+    pub(crate) fn as_multiline_format_string(&self) -> Option<Vec<String>> {
+        match self {
+            Token::MultilineFormatStr(parts) => Some(parts.clone()),
             _ => None,
         }
     }
@@ -505,8 +512,14 @@ impl fmt::Display for Token {
                 Ok(())
             }
             Token::Str(s) => write!(f, "{s:?}"),
+            Token::MultilineString(s) => {
+                for line in s.lines() {
+                    writeln!(f, "$ {line}")?;
+                }
+                Ok(())
+            }
             Token::Label(s) => write!(f, "${s}"),
-            Token::FormatStr(parts) | Token::MultilineString(parts) => {
+            Token::FormatStr(parts) | Token::MultilineFormatStr(parts) => {
                 write!(f, "format string")?;
                 for (i, part) in parts.iter().enumerate() {
                     if i > 0 {
@@ -816,7 +829,7 @@ impl<'a> Lexer<'a> {
                 // Characters
                 "@" => {
                     let mut escaped = false;
-                    let char = match self.character(&mut escaped, None) {
+                    let char = match self.character(&mut escaped, None, EscapeMode::All) {
                         Ok(Some(c)) => c,
                         Ok(None) => {
                             self.errors
@@ -833,17 +846,27 @@ impl<'a> Lexer<'a> {
                 }
                 // Strings
                 "\"" | "$" => {
-                    let format = c == "$";
-                    if format
+                    let first_dollar = c == "$";
+                    let format_raw = first_dollar && self.next_char_exact("$");
+                    if first_dollar
                         && (self.next_char_exact(" ")
                             || self.peek_char().map_or(true, |c| "\r\n".contains(c)))
                     {
-                        // Multiline strings
+                        // Raw strings
                         let mut start = start;
                         loop {
-                            let inner = self.parse_string_contents(start, None);
-                            let string = parse_format_fragments(&inner);
-                            self.end(MultilineString(string), start);
+                            let escape_mode = if format_raw {
+                                EscapeMode::UnderscoreOnly
+                            } else {
+                                EscapeMode::None
+                            };
+                            let inner = self.parse_string_contents(start, None, escape_mode);
+                            if format_raw {
+                                let string = parse_format_fragments(&inner);
+                                self.end(MultilineFormatStr(string), start);
+                            } else {
+                                self.end(MultilineString(inner), start);
+                            }
                             let checkpoint = self.loc;
                             while self.next_char_exact("\r") {}
                             if self.next_char_if(|c| c.ends_with('\n')).is_some() {
@@ -854,7 +877,11 @@ impl<'a> Lexer<'a> {
                                     .is_some()
                                 {}
                                 start = self.loc;
-                                if self.next_chars_exact(["$", " "]) || self.next_char_exact("$") {
+                                if !format_raw && (self.next_chars_exact(["$", " "]))
+                                    || format_raw
+                                        && (self.next_chars_exact(["$", "$", " "])
+                                            || self.next_chars_exact(["$", "$"]))
+                                {
                                     continue;
                                 }
                             }
@@ -863,7 +890,7 @@ impl<'a> Lexer<'a> {
                         }
                         continue;
                     }
-                    if format && !self.next_char_exact("\"") {
+                    if first_dollar && !self.next_char_exact("\"") {
                         let mut label = String::new();
                         while let Some(c) = self.next_char_if(|c| c.chars().all(is_ident_char)) {
                             label.push_str(c);
@@ -872,14 +899,14 @@ impl<'a> Lexer<'a> {
                         continue;
                     }
                     // Single-line strings
-                    let inner = self.parse_string_contents(start, Some('"'));
+                    let inner = self.parse_string_contents(start, Some('"'), EscapeMode::All);
                     if !self.next_char_exact("\"") {
                         self.errors.push(
                             self.end_span(start)
                                 .sp(LexError::ExpectedCharacter(vec!['"'])),
                         );
                     }
-                    if format {
+                    if first_dollar {
                         let frags = parse_format_fragments(&inner);
                         self.end(FormatStr(frags), start)
                     } else {
@@ -1104,6 +1131,7 @@ impl<'a> Lexer<'a> {
         &mut self,
         escaped: &mut bool,
         escape_char: Option<char>,
+        escape_mode: EscapeMode,
     ) -> Result<Option<String>, &'a str> {
         let Some(c) =
             self.next_char_if_all(|c| !"\r\n".contains(c) && (Some(c) != escape_char || *escaped))
@@ -1164,18 +1192,26 @@ impl<'a> Lexer<'a> {
                 }
                 c => return Err(c),
             }
-        } else if c == "\\" {
+        } else if c == "\\"
+            && (escape_mode == EscapeMode::All
+                || escape_mode == EscapeMode::UnderscoreOnly && self.peek_char() == Some("_"))
+        {
             *escaped = true;
-            return self.character(escaped, escape_char);
+            return self.character(escaped, escape_char, escape_mode);
         } else {
             c.into()
         }))
     }
-    fn parse_string_contents(&mut self, start: Loc, escape_char: Option<char>) -> String {
+    fn parse_string_contents(
+        &mut self,
+        start: Loc,
+        escape_char: Option<char>,
+        escape_mode: EscapeMode,
+    ) -> String {
         let mut string = String::new();
         let mut escaped = false;
         loop {
-            match self.character(&mut escaped, escape_char) {
+            match self.character(&mut escaped, escape_char, escape_mode) {
                 Ok(Some(c)) => string.push_str(&c),
                 Ok(None) => break,
                 Err(e) => {
@@ -1186,6 +1222,13 @@ impl<'a> Lexer<'a> {
         }
         string
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum EscapeMode {
+    All,
+    None,
+    UnderscoreOnly,
 }
 
 fn is_numbery(mut s: &str) -> bool {

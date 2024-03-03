@@ -26,11 +26,11 @@ ExtMime ← |1 °□⊏:⊂ExtMimeMime □⊂"text/": ⊗:ExtMimeExt□.
 # Make response: status mime bytes
 Response ← (|3
   ⊙⊙(⧻.)
-  ⊂ utf $ HTTP/1.1 _
-        $ Content-Type: _
-        $ Content-Length: _
-        $ 
-        $ 
+  ⊂ utf $$ HTTP/1.1 _
+        $$ Content-Type: _
+        $$ Content-Length: _
+        $$ 
+        $$ 
 )
 
 # Handlers

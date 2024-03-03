@@ -245,11 +245,12 @@ impl Spanner {
         for word in words {
             match &word.value {
                 Word::Number(..) => spans.push(word.span.clone().sp(SpanKind::Number)),
-                Word::Char(_) | Word::String(_) | Word::FormatString(_) => {
-                    spans.push(word.span.clone().sp(SpanKind::String))
-                }
+                Word::Char(_)
+                | Word::String(_)
+                | Word::MultilineString(_)
+                | Word::FormatString(_) => spans.push(word.span.clone().sp(SpanKind::String)),
                 Word::Label(_) => spans.push(word.span.clone().sp(SpanKind::Label)),
-                Word::MultilineString(lines) => {
+                Word::MultilineFormatString(lines) => {
                     spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
                 }
                 Word::Ref(r) => spans.extend(self.ref_spans(r)),

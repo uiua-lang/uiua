@@ -350,9 +350,12 @@ Ex ~ "example.ua"
 ⍤⟜≍: "1, 2, 3" $"_, _, _" 1 2 3
 ⍤⟜≍: "1 + 2 = 3" $"_ + _ = _" ⊃⊙∘+ 1 2
 ⍤⟜≍: ["foo5" "bar5"] ⊟⊃$"foo_"$"bar_" 5
-"foo" "bar"
 $ Multi _
 $ _ line
+⍤⟜≍: "Multi _\n_ line"
+"foo" "bar"
+$$ Multi _
+$$ _ line
 ⍤⟜≍: "Multi foo\nbar line"
 
 [1 ¯5 +0.1 0.2 π ∞ NaN]

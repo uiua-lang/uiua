@@ -795,7 +795,19 @@ impl<'a> Formatter<'a> {
             Word::Char(_) | Word::String(_) | Word::Label(_) | Word::FormatString(_) => self
                 .output
                 .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
-            Word::MultilineString(lines) => {
+            Word::MultilineString(s) => {
+                for (i, line) in s.lines().enumerate() {
+                    if i > 0 {
+                        self.output.push('\n');
+                        for _ in 0..self.config.multiline_indent * depth {
+                            self.output.push(' ');
+                        }
+                    }
+                    self.output.push_str("$ ");
+                    self.output.push_str(line);
+                }
+            }
+            Word::MultilineFormatString(lines) => {
                 if lines.len() == 1 {
                     let span = &lines[0].span;
                     self.output
@@ -1099,7 +1111,7 @@ impl<'a> Formatter<'a> {
             .is_some_and(|word| {
                 matches!(
                     word.value,
-                    Word::Comment(_) | Word::OutputComment { .. } | Word::MultilineString(_)
+                    Word::Comment(_) | Word::OutputComment { .. } | Word::MultilineFormatString(_)
                 )
             });
         if lines.len() == 1
@@ -1184,6 +1196,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::String(_) => false,
         Word::FormatString(_) => false,
         Word::MultilineString(_) => true,
+        Word::MultilineFormatString(_) => true,
         Word::Ref(_) => false,
         Word::Strand(_) => false,
         Word::Array(arr) => {

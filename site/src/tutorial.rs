@@ -677,17 +677,19 @@ fn TutorialTypes() -> impl IntoView {
         <p>"If you don't like the significant whitespace of "<code>"@ "</code>", "<code>"@\\s"</code>" is also space."</p>
         <p>"As noted in the advice diagnostics above, string literals, delimited by "<code>"\""</code>"s, create rank 1 character arrays."</p>
         <Editor example="△.\"Hello, World!\""/>
-        <p>"You can make strings span multiple lines with a "<code>"$"</code>" followed by a space on each line."</p>
-        <p>"These do not require "<code>"\""</code>"s."</p>
+        <p>"You can make raw strings, which do not require escaping, with a "<code>"$"</code>" followed by a space."</p>
         <p><Prim prim=Sys(SysOp::Print)/>" pretty-prints a value."</p>
-        <Editor example="&p $ Hello, \n   $ World!"/>
-        <p>"This style of string is also useful when your string contains a lot of quotes that you don't want to escape."</p>
+        <Editor example="&p $ \"How are you?\" she asked."/>
+        <p>"Raw strings that follow each other form multi-line strings."</p>
+        <Editor example="$ Hello\n$ World!"/>
+        <p>"This style of string is useful when your string contains a lot of quotes that you don't want to escape."</p>
         <Editor example="$ An then she was like, \"No way!\"\n$ And I was like, \"Way...\""/>
         <p>"Characters in character or string literals can also be specified with 2 or 4 hex digits by using escape codes "<code>"\\x"</code>" and "<code>"\\u"</code>" respectively."</p>
         <Editor example="\"\\x41\\x42\\x43\""/>
         <Editor example="@\\u2665"/>
         <p>"Longer (or shorter) sequences can be specified between "<code>"{}"</code>"s after a "<code>"\\u"</code>"."</p>
         <Editor example="@\\u{1f600}"/>
+        <p>"Note that these escape sequences do not work in raw strings."</p>
         <br/>
 
         <h2 id="character-arithmetic">"Character Arithmetic"</h2>
@@ -853,8 +855,10 @@ F 10 11"/>
         <Editor example="$\"_, _, and _\" 1 2 3"/>
         <p>"If you need to use a literal "<code>"_"</code>", you can escape them with "<code>"\\"</code>"."</p>
         <Editor example="$\"\\__\\_\" 27"/>
-        <p>"Multi-line strings are implicitly format strings."</p>
-        <Editor example="+,, 1 2\n&p $ What are two numbers that add up to _?\n   $ _ and _ do!"/>
+        <p>"Raw strings can be made format strings by adding an additional "<code>"$"</code>"."</p>
+        <Editor example="+,, 1 2\n&p $$ What are two numbers that add up to _?\n   $$ _ and _ do!"/>
+        <p><code>"_"</code>"s still need to be escaped in raw format strings."</p>
+        <Editor example="1 2 3\n$$ _\\__\\__"/>
 
         <h2 id="stack-signatures">"Stack Signatures"</h2>
         <p>"Bindings and inline functions can have a "<em>"stack signature"</em>" declared with a "<code>"|"</code>" followed by 1 or 2 numbers separated by a "<code>"."</code>". The first number is the number of arguments the function pops from the stack. The second number is the number of values the function pushes to the stack."</p>

@@ -97,9 +97,10 @@ pub enum Word {
     Number(String, f64),
     Char(String),
     String(String),
-    Label(String),
+    MultilineString(String),
     FormatString(Vec<String>),
-    MultilineString(Vec<Sp<Vec<String>>>),
+    MultilineFormatString(Vec<Sp<Vec<String>>>),
+    Label(String),
     Ref(Ref),
     Strand(Vec<Sp<Word>>),
     Array(Arr),
@@ -124,7 +125,7 @@ impl PartialEq for Word {
             (Self::String(a), Self::String(b)) => a == b,
             (Self::Label(a), Self::Label(b)) => a == b,
             (Self::FormatString(a), Self::FormatString(b)) => a == b,
-            (Self::MultilineString(a), Self::MultilineString(b)) => a == b,
+            (Self::MultilineFormatString(a), Self::MultilineFormatString(b)) => a == b,
             (Self::Ref(a), Self::Ref(b)) => a == b,
             (Self::Strand(a), Self::Strand(b)) => {
                 a.iter().map(|w| &w.value).eq(b.iter().map(|w| &w.value))
@@ -177,7 +178,7 @@ impl fmt::Debug for Word {
             Word::Number(s, ..) => write!(f, "{s:?}"),
             Word::Char(char) => write!(f, "{char:?}"),
             Word::String(string) => write!(f, "{string:?}"),
-            Word::Label(label) => write!(f, "${label}"),
+            Word::MultilineString(string) => write!(f, "{string:?}"),
             Word::FormatString(parts) => {
                 write!(f, "$\"")?;
                 for part in parts {
@@ -187,7 +188,7 @@ impl fmt::Debug for Word {
                 }
                 write!(f, "\"")
             }
-            Word::MultilineString(lines) => {
+            Word::MultilineFormatString(lines) => {
                 for line in lines {
                     write!(f, "$ ")?;
                     for part in &line.value {
@@ -198,6 +199,7 @@ impl fmt::Debug for Word {
                 }
                 Ok(())
             }
+            Word::Label(label) => write!(f, "${label}"),
             Word::Ref(ident) => write!(f, "ref({ident})"),
             Word::Array(arr) => arr.fmt(f),
             Word::Strand(items) => write!(f, "strand({items:?})"),

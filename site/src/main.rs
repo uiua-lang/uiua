@@ -241,6 +241,10 @@ pub fn MainPage() -> impl IntoView {
                     <h2>"Rust Integration"</h2>
                     <p>"Uiua can be embedded in Rust programs "<a href="https://docs.rs/uiua">"as a library"</a>"."</p>
                 </div>
+                <div>
+                    <h2>"FFI"</h2>
+                    <p>"Uiua has experimental support for calling functions from shared libraries through "<Prim prim=Sys(SysOp::FFI)/>"."</p>
+                </div>
             </div>
             <div>
                 <div>
@@ -277,8 +281,8 @@ pub fn MainPage() -> impl IntoView {
                     <p>"The Uiua logo was made with Uiua! Check example 5 at the top of the page."</p>
                 </div>
                 <div>
-                    <h2>"FFI"</h2>
-                    <p>"Uiua has experimental support for calling functions from shared libraries through "<Prim prim=Sys(SysOp::FFI)/>"."</p>
+                    <h2>"Language Server"</h2>
+                    <p>"The Uiua interpreter has a built-in language server that uses the "<a href="https://microsoft.github.io/language-server-protocol/">"Language Server Protocol"</a>", so you can "<A href="/install#editor-support">"use it with your favorite editor"</A>"."</p>
                 </div>
             </div>
         </div>

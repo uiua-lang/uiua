@@ -1213,61 +1213,62 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     /// Get the `index of` the rows of this array in another
-    pub fn index_of(&self, searched_in: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
-        let searched_for = self;
-        Ok(match searched_for.rank().cmp(&searched_in.rank()) {
+    pub fn index_of(&self, haystack: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
+        let needle = self;
+        Ok(match needle.rank().cmp(&haystack.rank()) {
             Ordering::Equal => {
-                let mut result_data = EcoVec::with_capacity(searched_for.row_count());
-                let mut members = HashMap::with_capacity(searched_in.row_count());
-                for (i, of) in searched_in.row_slices().enumerate() {
+                let mut result_data = EcoVec::with_capacity(needle.row_count());
+                let mut members = HashMap::with_capacity(haystack.row_count());
+                for (i, of) in haystack.row_slices().enumerate() {
                     members.entry(ArrayCmpSlice(of)).or_insert(i);
                 }
-                for elem in searched_for.row_slices() {
+                for elem in needle.row_slices() {
                     result_data.push(
                         members
                             .get(&ArrayCmpSlice(elem))
                             .map(|i| *i as f64)
-                            .unwrap_or(searched_in.row_count() as f64),
+                            .unwrap_or(haystack.row_count() as f64),
                     );
                 }
                 let shape: Shape = self.shape.iter().cloned().take(1).collect();
                 Array::new(shape, result_data)
             }
             Ordering::Greater => {
-                let mut rows = Vec::with_capacity(searched_for.row_count());
-                for elem in searched_for.rows() {
-                    rows.push(elem.index_of(searched_in, env)?);
+                let mut rows = Vec::with_capacity(needle.row_count());
+                for elem in needle.rows() {
+                    rows.push(elem.index_of(haystack, env)?);
                 }
                 Array::from_row_arrays(rows, env)?
             }
             Ordering::Less => {
-                if searched_in.rank() - searched_for.rank() == 1 {
-                    if searched_for.rank() == 0 {
-                        let searched_for = &searched_for.data[0];
-                        Array::from(
-                            searched_in
-                                .data
-                                .iter()
-                                .position(|of| searched_for.array_eq(of))
-                                .unwrap_or(searched_in.row_count())
-                                as f64,
-                        )
-                    } else {
-                        (searched_in
-                            .row_slices()
-                            .position(|r| {
-                                r.len() == searched_for.data.len()
-                                    && r.iter().zip(&searched_for.data).all(|(a, b)| a.array_eq(b))
-                            })
-                            .unwrap_or(searched_in.row_count()) as f64)
-                            .into()
-                    }
+                if !haystack.shape.ends_with(&needle.shape) {
+                    return Err(env.error(format!(
+                        "Cannot get index of array of shape {} \
+                        in array of shape {}",
+                        needle.shape(),
+                        haystack.shape()
+                    )));
+                }
+                let haystack_item_len: usize =
+                    haystack.shape.iter().rev().take(needle.rank()).product();
+                if haystack_item_len == 0 {
+                    todo!()
+                }
+                let outer_hay_shape =
+                    Shape::from(&haystack.shape[..haystack.rank() - needle.rank()]);
+                let index = if let Some(raw_index) = (haystack.data.chunks_exact(haystack_item_len))
+                    .position(|ch| ch.iter().zip(&needle.data).all(|(a, b)| a.array_eq(b)))
+                {
+                    let mut index = Vec::new();
+                    outer_hay_shape.flat_to_dims(raw_index, &mut index);
+                    index
                 } else {
-                    let mut rows = Vec::with_capacity(searched_in.row_count());
-                    for of in searched_in.rows() {
-                        rows.push(searched_for.index_of(&of, env)?);
-                    }
-                    Array::from_row_arrays(rows, env)?
+                    outer_hay_shape.to_vec()
+                };
+                if index.len() == 1 {
+                    (index[0] as f64).into()
+                } else {
+                    index.into()
                 }
             }
         })

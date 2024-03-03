@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Improve some cases of `indexof`
   - LSP
     - Signature hints
     - Inline values?

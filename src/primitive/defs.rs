@@ -1141,8 +1141,6 @@ primitive!(
     ///
     /// With the help of [keep], you can use [member] to get a set intersection.
     /// ex: ▽∊, "abracadabra" "that's really cool"
-    ///
-    /// [member] is closely related to [indexof].
     (2, Member, DyadicArray, ("member", '∊')),
     /// Find the first index of each row of one array in another
     ///
@@ -1152,15 +1150,9 @@ primitive!(
     /// ex: ⊗ [1 2 3] [0 3 4 5 1]
     /// ex: ⊗ [4 5 6] [1_2_3 4_5_6]
     /// ex: ⊗ [1_2_3 4_5_6] [3 4 5]
-    /// ex: ⊗ 2 [1_2_3 4_5_6]
-    ///
-    /// You can use the returned indices with [select] to get the rows that were found.
-    /// If you expect one of the searched-for rows to be missing, you can use [fill] to set a default value.
-    /// ex: a ← [2 3 5 7 11 13]
-    ///   : .⊗,a [1 2 3 4 5]
-    ///   : ⬚∞⊏:a
-    ///
-    /// [indexof] is closely related to [member].
+    /// If the rank of the needle is less than the rank of the haystack, the returned index may be multidimensional.
+    /// ex: ⊗ 3 [1_2_3 4_5_6]
+    /// ex: ⊗,, 20 ↯2_3_4⇡24
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
     // /// Find sequential indices of each row of one array in another
     // ///

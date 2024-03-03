@@ -8,6 +8,9 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - Multiline strings are now also *raw strings* which do not require escaping
   - They are no longer format strings by default
   - Raw strings can be made format strings with an extra `$`, i.e. `$$ …`
+- **Breaking Change** - [`indexof ⊗`](https://uiua.org/docs/indexof) can now return a multidimensional index if the needle has a lower rank than the haystack
+  - This makes it more useful for working with multidimensional arrays
+  - The old behavior can be approximated with `⍜⊙(☇1)≡⊗`
 - Switch functions now format to use `⟨⟩` brackets
   - This makes them easier to identify when reading
   - It also allows switch functions to be used as modifier arguments without extra nesting

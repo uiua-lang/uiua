@@ -102,7 +102,10 @@ impl Value {
         let keys = self
             .take_map_keys()
             .ok_or_else(|| env.error("Value is not a map"))?;
-        Ok((keys.keys, self))
+        let mut key_pairs: Vec<_> = keys.keys.into_rows().zip(keys.indices).collect();
+        key_pairs.sort_unstable_by_key(|(_, i)| *i);
+        let keys = remove_empty_rows(key_pairs.into_iter().map(|(k, _)| k));
+        Ok((keys, self))
     }
     /// Get a value from a map array
     pub fn get(&self, key: &Value, env: &Uiua) -> UiuaResult<Value> {

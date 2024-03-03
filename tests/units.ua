@@ -408,6 +408,7 @@ MapsII ← ∩(remove 1) MapsI
 ∩(⍤. has 3) MapsII
 ∩(⍤. has "hi") MapsII
 ∩(⍤. has [1 2 3]) MapsII
+⍤⟜≍: {{3 "hi" [1 2 3]} {4 "there" [4 5 6]} {3 "hi" [1 2 3] 5} {4 "there" [4 5 6] 6}} {∩°map MapsII}
 
 ⍤⟜≍: 5 get 1_2 map [1_2 3_4] 5_6
 ⍤⟜≍: 6 get 3_4 map [1_2 3_4] 5_6

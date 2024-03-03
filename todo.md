@@ -8,6 +8,7 @@
   - Let bind only take an ident?
   - 3+ argument `inventory`
   - Allow LSP completions for module items
+  - Fix semantic tokens in LSP
   - System functions
     - Clipboard
     - Excel

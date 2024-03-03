@@ -1,10 +1,11 @@
 # Uiua Todo
 
 - 0.10
-  - System for custom glyph formatting
-  - Let bind only take an ident?
+  - Pervasives on maps
   - System functions
     - Excel
+  - System for custom glyph formatting
+  - Let bind only take an ident?
   - Proofread and update tutorial and tour
 - Site pages/tutorials
   - Working with strings

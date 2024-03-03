@@ -716,16 +716,14 @@ code:
                 // Trace errors
                 let frame = self.rt.call_stack.pop().unwrap();
                 return Err(self.trace_error(err, frame));
-            } else {
-                // Go to next instruction
-                self.rt.call_stack.last_mut().unwrap().pc += 1;
-                if let Some(limit) = self.rt.execution_limit {
-                    if instant::now() - self.rt.execution_start > limit {
-                        return Err(UiuaError::Timeout(
-                            self.span(),
-                            self.inputs().clone().into(),
-                        ));
-                    }
+            }
+            self.rt.call_stack.last_mut().unwrap().pc += 1;
+            if let Some(limit) = self.rt.execution_limit {
+                if instant::now() - self.rt.execution_start > limit {
+                    return Err(UiuaError::Timeout(
+                        self.span(),
+                        self.inputs().clone().into(),
+                    ));
                 }
             }
         }

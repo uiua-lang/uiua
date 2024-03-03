@@ -349,7 +349,8 @@ impl Compiler {
                         Some(v.clone())
                     } else if !instrs.is_empty() && instrs_are_pure(&instrs, &self.asm) {
                         match self.comptime_instrs(instrs.clone()) {
-                            Ok(vals) => vals.into_iter().next(),
+                            Ok(Some(vals)) => vals.into_iter().next(),
+                            Ok(None) => None,
                             Err(e) => {
                                 self.errors.push(e);
                                 None

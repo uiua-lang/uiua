@@ -91,6 +91,13 @@ impl fmt::Display for UiuaError {
 }
 
 impl UiuaError {
+    pub(crate) fn inner(&self) -> &Self {
+        match self {
+            UiuaError::Traced { error, .. } => error.inner(),
+            UiuaError::Fill(error) => error.inner(),
+            error => error,
+        }
+    }
     /// Get the message of the error
     pub fn message(&self) -> String {
         match self {

@@ -433,19 +433,26 @@ code:
                                 "Cannot use placeholder outside of function",
                             );
                         }
-                        let instrs = self.compile_words(line, true)?;
+                        let mut instrs = self.compile_words(line, true)?;
                         match instrs_signature(&instrs) {
                             Ok(sig) => {
                                 if let Ok(height) = &mut self.scope.stack_height {
                                     *height = (*height + sig.outputs).saturating_sub(sig.args);
                                 }
+                                if sig.args == 0 && instrs_are_pure(&instrs, &self.asm) {
+                                    match self.comptime_instrs(instrs.clone()) {
+                                        Ok(Some(vals)) => {
+                                            instrs = vals.into_iter().map(Instr::push).collect();
+                                        }
+                                        Ok(None) => {}
+                                        Err(e) => self.errors.push(e),
+                                    }
+                                }
                             }
                             Err(e) => self.scope.stack_height = Err(span.sp(e)),
                         }
                         let start = self.asm.instrs.len();
-                        self.asm
-                            .instrs
-                            .extend(optimize_instrs(instrs, true, &self.asm));
+                        (self.asm.instrs).extend(optimize_instrs(instrs, true, &self.asm));
                         let end = self.asm.instrs.len();
                         self.asm.top_slices.push(FuncSlice {
                             start,
@@ -1572,9 +1579,9 @@ code:
         self.bind_function(name, function)
     }
 
-    fn comptime_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult<Vec<Value>> {
+    fn comptime_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult<Option<Vec<Value>>> {
         thread_local! {
-            static CACHE: RefCell<HashMap<EcoVec<Instr>, Vec<Value>>> = RefCell::new(HashMap::new());
+            static CACHE: RefCell<HashMap<EcoVec<Instr>, Option<Vec<Value>>>> = RefCell::new(HashMap::new());
         }
         CACHE.with(|cache| {
             let mut cache = cache.borrow_mut();
@@ -1591,16 +1598,18 @@ code:
             let mut env = Uiua::with_safe_sys().with_execution_limit(Duration::from_millis(10));
             match env.run_asm(asm) {
                 Ok(()) => {
-                    let mut stack = env.take_stack();
-                    if stack.iter().any(|v| v.element_count() > 1000) {
-                        stack = Vec::new();
-                    }
-                    cache.insert(instrs, stack.clone());
-                    Ok(stack)
+                    let stack = env.take_stack();
+                    let res = if stack.iter().any(|v| v.element_count() > 1000) {
+                        None
+                    } else {
+                        Some(stack)
+                    };
+                    cache.insert(instrs, res.clone());
+                    Ok(res)
                 }
-                Err(UiuaError::Timeout(..)) => {
-                    cache.insert(instrs, Vec::new());
-                    Ok(Vec::new())
+                Err(e) if matches!(e.inner(), UiuaError::Timeout(..)) => {
+                    cache.insert(instrs, None);
+                    Ok(None)
                 }
                 Err(e) => Err(e),
             }

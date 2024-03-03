@@ -378,9 +378,19 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     fn group_groups(
         self,
-        indices: Array<isize>,
+        mut indices: Array<isize>,
         env: &Uiua,
     ) -> UiuaResult<impl Iterator<Item = Self>> {
+        let mut target_groups = None;
+        if indices.rank() == 1 && indices.row_count() == self.row_count() + 1 {
+            let last = *indices.data.last().unwrap();
+            if last < 0 {
+                return Err(env.error("Cannot make a negative number of groups"));
+            }
+            target_groups = Some(last.unsigned_abs());
+            indices.data.modify(|data| data.pop());
+            indices.shape[0] -= 1;
+        }
         if !self.shape().starts_with(indices.shape()) {
             return Err(env.error(format!(
                 "Cannot {} array of shape {} with indices of shape {}",
@@ -389,15 +399,20 @@ impl<T: ArrayValue> Array<T> {
                 indices.shape()
             )));
         }
-        let Some(&max_index) = indices.data.iter().max() else {
-            return Ok(Vec::<Vec<Self>>::new()
-                .into_iter()
-                .map(Array::from_row_arrays_infallible));
+        let target_groups = if let Some(target_groups) = target_groups {
+            target_groups
+        } else {
+            let Some(&max_index) = indices.data.iter().max() else {
+                return Ok(Vec::<Vec<Self>>::new()
+                    .into_iter()
+                    .map(Array::from_row_arrays_infallible));
+            };
+            max_index.max(0) as usize + 1
         };
-        let mut groups: Vec<Vec<Self>> = vec![Vec::new(); max_index.max(0) as usize + 1];
+        let mut groups: Vec<Vec<Self>> = vec![Vec::new(); target_groups];
         let row_shape = self.shape()[indices.rank()..].into();
         for (g, r) in (indices.data.into_iter()).zip(self.into_row_shaped_slices(row_shape)) {
-            if g >= 0 {
+            if g >= 0 && g < target_groups as isize {
                 groups[g as usize].push(r);
             }
         }

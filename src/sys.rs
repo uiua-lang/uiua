@@ -209,14 +209,14 @@ sys_op! {
     /// This is not supported on the web.
     ///
     /// See also: [&clset]
-    (0, ClipboardGet, Misc, "&clget", "paste"),
+    (0, ClipboardGet, Misc, "&clget", "get clipboard contents"),
     /// Set the contents of the clipboard
     ///
     /// Expects a string.
     /// ex: &clset +@A⇡6 # Try running then pasting!
     ///
     /// See also: [&clget]
-    (1(0), ClipboardSet, Misc, "&clset", "copy"),
+    (1(0), ClipboardSet, Misc, "&clset", "set clipboard contents"),
     /// Sleep for n seconds
     ///
     /// On the web, this example will hang for 1 second.

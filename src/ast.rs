@@ -7,7 +7,7 @@ use crate::{
     function::{FunctionId, Signature},
     lex::{CodeSpan, Sp},
     parse::ident_modifier_args,
-    Ident, Primitive,
+    Ident, Primitive, SemanticComment,
 };
 
 /// A top-level item
@@ -112,6 +112,7 @@ pub enum Word {
     Spaces,
     BreakLine,
     UnbreakLine,
+    SemanticComment(SemanticComment),
     OutputComment { i: usize, n: usize },
 }
 
@@ -209,6 +210,7 @@ impl fmt::Debug for Word {
             Word::Placeholder(op) => write!(f, "{op}"),
             Word::BreakLine => write!(f, "'"),
             Word::UnbreakLine => write!(f, "''"),
+            Word::SemanticComment(comment) => write!(f, "{comment}"),
             Word::OutputComment { i, n, .. } => write!(f, "output_comment({i}/{n})"),
         }
     }

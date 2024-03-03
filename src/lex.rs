@@ -8,6 +8,7 @@ use std::{
     sync::Arc,
 };
 
+use enum_iterator::{all, Sequence};
 use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
@@ -418,6 +419,7 @@ impl<T> From<Sp<T>> for Sp<T, Span> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Comment,
+    SemanticComment(SemanticComment),
     OutputComment(usize),
     Ident,
     Number,
@@ -480,12 +482,19 @@ impl Token {
             _ => None,
         }
     }
+    pub(crate) fn as_semantic_comment(&self) -> Option<SemanticComment> {
+        match self {
+            Token::SemanticComment(sc) => Some(*sc),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Token::Comment => write!(f, "comment"),
+            Token::SemanticComment(sc) => sc.fmt(f),
             Token::OutputComment(_) => write!(f, "output comment"),
             Token::Ident => write!(f, "identifier"),
             Token::Number => write!(f, "number"),
@@ -588,6 +597,27 @@ impl From<AsciiToken> for Token {
 impl From<Primitive> for Token {
     fn from(p: Primitive) -> Self {
         Self::Glyph(p)
+    }
+}
+
+/// The kinds of semantic comments
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence)]
+pub enum SemanticComment {
+    /// Allow experimental features
+    Experimental,
+    /// Prevent the containing function from being inlined
+    NoInline,
+    #[doc(hidden)]
+    Boo,
+}
+
+impl fmt::Display for SemanticComment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SemanticComment::Experimental => write!(f, "# Experimental!"),
+            SemanticComment::NoInline => write!(f, "# No inline!"),
+            SemanticComment::Boo => write!(f, "# Boo!"),
+        }
     }
 }
 
@@ -757,7 +787,13 @@ impl<'a> Lexer<'a> {
                         if comment.starts_with(' ') {
                             comment.remove(0);
                         }
-                        self.end(Comment, start);
+                        if let Some(sc) = all::<self::SemanticComment>()
+                            .find(|sc| &sc.to_string()[2..] == comment.trim())
+                        {
+                            self.end(Token::SemanticComment(sc), start);
+                        } else {
+                            self.end(Comment, start);
+                        }
                     } else {
                         loop {
                             while self.next_char_if(|c| !c.ends_with('\n')).is_some() {}

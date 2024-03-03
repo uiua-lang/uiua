@@ -976,6 +976,9 @@ impl<'a> Formatter<'a> {
             }
             Word::BreakLine => self.output.push('\''),
             Word::UnbreakLine => self.output.push_str("''"),
+            Word::SemanticComment(sc) => {
+                self.push(&word.span, &sc.to_string());
+            }
             Word::OutputComment { i, n } => {
                 let stacks = self.output_comment(*i);
                 let mut s = String::new();
@@ -1205,6 +1208,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::Comment(_) => true,
         Word::Spaces => false,
         Word::BreakLine | Word::UnbreakLine => false,
+        Word::SemanticComment(_) => false,
         Word::OutputComment { .. } => true,
     }
 }

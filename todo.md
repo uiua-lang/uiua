@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Make semantic comments distinct in the AST
   - Make importing modules that use experimental features require experimental
   - Lists of structs in FFI
   - System for custom glyph formatting
@@ -9,6 +8,7 @@
   - 3+ argument `inventory`
   - Allow LSP completions for module items
   - Fix semantic tokens in LSP
+  - Multiply characters by numbers
   - System functions
     - Clipboard
     - Excel

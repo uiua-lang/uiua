@@ -358,7 +358,7 @@ impl Spanner {
                 Word::Spaces | Word::BreakLine | Word::UnbreakLine => {
                     spans.push(word.span.clone().sp(SpanKind::Whitespace))
                 }
-                Word::Comment(_) | Word::OutputComment { .. } => {
+                Word::Comment(_) | Word::SemanticComment(_) | Word::OutputComment { .. } => {
                     spans.push(word.span.clone().sp(SpanKind::Comment))
                 }
                 Word::Placeholder(op) => {

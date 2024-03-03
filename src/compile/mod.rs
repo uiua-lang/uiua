@@ -26,8 +26,8 @@ use crate::{
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
-    IntoInputSrc, IntoSysBackend, Primitive, RunMode, SysBackend, SysOp, Uiua, UiuaError,
-    UiuaResult, Value, CONSTANTS,
+    IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment, SysBackend, SysOp, Uiua,
+    UiuaError, UiuaResult, Value, CONSTANTS,
 };
 
 /// The Uiua compiler
@@ -335,14 +335,12 @@ code:
                 for word in line {
                     match &word.value {
                         Word::Comment(c) => {
-                            if c.trim() != "Experimental!" {
-                                let mut c = c.as_str();
-                                if c.starts_with(' ') {
-                                    c = &c[1..];
-                                }
-                                comment.push_str(c);
-                                started = true;
+                            let mut c = c.as_str();
+                            if c.starts_with(' ') {
+                                c = &c[1..];
                             }
+                            comment.push_str(c);
+                            started = true;
                         }
                         Word::Spaces => {}
                         _ => {
@@ -380,7 +378,7 @@ code:
         fn words_should_run_anyway(words: &[Sp<Word>]) -> bool {
             words.iter().any(|w| {
                 matches!(&w.value, Word::Primitive(Primitive::Sys(SysOp::Import)))
-                    || matches!(&w.value, Word::Comment(com) if com.trim() == "Experimental!")
+                    || matches!(&w.value, Word::Comment(_))
             })
         }
         let prev_com = prev_comment.take();
@@ -401,9 +399,6 @@ code:
                         }
                         for word in line {
                             if let Word::Comment(c) = &word.value {
-                                if c.trim() == "Experimental!" {
-                                    continue;
-                                }
                                 comment.push_str(c);
                             }
                         }
@@ -978,9 +973,9 @@ code:
             Word::Placeholder(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
-            Word::Comment(comment) => match comment.trim() {
-                "Experimental!" => self.scope.experimental = true,
-                "No inline!" => {
+            Word::SemanticComment(sc) => match sc {
+                SemanticComment::Experimental => self.scope.experimental = true,
+                SemanticComment::NoInline => {
                     if call {
                         self.push_instr(Instr::NoInline);
                     } else {
@@ -992,11 +987,12 @@ code:
                         self.push_instr(Instr::PushFunc(f));
                     }
                 }
-                "Boo!" => self.add_error(word.span.clone(), "The compiler is scared."),
-                _ => {}
+                SemanticComment::Boo => {
+                    self.add_error(word.span.clone(), "The compiler is scared!")
+                }
             },
             Word::OutputComment { i, n } => self.push_instr(Instr::SetOutputComment { i, n }),
-            Word::Spaces | Word::BreakLine | Word::UnbreakLine => {}
+            Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::UnbreakLine => {}
         }
         Ok(())
     }

@@ -902,6 +902,8 @@ impl<'i> Parser<'i> {
                 self.inputs.clone(),
             ));
             span.sp(Word::Primitive(Primitive::Pop))
+        } else if let Some(sc) = self.next_token_map(Token::as_semantic_comment) {
+            sc.map(Word::SemanticComment)
         } else {
             return None;
         })

@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: sed
       run: sudo sed -i 's/azure\.//' /etc/apt/sources.list
     - name: apt update

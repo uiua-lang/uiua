@@ -179,6 +179,41 @@ impl PartialEq for Instr {
 
 impl Eq for Instr {}
 
+impl Hash for Instr {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Instr::Push(val) => (0, val).hash(state),
+            Instr::BeginArray => 1.hash(state),
+            Instr::EndArray { boxed, .. } => (2, boxed).hash(state),
+            Instr::Prim(prim, _) => (3, prim).hash(state),
+            Instr::ImplPrim(prim, _) => (4, prim).hash(state),
+            Instr::Call(index) => (5, index).hash(state),
+            Instr::Format { parts, .. } => (6, parts).hash(state),
+            Instr::PushFunc(func) => (7, func).hash(state),
+            Instr::PushTemp { count, .. } => (8, count).hash(state),
+            Instr::PopTemp { count, .. } => (9, count).hash(state),
+            Instr::CopyFromTemp { offset, count, .. } => (10, offset, count).hash(state),
+            Instr::DropTemp { count, .. } => (11, count).hash(state),
+            Instr::TouchStack { count, .. } => (12, count).hash(state),
+            Instr::Comment(_) => (13, 0).hash(state),
+            Instr::CallGlobal { index, call } => (14, index, call).hash(state),
+            Instr::BindGlobal { index, .. } => (15, index).hash(state),
+            Instr::Switch { count, .. } => (16, count).hash(state),
+            Instr::Label { label, .. } => (17, label).hash(state),
+            Instr::Dynamic(df) => (18, df).hash(state),
+            Instr::PushLocals { count, .. } => (19, count).hash(state),
+            Instr::PopLocals => 20.hash(state),
+            Instr::GetLocal { index, .. } => (21, index).hash(state),
+            Instr::Unpack { count, unbox, .. } => (22, count, unbox).hash(state),
+            Instr::CopyToTemp { count, .. } => (23, count).hash(state),
+            Instr::SetOutputComment { i, n, .. } => (24, i, n).hash(state),
+            Instr::PushSig(sig) => (25, sig).hash(state),
+            Instr::PopSig => 26.hash(state),
+            Instr::NoInline => 27.hash(state),
+        }
+    }
+}
+
 impl Instr {
     /// Create a new push instruction
     pub fn push(val: impl Into<Value>) -> Self {
@@ -203,7 +238,7 @@ impl Instr {
 }
 
 pub(crate) fn instrs_are_pure(instrs: &[Instr], env: &impl AsRef<Assembly>) -> bool {
-    for (i, instr) in instrs.iter().enumerate() {
+    for instr in instrs {
         match instr {
             Instr::Comment(_) => {}
             Instr::Push(_) => {}
@@ -221,11 +256,6 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], env: &impl AsRef<Assembly>) -> b
                 }
             }
             Instr::BindGlobal { .. } => return false,
-            Instr::Prim(Primitive::Repeat, _) if i >= 2 => {
-                if !matches!(instrs[i - 2], Instr::Push(_)) {
-                    return false;
-                }
-            }
             Instr::Prim(prim, _) => {
                 if !prim.is_pure() {
                     return false;

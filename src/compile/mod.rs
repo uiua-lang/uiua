@@ -2,6 +2,7 @@ mod binding;
 mod modifier;
 
 use std::{
+    cell::RefCell,
     collections::{BTreeSet, HashMap, HashSet},
     fmt, fs,
     mem::{replace, take},
@@ -12,6 +13,7 @@ use std::{
 };
 
 use ecow::{eco_vec, EcoString, EcoVec};
+use instant::Duration;
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
@@ -1570,16 +1572,38 @@ code:
     }
 
     fn comptime_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult<Vec<Value>> {
-        let instrs = optimize_instrs(instrs, true, &self.asm);
-        let mut asm = self.asm.clone();
-        asm.top_slices.clear();
-        let start = asm.instrs.len();
-        let len = instrs.len();
-        asm.instrs.extend(instrs);
-        asm.top_slices.push(FuncSlice { start, len });
-        let mut env = Uiua::with_safe_sys();
-        env.run_asm(asm)?;
-        Ok(env.take_stack())
+        thread_local! {
+            static CACHE: RefCell<HashMap<EcoVec<Instr>, Vec<Value>>> = RefCell::new(HashMap::new());
+        }
+        CACHE.with(|cache| {
+            let mut cache = cache.borrow_mut();
+            let instrs = optimize_instrs(instrs, true, &self.asm);
+            if let Some(stack) = cache.get(&instrs) {
+                return Ok(stack.clone());
+            }
+            let mut asm = self.asm.clone();
+            asm.top_slices.clear();
+            let start = asm.instrs.len();
+            let len = instrs.len();
+            asm.instrs.extend(instrs.iter().cloned());
+            asm.top_slices.push(FuncSlice { start, len });
+            let mut env = Uiua::with_safe_sys().with_execution_limit(Duration::from_millis(10));
+            match env.run_asm(asm) {
+                Ok(()) => {
+                    let mut stack = env.take_stack();
+                    if stack.iter().any(|v| v.element_count() > 1000) {
+                        stack = Vec::new();
+                    }
+                    cache.insert(instrs, stack.clone());
+                    Ok(stack)
+                }
+                Err(UiuaError::Timeout(..)) => {
+                    cache.insert(instrs, Vec::new());
+                    Ok(Vec::new())
+                }
+                Err(e) => Err(e),
+            }
+        })
     }
 }
 

@@ -1359,7 +1359,7 @@ primitive!(
     /// ex: ⍥/◇⊂∞ {1 {2 3} {4 {5 6 {7}}}}
     ///
     /// [repeat]'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation.
-    ([1], Repeat, IteratingModifier, ("repeat", '⍥'), impure),
+    ([1], Repeat, IteratingModifier, ("repeat", '⍥')),
     /// Group elements of an array into buckets by index
     ///
     /// [group] is similar to `group_by` functions in other languages.
@@ -1769,7 +1769,7 @@ primitive!(
     /// This means that unlike [repeat], [do] cannot be wrapped in `[]`s to collect items into an array.
     /// Instead, [join] the items to an initial list.
     /// ex: ◌⍢(⊃(×2)⊂)(<100) 1 []
-    ([2], Do, IteratingModifier, ("do", '⍢'), impure),
+    ([2], Do, IteratingModifier, ("do", '⍢')),
     /// Set the fill value for a function
     ///
     /// By default, some operations require that arrays' [shape]s are in some way compatible.

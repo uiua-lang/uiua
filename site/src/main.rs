@@ -16,7 +16,7 @@ use base64::engine::{general_purpose::URL_SAFE, Engine};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{lsp::BindingDocs, ConstantDef, PrimClass, Primitive};
+use uiua::{lsp::BindingDocs, ConstantDef, PrimClass, Primitive, SysOp};
 use wasm_bindgen::JsCast;
 use web_sys::HtmlAudioElement;
 
@@ -222,10 +222,10 @@ pub fn MainPage() -> impl IntoView {
                 <div>
                     <h2>"Rich Primitives"</h2>
                     <p>"Uiua has lots of built-in functions for all your array manipulation needs. Just a few examples:"</p>
-                    <p><Prim prim=Partition/>" for splitting arrays by sequential keys:"</p>
-                    <Editor example=r#"⬚@ ⊜∘≠@ ."Oh boy, neat!""#/>
                     <p><Prim prim=Select/>" for re-sequencing array items:"</p>
                     <Editor example=r#"⊏ 2_1_3_0_4 "loco!""#/>
+                    <p><Prim prim=Partition/>" for splitting arrays by sequential keys:"</p>
+                    <Editor example=r#"⬚@ ⊜∘≠@ ."Oh boy, neat!""#/>
                     <p><Prim prim=Under/>" for modifying only part of an array (among other things):"</p>
                     <Editor example="⍜(↙2|×10) 1_2_3_4_5"/>
                 </div>
@@ -275,6 +275,10 @@ pub fn MainPage() -> impl IntoView {
                         }
                     }
                     <p>"The Uiua logo was made with Uiua! Check example 5 at the top of the page."</p>
+                </div>
+                <div>
+                    <h2>"FFI"</h2>
+                    <p>"Uiua has experimental support for calling functions from shared libraries through "<Prim prim=Sys(SysOp::FFI)/>"."</p>
                 </div>
             </div>
         </div>

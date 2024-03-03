@@ -546,7 +546,7 @@ sys_op! {
     /// Uiua arrays can be passed to foreign functions as pointer-length pairs.
     /// To do this, specify the type of the list items followed by `:n`, where `n` is the index of the parameter that corresponds to the length.
     /// The interpreter will automatically pass the number of elements in the array to this parameter.
-    /// Arrays passed in this way will be implicitely [deshape]ed.
+    /// Arrays passed in this way will be implicitely [deshape]ed, unless the item type is a struct.
     /// If we wave a C function `int sum(const int* arr, int len)` in a shared library `example.dll`, we can call it like this:
     /// ex! # Experimental!
     ///   : Lib ← &ffi ⊂□"example.dll"
@@ -574,7 +574,8 @@ sys_op! {
     ///   : Add ← Lib {VecII "vec2_add" VecII VecII}
     ///   : Add {[1 2] [3 4]} # [4 6]
     ///
-    /// One thing of note that is currently unsupported is structs which contains pointers other than `const char*`.
+    /// Coverage of types that are supported for binding is currently best-effort.
+    /// If you encounter a type that you need support for, please [open an issue](https://github.com/uiua-lang/uiua/issues/new).
     (2, FFI, Misc, "&ffi", "foreign function interface"),
 }
 

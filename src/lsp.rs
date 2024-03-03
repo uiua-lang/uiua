@@ -949,7 +949,11 @@ mod server {
                                 params.text_document.uri.clone(),
                                 vec![TextEdit {
                                     range: uiua_span_to_lsp(&insertion_span),
-                                    new_text: format!("{} ", inline.sig),
+                                    new_text: if inline.sig.outputs == 0 {
+                                        format!("|{} ", inline.sig.args)
+                                    } else {
+                                        format!("{} ", inline.sig)
+                                    },
                                 }],
                             )]
                             .into(),

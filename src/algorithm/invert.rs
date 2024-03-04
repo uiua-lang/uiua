@@ -261,7 +261,7 @@ pub(crate) fn under_instrs(
         &dyad!(Mul, Div),
         &dyad!(Div, Mul),
         &maybe_val!(pat!(Mod, (Over, Over, Flip, Over, Div, Floor, Mul, PushTempN(1), Mod), (PopTempN(1), Add))),
-        // Exponentail math
+        // Exponential math
         &maybe_val!(stash1!((Flip, Pow), Log)),
         &maybe_val!(stash1!(Pow, (1, Flip, Div, Pow))),
         &maybe_val!(stash1!(Log, (Flip, Pow))),

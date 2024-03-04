@@ -757,10 +757,14 @@ pub fn Editor<'a>(
             );
             _ = glyph_doc_element().style().remove_property("display");
         };
+        let mut class = "glyph-button glyph-title".to_string();
+        if prim.is_experimental() {
+            class.push_str(" experimental-glyph-button");
+        }
         Some(
             view! {
                 <button
-                    class="glyph-button glyph-title"
+                    class=class
                     data-title=title
                     on:click=onclick
                     on:mouseover=onmouseover
@@ -1100,6 +1104,9 @@ pub fn Editor<'a>(
     let toggle_autorun = move |_| {
         set_autorun(!get_autorun());
     };
+    let toggle_show_experimental = move |_| {
+        set_show_experimental(!get_show_experimental());
+    };
     let on_select_font = move |event: Event| {
         let input: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
         let name = input.value();
@@ -1163,6 +1170,13 @@ pub fn Editor<'a>(
                                 type="checkbox"
                                 checked=get_autorun
                                 on:change=toggle_autorun/>
+                        </div>
+                        <div>
+                            "Show experimental:"
+                            <input
+                                type="checkbox"
+                                checked=get_show_experimental
+                                on:change=toggle_show_experimental/>
                         </div>
                         <div>
                             "Stack:"
@@ -1232,7 +1246,7 @@ pub fn Editor<'a>(
                             </button>
                             <div id="example-tracker">{example_text}</div>
                         </div>
-                        <div class="code">
+                        <div class="code sized-code">
                             <div class="line-numbers">
                                 { line_numbers }
                             </div>

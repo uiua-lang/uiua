@@ -404,7 +404,7 @@ li {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 0.2em;
+    gap: 0.2em 1em;
 }
 
 #settings-left {
@@ -685,6 +685,10 @@ input[type=number] {
     z-index: 1;
     -webkit-text-fill-color: #eee;
     -moz-text-fill-color: #eee;
+}
+
+.experimental-glyph-button {
+    display: none;
 }
 
 .prim-code-a {

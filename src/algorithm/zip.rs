@@ -429,6 +429,7 @@ pub fn rows1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
 
 fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
     let outputs = f.signature().outputs;
+    let both_scalar = xs.rank() == 0 && ys.rank() == 0;
     match (xs.row_count(), ys.row_count()) {
         (_, 1) if !ys.length_is_fillable(env) => {
             ys.shape_mut().make_row();
@@ -456,7 +457,9 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             })?;
             for new_rows in new_rows.into_iter().rev() {
                 let mut val = Value::from_row_values(new_rows, env)?;
-                if is_empty {
+                if both_scalar {
+                    val.shape_mut().make_row();
+                } else if is_empty {
                     val.pop_row();
                 }
                 env.push(val);
@@ -489,7 +492,9 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             })?;
             for new_rows in new_rows.into_iter().rev() {
                 let mut val = Value::from_row_values(new_rows, env)?;
-                if is_empty {
+                if both_scalar {
+                    val.shape_mut().make_row();
+                } else if is_empty {
                     val.pop_row();
                 }
                 env.push(val);
@@ -540,7 +545,9 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             })?;
             for new_rows in new_rows.into_iter().rev() {
                 let mut val = Value::from_row_values(new_rows, env)?;
-                if is_empty {
+                if both_scalar {
+                    val.shape_mut().make_row();
+                } else if is_empty {
                     val.pop_row();
                 }
                 env.push(val);
@@ -689,6 +696,24 @@ fn inventory1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
 fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     let outputs = f.signature().outputs;
     let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
+    let both_scalar = xs.rank() == 0 && ys.rank() == 0;
+    fn finish(
+        new_values: MultiOutput<Vec<Boxed>>,
+        new_shape: Shape,
+        both_scalar: bool,
+        env: &mut Uiua,
+    ) {
+        for new_values in new_values.into_iter().rev() {
+            let mut new_arr = Array::new(
+                new_shape.clone(),
+                new_values.into_iter().collect::<EcoVec<_>>(),
+            );
+            if both_scalar {
+                new_arr.shape.make_row();
+            }
+            env.push(new_arr);
+        }
+    }
     match (xs, ys) {
         // Both box arrays
         (Value::Box(mut xs), Value::Box(mut ys)) => match (xs.row_count(), ys.row_count()) {
@@ -705,11 +730,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     }
                     Ok(())
                 })?;
-                for new_values in new_values.into_iter().rev() {
-                    let new_arr =
-                        Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
-                    env.push(new_arr);
-                }
+                finish(new_values, shape, both_scalar, env);
                 Ok(())
             }
             (_, 1) => {
@@ -726,11 +747,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     }
                     Ok(())
                 })?;
-                for new_values in new_values.into_iter().rev() {
-                    let new_arr =
-                        Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
-                    env.push(new_arr);
-                }
+                finish(new_values, shape, both_scalar, env);
                 Ok(())
             }
             (1, _) => {
@@ -747,11 +764,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     }
                     Ok(())
                 })?;
-                for new_values in new_values.into_iter().rev() {
-                    let new_arr =
-                        Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
-                    env.push(new_arr);
-                }
+                finish(new_values, shape, both_scalar, env);
                 Ok(())
             }
             _ => Err(env.error(format!(
@@ -778,11 +791,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 }
                 Ok(())
             })?;
-            for new_values in new_values.into_iter().rev() {
-                let new_arr =
-                    Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
-                env.push(new_arr);
-            }
+            finish(new_values, shape, both_scalar, env);
             Ok(())
         }
         (Value::Box(mut xs), mut ys) if xs.rank() <= 1 => match (xs.row_count(), ys.row_count()) {
@@ -799,11 +808,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     }
                     Ok(())
                 })?;
-                for new_values in new_values.into_iter().rev() {
-                    let new_arr =
-                        Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
-                    env.push(new_arr);
-                }
+                finish(new_values, shape, both_scalar, env);
                 Ok(())
             }
             (_, 1) => {
@@ -821,11 +826,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     }
                     Ok(())
                 })?;
-                for new_values in new_values.into_iter().rev() {
-                    let new_arr =
-                        Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
-                    env.push(new_arr);
-                }
+                finish(new_values, shape, both_scalar, env);
                 Ok(())
             }
             (1, _) => {
@@ -842,11 +843,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     }
                     Ok(())
                 })?;
-                for new_values in new_values.into_iter().rev() {
-                    let new_arr =
-                        Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
-                    env.push(new_arr);
-                }
+                finish(new_values, shape, both_scalar, env);
                 Ok(())
             }
             (a, b) => Err(env.error(format!(
@@ -872,11 +869,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 }
                 Ok(())
             })?;
-            for new_values in new_values.into_iter().rev() {
-                let new_arr =
-                    Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
-                env.push(new_arr);
-            }
+            finish(new_values, shape, both_scalar, env);
             Ok(())
         }
         (mut xs, Value::Box(mut ys)) if ys.rank() <= 1 => match (xs.row_count(), ys.row_count()) {
@@ -893,11 +886,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     }
                     Ok(())
                 })?;
-                for new_values in new_values.into_iter().rev() {
-                    let new_arr =
-                        Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
-                    env.push(new_arr);
-                }
+                finish(new_values, shape, both_scalar, env);
                 Ok(())
             }
             (_, 1) => {
@@ -914,11 +903,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     }
                     Ok(())
                 })?;
-                for new_values in new_values.into_iter().rev() {
-                    let new_arr =
-                        Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
-                    env.push(new_arr);
-                }
+                finish(new_values, shape, both_scalar, env);
                 Ok(())
             }
             (1, _) => {
@@ -936,11 +921,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     }
                     Ok(())
                 })?;
-                for new_values in new_values.into_iter().rev() {
-                    let new_arr =
-                        Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
-                    env.push(new_arr);
-                }
+                finish(new_values, shape, both_scalar, env);
                 Ok(())
             }
             (a, b) => Err(env.error(format!(
@@ -964,7 +945,11 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     Ok(())
                 })?;
                 for new_rows in new_rows.into_iter().rev() {
-                    env.push(Array::from_iter(new_rows));
+                    let mut arr = Array::from_iter(new_rows);
+                    if both_scalar {
+                        arr.shape.make_row();
+                    }
+                    env.push(arr);
                 }
                 Ok(())
             }
@@ -984,7 +969,11 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     Ok(())
                 })?;
                 for new_rows in new_rows.into_iter().rev() {
-                    env.push(Array::from_iter(new_rows));
+                    let mut arr = Array::from_iter(new_rows);
+                    if both_scalar {
+                        arr.shape.make_row();
+                    }
+                    env.push(arr);
                 }
                 Ok(())
             }
@@ -1004,7 +993,11 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                     Ok(())
                 })?;
                 for new_rows in new_rows.into_iter().rev() {
-                    env.push(Array::from_iter(new_rows));
+                    let mut arr = Array::from_iter(new_rows);
+                    if both_scalar {
+                        arr.shape.make_row();
+                    }
+                    env.push(arr);
                 }
                 Ok(())
             }

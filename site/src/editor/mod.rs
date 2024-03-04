@@ -350,6 +350,25 @@ pub fn Editor<'a>(
         }
     };
 
+    // Insert an # Experimental! comment at the top of the code
+    let insert_experimental = move || {
+        let code = code_text();
+        if code.starts_with("# Experimental!") {
+            return;
+        }
+        let new_code = format!("# Experimental!\n{}", code);
+        let cursor = if let Some((start, end)) = get_code_cursor() {
+            if start == 0 {
+                Cursor::Set(16, 16)
+            } else {
+                Cursor::Set(start + 16, end + 16)
+            }
+        } else {
+            Cursor::Ignore
+        };
+        state().set_code(&new_code, cursor);
+    };
+
     let on_mac = window()
         .navigator()
         .user_agent()
@@ -544,6 +563,8 @@ pub fn Editor<'a>(
             "z" if os_ctrl(event) => state().undo(),
             // Redo
             "y" if os_ctrl(event) => state().redo(),
+            // Insert # Experimental! comment
+            "e" if os_ctrl(event) => insert_experimental(),
             // Toggle line comment
             "/" | "4" if os_ctrl(event) => {
                 let code = code_text();
@@ -1125,6 +1146,7 @@ pub fn Editor<'a>(
     };
     set_font_name(&get_font_name());
     set_font_size(&get_font_size());
+    let on_insert_experimental = move |_| insert_experimental();
 
     // Render
     view! {
@@ -1207,12 +1229,20 @@ pub fn Editor<'a>(
                         </div>
                     </div>
                     <div id="settings-right">
-                        <button
-                            class="info-button"
-                            data-title=EDITOR_SHORTCUTS
-                            disabled>
-                            "🛈"
-                        </button>
+                        <div style="display: flex; gap: 0.2em;">
+                            <button
+                                class="info-button"
+                                data-title="Add # Experimental"
+                                on:click=on_insert_experimental>
+                                "🧪"
+                            </button>
+                            <button
+                                class="info-button"
+                                data-title=EDITOR_SHORTCUTS
+                                disabled>
+                                "🛈"
+                            </button>
+                        </div>
                         <div style="margin-right: 0.1em">
                             "Tokens: "
                             { move || token_count.get() }
@@ -1331,4 +1361,5 @@ ctrl/⌘ 4       - Toggle multiline string
    alt Up/Down - Swap lines
  shift Delete  - Delete lines
 ctrl/⌘ Z       - Undo
-ctrl/⌘ Y       - Redo";
+ctrl/⌘ Y       - Redo
+ctrl/⌘ E       - Insert # Experimental! comment";

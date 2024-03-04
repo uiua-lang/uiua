@@ -12,6 +12,8 @@ This version is not yet released. If you are reading this on the website, then t
   - This makes them easier to identify when reading
   - It also allows switch functions to be used as modifier arguments without extra nesting
 - Switch functions now work with [`under ⍜`](https://uiua.org/docs/under)
+- [`map`](https://uiua.org/docs/map) arrays are now a less leaky abstraction. The keys are now stored as metadata on the values.
+  - [`reverse ⇌`](https://uiua.org/docs/reverse), [`rotate ↻`](https://uiua.org/docs/rotate), [`take ↙`](https://uiua.org/docs/take), and [`drop ↘`](https://uiua.org/docs/drop) now work with [`map`](https://uiua.org/docs/map) arrays without corrupting them
 - [`under ⍜`](https://uiua.org/docs/under) [`join ⊂`](https://uiua.org/docs/join) now works with arrays of the same rank as long as the row count does not change
 - [`un °`](https://uiua.org/docs/un) [`scan \\`](https://uiua.org/docs/scan) now works with [`equals =`](https://uiua.org/docs/equals) and [`not equals ≠`](https://www.uiua.org/docs/not%20equals)
 - [`group ⊕`](https://uiua.org/docs/group) can now take multidimensional index arrays

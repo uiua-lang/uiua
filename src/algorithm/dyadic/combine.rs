@@ -321,7 +321,11 @@ impl<T: ArrayValue> Array<T> {
                     self.shape[0] += other.shape[0];
                     self.take_label();
                     if let Some((mut a, b)) = map_keys {
-                        a.join(b, ctx)?;
+                        let mut to_remove = a.join(b, ctx)?;
+                        to_remove.sort_unstable();
+                        for i in to_remove.into_iter().rev() {
+                            self.remove_row(i);
+                        }
                         self.meta_mut().map_keys = Some(a);
                     }
                     self

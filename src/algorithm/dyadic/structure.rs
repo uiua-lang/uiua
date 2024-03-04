@@ -16,6 +16,20 @@ use crate::{
     Array, ArrayValue, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
 };
 
+impl<T: Clone> Array<T> {
+    pub(crate) fn remove_row(&mut self, index: usize) {
+        let row_len = self.row_len();
+        let data = self.data.as_mut_slice();
+        let start = index * row_len;
+        for i in start..data.len() - row_len {
+            data[i] = data[i + row_len].clone();
+        }
+        let new_len = data.len() - row_len;
+        self.data.truncate(new_len);
+        self.shape[0] -= 1;
+    }
+}
+
 impl Value {
     pub(crate) fn as_shaped_indices(&self, env: &Uiua) -> UiuaResult<(&[usize], Vec<isize>)> {
         Ok(match self {

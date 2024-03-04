@@ -1,8 +1,9 @@
 # Uiua Todo
 
 - 0.10
+  - Fix constant stuff
+  - `insert` into empty array
   - `⊠ coordinate`
-  - `under /conjoin`
   - LSP
     - Get references
   - System functions

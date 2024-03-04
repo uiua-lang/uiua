@@ -156,25 +156,13 @@ impl Value {
                 }
             }
 
-            fn remove_row<T: Clone>(arr: &mut Array<T>, index: usize) {
-                let row_len = arr.row_len();
-                let data = arr.data.as_mut_slice();
-                let start = index * row_len;
-                for i in start..data.len() - row_len {
-                    data[i] = data[i + row_len].clone();
-                }
-                let new_len = data.len() - row_len;
-                arr.data.truncate(new_len);
-                arr.shape[0] -= 1;
-            }
-
             match self {
-                Value::Num(arr) => remove_row(arr, index),
-                Value::Complex(arr) => remove_row(arr, index),
-                Value::Char(arr) => remove_row(arr, index),
-                Value::Box(arr) => remove_row(arr, index),
+                Value::Num(arr) => arr.remove_row(index),
+                Value::Complex(arr) => arr.remove_row(index),
+                Value::Char(arr) => arr.remove_row(index),
+                Value::Box(arr) => arr.remove_row(index),
                 #[cfg(feature = "bytes")]
-                Value::Byte(arr) => remove_row(arr, index),
+                Value::Byte(arr) => arr.remove_row(index),
             }
         }
         Ok(())
@@ -191,9 +179,6 @@ pub struct MapKeys {
 impl MapKeys {
     fn capacity(&self) -> usize {
         self.indices.len()
-    }
-    fn rehash(&mut self) {
-        self.grow_to(self.capacity());
     }
     fn grow(&mut self) {
         if self.capacity() == 0 || (self.len as f64 / self.capacity() as f64) > LOAD_FACTOR {
@@ -248,7 +233,11 @@ impl MapKeys {
             }
         }
     }
-    fn insert(&mut self, key: Value, index: usize, env: &Uiua) -> UiuaResult {
+    fn insert<C>(&mut self, key: Value, index: usize, ctx: &C) -> Result<Option<usize>, C::Error>
+    where
+        C: FillContext,
+    {
+        println!("insert {:?}: {}", key, index);
         fn insert_impl<K>(
             keys: &mut Array<K>,
             indices: &mut [usize],
@@ -256,7 +245,7 @@ impl MapKeys {
             index: usize,
             len: &mut usize,
             capacity: usize,
-        ) -> Option<(Array<K>, usize)>
+        ) -> Result<Option<usize>, (Array<K>, usize)>
         where
             K: MapItem + ArrayValue,
         {
@@ -267,23 +256,28 @@ impl MapKeys {
             loop {
                 let cell_key =
                     &mut key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
-                let not_present = cell_key[0].is_empty_cell() || cell_key[0].is_tombstone();
-                if not_present || ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
-                    if not_present {
+                let present = !(cell_key[0].is_empty_cell() || cell_key[0].is_tombstone());
+                if !present || ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
+                    if !present {
                         *len += 1;
                     }
                     cell_key.clone_from_slice(&key.data);
+                    let replaced = if present {
+                        Some(indices[key_index])
+                    } else {
+                        None
+                    };
                     indices[key_index] = index;
-                    break None;
+                    break Ok(replaced);
                 }
                 key_index = (key_index + 1) % capacity;
                 if key_index == start {
-                    break Some((key, index));
+                    break Err((key, index));
                 }
             }
         }
         let key = coerce_values(&mut self.keys, key, "insert", "key into map with", "keys")
-            .map_err(|e| env.error(e))?;
+            .map_err(|e| ctx.error(e))?;
         if self.capacity() == 0 {
             self.grow();
         }
@@ -292,20 +286,21 @@ impl MapKeys {
             ($($k:ident),*) => {
                 match (&mut self.keys, key) {
                     $((Value::$k(keys), Value::$k(key)) => {
-                        if let Some((key, value)) =
-                            insert_impl(keys, &mut self.indices, key, index, &mut self.len, capacity)
-                        {
-                            self.grow();
-                            return self.insert(key.into(), value.into(), env);
+                        match insert_impl(keys, &mut self.indices, key, index, &mut self.len, capacity) {
+                            Ok(replaced) => replaced,
+                            Err((key, index)) => {
+                                self.grow();
+                                return self.insert(key.into(), index, ctx);
+                            }
                         }
                     })*
                     _ => unreachable!(),
                 }
             }
         }
-        do_insert!(Num, Complex, Char, Box);
+        let replaced = do_insert!(Num, Complex, Char, Box);
         self.grow();
-        Ok(())
+        Ok(replaced)
     }
     fn get(&self, key: &Value) -> Option<usize> {
         if self.keys.shape() == [0] {
@@ -459,18 +454,32 @@ impl MapKeys {
         }
         self.len = n;
     }
-    pub(crate) fn join<C>(&mut self, mut other: Self, ctx: &C) -> Result<(), C::Error>
+    pub(crate) fn join<C>(&mut self, mut other: Self, ctx: &C) -> Result<Vec<usize>, C::Error>
     where
         C: FillContext,
     {
-        self.keys = take(&mut self.keys).join_impl(other.keys, ctx)?;
         for index in &mut other.indices {
             *index += self.len;
         }
-        self.len += other.len;
-        self.indices.append(&mut other.indices);
-        self.rehash();
-        Ok(())
+        let mut to_remove = Vec::new();
+        let mut to_insert: Vec<_> = (other.keys.into_rows())
+            .zip(other.indices)
+            .filter(|(k, _)| !k.is_empty_cell() && !k.is_tombstone())
+            .collect();
+        to_insert.sort_unstable_by_key(|(_, i)| *i);
+        for (key, index) in to_insert {
+            if let Some(replaced) = self.insert(key, index, ctx)? {
+                to_remove.push(replaced);
+            }
+        }
+        for &r in &to_remove {
+            for i in &mut self.indices {
+                if *i > r {
+                    *i -= 1;
+                }
+            }
+        }
+        Ok(to_remove)
     }
 }
 

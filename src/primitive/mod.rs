@@ -570,18 +570,9 @@ impl Primitive {
             Primitive::Fix => env.monadic_mut(Value::fix)?,
             Primitive::First => env.monadic_env(Value::first)?,
             Primitive::Len => env.monadic_ref(Value::row_count)?,
-            Primitive::Shape => env.monadic_ref(|v| {
-                v.generic_ref(
-                    Array::shape,
-                    Array::shape,
-                    Array::shape,
-                    Array::shape,
-                    Array::shape,
-                )
-                .iter()
-                .copied()
-                .collect::<Value>()
-            })?,
+            Primitive::Shape => {
+                env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?
+            }
             Primitive::Bits => env.monadic_ref_env(Value::bits)?,
             Primitive::Reduce => reduce::reduce(0, env)?,
             Primitive::Scan => reduce::scan(env)?,

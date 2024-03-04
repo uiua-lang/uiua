@@ -27,7 +27,7 @@ c ← >⌵/ℂ Xy
 const CHORD: &str = "\
 [0 4 7 10]      # Notes
 ×220 ⁿ:2÷12     # Freqs
-○×τ ⊞× ÷⟜⇡&asr. # Generate
+∿×τ ⊞× ÷⟜⇡&asr. # Generate
 ÷⧻: ≡/+         # Mix";
 const SPIRAL: &str = "\
 ⇌×τ÷⟜⇡20           # Frame times
@@ -40,7 +40,7 @@ Quad ← ÷⊙+⊃(×2|⋅¯|Disc)
 Quad 1 2 0";
 const STRIPES: &str = "\
 [⊃⊃⊞+⊞↥⊞-].⇡300
-⍉ ÷2 +1.2 ○ ÷10";
+⍉ ÷2 +1.2 ∿ ÷10";
 const PALINDROME: &str = r#"$ uiua racecar wow cool!
 ⬚@ ⊜(⊂⊏:"❌✅" ≍⇌..)≠@ ."#;
 const AUTOMATA: &str = "\

@@ -454,7 +454,7 @@ sys_op! {
     /// Here is how you can generate a list of sample times for `4` seconds of audio:
     /// ex: ÷:⇡×, 4 &asr
     /// Pass that to a periodic function, and you get a nice tone!
-    /// ex: ÷4○×τ×220 ÷:⇡×, 4 &asr
+    /// ex: ÷4∿×τ×220 ÷:⇡×, 4 &asr
     (0, AudioSampleRate, Audio, "&asr", "audio - sample rate"),
     /// Synthesize and stream audio
     ///
@@ -464,11 +464,11 @@ sys_op! {
     /// ex: Sp ← 1.5
     ///   : Bass ← (
     ///   :   +110×20⌊÷4◿8. # Choose note
-    ///   :   ±○×π×÷Sp,     # Square wave
+    ///   :   ±∿×π×÷Sp,     # Square wave
     ///   :   ×2+1⌊◿2.:     # Modulation frequency
-    ///   :   ×0.2○×π××:    # Apply modulation
+    ///   :   ×0.2∿×π××:    # Apply modulation
     ///   : )
-    ///   : Kick ← ○×τ×40√√◿1
+    ///   : Kick ← ∿×τ×40√√◿1
     ///   : Noise ← [⍥⚂10000]
     ///   : Hit ← ×↯:Noise △. ×⊓><0.5,0.6 ÷⟜◿2
     ///   : Hat ← ×0.3×↯:Noise △.<0.1 ÷⟜◿0.25

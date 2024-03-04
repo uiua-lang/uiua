@@ -1056,7 +1056,7 @@ fn TutorialInverses() -> impl IntoView {
         <p>"The "<Prim prim=Un/>" modifier inverts the behavior of a function."</p>
         <Editor example="°(+1) 5"/>
         <Editor example="°⊟ [1 2]"/>
-        <Editor example="°○ 1"/>
+        <Editor example="°∿ 1"/>
         <p>"As discussed "<A href="/tutorial/arrays#array-model">"previously"</A>", "<Prim prim=Un/><Prim prim=Box/>" removes an array from a box."</p>
         <Editor example=r#"°□ ⊢{"unbox" "me!"}"#/>
         <p>"One interesting use of "<Prim prim=Un/>" is to put an array's rows onto the stack by "<Prim prim=Un/>"ing stack array notation with "<Prim prim=Dip/>" and "<Prim prim=Identity/>". The number of rows in the array must match though!"</p>

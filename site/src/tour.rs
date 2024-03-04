@@ -155,7 +155,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="\
 ↯4[0 2 4 7 12 9 7 4]
 ×220 ⁿ:2÷12
-÷2 ○×τ ♭⊞× :÷:⇡⁅÷8 .&asr"/>
+÷2 ∿×τ ♭⊞× :÷:⇡⁅÷8 .&asr"/>
         <h3>"GIFs"</h3>
         <p>"Any array whose rows can all be turned into images can be turned into a GIF."</p>
         <p>"On this site, arrays that look like they should be GIFs will be displayed as GIFs. You can see some on the "<A href="/">"main page"</A>"."</p>

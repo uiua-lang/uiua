@@ -370,16 +370,16 @@ primitive!(
     (1, Sqrt, MonadicPervasive, ("sqrt", '√')),
     /// Get the sine of a number
     ///
-    /// ex: ○ 1
+    /// ex: ∿ 1
     /// You can get a cosine function by [add]ing [eta].
-    /// ex: ○+η 1
+    /// ex: ∿+η 1
     /// You can get an arcsine function with [un].
-    /// ex: °○ 1
+    /// ex: °∿ 1
     /// You can get an arccosine function by [subtract]ing the arcsine from [eta].
-    /// ex: -:η°○ 0
+    /// ex: -:η°∿ 0
     /// You can get a tangent function by [divide]ing the [sine] by the cosine.
-    /// ex: ÷∩○+η. 0
-    (1, Sin, MonadicPervasive, ("sine", '○')),
+    /// ex: ÷∩∿+η. 0
+    (1, Sin, MonadicPervasive, ("sine", '∿')),
     /// Round to the nearest integer towards `¯∞`
     ///
     /// ex: ⌊1.5
@@ -1564,7 +1564,7 @@ primitive!(
     /// ex: °⋯ [1 0 1 0 1 0 1 0]
     ///
     /// [un][sine] gives the arcsine.
-    /// ex: °○ 1
+    /// ex: °∿ 1
     ///
     /// [un] can be used with stack array notation and [dip] and [identity] to unpack the items of an array onto the stack.
     /// ex: [⊙⊙∘] 1 2 3

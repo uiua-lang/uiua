@@ -242,7 +242,7 @@ uiuisms!(
     /// Complex conjugate
     "⍜°ℂ¯ +i1",
     /// Cosine
-    "○+η 1",
+    "∿+η 1",
     /// ⊕
     "÷:°∠ 1",
     /// Factorial

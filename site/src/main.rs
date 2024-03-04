@@ -273,10 +273,10 @@ pub fn MainPage() -> impl IntoView {
                             None
                         } else {
                             Some(view!{
-                                <Editor example="⍉⊞<⊞+⇡3○∩(÷25)⇡240⇡80"/>
-                                <Editor example="÷3/+○⊞×⊟×1.5.220×τ÷⟜⇡&asr"/>
+                                <Editor example="⍉⊞<⊞+⇡3∿∩(÷25)⇡240⇡80"/>
+                                <Editor example="÷3/+∿⊞×⊟×1.5.220×τ÷⟜⇡&asr"/>
                                 <Editor example="Xy ← ⍉⍉⊞⊟.÷⟜⇡100\n\
-                                    F ← ⍉◿1⊂⊃(+/÷|÷3+1○×τ+)Xy\n\
+                                    F ← ⍉◿1⊂⊃(+/÷|÷3+1∿×τ+)Xy\n\
                                     ∵F÷⟜⇡10"/>
                             })
                         }

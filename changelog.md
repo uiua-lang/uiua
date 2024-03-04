@@ -12,6 +12,10 @@ This version is not yet released. If you are reading this on the website, then t
   - This makes them easier to identify when reading
   - It also allows switch functions to be used as modifier arguments without extra nesting
 - Switch functions now work with [`under ⍜`](https://uiua.org/docs/under)
+- Change [`sine ∿`](https://uiua.org/docs/sine)'s glyph
+  - `∿` is more representative of what it does
+  - Most circle glyphs like `○` are used for array functions or stack manipulation
+  - `○` will continue to work and will be formatted as `∿`
 - [`map`](https://uiua.org/docs/map) arrays are now a less leaky abstraction. The keys are now stored as metadata on the values.
   - [`reverse ⇌`](https://uiua.org/docs/reverse), [`rotate ↻`](https://uiua.org/docs/rotate), [`take ↙`](https://uiua.org/docs/take), [`drop ↘`](https://uiua.org/docs/drop), and [`join ⊂`](https://uiua.org/docs/join) now work with [`map`](https://uiua.org/docs/map) arrays without corrupting them
 - [`under ⍜`](https://uiua.org/docs/under) [`join ⊂`](https://uiua.org/docs/join) now works with arrays of the same rank as long as the row count does not change

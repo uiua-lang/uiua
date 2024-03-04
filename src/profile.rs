@@ -45,7 +45,7 @@ pub(crate) mod enabled {
             "STRIPES",
             "\
 [⊃⊃⊞+⊞↥⊞-].⇡300
-⍉ ÷2 +1.2 ○ ÷10",
+⍉ ÷2 +1.2 ∿ ÷10",
         ),
         (
             "AUTOMATA",
@@ -65,7 +65,7 @@ Rule ← /+⊞= ⊓(⊚⋯|°⋯⇌◫3⇌ ⊂:0⊂0)
             "\
 [0 4 7 10]       # Notes
 ×220 ⁿ:2÷12      # Freqs
-○×τ ⊞× ÷:⇡.&asr. # Generate
+∿×τ ⊞× ÷:⇡.&asr. # Generate
 ÷⧻: ≡/+          # Mix",
         ),
         (

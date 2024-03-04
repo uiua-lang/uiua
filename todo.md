@@ -1,6 +1,8 @@
 # Uiua Todo
 
 - 0.10
+  - `coordinate`
+  - Map `rotate`, `take`, `drop`
   - LSP
     - Inline values?
     - Get references

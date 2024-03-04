@@ -278,41 +278,18 @@ impl Compiler {
         match instrs_signature(&instrs) {
             Ok(s) => {
                 let mut sig = sig.unwrap_or(s);
-                // Runtime-dependent binding
-                if instrs.is_empty() {
-                    // Binding from the stack set above
-                    match &mut self.scope.stack_height {
-                        Ok(height) => {
-                            if *height > 0 {
-                                sig = Signature::new(0, 1);
-                            }
-                            *height = height.saturating_sub(1);
-                        }
-                        Err(sp) => {
-                            let sp = sp.clone();
-                            self.add_error(
-                                sp.span,
-                                format!(
-                                    "This line's signature is undefined: {}. \
-                                    This prevents the later binding of {}.",
-                                    sp.value, name
-                                ),
-                            );
-                        }
-                    }
-                }
                 // Validate signature
                 if let Some(declared_sig) = &binding.signature {
                     let sig_to_check = if let [Instr::PushFunc(f)] = instrs.as_slice() {
                         // If this is a function wrapped in parens, check the signature of the
                         // function rather than the signature of the binding's words
                         f.signature()
+                    } else if instrs.is_empty() {
+                        Signature::new(0, 1)
                     } else {
                         sig
                     };
-                    if declared_sig.value == sig_to_check {
-                        sig = declared_sig.value;
-                    } else {
+                    if declared_sig.value != sig_to_check {
                         self.add_error(
                             declared_sig.span.clone(),
                             format!(
@@ -339,11 +316,7 @@ impl Compiler {
                     sig = f.signature();
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
                     self.compile_bind_function(&name, local, func, span_index, comment)?;
-                } else if (sig.args == 0 && sig.outputs <= 1)
-                    && (sig.outputs > 0 || instrs.is_empty())
-                    && !is_setinv
-                    && !is_setund
-                {
+                } else if sig == (0, 1) && !is_setinv && !is_setund {
                     // Binding is a constant or noadic function
                     let val = if let [Instr::Push(v)] = instrs.as_slice() {
                         Some(v.clone())
@@ -371,15 +344,53 @@ impl Compiler {
                             index: local.index,
                         });
                         let start = self.asm.instrs.len();
-                        self.asm
-                            .instrs
-                            .extend(optimize_instrs(instrs, true, &self.asm));
+                        (self.asm.instrs).extend(optimize_instrs(instrs, true, &self.asm));
                         let end = self.asm.instrs.len();
                         self.asm.top_slices.push(FuncSlice {
                             start,
                             len: end - start,
                         });
                     }
+                } else if instrs.is_empty() {
+                    // Binding binds the value above
+                    match &mut self.scope.stack_height {
+                        Ok(height) => {
+                            if *height > 0 {
+                                sig = Signature::new(0, 1);
+                            }
+                            *height = height.saturating_sub(1);
+                        }
+                        Err(sp) => {
+                            let sp = sp.clone();
+                            self.add_error(
+                                sp.span,
+                                format!(
+                                    "This line's signature is undefined: {}. \
+                                    This prevents the later binding of {}.",
+                                    sp.value, name
+                                ),
+                            );
+                        }
+                    }
+                    if let Some(Instr::Push(val)) = self.asm.instrs.last() {
+                        let val = val.clone();
+                        self.asm.instrs.pop();
+                        self.asm.bind_const(local, Some(val), span_index, comment);
+                        let last_slice = self.asm.top_slices.last_mut().unwrap();
+                        last_slice.len -= 1;
+                        if last_slice.len == 0 {
+                            self.asm.top_slices.pop();
+                        }
+                    } else {
+                        self.asm.bind_const(local, None, span_index, comment);
+                        let start = self.asm.instrs.len();
+                        self.asm.instrs.push(Instr::BindGlobal {
+                            span: span_index,
+                            index: local.index,
+                        });
+                        self.asm.top_slices.push(FuncSlice { start, len: 1 });
+                    }
+                    self.scope.names.insert(name.clone(), local);
                 } else {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);

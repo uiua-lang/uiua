@@ -330,7 +330,10 @@ impl<T: ArrayValue> Array<T> {
     #[track_caller]
     pub fn row(&self, row: usize) -> Self {
         if self.rank() == 0 {
-            return self.clone();
+            let mut row = self.clone();
+            row.take_map_keys();
+            row.take_label();
+            return row;
         }
         let row_count = self.row_count();
         if row >= row_count {

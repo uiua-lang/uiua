@@ -385,6 +385,7 @@ impl Primitive {
             "id" => return Some(Primitive::Identity),
             "ga" => return Some(Primitive::Gap),
             "po" => return Some(Primitive::Pop),
+            "of" => return Some(Primitive::Off),
             "pi" => return Some(Primitive::Pi),
             "ran" => return Some(Primitive::Range),
             "tra" => return Some(Primitive::Transpose),
@@ -439,7 +440,7 @@ impl Primitive {
                     .strip_suffix(['i', 'p', 'f'])
                     .unwrap_or(sub_name)
                     .chars()
-                    .all(|c| "gdo".contains(c))
+                    .all(|c| "gd".contains(c))
                 {
                     // 1-letter planet notation
                     for (i, c) in sub_name.char_indices() {
@@ -450,7 +451,6 @@ impl Primitive {
                             'd' => Primitive::Dip,
                             'i' => Primitive::Identity,
                             'p' => Primitive::Pop,
-                            'o' => Primitive::On,
                             _ => unreachable!(),
                         };
                         prims.push((prim, &sub_name[i..i + 1]))
@@ -619,6 +619,13 @@ impl Primitive {
             }
             Primitive::Pop => {
                 env.pop(1)?;
+            }
+            Primitive::Off => {
+                let a = env.pop(1)?;
+                let b = env.pop(2)?;
+                env.push(b.clone());
+                env.push(b);
+                env.push(a);
             }
             Primitive::Dip => {
                 return Err(env.error("Dip was not inlined. This is a bug in the interpreter"))

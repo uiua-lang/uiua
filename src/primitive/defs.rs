@@ -295,6 +295,32 @@ primitive!(
     /// When you have all the random numbers you need, you often want to discard the seed.
     /// ex: ⌊×10[◌⍥gen10 0]
     (1(0), Pop, Stack, ("pop", '◌')),
+    /// Call a function but keep its first argument on the top of the stack
+    ///
+    /// ex: [⟜+ 2 5]
+    ///   : [⟜- 2 5]
+    /// ex: ÷⟜⇡ 10
+    /// ex: +⟜(⇡-) 4 10
+    /// ex: +⟜(×-) 10 20 0.3
+    /// ex: ↯⟜⊚ 4
+    ///
+    /// [on] can be thought of as a compliment of [duplicate].
+    /// ex: [¯. 1]
+    ///   : [⟜¯ 1]
+    ///
+    /// [on] in planet notation acts as a way of [duplicate]ing a value.
+    /// You can read `on``dip` or `on``identity` as a single unit that keeps 2 copies of the value at that position.
+    /// ex: [⟜⊙⋅⟜⊙◌   1 2 3 4] # Easy to read with ⟜
+    ///   : [.⊙⋅(.⊙◌) 1 2 3 4] # Hard to read with .
+    ///   : [∩⊓.◌     1 2 3 4] # Shorter, maybe hard to read
+    /// ex: [⊙⟜⊙⋅⟜∘  1 2 3 4] # Easy to read with ⟜
+    ///   : [⊙(.⊙⋅.) 1 2 3 4] # Hard to read with .
+    ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
+    ///
+    /// [on] is equivalent to [fork][identity], but can often be easier to read.
+    ([1], On, Planet, ("on", '⟜')),
+    /// Duplicate the second value on the stack
+    (2(3), Off, Stack, ("off", '⊸')),
     /// Do nothing with one value
     ///
     /// ex: ∘ 5
@@ -1478,30 +1504,6 @@ primitive!(
     /// ex: +⊙(×⊙(↙⊙↘)) 2 10 3 1 [1 2 3 4 5]
     /// ex: +⊙(×|↙|↘)   2 10 3 1 [1 2 3 4 5]
     ([1], Dip, Planet, ("dip", '⊙')),
-    /// Call a function but keep its first argument on the top of the stack
-    ///
-    /// ex: [⟜+ 2 5]
-    ///   : [⟜- 2 5]
-    /// ex: ÷⟜⇡ 10
-    /// ex: +⟜(⇡-) 4 10
-    /// ex: +⟜(×-) 10 20 0.3
-    /// ex: ↯⟜⊚ 4
-    ///
-    /// [on] can be thought of as a compliment of [duplicate].
-    /// ex: [¯. 1]
-    ///   : [⟜¯ 1]
-    ///
-    /// [on] in planet notation acts as a way of [duplicate]ing a value.
-    /// You can read `on``dip` or `on``identity` as a single unit that keeps 2 copies of the value at that position.
-    /// ex: [⟜⊙⋅⟜⊙◌   1 2 3 4] # Easy to read with ⟜
-    ///   : [.⊙⋅(.⊙◌) 1 2 3 4] # Hard to read with .
-    ///   : [∩⊓.◌     1 2 3 4] # Shorter, maybe hard to read
-    /// ex: [⊙⟜⊙⋅⟜∘  1 2 3 4] # Easy to read with ⟜
-    ///   : [⊙(.⊙⋅.) 1 2 3 4] # Hard to read with .
-    ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
-    ///
-    /// [on] is equivalent to [fork][identity], but can often be easier to read.
-    ([1], On, Planet, ("on", '⟜')),
     /// Call a function on two sets of values
     ///
     /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.

@@ -735,11 +735,9 @@ impl<T: ArrayValue> Array<T> {
             self.reset_meta_flags();
         }
         if depth == 0 {
-            if let Some(meta) = self.get_meta_mut() {
-                if let Some(keys) = &mut meta.map_keys {
-                    let by = by.data[0];
-                    keys.rotate(by);
-                }
+            if let Some(keys) = self.map_keys_mut() {
+                let by = by.data[0];
+                keys.rotate(by);
             }
         }
         Ok(())

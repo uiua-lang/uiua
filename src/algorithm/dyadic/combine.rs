@@ -9,7 +9,7 @@ use crate::algorithm::op2_bytes_retry_fill;
 use crate::{
     algorithm::{max_shape, FillContext},
     cowslice::cowslice,
-    Array, ArrayValue, FormatShape, Uiua, UiuaResult, Value,
+    Array, ArrayValue, FormatShape, Primitive, Uiua, UiuaResult, Value,
 };
 
 fn data_index_to_shape_index(mut index: usize, shape: &[usize], out: &mut [usize]) -> bool {
@@ -100,7 +100,7 @@ impl Value {
     pub fn join_infallible(self, other: Self) -> Self {
         self.join_impl(other, &()).unwrap()
     }
-    fn join_impl<C: FillContext>(self, other: Self, ctx: &C) -> Result<Self, C::Error> {
+    pub(crate) fn join_impl<C: FillContext>(self, other: Self, ctx: &C) -> Result<Self, C::Error> {
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ctx)?.into(),
             #[cfg(feature = "bytes")]
@@ -235,9 +235,9 @@ impl<T: ArrayValue> Array<T> {
     }
     fn join_impl<C: FillContext>(mut self, mut other: Self, ctx: &C) -> Result<Self, C::Error> {
         crate::profile_function!();
-        self.combine_meta(other.meta());
         let res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
+                self.combine_meta(other.meta());
                 if let Some(label) = other.take_label() {
                     self.meta_mut().label = Some(label);
                 }
@@ -289,27 +289,41 @@ impl<T: ArrayValue> Array<T> {
                     self.shape = 2.into();
                     self
                 } else {
-                    match ctx.scalar_fill::<T>() {
-                        Ok(fill) => {
-                            let new_row_shape = max_shape(&self.shape[1..], &other.shape[1..]);
-                            for (array, fill) in [(&mut self, fill.clone()), (&mut other, fill)] {
-                                let mut new_shape = new_row_shape.clone();
-                                new_shape.insert(0, array.shape[0]);
-                                array.fill_to_shape(&new_shape, fill);
+                    let map_keys = self.take_map_keys().zip(other.take_map_keys());
+                    if self.shape[1..] != other.shape[1..] {
+                        match ctx.scalar_fill::<T>() {
+                            Ok(fill) => {
+                                if map_keys.is_some() {
+                                    return Err(ctx.error(format!(
+                                        "Cannot {} {} map arrays",
+                                        Primitive::Fill,
+                                        Primitive::Join
+                                    )));
+                                }
+                                let new_row_shape = max_shape(&self.shape[1..], &other.shape[1..]);
+                                for (array, fill) in [(&mut self, fill.clone()), (&mut other, fill)]
+                                {
+                                    let mut new_shape = new_row_shape.clone();
+                                    new_shape.insert(0, array.shape[0]);
+                                    array.fill_to_shape(&new_shape, fill);
+                                }
+                            }
+                            Err(e) => {
+                                return Err(C::fill_error(ctx.error(format!(
+                                    "Cannot join arrays of shapes {} and {}. {e}",
+                                    self.shape(),
+                                    other.shape()
+                                ))));
                             }
                         }
-                        Err(e) if self.shape[1..] != other.shape[1..] => {
-                            return Err(C::fill_error(ctx.error(format!(
-                                "Cannot join arrays of shapes {} and {}. {e}",
-                                self.shape(),
-                                other.shape()
-                            ))));
-                        }
-                        _ => (),
                     }
                     self.data.extend(other.data);
                     self.shape[0] += other.shape[0];
                     self.take_label();
+                    if let Some((mut a, b)) = map_keys {
+                        a.join(b, ctx)?;
+                        self.meta_mut().map_keys = Some(a);
+                    }
                     self
                 }
             }
@@ -373,6 +387,9 @@ impl<T: ArrayValue> Array<T> {
             }
             return self.uncouple(env);
         }
+        if self.map_keys().is_some() {
+            return Err(env.error("Cannot undo join of map arrays"));
+        }
         match ash.len().cmp(&bsh.len()) {
             Ordering::Equal => {
                 if self.row_count() != ash[0] + bsh[0] {
@@ -430,6 +447,9 @@ impl<T: ArrayValue> Array<T> {
         let first = Array::new(&self.shape[1..], first_data);
         self.shape[0] -= 1;
         self.validate_shape();
+        if let Some(keys) = self.map_keys_mut() {
+            keys.drop(1);
+        }
         Ok((first, self))
     }
 }

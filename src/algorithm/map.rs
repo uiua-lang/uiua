@@ -13,6 +13,8 @@ use crate::{
     Value,
 };
 
+use super::FillContext;
+
 impl<T: ArrayValue> Array<T> {
     /// Check if the array is a map
     pub fn is_map(&self) -> bool {
@@ -190,55 +192,59 @@ impl MapKeys {
     fn capacity(&self) -> usize {
         self.indices.len()
     }
+    fn rehash(&mut self) {
+        self.grow_to(self.capacity());
+    }
     fn grow(&mut self) {
         if self.capacity() == 0 || (self.len as f64 / self.capacity() as f64) > LOAD_FACTOR {
-            fn grow_impl<K>(keys: &mut Array<K>, indices: &mut Vec<usize>, new_capacity: usize)
-            where
-                K: MapItem + ArrayValue,
-            {
-                let key_row_len = keys.row_len();
-                let mut keys_shape = keys.shape.clone();
-                keys_shape[0] = new_capacity;
-                let old_keys = take(keys).into_rows();
-                let old_indices = take(indices);
-                *keys = Array::new(
-                    keys_shape,
-                    repeat(K::empty_cell())
-                        .take(new_capacity * key_row_len)
-                        .collect::<EcoVec<_>>(),
-                );
-                *indices = vec![0; new_capacity];
-                let key_data = keys.data.as_mut_slice();
-                for (key, index) in old_keys.zip(old_indices) {
-                    let start = hash_start(&key, new_capacity);
-                    let mut key_index = start;
-                    loop {
-                        let cell_key =
-                            &mut key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
-                        if cell_key[0].is_empty_cell() {
-                            cell_key.clone_from_slice(&key.data);
-                            indices[key_index] = index;
-                            break;
-                        }
-                        key_index = (key_index + 1) % new_capacity;
-                    }
-                }
+            self.grow_to((self.capacity() * 2).max(1));
+        }
+    }
+    fn grow_to(&mut self, new_capacity: usize) {
+        #[cfg(feature = "bytes")]
+        {
+            if let Value::Byte(keys) = &self.keys {
+                self.keys = Value::Num(keys.convert_ref());
             }
-
-            let new_cap = (self.capacity() * 2).max(1);
+        }
+        match &mut self.keys {
+            Value::Num(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
+            Value::Complex(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
+            Value::Char(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
+            Value::Box(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
             #[cfg(feature = "bytes")]
-            {
-                if let Value::Byte(keys) = &self.keys {
-                    self.keys = Value::Num(keys.convert_ref());
+            Value::Byte(_) => unreachable!(),
+        }
+    }
+    fn grow_impl<K>(keys: &mut Array<K>, indices: &mut Vec<usize>, new_capacity: usize)
+    where
+        K: MapItem + ArrayValue,
+    {
+        let key_row_len = keys.row_len();
+        let mut keys_shape = keys.shape.clone();
+        keys_shape[0] = new_capacity;
+        let old_keys = take(keys).into_rows();
+        let old_indices = take(indices);
+        *keys = Array::new(
+            keys_shape,
+            repeat(K::empty_cell())
+                .take(new_capacity * key_row_len)
+                .collect::<EcoVec<_>>(),
+        );
+        *indices = vec![0; new_capacity];
+        let key_data = keys.data.as_mut_slice();
+        for (key, index) in old_keys.zip(old_indices) {
+            let start = hash_start(&key, new_capacity);
+            let mut key_index = start;
+            loop {
+                let cell_key =
+                    &mut key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
+                if cell_key[0].is_empty_cell() {
+                    cell_key.clone_from_slice(&key.data);
+                    indices[key_index] = index;
+                    break;
                 }
-            }
-            match &mut self.keys {
-                Value::Num(a) => grow_impl(a, &mut self.indices, new_cap),
-                Value::Complex(a) => grow_impl(a, &mut self.indices, new_cap),
-                Value::Char(a) => grow_impl(a, &mut self.indices, new_cap),
-                Value::Box(a) => grow_impl(a, &mut self.indices, new_cap),
-                #[cfg(feature = "bytes")]
-                Value::Byte(_) => unreachable!(),
+                key_index = (key_index + 1) % new_capacity;
             }
         }
     }
@@ -452,6 +458,19 @@ impl MapKeys {
             }
         }
         self.len = n;
+    }
+    pub(crate) fn join<C>(&mut self, mut other: Self, ctx: &C) -> Result<(), C::Error>
+    where
+        C: FillContext,
+    {
+        self.keys = take(&mut self.keys).join_impl(other.keys, ctx)?;
+        for index in &mut other.indices {
+            *index += self.len;
+        }
+        self.len += other.len;
+        self.indices.append(&mut other.indices);
+        self.rehash();
+        Ok(())
     }
 }
 

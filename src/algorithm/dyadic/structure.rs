@@ -611,6 +611,9 @@ impl<T: ArrayValue> Array<T> {
         into: Self,
         env: &Uiua,
     ) -> UiuaResult<Self> {
+        if self.map_keys().is_some() {
+            return Err(env.error("Cannot undo take from map array"));
+        }
         let from = self;
         match from.rank().cmp(&into.rank()) {
             Ordering::Less => {
@@ -669,6 +672,9 @@ impl<T: ArrayValue> Array<T> {
         })
     }
     fn undrop(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+        if self.map_keys().is_some() {
+            return Err(env.error("Cannot undo drop from map array"));
+        }
         let index: Vec<isize> = index
             .iter()
             .zip(&into.shape)

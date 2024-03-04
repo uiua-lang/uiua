@@ -225,6 +225,14 @@ impl<T> Array<T> {
     pub fn take_map_keys(&mut self) -> Option<MapKeys> {
         self.get_meta_mut().and_then(|meta| meta.map_keys.take())
     }
+    /// Get a reference to the map keys
+    pub fn map_keys(&self) -> Option<&MapKeys> {
+        self.meta().map_keys.as_ref()
+    }
+    /// Get a mutable reference to the map keys
+    pub fn map_keys_mut(&mut self) -> Option<&mut MapKeys> {
+        self.get_meta_mut().and_then(|meta| meta.map_keys.as_mut())
+    }
     /// Reset all metadata
     pub fn reset_meta(&mut self) {
         self.meta = None;
@@ -247,8 +255,7 @@ impl<T> Array<T> {
     }
     /// Combine the metadata of two arrays
     pub fn combine_meta(&mut self, other: &ArrayMeta) {
-        if let Some(meta) = self.meta.as_mut() {
-            let meta = Arc::make_mut(meta);
+        if let Some(meta) = self.get_meta_mut() {
             meta.flags &= other.flags;
             meta.map_keys = None;
         }

@@ -101,11 +101,11 @@ impl Value {
     }
     /// Get a value from a map array
     pub fn get(&self, key: &Value, env: &Uiua) -> UiuaResult<Value> {
-        let keys = self
-            .meta()
-            .map_keys
-            .as_ref()
-            .ok_or_else(|| env.error("Value is not a map"))?;
+        if self.row_count() == 0 {
+            return (env.value_fill().cloned()).ok_or_else(|| env.error("Key not found in map"));
+        }
+        let keys =
+            (self.meta().map_keys.as_ref()).ok_or_else(|| env.error("Value is not a map"))?;
         if let Some(index) = keys.get(key) {
             if index >= self.row_count() {
                 return Err(env.error("Map was corrupted"));
@@ -119,15 +119,18 @@ impl Value {
     }
     /// Check if a map array contains a key
     pub fn has_key(&self, key: &Value, env: &Uiua) -> UiuaResult<bool> {
-        let keys = self
-            .meta()
-            .map_keys
-            .as_ref()
-            .ok_or_else(|| env.error("Value is not a map"))?;
+        if self.row_count() == 0 {
+            return Ok(false);
+        }
+        let keys =
+            (self.meta().map_keys.as_ref()).ok_or_else(|| env.error("Value is not a map"))?;
         Ok(keys.get(key).is_some())
     }
     /// Insert a key-value pair into a map array
     pub fn insert(&mut self, key: Value, value: Value, env: &Uiua) -> UiuaResult {
+        if !self.is_map() && self.row_count() == 0 {
+            *self = take(self).map(Value::default(), env)?;
+        }
         let index = self.row_count();
         let mut keys = self.take_map_keys();
         keys.as_mut()
@@ -141,6 +144,9 @@ impl Value {
     }
     /// Remove a key-value pair from a map array
     pub fn remove(&mut self, key: Value, env: &Uiua) -> UiuaResult {
+        if self.row_count() == 0 {
+            return Ok(());
+        }
         let row_count = self.row_count();
         let keys = (self.get_meta_mut().and_then(|m| m.map_keys.as_mut()))
             .ok_or_else(|| env.error("Value is not a map"))?;

@@ -2088,7 +2088,8 @@ primitive!(
     /// Create a hashmap from lists of keys and values
     ///
     /// A hashmap is a normal array that is used as a mapping from keys to values.
-    /// The related map functions [insert], [has], [get], and [remove] all treat the array as an actual hashmap, so they have O(1) amortized time complexity.
+    /// The related map functions [insert], [has], and [get], all treat the array as an actual hashmap, so they have O(1) amortized time complexity.
+    /// Because the values array maintains insertion order, the [remove] function has O(n) time complexity.
     ///
     /// ex: # Experimental!
     ///   : map 1_2 3_4
@@ -2101,9 +2102,13 @@ primitive!(
     /// ex: # Experimental!
     ///   : map 1_2 3_4
     ///   : insert 5 6
+    /// An empty array can be used as an empty map, event if it was not created with [map].
+    /// ex: # Experimental!
+    ///   : has 5 []
+    ///   : insert 1 2 []
     /// You can use [un][map] to get the keys and values back.
     /// ex: # Experimental!
-    ///   : map[][]
+    ///   : []
     ///   : insert 1 2_3
     ///   : insert 4 5_6
     ///   : insert 7 8_9
@@ -2141,13 +2146,13 @@ primitive!(
     ///
     /// The array is used as an actual hashmap, so some entries may be empty.
     /// ex: # Experimental!
-    ///   : map[][]
+    ///   : []
     ///   : insert 1 2
     ///   : insert 3 4
     ///   : insert 5 6
     /// If the key is already present, it is replaced.
     /// ex: # Experimental!
-    ///   : map[][]
+    ///   : []
     ///   : insert 1 2
     ///   : insert 3 4
     ///   : insert 3 5
@@ -2215,6 +2220,8 @@ primitive!(
     ///   : map 1_2 3_4
     ///   : remove 2 .
     ///   : remove 5 .
+    ///
+    /// Unlike the other map functions, [remove] has O(n) time complexity.
     ///
     /// See also: [insert], [has], [get]
     (2, Remove, Map, "remove"),

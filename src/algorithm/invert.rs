@@ -173,6 +173,32 @@ pub(crate) fn under_instrs(
         return None;
     }
 
+    /// Copy 1 value to the temp stack before the "before", and pop it before the "after"
+    macro_rules! stash1 {
+        (($($before:expr),*)) => {
+            pat!(($($before),*), (CopyToTempN(1), $($before),*), (PopTempN(1), $($before),*))
+        };
+        (($($before:expr),*), ($($after:expr),*)) => {
+            pat!(($($before),*), (CopyToTempN(1), $($before),*), (PopTempN(1), $($after),*))
+        };
+        (($($before:expr),*), $after:expr) => {
+            pat!(($($before),*), (CopyToTempN(1), $($before),*), (PopTempN(1), $after))
+        };
+        ($before:expr, ($($after:expr),*)) => {
+            pat!($before, (CopyToTempN(1), $before), (PopTempN(1), $($after),*))
+        };
+        ($before:expr, $after:expr) => {
+            pat!($before, (CopyToTempN(1), $before), (PopTempN(1), $after))
+        };
+    }
+
+    /// Copy 1 value to the temp stack after the "before", and pop it before the "after"
+    macro_rules! store1copy {
+        ($before:expr, $after:expr) => {
+            pat!($before, ($before, CopyToTempN(1)), (PopTempN(2), $after),)
+        };
+    }
+
     /// Copy 2 values to the temp stack before the "before", and pop them before the "after"
     macro_rules! stash2 {
         ($before:expr, $after:expr) => {
@@ -183,28 +209,20 @@ pub(crate) fn under_instrs(
     /// Handle dyadic arithmetic operations
     macro_rules! dyad {
         (Flip, $before:expr, $after:expr) => {
-            pat!(
-                (Flip, $before),
-                (CopyToTempN(1), Flip, $before),
-                (PopTempN(1), $after),
-            )
+            stash1!((Flip, $before), $after)
         };
         (Flip, $before:expr) => {
-            pat!(
-                (Flip, $before),
-                (CopyToTempN(1), Flip, $before),
-                (PopTempN(1), Flip, $before),
-            )
+            stash1!((Flip, $before))
         };
         ($before:expr, $after:expr) => {
-            pat!(($before), (CopyToTempN(1), $before), (PopTempN(1), $after),)
+            stash1!($before, $after)
         };
     }
 
     /// Rounding operations
     macro_rules! round {
         ($before:expr) => {
-            pat!($before, (Dup, $before, Flip, Over, Sub, Flip), (Add))
+            pat!($before, (Dup, $before, Flip, Over, Sub, PushTempN(1)), (PopTempN(1), Add))
         };
     }
 
@@ -242,30 +260,19 @@ pub(crate) fn under_instrs(
         &dyad!(Sub, Add),
         &dyad!(Mul, Div),
         &dyad!(Div, Mul),
+        &maybe_val!(pat!(Mod, (Over, Over, Flip, Over, Div, Floor, Mul, PushTempN(1), Mod), (PopTempN(1), Add))),
         // Exponentail math
-        &maybe_val!(pat!(
-            (Flip, Pow),
-            (CopyToTempN(1), Flip, Pow),
-            (PopTempN(1), Log)
-        )),
-        &maybe_val!(pat!(
-            Pow,
-            (CopyToTempN(1), Pow),
-            (PopTempN(1), 1, Flip, Div, Pow)
-        )),
-        &maybe_val!(pat!(Log, (CopyToTempN(1), Log), (PopTempN(1), Flip, Pow))),
-        &maybe_val!(pat!(
-            (Flip, Log),
-            (CopyToTempN(1), Flip, Log),
-            (1, Flip, Div, PopTempN(1), Flip, Pow)
-        )),
+        &maybe_val!(stash1!((Flip, Pow), Log)),
+        &maybe_val!(stash1!(Pow, (1, Flip, Div, Pow))),
+        &maybe_val!(stash1!(Log, (Flip, Pow))),
+        &maybe_val!(stash1!((Flip, Log), (Flip, 1, Flip, Div, Pow))),
         // Rounding
         &round!(Floor),
         &round!(Ceil),
         &round!(Round),
         // Sign ops
-        &pat!(Abs, (CopyToTempN(1), Abs), (PopTempN(1), Sign, Mul)),
-        &pat!(Sign, (Dup, Abs, PushTempN(1), Sign), (PopTempN(1), Mul)),
+        &stash1!(Abs, (Sign, Mul)),
+        &stash1!(Sign, (Abs, Mul)),
         // Pop
         &pat!(Pop, (PushTempN(1)), (PopTempN(1))),
         // Array restructuring
@@ -276,34 +283,39 @@ pub(crate) fn under_instrs(
             (CopyToTempN(2), Keep),
             (PopTempN(1), Flip, PopTempN(1), Unkeep),
         )),
-        &pat!(Rotate, (CopyToTempN(1), Rotate), (PopTempN(1), Neg, Rotate)),
+        &stash1!(Rotate, (Neg, Rotate)),
         &maybe_val!(pat!(
             Join,
-            (
-                Flip,
-                Dup,
-                Shape,
-                PushTempN(1),
-                Flip,
-                Dup,
-                Shape,
-                PushTempN(1),
-                Join
-            ),
+            (Over, Shape, Over, Shape, Flip, PushTempN(2), Join),
             (PopTempN(2), Unjoin),
         )),
+        // Array indexing
+        &stash1!(Rise, (Flip, Select)),
+        &stash1!(Fall, (Flip, Select)),
+        &maybe_val!(pat!(IndexOf, (Over, PushTempN(1), IndexOf), (PopTempN(1), Flip, Select))),
+        // Array masking
+        &stash1!(Unique, (Flip, Keep)),
+        &maybe_val!(stash1!(Member, (Flip, Keep))),
+        &maybe_val!(pat!(Find, (Over, PushTempN(1), Find), (PopTempN(1), Flip, Keep))),
         // Value retrieval
-        &pat!(First, (CopyToTempN(1), First), (PopTempN(1), Unfirst)),
-        &pat!(Last, (CopyToTempN(1), Last), (PopTempN(1), Unlast)),
+        &stash1!(First, Unfirst),
+        &stash1!(Last, Unlast),
         &maybe_val!(stash2!(Pick, Unpick)),
         &maybe_val!(stash2!(Select, Unselect)),
+        // Map control
         &maybe_val!(pat!(
             Get,
             (CopyToTempN(2), Get),
             (PopTempN(1), Flip, PopTempN(1), Insert),
         )),
+        &maybe_val!(pat!(
+            Remove,
+            (Over, Over, Get, Over, PushTempN(2), Remove),
+            (PopTempN(2), Insert),
+        )),
+        &maybe_val!(stash1!(Insert, Remove)),
         // Shaping
-        &pat!(Shape, (CopyToTempN(1), Shape), (PopTempN(1), Flip, Reshape)),
+        &stash1!(Shape, (Flip, Reshape)),
         &pat!(
             Deshape,
             (Dup, Shape, PushTempN(1), Deshape),
@@ -332,41 +344,13 @@ pub(crate) fn under_instrs(
         ),
         // System stuff
         &pat!(Now, (Now, PushTempN(1)), (PopTempN(1), Now, Flip, Sub)),
-        &pat!(
-            Sys(SysOp::FOpen),
-            (Sys(SysOp::FOpen), CopyToTempN(1)),
-            (PopTempN(1), Sys(SysOp::Close)),
-        ),
-        &pat!(
-            Sys(SysOp::FCreate),
-            (Sys(SysOp::FCreate), CopyToTempN(1)),
-            (PopTempN(1), Sys(SysOp::Close)),
-        ),
-        &pat!(
-            Sys(SysOp::RunStream),
-            (Sys(SysOp::RunStream), CopyToTempN(1)),
-            (PopTempN(1), Sys(SysOp::Close)),
-        ),
-        &pat!(
-            Sys(SysOp::TcpConnect),
-            (Sys(SysOp::TcpConnect), CopyToTempN(1)),
-            (PopTempN(1), Sys(SysOp::Close)),
-        ),
-        &pat!(
-            Sys(SysOp::TcpAccept),
-            (Sys(SysOp::TcpAccept), CopyToTempN(1)),
-            (PopTempN(1), Sys(SysOp::Close)),
-        ),
-        &maybe_val!(pat!(
-            Sys(SysOp::FReadAllStr),
-            (CopyToTempN(1), Sys(SysOp::FReadAllStr)),
-            (PopTempN(1), Sys(SysOp::FWriteAll)),
-        )),
-        &maybe_val!(pat!(
-            Sys(SysOp::FReadAllBytes),
-            (CopyToTempN(1), Sys(SysOp::FReadAllBytes)),
-            (PopTempN(1), Sys(SysOp::FWriteAll)),
-        )),
+        &store1copy!(Sys(SysOp::FOpen), Sys(SysOp::Close)),
+        &store1copy!(Sys(SysOp::FCreate), Sys(SysOp::Close)),
+        &store1copy!(Sys(SysOp::RunStream), Sys(SysOp::Close)),
+        &store1copy!(Sys(SysOp::TcpConnect), Sys(SysOp::Close)),
+        &store1copy!(Sys(SysOp::TcpAccept), Sys(SysOp::Close)),
+        &maybe_val!(stash1!(Sys(SysOp::FReadAllStr), Sys(SysOp::FWriteAll))),
+        &maybe_val!(stash1!(Sys(SysOp::FReadAllBytes), Sys(SysOp::FWriteAll))),
         // Patterns that need to be last
         &UnderPatternFn(under_flip_pattern, "flip"),
         &UnderPatternFn(under_push_temp_pattern, "push temp"),

@@ -181,7 +181,7 @@ impl Value {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MapKeys {
-    keys: Value,
+    pub(crate) keys: Value,
     indices: Vec<usize>,
     len: usize,
 }
@@ -398,6 +398,22 @@ impl MapKeys {
             self.indices.swap(a, b);
         }
     }
+    pub(crate) fn rotate(&mut self, by: isize) {
+        let present_indices = self.present_indices();
+        let len = present_indices.len();
+        if len == 0 {
+            return;
+        }
+        let by = (-by).rem_euclid(len as isize) as usize;
+        if by == 0 {
+            return;
+        }
+        let old = self.indices.clone();
+        for (i, &index) in present_indices.iter().enumerate() {
+            let new_index = (i + by) % len;
+            self.indices[index] = old[present_indices[new_index]];
+        }
+    }
     pub(crate) fn drop(&mut self, mut n: usize) {
         let present_indices = self.present_indices();
         n = n.min(present_indices.len());
@@ -417,6 +433,7 @@ impl MapKeys {
         for &not_dropped in &present_indices[n..] {
             self.indices[not_dropped] -= n;
         }
+        self.len -= n;
     }
     pub(crate) fn take(&mut self, mut n: usize) {
         let present_indices = self.present_indices();
@@ -434,6 +451,7 @@ impl MapKeys {
                 self.keys = Value::Num(nums);
             }
         }
+        self.len = n;
     }
 }
 

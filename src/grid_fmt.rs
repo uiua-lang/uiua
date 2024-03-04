@@ -228,10 +228,11 @@ impl GridFmt for Boxed {
 
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, boxed: bool, label: bool) -> Grid {
-        let mut grid = if self.shape.is_empty() {
+        let mut metagrid: Option<Metagrid> = None;
+        let mut grid = if self.shape.is_empty() && !self.is_map() {
             // Scalar
             self.data[0].fmt_grid(boxed, label)
-        } else if self.shape == [0] {
+        } else if self.shape == [0] && !self.is_map() {
             // Empty list
             let (left, right) = T::grid_fmt_delims(boxed);
             let inner = T::empty_list_inner();
@@ -240,14 +241,30 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             row.push(right);
             vec![row]
         } else {
-            let mut metagrid: Option<Metagrid> = None;
             // Hashmap
-            if self.is_map() {
+            if let Some(keys) = &self.meta().map_keys {
                 let metagrid = metagrid.get_or_insert_with(Metagrid::new);
                 for (key, value) in self.map_kv() {
                     let key = key.fmt_grid(false, label);
                     let value = value.fmt_grid(false, label);
                     metagrid.push(vec![key, vec![" → ".chars().collect()], value]);
+                }
+                if metagrid.is_empty() {
+                    let mut keys_row_shape = keys.keys.shape().clone();
+                    keys_row_shape.make_row();
+                    let mut row = match &keys.keys {
+                        Value::Num(_) => shape_row::<f64>(&keys_row_shape),
+                        #[cfg(feature = "bytes")]
+                        Value::Byte(_) => shape_row::<u8>(&keys_row_shape),
+                        Value::Complex(_) => shape_row::<Complex>(&keys_row_shape),
+                        Value::Char(_) => shape_row::<char>(&keys_row_shape),
+                        Value::Box(_) => shape_row::<Boxed>(&keys_row_shape),
+                    };
+                    row.extend([' ', '→', ' ']);
+                    let mut value_row_shape = self.shape.clone();
+                    value_row_shape.make_row();
+                    row.extend(shape_row::<T>(&value_row_shape));
+                    metagrid.push(vec![vec![row]]);
                 }
             }
 
@@ -387,7 +404,9 @@ fn shape_row<T: ArrayValue>(shape: &[usize]) -> Vec<char> {
         }
         shape_row.extend(dim.to_string().chars());
     }
-    shape_row.push(' ');
+    if !shape.is_empty() {
+        shape_row.push(' ');
+    }
     shape_row.push(T::SYMBOL);
     shape_row
 }

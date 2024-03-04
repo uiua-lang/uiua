@@ -2,7 +2,6 @@
 
 - 0.10
   - `⊠ coordinate`
-  - Map `rotate`
   - LSP
     - Get references
   - System functions
@@ -10,6 +9,7 @@
   - System for custom glyph formatting
   - Let bind only take an ident?
   - Proofread and update tutorial and tour
+  - Make maps good enough to not be experimental
 - Site pages/tutorials
   - Working with strings
   - Duality of `pick` and `select`

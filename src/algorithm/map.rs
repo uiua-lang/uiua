@@ -237,7 +237,6 @@ impl MapKeys {
     where
         C: FillContext,
     {
-        println!("insert {:?}: {}", key, index);
         fn insert_impl<K>(
             keys: &mut Array<K>,
             indices: &mut [usize],

@@ -361,7 +361,7 @@ impl Primitive {
         matches!(
             self,
             Mask | (This | Recur)
-                | (Rectify | All | Cascade)
+                | (Rectify | All | Cascade | By)
                 | (Map | Insert | Has | Get | Remove)
                 | Bind
                 | (Shapes | Types)

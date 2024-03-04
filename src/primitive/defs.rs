@@ -295,32 +295,6 @@ primitive!(
     /// When you have all the random numbers you need, you often want to discard the seed.
     /// ex: ⌊×10[◌⍥gen10 0]
     (1(0), Pop, Stack, ("pop", '◌')),
-    /// Call a function but keep its first argument on the top of the stack
-    ///
-    /// ex: [⟜+ 2 5]
-    ///   : [⟜- 2 5]
-    /// ex: ÷⟜⇡ 10
-    /// ex: +⟜(⇡-) 4 10
-    /// ex: +⟜(×-) 10 20 0.3
-    /// ex: ↯⟜⊚ 4
-    ///
-    /// [on] can be thought of as a compliment of [duplicate].
-    /// ex: [¯. 1]
-    ///   : [⟜¯ 1]
-    ///
-    /// [on] in planet notation acts as a way of [duplicate]ing a value.
-    /// You can read `on``dip` or `on``identity` as a single unit that keeps 2 copies of the value at that position.
-    /// ex: [⟜⊙⋅⟜⊙◌   1 2 3 4] # Easy to read with ⟜
-    ///   : [.⊙⋅(.⊙◌) 1 2 3 4] # Hard to read with .
-    ///   : [∩⊓.◌     1 2 3 4] # Shorter, maybe hard to read
-    /// ex: [⊙⟜⊙⋅⟜∘  1 2 3 4] # Easy to read with ⟜
-    ///   : [⊙(.⊙⋅.) 1 2 3 4] # Hard to read with .
-    ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
-    ///
-    /// [on] is equivalent to [fork][identity], but can often be easier to read.
-    ([1], On, Stack, ("on", '⟜')),
-    /// Duplicate a function's last argument before calling it
-    ([1], By, Stack, ("by", '⊸')),
     /// Do nothing with one value
     ///
     /// ex: ∘ 5
@@ -1504,6 +1478,51 @@ primitive!(
     /// ex: +⊙(×⊙(↙⊙↘)) 2 10 3 1 [1 2 3 4 5]
     /// ex: +⊙(×|↙|↘)   2 10 3 1 [1 2 3 4 5]
     ([1], Dip, Planet, ("dip", '⊙')),
+    /// Call a function but keep its first argument on the top of the stack
+    ///
+    /// ex: [⟜+ 2 5]
+    ///   : [⟜- 2 5]
+    /// ex: ÷⟜⇡ 10
+    /// ex: +⟜(⇡-) 4 10
+    /// ex: +⟜(×-) 10 20 0.3
+    /// ex: ↯⟜⊚ 4
+    ///
+    /// [on] can be thought of as a compliment of [duplicate].
+    /// ex: [¯. 1]
+    ///   : [⟜¯ 1]
+    ///
+    /// [on] in planet notation acts as a way of [duplicate]ing a value.
+    /// You can read `on``dip` or `on``identity` as a single unit that keeps 2 copies of the value at that position.
+    /// ex: [⟜⊙⋅⟜⊙◌   1 2 3 4] # Easy to read with ⟜
+    ///   : [.⊙⋅(.⊙◌) 1 2 3 4] # Hard to read with .
+    ///   : [∩⊓.◌     1 2 3 4] # Shorter, maybe hard to read
+    /// ex: [⊙⟜⊙⋅⟜∘  1 2 3 4] # Easy to read with ⟜
+    ///   : [⊙(.⊙⋅.) 1 2 3 4] # Hard to read with .
+    ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
+    ///
+    /// [on] is equivalent to [fork][identity], but can often be easier to read.
+    ([1], On, Stack, ("on", '⟜')),
+    /// Duplicate a function's last argument before calling it
+    ///
+    /// If you wanted to filter out every element of an array that is not [less than] 10, you could use [keep].
+    /// ex: ▽<10. [1 27 8 3 14 9]
+    /// However, if you wanted to make this a function, you would have to [dip] below the bound to [duplicate] the array.
+    /// ex: F ← ▽<⊙.
+    ///   : F 10 [1 27 8 3 14 9]
+    /// While this works, it may be take a moment to process in your mind how the stack is changing.
+    /// [by] expresses the common pattern of performing an operation but preserving the last argument so that it can be used again.
+    /// With [by], the filtering function above can be written more simply.
+    /// ex: # Experimental!
+    ///   : F ← ▽⊸<
+    ///   : F 10 [1 27 8 3 14 9]
+    /// Here are some more examples of [by] in action.
+    /// ex: # Experimental!
+    ///   : ⊂⊸↙ 2 [1 2 3 4 5]
+    ///   : ⊜□⊸≠ @  "Hey there buddy"
+    ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
+    ///
+    /// [by] is currently `# Experimental!` because it's not clear if it's useful enough to keep.
+    ([1], By, Stack, ("by", '⊸')),
     /// Call a function on two sets of values
     ///
     /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.

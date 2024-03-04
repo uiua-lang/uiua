@@ -190,22 +190,32 @@ impl Hash for Instr {
             Instr::Call(index) => (5, index).hash(state),
             Instr::Format { parts, .. } => (6, parts).hash(state),
             Instr::PushFunc(func) => (7, func).hash(state),
-            Instr::PushTemp { count, .. } => (8, count).hash(state),
-            Instr::PopTemp { count, .. } => (9, count).hash(state),
-            Instr::CopyFromTemp { offset, count, .. } => (10, offset, count).hash(state),
-            Instr::DropTemp { count, .. } => (11, count).hash(state),
-            Instr::TouchStack { count, .. } => (12, count).hash(state),
-            Instr::Comment(_) => (13, 0).hash(state),
-            Instr::CallGlobal { index, call } => (14, index, call).hash(state),
-            Instr::BindGlobal { index, .. } => (15, index).hash(state),
-            Instr::Switch { count, .. } => (16, count).hash(state),
-            Instr::Label { label, .. } => (17, label).hash(state),
-            Instr::Dynamic(df) => (18, df).hash(state),
-            Instr::PushLocals { count, .. } => (19, count).hash(state),
-            Instr::PopLocals => 20.hash(state),
-            Instr::GetLocal { index, .. } => (21, index).hash(state),
-            Instr::Unpack { count, unbox, .. } => (22, count, unbox).hash(state),
-            Instr::CopyToTemp { count, .. } => (23, count).hash(state),
+            Instr::PushTemp { count, stack, .. } => (8, count, stack).hash(state),
+            Instr::PopTemp { count, stack, .. } => (9, count, stack).hash(state),
+            Instr::CopyToTemp { count, stack, .. } => (10, count, stack).hash(state),
+            Instr::CopyFromTemp {
+                offset,
+                count,
+                stack,
+                ..
+            } => (11, offset, count, stack).hash(state),
+            Instr::DropTemp { count, stack, .. } => (12, count, stack).hash(state),
+            Instr::TouchStack { count, .. } => (13, count).hash(state),
+            Instr::Comment(_) => (14, 0).hash(state),
+            Instr::CallGlobal { index, call } => (15, index, call).hash(state),
+            Instr::BindGlobal { index, .. } => (16, index).hash(state),
+            Instr::Switch {
+                count,
+                under_cond,
+                sig,
+                ..
+            } => (17, count, under_cond, sig).hash(state),
+            Instr::Label { label, .. } => (18, label).hash(state),
+            Instr::Dynamic(df) => (19, df).hash(state),
+            Instr::PushLocals { count, .. } => (20, count).hash(state),
+            Instr::PopLocals => 21.hash(state),
+            Instr::GetLocal { index, .. } => (22, index).hash(state),
+            Instr::Unpack { count, unbox, .. } => (23, count, unbox).hash(state),
             Instr::SetOutputComment { i, n, .. } => (24, i, n).hash(state),
             Instr::PushSig(sig) => (25, sig).hash(state),
             Instr::PopSig => 26.hash(state),
@@ -357,6 +367,7 @@ pub struct Function {
     pub id: FunctionId,
     signature: Signature,
     pub(crate) slice: FuncSlice,
+    hash: u64,
 }
 
 /// A range of compiled instructions
@@ -515,7 +526,7 @@ impl fmt::Debug for DynamicFunction {
 
 impl PartialEq for Function {
     fn eq(&self, other: &Self) -> bool {
-        self.slice == other.slice
+        self.id == other.id && self.slice == other.slice && self.hash == other.hash
     }
 }
 
@@ -537,6 +548,7 @@ impl Hash for Function {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.id.hash(state);
         self.slice.hash(state);
+        self.hash.hash(state);
     }
 }
 
@@ -554,11 +566,12 @@ impl fmt::Display for Function {
 
 impl Function {
     /// Create a new function
-    pub(crate) fn new(id: FunctionId, signature: Signature, slice: FuncSlice) -> Self {
+    pub(crate) fn new(id: FunctionId, signature: Signature, slice: FuncSlice, hash: u64) -> Self {
         Self {
             id,
             slice,
             signature,
+            hash,
         }
     }
     /// Get how many arguments this function pops off the stack and how many it pushes.

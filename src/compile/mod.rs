@@ -3,8 +3,9 @@ mod modifier;
 
 use std::{
     cell::RefCell,
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{hash_map::DefaultHasher, BTreeSet, HashMap, HashSet},
     fmt, fs,
+    hash::{Hash, Hasher},
     mem::{replace, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
@@ -490,11 +491,14 @@ code:
             (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
         }
         let start = self.asm.instrs.len();
+        let mut hasher = DefaultHasher::new();
+        instrs.hash(&mut hasher);
+        let hash = hasher.finish();
         self.asm.instrs.extend(instrs);
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("{id})").into()));
         }
-        Function::new(id, sig, FuncSlice { start, len })
+        Function::new(id, sig, FuncSlice { start, len }, hash)
     }
     fn compile_bind_function(
         &mut self,

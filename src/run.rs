@@ -490,8 +490,12 @@ code:
                             Span::Code(span) => FunctionId::Anonymous(span),
                             Span::Builtin => FunctionId::Unnamed,
                         };
-                        let func =
-                            Function::new(id, Signature::new(0, 0), FuncSlice { start: 0, len: 0 });
+                        let func = Function::new(
+                            id,
+                            Signature::new(0, 0),
+                            FuncSlice { start: 0, len: 0 },
+                            0,
+                        );
                         self.asm.bind_function(local, func, span, None);
                     }
                     Ok(())

@@ -1153,11 +1153,13 @@ impl Value {
                     }
                 }
                 if compress {
+                    let meta = take(&mut nums.meta);
                     let mut bytes = EcoVec::with_capacity(nums.element_count());
                     for n in take(&mut nums.data) {
                         bytes.push(n as u8);
                     }
                     let mut arr = Array::new(take(&mut nums.shape), bytes);
+                    arr.meta = meta;
                     if boolean {
                         arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
                     }

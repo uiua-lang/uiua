@@ -16,13 +16,18 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let sig = f.signature();
-    let xs = env.pop(1)?;
-    let ys = env.pop(2)?;
     match sig.args {
         0 => env.call(f),
-        1 => rows1(f, xs, env),
-        2 if xs.rank() <= 1 && ys.rank() <= 1 => table_list(f, xs, ys, env),
-        _ => generic_table(f, xs, ys, env),
+        1 => rows1(f, env.pop(1)?, env),
+        n => {
+            let xs = env.pop(1)?;
+            let ys = env.pop(2)?;
+            if n == 2 && xs.rank() <= 1 && ys.rank() <= 1 {
+                table_list(f, xs, ys, env)
+            } else {
+                generic_table(f, xs, ys, env)
+            }
+        }
     }
 }
 

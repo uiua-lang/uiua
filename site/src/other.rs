@@ -146,12 +146,13 @@ pub fn Install() -> impl IntoView {
         <code class="code-block">"cargo install --git https://github.com/uiua-lang/uiua uiua"</code>
 
         <Hd id="fonts">"Fonts"</Hd>
-        <p>"Uiua was originally designed to be used with stock "<a href="https://dejavu-fonts.github.io">"DejaVu Sans Mono"</a>". However, it now supports two custom fonts:"</p>
+        <p>"Uiua supports a few custom fonts, but "<a href="https://github.com/uiua-lang/uiua/raw/main/site/Uiua386.ttf">"Uiua386"</a>" is the primary one."</p>
         <ul>
             <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/Uiua386.ttf">"Uiua386"</a>" - inspired by APL386. Thanks to Gifti for making it!"</li>
             <li>"Jonathan Perret's"<a href="https://github.com/jonathanperret/uiua386color">"Uiua386Color"</a>" - a colored version of Uiua386"</li>
             <li><a href="https://github.com/uiua-lang/uiua/raw/main/site/DejaVuSansMono.ttf">"DejaVuSansMono"</a>" - a modified version"</li>
         </ul>
+        <p>"Uiua was originally designed to be used with stock "<a href="https://dejavu-fonts.github.io">"DejaVu Sans Mono"</a>", but further development and glyph choices target Uiua386."</p>
 
         <Hd id="editor-support">"Editor Support"</Hd>
         <p>"An official "<a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode">"Uiua language extension for VSCode"</a>" is available."</p>

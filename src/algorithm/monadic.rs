@@ -352,6 +352,8 @@ impl<T: ArrayValue> Array<T> {
                 let row_len = self.row_len();
                 self.shape.remove(0);
                 self.data.truncate(row_len);
+                self.take_map_keys();
+                self.take_label();
                 Ok(self)
             }
         }
@@ -374,7 +376,9 @@ impl<T: ArrayValue> Array<T> {
                 let row_len = self.row_len();
                 self.shape.remove(0);
                 let prefix_len = self.data.len() - row_len;
-                self.data = self.data.into_iter().skip(prefix_len).collect();
+                self.data = self.data[prefix_len..].into();
+                self.take_map_keys();
+                self.take_label();
                 Ok(self)
             }
         }

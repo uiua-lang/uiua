@@ -13,7 +13,7 @@ use crate::algorithm::{op_bytes_ref_retry_fill, op_bytes_retry_fill};
 use crate::{
     algorithm::FillContext,
     cowslice::{cowslice, CowSlice},
-    Array, ArrayValue, FormatShape, Shape, Uiua, UiuaResult, Value,
+    Array, ArrayValue, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
 };
 
 impl Value {
@@ -351,7 +351,9 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// `take` from this array
     pub fn take(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
-        Ok(match index {
+        let map_keys = self.take_map_keys();
+        let row_count = self.row_count();
+        let mut arr = match index {
             [] => self,
             &[taking] => {
                 let row_len = self.row_len();
@@ -505,14 +507,34 @@ impl<T: ArrayValue> Array<T> {
                 arr.validate_shape();
                 arr
             }
-        })
+        };
+        if let Some(mut map_keys) = map_keys {
+            if let Some(taking) = index.first().copied() {
+                if taking.unsigned_abs() > row_count {
+                    return Err(env.error(format!(
+                        "Cannot {} {} a map array",
+                        Primitive::Fill.format(),
+                        Primitive::Take.format()
+                    )));
+                }
+                if taking >= 0 {
+                    map_keys.take(taking.unsigned_abs());
+                } else {
+                    map_keys.drop(row_count - taking.unsigned_abs());
+                }
+            }
+            arr.meta_mut().map_keys = Some(map_keys);
+        }
+        Ok(arr)
     }
     /// `drop` from this array
     pub fn drop(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
         if self.rank() == 0 {
             return Err(env.error("Cannot drop from scalar"));
         }
-        Ok(match index {
+        let map_keys = self.take_map_keys();
+        let row_count = self.row_count();
+        let mut arr = match index {
             [] => self,
             &[dropping] => {
                 let row_len = self.row_len();
@@ -564,7 +586,19 @@ impl<T: ArrayValue> Array<T> {
                     Array::from_row_arrays(new_rows, env)?
                 }
             }
-        })
+        };
+        if let Some(mut map_keys) = map_keys {
+            if let Some(dropping) = index.first().copied() {
+                if dropping >= 0 {
+                    map_keys.drop(dropping.unsigned_abs());
+                } else {
+                    let taken = row_count.saturating_sub(dropping.unsigned_abs());
+                    map_keys.take(taken);
+                }
+            }
+            arr.meta_mut().map_keys = Some(map_keys);
+        }
+        Ok(arr)
     }
     fn untake(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
         self.untake_impl("take", "taken", index, into, env)

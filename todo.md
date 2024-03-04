@@ -2,8 +2,7 @@
 
 - 0.10
   - `⊠ coordinate`
-  - `⊸ off`
-  - Map `rotate`, `take`, `drop`
+  - Map `rotate`
   - LSP
     - Get references
   - System functions

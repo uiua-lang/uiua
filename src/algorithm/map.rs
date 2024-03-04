@@ -383,19 +383,67 @@ impl MapKeys {
         }
         do_remove!(Num, Complex, Char, Box)
     }
-    pub(crate) fn reverse(&mut self) {
+    fn present_indices(&self) -> Vec<usize> {
         let mut present_indices: Vec<_> = (self.keys.rows().enumerate())
             .filter(|(_, k)| !k.is_empty_cell() && !k.is_tombstone())
             .map(|(i, _)| (i, self.indices[i]))
             .collect();
         present_indices.sort_unstable_by_key(|(_, i)| *i);
+        present_indices.into_iter().map(|(i, _)| i).collect()
+    }
+    pub(crate) fn reverse(&mut self) {
+        let present_indices = self.present_indices();
         let mid = present_indices.len() / 2;
-        for (&(a, _), &(b, _)) in present_indices
-            .iter()
-            .take(mid)
-            .zip(present_indices.iter().rev())
-        {
+        for (&a, &b) in (present_indices.iter().take(mid)).zip(present_indices.iter().rev()) {
             self.indices.swap(a, b);
+        }
+    }
+    pub(crate) fn drop(&mut self, mut n: usize) {
+        let present_indices = self.present_indices();
+        n = n.min(present_indices.len());
+        let dropped = &present_indices[..n];
+        match &mut self.keys {
+            Value::Num(keys) => set_tombstones(keys, dropped),
+            Value::Complex(keys) => set_tombstones(keys, dropped),
+            Value::Char(keys) => set_tombstones(keys, dropped),
+            Value::Box(keys) => set_tombstones(keys, dropped),
+            #[cfg(feature = "bytes")]
+            Value::Byte(keys) => {
+                let mut nums = keys.convert_ref();
+                set_tombstones(&mut nums, dropped);
+                self.keys = Value::Num(nums);
+            }
+        }
+        for &not_dropped in &present_indices[n..] {
+            self.indices[not_dropped] -= n;
+        }
+    }
+    pub(crate) fn take(&mut self, mut n: usize) {
+        let present_indices = self.present_indices();
+        n = n.min(present_indices.len());
+        let not_taken = &present_indices[n..];
+        match &mut self.keys {
+            Value::Num(keys) => set_tombstones(keys, not_taken),
+            Value::Complex(keys) => set_tombstones(keys, not_taken),
+            Value::Char(keys) => set_tombstones(keys, not_taken),
+            Value::Box(keys) => set_tombstones(keys, not_taken),
+            #[cfg(feature = "bytes")]
+            Value::Byte(keys) => {
+                let mut nums = keys.convert_ref();
+                set_tombstones(&mut nums, not_taken);
+                self.keys = Value::Num(nums);
+            }
+        }
+    }
+}
+
+fn set_tombstones<T: MapItem + Clone>(arr: &mut Array<T>, indices: &[usize]) {
+    let row_len = arr.row_len();
+    let data = arr.data.as_mut_slice();
+    for &i in indices {
+        let start = i * row_len;
+        for elem in &mut data[start..start + row_len] {
+            *elem = T::tombstone_cell();
         }
     }
 }

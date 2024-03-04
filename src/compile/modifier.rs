@@ -6,8 +6,8 @@ use super::*;
 
 impl Compiler {
     #[allow(clippy::collapsible_match)]
-    pub(super) fn modified(&mut self, modified: Modified, call: bool) -> UiuaResult {
-        let op_count = modified.code_operands().count();
+    pub(super) fn modified(&mut self, mut modified: Modified, call: bool) -> UiuaResult {
+        let mut op_count = modified.code_operands().count();
 
         // De-sugar function pack
         if op_count == 1 {
@@ -129,6 +129,19 @@ impl Compiler {
             }
         }
 
+        if op_count < modified.modifier.value.args() {
+            let missing = modified.modifier.value.args() - op_count;
+            let span = modified.modifier.span.clone();
+            for _ in 0..missing {
+                modified.operands.push(span.clone().sp(Word::Func(Func {
+                    id: FunctionId::Anonymous(span.clone()),
+                    signature: None,
+                    lines: Vec::new(),
+                    closed: false,
+                })));
+            }
+            op_count = modified.operands.len();
+        }
         if op_count == modified.modifier.value.args() {
             // Inlining
             if self.inline_modifier(&modified, call)? {

@@ -668,6 +668,7 @@ macro_rules! temp_wrap {
             let (
                 instr @ Instr::$variant {
                     stack: TempStack::Inline,
+                    count,
                     ..
                 },
                 input,
@@ -676,8 +677,8 @@ macro_rules! temp_wrap {
                 return None;
             };
             // Find end
-            let mut depth = 1;
-            let mut max_depth = 1;
+            let mut depth = *count;
+            let mut max_depth = depth;
             let mut end = 0;
             for (i, instr) in input.iter().enumerate() {
                 match instr {
@@ -707,9 +708,6 @@ macro_rules! temp_wrap {
                     }
                     _ => {}
                 }
-            }
-            if end == 0 {
-                return None;
             }
             let (inner, input) = input.split_at(end);
             let end_instr = input.first()?;

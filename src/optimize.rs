@@ -80,6 +80,23 @@ pub(crate) fn optimize_instrs_mut(
                 stack: a_stack,
                 count: a_count,
                 ..
+            }],
+            Instr::PopTemp {
+                stack: b_stack,
+                count: b_count,
+                span,
+                ..
+            },
+        ) if maximal && *a_stack == b_stack && *a_count == b_count => {
+            let count = *a_count;
+            instrs.pop();
+            instrs.push(Instr::TouchStack { count, span });
+        }
+        (
+            [.., Instr::PushTemp {
+                stack: a_stack,
+                count: a_count,
+                ..
             }, Instr::Prim(Identity, span)],
             Instr::PopTemp {
                 stack: b_stack,

@@ -370,6 +370,17 @@ pub struct Function {
     hash: u64,
 }
 
+impl Default for Function {
+    fn default() -> Self {
+        Self {
+            id: FunctionId::Unnamed,
+            signature: Signature::new(0, 0),
+            slice: FuncSlice::default(),
+            hash: 0,
+        }
+    }
+}
+
 /// A range of compiled instructions
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,

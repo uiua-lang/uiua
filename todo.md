@@ -1,14 +1,12 @@
 # Uiua Todo
 
 - 0.10
-  - Fix constant stuff
-  - `insert` into empty array
+  - System for custom glyph formatting
   - `⊠ coordinate`
   - LSP
     - Get references
   - System functions
     - Excel
-  - System for custom glyph formatting
   - Let bind only take an ident?
   - Proofread and update tutorial and tour
   - Make maps good enough to not be experimental

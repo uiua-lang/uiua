@@ -385,7 +385,7 @@ impl Primitive {
             "id" => return Some(Primitive::Identity),
             "ga" => return Some(Primitive::Gap),
             "po" => return Some(Primitive::Pop),
-            "of" => return Some(Primitive::Off),
+            "of" => return Some(Primitive::By),
             "pi" => return Some(Primitive::Pi),
             "ran" => return Some(Primitive::Range),
             "tra" => return Some(Primitive::Transpose),
@@ -620,18 +620,14 @@ impl Primitive {
             Primitive::Pop => {
                 env.pop(1)?;
             }
-            Primitive::Off => {
-                let a = env.pop(1)?;
-                let b = env.pop(2)?;
-                env.push(b.clone());
-                env.push(b);
-                env.push(a);
-            }
             Primitive::Dip => {
                 return Err(env.error("Dip was not inlined. This is a bug in the interpreter"))
             }
             Primitive::On => {
                 return Err(env.error("On was not inlined. This is a bug in the interpreter"))
+            }
+            Primitive::By => {
+                return Err(env.error("Off was not inlined. This is a bug in the interpreter"))
             }
             Primitive::Gap => {
                 return Err(env.error("Gap was not inlined. This is a bug in the interpreter"))
@@ -648,13 +644,6 @@ impl Primitive {
             Primitive::Content => {
                 return Err(env.error("Content was not inlined. This is a bug in the interpreter"))
             }
-            Primitive::Fill => {
-                let fill = env.pop_function()?;
-                let f = env.pop_function()?;
-                env.call(fill)?;
-                let fill_value = env.pop("fill value")?;
-                env.with_fill(fill_value, |env| env.call(f))?;
-            }
             Primitive::Both => {
                 return Err(env.error("Both was not inlined. This is a bug in the interpreter"))
             }
@@ -668,6 +657,13 @@ impl Primitive {
                 return Err(env.error("Bracket was not inlined. This is a bug in the interpreter"))
             }
             Primitive::All => algorithm::all(env)?,
+            Primitive::Fill => {
+                let fill = env.pop_function()?;
+                let f = env.pop_function()?;
+                env.call(fill)?;
+                let fill_value = env.pop("fill value")?;
+                env.with_fill(fill_value, |env| env.call(f))?;
+            }
             Primitive::This => {
                 let f = env.pop_function()?;
                 env.call_with_this(f)?;

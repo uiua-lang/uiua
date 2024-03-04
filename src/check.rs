@@ -446,13 +446,9 @@ impl<'a> VirtualEnv<'a> {
                     }
                     self.set_min_height();
                 }
-                Off => {
-                    let a = self.pop()?;
-                    let b = self.pop()?;
-                    self.set_min_height();
-                    self.stack.push(b.clone());
-                    self.stack.push(b);
-                    self.stack.push(a);
+                By => {
+                    let sig = self.pop_func()?.signature();
+                    self.handle_args_outputs(sig.args, sig.outputs + 1)?;
                 }
                 Over => {
                     let a = self.pop()?;

@@ -407,7 +407,7 @@ impl Compiler {
             }};
         }
         match prim {
-            Dip | Gap | On => {
+            Dip | Gap | On | By => {
                 // Compile operands
                 let (mut instrs, sig) = self.compile_operand_word(modified.operands[0].clone())?;
                 // Dip (|1 …) . diagnostic
@@ -462,6 +462,35 @@ impl Compiler {
                             count: 1,
                             span,
                         });
+                        Signature::new(sig.args, sig.outputs + 1)
+                    }
+                    By => {
+                        if sig.args > 0 {
+                            let mut i = 0;
+                            if sig.args > 1 {
+                                instrs.insert(
+                                    i,
+                                    Instr::PushTemp {
+                                        stack: TempStack::Inline,
+                                        count: sig.args - 1,
+                                        span,
+                                    },
+                                );
+                                i += 1;
+                            }
+                            instrs.insert(i, Instr::Prim(Dup, span));
+                            i += 1;
+                            if sig.args > 1 {
+                                instrs.insert(
+                                    i,
+                                    Instr::PopTemp {
+                                        stack: TempStack::Inline,
+                                        count: sig.args - 1,
+                                        span,
+                                    },
+                                );
+                            }
+                        }
                         Signature::new(sig.args, sig.outputs + 1)
                     }
                     _ => unreachable!(),

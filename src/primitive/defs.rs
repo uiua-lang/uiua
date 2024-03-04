@@ -318,9 +318,9 @@ primitive!(
     ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
     ///
     /// [on] is equivalent to [fork][identity], but can often be easier to read.
-    ([1], On, Planet, ("on", '⟜')),
-    /// Duplicate the second value on the stack
-    (2(3), Off, Stack, ("off", '⊸')),
+    ([1], On, Stack, ("on", '⟜')),
+    /// Duplicate a function's last argument before calling it
+    ([1], By, Stack, ("by", '⊸')),
     /// Do nothing with one value
     ///
     /// ex: ∘ 5

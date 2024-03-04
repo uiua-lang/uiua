@@ -1313,7 +1313,13 @@ mod server {
                     {
                         tokens.pop();
                     }
-                    tokens.len() < min_length
+                    let code_tok_count = tokens
+                        .iter()
+                        .filter(|tok| {
+                            !matches!(tok.value, Token::Spaces | Token::Newline | Token::Comment)
+                        })
+                        .count();
+                    code_tok_count < min_length
                 };
                 if decl.explicit
                     || !decl.inline && decl.sig == (0, 1)

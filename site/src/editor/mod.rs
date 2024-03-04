@@ -1193,7 +1193,7 @@ pub fn Editor<'a>(
                                 checked=get_autorun
                                 on:change=toggle_autorun/>
                         </div>
-                        <div>
+                        <div title="Show experimental primitive glyphs">
                             "Show experimental:"
                             <input
                                 type="checkbox"

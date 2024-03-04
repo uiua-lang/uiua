@@ -1297,24 +1297,23 @@ mod server {
             let mut hints = Vec::new();
             for (span, decl) in &doc.code_meta.function_sigs {
                 let is_too_short = || {
-                    span.as_str(&doc.asm.inputs, |s| {
-                        let mut tokens = lex(s, (), &mut Inputs::default()).0;
-                        if tokens.first().is_some_and(|t| {
-                            matches!(
-                                t.value,
-                                Token::Simple(AsciiToken::OpenParen | AsciiToken::Bar)
-                            )
-                        }) {
-                            tokens.pop();
-                        }
-                        if tokens
-                            .last()
-                            .is_some_and(|t| t.value == Token::Simple(AsciiToken::CloseParen))
-                        {
-                            tokens.pop();
-                        }
-                        tokens.len() < min_length
-                    })
+                    let mut tokens =
+                        span.as_str(&doc.asm.inputs, |s| lex(s, (), &mut Inputs::default()).0);
+                    if tokens.first().is_some_and(|t| {
+                        matches!(
+                            t.value,
+                            Token::Simple(AsciiToken::OpenParen | AsciiToken::Bar)
+                        )
+                    }) {
+                        tokens.remove(0);
+                    }
+                    if tokens
+                        .last()
+                        .is_some_and(|t| t.value == Token::Simple(AsciiToken::CloseParen))
+                    {
+                        tokens.pop();
+                    }
+                    tokens.len() < min_length
                 };
                 if decl.explicit
                     || !decl.inline && decl.sig == (0, 1)

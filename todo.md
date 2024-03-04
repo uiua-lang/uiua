@@ -1,7 +1,8 @@
 # Uiua Todo
 
 - 0.10
-  - `coordinate`
+  - `⊠ coordinate`
+  - `⊸ off`
   - Map `rotate`, `take`, `drop`
   - LSP
     - Get references

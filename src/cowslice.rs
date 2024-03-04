@@ -65,10 +65,8 @@ impl<T: Clone> CowSlice<T> {
     pub fn truncate(&mut self, len: usize) {
         if self.is_unique() {
             self.data.truncate(self.start + len);
-            self.end = self.start + len;
-        } else {
-            self.end = (self.start + len).min(self.end);
         }
+        self.end = (self.start + len).min(self.end);
     }
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         if !self.data.is_unique() {

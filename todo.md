@@ -4,7 +4,6 @@
   - `coordinate`
   - Map `rotate`, `take`, `drop`
   - LSP
-    - Inline values?
     - Get references
   - System functions
     - Excel

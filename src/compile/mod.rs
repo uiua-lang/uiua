@@ -433,6 +433,8 @@ code:
                                 "Cannot use placeholder outside of function",
                             );
                         }
+                        // let line_span = (line.first().unwrap().span.clone())
+                        //     .merge(line.last().unwrap().span.clone());
                         let mut instrs = self.compile_words(line, true)?;
                         match instrs_signature(&instrs) {
                             Ok(sig) => {
@@ -442,6 +444,8 @@ code:
                                 if sig.args == 0 && instrs_are_pure(&instrs, &self.asm) {
                                     match self.comptime_instrs(instrs.clone()) {
                                         Ok(Some(vals)) => {
+                                            // (self.code_meta.top_level_values)
+                                            //     .insert(line_span, vals.clone());
                                             instrs = vals.into_iter().map(Instr::push).collect();
                                         }
                                         Ok(None) => {}

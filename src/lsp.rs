@@ -96,6 +96,8 @@ pub(crate) struct CodeMeta {
     pub macro_expansions: HashMap<CodeSpan, (Ident, String)>,
     /// A map of incomplete ref paths to their module's index
     pub incomplete_refs: HashMap<CodeSpan, usize>,
+    /// A map of the spans of top-level lines to values
+    pub top_level_values: HashMap<CodeSpan, Vec<Value>>,
 }
 
 #[derive(Clone, Copy)]
@@ -563,6 +565,7 @@ mod server {
                     )),
                     code_action_provider: Some(CodeActionProviderCapability::Simple(true)),
                     inlay_hint_provider: Some(OneOf::Left(true)),
+                    inline_value_provider: Some(OneOf::Left(true)),
                     ..Default::default()
                 },
                 ..Default::default()
@@ -737,7 +740,8 @@ mod server {
                     label: name.clone(),
                     kind: Some(kind),
                     label_details: Some(CompletionItemLabelDetails {
-                        description: binding.global.signature().map(|sig| format!("{sig:<4}")),
+                        description: (binding.global.signature())
+                            .map(|sig| format!("{:<4}", sig.to_string())),
                         ..Default::default()
                     }),
                     documentation: binding.comment.as_ref().map(|c| {
@@ -804,13 +808,13 @@ mod server {
                                 description: Some(format!(
                                     "{} {:<4}",
                                     op.long_name(),
-                                    Signature::new(op.args(), op.outputs())
+                                    Signature::new(op.args(), op.outputs()).to_string()
                                 )),
                                 ..Default::default()
                             })
                         } else {
                             prim.signature().map(|sig| CompletionItemLabelDetails {
-                                description: Some(format!("{sig:<4}")),
+                                description: Some(format!("{:<4}", sig.to_string())),
                                 ..Default::default()
                             })
                         },
@@ -1340,6 +1344,26 @@ mod server {
                 });
             }
             Ok(Some(hints))
+        }
+
+        async fn inline_value(
+            &self,
+            params: InlineValueParams,
+        ) -> Result<Option<Vec<InlineValue>>> {
+            let Some(doc) = self.docs.get(&params.text_document.uri) else {
+                return Ok(None);
+            };
+            let mut inline_values = Vec::new();
+            for (span, values) in &doc.code_meta.top_level_values {
+                let Some(value) = values.first() else {
+                    continue;
+                };
+                inline_values.push(InlineValue::Text(InlineValueText {
+                    range: uiua_span_to_lsp(span),
+                    text: value.show(),
+                }));
+            }
+            Ok(Some(inline_values))
         }
 
         async fn shutdown(&self) -> Result<()> {

@@ -425,8 +425,8 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
                 _ => code_font!(""),
             },
             BindingDocsKind::Modifier(margs) => match margs {
-                0 => code_font!("monadic-modifier"),
-                1 => code_font!("dyadic-modifier"),
+                1 => code_font!("monadic-modifier"),
+                2 => code_font!("dyadic-modifier"),
                 _ => code_font!("triadic-modifier"),
             },
             BindingDocsKind::Module => code_font!("module"),

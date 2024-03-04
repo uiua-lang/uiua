@@ -84,8 +84,9 @@ pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<Span
     (spanner.items_spans(&items), spanner.asm.inputs)
 }
 
+/// Metadata for code for use in IDE tools
 #[derive(Clone, Default)]
-pub(crate) struct CodeMeta {
+pub struct CodeMeta {
     /// A map of references to global bindings
     pub global_references: HashMap<Sp<Ident>, usize>,
     /// A map of references to shadowable constants
@@ -100,10 +101,14 @@ pub(crate) struct CodeMeta {
     pub top_level_values: HashMap<CodeSpan, Vec<Value>>,
 }
 
+/// Data for the signature of a function
 #[derive(Clone, Copy)]
-pub(crate) struct SigDecl {
+pub struct SigDecl {
+    /// The signature itself
     pub sig: Signature,
+    /// Whether the signature is explicitely declared
     pub explicit: bool,
+    /// Whether the function is inline
     pub inline: bool,
 }
 

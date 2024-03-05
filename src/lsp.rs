@@ -554,7 +554,7 @@ mod server {
                     document_on_type_formatting_provider: Some(DocumentOnTypeFormattingOptions {
                         first_trigger_character: ' '.to_string(),
                         more_trigger_character: Some(
-                            "[{()}]|1234567890~-_+=!.,<>/?\\\nABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                            "[{()}]|1234567890~!@#$%^&*_-+=.,<>/?\\\\nABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                 .chars()
                                 .map(|c| c.to_string())
                                 .collect(),
@@ -1001,18 +1001,44 @@ mod server {
                 pos.character - 1
             };
             let before = line_str.chars().take(col as usize).collect::<String>();
+            self.client
+                .log_message(MessageType::LOG, format!("Before: {before:?}"))
+                .await;
             let mut ident = (before.chars().rev())
                 .take_while(|&c| is_ident_char(c))
                 .collect::<String>();
             ident = ident.chars().rev().collect();
-            let start = col - ident.chars().count() as u32;
-
             // Get prims
-            let Some(prims) = Primitive::from_format_name_multi(&ident) else {
-                return Ok(None);
+            let mut start = col - ident.chars().count() as u32;
+            let prims = if ident.is_empty() {
+                let mut prims = Vec::new();
+                let mut ascii_prims: Vec<_> = Primitive::non_deprecated()
+                    .filter_map(|p| p.ascii().map(|a| (p, a.to_string())))
+                    .collect();
+                ascii_prims.sort_by_key(|(_, a)| a.len());
+                ascii_prims.reverse();
+                for (prim, ascii) in ascii_prims {
+                    if before.ends_with(&ascii) {
+                        prims.push(prim);
+                        start -= ascii.chars().count() as u32;
+                        break;
+                    }
+                }
+                if prims.is_empty() {
+                    return Ok(None);
+                }
+                prims
+            } else {
+                match Primitive::from_format_name_multi(&ident) {
+                    Some(prims) => prims.into_iter().map(|(p, _)| p).collect(),
+                    None => return Ok(None),
+                }
             };
+            self.client
+                .log_message(MessageType::LOG, format!("Prims: {prims:?}"))
+                .await;
             let mut formatted = String::new();
-            for (prim, _) in prims {
+            for prim in prims {
                 formatted.push_str(&prim.to_string());
             }
 

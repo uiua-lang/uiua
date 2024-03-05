@@ -601,9 +601,8 @@ impl Primitive {
                 env.push(array);
             }
             Primitive::Dup => {
-                let mut x = env.pop(1)?;
+                let x = env.pop(1)?;
                 env.push(x.clone());
-                x.take_label();
                 env.push(x);
             }
             Primitive::Flip => {
@@ -614,10 +613,9 @@ impl Primitive {
             }
             Primitive::Over => {
                 let a = env.pop(1)?;
-                let mut b = env.pop(2)?;
+                let b = env.pop(2)?;
                 env.push(b.clone());
                 env.push(a);
-                b.take_label();
                 env.push(b);
             }
             Primitive::Pop => {

@@ -346,6 +346,14 @@ impl Value {
     pub fn take_map_keys(&mut self) -> Option<MapKeys> {
         unsafe { self.repr_mut() }.arr.take_map_keys()
     }
+    /// Take the persistent metadata from the value
+    pub fn take_per_meta(&mut self) -> PersistentMeta {
+        unsafe { self.repr_mut() }.arr.take_per_meta()
+    }
+    /// Set the persistent metadata for the value
+    pub fn set_per_meta(&mut self, per_meta: PersistentMeta) {
+        unsafe { self.repr_mut() }.arr.set_per_meta(per_meta)
+    }
     /// Combine this value's metadata with another
     pub fn combine_meta(&mut self, other: &ArrayMeta) {
         unsafe { self.repr_mut() }.arr.combine_meta(other)

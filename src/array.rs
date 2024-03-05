@@ -104,6 +104,49 @@ pub static DEFAULT_META: ArrayMeta = ArrayMeta {
     pointer: None,
 };
 
+/// Array metadata that can be persisted across operations
+#[derive(Clone, Default)]
+pub struct PersistentMeta {
+    label: Option<EcoString>,
+    map_keys: Option<MapKeys>,
+}
+
+impl PersistentMeta {
+    /// XOR this metadata with another
+    pub fn xor(self, other: Self) -> Self {
+        Self {
+            label: self.label.xor(other.label),
+            map_keys: self.map_keys.xor(other.map_keys),
+        }
+    }
+    /// XOR several metadatas
+    pub fn xor_all(metas: impl IntoIterator<Item = Self>) -> Self {
+        let mut label = None;
+        let mut map_keys = None;
+        let mut set_label = false;
+        let mut set_map_keys = false;
+        for meta in metas {
+            if let Some(l) = meta.label {
+                if set_label {
+                    label = None;
+                } else {
+                    label = Some(l);
+                    set_label = true;
+                }
+            }
+            if let Some(keys) = meta.map_keys {
+                if set_map_keys {
+                    map_keys = None;
+                } else {
+                    map_keys = Some(keys);
+                    set_map_keys = true;
+                }
+            }
+        }
+        Self { label, map_keys }
+    }
+}
+
 impl<T: ArrayValue> Default for Array<T> {
     fn default() -> Self {
         Self {
@@ -224,6 +267,29 @@ impl<T> Array<T> {
     /// Take the map keys from the metadata
     pub fn take_map_keys(&mut self) -> Option<MapKeys> {
         self.get_meta_mut().and_then(|meta| meta.map_keys.take())
+    }
+    /// The the persistent metadata of the array
+    pub fn take_per_meta(&mut self) -> PersistentMeta {
+        if let Some(meta) = self.get_meta_mut() {
+            let label = meta.label.take();
+            let map_keys = meta.map_keys.take();
+            PersistentMeta { label, map_keys }
+        } else {
+            PersistentMeta::default()
+        }
+    }
+    /// Set the map keys in the metadata
+    pub fn set_per_meta(&mut self, per_meta: PersistentMeta) {
+        if let Some(keys) = per_meta.map_keys {
+            self.meta_mut().map_keys = Some(keys);
+        } else if let Some(meta) = self.get_meta_mut() {
+            meta.map_keys = None;
+        }
+        if let Some(label) = per_meta.label {
+            self.meta_mut().label = Some(label);
+        } else if let Some(meta) = self.get_meta_mut() {
+            meta.label = None;
+        }
     }
     /// Get a reference to the map keys
     pub fn map_keys(&self) -> Option<&MapKeys> {

@@ -434,19 +434,33 @@ code:
                                 "Cannot use placeholder outside of function",
                             );
                         }
-                        // let line_span = (line.first().unwrap().span.clone())
-                        //     .merge(line.last().unwrap().span.clone());
+                        let line_span = (line.first().unwrap().span.clone())
+                            .merge(line.last().unwrap().span.clone());
+                        let all_literal = line.iter().filter(|w| w.value.is_code()).all(|w| {
+                            matches!(
+                                w.value,
+                                Word::Char(_)
+                                    | Word::Number(..)
+                                    | Word::String(_)
+                                    | Word::MultilineString(_)
+                            )
+                        });
+                        // Compile the words
                         let mut instrs = self.compile_words(line, true)?;
                         match instrs_signature(&instrs) {
                             Ok(sig) => {
+                                // Update scope stack height
                                 if let Ok(height) = &mut self.scope.stack_height {
                                     *height = (*height + sig.outputs).saturating_sub(sig.args);
                                 }
+                                // Try to evaluate at comptime
                                 if sig.args == 0 && instrs_are_pure(&instrs, &self.asm) {
                                     match self.comptime_instrs(instrs.clone()) {
                                         Ok(Some(vals)) => {
-                                            // (self.code_meta.top_level_values)
-                                            //     .insert(line_span, vals.clone());
+                                            if !all_literal {
+                                                (self.code_meta.top_level_values)
+                                                    .insert(line_span, vals.clone());
+                                            }
                                             instrs = vals.into_iter().map(Instr::push).collect();
                                         }
                                         Ok(None) => {}

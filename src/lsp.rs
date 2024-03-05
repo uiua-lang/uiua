@@ -948,9 +948,6 @@ mod server {
                     }]))
                 }
                 Err(e) => {
-                    self.client
-                        .log_message(MessageType::LOG, format!("Formatting error: {}", e))
-                        .await;
                     let mut error = Error::parse_error();
                     error.message = e.to_string().into();
                     Err(error)
@@ -1001,9 +998,6 @@ mod server {
                 pos.character - 1
             };
             let before = line_str.chars().take(col as usize).collect::<String>();
-            self.client
-                .log_message(MessageType::LOG, format!("Before: {before:?}"))
-                .await;
             let mut ident = (before.chars().rev())
                 .take_while(|&c| is_ident_char(c))
                 .collect::<String>();
@@ -1034,9 +1028,6 @@ mod server {
                     None => return Ok(None),
                 }
             };
-            self.client
-                .log_message(MessageType::LOG, format!("Prims: {prims:?}"))
-                .await;
             let mut formatted = String::new();
             for prim in prims {
                 formatted.push_str(&prim.to_string());
@@ -1424,6 +1415,7 @@ mod server {
                         "bindingSignatureHints",
                         "inlineSignatureHints",
                         "inlineHintMinLength",
+                        "values",
                     ]
                     .iter()
                     .map(|s| ConfigurationItem {
@@ -1434,17 +1426,26 @@ mod server {
                 )
                 .await
                 .unwrap_or_default();
-            let (binding_sigs, inline_sigs, min_length) = if let [Value::Bool(binding_sigs), Value::Bool(inline_sigs), Value::Number(min_length)] =
-                config.as_slice()
+            let (binding_sigs, inline_sigs, min_length, show_values) = if let [Value::Bool(
+                binding_sigs,
+            ), Value::Bool(
+                inline_sigs,
+            ), Value::Number(
+                min_length,
+            ), Value::Bool(
+                show_values,
+            )] = config.as_slice()
             {
                 (
                     *binding_sigs,
                     *inline_sigs,
                     min_length.as_u64().unwrap_or(1) as usize,
+                    *show_values,
                 )
             } else {
-                (true, true, 3)
+                (true, true, 3, true)
             };
+            // Signature hints
             let mut hints = Vec::new();
             for (span, decl) in &doc.code_meta.function_sigs {
                 let is_too_short = || {
@@ -1499,6 +1500,47 @@ mod server {
                     data: None,
                 });
             }
+            // Values
+            if show_values {
+                for (span, values) in &doc.code_meta.top_level_values {
+                    let Some(value) = values.last() else {
+                        continue;
+                    };
+                    let shown = value.show();
+                    let (label, tooltip) = if shown.lines().count() > 1 || values.len() > 1 {
+                        let mut shapes = value.shape_string();
+                        let mut md = "```uiua\n".to_string();
+                        for val in values.iter().rev().skip(1) {
+                            md.push_str(&val.show());
+                            md.push('\n');
+                            shapes.push(' ');
+                            shapes.push_str(&val.shape_string());
+                        }
+                        md.push_str(&shown);
+                        md.push_str("\n```");
+                        (
+                            InlayHintLabel::String(shapes),
+                            Some(InlayHintTooltip::MarkupContent(MarkupContent {
+                                kind: MarkupKind::Markdown,
+                                value: md,
+                            })),
+                        )
+                    } else {
+                        (InlayHintLabel::String(shown), None)
+                    };
+                    hints.push(InlayHint {
+                        text_edits: None,
+                        position: uiua_loc_to_lsp(span.end),
+                        label,
+                        kind: None,
+                        tooltip,
+                        padding_left: Some(true),
+                        padding_right: None,
+                        data: None,
+                    });
+                }
+            }
+
             Ok(Some(hints))
         }
 

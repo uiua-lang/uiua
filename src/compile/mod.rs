@@ -1617,7 +1617,7 @@ code:
             let len = instrs.len();
             asm.instrs.extend(instrs.iter().cloned());
             asm.top_slices.push(FuncSlice { start, len });
-            let mut env = Uiua::with_safe_sys().with_execution_limit(Duration::from_millis(10));
+            let mut env = Uiua::with_safe_sys().with_execution_limit(Duration::from_millis(40));
             match env.run_asm(asm) {
                 Ok(()) => {
                     let stack = env.take_stack();

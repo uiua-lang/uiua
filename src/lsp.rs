@@ -1510,10 +1510,12 @@ mod server {
                     let (label, tooltip) = if shown.lines().count() > 1 || values.len() > 1 {
                         let mut shapes = value.shape_string();
                         let mut md = "```uiua\n".to_string();
-                        for val in values.iter().rev().skip(1) {
+                        for val in values.iter().rev().skip(1).rev() {
                             md.push_str(&val.show());
                             md.push('\n');
-                            shapes.push(' ');
+                        }
+                        for val in values.iter().rev().skip(1) {
+                            shapes.push('|');
                             shapes.push_str(&val.shape_string());
                         }
                         md.push_str(&shown);

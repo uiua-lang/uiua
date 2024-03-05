@@ -1146,22 +1146,46 @@ primitive!(
     (2, Member, DyadicArray, ("member", '∊')),
     /// Find the first index of each row of one array in another
     ///
-    /// If the index cannot be found, the [length] of the searched-in array is returned.
     /// ex: ⊗ 2 [1 2 3]
-    /// ex: ⊗ 5 [1 2 3]
-    /// ex: ⊗ [1 2 3] [0 3 4 5 1]
     /// ex: ⊗ [4 5 6] [1_2_3 4_5_6]
-    /// ex: ⊗ [1_2_3 4_5_6] [3 4 5]
     /// ex: ⊗ 2 [1_2_3 4_5_6]
+    /// If the index cannot be found, the [length] of the searched-in array is returned.
+    /// ex: ⊗ [1 2 3] [0 3 4 5 1]
+    /// ex: ⊗ [1_2_3 4_5_6] [3 4 5]
+    /// ex: ⊗ 5 [1 2 3]
     ///
     /// You can use the returned indices with [select] to get the rows that were found.
     /// If you expect one of the searched-for rows to be missing, you can use [fill] to set a default value.
-    /// ex: a ← [2 3 5 7 11 13]
-    ///   : .⊗,a [1 2 3 4 5]
-    ///   : ⬚∞⊏:a
+    /// ex: A ← [2 3 5 7 11 13]
+    ///   : .⊗,A [1 2 3 4 5]
+    ///   : ⬚∞⊏:A
     ///
     /// [indexof] is closely related to [member].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
+    /// Find the first deep index of each row of one array in another
+    ///
+    /// While [indexof] returns an array of top-level indices into the searched-in array, [coordinate] returns an array of multi-dimensional coordinates.
+    /// ex: # Experimental!
+    ///   : ⟔,, 14 ↯2_3_4⇡24
+    /// ex: # Experimental!
+    ///   : ⟔,, [4 5 6 7] ↯2_3_4⇡24
+    /// ex: # Experimental!
+    ///   : ⟔,, +12↯3_4⇡12 ↯2_3_4⇡24
+    /// ex: # Experimental!
+    ///   : ⟔,, [1 2 3] [2 1 4 5 3]
+    /// If the index cannot be found, the [shape] of the searched-in array is returned.
+    /// ex: # Experimental!
+    ///   : ⟔,, 100 ↯2_3_4⇡24
+    /// If you want to get multiple coordinates from an array, you may need to use [rows] and [fix].
+    /// ex: # Experimental!
+    ///   : ≡⟔⊙¤,, [1 2 3 4 5] [1_5_3 6_2_4]
+    /// You can use the returned indices with [pick] to get the rows that were found.
+    /// If you expect one of the searched-for rows to be missing, you can use [fill] to set a default value.
+    /// ex: # Experimental!
+    ///   : A ← [2 3 5 7 11 13]
+    ///   : .≡⟔⊙¤,A [1_2_3 4_5_6]
+    ///   : ⬚∞⊡:A
+    (2, Coordinate, DyadicArray, ("coordinate", '⟔')),
     // /// Find sequential indices of each row of one array in another
     // ///
     // /// Unlike [indexof], [progressive indexof] will return the sequential indices of each row of the first array in the second array; the same index will not be used twice.

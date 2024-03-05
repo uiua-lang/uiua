@@ -360,7 +360,8 @@ impl Primitive {
         use Primitive::*;
         matches!(
             self,
-            Mask | (This | Recur)
+            (Mask | Coordinate)
+                | (This | Recur)
                 | (Rectify | All | Cascade | By)
                 | (Map | Insert | Has | Get | Remove)
                 | Bind
@@ -556,6 +557,7 @@ impl Primitive {
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
             Primitive::Mask => env.dyadic_rr_env(Value::mask)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
+            Primitive::Coordinate => env.dyadic_rr_env(Value::coordinate)?,
             // Primitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
             Primitive::Box => {
                 let val = env.pop(1)?;

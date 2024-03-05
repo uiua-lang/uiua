@@ -127,19 +127,40 @@ impl Value {
         Ok(keys.get(key).is_some())
     }
     /// Insert a key-value pair into a map array
+    #[allow(clippy::unit_arg)]
     pub fn insert(&mut self, key: Value, value: Value, env: &Uiua) -> UiuaResult {
         if !self.is_map() && self.row_count() == 0 {
             *self = take(self).map(Value::default(), env)?;
         }
-        let index = self.row_count();
-        let mut keys = self.take_map_keys();
-        keys.as_mut()
-            .ok_or_else(|| env.error("Value is not a map"))?
-            .insert(key, index, env)?;
+        let row_count = self.row_count();
+        let mut keys = self
+            .take_map_keys()
+            .ok_or_else(|| env.error("Value is not a map"))?;
+        let curr_index = keys.get(&key);
+        let index = curr_index.unwrap_or(row_count);
+        keys.insert(key, index, env)?;
         let value = coerce_values(self, value, "insert", "value into map with", "values")
             .map_err(|e| env.error(e))?;
-        self.append(value, env)?;
-        self.meta_mut().map_keys = keys;
+        if curr_index.is_some() {
+            self.generic_bin_mut(
+                value,
+                |arr, value| Ok(arr.set_row(index, value)),
+                |arr, value| Ok(arr.set_row(index, value)),
+                |arr, value| Ok(arr.set_row(index, value)),
+                |arr, value| Ok(arr.set_row(index, value)),
+                |arr, value| Ok(arr.set_row(index, value)),
+                |a, b| {
+                    env.error(format!(
+                        "Cannot insert {} value into map with {} values",
+                        b.type_name(),
+                        a.type_name()
+                    ))
+                },
+            )?;
+        } else {
+            self.append(value, env)?;
+        }
+        self.meta_mut().map_keys = Some(keys);
         Ok(())
     }
     #[allow(clippy::unit_arg)]
@@ -167,8 +188,6 @@ impl Value {
             }
         }
         keys.insert(key, index, env)?;
-        let value = coerce_values(self, value, "insert", "value into map with", "values")
-            .map_err(|e| env.error(e))?;
         self.generic_bin_mut(
             value,
             |arr, value| Ok(arr.insert_row(index, value)),

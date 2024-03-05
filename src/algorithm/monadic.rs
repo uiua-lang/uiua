@@ -488,6 +488,9 @@ impl<T: ArrayValue> Array<T> {
     }
     pub(crate) fn transpose_depth(&mut self, mut depth: usize, amnt: i32) {
         crate::profile_function!();
+        if depth == 0 && self.is_map() {
+            return;
+        }
         depth = depth.min(self.rank());
         let trans_count = amnt.unsigned_abs() as usize;
         let trans_rank = self.rank() - depth;

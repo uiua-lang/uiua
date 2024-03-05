@@ -2159,19 +2159,20 @@ primitive!(
     ///   : insert 7 8_9
     ///   : °map .
     ///
-    /// The values of a map array are just the array itself. The keys are stored as metadata on the array.
-    /// Performing non-map operations on a map array may work, but it will usually break the mapping.
-    /// ex: # Experimental!
-    ///   : map 1_2_3 [3_4 5_6 7_8]
-    ///   : get 1 ⍉ .
-    ///
-    /// Some normal array operations *do* work on maps though.
+    /// Some normal array operations work on maps though.
     /// They are:
     /// - [reverse]
     /// - [rotate]
     /// - [take]
     /// - [drop]
     /// - [join]
+    /// - [each]
+    /// - [rows]
+    ///
+    /// [tranpose] does nothing to maps.
+    /// ex: # Experimental!
+    ///   : map 1_2_3 [3_4 5_6 7_8]
+    ///   : ⍉ .
     ///
     /// Regardless of the size of the map, operations on it have O(1) amortized time complexity.
     /// In this example, we time [get] and [insert] operations on maps from 10 entries up to 100,000 entries.

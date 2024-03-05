@@ -437,6 +437,7 @@ mod server {
 
     use crate::{
         format::{format_str, FormatConfig},
+        is_ident_char,
         lex::{lex, Loc},
         primitive::{PrimClass, PrimDocFragment},
         AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span, Token,
@@ -550,6 +551,15 @@ mod server {
                         ..Default::default()
                     }),
                     document_formatting_provider: Some(OneOf::Left(true)),
+                    document_on_type_formatting_provider: Some(DocumentOnTypeFormattingOptions {
+                        first_trigger_character: ' '.to_string(),
+                        more_trigger_character: Some(
+                            "[{()}]|1234567890~-_+=!.,<>/?\\\nABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                .chars()
+                                .map(|c| c.to_string())
+                                .collect(),
+                        ),
+                    }),
                     semantic_tokens_provider: Some(
                         SemanticTokensServerCapabilities::SemanticTokensOptions(
                             SemanticTokensOptions {
@@ -948,13 +958,76 @@ mod server {
             }
         }
 
+        async fn on_type_formatting(
+            &self,
+            params: DocumentOnTypeFormattingParams,
+        ) -> Result<Option<Vec<TextEdit>>> {
+            self.client
+                .log_message(
+                    MessageType::LOG,
+                    format!("On type formatting: {:#?}", params),
+                )
+                .await;
+            let Some(doc) = self
+                .docs
+                .get(&params.text_document_position.text_document.uri)
+            else {
+                return Ok(None);
+            };
+            let pos = params.text_document_position.position;
+            let is_newline = params.ch == "\n";
+            let line = if is_newline { pos.line - 1 } else { pos.line };
+            let Some(line_str) = doc.input.lines().nth(line as usize) else {
+                return Ok(None);
+            };
+            let col = if is_newline {
+                line_str.chars().count() as u32
+            } else {
+                pos.character - 1
+            };
+            self.client
+                .log_message(MessageType::INFO, format!("line: {:?}", line_str))
+                .await;
+            let before = line_str.chars().take(col as usize).collect::<String>();
+            self.client
+                .log_message(MessageType::INFO, format!("before: {:?}", before))
+                .await;
+            let mut ident = (before.chars().rev())
+                .take_while(|&c| is_ident_char(c))
+                .collect::<String>();
+            ident = ident.chars().rev().collect();
+            let start = col - ident.chars().count() as u32;
+            self.client
+                .log_message(MessageType::INFO, format!("ident: {:?}", ident))
+                .await;
+            let Some(prims) = Primitive::from_format_name_multi(&ident) else {
+                return Ok(None);
+            };
+            let mut formatted = String::new();
+            for (prim, _) in prims {
+                formatted.push_str(&prim.to_string());
+            }
+            let mut end = pos;
+            if params.ch.chars().all(|c| c.is_whitespace()) {
+                formatted.push_str(&params.ch);
+            } else {
+                end.character -= 1;
+            }
+            let start = Position {
+                line,
+                character: start,
+            };
+            Ok(Some(vec![TextEdit {
+                range: Range { start, end },
+                new_text: formatted,
+            }]))
+        }
+
         async fn semantic_tokens_full(
             &self,
             params: SemanticTokensParams,
         ) -> Result<Option<SemanticTokensResult>> {
-            let doc = if let Some(doc) = self.docs.get(&params.text_document.uri) {
-                doc
-            } else {
+            let Some(doc) = self.docs.get(&params.text_document.uri) else {
                 return Ok(None);
             };
             let mut tokens = Vec::new();

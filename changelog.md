@@ -53,6 +53,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Add find references
   - Add signature inlay hints
   - Add macro expansion as a code action
+  - Add on-type formatting
   - Add completions for shadowable constants
   - Add completions for module items when the module reference is partially typed
 - Add the `--file <file>` option to the `uiua repl` command

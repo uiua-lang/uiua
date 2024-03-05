@@ -20,6 +20,7 @@ use parking_lot::Mutex;
 use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
+    load_glyph_mappings,
     lsp::BindingDocsKind,
     spans, Assembly, Compiler, NativeSys, PrimClass, RunMode, SpanKind, Uiua, UiuaError,
     UiuaResult, Value,
@@ -80,6 +81,8 @@ fn run() -> UiuaResult {
                 path,
                 formatter_options,
             } => {
+                load_glyph_mappings()?;
+
                 let config = FormatConfig::from_source(
                     formatter_options.format_config_source,
                     path.as_deref(),
@@ -102,6 +105,8 @@ fn run() -> UiuaResult {
                 audio_options,
                 args,
             } => {
+                load_glyph_mappings()?;
+
                 let path = if let Some(path) = path {
                     path
                 } else {
@@ -151,6 +156,8 @@ fn run() -> UiuaResult {
                 print_stack(&rt.take_stack(), !no_color);
             }
             App::Build { path, output } => {
+                load_glyph_mappings()?;
+
                 let path = if let Some(path) = path {
                     path
                 } else {
@@ -185,6 +192,8 @@ fn run() -> UiuaResult {
                 audio_options,
                 args,
             } => {
+                load_glyph_mappings()?;
+
                 #[cfg(feature = "audio")]
                 setup_audio(audio_options);
                 let mut rt = Uiua::with_native_sys().with_args(args);
@@ -199,6 +208,8 @@ fn run() -> UiuaResult {
                 path,
                 formatter_options,
             } => {
+                load_glyph_mappings()?;
+
                 let path = if let Some(path) = path {
                     path
                 } else {
@@ -250,6 +261,8 @@ fn run() -> UiuaResult {
                 audio_options,
                 args,
             } => {
+                load_glyph_mappings()?;
+
                 let config = FormatConfig {
                     trailing_newline: false,
                     ..FormatConfig::from_source(formatter_options.format_config_source, None)?
@@ -269,6 +282,8 @@ fn run() -> UiuaResult {
             App::Update { main, check } => update(main, check),
             #[cfg(feature = "stand")]
             App::Stand { main, name } => {
+                load_glyph_mappings()?;
+
                 let main = main.unwrap_or_else(|| "main.ua".into());
                 if !main.exists() {
                     eprintln!("{} does not exist", main.display());
@@ -449,6 +464,7 @@ fn watch(
         } else {
             path.to_path_buf()
         };
+        _ = load_glyph_mappings();
         for i in 0..TRIES {
             let formatted = if let (Some(config), true) = (&config, format) {
                 format_file(&path, config, false).map(|f| f.output)

@@ -30,6 +30,7 @@ use crate::{
     array::Array,
     boxed::Boxed,
     check::instrs_signature,
+    glyph_mappings,
     lex::AsciiToken,
     sys::*,
     value::*,
@@ -375,8 +376,30 @@ impl Primitive {
     pub fn is_deprecated(&self) -> bool {
         self.deprecation_suggestion().is_some()
     }
+}
+
+/// Things that format from names
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FormatName {
+    /// A built-in primitive
+    Prim(Primitive),
+    /// A custom glyph
+    #[allow(missing_docs)]
+    Custom { name: String, glyph: String },
+}
+
+impl FormatName {
+    fn name(&self) -> &str {
+        match self {
+            FormatName::Prim(p) => p.name(),
+            FormatName::Custom { name, .. } => name,
+        }
+    }
+}
+
+impl Primitive {
     /// Try to parse a primitive from a name prefix
-    pub fn from_format_name(name: &str) -> Option<Self> {
+    pub fn from_format_name(name: &str) -> Option<FormatName> {
         if name.chars().any(char::is_uppercase) {
             return None;
         }
@@ -384,33 +407,49 @@ impl Primitive {
             return None;
         }
         match name {
-            "id" => return Some(Primitive::Identity),
-            "ga" => return Some(Primitive::Gap),
-            "po" => return Some(Primitive::Pop),
-            "of" => return Some(Primitive::By),
-            "pi" => return Some(Primitive::Pi),
-            "ran" => return Some(Primitive::Range),
-            "tra" => return Some(Primitive::Transpose),
-            "par" => return Some(Primitive::Partition),
+            "id" => return Some(FormatName::Prim(Primitive::Identity)),
+            "ga" => return Some(FormatName::Prim(Primitive::Gap)),
+            "po" => return Some(FormatName::Prim(Primitive::Pop)),
+            "pi" => return Some(FormatName::Prim(Primitive::Pi)),
+            "ran" => return Some(FormatName::Prim(Primitive::Range)),
+            "tra" => return Some(FormatName::Prim(Primitive::Transpose)),
+            "par" => return Some(FormatName::Prim(Primitive::Partition)),
             _ => {}
         }
         if let Some(prim) = Primitive::non_deprecated().find(|p| p.name() == name) {
-            return Some(prim);
+            return Some(FormatName::Prim(prim));
         }
         if let Some(prim) = SysOp::ALL.iter().find(|s| s.name() == name) {
-            return Some(Primitive::Sys(*prim));
+            return Some(FormatName::Prim(Primitive::Sys(*prim)));
+        }
+        if let Some(glyph) = glyph_mappings(|glyphs| glyphs.get(name).cloned()) {
+            return Some(FormatName::Custom {
+                name: name.into(),
+                glyph,
+            });
         }
         if name.len() < 3 {
             return None;
         }
         let mut matching = Primitive::non_deprecated()
-            .filter(|p| p.glyph().is_some_and(|u| !u.is_ascii()) && p.name().starts_with(name));
+            .filter(|p| p.glyph().is_some_and(|u| !u.is_ascii()) && p.name().starts_with(name))
+            .map(FormatName::Prim)
+            .chain(glyph_mappings(|glyphs| {
+                glyphs
+                    .iter()
+                    .filter(|(k, _)| k.starts_with(name))
+                    .map(|(k, v)| FormatName::Custom {
+                        name: k.clone(),
+                        glyph: v.clone(),
+                    })
+                    .collect::<Vec<_>>()
+            }));
         let res = matching.next()?;
         let exact_match = res.name() == name;
         (exact_match || matching.next().is_none()).then_some(res)
     }
     /// Try to parse multiple primitives from the concatenation of their name prefixes
-    pub fn from_format_name_multi(name: &str) -> Option<Vec<(Self, &str)>> {
+    pub fn from_format_name_multi(name: &str) -> Option<Vec<(FormatName, &str)>> {
         let mut indices: Vec<usize> = name.char_indices().map(|(i, _)| i).collect();
         if indices.len() < 2 {
             return None;
@@ -455,7 +494,7 @@ impl Primitive {
                             'p' => Primitive::Pop,
                             _ => unreachable!(),
                         };
-                        prims.push((prim, &sub_name[i..i + 1]))
+                        prims.push((FormatName::Prim(prim), &sub_name[i..i + 1]))
                     }
                     start += len;
                     continue 'outer;
@@ -473,7 +512,7 @@ impl Primitive {
                             'f' => Primitive::Fix,
                             _ => unreachable!(),
                         };
-                        prims.push((prim, &sub_name[i..i + 1]))
+                        prims.push((FormatName::Prim(prim), &sub_name[i..i + 1]))
                     }
                     start += len;
                     continue 'outer;
@@ -1599,15 +1638,22 @@ mod tests {
         for (name, test) in [
             (
                 "from_format_name",
-                Primitive::from_format_name as fn(&str) -> Option<Primitive>,
+                Primitive::from_format_name as fn(&str) -> Option<FormatName>,
             ),
             ("from_format_name_multi", |name| {
                 Primitive::from_format_name_multi(name)
                     .unwrap()
                     .first()
-                    .map(|(prim, _)| *prim)
+                    .map(|(prim, _)| prim.clone())
             }),
         ] {
+            let test = |s: &str| {
+                if let FormatName::Prim(prim) = test(s)? {
+                    Some(prim)
+                } else {
+                    None
+                }
+            };
             for prim in Primitive::non_deprecated() {
                 let char_test = match prim.glyph() {
                     None => prim.name().len(),
@@ -1644,22 +1690,31 @@ mod tests {
                 );
             }
         }
-        assert_eq!(Primitive::from_format_name("id"), Some(Primitive::Identity));
+        assert_eq!(
+            Primitive::from_format_name("id"),
+            Some(FormatName::Prim(Primitive::Identity))
+        );
     }
 
     #[test]
     fn from_multiname() {
         assert!(matches!(
             &*Primitive::from_format_name_multi("rev").expect("rev"),
-            [(Primitive::Reverse, _)]
+            [(FormatName::Prim(Primitive::Reverse), _)]
         ));
         assert!(matches!(
             &*Primitive::from_format_name_multi("revrev").expect("revrev"),
-            [(Primitive::Reverse, _), (Primitive::Reverse, _)]
+            [
+                (FormatName::Prim(Primitive::Reverse), _),
+                (FormatName::Prim(Primitive::Reverse), _)
+            ]
         ));
         assert!(matches!(
             &*Primitive::from_format_name_multi("tabkee").unwrap(),
-            [(Primitive::Table, _), (Primitive::Keep, _)]
+            [
+                (FormatName::Prim(Primitive::Table), _),
+                (FormatName::Prim(Primitive::Keep), _)
+            ]
         ));
         assert_eq!(Primitive::from_format_name_multi("foo"), None);
     }
@@ -1693,7 +1748,9 @@ mod tests {
                         name.len()
                     } else {
                         (2..=name.len())
-                            .find(|&n| Primitive::from_format_name(&name[..n]) == Some(p))
+                            .find(|&n| {
+                                Primitive::from_format_name(&name[..n]) == Some(FormatName::Prim(p))
+                            })
                             .unwrap()
                     };
                     let mut start: String = name.chars().take(min_len).collect();

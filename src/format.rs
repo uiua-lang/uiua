@@ -17,6 +17,7 @@ use paste::paste;
 use crate::{
     ast::*,
     function::Signature,
+    glyph_mappings,
     grid_fmt::GridFmt,
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
@@ -734,7 +735,15 @@ impl<'a> Formatter<'a> {
         {
             self.output.push(' ');
         }
-        self.push(&r.name.span, &r.name.value);
+        if let Some(glyph) = glyph_mappings(|glyphs| {
+            (glyphs.iter())
+                .find(|(name, _)| name.starts_with(r.name.value.as_str()))
+                .map(|(_, glyph)| glyph.clone())
+        }) {
+            self.push(&r.name.span, &glyph);
+        } else {
+            self.push(&r.name.span, &r.name.value);
+        }
     }
     fn format_ref_path(&mut self, comps: &[RefComponent]) {
         if let Some(first) = comps.first() {

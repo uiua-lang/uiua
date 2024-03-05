@@ -439,8 +439,9 @@ mod server {
         format::{format_str, FormatConfig},
         is_ident_char,
         lex::{lex, Loc},
+        load_glyph_mappings,
         primitive::{PrimClass, PrimDocFragment},
-        AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span, Token,
+        AsciiToken, Assembly, BindingInfo, FormatName, NativeSys, PrimDocLine, Span, Token,
     };
 
     pub struct LspDoc {
@@ -460,17 +461,22 @@ mod server {
                 .ok()
                 .and_then(|curr| pathdiff::diff_paths(path, curr))
                 .unwrap_or_else(|| path.to_path_buf());
+            let mut errors = Vec::new();
             let src = InputSrc::File(path.into());
+            if let Err(e) = load_glyph_mappings() {
+                errors.push(e);
+            }
             let (items, _, _) = parse(&input, src.clone(), &mut Inputs::default());
             let spanner = Spanner::new(src, &input, NativeSys);
             let spans = spanner.items_spans(&items);
+            errors.extend(spanner.errors);
             Self {
                 input,
                 items,
                 spans,
                 asm: spanner.asm,
                 code_meta: spanner.code_meta,
-                errors: spanner.errors,
+                errors,
                 diagnostics: spanner.diagnostics,
             }
         }
@@ -1013,7 +1019,7 @@ mod server {
                 ascii_prims.reverse();
                 for (prim, ascii) in ascii_prims {
                     if before.ends_with(&ascii) {
-                        prims.push(prim);
+                        prims.push(prim.to_string());
                         start -= ascii.chars().count() as u32;
                         break;
                     }
@@ -1024,7 +1030,13 @@ mod server {
                 prims
             } else {
                 match Primitive::from_format_name_multi(&ident) {
-                    Some(prims) => prims.into_iter().map(|(p, _)| p).collect(),
+                    Some(prims) => prims
+                        .into_iter()
+                        .map(|(p, _)| match p {
+                            FormatName::Prim(p) => p.to_string(),
+                            FormatName::Custom { glyph, .. } => glyph.clone(),
+                        })
+                        .collect(),
                     None => return Ok(None),
                 }
             };

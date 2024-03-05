@@ -1,8 +1,10 @@
 use std::{
-    collections::VecDeque,
+    cell::RefCell,
+    collections::{HashMap, VecDeque},
     error::Error,
-    fmt,
+    fmt, fs,
     hash::Hash,
+    io,
     ops::Range,
     path::{Path, PathBuf},
     sync::Arc,
@@ -13,7 +15,7 @@ use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{ast::PlaceholderOp, Inputs, Primitive};
+use crate::{ast::PlaceholderOp, FormatName, Inputs, Primitive, Uiua, UiuaError, UiuaResult};
 
 /// Lex a Uiua source file
 pub fn lex(
@@ -47,6 +49,7 @@ pub enum LexError {
     ExpectedCharacter(Vec<char>),
     InvalidEscape(String),
     ExpectedNumber,
+    Env(Box<UiuaError>),
 }
 
 impl fmt::Display for LexError {
@@ -65,6 +68,7 @@ impl fmt::Display for LexError {
             LexError::ExpectedCharacter(chars) => write!(f, "Expected one of {:?}", chars),
             LexError::InvalidEscape(c) => write!(f, "Invalid escape character {c:?}"),
             LexError::ExpectedNumber => write!(f, "Expected number"),
+            LexError::Env(err) => write!(f, "Cannot collect glyphs: {err}"),
         }
     }
 }
@@ -952,7 +956,7 @@ impl<'a> Lexer<'a> {
                             self.loc.byte_pos -= 1;
                         }
                         let mut start = start;
-                        for (prim, frag) in prims {
+                        for (fmt_name, frag) in prims {
                             let end = Loc {
                                 col: start.col + frag.chars().count() as u16,
                                 char_pos: start.char_pos + frag.chars().count() as u32,
@@ -960,7 +964,10 @@ impl<'a> Lexer<'a> {
                                 ..start
                             };
                             self.tokens.push_back(Sp {
-                                value: Glyph(prim),
+                                value: match fmt_name {
+                                    FormatName::Prim(prim) => Glyph(prim),
+                                    FormatName::Custom { .. } => Ident,
+                                },
                                 span: self.make_span(start, end),
                             });
                             start = end;
@@ -1286,4 +1293,62 @@ pub fn is_custom_glyph(c: &str) -> bool {
             .chars()
             .all(|c| !c.is_ascii() && !is_ident_char(c) && Primitive::from_glyph(c).is_none()),
     }
+}
+
+/// Mappings from custom glyphs names to their Unicode representations
+pub type GlyphMappings = HashMap<String, String>;
+
+thread_local! {
+    static GLYPH_MAPPINGS: RefCell<GlyphMappings> = RefCell::new(GlyphMappings::new());
+}
+
+/// Get the glyph mappings
+pub fn glyph_mappings<T>(f: impl FnOnce(&GlyphMappings) -> T) -> T {
+    GLYPH_MAPPINGS.with(|m| f(&m.borrow()))
+}
+
+/// Set the glyph mappings
+pub fn set_glyph_mappings(glyphs: GlyphMappings) {
+    GLYPH_MAPPINGS.with(|m| *m.borrow_mut() = glyphs);
+}
+
+/// Load the glyph mappings from the current directory and its subdirectories
+pub fn load_glyph_mappings() -> UiuaResult {
+    fn collect_glyphs(path: &Path, depth: usize, glyphs: &mut GlyphMappings) -> UiuaResult {
+        let map_err = |e: io::Error| UiuaError::Load(path.into(), e.into());
+        for entry in fs::read_dir(path).map_err(map_err)? {
+            let entry = entry.map_err(map_err)?;
+            let path = entry.path();
+            if !path.file_name().is_some_and(|name| name == "glyphs.ua") {
+                if depth < 2 && path.is_dir() {
+                    collect_glyphs(&path, depth + 1, glyphs)?;
+                }
+                continue;
+            }
+            let mut env = Uiua::with_native_sys();
+            env.run_file(&path)?;
+            let values = env.take_stack();
+            if values.len() % 2 != 0 {
+                return Err(env.error(format!(
+                    "{} returned an odd number of values for glyph mapping",
+                    path.display()
+                )));
+            }
+            let mut strings = Vec::new();
+            for value in values {
+                strings.push(value.as_string(&env, "All glyph mapping outputs must be strings")?);
+            }
+            for i in 0..strings.len() / 2 {
+                let key = strings[i * 2].clone();
+                let value = strings[i * 2 + 1].clone();
+                glyphs.insert(key, value);
+            }
+        }
+        Ok(())
+    }
+
+    let mut glyphs = GlyphMappings::new();
+    collect_glyphs(Path::new("."), 0, &mut glyphs)?;
+    set_glyph_mappings(glyphs);
+    Ok(())
 }

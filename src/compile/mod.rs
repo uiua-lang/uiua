@@ -23,7 +23,7 @@ use crate::{
     example_ua,
     format::format_word,
     function::*,
-    ident_modifier_args,
+    glyph_mappings, ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, SigDecl},
     optimize::{optimize_instrs, optimize_instrs_mut},
@@ -1176,7 +1176,15 @@ code:
             Ok(())
         }
     }
-    fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
+    fn ident(&mut self, mut ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
+        glyph_mappings(|glyphs| {
+            if let Some((_, glyph)) = glyphs
+                .iter()
+                .find(|(name, _)| name.starts_with(ident.as_str()))
+            {
+                ident = glyph.as_str().into();
+            }
+        });
         if let Some(curr) = (self.current_binding.as_mut()).filter(|curr| curr.name == ident) {
             // Name is a recursive call
             let Some(sig) = curr.signature else {

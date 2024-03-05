@@ -554,7 +554,7 @@ mod server {
                     document_on_type_formatting_provider: Some(DocumentOnTypeFormattingOptions {
                         first_trigger_character: ' '.to_string(),
                         more_trigger_character: Some(
-                            "[{()}]|1234567890~!@#$%^&*_-+=.,<>/?\\\\nABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                            "[{()}]|1234567890~!@#$%^&*_-+=.,<>/?\\\nABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                 .chars()
                                 .map(|c| c.to_string())
                                 .collect(),

@@ -2435,6 +2435,7 @@ macro_rules! impl_primitive {
             $(($outputs:expr))?
             $([$margs:expr])?,
             $variant:ident
+            $(, $impure:vis impure)?
         )
     ),* $(,)?) => {
         /// Primitives that exist as an implementation detail
@@ -2466,6 +2467,12 @@ macro_rules! impl_primitive {
                     $($(ImplPrimitive::$variant => Some($margs),)?)*
                     ImplPrimitive::ReduceDepth(_) => Some(1),
                     _ => None
+                }
+            }
+            pub fn is_pure(&self) -> bool {
+                match self {
+                    $($(ImplPrimitive::$variant => {$impure false},)*)*
+                    _ => true
                 }
             }
         }
@@ -2517,7 +2524,7 @@ impl_primitive!(
     (1, SortUp),
     (1, SortDown),
     (1[1], ReduceContent),
-    (1, ReplaceRand),
-    (2, ReplaceRand2),
+    (1, ReplaceRand, impure),
+    (2, ReplaceRand2, impure),
     (2, Adjacent),
 );

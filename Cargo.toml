@@ -69,6 +69,7 @@ serde_yaml = {version = "0.9.32", optional = true}
 
 # Feature dependencies
 clipboard = {version = "0.5.0", optional = true}
+csv = {version = "1", optional = true}
 gif = {version = "0.13.1", optional = true}
 hound = {version = "3", optional = true}
 image = {version = "0.24.9", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "qoi"]}
@@ -84,6 +85,7 @@ batteries = [
   "image",
   "regex",
   "audio_encode",
+  "csv",
 ]
 binary = [
   "ctrlc",

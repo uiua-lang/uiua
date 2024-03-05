@@ -170,6 +170,7 @@ impl fmt::Display for ImplPrimitive {
             InvStack => write!(f, "{Un}{Stack}"),
             InvDump => write!(f, "{Un}{Dump}"),
             InvBox => write!(f, "{Un}{Box}"),
+            InvCsv => write!(f, "{Un}{Csv}"),
             Untake => write!(f, "{Un}{Take}"),
             Undrop => write!(f, "{Un}{Drop}"),
             Unselect => write!(f, "{Un}{Select}"),
@@ -820,6 +821,7 @@ impl Primitive {
             Primitive::Stack => stack(env, false)?,
             Primitive::Dump => dump(env, false)?,
             Primitive::Regex => regex(env)?,
+            Primitive::Csv => env.monadic_ref_env(Value::to_csv)?,
             Primitive::Stringify => {
                 return Err(env.error("stringify was not inlined. This is a bug in the interpreter"))
             }
@@ -949,6 +951,11 @@ impl ImplPrimitive {
             ImplPrimitive::InvBox => {
                 let val = env.pop(1)?;
                 env.push(val.unboxed());
+            }
+            ImplPrimitive::InvCsv => {
+                let csv = env.pop(1)?.as_string(env, "CSV expects a string")?;
+                let val = Value::from_csv(&csv, env)?;
+                env.push(val);
             }
             ImplPrimitive::Uninsert => {
                 let key = env.pop(1)?;

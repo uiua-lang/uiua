@@ -388,6 +388,11 @@ Z ← comptime(+1Y)
 Fact ← |1 ⟨×Fact-1.|1⟩<2.
 ⍤⟜≍: 120 Fact 5
 
+# Csv
+⍤⟜≍: ⍜csv∘ . [{"hi" "there"} {"my" "friend"}]
+⍤⟜≍: ⋕ ⍜csv∘ . ↯3_4⇡12
+⍤⟜≍: ∵⍣⋕⋅∘ ⍜csv∘ . [{"Foo" "Bar"} [1 2] [3 4] [5 6]]
+
 # Experimental!
 
 # Coordinate

@@ -42,6 +42,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Sys(SysOp::ImEncode) => Instr::Prim(Sys(SysOp::ImDecode), span),
         Sys(SysOp::ClipboardSet) => Instr::Prim(Sys(SysOp::ClipboardGet), span),
         Sys(SysOp::ClipboardGet) => Instr::Prim(Sys(SysOp::ClipboardSet), span),
+        Csv => Instr::ImplPrim(InvCsv, span),
         _ => return None,
     })
 }
@@ -65,6 +66,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         InvStack => Instr::Prim(Stack, span),
         InvBox => Instr::Prim(Box, span),
         InvJoin => Instr::Prim(Join, span),
+        InvCsv => Instr::Prim(Csv, span),
         _ => return None,
     })
 }

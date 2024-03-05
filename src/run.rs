@@ -1218,11 +1218,11 @@ code:
         }
     }
     /// Do something with the fill context set
-    pub(crate) fn with_fill(
+    pub(crate) fn with_fill<T>(
         &mut self,
         fill: Value,
-        in_ctx: impl FnOnce(&mut Self) -> UiuaResult,
-    ) -> UiuaResult {
+        in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
+    ) -> UiuaResult<T> {
         self.rt.fill_stack.push(fill);
         let res = in_ctx(self);
         self.rt.fill_stack.pop();

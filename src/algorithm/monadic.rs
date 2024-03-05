@@ -1258,3 +1258,63 @@ impl Array<f64> {
         Ok(Array::new(shape, data))
     }
 }
+
+impl Value {
+    pub(crate) fn to_csv(&self, env: &Uiua) -> UiuaResult<String> {
+        #[cfg(not(feature = "csv"))]
+        return Err(env.error("CSV support is not enabled in this environment"));
+        #[cfg(feature = "csv")]
+        {
+            let mut buf = Vec::new();
+            let mut writer = csv::Writer::from_writer(&mut buf);
+            match self.rank() {
+                0 => {
+                    writer
+                        .write_record([self.format()])
+                        .map_err(|e| env.error(e))?;
+                }
+                1 => {
+                    for row in self.rows() {
+                        writer
+                            .write_record([row.format()])
+                            .map_err(|e| env.error(e))?;
+                    }
+                }
+                2 => {
+                    for row in self.rows() {
+                        writer
+                            .write_record(row.rows().map(|v| v.format()))
+                            .map_err(|e| env.error(e))?;
+                    }
+                }
+                n => return Err(env.error(format!("Cannot write a rank-{n} array to CSV"))),
+            }
+            writer.flush().map_err(|e| env.error(e))?;
+            drop(writer);
+            let s = String::from_utf8(buf).map_err(|e| env.error(e))?;
+            Ok(s)
+        }
+    }
+    pub(crate) fn from_csv(csv: &str, env: &mut Uiua) -> UiuaResult<Self> {
+        #[cfg(not(feature = "csv"))]
+        return Err(env.error("CSV support is not enabled in this environment"));
+        #[cfg(feature = "csv")]
+        {
+            let mut reader = csv::ReaderBuilder::new()
+                .has_headers(false)
+                .from_reader(csv.as_bytes());
+            env.with_fill("".into(), |env| {
+                let mut rows = Vec::new();
+                for result in reader.records() {
+                    let record = result.map_err(|e| env.error(e))?;
+                    let mut row = EcoVec::new();
+                    for field in record.iter() {
+                        row.push(Boxed(field.into()));
+                    }
+                    rows.push(Array::new(row.len(), row));
+                }
+                Array::from_row_arrays(rows, env).map(Into::into)
+            })
+        }
+    }
+}

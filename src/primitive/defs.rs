@@ -2409,6 +2409,23 @@ primitive!(
     /// At the moment, this is only useful for debugging.
     /// While theoretically, it could be used in a macro to choose a branch of a switch function appropriate for the function, this is not yet possible because of the way that macros and signature checking work.
     (0(2)[1], Sig, OtherModifier, "signature"),
+    /// Encode an array into a CSV string
+    ///
+    /// The input array must be at most rank-`2`.
+    /// ex: csv [1 2 3]
+    /// ex: csv ↯3_4⇡12
+    /// ex: csv [{"Foo" "Bar"} [1 2] [3 4] [5 6]]
+    /// You can use [un][csv] to decode a CSV string back into an array.
+    /// ex: °csv "#,Count\n1,5\n2,21\n3,8\n"
+    /// The decoding result will always be a rank-`2` array of boxed strings.
+    /// You can use `each``try``parse``gap``identity` to convert the strings that represent numbers.
+    /// ex: ∵⍣⋕⋅∘ °csv "#,Count\n1,5\n2,21\n3,8\n"
+    /// If you know there are headers, you can use [un][join] to separate them.
+    /// ex: ⊙⋕°⊂ °csv "#,Count\n1,5\n2,21\n3,8\n"
+    /// You can easily create a [map] with the headers as keys.
+    /// ex: # Experimental!
+    ///   : map⊙(⍉⋕)°⊂ °csv "#,Count\n1,5\n2,21\n3,8\n"
+    (1, Csv, Misc, "csv"),
     /// Convert a value to its code representation
     ///
     /// ex: # Experimental!
@@ -2498,6 +2515,7 @@ impl_primitive!(
     (1, Primes),
     (1, InvBox),
     (1(2), InvJoin),
+    (1, InvCsv),
     // Unders
     (3, Unselect),
     (3, Unpick),

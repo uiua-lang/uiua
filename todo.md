@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.10
+  - Preserve map on each
   - System for custom glyph formatting
   - System functions
     - Excel

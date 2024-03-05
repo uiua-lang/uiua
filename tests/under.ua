@@ -84,7 +84,7 @@
 ⍤⟜≍: 5 ⍜°√(+9) 4
 ⍤⟜≍: 5 ⍜∩°√+ 3 4
 
-# absolute value, sign, and mod
+# Absolute value, Sign, and Mod
 ⍤⟜≍: "Hello World!" ⍜⌵∘ "Hello World!"
 ⍤⟜≍: "Hello World!" ⍜±∘ "Hello World!"
 
@@ -100,7 +100,7 @@
 
 ⍤⟜≍: [6 7 18] ⍜◿(×2) 5 [3 6 14]
 
-# rounding
+# Rounding
 ⍤⟜≍: 1.5 ⍜⌊∘ 1.5
 ⍤⟜≍: 1.5 ⍜⌈∘ 1.5
 ⍤⟜≍: 1.5 ⍜⁅∘ 1.5
@@ -201,3 +201,14 @@ G ← ⍜(⊙⊙⊢) ⋅⊙∘
 ⍤⟜≍: [1 20 3] ⍜⟨⊡|⊏⟩(×10) 1 1 [1 2 3]
 
 ⍤⟜≍: {2_5_8 [1_0_1 4_3_2 7_6_3]} {⍜≡⊂≡⇌ [1 2 3] ↯3_3⇡9}
+
+# Experimental!
+
+# Maps
+⍤⟜≍: map "abc" [1 2 3] ⍜°map∘ map "abc" [1 2 3]
+⍤⟜≍: map "abc" [1 2 3] ⍜get∘ @a map "abc" [1 2 3]
+⍤⟜≍: map "abcd" [1 2 3 0] ⬚0⍜get∘ @d map "abc" [1 2 3]
+⍤⟜≍: map "abc" [1 2 3] ⍜insert∘ @c 5  map "abc" [1 2 3]
+⍤⟜≍: map "abc" [1 2 3] ⍜insert∘ @d 4  map "abc" [1 2 3]
+⍤⟜≍: map "abc" [1 2 3] ⍜remove∘ @a  map "abc" [1 2 3]
+⍤⟜≍: map "abc" [1 2 3] ⍜remove∘ @d  map "abc" [1 2 3]

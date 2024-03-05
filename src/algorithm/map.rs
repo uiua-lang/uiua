@@ -164,7 +164,7 @@ impl Value {
         Ok(())
     }
     #[allow(clippy::unit_arg)]
-    pub(crate) fn map_insert_at(
+    pub(crate) fn insert_at(
         &mut self,
         index: Value,
         key: Value,
@@ -206,6 +206,25 @@ impl Value {
         self.meta_mut().map_keys = Some(keys);
         Ok(())
     }
+    /// Return a key's value to what it used to be, including if it didn't exist before
+    pub fn uninsert(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
+        let keys = original.meta().map_keys.as_ref()
+            .ok_or_else(|| env.error("Value wasn't a map"))?;
+        //if self.row_count() != original.row_count() {
+        //    return Err(env.error(format!(
+        //            "Attempted to undo insert, but the map's number of entries changed from {} to {}",
+        //            original.row_count(),
+        //            self.row_count()
+        //        )));
+        //}
+        if let Some(index) = keys.get(&key) {
+            self.insert_at(index.into(), key, original.row(index), env)?;
+            println!("{}", index);
+        } else {
+            self.remove(key, env)?;
+        }
+        Ok(())
+    }
     /// Remove a key-value pair from a map array
     pub fn remove(&mut self, key: Value, env: &Uiua) -> UiuaResult {
         if self.row_count() == 0 {
@@ -234,6 +253,22 @@ impl Value {
                 #[cfg(feature = "bytes")]
                 Value::Byte(arr) => arr.remove_row(index),
             }
+        }
+        Ok(())
+    }
+    /// Re-insert a key-value pair to a modified map array if it got removed
+    pub fn unremove(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
+        let keys = original.meta().map_keys.as_ref()
+            .ok_or_else(|| env.error("Value wasn't a map"))?;
+        if let Some(index) = keys.get(&key) {
+            //if self.row_count() != original.row_count() {
+            //    return Err(env.error(format!(
+            //        "Attempted to undo remove, but the map's number of entries changed from {} to {}",
+            //        original.row_count(),
+            //        self.row_count()
+            //    )));
+            //}
+            self.insert_at(index.into(), key, original.row(index), env)?;
         }
         Ok(())
     }

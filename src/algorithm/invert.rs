@@ -286,7 +286,7 @@ pub(crate) fn under_instrs(
         &stash1!(Rotate, (Neg, Rotate)),
         &maybe_val!(pat!(
             Join,
-            (Over, Shape, Over, Shape, Flip, PushTempN(2), Join),
+            (Over, Shape, Over, Shape, PushTempN(2), Join),
             (PopTempN(2), Unjoin),
         )),
         // Array indexing
@@ -308,12 +308,8 @@ pub(crate) fn under_instrs(
             (CopyToTempN(2), Get),
             (PopTempN(1), Flip, PopTempN(1), Insert),
         )),
-        &maybe_val!(pat!(
-            Remove,
-            (Over, Over, Get, Over, PushTempN(2), Remove),
-            (PopTempN(2), Insert),
-        )),
-        &maybe_val!(stash1!(Insert, Remove)),
+        &maybe_val!(stash2!(Remove, Unremove)),
+        &maybe_val!(pat!(Insert, (CopyToTempN(3), Insert), (PopTempN(3), Uninsert))),
         // Shaping
         &stash1!(Shape, (Flip, Reshape)),
         &pat!(

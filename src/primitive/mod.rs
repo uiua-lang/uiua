@@ -174,6 +174,8 @@ impl fmt::Display for ImplPrimitive {
             Undrop => write!(f, "{Un}{Drop}"),
             Unselect => write!(f, "{Un}{Select}"),
             Unpick => write!(f, "{Un}{Pick}"),
+            Uninsert => write!(f, "{Un}{Insert}"),
+            Unremove => write!(f, "{Un}{Remove}"),
             Unpartition1 | Unpartition2 => write!(f, "{Un}{Partition}"),
             Ungroup1 | Ungroup2 => write!(f, "{Un}{Group}"),
             Asin => write!(f, "{Un}{Sin}"),
@@ -196,7 +198,6 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
             Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
-            MapInsertAt => write!(f, "{Un}{Insert}"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -911,10 +912,10 @@ impl ImplPrimitive {
             ImplPrimitive::Ungroup1 => loops::ungroup_part1(env)?,
             ImplPrimitive::Ungroup2 => loops::ungroup_part2(env)?,
             ImplPrimitive::Unjoin => {
-                let b_rank = env.pop(1)?;
-                let a_rank = env.pop(2)?;
+                let a_shape = env.pop(1)?;
+                let b_shape = env.pop(2)?;
                 let val = env.pop(3)?;
-                let (left, right) = val.undo_join(a_rank, b_rank, env)?;
+                let (left, right) = val.undo_join(a_shape, b_shape, env)?;
                 env.push(right);
                 env.push(left);
             }
@@ -949,12 +950,19 @@ impl ImplPrimitive {
                 let val = env.pop(1)?;
                 env.push(val.unboxed());
             }
-            ImplPrimitive::MapInsertAt => {
-                let index = env.pop(1)?;
-                let key = env.pop(2)?;
-                let value = env.pop(3)?;
+            ImplPrimitive::Uninsert => {
+                let key = env.pop(1)?;
+                let _value = env.pop(2)?;
+                let original = env.pop(3)?;
                 let mut map = env.pop(4)?;
-                map.map_insert_at(index, key, value, env)?;
+                map.uninsert(key, &original, env)?;
+                env.push(map);
+            }
+            ImplPrimitive::Unremove => {
+                let key = env.pop(1)?;
+                let original = env.pop(2)?;
+                let mut map = env.pop(3)?;
+                map.unremove(key, &original, env)?;
                 env.push(map);
             }
             // Optimizations

@@ -222,7 +222,11 @@ pub(crate) fn under_instrs(
     /// Rounding operations
     macro_rules! round {
         ($before:expr) => {
-            pat!($before, (Dup, $before, Flip, Over, Sub, PushTempN(1)), (PopTempN(1), Add))
+            pat!(
+                $before,
+                (Dup, $before, Flip, Over, Sub, PushTempN(1)),
+                (PopTempN(1), Add)
+            )
         };
     }
 
@@ -260,7 +264,11 @@ pub(crate) fn under_instrs(
         &dyad!(Sub, Add),
         &dyad!(Mul, Div),
         &dyad!(Div, Mul),
-        &maybe_val!(pat!(Mod, (Over, Over, Flip, Over, Div, Floor, Mul, PushTempN(1), Mod), (PopTempN(1), Add))),
+        &maybe_val!(pat!(
+            Mod,
+            (Over, Over, Flip, Over, Div, Floor, Mul, PushTempN(1), Mod),
+            (PopTempN(1), Add)
+        )),
         // Exponential math
         &maybe_val!(stash1!((Flip, Pow), Log)),
         &maybe_val!(stash1!(Pow, (1, Flip, Div, Pow))),
@@ -292,11 +300,19 @@ pub(crate) fn under_instrs(
         // Array indexing
         &stash1!(Rise, (Flip, Select)),
         &stash1!(Fall, (Flip, Select)),
-        &maybe_val!(pat!(IndexOf, (Over, PushTempN(1), IndexOf), (PopTempN(1), Flip, Select))),
+        &maybe_val!(pat!(
+            IndexOf,
+            (Over, PushTempN(1), IndexOf),
+            (PopTempN(1), Flip, Select)
+        )),
         // Array masking
         &stash1!(Unique, (Flip, Keep)),
         &maybe_val!(stash1!(Member, (Flip, Keep))),
-        &maybe_val!(pat!(Find, (Over, PushTempN(1), Find), (PopTempN(1), Flip, Keep))),
+        &maybe_val!(pat!(
+            Find,
+            (Over, PushTempN(1), Find),
+            (PopTempN(1), Flip, Keep)
+        )),
         // Value retrieval
         &stash1!(First, Unfirst),
         &stash1!(Last, Unlast),
@@ -309,7 +325,11 @@ pub(crate) fn under_instrs(
             (PopTempN(1), Flip, PopTempN(1), Insert),
         )),
         &maybe_val!(stash2!(Remove, Unremove)),
-        &maybe_val!(pat!(Insert, (CopyToTempN(3), Insert), (PopTempN(3), Uninsert))),
+        &maybe_val!(pat!(
+            Insert,
+            (CopyToTempN(3), Insert),
+            (PopTempN(3), Uninsert)
+        )),
         // Shaping
         &stash1!(Shape, (Flip, Reshape)),
         &pat!(

@@ -955,14 +955,14 @@ impl ImplPrimitive {
                 let _value = env.pop(2)?;
                 let original = env.pop(3)?;
                 let mut map = env.pop(4)?;
-                map.uninsert(key, &original, env)?;
+                map.undo_insert(key, &original, env)?;
                 env.push(map);
             }
             ImplPrimitive::Unremove => {
                 let key = env.pop(1)?;
                 let original = env.pop(2)?;
                 let mut map = env.pop(3)?;
-                map.unremove(key, &original, env)?;
+                map.undo_remove(key, &original, env)?;
                 env.push(map);
             }
             // Optimizations

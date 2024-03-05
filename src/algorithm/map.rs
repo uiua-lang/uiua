@@ -187,39 +187,51 @@ impl Value {
                 *i += 1;
             }
         }
-        keys.insert(key, index, env)?;
-        self.generic_bin_mut(
-            value,
-            |arr, value| Ok(arr.insert_row(index, value)),
-            |arr, value| Ok(arr.insert_row(index, value)),
-            |arr, value| Ok(arr.insert_row(index, value)),
-            |arr, value| Ok(arr.insert_row(index, value)),
-            |arr, value| Ok(arr.insert_row(index, value)),
-            |a, b| {
-                env.error(format!(
-                    "Cannot insert {} value into map with {} values",
-                    b.type_name(),
-                    a.type_name()
-                ))
-            },
-        )?;
+        if keys.insert(key, index, env)?.is_some() {
+            self.generic_bin_mut(
+                value,
+                |arr, value| Ok(arr.set_row(index, value)),
+                |arr, value| Ok(arr.set_row(index, value)),
+                |arr, value| Ok(arr.set_row(index, value)),
+                |arr, value| Ok(arr.set_row(index, value)),
+                |arr, value| Ok(arr.set_row(index, value)),
+                |a, b| {
+                    env.error(format!(
+                        "Cannot insert {} value into map with {} values",
+                        b.type_name(),
+                        a.type_name()
+                    ))
+                },
+            )?;
+        } else {
+            self.generic_bin_mut(
+                value,
+                |arr, value| Ok(arr.insert_row(index, value)),
+                |arr, value| Ok(arr.insert_row(index, value)),
+                |arr, value| Ok(arr.insert_row(index, value)),
+                |arr, value| Ok(arr.insert_row(index, value)),
+                |arr, value| Ok(arr.insert_row(index, value)),
+                |a, b| {
+                    env.error(format!(
+                        "Cannot insert {} value into map with {} values",
+                        b.type_name(),
+                        a.type_name()
+                    ))
+                },
+            )?;
+        };
         self.meta_mut().map_keys = Some(keys);
         Ok(())
     }
     /// Return a key's value to what it used to be, including if it didn't exist before
-    pub fn uninsert(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
-        let keys = original.meta().map_keys.as_ref()
-            .ok_or_else(|| env.error("Value wasn't a map"))?;
-        //if self.row_count() != original.row_count() {
-        //    return Err(env.error(format!(
-        //            "Attempted to undo insert, but the map's number of entries changed from {} to {}",
-        //            original.row_count(),
-        //            self.row_count()
-        //        )));
-        //}
-        if let Some(index) = keys.get(&key) {
+    pub fn undo_insert(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
+        let orig_keys = original
+            .meta()
+            .map_keys
+            .as_ref()
+            .ok_or_else(|| env.error("Value was not a map"))?;
+        if let Some(index) = orig_keys.get(&key) {
             self.insert_at(index.into(), key, original.row(index), env)?;
-            println!("{}", index);
         } else {
             self.remove(key, env)?;
         }
@@ -257,17 +269,13 @@ impl Value {
         Ok(())
     }
     /// Re-insert a key-value pair to a modified map array if it got removed
-    pub fn unremove(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
-        let keys = original.meta().map_keys.as_ref()
+    pub fn undo_remove(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
+        let keys = original
+            .meta()
+            .map_keys
+            .as_ref()
             .ok_or_else(|| env.error("Value wasn't a map"))?;
         if let Some(index) = keys.get(&key) {
-            //if self.row_count() != original.row_count() {
-            //    return Err(env.error(format!(
-            //        "Attempted to undo remove, but the map's number of entries changed from {} to {}",
-            //        original.row_count(),
-            //        self.row_count()
-            //    )));
-            //}
             self.insert_at(index.into(), key, original.row(index), env)?;
         }
         Ok(())

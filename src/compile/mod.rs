@@ -30,7 +30,7 @@ use crate::{
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
     IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment, SysBackend, SysOp, Uiua,
-    UiuaError, UiuaResult, Value, CONSTANTS,
+    UiuaError, UiuaResult, Value, CONSTANTS, VERSION,
 };
 
 /// The Uiua compiler
@@ -326,6 +326,8 @@ impl Compiler {
 The compiler has crashed!
 Hooray! You found a bug!
 Please report this at http://github.com/uiua-lang/uiua/issues/new or on Discord at https://discord.gg/9CU2ME4kmn.
+
+Uiua version {VERSION}
 
 code:
 {input}"

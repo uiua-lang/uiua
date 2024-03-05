@@ -19,7 +19,7 @@ use thread_local::ThreadLocal;
 use crate::{
     algorithm, array::Array, boxed::Boxed, check::instrs_temp_signatures, function::*, lex::Span,
     value::Value, Assembly, Compiler, Complex, Global, Ident, Inputs, IntoSysBackend, LocalName,
-    Primitive, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult,
+    Primitive, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult, VERSION,
 };
 
 /// The Uiua interpreter
@@ -365,6 +365,8 @@ impl Uiua {
 The interpreter has crashed!
 Hooray! You found a bug!
 Please report this at http://github.com/uiua-lang/uiua/issues/new or on Discord at https://discord.gg/9CU2ME4kmn.
+
+Uiua version {VERSION}
 
 code:
 {}

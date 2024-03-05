@@ -164,7 +164,7 @@ impl Value {
         Ok(())
     }
     #[allow(clippy::unit_arg)]
-    pub(crate) fn map_insert_at(
+    pub(crate) fn insert_at(
         &mut self,
         index: Value,
         key: Value,
@@ -187,23 +187,54 @@ impl Value {
                 *i += 1;
             }
         }
-        keys.insert(key, index, env)?;
-        self.generic_bin_mut(
-            value,
-            |arr, value| Ok(arr.insert_row(index, value)),
-            |arr, value| Ok(arr.insert_row(index, value)),
-            |arr, value| Ok(arr.insert_row(index, value)),
-            |arr, value| Ok(arr.insert_row(index, value)),
-            |arr, value| Ok(arr.insert_row(index, value)),
-            |a, b| {
-                env.error(format!(
-                    "Cannot insert {} value into map with {} values",
-                    b.type_name(),
-                    a.type_name()
-                ))
-            },
-        )?;
+        if keys.insert(key, index, env)?.is_some() {
+            self.generic_bin_mut(
+                value,
+                |arr, value| Ok(arr.set_row(index, value)),
+                |arr, value| Ok(arr.set_row(index, value)),
+                |arr, value| Ok(arr.set_row(index, value)),
+                |arr, value| Ok(arr.set_row(index, value)),
+                |arr, value| Ok(arr.set_row(index, value)),
+                |a, b| {
+                    env.error(format!(
+                        "Cannot insert {} value into map with {} values",
+                        b.type_name(),
+                        a.type_name()
+                    ))
+                },
+            )?;
+        } else {
+            self.generic_bin_mut(
+                value,
+                |arr, value| Ok(arr.insert_row(index, value)),
+                |arr, value| Ok(arr.insert_row(index, value)),
+                |arr, value| Ok(arr.insert_row(index, value)),
+                |arr, value| Ok(arr.insert_row(index, value)),
+                |arr, value| Ok(arr.insert_row(index, value)),
+                |a, b| {
+                    env.error(format!(
+                        "Cannot insert {} value into map with {} values",
+                        b.type_name(),
+                        a.type_name()
+                    ))
+                },
+            )?;
+        };
         self.meta_mut().map_keys = Some(keys);
+        Ok(())
+    }
+    /// Return a key's value to what it used to be, including if it didn't exist before
+    pub fn undo_insert(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
+        let orig_keys = original
+            .meta()
+            .map_keys
+            .as_ref()
+            .ok_or_else(|| env.error("Value was not a map"))?;
+        if let Some(index) = orig_keys.get(&key) {
+            self.insert_at(index.into(), key, original.row(index), env)?;
+        } else {
+            self.remove(key, env)?;
+        }
         Ok(())
     }
     /// Remove a key-value pair from a map array
@@ -234,6 +265,18 @@ impl Value {
                 #[cfg(feature = "bytes")]
                 Value::Byte(arr) => arr.remove_row(index),
             }
+        }
+        Ok(())
+    }
+    /// Re-insert a key-value pair to a modified map array if it got removed
+    pub fn undo_remove(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
+        let keys = original
+            .meta()
+            .map_keys
+            .as_ref()
+            .ok_or_else(|| env.error("Value wasn't a map"))?;
+        if let Some(index) = keys.get(&key) {
+            self.insert_at(index.into(), key, original.row(index), env)?;
         }
         Ok(())
     }

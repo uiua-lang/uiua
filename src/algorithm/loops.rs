@@ -82,7 +82,6 @@ pub fn do_(env: &mut Uiua) -> UiuaResult {
             minus the condition, is {comp_sig}"
         )));
     }
-    dbg!(copy_count, g_sig, comp_sig);
     loop {
         if env.stack().len() < copy_count {
             // Pop until it fails

@@ -32,9 +32,6 @@ impl Value {
         self.fix_depth(0);
     }
     pub(crate) fn fix_depth(&mut self, depth: usize) {
-        if self.is_map() {
-            return;
-        }
         let depth = depth.min(self.rank());
         self.shape_mut().insert(depth, 1);
     }

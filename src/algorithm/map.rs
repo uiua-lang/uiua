@@ -31,9 +31,15 @@ impl<T: ArrayValue> Array<T> {
             .filter(|(k, _)| !k.is_empty_cell() && !k.is_tombstone())
             .collect();
         ki.sort_unstable_by_key(|(_, i)| *i);
+        let mut values = self;
+        let vals;
+        if values.row_count() == 1 && map_keys.len != 1 {
+            vals = values.row(0);
+            values = &vals;
+        }
         for (key, index) in ki {
-            if *index < self.row_count() {
-                kv.push((key, self.row(*index)));
+            if *index < values.row_count() {
+                kv.push((key, values.row(*index)));
             }
         }
         kv
@@ -56,9 +62,15 @@ impl Value {
             .filter(|(k, _)| !k.is_empty_cell() && !k.is_tombstone())
             .collect();
         ki.sort_unstable_by_key(|(_, i)| *i);
+        let mut values = self;
+        let vals;
+        if values.row_count() == 1 && map_keys.len != 1 {
+            vals = values.row(0);
+            values = &vals;
+        }
         for (key, index) in ki {
-            if *index < self.row_count() {
-                kv.push((key, self.row(*index)));
+            if *index < values.row_count() {
+                kv.push((key, values.row(*index)));
             }
         }
         kv

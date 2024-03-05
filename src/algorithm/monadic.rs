@@ -467,11 +467,9 @@ impl Value {
             Value::Complex(c) => c.transpose_depth(depth, amnt),
             Value::Char(c) => c.transpose_depth(depth, amnt),
             Value::Box(b) => {
-                if let Some(bx) = b.as_scalar_mut() {
-                    bx.as_value_mut().transpose_depth(depth, amnt);
-                } else if depth > 0 && b.rank() <= 1 {
+                if depth == b.rank() {
                     for b in b.data.as_mut_slice() {
-                        b.as_value_mut().transpose_depth(depth - 1, amnt);
+                        b.0.transpose();
                     }
                 } else {
                     b.transpose_depth(depth, amnt);

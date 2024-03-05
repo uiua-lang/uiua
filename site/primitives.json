@@ -447,7 +447,7 @@
     "args": 2,
     "outputs": 1,
     "class": "DyadicArray",
-    "description": "Find the first deep index of each row of one array in another",
+    "description": "Find the first deep index of one array in another",
     "experimental": true
   },
   "couple": {

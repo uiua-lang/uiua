@@ -304,6 +304,7 @@ impl Uiua {
     /// The runtime will inherit the system backend from the compiler
     pub fn run_compiler(&mut self, compiler: &mut Compiler) -> UiuaResult {
         let backup = compiler.clone();
+        self.rt.backend = compiler.backend();
         let res = self.run_asm(compiler.finish());
         let asm = self.take_asm();
         match res {

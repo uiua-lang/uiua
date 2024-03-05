@@ -51,9 +51,9 @@ This version is not yet released. If you are reading this on the website, then t
   - A `|0.1` binding will be automatically evaluated at compile time if it is pure
 - Language Server
   - Add find references
-  - Add signature inlay hints
+  - Add signature inlay hints (can be toggled/adjusted in settings)
   - Add macro expansion as a code action
-  - Add on-type formatting
+  - Add on-type formatting (can be toggled in settings)
   - Add completions for shadowable constants
   - Add completions for module items when the module reference is partially typed
 - Add the `--file <file>` option to the `uiua repl` command

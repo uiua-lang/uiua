@@ -962,18 +962,33 @@ mod server {
             &self,
             params: DocumentOnTypeFormattingParams,
         ) -> Result<Option<Vec<TextEdit>>> {
-            self.client
-                .log_message(
-                    MessageType::LOG,
-                    format!("On type formatting: {:#?}", params),
-                )
-                .await;
+            // Skip if disabled
+            let config = self
+                .client
+                .configuration(vec![ConfigurationItem {
+                    scope_uri: Some(params.text_document_position.text_document.uri.clone()),
+                    section: Some("uiua.format.onTypeFormatting".into()),
+                }])
+                .await
+                .unwrap_or_default();
+            let enabled = if let [serde_json::Value::Bool(enabled)] = config.as_slice() {
+                *enabled
+            } else {
+                true
+            };
+            if !enabled {
+                return Ok(None);
+            }
+
+            // Get document
             let Some(doc) = self
                 .docs
                 .get(&params.text_document_position.text_document.uri)
             else {
                 return Ok(None);
             };
+
+            // Get ident
             let pos = params.text_document_position.position;
             let is_newline = params.ch == "\n";
             let line = if is_newline { pos.line - 1 } else { pos.line };
@@ -985,21 +1000,14 @@ mod server {
             } else {
                 pos.character - 1
             };
-            self.client
-                .log_message(MessageType::INFO, format!("line: {:?}", line_str))
-                .await;
             let before = line_str.chars().take(col as usize).collect::<String>();
-            self.client
-                .log_message(MessageType::INFO, format!("before: {:?}", before))
-                .await;
             let mut ident = (before.chars().rev())
                 .take_while(|&c| is_ident_char(c))
                 .collect::<String>();
             ident = ident.chars().rev().collect();
             let start = col - ident.chars().count() as u32;
-            self.client
-                .log_message(MessageType::INFO, format!("ident: {:?}", ident))
-                .await;
+
+            // Get prims
             let Some(prims) = Primitive::from_format_name_multi(&ident) else {
                 return Ok(None);
             };
@@ -1007,6 +1015,8 @@ mod server {
             for (prim, _) in prims {
                 formatted.push_str(&prim.to_string());
             }
+
+            // Adjust range
             let mut end = pos;
             if params.ch.chars().all(|c| c.is_whitespace()) {
                 formatted.push_str(&params.ch);

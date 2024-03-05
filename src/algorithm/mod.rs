@@ -506,8 +506,10 @@ pub fn switch(
         if discard_start > env.rt.stack.len() {
             return Err(env.error("Stack was empty when discarding excess switch arguments."));
         }
-        let discard_end =
-            discard_start + sig.args - f.signature().args - (sig.outputs - f.signature().outputs);
+        // `saturating_sub` and `max` handle incorrect explicit signatures
+        let discard_end = (discard_start + sig.args + f.signature().outputs)
+            .saturating_sub(f.signature().args + sig.outputs)
+            .max(discard_start);
         if discard_end > env.rt.stack.len() {
             return Err(env.error("Stack was empty when discarding excess switch arguments."));
         }

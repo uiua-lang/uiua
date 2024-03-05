@@ -2159,8 +2159,10 @@ primitive!(
     ///   : insert 7 8_9
     ///   : °map .
     ///
-    /// Some normal array operations work on maps though.
-    /// They are:
+    /// Pervasive operations work on the values of a map, but not on the keys.
+    /// ex: # Experimental!
+    ///   : ×10 map 1_2_3 4_5_6
+    /// Some normal array operations work on maps:
     /// - [reverse]
     /// - [rotate]
     /// - [take]
@@ -2168,11 +2170,12 @@ primitive!(
     /// - [join]
     /// - [each]
     /// - [rows]
-    ///
-    /// [tranpose] does nothing to maps.
-    /// ex: # Experimental!
-    ///   : map 1_2_3 [3_4 5_6 7_8]
-    ///   : ⍉ .
+    /// These operations do *not* work on maps:
+    /// - [fix]
+    /// - [transpose]
+    /// - [deshape]
+    /// - [rerank]
+    /// - [reshape]
     ///
     /// Regardless of the size of the map, operations on it have O(1) amortized time complexity.
     /// In this example, we time [get] and [insert] operations on maps from 10 entries up to 100,000 entries.

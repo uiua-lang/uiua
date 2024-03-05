@@ -1,9 +1,13 @@
 # Uiua Todo
 
 - 0.10
+  - Make maps good enough to not be experimental
+    - `select`
+    - `sort up/down`
+    - `dedup`
+    - `keep`
   - Let bind only take an ident?
   - Proofread and update tutorial and tour
-  - Make maps good enough to not be experimental
   - System functions
     - Excel
 - Site pages/tutorials

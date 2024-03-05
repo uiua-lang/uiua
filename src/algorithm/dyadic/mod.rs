@@ -207,6 +207,7 @@ impl Value {
 impl<T: Clone> Array<T> {
     /// `reshape` this array by replicating it as the rows of a new array
     pub fn reshape_scalar(&mut self, count: Result<isize, bool>) {
+        self.take_map_keys();
         match count {
             Ok(count) => {
                 if count == 0 {
@@ -239,6 +240,13 @@ impl<T: ArrayValue> Array<T> {
     pub fn reshape(&mut self, dims: &[Result<isize, bool>], env: &Uiua) -> UiuaResult {
         let fill = env.scalar_fill::<T>();
         let axes = derive_shape(&self.shape, dims, fill.is_ok(), env)?;
+        if self.is_map()
+            && axes
+                .first()
+                .map_or(true, |&d| d.unsigned_abs() != self.row_count())
+        {
+            return Ok(());
+        }
         let reversed_axes: Vec<usize> = axes
             .iter()
             .enumerate()
@@ -359,6 +367,9 @@ fn derive_shape(
 impl Value {
     /// `rerank` this value with another
     pub fn rerank(&mut self, rank: &Self, env: &Uiua) -> UiuaResult {
+        if self.is_map() {
+            return Ok(());
+        }
         let irank = rank.as_int(env, "Rank must be a natural number")?;
         let shape = self.shape_mut();
         let rank = irank.unsigned_abs();

@@ -32,10 +32,16 @@ impl Value {
         self.fix_depth(0);
     }
     pub(crate) fn fix_depth(&mut self, depth: usize) {
+        if self.is_map() {
+            return;
+        }
         let depth = depth.min(self.rank());
         self.shape_mut().insert(depth, 1);
     }
     pub(crate) fn inv_fix(&mut self) {
+        if self.is_map() {
+            return;
+        }
         let shape = self.shape_mut();
         if shape.starts_with(&[1]) {
             shape.remove(0);
@@ -159,6 +165,9 @@ impl<T: ArrayValue> Array<T> {
         self.shape = self.element_count().into();
     }
     pub(crate) fn deshape_depth(&mut self, mut depth: usize) {
+        if self.is_map() {
+            return;
+        }
         depth = depth.min(self.rank());
         let deshaped = self.shape.split_off(depth).into_iter().product();
         self.shape.push(deshaped);

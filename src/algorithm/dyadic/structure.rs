@@ -28,6 +28,13 @@ impl<T: Clone> Array<T> {
         self.data.truncate(new_len);
         self.shape[0] -= 1;
     }
+    pub(crate) fn insert_row(&mut self, index: usize, row: Self) {
+        let row_len = row.row_len();
+        self.data.reserve(row_len);
+        self.data.extend_from_slice(&row.data);
+        let start = index * row_len;
+        self.data.as_mut_slice()[start..].rotate_right(row_len);
+    }
 }
 
 impl Value {

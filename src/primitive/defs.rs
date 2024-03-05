@@ -2498,6 +2498,7 @@ impl_primitive!(
     (3, Unpartition2),
     (1[1], Ungroup1),
     (3, Ungroup2),
+    (4, MapInsertAt),
     // Optimizations
     (1, Last),
     (1, FirstMinIndex),

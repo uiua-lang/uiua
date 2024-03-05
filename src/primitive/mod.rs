@@ -196,6 +196,7 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
             Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
+            MapInsertAt => write!(f, "{Un}{Insert}"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -949,6 +950,14 @@ impl ImplPrimitive {
             ImplPrimitive::InvBox => {
                 let val = env.pop(1)?;
                 env.push(val.unboxed());
+            }
+            ImplPrimitive::MapInsertAt => {
+                let index = env.pop(1)?;
+                let key = env.pop(2)?;
+                let value = env.pop(3)?;
+                let mut map = env.pop(4)?;
+                map.map_insert_at(index, key, value, env)?;
+                env.push(map);
             }
             // Optimizations
             ImplPrimitive::Last => env.monadic_env(Value::last)?,

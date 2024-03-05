@@ -142,6 +142,51 @@ impl Value {
         self.meta_mut().map_keys = keys;
         Ok(())
     }
+    #[allow(clippy::unit_arg)]
+    pub(crate) fn map_insert_at(
+        &mut self,
+        index: Value,
+        key: Value,
+        value: Value,
+        env: &Uiua,
+    ) -> UiuaResult {
+        let index = index.as_nat(env, "Index must be a non-negative integer")?;
+        if index > self.row_count() {
+            return Err(env.error(format!(
+                "Index {} is out of bounds for map with {} entries",
+                index,
+                self.row_count()
+            )));
+        }
+        let mut keys = self
+            .take_map_keys()
+            .ok_or_else(|| env.error("Value is not a map"))?;
+        for i in &mut keys.indices {
+            if *i >= index {
+                *i += 1;
+            }
+        }
+        keys.insert(key, index, env)?;
+        let value = coerce_values(self, value, "insert", "value into map with", "values")
+            .map_err(|e| env.error(e))?;
+        self.generic_bin_mut(
+            value,
+            |arr, value| Ok(arr.insert_row(index, value)),
+            |arr, value| Ok(arr.insert_row(index, value)),
+            |arr, value| Ok(arr.insert_row(index, value)),
+            |arr, value| Ok(arr.insert_row(index, value)),
+            |arr, value| Ok(arr.insert_row(index, value)),
+            |a, b| {
+                env.error(format!(
+                    "Cannot insert {} value into map with {} values",
+                    b.type_name(),
+                    a.type_name()
+                ))
+            },
+        )?;
+        self.meta_mut().map_keys = Some(keys);
+        Ok(())
+    }
     /// Remove a key-value pair from a map array
     pub fn remove(&mut self, key: Value, env: &Uiua) -> UiuaResult {
         if self.row_count() == 0 {

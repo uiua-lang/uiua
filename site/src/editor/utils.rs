@@ -222,9 +222,23 @@ pub fn set_autorun(autorun: bool) {
     set_local_var("autorun", autorun);
 }
 
+pub fn get_show_experimental() -> bool {
+    get_local_var("show-experimental", || false)
+}
+
+pub fn set_show_experimental(show_experimental: bool) {
+    set_local_var("show-experimental", show_experimental);
+    update_style();
+}
+
 fn update_style() {
     let font_name = get_font_name();
     let font_size = get_font_size();
+    let show_experimental = if get_show_experimental() {
+        "block"
+    } else {
+        "none"
+    };
     // Remove the old style
     let head = &document().head().unwrap();
     if let Some(item) = head.get_elements_by_tag_name("style").item(0) {
@@ -238,7 +252,8 @@ fn update_style() {
         .unwrap();
     new_style.set_inner_text(&format!(
         "@font-face {{ font-family: 'Code Font'; src: url('/{font_name}.ttf') format('truetype'); }}\n\
-        .sized-code {{ font-size: {font_size}; }} }}"
+        .sized-code {{ font-size: {font_size}; }}\n\
+        .experimental-glyph-button {{ display: {show_experimental}; }}",
     ));
     document().head().unwrap().append_child(&new_style).unwrap();
 }

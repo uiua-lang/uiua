@@ -311,7 +311,7 @@ impl<'a> VirtualEnv<'a> {
                     let sig = self.pop_func()?.signature();
                     self.handle_sig(sig)?
                 }
-                Table | Cross => {
+                Table => {
                     let sig = self.pop_func()?.signature();
                     self.handle_sig(sig)?;
                 }
@@ -445,6 +445,10 @@ impl<'a> VirtualEnv<'a> {
                         self.popped.push(i);
                     }
                     self.set_min_height();
+                }
+                By => {
+                    let sig = self.pop_func()?.signature();
+                    self.handle_args_outputs(sig.args, sig.outputs + 1)?;
                 }
                 Over => {
                     let a = self.pop()?;

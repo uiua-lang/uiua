@@ -404,7 +404,7 @@ li {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 0.2em;
+    gap: 0.2em 0.6em;
 }
 
 #settings-left {
@@ -663,7 +663,7 @@ input[type=number] {
 
 .glyph-button {
     font-family: "Code Font", monospace;
-    font-size: 0.93em;
+    font-size: 0.92em;
     padding: 0.05em;
     margin: 0em;
     background-color: transparent;
@@ -685,6 +685,10 @@ input[type=number] {
     z-index: 1;
     -webkit-text-fill-color: #eee;
     -moz-text-fill-color: #eee;
+}
+
+.experimental-glyph-button {
+    display: none;
 }
 
 .prim-code-a {

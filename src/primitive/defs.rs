@@ -1146,22 +1146,46 @@ primitive!(
     (2, Member, DyadicArray, ("member", '∊')),
     /// Find the first index of each row of one array in another
     ///
-    /// If the index cannot be found, the [length] of the searched-in array is returned.
     /// ex: ⊗ 2 [1 2 3]
-    /// ex: ⊗ 5 [1 2 3]
-    /// ex: ⊗ [1 2 3] [0 3 4 5 1]
     /// ex: ⊗ [4 5 6] [1_2_3 4_5_6]
-    /// ex: ⊗ [1_2_3 4_5_6] [3 4 5]
     /// ex: ⊗ 2 [1_2_3 4_5_6]
+    /// If the index cannot be found, the [length] of the searched-in array is returned.
+    /// ex: ⊗ [1 2 3] [0 3 4 5 1]
+    /// ex: ⊗ [1_2_3 4_5_6] [3 4 5]
+    /// ex: ⊗ 5 [1 2 3]
     ///
     /// You can use the returned indices with [select] to get the rows that were found.
     /// If you expect one of the searched-for rows to be missing, you can use [fill] to set a default value.
-    /// ex: a ← [2 3 5 7 11 13]
-    ///   : .⊗,a [1 2 3 4 5]
-    ///   : ⬚∞⊏:a
+    /// ex: A ← [2 3 5 7 11 13]
+    ///   : .⊗,A [1 2 3 4 5]
+    ///   : ⬚∞⊏:A
     ///
     /// [indexof] is closely related to [member].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
+    /// Find the first deep index of one array in another
+    ///
+    /// While [indexof] returns an array of top-level indices into the searched-in array, [coordinate] returns an array of multi-dimensional coordinates.
+    /// ex: # Experimental!
+    ///   : ⟔,, 14 ↯2_3_4⇡24
+    /// ex: # Experimental!
+    ///   : ⟔,, [4 5 6 7] ↯2_3_4⇡24
+    /// ex: # Experimental!
+    ///   : ⟔,, +12↯3_4⇡12 ↯2_3_4⇡24
+    /// ex: # Experimental!
+    ///   : ⟔,, [1 2 3] [2 1 4 5 3]
+    /// If the index cannot be found, the [shape] of the searched-in array is returned.
+    /// ex: # Experimental!
+    ///   : ⟔,, 100 ↯2_3_4⇡24
+    /// If you want to get multiple coordinates from an array, you may need to use [rows] and [fix].
+    /// ex: # Experimental!
+    ///   : ≡⟔⊙¤,, [1 2 3 4 5] [1_5_3 6_2_4]
+    /// You can use the returned indices with [pick] to get the rows that were found.
+    /// If you expect one of the searched-for rows to be missing, you can use [fill] to set a default value.
+    /// ex: # Experimental!
+    ///   : A ← [2 3 5 7 11 13]
+    ///   : .≡⟔⊙¤,A [1_2_3 4_5_6]
+    ///   : ⬚∞⊡:A
+    (2, Coordinate, DyadicArray, ("coordinate", '⟔')),
     // /// Find sequential indices of each row of one array in another
     // ///
     // /// Unlike [indexof], [progressive indexof] will return the sequential indices of each row of the first array in the second array; the same index will not be used twice.
@@ -1501,7 +1525,28 @@ primitive!(
     ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
     ///
     /// [on] is equivalent to [fork][identity], but can often be easier to read.
-    ([1], On, Planet, ("on", '⟜')),
+    ([1], On, Stack, ("on", '⟜')),
+    /// Duplicate a function's last argument before calling it
+    ///
+    /// If you wanted to filter out every element of an array that is not [less than] 10, you could use [keep].
+    /// ex: ▽<10. [1 27 8 3 14 9]
+    /// However, if you wanted to make this a function, you would have to [dip] below the bound to [duplicate] the array.
+    /// ex: F ← ▽<⊙.
+    ///   : F 10 [1 27 8 3 14 9]
+    /// While this works, it may be take a moment to process in your mind how the stack is changing.
+    /// [by] expresses the common pattern of performing an operation but preserving the last argument so that it can be used again.
+    /// With [by], the filtering function above can be written more simply.
+    /// ex: # Experimental!
+    ///   : F ← ▽⊸<
+    ///   : F 10 [1 27 8 3 14 9]
+    /// Here are some more examples of [by] in action.
+    /// ex: # Experimental!
+    ///   : ⊂⊸↙ 2 [1 2 3 4 5]
+    ///   : ⊜□⊸≠ @  "Hey there buddy"
+    ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
+    ///
+    /// [by] is currently `# Experimental!` because it's not clear if it's useful enough to keep.
+    ([1], By, Stack, ("by", '⊸')),
     /// Call a function on two sets of values
     ///
     /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.
@@ -2453,6 +2498,7 @@ impl_primitive!(
     (3, Unpartition2),
     (1[1], Ungroup1),
     (3, Ungroup2),
+    (4, MapInsertAt),
     // Optimizations
     (1, Last),
     (1, FirstMinIndex),

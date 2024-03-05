@@ -196,6 +196,7 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
             Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
+            MapInsertAt => write!(f, "{Un}{Insert}"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -360,8 +361,9 @@ impl Primitive {
         use Primitive::*;
         matches!(
             self,
-            Mask | (This | Recur)
-                | (Rectify | All | Cascade)
+            (Mask | Coordinate)
+                | (This | Recur)
+                | (Rectify | All | Cascade | By)
                 | (Map | Insert | Has | Get | Remove)
                 | Bind
                 | (Shapes | Types)
@@ -385,6 +387,7 @@ impl Primitive {
             "id" => return Some(Primitive::Identity),
             "ga" => return Some(Primitive::Gap),
             "po" => return Some(Primitive::Pop),
+            "of" => return Some(Primitive::By),
             "pi" => return Some(Primitive::Pi),
             "ran" => return Some(Primitive::Range),
             "tra" => return Some(Primitive::Transpose),
@@ -439,7 +442,7 @@ impl Primitive {
                     .strip_suffix(['i', 'p', 'f'])
                     .unwrap_or(sub_name)
                     .chars()
-                    .all(|c| "gdo".contains(c))
+                    .all(|c| "gd".contains(c))
                 {
                     // 1-letter planet notation
                     for (i, c) in sub_name.char_indices() {
@@ -450,7 +453,6 @@ impl Primitive {
                             'd' => Primitive::Dip,
                             'i' => Primitive::Identity,
                             'p' => Primitive::Pop,
-                            'o' => Primitive::On,
                             _ => unreachable!(),
                         };
                         prims.push((prim, &sub_name[i..i + 1]))
@@ -556,6 +558,7 @@ impl Primitive {
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
             Primitive::Mask => env.dyadic_rr_env(Value::mask)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
+            Primitive::Coordinate => env.dyadic_rr_env(Value::coordinate)?,
             // Primitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
@@ -626,6 +629,9 @@ impl Primitive {
             Primitive::On => {
                 return Err(env.error("On was not inlined. This is a bug in the interpreter"))
             }
+            Primitive::By => {
+                return Err(env.error("Off was not inlined. This is a bug in the interpreter"))
+            }
             Primitive::Gap => {
                 return Err(env.error("Gap was not inlined. This is a bug in the interpreter"))
             }
@@ -641,13 +647,6 @@ impl Primitive {
             Primitive::Content => {
                 return Err(env.error("Content was not inlined. This is a bug in the interpreter"))
             }
-            Primitive::Fill => {
-                let fill = env.pop_function()?;
-                let f = env.pop_function()?;
-                env.call(fill)?;
-                let fill_value = env.pop("fill value")?;
-                env.with_fill(fill_value, |env| env.call(f))?;
-            }
             Primitive::Both => {
                 return Err(env.error("Both was not inlined. This is a bug in the interpreter"))
             }
@@ -661,6 +660,13 @@ impl Primitive {
                 return Err(env.error("Bracket was not inlined. This is a bug in the interpreter"))
             }
             Primitive::All => algorithm::all(env)?,
+            Primitive::Fill => {
+                let fill = env.pop_function()?;
+                let f = env.pop_function()?;
+                env.call(fill)?;
+                let fill_value = env.pop("fill value")?;
+                env.with_fill(fill_value, |env| env.call(f))?;
+            }
             Primitive::This => {
                 let f = env.pop_function()?;
                 env.call_with_this(f)?;
@@ -944,6 +950,14 @@ impl ImplPrimitive {
             ImplPrimitive::InvBox => {
                 let val = env.pop(1)?;
                 env.push(val.unboxed());
+            }
+            ImplPrimitive::MapInsertAt => {
+                let index = env.pop(1)?;
+                let key = env.pop(2)?;
+                let value = env.pop(3)?;
+                let mut map = env.pop(4)?;
+                map.map_insert_at(index, key, value, env)?;
+                env.push(map);
             }
             // Optimizations
             ImplPrimitive::Last => env.monadic_env(Value::last)?,

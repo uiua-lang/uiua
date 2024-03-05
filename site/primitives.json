@@ -391,6 +391,14 @@
     "class": "Planet",
     "description": "Call two functions on two distinct sets of values"
   },
+  "by": {
+    "glyph": "⊸",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Stack",
+    "description": "Duplicate a function's last argument before calling it",
+    "experimental": true
+  },
   "cascade": {
     "glyph": "⪾",
     "outputs": 1,
@@ -433,6 +441,14 @@
     "modifier_args": 1,
     "class": "OtherModifier",
     "description": "Unbox the arguments to a function before calling it"
+  },
+  "coordinate": {
+    "glyph": "⟔",
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Find the first deep index of one array in another",
+    "experimental": true
   },
   "couple": {
     "glyph": "⊟",
@@ -823,7 +839,7 @@
     "glyph": "⟜",
     "outputs": 1,
     "modifier_args": 1,
-    "class": "Planet",
+    "class": "Stack",
     "description": "Call a function but keep its first argument on the top of the stack"
   },
   "over": {

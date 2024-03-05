@@ -1187,9 +1187,9 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// Get the `index of` the rows of this value in another
-    pub fn index_of(&self, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
+    pub fn index_of(&self, haystack: &Value, env: &Uiua) -> UiuaResult<Value> {
         self.generic_bin_ref(
-            searched_in,
+            haystack,
             |a, b| a.index_of(b, env).map(Into::into),
             |a, b| a.index_of(b, env).map(Into::into),
             |a, b| a.index_of(b, env).map(Into::into),
@@ -1198,6 +1198,24 @@ impl Value {
             |a, b| {
                 env.error(format!(
                     "Cannot look for indices of {} array in {} array",
+                    a.type_name(),
+                    b.type_name(),
+                ))
+            },
+        )
+    }
+    /// Get the `coordinate` of the rows of this value in another
+    pub fn coordinate(&self, haystack: &Value, env: &Uiua) -> UiuaResult<Value> {
+        self.generic_bin_ref(
+            haystack,
+            |a, b| a.coordinate(b, env).map(Into::into),
+            |a, b| a.coordinate(b, env).map(Into::into),
+            |a, b| a.coordinate(b, env).map(Into::into),
+            |a, b| a.coordinate(b, env).map(Into::into),
+            |a, b| a.coordinate(b, env).map(Into::into),
+            |a, b| {
+                env.error(format!(
+                    "Cannot look for coordinates of {} array in {} array",
                     a.type_name(),
                     b.type_name(),
                 ))
@@ -1281,6 +1299,68 @@ impl<T: ArrayValue> Array<T> {
                         rows.push(searched_for.index_of(&of, env)?);
                     }
                     Array::from_row_arrays(rows, env)?
+                }
+            }
+        })
+    }
+    /// Get the `coordinate` of the rows of this array in another
+    pub fn coordinate(&self, haystack: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
+        let needle = self;
+        Ok(match needle.rank().cmp(&haystack.rank()) {
+            Ordering::Equal => {
+                let mut result_data = EcoVec::with_capacity(needle.row_count());
+                let mut members = HashMap::with_capacity(haystack.row_count());
+                for (i, of) in haystack.row_slices().enumerate() {
+                    members.entry(ArrayCmpSlice(of)).or_insert(i);
+                }
+                for elem in needle.row_slices() {
+                    result_data.push(
+                        members
+                            .get(&ArrayCmpSlice(elem))
+                            .map(|i| *i as f64)
+                            .unwrap_or(haystack.row_count() as f64),
+                    );
+                }
+                let mut shape: Shape = self.shape.iter().cloned().take(1).collect();
+                shape.push(1);
+                Array::new(shape, result_data)
+            }
+            Ordering::Greater => {
+                let mut rows = Vec::with_capacity(needle.row_count());
+                for elem in needle.rows() {
+                    rows.push(elem.coordinate(haystack, env)?);
+                }
+                Array::from_row_arrays(rows, env)?
+            }
+            Ordering::Less => {
+                if !haystack.shape.ends_with(&needle.shape) {
+                    return Err(env.error(format!(
+                        "Cannot get coordinate of array of shape {} \
+                        in array of shape {}",
+                        needle.shape(),
+                        haystack.shape()
+                    )));
+                }
+                let haystack_item_len: usize =
+                    haystack.shape.iter().rev().take(needle.rank()).product();
+                if haystack_item_len == 0 {
+                    todo!()
+                }
+                let outer_hay_shape =
+                    Shape::from(&haystack.shape[..haystack.rank() - needle.rank()]);
+                let index = if let Some(raw_index) = (haystack.data.chunks_exact(haystack_item_len))
+                    .position(|ch| ch.iter().zip(&needle.data).all(|(a, b)| a.array_eq(b)))
+                {
+                    let mut index = Vec::new();
+                    outer_hay_shape.flat_to_dims(raw_index, &mut index);
+                    index
+                } else {
+                    outer_hay_shape.to_vec()
+                };
+                if index.len() == 1 {
+                    (index[0] as f64).into()
+                } else {
+                    index.into()
                 }
             }
         })

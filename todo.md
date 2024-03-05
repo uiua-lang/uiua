@@ -1,9 +1,7 @@
 # Uiua Todo
 
 - 0.10
-  - Fix debugging array macros on web
   - System for custom glyph formatting
-  - `⊠ coordinate`
   - LSP
     - Get references
   - System functions

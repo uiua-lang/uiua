@@ -18,6 +18,7 @@ This version is not yet released. If you are reading this on the website, then t
   - `○` will continue to work and will be formatted as `∿`
 - [`map`](https://uiua.org/docs/map) arrays are now a less leaky abstraction. The keys are now stored as metadata on the values.
   - [`reverse ⇌`](https://uiua.org/docs/reverse), [`rotate ↻`](https://uiua.org/docs/rotate), [`take ↙`](https://uiua.org/docs/take), [`drop ↘`](https://uiua.org/docs/drop), and [`join ⊂`](https://uiua.org/docs/join) now work with [`map`](https://uiua.org/docs/map) arrays without corrupting them
+- Add the [`off ⊸`](https://uiua.org/docs/off) function, which duplicates the second value on the stack
 - [`under ⍜`](https://uiua.org/docs/under) [`join ⊂`](https://uiua.org/docs/join) now works with arrays of the same rank as long as the row count does not change
 - [`un °`](https://uiua.org/docs/un) [`scan \\`](https://uiua.org/docs/scan) now works with [`equals =`](https://uiua.org/docs/equals) and [`not equals ≠`](https://www.uiua.org/docs/not%20equals)
 - [`group ⊕`](https://uiua.org/docs/group) can now take multidimensional index arrays
@@ -36,6 +37,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add `df`, `ddf`, etc shortcuts for [`dip ⊙`](https://uiua.org/docs/dip) [`fix ¤`](https://uiua.org/docs/fix)
 - Add the experimental [`mask ⍝`](https://uiua.org/docs/mask) function, which creates a mask of occurrences of one array in another
   - This works similarly to [`find ⌕`](https://uiua.org/docs/find), but is better when you need a mask or to distinguish between adjacent occurrences
+- Add the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, which searches an array for a value and returns a multidimensional index
+  - [`coordinate ⟔`](https://uiua.org/docs/coordinate) is to [`pick ⊡`](https://uiua.org/docs/pick) as [`indexof ⊗`](https://uiua.org/docs/indexof) is to [`select ⊏`](https://uiua.org/docs/select)
 - Add experimental array macros, which allow code to be generated and manipulated at compile time as strings
   - These are specified with a `^` immediately following a binding's arrow
 - Add the experimental [`quote`](https://uiua.org/docs/quote) modifier, which converts a string to code at compile time
@@ -55,6 +58,10 @@ This version is not yet released. If you are reading this on the website, then t
   - This runs a file before starting the REPL
 - Improve the supported binding type coverage of [`&ffi`](https://uiua.org/docs/&ffi)
 - Lots of bug and crash fixes
+### Website
+- Hide experimental glyphs in the editor by default
+  - They can be toggled on in the settings
+- An `# Experimental!` comment can now be easily inserted via a settings button or with `Ctrl+E`
 
 ## 0.9.5 - 2024-02-28
 ### Interpreter

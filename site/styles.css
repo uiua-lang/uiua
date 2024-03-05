@@ -1109,6 +1109,32 @@ a.clean {
             #800080 70%);
 }
 
+.aro {
+    background-image: linear-gradient(180deg,
+            #000000 36%,
+            #A9A9A9 36%,
+            #A9A9A9 47%,
+            #FFFFFF 47%,
+            #FFFFFF 58%,
+            #A7D379 58%,
+            #A7D379 69%,
+            #3DA542 69%);
+
+}
+
+.aroace {
+    background-image: linear-gradient(180deg,
+            #ef9007 36%,
+            #f6d317 36%,
+            #f6d317 47%,
+            #FFFFFF 47%,
+            #FFFFFF 58%,
+            #45bcee 58%,
+            #45bcee 69%,
+            #1e3f54 69%);
+
+}
+
 .nb {
     background-image: linear-gradient(180deg,
             #FCF434 30%,
@@ -1141,14 +1167,14 @@ a.clean {
 
 .lesbian {
     background-image: linear-gradient(180deg,
-                #d42c00 34%,
-                #fd9855 34%,
-                #fd9855 45%,
-                #FFFFFF 45%,
-                #FFFFFF 56%,
-                #d161a2 56%,
-                #d161a2 67%,
-                #a20161 67%);
+            #d42c00 34%,
+            #fd9855 34%,
+            #fd9855 45%,
+            #FFFFFF 45%,
+            #FFFFFF 56%,
+            #d161a2 56%,
+            #d161a2 67%,
+            #a20161 67%);
 }
 
 @media (prefers-color-scheme: light) {
@@ -1157,6 +1183,8 @@ a.clean {
     .bi,
     .pan,
     .ace,
+    .aro,
+    .aroace,
     .gay,
     .nb,
     .fluid,
@@ -1170,6 +1198,8 @@ a.clean {
     .bi,
     .nb,
     .ace,
+    .aro,
+    .aroace,
     .fluid {
         -webkit-text-stroke: 0.01em #fff8;
     }

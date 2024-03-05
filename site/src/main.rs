@@ -406,15 +406,17 @@ fn prim_class(prim: Primitive) -> &'static str {
 
 fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
     match name {
-        "Trans" => code_font!("trans text-gradient"),
-        "Bi" => code_font!("bi text-gradient"),
-        "Pan" => code_font!("pan text-gradient"),
+        "Trans" | "Transgender" => code_font!("trans text-gradient"),
+        "Bi" | "Bisexual" => code_font!("bi text-gradient"),
+        "Pan" | "Pansexual" => code_font!("pan text-gradient"),
         "Gay" => code_font!("gay text-gradient"),
-        "Ace" => code_font!("ace text-gradient"),
-        "Nb" | "Enby" => code_font!("nb text-gradient"),
-        "Fluid" => code_font!("fluid text-gradient"),
-        "Queer" => code_font!("queer text-gradient"),
         "Lesbian" => code_font!("lesbian text-gradient"),
+        "Ace" | "Asexual" => code_font!("ace text-gradient"),
+        "Aro" | "Aromantic" => code_font!("aro text-gradient"),
+        "AroAce" => code_font!("aroace text-gradient"),
+        "Nb" | "Enby" | "Nonbinary" | "NonBinary" => code_font!("nb text-gradient"),
+        "Fluid" | "Genderfluid" | "GenderFluid" => code_font!("fluid text-gradient"),
+        "Queer" | "Genderqueer" | "GenderQueer" => code_font!("queer text-gradient"),
         _ => match docs.kind {
             BindingDocsKind::Constant(_) => code_font!(""),
             BindingDocsKind::Function { sig, .. } => match sig.args {

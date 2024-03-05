@@ -379,7 +379,26 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 impl<T: ArrayValue> Array<T> {
     /// Get a string representation of the shape of the array
     pub fn shape_string(&self) -> String {
-        shape_row::<T>(&self.shape).into_iter().collect()
+        let base: String = shape_row::<T>(&self.shape).into_iter().collect();
+        if let Some(keys) = &self.meta().map_keys {
+            let mut keys_shape = keys.keys.shape().clone();
+            keys_shape[0] = self.row_count();
+            let mut s: String = match keys.keys {
+                Value::Num(_) => shape_row::<f64>(&keys_shape),
+                #[cfg(feature = "bytes")]
+                Value::Byte(_) => shape_row::<u8>(&keys_shape),
+                Value::Complex(_) => shape_row::<Complex>(&keys_shape),
+                Value::Char(_) => shape_row::<char>(&keys_shape),
+                Value::Box(_) => shape_row::<Boxed>(&keys_shape),
+            }
+            .into_iter()
+            .collect();
+            s.push_str(" → ");
+            s.push_str(&base);
+            s
+        } else {
+            base
+        }
     }
 }
 

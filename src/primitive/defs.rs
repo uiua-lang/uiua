@@ -2201,6 +2201,14 @@ primitive!(
     ///   : insert 1 2
     ///   : insert 3 4
     ///   : insert 3 5
+    /// Keys that are already present keep their order.
+    /// ex: # Experimental!
+    ///   : map 1_2_3 4_5_6
+    ///   : insert 1 10
+    /// Here is a pattern for [remove]ing a key if it is present before [insert]ing it, so that the key moves to the end.
+    /// ex: # Experimental!
+    /// map 1_2_3 4_5_6
+    /// insert⟜⍜⊙◌remove 1 10
     /// All keys (and all values) must have the same shape and type.
     /// ex! # Experimental!
     ///   : map 1 ["wow"]
@@ -2427,6 +2435,7 @@ macro_rules! impl_primitive {
             $(($outputs:expr))?
             $([$margs:expr])?,
             $variant:ident
+            $(, $impure:vis impure)?
         )
     ),* $(,)?) => {
         /// Primitives that exist as an implementation detail
@@ -2458,6 +2467,12 @@ macro_rules! impl_primitive {
                     $($(ImplPrimitive::$variant => Some($margs),)?)*
                     ImplPrimitive::ReduceDepth(_) => Some(1),
                     _ => None
+                }
+            }
+            pub fn is_pure(&self) -> bool {
+                match self {
+                    $($(ImplPrimitive::$variant => {$impure false},)*)*
+                    _ => true
                 }
             }
         }
@@ -2509,7 +2524,7 @@ impl_primitive!(
     (1, SortUp),
     (1, SortDown),
     (1[1], ReduceContent),
-    (1, ReplaceRand),
-    (2, ReplaceRand2),
+    (1, ReplaceRand, impure),
+    (2, ReplaceRand2, impure),
     (2, Adjacent),
 );

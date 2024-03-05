@@ -2,8 +2,6 @@
 
 - 0.10
   - System for custom glyph formatting
-  - LSP
-    - Get references
   - System functions
     - Excel
   - Let bind only take an ident?

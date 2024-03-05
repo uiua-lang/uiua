@@ -426,7 +426,10 @@ mod server {
     use dashmap::DashMap;
     use tower_lsp::{
         jsonrpc::{Error, Result},
-        lsp_types::*,
+        lsp_types::{
+            request::{GotoDeclarationParams, GotoDeclarationResponse},
+            *,
+        },
         *,
     };
 
@@ -434,6 +437,7 @@ mod server {
 
     use crate::{
         format::{format_str, FormatConfig},
+        is_ident_char,
         lex::{lex, Loc},
         primitive::{PrimClass, PrimDocFragment},
         AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span, Token,
@@ -547,6 +551,15 @@ mod server {
                         ..Default::default()
                     }),
                     document_formatting_provider: Some(OneOf::Left(true)),
+                    document_on_type_formatting_provider: Some(DocumentOnTypeFormattingOptions {
+                        first_trigger_character: ' '.to_string(),
+                        more_trigger_character: Some(
+                            "[{()}]|1234567890~!@#$%^&*_-+=.,<>/?\\\nABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                .chars()
+                                .map(|c| c.to_string())
+                                .collect(),
+                        ),
+                    }),
                     semantic_tokens_provider: Some(
                         SemanticTokensServerCapabilities::SemanticTokensOptions(
                             SemanticTokensOptions {
@@ -562,6 +575,8 @@ mod server {
                     ),
                     rename_provider: Some(OneOf::Left(true)),
                     definition_provider: Some(OneOf::Left(true)),
+                    declaration_provider: Some(DeclarationCapability::Simple(true)),
+                    references_provider: Some(OneOf::Left(true)),
                     diagnostic_provider: Some(DiagnosticServerCapabilities::Options(
                         DiagnosticOptions {
                             inter_file_dependencies: true,
@@ -933,9 +948,6 @@ mod server {
                     }]))
                 }
                 Err(e) => {
-                    self.client
-                        .log_message(MessageType::LOG, format!("Formatting error: {}", e))
-                        .await;
                     let mut error = Error::parse_error();
                     error.message = e.to_string().into();
                     Err(error)
@@ -943,13 +955,106 @@ mod server {
             }
         }
 
+        async fn on_type_formatting(
+            &self,
+            params: DocumentOnTypeFormattingParams,
+        ) -> Result<Option<Vec<TextEdit>>> {
+            // Skip if disabled
+            let config = self
+                .client
+                .configuration(vec![ConfigurationItem {
+                    scope_uri: Some(params.text_document_position.text_document.uri.clone()),
+                    section: Some("uiua.format.onTypeFormatting".into()),
+                }])
+                .await
+                .unwrap_or_default();
+            let enabled = if let [serde_json::Value::Bool(enabled)] = config.as_slice() {
+                *enabled
+            } else {
+                true
+            };
+            if !enabled {
+                return Ok(None);
+            }
+
+            // Get document
+            let Some(doc) = self
+                .docs
+                .get(&params.text_document_position.text_document.uri)
+            else {
+                return Ok(None);
+            };
+
+            // Get ident
+            let pos = params.text_document_position.position;
+            let is_newline = params.ch == "\n";
+            let line = if is_newline { pos.line - 1 } else { pos.line };
+            let Some(line_str) = doc.input.lines().nth(line as usize) else {
+                return Ok(None);
+            };
+            let col = if is_newline {
+                line_str.chars().count() as u32
+            } else {
+                pos.character - 1
+            };
+            let before = line_str.chars().take(col as usize).collect::<String>();
+            let mut ident = (before.chars().rev())
+                .take_while(|&c| is_ident_char(c))
+                .collect::<String>();
+            ident = ident.chars().rev().collect();
+            // Get prims
+            let mut start = col - ident.chars().count() as u32;
+            let prims = if ident.is_empty() {
+                let mut prims = Vec::new();
+                let mut ascii_prims: Vec<_> = Primitive::non_deprecated()
+                    .filter_map(|p| p.ascii().map(|a| (p, a.to_string())))
+                    .collect();
+                ascii_prims.sort_by_key(|(_, a)| a.len());
+                ascii_prims.reverse();
+                for (prim, ascii) in ascii_prims {
+                    if before.ends_with(&ascii) {
+                        prims.push(prim);
+                        start -= ascii.chars().count() as u32;
+                        break;
+                    }
+                }
+                if prims.is_empty() {
+                    return Ok(None);
+                }
+                prims
+            } else {
+                match Primitive::from_format_name_multi(&ident) {
+                    Some(prims) => prims.into_iter().map(|(p, _)| p).collect(),
+                    None => return Ok(None),
+                }
+            };
+            let mut formatted = String::new();
+            for prim in prims {
+                formatted.push_str(&prim.to_string());
+            }
+
+            // Adjust range
+            let mut end = pos;
+            if params.ch.chars().all(|c| c.is_whitespace()) {
+                formatted.push_str(&params.ch);
+            } else {
+                end.character -= 1;
+            }
+            let start = Position {
+                line,
+                character: start,
+            };
+            Ok(Some(vec![TextEdit {
+                range: Range { start, end },
+                new_text: formatted,
+            }]))
+        }
+
         async fn semantic_tokens_full(
             &self,
             params: SemanticTokensParams,
         ) -> Result<Option<SemanticTokensResult>> {
-            let doc = if let Some(doc) = self.docs.get(&params.text_document.uri) {
-                doc
-            } else {
+            let Some(doc) = self.docs.get(&params.text_document.uri) else {
                 return Ok(None);
             };
             let mut tokens = Vec::new();
@@ -1176,6 +1281,38 @@ mod server {
             Ok(None)
         }
 
+        async fn goto_declaration(
+            &self,
+            params: GotoDeclarationParams,
+        ) -> Result<Option<GotoDeclarationResponse>> {
+            let current_doc = if let Some(doc) = self
+                .docs
+                .get(&params.text_document_position_params.text_document.uri)
+            {
+                doc
+            } else {
+                return Ok(None);
+            };
+            let position = params.text_document_position_params.position;
+            let (line, col) = lsp_pos_to_uiua(position);
+            for (name, idx) in &current_doc.code_meta.global_references {
+                if name.span.contains_line_col(line, col) {
+                    let binding = &current_doc.asm.bindings[*idx];
+                    let uri = match &binding.span.src {
+                        InputSrc::Str(_) | InputSrc::Macro(_) => {
+                            params.text_document_position_params.text_document.uri
+                        }
+                        InputSrc::File(file) => path_to_uri(file)?,
+                    };
+                    return Ok(Some(GotoDeclarationResponse::Scalar(Location {
+                        uri,
+                        range: uiua_span_to_lsp(&binding.span),
+                    })));
+                }
+            }
+            Ok(None)
+        }
+
         async fn diagnostic(
             &self,
             params: DocumentDiagnosticParams,
@@ -1278,6 +1415,7 @@ mod server {
                         "bindingSignatureHints",
                         "inlineSignatureHints",
                         "inlineHintMinLength",
+                        "values",
                     ]
                     .iter()
                     .map(|s| ConfigurationItem {
@@ -1288,17 +1426,26 @@ mod server {
                 )
                 .await
                 .unwrap_or_default();
-            let (binding_sigs, inline_sigs, min_length) = if let [Value::Bool(binding_sigs), Value::Bool(inline_sigs), Value::Number(min_length)] =
-                config.as_slice()
+            let (binding_sigs, inline_sigs, min_length, show_values) = if let [Value::Bool(
+                binding_sigs,
+            ), Value::Bool(
+                inline_sigs,
+            ), Value::Number(
+                min_length,
+            ), Value::Bool(
+                show_values,
+            )] = config.as_slice()
             {
                 (
                     *binding_sigs,
                     *inline_sigs,
                     min_length.as_u64().unwrap_or(1) as usize,
+                    *show_values,
                 )
             } else {
-                (true, true, 3)
+                (true, true, 3, true)
             };
+            // Signature hints
             let mut hints = Vec::new();
             for (span, decl) in &doc.code_meta.function_sigs {
                 let is_too_short = || {
@@ -1353,7 +1500,79 @@ mod server {
                     data: None,
                 });
             }
+            // Values
+            if show_values {
+                for (span, values) in &doc.code_meta.top_level_values {
+                    let Some(value) = values.last() else {
+                        continue;
+                    };
+                    let shown = value.show();
+                    let (label, tooltip) = if shown.lines().count() > 1 || values.len() > 1 {
+                        let mut shapes = value.shape_string();
+                        let mut md = "```uiua\n".to_string();
+                        for val in values.iter().rev().skip(1).rev() {
+                            md.push_str(&val.show());
+                            md.push('\n');
+                        }
+                        for val in values.iter().rev().skip(1) {
+                            shapes.push('|');
+                            shapes.push_str(&val.shape_string());
+                        }
+                        md.push_str(&shown);
+                        md.push_str("\n```");
+                        (
+                            InlayHintLabel::String(shapes),
+                            Some(InlayHintTooltip::MarkupContent(MarkupContent {
+                                kind: MarkupKind::Markdown,
+                                value: md,
+                            })),
+                        )
+                    } else {
+                        (InlayHintLabel::String(shown), None)
+                    };
+                    hints.push(InlayHint {
+                        text_edits: None,
+                        position: uiua_loc_to_lsp(span.end),
+                        label,
+                        kind: None,
+                        tooltip,
+                        padding_left: Some(true),
+                        padding_right: None,
+                        data: None,
+                    });
+                }
+            }
+
             Ok(Some(hints))
+        }
+
+        async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+            let Some(doc) = self
+                .docs
+                .get(&params.text_document_position.text_document.uri)
+            else {
+                return Ok(None);
+            };
+            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
+            for (i, binfo) in doc.asm.bindings.iter().enumerate() {
+                if binfo.span.contains_line_col(line, col) {
+                    let mut locations = Vec::new();
+                    for (name, idx) in &doc.code_meta.global_references {
+                        if *idx == i {
+                            let uri = match &name.span.src {
+                                InputSrc::Str(_) | InputSrc::Macro(_) => {
+                                    params.text_document_position.text_document.uri.clone()
+                                }
+                                InputSrc::File(file) => path_to_uri(file)?,
+                            };
+                            let range = uiua_span_to_lsp(&name.span);
+                            locations.push(Location { uri, range });
+                        }
+                    }
+                    return Ok(Some(locations));
+                }
+            }
+            Ok(None)
         }
 
         async fn inline_value(

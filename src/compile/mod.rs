@@ -30,7 +30,7 @@ use crate::{
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
     IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment, SysBackend, SysOp, Uiua,
-    UiuaError, UiuaResult, Value, CONSTANTS,
+    UiuaError, UiuaResult, Value, CONSTANTS, VERSION,
 };
 
 /// The Uiua compiler
@@ -327,6 +327,8 @@ The compiler has crashed!
 Hooray! You found a bug!
 Please report this at http://github.com/uiua-lang/uiua/issues/new or on Discord at https://discord.gg/9CU2ME4kmn.
 
+Uiua version {VERSION}
+
 code:
 {input}"
             ))),
@@ -434,19 +436,33 @@ code:
                                 "Cannot use placeholder outside of function",
                             );
                         }
-                        // let line_span = (line.first().unwrap().span.clone())
-                        //     .merge(line.last().unwrap().span.clone());
+                        let line_span = (line.first().unwrap().span.clone())
+                            .merge(line.last().unwrap().span.clone());
+                        let all_literal = line.iter().filter(|w| w.value.is_code()).all(|w| {
+                            matches!(
+                                w.value,
+                                Word::Char(_)
+                                    | Word::Number(..)
+                                    | Word::String(_)
+                                    | Word::MultilineString(_)
+                            )
+                        });
+                        // Compile the words
                         let mut instrs = self.compile_words(line, true)?;
                         match instrs_signature(&instrs) {
                             Ok(sig) => {
+                                // Update scope stack height
                                 if let Ok(height) = &mut self.scope.stack_height {
                                     *height = (*height + sig.outputs).saturating_sub(sig.args);
                                 }
+                                // Try to evaluate at comptime
                                 if sig.args == 0 && instrs_are_pure(&instrs, &self.asm) {
                                     match self.comptime_instrs(instrs.clone()) {
                                         Ok(Some(vals)) => {
-                                            // (self.code_meta.top_level_values)
-                                            //     .insert(line_span, vals.clone());
+                                            if !all_literal {
+                                                (self.code_meta.top_level_values)
+                                                    .insert(line_span, vals.clone());
+                                            }
                                             instrs = vals.into_iter().map(Instr::push).collect();
                                         }
                                         Ok(None) => {}
@@ -1603,7 +1619,7 @@ code:
             let len = instrs.len();
             asm.instrs.extend(instrs.iter().cloned());
             asm.top_slices.push(FuncSlice { start, len });
-            let mut env = Uiua::with_safe_sys().with_execution_limit(Duration::from_millis(10));
+            let mut env = Uiua::with_safe_sys().with_execution_limit(Duration::from_millis(40));
             match env.run_asm(asm) {
                 Ok(()) => {
                     let stack = env.take_stack();

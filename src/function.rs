@@ -271,6 +271,11 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], env: &impl AsRef<Assembly>) -> b
                     return false;
                 }
             }
+            Instr::ImplPrim(prim, _) => {
+                if !prim.is_pure() {
+                    return false;
+                }
+            }
             Instr::PushFunc(f) => {
                 if !instrs_are_pure(f.instrs(env.as_ref()), env.as_ref()) {
                     return false;

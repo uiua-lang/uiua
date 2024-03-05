@@ -28,12 +28,23 @@ impl<T: Clone> Array<T> {
         self.data.truncate(new_len);
         self.shape[0] -= 1;
     }
+    pub(crate) fn set_row(&mut self, index: usize, row: Self) {
+        let row_len = row.row_len();
+        let start = index * row_len;
+        for (a, b) in self.data.as_mut_slice()[start..]
+            .iter_mut()
+            .zip(row.data.into_iter())
+        {
+            *a = b;
+        }
+    }
     pub(crate) fn insert_row(&mut self, index: usize, row: Self) {
         let row_len = row.row_len();
         self.data.reserve(row_len);
         self.data.extend_from_slice(&row.data);
         let start = index * row_len;
         self.data.as_mut_slice()[start..].rotate_right(row_len);
+        self.shape[0] += 1;
     }
 }
 
@@ -716,16 +727,16 @@ impl Value {
     pub fn select(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
         let (indices_shape, indices_data) = self.as_shaped_indices(env)?;
         Ok(match from {
-            Value::Num(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
+            Value::Num(a) => a.select(indices_shape, &indices_data, env)?.into(),
             #[cfg(feature = "bytes")]
             Value::Byte(a) => op_bytes_ref_retry_fill(
                 a,
-                |a| Ok(a.select_impl(indices_shape, &indices_data, env)?.into()),
-                |a| Ok(a.select_impl(indices_shape, &indices_data, env)?.into()),
+                |a| Ok(a.select(indices_shape, &indices_data, env)?.into()),
+                |a| Ok(a.select(indices_shape, &indices_data, env)?.into()),
             )?,
-            Value::Complex(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
-            Value::Char(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
-            Value::Box(a) => a.select_impl(indices_shape, &indices_data, env)?.into(),
+            Value::Complex(a) => a.select(indices_shape, &indices_data, env)?.into(),
+            Value::Char(a) => a.select(indices_shape, &indices_data, env)?.into(),
+            Value::Box(a) => a.select(indices_shape, &indices_data, env)?.into(),
         })
     }
     pub(crate) fn unselect(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -771,12 +782,8 @@ impl Value {
 }
 
 impl<T: ArrayValue> Array<T> {
-    fn select_impl(
-        &self,
-        indices_shape: &[usize],
-        indices: &[isize],
-        env: &Uiua,
-    ) -> UiuaResult<Self> {
+    /// `select` from this array
+    fn select(&self, indices_shape: &[usize], indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
         if indices_shape.len() > 1 {
             let row_count = indices_shape[0];
             let row_len = indices_shape[1..].iter().product();
@@ -790,11 +797,15 @@ impl<T: ArrayValue> Array<T> {
             }
             let mut rows = Vec::with_capacity(row_count);
             for indices_row in indices.chunks_exact(row_len) {
-                rows.push(self.select_impl(&indices_shape[1..], indices_row, env)?);
+                rows.push(self.select(&indices_shape[1..], indices_row, env)?);
             }
-            Array::from_row_arrays(rows, env)
+            let mut arr = Array::from_row_arrays(rows, env)?;
+            if let Some(label) = &self.meta().label {
+                arr.meta_mut().label = Some(label.clone());
+            }
+            Ok(arr)
         } else {
-            let mut res = self.select(indices, env)?;
+            let mut res = self.select_impl(indices, env)?;
             if indices_shape.is_empty() {
                 res.shape.remove(0);
             }
@@ -814,7 +825,7 @@ impl<T: ArrayValue> Array<T> {
             self.unselect(indices_shape, indices, into, env)
         }
     }
-    fn select(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
+    fn select_impl(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
         let mut selected = CowSlice::with_capacity(self.row_len() * indices.len());
         let row_len = self.row_len();
         let row_count = self.row_count();

@@ -1404,7 +1404,6 @@ mod server {
         }
 
         async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
-            use serde_json::Value;
             let Some(doc) = self.docs.get(&params.text_document.uri) else {
                 return Ok(None);
             };
@@ -1426,13 +1425,13 @@ mod server {
                 )
                 .await
                 .unwrap_or_default();
-            let (binding_sigs, inline_sigs, min_length, show_values) = if let [Value::Bool(
+            let (binding_sigs, inline_sigs, min_length, show_values) = if let [serde_json::Value::Bool(
                 binding_sigs,
-            ), Value::Bool(
+            ), serde_json::Value::Bool(
                 inline_sigs,
-            ), Value::Number(
+            ), serde_json::Value::Number(
                 min_length,
-            ), Value::Bool(
+            ), serde_json::Value::Bool(
                 show_values,
             )] = config.as_slice()
             {
@@ -1503,23 +1502,21 @@ mod server {
             // Values
             if show_values {
                 for (span, values) in &doc.code_meta.top_level_values {
-                    let Some(value) = values.last() else {
-                        continue;
-                    };
-                    let shown = value.show();
-                    let (label, tooltip) = if shown.lines().count() > 1 || values.len() > 1 {
-                        let mut shapes = value.shape_string();
+                    let mut shown: Vec<String> = values.iter().map(Value::show).collect();
+                    let (label, tooltip) = if shown.iter().any(|s| s.lines().count() > 1) {
                         let mut md = "```uiua\n".to_string();
-                        for val in values.iter().rev().skip(1).rev() {
-                            md.push_str(&val.show());
+                        for shown in &shown {
+                            md.push_str(shown);
                             md.push('\n');
                         }
-                        for val in values.iter().rev().skip(1) {
-                            shapes.push('|');
+                        md.push_str("\n```");
+                        let mut shapes = String::new();
+                        for (i, val) in values.iter().rev().enumerate() {
+                            if i > 0 {
+                                shapes.push_str(" | ");
+                            }
                             shapes.push_str(&val.shape_string());
                         }
-                        md.push_str(&shown);
-                        md.push_str("\n```");
                         (
                             InlayHintLabel::String(shapes),
                             Some(InlayHintTooltip::MarkupContent(MarkupContent {
@@ -1528,7 +1525,8 @@ mod server {
                             })),
                         )
                     } else {
-                        (InlayHintLabel::String(shown), None)
+                        shown.reverse();
+                        (InlayHintLabel::String(shown.join(" ")), None)
                     };
                     hints.push(InlayHint {
                         text_edits: None,

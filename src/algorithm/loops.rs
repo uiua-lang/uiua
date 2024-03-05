@@ -82,17 +82,28 @@ pub fn do_(env: &mut Uiua) -> UiuaResult {
             minus the condition, is {comp_sig}"
         )));
     }
+    dbg!(copy_count, g_sig, comp_sig);
     loop {
+        if env.stack().len() < copy_count {
+            // Pop until it fails
+            for i in 0..copy_count {
+                env.pop(i + 1)?;
+            }
+        }
+        // Copy necessary condition args
         for _ in 0..copy_count {
             env.push(env.stack()[env.stack().len() - copy_count].clone());
         }
+        // Call condition
         env.call(g.clone())?;
+        // Break if condition is false
         let cond = env
             .pop("do condition")?
             .as_bool(env, "Do condition must be a boolean")?;
         if !cond {
             break;
         }
+        // Call body
         env.call(f.clone())?;
     }
     Ok(())

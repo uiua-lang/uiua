@@ -426,7 +426,10 @@ mod server {
     use dashmap::DashMap;
     use tower_lsp::{
         jsonrpc::{Error, Result},
-        lsp_types::*,
+        lsp_types::{
+            request::{GotoDeclarationParams, GotoDeclarationResponse},
+            *,
+        },
         *,
     };
 
@@ -562,6 +565,8 @@ mod server {
                     ),
                     rename_provider: Some(OneOf::Left(true)),
                     definition_provider: Some(OneOf::Left(true)),
+                    declaration_provider: Some(DeclarationCapability::Simple(true)),
+                    references_provider: Some(OneOf::Left(true)),
                     diagnostic_provider: Some(DiagnosticServerCapabilities::Options(
                         DiagnosticOptions {
                             inter_file_dependencies: true,
@@ -1176,6 +1181,38 @@ mod server {
             Ok(None)
         }
 
+        async fn goto_declaration(
+            &self,
+            params: GotoDeclarationParams,
+        ) -> Result<Option<GotoDeclarationResponse>> {
+            let current_doc = if let Some(doc) = self
+                .docs
+                .get(&params.text_document_position_params.text_document.uri)
+            {
+                doc
+            } else {
+                return Ok(None);
+            };
+            let position = params.text_document_position_params.position;
+            let (line, col) = lsp_pos_to_uiua(position);
+            for (name, idx) in &current_doc.code_meta.global_references {
+                if name.span.contains_line_col(line, col) {
+                    let binding = &current_doc.asm.bindings[*idx];
+                    let uri = match &binding.span.src {
+                        InputSrc::Str(_) | InputSrc::Macro(_) => {
+                            params.text_document_position_params.text_document.uri
+                        }
+                        InputSrc::File(file) => path_to_uri(file)?,
+                    };
+                    return Ok(Some(GotoDeclarationResponse::Scalar(Location {
+                        uri,
+                        range: uiua_span_to_lsp(&binding.span),
+                    })));
+                }
+            }
+            Ok(None)
+        }
+
         async fn diagnostic(
             &self,
             params: DocumentDiagnosticParams,
@@ -1354,6 +1391,35 @@ mod server {
                 });
             }
             Ok(Some(hints))
+        }
+
+        async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
+            let Some(doc) = self
+                .docs
+                .get(&params.text_document_position.text_document.uri)
+            else {
+                return Ok(None);
+            };
+            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
+            for (i, binfo) in doc.asm.bindings.iter().enumerate() {
+                if binfo.span.contains_line_col(line, col) {
+                    let mut locations = Vec::new();
+                    for (name, idx) in &doc.code_meta.global_references {
+                        if *idx == i {
+                            let uri = match &name.span.src {
+                                InputSrc::Str(_) | InputSrc::Macro(_) => {
+                                    params.text_document_position.text_document.uri.clone()
+                                }
+                                InputSrc::File(file) => path_to_uri(file)?,
+                            };
+                            let range = uiua_span_to_lsp(&name.span);
+                            locations.push(Location { uri, range });
+                        }
+                    }
+                    return Ok(Some(locations));
+                }
+            }
+            Ok(None)
         }
 
         async fn inline_value(

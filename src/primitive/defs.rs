@@ -1162,7 +1162,7 @@ primitive!(
     ///
     /// [indexof] is closely related to [member].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
-    /// Find the first deep index of each row of one array in another
+    /// Find the first deep index of one array in another
     ///
     /// While [indexof] returns an array of top-level indices into the searched-in array, [coordinate] returns an array of multi-dimensional coordinates.
     /// ex: # Experimental!

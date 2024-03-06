@@ -314,7 +314,7 @@ pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], env: &impl AsRef<Assemb
                 _,
             ) => return false,
             Instr::PushFunc(f) => {
-                if !f.recursive || !instrs_are_limit_bounded(f.instrs(env.as_ref()), env.as_ref()) {
+                if f.recursive || !instrs_are_limit_bounded(f.instrs(env.as_ref()), env.as_ref()) {
                     return false;
                 }
             }

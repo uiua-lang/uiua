@@ -462,7 +462,7 @@ impl Compiler {
                             count: 1,
                             span,
                         });
-                        Signature::new(sig.args, sig.outputs + 1)
+                        Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
                     By => {
                         if sig.args > 0 {

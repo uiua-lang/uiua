@@ -16,8 +16,6 @@ This version is not yet released. If you are reading this on the website, then t
   - `∿` is more representative of what it does
   - Most circle glyphs like `○` are used for array functions or stack manipulation
   - `○` will continue to work and will be formatted as `∿`
-- [`map`](https://uiua.org/docs/map) arrays are now a less leaky abstraction. The keys are now stored as metadata on the values.
-  - [`reverse ⇌`](https://uiua.org/docs/reverse), [`rotate ↻`](https://uiua.org/docs/rotate), [`take ↙`](https://uiua.org/docs/take), [`drop ↘`](https://uiua.org/docs/drop), and [`join ⊂`](https://uiua.org/docs/join) now work with [`map`](https://uiua.org/docs/map) arrays without corrupting them
 - Add the [`by ⊸`](https://uiua.org/docs/by) modifier, which duplicates a function's last argument before calling it
 - [`under ⍜`](https://uiua.org/docs/under) [`join ⊂`](https://uiua.org/docs/join) now works with arrays of the same rank as long as the row count does not change
 - [`un °`](https://uiua.org/docs/un) [`scan \\`](https://uiua.org/docs/scan) now works with [`equals =`](https://uiua.org/docs/equals) and [`not equals ≠`](https://www.uiua.org/docs/not%20equals)

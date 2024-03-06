@@ -1670,9 +1670,8 @@ code:
             static CACHE: RefCell<HashMap<EcoVec<Instr>, Option<Vec<Value>>>> = RefCell::new(HashMap::new());
         }
         CACHE.with(|cache| {
-            let mut cache = cache.borrow_mut();
             let instrs = optimize_instrs(instrs, true, &self.asm);
-            if let Some(stack) = cache.get(&instrs) {
+            if let Some(stack) = cache.borrow().get(&instrs) {
                 return Ok(stack.clone());
             }
             let mut asm = self.asm.clone();
@@ -1700,11 +1699,11 @@ code:
                     } else {
                         Some(stack)
                     };
-                    cache.insert(instrs, res.clone());
+                    cache.borrow_mut().insert(instrs, res.clone());
                     Ok(res)
                 }
                 Err(e) if matches!(e.inner(), UiuaError::Timeout(..)) => {
-                    cache.insert(instrs, None);
+                    cache.borrow_mut().insert(instrs, None);
                     Ok(None)
                 }
                 Err(e) => Err(e),

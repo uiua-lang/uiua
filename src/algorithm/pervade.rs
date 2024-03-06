@@ -424,7 +424,7 @@ fn toggle_char_case(a: char) -> char {
     }
 }
 
-pub mod neg {
+pub mod scalar_neg {
     use super::*;
     pub fn num(a: f64) -> f64 {
         -a
@@ -443,7 +443,7 @@ pub mod neg {
         env.error(format!("Cannot negate {a}"))
     }
 }
-pub mod abs {
+pub mod scalar_abs {
     use super::*;
     pub fn num(a: f64) -> f64 {
         a.abs()

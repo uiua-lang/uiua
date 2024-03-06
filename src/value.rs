@@ -1417,7 +1417,7 @@ macro_rules! value_un_impl {
 }
 
 value_un_impl!(
-    neg,
+    scalar_neg,
     [Num, num],
     ("bytes", Byte, byte),
     [Complex, com],
@@ -1431,7 +1431,7 @@ value_un_impl!(
     [Complex, com]
 );
 value_un_impl!(
-    abs,
+    scalar_abs,
     [Num, num],
     ("bytes", Byte, byte),
     (Complex, com),
@@ -1470,6 +1470,73 @@ value_un_impl!(
     ["bytes", Byte, byte],
     (Complex, com)
 );
+
+impl Value {
+    /// Get the `absolute value` of a value
+    pub fn abs(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Char(mut chars) if chars.rank() == 1 && env.char_fill().is_ok() => {
+                chars.data = (chars.data.into_iter())
+                    .flat_map(|c| c.to_uppercase())
+                    .collect();
+                chars.shape = chars.data.len().into();
+                Ok(chars.into())
+            }
+            Value::Char(chars) if chars.rank() > 1 && env.char_fill().is_ok() => {
+                let mut rows = Vec::new();
+                for row in chars.row_shaped_slices(Shape::from(*chars.shape.last().unwrap())) {
+                    rows.push(Array::<char>::from_iter(
+                        row.data().iter().flat_map(|c| c.to_uppercase()),
+                    ));
+                }
+                let mut arr = Array::from_row_arrays(rows, env)?;
+                let last = arr.shape.pop().unwrap();
+                arr.shape = chars.shape;
+                *arr.shape.last_mut().unwrap() = last;
+                Ok(arr.into())
+            }
+            value => value.scalar_abs(env),
+        }
+    }
+    /// `negate` a value
+    pub fn neg(self, env: &Uiua) -> UiuaResult<Self> {
+        match self {
+            Value::Char(mut chars) if chars.rank() == 1 && env.char_fill().is_ok() => {
+                let mut new_data = EcoVec::with_capacity(chars.data.len());
+                for c in chars.data {
+                    if c.is_uppercase() {
+                        new_data.extend(c.to_lowercase());
+                    } else {
+                        new_data.extend(c.to_uppercase());
+                    }
+                }
+                chars.data = new_data.into();
+                chars.shape = chars.data.len().into();
+                Ok(chars.into())
+            }
+            Value::Char(chars) if chars.rank() > 1 && env.char_fill().is_ok() => {
+                let mut rows = Vec::new();
+                for row in chars.row_shaped_slices(Shape::from(*chars.shape.last().unwrap())) {
+                    let mut new_data = EcoVec::with_capacity(row.data().len());
+                    for c in row.data() {
+                        if c.is_uppercase() {
+                            new_data.extend(c.to_lowercase());
+                        } else {
+                            new_data.extend(c.to_uppercase());
+                        }
+                    }
+                    rows.push(Array::from(new_data));
+                }
+                let mut arr = Array::from_row_arrays(rows, env)?;
+                let last = arr.shape.pop().unwrap();
+                arr.shape = chars.shape;
+                *arr.shape.last_mut().unwrap() = last;
+                Ok(arr.into())
+            }
+            value => value.scalar_neg(env),
+        }
+    }
+}
 
 macro_rules! val_retry {
     (Byte, $env:expr) => {

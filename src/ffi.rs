@@ -40,11 +40,13 @@ impl FromStr for FfiType {
     type Err = String;
     fn from_str(mut s: &str) -> Result<Self, String> {
         s = s.trim();
+        // Parse const
         let mut mutable = true;
         if let Some(t) = s.strip_prefix("const ") {
             s = t;
             mutable = false;
         }
+        // Parse list
         if let Some((mut a, mut b)) = s.rsplit_once(':') {
             a = a.trim();
             b = b.trim();
@@ -57,6 +59,7 @@ impl FromStr for FfiType {
                 inner: Box::new(a.parse()?),
             });
         }
+        // Parse pointer
         if let Some(mut s) = s.strip_suffix('*') {
             s = s.trim();
             return Ok(FfiType::Ptr {
@@ -1089,4 +1092,60 @@ mod enabled {
             }
         }
     }
+}
+
+#[test]
+#[cfg(test)]
+fn parse_ffi_type() {
+    let rect = FfiType::Struct {
+        fields: vec![FfiType::Float; 4],
+    };
+    let texture = FfiType::Struct {
+        fields: vec![FfiType::Int; 5],
+    };
+    let image = FfiType::Struct {
+        fields: vec![
+            FfiType::Ptr {
+                mutable: true,
+                inner: FfiType::Void.into(),
+            },
+            FfiType::Int,
+            FfiType::Int,
+            FfiType::Int,
+            FfiType::Int,
+        ],
+    };
+    let glyph_info = FfiType::Struct {
+        fields: vec![
+            FfiType::Int,
+            FfiType::Int,
+            FfiType::Int,
+            FfiType::Int,
+            image,
+        ],
+    };
+    let font = FfiType::Struct {
+        fields: vec![
+            FfiType::Int,
+            FfiType::Int,
+            FfiType::Int,
+            texture,
+            FfiType::Ptr {
+                mutable: true,
+                inner: rect.into(),
+            },
+            FfiType::Ptr {
+                mutable: true,
+                inner: glyph_info.into(),
+            },
+        ],
+    };
+    let expected = "{\
+        int; int; int; \
+        {int; int; int; int; int}; \
+        {float; float; float; float}*; \
+        {int; int; int; int; {void*; int; int; int; int}}*\
+    }";
+    assert_eq!(font.to_string(), expected);
+    assert_eq!(expected.parse(), Ok(font));
 }

@@ -1674,7 +1674,12 @@ code:
             asm.instrs.extend(instrs.iter().cloned());
             asm.top_slices.push(FuncSlice { start, len });
             let mut env = if self.pre_eval_mode == PreEvalMode::Lsp {
-                Uiua::with_native_sys()
+                #[cfg(feature = "native_sys")]
+                {
+                    Uiua::with_native_sys()
+                }
+                #[cfg(not(feature = "native_sys"))]
+                Uiua::with_safe_sys()
             } else {
                 Uiua::with_safe_sys()
             }

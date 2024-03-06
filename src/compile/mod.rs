@@ -424,98 +424,12 @@ code:
             })
         }
         let prev_com = prev_comment.take();
-        match item {
+        let mut lines = match item {
             Item::TestScope(items) => {
                 self.in_scope(|env| env.items(items.value, true))?;
+                return Ok(());
             }
-            Item::Words(mut lines) => {
-                if lines.iter().flatten().all(|w| !w.value.is_code()) {
-                    let mut comment = String::new();
-                    for (i, line) in lines.iter().enumerate() {
-                        if line.is_empty() {
-                            comment.clear();
-                            continue;
-                        }
-                        if i > 0 {
-                            comment.push('\n');
-                        }
-                        for word in line {
-                            if let Word::Comment(c) = &word.value {
-                                comment.push_str(c);
-                            }
-                        }
-                    }
-                    *prev_comment = if comment.trim().is_empty() {
-                        None
-                    } else {
-                        Some(comment.trim().into())
-                    };
-                };
-                let can_run = match self.mode {
-                    RunMode::Normal => !in_test,
-                    RunMode::Test => in_test,
-                    RunMode::All => true,
-                };
-                lines = unsplit_words(lines.into_iter().flat_map(split_words));
-                for line in lines {
-                    if line.is_empty() {
-                        continue;
-                    }
-                    if can_run || words_should_run_anyway(&line) {
-                        let span = (line.first().unwrap().span.clone())
-                            .merge(line.last().unwrap().span.clone());
-                        if count_placeholders(&line) > 0 {
-                            self.add_error(
-                                span.clone(),
-                                "Cannot use placeholder outside of function",
-                            );
-                        }
-                        let line_span = (line.first().unwrap().span.clone())
-                            .merge(line.last().unwrap().span.clone());
-                        let all_literal = line.iter().filter(|w| w.value.is_code()).all(|w| {
-                            matches!(
-                                w.value,
-                                Word::Char(_)
-                                    | Word::Number(..)
-                                    | Word::String(_)
-                                    | Word::MultilineString(_)
-                            )
-                        });
-                        // Compile the words
-                        let mut instrs = self.compile_words(line, true)?;
-                        match instrs_signature(&instrs) {
-                            Ok(sig) => {
-                                // Update scope stack height
-                                if let Ok(height) = &mut self.scope.stack_height {
-                                    *height = (*height + sig.outputs).saturating_sub(sig.args);
-                                }
-                                // Try to evaluate at comptime
-                                if sig.args == 0 {
-                                    match self.comptime_instrs(instrs.clone()) {
-                                        Ok(Some(vals)) => {
-                                            if !all_literal {
-                                                (self.code_meta.top_level_values)
-                                                    .insert(line_span, vals.clone());
-                                            }
-                                            instrs = vals.into_iter().map(Instr::push).collect();
-                                        }
-                                        Ok(None) => {}
-                                        Err(e) => self.errors.push(e),
-                                    }
-                                }
-                            }
-                            Err(e) => self.scope.stack_height = Err(span.sp(e)),
-                        }
-                        let start = self.asm.instrs.len();
-                        (self.asm.instrs).extend(optimize_instrs(instrs, true, &self.asm));
-                        let end = self.asm.instrs.len();
-                        self.asm.top_slices.push(FuncSlice {
-                            start,
-                            len: end - start,
-                        });
-                    }
-                }
-            }
+            Item::Words(lines) => lines,
             Item::Binding(binding) => {
                 let can_run = match self.mode {
                     RunMode::Normal => !in_test,
@@ -524,8 +438,111 @@ code:
                 if can_run || words_should_run_anyway(&binding.words) {
                     self.binding(binding, prev_com)?;
                 }
+                return Ok(());
             }
-            Item::Import(import) => self.import(import, prev_com)?,
+            Item::Import(import) => return self.import(import, prev_com),
+        };
+
+        // Compile top-level words
+        if lines.iter().flatten().all(|w| !w.value.is_code()) {
+            let mut comment = String::new();
+            for (i, line) in lines.iter().enumerate() {
+                if line.is_empty() {
+                    comment.clear();
+                    continue;
+                }
+                if i > 0 {
+                    comment.push('\n');
+                }
+                for word in line {
+                    if let Word::Comment(c) = &word.value {
+                        comment.push_str(c);
+                    }
+                }
+            }
+            *prev_comment = if comment.trim().is_empty() {
+                None
+            } else {
+                Some(comment.trim().into())
+            };
+        };
+        let can_run = match self.mode {
+            RunMode::Normal => !in_test,
+            RunMode::Test => in_test,
+            RunMode::All => true,
+        };
+        lines = unsplit_words(lines.into_iter().flat_map(split_words));
+        for line in lines {
+            if line.is_empty() {
+                continue;
+            }
+            if !(can_run || words_should_run_anyway(&line)) {
+                continue;
+            }
+            let span =
+                (line.first().unwrap().span.clone()).merge(line.last().unwrap().span.clone());
+            if count_placeholders(&line) > 0 {
+                self.add_error(span.clone(), "Cannot use placeholder outside of function");
+            }
+            let all_literal = line.iter().filter(|w| w.value.is_code()).all(|w| {
+                matches!(
+                    w.value,
+                    Word::Char(_) | Word::Number(..) | Word::String(_) | Word::MultilineString(_)
+                )
+            });
+            // Compile the words
+            let mut instrs = self.compile_words(line, true)?;
+            match instrs_signature(&instrs) {
+                Ok(sig) => {
+                    // Update scope stack height
+                    if let Ok(height) = &mut self.scope.stack_height {
+                        *height = (*height + sig.outputs).saturating_sub(sig.args);
+                    }
+                    // Try to evaluate at comptime
+                    if self.asm.instrs.len() >= sig.args
+                        && (self.asm.instrs.iter().rev().take(sig.args))
+                            .all(|instr| matches!(instr, Instr::Push(_)))
+                    {
+                        let mut comp_instrs =
+                            EcoVec::from(&self.asm.instrs[self.asm.instrs.len() - sig.args..]);
+                        comp_instrs.extend(instrs.iter().cloned());
+                        match self.comptime_instrs(comp_instrs) {
+                            Ok(Some(vals)) => {
+                                if !all_literal {
+                                    self.code_meta.top_level_values.insert(span, vals.clone());
+                                }
+                                // Truncate instrs
+                                self.asm.instrs.truncate(self.asm.instrs.len() - sig.args);
+                                // Truncate top slices
+                                let mut remaining = sig.args;
+                                while let Some(slice) = self.asm.top_slices.last_mut() {
+                                    let to_sub = slice.len.min(remaining);
+                                    slice.len -= to_sub;
+                                    remaining -= to_sub;
+                                    if remaining == 0 {
+                                        break;
+                                    }
+                                    if slice.len == 0 {
+                                        self.asm.top_slices.pop();
+                                    }
+                                }
+                                // Set instrs
+                                instrs = vals.into_iter().map(Instr::push).collect();
+                            }
+                            Ok(None) => {}
+                            Err(e) => self.errors.push(e),
+                        }
+                    }
+                }
+                Err(e) => self.scope.stack_height = Err(span.sp(e)),
+            }
+            let start = self.asm.instrs.len();
+            (self.asm.instrs).extend(optimize_instrs(instrs, true, &self.asm));
+            let end = self.asm.instrs.len();
+            self.asm.top_slices.push(FuncSlice {
+                start,
+                len: end - start,
+            });
         }
         Ok(())
     }

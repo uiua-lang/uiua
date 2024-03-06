@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.10
-  - Fill `abs` on character arrays
+  - Fix serializion of non-standard floats
   - Proofread and update tutorial and tour
   - System functions
     - Excel

@@ -491,6 +491,7 @@ code:
                 )
             });
             // Compile the words
+            let instr_count_before = self.asm.instrs.len();
             let mut instrs = self.compile_words(line, true)?;
             match instrs_signature(&instrs) {
                 Ok(sig) => {
@@ -499,20 +500,27 @@ code:
                         *height = (*height + sig.outputs).saturating_sub(sig.args);
                     }
                     // Try to evaluate at comptime
-                    if self.asm.instrs.len() >= sig.args
-                        && (self.asm.instrs.iter().rev().take(sig.args))
+                    // This can be done when there are at least as many push instructions
+                    // preceding the current line as there are arguments to the line
+                    if instr_count_before >= sig.args
+                        && (self.asm.instrs.iter().take(instr_count_before).rev())
+                            .take(sig.args)
                             .all(|instr| matches!(instr, Instr::Push(_)))
                     {
-                        let mut comp_instrs =
-                            EcoVec::from(&self.asm.instrs[self.asm.instrs.len() - sig.args..]);
+                        // The instructions for evaluation are the preceding push
+                        // instructions, followed by the current line
+                        let mut comp_instrs = EcoVec::from(
+                            &self.asm.instrs[instr_count_before - sig.args..instr_count_before],
+                        );
                         comp_instrs.extend(instrs.iter().cloned());
                         match self.comptime_instrs(comp_instrs) {
                             Ok(Some(vals)) => {
+                                // Track top level values
                                 if !all_literal {
                                     self.code_meta.top_level_values.insert(span, vals.clone());
                                 }
                                 // Truncate instrs
-                                self.asm.instrs.truncate(self.asm.instrs.len() - sig.args);
+                                self.asm.instrs.truncate(instr_count_before - sig.args);
                                 // Truncate top slices
                                 let mut remaining = sig.args;
                                 while let Some(slice) = self.asm.top_slices.last_mut() {

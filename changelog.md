@@ -65,6 +65,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Hide experimental glyphs in the editor by default
   - They can be toggled on in the settings
 - An `# Experimental!` comment can now be easily inserted via a settings button or with `Ctrl+E`
+- Add horizontal scrolling to pad output
 
 ## 0.9.5 - 2024-02-28
 ### Interpreter

@@ -358,7 +358,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 
         // Handle really big grid
         if self.rank() > 1 {
-            let max_width = term_size::dimensions().map_or(54, |(w, _)| w);
+            let max_width = term_size::dimensions().map_or(500, |(w, _)| w);
             for row in grid.iter_mut() {
                 if row.len() > max_width {
                     let diff = row.len() - max_width;
@@ -476,6 +476,11 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     let row_shape = &shape[1..];
     let cell_size = data.len() / cell_count;
     let row_height: usize = row_shape.iter().rev().skip(1).product();
+    let max_height = if term_size::dimensions().is_some() {
+        100
+    } else {
+        300
+    };
     for (i, cell) in data.chunks(cell_size).enumerate() {
         if i > 0 && rank > 2 {
             for _ in 0..rank - 2 {
@@ -492,7 +497,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
                 }
             }
         }
-        if i * row_height >= 100 {
+        if i * row_height >= max_height {
             let mut elipses_row = Vec::new();
             for prev_grid in metagrid.last().unwrap() {
                 let prev_row = &prev_grid[0];

@@ -519,23 +519,50 @@ input[type=number] {
 }
 
 .output-frame {
+    position: relative;
     display: flex;
     justify-content: space-between;
 }
 
+.output-wrapper {
+    transform: rotateX(180deg);
+    overflow-x: auto;
+    min-height: 1.9em;
+}
+
 .output {
     display: inline-block;
-    white-space: pre-wrap;
+    white-space: pre;
     margin-left: 1.75em;
     padding: 0.3em 0;
     font-family: "Code Font", monospace;
-    overflow-wrap: break-word;
-    word-break: break-word;
+    transform: rotateX(180deg);
 }
 
 .output-item,
 .output-report {
     font-family: inherit;
+}
+
+#code-buttons {
+    position: absolute;
+    margin: 0.2em 0.2em 0.2em 0;
+    display: flex;
+    flex-wrap: nowrap;
+    right: 0;
+    max-height: 1.5em;
+}
+
+.code-button {
+    font-size: 0.9em;
+    margin: 0 0 0 0.2em;
+    height: auto;
+    text-align: center;
+    text-justify: center;
+}
+
+.important-button {
+    animation: fadeAnimation 2s infinite;
 }
 
 .output-report {
@@ -574,23 +601,6 @@ input[type=number] {
 .output-audio {
     border-radius: 0.5em;
     max-width: 50vw;
-}
-
-#code-buttons {
-    margin: 0.2em 0.2em 0.2em 0;
-    display: flex;
-    flex-wrap: nowrap;
-    height: 1.5em;
-}
-
-.code-button {
-    font-size: 0.9em;
-    margin: 0 0 0 0.2em;
-    height: auto;
-}
-
-.important-button {
-    animation: fadeAnimation 2s infinite;
 }
 
 #code-right-side {

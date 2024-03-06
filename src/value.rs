@@ -1925,18 +1925,22 @@ impl ValueBuilder {
 }
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
-enum MapNumRep {
+enum F64Rep {
     #[serde(rename = "NaN")]
     NaN,
     #[serde(rename = "empty")]
     MapEmpty,
     #[serde(rename = "tomb")]
     MapTombstone,
+    #[serde(rename = "∞")]
+    Infinity,
+    #[serde(rename = "-∞")]
+    NegInfinity,
     #[serde(untagged)]
     Num(f64),
 }
 
-impl From<f64> for MapNumRep {
+impl From<f64> for F64Rep {
     fn from(n: f64) -> Self {
         if n.is_nan() {
             if n.to_bits() == EMPTY_NAN.to_bits() {
@@ -1946,19 +1950,27 @@ impl From<f64> for MapNumRep {
             } else {
                 Self::NaN
             }
+        } else if n.is_infinite() {
+            if n.is_sign_positive() {
+                Self::Infinity
+            } else {
+                Self::NegInfinity
+            }
         } else {
             Self::Num(n)
         }
     }
 }
 
-impl From<MapNumRep> for f64 {
-    fn from(rep: MapNumRep) -> Self {
+impl From<F64Rep> for f64 {
+    fn from(rep: F64Rep) -> Self {
         match rep {
-            MapNumRep::NaN => f64::NAN,
-            MapNumRep::MapEmpty => EMPTY_NAN,
-            MapNumRep::MapTombstone => TOMBSTONE_NAN,
-            MapNumRep::Num(n) => n,
+            F64Rep::NaN => f64::NAN,
+            F64Rep::MapEmpty => EMPTY_NAN,
+            F64Rep::MapTombstone => TOMBSTONE_NAN,
+            F64Rep::Infinity => f64::INFINITY,
+            F64Rep::NegInfinity => f64::NEG_INFINITY,
+            F64Rep::Num(n) => n,
         }
     }
 }
@@ -1968,7 +1980,7 @@ impl From<MapNumRep> for f64 {
 enum ValueRep {
     #[cfg(feature = "bytes")]
     Byte(Array<u8>),
-    Num(Array<MapNumRep>),
+    Num(Array<F64Rep>),
     Complex(Array<Complex>),
     Char {
         #[serde(rename = "s", default, skip_serializing_if = "<[_]>::is_empty")]
@@ -2010,7 +2022,7 @@ impl From<Value> for ValueRep {
         match value {
             #[cfg(feature = "bytes")]
             Value::Byte(arr) => Self::Byte(arr),
-            Value::Num(arr) => Self::Num(arr.convert_with(MapNumRep::from)),
+            Value::Num(arr) => Self::Num(arr.convert_with(F64Rep::from)),
             Value::Complex(arr) => Self::Complex(arr),
             Value::Char(arr) => Self::Char {
                 shape: arr.shape().clone(),

@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Fix serializion of non-standard floats
   - Proofread and update tutorial and tour
   - System functions
     - Excel

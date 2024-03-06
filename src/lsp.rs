@@ -14,8 +14,8 @@ use crate::{
     ident_modifier_args, instrs_are_pure,
     lex::{CodeSpan, Loc, Sp},
     parse::parse,
-    Assembly, BindingInfo, Compiler, Global, Ident, InputSrc, Inputs, Primitive, SafeSys,
-    Signature, SysBackend, UiuaError, Value, CONSTANTS,
+    Assembly, BindingInfo, Compiler, Global, Ident, InputSrc, Inputs, PreEvalMode, Primitive,
+    SafeSys, Signature, SysBackend, UiuaError, Value, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -126,6 +126,7 @@ struct Spanner {
 impl Spanner {
     fn new(src: InputSrc, input: &str, backend: impl SysBackend) -> Self {
         let mut compiler = Compiler::with_backend(backend);
+        compiler.pre_eval_mode(PreEvalMode::Lsp);
         let errors = match compiler.load_str_src(input, src) {
             Ok(_) => Vec::new(),
             Err(UiuaError::Multi(errors)) => errors,

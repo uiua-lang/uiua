@@ -74,6 +74,8 @@ pub struct Compiler {
     print_diagnostics: bool,
     /// Whether to evaluate comptime code
     comptime: bool,
+    /// The comptime mode
+    pre_eval_mode: PreEvalMode,
     /// The interpreter used for comptime code
     macro_env: Uiua,
 }
@@ -101,6 +103,7 @@ impl Default for Compiler {
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             comptime: true,
+            pre_eval_mode: PreEvalMode::default(),
             macro_env: Uiua::default(),
         }
     }
@@ -169,6 +172,32 @@ pub(crate) struct LocalName {
     pub public: bool,
 }
 
+/// The mode that dictates how much code to pre-evaluate at compile time
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PreEvalMode {
+    /// The normal mode. Tries to evaluate pure, time-bounded constants and expressions at comptime
+    #[default]
+    Normal,
+    /// Does not evalute pure constants and expressions at comptime, but still evaluates `comptime`
+    Lazy,
+    /// Evaluate as much as possible at compile time, even impure expressions
+    ///
+    /// Recursive functions and certain system functions are not evaluated
+    Lsp,
+}
+
+impl PreEvalMode {
+    fn matches_instrs(&self, instrs: &[Instr], asm: &Assembly) -> bool {
+        match self {
+            PreEvalMode::Normal => {
+                instrs_are_pure(instrs, asm) && instrs_are_limit_bounded(instrs, asm)
+            }
+            PreEvalMode::Lazy => false,
+            PreEvalMode::Lsp => instrs_are_limit_bounded(instrs, asm),
+        }
+    }
+}
+
 impl Compiler {
     /// Create a new compiler
     pub fn new() -> Self {
@@ -197,9 +226,14 @@ impl Compiler {
     pub fn finish(&mut self) -> Assembly {
         take(&mut self.asm)
     }
-    /// Set whether to evaluate comptime code
+    /// Set whether to evaluate `comptime`
     pub fn comptime(&mut self, comptime: bool) -> &mut Self {
         self.comptime = comptime;
+        self
+    }
+    /// Set the [`PreEvalMode`]
+    pub fn pre_eval_mode(&mut self, mode: PreEvalMode) -> &mut Self {
+        self.pre_eval_mode = mode;
         self
     }
     /// Set whether to print diagnostics as they are encountered
@@ -456,7 +490,7 @@ code:
                                     *height = (*height + sig.outputs).saturating_sub(sig.args);
                                 }
                                 // Try to evaluate at comptime
-                                if sig.args == 0 && instrs_are_pure(&instrs, &self.asm) {
+                                if sig.args == 0 {
                                     match self.comptime_instrs(instrs.clone()) {
                                         Ok(Some(vals)) => {
                                             if !all_literal {
@@ -1604,6 +1638,9 @@ code:
     }
 
     fn comptime_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult<Option<Vec<Value>>> {
+        if !self.pre_eval_mode.matches_instrs(&instrs, &self.asm) {
+            return Ok(None);
+        }
         thread_local! {
             static CACHE: RefCell<HashMap<EcoVec<Instr>, Option<Vec<Value>>>> = RefCell::new(HashMap::new());
         }
@@ -1619,7 +1656,12 @@ code:
             let len = instrs.len();
             asm.instrs.extend(instrs.iter().cloned());
             asm.top_slices.push(FuncSlice { start, len });
-            let mut env = Uiua::with_safe_sys().with_execution_limit(Duration::from_millis(40));
+            let mut env = if self.pre_eval_mode == PreEvalMode::Lsp {
+                Uiua::with_native_sys()
+            } else {
+                Uiua::with_safe_sys()
+            }
+            .with_execution_limit(Duration::from_millis(40));
             match env.run_asm(asm) {
                 Ok(()) => {
                     let stack = env.take_stack();

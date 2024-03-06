@@ -14,7 +14,7 @@ use crate::{
     lex::CodeSpan,
     primitive::{ImplPrimitive, Primitive},
     value::Value,
-    Assembly, Global, Ident,
+    Assembly, Global, Ident, SysOp,
 };
 
 /// A Uiua bytecode instruction
@@ -247,11 +247,10 @@ impl Instr {
     }
 }
 
+/// Whether some instructions are pure
 pub(crate) fn instrs_are_pure(instrs: &[Instr], env: &impl AsRef<Assembly>) -> bool {
     for instr in instrs {
         match instr {
-            Instr::Comment(_) => {}
-            Instr::Push(_) => {}
             Instr::CallGlobal { index, .. } => {
                 if let Some(binding) = env.as_ref().bindings.get(*index) {
                     match &binding.global {
@@ -284,6 +283,42 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], env: &impl AsRef<Assembly>) -> b
             Instr::Dynamic(_) => return false,
             Instr::SetOutputComment { .. } => return false,
             Instr::NoInline => return false,
+            _ => {}
+        }
+    }
+    true
+}
+
+/// Whether some instructions can be propertly bounded by the runtime execution limit
+pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], env: &impl AsRef<Assembly>) -> bool {
+    use Primitive::*;
+    use SysOp::*;
+    for instr in instrs {
+        match instr {
+            Instr::CallGlobal { index, .. } => {
+                if let Some(binding) = env.as_ref().bindings.get(*index) {
+                    match &binding.global {
+                        Global::Const(Some(_)) => {}
+                        Global::Func(f) => {
+                            if !instrs_are_limit_bounded(f.instrs(env.as_ref()), env.as_ref()) {
+                                return false;
+                            }
+                        }
+                        _ => return false,
+                    }
+                }
+            }
+            Instr::Prim(
+                Send | Recv | Sys(ReadBytes) | Sys(ReadUntil) | Sys(Write) | Sys(TcpAccept)
+                | Sys(HttpsWrite),
+                _,
+            ) => return false,
+            Instr::PushFunc(f) => {
+                if !f.recursive || !instrs_are_limit_bounded(f.instrs(env.as_ref()), env.as_ref()) {
+                    return false;
+                }
+            }
+            Instr::Dynamic(_) => return false,
             _ => {}
         }
     }
@@ -373,6 +408,7 @@ pub struct Function {
     signature: Signature,
     pub(crate) slice: FuncSlice,
     hash: u64,
+    pub(crate) recursive: bool,
 }
 
 impl Default for Function {
@@ -382,6 +418,7 @@ impl Default for Function {
             signature: Signature::new(0, 0),
             slice: FuncSlice::default(),
             hash: 0,
+            recursive: false,
         }
     }
 }
@@ -588,12 +625,17 @@ impl Function {
             slice,
             signature,
             hash,
+            recursive: false,
         }
     }
     /// Get how many arguments this function pops off the stack and how many it pushes.
     /// Returns `None` if either of these values are dynamic.
     pub fn signature(&self) -> Signature {
         self.signature
+    }
+    /// Whether this function is recursive
+    pub fn is_recursive(&self) -> bool {
+        self.recursive
     }
     /// Get the address of function's instructions
     pub fn slice(&self) -> FuncSlice {

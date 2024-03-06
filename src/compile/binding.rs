@@ -197,7 +197,8 @@ impl Compiler {
             let name = name.clone();
             let make = make_fn.clone();
             make_fn = Rc::new(move |instrs, sig, comp: &mut Compiler| {
-                let f = make(instrs, sig, comp);
+                let mut f = make(instrs, sig, comp);
+                f.recursive = true;
                 let instrs = vec![Instr::PushFunc(f), Instr::Prim(Primitive::This, span_index)];
                 comp.add_function(FunctionId::Named(name.clone()), sig, instrs)
             });
@@ -320,7 +321,7 @@ impl Compiler {
                     // Binding is a constant or noadic function
                     let val = if let [Instr::Push(v)] = instrs.as_slice() {
                         Some(v.clone())
-                    } else if !instrs.is_empty() && instrs_are_pure(&instrs, &self.asm) {
+                    } else {
                         match self.comptime_instrs(instrs.clone()) {
                             Ok(Some(vals)) => vals.into_iter().next(),
                             Ok(None) => None,
@@ -329,8 +330,6 @@ impl Compiler {
                                 None
                             }
                         }
-                    } else {
-                        None
                     };
                     let is_const = val.is_some();
                     self.asm.bind_const(local, val, span_index, comment);

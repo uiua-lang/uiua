@@ -24,8 +24,8 @@ Person ← "{const char*; int}"
 ⍤⟜≍: 31 Lib {"int" "person_val_age" Person} {{"Dave" 31}}
 ⍤⟜≍: 31 Lib {"int" "person_ptr_age" $"const _*"Person} {{"Dave" 31}}
 TwoPeople ← $"{_; _}" .Person
-# ⍤⟜≍ {{"a" 1} {"b" 2}} Lib {TwoPeople "two_people_new" Person Person} {{"a" 1} {"b" 2}}
-# TwoPeoplePtrs ← $"{_*; _*}" .Person
-# ⍤⟜≍ {{"a" 1} {"b" 2}} Lib {TwoPeoplePtrs "two_people_new_ptr" .$"const _*"Person} {{"a" 1} {"b" 2}}
-# TwoInts ← "{const int*; const int*}"
-# ⍤⟜≍: {1 2} Lib {TwoInts "two_ints_new" "const int*" "const int*"} {1 2}
+⍤⟜≍ {{"a" 1} {"b" 2}} Lib {TwoPeople "two_people_new" Person Person} {{"a" 1} {"b" 2}}
+TwoPeoplePtrs ← $"{_*; _*}" .Person
+⍤⟜≍ {{"a" 1} {"b" 2}} Lib {TwoPeoplePtrs "two_people_new_ptr" .$"const _*"Person} {{"a" 1} {"b" 2}}
+TwoInts ← "{const int*; const int*}"
+⍤⟜≍: {1 2} Lib {TwoInts "two_ints_new" "const int*" "const int*"} {1 2}

@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.10
+  - Fill `abs` on character arrays
   - Proofread and update tutorial and tour
   - System functions
     - Excel

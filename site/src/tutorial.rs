@@ -1209,6 +1209,8 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p>"Switch functions can have as many branches as you want, and they can also be nested."</p>
         <Editor example="⟨+|-|×|÷⟩ [1 2 0 3] [...2] [...5]"/>
         <Editor example="≡(⟨×10|+1|⟨∘|¯⟩=2.⟩ ◿3.) [2 9 4 0 8 3]"/>
+        <p>"With "<Prim prim=IndexOf/>", switch functions can be used to implement behavior similar to "<code>"switch"</code>" statements in other languages."</p>
+        <Editor example="F ← (\n  ⊗□:{\"foo\" \"bar\" \"baz\"}\n  ⟨+1|×10|÷2|¯⟩\n)\nF \"foo\" 5\nF \"bar\" 5\nF \"baz\" 5\nF \"wow\" 5"/>
         <p>"Each branch can have a signature specified. For the overall switch function to have a valid signature, all branches must either change the height of the stack by the same amount "<em>"or"</em>" return the same number of outputs."</p>
         <Editor example="F ← ⟨|2 ×||3.2 ⊃(++)×⟩\n[F 0 2 3 4]\n[F 1 2 3 4]"/>
         <p>"Signatures in switch functions are a bit messy, so try to avoid them when possible."</p>

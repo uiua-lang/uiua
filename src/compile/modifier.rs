@@ -252,7 +252,7 @@ impl Compiler {
                                     formatted = formatted[1..formatted.len() - 1].to_string();
                                 }
                             }
-                            Boxed(formatted.into())
+                            Boxed(formatted.trim().into())
                         })
                         .collect();
 

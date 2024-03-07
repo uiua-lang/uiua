@@ -1455,10 +1455,12 @@ code:
             self.new_functions.push(EcoVec::new());
         }
         let mut branches = sw.branches.into_iter();
+        // Compile first branch
         let first_branch = branches.next().expect("switch cannot have no branches");
         let f = self.compile_func(first_branch.value, first_branch.span)?;
         let mut sig = f.signature();
-        self.push_instr(Instr::PushFunc(f));
+        let mut branch_funcs = vec![f];
+        // Compile remaining branches
         for branch in branches {
             let f = self.compile_func(branch.value, branch.span.clone())?;
             let f_sig = f.signature();
@@ -1475,8 +1477,29 @@ code:
                     ),
                 );
             }
-            self.push_instr(Instr::PushFunc(f));
+            branch_funcs.push(f);
         }
+
+        // Maybe use `repeat` diagnostic
+        if branch_funcs.len() == 2
+            && matches!(
+                branch_funcs[0].instrs(&self.asm),
+                [] | [Instr::Prim(Primitive::Identity, _)]
+            )
+            && branch_funcs[1].signature().args == branch_funcs[1].signature().outputs
+        {
+            self.emit_diagnostic(
+                format!(
+                    "Prefer {} over this switch function",
+                    Primitive::Repeat.format(),
+                ),
+                DiagnosticKind::Style,
+                span.clone(),
+            );
+        }
+
+        self.push_all_instrs(branch_funcs.into_iter().map(Instr::PushFunc));
+
         let span_idx = self.add_span(span.clone());
         self.push_instr(Instr::Switch {
             count,

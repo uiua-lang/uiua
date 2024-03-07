@@ -169,8 +169,28 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+fn trim_instrs(mut instrs: &[Instr]) -> &[Instr] {
+    use ImplPrimitive::*;
+    use Primitive::*;
+    let trim = |instr: &Instr| {
+        matches!(
+            instr,
+            Instr::Prim(Stack | Trace, _)
+                | Instr::ImplPrim(InvStack | InvTrace | BothTrace | InvBothTrace, _)
+        )
+    };
+    while instrs.first().is_some_and(trim) {
+        instrs = &instrs[1..];
+    }
+    while instrs.last().is_some_and(trim) {
+        instrs = &instrs[..instrs.len() - 1];
+    }
+    instrs
+}
+
 fn reduce_identity(instrs: &[Instr], mut val: Value) -> Option<Value> {
     use Primitive::*;
+    let instrs = trim_instrs(instrs);
     let mut shape = val.shape().clone();
     shape.make_row();
     let len: usize = shape.iter().product();
@@ -180,7 +200,12 @@ fn reduce_identity(instrs: &[Instr], mut val: Value) -> Option<Value> {
     let tail_sig = || instrs_signature(tail).is_ok_and(|sig| sig.args == 1 && sig.outputs == 1);
     Some(match first {
         Instr::Prim(Join, _) if tail_sig() => {
-            val.shape_mut()[0] = 0;
+            if val.rank() < 2 {
+                val.shape_mut()[0] = 0;
+            } else {
+                let first = val.shape_mut().remove(0);
+                val.shape_mut()[0] *= first;
+            }
             val
         }
         _ => match last {
@@ -196,7 +221,12 @@ fn reduce_identity(instrs: &[Instr], mut val: Value) -> Option<Value> {
             }
             Instr::Prim(Atan, _) if init_sig() => Array::new(shape, eco_vec![0.0; len]).into(),
             Instr::Prim(Join, _) if init_sig() => {
-                val.shape_mut()[0] = 0;
+                if val.rank() < 2 {
+                    val.shape_mut()[0] = 0;
+                } else {
+                    let first = val.shape_mut().remove(0);
+                    val.shape_mut()[0] *= first;
+                }
                 val
             }
             Instr::Format { parts, .. } if parts.len() == 3 && init_sig() => {
@@ -209,6 +239,7 @@ fn reduce_identity(instrs: &[Instr], mut val: Value) -> Option<Value> {
 
 fn reduce_one(instrs: &[Instr], val: Value) -> Value {
     use Primitive::*;
+    let instrs = trim_instrs(instrs);
     let row = val.row(0);
     let Some((first, tail)) = instrs.split_first() else {
         return val;
@@ -219,7 +250,13 @@ fn reduce_one(instrs: &[Instr], val: Value) -> Value {
     match first {
         Instr::Prim(Join, _) if tail_sig() => val,
         _ => match last {
-            Instr::Prim(Join, _) if init_sig() => val,
+            Instr::Prim(Join, _) if init_sig() => {
+                if val.rank() < 2 {
+                    val
+                } else {
+                    row
+                }
+            }
             Instr::Format { parts, .. } if init_sig() && parts.len() == 3 => row.format().into(),
             _ => row,
         },

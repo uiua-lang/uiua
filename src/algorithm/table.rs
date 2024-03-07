@@ -68,10 +68,7 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
                 others.push(env.pop(i + 1)?);
             }
             let mut new_shape = Shape::with_capacity(n);
-            new_shape.push(xs.row_count());
-            new_shape.push(ys.row_count());
-            new_shape.push(zs.row_count());
-            for arg in &others {
+            for arg in [&xs, &ys, &zs].into_iter().chain(&others) {
                 new_shape.push(arg.row_count());
             }
             let outputs = sig.outputs;

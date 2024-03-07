@@ -96,11 +96,11 @@ impl Value {
         })
     }
     pub(crate) fn undo_pick(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let (index_shape, index_data) = index.as_shaped_indices(env)?;
-        if index_shape.len() > 1 {
-            let last_axis_len = *index_shape.last().unwrap();
+        let (idx_shape, index_data) = index.as_shaped_indices(env)?;
+        if idx_shape.len() > 1 {
+            let last_axis_len = *idx_shape.last().unwrap();
             if last_axis_len == 0 {
-                if index_shape[..index_shape.len() - 1].iter().any(|&n| n > 1) {
+                if idx_shape[..idx_shape.len() - 1].iter().any(|&n| n > 1) {
                     return Err(env.error("Cannot undo pick with duplicate indices"));
                 }
             } else {
@@ -136,11 +136,11 @@ impl Value {
         }
         self.generic_bin_into(
             into,
-            |a, b| a.unpick(index_shape, &index_data, b, env).map(Into::into),
-            |a, b| a.unpick(index_shape, &index_data, b, env).map(Into::into),
-            |a, b| a.unpick(index_shape, &index_data, b, env).map(Into::into),
-            |a, b| a.unpick(index_shape, &index_data, b, env).map(Into::into),
-            |a, b| a.unpick(index_shape, &index_data, b, env).map(Into::into),
+            |a, b| a.undo_pick(idx_shape, &index_data, b, env).map(Into::into),
+            |a, b| a.undo_pick(idx_shape, &index_data, b, env).map(Into::into),
+            |a, b| a.undo_pick(idx_shape, &index_data, b, env).map(Into::into),
+            |a, b| a.undo_pick(idx_shape, &index_data, b, env).map(Into::into),
+            |a, b| a.undo_pick(idx_shape, &index_data, b, env).map(Into::into),
             |a, b| {
                 env.error(format!(
                     "Cannot unpick {} array from {} array",
@@ -229,7 +229,7 @@ impl<T: ArrayValue> Array<T> {
         let shape = Shape::from(&self.shape[index.len()..]);
         Ok(Array::new(shape, picked))
     }
-    fn unpick(
+    fn undo_pick(
         self,
         index_shape: &[usize],
         index_data: &[isize],
@@ -239,10 +239,10 @@ impl<T: ArrayValue> Array<T> {
         if index_shape.len() <= 1 {
             self.unpick_single(index_data, into, env)
         } else {
-            self.unpick_multi(index_shape, index_data, into, env)
+            self.undo_pick_multi(index_shape, index_data, into, env)
         }
     }
-    fn unpick_multi(
+    fn undo_pick_multi(
         self,
         index_shape: &[usize],
         index_data: &[isize],
@@ -265,11 +265,11 @@ impl<T: ArrayValue> Array<T> {
         let index_row_len: usize = index_shape[1..].iter().product();
         if index_row_len == 0 {
             for from in self.into_rows() {
-                into = from.unpick(&index_shape[1..], index_data, into, env)?;
+                into = from.undo_pick(&index_shape[1..], index_data, into, env)?;
             }
         } else {
             for (index_row, from) in index_data.chunks(index_row_len).zip(self.into_rows()) {
-                into = from.unpick(&index_shape[1..], index_row, into, env)?;
+                into = from.undo_pick(&index_shape[1..], index_row, into, env)?;
             }
         }
         Ok(into)
@@ -346,11 +346,11 @@ impl Value {
         let index = index.as_ints(env, "Index must be a list of integers")?;
         self.generic_bin_into(
             into,
-            |a, b| a.untake(&index, b, env).map(Into::into),
-            |a, b| a.untake(&index, b, env).map(Into::into),
-            |a, b| a.untake(&index, b, env).map(Into::into),
-            |a, b| a.untake(&index, b, env).map(Into::into),
-            |a, b| a.untake(&index, b, env).map(Into::into),
+            |a, b| a.undo_take(&index, b, env).map(Into::into),
+            |a, b| a.undo_take(&index, b, env).map(Into::into),
+            |a, b| a.undo_take(&index, b, env).map(Into::into),
+            |a, b| a.undo_take(&index, b, env).map(Into::into),
+            |a, b| a.undo_take(&index, b, env).map(Into::into),
             |a, b| {
                 env.error(format!(
                     "Cannot untake {} into {}",
@@ -364,11 +364,11 @@ impl Value {
         let index = index.as_ints(env, "Index must be a list of integers")?;
         self.generic_bin_into(
             into,
-            |a, b| a.undrop(&index, b, env).map(Into::into),
-            |a, b| a.undrop(&index, b, env).map(Into::into),
-            |a, b| a.undrop(&index, b, env).map(Into::into),
-            |a, b| a.undrop(&index, b, env).map(Into::into),
-            |a, b| a.undrop(&index, b, env).map(Into::into),
+            |a, b| a.undo_drop(&index, b, env).map(Into::into),
+            |a, b| a.undo_drop(&index, b, env).map(Into::into),
+            |a, b| a.undo_drop(&index, b, env).map(Into::into),
+            |a, b| a.undo_drop(&index, b, env).map(Into::into),
+            |a, b| a.undo_drop(&index, b, env).map(Into::into),
             |a, b| {
                 env.error(format!(
                     "Cannot undrop {} into {}",
@@ -632,10 +632,10 @@ impl<T: ArrayValue> Array<T> {
         }
         Ok(arr)
     }
-    fn untake(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.untake_impl("take", "taken", index, into, env)
+    fn undo_take(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.undo_take_impl("take", "taken", index, into, env)
     }
-    fn untake_impl(
+    fn undo_take_impl(
         self,
         name: &str,
         past: &str,
@@ -689,21 +689,21 @@ impl<T: ArrayValue> Array<T> {
                 let mut new_rows = Vec::with_capacity(into_row_count);
                 if untaking >= 0 {
                     for (from, into) in from.rows().zip(into.rows()) {
-                        new_rows.push(from.untake_impl(name, past, sub_index, into, env)?);
+                        new_rows.push(from.undo_take_impl(name, past, sub_index, into, env)?);
                     }
                     new_rows.extend(into.rows().skip(abs_untaking));
                 } else {
                     let start = into_row_count.saturating_sub(abs_untaking);
                     new_rows.extend(into.rows().take(start));
                     for (from, into) in from.rows().zip(into.rows().skip(start)) {
-                        new_rows.push(from.untake_impl(name, past, sub_index, into, env)?);
+                        new_rows.push(from.undo_take_impl(name, past, sub_index, into, env)?);
                     }
                 }
                 Array::from_row_arrays(new_rows, env)?
             }
         })
     }
-    fn undrop(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+    fn undo_drop(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
         if self.map_keys().is_some() {
             return Err(env.error("Cannot undo drop from map array"));
         }
@@ -718,7 +718,7 @@ impl<T: ArrayValue> Array<T> {
                 }
             })
             .collect();
-        self.untake_impl("drop", "dropped", &index, into, env)
+        self.undo_take_impl("drop", "dropped", &index, into, env)
     }
 }
 
@@ -765,11 +765,11 @@ impl Value {
         }
         self.generic_bin_into(
             into,
-            |a, b| a.unselect_impl(ind_shape, &ind, b, env).map(Into::into),
-            |a, b| a.unselect_impl(ind_shape, &ind, b, env).map(Into::into),
-            |a, b| a.unselect_impl(ind_shape, &ind, b, env).map(Into::into),
-            |a, b| a.unselect_impl(ind_shape, &ind, b, env).map(Into::into),
-            |a, b| a.unselect_impl(ind_shape, &ind, b, env).map(Into::into),
+            |a, b| a.undo_select_impl(ind_shape, &ind, b, env).map(Into::into),
+            |a, b| a.undo_select_impl(ind_shape, &ind, b, env).map(Into::into),
+            |a, b| a.undo_select_impl(ind_shape, &ind, b, env).map(Into::into),
+            |a, b| a.undo_select_impl(ind_shape, &ind, b, env).map(Into::into),
+            |a, b| a.undo_select_impl(ind_shape, &ind, b, env).map(Into::into),
             |a, b| {
                 env.error(format!(
                     "Cannot untake {} into {}",
@@ -812,7 +812,7 @@ impl<T: ArrayValue> Array<T> {
             Ok(res)
         }
     }
-    fn unselect_impl(
+    fn undo_select_impl(
         &self,
         indices_shape: &[usize],
         indices: &[isize],
@@ -822,7 +822,7 @@ impl<T: ArrayValue> Array<T> {
         if indices_shape.len() > 1 {
             Err(env.error("Cannot undo multi-dimensional selection"))
         } else {
-            self.unselect(indices_shape, indices, into, env)
+            self.undo_select(indices_shape, indices, into, env)
         }
     }
     fn select_impl(&self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
@@ -881,7 +881,7 @@ impl<T: ArrayValue> Array<T> {
         }
         Ok(Array::new(shape, selected))
     }
-    fn unselect(
+    fn undo_select(
         &self,
         indices_shape: &[usize],
         indices: &[isize],
@@ -896,15 +896,15 @@ impl<T: ArrayValue> Array<T> {
             ));
         }
         if indices_shape.is_empty() {
-            unselect_inner(once(self.data.as_slice()), indices, &mut into, env)?;
+            undo_select_inner(once(self.data.as_slice()), indices, &mut into, env)?;
         } else {
-            unselect_inner(self.row_slices(), indices, &mut into, env)?;
+            undo_select_inner(self.row_slices(), indices, &mut into, env)?;
         }
         Ok(into)
     }
 }
 
-fn unselect_inner<'a, T: ArrayValue>(
+fn undo_select_inner<'a, T: ArrayValue>(
     row_slices: impl Iterator<Item = &'a [T]>,
     indices: &[isize],
     into: &mut Array<T>,

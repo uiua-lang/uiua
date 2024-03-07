@@ -258,6 +258,14 @@ impl Inputs {
             }
         }
     }
+    /// Get an input string and perform an operation on it
+    pub fn try_get_with<T>(&self, src: &InputSrc, f: impl FnOnce(&str) -> T) -> Option<T> {
+        match src {
+            InputSrc::File(path) => self.files.get(&**path).map(|src| f(&src)),
+            InputSrc::Str(index) => self.strings.get(*index).map(|src| f(src)),
+            InputSrc::Macro(span) => self.macros.get(span).map(|src| f(&src)),
+        }
+    }
 }
 
 impl Serialize for Instr {

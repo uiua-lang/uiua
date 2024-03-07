@@ -868,7 +868,9 @@ mod server {
 
             // Collect binding completions
             for binding in self.bindings_in_file(doc_uri, &uri_path(doc_uri)) {
-                let name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
+                let Some(name) = binding.span.try_as_str(&doc.asm.inputs, |s| s.to_string()) else {
+                    continue;
+                };
 
                 if let Global::Module(module) = &binding.global {
                     for binding in self.bindings_in_file(doc_uri, module) {

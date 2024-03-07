@@ -308,6 +308,10 @@ impl CodeSpan {
     pub fn as_str<T>(&self, inputs: &Inputs, f: impl FnOnce(&str) -> T) -> T {
         inputs.get_with(&self.src, |input| f(&input[self.byte_range()]))
     }
+    /// Get the text of the span from the inputs
+    pub fn try_as_str<T>(&self, inputs: &Inputs, f: impl FnOnce(&str) -> T) -> Option<T> {
+        inputs.try_get_with(&self.src, |input| f(&input[self.byte_range()]))
+    }
     /// Get just the span of the first character
     pub fn just_start(&self, inputs: &Inputs) -> Self {
         let start = self.start;

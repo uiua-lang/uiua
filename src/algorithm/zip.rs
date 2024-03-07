@@ -190,6 +190,7 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
         }
     }
     let outputs = f.signature().outputs;
+    let is_scalar = xs.rank() == 0;
     let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
     let new_shape = xs.shape().clone();
     let is_empty = outputs > 0 && xs.row_count() == 0;
@@ -215,7 +216,9 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
     for new_values in new_values.into_iter().rev() {
         let mut new_shape = new_shape.clone();
         let mut eached = Value::from_row_values(new_values, env)?;
-        if is_empty {
+        if is_scalar {
+            eached.shape_mut().make_row();
+        } else if is_empty {
             eached.pop_row();
         }
         new_shape.extend_from_slice(&eached.shape()[1..]);
@@ -400,6 +403,7 @@ pub fn rows1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
         }
     }
     let outputs = f.signature().outputs;
+    let is_scalar = xs.rank() == 0;
     let is_empty = outputs > 0 && xs.row_count() == 0;
     let mut new_rows = multi_output(
         outputs,
@@ -426,7 +430,9 @@ pub fn rows1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
     })?;
     for new_rows in new_rows.into_iter().rev() {
         let mut val = Value::from_row_values(new_rows, env)?;
-        if is_empty {
+        if is_scalar {
+            val.shape_mut().make_row();
+        } else if is_empty {
             val.pop_row();
         }
         val.set_per_meta(per_meta.clone());

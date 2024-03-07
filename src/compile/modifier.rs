@@ -451,10 +451,18 @@ impl Compiler {
                     On => {
                         instrs.insert(
                             0,
-                            Instr::CopyToTemp {
-                                stack: TempStack::Inline,
-                                count: 1,
-                                span,
+                            if sig.args == 0 {
+                                Instr::PushTemp {
+                                    stack: TempStack::Inline,
+                                    count: 1,
+                                    span,
+                                }
+                            } else {
+                                Instr::CopyToTemp {
+                                    stack: TempStack::Inline,
+                                    count: 1,
+                                    span,
+                                }
                             },
                         );
                         instrs.push(Instr::PopTemp {

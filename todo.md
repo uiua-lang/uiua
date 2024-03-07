@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.10
+  - Fix signature bugs in `try`
   - Specialization for `both` `rerank`
   - `fill`ed `un` `drop`
   - Better span serialization

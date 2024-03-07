@@ -1,6 +1,8 @@
 # Uiua Todo
 
 - 0.10
+  - `box` instead of `fix`?
+  - `fill`ed `un` `drop`
   - Proofread and update tutorial and tour
   - System functions
     - Excel

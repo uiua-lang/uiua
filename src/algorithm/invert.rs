@@ -67,6 +67,8 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         InvBox => Instr::Prim(Box, span),
         InvJoin => Instr::Prim(Join, span),
         InvCsv => Instr::Prim(Csv, span),
+        BothTrace => Instr::ImplPrim(InvBothTrace, span),
+        InvBothTrace => Instr::ImplPrim(BothTrace, span),
         _ => return None,
     })
 }
@@ -369,6 +371,7 @@ pub(crate) fn under_instrs(
         &store1copy!(Sys(SysOp::TcpAccept), Sys(SysOp::Close)),
         &maybe_val!(stash1!(Sys(SysOp::FReadAllStr), Sys(SysOp::FWriteAll))),
         &maybe_val!(stash1!(Sys(SysOp::FReadAllBytes), Sys(SysOp::FWriteAll))),
+        &pat!(BothTrace, (BothTrace), (InvTrace)),
         // Patterns that need to be last
         &UnderPatternFn(under_flip_pattern, "flip"),
         &UnderPatternFn(under_push_temp_pattern, "push temp"),

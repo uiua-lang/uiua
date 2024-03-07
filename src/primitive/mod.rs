@@ -199,6 +199,8 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
             Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
+            BothTrace => write!(f, "{Both}{Trace}"),
+            InvBothTrace => write!(f, "{Un}{Both}{Trace}"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -945,6 +947,8 @@ impl ImplPrimitive {
             ImplPrimitive::InvFix => env.monadic_mut(Value::inv_fix)?,
             ImplPrimitive::InvScan => reduce::invscan(env)?,
             ImplPrimitive::InvTrace => trace(env, true)?,
+            ImplPrimitive::BothTrace => both_trace(env, false)?,
+            ImplPrimitive::InvBothTrace => both_trace(env, true)?,
             ImplPrimitive::InvStack => stack(env, true)?,
             ImplPrimitive::InvDump => dump(env, true)?,
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
@@ -1148,6 +1152,41 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
     let item_lines =
         format_trace_item_lines(val.show().lines().map(Into::into).collect(), max_line_len);
     env.push(val);
+    env.rt.backend.print_str_trace(&format!("┌╴{span}\n"));
+    for line in item_lines {
+        env.rt.backend.print_str_trace(&line);
+    }
+    env.rt.backend.print_str_trace("└");
+    for _ in 0..max_line_len - 1 {
+        env.rt.backend.print_str_trace("╴");
+    }
+    env.rt.backend.print_str_trace("\n");
+    Ok(())
+}
+
+fn both_trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
+    let a = env.pop(1)?;
+    let b = env.pop(2)?;
+    let span: String = if inverse {
+        format!(
+            "{}{}{} {}",
+            Primitive::Un,
+            Primitive::Both,
+            Primitive::Trace,
+            env.span()
+        )
+    } else {
+        format!("{}{} {}", Primitive::Both, Primitive::Trace, env.span())
+    };
+    let max_line_len = span.chars().count() + 2;
+    let mut item_lines =
+        format_trace_item_lines(b.show().lines().map(Into::into).collect(), max_line_len);
+    item_lines.extend(format_trace_item_lines(
+        a.show().lines().map(Into::into).collect(),
+        max_line_len,
+    ));
+    env.push(b);
+    env.push(a);
     env.rt.backend.print_str_trace(&format!("┌╴{span}\n"));
     for line in item_lines {
         env.rt.backend.print_str_trace(&line);

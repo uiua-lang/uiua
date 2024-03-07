@@ -12,7 +12,7 @@ use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
     ast::{Item, Modifier, PlaceholderOp, Ref, RefComponent, Word},
     ident_modifier_args, instrs_are_pure,
-    lex::{CodeSpan, Loc, Sp},
+    lex::{CodeSpan, Sp},
     parse::parse,
     Assembly, BindingInfo, Compiler, Global, Ident, InputSrc, Inputs, PreEvalMode, Primitive,
     SafeSys, Signature, SysBackend, UiuaError, Value, CONSTANTS,
@@ -279,28 +279,21 @@ impl Spanner {
                 }
                 Word::Ref(r) => spans.extend(self.ref_spans(r)),
                 Word::IncompleteRef(path) => spans.extend(self.ref_path_spans(path)),
-                Word::Strand(items) => {
-                    for (i, word) in items.iter().enumerate() {
-                        let item_spans = self.words_spans(slice::from_ref(word));
+                Word::Strand(items) | Word::Undertied(items) => {
+                    for i in 0..items.len() {
+                        let word = &items[i];
                         if i > 0 {
-                            if let Some(first_item) = item_spans.first() {
-                                let end = first_item.span.start;
-                                spans.push(
-                                    CodeSpan {
-                                        start: Loc {
-                                            char_pos: end.char_pos - 1,
-                                            byte_pos: end.byte_pos - 1,
-                                            col: end.col - 1,
-                                            ..end
-                                        },
-                                        end,
-                                        ..first_item.span.clone()
-                                    }
-                                    .sp(SpanKind::Strand),
-                                )
-                            }
+                            let prev = &items[i - 1];
+                            spans.push(
+                                CodeSpan {
+                                    start: prev.span.end,
+                                    end: word.span.start,
+                                    src: word.span.src.clone(),
+                                }
+                                .sp(SpanKind::Strand),
+                            );
                         }
-                        spans.extend(item_spans);
+                        spans.extend(self.words_spans(slice::from_ref(word)));
                     }
                 }
                 Word::Array(arr) => {
@@ -989,6 +982,8 @@ mod server {
             // Get ident
             let pos = params.text_document_position.position;
             let is_newline = params.ch == "\n";
+            let is_underscore = params.ch == "_";
+            let mut is_undertie = false;
             let line = if is_newline { pos.line - 1 } else { pos.line };
             let Some(line_str) = doc.input.lines().nth(line as usize) else {
                 return Ok(None);
@@ -1003,42 +998,42 @@ mod server {
                 .take_while(|&c| is_ident_char(c))
                 .collect::<String>();
             ident = ident.chars().rev().collect();
-            // Get prims
+            // Get formatted
             let mut start = col - ident.chars().count() as u32;
-            let prims = if ident.is_empty() {
-                let mut prims = Vec::new();
-                let mut ascii_prims: Vec<_> = Primitive::non_deprecated()
-                    .filter_map(|p| p.ascii().map(|a| (p, a.to_string())))
-                    .collect();
-                ascii_prims.sort_by_key(|(_, a)| a.len());
-                ascii_prims.reverse();
-                for (prim, ascii) in ascii_prims {
-                    if before.ends_with(&ascii) {
-                        prims.push(prim);
-                        start -= ascii.chars().count() as u32;
-                        break;
+            let mut formatted = String::new();
+            if ident.is_empty() {
+                if is_underscore && before.ends_with('_') {
+                    formatted.push('‿');
+                    start -= 1;
+                    is_undertie = true;
+                } else {
+                    let mut ascii_prims: Vec<_> = Primitive::non_deprecated()
+                        .filter_map(|p| p.ascii().map(|a| (p, a.to_string())))
+                        .collect();
+                    ascii_prims.sort_by_key(|(_, a)| a.len());
+                    ascii_prims.reverse();
+                    for (prim, ascii) in ascii_prims {
+                        if before.ends_with(&ascii) {
+                            formatted.push_str(&prim.to_string());
+                            start -= ascii.chars().count() as u32;
+                            break;
+                        }
                     }
                 }
-                if prims.is_empty() {
-                    return Ok(None);
+            } else if let Some(prims) = Primitive::from_format_name_multi(&ident) {
+                for (p, _) in prims {
+                    formatted.push_str(&p.to_string());
                 }
-                prims
-            } else {
-                match Primitive::from_format_name_multi(&ident) {
-                    Some(prims) => prims.into_iter().map(|(p, _)| p).collect(),
-                    None => return Ok(None),
-                }
-            };
-            let mut formatted = String::new();
-            for prim in prims {
-                formatted.push_str(&prim.to_string());
+            }
+            if formatted.is_empty() {
+                return Ok(None);
             }
 
             // Adjust range
             let mut end = pos;
             if params.ch.chars().all(|c| c.is_whitespace()) {
                 formatted.push_str(&params.ch);
-            } else {
+            } else if !is_undertie {
                 end.character -= 1;
             }
             let start = Position {

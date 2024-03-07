@@ -887,6 +887,17 @@ impl<'a> Formatter<'a> {
                     self.output.push(']');
                 }
             }
+            Word::Undertied(items) => {
+                for (i, item) in items.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push('‿');
+                    }
+                    self.format_word(item, depth, true);
+                }
+                if items.len() == 1 {
+                    self.output.push('‿');
+                }
+            }
             Word::Func(func) => {
                 // Handle nested switch conversion to angle brackets
                 let mut code_words =
@@ -1219,6 +1230,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::Ref(_) => false,
         Word::IncompleteRef(_) => false,
         Word::Strand(_) => false,
+        Word::Undertied(_) => false,
         Word::Array(arr) => {
             arr.lines.len() > 1
                 || (arr.lines.iter()).any(|words| {

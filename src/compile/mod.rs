@@ -275,7 +275,7 @@ impl Compiler {
         let input: EcoString = fs::read_to_string(path)
             .map_err(|e| UiuaError::Load(path.into(), e.into()))?
             .into();
-        // _ = crate::lsp::spans(&input);
+        _ = crate::lsp::spans(&input);
         self.asm.inputs.files.insert(path.into(), input.clone());
         self.load_impl(&input, InputSrc::File(path.into()))
     }
@@ -510,7 +510,8 @@ code:
                         // The instructions for evaluation are the preceding push
                         // instructions, followed by the current line
                         let mut comp_instrs = EcoVec::from(
-                            &self.asm.instrs[instr_count_before - sig.args..instr_count_before],
+                            &self.asm.instrs
+                                [instr_count_before.saturating_sub(sig.args)..instr_count_before],
                         );
                         comp_instrs.extend(instrs.iter().cloned());
                         match self.comptime_instrs(comp_instrs) {
@@ -726,7 +727,7 @@ code:
         let mut words = words
             .into_iter()
             .rev()
-            .filter(|word| word.value.is_code() || matches!(&word.value, Word::Comment(_)))
+            .filter(|word| word.value.is_code())
             .peekable();
         while let Some(word) = words.next() {
             if let Some(next) = words.peek() {
@@ -931,41 +932,21 @@ code:
                     .rev()
                     .map(|word| self.compile_operand_word(word))
                     .collect::<UiuaResult<Vec<_>>>()?;
-                let item_count = op_instrs.len();
                 // Check item sigs
-                let is_function_strand = op_instrs.iter().any(|(_, sig)| sig.args > 0);
+                let has_functions = op_instrs.iter().any(|(_, sig)| sig.args > 0);
+                if has_functions {
+                    return Err(self.fatal_error(
+                        word.span.clone(),
+                        "Functions are not allowed in strands. \n\
+                        You can use the ‿ character (which formats from __) \
+                        to make a function strand.",
+                    ));
+                }
                 // Flatten instrs
                 let inner: Vec<Instr> = op_instrs
                     .into_iter()
                     .flat_map(|(instrs, _)| instrs)
                     .collect();
-
-                // Function strand
-                if is_function_strand {
-                    if item_count > 2 {
-                        self.add_error(
-                            word.span.clone(),
-                            "Function strands cannot contain more than two items",
-                        );
-                    }
-                    if !self.scope.experimental && !self.experimental_function_strand_error {
-                        self.experimental_function_strand_error = true;
-                        self.add_error(
-                            word.span.clone(),
-                            "Function strands are experimental. To use them, add \
-                            `# Experimental!` to the top of the file.",
-                        );
-                    }
-                    let sig = instrs_signature(&inner).unwrap();
-                    if call {
-                        self.push_all_instrs(inner);
-                    } else {
-                        let f =
-                            self.add_function(FunctionId::Anonymous(word.span.clone()), sig, inner);
-                        self.push_instr(Instr::PushFunc(f));
-                    }
-                    return Ok(());
-                }
 
                 // Normal strand
                 if !call {
@@ -1082,6 +1063,47 @@ code:
                     let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
                     let func = self.add_function(FunctionId::Anonymous(word.span), sig, instrs);
                     self.push_instr(Instr::PushFunc(func));
+                }
+            }
+            Word::Undertied(words) => {
+                if words.len() > 2 {
+                    self.add_error(
+                        word.span.clone(),
+                        "Function strands cannot contain more than two items",
+                    );
+                }
+                if !self.scope.experimental && !self.experimental_function_strand_error {
+                    self.experimental_function_strand_error = true;
+                    self.add_error(
+                        word.span.clone(),
+                        "Function strands are experimental. To use them, add \
+                        `# Experimental!` to the top of the file.",
+                    );
+                }
+                let instrs = self.compile_words(words, true)?;
+                if call {
+                    self.push_all_instrs(instrs);
+                } else {
+                    match instrs_signature(&instrs) {
+                        Ok(sig) => {
+                            let func =
+                                self.add_function(FunctionId::Anonymous(word.span), sig, instrs);
+                            self.push_instr(Instr::PushFunc(func));
+                        }
+                        Err(e) => {
+                            return Err(self.fatal_error(
+                                word.span,
+                                format!(
+                                    "Cannot infer function signature: {e}{}",
+                                    if e.ambiguous {
+                                        ". A signature can be declared after the opening `(`."
+                                    } else {
+                                        ""
+                                    }
+                                ),
+                            ));
+                        }
+                    }
                 }
             }
             Word::Func(func) => self.func(func, word.span, call)?,

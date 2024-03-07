@@ -3,7 +3,7 @@
 - 0.10
   - Specialization for `both` `rerank`
   - `fill`ed `un` `drop`
-  - Use `‿` for function strands, format from `__`
+  - Non-scalar `repeat`
   - Better span serialization
   - Planet expressions?
   - Proofread and update tutorial and tour

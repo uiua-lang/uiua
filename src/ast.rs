@@ -104,6 +104,7 @@ pub enum Word {
     Ref(Ref),
     IncompleteRef(Vec<RefComponent>),
     Strand(Vec<Sp<Word>>),
+    Undertied(Vec<Sp<Word>>),
     Array(Arr),
     Func(Func),
     Switch(Switch),
@@ -129,6 +130,9 @@ impl PartialEq for Word {
             (Self::MultilineFormatString(a), Self::MultilineFormatString(b)) => a == b,
             (Self::Ref(a), Self::Ref(b)) => a == b,
             (Self::Strand(a), Self::Strand(b)) => {
+                a.iter().map(|w| &w.value).eq(b.iter().map(|w| &w.value))
+            }
+            (Self::Undertied(a), Self::Undertied(b)) => {
                 a.iter().map(|w| &w.value).eq(b.iter().map(|w| &w.value))
             }
             (Self::Array(a), Self::Array(b)) => a.lines.iter().flatten().map(|w| &w.value).eq(b
@@ -207,6 +211,7 @@ impl fmt::Debug for Word {
             }
             Word::Array(arr) => arr.fmt(f),
             Word::Strand(items) => write!(f, "strand({items:?})"),
+            Word::Undertied(items) => write!(f, "undertie({items:?})"),
             Word::Func(func) => func.fmt(f),
             Word::Switch(sw) => sw.fmt(f),
             Word::Primitive(prim) => prim.fmt(f),

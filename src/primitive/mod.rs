@@ -1904,7 +1904,7 @@ mod tests {
 		}},
 		"strand": {{
 			"name": "comment.line",
-			"match": "_"
+			"match": "(_|‿)"
 		}},
         "stack": {{
             "match": "{stack_functions}"

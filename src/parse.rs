@@ -663,16 +663,31 @@ impl<'i> Parser<'i> {
         self.comment()
             .map(|c| c.map(Word::Comment))
             .or_else(|| self.output_comment())
-            .or_else(|| self.try_strand())
+            .or_else(|| self.try_undertied())
+    }
+    fn try_undertied(&mut self) -> Option<Sp<Word>> {
+        self.try_strand_impl(
+            &[Undertie, DoubleUnderscore.into()],
+            Word::Undertied,
+            Self::try_strand,
+        )
     }
     fn try_strand(&mut self) -> Option<Sp<Word>> {
-        let word = self.try_modified()?;
+        self.try_strand_impl(&[Underscore.into()], Word::Strand, Self::try_modified)
+    }
+    fn try_strand_impl(
+        &mut self,
+        tokens: &[Token],
+        make: fn(Vec<Sp<Word>>) -> Word,
+        inner: fn(&mut Self) -> Option<Sp<Word>>,
+    ) -> Option<Sp<Word>> {
+        let word = inner(self)?;
         if let Word::Spaces = word.value {
             return Some(word);
         }
         // Collect items
         let mut items = Vec::new();
-        while self.try_exact(Underscore).is_some() {
+        while (tokens.iter()).any(|tok| self.try_exact(tok.clone()).is_some()) {
             let item = match self.try_modified() {
                 Some(mut item) => {
                     if let Word::Spaces = item.value {
@@ -707,7 +722,7 @@ impl<'i> Parser<'i> {
             .span
             .clone()
             .merge(items.last().unwrap().span.clone());
-        Some(span.sp(Word::Strand(items)))
+        Some(span.sp(make(items)))
     }
     fn try_modified(&mut self) -> Option<Sp<Word>> {
         let (modifier, mod_span) = if let Some(prim) = Primitive::all()
@@ -744,7 +759,7 @@ impl<'i> Parser<'i> {
                 }
                 break;
             }
-            if let Some(arg) = self.try_func().or_else(|| self.try_strand()) {
+            if let Some(arg) = self.try_func().or_else(|| self.try_undertied()) {
                 // Parse switch function syntax
                 if let Word::Switch(sw) = &arg.value {
                     if i == 0 && !sw.angled && sw.branches.len() >= modifier.args() {

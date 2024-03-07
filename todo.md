@@ -3,6 +3,8 @@
 - 0.10
   - Specialization for `both` `rerank`
   - `fill`ed `un` `drop`
+  - Better span serialization
+  - Planet expressions?
   - Proofread and update tutorial and tour
   - System functions
     - Excel

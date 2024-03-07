@@ -1504,13 +1504,17 @@ mod server {
             if show_values {
                 for (span, values) in &doc.code_meta.top_level_values {
                     let mut shown: Vec<String> = values.iter().map(Value::show).collect();
-                    let (label, tooltip) = if shown.iter().any(|s| s.lines().count() > 1) {
-                        let mut md = "```uiua\n".to_string();
-                        for shown in &shown {
-                            md.push_str(shown);
-                            md.push('\n');
-                        }
-                        md.push_str("\n```");
+                    let mut md = "```uiua\n".to_string();
+                    for shown in &shown {
+                        md.push_str(shown);
+                        md.push('\n');
+                    }
+                    md.push_str("\n```");
+                    let tooltip = InlayHintTooltip::MarkupContent(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value: md,
+                    });
+                    let label = if shown.iter().any(|s| s.lines().count() > 1) {
                         let mut shapes = String::new();
                         for (i, val) in values.iter().rev().enumerate() {
                             if i > 0 {
@@ -1518,23 +1522,17 @@ mod server {
                             }
                             shapes.push_str(&val.shape_string());
                         }
-                        (
-                            InlayHintLabel::String(shapes),
-                            Some(InlayHintTooltip::MarkupContent(MarkupContent {
-                                kind: MarkupKind::Markdown,
-                                value: md,
-                            })),
-                        )
+                        InlayHintLabel::String(shapes)
                     } else {
                         shown.reverse();
-                        (InlayHintLabel::String(shown.join(" ")), None)
+                        InlayHintLabel::String(shown.join(" "))
                     };
                     hints.push(InlayHint {
                         text_edits: None,
                         position: uiua_loc_to_lsp(span.end),
                         label,
                         kind: None,
-                        tooltip,
+                        tooltip: Some(tooltip),
                         padding_left: Some(true),
                         padding_right: None,
                         data: None,

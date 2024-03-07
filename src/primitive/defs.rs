@@ -1009,8 +1009,9 @@ primitive!(
     /// This is the opposite of [drop].
     ///
     /// ex: ↙ 3 [8 3 9 2 0]
-    /// ex: ↙ ¯3 [8 3 9 2 0]
     /// ex: ↙ 2 ↯3_3⇡9
+    /// Negative amounts take from the end.
+    /// ex: ↙ ¯3 [8 3 9 2 0]
     /// ex: ↙ ¯2 ↯3_3⇡9
     /// The amount to take can also be a list to take along multiple axes.
     /// ex: .↯3_4⇡12
@@ -1021,14 +1022,17 @@ primitive!(
     /// ex! ↙7 [8 3 9 2 0]
     /// If you would like to fill the excess length with some fill value, use [fill].
     /// ex: ⬚π↙ 7 [8 3 9 2 0]
+    /// This works with negative values as well.
+    /// ex: ⬚π↙ ¯7 [8 3 9 2 0]
     (2, Take, DyadicArray, ("take", '↙')),
     /// Drop the first n elements of an array
     ///
     /// This is the opposite of [take].
     ///
     /// ex: ↘ 3 [8 3 9 2 0]
-    /// ex: ↘ ¯3 [8 3 9 2 0]
     /// ex: ↘ 2 ↯3_3⇡9
+    /// Negative amounts drop from the end.
+    /// ex: ↘ ¯3 [8 3 9 2 0]
     /// ex: ↘ ¯2 ↯3_3⇡9
     /// The amount to drop can also be a list to drop along multiple axes.
     /// ex: .↯3_4⇡12
@@ -1040,6 +1044,10 @@ primitive!(
     /// ex: ↘ ¯7 [8 3 9 2 0]
     /// ex: ↘ 5 ↯3_3⇡9
     /// ex: ↘ ¯5 ↯3_3⇡9
+    ///
+    /// [un][drop] will pad an array if a [fill] is set.
+    /// ex: ⬚0°↘ 2 [1 2 3]
+    /// ex: ⬚0°↘ 2_¯3 [1_2 3_4]
     (2, Drop, DyadicArray, ("drop", '↘')),
     /// Rotate the elements of an array by n
     ///
@@ -2526,6 +2534,7 @@ impl_primitive!(
     (1, Primes),
     (1, UnBox),
     (1(2), UnJoin),
+    (2, UnDrop),
     (1, UnCsv),
     // Unders
     (3, UndoSelect),

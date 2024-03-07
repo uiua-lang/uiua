@@ -45,6 +45,16 @@ impl Shape {
     pub fn remove(&mut self, index: usize) -> usize {
         self.dims.remove(index)
     }
+    /// Get the row shape
+    pub fn row(&self) -> Shape {
+        let mut shape = self.clone();
+        shape.make_row();
+        shape
+    }
+    /// Get the number of elements
+    pub fn elements(&self) -> usize {
+        self.iter().product()
+    }
     /// Make the shape its row shape
     pub fn make_row(&mut self) {
         if self.len() > 0 {

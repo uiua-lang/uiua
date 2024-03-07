@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - `fill`ed `un` `drop`
   - Non-scalar `repeat`
   - Better span serialization
   - Planet expressions?

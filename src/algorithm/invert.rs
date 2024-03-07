@@ -34,6 +34,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Trace => Instr::ImplPrim(UnTrace, span),
         Stack => Instr::ImplPrim(UnStack, span),
         Join => Instr::ImplPrim(UnJoin, span),
+        Drop => Instr::ImplPrim(UnDrop, span),
         Sys(SysOp::GifDecode) => Instr::Prim(Sys(SysOp::GifEncode), span),
         Sys(SysOp::GifEncode) => Instr::Prim(Sys(SysOp::GifDecode), span),
         Sys(SysOp::AudioDecode) => Instr::Prim(Sys(SysOp::AudioEncode), span),
@@ -66,6 +67,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         UnStack => Instr::Prim(Stack, span),
         UnBox => Instr::Prim(Box, span),
         UnJoin => Instr::Prim(Join, span),
+        UnDrop => Instr::Prim(Drop, span),
         UnCsv => Instr::Prim(Csv, span),
         BothTrace => Instr::ImplPrim(UnBothTrace, span),
         UnBothTrace => Instr::ImplPrim(BothTrace, span),
@@ -205,8 +207,20 @@ pub(crate) fn under_instrs(
 
     /// Copy 2 values to the temp stack before the "before", and pop them before the "after"
     macro_rules! stash2 {
+        (($($before:expr),*)) => {
+            pat!(($($before),*), (CopyToTempN(2), $($before),*), (PopTempN(2), $($before),*))
+        };
+        (($($before:expr),*), ($($after:expr),*)) => {
+            pat!(($($before),*), (CopyToTempN(2), $($before),*), (PopTempN(2), $($after),*))
+        };
+        (($($before:expr),*), $after:expr) => {
+            pat!(($($before),*), (CopyToTempN(2), $($before),*), (PopTempN(2), $after))
+        };
+        ($before:expr, ($($after:expr),*)) => {
+            pat!($before, (CopyToTempN(2), $before), (PopTempN(2), $($after),*))
+        };
         ($before:expr, $after:expr) => {
-            pat!($before, (CopyToTempN(2), $before), (PopTempN(2), $after),)
+            pat!($before, (CopyToTempN(2), $before), (PopTempN(2), $after))
         };
     }
 
@@ -290,6 +304,7 @@ pub(crate) fn under_instrs(
         // Array restructuring
         &maybe_val!(stash2!(Take, UndoTake)),
         &maybe_val!(stash2!(Drop, UndoDrop)),
+        &maybe_val!(stash2!(UnDrop, (Flip, Pop, Drop))),
         &maybe_val!(pat!(
             Keep,
             (CopyToTempN(2), Keep),

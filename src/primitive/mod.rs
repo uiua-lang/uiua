@@ -173,6 +173,7 @@ impl fmt::Display for ImplPrimitive {
             UnCsv => write!(f, "{Un}{Csv}"),
             UndoTake => write!(f, "{Under}{Take}"),
             UndoDrop => write!(f, "{Under}{Drop}"),
+            UnDrop => write!(f, "{Un}{Drop}"),
             UndoSelect => write!(f, "{Under}{Select}"),
             UndoPick => write!(f, "{Under}{Pick}"),
             UndoInsert => write!(f, "{Under}{Insert}"),
@@ -930,6 +931,7 @@ impl ImplPrimitive {
                 env.push(rest);
                 env.push(first);
             }
+            ImplPrimitive::UnDrop => env.dyadic_oo_env(Value::undrop)?,
             ImplPrimitive::UnAtan => {
                 let x = env.pop(1)?;
                 let sin = x.clone().sin(env)?;

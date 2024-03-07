@@ -371,11 +371,21 @@ impl Value {
             |a, b| a.undo_drop(&index, b, env).map(Into::into),
             |a, b| {
                 env.error(format!(
-                    "Cannot undrop {} into {}",
+                    "Cannot undo drop {} into {}",
                     a.type_name(),
                     b.type_name()
                 ))
             },
+        )
+    }
+    pub(crate) fn undrop(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
+        let index = self.as_ints(env, "Index must be a list of integers")?;
+        from.generic_into(
+            |a| a.undrop(&index, env).map(Into::into),
+            |a| a.undrop(&index, env).map(Into::into),
+            |a| a.undrop(&index, env).map(Into::into),
+            |a| a.undrop(&index, env).map(Into::into),
+            |a| a.undrop(&index, env).map(Into::into),
         )
     }
 }
@@ -719,6 +729,44 @@ impl<T: ArrayValue> Array<T> {
             })
             .collect();
         self.undo_take_impl("drop", "dropped", &index, into, env)
+    }
+    fn undrop(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        if self.map_keys().is_some() {
+            return Err(env.error("Cannot undrop from map array"));
+        }
+        if index.len() > self.rank() {
+            return Err(env.error(format!(
+                "Cannot undrop from array of rank {} \
+                with index of length {}",
+                self.rank(),
+                index.len()
+            )));
+        }
+        Ok(match index {
+            [] => self,
+            &[0] => self,
+            &[undropping] => {
+                let fill = env
+                    .scalar_fill::<T>()
+                    .map_err(|e| env.error(format!("Cannot undrop without fill{e}")))?;
+                let abs_undropping = undropping.unsigned_abs();
+                let elem_count = self.shape().row().elements() * abs_undropping;
+                self.data.extend(repeat(fill).take(elem_count));
+                if undropping > 0 {
+                    self.data.as_mut_slice().rotate_right(elem_count);
+                }
+                self.shape[0] += abs_undropping;
+                self
+            }
+            &[undropping, ref sub_index @ ..] => {
+                let mut rows = Vec::with_capacity(self.row_count());
+                for row in self.into_rows() {
+                    rows.push(row.undrop(sub_index, env)?);
+                }
+                let arr = Self::from_row_arrays_infallible(rows);
+                arr.undrop(&[undropping], env)?
+            }
+        })
     }
 }
 

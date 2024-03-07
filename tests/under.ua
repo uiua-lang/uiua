@@ -42,7 +42,7 @@
 ⍤⟜≍: {6 5} [⍜∩°□:□5 □6]
 ⍤⟜≍: [9 9 5] ⍜⊡(⍜∩×↥,) 2 [⍥9]3 ¯1 5
 ⍤⟜≍: [3 2] ⍜∩▽◌⟜: [1 0] [1 2] [3 4]
-⍤⟜≍: 1 ⍣(0◌)1 ⍜(∩(|1 ◌ °&ime &frab))∩∘ ."site/favicon.ico"
+⍤⟜≍: 0 ⧻ {⍜(∩(|1 ◌ °&ime &frab))∩∘ ."site/favicon.ico"}
 ⍤⟜≍: [.4] [⍜∩(◌setinv(⊓⌊⌈.÷2|+)): 3 5]
 
 # On
@@ -208,7 +208,7 @@ G ← ⍜(⊙⊙⊢) ⋅⊙∘
 ⍤⟜≍: map "abc" [1 2 3] ⍜°map∘ map "abc" [1 2 3]
 ⍤⟜≍: map "abc" [1 2 3] ⍜get∘ @a map "abc" [1 2 3]
 ⍤⟜≍: map "abcd" [1 2 3 0] ⬚0⍜get∘ @d map "abc" [1 2 3]
-⍤⟜≍: map "abc" [1 2 3] ⍜insert∘ @c 5  map "abc" [1 2 3]
-⍤⟜≍: map "abc" [1 2 3] ⍜insert∘ @d 4  map "abc" [1 2 3]
-⍤⟜≍: map "abc" [1 2 3] ⍜remove∘ @a  map "abc" [1 2 3]
-⍤⟜≍: map "abc" [1 2 3] ⍜remove∘ @d  map "abc" [1 2 3]
+⍤⟜≍: map "abc" [1 2 3] ⍜insert∘ @c 5 map "abc" [1 2 3]
+⍤⟜≍: map "abc" [1 2 3] ⍜insert∘ @d 4 map "abc" [1 2 3]
+⍤⟜≍: map "abc" [1 2 3] ⍜remove∘ @a map "abc" [1 2 3]
+⍤⟜≍: map "abc" [1 2 3] ⍜remove∘ @d map "abc" [1 2 3]

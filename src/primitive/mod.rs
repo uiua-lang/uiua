@@ -156,6 +156,7 @@ impl fmt::Display for ImplPrimitive {
         use ImplPrimitive::*;
         use Primitive::*;
         match self {
+            UnPop => write!(f, "{Un}{Pop}"),
             UnBits => write!(f, "{Un}{Bits}"),
             UnWhere => write!(f, "{Un}{Where}"),
             UnCouple => write!(f, "{Un}{Couple}"),
@@ -844,6 +845,13 @@ impl Primitive {
 impl ImplPrimitive {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
+            ImplPrimitive::UnPop => {
+                env.push(
+                    env.value_fill()
+                        .ok_or_else(|| env.error("No fill set"))?
+                        .clone(),
+                );
+            }
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
             ImplPrimitive::UndoKeep => {
                 let from = env.pop(1)?;

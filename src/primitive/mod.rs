@@ -156,37 +156,38 @@ impl fmt::Display for ImplPrimitive {
         use ImplPrimitive::*;
         use Primitive::*;
         match self {
-            InverseBits => write!(f, "{Un}{Bits}"),
-            InvWhere => write!(f, "{Un}{Where}"),
-            InvCouple => write!(f, "{Un}{Couple}"),
-            InvMap => write!(f, "{Un}{Map}"),
-            InvAtan => write!(f, "{Un}{Atan}"),
-            InvComplex => write!(f, "{Un}{Complex}"),
-            InvUtf => write!(f, "{Un}{Utf}"),
-            InvParse => write!(f, "{Un}{Parse}"),
-            InvFix => write!(f, "{Un}{Fix}"),
-            InvScan => write!(f, "{Un}{Scan}"),
-            InvTrace => write!(f, "{Un}{Trace}"),
-            InvStack => write!(f, "{Un}{Stack}"),
-            InvDump => write!(f, "{Un}{Dump}"),
-            InvBox => write!(f, "{Un}{Box}"),
-            InvCsv => write!(f, "{Un}{Csv}"),
-            UndoTake => write!(f, "{Un}{Take}"),
-            UndoDrop => write!(f, "{Un}{Drop}"),
-            UndoSelect => write!(f, "{Un}{Select}"),
-            UndoPick => write!(f, "{Un}{Pick}"),
-            UndoInsert => write!(f, "{Un}{Insert}"),
-            UndoRemove => write!(f, "{Un}{Remove}"),
-            Unpartition1 | Unpartition2 => write!(f, "{Un}{Partition}"),
-            Ungroup1 | Ungroup2 => write!(f, "{Un}{Group}"),
+            UnBits => write!(f, "{Un}{Bits}"),
+            UnWhere => write!(f, "{Un}{Where}"),
+            UnCouple => write!(f, "{Un}{Couple}"),
+            UnMap => write!(f, "{Un}{Map}"),
+            UnAtan => write!(f, "{Un}{Atan}"),
+            UnComplex => write!(f, "{Un}{Complex}"),
+            UnUtf => write!(f, "{Un}{Utf}"),
+            UnParse => write!(f, "{Un}{Parse}"),
+            UnFix => write!(f, "{Un}{Fix}"),
+            UnScan => write!(f, "{Un}{Scan}"),
+            UnTrace => write!(f, "{Un}{Trace}"),
+            UnStack => write!(f, "{Un}{Stack}"),
+            UnDump => write!(f, "{Un}{Dump}"),
+            UnBox => write!(f, "{Un}{Box}"),
+            UnCsv => write!(f, "{Un}{Csv}"),
+            UndoTake => write!(f, "{Under}{Take}"),
+            UndoDrop => write!(f, "{Under}{Drop}"),
+            UndoSelect => write!(f, "{Under}{Select}"),
+            UndoPick => write!(f, "{Under}{Pick}"),
+            UndoInsert => write!(f, "{Under}{Insert}"),
+            UndoRemove => write!(f, "{Under}{Remove}"),
+            UndoPartition1 | UndpPartition2 => write!(f, "{Under}{Partition}"),
+            UndoGroup1 | UndoGroup2 => write!(f, "{Under}{Group}"),
             Asin => write!(f, "{Un}{Sin}"),
             Last => write!(f, "{First}{Reverse}"),
-            UndoFirst => write!(f, "{Un}{First}"),
-            UndoLast => write!(f, "{Un}{Last}"),
-            UndoKeep => write!(f, "{Un}{Keep}"),
-            Unrerank => write!(f, "{Un}{Rerank}"),
-            Unreshape => write!(f, "{Un}{Reshape}"),
-            Unjoin | InvJoin => write!(f, "{Un}{Join}"),
+            UndoFirst => write!(f, "{Under}{First}"),
+            UndoLast => write!(f, "{Under}{Last}"),
+            UndoKeep => write!(f, "{Under}{Keep}"),
+            UndoRerank => write!(f, "{Under}{Rerank}"),
+            UndoReshape => write!(f, "{Un}{Reshape}"),
+            UndoJoin => write!(f, "{Under}{Join}"),
+            UnJoin => write!(f, "{Un}{Join}"),
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
             LastMinIndex => write!(f, "{First}{Reverse}{Rise}"),
@@ -200,7 +201,7 @@ impl fmt::Display for ImplPrimitive {
             ReduceContent => write!(f, "{Reduce}{Content}"),
             Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
             BothTrace => write!(f, "{Both}{Trace}"),
-            InvBothTrace => write!(f, "{Un}{Both}{Trace}"),
+            UnBothTrace => write!(f, "{Un}{Both}{Trace}"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -861,13 +862,13 @@ impl ImplPrimitive {
                 let from = env.pop(3)?;
                 env.push(from.undo_drop(index, into, env)?);
             }
-            ImplPrimitive::InvCouple => {
+            ImplPrimitive::UnCouple => {
                 let coupled = env.pop(1)?;
                 let (a, b) = coupled.uncouple(env)?;
                 env.push(b);
                 env.push(a);
             }
-            ImplPrimitive::InvMap => {
+            ImplPrimitive::UnMap => {
                 let map = env.pop(1)?;
                 let (keys, vals) = map.unmap(env)?;
                 env.push(vals);
@@ -885,14 +886,14 @@ impl ImplPrimitive {
                 let from = env.pop(3)?;
                 env.push(from.undo_select(index, into, env)?);
             }
-            ImplPrimitive::Unrerank => {
+            ImplPrimitive::UndoRerank => {
                 let rank = env.pop(1)?;
                 let shape = env.pop(2)?;
                 let mut array = env.pop(3)?;
                 array.undo_rerank(&rank, &shape, env)?;
                 env.push(array);
             }
-            ImplPrimitive::Unreshape => {
+            ImplPrimitive::UndoReshape => {
                 let orig_shape = env.pop(1)?;
                 let mut array = env.pop(2)?;
                 array.undo_reshape(&orig_shape, env)?;
@@ -908,14 +909,14 @@ impl ImplPrimitive {
                 let from = env.pop(2)?;
                 env.push(from.undo_last(into, env)?);
             }
-            ImplPrimitive::InvWhere => env.monadic_ref_env(Value::unwhere)?,
-            ImplPrimitive::InvUtf => env.monadic_ref_env(Value::un_utf8)?,
-            ImplPrimitive::InverseBits => env.monadic_ref_env(Value::un_bits)?,
-            ImplPrimitive::Unpartition1 => loops::undo_partition_part1(env)?,
-            ImplPrimitive::Unpartition2 => loops::undo_partition_part2(env)?,
-            ImplPrimitive::Ungroup1 => loops::undo_group_part1(env)?,
-            ImplPrimitive::Ungroup2 => loops::undo_group_part2(env)?,
-            ImplPrimitive::Unjoin => {
+            ImplPrimitive::UnWhere => env.monadic_ref_env(Value::unwhere)?,
+            ImplPrimitive::UnUtf => env.monadic_ref_env(Value::unutf8)?,
+            ImplPrimitive::UnBits => env.monadic_ref_env(Value::unbits)?,
+            ImplPrimitive::UndoPartition1 => loops::undo_partition_part1(env)?,
+            ImplPrimitive::UndpPartition2 => loops::undo_partition_part2(env)?,
+            ImplPrimitive::UndoGroup1 => loops::undo_group_part1(env)?,
+            ImplPrimitive::UndoGroup2 => loops::undo_group_part2(env)?,
+            ImplPrimitive::UndoJoin => {
                 let a_shape = env.pop(1)?;
                 let b_shape = env.pop(2)?;
                 let val = env.pop(3)?;
@@ -923,40 +924,40 @@ impl ImplPrimitive {
                 env.push(right);
                 env.push(left);
             }
-            ImplPrimitive::InvJoin => {
+            ImplPrimitive::UnJoin => {
                 let val = env.pop(1)?;
                 let (first, rest) = val.unjoin(env)?;
                 env.push(rest);
                 env.push(first);
             }
-            ImplPrimitive::InvAtan => {
+            ImplPrimitive::UnAtan => {
                 let x = env.pop(1)?;
                 let sin = x.clone().sin(env)?;
                 let cos = x.cos(env)?;
                 env.push(cos);
                 env.push(sin);
             }
-            ImplPrimitive::InvComplex => {
+            ImplPrimitive::UnComplex => {
                 let x = env.pop(1)?;
                 let im = x.clone().complex_im(env)?;
                 let re = x.complex_re(env)?;
                 env.push(re);
                 env.push(im);
             }
-            ImplPrimitive::InvParse => env.monadic_ref_env(Value::inv_parse)?,
-            ImplPrimitive::InvFix => env.monadic_mut(Value::inv_fix)?,
-            ImplPrimitive::InvScan => reduce::invscan(env)?,
-            ImplPrimitive::InvTrace => trace(env, true)?,
+            ImplPrimitive::UnParse => env.monadic_ref_env(Value::unparse)?,
+            ImplPrimitive::UnFix => env.monadic_mut(Value::unfix)?,
+            ImplPrimitive::UnScan => reduce::unscan(env)?,
+            ImplPrimitive::UnTrace => trace(env, true)?,
             ImplPrimitive::BothTrace => both_trace(env, false)?,
-            ImplPrimitive::InvBothTrace => both_trace(env, true)?,
-            ImplPrimitive::InvStack => stack(env, true)?,
-            ImplPrimitive::InvDump => dump(env, true)?,
+            ImplPrimitive::UnBothTrace => both_trace(env, true)?,
+            ImplPrimitive::UnStack => stack(env, true)?,
+            ImplPrimitive::UnDump => dump(env, true)?,
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
-            ImplPrimitive::InvBox => {
+            ImplPrimitive::UnBox => {
                 let val = env.pop(1)?;
                 env.push(val.unboxed());
             }
-            ImplPrimitive::InvCsv => {
+            ImplPrimitive::UnCsv => {
                 let csv = env.pop(1)?.as_string(env, "CSV expects a string")?;
                 let val = Value::from_csv(&csv, env)?;
                 env.push(val);

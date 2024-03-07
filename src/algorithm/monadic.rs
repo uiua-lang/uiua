@@ -35,7 +35,7 @@ impl Value {
         let depth = depth.min(self.rank());
         self.shape_mut().insert(depth, 1);
     }
-    pub(crate) fn inv_fix(&mut self) {
+    pub(crate) fn unfix(&mut self) {
         if self.is_map() {
             return;
         }
@@ -114,10 +114,10 @@ impl Value {
             (val, _) => return Err(env.error(format!("Cannot parse {} array", val.type_name()))),
         })
     }
-    pub(crate) fn inv_parse(&self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn unparse(&self, env: &Uiua) -> UiuaResult<Self> {
         if self.rank() == 0 {
             return match self {
-                Value::Box(b) => b.as_scalar().unwrap().as_value().inv_parse(env),
+                Value::Box(b) => b.as_scalar().unwrap().as_value().unparse(env),
                 value => Ok(value.format().into()),
             };
         }
@@ -787,7 +787,7 @@ impl Value {
         }
     }
     /// Decode the `bits` of the value
-    pub fn un_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+    pub fn unbits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
             #[cfg(feature = "bytes")]
             Value::Byte(n) => n.inverse_bits(env),
@@ -1075,7 +1075,7 @@ impl Value {
         Ok(Array::<u8>::from_iter(s.into_bytes()).into())
     }
     /// Convert a list of UTF-8 bytes to a string value
-    pub fn un_utf8(&self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn unutf8(&self, env: &Uiua) -> UiuaResult<Self> {
         let bytes = self.as_bytes(env, "Argument to inverse utf must be a list of bytes")?;
         let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
         Ok(s.into())

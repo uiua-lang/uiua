@@ -176,7 +176,7 @@ fn trim_instrs(mut instrs: &[Instr]) -> &[Instr] {
         matches!(
             instr,
             Instr::Prim(Stack | Trace, _)
-                | Instr::ImplPrim(InvStack | InvTrace | BothTrace | InvBothTrace, _)
+                | Instr::ImplPrim(UnStack | UnTrace | BothTrace | UnBothTrace, _)
         )
     };
     while instrs.first().is_some_and(trim) {
@@ -656,17 +656,17 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn invscan(env: &mut Uiua) -> UiuaResult {
+pub fn unscan(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let mut xs = env.pop(1)?;
     if xs.rank() == 0 {
-        return Err(env.error(format!("Cannot {} rank 0 array", ImplPrimitive::InvScan,)));
+        return Err(env.error(format!("Cannot {} rank 0 array", ImplPrimitive::UnScan,)));
     }
     let sig = f.signature();
     if sig != (2, 1) {
         return Err(env.error(format!(
             "{} unscan's function's signature must be |2.1, but it is {sig}",
-            ImplPrimitive::InvScan,
+            ImplPrimitive::UnScan,
         )));
     }
     if xs.row_count() == 0 {

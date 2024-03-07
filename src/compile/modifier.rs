@@ -894,7 +894,7 @@ impl Compiler {
                         });
                         for _ in 0..sig.args - 1 {
                             prefix.extend([
-                                Instr::ImplPrim(ImplPrimitive::InvBox, span),
+                                Instr::ImplPrim(ImplPrimitive::UnBox, span),
                                 Instr::PopTemp {
                                     stack: TempStack::Inline,
                                     count: 1,
@@ -903,7 +903,7 @@ impl Compiler {
                             ]);
                         }
                     }
-                    prefix.push(Instr::ImplPrim(ImplPrimitive::InvBox, span));
+                    prefix.push(Instr::ImplPrim(ImplPrimitive::UnBox, span));
                 }
                 prefix.extend(instrs);
                 finish!(prefix, sig);

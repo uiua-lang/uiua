@@ -1573,7 +1573,7 @@ code:
                     _,
                 ) => return true,
                 Instr::ImplPrim(
-                    ImplPrimitive::InvTrace | ImplPrimitive::InvDump | ImplPrimitive::InvStack,
+                    ImplPrimitive::UnTrace | ImplPrimitive::UnDump | ImplPrimitive::UnStack,
                     _,
                 ) => return true,
                 Instr::PushFunc(f) if self.not_inlinable(f.instrs(self)) => return true,

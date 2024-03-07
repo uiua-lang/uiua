@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Optimize scalar `memeber` and `indexof`
   - Proofread and update tutorial and tour
   - System functions
     - Excel

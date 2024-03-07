@@ -2,19 +2,36 @@
 
 use std::{collections::VecDeque, convert::identity};
 
-use ecow::EcoVec;
+use ecow::{eco_vec, EcoVec};
 
 use crate::{
     algorithm::{loops::flip, pervade::*},
+    check::instrs_signature,
     cowslice::cowslice,
-    Array, ArrayValue, Function, ImplPrimitive, Primitive, Shape, Uiua, UiuaResult, Value,
+    Array, ArrayValue, Function, ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult, Value,
 };
 
 pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let xs = env.pop(1)?;
-
+    if env.value_fill().is_none() {
+        if xs.row_count() == 0 {
+            let val = reduce_identity(f.instrs(env), xs).ok_or_else(|| {
+                env.error(format!(
+                    "Cannot {} empty array. Function has no identity value.",
+                    Primitive::Reduce.format()
+                ))
+            })?;
+            env.push(val);
+            return Ok(());
+        }
+        if xs.row_count() == 1 {
+            let val = reduce_one(f.instrs(env), xs);
+            env.push(val);
+            return Ok(());
+        }
+    }
     match (f.as_flipped_primitive(env), xs) {
         (Some((Primitive::Join, false)), mut xs) if env.value_fill().is_none() => {
             let depth = depth.min(xs.rank());
@@ -148,6 +165,63 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
         (_, xs) => generic_reduce(f, xs, depth, env)?,
     }
     Ok(())
+}
+
+fn reduce_identity(instrs: &[Instr], mut val: Value) -> Option<Value> {
+    use Primitive::*;
+    let mut shape = val.shape().clone();
+    shape.make_row();
+    let len: usize = shape.iter().product();
+    let (first, tail) = instrs.split_first()?;
+    let (last, init) = instrs.split_last()?;
+    let init_sig = || instrs_signature(init).is_ok_and(|sig| sig.args == sig.outputs);
+    let tail_sig = || instrs_signature(tail).is_ok_and(|sig| sig.args == 1 && sig.outputs == 1);
+    Some(match first {
+        Instr::Prim(Join, _) if tail_sig() => {
+            val.shape_mut()[0] = 0;
+            val
+        }
+        _ => match last {
+            Instr::Prim(Add | Sub, _) if init_sig() => Array::new(shape, eco_vec![0u8; len]).into(),
+            Instr::Prim(Mul | Div | Mod, _) if init_sig() => {
+                Array::new(shape, eco_vec![1u8; len]).into()
+            }
+            Instr::Prim(Max, _) if init_sig() => {
+                Array::new(shape, eco_vec![f64::NEG_INFINITY; len]).into()
+            }
+            Instr::Prim(Min, _) if init_sig() => {
+                Array::new(shape, eco_vec![f64::INFINITY; len]).into()
+            }
+            Instr::Prim(Atan, _) if init_sig() => Array::new(shape, eco_vec![0.0; len]).into(),
+            Instr::Prim(Join, _) if init_sig() => {
+                val.shape_mut()[0] = 0;
+                val
+            }
+            Instr::Format { parts, .. } if parts.len() == 3 && init_sig() => {
+                EcoVec::<char>::new().into()
+            }
+            _ => return None,
+        },
+    })
+}
+
+fn reduce_one(instrs: &[Instr], val: Value) -> Value {
+    use Primitive::*;
+    let row = val.row(0);
+    let Some((first, tail)) = instrs.split_first() else {
+        return val;
+    };
+    let (last, init) = instrs.split_last().unwrap();
+    let init_sig = || instrs_signature(init).is_ok_and(|sig| sig.args == sig.outputs);
+    let tail_sig = || instrs_signature(tail).is_ok_and(|sig| sig.args == 1 && sig.outputs == 1);
+    match first {
+        Instr::Prim(Join, _) if tail_sig() => val,
+        _ => match last {
+            Instr::Prim(Join, _) if init_sig() => val,
+            Instr::Format { parts, .. } if init_sig() && parts.len() == 3 => row.format().into(),
+            _ => row,
+        },
+    }
 }
 
 macro_rules! reduce_math {

@@ -358,7 +358,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 
         // Handle really big grid
         if self.rank() > 1 {
-            let max_width = term_size::dimensions().map_or(500, |(w, _)| w);
+            let max_width = term_size::dimensions().map_or(1000, |(w, _)| w);
             for row in grid.iter_mut() {
                 if row.len() > max_width {
                     let diff = row.len() - max_width;

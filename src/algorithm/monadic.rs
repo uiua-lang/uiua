@@ -299,7 +299,7 @@ impl Value {
             |a| a.last(env).map(Into::into),
         )
     }
-    pub(crate) fn unfirst(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn undo_first(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         into.try_map_boxed(|into| {
             self.generic_bin_into(
                 into.unboxed(),
@@ -318,7 +318,7 @@ impl Value {
             )
         })
     }
-    pub(crate) fn unlast(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn undo_last(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         into.try_map_boxed(|into| {
             self.generic_bin_into(
                 into.unboxed(),

@@ -185,7 +185,7 @@ impl Value {
         }
         Ok(())
     }
-    pub(crate) fn unreshape(&mut self, old_shape: &Self, env: &Uiua) -> UiuaResult {
+    pub(crate) fn undo_reshape(&mut self, old_shape: &Self, env: &Uiua) -> UiuaResult {
         if old_shape.as_nat(env, "").is_ok() {
             return Err(env.error("Cannot undo scalar reshae"));
         }
@@ -395,22 +395,21 @@ impl Value {
                     rank,
                     shape.len()
                 )));
-            } else {
-                let new_first_dim: usize = shape[..rank].iter().product();
-                *shape = once(new_first_dim)
-                    .chain(shape[rank..].iter().copied())
-                    .collect();
             }
+            let new_first_dim: usize = shape[..rank].iter().product();
+            *shape = once(new_first_dim)
+                .chain(shape[rank..].iter().copied())
+                .collect();
         }
         self.validate_shape();
         Ok(())
     }
-    pub(crate) fn unrerank(&mut self, rank: &Self, orig_shape: &Self, env: &Uiua) -> UiuaResult {
+    pub(crate) fn undo_rerank(&mut self, rank: &Self, orig_shape: &Self, env: &Uiua) -> UiuaResult {
         if self.rank() == 0 {
             if let Value::Box(arr) = self {
                 arr.data.as_mut_slice()[0]
                     .0
-                    .unrerank(rank, orig_shape, env)?;
+                    .undo_rerank(rank, orig_shape, env)?;
             }
             return Ok(());
         }
@@ -475,7 +474,7 @@ impl Value {
             }
         })
     }
-    pub(crate) fn unkeep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn undo_keep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_nats(
             env,
             "Keep amount must be a natural number \

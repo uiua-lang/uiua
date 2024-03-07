@@ -288,12 +288,12 @@ pub(crate) fn under_instrs(
         // Pop
         &pat!(Pop, (PushTempN(1)), (PopTempN(1))),
         // Array restructuring
-        &maybe_val!(stash2!(Take, Untake)),
-        &maybe_val!(stash2!(Drop, Undrop)),
+        &maybe_val!(stash2!(Take, UndoTake)),
+        &maybe_val!(stash2!(Drop, UndoDrop)),
         &maybe_val!(pat!(
             Keep,
             (CopyToTempN(2), Keep),
-            (PopTempN(1), Flip, PopTempN(1), Unkeep),
+            (PopTempN(1), Flip, PopTempN(1), UndoKeep),
         )),
         &stash1!(Rotate, (Neg, Rotate)),
         &maybe_val!(pat!(
@@ -318,21 +318,21 @@ pub(crate) fn under_instrs(
             (PopTempN(1), Flip, Keep)
         )),
         // Value retrieval
-        &stash1!(First, Unfirst),
-        &stash1!(Last, Unlast),
-        &maybe_val!(stash2!(Pick, Unpick)),
-        &maybe_val!(stash2!(Select, Unselect)),
+        &stash1!(First, UndoFirst),
+        &stash1!(Last, UndoLast),
+        &maybe_val!(stash2!(Pick, UndoPick)),
+        &maybe_val!(stash2!(Select, UndoSelect)),
         // Map control
         &maybe_val!(pat!(
             Get,
             (CopyToTempN(2), Get),
             (PopTempN(1), Flip, PopTempN(1), Insert),
         )),
-        &maybe_val!(stash2!(Remove, Unremove)),
+        &maybe_val!(stash2!(Remove, UndoRemove)),
         &maybe_val!(pat!(
             Insert,
             (CopyToTempN(3), Insert),
-            (PopTempN(3), Uninsert)
+            (PopTempN(3), UndoInsert)
         )),
         // Shaping
         &stash1!(Shape, (Flip, Reshape)),

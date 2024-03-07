@@ -246,7 +246,7 @@ fn multi_partition_indices(markers: Array<isize>) -> Vec<(isize, Vec<usize>)> {
         .collect()
 }
 
-pub fn unpartition_part1(env: &mut Uiua) -> UiuaResult {
+pub fn undo_partition_part1(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let sig = f.signature();
@@ -270,7 +270,7 @@ pub fn unpartition_part1(env: &mut Uiua) -> UiuaResult {
 }
 
 #[allow(clippy::unit_arg)]
-pub fn unpartition_part2(env: &mut Uiua) -> UiuaResult {
+pub fn undo_partition_part2(env: &mut Uiua) -> UiuaResult {
     let untransformed = env.pop(1)?;
     let markers = env
         .pop(2)?
@@ -430,7 +430,7 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
-pub fn ungroup_part1(env: &mut Uiua) -> UiuaResult {
+pub fn undo_group_part1(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let sig = f.signature();
@@ -455,7 +455,7 @@ pub fn ungroup_part1(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn ungroup_part2(env: &mut Uiua) -> UiuaResult {
+pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
     let ungrouped_rows = env.pop(1)?;
     let indices = env
         .pop(2)?

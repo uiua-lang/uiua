@@ -95,7 +95,7 @@ impl Value {
             Value::Box(a) => Value::Box(a.pick(index_shape, &index_data, env)?),
         })
     }
-    pub(crate) fn unpick(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn undo_pick(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let (index_shape, index_data) = index.as_shaped_indices(env)?;
         if index_shape.len() > 1 {
             let last_axis_len = *index_shape.last().unwrap();
@@ -342,7 +342,7 @@ impl Value {
             Value::Box(a) => Value::Box(a.drop(&index, env)?),
         })
     }
-    pub(crate) fn untake(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn undo_take(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let index = index.as_ints(env, "Index must be a list of integers")?;
         self.generic_bin_into(
             into,
@@ -360,7 +360,7 @@ impl Value {
             },
         )
     }
-    pub(crate) fn undrop(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn undo_drop(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let index = index.as_ints(env, "Index must be a list of integers")?;
         self.generic_bin_into(
             into,
@@ -739,7 +739,7 @@ impl Value {
             Value::Box(a) => a.select(indices_shape, &indices_data, env)?.into(),
         })
     }
-    pub(crate) fn unselect(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn undo_select(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let (ind_shape, ind) = index.as_shaped_indices(env)?;
         let mut sorted_indices: Vec<_> = ind.iter().copied().enumerate().collect();
         sorted_indices.sort_unstable_by_key(|(_, index)| *index);

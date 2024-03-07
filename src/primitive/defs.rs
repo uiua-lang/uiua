@@ -1213,6 +1213,9 @@ primitive!(
     /// ex: /+ 1_2_3_4_5
     /// [reduce] goes from left to right. This is important for non-commutative functions like [subtract].
     /// ex: /- 1_2_3_4_5
+    /// [reduce] works on arrays of arbitrary rank. The leading-axis rows will always be iterated over.
+    /// ex: /+ . [1_2_3 4_5_6]
+    /// ex: /+ . [[0_1 1_0] [2_0 0_0] [0_0 0_3]]
     ///
     /// If you want to see the intermediate values, you can use [scan].
     /// ex: /- 1_2_3_4_5

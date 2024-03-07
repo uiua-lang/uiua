@@ -191,8 +191,7 @@ impl Value {
                 self.row_count()
             )));
         }
-        let mut keys = self
-            .take_map_keys()
+        let mut keys = (self.take_map_keys())
             .ok_or_else(|| env.error("Value is not a map"))?;
         for i in &mut keys.indices {
             if *i >= index {
@@ -237,10 +236,7 @@ impl Value {
     }
     /// Return a key's value to what it used to be, including if it didn't exist before
     pub fn undo_insert(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
-        let orig_keys = original
-            .meta()
-            .map_keys
-            .as_ref()
+        let orig_keys = (original.meta().map_keys.as_ref())
             .ok_or_else(|| env.error("Value was not a map"))?;
         if let Some(index) = orig_keys.get(&key) {
             self.insert_at(index.into(), key, original.row(index), env)?;
@@ -282,10 +278,7 @@ impl Value {
     }
     /// Re-insert a key-value pair to a modified map array if it got removed
     pub fn undo_remove(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
-        let keys = original
-            .meta()
-            .map_keys
-            .as_ref()
+        let keys = (original.meta().map_keys.as_ref())
             .ok_or_else(|| env.error("Value wasn't a map"))?;
         if let Some(index) = keys.get(&key) {
             self.insert_at(index.into(), key, original.row(index), env)?;

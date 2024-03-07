@@ -55,6 +55,12 @@ pub enum OutputItem {
     Separator,
 }
 
+impl OutputItem {
+    pub fn is_report(&self) -> bool {
+        matches!(self, OutputItem::Report(_))
+    }
+}
+
 impl SysBackend for WebBackend {
     fn any(&self) -> &dyn Any {
         self

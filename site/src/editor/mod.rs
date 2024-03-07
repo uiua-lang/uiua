@@ -92,6 +92,7 @@ pub fn Editor<'a>(
     ));
 
     let (example, set_example) = create_signal(0);
+    let (diag_output, set_diag_output) = create_signal(View::default());
     let (output, set_output) = create_signal(View::default());
     let (token_count, set_token_count) = create_signal(0);
 
@@ -268,16 +269,22 @@ pub fn Editor<'a>(
                     set_timeout(
                         move || {
                             let output = state().run_code(&input);
-                            let items: Vec<_> =
-                                output.into_iter().map(render_output_item).collect();
+                            let (diags, items): (Vec<_>, Vec<_>) =
+                                output.into_iter().partition(OutputItem::is_report);
+                            let items: Vec<_> = items.into_iter().map(render_output_item).collect();
+                            let diags: Vec<_> = diags.into_iter().map(render_output_item).collect();
                             set_output.set(items.into_view());
-                            state().set_code(&code_text, cursor);
+                            set_diag_output.set(diags.into_view());
                         },
                         Duration::from_millis(200),
                     );
                 } else {
-                    let items: Vec<_> = output.into_iter().map(render_output_item).collect();
+                    let (diags, items): (Vec<_>, Vec<_>) =
+                        output.into_iter().partition(OutputItem::is_report);
+                    let items: Vec<_> = items.into_iter().map(render_output_item).collect();
+                    let diags: Vec<_> = diags.into_iter().map(render_output_item).collect();
                     set_output.set(items.into_view());
+                    set_diag_output.set(diags.into_view());
                 }
             },
             Duration::ZERO,
@@ -1296,38 +1303,43 @@ pub fn Editor<'a>(
                         </div>
                     </div>
                     <div class="output-frame">
-                        <div class="output-wrapper">
-                            <div class="output sized-code">
-                                { move || output.get() }
-                                {state().challenge.as_ref().map(|chal| {
-                                    let intended = chal.intended_answer.clone();
-                                    let click_intended = move|_| {
-                                        state().set_code(&intended, Cursor::Ignore);
-                                    };
-                                    view! {
-                                    <div>
-                                        <hr/>
-                                        <button
-                                            class="glyph-button"
-                                            data-title="Show intended answer"
-                                            on:click=click_intended>
-                                            "📖"
-                                        </button>
-                                        {chal.best_answer.clone().map(|ans| {
-                                            let click_ans = move|_| {
-                                                state().set_code(&ans, Cursor::Ignore);
-                                            };
-                                            view! {
-                                                <button
-                                                    class="glyph-button"
-                                                    data-title="Show idiomatic answer"
-                                                    on:click=click_ans>
-                                                    "💡"
-                                                </button>
-                                            }
-                                        })}
-                                    </div>
-                                }})}
+                        <div>
+                            <div class="output-diagnostics">
+                                { move || diag_output.get() }
+                            </div>
+                            <div class="output-wrapper">
+                                <div class="output sized-code">
+                                    { move || output.get() }
+                                    {state().challenge.as_ref().map(|chal| {
+                                        let intended = chal.intended_answer.clone();
+                                        let click_intended = move|_| {
+                                            state().set_code(&intended, Cursor::Ignore);
+                                        };
+                                        view! {
+                                        <div>
+                                            <hr/>
+                                            <button
+                                                class="glyph-button"
+                                                data-title="Show intended answer"
+                                                on:click=click_intended>
+                                                "📖"
+                                            </button>
+                                            {chal.best_answer.clone().map(|ans| {
+                                                let click_ans = move|_| {
+                                                    state().set_code(&ans, Cursor::Ignore);
+                                                };
+                                                view! {
+                                                    <button
+                                                        class="glyph-button"
+                                                        data-title="Show idiomatic answer"
+                                                        on:click=click_ans>
+                                                        "💡"
+                                                    </button>
+                                                }
+                                            })}
+                                        </div>
+                                    }})}
+                                </div>
                             </div>
                         </div>
                         <div id="code-buttons">

@@ -166,7 +166,7 @@ pub fn each(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let sig = f.signature();
     match sig.args {
-        0 => Ok(()),
+        0 => env.call(f),
         1 => each1(f, env.pop(1)?, env),
         2 => each2(f, env.pop(1)?, env.pop(2)?, env),
         n => {
@@ -377,7 +377,7 @@ pub fn rows(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let sig = f.signature();
     match sig.args {
-        0 => Ok(()),
+        0 => env.call(f),
         1 => rows1(f, env.pop(1)?, env),
         2 => rows2(f, env.pop(1)?, env.pop(2)?, env),
         n => {
@@ -664,6 +664,7 @@ pub fn inventory(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let sig = f.signature();
     match sig.args {
+        0 => env.call(f),
         1 => inventory1(f, env.pop(1)?, env),
         2 => invertory2(f, env.pop(1)?, env.pop(2)?, env),
         n => {

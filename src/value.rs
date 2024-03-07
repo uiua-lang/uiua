@@ -1091,7 +1091,7 @@ impl Value {
     pub fn unbox(&mut self) {
         if let Value::Box(boxed) = self {
             if boxed.rank() == 0 {
-                *self = take(boxed).data.into_iter().next().unwrap().0;
+                *self = boxed.data.modify(|data| data.remove(0)).0;
             }
         }
     }

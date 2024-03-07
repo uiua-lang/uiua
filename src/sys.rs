@@ -49,7 +49,8 @@ macro_rules! sys_op {
         $(#[doc = $doc:literal])*
         (
             $args:literal$(($outputs:expr))?$([$mod_args:expr])?,
-            $variant:ident, $class:ident, $name:literal, $long_name:literal $(,$pure:vis pure)*
+            $variant:ident, $class:ident, $name:literal, $long_name:literal
+            $(,($pure:ident))* $(,[$mutating:ident])*
         )
     ),* $(,)?) => {
         /// A system function
@@ -120,7 +121,14 @@ macro_rules! sys_op {
             /// Whether the system function is pure
             pub fn is_pure(&self) -> bool {
                 match self {
-                    $($(SysOp::$variant => {$pure true},)*)*
+                    $($(SysOp::$variant => {stringify!($pure); true},)*)*
+                    _ => false
+                }
+            }
+            /// Whether the system function mutates the system
+            pub fn is_mutating(&self) -> bool {
+                match self {
+                    $($(SysOp::$variant => {stringify!($mutating); true},)*)*
                     _ => false
                 }
             }
@@ -163,7 +171,7 @@ sys_op! {
     /// The normal output is a string.
     /// If EOF is reached, the number `0` is returned instead.
     /// Programs that wish to properly handle EOF should check for this.
-    (0, ScanLine, StdIO, "&sc", "scan line"),
+    (0, ScanLine, StdIO, "&sc", "scan line", [mutating]),
     /// Get the size of the terminal
     ///
     /// The result is a 2-element array of the height and width of the terminal.
@@ -176,7 +184,7 @@ sys_op! {
     ///
     /// [&sc] will still work, but it will not return until the user presses enter.
     /// To get individual characters, use [&rs] or [&rb] with a count of `1` and a handle of `0`, which is stdin.
-    (1(0), RawMode, Env, "&raw", "set raw mode"),
+    (1(0), RawMode, Env, "&raw", "set raw mode", [mutating]),
     /// Get the command line arguments
     ///
     /// The first element will always be the name of your script
@@ -191,13 +199,13 @@ sys_op! {
     /// Standard IO will be inherited. Returns the exit code of the command.
     ///
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
-    (1, RunInherit, Command, "&runi", "run command inherit"),
+    (1, RunInherit, Command, "&runi", "run command inherit", [mutating]),
     /// Run a command and wait for it to finish
     ///
     /// Standard IO will be captured. The exit code, stdout, and stderr will each be pushed to the stack.
     ///
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
-    (1(3), RunCapture, Command, "&runc", "run command capture"),
+    (1(3), RunCapture, Command, "&runc", "run command capture", [mutating]),
     /// Run a command with streaming IO
     ///
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
@@ -207,9 +215,9 @@ sys_op! {
     /// Stderr will be inherited.
     /// Using [&cl] on the handle will kill the child process.
     /// [under][&runs] calls [&cl] automatically.
-    (1, RunStream, Command, "&runs", "run command stream"),
+    (1, RunStream, Command, "&runs", "run command stream", [mutating]),
     /// Change the current directory
-    (1(0), ChangeDirectory, Filesystem, "&cd", "change directory"),
+    (1(0), ChangeDirectory, Filesystem, "&cd", "change directory", [mutating]),
     /// Get the contents of the clipboard
     ///
     /// Returns a string of the clipboard's contents.
@@ -223,36 +231,36 @@ sys_op! {
     /// ex: &clset +@A⇡6 # Try running then pasting!
     ///
     /// See also: [&clget]
-    (1(0), ClipboardSet, Misc, "&clset", "set clipboard contents"),
+    (1(0), ClipboardSet, Misc, "&clset", "set clipboard contents", [mutating]),
     /// Sleep for n seconds
     ///
     /// On the web, this example will hang for 1 second.
     /// ex: ⚂ &sl 1
-    (1(0), Sleep, Misc, "&sl", "sleep"),
+    (1(0), Sleep, Misc, "&sl", "sleep", [mutating]),
     /// Read at most n bytes from a stream
     ///
     /// Expects a count and a stream handle.
     /// The stream handle `0` is stdin.
     /// Using [infinity] as the count will read until the end of the stream.
-    (2, ReadStr, Stream, "&rs", "read to string"),
+    (2, ReadStr, Stream, "&rs", "read to string", [mutating]),
     /// Read at most n bytes from a stream
     ///
     /// Expects a count and a stream handle.
     /// The stream handle `0` is stdin.
     /// Using [infinity] as the count will read until the end of the stream.
-    (2, ReadBytes, Stream, "&rb", "read to bytes"),
+    (2, ReadBytes, Stream, "&rb", "read to bytes", [mutating]),
     /// Read from a stream until a delimiter is reached
     ///
     /// Expects a delimiter and a stream handle.
     /// The result will be a rank-`1` byte or character array. The type will match the type of the delimiter.
     /// The stream handle `0` is stdin.
-    (2, ReadUntil, Stream, "&ru", "read until"),
+    (2, ReadUntil, Stream, "&ru", "read until", [mutating]),
     /// Write an array to a stream
     ///
     /// If the stream is a file, the file may not be written to until it is closed with [&cl].
     /// The stream handle `1` is stdout.
     /// The stream handle `2` is stderr.
-    (2(0), Write, Stream, "&w", "write"),
+    (2(0), Write, Stream, "&w", "write", [mutating]),
     /// Import an item from a file
     ///
     /// The first argument is the path to the file. The second is the name of the item to import.
@@ -268,11 +276,11 @@ sys_op! {
     /// ex! &i "example.ua" "Double" 5
     (2, Import, Filesystem, "&i", "import"),
     /// Invoke a path with the system's default program
-    (1(1), Invoke, Command, "&invk", "invoke"),
+    (1(1), Invoke, Command, "&invk", "invoke", [mutating]),
     /// Close a stream by its handle
     ///
     /// This will close files, tcp listeners, and tcp sockets.
-    (1(0), Close, Stream, "&cl", "close handle"),
+    (1(0), Close, Stream, "&cl", "close handle", [mutating]),
     /// Open a file and return a handle to it
     ///
     /// The file can be read from with [&rs], [&rb], or [&ru].
@@ -286,18 +294,18 @@ sys_op! {
     /// The file can be written to with [&w].
     /// In some cases, the file may not be actually written to until it is closed with [&cl].
     /// [under][&fc] calls [&cl] automatically.
-    (1, FCreate, Filesystem, "&fc", "file - create"),
+    (1, FCreate, Filesystem, "&fc", "file - create", [mutating]),
     /// Delete a file or directory
     ///
     /// Deletes the file or directory at the given path.
     /// Be careful with this function, as deleted files and directories cannot be recovered!
     /// For a safer alternative, see [&ftr].
-    (1(0), FDelete, Filesystem, "&fde", "file - delete"),
+    (1(0), FDelete, Filesystem, "&fde", "file - delete", [mutating]),
     /// Move a file or directory to the trash
     ///
     /// Moves the file or directory at the given path to the trash.
     /// This is a safer alternative to [&fde].
-    (1(0), FTrash, Filesystem, "&ftr", "file - trash"),
+    (1(0), FTrash, Filesystem, "&ftr", "file - trash", [mutating]),
     /// Check if a file exists at a path
     (1, FExists, Filesystem, "&fe", "file - exists"),
     /// List the contents of a directory
@@ -340,14 +348,14 @@ sys_op! {
     /// ex: Path ← "test.txt"
     ///   : &fwa Path +@A⇡26
     ///   : &fras Path
-    (2(0), FWriteAll, Filesystem, "&fwa", "file - write all"),
+    (2(0), FWriteAll, Filesystem, "&fwa", "file - write all", [mutating]),
     /// Decode an image from a byte array
     ///
     /// Returns the image format as a string and a rank-`3` numeric array.
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, `ico`, and `qoi`.
     ///
     /// See also: [&ime]
-    (1(2), ImDecode, Images, "&imd", "image - decode", pure),
+    (1(2), ImDecode, Images, "&imd", "image - decode", (pure)),
     /// Encode an image into a byte array with the specified format
     ///
     /// The first argument is the format, and the second is the image.
@@ -367,7 +375,7 @@ sys_op! {
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, `ico`, and `qoi`.
     ///
     /// See also: [&ims]
-    (2, ImEncode, Images, "&ime", "image - encode", pure),
+    (2, ImEncode, Images, "&ime", "image - encode", (pure)),
     /// Show an image
     ///
     /// How the image is shown depends on the system backend.
@@ -386,13 +394,13 @@ sys_op! {
     /// A length 4 last axis is an RGB image with an alpha channel.
     ///
     /// See also: [&ime]
-    (1(0), ImShow, Images, "&ims", "image - show"),
+    (1(0), ImShow, Images, "&ims", "image - show", [mutating]),
     /// Decode a gif from a byte array
     ///
     /// Returns a framerate in seconds and a rank 4 array of RGBA frames.
     ///
     /// See also: [&gife]
-    (1(2), GifDecode, Gifs, "&gifd", "gif - decode", pure),
+    (1(2), GifDecode, Gifs, "&gifd", "gif - decode", (pure)),
     /// Encode a gif into a byte array
     ///
     /// The first argument is a framerate in seconds.
@@ -402,7 +410,7 @@ sys_op! {
     /// You can decode a byte array into a gif with [un][&gife].
     ///
     /// See also: [&gifs]
-    (2, GifEncode, Gifs, "&gife", "gif - encode", pure),
+    (2, GifEncode, Gifs, "&gife", "gif - encode", (pure)),
     /// Show a gif
     ///
     /// The first argument is a framerate in seconds.
@@ -410,14 +418,14 @@ sys_op! {
     /// The rows of the array are the frames of the gif, and their format must conform to that of [&ime].
     ///
     /// See also: [&gife]
-    (2(0), GifShow, Gifs, "&gifs", "gif - show"),
+    (2(0), GifShow, Gifs, "&gifs", "gif - show", [mutating]),
     /// Decode audio from a byte array
     ///
     /// Returns the audio format as a string and an array representing the audio samples.
     /// Only the `wav` format is supported.
     ///
     /// See also: [&ae]
-    (1(2), AudioDecode, Audio, "&ad", "audio - decode", pure),
+    (1(2), AudioDecode, Audio, "&ad", "audio - decode", (pure)),
     /// Encode audio into a byte array
     ///
     /// The first argument is the format, and the second is the audio samples.
@@ -435,7 +443,7 @@ sys_op! {
     /// Only the `wav` format is supported.
     ///
     /// See also: [&ap]
-    (2, AudioEncode, Audio, "&ae", "audio - encode", pure),
+    (2, AudioEncode, Audio, "&ae", "audio - encode", (pure)),
     /// Play some audio
     ///
     /// The audio must be a rank 1 or 2 numeric array.
@@ -447,7 +455,7 @@ sys_op! {
     /// The sample rate is [&asr].
     ///
     /// See also: [&ae]
-    (1(0), AudioPlay, Audio, "&ap", "audio - play"),
+    (1(0), AudioPlay, Audio, "&ap", "audio - play", [mutating]),
     /// Get the sample rate of the audio output backend
     ///
     /// ex: &asr
@@ -475,27 +483,27 @@ sys_op! {
     ///   : &ast(÷3/+[⊃(Hat|Kick|Hit|Bass)]×Sp)
     /// On the web, this will simply use the function to generate a fixed amount of audio.
     /// How long the audio is can be configure in the editor settings.
-    (0(0)[1], AudioStream, Audio, "&ast", "audio - stream"),
+    (0(0)[1], AudioStream, Audio, "&ast", "audio - stream", [mutating]),
     /// Create a TCP listener and bind it to an address
-    (1, TcpListen, Tcp, "&tcpl", "tcp - listen"),
+    (1, TcpListen, Tcp, "&tcpl", "tcp - listen", [mutating]),
     /// Accept a connection with a TCP listener
     ///
     /// Returns a stream handle
     /// [under][&tcpl] calls [&cl] automatically.
-    (1, TcpAccept, Tcp, "&tcpa", "tcp - accept"),
+    (1, TcpAccept, Tcp, "&tcpa", "tcp - accept", [mutating]),
     /// Create a TCP socket and connect it to an address
     ///
     /// Returns a stream handle
     /// [under][&tcpc] calls [&cl] automatically.
-    (1, TcpConnect, Tcp, "&tcpc", "tcp - connect"),
+    (1, TcpConnect, Tcp, "&tcpc", "tcp - connect", [mutating]),
     /// Set a TCP socket to non-blocking mode
-    (1, TcpSetNonBlocking, Tcp, "&tcpsnb", "tcp - set non-blocking"),
+    (1, TcpSetNonBlocking, Tcp, "&tcpsnb", "tcp - set non-blocking", [mutating]),
     /// Set the read timeout of a TCP socket in seconds
-    (2(0), TcpSetReadTimeout, Tcp, "&tcpsrt", "tcp - set read timeout"),
+    (2(0), TcpSetReadTimeout, Tcp, "&tcpsrt", "tcp - set read timeout", [mutating]),
     /// Set the write timeout of a TCP socket in seconds
-    (2(0), TcpSetWriteTimeout, Tcp, "&tcpswt", "tcp - set write timeout"),
+    (2(0), TcpSetWriteTimeout, Tcp, "&tcpswt", "tcp - set write timeout", [mutating]),
     /// Get the connection address of a TCP socket
-    (1, TcpAddr, Tcp, "&tcpaddr", "tcp - address"),
+    (1, TcpAddr, Tcp, "&tcpaddr", "tcp - address", [mutating]),
     /// Make an HTTP request
     ///
     /// Takes in an 1.x HTTP request and returns an HTTP response.
@@ -516,7 +524,7 @@ sys_op! {
     /// - 2 trailing newlines (if there is no body)
     /// - The HTTP version
     /// - The `Host` header (if not defined)
-    (2, HttpsWrite, Tcp, "&httpsw", "http - Make an HTTP request"),
+    (2, HttpsWrite, Tcp, "&httpsw", "http - Make an HTTP request", [mutating]),
     /// Call a foreign function interface
     ///
     /// *Warning ⚠️: Using FFI is deeply unsafe. Calling a function incorrectly is undefined behavior.*
@@ -583,7 +591,7 @@ sys_op! {
     ///
     /// Coverage of types that are supported for binding is currently best-effort.
     /// If you encounter a type that you need support for, please [open an issue](https://github.com/uiua-lang/uiua/issues/new).
-    (2, FFI, Misc, "&ffi", "foreign function interface"),
+    (2, FFI, Misc, "&ffi", "foreign function interface", [mutating]),
 }
 
 /// A handle to an IO stream

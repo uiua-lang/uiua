@@ -14,7 +14,7 @@ use crate::{
     lex::CodeSpan,
     primitive::{ImplPrimitive, Primitive},
     value::Value,
-    Assembly, Global, Ident, SysOp,
+    Assembly, Global, Ident,
 };
 
 /// A Uiua bytecode instruction
@@ -292,7 +292,6 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], env: &impl AsRef<Assembly>) -> b
 /// Whether some instructions can be propertly bounded by the runtime execution limit
 pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], env: &impl AsRef<Assembly>) -> bool {
     use Primitive::*;
-    use SysOp::*;
     for instr in instrs {
         match instr {
             Instr::CallGlobal { index, .. } => {
@@ -308,11 +307,8 @@ pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], env: &impl AsRef<Assemb
                     }
                 }
             }
-            Instr::Prim(
-                Send | Recv | Sys(ReadBytes) | Sys(ReadUntil) | Sys(Write) | Sys(TcpAccept)
-                | Sys(HttpsWrite),
-                _,
-            ) => return false,
+            Instr::Prim(Send | Recv, _) => return false,
+            Instr::Prim(Sys(op), _) if op.is_mutating() => return false,
             Instr::PushFunc(f) => {
                 if f.recursive || !instrs_are_limit_bounded(f.instrs(env.as_ref()), env.as_ref()) {
                     return false;

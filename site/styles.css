@@ -519,13 +519,16 @@ input[type=number] {
 }
 
 .output-frame {
-    position: relative;
     display: flex;
     justify-content: space-between;
+    min-height: 1.9em;
+}
+
+.output-lines {
+    overflow-x: auto;
 }
 
 .output-diagnostics {
-    display: inline-block;
     white-space: pre-wrap;
     margin-left: 1.75em;
     padding: 0.3em 0;
@@ -535,16 +538,19 @@ input[type=number] {
 .output-wrapper {
     transform: rotateX(180deg);
     overflow-x: auto;
-    min-height: 1.9em;
 }
 
 .output {
-    display: inline-block;
     white-space: pre;
     margin-left: 1.75em;
-    padding: 0.3em 0;
+    padding: 0.4em 0;
     font-family: "Code Font", monospace;
     transform: rotateX(180deg);
+}
+
+.output:empty,
+.output-diagnostics:empty {
+    display: none;
 }
 
 .output-item,
@@ -553,7 +559,6 @@ input[type=number] {
 }
 
 #code-buttons {
-    position: absolute;
     margin: 0.2em 0.2em 0.2em 0;
     display: flex;
     flex-wrap: nowrap;

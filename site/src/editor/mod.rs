@@ -1303,7 +1303,7 @@ pub fn Editor<'a>(
                         </div>
                     </div>
                     <div class="output-frame">
-                        <div>
+                        <div class="output-lines">
                             <div class="output-diagnostics">
                                 { move || diag_output.get() }
                             </div>

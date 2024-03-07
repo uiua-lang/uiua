@@ -1,9 +1,9 @@
 # Uiua Todo
 
 - 0.10
-  - Fix signature bugs in `try`
   - Specialization for `both` `rerank`
   - `fill`ed `un` `drop`
+  - Use `‿` for function strands, format from `__`
   - Better span serialization
   - Planet expressions?
   - Proofread and update tutorial and tour

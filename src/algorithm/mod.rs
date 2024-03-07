@@ -587,6 +587,11 @@ pub fn try_(env: &mut Uiua) -> UiuaResult {
             but their signatures are {f_sig} and {handler_sig} respectively."
         )));
     }
+    if env.stack_height() < f_sig.args {
+        for i in 0..f_sig.args {
+            env.pop(i + 1)?;
+        }
+    }
     let backup_count = if handler_sig.args == 0 || handler_sig.args == 1 {
         0
     } else {

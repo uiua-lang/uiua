@@ -1838,6 +1838,9 @@ primitive!(
     /// Because array construction is implemented in terms of [couple] and [join], [fill] can be used when building arrays.
     /// ex: ⬚0[1 2_3 4_5_6]
     ///
+    /// This also means that modifiers like [rows] and [each] work with [fill].
+    /// ex: ⬚∞≡⇡ [4 5 8]
+    ///
     /// [fill] also works with pervasive operations where the shapes don't match.
     /// ex: ⬚0+ 1_2_3 10_9_8_7_6_5
     ///

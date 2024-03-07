@@ -787,7 +787,7 @@ impl Value {
         }
     }
     /// Decode the `bits` of the value
-    pub fn inv_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+    pub fn un_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
             #[cfg(feature = "bytes")]
             Value::Byte(n) => n.inverse_bits(env),
@@ -997,11 +997,11 @@ impl Value {
         }
     }
     /// `un` `where`
-    pub fn inv_where(&self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn unwhere(&self, env: &Uiua) -> UiuaResult<Self> {
+        const INDICES_ERROR: &str = "Argument to ° un ⊚ where must be an array of naturals";
         Ok(match self.shape().dims() {
             [] | [_] => {
-                let indices =
-                    self.as_nats(env, "Argument to inverse where must be a list of naturals")?;
+                let indices = self.as_nats(env, INDICES_ERROR)?;
                 let is_sorted = indices
                     .iter()
                     .zip(indices.iter().skip(1))
@@ -1034,10 +1034,7 @@ impl Value {
                 Array::from(data).into()
             }
             [_, trailing] => {
-                let indices = self.as_natural_array(
-                    env,
-                    "Argument to inverse where must be an array of naturals",
-                )?;
+                let indices = self.as_natural_array(env, INDICES_ERROR)?;
                 let mut counts: HashMap<&[usize], usize> = HashMap::new();
                 for row in indices.row_slices() {
                     *counts.entry(row).or_default() += 1;
@@ -1078,7 +1075,7 @@ impl Value {
         Ok(Array::<u8>::from_iter(s.into_bytes()).into())
     }
     /// Convert a list of UTF-8 bytes to a string value
-    pub fn inv_utf8(&self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn un_utf8(&self, env: &Uiua) -> UiuaResult<Self> {
         let bytes = self.as_bytes(env, "Argument to inverse utf must be a list of bytes")?;
         let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
         Ok(s.into())

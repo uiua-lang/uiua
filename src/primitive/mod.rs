@@ -906,9 +906,9 @@ impl ImplPrimitive {
                 let from = env.pop(2)?;
                 env.push(from.unlast(into, env)?);
             }
-            ImplPrimitive::InvWhere => env.monadic_ref_env(Value::inv_where)?,
-            ImplPrimitive::InvUtf => env.monadic_ref_env(Value::inv_utf8)?,
-            ImplPrimitive::InverseBits => env.monadic_ref_env(Value::inv_bits)?,
+            ImplPrimitive::InvWhere => env.monadic_ref_env(Value::un_where)?,
+            ImplPrimitive::InvUtf => env.monadic_ref_env(Value::un_utf8)?,
+            ImplPrimitive::InverseBits => env.monadic_ref_env(Value::un_bits)?,
             ImplPrimitive::Unpartition1 => loops::unpartition_part1(env)?,
             ImplPrimitive::Unpartition2 => loops::unpartition_part2(env)?,
             ImplPrimitive::Ungroup1 => loops::ungroup_part1(env)?,

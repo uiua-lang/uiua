@@ -76,7 +76,7 @@ pub fn Editor<'a>(
             .max()
             .unwrap()
     };
-    let code_height_em = code_max_lines as f32 * 1.2;
+    let code_height_em = code_max_lines as f32 * 1.25;
 
     let code_id = move || format!("code{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
@@ -1043,8 +1043,8 @@ pub fn Editor<'a>(
     let line_numbers = move || {
         (0..line_count.get().max(1))
             .map(|i| {
-                view!( <div>
-                    <span class="code-span line-number">{i + 1}</span>
+                view!( <div class="code-line">
+                    <span class="code-span">{i + 1}</span>
                 </div>)
             })
             .collect::<Vec<_>>()

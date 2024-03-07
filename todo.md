@@ -1,8 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Non-scalar `repeat`
-  - Better span serialization
   - Planet expressions?
   - Proofread and update tutorial and tour
   - System functions

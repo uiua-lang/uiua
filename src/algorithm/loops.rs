@@ -3,7 +3,7 @@
 use crate::{
     array::{Array, ArrayValue},
     value::Value,
-    Boxed, Primitive, Shape, Signature, Uiua, UiuaResult,
+    Boxed, Function, Primitive, Shape, Signature, Uiua, UiuaResult,
 };
 
 use super::multi_output;
@@ -15,11 +15,69 @@ pub fn flip<A, B, C>(f: impl Fn(A, B) -> C + Copy) -> impl Fn(B, A) -> C + Copy 
 pub fn repeat(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
-    let n = env
-        .pop("repetition count")?
-        .as_num(env, "Repetitions must be a natural number or infinity")?;
+    let n = env.pop("repetition count")?;
+    let n = match n {
+        Value::Num(n) => n,
+        #[cfg(feature = "bytes")]
+        Value::Byte(n) => n.convert(),
+        val => {
+            return Err(env.error(format!(
+                "Repetitions must be a scalar or list of \
+                natural numbers or infinity, \
+                but it is {}",
+                val.type_name_plural()
+            )))
+        }
+    };
+    if n.rank() == 0 {
+        // Scalar repeat
+        repeat_impl(f, n.data[0], env)
+    } else {
+        // Non-scalar repeat
+        let sig = f.signature();
+        // Collect arguments
+        let mut args_rows: Vec<_> = Vec::with_capacity(sig.args);
+        for i in 0..sig.args {
+            let arg = env.pop(i + 1)?;
+            if !arg.shape().starts_with(n.shape()) {
+                return Err(env.error(format!(
+                    "The repetitions' shape {} is not compatible \
+                    with the argument {}'s shape {}",
+                    n.shape(),
+                    i + 1,
+                    arg.shape(),
+                )));
+            }
+            let row_shape = Shape::from(&arg.shape()[n.rank()..]);
+            args_rows.push(arg.into_row_shaped_slices(row_shape));
+        }
+        args_rows.reverse();
+        let mut outputs = multi_output(sig.outputs, Vec::with_capacity(n.data.len()));
+        // Repeate with each repetition count
+        for n in n.data {
+            for arg in args_rows.iter_mut().rev() {
+                env.push(arg.next().unwrap());
+            }
+            repeat_impl(f.clone(), n, env)?;
+            for i in 0..sig.outputs {
+                outputs[i].push(env.pop("repeat's output")?);
+            }
+        }
+        // Collect outputs
+        for output in outputs.into_iter().rev() {
+            let mut new_value = Value::from_row_values(output, env)?;
+            let mut new_shape = n.shape.clone();
+            new_shape.extend_from_slice(&new_value.shape()[1..]);
+            *new_value.shape_mut() = new_shape;
+            env.push(new_value);
+        }
+        Ok(())
+    }
+}
 
+fn repeat_impl(f: Function, n: f64, env: &mut Uiua) -> UiuaResult {
     if n.is_infinite() {
+        // Converging repeat
         let sig = f.signature();
         if sig.args == 0 {
             return Err(env.error(format!(
@@ -49,6 +107,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
             }
         }
     } else {
+        // Normal repeat
         if n < 0.0 || n.fract() != 0.0 {
             return Err(env.error("Repetitions must be a natural number or infinity"));
         }

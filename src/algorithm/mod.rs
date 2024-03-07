@@ -549,6 +549,7 @@ pub fn switch(
             })
             .collect();
         let mut outputs = multi_output(sig.outputs, Vec::new());
+        // Switch with each selector element
         for elem in selector.data {
             let (f, args) = &functions[elem];
             for (i, arg) in args_rows.iter_mut().rev().enumerate().rev() {
@@ -562,6 +563,7 @@ pub fn switch(
                 outputs[i].push(env.pop("switch output")?);
             }
         }
+        // Collect output
         for output in outputs.into_iter().rev() {
             let mut new_value = Value::from_row_values(output, env)?;
             let mut new_shape = selector.shape.clone();

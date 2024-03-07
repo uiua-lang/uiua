@@ -1386,12 +1386,12 @@ primitive!(
     ///
     /// ex: ⍥(+2)5 0
     /// ex: ⍥(⊂2)5 []
-    /// One interesting use of `repeat` is to collect some number of stack values into an array.
-    /// ex: ⍥⊂3 [] 1 2 3
     /// Repeating [infinity] times will do a fixed-point iteration.
     /// The loop will end when the top value of the function's output is equal to the top value of the function's input.
     /// For example, this could be used to flatten a deeply nested array.
     /// ex: ⍥/◇⊂∞ {1 {2 3} {4 {5 6 {7}}}}
+    /// The number of repetitions may be non-scalar. In this case, the function will be repeated each row of the input a different number of times.
+    /// ex: ⍥(×2) [1 2 3 4] [5 5 5 5]
     ///
     /// [repeat]'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation.
     ([1], Repeat, IteratingModifier, ("repeat", '⍥')),

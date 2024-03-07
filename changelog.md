@@ -25,6 +25,8 @@ This version is not yet released. If you are reading this on the website, then t
 - [`rotate ↻`](https://uiua.org/docs/rotate) now works through boxes
 - [`fold ∧`](https://uiua.org/docs/fold) now works with [`under ⍜`](https://uiua.org/docs/under) if its function does
 - [`inventory ⍚`](https://uiua.org/docs/inventory) can now take 3 or more arrays
+- [`repeat ⍥`](https://uiua.org/docs/repeat) can now take non-scalar repetition counts
+  - This repeats the function a different numbers on rows of the inputs
 - [`drop ↘`](https://uiua.org/docs/drop) can now be used with [`un °`](https://uiua.org/docs/un) if a [`fill ⬚`](https://uiua.org/docs/fill) is set
 - Characters can now be [`multiply ×`](https://uiua.org/docs/multiply)d or [`divide ÷`](https://uiua.org/docs/divide)d by numbers to possibly toggle their case
 - Add the [`csv`](https://uiua.org/docs/csv) function, which encodes and decodes CSV data

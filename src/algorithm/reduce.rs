@@ -1,6 +1,6 @@
 //! Algorithms for reducing modifiers
 
-use std::{collections::VecDeque, convert::identity};
+use std::{collections::VecDeque, convert::identity, iter::repeat};
 
 use ecow::{eco_vec, EcoVec};
 
@@ -361,6 +361,7 @@ where
                 arr.data.extend(Some(identity));
             }
             arr.shape = Shape::default();
+            arr.validate_shape();
             arr
         }
         (_, 0) => {
@@ -390,6 +391,7 @@ where
             });
             arr.data.truncate(row_len);
             arr.shape.remove(0);
+            arr.validate_shape();
             arr
         }
         (_, depth) => {
@@ -399,9 +401,7 @@ where
             let data_slice = arr.data.as_mut_slice();
             if chunk_len == 0 {
                 let val = default.unwrap_or(identity);
-                for i in 0..chunk_len {
-                    data_slice[i] = val;
-                }
+                arr.data = repeat(val).take(chunk_count * chunk_row_len).collect();
             } else {
                 for c in 0..chunk_count {
                     let chunk_start = c * chunk_len;
@@ -421,9 +421,10 @@ where
                     data_slice
                         .copy_within(chunk_start..chunk_start + chunk_row_len, c * chunk_row_len);
                 }
+                arr.data.truncate(chunk_count * chunk_row_len);
             }
-            arr.data.truncate(chunk_count * chunk_row_len);
             arr.shape.remove(depth);
+            arr.validate_shape();
             arr
         }
     }
@@ -914,6 +915,7 @@ where
             }
             arr.data.truncate(arr.data.len() - (n - 1));
             arr.shape[0] -= n - 1;
+            arr.validate_shape();
             Ok(arr)
         }
         _ => {
@@ -936,6 +938,7 @@ where
             }
             arr.data.truncate(arr.data.len() - (n - 1) * row_len);
             arr.shape[0] -= n - 1;
+            arr.validate_shape();
             Ok(arr)
         }
     }

@@ -473,10 +473,7 @@ code:
         };
         lines = unsplit_words(lines.into_iter().flat_map(split_words));
         for line in lines {
-            if line.is_empty() {
-                continue;
-            }
-            if !(can_run || words_should_run_anyway(&line)) {
+            if line.is_empty() || !can_run && !words_should_run_anyway(&line) {
                 continue;
             }
             let span =
@@ -492,7 +489,8 @@ code:
             });
             // Compile the words
             let instr_count_before = self.asm.instrs.len();
-            let mut instrs = self.compile_words(line, true)?;
+            let instrs = self.compile_words(line, true)?;
+            let mut instrs = self.pre_eval_instrs(instrs);
             match instrs_signature(&instrs) {
                 Ok(sig) => {
                     // Update scope stack height
@@ -546,7 +544,7 @@ code:
                 Err(e) => self.scope.stack_height = Err(span.sp(e)),
             }
             let start = self.asm.instrs.len();
-            (self.asm.instrs).extend(optimize_instrs(instrs, true, &self.asm));
+            (self.asm.instrs).extend(instrs);
             let end = self.asm.instrs.len();
             self.asm.top_slices.push(FuncSlice {
                 start,
@@ -561,8 +559,7 @@ code:
         I: IntoIterator<Item = Instr> + fmt::Debug,
         I::IntoIter: ExactSizeIterator,
     {
-        let instrs = optimize_instrs(instrs, true, &self.asm);
-        let instrs = self.pre_eval_instrs(instrs);
+        let instrs = self.pre_eval_instrs(instrs.into_iter().collect());
         let len = instrs.len();
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
@@ -1705,7 +1702,10 @@ code:
     }
     fn pre_eval_instrs(&mut self, instrs: EcoVec<Instr>) -> EcoVec<Instr> {
         use Primitive::*;
-        if self.pre_eval_mode == PreEvalMode::Lazy {
+        let instrs = optimize_instrs(instrs, true, &self.asm);
+        if self.pre_eval_mode == PreEvalMode::Lazy
+            || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
+        {
             return instrs;
         }
         let mut start = 0;
@@ -1713,7 +1713,29 @@ code:
         'start: while start < instrs.len() {
             for end in (start + 1..=instrs.len()).rev() {
                 let section = &instrs[start..end];
-                if (section.last()).is_some_and(|instr| matches!(instr, Instr::PushFunc(_)))
+                let begin_array_pos =
+                    (section.iter()).position(|instr| matches!(instr, Instr::BeginArray));
+                let begin_array_count = section
+                    .iter()
+                    .filter(|instr| matches!(instr, Instr::BeginArray))
+                    .count();
+                let end_array_pos =
+                    (section.iter()).position(|instr| matches!(instr, Instr::EndArray { .. }));
+                let end_array_count = section
+                    .iter()
+                    .filter(|instr| matches!(instr, Instr::EndArray { .. }))
+                    .count();
+                let array_allowed = begin_array_count == end_array_count
+                    && match (begin_array_pos, end_array_pos) {
+                        (Some(0), Some(end)) => end == section.len() - 1,
+                        (None, None) => true,
+                        _ => false,
+                    };
+                if !array_allowed
+                    || matches!(
+                        section.last().unwrap(),
+                        Instr::PushFunc(_) | Instr::BeginArray
+                    )
                     || section.iter().all(|instr| matches!(instr, Instr::Push(_)))
                     || (section.iter())
                         .any(|instr| matches!(instr, Instr::Prim(SetInverse | SetUnder, _)))
@@ -1725,8 +1747,12 @@ code:
                         sig.args == 0 && sig.outputs > 0 && temps.iter().all(|&sig| sig == (0, 0))
                     })
                 {
+                    // println!("section: {section:?}");
                     match self.comptime_instrs(section.into()) {
                         Ok(Some(values)) => {
+                            for val in &values {
+                                val.validate_shape();
+                            }
                             let new_instrs =
                                 new_instrs.get_or_insert_with(|| instrs[..start].into());
                             new_instrs.extend(values.into_iter().map(Instr::Push));
@@ -1745,6 +1771,9 @@ code:
             }
             start += 1;
         }
+        // if let Some(new_instrs) = &new_instrs {
+        //     println!("eval: {new_instrs:?}")
+        // }
         new_instrs.unwrap_or(instrs)
     }
     fn comptime_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult<Option<Vec<Value>>> {

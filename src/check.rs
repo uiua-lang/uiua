@@ -276,11 +276,20 @@ impl<'a> VirtualEnv<'a> {
             }
             Instr::Label { .. } => self.handle_args_outputs(1, 1)?,
             Instr::PushFunc(f) => self.function_stack.push(Cow::Borrowed(f)),
-            &Instr::Switch { count, sig, .. } => {
+            &Instr::Switch {
+                count,
+                sig,
+                under_cond,
+                ..
+            } => {
                 for _ in 0..count {
                     self.pop_func()?;
                 }
-                self.handle_args_outputs(sig.args + 1, sig.outputs)?;
+                let cond = self.pop()?;
+                if under_cond {
+                    self.temp_stacks[TempStack::Under as usize].push(cond);
+                }
+                self.handle_args_outputs(sig.args, sig.outputs)?;
             }
             Instr::Format { parts, .. } => {
                 self.handle_args_outputs(parts.len().saturating_sub(1), 1)?

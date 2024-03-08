@@ -161,11 +161,11 @@ impl SysOpClass {
 
 sys_op! {
     /// Print a nicely formatted representation of a value to stdout
-    (1(0), Show, StdIO, "&s", "show"),
+    (1(0), Show, StdIO, "&s", "show", [mutating]),
     /// Print a value to stdout
-    (1(0), Prin, StdIO, "&pf", "print and flush"),
+    (1(0), Prin, StdIO, "&pf", "print and flush", [mutating]),
     /// Print a value to stdout followed by a newline
-    (1(0), Print, StdIO, "&p", "print with newline"),
+    (1(0), Print, StdIO, "&p", "print with newline", [mutating]),
     /// Read a line from stdin
     ///
     /// The normal output is a string.

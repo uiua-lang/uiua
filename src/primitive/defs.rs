@@ -2059,7 +2059,7 @@ primitive!(
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
     /// ex: ⌊*10[◌⍥gen5 0]
-    (1(2), Gen, Misc, "gen", impure),
+    (1(2), Gen, Misc, "gen"),
     /// Randomly reorder the rows of an array with a seed
     ///
     /// ex: deal0 [1 2 3 4 5]

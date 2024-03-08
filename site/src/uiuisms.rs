@@ -194,9 +194,9 @@ uiuisms!(
     /// Remove all instances of a row from an array
     "▽¬≡≍¤⊙. 2_0 [1_4 2_0 5_3 2_0]",
     /// Filter by a fixed predicate
-    "▽ =0◿2 . ⇡10",
+    "▽ =0◿3 . ⇡10",
     /// Find the most common row in an array
-    r#"⊡⊢⍖°⊚⊛:◴. "Hello World!""#,
+    r#"⍜⊛(⊢⍖°⊚) "Hello World!""#,
     /// Convert a string to uppercase
     r#"⌵ "These are Words""#,
     /// Convert a string to lowercase
@@ -212,11 +212,9 @@ uiuisms!(
     /// Trim suffix-matching characters from a set
     r#"▽¬⍜⇌\↧∊, "abc" "remove this → bcaa""#,
     /// Trim whitespace
-    r#"▽×⍜(⊟⇌)≡\↥.≠@ . "  abc xyz   ""#,
-    /// Upscale a 2d matrix
-    "30 [0_1 1_0.5]\n°⍉▽▽⧻⟜:⍉▽▽⧻,⟜:",
-    /// Upscale a colored image
-    "30 [[0_0_1 0_1_0] [1_0_0 0_0_0]]\n°⍉▽▽⧻⟜:⍉▽▽⧻,⟜:",
+    r#"▽×⍜⇌∩\↥.≠@ . "  abc xyz   ""#,
+    /// Upscale a 2d matrix or colored image
+    "30 [0_1 1_0.5]\n°⍉▽▽⧻⟜:⍉▽▽⧻,⟜:\n30 [[0_0_1 0_1_0] [1_0_0 0_0_0]]\n°⍉▽▽⧻⟜:⍉▽▽⧻,⟜:",
     /// Linearly interpolate between two values
     "⍜-× 10 0 0.2\n⍜⊙-× 0.2 10 0",
     /// Set the value of an array at an index
@@ -226,7 +224,13 @@ uiuisms!(
     /// Create a matrix of random numbers
     "⌊×⊞⋅⋅⚂.⊚ 5 10",
     /// Arithmetic mean
-    "÷⊃⧻/+ [85 105 117 97]",
+    "÷⧻⟜/+ [85 105 117 97]",
+    /// Geometric mean
+    "÷:1⧻⟜/× [85 105 117 97]",
+    /// Harmonic mean
+    "÷/+⟜⧻÷:1 [85 105 117 97]",
+    /// Quadratic mean
+    "√÷⧻⟜/+×. [85 105 117 97]",
     /// Dot product
     "/+× [1 2 3] [4 ¯5 6]",
     /// Cross product
@@ -238,7 +242,7 @@ uiuisms!(
     /// Repeat a function and collect intermediate results into an array
     "[⍥(×2.)] 10 1",
     /// Pad an array with 0s
-    "[1_2_3 4_5_6]\n↻▽:¯1⧻:⬚0↙+2,⟜△",
+    "[1_2_3 4_5_6]\n↻¯±⟜⬚0↙+2△.",
     /// Complex conjugate
     "⍜°ℂ¯ +i1",
     /// Cosine
@@ -250,7 +254,7 @@ uiuisms!(
     /// Rank of an array
     "⧻△ [1_2_3_4 5_6_7_8 9_10_11_12]",
     /// Main diagonal of an array
-    "⊡≡↯⊃⧻(⇡/↧)△. [1_2_3_4 5_6_7_8 9_10_11_12]",
+    "⊡≡↯:⇡/↧⟜⧻△. [1_2_3_4 5_6_7_8 9_10_11_12]",
     /// Convert from base, input in little endian
     "/+×ⁿ⇡⧻, 3 0_2_1_1",
     /// Corner element of an array
@@ -268,15 +272,15 @@ uiuisms!(
     /// Successive differences
     "≡/-◫2 2_3_5_9_4",
     /// Binomial coefficient
-    "÷××∩∩(/×+1⇡)1-,, 3 5",
+    "/×÷¬⟜+¯⇡ 3 5",
     /// Replace all of one element in a list with another
     "⍜▽◌⊃=∘ [1 5 8 2] 5 3",
     /// Boxed powerset
-    "⍚▽⬚0⋯⇡ⁿ:2⊃⧻¤ [1 5 8 2]",
+    "⍚▽⋯⇡ⁿ:2⧻⟜¤ [1 5 8 2]",
     /// Irrational number to n terms of continued fraction
     "⊙◌⍥(⊂⊙⊃⌊(÷:1◿1)):[] 10 e",
     /// Bitwise XOR
-    "⍜∩(°⍉⋯)⬚0≠ 42 30_65_135",
+    "⍜∩⋯⬚0≠ 42 65",
     /// Boxed chunks of array
     "⊕□⌊÷:⇡⧻, 3 1_4_9_16_25_36_49",
 );

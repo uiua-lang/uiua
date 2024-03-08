@@ -1123,21 +1123,21 @@ primitive!(
     /// Occurences of the first array in the second array will be marked with increasing numbers.
     /// While [find] only marks the start of each occurence, [mask] marks the entire occurence.
     /// ex: # Experimental!
-    ///   : ⍝ "ab" "abracadabra"
+    ///   : ⦷ "ab" "abracadabra"
     /// ex: # Experimental!
-    ///   : ⍝ [1 2 3].[0 1 2 3 1 2 3 4 5 1 2 3 4 5 6]
+    ///   : ⦷ [1 2 3].[0 1 2 3 1 2 3 4 5 1 2 3 4 5 6]
     /// Increasing numbers are used so that adjacent occurences can be distinguished.
     /// An occurence that would overlap with a previous occurence is not marked.
     /// ex: # Experimental!
-    ///   : ⍝ [3 4 3 4].[0 3 4 3 4 3 4 0 0 3 4 3 4 0]
+    ///   : ⦷ [3 4 3 4].[0 3 4 3 4 3 4 0 0 3 4 3 4 0]
     ///
     /// Arbitrary rank arrays are supported.
     /// The first array's rank must be `less or equal` the rank of the second.
     /// ex: # Experimental!
-    ///   : ⍝,, 3_4 ↯2_3⇡6
+    ///   : ⦷,, 3_4 ↯2_3⇡6
     /// ex: # Experimental!
-    ///   : ⍝,, [1_2 5_6] [1_2_3_4 5_6_1_2 7_8_5_6 4_3_1_2]
-    (2, Mask, DyadicArray, ("mask", '⍝')),
+    ///   : ⦷,, [1_2 5_6] [1_2_3_4 5_6_1_2 7_8_5_6 4_3_1_2]
+    (2, Mask, DyadicArray, ("mask", '⦷')),
     /// Check if each row of one array exists in another
     ///
     /// ex: ∊ 2 [1 2 3]

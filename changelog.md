@@ -36,7 +36,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Doc comments may now be placed at the end of single-line functions
 - Non-alphabetic identifiers can now be suffixed with `!` to make macros
 - Add `df`, `ddf`, etc shortcuts for [`dip ⊙`](https://uiua.org/docs/dip) [`fix ¤`](https://uiua.org/docs/fix)
-- Add the experimental [`mask ⍝`](https://uiua.org/docs/mask) function, which creates a mask of occurrences of one array in another
+- Add the experimental [`mask ⦷`](https://uiua.org/docs/mask) function, which creates a mask of occurrences of one array in another
   - This works similarly to [`find ⌕`](https://uiua.org/docs/find), but is better when you need a mask or to distinguish between adjacent occurrences
 - Add the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, which searches an array for a value and returns a multidimensional index
   - [`coordinate ⟔`](https://uiua.org/docs/coordinate) is to [`pick ⊡`](https://uiua.org/docs/pick) as [`indexof ⊗`](https://uiua.org/docs/indexof) is to [`select ⊏`](https://uiua.org/docs/select)
@@ -52,8 +52,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - Code is now analyzed for purity
   - All pure top-level expressions will attempt to evaluate at compile time
-  - A `|0.1` binding will be automatically evaluated at compile time if it is pure
-  - Any pure code fragments that take 0 arguments will be evaluated at compile time
+  - All fragments of code that are pure and have a signature `|0.n` will be evaluated at compile time
 - Add lots of LSP features
   - Find references
   - Signature inlay hints (can be toggled/adjusted in settings)

@@ -152,6 +152,8 @@ pub(crate) struct Scope {
     stack_height: Result<usize, Sp<SigCheckError>>,
     /// The stack of referenced bind locals
     bind_locals: Vec<HashSet<usize>>,
+    /// Whether currently compiling fill's second function
+    fill: bool,
 }
 
 impl Default for Scope {
@@ -162,6 +164,7 @@ impl Default for Scope {
             experimental: false,
             stack_height: Ok(0),
             bind_locals: Vec::new(),
+            fill: false,
         }
     }
 }
@@ -1703,7 +1706,8 @@ code:
     fn pre_eval_instrs(&mut self, instrs: EcoVec<Instr>) -> EcoVec<Instr> {
         use Primitive::*;
         let instrs = optimize_instrs(instrs, true, &self.asm);
-        if self.pre_eval_mode == PreEvalMode::Lazy
+        if self.scope.fill
+            || self.pre_eval_mode == PreEvalMode::Lazy
             || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
         {
             return instrs;
@@ -1758,7 +1762,7 @@ code:
                             new_instrs.extend(values.into_iter().map(Instr::Push));
                         }
                         Ok(None) => {}
-                        Err(e) if e.is_fill() => {}
+                        Err(e) if e.is_fill() && !self.scope.fill => {}
                         Err(e) if e.message().contains("No locals to get") => {}
                         Err(e) => self.errors.push(e),
                     }

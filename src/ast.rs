@@ -393,7 +393,7 @@ pub struct Modified {
 
 impl Modified {
     /// Get an iterator over the functions that are actual code
-    pub fn code_operands(&self) -> impl Iterator<Item = &Sp<Word>> {
+    pub fn code_operands(&self) -> impl DoubleEndedIterator<Item = &Sp<Word>> {
         self.operands.iter().filter(|word| word.value.is_code())
     }
 }

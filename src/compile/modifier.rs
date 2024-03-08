@@ -778,6 +778,34 @@ impl Compiler {
                     }
                 }
             }
+            Fill => {
+                let mut operands = modified.code_operands().rev().cloned();
+                if !call {
+                    self.new_functions.push(EcoVec::new());
+                }
+                let fill = take(&mut self.scope.fill);
+                self.scope.fill = true;
+                self.word(operands.next().unwrap(), false)?;
+                self.scope.fill = fill;
+                self.word(operands.next().unwrap(), false)?;
+                let span = self.add_span(modified.modifier.span.clone());
+                self.push_instr(Instr::Prim(Primitive::Fill, span));
+                if !call {
+                    let instrs = self.new_functions.pop().unwrap();
+                    let sig = instrs_signature(&instrs).map_err(|e| {
+                        self.fatal_error(
+                            modified.modifier.span.clone(),
+                            format!("Cannot infer function signature: {e}"),
+                        )
+                    })?;
+                    let func = self.add_function(
+                        FunctionId::Anonymous(modified.modifier.span.clone()),
+                        sig,
+                        instrs,
+                    );
+                    self.push_instr(Instr::PushFunc(func));
+                }
+            }
             Bind => {
                 let operand = modified.code_operands().next().cloned().unwrap();
                 let operand_span = operand.span.clone();

@@ -14,3 +14,5 @@ Ex~RangeDiff
 
 F! ← F!^!
 F!+
+
+regex "([a-z]" "hello world"

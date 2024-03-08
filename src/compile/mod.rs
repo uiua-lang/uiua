@@ -19,7 +19,7 @@ use instant::Duration;
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
     ast::*,
-    check::{instrs_signature, SigCheckError},
+    check::{instrs_all_signatures, instrs_signature, SigCheckError},
     example_ua,
     format::format_word,
     function::*,
@@ -562,6 +562,7 @@ code:
         I::IntoIter: ExactSizeIterator,
     {
         let instrs = optimize_instrs(instrs, true, &self.asm);
+        let instrs = self.pre_eval_instrs(instrs);
         let len = instrs.len();
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
@@ -1025,7 +1026,6 @@ code:
                 let instrs = self.new_functions.last_mut().unwrap();
                 // Inline constant arrays
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
-                    instrs.pop();
                     let empty = inner.is_empty();
                     let values = inner.iter().rev().map(|instr| match instr {
                         Instr::Push(v) => v.clone(),
@@ -1045,6 +1045,7 @@ code:
                     };
                     match res {
                         Ok(val) => {
+                            instrs.pop();
                             self.push_instr(Instr::push(val));
                             return Ok(());
                         }
@@ -1702,9 +1703,54 @@ code:
         let function = self.create_function(signature, f);
         self.bind_function(name, function)
     }
-
+    fn pre_eval_instrs(&mut self, instrs: EcoVec<Instr>) -> EcoVec<Instr> {
+        use Primitive::*;
+        if self.pre_eval_mode == PreEvalMode::Lazy {
+            return instrs;
+        }
+        let mut start = 0;
+        let mut new_instrs: Option<EcoVec<Instr>> = None;
+        'start: while start < instrs.len() {
+            for end in (start + 1..=instrs.len()).rev() {
+                let section = &instrs[start..end];
+                if (section.last()).is_some_and(|instr| matches!(instr, Instr::PushFunc(_)))
+                    || section.iter().all(|instr| matches!(instr, Instr::Push(_)))
+                    || (section.iter())
+                        .any(|instr| matches!(instr, Instr::Prim(SetInverse | SetUnder, _)))
+                {
+                    continue;
+                }
+                if instrs_are_pure(section, &self.asm)
+                    && instrs_all_signatures(section).is_ok_and(|(sig, temps)| {
+                        sig.args == 0 && sig.outputs > 0 && temps.iter().all(|&sig| sig == (0, 0))
+                    })
+                {
+                    match self.comptime_instrs(section.into()) {
+                        Ok(Some(values)) => {
+                            let new_instrs =
+                                new_instrs.get_or_insert_with(|| instrs[..start].into());
+                            new_instrs.extend(values.into_iter().map(Instr::Push));
+                        }
+                        Ok(None) => {}
+                        Err(e) if e.is_fill() => {}
+                        Err(e) if e.message().contains("No locals to get") => {}
+                        Err(e) => self.errors.push(e),
+                    }
+                    start = end;
+                    continue 'start;
+                }
+            }
+            if let Some(new_instrs) = &mut new_instrs {
+                new_instrs.push(instrs[start].clone())
+            }
+            start += 1;
+        }
+        new_instrs.unwrap_or(instrs)
+    }
     fn comptime_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult<Option<Vec<Value>>> {
-        if !self.pre_eval_mode.matches_instrs(&instrs, &self.asm) {
+        if !self.pre_eval_mode.matches_instrs(&instrs, &self.asm)
+            || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
+        {
             return Ok(None);
         }
         thread_local! {

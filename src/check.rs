@@ -32,6 +32,13 @@ pub(crate) fn instrs_temp_signatures(
     Ok(env.temp_signatures())
 }
 
+pub(crate) fn instrs_all_signatures(
+    instrs: &[Instr],
+) -> Result<(Signature, [Signature; TempStack::CARDINALITY]), SigCheckError> {
+    let env = VirtualEnv::from_instrs(instrs)?;
+    Ok((env.sig(), env.temp_signatures()))
+}
+
 /// An environment that emulates the runtime but only keeps track of the stack.
 struct VirtualEnv<'a> {
     stack: Vec<BasicValue>,
@@ -256,15 +263,16 @@ impl<'a> VirtualEnv<'a> {
                 offset,
                 ..
             } => {
-                for val in self.temp_stacks[*stack as usize]
-                    .iter()
-                    .rev()
-                    .skip(*offset)
-                    .take(*count)
-                {
-                    self.stack.push(val.clone());
+                let mut vals = Vec::with_capacity(*count + *offset);
+                for i in 0..*count + *offset {
+                    let val = self.pop_temp(*stack)?;
+                    if i > *offset {
+                        self.stack.push(val.clone());
+                    }
+                    vals.push(val);
                 }
                 self.set_min_height();
+                self.temp_stacks[*stack as usize].extend(vals.into_iter().rev());
             }
             Instr::Label { .. } => self.handle_args_outputs(1, 1)?,
             Instr::PushFunc(f) => self.function_stack.push(Cow::Borrowed(f)),

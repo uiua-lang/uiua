@@ -221,7 +221,6 @@ ParseOrZero ← ⍣⋕⋅⋅0
 # Regex
 ⍤⟜≍: [{"hello"} {"world"}] regex "[a-z]+" "hello world"
 ⍤⟜≍: ↯0_1 {} regex "[0-9]+" "hello world"
-⍤⟜≍: 1 ⍣(regex "([a-z]" "hello world")⋅1
 
 # Index of
 ⍤⟜≍: 1 ⊗ 5 [1 5 5]

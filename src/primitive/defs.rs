@@ -1884,8 +1884,8 @@ primitive!(
     /// If the first function errors, the second function is called with the original arguments and the error value below.
     ///
     /// Normal runtime errors become strings.
-    /// ex: ⍣(+1 2)$"Error: _"
-    /// ex: ⍣(+@a @b)$"Error: _"
+    /// ex: ⍣(+1)$"Error: _" 2
+    /// ex: ⍣(+@a)$"Error: _" @b
     /// Errors thrown with [assert] can be any value.
     /// ex: ⍣(⍤5>10.|×5) 12
     /// ex: ⍣(⍤5>10.|×5) 7

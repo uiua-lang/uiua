@@ -133,7 +133,7 @@ impl FillContext for (&CodeSpan, &Inputs) {
         Err(". No fill is set.")
     }
     fn fill_error(error: Self::Error) -> Self::Error {
-        error
+        error.fill()
     }
     fn is_fill_error(error: &Self::Error) -> bool {
         error.is_fill()

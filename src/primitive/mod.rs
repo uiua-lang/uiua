@@ -848,7 +848,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnPop => {
                 env.push(
                     env.value_fill()
-                        .ok_or_else(|| env.error("No fill set"))?
+                        .ok_or_else(|| env.error("No fill set").fill())?
                         .clone(),
                 );
             }

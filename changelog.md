@@ -53,6 +53,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Code is now analyzed for purity
   - All pure top-level expressions will attempt to evaluate at compile time
   - A `|0.1` binding will be automatically evaluated at compile time if it is pure
+  - Any pure code fragments that take 0 arguments will be evaluated at compile time
 - Add lots of LSP features
   - Find references
   - Signature inlay hints (can be toggled/adjusted in settings)

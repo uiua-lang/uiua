@@ -172,6 +172,46 @@ impl PartialEq for Instr {
             ) => ao == bo && ac == bc,
             (Self::DropTemp { count: a, .. }, Self::DropTemp { count: b, .. }) => a == b,
             (Self::TouchStack { count: a, .. }, Self::TouchStack { count: b, .. }) => a == b,
+            (Self::Comment(a), Self::Comment(b)) => a == b,
+            (Self::CallGlobal { index: a, .. }, Self::CallGlobal { index: b, .. }) => a == b,
+            (Self::BindGlobal { index: a, .. }, Self::BindGlobal { index: b, .. }) => a == b,
+            (
+                Self::Switch {
+                    count: a,
+                    under_cond: au,
+                    sig: asig,
+                    ..
+                },
+                Self::Switch {
+                    count: b,
+                    under_cond: bu,
+                    sig: bsig,
+                    ..
+                },
+            ) => a == b && au == bu && asig == bsig,
+            (Self::Label { label: a, .. }, Self::Label { label: b, .. }) => a == b,
+            (Self::Dynamic(a), Self::Dynamic(b)) => a == b,
+            (Self::PushLocals { count: a, .. }, Self::PushLocals { count: b, .. }) => a == b,
+            (Self::PopLocals, Self::PopLocals) => true,
+            (Self::GetLocal { index: a, .. }, Self::GetLocal { index: b, .. }) => a == b,
+            (
+                Self::Unpack {
+                    count: a,
+                    unbox: au,
+                    ..
+                },
+                Self::Unpack {
+                    count: b,
+                    unbox: bu,
+                    ..
+                },
+            ) => a == b && au == bu,
+            (Self::SetOutputComment { i: ai, n: an }, Self::SetOutputComment { i: bi, n: bn }) => {
+                ai == bi && an == bn
+            }
+            (Self::PushSig(a), Self::PushSig(b)) => a == b,
+            (Self::PopSig, Self::PopSig) => true,
+            (Self::NoInline, Self::NoInline) => true,
             _ => false,
         }
     }
@@ -248,15 +288,15 @@ impl Instr {
 }
 
 /// Whether some instructions are pure
-pub(crate) fn instrs_are_pure(instrs: &[Instr], env: &impl AsRef<Assembly>) -> bool {
+pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly) -> bool {
     for instr in instrs {
         match instr {
             Instr::CallGlobal { index, .. } => {
-                if let Some(binding) = env.as_ref().bindings.get(*index) {
+                if let Some(binding) = asm.bindings.get(*index) {
                     match &binding.global {
                         Global::Const(Some(_)) => {}
                         Global::Func(f) => {
-                            if !instrs_are_pure(f.instrs(env.as_ref()), env.as_ref()) {
+                            if !instrs_are_pure(f.instrs(asm), asm) {
                                 return false;
                             }
                         }
@@ -276,7 +316,7 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], env: &impl AsRef<Assembly>) -> b
                 }
             }
             Instr::PushFunc(f) => {
-                if !instrs_are_pure(f.instrs(env.as_ref()), env.as_ref()) {
+                if !instrs_are_pure(f.instrs(asm), asm) {
                     return false;
                 }
             }
@@ -290,16 +330,16 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], env: &impl AsRef<Assembly>) -> b
 }
 
 /// Whether some instructions can be propertly bounded by the runtime execution limit
-pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], env: &impl AsRef<Assembly>) -> bool {
+pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], asm: &Assembly) -> bool {
     use Primitive::*;
     for instr in instrs {
         match instr {
             Instr::CallGlobal { index, .. } => {
-                if let Some(binding) = env.as_ref().bindings.get(*index) {
+                if let Some(binding) = asm.bindings.get(*index) {
                     match &binding.global {
                         Global::Const(Some(_)) => {}
                         Global::Func(f) => {
-                            if !instrs_are_limit_bounded(f.instrs(env.as_ref()), env.as_ref()) {
+                            if !instrs_are_limit_bounded(f.instrs(asm), asm) {
                                 return false;
                             }
                         }
@@ -310,7 +350,7 @@ pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], env: &impl AsRef<Assemb
             Instr::Prim(Send | Recv, _) => return false,
             Instr::Prim(Sys(op), _) if op.is_mutating() => return false,
             Instr::PushFunc(f) => {
-                if f.recursive || !instrs_are_limit_bounded(f.instrs(env.as_ref()), env.as_ref()) {
+                if f.recursive || !instrs_are_limit_bounded(f.instrs(asm), asm) {
                     return false;
                 }
             }

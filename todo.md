@@ -8,6 +8,7 @@
 - Site pages/tutorials
   - Working with strings
   - Style and readability
+  - `repeat` as conditional
 - Multimedia
   - Sound input
   - Webcam input

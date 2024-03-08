@@ -880,8 +880,8 @@ F 10 11"/>
         <Editor example="△≡⇌↯3_4⇡12\n△≡⇌↯0_4⇡12 # Would be [0] without proxy"/>
         <p>"There are some ways to make the proxy value visible."</p>
         <Editor example="≡(&p.) []"/>
-        <p>"To avoid this case, you can conditionally iterate. This example uses a "<A href="/tutorial/controlflow#switch">"switch function"</A>", which will be explained in a "<A href="/tutorial/controlflow">"later section"</A>"."</p>
-        <Editor example="⟨∘|≡(&p.)⟩±⧻. []"/>
+        <p>"To avoid this case, you can conditionally iterate. This example uses a "<Prim prim=Repeat/>" modifier to conditionally call the function."</p>
+        <Editor example="⍥≡(&p.)±⧻. []"/>
 
         <Hd id="challenges">"Challenges"</Hd>
 

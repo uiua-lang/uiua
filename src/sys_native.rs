@@ -301,19 +301,17 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "clipboard")]
     fn clipboard(&self) -> Result<String, String> {
-        use clipboard::*;
-        match ClipboardContext::new() {
-            Ok(mut provider) => provider.get_contents().map_err(|e| e.to_string()),
+        use arboard::*;
+        match Clipboard::new() {
+            Ok(mut provider) => provider.get_text().map_err(|e| e.to_string()),
             Err(e) => Err(format!("Failed to get clipboard provider: {e}")),
         }
     }
     #[cfg(feature = "clipboard")]
     fn set_clipboard(&self, contents: &str) -> Result<(), String> {
-        use clipboard::*;
-        match ClipboardContext::new() {
-            Ok(mut provider) => provider
-                .set_contents(contents.into())
-                .map_err(|e| e.to_string()),
+        use arboard::*;
+        match Clipboard::new() {
+            Ok(mut provider) => provider.set_text(contents).map_err(|e| e.to_string()),
             Err(e) => Err(format!("Failed to get clipboard provider: {e}")),
         }
     }

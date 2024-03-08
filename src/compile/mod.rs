@@ -1337,7 +1337,7 @@ code:
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
-            Global::Func(f) if !self.not_inlinable(f.instrs(self)) => {
+            Global::Func(f) if self.inlinable(f.instrs(self)) => {
                 if call {
                     // Inline instructions
                     self.push_instr(Instr::PushSig(f.signature()));
@@ -1583,28 +1583,24 @@ code:
             }
         }
     }
-    fn not_inlinable(&self, instrs: &[Instr]) -> bool {
+    fn inlinable(&self, instrs: &[Instr]) -> bool {
+        use ImplPrimitive::*;
+        use Primitive::*;
+        if instrs.len() > 10 {
+            return false;
+        }
         for instr in instrs {
             match instr {
-                Instr::Prim(
-                    Primitive::Trace
-                    | Primitive::Dump
-                    | Primitive::Stack
-                    | Primitive::Assert
-                    | Primitive::Shapes
-                    | Primitive::Types,
-                    _,
-                ) => return true,
-                Instr::ImplPrim(
-                    ImplPrimitive::UnTrace | ImplPrimitive::UnDump | ImplPrimitive::UnStack,
-                    _,
-                ) => return true,
-                Instr::PushFunc(f) if self.not_inlinable(f.instrs(self)) => return true,
-                Instr::NoInline => return true,
+                Instr::Prim(Trace | Dump | Stack | Assert | Shapes | Types, _) => return false,
+                Instr::ImplPrim(UnTrace | UnDump | UnStack | BothTrace | UnBothTrace, _) => {
+                    return false
+                }
+                Instr::PushFunc(f) if !self.inlinable(f.instrs(self)) => return false,
+                Instr::NoInline => return false,
                 _ => {}
             }
         }
-        false
+        true
     }
     /// Get all diagnostics
     pub fn diagnostics(&self) -> &BTreeSet<Diagnostic> {

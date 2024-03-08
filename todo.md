@@ -7,11 +7,7 @@
     - Excel
 - Site pages/tutorials
   - Working with strings
-  - Duality of `pick` and `select`
-  - Stack-source locality
-- Changle how function inlining works
-  - Prevent inlining of large functions
-  - If a function is inlinable, don't actually put it in the assembly instructions
+  - Style and readability
 - Multimedia
   - Sound input
   - Webcam input

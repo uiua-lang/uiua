@@ -118,6 +118,7 @@ pub fn StackIdioms() -> impl IntoView {
         <Editor example="[,, @A@B]"/>
         <Editor example="[⟜: @A@B]"/>
         <Editor example="[⊙. @A@B]"/>
+        <Editor example="[:⟜: @A@B]"/>
         <Editor example="[⊙◌ @A@B]"/>
         <Editor example="[⊙: @A@B@C]"/>
         <Editor example="[⊙, @A@B@C]"/>

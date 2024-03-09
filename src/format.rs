@@ -16,13 +16,11 @@ use paste::paste;
 
 use crate::{
     ast::*,
-    function::Signature,
     grid_fmt::GridFmt,
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
-    value::Value,
-    Compiler, FunctionId, Ident, InputSrc, Inputs, Primitive, RunMode, SafeSys, SysBackend, SysOp,
-    Uiua, UiuaError, UiuaResult,
+    Compiler, FunctionId, Ident, InputSrc, Inputs, RunMode, SafeSys, Signature, SysBackend, Uiua,
+    UiuaError, UiuaResult, Value,
 };
 
 trait ConfigValue: Sized {
@@ -594,14 +592,6 @@ impl<'a> Formatter<'a> {
             }
             Item::Binding(binding) => {
                 match binding.words.first().map(|w| &w.value) {
-                    Some(Word::Primitive(Primitive::Sys(SysOp::Import)))
-                        if (binding.words.iter())
-                            .filter(|word| word.value.is_code())
-                            .count()
-                            == 2 =>
-                    {
-                        self.prev_import_function = Some(binding.name.value.clone());
-                    }
                     Some(Word::Ref(r)) => {
                         if r.root_module()
                             .zip(self.prev_import_function.as_ref())

@@ -29,8 +29,8 @@ use crate::{
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
-    IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment, SysBackend, SysOp, Uiua,
-    UiuaError, UiuaResult, Value, CONSTANTS, VERSION,
+    IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment, SysBackend, Uiua, UiuaError,
+    UiuaResult, Value, CONSTANTS, VERSION,
 };
 
 /// The Uiua compiler
@@ -429,10 +429,7 @@ code:
         prev_comment: &mut Option<Arc<str>>,
     ) -> UiuaResult {
         fn words_should_run_anyway(words: &[Sp<Word>]) -> bool {
-            words.iter().any(|w| {
-                matches!(&w.value, Word::Primitive(Primitive::Sys(SysOp::Import)))
-                    || matches!(&w.value, Word::SemanticComment(_))
-            })
+            (words.iter()).any(|w| matches!(&w.value, Word::SemanticComment(_)))
         }
         let prev_com = prev_comment.take();
         let mut lines = match item {
@@ -748,42 +745,6 @@ code:
             .peekable();
         while let Some(word) = words.next() {
             if let Some(next) = words.peek() {
-                // Handle legacy imports
-                if let Word::Ref(r) = &next.value {
-                    if r.path.is_empty() {
-                        if let Some(local) = self.scope.names.get(&r.name.value) {
-                            if let Global::Module(module) = &self.asm.bindings[local.index].global {
-                                if let Word::String(item_name) = &word.value {
-                                    let local = self.imports[module]
-                                        .names
-                                        .get(item_name.as_str())
-                                        .copied()
-                                        .ok_or_else(|| {
-                                            self.fatal_error(
-                                                next.span.clone(),
-                                                format!(
-                                                    "Item `{item_name}` not found in module `{}`",
-                                                    module.display()
-                                                ),
-                                            )
-                                        })?;
-                                    self.validate_local(item_name, local, &next.span);
-                                    self.global_index(local.index, next.span.clone(), false);
-                                    words.next();
-                                    continue;
-                                }
-                                self.add_error(
-                                    next.span.clone(),
-                                    format!(
-                                        "Expected a string after `{}` \
-                                            to specify an item to import",
-                                        r.name.value
-                                    ),
-                                );
-                            }
-                        }
-                    }
-                }
                 // First select diagnostic
                 if let (Word::Primitive(Primitive::Select), Word::Primitive(Primitive::First)) =
                     (&word.value, &next.value)

@@ -2,14 +2,14 @@
 
 - 0.10
   - Document new `partition` behavior
-  - Remove old `&i`
   - Proofread and update tutorial and tour
   - System functions
     - Excel
-- Site pages/tutorials
-  - Working with strings
-  - Style and readability
-  - `repeat` as conditional
+  - Site pages/tutorials
+    - Working with strings
+    - Style and readability
+    - `repeat` as conditional
+    - Git imports
 - Multimedia
   - Sound input
   - Webcam input

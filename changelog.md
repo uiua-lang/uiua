@@ -49,6 +49,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add `# No inline!` semantic comment, which prevents a function and its callers from being inlined
   - This enables stack traces on errors
 - Remove `unpack ⊐` for good
+- Remove `&i` for good
 ### Interpreter
 - Code is now analyzed for purity
   - All pure top-level expressions will attempt to evaluate at compile time

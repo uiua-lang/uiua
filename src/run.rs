@@ -19,7 +19,7 @@ use thread_local::ThreadLocal;
 use crate::{
     algorithm, array::Array, boxed::Boxed, check::instrs_temp_signatures, function::*, lex::Span,
     value::Value, Assembly, Compiler, Complex, Global, Ident, Inputs, IntoSysBackend, LocalName,
-    Primitive, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult, VERSION,
+    Primitive, SafeSys, SysBackend, TraceFrame, UiuaError, UiuaResult, VERSION,
 };
 
 /// The Uiua interpreter
@@ -842,16 +842,10 @@ code:
     fn call_with_frame_span(&mut self, frame: StackFrame, call_span: usize) -> UiuaResult {
         let start_height = self.rt.stack.len();
         let sig = frame.sig;
-        let slice = frame.slice;
         self.exec(frame)?;
         let height_diff = self.rt.stack.len() as isize - start_height as isize;
         let sig_diff = sig.outputs as isize - sig.args as isize;
-        if height_diff != sig_diff
-            && !self
-                .instrs(slice)
-                .iter()
-                .any(|instr| matches!(instr, Instr::Prim(Primitive::Sys(SysOp::Import), _)))
-        {
+        if height_diff != sig_diff {
             return Err(self.error_with_span(
                 self.asm.spans[call_span].clone(),
                 format!(

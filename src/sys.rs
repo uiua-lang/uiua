@@ -261,20 +261,6 @@ sys_op! {
     /// The stream handle `1` is stdout.
     /// The stream handle `2` is stderr.
     (2(0), Write, Stream, "&w", "write", [mutating]),
-    /// Import an item from a file
-    ///
-    /// The first argument is the path to the file. The second is the name of the item to import.
-    /// ex: Dub ← &i "example.ua" "Double"
-    ///   : Dub 5
-    /// To import multiple items, you can make a function that imports from a specific path.
-    /// ex: Ex ← &i "example.ua"
-    ///   : Double ← Ex "Double"
-    ///   : Square ← Ex "Square"
-    ///   : Square Double 5
-    ///
-    /// [&i] can only be used as the first function in a binding.
-    /// ex! &i "example.ua" "Double" 5
-    (2, Import, Filesystem, "&i", "import"),
     /// Invoke a path with the system's default program
     (1(1), Invoke, Command, "&invk", "invoke", [mutating]),
     /// Close a stream by its handle
@@ -1271,12 +1257,6 @@ impl SysOp {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let is_file = env.rt.backend.is_file(&path).map_err(|e| env.error(e))?;
                 env.push(is_file);
-            }
-            SysOp::Import => {
-                return Err(env.error(
-                    "&i is not valid in this position. \
-                    It must be the first item in a binding.",
-                ));
             }
             SysOp::Invoke => {
                 let path = env.pop(1)?.as_string(env, "Invoke path must be a string")?;

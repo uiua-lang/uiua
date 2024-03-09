@@ -204,81 +204,9 @@ impl Compiler {
             });
         }
 
-        // Check if binding is an import
-        let mut is_import = false;
-        let mut sig = None;
-        if let [init @ .., Instr::Prim(Primitive::Sys(SysOp::Import), _)] = instrs.as_slice() {
-            is_import = true;
-            match init {
-                [Instr::Push(path)] => {
-                    if let Some(sig) = &binding.signature {
-                        self.add_error(
-                            sig.span.clone(),
-                            "Cannot declare a signature for a module import",
-                        );
-                    }
-                    match path {
-                        Value::Char(arr) if arr.rank() == 1 => {
-                            let path: String = arr.data.iter().copied().collect();
-                            let module = self.import_module(path.as_ref(), span)?;
-                            self.asm.add_global_at(
-                                local,
-                                Global::Module(module),
-                                Some(binding.name.span.clone()),
-                                comment.clone(),
-                            );
-                            self.scope.names.insert(name.clone(), local);
-                        }
-                        _ => self.add_error(span.clone(), "Import path must be a string"),
-                    }
-                }
-                [Instr::Push(item), Instr::Push(path)] => match path {
-                    Value::Char(arr) if arr.rank() == 1 => {
-                        let path: String = arr.data.iter().copied().collect();
-                        let module = self.import_module(path.as_ref(), span)?;
-                        match item {
-                            Value::Char(arr) if arr.rank() == 1 => {
-                                let item: String = arr.data.iter().copied().collect();
-                                if let Some(&local) = self.imports[&module].names.get(item.as_str())
-                                {
-                                    self.validate_local(&item, local, span);
-                                    self.scope.names.insert(
-                                        name.clone(),
-                                        LocalName {
-                                            index: local.index,
-                                            public,
-                                        },
-                                    );
-                                    if let Some(s) =
-                                        self.asm.bindings[local.index].global.signature()
-                                    {
-                                        sig = Some(s);
-                                    } else {
-                                        self.add_error(
-                                            span.clone(),
-                                            "Cannot define a signature for a module rebind",
-                                        )
-                                    }
-                                } else {
-                                    self.add_error(
-                                        span.clone(),
-                                        format!("Item `{item}` not found in module `{path}`"),
-                                    )
-                                }
-                            }
-                            _ => self.add_error(span.clone(), "Import item must be a string"),
-                        };
-                    }
-                    _ => self.add_error(span.clone(), "Import path must be a string"),
-                },
-                _ => self.add_error(span.clone(), "&i must be followed by one or two strings"),
-            }
-        }
-
         // Resolve signature
         match instrs_signature(&instrs) {
-            Ok(s) => {
-                let mut sig = sig.unwrap_or(s);
+            Ok(mut sig) => {
                 // Validate signature
                 if let Some(declared_sig) = &binding.signature {
                     let sig_to_check = if let [Instr::PushFunc(f)] = instrs.as_slice() {
@@ -311,8 +239,7 @@ impl Compiler {
                     instrs.as_slice(),
                     [Instr::PushFunc(_), Instr::PushFunc(_), Instr::PushFunc(_), Instr::Prim(Primitive::SetUnder, _)]
                 );
-                if is_import {
-                } else if let [Instr::PushFunc(f)] = instrs.as_slice() {
+                if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
                     sig = f.signature();
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
@@ -406,8 +333,7 @@ impl Compiler {
                 );
             }
             Err(e) => {
-                if is_import {
-                } else if let Some(sig) = binding.signature {
+                if let Some(sig) = binding.signature {
                     // Binding is a normal function
                     instrs.insert(0, Instr::NoInline);
                     let func = make_fn(instrs, sig.value, self);

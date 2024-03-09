@@ -70,7 +70,7 @@ pub fn validate_size<T>(elements: usize, env: &Uiua) -> UiuaResult {
 }
 
 pub trait ErrorContext {
-    type Error;
+    type Error: FillError;
     fn error(&self, msg: impl ToString) -> Self::Error;
 }
 
@@ -95,6 +95,22 @@ impl ErrorContext for () {
     type Error = Infallible;
     fn error(&self, msg: impl ToString) -> Self::Error {
         panic!("{}", msg.to_string())
+    }
+}
+
+pub trait FillError {
+    fn is_fill(&self) -> bool;
+}
+
+impl FillError for UiuaError {
+    fn is_fill(&self) -> bool {
+        UiuaError::is_fill(self)
+    }
+}
+
+impl FillError for Infallible {
+    fn is_fill(&self) -> bool {
+        match *self {}
     }
 }
 
@@ -153,13 +169,34 @@ fn fill_value_shape<C>(
 where
     C: FillContext,
 {
-    val.generic_mut_shallow(
-        |arr| fill_array_shape(arr, target, expand_fixed, ctx),
-        |arr| fill_array_shape(arr, target, expand_fixed, ctx),
-        |arr| fill_array_shape(arr, target, expand_fixed, ctx),
-        |arr| fill_array_shape(arr, target, expand_fixed, ctx),
-        |arr| fill_array_shape(arr, target, expand_fixed, ctx),
-    )
+    // val.generic_mut_shallow(
+    //     |arr| fill_array_shape(arr, target, expand_fixed, ctx),
+    //     |arr| fill_array_shape(arr, target, expand_fixed, ctx),
+    //     |arr| fill_array_shape(arr, target, expand_fixed, ctx),
+    //     |arr| fill_array_shape(arr, target, expand_fixed, ctx),
+    //     |arr| fill_array_shape(arr, target, expand_fixed, ctx),
+    // )
+    match val {
+        Value::Num(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
+        #[cfg(feature = "bytes")]
+        Value::Byte(arr) => {
+            *val = op_bytes_retry_fill(
+                arr.clone(),
+                |mut arr| {
+                    fill_array_shape(&mut arr, target, expand_fixed, ctx)?;
+                    Ok(arr.into())
+                },
+                |mut arr| {
+                    fill_array_shape(&mut arr, target, expand_fixed, ctx)?;
+                    Ok(arr.into())
+                },
+            )?;
+            Ok(())
+        }
+        Value::Complex(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
+        Value::Char(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
+        Value::Box(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
+    }
 }
 
 fn fill_array_shape<T, C>(
@@ -617,11 +654,11 @@ pub fn try_(env: &mut Uiua) -> UiuaResult {
 
 /// If a function fails on a byte array because no fill byte is defined,
 /// convert the byte array to a number array and try again.
-fn op_bytes_retry_fill<T>(
+fn op_bytes_retry_fill<T, E: FillError>(
     bytes: Array<u8>,
-    on_bytes: impl FnOnce(Array<u8>) -> UiuaResult<T>,
-    on_nums: impl FnOnce(Array<f64>) -> UiuaResult<T>,
-) -> UiuaResult<T> {
+    on_bytes: impl FnOnce(Array<u8>) -> Result<T, E>,
+    on_nums: impl FnOnce(Array<f64>) -> Result<T, E>,
+) -> Result<T, E> {
     match on_bytes(bytes.clone()) {
         Ok(res) => Ok(res),
         Err(err) if err.is_fill() => on_nums(bytes.convert()),

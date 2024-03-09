@@ -87,8 +87,8 @@ impl Value {
             #[cfg(feature = "bytes")]
             Value::Byte(a) => op_bytes_retry_fill(
                 a,
-                |a| Ok(a.pick(index_shape, &index_data, env)?.into()),
-                |a| Ok(a.pick(index_shape, &index_data, env)?.into()),
+                |a| a.pick(index_shape, &index_data, env).map(Into::into),
+                |a| a.pick(index_shape, &index_data, env).map(Into::into),
             )?,
             Value::Complex(a) => Value::Complex(a.pick(index_shape, &index_data, env)?),
             Value::Char(a) => Value::Char(a.pick(index_shape, &index_data, env)?),
@@ -322,8 +322,8 @@ impl Value {
             #[cfg(feature = "bytes")]
             Value::Byte(a) => op_bytes_retry_fill(
                 a,
-                |a| Ok(a.take(&index, env)?.into()),
-                |a| Ok(a.take(&index, env)?.into()),
+                |a| a.take(&index, env).map(Into::into),
+                |a| a.take(&index, env).map(Into::into),
             )?,
             Value::Complex(a) => Value::Complex(a.take(&index, env)?),
             Value::Char(a) => Value::Char(a.take(&index, env)?),

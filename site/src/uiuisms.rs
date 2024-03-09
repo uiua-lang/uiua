@@ -226,7 +226,7 @@ uiuisms!(
     /// Arithmetic mean
     "÷⧻⟜/+ [85 105 117 97]",
     /// Geometric mean
-    "÷:1⧻⟜/× [85 105 117 97]",
+    "ⁿ÷:1⧻⟜/× [85 105 117 97]",
     /// Harmonic mean
     "÷/+⟜⧻÷:1 [85 105 117 97]",
     /// Quadratic mean

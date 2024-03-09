@@ -228,10 +228,8 @@ impl SysBackend for NativeSys {
     fn read(&self, handle: Handle, len: usize) -> Result<Vec<u8>, String> {
         Ok(match NATIVE_SYS.get_stream(handle)? {
             SysStream::File(mut file) => {
-                let mut buf = Vec::new();
-                Write::by_ref(&mut *file)
-                    .take(len as u64)
-                    .read_to_end(&mut buf)
+                let mut buf = vec![0; len];
+                file.read_exact(buf.as_mut_slice())
                     .map_err(|e| e.to_string())?;
                 buf
             }
@@ -244,10 +242,9 @@ impl SysBackend for NativeSys {
             }
             SysStream::TcpListener(_) => return Err("Cannot read from a tcp listener".to_string()),
             SysStream::TcpSocket(mut socket) => {
-                let mut buf = Vec::new();
-                Write::by_ref(&mut *socket)
-                    .take(len as u64)
-                    .read_to_end(&mut buf)
+                let mut buf = vec![0; len];
+                socket
+                    .read_exact(buf.as_mut_slice())
                     .map_err(|e| e.to_string())?;
                 buf
             }

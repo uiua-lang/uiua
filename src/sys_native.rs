@@ -2,7 +2,7 @@ use std::{
     any::Any,
     env,
     fs::{self, File, OpenOptions},
-    io::{stderr, stdin, stdout, BufReader, Read, Write},
+    io::{stderr, stdin, stdout, Read, Write},
     net::*,
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
@@ -28,7 +28,7 @@ struct GlobalNativeSys {
     files: DashMap<Handle, Buffered<File>>,
     child_procs: DashMap<Handle, Child>,
     tcp_listeners: DashMap<Handle, TcpListener>,
-    tcp_sockets: DashMap<Handle, TcpStream>,
+    tcp_sockets: DashMap<Handle, Buffered<TcpStream>>,
     hostnames: DashMap<Handle, String>,
     git_paths: DashMap<String, Result<PathBuf, String>>,
     #[cfg(feature = "audio")]
@@ -46,7 +46,7 @@ enum SysStream<'a> {
     File(dashmap::mapref::one::RefMut<'a, Handle, Buffered<File>>),
     Child(dashmap::mapref::one::RefMut<'a, Handle, Child>),
     TcpListener(dashmap::mapref::one::RefMut<'a, Handle, TcpListener>),
-    TcpSocket(dashmap::mapref::one::RefMut<'a, Handle, TcpStream>),
+    TcpSocket(dashmap::mapref::one::RefMut<'a, Handle, Buffered<TcpStream>>),
 }
 
 impl Default for GlobalNativeSys {
@@ -250,8 +250,9 @@ impl SysBackend for NativeSys {
             }
             SysStream::TcpListener(_) => return Err("Cannot read from a tcp listener".to_string()),
             SysStream::TcpSocket(mut socket) => {
+                socket.flush().map_err(|e| e.to_string())?;
                 let mut buf = Vec::new();
-                BufReader::new(&mut *socket)
+                Read::by_ref(&mut *socket)
                     .take(len as u64)
                     .read_to_end(&mut buf)
                     .map_err(|e| e.to_string())?;
@@ -276,10 +277,9 @@ impl SysBackend for NativeSys {
             }
             SysStream::TcpListener(_) => return Err("Cannot read from a tcp listener".to_string()),
             SysStream::TcpSocket(mut socket) => {
+                socket.flush().map_err(|e| e.to_string())?;
                 let mut buf = Vec::new();
-                BufReader::new(&mut *socket)
-                    .read_to_end(&mut buf)
-                    .map_err(|e| e.to_string())?;
+                socket.read_to_end(&mut buf).map_err(|e| e.to_string())?;
                 buf
             }
         })
@@ -464,13 +464,17 @@ impl SysBackend for NativeSys {
         let (stream, _) = listener.accept().map_err(|e| e.to_string())?;
         drop(listener);
         let handle = NATIVE_SYS.new_handle();
-        NATIVE_SYS.tcp_sockets.insert(handle, stream);
+        NATIVE_SYS
+            .tcp_sockets
+            .insert(handle, Buffered::new_reader(stream));
         Ok(handle)
     }
     fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
         let stream = TcpStream::connect(addr).map_err(|e| e.to_string())?;
-        NATIVE_SYS.tcp_sockets.insert(handle, stream);
+        NATIVE_SYS
+            .tcp_sockets
+            .insert(handle, Buffered::new_writer(stream));
         NATIVE_SYS.hostnames.insert(
             handle,
             addr.split_once(':')
@@ -485,7 +489,11 @@ impl SysBackend for NativeSys {
             .tcp_sockets
             .get(&handle)
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
-        Ok(socket.peer_addr().map_err(|e| e.to_string())?.to_string())
+        Ok(socket
+            .get_ref()
+            .peer_addr()
+            .map_err(|e| e.to_string())?
+            .to_string())
     }
     fn tcp_set_non_blocking(&self, handle: Handle, non_blocking: bool) -> Result<(), String> {
         let socket = NATIVE_SYS
@@ -493,6 +501,7 @@ impl SysBackend for NativeSys {
             .get(&handle)
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
         socket
+            .get_ref()
             .set_nonblocking(non_blocking)
             .map_err(|e| e.to_string())?;
         Ok(())
@@ -507,6 +516,7 @@ impl SysBackend for NativeSys {
             .get(&handle)
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
         socket
+            .get_ref()
             .set_read_timeout(timeout)
             .map_err(|e| e.to_string())?;
         Ok(())
@@ -521,6 +531,7 @@ impl SysBackend for NativeSys {
             .get(&handle)
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
         socket
+            .get_ref()
             .set_write_timeout(timeout)
             .map_err(|e| e.to_string())?;
         Ok(())
@@ -610,10 +621,11 @@ impl SysBackend for NativeSys {
 
         let server_name =
             rustls::pki_types::ServerName::try_from(host).map_err(|e| e.to_string())?;
+        let tcp_stream = socket.get_mut();
 
         let mut conn = rustls::ClientConnection::new(CLIENT_CONFIG.clone(), server_name)
             .map_err(|e| e.to_string())?;
-        let mut tls = rustls::Stream::new(&mut conn, &mut *socket);
+        let mut tls = rustls::Stream::new(&mut conn, tcp_stream);
         tls.write_all(request.as_bytes())
             .map_err(|e| e.to_string())?;
         let mut buffer = Vec::new();

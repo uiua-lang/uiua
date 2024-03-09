@@ -1159,12 +1159,9 @@ impl SysOp {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     #[cfg(feature = "bytes")]
                     Value::Byte(arr) => arr.data.into(),
-
-                    Value::Complex(_) => {
-                        return Err(env.error("Cannot write complex array to file"))
-                    }
+                    Value::Complex(_) => return Err(env.error("Cannot write complex array")),
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
-                    Value::Box(_) => return Err(env.error("Cannot write box array to file")),
+                    Value::Box(_) => return Err(env.error("Cannot write box array")),
                 };
                 match handle {
                     Handle::STDOUT => env

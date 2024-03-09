@@ -1391,6 +1391,10 @@ primitive!(
     /// ex: ⍥/◇⊂∞ {1 {2 3} {4 {5 6 {7}}}}
     /// The number of repetitions may be non-scalar. In this case, the function will be repeated each row of the input a different number of times.
     /// ex: ⍥(×2) [1 2 3 4] [5 5 5 5]
+    /// If you want to conditionally either run some function or not, you can use [repeat] to repeat `0` or `1` times.
+    /// ex: F ← ⍥(×10)<10.
+    ///   : F 5
+    ///   : F 12
     ///
     /// [repeat]'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation.
     ([1], Repeat, IteratingModifier, ("repeat", '⍥')),

@@ -1178,6 +1178,8 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="⍥/+2 ↯3_3⇡9"/>
         <p><Prim prim=Repeat/><Prim prim=Rand/>" inside "<code>"[]"</code>"s is a common pattern for generating a list of random numbers."</p>
         <Editor example="⁅[⍥⚂]5"/>
+        <p><Prim prim=Repeat/>" is also useful for conditionally calling a function. Because booleans in Uiua are just numbers, "<Prim prim=Repeat/>"ing with a boolean value will call a function "<code>"0"</code>" or "<code>"1"</code>" times."</p>
+        <Editor example="F ← ⍥(×10)<10.\nF 5\nF 12"/>
         <p><Prim prim=Repeat/>"'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation."</p>
         <p>"The "<Prim prim=Do/>" modifier takes a loop function and a condition function. It repeatedly calls the loop function as long as the condition function returns "<code>"1"</code>"."</p>
         <Editor example="⍢(×2|<1000) 1"/>

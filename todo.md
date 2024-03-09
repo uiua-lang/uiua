@@ -1,7 +1,8 @@
 # Uiua Todo
 
 - 0.10
-  - Planet expressions?
+  - Fix `group` docs
+  - Document new `partition` behavior
   - Proofread and update tutorial and tour
   - System functions
     - Excel

@@ -501,7 +501,8 @@ code:
             // Compile the words
             let instr_count_before = self.asm.instrs.len();
             let instrs = self.compile_words(line, true)?;
-            let mut instrs = self.pre_eval_instrs(instrs);
+            let (mut instrs, pre_eval_errors) = self.pre_eval_instrs(instrs);
+            let mut line_eval_errored = false;
             match instrs_signature(&instrs) {
                 Ok(sig) => {
                     // Update scope stack height
@@ -548,11 +549,17 @@ code:
                                 instrs = vals.into_iter().map(Instr::push).collect();
                             }
                             Ok(None) => {}
-                            Err(e) => self.errors.push(e),
+                            Err(e) => {
+                                self.errors.push(e);
+                                line_eval_errored = true;
+                            }
                         }
                     }
                 }
                 Err(e) => self.scope.stack_height = Err(span.sp(e)),
+            }
+            if !line_eval_errored {
+                self.errors.extend(pre_eval_errors);
             }
             let start = self.asm.instrs.len();
             (self.asm.instrs).extend(instrs);
@@ -570,7 +577,8 @@ code:
         I: IntoIterator<Item = Instr> + fmt::Debug,
         I::IntoIter: ExactSizeIterator,
     {
-        let instrs = self.pre_eval_instrs(instrs.into_iter().collect());
+        let (instrs, errors) = self.pre_eval_instrs(instrs.into_iter().collect());
+        self.errors.extend(errors);
         let len = instrs.len();
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
@@ -1711,14 +1719,16 @@ code:
         let function = self.create_function(signature, f);
         self.bind_function(name, function)
     }
-    fn pre_eval_instrs(&mut self, instrs: EcoVec<Instr>) -> EcoVec<Instr> {
+    #[must_use]
+    fn pre_eval_instrs(&mut self, instrs: EcoVec<Instr>) -> (EcoVec<Instr>, Vec<UiuaError>) {
         use Primitive::*;
+        let mut errors = Vec::new();
         let instrs = optimize_instrs(instrs, true, &self.asm);
         if self.scope.fill
             || self.pre_eval_mode == PreEvalMode::Lazy
             || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
         {
-            return instrs;
+            return (instrs, errors);
         }
         let mut start = 0;
         let mut new_instrs: Option<EcoVec<Instr>> = None;
@@ -1772,7 +1782,7 @@ code:
                         Ok(None) => {}
                         Err(e) if e.is_fill() => {}
                         Err(e) if e.message().contains("No locals to get") => {}
-                        Err(e) => self.errors.push(e),
+                        Err(e) => errors.push(e),
                     }
                     start = end;
                     continue 'start;
@@ -1786,7 +1796,7 @@ code:
         // if let Some(new_instrs) = &new_instrs {
         //     println!("eval: {new_instrs:?}")
         // }
-        new_instrs.unwrap_or(instrs)
+        (new_instrs.unwrap_or(instrs), errors)
     }
     fn comptime_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult<Option<Vec<Value>>> {
         if !self.pre_eval_mode.matches_instrs(&instrs, &self.asm) {

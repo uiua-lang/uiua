@@ -626,7 +626,7 @@ enum App {
     Lsp,
     #[clap(about = "Run the Uiua interpreter in a REPL")]
     Repl {
-        #[clap(short = 'f', long, help = "A Uiua file to run before the REPL starts")]
+        #[clap(help = "A Uiua file to run before the REPL starts")]
         file: Option<PathBuf>,
         #[clap(flatten)]
         formatter_options: FormatterOptions,

@@ -15,7 +15,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let xs = env.pop(1)?;
-    match (f.as_flipped_primitive(env), xs) {
+    match (f.as_flipped_primitive(&env.asm), xs) {
         (Some((Primitive::Join, false)), mut xs) if env.value_fill().is_none() => {
             let depth = depth.min(xs.rank());
             if xs.rank() - depth < 2 {
@@ -437,7 +437,7 @@ fn generic_reduce(f: Function, xs: Value, depth: usize, env: &mut Uiua) -> UiuaR
 pub fn reduce_content(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let xs = env.pop(1)?;
-    if let (1, Some((Primitive::Join, false))) = (xs.rank(), f.as_flipped_primitive(env)) {
+    if let (1, Some((Primitive::Join, false))) = (xs.rank(), f.as_flipped_primitive(&env.asm)) {
         let xs = xs
             .into_rows()
             .map(Value::unboxed)
@@ -533,7 +533,7 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     if xs.rank() == 0 {
         return Err(env.error(format!("Cannot {} rank 0 array", Primitive::Scan.format())));
     }
-    match (f.as_flipped_primitive(env), xs) {
+    match (f.as_flipped_primitive(&env.asm), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => {
             let arr = match prim {
                 Primitive::Eq => fast_scan(nums, |a, b| is_eq::num_num(a, b) as f64),
@@ -676,7 +676,7 @@ pub fn unscan(env: &mut Uiua) -> UiuaResult {
     }
 
     match xs {
-        Value::Num(nums) => match f.as_flipped_primitive(env) {
+        Value::Num(nums) => match f.as_flipped_primitive(&env.asm) {
             Some((Primitive::Sub, false)) => {
                 env.push(fast_invscan(nums, sub::num_num));
                 return Ok(());
@@ -688,7 +688,7 @@ pub fn unscan(env: &mut Uiua) -> UiuaResult {
             _ => xs = Value::Num(nums),
         },
         #[cfg(feature = "bytes")]
-        Value::Byte(bytes) => match f.as_flipped_primitive(env) {
+        Value::Byte(bytes) => match f.as_flipped_primitive(&env.asm) {
             Some((Primitive::Sub, false)) => {
                 env.push(fast_invscan(bytes.convert(), sub::num_num));
                 return Ok(());
@@ -833,7 +833,7 @@ pub fn adjacent(env: &mut Uiua) -> UiuaResult {
         return Err(env.error("Window size cannot be zero"));
     }
     let n = n_abs;
-    match (f.as_flipped_primitive(env), xs) {
+    match (f.as_flipped_primitive(&env.asm), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => env.push(match prim {
             Primitive::Add => fast_adjacent(nums, n, env, add::num_num),
             Primitive::Sub if flipped => fast_adjacent(nums, n, env, flip(sub::num_num)),

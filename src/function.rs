@@ -686,65 +686,75 @@ impl Function {
         env.as_mut().instrs_mut(self.slice)
     }
     /// Try to get a lone primitive from this function
-    pub fn as_primitive(&self, env: &impl AsRef<Assembly>) -> Option<Primitive> {
-        self.as_flipped_primitive(env)
+    pub fn as_primitive(&self, asm: &Assembly) -> Option<Primitive> {
+        self.as_flipped_primitive(asm)
             .filter(|(_, flipped)| !flipped)
             .map(|(prim, _)| prim)
     }
-    pub(crate) fn as_flipped_primitive(
-        &self,
-        env: &impl AsRef<Assembly>,
-    ) -> Option<(Primitive, bool)> {
-        use Primitive::*;
+    pub(crate) fn as_flipped_primitive(&self, asm: &Assembly) -> Option<(Primitive, bool)> {
         match &self.id {
             FunctionId::Primitive(prim) => Some((*prim, false)),
-            _ => match self.instrs(env.as_ref()) {
-                [Instr::Prim(Flip, _), Instr::Prim(prim, _), rest @ ..]
-                | [rest @ .., Instr::Prim(Flip, _), Instr::Prim(prim, _)]
-                    if rest.iter().all(|i| !i.is_code()) =>
-                {
-                    Some((*prim, true))
-                }
-                [Instr::Prim(prim, _), rest @ ..] | [rest @ .., Instr::Prim(prim, _)]
-                    if rest.iter().all(|i| !i.is_code()) =>
-                {
-                    Some((*prim, false))
-                }
-                [Instr::PushFunc(f), Instr::Call(_), rest @ ..]
-                | [rest @ .., Instr::PushFunc(f), Instr::Call(_)]
-                    if rest.iter().all(|i| !i.is_code()) =>
-                {
-                    f.as_flipped_primitive(env.as_ref())
-                }
-                _ => None,
-            },
+            _ => instrs_as_flipped_primitive(self.instrs(asm), asm),
         }
     }
     pub(crate) fn as_flipped_impl_primitive(
         &self,
-        env: &impl AsRef<Assembly>,
+        asm: &Assembly,
     ) -> Option<(ImplPrimitive, bool)> {
-        use Primitive::*;
-        match self.instrs(env.as_ref()) {
-            [Instr::ImplPrim(prim, _), Instr::Prim(Flip, _), rest @ ..]
-            | [rest @ .., Instr::ImplPrim(prim, _), Instr::Prim(Flip, _)]
-                if rest.iter().all(|i| !i.is_code()) =>
-            {
-                Some((*prim, true))
-            }
-            [Instr::ImplPrim(prim, _), rest @ ..] | [rest @ .., Instr::ImplPrim(prim, _)]
-                if rest.iter().all(|i| !i.is_code()) =>
-            {
-                Some((*prim, false))
-            }
-            [Instr::PushFunc(f), Instr::Call(_), rest @ ..]
-            | [rest @ .., Instr::PushFunc(f), Instr::Call(_)]
-                if rest.iter().all(|i| !i.is_code()) =>
-            {
-                f.as_flipped_impl_primitive(env.as_ref())
-            }
-            _ => None,
+        instrs_as_flipped_impl_primitive(self.instrs(asm), asm)
+    }
+}
+
+pub(crate) fn instrs_as_flipped_primitive(
+    instrs: &[Instr],
+    asm: &Assembly,
+) -> Option<(Primitive, bool)> {
+    use Primitive::*;
+    match instrs {
+        [Instr::Prim(Flip, _), Instr::Prim(prim, _), rest @ ..]
+        | [rest @ .., Instr::Prim(Flip, _), Instr::Prim(prim, _)]
+            if rest.iter().all(|i| !i.is_code()) =>
+        {
+            Some((*prim, true))
         }
+        [Instr::Prim(prim, _), rest @ ..] | [rest @ .., Instr::Prim(prim, _)]
+            if rest.iter().all(|i| !i.is_code()) =>
+        {
+            Some((*prim, false))
+        }
+        [Instr::PushFunc(f), Instr::Call(_), rest @ ..]
+        | [rest @ .., Instr::PushFunc(f), Instr::Call(_)]
+            if rest.iter().all(|i| !i.is_code()) =>
+        {
+            f.as_flipped_primitive(asm.as_ref())
+        }
+        _ => None,
+    }
+}
+pub(crate) fn instrs_as_flipped_impl_primitive(
+    instrs: &[Instr],
+    asm: &Assembly,
+) -> Option<(ImplPrimitive, bool)> {
+    use Primitive::*;
+    match instrs {
+        [Instr::ImplPrim(prim, _), Instr::Prim(Flip, _), rest @ ..]
+        | [rest @ .., Instr::ImplPrim(prim, _), Instr::Prim(Flip, _)]
+            if rest.iter().all(|i| !i.is_code()) =>
+        {
+            Some((*prim, true))
+        }
+        [Instr::ImplPrim(prim, _), rest @ ..] | [rest @ .., Instr::ImplPrim(prim, _)]
+            if rest.iter().all(|i| !i.is_code()) =>
+        {
+            Some((*prim, false))
+        }
+        [Instr::PushFunc(f), Instr::Call(_), rest @ ..]
+        | [rest @ .., Instr::PushFunc(f), Instr::Call(_)]
+            if rest.iter().all(|i| !i.is_code()) =>
+        {
+            f.as_flipped_impl_primitive(asm.as_ref())
+        }
+        _ => None,
     }
 }
 

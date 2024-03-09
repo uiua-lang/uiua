@@ -1304,7 +1304,7 @@ fn invert_scan_pattern<'a>(
     let [Instr::PushFunc(f), Instr::Prim(Primitive::Scan, span), input @ ..] = input else {
         return None;
     };
-    let inverse = match f.as_flipped_primitive(comp) {
+    let inverse = match f.as_flipped_primitive(&comp.asm) {
         Some((Primitive::Add, false)) => eco_vec![Instr::Prim(Primitive::Sub, *span)],
         Some((Primitive::Mul, false)) => eco_vec![Instr::Prim(Primitive::Div, *span)],
         Some((Primitive::Eq, false)) => eco_vec![Instr::Prim(Primitive::Eq, *span)],
@@ -1437,7 +1437,7 @@ fn invert_reduce_mul_pattern<'a>(
     let [Instr::PushFunc(f), Instr::Prim(Primitive::Reduce, span), input @ ..] = input else {
         return None;
     };
-    let Some((Primitive::Mul, _)) = f.as_flipped_primitive(comp) else {
+    let Some((Primitive::Mul, _)) = f.as_flipped_primitive(&comp.asm) else {
         return None;
     };
     let instrs = eco_vec![Instr::ImplPrim(ImplPrimitive::Primes, *span)];

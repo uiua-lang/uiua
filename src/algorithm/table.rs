@@ -117,7 +117,7 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
 
 pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    match (f.as_flipped_primitive(env), xs, ys) {
+    match (f.as_flipped_primitive(&env.asm), xs, ys) {
         (Some((prim, flipped)), Value::Num(xs), Value::Num(ys)) => {
             if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env)? {
                 return generic_table(f, Value::Num(xs), Value::Num(ys), env);
@@ -227,7 +227,7 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
             Value::Char(xs),
             Value::Char(ys),
         ) => env.push(fast_table_list_join_or_couple(xs, ys, flipped)),
-        (_, xs, ys) => match f.as_flipped_impl_primitive(env) {
+        (_, xs, ys) => match f.as_flipped_impl_primitive(&env.asm) {
             // Random
             Some((ImplPrimitive::ReplaceRand2, _)) => {
                 let shape = [xs.row_count(), ys.row_count()];

@@ -76,6 +76,21 @@ pub fn spans(input: &str) -> (Vec<Sp<SpanKind>>, Inputs) {
     spans_with_backend(input, SafeSys::default())
 }
 
+#[doc(hidden)]
+/// Used for coloring code in the REPL
+pub fn spans_with_compiler(input: &str, compiler: &Compiler) -> (Vec<Sp<SpanKind>>, Inputs) {
+    let mut compiler = compiler.clone();
+    let src = InputSrc::Str(compiler.asm.inputs.strings.len().saturating_sub(1));
+    let (items, _, _) = parse(input, src.clone(), &mut compiler.asm.inputs);
+    let spanner = Spanner {
+        asm: compiler.asm,
+        code_meta: compiler.code_meta,
+        errors: Vec::new(),
+        diagnostics: Vec::new(),
+    };
+    (spanner.items_spans(&items), spanner.asm.inputs.clone())
+}
+
 /// Get spans and their kinds from Uiua code with a custom backend
 pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<SpanKind>>, Inputs) {
     let src = InputSrc::Str(0);
@@ -85,7 +100,7 @@ pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<Span
 }
 
 /// Metadata for code for use in IDE tools
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct CodeMeta {
     /// A map of references to global bindings
     pub global_references: HashMap<Sp<Ident>, usize>,
@@ -102,7 +117,7 @@ pub struct CodeMeta {
 }
 
 /// Data for the signature of a function
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct SigDecl {
     /// The signature itself
     pub sig: Signature,

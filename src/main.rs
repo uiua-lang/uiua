@@ -21,8 +21,8 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lsp::BindingDocsKind,
-    spans, Assembly, Compiler, NativeSys, PrimClass, RunMode, SpanKind, Uiua, UiuaError,
-    UiuaResult, Value,
+    Assembly, Compiler, NativeSys, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult,
+    Value,
 };
 
 fn main() {
@@ -837,9 +837,9 @@ fn print_stack(stack: &[Value], color: bool) {
     }
 }
 
-fn repl(mut rt: Uiua, mut compiler: Compiler, color: bool, config: FormatConfig) {
+fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, config: FormatConfig) {
     let mut line_reader = DefaultEditor::new().expect("Failed to read from Stdin");
-    let mut repl = |rt: &mut Uiua| -> Result<bool, UiuaError> {
+    let mut repl = || -> Result<bool, UiuaError> {
         let mut code = match line_reader.readline("» ") {
             Ok(code) => code,
             Err(ReadlineError::Eof | ReadlineError::Interrupted) => return Ok(false),
@@ -861,14 +861,13 @@ fn repl(mut rt: Uiua, mut compiler: Compiler, color: bool, config: FormatConfig)
         }
 
         print!("↪ ");
-        println!("{}", color_code(&code));
-
         let backup = compiler.clone();
-        let res = compiler
-            .load_str(&code)
-            .and_then(|comp| rt.run_asm(comp.finish()));
-        print_stack(&rt.take_stack(), color);
-        let mut asm = rt.take_asm();
+        let res = compiler.load_str(&code).map(drop);
+        println!("{}", color_code(&code, &compiler));
+        let res = res.and_then(|()| env.run_asm(compiler.finish()));
+
+        print_stack(&env.take_stack(), color);
+        let mut asm = env.take_asm();
         match res {
             Ok(()) => {
                 asm.remove_top_level();
@@ -884,7 +883,7 @@ fn repl(mut rt: Uiua, mut compiler: Compiler, color: bool, config: FormatConfig)
 
     println!("Uiua {} (end with ctrl+C)\n", env!("CARGO_PKG_VERSION"));
     loop {
-        match repl(&mut rt) {
+        match repl() {
             Ok(true) => {}
             Ok(false) => break,
             Err(e) => {
@@ -894,9 +893,9 @@ fn repl(mut rt: Uiua, mut compiler: Compiler, color: bool, config: FormatConfig)
     }
 }
 
-fn color_code(code: &str) -> String {
+fn color_code(code: &str, compiler: &Compiler) -> String {
     let mut colored = String::new();
-    let (spans, inputs) = spans(code);
+    let (spans, inputs) = uiua::lsp::spans_with_compiler(code, compiler);
 
     let noadic = (237, 94, 106);
     let monadic = (149, 209, 106);

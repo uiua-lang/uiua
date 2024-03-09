@@ -225,6 +225,14 @@ impl Compiler {
     pub fn assembly_mut(&mut self) -> &mut Assembly {
         &mut self.asm
     }
+    /// Get a reference to the code metadata
+    pub fn code_meta(&self) -> &CodeMeta {
+        &self.code_meta
+    }
+    /// Get a mutable reference to the code metadata
+    pub fn code_meta_mut(&mut self) -> &mut CodeMeta {
+        &mut self.code_meta
+    }
     /// Take a completed assembly from the compiler
     pub fn finish(&mut self) -> Assembly {
         take(&mut self.asm)

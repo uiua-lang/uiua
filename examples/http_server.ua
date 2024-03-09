@@ -46,14 +46,14 @@ Page ← |1 ⍣(
 )HandlePageLoadError ⊂"docs"
 Home ← |0 Page "/index.html"
 
-Respond ← ◌spawn(
+Respond ← ◌pool(
+  &p $"Request from _" &tcpaddr.
   # Extract path from request
   °□⊡1 ⊜□≠@ . &ru "\r\n\r\n".
-  &p "Request:"
-  &p.
+  &p $"Request:\n_".
 
   # Route to handler
-  ⟨Page|Home◌⟩ ≍"/".
+  ⟨Page|⋅Home⟩ ≍"/".
   &p "Response:"
   &pf⧻.
   &p " bytes"

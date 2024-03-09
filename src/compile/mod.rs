@@ -431,7 +431,7 @@ code:
         fn words_should_run_anyway(words: &[Sp<Word>]) -> bool {
             words.iter().any(|w| {
                 matches!(&w.value, Word::Primitive(Primitive::Sys(SysOp::Import)))
-                    || matches!(&w.value, Word::Comment(_))
+                    || matches!(&w.value, Word::SemanticComment(_))
             })
         }
         let prev_com = prev_comment.take();

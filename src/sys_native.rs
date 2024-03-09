@@ -1,7 +1,7 @@
 use std::{
     any::Any,
     env,
-    fs::{self, File},
+    fs::{self, File, OpenOptions},
     io::{stderr, stdin, stdout, Read, Write},
     net::*,
     path::{Path, PathBuf},
@@ -197,7 +197,11 @@ impl SysBackend for NativeSys {
     }
     fn open_file(&self, path: &Path) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
-        let file = File::open(path).map_err(|e| format!("{e} {}", path.display()))?;
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(path)
+            .map_err(|e| format!("{e} {}", path.display()))?;
         NATIVE_SYS.files.insert(handle, Buffered::new_reader(file));
         Ok(handle)
     }
@@ -535,10 +539,12 @@ impl SysBackend for NativeSys {
         if let Some((_, mut child)) = NATIVE_SYS.child_procs.remove(&handle) {
             child.kill().map_err(|e| e.to_string())?;
             Ok(())
-        } else if NATIVE_SYS.files.remove(&handle).is_some()
-            || NATIVE_SYS.tcp_listeners.remove(&handle).is_some()
-            || NATIVE_SYS.tcp_sockets.remove(&handle).is_some()
-        {
+        } else if let Some((_, mut file)) = NATIVE_SYS.files.remove(&handle) {
+            file.flush().map_err(|e| e.to_string())
+        } else if let Some((_, mut socket)) = NATIVE_SYS.tcp_sockets.remove(&handle) {
+            NATIVE_SYS.hostnames.remove(&handle);
+            socket.flush().map_err(|e| e.to_string())
+        } else if NATIVE_SYS.tcp_listeners.remove(&handle).is_some() {
             NATIVE_SYS.hostnames.remove(&handle);
             Ok(())
         } else {

@@ -1438,8 +1438,8 @@ primitive!(
     ///
     /// Takes a function and two arrays.
     /// The arrays must be the same [length].
-    /// The first array must be rank `1` and contain integers.
-    /// Consecutive rows in the second array that line up with groups of the same key in the first array will be grouped together.
+    /// The first array is called the "markers". It must be rank `1` and contain integers.
+    /// Consecutive rows in the second array that line up with groups of the same key in the markers will be grouped together.
     /// Keys `less or equal``0` will be omitted.
     /// The function then processes each group in order. The result depends on what the function is.
     /// If the function takes 0 or 1 arguments, then [partition] behaves like [rows]. This is called *iterating* [partition].
@@ -1457,6 +1457,12 @@ primitive!(
     /// ex: $ 1 1 2 3
     ///   : $ 5 8 13 21
     ///   : ⊜(⊜⋕≠@ .)≠@\n.
+    ///
+    /// [partition] also works with multidimensional markers. Groups are formed from markers that are adjacent along any axis.
+    /// Each group will be flattened before being passed to the function.
+    /// ex: ⊜□.. ↯4_4 [0 1 1 2 2]
+    /// If we wanted to group the indices that are adjacent, we could use the array to [partition] its own indices.
+    /// ex: ⊜□:⇡△.. ↯4_4 [0 1 1 2 2]
     ///
     /// [under][partition] works if [partition]'s function is [under]able.
     /// ex: ⍜⊜□⇌  ≠@ . $ These are some words

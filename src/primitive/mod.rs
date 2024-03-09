@@ -367,7 +367,7 @@ impl Primitive {
         use Primitive::*;
         matches!(
             self,
-            (Mask | Coordinate)
+            Coordinate
                 | (This | Recur)
                 | (Rectify | All | Cascade | By)
                 | (Map | Insert | Has | Get | Remove)

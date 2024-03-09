@@ -1780,10 +1780,18 @@ code:
         new_instrs.unwrap_or(instrs)
     }
     fn comptime_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult<Option<Vec<Value>>> {
-        if !self.pre_eval_mode.matches_instrs(&instrs, &self.asm)
-            || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
-        {
+        if !self.pre_eval_mode.matches_instrs(&instrs, &self.asm) {
             return Ok(None);
+        }
+        if instrs.iter().all(|instr| matches!(instr, Instr::Push(_))) {
+            return Ok(Some(
+                (instrs.into_iter())
+                    .map(|instr| match instr {
+                        Instr::Push(val) => val,
+                        _ => unreachable!(),
+                    })
+                    .collect(),
+            ));
         }
         thread_local! {
             static CACHE: RefCell<HashMap<EcoVec<Instr>, Option<Vec<Value>>>> = RefCell::new(HashMap::new());

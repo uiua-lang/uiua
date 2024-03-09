@@ -203,7 +203,7 @@ pub(crate) fn under_instrs(
     /// Copy 1 value to the temp stack after the "before", and pop it before the "after"
     macro_rules! store1copy {
         ($before:expr, $after:expr) => {
-            pat!($before, ($before, CopyToTempN(1)), (PopTempN(2), $after),)
+            pat!($before, ($before, CopyToTempN(1)), (PopTempN(1), $after),)
         };
     }
 

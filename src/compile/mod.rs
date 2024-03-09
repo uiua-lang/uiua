@@ -1762,7 +1762,6 @@ code:
                             new_instrs.extend(values.into_iter().map(Instr::Push));
                         }
                         Ok(None) => {}
-                        Err(e) if e.is_fill() && !self.scope.fill => {}
                         Err(e) if e.message().contains("No locals to get") => {}
                         Err(e) => self.errors.push(e),
                     }

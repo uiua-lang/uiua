@@ -232,6 +232,7 @@ impl SysBackend for NativeSys {
     fn read(&self, handle: Handle, len: usize) -> Result<Vec<u8>, String> {
         Ok(match NATIVE_SYS.get_stream(handle)? {
             SysStream::File(mut file) => {
+                file.flush().map_err(|e| e.to_string())?;
                 let mut buf = Vec::new();
                 Read::by_ref(&mut *file)
                     .take(len as u64)
@@ -249,6 +250,7 @@ impl SysBackend for NativeSys {
             }
             SysStream::TcpListener(_) => return Err("Cannot read from a tcp listener".to_string()),
             SysStream::TcpSocket(mut socket) => {
+                socket.flush().map_err(|e| e.to_string())?;
                 let mut buf = Vec::new();
                 Read::by_ref(&mut *socket)
                     .take(len as u64)
@@ -261,22 +263,21 @@ impl SysBackend for NativeSys {
     fn read_all(&self, handle: Handle) -> Result<Vec<u8>, String> {
         Ok(match NATIVE_SYS.get_stream(handle)? {
             SysStream::File(mut file) => {
+                file.flush().map_err(|e| e.to_string())?;
                 let mut buf = Vec::new();
                 file.read_to_end(&mut buf).map_err(|e| e.to_string())?;
                 buf
             }
             SysStream::Child(mut child) => {
                 let mut buf = Vec::new();
-                child
-                    .stdout
-                    .as_mut()
-                    .unwrap()
+                (child.stdout.as_mut().unwrap())
                     .read_to_end(&mut buf)
                     .map_err(|e| e.to_string())?;
                 buf
             }
             SysStream::TcpListener(_) => return Err("Cannot read from a tcp listener".to_string()),
             SysStream::TcpSocket(mut socket) => {
+                socket.flush().map_err(|e| e.to_string())?;
                 let mut buf = Vec::new();
                 socket.read_to_end(&mut buf).map_err(|e| e.to_string())?;
                 buf

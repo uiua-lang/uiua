@@ -806,10 +806,20 @@ impl<'a> Formatter<'a> {
                 .output
                 .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
             Word::MultilineString(s) => {
+                let curr_line_pos = if self.output.ends_with('\n') {
+                    0
+                } else {
+                    self.output
+                        .split('\n')
+                        .last()
+                        .unwrap_or_default()
+                        .chars()
+                        .count()
+                };
                 for (i, line) in s.lines().enumerate() {
                     if i > 0 {
                         self.output.push('\n');
-                        for _ in 0..self.config.multiline_indent * depth {
+                        for _ in 0..curr_line_pos {
                             self.output.push(' ');
                         }
                     }

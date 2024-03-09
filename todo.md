@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Fix `group` docs
   - Document new `partition` behavior
   - Remove old `&i`
   - Proofread and update tutorial and tour

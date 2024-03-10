@@ -108,6 +108,13 @@ impl Value {
         }
         let keys =
             (self.meta().map_keys.as_ref()).ok_or_else(|| env.error("Value is not a map"))?;
+        if keys.len != self.row_count() {
+            return Err(env.error(format!(
+                "Cannot read from map with {} keys and {} value(s)",
+                keys.len,
+                self.row_count()
+            )));
+        }
         if let Some(index) = keys.get(key) {
             if index >= self.row_count() {
                 return Err(env.error("Map was corrupted"));
@@ -138,6 +145,12 @@ impl Value {
         let mut keys = self
             .take_map_keys()
             .ok_or_else(|| env.error("Value is not a map"))?;
+        if keys.len != row_count {
+            return Err(env.error(format!(
+                "Cannot insert into map with {} keys and {} value(s)",
+                keys.len, row_count
+            )));
+        }
         let curr_index = keys.get(&key);
         let index = curr_index.unwrap_or(row_count);
         keys.insert(key, index, env)?;
@@ -242,6 +255,12 @@ impl Value {
         let row_count = self.row_count();
         let keys = (self.get_meta_mut().and_then(|m| m.map_keys.as_mut()))
             .ok_or_else(|| env.error("Value is not a map"))?;
+        if keys.len != row_count {
+            return Err(env.error(format!(
+                "Cannot remove from map with {} keys and {} value(s)",
+                keys.len, row_count
+            )));
+        }
         if let Some(index) = keys.remove(key, env)? {
             if index >= row_count {
                 return Err(env.error("Map was corrupted"));

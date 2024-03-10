@@ -132,7 +132,3 @@ members = ["site", "tests_ffi"]
 
 [profile.dev]
 incremental = true
-
-[profile.release]
-lto = 'thin'
-opt-level = 's'

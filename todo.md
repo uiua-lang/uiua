@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.10
-  - Make `fix`ed maps well-defined
+  - Document all `un`s and `under`s
   - Proofread and update tutorial and tour
   - System functions
     - Excel

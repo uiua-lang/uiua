@@ -2,7 +2,7 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
     iter::repeat,
-    mem::take,
+    mem::{replace, take},
 };
 
 use ecow::EcoVec;
@@ -18,27 +18,20 @@ use super::FillContext;
 impl<T: ArrayValue> Array<T> {
     /// Check if the array is a map
     pub fn is_map(&self) -> bool {
-        (self.meta().map_keys.as_ref()).is_some_and(|keys| keys.len == self.row_count())
-    }
-    /// Check if the array is a fixed map
-    pub fn is_fixed_map(&self) -> bool {
-        let Some(map_keys) = self.meta().map_keys.as_ref() else {
-            return false;
-        };
-        self.row_count() == 1
-            && map_keys.len != 1
-            && self.rank() > 1
-            && self.shape()[1] == map_keys.len
+        self.meta().map_keys.as_ref().is_some()
     }
     /// Get the keys and values of a map array
     pub fn map_kv(&self) -> impl Iterator<Item = (Value, Array<T>)> {
+        self.map_kv_inner().into_iter()
+    }
+    fn map_kv_inner(&self) -> Vec<(Value, Array<T>)> {
         let Some(map_keys) = self.meta().map_keys.as_ref() else {
-            return Vec::new().into_iter();
+            return Vec::new();
         };
         let mut kv = Vec::with_capacity(map_keys.len);
         let mut ki: Vec<_> = (map_keys.keys.rows())
             .zip(&map_keys.indices)
-            .filter(|(k, _)| !k.is_empty_cell() && !k.is_tombstone())
+            .filter(|(k, _)| !k.is_all_empty_cell() && !k.is_all_tombstone())
             .collect();
         ki.sort_unstable_by_key(|(_, i)| *i);
         for (key, index) in ki {
@@ -46,14 +39,14 @@ impl<T: ArrayValue> Array<T> {
                 kv.push((key, self.row(*index)));
             }
         }
-        kv.into_iter()
+        kv
     }
 }
 
 impl Value {
     /// Check if the value is a map
     pub fn is_map(&self) -> bool {
-        (self.meta().map_keys.as_ref()).is_some_and(|keys| keys.len == self.row_count())
+        self.meta().map_keys.as_ref().is_some()
     }
     /// Get the keys and values of a map array
     pub fn map_kv(&self) -> Vec<(Value, Value)> {
@@ -84,6 +77,7 @@ impl Value {
             keys: self.clone(),
             indices: Vec::new(),
             len: 0,
+            fix_stack: Vec::new(),
         };
         for (i, key) in self.into_rows().enumerate() {
             keys.insert(key, i, env)?;
@@ -93,12 +87,19 @@ impl Value {
     }
     /// Turn a map array into its keys and values
     pub fn unmap(mut self, env: &Uiua) -> UiuaResult<(Value, Value)> {
-        let keys = self
+        let mut keys = self
             .take_map_keys()
             .ok_or_else(|| env.error("Value is not a map"))?;
+        let mut fix_count = 0;
+        while keys.unfix() {
+            fix_count += 1;
+        }
         let mut key_pairs: Vec<_> = keys.keys.into_rows().zip(keys.indices).collect();
         key_pairs.sort_unstable_by_key(|(_, i)| *i);
-        let keys = remove_empty_rows(key_pairs.into_iter().map(|(k, _)| k));
+        let mut keys = remove_empty_rows(key_pairs.into_iter().map(|(k, _)| k));
+        for _ in 0..fix_count {
+            keys.fix();
+        }
         Ok((keys, self))
     }
     /// Get a value from a map array
@@ -300,6 +301,7 @@ pub struct MapKeys {
     pub(crate) keys: Value,
     indices: Vec<usize>,
     len: usize,
+    fix_stack: Vec<(usize, Vec<usize>)>,
 }
 
 impl MapKeys {
@@ -350,7 +352,7 @@ impl MapKeys {
             loop {
                 let cell_key =
                     &mut key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
-                if cell_key[0].is_empty_cell() {
+                if cell_key[0].is_any_empty_cell() {
                     cell_key.clone_from_slice(&key.data);
                     indices[key_index] = index;
                     break;
@@ -381,7 +383,7 @@ impl MapKeys {
             loop {
                 let cell_key =
                     &mut key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
-                let present = !(cell_key[0].is_empty_cell() || cell_key[0].is_tombstone());
+                let present = !(cell_key[0].is_any_empty_cell() || cell_key[0].is_any_tombstone());
                 if !present || ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
                     if !present {
                         *len += 1;
@@ -445,7 +447,7 @@ impl MapKeys {
             if key.unpacked_ref() == row_key.unpacked_ref() {
                 return Some(self.indices[key_index]);
             }
-            if row_key.is_empty_cell() {
+            if row_key.is_any_empty_cell() {
                 return None;
             }
             key_index = (key_index + 1) % self.capacity();
@@ -479,7 +481,7 @@ impl MapKeys {
                     }
                     break Some(take(&mut indices[key_index]));
                 }
-                if cell_key[0].is_empty_cell() {
+                if cell_key[0].is_any_empty_cell() {
                     break None;
                 }
                 key_index = (key_index + 1) % capacity;
@@ -509,9 +511,25 @@ impl MapKeys {
         }
         do_remove!(Num, Complex, Char, Box)
     }
+    pub(crate) fn fix(&mut self) {
+        self.keys.fix();
+        let indices = replace(&mut self.indices, vec![0]);
+        let len = replace(&mut self.len, 1);
+        self.fix_stack.push((len, indices));
+    }
+    pub(crate) fn unfix(&mut self) -> bool {
+        if let Some((len, indices)) = self.fix_stack.pop() {
+            self.len = len;
+            self.indices = indices;
+            self.keys.unfix();
+            true
+        } else {
+            false
+        }
+    }
     fn present_indices(&self) -> Vec<usize> {
         let mut present_indices: Vec<_> = (self.keys.rows().enumerate())
-            .filter(|(_, k)| !k.is_empty_cell() && !k.is_tombstone())
+            .filter(|(_, k)| !k.is_any_empty_cell() && !k.is_any_tombstone())
             .map(|(i, _)| (i, self.indices[i]))
             .collect();
         present_indices.sort_unstable_by_key(|(_, i)| *i);
@@ -589,7 +607,7 @@ impl MapKeys {
         let mut to_remove = Vec::new();
         let mut to_insert: Vec<_> = (other.keys.into_rows())
             .zip(other.indices)
-            .filter(|(k, _)| !k.is_empty_cell() && !k.is_tombstone())
+            .filter(|(k, _)| !k.is_any_empty_cell() && !k.is_any_tombstone())
             .collect();
         to_insert.sort_unstable_by_key(|(_, i)| *i);
         for (key, index) in to_insert {
@@ -622,7 +640,7 @@ fn set_tombstones<T: MapItem + Clone>(arr: &mut Array<T>, indices: &[usize]) {
 /// Filter out placeholder map rows and collect into a new `Value`
 pub fn remove_empty_rows(iter: impl ExactSizeIterator<Item = Value>) -> Value {
     Value::from_row_values_infallible(
-        iter.filter(|row| !(row.is_empty_cell() || row.is_tombstone()))
+        iter.filter(|row| !(row.is_any_empty_cell() || row.is_any_tombstone()))
             .collect::<Vec<_>>(),
     )
 }
@@ -722,22 +740,28 @@ fn coerce_values(
 
 pub(crate) trait MapItem {
     fn empty_cell() -> Self;
-    fn is_empty_cell(&self) -> bool;
     fn tombstone_cell() -> Self;
-    fn is_tombstone(&self) -> bool;
+    fn is_any_empty_cell(&self) -> bool;
+    fn is_any_tombstone(&self) -> bool;
+    fn is_all_empty_cell(&self) -> bool {
+        self.is_any_empty_cell()
+    }
+    fn is_all_tombstone(&self) -> bool {
+        self.is_any_tombstone()
+    }
 }
 
 impl MapItem for f64 {
     fn empty_cell() -> Self {
         EMPTY_NAN
     }
-    fn is_empty_cell(&self) -> bool {
-        self.to_bits() == EMPTY_NAN.to_bits()
-    }
     fn tombstone_cell() -> Self {
         TOMBSTONE_NAN
     }
-    fn is_tombstone(&self) -> bool {
+    fn is_any_empty_cell(&self) -> bool {
+        self.to_bits() == EMPTY_NAN.to_bits()
+    }
+    fn is_any_tombstone(&self) -> bool {
         self.to_bits() == TOMBSTONE_NAN.to_bits()
     }
 }
@@ -746,13 +770,13 @@ impl MapItem for Complex {
     fn empty_cell() -> Self {
         Complex::new(EMPTY_NAN, 0.0)
     }
-    fn is_empty_cell(&self) -> bool {
-        self.re.to_bits() == EMPTY_NAN.to_bits()
-    }
     fn tombstone_cell() -> Self {
         Complex::new(TOMBSTONE_NAN, 0.0)
     }
-    fn is_tombstone(&self) -> bool {
+    fn is_any_empty_cell(&self) -> bool {
+        self.re.to_bits() == EMPTY_NAN.to_bits()
+    }
+    fn is_any_tombstone(&self) -> bool {
         self.re.to_bits() == TOMBSTONE_NAN.to_bits()
     }
 }
@@ -761,13 +785,13 @@ impl MapItem for char {
     fn empty_cell() -> Self {
         '\0'
     }
-    fn is_empty_cell(&self) -> bool {
-        *self == '\0'
-    }
     fn tombstone_cell() -> Self {
         '\u{1}'
     }
-    fn is_tombstone(&self) -> bool {
+    fn is_any_empty_cell(&self) -> bool {
+        *self == '\0'
+    }
+    fn is_any_tombstone(&self) -> bool {
         *self == '\u{1}'
     }
 }
@@ -776,14 +800,14 @@ impl MapItem for Boxed {
     fn empty_cell() -> Self {
         Boxed(Value::empty_cell())
     }
-    fn is_empty_cell(&self) -> bool {
-        self.0.is_empty_cell()
-    }
     fn tombstone_cell() -> Self {
         Boxed(Value::tombstone_cell())
     }
-    fn is_tombstone(&self) -> bool {
-        self.0.is_tombstone()
+    fn is_any_empty_cell(&self) -> bool {
+        self.0.is_any_empty_cell()
+    }
+    fn is_any_tombstone(&self) -> bool {
+        self.0.is_any_tombstone()
     }
 }
 
@@ -791,27 +815,47 @@ impl MapItem for Value {
     fn empty_cell() -> Self {
         Value::from(EMPTY_NAN)
     }
-    fn is_empty_cell(&self) -> bool {
-        match self {
-            Value::Num(num) => num.data.iter().any(|v| v.is_empty_cell()),
-            #[cfg(feature = "bytes")]
-            Value::Byte(_) => false,
-            Value::Complex(num) => num.data.iter().any(|v| v.is_empty_cell()),
-            Value::Char(num) => num.data.iter().any(|v| v.is_empty_cell()),
-            Value::Box(num) => num.data.iter().any(|v| v.is_empty_cell()),
-        }
-    }
     fn tombstone_cell() -> Self {
         Value::from(TOMBSTONE_NAN)
     }
-    fn is_tombstone(&self) -> bool {
+    fn is_any_empty_cell(&self) -> bool {
         match self {
-            Value::Num(num) => num.data.iter().any(|v| v.is_tombstone()),
+            Value::Num(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
             #[cfg(feature = "bytes")]
             Value::Byte(_) => false,
-            Value::Complex(num) => num.data.iter().any(|v| v.is_tombstone()),
-            Value::Char(num) => num.data.iter().any(|v| v.is_tombstone()),
-            Value::Box(num) => num.data.iter().any(|v| v.is_tombstone()),
+            Value::Complex(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
+            Value::Char(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
+            Value::Box(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
+        }
+    }
+    fn is_any_tombstone(&self) -> bool {
+        match self {
+            Value::Num(num) => num.data.iter().any(|v| v.is_any_tombstone()),
+            #[cfg(feature = "bytes")]
+            Value::Byte(_) => false,
+            Value::Complex(num) => num.data.iter().any(|v| v.is_any_tombstone()),
+            Value::Char(num) => num.data.iter().any(|v| v.is_any_tombstone()),
+            Value::Box(num) => num.data.iter().any(|v| v.is_any_tombstone()),
+        }
+    }
+    fn is_all_empty_cell(&self) -> bool {
+        match self {
+            Value::Num(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
+            #[cfg(feature = "bytes")]
+            Value::Byte(_) => false,
+            Value::Complex(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
+            Value::Char(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
+            Value::Box(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
+        }
+    }
+    fn is_all_tombstone(&self) -> bool {
+        match self {
+            Value::Num(num) => num.data.iter().all(|v| v.is_any_tombstone()),
+            #[cfg(feature = "bytes")]
+            Value::Byte(_) => false,
+            Value::Complex(num) => num.data.iter().all(|v| v.is_any_tombstone()),
+            Value::Char(num) => num.data.iter().all(|v| v.is_any_tombstone()),
+            Value::Box(num) => num.data.iter().all(|v| v.is_any_tombstone()),
         }
     }
 }

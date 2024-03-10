@@ -242,7 +242,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             vec![row]
         } else {
             // Hashmap
-            if let (true, Some(keys)) = (self.is_map(), &self.meta().map_keys) {
+            if let Some(keys) = &self.meta().map_keys {
                 let metagrid = metagrid.get_or_insert_with(Metagrid::new);
                 for (key, value) in self.map_kv() {
                     let key = key.fmt_grid(false, label);

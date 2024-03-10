@@ -61,6 +61,22 @@ impl Shape {
             self.dims.remove(0);
         }
     }
+    /// Unfix the shape
+    pub fn unfix(&mut self) -> bool {
+        match &mut **self {
+            [1, ..] => {
+                self.remove(0);
+                true
+            }
+            [a, b, ..] => {
+                let new_first_dim = *a * *b;
+                *b = new_first_dim;
+                self.remove(0);
+                true
+            }
+            _ => false,
+        }
+    }
     /// Extend the shape with the given dimensions
     pub fn extend_from_slice(&mut self, dims: &[usize]) {
         self.dims.extend_from_slice(dims);

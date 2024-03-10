@@ -217,7 +217,7 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
         let mut new_shape = new_shape.clone();
         let mut eached = Value::from_row_values(new_values, env)?;
         if is_scalar {
-            eached.shape_mut().make_row();
+            eached.unfix();
         } else if is_empty {
             eached.pop_row();
         }
@@ -431,7 +431,7 @@ pub fn rows1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
     for new_rows in new_rows.into_iter().rev() {
         let mut val = Value::from_row_values(new_rows, env)?;
         if is_scalar {
-            val.shape_mut().make_row();
+            val.unfix();
         } else if is_empty {
             val.pop_row();
         }
@@ -447,7 +447,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
     let both_scalar = xs.rank() == 0 && ys.rank() == 0;
     match (xs.row_count(), ys.row_count()) {
         (_, 1) if !ys.length_is_fillable(env) => {
-            ys.shape_mut().make_row();
+            ys.unfix();
             let is_empty = outputs > 0 && xs.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
             let per_meta = xs.take_per_meta();
@@ -474,7 +474,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             for new_rows in new_rows.into_iter().rev() {
                 let mut val = Value::from_row_values(new_rows, env)?;
                 if both_scalar {
-                    val.shape_mut().make_row();
+                    val.unfix();
                 } else if is_empty {
                     val.pop_row();
                 }
@@ -484,7 +484,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             Ok(())
         }
         (1, _) if !xs.length_is_fillable(env) => {
-            xs.shape_mut().make_row();
+            xs.unfix();
             let is_empty = outputs > 0 && ys.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
             let per_meta = ys.take_per_meta();
@@ -511,7 +511,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             for new_rows in new_rows.into_iter().rev() {
                 let mut val = Value::from_row_values(new_rows, env)?;
                 if both_scalar {
-                    val.shape_mut().make_row();
+                    val.unfix();
                 } else if is_empty {
                     val.pop_row();
                 }
@@ -566,7 +566,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             for new_rows in new_rows.into_iter().rev() {
                 let mut val = Value::from_row_values(new_rows, env)?;
                 if both_scalar {
-                    val.shape_mut().make_row();
+                    val.unfix();
                 } else if is_empty {
                     val.pop_row();
                 }
@@ -620,7 +620,7 @@ fn rowsn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         .map(|mut v| {
             all_scalar = all_scalar && v.rank() == 0;
             if v.row_count() == 1 {
-                v.shape_mut().make_row();
+                v.unfix();
                 Err(v)
             } else {
                 let proxy = is_empty.then(|| v.proxy_row(env));
@@ -654,7 +654,7 @@ fn rowsn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for new_values in new_values.into_iter().rev() {
         let mut rowsed = Value::from_row_values(new_values, env)?;
         if all_scalar {
-            rowsed.shape_mut().make_row();
+            rowsed.unfix();
         } else if is_empty {
             rowsed.pop_row();
         }
@@ -735,7 +735,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 new_values.into_iter().collect::<EcoVec<_>>(),
             );
             if both_scalar {
-                new_arr.shape.make_row();
+                new_arr.unfix();
             }
             env.push(new_arr);
         }
@@ -762,7 +762,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (_, 1) => {
                 let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    ys.shape.make_row();
+                    ys.unfix();
                     for Boxed(x) in xs.data.into_iter() {
                         env.push(ys.clone());
                         env.push(x);
@@ -779,7 +779,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (1, _) => {
                 let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    xs.shape.make_row();
+                    xs.unfix();
                     for Boxed(y) in ys.data.into_iter() {
                         env.push(y);
                         env.push(xs.clone());
@@ -840,7 +840,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (_, 1) => {
                 let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    ys.shape_mut().make_row();
+                    ys.unfix();
                     ys.unbox();
                     for Boxed(x) in xs.data.into_iter() {
                         env.push(ys.clone());
@@ -858,7 +858,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (1, _) => {
                 let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    xs.shape.make_row();
+                    xs.unfix();
                     for y in ys.into_rows() {
                         env.push(y);
                         env.push(xs.clone());
@@ -918,7 +918,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (_, 1) => {
                 let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    ys.shape.make_row();
+                    ys.unfix();
                     for x in xs.into_rows() {
                         env.push(ys.clone());
                         env.push(x);
@@ -935,7 +935,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (1, _) => {
                 let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    xs.shape_mut().make_row();
+                    xs.unfix();
                     xs.unbox();
                     for Boxed(y) in ys.data.into_iter() {
                         env.push(y);
@@ -973,14 +973,14 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 for new_rows in new_rows.into_iter().rev() {
                     let mut arr = Array::from_iter(new_rows);
                     if both_scalar {
-                        arr.shape.make_row();
+                        arr.unfix();
                     }
                     env.push(arr);
                 }
                 Ok(())
             }
             (_, 1) => {
-                ys.shape_mut().make_row();
+                ys.unfix();
                 ys.unbox();
                 let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
                 env.without_fill(|env| -> UiuaResult {
@@ -997,14 +997,14 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 for new_rows in new_rows.into_iter().rev() {
                     let mut arr = Array::from_iter(new_rows);
                     if both_scalar {
-                        arr.shape.make_row();
+                        arr.unfix();
                     }
                     env.push(arr);
                 }
                 Ok(())
             }
             (1, _) => {
-                xs.shape_mut().make_row();
+                xs.unfix();
                 xs.unbox();
                 let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
                 env.without_fill(|env| -> UiuaResult {
@@ -1021,7 +1021,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 for new_rows in new_rows.into_iter().rev() {
                     let mut arr = Array::from_iter(new_rows);
                     if both_scalar {
-                        arr.shape.make_row();
+                        arr.unfix();
                     }
                     env.push(arr);
                 }
@@ -1079,7 +1079,7 @@ fn inventoryn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
                 if v.rank() == 0 {
                     v.unbox();
                 } else {
-                    v.shape_mut().make_row();
+                    v.unfix();
                 }
                 Err(v)
             } else {
@@ -1112,7 +1112,7 @@ fn inventoryn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for new_values in new_values.into_iter().rev() {
         let mut arr = Array::<Boxed>::from_iter(new_values);
         if all_scalar {
-            arr.shape.make_row();
+            arr.unfix();
         } else if is_empty {
             arr.pop_row();
         }

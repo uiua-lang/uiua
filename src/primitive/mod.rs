@@ -954,7 +954,9 @@ impl ImplPrimitive {
                 env.push(im);
             }
             ImplPrimitive::UnParse => env.monadic_ref_env(Value::unparse)?,
-            ImplPrimitive::UnFix => env.monadic_mut(Value::unfix)?,
+            ImplPrimitive::UnFix => env.monadic_mut(|val| {
+                val.unfix();
+            })?,
             ImplPrimitive::UnScan => reduce::unscan(env)?,
             ImplPrimitive::UnTrace => trace(env, true)?,
             ImplPrimitive::BothTrace => both_trace(env, false)?,

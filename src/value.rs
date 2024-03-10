@@ -366,6 +366,17 @@ impl Value {
     pub fn reset_meta_flags(&mut self) {
         unsafe { self.repr_mut() }.arr.reset_meta_flags()
     }
+    /// Add a 1-length dimension to the front of the value's shape
+    pub fn fix(&mut self) {
+        unsafe { self.repr_mut() }.arr.fix()
+    }
+    pub(crate) fn fix_depth(&mut self, depth: usize) {
+        unsafe { self.repr_mut() }.arr.fix_depth(depth)
+    }
+    /// Remove a 1-length dimension from the front of the value's shape
+    pub fn unfix(&mut self) -> bool {
+        unsafe { self.repr_mut() }.arr.unfix()
+    }
     pub(crate) fn validate_shape(&self) {
         self.generic_ref(
             Array::validate_shape,

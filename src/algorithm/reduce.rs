@@ -794,9 +794,10 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
     let iterable_count = sig.args - sig.outputs;
     let mut arrays = Vec::with_capacity(iterable_count);
     for i in 0..iterable_count {
-        let val = env.pop(("iterated array", i + 1))?;
+        let mut val = env.pop(("iterated array", i + 1))?;
         arrays.push(if val.row_count() == 1 {
-            Err(val.into_rows().next().unwrap())
+            val.unfix();
+            Err(val)
         } else {
             Ok(val.into_rows())
         });

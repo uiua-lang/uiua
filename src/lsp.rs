@@ -1256,16 +1256,11 @@ mod server {
         }
 
         async fn rename(&self, params: RenameParams) -> Result<Option<WorkspaceEdit>> {
-            let doc = if let Some(doc) = self
-                .docs
-                .get(&params.text_document_position.text_document.uri)
-            {
-                doc
-            } else {
+            let Some(doc) = (self.docs).get(&params.text_document_position.text_document.uri)
+            else {
                 return Ok(None);
             };
-            let position = params.text_document_position.position;
-            let (line, col) = lsp_pos_to_uiua(position);
+            let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
             let path = uri_path(&params.text_document_position.text_document.uri);
             let mut binding: Option<(&BindingInfo, usize)> = None;
             // Check for span in bindings
@@ -1288,20 +1283,42 @@ mod server {
                 return Ok(None);
             };
             // Collect edits
-            let mut edits = vec![TextEdit {
-                range: uiua_span_to_lsp(&binding.span),
-                new_text: params.new_name.clone(),
-            }];
-            for (name, idx) in &doc.code_meta.global_references {
-                if *idx == index {
-                    edits.push(TextEdit {
-                        range: uiua_span_to_lsp(&name.span),
-                        new_text: params.new_name.clone(),
-                    });
+            let mut changes: HashMap<Url, Vec<TextEdit>> = HashMap::new();
+            changes.insert(
+                match &binding.span.src {
+                    InputSrc::Str(_) | InputSrc::Macro(_) => {
+                        params.text_document_position.text_document.uri.clone()
+                    }
+                    InputSrc::File(file) => path_to_uri(file)?,
+                },
+                vec![TextEdit {
+                    range: uiua_span_to_lsp(&binding.span),
+                    new_text: params.new_name.clone(),
+                }],
+            );
+            for entry in &self.docs {
+                let uri = entry.key();
+                let doc = entry.value();
+                for (name, idx) in &doc.code_meta.global_references {
+                    if *idx == index {
+                        let uri = match &name.span.src {
+                            InputSrc::Str(_) | InputSrc::Macro(_) => uri.clone(),
+                            InputSrc::File(file) => path_to_uri(file)?,
+                        };
+                        self.debug(&format!(
+                            "Renaming {} to {} in {:?}",
+                            name, params.new_name, uri
+                        ))
+                        .await;
+                        changes.entry(uri).or_default().push(TextEdit {
+                            range: uiua_span_to_lsp(&name.span),
+                            new_text: params.new_name.clone(),
+                        });
+                    }
                 }
             }
             Ok(Some(WorkspaceEdit {
-                changes: Some([(params.text_document_position.text_document.uri, edits)].into()),
+                changes: Some(changes.clone()),
                 document_changes: None,
                 change_annotations: None,
             }))
@@ -1311,20 +1328,17 @@ mod server {
             &self,
             params: GotoDefinitionParams,
         ) -> Result<Option<GotoDefinitionResponse>> {
-            let current_doc = if let Some(doc) = self
-                .docs
-                .get(&params.text_document_position_params.text_document.uri)
-            {
-                doc
-            } else {
+            let Some(doc) =
+                (self.docs).get(&params.text_document_position_params.text_document.uri)
+            else {
                 return Ok(None);
             };
             let position = params.text_document_position_params.position;
             let (line, col) = lsp_pos_to_uiua(position);
             let path = uri_path(&params.text_document_position_params.text_document.uri);
-            for (name, idx) in &current_doc.code_meta.global_references {
+            for (name, idx) in &doc.code_meta.global_references {
                 if name.span.contains_line_col(line, col) && name.span.src == path {
-                    let binding = &current_doc.asm.bindings[*idx];
+                    let binding = &doc.asm.bindings[*idx];
                     let uri = match &binding.span.src {
                         InputSrc::Str(_) | InputSrc::Macro(_) => {
                             params.text_document_position_params.text_document.uri
@@ -1344,20 +1358,17 @@ mod server {
             &self,
             params: GotoDeclarationParams,
         ) -> Result<Option<GotoDeclarationResponse>> {
-            let current_doc = if let Some(doc) = self
-                .docs
-                .get(&params.text_document_position_params.text_document.uri)
-            {
-                doc
-            } else {
+            let Some(doc) =
+                (self.docs).get(&params.text_document_position_params.text_document.uri)
+            else {
                 return Ok(None);
             };
             let position = params.text_document_position_params.position;
             let (line, col) = lsp_pos_to_uiua(position);
             let path = uri_path(&params.text_document_position_params.text_document.uri);
-            for (name, idx) in &current_doc.code_meta.global_references {
+            for (name, idx) in &doc.code_meta.global_references {
                 if name.span.contains_line_col(line, col) && name.span.src == path {
-                    let binding = &current_doc.asm.bindings[*idx];
+                    let binding = &doc.asm.bindings[*idx];
                     let uri = match &binding.span.src {
                         InputSrc::Str(_) | InputSrc::Macro(_) => {
                             params.text_document_position_params.text_document.uri
@@ -1610,26 +1621,29 @@ mod server {
         }
 
         async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
-            let Some(doc) = self
-                .docs
-                .get(&params.text_document_position.text_document.uri)
+            let Some(doc) = (self.docs).get(&params.text_document_position.text_document.uri)
             else {
                 return Ok(None);
             };
             let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
+            let path = uri_path(&params.text_document_position.text_document.uri);
             for (i, binfo) in doc.asm.bindings.iter().enumerate() {
-                if binfo.span.contains_line_col(line, col) {
+                if binfo.span.contains_line_col(line, col) && binfo.span.src == path {
                     let mut locations = Vec::new();
-                    for (name, idx) in &doc.code_meta.global_references {
-                        if *idx == i {
-                            let uri = match &name.span.src {
-                                InputSrc::Str(_) | InputSrc::Macro(_) => {
-                                    params.text_document_position.text_document.uri.clone()
-                                }
-                                InputSrc::File(file) => path_to_uri(file)?,
-                            };
-                            let range = uiua_span_to_lsp(&name.span);
-                            locations.push(Location { uri, range });
+                    for entry in &self.docs {
+                        let uri = entry.key();
+                        let doc = entry.value();
+                        for (name, idx) in &doc.code_meta.global_references {
+                            if *idx == i {
+                                let uri = match &name.span.src {
+                                    InputSrc::Str(_) | InputSrc::Macro(_) => uri.clone(),
+                                    InputSrc::File(file) => path_to_uri(file)?,
+                                };
+                                self.debug(format!("Found reference to in uri: {uri:?}"))
+                                    .await;
+                                let range = uiua_span_to_lsp(&name.span);
+                                locations.push(Location { uri, range });
+                            }
                         }
                     }
                     return Ok(Some(locations));
@@ -1701,7 +1715,8 @@ mod server {
 
     fn uri_path(uri: &Url) -> PathBuf {
         let path = uri.path().replace("/c%3A", "C:");
-        PathBuf::from(path)
+        let path = PathBuf::from(path);
+        path.canonicalize().unwrap_or(path)
     }
 
     fn lsp_pos_to_uiua(pos: Position) -> (usize, usize) {

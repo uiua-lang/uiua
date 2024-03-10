@@ -59,6 +59,7 @@ This version is not yet released. If you are reading this on the website, then t
   - All fragments of code that are pure and have a signature `|0.n` will be evaluated at compile time
 - Add lots of LSP features
   - Find references
+  - Rename is now cross-file
   - On-type formatting (can be toggled in settings)
   - Inlay hints (each can be toggled in settings)
     - Binding function signatures

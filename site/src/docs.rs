@@ -14,7 +14,7 @@ use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoView
 
 use crate::{
     element, markdown::Markdown, other::*, primitive::*, tour::Tour, tutorial::TutorialPage,
-    uiuisms::Uiuisms, Hd, Prim,
+    uiuisms::Uiuisms, Challenge, Hd, Prim,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,9 +93,11 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Combinators => Combinators().into_view(),
             DocsPage::Optimizations => Optimizations().into_view(),
             DocsPage::FormatConfig => {
-                title_markdown("Formatter Configuration", "/text/format_config.md").into_view()
+                title_markdown("Formatter Configuration", "/text/format_config.md", ()).into_view()
             }
-            DocsPage::Strings => title_markdown("Strings", "/text/strings.md").into_view(),
+            DocsPage::Strings => {
+                title_markdown("Strings", "/text/strings.md", strings_challenges).into_view()
+            }
         };
 
         view! {
@@ -111,10 +113,11 @@ pub fn Docs() -> impl IntoView {
     }
 }
 
-fn title_markdown(title: &str, src: &str) -> impl IntoView {
+fn title_markdown(title: &str, src: &str, end: impl IntoView) -> impl IntoView {
     view! {
         <Title text={format!("{} - Uiua Docs", title)}/>
         <Markdown src=src/>
+        { end }
     }
 }
 
@@ -563,5 +566,28 @@ impl Allowed {
             rows.push(view!( <tr>{once(first).chain(class_iter.next()).collect::<Vec<_>>()}</tr>));
         }
         view!( <table>{ rows }</table>)
+    }
+}
+
+fn strings_challenges() -> impl IntoView {
+    view! {
+        <Hd id="challenges">"Challenges"</Hd>
+
+        <Challenge
+            number=1
+            prompt="Counts the number of times a string appears in another string"
+            example="\"ab\" \"abracadabra\""
+            answer="/+⌕"
+            tests={&["\"123\" \"12345678\"", "\"()\" \"(()(())()(()()))\""]}
+            hidden="\"5\" \"dog\""/>
+
+        <Challenge
+            number=2
+            prompt="finds the first and last number in a string and adds them together"
+            example="\"1foo2bar3\""
+            answer="+⊃⊢(⊢⇌) ⋕♭regex\"\\\\d+\""
+            tests={&["\"What is 1 + 2?\"", "\"99 bottles of beer on the wall, 99 bottles of beer\"", "\"(555) 555-5555\""]}
+            best_answer="+∩⊢⇌. ⊜⋕ ×⊓≥≤@0,@9."
+            hidden="\"123\""/>
     }
 }

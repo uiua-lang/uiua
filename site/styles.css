@@ -707,6 +707,7 @@ input[type=number] {
     width: 7em;
     pointer-events: none;
     z-index: 1;
+    white-space: pre-wrap;
     -webkit-text-fill-color: #eee;
     -moz-text-fill-color: #eee;
 }

@@ -5,7 +5,6 @@
   - System functions
     - Excel
   - Site pages/tutorials
-    - Working with strings
     - Style and readability
     - Git imports
 - Multimedia

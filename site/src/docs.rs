@@ -35,6 +35,7 @@ pub enum DocsPage {
     Combinators,
     Optimizations,
     FormatConfig,
+    Strings,
 }
 
 impl IntoParam for DocsPage {
@@ -57,6 +58,7 @@ impl IntoParam for DocsPage {
             "combinators" => Ok(Self::Combinators),
             "optimizations" => Ok(Self::Optimizations),
             "format-config" => Ok(Self::FormatConfig),
+            "strings" => Ok(Self::Strings),
             value => Ok(Self::Search(value.into())),
         }
     }
@@ -93,6 +95,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::FormatConfig => {
                 title_markdown("Formatter Configuration", "/text/format_config.md").into_view()
             }
+            DocsPage::Strings => title_markdown("Strings", "/text/strings.md").into_view(),
         };
 
         view! {
@@ -228,7 +231,9 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         }</ul>
 
         <Hd id="other-tutorials">"Other Tutorials"</Hd>
+        <p>"These tutorials cover more specific topics. They assume you have read the main tutorial above, but they can be read in any order."</p>
         <ul>
+            <li><A href="/docs/strings">"Strings"</A>" - how to manipulate strings"</li>
             <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
             <li><A href="/docs/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
         </ul>

@@ -209,6 +209,22 @@ pub fn Editor<'a>(
             code_text.clone()
         };
 
+        // Update title
+        if let EditorMode::Pad = mode {
+            let title = if let Some(line) = (input.lines())
+                .find(|line| line.starts_with('#') && !line.starts_with("# Experimental!"))
+            {
+                line[1..].trim()
+            } else if let Some(line) = (input.lines())
+                .find(|line| !line.trim().is_empty() && !line.starts_with("# Experimental!"))
+            {
+                line.trim()
+            } else {
+                "Pad"
+            };
+            (window().document().unwrap()).set_title(&format!("Uiua - {title}"));
+        }
+
         // Update URL
         {
             let encoded = url_encode_code(&clean_code());

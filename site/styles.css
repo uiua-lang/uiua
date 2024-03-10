@@ -543,6 +543,7 @@ input[type=number] {
 
 .output {
     white-space: pre;
+    text-align: left;
     margin-left: 1.85em;
     padding: 0.4em 0;
     font-family: "Code Font", monospace;
@@ -742,6 +743,7 @@ input[type=number] {
     white-space: pre-wrap;
     overflow: visible;
     line-height: 1em;
+    z-index: 1;
     -webkit-text-fill-color: #eee;
     -moz-text-fill-color: #eee;
 }
@@ -950,6 +952,10 @@ input[type=number] {
     display: flex;
     justify-content: space-between;
     gap: 0.5em;
+}
+
+#editor-help:empty {
+    display: none;
 }
 
 #editor-help>* {

@@ -366,10 +366,13 @@ pub fn Prim(
 }
 
 #[component]
-pub fn Prims<const N: usize>(prims: [Primitive; N]) -> impl IntoView {
+pub fn Prims<const N: usize>(
+    prims: [Primitive; N],
+    #[prop(optional)] show_names: bool,
+) -> impl IntoView {
     prims
         .into_iter()
-        .map(|prim| view!(<Prim prim=prim glyph_only=true/>))
+        .map(|prim| view!(<Prim prim=prim glyph_only={!show_names}/>))
         .collect::<Vec<_>>()
 }
 

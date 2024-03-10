@@ -695,6 +695,9 @@ primitive!(
     /// [transpose] works through boxes.
     /// ex: ⍉ □[1_2_3 4_5_6]
     /// ex: ≡⍉ {[1_2 3_4] [1_2_3 4_5_6]}
+    /// [un][transpose] transposes in the opposite direction.
+    /// This is useful for arrays with rank `greater than``2`.
+    /// ex: °⍉ .⊟.[1_2_3 4_5_6]
     ///
     /// `shape``transpose` is always equivalent to `rotate``1``shape`.
     /// ex: [1_2 3_4 5_6]
@@ -872,19 +875,16 @@ primitive!(
     /// For scalars, it is equivalent to [join].
     /// ex: ⊟ 1 2
     ///   : ⊂ 1 2
-    ///
     /// For arrays, a new array is created with the first array as the first row and the second array as the second row.
     /// ex: ⊟ [1 2 3] [4 5 6]
+    /// [un][couple] uncouples a [length] `2` array and pushes both rows onto the stack.
+    /// ex: °⊟ .[1_2_3 4_5_6]
+    /// ex: °⊟ [1_2 3_4]
     ///
     /// By default, arrays with different shapes cannot be [couple]d.
     /// ex! ⊟ [1 2 3] [4 5]
     /// Use [fill] to make their shapes match
     /// ex: ⬚∞⊟ [1 2 3] [4 5]
-    ///
-    /// [couple] is compatible with [un] and [under].
-    /// ex: °⊟ [10 20]
-    /// ex: °⊟ [1_2 3_4]
-    /// ex: ⍜⊟(×2) 3 5 # Works, but maybe use ∩ both in this case
     (2, Couple, DyadicArray, ("couple", '⊟')),
     /// Append two arrays end-to-end
     ///
@@ -1613,35 +1613,13 @@ primitive!(
     ([1], Bind, OtherModifier, ("bind", 'λ')),
     /// Invert the behavior of a function
     ///
+    /// ex: °√ 5
+    /// Two functions that are invertible alone can be inverted together
+    /// ex: °(+1√) 5
     /// Most functions are not invertible.
-    ///
-    /// ex: √2
-    /// ex: °√2
-    ///
-    /// [un][couple] uncouples a [length]`2` array and pushes both rows onto the stack.
-    /// ex: °⊟ .[1_2_3 4_5_6]
-    ///
-    /// [un][transpose] transposes in the opposite direction.
-    /// This is useful for arrays with rank `greater than``2`.
-    /// ex: °⍉ .⊟.[1_2_3 4_5_6]
-    ///
-    /// [un][bits] converts an array of bits into a number.
-    /// ex: °⋯ [1 0 1 0 1 0 1 0]
-    ///
-    /// [un][sine] gives the arcsine.
-    /// ex: °∿ 1
-    ///
-    /// [un] can be used with stack array notation and [dip] and [identity] to unpack the items of an array onto the stack.
-    /// ex: [⊙⊙∘] 1 2 3
-    /// ex: °[⊙⊙∘] [1 2 3]
-    ///
-    /// `un``reduce``multiply` finds the prime factors of a number. It also works with arrays, filling in the shape with `1`s.
-    /// ex: °/× 42
-    /// ex: °/× +1⇡10
-    ///
-    /// While more inverses exists, most of them are not useful on their own.
-    /// [under] also uses inverses, but is more powerful.
-    /// A function's inverse can be set with [setinv].
+    /// [under] also uses inverses, but expresses a different pattern and is generally more powerful.
+    /// A function's [un]-inverse can be set with [setinv].
+    /// For more about inverses, see the [Inverse Tutorial](/tutorial/inverses).
     ([1], Un, InversionModifier, ("un", '°')),
     /// Set a function as its own inverse
     ///
@@ -1701,7 +1679,7 @@ primitive!(
     ///
     /// Inverses set with [setund] cannot be used with [un]. For simpler inverse defining, see [setinv].
     ([3], SetUnder, InversionModifier, "setund"),
-    /// Apply a function under another
+    /// Operate on a transformed array, then reverse the transformation
     ///
     /// This is a more powerful version of [un].
     /// Conceptually, [under] transforms a value, modifies it, then reverses the transformation.
@@ -1756,6 +1734,8 @@ primitive!(
     /// [under] works with [&fo], [&fc], [&tcpa], and [&tcpc]. It calls [&cl] when `g` is done.
     ///
     /// [setund] can be used to define a function's [under] behavior.
+    ///
+    /// For more about [under] and inverses, see the [Inverse Tutorial](/tutorial/inverses).
     ([2], Under, InversionModifier, ("under", '⍜')),
     /// Call two functions on the same values
     ///

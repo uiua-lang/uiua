@@ -1467,9 +1467,13 @@ mod server {
             } else {
                 (true, true, 3, true)
             };
+            let path = uri_path(&params.text_document.uri);
             // Signature hints
             let mut hints = Vec::new();
             for (span, decl) in &doc.code_meta.function_sigs {
+                if span.src != path {
+                    continue;
+                }
                 let is_too_short = || {
                     let mut tokens =
                         span.as_str(&doc.asm.inputs, |s| lex(s, (), &mut Inputs::default()).0);
@@ -1525,6 +1529,9 @@ mod server {
             // Values
             if show_values {
                 for (span, values) in &doc.code_meta.top_level_values {
+                    if span.src != path {
+                        continue;
+                    }
                     let mut shown: Vec<String> = values.iter().map(Value::show).collect();
                     let mut md = "```uiua\n".to_string();
                     for shown in &shown {

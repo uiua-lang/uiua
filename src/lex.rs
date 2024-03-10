@@ -151,6 +151,40 @@ pub enum InputSrc {
     Macro(Box<CodeSpan>),
 }
 
+impl PartialEq<Path> for InputSrc {
+    fn eq(&self, other: &Path) -> bool {
+        match self {
+            InputSrc::File(path) => (path.canonicalize().ok())
+                .zip(other.canonicalize().ok())
+                .is_some_and(|(a, b)| a == b),
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<InputSrc> for Path {
+    fn eq(&self, other: &InputSrc) -> bool {
+        other == self
+    }
+}
+
+impl PartialEq<PathBuf> for InputSrc {
+    fn eq(&self, other: &PathBuf) -> bool {
+        match self {
+            InputSrc::File(path) => (path.canonicalize().ok())
+                .zip(other.canonicalize().ok())
+                .is_some_and(|(a, b)| a == b),
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<InputSrc> for PathBuf {
+    fn eq(&self, other: &InputSrc) -> bool {
+        other == self
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 enum InputSrcRep {
     File(PathBuf),

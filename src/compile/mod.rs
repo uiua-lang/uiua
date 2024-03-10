@@ -607,13 +607,6 @@ code:
         // Resolve path
         let path = if let Some(url) = path_str.strip_prefix("git:") {
             // Git import
-            if !self.scope.experimental {
-                return Err(self.fatal_error(
-                    span.clone(),
-                    "Git imports are experimental. To use them, add \
-                    `# Experimental!` to the top of the file.",
-                ));
-            }
             let mut url = url.trim().trim_end_matches(".git").to_string();
             if ![".com", ".net", ".org", ".io", ".dev"]
                 .iter()

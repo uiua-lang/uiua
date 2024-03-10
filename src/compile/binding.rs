@@ -361,10 +361,10 @@ impl Compiler {
         prev_com: Option<Arc<str>>,
     ) -> UiuaResult {
         // Import module
-        let module = self.import_module(&import.path.value, &import.path.span)?;
+        let module_path = self.import_module(&import.path.value, &import.path.span)?;
         // Bind name
         if let Some(name) = &import.name {
-            let imported = self.imports.get(&module).unwrap();
+            let imported = self.imports.get(&module_path).unwrap();
             let global_index = self.next_global;
             self.next_global += 1;
             let local = LocalName {
@@ -373,7 +373,7 @@ impl Compiler {
             };
             self.asm.add_global_at(
                 local,
-                Global::Module(module.clone()),
+                Global::Module(module_path.clone()),
                 Some(name.span.clone()),
                 prev_com.or_else(|| imported.comment.clone()),
             );
@@ -383,7 +383,7 @@ impl Compiler {
         for item in import.items() {
             if let Some(local) = self
                 .imports
-                .get(&module)
+                .get(&module_path)
                 .and_then(|i| i.names.get(item.value.as_str()))
                 .copied()
             {
@@ -399,7 +399,11 @@ impl Compiler {
             } else {
                 self.add_error(
                     item.span.clone(),
-                    format!("`{}` not found in module {}", item.value, module.display()),
+                    format!(
+                        "`{}` not found in module {}",
+                        item.value,
+                        module_path.display()
+                    ),
                 );
             }
         }

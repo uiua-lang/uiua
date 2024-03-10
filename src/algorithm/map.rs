@@ -18,12 +18,22 @@ use super::FillContext;
 impl<T: ArrayValue> Array<T> {
     /// Check if the array is a map
     pub fn is_map(&self) -> bool {
-        self.meta().map_keys.is_some()
+        (self.meta().map_keys.as_ref()).is_some_and(|keys| keys.len == self.row_count())
+    }
+    /// Check if the array is a fixed map
+    pub fn is_fixed_map(&self) -> bool {
+        let Some(map_keys) = self.meta().map_keys.as_ref() else {
+            return false;
+        };
+        self.row_count() == 1
+            && map_keys.len != 1
+            && self.rank() > 1
+            && self.shape()[1] == map_keys.len
     }
     /// Get the keys and values of a map array
-    pub fn map_kv(&self) -> Vec<(Value, Array<T>)> {
+    pub fn map_kv(&self) -> impl Iterator<Item = (Value, Array<T>)> {
         let Some(map_keys) = self.meta().map_keys.as_ref() else {
-            return Vec::new();
+            return Vec::new().into_iter();
         };
         let mut kv = Vec::with_capacity(map_keys.len);
         let mut ki: Vec<_> = (map_keys.keys.rows())
@@ -31,49 +41,29 @@ impl<T: ArrayValue> Array<T> {
             .filter(|(k, _)| !k.is_empty_cell() && !k.is_tombstone())
             .collect();
         ki.sort_unstable_by_key(|(_, i)| *i);
-        let mut values = self;
-        let vals;
-        if values.row_count() == 1 && map_keys.len != 1 {
-            vals = values.row(0);
-            values = &vals;
-        }
         for (key, index) in ki {
-            if *index < values.row_count() {
-                kv.push((key, values.row(*index)));
+            if *index < self.row_count() {
+                kv.push((key, self.row(*index)));
             }
         }
-        kv
+        kv.into_iter()
     }
 }
 
 impl Value {
     /// Check if the value is a map
     pub fn is_map(&self) -> bool {
-        self.meta().map_keys.is_some()
+        (self.meta().map_keys.as_ref()).is_some_and(|keys| keys.len == self.row_count())
     }
     /// Get the keys and values of a map array
     pub fn map_kv(&self) -> Vec<(Value, Value)> {
-        let Some(map_keys) = self.meta().map_keys.as_ref() else {
-            return Vec::new();
-        };
-        let mut kv = Vec::with_capacity(map_keys.len);
-        let mut ki: Vec<_> = (map_keys.keys.rows())
-            .zip(&map_keys.indices)
-            .filter(|(k, _)| !k.is_empty_cell() && !k.is_tombstone())
-            .collect();
-        ki.sort_unstable_by_key(|(_, i)| *i);
-        let mut values = self;
-        let vals;
-        if values.row_count() == 1 && map_keys.len != 1 {
-            vals = values.row(0);
-            values = &vals;
-        }
-        for (key, index) in ki {
-            if *index < values.row_count() {
-                kv.push((key, values.row(*index)));
-            }
-        }
-        kv
+        self.generic_ref(
+            |arr| arr.map_kv().map(|(k, v)| (k, v.into())).collect(),
+            |arr| arr.map_kv().map(|(k, v)| (k, v.into())).collect(),
+            |arr| arr.map_kv().map(|(k, v)| (k, v.into())).collect(),
+            |arr| arr.map_kv().map(|(k, v)| (k, v.into())).collect(),
+            |arr| arr.map_kv().map(|(k, v)| (k, v.into())).collect(),
+        )
     }
     /// Create a map array
     pub fn map(mut self, mut values: Self, env: &Uiua) -> UiuaResult<Value> {
@@ -191,8 +181,7 @@ impl Value {
                 self.row_count()
             )));
         }
-        let mut keys = (self.take_map_keys())
-            .ok_or_else(|| env.error("Value is not a map"))?;
+        let mut keys = (self.take_map_keys()).ok_or_else(|| env.error("Value is not a map"))?;
         for i in &mut keys.indices {
             if *i >= index {
                 *i += 1;
@@ -236,8 +225,8 @@ impl Value {
     }
     /// Return a key's value to what it used to be, including if it didn't exist before
     pub fn undo_insert(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
-        let orig_keys = (original.meta().map_keys.as_ref())
-            .ok_or_else(|| env.error("Value was not a map"))?;
+        let orig_keys =
+            (original.meta().map_keys.as_ref()).ok_or_else(|| env.error("Value was not a map"))?;
         if let Some(index) = orig_keys.get(&key) {
             self.insert_at(index.into(), key, original.row(index), env)?;
         } else {
@@ -278,8 +267,8 @@ impl Value {
     }
     /// Re-insert a key-value pair to a modified map array if it got removed
     pub fn undo_remove(&mut self, key: Value, original: &Self, env: &Uiua) -> UiuaResult {
-        let keys = (original.meta().map_keys.as_ref())
-            .ok_or_else(|| env.error("Value wasn't a map"))?;
+        let keys =
+            (original.meta().map_keys.as_ref()).ok_or_else(|| env.error("Value wasn't a map"))?;
         if let Some(index) = keys.get(&key) {
             self.insert_at(index.into(), key, original.row(index), env)?;
         }

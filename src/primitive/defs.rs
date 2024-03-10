@@ -2200,6 +2200,12 @@ primitive!(
     /// - [rerank]
     /// - [reshape]
     ///
+    /// [fix]ing a map breaks the mapping, but it is sometimes necessary for use with [rows].
+    /// ex: # Experimental!
+    ///   : ¤.map 1_2_3 4_5_6
+    /// ex: # Experimental
+    ///   : ≡get⊙¤ [1 3 3 2] map 1_2_3 4_5_6
+    ///
     /// Regardless of the size of the map, operations on it have O(1) amortized time complexity.
     /// In this example, we time [get] and [insert] operations on maps from 10 entries up to 100,000 entries.
     /// ex: # Experimental!

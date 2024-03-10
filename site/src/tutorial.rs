@@ -1583,6 +1583,14 @@ fn TutorialModules() -> impl IntoView {
         <p>"To enter this arrow, you can put a "<code>"~"</code>" after a binding's normal "<code>"←"</code>" or "<code>"="</code>"."</p>
         <p>"Try formatting the following example to see how this works."</p>
         <Editor example="A = +1\nB ← +2\nC =~ +3\nD ←~ +4"/>
+
+        <Hd id="git-modules">"Git Modules"</Hd>
+        <p>"Modules can be imported from Git repositories. Instead of a path, use a URL prefixed with "<code>"git:"</code>"."</p>
+        <p>"The Uiua GitHub organization hosts an example module at "<a href="https://github.com/uiua-lang/example-module">"https://github.com/uiua-lang/example-module"</a>". The protocol specification can be omitted."</p>
+        <Editor example="~ \"git: github.com/uiua-lang/example-module\" ~ Upscale\nUpscale 3 [1_2 3_4]"/>
+        <p>"On the site, code is pulled from a "<code>"lib.ua"</code>" file at the root of the repository. Loading other files is not supported."</p>
+        <p>"To use Git modules in the "<A href="/docs/install">"native interpreter"</A>", you must have Git installed. The repository is added as a Git submodule and the "<code>"lib.ua"</code>" file is loaded as the module's contents."</p>
+        <p>"The native interpreter also supports adding an additional "<code>"branch: <branch-name>"</code>" specifier after the URL."</p>
     }
 }
 
@@ -1606,7 +1614,7 @@ fn TutorialTesting() -> impl IntoView {
         <p>"One nice pattern for writing tests is to put the expected result before the test computation and use "<Prims prims=[Assert, On, Match, Flip]/>"."</p>
         <p>"If the result does not match the expectation, that incorrect result will be thrown."</p>
         <Editor example="---\n⍤⟜≍: 4 +2 2 # Passes\n---"/>
-        <Editor example="---\n⍤⟜≍: [2 3 5] +1 [1 2 3]\n--- #  ↓↓↓↓↓↓↓"/> // Should fail
+        <Editor example="---\n⍤⟜≍: [2 3 5] +1 [1 2 3]\n--- # ↓↓↓↓↓↓↓"/> // Should fail
 
         <Hd id="run-modes">"Run Modes"</Hd>
         <p>"Whether tests will run or not depends on how you run the code."</p>

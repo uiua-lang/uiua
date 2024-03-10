@@ -135,12 +135,14 @@ pub fn Install() -> impl IntoView {
         <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation (>=1.75)."</p>
         <p>"Once you have that, run the following command:"</p>
         <code class="code-block">"cargo install uiua"</code>
-        <p>"The following optional features are available (enabled by passing "<code>"--features <feature>"</code>"):"</p>
+        <p>"On Linux, this may require installing some dependencies:"</p>
+        <code class="code-block">"apt install libx11-dev"</code>
+        <p>"The following optional features are available but not enabled by default (enabled by passing "<code>"--features <feature>"</code>"):"</p>
         <ul>
             <li>
                 <p><code>"audio"</code>" - Enables audio system functions."</p>
                 <p>"On Linux, this may require installing some dependencies:"</p>
-                <code class="code-block">"apt install libasound2-dev libudev-dev pkg-config libx11-dev"</code>
+                <code class="code-block">"apt install libasound2-dev libudev-dev pkg-config"</code>
             </li>
         </ul>
         <p>"If you want the most recent development version of Uiua, you can install from the git repository."</p>

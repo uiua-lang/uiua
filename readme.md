@@ -24,12 +24,17 @@ This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.75) to be ins
   ```
   cargo install uiua
   ```
-  The following optional features are available (enabled by passing `--features <feature>`):
+  On Linux, you may need to install some dependencies first:
+  ```
+  apt install libx11-dev
+  ```
+
+  The following optional features are available but not enabled by default (enabled by passing `--features <feature>`):
   - `audio`: Enables audio system functions
 
   If you want audio on Linux, you may need to install some dependencies first:
   ```
-  apt install libasound2-dev libudev-dev pkg-config libx11-dev
+  apt install libasound2-dev libudev-dev pkg-config
   ```
 - If you want the most recent development version of Uiua, you can install from the git repository.
   ```

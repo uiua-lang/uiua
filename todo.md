@@ -1,13 +1,10 @@
 # Uiua Todo
 
 - 0.10
-  - Handle `fix`ed maps well
+  - Make `fix`ed maps well-defined
   - Proofread and update tutorial and tour
   - System functions
     - Excel
-  - Site pages/tutorials
-    - Style and readability
-    - Git imports
 - Multimedia
   - Sound input
   - Webcam input

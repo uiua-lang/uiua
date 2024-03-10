@@ -233,29 +233,25 @@ impl SysBackend for NativeSys {
         Ok(match NATIVE_SYS.get_stream(handle)? {
             SysStream::File(mut file) => {
                 file.flush().map_err(|e| e.to_string())?;
-                let mut buf = Vec::new();
-                Read::by_ref(&mut *file)
-                    .take(len as u64)
-                    .read_to_end(&mut buf)
-                    .map_err(|e| e.to_string())?;
+                let mut buf = vec![0; len];
+                let n = file.read(&mut buf).map_err(|e| e.to_string())?;
+                buf.truncate(n);
                 buf
             }
             SysStream::Child(mut child) => {
-                let mut buf = Vec::new();
-                Read::by_ref(child.stdout.as_mut().unwrap())
-                    .take(len as u64)
-                    .read_to_end(&mut buf)
+                let mut buf = vec![0; len];
+                let n = (child.stdout.as_mut().unwrap())
+                    .read(&mut buf)
                     .map_err(|e| e.to_string())?;
+                buf.truncate(n);
                 buf
             }
             SysStream::TcpListener(_) => return Err("Cannot read from a tcp listener".to_string()),
             SysStream::TcpSocket(mut socket) => {
                 socket.flush().map_err(|e| e.to_string())?;
-                let mut buf = Vec::new();
-                Read::by_ref(&mut *socket)
-                    .take(len as u64)
-                    .read_to_end(&mut buf)
-                    .map_err(|e| e.to_string())?;
+                let mut buf = vec![0; len];
+                let n = socket.read(&mut buf).map_err(|e| e.to_string())?;
+                buf.truncate(n);
                 buf
             }
         })

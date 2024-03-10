@@ -541,9 +541,10 @@ fn site() {
                             .replace("\\\"", "\"")
                             .replace("\\\\", "\\")
                             .replace("\\n", "\n");
-                        if [uiua::SysOp::AudioPlay, uiua::SysOp::GifShow]
-                            .iter()
-                            .any(|p| code.contains(p.name()))
+                        if code.contains("\"git:")
+                            || [uiua::SysOp::AudioPlay, uiua::SysOp::GifShow]
+                                .iter()
+                                .any(|p| code.contains(p.name()))
                         {
                             continue;
                         }

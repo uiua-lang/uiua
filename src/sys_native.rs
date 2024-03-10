@@ -645,7 +645,7 @@ impl SysBackend for NativeSys {
             .ffi
             .do_ffi(file, return_ty, name, arg_tys, arg_values)
     }
-    fn load_git_module(&self, url: &str) -> Result<PathBuf, String> {
+    fn load_git_module(&self, url: &str, branch: Option<&str>) -> Result<PathBuf, String> {
         if let Some(path) = NATIVE_SYS.git_paths.get(url) {
             if path.is_err() || path.as_ref().unwrap().exists() {
                 return path.clone();
@@ -659,28 +659,57 @@ impl SysBackend for NativeSys {
         }
         let parent_path = Path::new("uiua-modules").join(repo_owner);
         let path = parent_path.join(repo_name).join("lib.ua");
+        // Early return if the module already exists
         if path.exists() {
             return Ok(path);
         }
+        // Create the parent directory if it doesn't exist
         if !parent_path.exists() {
             fs::create_dir_all(&parent_path).map_err(|e| e.to_string())?;
         }
-        let current_dir = env::current_dir().map_err(|e| e.to_string())?;
+        // Make sure this folder is a git repository
+        let mut child = Command::new("git")
+            .arg("init")
+            .stderr(Stdio::piped())
+            .stdout(Stdio::null())
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        let status = child.wait().map_err(|e| e.to_string())?;
+        if !status.success() {
+            let stderr = child.stderr.as_mut().unwrap();
+            let mut err = String::new();
+            stderr.read_to_string(&mut err).map_err(|e| e.to_string())?;
+            return Err(format!("Failed to initialize git repository: {err}"));
+        }
+
+        // Add submodule
+        let submodule_path = parent_path.join(repo_name);
         let res = (move || {
-            env::set_current_dir(&parent_path).map_err(|e| e.to_string())?;
-            if !Path::new(repo_name).exists() {
-                let status = Command::new("git")
-                    .args(["clone", url])
+            if !submodule_path.exists() {
+                let submod_path = submodule_path.to_string_lossy();
+                let mut args = vec!["submodule", "add", "--force"];
+                if let Some(branch) = branch {
+                    args.push("-b");
+                    args.push(branch);
+                }
+                args.push(url);
+                args.push(&submod_path);
+                let mut child = Command::new("git")
+                    .args(args)
+                    .stderr(Stdio::piped())
+                    .stdout(Stdio::null())
                     .spawn()
-                    .and_then(|mut c| c.wait())
                     .map_err(|e| e.to_string())?;
+                let status = child.wait().map_err(|e| e.to_string())?;
                 if !status.success() {
-                    return Err("Failed to clone git repository".to_string());
+                    let stderr = child.stderr.as_mut().unwrap();
+                    let mut err = String::new();
+                    stderr.read_to_string(&mut err).map_err(|e| e.to_string())?;
+                    return Err(format!("Failed to add submodule: {err}"));
                 }
             }
             Ok(path)
         })();
-        env::set_current_dir(current_dir).map_err(|e| e.to_string())?;
         NATIVE_SYS.git_paths.insert(url.to_string(), res.clone());
         res
     }

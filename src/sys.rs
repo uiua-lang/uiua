@@ -832,7 +832,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Load a git repo as a module
     ///
     /// The returned path should be loadable via [`SysBackend::file_read_all`]
-    fn load_git_module(&self, url: &str) -> Result<PathBuf, String> {
+    fn load_git_module(&self, url: &str, branch: Option<&str>) -> Result<PathBuf, String> {
         Err("Loading git modules is not supported in this environment".into())
     }
 }

@@ -192,7 +192,10 @@ impl SysBackend for WebBackend {
         while (instant::now() - start) / 1000.0 < seconds {}
         Ok(())
     }
-    fn load_git_module(&self, url: &str) -> Result<PathBuf, String> {
+    fn load_git_module(&self, url: &str, branch: Option<&str>) -> Result<PathBuf, String> {
+        if branch.is_some() {
+            return Err("Git branch specification is not supported in the web backend".into());
+        }
         let mut parts = url.rsplitn(3, '/');
         let repo_name = parts.next().ok_or("Invalid git url")?;
         let repo_owner = parts.next().ok_or("Invalid git url")?;

@@ -605,7 +605,12 @@ code:
     /// Import a module
     pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
         // Resolve path
-        let path = if let Some(url) = path_str.strip_prefix("git:") {
+        let path = if let Some(mut url) = path_str.strip_prefix("git:") {
+            let mut branch = None;
+            if let Some((a, b)) = url.split_once("branch:") {
+                url = a;
+                branch = Some(b.trim());
+            }
             // Git import
             let mut url = url.trim().trim_end_matches(".git").to_string();
             if ![".com", ".net", ".org", ".io", ".dev"]
@@ -621,7 +626,7 @@ code:
                 url = format!("https://{url}");
             }
             self.backend()
-                .load_git_module(&url)
+                .load_git_module(&url, branch)
                 .map_err(|e| self.fatal_error(span.clone(), e))?
         } else {
             // Normal import

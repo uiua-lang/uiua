@@ -18,8 +18,8 @@ use parking_lot::Mutex;
 use serde::*;
 
 use crate::{
-    cowslice::cowslice, primitive::PrimDoc, Array, Boxed, FfiType, Signature, Uiua, UiuaResult,
-    Value,
+    algorithm::validate_size, cowslice::cowslice, primitive::PrimDoc, Array, Boxed, FfiType,
+    Signature, Uiua, UiuaResult, Value,
 };
 
 /// Access the built-in `example.ua` file
@@ -1006,6 +1006,9 @@ impl SysOp {
                 let count = env
                     .pop(1)?
                     .as_nat_or_inf(env, "Count must be an integer or infinity")?;
+                if let Some(count) = count {
+                    validate_size::<u8>(count, env)?;
+                }
                 let handle = env
                     .pop(2)?
                     .as_nat(env, "Handle must be an natural number")?
@@ -1043,6 +1046,9 @@ impl SysOp {
                 let count = env
                     .pop(1)?
                     .as_nat_or_inf(env, "Count must be an integer or infinity")?;
+                if let Some(count) = count {
+                    validate_size::<u8>(count, env)?;
+                }
                 let handle = env
                     .pop(2)?
                     .as_nat(env, "Handle must be an natural number")?

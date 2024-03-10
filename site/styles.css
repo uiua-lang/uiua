@@ -949,12 +949,13 @@ input[type=number] {
     opacity: 0.5;
     display: flex;
     justify-content: space-between;
+    gap: 0.5em;
 }
 
 #editor-help>* {
     line-height: 1em;
     margin: 0;
-    white-space: pre;
+    white-space: pre-wrap;
 }
 
 .sound-button {

@@ -320,7 +320,7 @@ pub fn Prim(
     #[prop(optional)] glyph_only: bool,
     #[prop(optional)] hide_docs: bool,
 ) -> impl IntoView {
-    let span_class = prim_class(prim);
+    let symbol_class = format!("prim-glyph {}", prim_class(prim));
     let symbol = prim.to_string();
     let name = if !glyph_only && symbol != prim.name() {
         format!(" {}", prim.name())
@@ -353,13 +353,13 @@ pub fn Prim(
     if title.is_empty() {
         view! {
             <a href=href class="prim-code-a">
-                <code><span class=span_class>{ symbol }</span>{name}</code>
+                <code><span class=symbol_class>{ symbol }</span>{name}</code>
             </a>
         }
     } else {
         view! {
             <a href=href class="prim-code-a">
-                <code class="prim-code" data-title=title><span class=span_class>{ symbol }</span>{name}</code>
+                <code class="prim-code" data-title=title><span class=symbol_class>{ symbol }</span>{name}</code>
             </a>
         }
     }

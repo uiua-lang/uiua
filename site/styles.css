@@ -719,7 +719,10 @@ input[type=number] {
 .prim-code-a {
     text-decoration: none;
     white-space: nowrap;
-    font-weight: regular;
+}
+
+.prim-glyph {
+    font-weight: 400;
 }
 
 .prim-code:hover::after {

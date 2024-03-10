@@ -12,6 +12,8 @@ This version is not yet released. If you are reading this on the website, then t
   - This makes them easier to identify when reading
   - It also allows switch functions to be used as modifier arguments without extra nesting
 - Switch functions now work with [`under ⍜`](https://uiua.org/docs/under)
+- Add the [`mask ⦷`](https://uiua.org/docs/mask) function, which creates a mask of occurrences of one array in another
+  - This works similarly to [`find ⌕`](https://uiua.org/docs/find), but is better when you need a mask or to distinguish between adjacent occurrences
 - Change [`sine ∿`](https://uiua.org/docs/sine)'s glyph
   - `∿` is more representative of what it does
   - Most circle glyphs like `○` are used for array functions or stack manipulation
@@ -36,8 +38,6 @@ This version is not yet released. If you are reading this on the website, then t
 - Doc comments may now be placed at the end of single-line functions
 - Non-alphabetic identifiers can now be suffixed with `!` to make macros
 - Add `df`, `ddf`, etc shortcuts for [`dip ⊙`](https://uiua.org/docs/dip) [`fix ¤`](https://uiua.org/docs/fix)
-- Add the experimental [`mask ⦷`](https://uiua.org/docs/mask) function, which creates a mask of occurrences of one array in another
-  - This works similarly to [`find ⌕`](https://uiua.org/docs/find), but is better when you need a mask or to distinguish between adjacent occurrences
 - Add the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, which searches an array for a value and returns a multidimensional index
   - [`coordinate ⟔`](https://uiua.org/docs/coordinate) is to [`pick ⊡`](https://uiua.org/docs/pick) as [`indexof ⊗`](https://uiua.org/docs/indexof) is to [`select ⊏`](https://uiua.org/docs/select)
 - Experimental function strands now use the `‿` character, which formats from `__`
@@ -67,6 +67,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Improve the supported binding type coverage of [`&ffi`](https://uiua.org/docs/&ffi)
 - Lots of bug and crash fixes
 ### Website
+- Add a [Working with Strings](https://uiua.org/tutorial/strings) tutorial
 - Hide experimental glyphs in the editor by default
   - They can be toggled on in the settings
 - An `# Experimental!` comment can now be easily inserted via a settings button or with `Ctrl+E`

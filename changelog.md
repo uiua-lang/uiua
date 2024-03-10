@@ -59,12 +59,17 @@ This version is not yet released. If you are reading this on the website, then t
   - All fragments of code that are pure and have a signature `|0.n` will be evaluated at compile time
 - Add lots of LSP features
   - Find references
-  - Signature inlay hints (can be toggled/adjusted in settings)
-  - Value inlay hints (can be toggled in settings)
-  - Macro expansion as a code action
   - On-type formatting (can be toggled in settings)
-  - Completions for shadowable constants
-  - Completions for module items when the module reference is partially typed
+  - Inlay hints (each can be toggled in settings)
+    - Binding function signatures
+    - Inline function signatures
+    - Values of top-level expressions
+  - Code actions
+    - Macro expansion
+    - Remove output comment
+  - Completions
+    - Shadowable constants
+    - Module items when the module reference is partially typed
 - Add the `--file <file>` option to the `uiua repl` command
   - This runs a file before starting the REPL
 - Improve the supported binding type coverage of [`&ffi`](https://uiua.org/docs/&ffi)

@@ -26,6 +26,7 @@ pub enum SpanKind {
     String,
     Number,
     Comment,
+    OutputComment,
     Strand,
     Ident(Option<BindingDocs>),
     Label,
@@ -392,8 +393,11 @@ impl Spanner {
                 Word::Spaces | Word::BreakLine | Word::UnbreakLine => {
                     spans.push(word.span.clone().sp(SpanKind::Whitespace))
                 }
-                Word::Comment(_) | Word::SemanticComment(_) | Word::OutputComment { .. } => {
+                Word::Comment(_) | Word::SemanticComment(_) => {
                     spans.push(word.span.clone().sp(SpanKind::Comment))
+                }
+                Word::OutputComment { .. } => {
+                    spans.push(word.span.clone().sp(SpanKind::OutputComment))
                 }
                 Word::Placeholder(op) => {
                     spans.push(word.span.clone().sp(SpanKind::Placeholder(*op)))
@@ -1157,11 +1161,12 @@ mod server {
                 return Ok(None);
             };
             let (line, col) = lsp_pos_to_uiua(params.range.start);
+            let path = uri_path(&params.text_document.uri);
             let mut actions = Vec::new();
 
             // Add explicit signature
             for (span, inline) in &doc.code_meta.function_sigs {
-                if inline.explicit || !span.contains_line_col(line, col) {
+                if inline.explicit || !span.contains_line_col(line, col) || span.src != path {
                     continue;
                 }
                 let mut insertion_span = span.just_start(&doc.asm.inputs);
@@ -1193,7 +1198,7 @@ mod server {
 
             // Expand macro
             for (span, (name, expanded)) in &doc.code_meta.macro_expansions {
-                if !span.contains_line_col(line, col) {
+                if !span.contains_line_col(line, col) || span.src != path {
                     continue;
                 }
                 actions.push(CodeActionOrCommand::CodeAction(CodeAction {
@@ -1216,6 +1221,33 @@ mod server {
                 }));
             }
 
+            // Remove output comment
+            for span in &doc.spans {
+                if !span.span.contains_line_col(line, col) || span.span.src != path {
+                    continue;
+                }
+                if let SpanKind::OutputComment = &span.value {
+                    actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                        title: "Remove output comment".into(),
+                        kind: Some(CodeActionKind::QUICKFIX),
+                        edit: Some(WorkspaceEdit {
+                            changes: Some(
+                                [(
+                                    params.text_document.uri.clone(),
+                                    vec![TextEdit {
+                                        range: uiua_span_to_lsp(&span.span),
+                                        new_text: "".into(),
+                                    }],
+                                )]
+                                .into(),
+                            ),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }));
+                }
+            }
+
             Ok(if actions.is_empty() {
                 None
             } else {
@@ -1234,10 +1266,11 @@ mod server {
             };
             let position = params.text_document_position.position;
             let (line, col) = lsp_pos_to_uiua(position);
+            let path = uri_path(&params.text_document_position.text_document.uri);
             let mut binding: Option<(&BindingInfo, usize)> = None;
             // Check for span in bindings
             for (i, gb) in doc.asm.bindings.iter().enumerate() {
-                if gb.span.contains_line_col(line, col) {
+                if gb.span.contains_line_col(line, col) && gb.span.src == path {
                     binding = Some((gb, i));
                     break;
                 }
@@ -1245,7 +1278,7 @@ mod server {
             // Check for span in binding references
             if binding.is_none() {
                 for (name, index) in &doc.code_meta.global_references {
-                    if name.span.contains_line_col(line, col) {
+                    if name.span.contains_line_col(line, col) && name.span.src == path {
                         binding = Some((&doc.asm.bindings[*index], *index));
                         break;
                     }
@@ -1288,8 +1321,9 @@ mod server {
             };
             let position = params.text_document_position_params.position;
             let (line, col) = lsp_pos_to_uiua(position);
+            let path = uri_path(&params.text_document_position_params.text_document.uri);
             for (name, idx) in &current_doc.code_meta.global_references {
-                if name.span.contains_line_col(line, col) {
+                if name.span.contains_line_col(line, col) && name.span.src == path {
                     let binding = &current_doc.asm.bindings[*idx];
                     let uri = match &binding.span.src {
                         InputSrc::Str(_) | InputSrc::Macro(_) => {
@@ -1320,8 +1354,9 @@ mod server {
             };
             let position = params.text_document_position_params.position;
             let (line, col) = lsp_pos_to_uiua(position);
+            let path = uri_path(&params.text_document_position_params.text_document.uri);
             for (name, idx) in &current_doc.code_meta.global_references {
-                if name.span.contains_line_col(line, col) {
+                if name.span.contains_line_col(line, col) && name.span.src == path {
                     let binding = &current_doc.asm.bindings[*idx];
                     let uri = match &binding.span.src {
                         InputSrc::Str(_) | InputSrc::Macro(_) => {

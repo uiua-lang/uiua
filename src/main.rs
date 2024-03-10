@@ -940,7 +940,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             },
             SpanKind::String => (32, 249, 252),
             SpanKind::Number => (255, 136, 68),
-            SpanKind::Comment => (127, 127, 127),
+            SpanKind::Comment | SpanKind::OutputComment => (127, 127, 127),
             SpanKind::Strand => (200, 200, 200),
             SpanKind::Ident(None)
             | SpanKind::Label

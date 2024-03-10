@@ -207,7 +207,7 @@ impl SysBackend for NativeSys {
     }
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
         let handle = self.open_file(path)?;
-        let bytes = self.read(handle, usize::MAX)?;
+        let bytes = self.read_all(handle)?;
         self.close(handle)?;
         Ok(bytes)
     }

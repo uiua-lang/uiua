@@ -753,8 +753,7 @@
     "args": 2,
     "outputs": 1,
     "class": "DyadicArray",
-    "description": "Mask the occurences of one array in another",
-    "experimental": true
+    "description": "Mask the occurences of one array in another"
   },
   "match": {
     "glyph": "≍",

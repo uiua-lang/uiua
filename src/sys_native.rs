@@ -7,7 +7,7 @@ use std::{
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     slice,
-    sync::atomic::{self, AtomicU64},
+    sync::atomic::{self, AtomicBool, AtomicU64},
     thread::sleep,
     time::Duration,
 };
@@ -24,6 +24,7 @@ pub struct NativeSys;
 type Buffered<T> = BufReaderWriterSeq<T>;
 
 struct GlobalNativeSys {
+    output_enabled: AtomicBool,
     next_handle: AtomicU64,
     files: DashMap<Handle, Buffered<File>>,
     child_procs: DashMap<Handle, Child>,
@@ -52,6 +53,7 @@ enum SysStream<'a> {
 impl Default for GlobalNativeSys {
     fn default() -> Self {
         Self {
+            output_enabled: AtomicBool::new(true),
             next_handle: Handle::FIRST_UNRESERVED.0.into(),
             files: DashMap::new(),
             child_procs: DashMap::new(),
@@ -118,6 +120,12 @@ pub fn set_audio_stream_time_port(port: u16) -> std::io::Result<()> {
     Ok(())
 }
 
+pub(crate) fn set_output_enabled(enabled: bool) -> bool {
+    NATIVE_SYS
+        .output_enabled
+        .swap(enabled, atomic::Ordering::Relaxed)
+}
+
 impl SysBackend for NativeSys {
     fn any(&self) -> &dyn Any {
         self
@@ -126,6 +134,9 @@ impl SysBackend for NativeSys {
         self
     }
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
+        if !NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed) {
+            return Ok(());
+        }
         let mut stdout = stdout().lock();
         stdout.write_all(s.as_bytes()).map_err(|e| e.to_string())?;
         stdout.flush().map_err(|e| e.to_string())
@@ -140,6 +151,9 @@ impl SysBackend for NativeSys {
         _ = stderr().flush();
     }
     fn scan_line_stdin(&self) -> Result<Option<String>, String> {
+        if !NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed) {
+            return Ok(None);
+        }
         let mut buffer = Vec::new();
         let mut b = 0u8;
         loop {

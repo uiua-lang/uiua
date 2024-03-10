@@ -1202,11 +1202,17 @@ impl<'a> Formatter<'a> {
         let values = self.output_comments.get_or_insert_with(|| {
             let mut env = Uiua::with_backend(self.config.backend.clone())
                 .with_execution_limit(Duration::from_secs(2));
+
+            #[cfg(feature = "native_sys")]
+            let enabled = crate::sys_native::set_output_enabled(false);
             let res = env.compile_run(|comp| {
                 comp.print_diagnostics(true)
                     .mode(RunMode::All)
                     .load_str_src(&self.inputs.get(&self.src), self.src.clone())
             });
+            #[cfg(feature = "native_sys")]
+            crate::sys_native::set_output_enabled(enabled);
+
             let mut values = env.rt.output_comments;
             if let Err(e) = res {
                 let next = (0..).take_while(|i| values.contains_key(i)).count();

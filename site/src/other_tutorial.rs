@@ -133,7 +133,7 @@ fn strings_challenges() -> impl IntoView {
 
         <Challenge
             number=1
-            prompt="Counts the number of times a string appears in another string"
+            prompt="counts the number of times a string appears in another string"
             example="\"ab\" \"abracadabra\""
             answer="/+⌕"
             tests={&["\"123\" \"12345678\"", "\"()\" \"(()(())()(()()))\""]}

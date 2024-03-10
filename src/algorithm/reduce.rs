@@ -449,12 +449,22 @@ pub fn reduce_content(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let xs = env.pop(1)?;
     if let (1, Some((Primitive::Join, false))) = (xs.rank(), f.as_flipped_primitive(&env.asm)) {
-        let xs = xs
-            .into_rows()
-            .map(Value::unboxed)
-            .flat_map(Value::into_rows);
-        let val = Value::from_row_values(xs, env)?;
-        env.push(val);
+        if xs.row_count() == 0 {
+            env.push(match xs {
+                Value::Box(_) => Value::default(),
+                value => value,
+            });
+            return Ok(());
+        }
+        let mut rows = xs.into_rows().map(Value::unboxed);
+        let mut acc = rows.next().unwrap();
+        if acc.rank() == 0 {
+            acc.shape_mut().insert(0, 1);
+        }
+        for row in rows {
+            acc = acc.join(row, env)?;
+        }
+        env.push(acc);
         return Ok(());
     }
     generic_reduce_impl(f, xs, 0, Value::unboxed, env)

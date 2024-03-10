@@ -999,8 +999,10 @@ mod server {
             // Check if in a string or comment
             let (line, col) = lsp_pos_to_uiua(params.text_document_position.position);
             for span in &doc.spans {
-                if matches!(span.value, SpanKind::String | SpanKind::Comment)
-                    && span.span.contains_line_col(line, col)
+                if matches!(
+                    span.value,
+                    SpanKind::String | SpanKind::Comment | SpanKind::Label
+                ) && span.span.contains_line_col(line, col)
                 {
                     return Ok(None);
                 }

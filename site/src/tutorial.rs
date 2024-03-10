@@ -6,7 +6,7 @@ use leptos_meta::*;
 use leptos_router::*;
 use uiua::{example_ua, Primitive, SysOp};
 
-use crate::{editor::*, Hd, Prim, Prims};
+use crate::{editor::*, other_tutorial::OtherTutorialParams, Hd, Prim, Prims};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum TutorialPage {
@@ -59,42 +59,54 @@ pub struct TutorialParams {
 
 #[component]
 pub fn Tutorial() -> impl IntoView {
-    move || {
-        let page = match use_params::<TutorialParams>().get() {
-            Ok(params) => params.page,
-            Err(_) => TutorialPage::Introduction,
-        };
-        let tut_view = match page {
-            TutorialPage::Introduction => TutorialIntroduction().into_view(),
-            TutorialPage::Basic => TutorialBasic().into_view(),
-            TutorialPage::Math => TutorialMath().into_view(),
-            TutorialPage::Arrays => TutorialArrays().into_view(),
-            TutorialPage::Types => TutorialTypes().into_view(),
-            TutorialPage::Bindings => TutorialBindings().into_view(),
-            TutorialPage::Functions => TutorialFunctions().into_view(),
-            TutorialPage::ControlFlow => TutorialControlFlow().into_view(),
-            TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
-            TutorialPage::Inverses => TutorialInverses().into_view(),
-            TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
-            TutorialPage::ThinkingWithArrays => TutorialThinkingWithArrays().into_view(),
-            TutorialPage::Macros => TutorialMacros().into_view(),
-            TutorialPage::Modules => TutorialModules().into_view(),
-            TutorialPage::Testing => TutorialTesting().into_view(),
-        };
-        view! {
-            <A href="/docs">"Back to Docs Home"</A>
-            <br/>
-            <br/>
-            <TutorialNav page=page/>
-            { tut_view }
-            <br/>
-            <br/>
-            <TutorialNav page=page/>
-            <br/>
-            <br/>
-            <A href="/docs">"Back to Docs Home"</A>
+    move || match use_params::<TutorialParams>().get() {
+        Ok(params) => {
+            let page = params.page;
+            let tut_view = match page {
+                TutorialPage::Introduction => TutorialIntroduction().into_view(),
+                TutorialPage::Basic => TutorialBasic().into_view(),
+                TutorialPage::Math => TutorialMath().into_view(),
+                TutorialPage::Arrays => TutorialArrays().into_view(),
+                TutorialPage::Types => TutorialTypes().into_view(),
+                TutorialPage::Bindings => TutorialBindings().into_view(),
+                TutorialPage::Functions => TutorialFunctions().into_view(),
+                TutorialPage::ControlFlow => TutorialControlFlow().into_view(),
+                TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
+                TutorialPage::Inverses => TutorialInverses().into_view(),
+                TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
+                TutorialPage::ThinkingWithArrays => TutorialThinkingWithArrays().into_view(),
+                TutorialPage::Macros => TutorialMacros().into_view(),
+                TutorialPage::Modules => TutorialModules().into_view(),
+                TutorialPage::Testing => TutorialTesting().into_view(),
+            };
+            view! {
+                <A href="/docs">"Back to Docs Home"</A>
+                <br/>
+                <br/>
+                <TutorialNav page=page/>
+                { tut_view }
+                <br/>
+                <br/>
+                <TutorialNav page=page/>
+                <br/>
+                <br/>
+                <A href="/docs">"Back to Docs Home"</A>
+            }
+            .into_view()
         }
-        .into_view()
+        Err(_) => match use_params::<OtherTutorialParams>().get() {
+            Ok(params) => view! {
+                <A href="/docs">"Back to Docs Home"</A>
+                <br/>
+                <br/>
+                { params.page.view() }
+                <br/>
+                <br/>
+                <A href="/docs">"Back to Docs Home"</A>
+            }
+            .into_view(),
+            Err(_) => TutorialIntroduction().into_view(),
+        },
     }
 }
 

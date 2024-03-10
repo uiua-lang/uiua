@@ -7,6 +7,7 @@ mod editor;
 mod examples;
 mod markdown;
 mod other;
+mod other_tutorial;
 mod primitive;
 mod tour;
 mod tutorial;

@@ -55,14 +55,14 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
             text.into_view()
         }
         NodeValue::Heading(heading) => {
-            let id = leaf_text(node).map(|s| s.to_lowercase().replace(' ', "-"));
+            let id = all_text(node).to_lowercase().replace(' ', "-");
             match heading.level {
                 0 | 1 => view!(<h1 id=id>{children}</h1>).into_view(),
                 2 => {
-                    if let Some(id) = id {
-                        view!(<Hd id={&id}>{children}</Hd>).into_view()
-                    } else {
+                    if id.is_empty() {
                         view!(<h2 id=id>{children}</h2>).into_view()
+                    } else {
+                        view!(<Hd id={&id}>{children}</Hd>).into_view()
                     }
                 }
                 3 => view!(<h3 id=id>{children}</h3>).into_view(),
@@ -124,4 +124,16 @@ fn leaf_text<'a>(node: &'a AstNode<'a>) -> Option<String> {
         NodeValue::Code(code) => Some(code.literal.clone()),
         _ => node.first_child().and_then(leaf_text),
     }
+}
+
+fn all_text<'a>(node: &'a AstNode<'a>) -> String {
+    let mut text = String::new();
+    for child in node.children() {
+        match &child.data.borrow().value {
+            NodeValue::Text(s) => text.push_str(s),
+            NodeValue::Code(code) => text.push_str(&code.literal),
+            _ => text.push_str(&all_text(child)),
+        }
+    }
+    text
 }

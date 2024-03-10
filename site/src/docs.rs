@@ -14,7 +14,7 @@ use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoView
 
 use crate::{
     element, markdown::Markdown, other::*, primitive::*, tour::Tour, tutorial::TutorialPage,
-    uiuisms::Uiuisms, Challenge, Hd, Prim,
+    uiuisms::Uiuisms, Hd, Prim,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -24,8 +24,6 @@ pub enum DocsPage {
     Design,
     Technical,
     Install,
-    Audio,
-    ImagesAndGifs,
     AllFunctions,
     Uiuisms,
     Changelog,
@@ -35,7 +33,6 @@ pub enum DocsPage {
     Combinators,
     Optimizations,
     FormatConfig,
-    Strings,
 }
 
 impl IntoParam for DocsPage {
@@ -47,8 +44,6 @@ impl IntoParam for DocsPage {
             "design" => Ok(Self::Design),
             "technical" => Ok(Self::Technical),
             "install" => Ok(Self::Install),
-            "audio" => Ok(Self::Audio),
-            "images" => Ok(Self::ImagesAndGifs),
             "all-functions" => Ok(Self::AllFunctions),
             "isms" => Ok(Self::Uiuisms),
             "changelog" => Ok(Self::Changelog),
@@ -58,7 +53,6 @@ impl IntoParam for DocsPage {
             "combinators" => Ok(Self::Combinators),
             "optimizations" => Ok(Self::Optimizations),
             "format-config" => Ok(Self::FormatConfig),
-            "strings" => Ok(Self::Strings),
             value => Ok(Self::Search(value.into())),
         }
     }
@@ -82,8 +76,6 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Design => Design().into_view(),
             DocsPage::Technical => Technical().into_view(),
             DocsPage::Install => Install().into_view(),
-            DocsPage::Audio => Audio().into_view(),
-            DocsPage::ImagesAndGifs => ImagesAndGifs().into_view(),
             DocsPage::AllFunctions => AllFunctions().into_view(),
             DocsPage::Uiuisms => Uiuisms().into_view(),
             DocsPage::Changelog => Changelog().into_view(),
@@ -94,9 +86,6 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Optimizations => Optimizations().into_view(),
             DocsPage::FormatConfig => {
                 title_markdown("Formatter Configuration", "/text/format_config.md", ()).into_view()
-            }
-            DocsPage::Strings => {
-                title_markdown("Strings", "/text/strings.md", strings_challenges).into_view()
             }
         };
 
@@ -113,7 +102,7 @@ pub fn Docs() -> impl IntoView {
     }
 }
 
-fn title_markdown(title: &str, src: &str, end: impl IntoView) -> impl IntoView {
+pub fn title_markdown(title: &str, src: &str, end: impl IntoView) -> impl IntoView {
     view! {
         <Title text={format!("{} - Uiua Docs", title)}/>
         <Markdown src=src/>
@@ -236,9 +225,9 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <Hd id="other-tutorials">"Other Tutorials"</Hd>
         <p>"These tutorials cover more specific topics. They assume you have read the main tutorial above, but they can be read in any order."</p>
         <ul>
-            <li><A href="/docs/strings">"Strings"</A>" - how to manipulate strings"</li>
-            <li><A href="/docs/audio">"Audio"</A>" - how to generate and play audio"</li>
-            <li><A href="/docs/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
+            <li><A href="/tutorial/strings">"Strings"</A>" - how to manipulate strings"</li>
+            <li><A href="/tutorial/audio">"Audio"</A>" - how to generate and play audio"</li>
+            <li><A href="/tutorial/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
         </ul>
 
         <Hd id="other-docs">"Other Docs"</Hd>
@@ -566,28 +555,5 @@ impl Allowed {
             rows.push(view!( <tr>{once(first).chain(class_iter.next()).collect::<Vec<_>>()}</tr>));
         }
         view!( <table>{ rows }</table>)
-    }
-}
-
-fn strings_challenges() -> impl IntoView {
-    view! {
-        <Hd id="challenges">"Challenges"</Hd>
-
-        <Challenge
-            number=1
-            prompt="Counts the number of times a string appears in another string"
-            example="\"ab\" \"abracadabra\""
-            answer="/+⌕"
-            tests={&["\"123\" \"12345678\"", "\"()\" \"(()(())()(()()))\""]}
-            hidden="\"5\" \"dog\""/>
-
-        <Challenge
-            number=2
-            prompt="finds the first and last number in a string and adds them together"
-            example="\"1foo2bar3\""
-            answer="+⊃⊢(⊢⇌) ⋕♭regex\"\\\\d+\""
-            tests={&["\"What is 1 + 2?\"", "\"99 bottles of beer on the wall, 99 bottles of beer\"", "\"(555) 555-5555\""]}
-            best_answer="+∩⊢⇌. ⊜⋕ ×⊓≥≤@0,@9."
-            hidden="\"123\""/>
     }
 }

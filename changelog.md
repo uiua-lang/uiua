@@ -12,6 +12,9 @@ This version is not yet released. If you are reading this on the website, then t
   - This makes them easier to identify when reading
   - It also allows switch functions to be used as modifier arguments without extra nesting
 - Switch functions now work with [`under ⍜`](https://uiua.org/docs/under)
+- Git modules are no longer experimental
+  - Modules are added automatically as Git submodules when imported
+  - See the [Modules](https://uiua.org/tutorial/modules#git-modules) tutorial for more information
 - Add the [`mask ⦷`](https://uiua.org/docs/mask) function, which creates a mask of occurrences of one array in another
   - This works similarly to [`find ⌕`](https://uiua.org/docs/find), but is better when you need a mask or to distinguish between adjacent occurrences
 - Change [`sine ∿`](https://uiua.org/docs/sine)'s glyph
@@ -23,12 +26,12 @@ This version is not yet released. If you are reading this on the website, then t
 - [`group ⊕`](https://uiua.org/docs/group) can now take multidimensional index arrays
 - [`group ⊕`](https://uiua.org/docs/group)'s indices can now have an extra number at the end to specify the number of groups to make
 - [`partition ⊜`](https://uiua.org/docs/partition) can now take multidimensional marker arrays
-- [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`pick ⊐`](https://uiua.org/docs/pick) now work with duplicate indices if the values at those indices are the same
+- [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`pick ⊡`](https://uiua.org/docs/pick) now work with duplicate indices if the values at those indices are the same
 - [`rotate ↻`](https://uiua.org/docs/rotate) now works through boxes
 - [`fold ∧`](https://uiua.org/docs/fold) now works with [`under ⍜`](https://uiua.org/docs/under) if its function does
 - [`inventory ⍚`](https://uiua.org/docs/inventory) can now take 3 or more arrays
 - [`repeat ⍥`](https://uiua.org/docs/repeat) can now take non-scalar repetition counts
-  - This repeats the function a different numbers on rows of the inputs
+  - This repeats the function a different number of times for each row of the inputs
 - [`drop ↘`](https://uiua.org/docs/drop) can now be used with [`un °`](https://uiua.org/docs/un) if a [`fill ⬚`](https://uiua.org/docs/fill) is set
 - Characters can now be [`multiply ×`](https://uiua.org/docs/multiply)d or [`divide ÷`](https://uiua.org/docs/divide)d by numbers to possibly toggle their case
 - Add the [`csv`](https://uiua.org/docs/csv) function, which encodes and decodes CSV data
@@ -47,7 +50,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the experimental [`quote`](https://uiua.org/docs/quote) modifier, which converts a string to code at compile time
   - This is useful in array macros
 - Add `# No inline!` semantic comment, which prevents a function and its callers from being inlined
-  - This enables stack traces on errors
+  - This enables better stack traces on errors
 - Remove `unpack ⊐` for good
 - Remove `&i` for good
 ### Interpreter

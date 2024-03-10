@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.10
-  - Branches and commit hashes in git imports
+  - Handle `fix`ed maps well
   - Proofread and update tutorial and tour
   - System functions
     - Excel

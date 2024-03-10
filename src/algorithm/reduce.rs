@@ -8,7 +8,8 @@ use crate::{
     algorithm::{loops::flip, pervade::*},
     check::instrs_signature,
     cowslice::cowslice,
-    Array, ArrayValue, Function, ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult, Value,
+    Array, ArrayValue, Complex, Function, ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult,
+    Value,
 };
 
 pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
@@ -264,7 +265,7 @@ fn reduce_one(instrs: &[Instr], val: Value) -> Value {
 }
 
 macro_rules! reduce_math {
-    ($fname:ident, $ty:ty, $f:ident, $fill:ident) => {
+    ($fname:ident, $ty:ident, $f:ident, $fill:ident) => {
         #[allow(clippy::result_large_err)]
         fn $fname(
             prim: Primitive,
@@ -306,20 +307,7 @@ macro_rules! reduce_math {
 }
 
 reduce_math!(reduce_nums, f64, num_num, num_fill);
-reduce_math!(reduce_coms, crate::Complex, com_x, complex_fill);
-
-fn fast_reduce<T>(
-    arr: Array<T>,
-    identity: T,
-    default: Option<T>,
-    depth: usize,
-    f: impl Fn(T, T) -> T + Copy,
-) -> Array<T>
-where
-    T: ArrayValue + Copy,
-{
-    fast_reduce_different(arr, identity, default, depth, f, f)
-}
+reduce_math!(reduce_coms, Complex, com_x, complex_fill);
 
 fn fast_reduce_different<T, U>(
     arr: Array<T>,
@@ -333,6 +321,7 @@ where
     T: ArrayValue + Copy + Into<U>,
     U: ArrayValue + Copy,
 {
+    depth = depth.min(arr.rank());
     if depth == 0 && arr.rank() == 1 {
         return if let Some(default) = default {
             arr.data.into_iter().fold(default, fut).into()
@@ -343,13 +332,35 @@ where
             arr.data.into_iter().skip(1).fold(first, fut).into()
         };
     }
-    let mut arr = arr.convert();
+    fast_reduce(arr.convert(), identity, default, depth, fuu)
+}
+
+fn fast_reduce<T>(
+    mut arr: Array<T>,
+    identity: T,
+    default: Option<T>,
+    mut depth: usize,
+    f: impl Fn(T, T) -> T,
+) -> Array<T>
+where
+    T: ArrayValue + Copy,
+{
     depth = depth.min(arr.rank());
+    if depth == 0 && arr.rank() == 1 {
+        return if let Some(default) = default {
+            arr.data.into_iter().fold(default, f).into()
+        } else if arr.row_count() == 0 {
+            identity.into()
+        } else {
+            let first = arr.data[0];
+            arr.data.into_iter().skip(1).fold(first, f).into()
+        };
+    }
     match (arr.rank(), depth) {
         (r, d) if r == d => arr,
         (1, 0) => {
             let data = arr.data.as_mut_slice();
-            let reduced = default.into_iter().chain(data.iter().copied()).reduce(fuu);
+            let reduced = default.into_iter().chain(data.iter().copied()).reduce(f);
             if let Some(reduced) = reduced {
                 if data.is_empty() {
                     arr.data.extend(Some(reduced));
@@ -380,12 +391,12 @@ where
             let (acc, rest) = sliced.split_at_mut(row_len);
             if let Some(default) = default {
                 for acc in &mut *acc {
-                    *acc = fuu(default, *acc);
+                    *acc = f(default, *acc);
                 }
             }
             rest.chunks_exact(row_len).fold(acc, |acc, row| {
                 for (a, b) in acc.iter_mut().zip(row) {
-                    *a = fuu(*a, *b);
+                    *a = f(*a, *b);
                 }
                 acc
             });
@@ -409,12 +420,12 @@ where
                     let (acc, rest) = chunk.split_at_mut(chunk_row_len);
                     if let Some(default) = default {
                         for acc in &mut *acc {
-                            *acc = fuu(default, *acc);
+                            *acc = f(default, *acc);
                         }
                     }
                     rest.chunks_exact_mut(chunk_row_len).fold(acc, |acc, row| {
                         for (a, b) in acc.iter_mut().zip(row) {
-                            *a = fuu(*a, *b);
+                            *a = f(*a, *b);
                         }
                         acc
                     });

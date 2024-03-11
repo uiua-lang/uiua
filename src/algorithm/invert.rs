@@ -326,14 +326,6 @@ pub(crate) fn under_instrs(
             (Over, PushTempN(1), IndexOf),
             (PopTempN(1), Flip, Select)
         )),
-        // Array masking
-        &stash1!(Unique, (Flip, Keep)),
-        &maybe_val!(stash1!(Member, (Flip, Keep))),
-        &maybe_val!(pat!(
-            Find,
-            (Over, PushTempN(1), Find),
-            (PopTempN(1), Flip, Keep)
-        )),
         // Value retrieval
         &stash1!(First, UndoFirst),
         &stash1!(Last, UndoLast),

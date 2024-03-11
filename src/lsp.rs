@@ -624,12 +624,9 @@ mod server {
         }
 
         async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
-            let doc = if let Some(doc) = self
-                .docs
-                .get(&params.text_document_position_params.text_document.uri)
-            {
-                doc
-            } else {
+            let Some(doc) =
+                (self.docs).get(&params.text_document_position_params.text_document.uri)
+            else {
                 return Ok(None);
             };
             let (line, col) = lsp_pos_to_uiua(params.text_document_position_params.position);
@@ -1169,11 +1166,6 @@ mod server {
                 if inline.explicit || !span.contains_line_col(line, col) || span.src != path {
                     continue;
                 }
-                self.debug(&format!(
-                    "Can add sig on {:?}",
-                    span.as_str(&doc.asm.inputs, |s| s.to_string())
-                ))
-                .await;
                 let mut insertion_span = span.just_start(&doc.asm.inputs);
                 if span.as_str(&doc.asm.inputs, |s| s.starts_with('(')) {
                     if span.start.line as usize == line && span.start.col as usize == col {
@@ -1321,11 +1313,6 @@ mod server {
                             InputSrc::Str(_) | InputSrc::Macro(_) => uri.clone(),
                             InputSrc::File(file) => path_to_uri(file)?,
                         };
-                        self.debug(&format!(
-                            "Renaming {} to {} in {:?}",
-                            name, params.new_name, uri
-                        ))
-                        .await;
                         changes.entry(uri).or_default().push(TextEdit {
                             range: uiua_span_to_lsp(&name.span),
                             new_text: params.new_name.clone(),
@@ -1655,8 +1642,6 @@ mod server {
                                     InputSrc::Str(_) | InputSrc::Macro(_) => uri.clone(),
                                     InputSrc::File(file) => path_to_uri(file)?,
                                 };
-                                self.debug(format!("Found reference to in uri: {uri:?}"))
-                                    .await;
                                 let range = uiua_span_to_lsp(&name.span);
                                 locations.push(Location { uri, range });
                             }

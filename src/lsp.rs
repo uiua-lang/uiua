@@ -1169,8 +1169,24 @@ mod server {
                 if inline.explicit || !span.contains_line_col(line, col) || span.src != path {
                     continue;
                 }
+                self.debug(&format!(
+                    "Can add sig on {:?}",
+                    span.as_str(&doc.asm.inputs, |s| s.to_string())
+                ))
+                .await;
                 let mut insertion_span = span.just_start(&doc.asm.inputs);
-                insertion_span.start = insertion_span.end;
+                if span.as_str(&doc.asm.inputs, |s| s.starts_with('(')) {
+                    if span.start.line as usize == line && span.start.col as usize == col {
+                        // Binding with single inline function
+                        insertion_span.end = insertion_span.start;
+                    } else {
+                        // Inline function
+                        insertion_span.start = insertion_span.end;
+                    }
+                } else {
+                    // Binding without single inline function
+                    insertion_span.end = insertion_span.start;
+                }
                 actions.push(CodeActionOrCommand::CodeAction(CodeAction {
                     title: "Add explicit signature".into(),
                     kind: Some(CodeActionKind::QUICKFIX),

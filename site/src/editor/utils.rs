@@ -535,7 +535,7 @@ fn set_code_html(id: &str, code: &str) {
             SpanKind::Primitive(prim) => prim_class(prim),
             SpanKind::Number => "number-literal",
             SpanKind::String => "string-literal-span",
-            SpanKind::Comment => "comment-span",
+            SpanKind::Comment | SpanKind::OutputComment => "comment-span",
             SpanKind::Strand => "strand-span",
             _ => "",
         };

@@ -329,6 +329,12 @@ pub(crate) fn under_instrs(
             (CopyToTempN(1), Fall, Dup, Rise, PushTempN(1)),
             (PopTempN(1), Select, PopTempN(1), Flip, Select)
         ),
+        // Index of
+        &maybe_val!(pat!(
+            IndexOf,
+            (Over, PushTempN(1), IndexOf),
+            (PopTempN(1), Flip, Select)
+        )),
         // Value retrieval
         &stash1!(First, UndoFirst),
         &stash1!(Last, UndoLast),

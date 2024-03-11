@@ -68,6 +68,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Code actions
     - Macro expansion
     - Remove output comment
+    - Convert between strand and array syntax
   - Completions
     - Shadowable constants
     - Module items when the module reference is partially typed

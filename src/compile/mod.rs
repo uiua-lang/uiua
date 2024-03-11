@@ -902,6 +902,8 @@ code:
                 }
             }
             Word::Strand(items) => {
+                // Track span for LSP
+                let just_spans: Vec<_> = items.iter().map(|w| w.span.clone()).collect();
                 // Compile individual items
                 let op_instrs = items
                     .into_iter()
@@ -918,6 +920,7 @@ code:
                         to make a function strand.",
                     ));
                 }
+                self.code_meta.strands.insert(word.span.clone(), just_spans);
                 // Flatten instrs
                 let inner: Vec<Instr> = op_instrs
                     .into_iter()
@@ -974,6 +977,19 @@ code:
                 }
             }
             Word::Array(arr) => {
+                // Track span for LSP
+                if !arr.boxes
+                    && (arr.lines.iter().flatten())
+                        .filter(|w| w.value.is_code())
+                        .all(|w| w.value.is_literal() && !matches!(w.value, Word::Strand(_)))
+                {
+                    let just_spans: Vec<_> = (arr.lines.iter().rev().flatten())
+                        .filter(|w| w.value.is_code())
+                        .map(|w| w.span.clone())
+                        .collect();
+                    self.code_meta.arrays.insert(word.span.clone(), just_spans);
+                }
+
                 if !call {
                     self.new_functions.push(EcoVec::new());
                 }

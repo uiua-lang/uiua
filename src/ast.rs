@@ -175,6 +175,12 @@ impl Word {
             Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::UnbreakLine
         )
     }
+    /// Whether this word is a literal
+    pub fn is_literal(&self) -> bool {
+        matches!(self, Word::Number(..) | Word::Char(_) | Word::String(_))
+            || matches!(self, Word::Array(arr) if arr.lines.iter().flatten().filter(|w| w.value.is_code()).all(|w| w.value.is_literal()))
+            || matches!(self, Word::Strand(items) if items.iter().all(|w| w.value.is_literal()))
+    }
 }
 
 impl fmt::Debug for Word {

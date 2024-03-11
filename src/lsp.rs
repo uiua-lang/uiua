@@ -3,7 +3,7 @@
 //! Even without the `lsp` feature enabled, this module still provides some useful types and functions for working with Uiua code in an IDE or text editor.
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     slice,
     sync::Arc,
 };
@@ -115,6 +115,10 @@ pub struct CodeMeta {
     pub incomplete_refs: HashMap<CodeSpan, usize>,
     /// A map of the spans of top-level lines to values
     pub top_level_values: HashMap<CodeSpan, Vec<Value>>,
+    /// A map of strand spans
+    pub strands: BTreeMap<CodeSpan, Vec<CodeSpan>>,
+    /// A map of array spans
+    pub arrays: BTreeMap<CodeSpan, Vec<CodeSpan>>,
 }
 
 /// Data for the signature of a function
@@ -1254,6 +1258,71 @@ mod server {
                         ..Default::default()
                     }));
                 }
+            }
+
+            // Convert to array syntax
+            for (span, parts) in &doc.code_meta.strands {
+                if !span.contains_line_col(line, col) || span.src != path {
+                    continue;
+                }
+                let mut new_text = "[".to_string();
+                for (i, part) in parts.iter().enumerate() {
+                    if i > 0 {
+                        new_text.push(' ');
+                    }
+                    part.as_str(&doc.asm.inputs, |s| new_text.push_str(s));
+                }
+                new_text.push(']');
+                actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                    title: "Convert to array syntax".into(),
+                    kind: Some(CodeActionKind::REFACTOR_REWRITE),
+                    edit: Some(WorkspaceEdit {
+                        changes: Some(
+                            [(
+                                params.text_document.uri.clone(),
+                                vec![TextEdit {
+                                    range: uiua_span_to_lsp(span),
+                                    new_text,
+                                }],
+                            )]
+                            .into(),
+                        ),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }));
+            }
+
+            // Convert to strand syntax
+            for (span, parts) in &doc.code_meta.arrays {
+                if !span.contains_line_col(line, col) || span.src != path {
+                    continue;
+                }
+                let mut new_text = String::new();
+                for (i, part) in parts.iter().enumerate() {
+                    if i > 0 {
+                        new_text.push('_');
+                    }
+                    part.as_str(&doc.asm.inputs, |s| new_text.push_str(s));
+                }
+                actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                    title: "Convert to strand syntax".into(),
+                    kind: Some(CodeActionKind::REFACTOR_REWRITE),
+                    edit: Some(WorkspaceEdit {
+                        changes: Some(
+                            [(
+                                params.text_document.uri.clone(),
+                                vec![TextEdit {
+                                    range: uiua_span_to_lsp(span),
+                                    new_text,
+                                }],
+                            )]
+                            .into(),
+                        ),
+                        ..Default::default()
+                    }),
+                    ..Default::default()
+                }));
             }
 
             Ok(if actions.is_empty() {

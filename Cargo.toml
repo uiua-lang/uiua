@@ -74,7 +74,7 @@ gif = {version = "0.13.1", optional = true}
 hound = {version = "3", optional = true}
 image = {version = "0.24.9", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "qoi"]}
 libffi = {version = "3", optional = true}
-libloading = {version = "0.8.1", optional = true}
+libloading = {version = "0.8.3", optional = true}
 regex = {version = "1.10.3", optional = true}
 
 [features]

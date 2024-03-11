@@ -1093,14 +1093,14 @@ mod server {
                     SpanKind::Comment => SemanticTokenType::COMMENT,
                     SpanKind::Primitive(p) => match p.class() {
                         PrimClass::Stack if p.modifier_args().is_none() => STACK_FUNCTION_STT,
-                        PrimClass::MonadicPervasive | PrimClass::MonadicArray => {
-                            MONADIC_FUNCTION_STT
-                        }
-                        PrimClass::DyadicPervasive | PrimClass::DyadicArray => DYADIC_FUNCTION_STT,
                         _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,
                         _ if p.modifier_args() == Some(2) => DYADIC_MODIFIER_STT,
                         _ if p.modifier_args() == Some(3) => TRIADIC_MODIFIER_STT,
                         _ if p.args() == Some(0) => NOADIC_FUNCTION_STT,
+                        _ if p.args() == Some(1) => MONADIC_FUNCTION_STT,
+                        _ if p.args() == Some(2) => DYADIC_FUNCTION_STT,
+                        _ if p.args() == Some(3) => TRIADIC_FUNCTION_STT,
+                        _ if p.args() == Some(4) => TETRADIC_FUNCTION_STT,
                         _ => continue,
                     },
                     SpanKind::Ident(Some(docs)) => match docs.kind {

@@ -1220,7 +1220,7 @@
     "outputs": 1,
     "modifier_args": 2,
     "class": "InversionModifier",
-    "description": "Apply a function under another"
+    "description": "Operate on a transformed array, then reverse the transformation"
   },
   "unique": {
     "glyph": "◰",

@@ -1702,6 +1702,8 @@ code:
         if self.scope.fill
             || self.pre_eval_mode == PreEvalMode::Lazy
             || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
+            || (instrs.iter())
+                .any(|instr| matches!(instr, Instr::PushLocals { .. } | Instr::PopLocals))
         {
             return (instrs, errors);
         }
@@ -1728,7 +1730,14 @@ code:
                         (None, None) => true,
                         _ => false,
                     };
+                let locals_allowed = section
+                    .iter()
+                    .position(|instr| matches!(instr, Instr::PushLocals { .. }))
+                    .map_or(true, |pos| {
+                        pos == 0 && section.ends_with(&[Instr::PopLocals])
+                    });
                 if !array_allowed
+                    || !locals_allowed
                     || matches!(
                         section.last().unwrap(),
                         Instr::PushFunc(_) | Instr::BeginArray

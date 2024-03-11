@@ -414,6 +414,9 @@ code:
             // for val in &self.rt.stack {
             //     print!("{:?} ", val);
             // }
+            // if self.rt.stack.is_empty() {
+            //     print!("(empty) ");
+            // }
             // println!();
             // if !self.rt.array_stack.is_empty() {
             //     print!("array: ");

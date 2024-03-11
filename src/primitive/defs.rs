@@ -1684,8 +1684,8 @@ primitive!(
     /// This is a more powerful version of [un].
     /// Conceptually, [under] transforms a value, modifies it, then reverses the transformation.
     ///
-    /// [under] takes 2 functions `f` and `g` and another argument `x`.
-    /// It applies `f` to `x`, then applies `g` to the result.
+    /// [under] takes 2 functions `f` and `g` and some other arguments `xs`.
+    /// It applies `f` to `xs`, then applies `g` to the result.
     /// It then applies the inverse of `f` to the result of `g`.
     ///
     /// Any function that can be [un]ed can be used with [under].
@@ -1693,45 +1693,17 @@ primitive!(
     ///
     /// Here, we [negate] 5, [subtract] 2, then [negate] again.
     /// ex: ⍜¯(-2) 5
-    /// You can use [under] with [round] to round to a specific number of decimal places.
-    /// ex: ⍜(×1e3)⁅ π
+    /// You can use [under][multiply][round] to round to a specific number of decimal places.
+    /// ex: ⍜×⁅ 1e3 π
     ///
-    /// The above examples involve an *arithmetic* under. That is, [un]`f` is well-definined independent of [under]'s concept of "undoing".
-    /// The remaining examples below involve `f`s which cannot be normally [un]ed, but which are valid as functions to use with [under].
-    ///
-    /// [under][deshape] will [reshape] the array after `g` finishes.
-    /// ex: ⍜♭⇌ .↯3_4⇡12
-    /// If you want to insert a value somewhere in the middle of an array, you can use [under], [rotate], and [join].
-    /// ex: ⍜(↻3)(⊂π) 1_2_3_4_5
-    /// You can use [under][first] to apply a function to the first row of an array.
-    /// ex: ⍜⊢(×10) 1_2_3_4_5
-    /// If you need to work on more of the array's rows, can use [under] with [take] or [drop].
-    /// ex: ⍜(↙3)(×10) 1_2_3_4_5
-    /// ex: ⍜(↘3)(×10) 1_2_3_4_5
-    /// You can chain [under]-compatible functions.
-    /// ex: ⍜(↙2↘1)(×10) 1_2_3_4_5
-    /// [pick] and [select] also work.
-    /// ex: ⍜⊡(×10) 2_1 ↯3_3⇡9
-    /// ex: ⍜⊏(×10) 1_3 1_2_3_4_5
-    /// Although, [under][select] with duplicate indices only works if the mapping is unambiguous.
-    /// ex: ⍜⊏(×10)    1_3_3 1_2_3_4_5
-    /// ex! ⍜⊏(+1_2_3) 1_3_3 1_2_3_4_5
-    /// [under][keep] works as long as the counts list is boolean.
-    /// ex: ⍜▽(×10) =0◿3.⇡10
-    ///
-    /// If `g` takes more than 1 argument, keep in mind that `f` will be called on the stack as it is when the full under expression begins.
-    /// This means you may have to flip the arguments to `g`.
-    /// Consider this equivalence:
-    /// ex: ⍜(↙2)(÷:)  [1 2 3 4 5] 10
-    ///   : ⍜(↙2)(÷10) [1 2 3 4 5]
+    /// In general, if two functions are compatible with [under] separately, then they are compatible together.
+    /// ex: ⍜(↙⊙↘|×10) 2 1 [1 2 3 4 5]
     ///
     /// [under][both] works, and whether [both] is applied when undoing depends on the signature of `g`.
     /// For example, this hypotenuse function does not use [both] when undoing because its `g` (`add`) returns a single value.
     /// ex: ⍜∩(×.)+ 3 4
     /// However, this function whose `g` returns *2* values *does* use [both] when undoing, in this case re-[box]ing the outputs.
     /// ex: ⍜∩°□(⊂⊢,) □[1 2 3] □[4 5 6 7 8]
-    ///
-    /// [under] works with [&fo], [&fc], [&tcpa], and [&tcpc]. It calls [&cl] when `g` is done.
     ///
     /// [setund] can be used to define a function's [under] behavior.
     ///

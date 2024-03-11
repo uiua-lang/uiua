@@ -108,7 +108,7 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
             { body }
             { match prim {
                 Primitive::Un => all_uns().into_view(),
-                // Primitive::Under => all_unders().into_view(),
+                Primitive::Under => all_unders().into_view(),
                 _ => View::default(),
             } }
         </div>
@@ -151,6 +151,8 @@ fn all_uns() -> impl IntoView {
     use ValueRequirement::*;
     view! {
         <Hd id="uns"><Prim prim=Un/>"-compatible functions"</Hd>
+        <p>"These functions are also compatible with "<Prim prim=Under/>"."</p>
+        <p>"See the "<A href="/docs/under#unders">"similar table"</A>" for "<Prim prim=Under/>" for more."</p>
         <table class="header-centered-table cell-centered-table" style="width: 100%">
             <tr>
                 <th>"Pattern"</th>
@@ -169,7 +171,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Sqrt], No, "", "°√ 5") }
             { inverse_row([Sin], No, "Arcsine", "°∿ 1") }
             { inverse_row([Add], Required, "", "°(+1) 5") }
-            { inverse_row([Sub], Required, "", "°(+1) 5") }
+            { inverse_row([Sub], Required, "", "°(-1) 5") }
             { inverse_row([Mul], Required, "", "°(×2) 5") }
             { inverse_row([Div], Required, "", "°(÷2) 5") }
             { inverse_row([Pow], Required, "", "°(ⁿ2) 36") }
@@ -221,10 +223,15 @@ fn all_uns() -> impl IntoView {
     }
 }
 
-fn _all_unders() -> impl IntoView {
+fn all_unders() -> impl IntoView {
     use Primitive::*;
+    use SysOp::*;
+    use ValueRequirement::*;
     view! {
-        <Hd id="all-unders">"All "<Prim prim=Under/>"s"</Hd>
+        <Hd id="unders"><Prim prim=Under/>"-compatible functions"</Hd>
+        <p>"Any function that is compatible with "<Prim prim=Un/>" is also compatible with "<Prim prim=Under/>"."</p>
+        <p>"Functions that are compatible with "<Prim prim=Under/>" that are either not compatible with "<Prim prim=Un/>" or have different behavior are listed below."</p>
+        <p>"See the "<A href="/docs/un#uns">"similar table"</A>" for "<Prim prim=Un/>" for more."</p>
         <table class="header-centered-table cell-centered-table" style="width: 100%">
             <tr>
                 <th>"Pattern"</th>
@@ -236,6 +243,52 @@ fn _all_unders() -> impl IntoView {
                 <th>"Notes"</th>
                 <th>"Example"</th>
             </tr>
+            { inverse_row([Add], Optional, "", "⍜+(×2) 1 5") }
+            { inverse_row([Sub], Optional, "", "⍜-(×2) 1 5") }
+            { inverse_row([Mul], Optional, "", "⍜×(+1) 2 5") }
+            { inverse_row([Div], Optional, "", "⍜÷(+1) 2 5") }
+            { inverse_row([Mod], Optional, "", "⍜◿(×10) 4 9") }
+            { inverse_row([Pow], Optional, "", "⍜ⁿ(-9) 2 5") }
+            { inverse_row([Log], Optional, "", "⍜ₙ(+1) 3 8") }
+            { inverse_row([Floor], No, "", "⍜⌊(×10) 1.5") }
+            { inverse_row([Floor], No, "", "⍜⌈(×10) 1.5") }
+            { inverse_row([Round], No, "", "⍜⁅(×10) 1.5") }
+            { inverse_row([Abs], No, "", "⍜⌵(+1) ¯5") }
+            { inverse_row([Sign], No, "", "⍜±(×2) ¯5") }
+            { inverse_row([First], No, "", "⍜⊢(×10) [1 2 3 4 5]") }
+            { inverse_row([First, Reverse], No, "", "⍜(⊢⇌|×10) [1 2 3 4 5]") }
+            { inverse_row([Deshape], No, "", "⍜♭⇌ ↯3_3⇡9") }
+            { inverse_row([Rise], No, "", "⍜⍏(↻¯1). [1 4 2 3 5]") }
+            { inverse_row([Fall], No, "", "⍜⍖(↻¯1). [1 4 2 3 5]") }
+            { inverse_row([Classify], No, "", "⍜⊛⇌ \"hello\"") }
+            { inverse_row([Deduplicate], No, "", "⍜◴⇌ \"hello\"") }
+            { inverse_row([Rerank], Optional, "", "⍜(☇1)⇌ ↯2_2_4⇡16") }
+            { inverse_row([Reshape], Optional, "", "⍜↯⇌ 2_3 ⇡6") }
+            { inverse_row([Take], Optional, "", "⍜↙(×10) 2 [1 2 3 4 5]") }
+            { inverse_row([Drop], Optional, "", "⍜↘(×10) 2 [1 2 3 4 5]") }
+            { inverse_row([Keep], Optional, "", "⍜▽(×10) ◿2. [1 2 3 4 5]") }
+            { inverse_row([Rotate], Optional, "", "⍜(↻2|⊂π) [1 2 3 4 5]") }
+            { inverse_row([Pick], Optional, "Duplicate indices must have the same value", "⍜(⊡1_1|×10) [1_2_3 4_5_6]") }
+            { inverse_row([Select], Optional, "Duplicate indices must have the same value", "⍜(⊏1_4|×10) [1 2 3 4 5]") }
+            { inverse_row([Join], No, view!(<Prim prim=Len/>" may not change"), "⍜⊂\\+ 1_2_3 4_5_6") }
+            { inverse_row([Dip], No, "", "⍜⊙⊂× 10 2 3") }
+            { inverse_row([Both], No, "", "⍜∩⊡: 1 [1 2 3] 2 [4 5 6]") }
+            { inverse_row([Pop], No, "", "⍜◌(×2) 1 2") }
+            { inverse_row([Rows], No, "", "⍜∵⇌⍚\\+ {1_2_3 4_5}") }
+            { inverse_row([Each], No, "", "⍜≡⊢(×10) [1_2_3 4_5_6]") }
+            { inverse_row([Group], No, "", "⍜⊕□≡⇌ ≠@ . \"I love arrays\"") }
+            { inverse_row([Partition], No, "", "⍜⊜□≡⇌ ≠@ . \"Hello World\"") }
+            { inverse_row([Fold], No, "", "⍜∧⊏(×10) [0 2] ↯2_3⇡6") }
+            { inverse_row([Repeat], Optional, "", "⍜⍥(×2). 5 1") }
+            { inverse_row_impl(view!(<code>"⟨…|…|…⟩"</code>), No, "Switch function", "⍜⟨⊢|⊢⇌⟩(×10) 1 [1 2 3 4]") }
+            { inverse_row([Now], No, "Times execution", "⍜now(&sl 0.005)") }
+            { inverse_row([Sys(FOpen)], Optional, view!("Calls "<Prim prim=Sys(Close)/>" on handle"), None) }
+            { inverse_row([Sys(FCreate)], Optional, view!("Calls "<Prim prim=Sys(Close)/>" on handle"), None) }
+            { inverse_row([Sys(RunStream)], Optional, view!("Calls "<Prim prim=Sys(Close)/>" on handle"), None) }
+            { inverse_row([Sys(TcpConnect)], Optional, view!("Calls "<Prim prim=Sys(Close)/>" on handle"), None) }
+            { inverse_row([Sys(TcpAccept)], Optional, view!("Calls "<Prim prim=Sys(Close)/>" on handle"), None) }
+            { inverse_row([Sys(FReadAllStr)], Optional, view!("Calls "<Prim prim=Sys(FWriteAll)/>), None) }
+            { inverse_row([Sys(FReadAllBytes)], Optional, view!("Calls "<Prim prim=Sys(FWriteAll)/>), None) }
         </table>
     }
 }

@@ -318,14 +318,6 @@ pub(crate) fn under_instrs(
             (Over, Shape, Over, Shape, PushTempN(2), Join),
             (PopTempN(2), UndoJoin),
         )),
-        // Array indexing
-        &stash1!(Rise, (Flip, Select)),
-        &stash1!(Fall, (Flip, Select)),
-        &maybe_val!(pat!(
-            IndexOf,
-            (Over, PushTempN(1), IndexOf),
-            (PopTempN(1), Flip, Select)
-        )),
         // Value retrieval
         &stash1!(First, UndoFirst),
         &stash1!(Last, UndoLast),

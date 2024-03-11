@@ -5,6 +5,8 @@
   - Proofread and update tutorial and tour
   - System functions
     - Excel
+- 0.11
+  - Pattern matching
 - Multimedia
   - Sound input
   - Webcam input

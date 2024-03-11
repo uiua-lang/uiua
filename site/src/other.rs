@@ -271,6 +271,7 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[Transpose, Transpose, Transpose]/>"…"</th><td><Prim prim=Transpose/>" n times"</td><td>"Single "<Prim prim=Transpose/></td></tr>
             <tr><th><Prims prims=[Rows, Transpose]/></th><td><Prim prim=Transpose/>" each row"</td><td>"Single "<Prim prim=Transpose/></td></tr>
             <tr><th><Prims prims=[Rows, Reduce]/><code>"F"</code><Prims prims=[Windows]/></th><td>"Make "<Prim prim=Windows/>" then "<Prim prim=Reduce/>" each row"</td><td>"Apply "<code>"F"</code>" to adjacent rows"</td></tr>
+            <tr><th><Prims prims=[Rows, Reduce]/><code>"F"</code></th><td><Prim prim=Reduce/>" each row"</td><td><Prim prim=Reduce/>" each column"</td></tr>
         </table>
     }
 }

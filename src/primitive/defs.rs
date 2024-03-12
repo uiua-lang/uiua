@@ -911,6 +911,8 @@ primitive!(
     /// ex: °⊂ [1 2 3 4]
     /// ex: °⊂ [1_2 3_4 5_6]
     ///
+    /// [join]ing to the front of an array is a bit slower than [join]ing to the back because it requires all the existing rows to be shifted.
+    ///
     /// [join]'s glyph is `⊂` because it kind of looks like a magnet pulling its two arguments together.
     (2, Join, DyadicArray, ("join", '⊂')),
     /// Select multiple rows from an array

@@ -270,10 +270,13 @@ impl<T: ArrayValue> Array<T> {
                         other.shape
                     }
                 };
-                self.data.extend(other.data);
-                self.shape = target_shape;
-                self.shape[0] += 1;
-                self
+                let rot_len = self.data.len();
+                other.data.extend(self.data);
+                other.data.as_mut_slice().rotate_right(rot_len);
+                other.shape = target_shape;
+                other.shape[0] += 1;
+                other.meta = self.meta;
+                other
             }
             Ordering::Greater => {
                 if other.shape() == 0 {
@@ -317,8 +320,19 @@ impl<T: ArrayValue> Array<T> {
                             }
                         }
                     }
-                    self.data.extend(other.data);
-                    self.shape[0] += other.shape[0];
+
+                    if self.data.len() >= other.data.len() {
+                        self.data.extend(other.data);
+                        self.shape[0] += other.shape[0];
+                    } else {
+                        let rot_len = self.data.len();
+                        other.data.extend(self.data);
+                        other.data.as_mut_slice().rotate_right(rot_len);
+                        other.shape[0] += self.shape[0];
+                        other.meta = self.meta;
+                        self = other;
+                    }
+
                     self.take_label();
                     if let Some((mut a, b)) = map_keys {
                         let mut to_remove = a.join(b, ctx)?;

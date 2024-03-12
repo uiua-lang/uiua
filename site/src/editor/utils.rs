@@ -897,6 +897,16 @@ fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
                 _ => {}
             }
         }
+        // Try to convert the value to SVG
+        if let Ok(mut str) = value.as_string(&rt, "") {
+            if str.starts_with("<svg") && str.ends_with("</svg>") {
+                if !str.contains("xmlns") {
+                    str = str.replacen("<svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"", 1);
+                }
+                stack.push(OutputItem::Svg(str));
+                continue;
+            }
+        }
         // Otherwise, just show the value
         let class = if value_count == 1 {
             ""

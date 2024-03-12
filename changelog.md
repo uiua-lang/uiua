@@ -83,6 +83,7 @@ This version is not yet released. If you are reading this on the website, then t
 - An `# Experimental!` comment can now be easily inserted via a settings button or with `Ctrl+E`
 - Add horizontal scrolling to pad output
 - Pad tabs are now given titles according to their contents
+- The pad now renders strings that are SVG as images
 
 ## 0.9.5 - 2024-02-28
 ### Interpreter

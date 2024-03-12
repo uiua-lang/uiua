@@ -46,6 +46,7 @@ impl Default for WebBackend {
 
 pub enum OutputItem {
     String(String),
+    Svg(String),
     Image(Vec<u8>),
     Gif(Vec<u8>),
     Audio(Vec<u8>),

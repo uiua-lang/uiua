@@ -422,43 +422,6 @@ Fact ← |1 ⟨×Fact-1.|1⟩<2.
 ⍤⟜≍: [1 1 2 2 4] [⟜⊙⟜⊙⋅∘ 1 2 3 4]
 ⍤⟜≍: [1 3] [⟜3 1]
 
-# Maps
-{1 3 "hi" [1 2 3]}
-{2 4 "there" [4 5 6]}
-map:
-MapA ←
-MapB ← insert 5 6 MapA
-MapsI ← MapA MapB
-
-∩(⍤. has 1) MapsI
-∩(⍤. has 3) MapsI
-∩(⍤. has "hi") MapsI
-∩(⍤. has [1 2 3]) MapsI
-
-∩(⍤⟜≍: □2 get 1) MapsI
-∩(⍤⟜≍: □4 get 3) MapsI
-∩(⍤⟜≍: □"there" get "hi") MapsI
-∩(⍤⟜≍: □[4 5 6] get [1 2 3]) MapsI
-
-MapsII ← ∩(remove 1) MapsI
-∩(⍤. ¬has 1) MapsII
-∩(⍤. has 3) MapsII
-∩(⍤. has "hi") MapsII
-∩(⍤. has [1 2 3]) MapsII
-⍤⟜≍: {{3 "hi" [1 2 3]} {4 "there" [4 5 6]} {3 "hi" [1 2 3] 5} {4 "there" [4 5 6] 6}} {∩°map MapsII}
-
-⍤⟜≍: 5 get 1_2 map [1_2 3_4] 5_6
-⍤⟜≍: 6 get 3_4 map [1_2 3_4] 5_6
-
-⍤⟜≍: map 1_2_3 10_5_6 insert 1 10 map 1_2_3 4_5_6
-
-⍤⟜≍: [2 3 4 1] ≡get[2 3 4 5]¤ ∧(insert) [5 2 3 4] [1 2 3 4] map[][]
-
-⍤⟜≍: map 1_2_3 6_10_15 ≡(/+⇡) map 1_2_3 4_5_6
-⍤⟜≍: map 1_2_3 6_10_15 ∵(/+⇡) map 1_2_3 4_5_6
-⍤⟜≍: map 1_2_3 14_25_36 ≡+ 10_20_30 map 1_2_3 4_5_6
-⍤⟜≍: ⟜⍉ map 1_2_3 [4_5 6_7 8_9]
-
 # Bind
 ⍤⟜≍: [2 3 4] λ[abc] 2 3 4
 ⍤⟜≍: [2 3 4] λ[abc] $L 2 3 4

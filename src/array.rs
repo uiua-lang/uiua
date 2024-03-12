@@ -13,7 +13,7 @@ use crate::{
     algorithm::map::MapKeys,
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
-    Boxed, Complex, Shape, Uiua, Value,
+    Boxed, Complex, HandleKind, Shape, Uiua, Value,
 };
 
 /// Uiua's array type
@@ -72,6 +72,9 @@ pub struct ArrayMeta {
     /// The pointer value for FFI
     #[serde(skip)]
     pub pointer: Option<usize>,
+    /// The kind of system handle
+    #[serde(skip)]
+    pub handle_kind: Option<HandleKind>,
 }
 
 bitflags! {
@@ -102,6 +105,7 @@ pub static DEFAULT_META: ArrayMeta = ArrayMeta {
     flags: ArrayFlags::NONE,
     map_keys: None,
     pointer: None,
+    handle_kind: None,
 };
 
 /// Array metadata that can be persisted across operations
@@ -328,6 +332,9 @@ impl<T> Array<T> {
         if let Some(meta) = self.get_meta_mut() {
             meta.flags &= other.flags;
             meta.map_keys = None;
+            if meta.handle_kind != other.handle_kind {
+                meta.handle_kind = None;
+            }
         }
     }
 }

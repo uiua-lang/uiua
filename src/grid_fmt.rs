@@ -338,6 +338,16 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             grid
         };
 
+        // Add handle kind
+        if let Some(kind) = &self.meta().handle_kind {
+            if grid.len() == 1 {
+                grid[0] = (kind.to_string().chars().chain(['(']))
+                    .chain(take(&mut grid[0]))
+                    .chain([')'])
+                    .collect();
+            }
+        }
+
         // Add label
         if label {
             if let Some(label) = &self.meta().label {

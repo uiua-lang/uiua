@@ -611,6 +611,29 @@ impl From<Handle> for Value {
 /// The function type passed to `&ast`
 pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>> + Send>;
 
+/// The kind of a handle
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[allow(missing_docs)]
+pub enum HandleKind {
+    File,
+    TcpListener,
+    TcpSocket,
+    Thread,
+    ChildProcess,
+}
+
+impl fmt::Display for HandleKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::File => write!(f, "file"),
+            Self::TcpListener => write!(f, "tcp listener"),
+            Self::TcpSocket => write!(f, "tcp socket"),
+            Self::Thread => write!(f, "thread"),
+            Self::ChildProcess => write!(f, "child"),
+        }
+    }
+}
+
 /// Trait for defining a system backend
 #[allow(unused_variables)]
 pub trait SysBackend: Any + Send + Sync + 'static {
@@ -982,17 +1005,21 @@ impl SysOp {
             }
             SysOp::FOpen => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let handle = (env.rt.backend)
+                let mut handle: Value = (env.rt.backend)
                     .open_file(path.as_ref())
-                    .map_err(|e| env.error(e))?;
+                    .map_err(|e| env.error(e))?
+                    .into();
+                handle.meta_mut().handle_kind = Some(HandleKind::File);
                 env.push(handle);
             }
             SysOp::FCreate => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let handle = (env.rt.backend)
+                let mut handle: Value = (env.rt.backend)
                     .create_file(path.as_ref())
-                    .map_err(|e| env.error(e))?;
-                env.push(handle.0 as f64);
+                    .map_err(|e| env.error(e))?
+                    .into();
+                handle.meta_mut().handle_kind = Some(HandleKind::File);
+                env.push(handle);
             }
             SysOp::FDelete => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
@@ -1510,7 +1537,13 @@ impl SysOp {
             }
             SysOp::TcpListen => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
-                let handle = env.rt.backend.tcp_listen(&addr).map_err(|e| env.error(e))?;
+                let mut handle: Value = env
+                    .rt
+                    .backend
+                    .tcp_listen(&addr)
+                    .map_err(|e| env.error(e))?
+                    .into();
+                handle.meta_mut().handle_kind = Some(HandleKind::TcpListener);
                 env.push(handle);
             }
             SysOp::TcpAccept => {
@@ -1518,16 +1551,20 @@ impl SysOp {
                     .pop(1)?
                     .as_nat(env, "Handle must be an natural number")?
                     .into();
-                let new_handle = (env.rt.backend)
+                let mut new_handle: Value = (env.rt.backend)
                     .tcp_accept(handle)
-                    .map_err(|e| env.error(e))?;
+                    .map_err(|e| env.error(e))?
+                    .into();
+                new_handle.meta_mut().handle_kind = Some(HandleKind::TcpSocket);
                 env.push(new_handle);
             }
             SysOp::TcpConnect => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
-                let handle = (env.rt.backend)
+                let mut handle: Value = (env.rt.backend)
                     .tcp_connect(&addr)
-                    .map_err(|e| env.error(e))?;
+                    .map_err(|e| env.error(e))?
+                    .into();
+                handle.meta_mut().handle_kind = Some(HandleKind::TcpSocket);
                 env.push(handle);
             }
             SysOp::TcpAddr => {
@@ -1621,9 +1658,11 @@ impl SysOp {
             SysOp::RunStream => {
                 let (command, args) = value_to_command(&env.pop(1)?, env)?;
                 let args: Vec<_> = args.iter().map(|s| s.as_str()).collect();
-                let handle = (env.rt.backend)
+                let mut handle: Value = (env.rt.backend)
                     .run_command_stream(&command, &args)
-                    .map_err(|e| env.error(e))?;
+                    .map_err(|e| env.error(e))?
+                    .into();
+                handle.meta_mut().handle_kind = Some(HandleKind::ChildProcess);
                 env.push(handle);
             }
             SysOp::ChangeDirectory => {

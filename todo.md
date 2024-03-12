@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Document all `under`s
   - Proofread and update tutorial and tour
   - System functions
     - Excel

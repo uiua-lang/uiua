@@ -531,6 +531,7 @@ input[type=number] {
 
 .output-diagnostics {
     white-space: pre-wrap;
+    text-align: left;
     margin-left: 1.75em;
     padding: 0.3em 0;
     font-family: "Code Font", monospace;

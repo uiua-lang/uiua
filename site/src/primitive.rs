@@ -164,10 +164,11 @@ fn all_uns() -> impl IntoView {
                 <th>"Notes"</th>
                 <th>"Example"</th>
             </tr>
-            { inverse_row([Identity], No, "", "°∘ 5") }
-            { inverse_row([Flip], No, "", "°: 2 5") }
-            { inverse_row([Neg], No, "", "°¯ 5") }
-            { inverse_row([Not], No, "", "°¬ 5") }
+            { inverse_row([Un], No, "", "°°⊟ 1 2") }
+            { inverse_row([Identity], No, "Self inverse", "°∘ 5") }
+            { inverse_row([Flip], No, "Self inverse", "°: 2 5") }
+            { inverse_row([Neg], No, "Self inverse", "°¯ 5") }
+            { inverse_row([Not], No, "Self inverse", "°¬ 5") }
             { inverse_row([Sqrt], No, "", "°√ 5") }
             { inverse_row([Sin], No, "Arcsine", "°∿ 1") }
             { inverse_row([Add], Required, "", "°(+1) 5") }
@@ -234,22 +235,23 @@ fn all_unders() -> impl IntoView {
         <p>"See the "<A href="/docs/un#uns">"similar table"</A>" for "<Prim prim=Un/>" for more."</p>
         <table class="header-centered-table cell-centered-table" style="width: 100%">
             <tr>
-                <th>"Pattern"</th>
+                <th style="width: 20%">"Pattern"</th>
                 <th>"Value?"<sup>" "<span
                     style="text-decoration: underline dotted; font-size: 0.8em; cursor: help;"
                     title="Whether a constant value can be inside the inverted function">
                     "*"
                 </span></sup></th>
-                <th>"Notes"</th>
+                <th style="width: 18%">"Notes"</th>
                 <th>"Example"</th>
             </tr>
-            { inverse_row([Add], Optional, "", "⍜+(×2) 1 5") }
-            { inverse_row([Sub], Optional, "", "⍜-(×2) 1 5") }
-            { inverse_row([Mul], Optional, "", "⍜×(+1) 2 5") }
-            { inverse_row([Div], Optional, "", "⍜÷(+1) 2 5") }
-            { inverse_row([Mod], Optional, "", "⍜◿(×10) 4 9") }
-            { inverse_row([Pow], Optional, "", "⍜ⁿ(-9) 2 5") }
-            { inverse_row([Log], Optional, "", "⍜ₙ(+1) 3 8") }
+            { inverse_row([Un], Optional, "Inner function must be invertible", "⍜°⊟: [1 2]") }
+            { inverse_row([Add], Optional, view!("Optional "<Prim prim=Flip/>), "⍜+(×2) 1 5") }
+            { inverse_row([Sub], Optional, view!("Optional "<Prim prim=Flip/>), "⍜-(×2) 1 5") }
+            { inverse_row([Mul], Optional, view!("Optional "<Prim prim=Flip/>), "⍜×(+1) 2 5") }
+            { inverse_row([Div], Optional, view!("Optional "<Prim prim=Flip/>), "⍜÷(+1) 2 5") }
+            { inverse_row([Mod], Optional, view!("Optional "<Prim prim=Flip/>), "⍜◿(×10) 4 9") }
+            { inverse_row([Pow], Optional, view!("Optional "<Prim prim=Flip/>), "⍜ⁿ(-9) 2 5") }
+            { inverse_row([Log], Optional, view!("Optional "<Prim prim=Flip/>), "⍜ₙ(+1) 3 8") }
             { inverse_row([Floor], No, "", "⍜⌊(×10) 1.5") }
             { inverse_row([Floor], No, "", "⍜⌈(×10) 1.5") }
             { inverse_row([Round], No, "", "⍜⁅(×10) 1.5") }
@@ -271,15 +273,15 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Pick], Optional, "Duplicate indices must have the same value", "⍜(⊡1_1|×10) [1_2_3 4_5_6]") }
             { inverse_row([Select], Optional, "Duplicate indices must have the same value", "⍜(⊏1_4|×10) [1 2 3 4 5]") }
             { inverse_row([Join], No, view!(<Prim prim=Len/>" may not change"), "⍜⊂\\+ 1_2_3 4_5_6") }
-            { inverse_row([Dip], No, "", "⍜⊙⊂× 10 2 3") }
-            { inverse_row([Both], No, "", "⍜∩⊡: 1 [1 2 3] 2 [4 5 6]") }
+            { inverse_row([Dip], No, "Inner function must be invertible", "⍜⊙⊂× 10 2 3") }
+            { inverse_row([Both], No, "Inner function must be invertible", "⍜∩⊡: 1 [1 2 3] 2 [4 5 6]") }
             { inverse_row([Pop], No, "", "⍜◌(×2) 1 2") }
-            { inverse_row([Rows], No, "", "⍜∵⇌⍚\\+ {1_2_3 4_5}") }
-            { inverse_row([Each], No, "", "⍜≡⊢(×10) [1_2_3 4_5_6]") }
-            { inverse_row([Group], No, "", "⍜⊕□≡⇌ ≠@ . \"I love arrays\"") }
-            { inverse_row([Partition], No, "", "⍜⊜□≡⇌ ≠@ . \"Hello World\"") }
-            { inverse_row([Fold], No, "", "⍜∧⊏(×10) [0 2] ↯2_3⇡6") }
-            { inverse_row([Repeat], Optional, "", "⍜⍥(×2). 5 1") }
+            { inverse_row([Rows], No, "Inner function must be invertible", "⍜∵⇌⍚\\+ {1_2_3 4_5}") }
+            { inverse_row([Each], No, "Inner function must be invertible", "⍜≡⊢(×10) [1_2_3 4_5_6]") }
+            { inverse_row([Group], No, "Inner function must be invertible", "⍜⊕□≡⇌ ≠@ . \"I love arrays\"") }
+            { inverse_row([Partition], No, "Inner function must be invertible", "⍜⊜□≡⇌ ≠@ . \"Hello World\"") }
+            { inverse_row([Fold], No, "Inner function must be invertible", "⍜∧⊏(×10) [0 2] ↯2_3⇡6") }
+            { inverse_row([Repeat], Optional, "Inner function must be invertible", "⍜⍥(×2). 5 1") }
             { inverse_row_impl(view!(<code>"⟨…|…|…⟩"</code>), No, "Switch function", "⍜⟨⊢|⊢⇌⟩(×10) 1 [1 2 3 4]") }
             { inverse_row([Now], No, "Times execution", "⍜now(&sl 0.005)") }
             { inverse_row([Sys(FOpen)], Optional, view!("Calls "<Prim prim=Sys(Close)/>" on handle"), None) }

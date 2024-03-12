@@ -234,8 +234,6 @@ struct FetchReq {
     resouce: Resource<(), Result<String, String>>,
 }
 
-// M ~ "git: https://github.com/uiua-lang/example_module"
-
 pub fn try_fetch_sync(src: &str) -> Option<Result<String, String>> {
     REQ.with(|req| {
         let mut req = req.borrow_mut();

@@ -3,6 +3,7 @@ use std::{
     fmt,
     io::{stdin, Read},
     mem::take,
+    net::SocketAddr,
     path::{Path, PathBuf},
     sync::{Arc, OnceLock},
     time::Duration,
@@ -586,7 +587,7 @@ sys_op! {
 ///
 /// Other handles can be used by files or sockets.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Handle(pub u64);
+pub struct Handle(pub(crate) u64);
 
 impl Handle {
     const STDIN: Self = Self(0);
@@ -602,9 +603,30 @@ impl From<usize> for Handle {
     }
 }
 
-impl From<Handle> for Value {
-    fn from(handle: Handle) -> Self {
-        (handle.0 as f64).into()
+impl Handle {
+    pub(crate) fn value(self, kind: HandleKind) -> Value {
+        let mut arr = Array::from(self.0 as f64);
+        arr.meta_mut().handle_kind = Some(kind);
+        Boxed(arr.into()).into()
+    }
+}
+
+impl Value {
+    /// Attempt to convert the array to systme handle
+    pub fn as_handle(&self, env: &Uiua, mut expected: &'static str) -> UiuaResult<Handle> {
+        if expected.is_empty() {
+            expected = "Expected value to be a handle";
+        }
+        match self {
+            Value::Box(b) => {
+                if let Some(b) = b.as_scalar() {
+                    b.0.as_nat(env, expected).map(|h| Handle(h as u64))
+                } else {
+                    Err(env.error(format!("{expected}, but it is rank {}", b.rank())))
+                }
+            }
+            value => value.as_nat(env, expected).map(|h| Handle(h as u64)),
+        }
     }
 }
 
@@ -612,24 +634,22 @@ impl From<Handle> for Value {
 pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>> + Send>;
 
 /// The kind of a handle
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(missing_docs)]
 pub enum HandleKind {
-    File,
-    TcpListener,
-    TcpSocket,
-    Thread,
-    ChildProcess,
+    File(PathBuf),
+    TcpListener(SocketAddr),
+    TcpSocket(SocketAddr),
+    ChildProcess(String),
 }
 
 impl fmt::Display for HandleKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::File => write!(f, "file"),
-            Self::TcpListener => write!(f, "tcp listener"),
-            Self::TcpSocket => write!(f, "tcp socket"),
-            Self::Thread => write!(f, "thread"),
-            Self::ChildProcess => write!(f, "child"),
+            Self::File(path) => write!(f, "file {}", path.display()),
+            Self::TcpListener(addr) => write!(f, "tcp listener {}", addr),
+            Self::TcpSocket(addr) => write!(f, "tcp socket {}", addr),
+            Self::ChildProcess(com) => write!(f, "child {com}"),
         }
     }
 }
@@ -786,7 +806,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("TCP sockets are not supported in this environment".into())
     }
     /// Get the connection address of a TCP socket
-    fn tcp_addr(&self, handle: Handle) -> Result<String, String> {
+    fn tcp_addr(&self, handle: Handle) -> Result<SocketAddr, String> {
         Err("TCP sockets are not supported in this environment".into())
     }
     /// Set a TCP socket to non-blocking mode
@@ -1005,20 +1025,18 @@ impl SysOp {
             }
             SysOp::FOpen => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let mut handle: Value = (env.rt.backend)
+                let handle = (env.rt.backend)
                     .open_file(path.as_ref())
                     .map_err(|e| env.error(e))?
-                    .into();
-                handle.meta_mut().handle_kind = Some(HandleKind::File);
+                    .value(HandleKind::File(path.into()));
                 env.push(handle);
             }
             SysOp::FCreate => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                let mut handle: Value = (env.rt.backend)
+                let handle: Value = (env.rt.backend)
                     .create_file(path.as_ref())
                     .map_err(|e| env.error(e))?
-                    .into();
-                handle.meta_mut().handle_kind = Some(HandleKind::File);
+                    .value(HandleKind::File(path.into()));
                 env.push(handle);
             }
             SysOp::FDelete => {
@@ -1036,10 +1054,7 @@ impl SysOp {
                 if let Some(count) = count {
                     validate_size::<u8>(count, env)?;
                 }
-                let handle = env
-                    .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
-                    .into();
+                let handle = env.pop(2)?.as_handle(env, "")?;
                 let bytes = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
@@ -1076,10 +1091,7 @@ impl SysOp {
                 if let Some(count) = count {
                     validate_size::<u8>(count, env)?;
                 }
-                let handle = env
-                    .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
-                    .into();
+                let handle = env.pop(2)?.as_handle(env, "")?;
                 let bytes = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
@@ -1110,10 +1122,7 @@ impl SysOp {
             }
             SysOp::ReadUntil => {
                 let delim = env.pop(1)?;
-                let handle = env
-                    .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
-                    .into();
+                let handle = env.pop(2)?.as_handle(env, "")?;
                 if delim.rank() > 1 {
                     return Err(env.error("Delimiter must be a rank 0 or 1 string or byte array"));
                 }
@@ -1184,10 +1193,7 @@ impl SysOp {
             }
             SysOp::Write => {
                 let data = env.pop(1)?;
-                let handle = env
-                    .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
-                    .into();
+                let handle = env.pop(2)?.as_handle(env, "")?;
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
                     #[cfg(feature = "bytes")]
@@ -1537,49 +1543,42 @@ impl SysOp {
             }
             SysOp::TcpListen => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
-                let mut handle: Value = env
-                    .rt
-                    .backend
+                let sock_addr = (addr.parse::<SocketAddr>())
+                    .map_err(|e| env.error(format!("Invalid address: {}", e)))?;
+                let handle = (env.rt.backend)
                     .tcp_listen(&addr)
                     .map_err(|e| env.error(e))?
-                    .into();
-                handle.meta_mut().handle_kind = Some(HandleKind::TcpListener);
+                    .value(HandleKind::TcpListener(sock_addr));
                 env.push(handle);
             }
             SysOp::TcpAccept => {
-                let handle = env
-                    .pop(1)?
-                    .as_nat(env, "Handle must be an natural number")?
-                    .into();
-                let mut new_handle: Value = (env.rt.backend)
+                let handle = env.pop(1)?.as_handle(env, "")?;
+                let handle = (env.rt.backend)
                     .tcp_accept(handle)
-                    .map_err(|e| env.error(e))?
-                    .into();
-                new_handle.meta_mut().handle_kind = Some(HandleKind::TcpSocket);
-                env.push(new_handle);
+                    .map_err(|e| env.error(e))?;
+                let addr = (env.rt.backend)
+                    .tcp_addr(handle)
+                    .map_err(|e| env.error(e))?;
+                let handle = handle.value(HandleKind::TcpSocket(addr));
+                env.push(handle);
             }
             SysOp::TcpConnect => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
-                let mut handle: Value = (env.rt.backend)
+                let sock_addr = (addr.parse::<SocketAddr>())
+                    .map_err(|e| env.error(format!("Invalid address: {}", e)))?;
+                let handle = (env.rt.backend)
                     .tcp_connect(&addr)
                     .map_err(|e| env.error(e))?
-                    .into();
-                handle.meta_mut().handle_kind = Some(HandleKind::TcpSocket);
+                    .value(HandleKind::TcpSocket(sock_addr));
                 env.push(handle);
             }
             SysOp::TcpAddr => {
-                let handle = env
-                    .pop(1)?
-                    .as_nat(env, "Handle must be an natural number")?
-                    .into();
+                let handle = env.pop(1)?.as_handle(env, "")?;
                 let addr = env.rt.backend.tcp_addr(handle).map_err(|e| env.error(e))?;
-                env.push(addr);
+                env.push(addr.to_string());
             }
             SysOp::TcpSetNonBlocking => {
-                let handle = env
-                    .pop(1)?
-                    .as_nat(env, "Handle must be an natural number")?
-                    .into();
+                let handle = env.pop(1)?.as_handle(env, "")?;
                 env.rt
                     .backend
                     .tcp_set_non_blocking(handle, true)
@@ -1592,10 +1591,7 @@ impl SysOp {
                 } else {
                     Some(Duration::from_secs_f64(timeout))
                 };
-                let handle = env
-                    .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
-                    .into();
+                let handle = env.pop(2)?.as_handle(env, "")?;
                 env.rt
                     .backend
                     .tcp_set_read_timeout(handle, timeout)
@@ -1608,10 +1604,7 @@ impl SysOp {
                 } else {
                     Some(Duration::from_secs_f64(timeout))
                 };
-                let handle = env
-                    .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
-                    .into();
+                let handle = env.pop(2)?.as_handle(env, "")?;
                 env.rt
                     .backend
                     .tcp_set_write_timeout(handle, timeout)
@@ -1621,20 +1614,14 @@ impl SysOp {
                 let http = env
                     .pop(1)?
                     .as_string(env, "HTTP request must be a string")?;
-                let handle = env
-                    .pop(2)?
-                    .as_nat(env, "Handle must be an natural number")?
-                    .into();
+                let handle = env.pop(2)?.as_handle(env, "")?;
                 let res = (env.rt.backend)
                     .https_get(&http, handle)
                     .map_err(|e| env.error(e))?;
                 env.push(res);
             }
             SysOp::Close => {
-                let handle = env
-                    .pop(1)?
-                    .as_nat(env, "Handle must be an natural number")?
-                    .into();
+                let handle = env.pop(1)?.as_handle(env, "")?;
                 env.rt.backend.close(handle).map_err(|e| env.error(e))?;
             }
             SysOp::RunInherit => {
@@ -1658,11 +1645,10 @@ impl SysOp {
             SysOp::RunStream => {
                 let (command, args) = value_to_command(&env.pop(1)?, env)?;
                 let args: Vec<_> = args.iter().map(|s| s.as_str()).collect();
-                let mut handle: Value = (env.rt.backend)
+                let handle = (env.rt.backend)
                     .run_command_stream(&command, &args)
                     .map_err(|e| env.error(e))?
-                    .into();
-                handle.meta_mut().handle_kind = Some(HandleKind::ChildProcess);
+                    .value(HandleKind::ChildProcess(command));
                 env.push(handle);
             }
             SysOp::ChangeDirectory => {

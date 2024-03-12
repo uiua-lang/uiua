@@ -318,7 +318,7 @@ impl<T> Array<T> {
         }
     }
     /// Get an iterator over the row slices of the array
-    pub fn row_slices(&self) -> impl ExactSizeIterator<Item = &[T]> + DoubleEndedIterator {
+    pub fn row_slices(&self) -> impl ExactSizeIterator<Item = &[T]> + DoubleEndedIterator + Clone {
         (0..self.row_count()).map(move |row| self.row_slice(row))
     }
     /// Get a slice of a row

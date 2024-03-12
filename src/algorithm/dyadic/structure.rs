@@ -944,15 +944,23 @@ impl<T: ArrayValue> Array<T> {
             ));
         }
         if indices_shape.is_empty() {
-            undo_select_inner(once(self.data.as_slice()), indices, &mut into, env)?;
+            if self.shape == into.shape[1..] {
+                undo_select_same_size(once(self.data.as_slice()), indices, &mut into, env)?;
+            } else {
+                let mut from = self.clone();
+                from.shape.insert(0, 1);
+                into = under_select_different_size(&from, indices, &into, env)?;
+            }
+        } else if self.shape[1..] == into.shape[1..] {
+            undo_select_same_size(self.row_slices(), indices, &mut into, env)?;
         } else {
-            undo_select_inner(self.row_slices(), indices, &mut into, env)?;
+            into = under_select_different_size(self, indices, &into, env)?;
         }
         Ok(into)
     }
 }
 
-fn undo_select_inner<'a, T: ArrayValue>(
+fn undo_select_same_size<'a, T: ArrayValue>(
     row_slices: impl Iterator<Item = &'a [T]>,
     indices: &[isize],
     into: &mut Array<T>,
@@ -992,4 +1000,57 @@ fn undo_select_inner<'a, T: ArrayValue>(
         }
     }
     Ok(())
+}
+
+fn under_select_different_size<T: ArrayValue>(
+    from: &Array<T>,
+    indices: &[isize],
+    into: &Array<T>,
+    env: &Uiua,
+) -> UiuaResult<Array<T>> {
+    let mut abs_indices: Vec<usize> = Vec::with_capacity(indices.len());
+    for &index in indices {
+        if index >= 0 {
+            let index = index as usize;
+            if index >= into.row_count() {
+                return Err(env
+                    .error(format!(
+                        "Index {} is out of bounds of length {}",
+                        index,
+                        into.row_count()
+                    ))
+                    .fill());
+            }
+            abs_indices.push(index);
+        } else {
+            let pos_i = (into.row_count() as isize + index) as usize;
+            if pos_i >= into.row_count() {
+                return Err(env
+                    .error(format!(
+                        "Index {} is out of bounds of length {}",
+                        index,
+                        into.row_count()
+                    ))
+                    .fill());
+            }
+            abs_indices.push(pos_i);
+        }
+    }
+    abs_indices.sort_unstable();
+    let mut new_rows = Vec::new();
+    let mut i = 0;
+    let mut from_rows = from.rows();
+    for index in abs_indices {
+        while i < index {
+            new_rows.push(into.row(i));
+            i += 1;
+        }
+        new_rows.extend(from_rows.next().into_iter().flat_map(Array::into_rows));
+        i += 1;
+    }
+    while i < into.row_count() {
+        new_rows.push(into.row(i));
+        i += 1;
+    }
+    Array::from_row_arrays(new_rows, env)
 }

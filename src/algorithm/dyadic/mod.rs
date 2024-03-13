@@ -558,8 +558,8 @@ impl<T: ArrayValue> Array<T> {
                 return Err(env.error(match env.scalar_fill::<f64>() {
                     Ok(_) => {
                         format!(
-                            "Cannot keep array with shape {} with array of shape {}.\
-                            A fill value is available, but keep can only been filled\
+                            "Cannot keep array with shape {} with array of shape {}. \
+                            A fill value is available, but keep can only been filled \
                             if there are fewer counts than rows.",
                             self.shape(),
                             FormatShape(&[amount.len()])

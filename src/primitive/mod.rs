@@ -332,32 +332,30 @@ impl Primitive {
         FormatPrimitive(*self)
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
+        use Primitive::*;
         match self {
-            Primitive::Cross => Some(format!("use {} instead", Primitive::Table.format())),
-            Primitive::Cascade => Some(format!(
-                "use {} or {} instead",
-                Primitive::Fork.format(),
-                Primitive::On.format()
-            )),
-            Primitive::Rectify => Some(String::new()),
-            Primitive::All => Some(String::new()),
-            Primitive::This | Primitive::Recur => {
-                Some("use the name of a binding to recur instead".into())
-            }
-            Primitive::Sys(SysOp::GifDecode) => Some(format!(
+            Cross => Some(format!("use {} instead", Table.format())),
+            Cascade => Some(format!("use {} or {} instead", Fork.format(), On.format())),
+            Rectify => Some(String::new()),
+            All => Some(String::new()),
+            This | Recur => Some("use the name of a binding to recur instead".into()),
+            Sys(SysOp::GifDecode) => Some(format!(
                 "use {} {} instead",
-                Primitive::Un.format(),
-                Primitive::Sys(SysOp::GifEncode).format()
+                Un.format(),
+                Sys(SysOp::GifEncode).format()
             )),
-            Primitive::Sys(SysOp::AudioDecode) => Some(format!(
+            Sys(SysOp::AudioDecode) => Some(format!(
                 "use {} {} instead",
-                Primitive::Un.format(),
-                Primitive::Sys(SysOp::AudioEncode).format()
+                Un.format(),
+                Sys(SysOp::AudioEncode).format()
             )),
-            Primitive::Sys(SysOp::ImDecode) => Some(format!(
+            Sys(SysOp::ImDecode) => Some(format!(
                 "use {} {} instead",
-                Primitive::Un.format(),
-                Primitive::Sys(SysOp::ImEncode).format()
+                Un.format(),
+                Sys(SysOp::ImEncode).format()
+            )),
+            Deal => Some(format!(
+                "use {Select}{Rise}{Each}{Gap}{Rand}{Range}{Len}{Dup} instead"
             )),
             _ => None,
         }

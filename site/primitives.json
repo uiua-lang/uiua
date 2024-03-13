@@ -469,7 +469,8 @@
     "args": 2,
     "outputs": 1,
     "class": "Misc",
-    "description": "Randomly reorder the rows of an array with a seed"
+    "description": "Randomly reorder the rows of an array with a seed",
+    "deprecated": true
   },
   "deduplicate": {
     "glyph": "◴",

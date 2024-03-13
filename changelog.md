@@ -51,6 +51,8 @@ This version is not yet released. If you are reading this on the website, then t
   - This is useful in array macros
 - Add `# No inline!` semantic comment, which prevents a function and its callers from being inlined
   - This enables better stack traces on errors
+- Deprecate [`deal`](https://uiua.org/docs/deal)
+  - It is rarely used and easy to express with other functions
 - Remove `unpack ⊐` for good
 - Remove `&i` for good
 ### Interpreter

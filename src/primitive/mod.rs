@@ -175,6 +175,7 @@ impl fmt::Display for ImplPrimitive {
             UndoTake => write!(f, "{Under}{Take}"),
             UndoDrop => write!(f, "{Under}{Drop}"),
             UnDrop => write!(f, "{Un}{Drop}"),
+            UnKeep => write!(f, "{Un}{Keep}"),
             UndoSelect => write!(f, "{Under}{Select}"),
             UndoPick => write!(f, "{Under}{Pick}"),
             UndoInsert => write!(f, "{Under}{Insert}"),
@@ -882,6 +883,7 @@ impl ImplPrimitive {
                 env.push(vals);
                 env.push(keys);
             }
+            ImplPrimitive::UnKeep => env.dyadic_ro_env(Value::unkeep)?,
             ImplPrimitive::UndoPick => {
                 let index = env.pop(1)?;
                 let into = env.pop(2)?;

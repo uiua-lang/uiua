@@ -2504,6 +2504,7 @@ impl_primitive!(
     (1(2), UnJoin),
     (2, UnDrop),
     (1, UnCsv),
+    (2, UnKeep),
     // Unders
     (3, UndoSelect),
     (3, UndoPick),

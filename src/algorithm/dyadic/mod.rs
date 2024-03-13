@@ -479,12 +479,29 @@ impl Value {
         }
         kept.generic_bin_into(
             into,
-            |a, b| a.unkeep(&counts, b, env).map(Into::into),
-            |a, b| a.unkeep(&counts, b, env).map(Into::into),
-            |a, b| a.unkeep(&counts, b, env).map(Into::into),
-            |a, b| a.unkeep(&counts, b, env).map(Into::into),
-            |a, b| a.unkeep(&counts, b, env).map(Into::into),
+            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
             |a, b| env.error(format!("Cannot unkeep {a} array with {b} array")),
+        )
+    }
+    pub(crate) fn unkeep(&self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
+        let counts = self.as_nats(
+            env,
+            "Keep amount must be a natural number \
+            or list of natural numbers",
+        )?;
+        if self.rank() == 0 {
+            return Err(env.error("Cannot invert scalar keep"));
+        }
+        kept.generic_into(
+            |a| a.unkeep(&counts, env).map(Into::into),
+            |a| a.unkeep(&counts, env).map(Into::into),
+            |a| a.unkeep(&counts, env).map(Into::into),
+            |a| a.unkeep(&counts, env).map(Into::into),
+            |a| a.unkeep(&counts, env).map(Into::into),
         )
     }
 }
@@ -630,7 +647,7 @@ impl<T: ArrayValue> Array<T> {
         self.validate_shape();
         Ok(self)
     }
-    pub(crate) fn unkeep(self, counts: &[usize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+    fn undo_keep(self, counts: &[usize], into: Self, env: &Uiua) -> UiuaResult<Self> {
         if counts.iter().any(|&n| n > 1) {
             return Err(env.error("Cannot invert keep with non-boolean counts"));
         }
@@ -658,6 +675,44 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         Self::from_row_arrays(new_rows, env)
+    }
+    fn unkeep(self, counts: &[usize], env: &Uiua) -> UiuaResult<Self> {
+        let mut trues = 0;
+        for &count in counts {
+            if count > 1 {
+                return Err(env.error("Cannot unkeep with non-boolean counts"));
+            }
+            if count == 1 {
+                trues += 1;
+            }
+        }
+        if trues != self.row_count() {
+            return Err(env.error(format!(
+                "Cannot unkeep array with shape {} with mask of {} 1s",
+                self.shape(),
+                trues
+            )));
+        }
+        let row_len = self.row_len();
+        let mut new_shape = self.shape.clone();
+        new_shape[0] = counts.len();
+        let mut new_data = EcoVec::with_capacity(counts.len() * row_len);
+        let mut rows = self.into_rows();
+        let mut fill: Option<T> = None;
+        for &count in counts {
+            if count == 1 {
+                new_data.extend(rows.next().unwrap().data);
+            } else {
+                if fill.is_none() {
+                    match env.scalar_fill::<T>() {
+                        Ok(f) => fill = Some(f),
+                        Err(e) => return Err(env.error(format!("Cannot unkeep without fill{e}"))),
+                    }
+                }
+                new_data.extend(repeat(fill.as_ref().unwrap()).take(row_len).cloned());
+            }
+        }
+        Ok(Array::new(new_shape, new_data))
     }
 }
 

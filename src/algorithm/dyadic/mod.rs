@@ -144,7 +144,7 @@ impl Value {
         let target_shape = shape.as_number_list(
             env,
             "Shape should be a single natural number \
-                or a list of integers or infinity",
+            or a list of integers or infinity",
             |n| n.fract() == 0.0 || n.is_infinite(),
             |n| {
                 if n.is_infinite() {
@@ -562,14 +562,14 @@ impl<T: ArrayValue> Array<T> {
                             A fill value is available, but keep can only been filled\
                             if there are fewer counts than rows.",
                             self.shape(),
-                            FormatShape(amount.as_ref())
+                            FormatShape(&[amount.len()])
                         )
                     }
                     Err(e) => {
                         format!(
                             "Cannot keep array with shape {} with array of shape {}{e}",
                             self.shape(),
-                            FormatShape(amount.as_ref())
+                            FormatShape(&[amount.len()])
                         )
                     }
                 }))

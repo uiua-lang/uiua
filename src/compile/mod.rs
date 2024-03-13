@@ -1810,6 +1810,9 @@ code:
 
 fn instrs_can_pre_eval(instrs: &[Instr], asm: &Assembly) -> bool {
     use Primitive::*;
+    if instrs.is_empty() {
+        return true;
+    }
     let begin_array_pos = (instrs.iter()).position(|instr| matches!(instr, Instr::BeginArray));
     let begin_array_count = instrs
         .iter()

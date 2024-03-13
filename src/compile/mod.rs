@@ -1696,7 +1696,6 @@ code:
     }
     #[must_use]
     fn pre_eval_instrs(&mut self, instrs: EcoVec<Instr>) -> (EcoVec<Instr>, Vec<UiuaError>) {
-        use Primitive::*;
         let mut errors = Vec::new();
         let instrs = optimize_instrs(instrs, true, &self.asm);
         if self.scope.fill
@@ -1712,40 +1711,7 @@ code:
         'start: while start < instrs.len() {
             for end in (start + 1..=instrs.len()).rev() {
                 let section = &instrs[start..end];
-                let begin_array_pos =
-                    (section.iter()).position(|instr| matches!(instr, Instr::BeginArray));
-                let begin_array_count = section
-                    .iter()
-                    .filter(|instr| matches!(instr, Instr::BeginArray))
-                    .count();
-                let end_array_pos =
-                    (section.iter()).position(|instr| matches!(instr, Instr::EndArray { .. }));
-                let end_array_count = section
-                    .iter()
-                    .filter(|instr| matches!(instr, Instr::EndArray { .. }))
-                    .count();
-                let array_allowed = begin_array_count == end_array_count
-                    && match (begin_array_pos, end_array_pos) {
-                        (Some(0), Some(end)) => end == section.len() - 1,
-                        (None, None) => true,
-                        _ => false,
-                    };
-                let locals_allowed = section
-                    .iter()
-                    .position(|instr| matches!(instr, Instr::PushLocals { .. }))
-                    .map_or(true, |pos| {
-                        pos == 0 && section.ends_with(&[Instr::PopLocals])
-                    });
-                if !array_allowed
-                    || !locals_allowed
-                    || matches!(
-                        section.last().unwrap(),
-                        Instr::PushFunc(_) | Instr::BeginArray
-                    )
-                    || section.iter().all(|instr| matches!(instr, Instr::Push(_)))
-                    || (section.iter())
-                        .any(|instr| matches!(instr, Instr::Prim(SetInverse | SetUnder, _)))
-                {
+                if !instrs_can_pre_eval(section, &self.asm) {
                     continue;
                 }
                 if instrs_are_pure(section, &self.asm)
@@ -1840,6 +1806,56 @@ code:
             }
         })
     }
+}
+
+fn instrs_can_pre_eval(instrs: &[Instr], asm: &Assembly) -> bool {
+    use Primitive::*;
+    let begin_array_pos = (instrs.iter()).position(|instr| matches!(instr, Instr::BeginArray));
+    let begin_array_count = instrs
+        .iter()
+        .filter(|instr| matches!(instr, Instr::BeginArray))
+        .count();
+    let end_array_pos = (instrs.iter()).position(|instr| matches!(instr, Instr::EndArray { .. }));
+    let end_array_count = instrs
+        .iter()
+        .filter(|instr| matches!(instr, Instr::EndArray { .. }))
+        .count();
+    let array_allowed = begin_array_count == end_array_count
+        && match (begin_array_pos, end_array_pos) {
+            (Some(0), Some(end)) => end == instrs.len() - 1,
+            (None, None) => true,
+            _ => false,
+        };
+    let locals_allowed = instrs
+        .iter()
+        .position(|instr| matches!(instr, Instr::PushLocals { .. }))
+        .map_or(true, |pos| {
+            pos == 0 && instrs.ends_with(&[Instr::PopLocals])
+        });
+    if !array_allowed
+        || !locals_allowed
+        || matches!(
+            instrs.last().unwrap(),
+            Instr::PushFunc(_) | Instr::BeginArray
+        )
+        || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
+        || instrs.iter().any(|instr| {
+            matches!(
+                instr,
+                Instr::Prim(SetInverse | SetUnder, _) | Instr::ImplPrim(ImplPrimitive::UnPop, _)
+            )
+        })
+    {
+        return false;
+    }
+    for instr in instrs {
+        if let Instr::PushFunc(f) = instr {
+            if !instrs_can_pre_eval(f.instrs(asm), asm) {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 fn words_look_pervasive(words: &[Sp<Word>]) -> bool {

@@ -22,7 +22,7 @@ use crate::{
     Shape, Uiua, UiuaResult,
 };
 
-use super::{ArrayCmpSlice, FillContext};
+use super::{op_bytes_retry_fill, ArrayCmpSlice, FillContext};
 
 impl Value {
     pub(crate) fn bin_coerce_to_boxes<T, C: FillContext, E: ToString>(
@@ -498,7 +498,13 @@ impl Value {
         }
         kept.generic_into(
             |a| a.unkeep(&counts, env).map(Into::into),
-            |a| a.unkeep(&counts, env).map(Into::into),
+            |a| {
+                op_bytes_retry_fill(
+                    a,
+                    |a| a.unkeep(&counts, env).map(Into::into),
+                    |a| a.unkeep(&counts, env).map(Into::into),
+                )
+            },
             |a| a.unkeep(&counts, env).map(Into::into),
             |a| a.unkeep(&counts, env).map(Into::into),
             |a| a.unkeep(&counts, env).map(Into::into),
@@ -706,7 +712,9 @@ impl<T: ArrayValue> Array<T> {
                 if fill.is_none() {
                     match env.scalar_fill::<T>() {
                         Ok(f) => fill = Some(f),
-                        Err(e) => return Err(env.error(format!("Cannot unkeep without fill{e}"))),
+                        Err(e) => {
+                            return Err(env.error(format!("Cannot unkeep without fill{e}")).fill())
+                        }
                     }
                 }
                 new_data.extend(repeat(fill.as_ref().unwrap()).take(row_len).cloned());

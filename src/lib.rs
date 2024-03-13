@@ -16,7 +16,7 @@ uiua = { version = "*", default-features = false, features = ["batteries"] }
 
 The main entry point is the [`Uiua`] struct, which is the Uiua runtime. It must be created with a [`SysBackend`]. [`Uiua::with_native_sys`] is a convenient way to create a Uiua runtime that uses the same backend as the Uiua CLI, though keep in mind it gives full access to the filesystem and TCP sockets and so probably shouldn't be used in a sandboxed environment.
 
-[`Value`] is the generic value type. It wraps one of four [`Array`] types.
+[`Value`] is the generic value type. It wraps one of five [`Array`] types.
 
 You can run Uiua code with [`Uiua::run_str`] or [`Uiua::run_file`].
 ```rust

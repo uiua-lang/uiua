@@ -128,9 +128,14 @@ impl<T: Clone + std::fmt::Debug> Array<T> {
 
         let a_row_shape = &a.shape[a_depth..];
         let b_row_shape = &b.shape[b_depth..];
+        let a_row_len: usize = a_row_shape.iter().product();
+        let b_row_len: usize = b_row_shape.iter().product();
+        if a_row_len == 0 || b_row_len == 0 {
+            return Ok(());
+        }
         for (a, b) in (a.data.as_mut_slice())
-            .chunks_exact_mut(a_row_shape.iter().product())
-            .zip(b.data.as_slice().chunks_exact(b_row_shape.iter().product()))
+            .chunks_exact_mut(a_row_len)
+            .zip(b.data.as_slice().chunks_exact(b_row_len))
         {
             f(a_row_shape, a, b_row_shape, b, ctx)?;
         }

@@ -2147,11 +2147,9 @@ primitive!(
     /// - [join]
     /// - [each]
     /// - [rows]
-    /// These operations do *not* work on maps:
-    /// - [transpose]
-    /// - [deshape]
-    /// - [rerank]
-    /// - [reshape]
+    /// - [classify]
+    /// - [deduplicate]
+    /// Operations that do not specifically work on maps will remove the keys and turn the map into a normal array.
     ///
     /// [fix]ing a map will [fix] the keys and values. This exposes the true structure of the keys array.
     /// ex: # Experimental!

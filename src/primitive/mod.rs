@@ -558,7 +558,7 @@ impl Primitive {
             Primitive::Windows => env.dyadic_rr_env(Value::windows)?,
             Primitive::Where => env.monadic_ref_env(Value::wher)?,
             Primitive::Classify => env.monadic_ref(Value::classify)?,
-            Primitive::Deduplicate => env.monadic_mut(Value::deduplicate)?,
+            Primitive::Deduplicate => env.monadic_mut_env(Value::deduplicate)?,
             Primitive::Unique => env.monadic_ref(Value::unique)?,
             Primitive::Member => env.dyadic_rr_env(Value::member)?,
             Primitive::Find => env.dyadic_rr_env(Value::find)?,
@@ -815,9 +815,9 @@ impl Primitive {
             }
             Primitive::Map => {
                 let keys = env.pop("keys")?;
-                let vals = env.pop("values")?;
-                let map = keys.map(vals, env)?;
-                env.push(map);
+                let mut vals = env.pop("values")?;
+                vals.map(keys, env)?;
+                env.push(vals);
             }
             Primitive::Shapes => shapes(env)?,
             Primitive::Types => types(env)?,

@@ -240,12 +240,8 @@ impl<T: ArrayValue> Array<T> {
     pub fn reshape(&mut self, dims: &[Result<isize, bool>], env: &Uiua) -> UiuaResult {
         let fill = env.scalar_fill::<T>();
         let axes = derive_shape(&self.shape, dims, fill.is_ok(), env)?;
-        if self.is_map()
-            && axes
-                .first()
-                .map_or(true, |&d| d.unsigned_abs() != self.row_count())
-        {
-            return Ok(());
+        if (axes.first()).map_or(true, |&d| d.unsigned_abs() != self.row_count()) {
+            self.take_map_keys();
         }
         let reversed_axes: Vec<usize> = axes
             .iter()
@@ -367,9 +363,7 @@ fn derive_shape(
 impl Value {
     /// `rerank` this value with another
     pub fn rerank(&mut self, rank: &Self, env: &Uiua) -> UiuaResult {
-        if self.is_map() {
-            return Ok(());
-        }
+        self.take_map_keys();
         let irank = rank.as_int(env, "Rank must be a natural number")?;
         let shape = self.shape_mut();
         let rank = irank.unsigned_abs();
@@ -535,6 +529,7 @@ impl<T: ArrayValue> Array<T> {
     }
     /// `keep` this array with some counts
     pub fn list_keep(mut self, counts: &[usize], env: &Uiua) -> UiuaResult<Self> {
+        self.take_map_keys();
         let mut amount = Cow::Borrowed(counts);
         match amount.len().cmp(&self.row_count()) {
             Ordering::Equal => {}

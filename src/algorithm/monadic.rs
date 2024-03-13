@@ -138,11 +138,14 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 1 {
             return;
         }
+        if self.is_map() {
+            self.take_map_keys();
+        }
         self.shape = self.element_count().into();
     }
     pub(crate) fn deshape_depth(&mut self, mut depth: usize) {
         if self.is_map() {
-            return;
+            self.take_map_keys();
         }
         depth = depth.min(self.rank());
         let deshaped = self.shape.split_off(depth).into_iter().product();
@@ -472,7 +475,7 @@ impl<T: ArrayValue> Array<T> {
     pub(crate) fn transpose_depth(&mut self, mut depth: usize, amnt: i32) {
         crate::profile_function!();
         if depth == 0 && self.is_map() {
-            return;
+            self.take_map_keys();
         }
         depth = depth.min(self.rank());
         let trans_count = amnt.unsigned_abs() as usize;
@@ -596,24 +599,30 @@ impl Value {
         if self.rank() == 0 {
             return 0.into();
         }
-        self.generic_ref(
-            Array::classify,
-            Array::classify,
-            Array::classify,
-            Array::classify,
-            Array::classify,
-        )
-        .into_iter()
-        .collect()
+        let map_keys = self.map_keys().cloned();
+        let mut val: Value = self
+            .generic_ref(
+                Array::classify,
+                Array::classify,
+                Array::classify,
+                Array::classify,
+                Array::classify,
+            )
+            .into_iter()
+            .collect();
+        if let Some(map_keys) = map_keys {
+            val.meta_mut().map_keys = Some(map_keys);
+        }
+        val
     }
     /// `deduplicate` the rows of the value
-    pub fn deduplicate(&mut self) {
+    pub fn deduplicate(&mut self, env: &Uiua) -> UiuaResult {
         self.generic_mut_shallow(
-            Array::deduplicate,
-            Array::deduplicate,
-            Array::deduplicate,
-            Array::deduplicate,
-            Array::deduplicate,
+            |a| a.deduplicate(env),
+            |a| a.deduplicate(env),
+            |a| a.deduplicate(env),
+            |a| a.deduplicate(env),
+            |a| a.deduplicate(env),
         )
     }
     /// Mask the `unique` rows of the value
@@ -720,10 +729,13 @@ impl<T: ArrayValue> Array<T> {
         classified
     }
     /// `deduplicate` the rows of the array
-    pub fn deduplicate(&mut self) {
+    pub fn deduplicate(&mut self, env: &Uiua) -> UiuaResult {
         if self.rank() == 0 {
-            return;
+            return Ok(());
         }
+        let map_keys_unique = self
+            .take_map_keys()
+            .map(|keys| (keys.into_value(), self.unique()));
         let mut deduped = CowSlice::new();
         let mut seen = HashSet::new();
         let mut new_len = 0;
@@ -735,12 +747,18 @@ impl<T: ArrayValue> Array<T> {
         }
         self.data = deduped;
         self.shape[0] = new_len;
+        if let Some((keys, unique)) = map_keys_unique {
+            let keys = Value::from(unique).keep(keys, env)?;
+            self.map(keys, env)?;
+        }
+        Ok(())
     }
     /// Mask the `unique` rows of the array
     pub fn unique(&self) -> Array<u8> {
         if self.rank() == 0 {
             return 1u8.into();
         }
+        let map_keys = self.map_keys().cloned();
         let mut seen = HashSet::new();
         let mut mask = eco_vec![0u8; self.row_count()];
         let mask_slice = mask.make_mut();
@@ -751,6 +769,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut arr = Array::new([self.row_count()], mask);
         arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+        arr.meta_mut().map_keys = map_keys;
         arr
     }
 }

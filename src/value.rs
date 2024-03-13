@@ -354,6 +354,14 @@ impl Value {
     pub fn set_per_meta(&mut self, per_meta: PersistentMeta) {
         unsafe { self.repr_mut() }.arr.set_per_meta(per_meta)
     }
+    /// Get the value's map keys
+    pub fn map_keys(&self) -> Option<&MapKeys> {
+        unsafe { self.repr() }.arr.map_keys()
+    }
+    /// Get a mutable reference to the value's map keys
+    pub fn map_keys_mut(&mut self) -> Option<&mut MapKeys> {
+        unsafe { self.repr_mut() }.arr.map_keys_mut()
+    }
     /// Combine this value's metadata with another
     pub fn combine_meta(&mut self, other: &ArrayMeta) {
         unsafe { self.repr_mut() }.arr.combine_meta(other)

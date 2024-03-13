@@ -41,6 +41,34 @@ impl<T: ArrayValue> Array<T> {
         }
         kv
     }
+    /// Create a map array
+    pub fn map(&mut self, mut keys: Value, env: &Uiua) -> UiuaResult {
+        let values = self;
+        if keys.row_count() != values.row_count() {
+            return Err(env.error(format!(
+                "Map array's keys and values must have the same length, but they have lengths {} and {}",
+                keys.row_count(),
+                values.row_count()
+            )));
+        }
+        if keys.rank() == 0 {
+            keys.shape_mut().insert(0, 1);
+        }
+        if values.rank() == 0 {
+            values.shape_mut().insert(0, 1);
+        }
+        let mut map_keys = MapKeys {
+            keys: keys.clone(),
+            indices: Vec::new(),
+            len: 0,
+            fix_stack: Vec::new(),
+        };
+        for (i, key) in keys.into_rows().enumerate() {
+            map_keys.insert(key, i, env)?;
+        }
+        values.meta_mut().map_keys = Some(map_keys);
+        Ok(())
+    }
 }
 
 impl Value {
@@ -59,31 +87,15 @@ impl Value {
         )
     }
     /// Create a map array
-    pub fn map(mut self, mut values: Self, env: &Uiua) -> UiuaResult<Value> {
-        if self.row_count() != values.row_count() {
-            return Err(env.error(format!(
-                "Map array's keys and values must have the same length, but they have lengths {} and {}",
-                self.row_count(),
-                values.row_count()
-            )));
+    pub fn map(&mut self, keys: Self, env: &Uiua) -> UiuaResult {
+        match self {
+            Value::Num(arr) => arr.map(keys, env),
+            #[cfg(feature = "bytes")]
+            Value::Byte(arr) => arr.map(keys, env),
+            Value::Complex(arr) => arr.map(keys, env),
+            Value::Char(arr) => arr.map(keys, env),
+            Value::Box(arr) => arr.map(keys, env),
         }
-        if self.rank() == 0 {
-            self.shape_mut().insert(0, 1);
-        }
-        if values.rank() == 0 {
-            values.shape_mut().insert(0, 1);
-        }
-        let mut keys = MapKeys {
-            keys: self.clone(),
-            indices: Vec::new(),
-            len: 0,
-            fix_stack: Vec::new(),
-        };
-        for (i, key) in self.into_rows().enumerate() {
-            keys.insert(key, i, env)?;
-        }
-        values.meta_mut().map_keys = Some(keys);
-        Ok(values)
     }
     /// Turn a map array into its keys and values
     pub fn unmap(mut self, env: &Uiua) -> UiuaResult<(Value, Value)> {
@@ -140,7 +152,7 @@ impl Value {
     #[allow(clippy::unit_arg)]
     pub fn insert(&mut self, key: Value, value: Value, env: &Uiua) -> UiuaResult {
         if !self.is_map() && self.row_count() == 0 {
-            *self = take(self).map(Value::default(), env)?;
+            self.map(Value::default(), env)?;
         }
         let row_count = self.row_count();
         let mut keys = self
@@ -526,6 +538,9 @@ impl MapKeys {
         } else {
             false
         }
+    }
+    pub fn into_value(self) -> Value {
+        remove_empty_rows(self.keys.into_rows())
     }
     fn present_indices(&self) -> Vec<usize> {
         let mut present_indices: Vec<_> = (self.keys.rows().enumerate())

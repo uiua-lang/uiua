@@ -521,17 +521,17 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
         .as_integer_array(env, "⊕ group indices must be an array of integers")?;
     let original = env.pop(3)?;
 
-    if (indices.data.iter())
-        .any(|&index| index >= 0 && index as usize >= ungrouped_rows.row_count())
-    {
-        return Err(env.error(format!(
-            "Cannot undo {} because the grouped array's \
-            length changed from {} to {}",
-            Primitive::Group.format(),
-            indices.element_count(),
-            ungrouped_rows.row_count(),
-        )));
-    }
+    // if (indices.data.iter())
+    //     .any(|&index| index >= 0 && index as usize >= ungrouped_rows.row_count())
+    // {
+    //     return Err(env.error(format!(
+    //         "Cannot undo {} because the grouped array's \
+    //         length changed from {} to {}",
+    //         Primitive::Group.format(),
+    //         indices.element_count(),
+    //         ungrouped_rows.row_count(),
+    //     )));
+    // }
 
     // Ungroup
     let mut ungrouped_rows: Vec<_> = ungrouped_rows
@@ -539,11 +539,16 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
         .map(|row| row.unboxed().into_rows())
         .collect();
     let mut ungrouped = Vec::with_capacity(indices.element_count() * original.row_len());
+    let mut extra_rows = 0;
     for (i, &index) in indices.data.iter().enumerate() {
         if index >= 0 {
-            ungrouped.push(ungrouped_rows[index as usize].next().ok_or_else(|| {
-                env.error("A group's length was modified between grouping and ungrouping")
-            })?);
+            if let Some(ungrouped_row) = ungrouped_rows.get_mut(index as usize) {
+                ungrouped.push(ungrouped_row.next().ok_or_else(|| {
+                    env.error("A group's length was modified between grouping and ungrouping")
+                })?);
+            } else {
+                extra_rows += 1;
+            }
         } else {
             ungrouped.push(original.row(i));
         }
@@ -553,6 +558,8 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
     for &dim in indices.shape().iter().rev() {
         val.shape_mut().insert(0, dim);
     }
+    val.shape_mut()[0] -= extra_rows;
+    val.validate_shape();
     env.push(val);
     Ok(())
 }

@@ -537,7 +537,7 @@ impl<T: ArrayValue> Array<T> {
                 Ok(fill) => {
                     if fill < 0.0 || fill.fract() != 0.0 {
                         return Err(env.error(format!(
-                            "Fill value for keep must be a non-negative\
+                            "Fill value for keep must be a non-negative \
                             integer, but it is {fill}"
                         )));
                     }

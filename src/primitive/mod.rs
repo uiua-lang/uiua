@@ -355,7 +355,7 @@ impl Primitive {
                 Sys(SysOp::ImEncode).format()
             )),
             Deal => Some(format!(
-                "use {Select}{Rise}{Each}{Gap}{Rand}{Range}{Len}{Dup} instead"
+                "use {Select}{Rise}[{Pop}{Repeat}{Gen}]{Len}{Over} instead"
             )),
             _ => None,
         }
@@ -400,6 +400,9 @@ impl Primitive {
             _ => {}
         }
         if let Some(prim) = Primitive::non_deprecated().find(|p| p.name() == name) {
+            return Some(prim);
+        }
+        if let Some(prim) = Primitive::all().find(|p| p.glyph().is_none() && p.name() == name) {
             return Some(prim);
         }
         if let Some(prim) = SysOp::ALL.iter().find(|s| s.name() == name) {

@@ -953,12 +953,10 @@ impl SysOp {
                 if !env.rt.do_top_io {
                     return Ok(());
                 }
-                env.rt
-                    .backend
+                (env.rt.backend)
                     .print_str_stdout(&s)
                     .map_err(|e| env.error(e))?;
-                env.rt
-                    .backend
+                (env.rt.backend)
                     .print_str_stdout("\n")
                     .map_err(|e| env.error(e))?;
             }
@@ -967,8 +965,7 @@ impl SysOp {
                 if !env.rt.do_top_io {
                     return Ok(());
                 }
-                env.rt
-                    .backend
+                (env.rt.backend)
                     .print_str_stdout(&val.format())
                     .map_err(|e| env.error(e))?;
             }
@@ -977,12 +974,10 @@ impl SysOp {
                 if !env.rt.do_top_io {
                     return Ok(());
                 }
-                env.rt
-                    .backend
+                (env.rt.backend)
                     .print_str_stdout(&val.format())
                     .map_err(|e| env.error(e))?;
-                env.rt
-                    .backend
+                (env.rt.backend)
                     .print_str_stdout("\n")
                     .map_err(|e| env.error(e))?;
             }
@@ -1002,8 +997,7 @@ impl SysOp {
                 if !env.rt.do_top_io {
                     return Ok(());
                 }
-                env.rt
-                    .backend
+                (env.rt.backend)
                     .set_raw_mode(raw_mode)
                     .map_err(|e| env.error(e))?;
             }
@@ -1265,8 +1259,7 @@ impl SysOp {
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
                     Value::Box(_) => return Err(env.error("Cannot write box array to file")),
                 };
-                env.rt
-                    .backend
+                (env.rt.backend)
                     .file_write_all(path.as_ref(), &bytes)
                     .or_else(|e| {
                         if path == "example.ua" {
@@ -1529,8 +1522,7 @@ impl SysOp {
             }
             SysOp::ClipboardSet => {
                 let contents = env.pop(1)?.as_string(env, "Contents must be a string")?;
-                env.rt
-                    .backend
+                (env.rt.backend)
                     .set_clipboard(&contents)
                     .map_err(|e| env.error(e))?;
             }
@@ -1577,8 +1569,7 @@ impl SysOp {
             }
             SysOp::TcpSetNonBlocking => {
                 let handle = env.pop(1)?.as_handle(env, "")?;
-                env.rt
-                    .backend
+                (env.rt.backend)
                     .tcp_set_non_blocking(handle, true)
                     .map_err(|e| env.error(e))?;
             }
@@ -1590,8 +1581,7 @@ impl SysOp {
                     Some(Duration::from_secs_f64(timeout))
                 };
                 let handle = env.pop(2)?.as_handle(env, "")?;
-                env.rt
-                    .backend
+                (env.rt.backend)
                     .tcp_set_read_timeout(handle, timeout)
                     .map_err(|e| env.error(e))?;
             }
@@ -1603,8 +1593,7 @@ impl SysOp {
                     Some(Duration::from_secs_f64(timeout))
                 };
                 let handle = env.pop(2)?.as_handle(env, "")?;
-                env.rt
-                    .backend
+                (env.rt.backend)
                     .tcp_set_write_timeout(handle, timeout)
                     .map_err(|e| env.error(e))?;
             }
@@ -1651,8 +1640,7 @@ impl SysOp {
             }
             SysOp::ChangeDirectory => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
-                env.rt
-                    .backend
+                (env.rt.backend)
                     .change_directory(&path)
                     .map_err(|e| env.error(e))?;
             }

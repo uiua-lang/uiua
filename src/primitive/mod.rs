@@ -392,7 +392,6 @@ impl Primitive {
             "id" => return Some(Primitive::Identity),
             "ga" => return Some(Primitive::Gap),
             "po" => return Some(Primitive::Pop),
-            "of" => return Some(Primitive::By),
             "pi" => return Some(Primitive::Pi),
             "ran" => return Some(Primitive::Range),
             "tra" => return Some(Primitive::Transpose),

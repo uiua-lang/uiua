@@ -495,11 +495,18 @@ impl SysBackend for NativeSys {
         Ok(handle)
     }
     fn tcp_addr(&self, handle: Handle) -> Result<SocketAddr, String> {
-        let socket = NATIVE_SYS
+        NATIVE_SYS
             .tcp_sockets
             .get(&handle)
-            .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
-        socket.get_ref().peer_addr().map_err(|e| e.to_string())
+            .map(|s| s.get_ref().peer_addr())
+            .or_else(|| {
+                NATIVE_SYS
+                    .tcp_listeners
+                    .get(&handle)
+                    .map(|l| l.local_addr())
+            })
+            .ok_or_else(|| "Invalid tcp socket handle".to_string())
+            .and_then(|r| r.map_err(|e| e.to_string()))
     }
     fn tcp_set_non_blocking(&self, handle: Handle, non_blocking: bool) -> Result<(), String> {
         let socket = NATIVE_SYS

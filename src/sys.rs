@@ -805,7 +805,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
         Err("TCP sockets are not supported in this environment".into())
     }
-    /// Get the connection address of a TCP socket
+    /// Get the connection address of a TCP socket or listener
     fn tcp_addr(&self, handle: Handle) -> Result<SocketAddr, String> {
         Err("TCP sockets are not supported in this environment".into())
     }
@@ -1543,12 +1543,11 @@ impl SysOp {
             }
             SysOp::TcpListen => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
-                let sock_addr = (addr.parse::<SocketAddr>())
-                    .map_err(|e| env.error(format!("Invalid address: {}", e)))?;
                 let handle = (env.rt.backend)
                     .tcp_listen(&addr)
-                    .map_err(|e| env.error(e))?
-                    .value(HandleKind::TcpListener(sock_addr));
+                    .map_err(|e| env.error(e))?;
+                let sock_addr = env.rt.backend.tcp_addr(handle).map_err(|e| env.error(e))?;
+                let handle = handle.value(HandleKind::TcpListener(sock_addr));
                 env.push(handle);
             }
             SysOp::TcpAccept => {
@@ -1564,12 +1563,11 @@ impl SysOp {
             }
             SysOp::TcpConnect => {
                 let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
-                let sock_addr = (addr.parse::<SocketAddr>())
-                    .map_err(|e| env.error(format!("Invalid address: {}", e)))?;
                 let handle = (env.rt.backend)
                     .tcp_connect(&addr)
-                    .map_err(|e| env.error(e))?
-                    .value(HandleKind::TcpSocket(sock_addr));
+                    .map_err(|e| env.error(e))?;
+                let sock_addr = env.rt.backend.tcp_addr(handle).map_err(|e| env.error(e))?;
+                let handle = handle.value(HandleKind::TcpSocket(sock_addr));
                 env.push(handle);
             }
             SysOp::TcpAddr => {

@@ -253,7 +253,7 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Pow], Optional, view!("Optional "<Prim prim=Flip/>), "⍜ⁿ(-9) 2 5") }
             { inverse_row([Log], Optional, view!("Optional "<Prim prim=Flip/>), "⍜ₙ(+1) 3 8") }
             { inverse_row([Floor], No, "", "⍜⌊(×10) 1.5") }
-            { inverse_row([Floor], No, "", "⍜⌈(×10) 1.5") }
+            { inverse_row([Ceil], No, "", "⍜⌈(×10) 1.5") }
             { inverse_row([Round], No, "", "⍜⁅(×10) 1.5") }
             { inverse_row([Abs], No, "", "⍜⌵(+1) ¯5") }
             { inverse_row([Sign], No, "", "⍜±(×2) ¯5") }
@@ -276,8 +276,8 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Dip], No, "Inner function must be invertible", "⍜⊙⊂× 10 2 3") }
             { inverse_row([Both], No, "Inner function must be invertible", "⍜∩⊡: 1 [1 2 3] 2 [4 5 6]") }
             { inverse_row([Pop], No, "", "⍜◌(×2) 1 2") }
-            { inverse_row([Rows], No, "Inner function must be invertible", "⍜∵⇌⍚\\+ {1_2_3 4_5}") }
-            { inverse_row([Each], No, "Inner function must be invertible", "⍜≡⊢(×10) [1_2_3 4_5_6]") }
+            { inverse_row([Rows], No, "Inner function must be invertible", "⍜≡⊢(×10) [1_2_3 4_5_6]") }
+            { inverse_row([Each], No, "Inner function must be invertible", "⍜∵⇌⍚\\+ {1_2_3 4_5}") }
             { inverse_row([Group], No, "Inner function must be invertible", "⍜⊕□≡⇌ ≠@ . \"I love arrays\"") }
             { inverse_row([Partition], No, "Inner function must be invertible", "⍜⊜□≡⇌ ≠@ . \"Hello World\"") }
             { inverse_row([Fold], No, "Inner function must be invertible", "⍜∧⊏(×10) [0 2] ↯2_3⇡6") }

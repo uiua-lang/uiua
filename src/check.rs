@@ -266,7 +266,7 @@ impl<'a> VirtualEnv<'a> {
                 let mut vals = Vec::with_capacity(*count + *offset);
                 for i in 0..*count + *offset {
                     let val = self.pop_temp(*stack)?;
-                    if i > *offset {
+                    if i >= *offset {
                         self.stack.push(val.clone());
                     }
                     vals.push(val);

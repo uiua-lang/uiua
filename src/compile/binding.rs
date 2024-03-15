@@ -142,8 +142,32 @@ impl Compiler {
             self.scope.names.insert(name.clone(), local);
             self.asm
                 .add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
+            let mut words = binding.words.clone();
+            recurse_words(&mut words, &mut |word| match &word.value {
+                Word::Ref(r) => {
+                    if let Ok((path_locals, local)) = self.ref_local(r) {
+                        self.validate_local(&r.name.value, local, &r.name.span);
+                        self.code_meta
+                            .global_references
+                            .insert(r.name.clone(), local.index);
+                        for (local, comp) in path_locals.into_iter().zip(&r.path) {
+                            (self.code_meta.global_references)
+                                .insert(comp.module.clone(), local.index);
+                        }
+                    }
+                }
+                Word::IncompleteRef { path, in_macro_arg } => {
+                    if let Ok(Some((_, path_locals))) = self.ref_path(path, *in_macro_arg) {
+                        for (local, comp) in path_locals.into_iter().zip(path) {
+                            (self.code_meta.global_references)
+                                .insert(comp.module.clone(), local.index);
+                        }
+                    }
+                }
+                _ => {}
+            });
             let mac = StackMacro {
-                words: binding.words.clone(),
+                words,
                 names: self.scope.names.clone(),
             };
             self.stack_macros.insert(local.index, mac);

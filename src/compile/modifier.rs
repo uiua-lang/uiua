@@ -1001,13 +1001,17 @@ impl Compiler {
         mut operands: Vec<Sp<Word>>,
         span: CodeSpan,
     ) -> UiuaResult {
+        // Mark the operands as macro arguments
         set_in_macro_arg(&mut operands);
+        // Collect placeholders
         let mut ops = collect_placeholder(macro_words);
         ops.reverse();
         let span = span.merge(operands.last().unwrap().span.clone());
+        // Initialize the placeholder stack
         let mut ph_stack: Vec<Sp<Word>> =
             operands.into_iter().filter(|w| w.value.is_code()).collect();
         let mut replaced = Vec::new();
+        // Run the placeholder operations
         for op in ops {
             let span = op.span;
             let op = op.value;
@@ -1037,6 +1041,7 @@ impl Compiler {
                 }
             }
         }
+        // Warn if there are operands left
         if !ph_stack.is_empty() {
             let span = (ph_stack.first().unwrap().span.clone())
                 .merge(ph_stack.last().unwrap().span.clone());
@@ -1050,8 +1055,10 @@ impl Compiler {
                 span,
             );
         }
+        // Replace placeholders in the macro's words
         let mut operands = replaced.into_iter().rev();
         replace_placeholders(macro_words, &mut || operands.next().unwrap());
+        // Format and store the expansion for the LSP
         let mut words_to_format = Vec::new();
         for word in &*macro_words {
             match &word.value {
@@ -1147,6 +1154,7 @@ impl Compiler {
         }
         Ok(())
     }
+    /// Prepare the macro environment to run some expanded code.
     pub(super) fn prepare_env(&mut self) -> UiuaResult {
         let top_slices = take(&mut self.macro_env.asm.top_slices);
         let mut bindings = take(&mut self.macro_env.asm.bindings);
@@ -1159,6 +1167,8 @@ impl Compiler {
         self.macro_env.no_io(Uiua::run_top_slices)?;
         Ok(())
     }
+    /// Run a function in a temporary scope with the given names.
+    /// Newly created bindings will be added to the current scope after the function is run.
     fn temp_scope<T>(
         &mut self,
         names: IndexMap<Ident, LocalName>,

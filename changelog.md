@@ -41,11 +41,13 @@ This version is not yet released. If you are reading this on the website, then t
 - Doc comments may now be placed at the end of single-line functions
 - Non-alphabetic identifiers can now be suffixed with `!` to make macros
 - Add `df`, `ddf`, etc shortcuts for [`dip ⊙`](https://uiua.org/docs/dip) [`fix ¤`](https://uiua.org/docs/fix)
+- Existing macros are now called "stack macros" to distinguish them from the new "array macros"
+  - Stack macros are now [hygienic](https://en.wikipedia.org/wiki/Hygienic_macro)
+- Add experimental array macros, which allow code to be generated and manipulated at compile time as strings
+  - These are specified with a `^` immediately following a binding's arrow
 - Add the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, which searches an array for a value and returns a multidimensional index
   - [`coordinate ⟔`](https://uiua.org/docs/coordinate) is to [`pick ⊡`](https://uiua.org/docs/pick) as [`indexof ⊗`](https://uiua.org/docs/indexof) is to [`select ⊏`](https://uiua.org/docs/select)
 - Experimental function strands now use the `‿` character, which formats from `__`
-- Add experimental array macros, which allow code to be generated and manipulated at compile time as strings
-  - These are specified with a `^` immediately following a binding's arrow
 - Add the experimental [`by ⊸`](https://uiua.org/docs/by) modifier, which duplicates a function's last argument before calling it
 - Add the experimental [`quote`](https://uiua.org/docs/quote) modifier, which converts a string to code at compile time
   - This is useful in array macros

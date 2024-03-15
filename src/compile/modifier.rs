@@ -187,17 +187,19 @@ impl Compiler {
                         self.fatal_error(modified.modifier.span.clone(), "Macro recurs too deep")
                     );
                 }
-                if let Some(mut words) = self.stack_macros.get(&local.index).cloned() {
+                if let Some(mut mac) = self.stack_macros.get(&local.index).cloned() {
                     // Stack macros
-                    let instrs = self
-                        .expand_macro(
-                            r.name.value.clone(),
-                            &mut words,
-                            modified.operands,
-                            modified.modifier.span.clone(),
-                        )
-                        .and_then(|()| self.compile_words(words, true));
-                    let instrs = instrs?;
+                    // Expand
+                    self.expand_macro(
+                        r.name.value.clone(),
+                        &mut mac.words,
+                        modified.operands,
+                        modified.modifier.span.clone(),
+                    )?;
+                    // Compile
+                    let instrs =
+                        self.temp_scope(mac.names, |comp| comp.compile_words(mac.words, true))?;
+                    // Add
                     match instrs_signature(&instrs) {
                         Ok(sig) => {
                             let func = self.add_function(
@@ -216,7 +218,7 @@ impl Compiler {
                         let span = self.add_span(modified.modifier.span);
                         self.push_instr(Instr::Call(span));
                     }
-                } else if let Some(function) = self.array_macros.get(&local.index).cloned() {
+                } else if let Some(mac) = self.array_macros.get(&local.index).cloned() {
                     // Array macros
                     let full_span = (modified.modifier.span.clone())
                         .merge(modified.operands.last().unwrap().span.clone());
@@ -234,7 +236,7 @@ impl Compiler {
                             word => vec![operand.span.sp(word)],
                         };
                     }
-                    let op_sigs = if function.signature().args == 2 {
+                    let op_sigs = if mac.function.signature().args == 2 {
                         let mut comp = self.clone();
                         let mut sig_data: EcoVec<u8> = EcoVec::with_capacity(operands.len() * 2);
                         for op in &operands {
@@ -267,7 +269,7 @@ impl Compiler {
                             env.push(sigs);
                         }
                         env.push(formatted);
-                        env.call(function)?;
+                        env.call(mac.function)?;
                         let val = env.pop("macro result")?;
 
                         // Parse the macro output
@@ -290,7 +292,9 @@ impl Compiler {
                     self.code_meta
                         .macro_expansions
                         .insert(full_span, (r.name.value.clone(), code.clone()));
-                    self.quote(&code, &modified.modifier.span, call)?;
+                    self.temp_scope(mac.names, |comp| {
+                        comp.quote(&code, &modified.modifier.span, call)
+                    })?;
                 } else {
                     return Err(self.fatal_error(
                         modified.modifier.span.clone(),
@@ -1153,5 +1157,24 @@ impl Compiler {
         }
         self.macro_env.no_io(Uiua::run_top_slices)?;
         Ok(())
+    }
+    fn temp_scope<T>(
+        &mut self,
+        names: IndexMap<Ident, LocalName>,
+        f: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        let macro_names_len = names.len();
+        let temp_scope = Scope {
+            names,
+            experimental: self.scope.experimental,
+            ..Default::default()
+        };
+        self.higher_scopes
+            .push(replace(&mut self.scope, temp_scope));
+        let res = f(self);
+        let mut scope = self.higher_scopes.pop().unwrap();
+        (scope.names).extend(self.scope.names.drain(macro_names_len..));
+        self.scope = scope;
+        res
     }
 }

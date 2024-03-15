@@ -104,10 +104,14 @@ impl Compiler {
                     ),
                 );
             }
-            let func = self.add_function(FunctionId::Named(name.clone()), sig, instrs);
+            let function = self.add_function(FunctionId::Named(name.clone()), sig, instrs);
             self.scope.names.insert(name.clone(), local);
             (self.asm).add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
-            self.array_macros.insert(local.index, func);
+            let mac = ArrayMacro {
+                function,
+                names: self.scope.names.clone(),
+            };
+            self.array_macros.insert(local.index, mac);
             return Ok(());
         }
         // Stack macro
@@ -138,7 +142,11 @@ impl Compiler {
             self.scope.names.insert(name.clone(), local);
             self.asm
                 .add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
-            self.stack_macros.insert(local.index, binding.words.clone());
+            let mac = StackMacro {
+                words: binding.words.clone(),
+                names: self.scope.names.clone(),
+            };
+            self.stack_macros.insert(local.index, mac);
             return Ok(());
         }
 

@@ -14,6 +14,7 @@ use std::{
 };
 
 use ecow::{eco_vec, EcoString, EcoVec};
+use indexmap::IndexMap;
 use instant::Duration;
 
 use crate::{
@@ -55,9 +56,9 @@ pub struct Compiler {
     /// The bindings of imported files
     imports: HashMap<PathBuf, Import>,
     /// Unexpanded stack macros
-    stack_macros: HashMap<usize, Vec<Sp<Word>>>,
+    stack_macros: HashMap<usize, StackMacro>,
     /// Unexpanded array macros
-    array_macros: HashMap<usize, Function>,
+    array_macros: HashMap<usize, ArrayMacro>,
     /// The depth of macro expansion
     macro_depth: usize,
     /// Accumulated errors
@@ -115,9 +116,21 @@ pub struct Import {
     /// The top level comment
     pub comment: Option<Arc<str>>,
     /// Map module-local names to global indices
-    names: HashMap<Ident, LocalName>,
+    names: IndexMap<Ident, LocalName>,
     /// Whether the import uses experimental features
     experimental: bool,
+}
+
+#[derive(Clone)]
+struct StackMacro {
+    words: Vec<Sp<Word>>,
+    names: IndexMap<Ident, LocalName>,
+}
+
+#[derive(Clone)]
+struct ArrayMacro {
+    function: Function,
+    names: IndexMap<Ident, LocalName>,
 }
 
 impl AsRef<Assembly> for Compiler {
@@ -145,7 +158,7 @@ pub(crate) struct Scope {
     /// The top level comment
     comment: Option<Arc<str>>,
     /// Map local names to global indices
-    names: HashMap<Ident, LocalName>,
+    names: IndexMap<Ident, LocalName>,
     /// Whether to allow experimental features
     experimental: bool,
     /// The stack height between top-level statements
@@ -160,7 +173,7 @@ impl Default for Scope {
     fn default() -> Self {
         Self {
             comment: None,
-            names: HashMap::new(),
+            names: IndexMap::new(),
             experimental: false,
             stack_height: Ok(0),
             bind_locals: Vec::new(),
@@ -509,7 +522,8 @@ code:
                     // Try to evaluate at comptime
                     // This can be done when there are at least as many push instructions
                     // preceding the current line as there are arguments to the line
-                    if instr_count_before >= sig.args
+                    if !instrs.is_empty()
+                        && instr_count_before >= sig.args
                         && (self.asm.instrs.iter().take(instr_count_before).rev())
                             .take(sig.args)
                             .all(|instr| matches!(instr, Instr::Push(_)))

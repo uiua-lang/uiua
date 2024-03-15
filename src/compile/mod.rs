@@ -153,6 +153,7 @@ struct CurrentBinding {
     global_index: usize,
 }
 
+/// A scope where names are defined
 #[derive(Clone)]
 pub(crate) struct Scope {
     kind: ScopeKind,
@@ -172,8 +173,11 @@ pub(crate) struct Scope {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ScopeKind {
+    /// A scope at the top level of a file
     File,
+    /// A temporary scope, probably for a macro
     Temp,
+    /// A test scope between `---`s
     Test,
 }
 
@@ -191,6 +195,7 @@ impl Default for Scope {
     }
 }
 
+/// The index of a named local in the bindings, and whether it is public
 #[derive(Clone, Copy)]
 pub(crate) struct LocalName {
     pub index: usize,

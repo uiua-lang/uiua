@@ -250,7 +250,7 @@ impl Spanner {
         if comment.is_none() {
             match &binfo.global {
                 Global::Const(None) => comment = Some("constant".into()),
-                Global::Module { .. } => comment = Some("macro".into()),
+                Global::Module { .. } => comment = Some("module".into()),
                 Global::Macro => comment = Some("macro".into()),
                 _ => {}
             }

@@ -6,7 +6,6 @@ use std::{
     collections::{hash_map::DefaultHasher, BTreeSet, HashMap, HashSet},
     fmt, fs,
     hash::{Hash, Hasher},
-    iter::once,
     mem::{replace, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
@@ -1180,9 +1179,22 @@ code:
         }
     }
     fn find_name(&self, name: &str) -> Option<LocalName> {
-        once(&self.scope)
-            .chain(self.higher_scopes.iter().rev())
-            .find_map(|scope| scope.names.get(name).copied())
+        if let Some(local) = self.scope.names.get(name).copied() {
+            return Some(local);
+        }
+        let mut hit_file = false;
+        for scope in self.higher_scopes.iter().rev() {
+            if scope.kind == ScopeKind::File {
+                if hit_file || self.scope.kind == ScopeKind::File {
+                    break;
+                }
+                hit_file = true;
+            }
+            if let Some(local) = scope.names.get(name).copied() {
+                return Some(local);
+            }
+        }
+        None
     }
     fn ref_path(&self, path: &[RefComponent]) -> UiuaResult<Option<(PathBuf, Vec<LocalName>)>> {
         let Some(first) = path.first() else {

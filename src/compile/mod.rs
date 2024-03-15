@@ -6,6 +6,7 @@ use std::{
     collections::{hash_map::DefaultHasher, BTreeSet, HashMap, HashSet},
     fmt, fs,
     hash::{Hash, Hasher},
+    iter::once,
     mem::{replace, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
@@ -155,6 +156,7 @@ struct CurrentBinding {
 
 #[derive(Clone)]
 pub(crate) struct Scope {
+    kind: ScopeKind,
     /// The top level comment
     comment: Option<Arc<str>>,
     /// Map local names to global indices
@@ -169,9 +171,17 @@ pub(crate) struct Scope {
     fill: bool,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ScopeKind {
+    File,
+    Temp,
+    Test,
+}
+
 impl Default for Scope {
     fn default() -> Self {
         Self {
+            kind: ScopeKind::File,
             comment: None,
             names: IndexMap::new(),
             experimental: false,
@@ -319,12 +329,14 @@ impl Compiler {
     /// those names will not.
     ///
     /// All other runtime state other than the stack, will also be restored.
-    pub fn in_scope<T>(
+    fn in_scope<T>(
         &mut self,
+        kind: ScopeKind,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<Import> {
         let experimental = self.scope.experimental;
         self.higher_scopes.push(take(&mut self.scope));
+        self.scope.kind = kind;
         self.scope.experimental = experimental;
         let res = f(self);
         let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
@@ -447,7 +459,7 @@ code:
         let prev_com = prev_comment.take();
         let mut lines = match item {
             Item::TestScope(items) => {
-                self.in_scope(|env| env.items(items.value, true))?;
+                self.in_scope(ScopeKind::Test, |env| env.items(items.value, true))?;
                 return Ok(());
             }
             Item::Words(lines) => lines,
@@ -667,7 +679,9 @@ code:
                     format!("Cycle detected importing {}", path.to_string_lossy()),
                 ));
             }
-            let import = self.in_scope(|env| env.load_str_src(&input, &path).map(drop))?;
+            let import = self.in_scope(ScopeKind::File, |env| {
+                env.load_str_src(&input, &path).map(drop)
+            })?;
             self.imports.insert(path.clone(), import);
         }
         let import = self.imports.get(&path).unwrap();
@@ -1156,8 +1170,8 @@ code:
                     ),
                 ))
             }
-        } else if let Some(local) = self.scope.names.get(&r.name.value) {
-            Ok((Vec::new(), *local))
+        } else if let Some(local) = self.find_name(&r.name.value) {
+            Ok((Vec::new(), local))
         } else {
             Err(self.fatal_error(
                 r.name.span.clone(),
@@ -1165,22 +1179,22 @@ code:
             ))
         }
     }
+    fn find_name(&self, name: &str) -> Option<LocalName> {
+        once(&self.scope)
+            .chain(self.higher_scopes.iter().rev())
+            .find_map(|scope| scope.names.get(name).copied())
+    }
     fn ref_path(&self, path: &[RefComponent]) -> UiuaResult<Option<(PathBuf, Vec<LocalName>)>> {
         let Some(first) = path.first() else {
             return Ok(None);
         };
         let mut path_locals = Vec::new();
-        let module_local = self
-            .scope
-            .names
-            .get(&first.module.value)
-            .copied()
-            .ok_or_else(|| {
-                self.fatal_error(
-                    first.module.span.clone(),
-                    format!("Unknown import `{}`", first.module.value),
-                )
-            })?;
+        let module_local = self.find_name(&first.module.value).ok_or_else(|| {
+            self.fatal_error(
+                first.module.span.clone(),
+                format!("Unknown import `{}`", first.module.value),
+            )
+        })?;
         path_locals.push(module_local);
         let global = &self.asm.bindings[module_local.index].global;
         let mut module = match global {
@@ -1294,10 +1308,7 @@ code:
                 self.scope.bind_locals.last_mut().unwrap().insert(index);
                 self.push_instr(Instr::GetLocal { index, span });
             }
-        } else if let Some(local) = (self.scope.names.get(&ident))
-            .or_else(|| self.higher_scopes.last()?.names.get(&ident))
-            .copied()
-        {
+        } else if let Some(local) = self.find_name(&ident) {
             // Name exists in scope
             (self.code_meta.global_references).insert(span.clone().sp(ident), local.index);
             self.global_index(local.index, span, call);

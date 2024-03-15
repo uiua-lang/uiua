@@ -368,6 +368,8 @@ Ex ~ "example.ua"
 ~ "example.ua" ~ Increment
 ~ "example.ua" ~ Increment
 ⍤⟜≍: 7 Increment Increment 5
+F! ← ^!
+⍤⟜≍: 15 Ex~Mac!F!+
 
 # Euler's identity
 ⍤⟜≍: 0 ⍜(×1e12)⁅ ⌵+1 ⁿ×iπ e

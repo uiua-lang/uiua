@@ -1165,6 +1165,7 @@ impl Compiler {
     ) -> T {
         let macro_names_len = names.len();
         let temp_scope = Scope {
+            kind: ScopeKind::Temp,
             names,
             experimental: self.scope.experimental,
             ..Default::default()

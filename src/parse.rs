@@ -523,7 +523,10 @@ impl<'i> Parser<'i> {
                 {
                     let span = start_span.merge(comp.tilde_span.clone());
                     path.push(comp);
-                    return Some(span.sp(Word::IncompleteRef(path)));
+                    return Some(span.sp(Word::IncompleteRef {
+                        path,
+                        in_macro_arg: false,
+                    }));
                 }
                 self.index = checkpoint;
                 return None;
@@ -533,7 +536,11 @@ impl<'i> Parser<'i> {
             name = next;
         }
         let span = start_span.merge(name.span.clone());
-        Some(span.sp(Word::Ref(Ref { name, path })))
+        Some(span.sp(Word::Ref(Ref {
+            name,
+            path,
+            in_macro_arg: false,
+        })))
     }
     fn try_signature(&mut self, initial_token: AsciiToken) -> Option<Sp<Signature>> {
         let start = self.try_exact(initial_token)?;

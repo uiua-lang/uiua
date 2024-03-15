@@ -854,7 +854,7 @@ impl<'a> Formatter<'a> {
                 }
                 self.format_ref(r);
             }
-            Word::IncompleteRef(path) => {
+            Word::IncompleteRef { path, .. } => {
                 if (self.output.chars().rev())
                     .take_while(|&c| is_ident_char(c))
                     .any(|c| c.is_uppercase())
@@ -1234,7 +1234,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::MultilineString(_) => true,
         Word::MultilineFormatString(_) => true,
         Word::Ref(_) => false,
-        Word::IncompleteRef(_) => false,
+        Word::IncompleteRef { .. } => false,
         Word::Strand(_) => false,
         Word::Undertied(_) => false,
         Word::Array(arr) => {

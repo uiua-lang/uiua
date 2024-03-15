@@ -911,13 +911,13 @@ code:
                 }
             }
             Word::Ref(r) => self.reference(r, call)?,
-            Word::IncompleteRef(comps) => {
-                if let Some((_, locals)) = self.ref_path(&comps)? {
+            Word::IncompleteRef { path, in_macro_arg } => {
+                if let Some((_, locals)) = self.ref_path(&path, in_macro_arg)? {
                     self.add_error(
-                        comps.last().unwrap().tilde_span.clone(),
+                        path.last().unwrap().tilde_span.clone(),
                         "Incomplete module reference",
                     );
-                    for (local, comp) in locals.iter().zip(comps) {
+                    for (local, comp) in locals.iter().zip(path) {
                         self.validate_local(&comp.module.value, *local, &comp.module.span);
                         self.code_meta
                             .global_references
@@ -1156,7 +1156,7 @@ code:
         Ok(())
     }
     fn ref_local(&self, r: &Ref) -> UiuaResult<(Vec<LocalName>, LocalName)> {
-        if let Some((module, path_locals)) = self.ref_path(&r.path)? {
+        if let Some((module, path_locals)) = self.ref_path(&r.path, r.in_macro_arg)? {
             if let Some(local) = self.imports[&module].names.get(&r.name.value).copied() {
                 Ok((path_locals, local))
             } else {
@@ -1169,7 +1169,7 @@ code:
                     ),
                 ))
             }
-        } else if let Some(local) = self.find_name(&r.name.value) {
+        } else if let Some(local) = self.find_name(&r.name.value, r.in_macro_arg) {
             Ok((Vec::new(), local))
         } else {
             Err(self.fatal_error(
@@ -1178,9 +1178,11 @@ code:
             ))
         }
     }
-    fn find_name(&self, name: &str) -> Option<LocalName> {
-        if let Some(local) = self.scope.names.get(name).copied() {
-            return Some(local);
+    fn find_name(&self, name: &str, skip_local: bool) -> Option<LocalName> {
+        if !skip_local {
+            if let Some(local) = self.scope.names.get(name).copied() {
+                return Some(local);
+            }
         }
         let mut hit_file = false;
         for scope in self.higher_scopes.iter().rev() {
@@ -1196,17 +1198,23 @@ code:
         }
         None
     }
-    fn ref_path(&self, path: &[RefComponent]) -> UiuaResult<Option<(PathBuf, Vec<LocalName>)>> {
+    fn ref_path(
+        &self,
+        path: &[RefComponent],
+        skip_local: bool,
+    ) -> UiuaResult<Option<(PathBuf, Vec<LocalName>)>> {
         let Some(first) = path.first() else {
             return Ok(None);
         };
         let mut path_locals = Vec::new();
-        let module_local = self.find_name(&first.module.value).ok_or_else(|| {
-            self.fatal_error(
-                first.module.span.clone(),
-                format!("Unknown import `{}`", first.module.value),
-            )
-        })?;
+        let module_local = self
+            .find_name(&first.module.value, skip_local)
+            .ok_or_else(|| {
+                self.fatal_error(
+                    first.module.span.clone(),
+                    format!("Unknown import `{}`", first.module.value),
+                )
+            })?;
         path_locals.push(module_local);
         let global = &self.asm.bindings[module_local.index].global;
         let mut module = match global {
@@ -1274,7 +1282,7 @@ code:
     }
     fn reference(&mut self, r: Ref, call: bool) -> UiuaResult {
         if r.path.is_empty() {
-            self.ident(r.name.value, r.name.span, call)
+            self.ident(r.name.value, r.name.span, call, r.in_macro_arg)
         } else {
             let (path_locals, local) = self.ref_local(&r)?;
             self.validate_local(&r.name.value, local, &r.name.span);
@@ -1289,7 +1297,7 @@ code:
             Ok(())
         }
     }
-    fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool) -> UiuaResult {
+    fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool, skip_local: bool) -> UiuaResult {
         if let Some(curr) = (self.current_binding.as_mut()).filter(|curr| curr.name == ident) {
             // Name is a recursive call
             let Some(sig) = curr.signature else {
@@ -1320,7 +1328,7 @@ code:
                 self.scope.bind_locals.last_mut().unwrap().insert(index);
                 self.push_instr(Instr::GetLocal { index, span });
             }
-        } else if let Some(local) = self.find_name(&ident) {
+        } else if let Some(local) = self.find_name(&ident, skip_local) {
             // Name exists in scope
             (self.code_meta.global_references).insert(span.clone().sp(ident), local.index);
             self.global_index(local.index, span, call);
@@ -1943,30 +1951,45 @@ fn collect_placeholder(words: &[Sp<Word>]) -> Vec<Sp<PlaceholderOp>> {
 }
 
 fn replace_placeholders(words: &mut Vec<Sp<Word>>, next: &mut dyn FnMut() -> Sp<Word>) {
-    for word in &mut *words {
+    recurse_words(words, &mut |word| match &mut word.value {
+        Word::Placeholder(PlaceholderOp::Call) => *word = next(),
+        _ => {}
+    });
+    words.retain(|word| !matches!(word.value, Word::Placeholder(_)))
+}
+
+fn set_in_macro_arg(words: &mut Vec<Sp<Word>>) {
+    recurse_words(words, &mut |word| match &mut word.value {
+        Word::Ref(r) => r.in_macro_arg = true,
+        Word::IncompleteRef { in_macro_arg, .. } => *in_macro_arg = true,
+        _ => {}
+    });
+}
+
+fn recurse_words(words: &mut Vec<Sp<Word>>, f: &mut dyn FnMut(&mut Sp<Word>)) {
+    for word in words {
+        f(word);
         match &mut word.value {
-            Word::Placeholder(PlaceholderOp::Call) => *word = next(),
-            Word::Strand(items) => replace_placeholders(items, next),
+            Word::Strand(items) => recurse_words(items, f),
             Word::Array(arr) => {
                 for line in &mut arr.lines {
-                    replace_placeholders(line, next);
+                    recurse_words(line, f);
                 }
             }
             Word::Func(func) => {
                 for line in &mut func.lines {
-                    replace_placeholders(line, next);
+                    recurse_words(line, f);
                 }
             }
-            Word::Modified(m) => replace_placeholders(&mut m.operands, next),
+            Word::Modified(m) => recurse_words(&mut m.operands, f),
             Word::Switch(sw) => {
                 for branch in &mut sw.branches {
                     for line in &mut branch.value.lines {
-                        replace_placeholders(line, next);
+                        recurse_words(line, f);
                     }
                 }
             }
             _ => {}
         }
     }
-    words.retain(|word| !matches!(word.value, Word::Placeholder(_)))
 }

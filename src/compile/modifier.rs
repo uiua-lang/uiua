@@ -998,9 +998,10 @@ impl Compiler {
         &mut self,
         name: Ident,
         macro_words: &mut Vec<Sp<Word>>,
-        operands: Vec<Sp<Word>>,
+        mut operands: Vec<Sp<Word>>,
         span: CodeSpan,
     ) -> UiuaResult {
+        set_in_macro_arg(&mut operands);
         let mut ops = collect_placeholder(macro_words);
         ops.reverse();
         let span = span.merge(operands.last().unwrap().span.clone());

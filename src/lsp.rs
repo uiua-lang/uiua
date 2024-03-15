@@ -298,7 +298,7 @@ impl Spanner {
                     spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
                 }
                 Word::Ref(r) => spans.extend(self.ref_spans(r)),
-                Word::IncompleteRef(path) => spans.extend(self.ref_path_spans(path)),
+                Word::IncompleteRef { path, .. } => spans.extend(self.ref_path_spans(path)),
                 Word::Strand(items) | Word::Undertied(items) => {
                     for i in 0..items.len() {
                         let word = &items[i];

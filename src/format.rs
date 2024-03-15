@@ -747,8 +747,8 @@ impl<'a> Formatter<'a> {
         depth: usize,
         angle_switch: bool,
     ) {
-        for word in trim_spaces(words, trim_end) {
-            self.format_word(word, depth, angle_switch);
+        for (i, word) in trim_spaces(words, trim_end).iter().enumerate() {
+            self.format_word(word, depth, angle_switch || i > 0);
         }
     }
     fn format_word(&mut self, word: &Sp<Word>, depth: usize, angle_switch: bool) {

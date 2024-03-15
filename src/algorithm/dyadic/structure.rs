@@ -944,7 +944,7 @@ impl<T: ArrayValue> Array<T> {
             ));
         }
         if indices_shape.is_empty() {
-            if self.shape == into.shape[1..] {
+            if self.shape == into.shape[1.min(into.shape.len())..] {
                 undo_select_same_size(once(self.data.as_slice()), indices, &mut into, env)?;
             } else {
                 let mut from = self.clone();

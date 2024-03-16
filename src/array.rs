@@ -421,6 +421,23 @@ impl<T: ArrayValue> Array<T> {
         let end = start + row_len;
         Self::new(&self.shape[1..], self.data.slice(start..end))
     }
+    #[track_caller]
+    pub(crate) fn depth_row(&self, depth: usize, row: usize) -> Self {
+        if self.rank() <= depth {
+            let mut row = self.clone();
+            row.take_map_keys();
+            row.take_label();
+            return row;
+        }
+        let row_count: usize = self.shape[..depth + 1].iter().product();
+        if row >= row_count {
+            panic!("row index out of bounds: {} >= {}", row, row_count);
+        }
+        let row_len: usize = self.shape[depth + 1..].iter().product();
+        let start = row * row_len;
+        let end = start + row_len;
+        Self::new(&self.shape[depth + 1..], self.data.slice(start..end))
+    }
     /// Consume the array and get an iterator over its rows
     pub fn into_rows(self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator {
         (0..self.row_count()).map(move |i| self.row(i))

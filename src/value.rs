@@ -404,6 +404,15 @@ impl Value {
             |arr| arr.row(i).into(),
         )
     }
+    pub(crate) fn depth_row(&self, depth: usize, i: usize) -> Self {
+        self.generic_ref(
+            |arr| arr.depth_row(depth, i).into(),
+            |arr| arr.depth_row(depth, i).into(),
+            |arr| arr.depth_row(depth, i).into(),
+            |arr| arr.depth_row(depth, i).into(),
+            |arr| arr.depth_row(depth, i).into(),
+        )
+    }
     pub(crate) fn generic_into<T>(
         self,
         n: impl FnOnce(Array<f64>) -> T,

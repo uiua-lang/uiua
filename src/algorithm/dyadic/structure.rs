@@ -109,6 +109,7 @@ impl Value {
                     sorted_indices.push((i, index));
                 }
                 sorted_indices.sort_unstable_by_key(|(_, index)| *index);
+                let depth = idx_shape.len() - 2;
                 if sorted_indices.windows(2).any(|w| {
                     let (ai, a) = w[0];
                     let (bi, b) = w[1];
@@ -125,7 +126,7 @@ impl Value {
                         };
                         a == b
                     });
-                    same && self.row(ai) != self.row(bi)
+                    same && self.depth_row(depth, ai) != self.depth_row(depth, bi)
                 }) {
                     return Err(env.error(
                         "Cannot undo pick with duplicate \

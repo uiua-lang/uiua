@@ -491,12 +491,12 @@ sys_op! {
     (2(0), TcpSetWriteTimeout, Tcp, "&tcpswt", "tcp - set write timeout", [mutating]),
     /// Get the connection address of a TCP socket
     (1, TcpAddr, Tcp, "&tcpaddr", "tcp - address", [mutating]),
-    /// Make an HTTP request
+    /// Make an HTTP(S) request
     ///
     /// Takes in an 1.x HTTP request and returns an HTTP response.
     ///
     /// Requires the `Host` header to be set.
-    /// Using port 443 is recommended for HTTPS.
+    /// Using port 443 makes an HTTPS request. Any other port makes an HTTP request.
     ///
     /// ex: &httpsw "GET / " &tcpc "example.com:443"
     ///
@@ -511,7 +511,7 @@ sys_op! {
     /// - 2 trailing newlines (if there is no body)
     /// - The HTTP version
     /// - The `Host` header (if not defined)
-    (2, HttpsWrite, Tcp, "&httpsw", "http - Make an HTTP request", [mutating]),
+    (2, HttpsWrite, Tcp, "&httpsw", "https - Make an HTTP(S) request", [mutating]),
     /// Call a foreign function interface
     ///
     /// *Warning ⚠️: Using FFI is deeply unsafe. Calling a function incorrectly is undefined behavior.*

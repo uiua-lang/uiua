@@ -151,7 +151,7 @@
     "args": 2,
     "outputs": 1,
     "class": "Tcp",
-    "description": "Make an HTTP request"
+    "description": "Make an HTTP(S) request"
   },
   "&imd": {
     "args": 1,

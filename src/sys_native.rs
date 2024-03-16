@@ -612,43 +612,43 @@ impl SysBackend for NativeSys {
     fn https_get(&self, request: &str, handle: Handle) -> Result<String, String> {
         use std::io;
 
-        let host = NATIVE_SYS
-            .hostnames
-            .get(&handle)
+        let host = (NATIVE_SYS.hostnames.get(&handle))
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?
-            .to_string();
+            .clone();
         let request = check_http(request.to_string(), &host)?;
 
-        // https://github.com/rustls/rustls/blob/c9cfe3499681361372351a57a00ccd793837ae9c/examples/src/bin/simpleclient.rs
-        static CLIENT_CONFIG: Lazy<std::sync::Arc<rustls::ClientConfig>> = Lazy::new(|| {
-            let mut store = rustls::RootCertStore::empty();
-            store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
-            rustls::ClientConfig::builder()
-                .with_root_certificates(store)
-                .with_no_client_auth()
-                .into()
-        });
-
-        let mut socket = NATIVE_SYS
-            .tcp_sockets
-            .get_mut(&handle)
+        let mut socket = (NATIVE_SYS.tcp_sockets.get_mut(&handle))
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
 
-        let server_name =
-            rustls::pki_types::ServerName::try_from(host).map_err(|e| e.to_string())?;
-        let tcp_stream = socket.get_mut();
-
-        let mut conn = rustls::ClientConnection::new(CLIENT_CONFIG.clone(), server_name)
-            .map_err(|e| e.to_string())?;
-        let mut tls = rustls::Stream::new(&mut conn, tcp_stream);
-        tls.write_all(request.as_bytes())
-            .map_err(|e| e.to_string())?;
         let mut buffer = Vec::new();
-        match tls.read_to_end(&mut buffer) {
-            Ok(_) => {}
-            Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => {}
-            Err(e) => return Err(e.to_string()),
+        if let Ok(443) = socket.get_ref().peer_addr().map(|a| a.port()) {
+            static CLIENT_CONFIG: Lazy<std::sync::Arc<rustls::ClientConfig>> = Lazy::new(|| {
+                let mut store = rustls::RootCertStore::empty();
+                store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+                rustls::ClientConfig::builder()
+                    .with_root_certificates(store)
+                    .with_no_client_auth()
+                    .into()
+            });
+
+            let server_name =
+                rustls::pki_types::ServerName::try_from(host).map_err(|e| e.to_string())?;
+            let tcp_stream = socket.get_mut();
+            let mut conn = rustls::ClientConnection::new(CLIENT_CONFIG.clone(), server_name)
+                .map_err(|e| e.to_string())?;
+            let mut tls = rustls::Stream::new(&mut conn, tcp_stream);
+            tls.write_all(request.as_bytes())
+                .map_err(|e| e.to_string())?;
+            match tls.read_to_end(&mut buffer) {
+                Ok(_) => {}
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => {}
+                Err(e) => return Err(e.to_string()),
+            }
+        } else {
+            (socket.write_all(request.as_bytes())).map_err(|e| e.to_string())?;
+            socket.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
         }
+
         let s = String::from_utf8(buffer).map_err(|e| {
             "Error converting HTTP Response to utf-8: ".to_string() + &e.to_string()
         })?;

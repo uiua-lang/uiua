@@ -610,6 +610,8 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "https")]
     fn https_get(&self, request: &str, handle: Handle) -> Result<String, String> {
+        use std::io;
+
         let host = NATIVE_SYS
             .hostnames
             .get(&handle)
@@ -642,7 +644,11 @@ impl SysBackend for NativeSys {
         tls.write_all(request.as_bytes())
             .map_err(|e| e.to_string())?;
         let mut buffer = Vec::new();
-        tls.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
+        match tls.read_to_end(&mut buffer) {
+            Ok(_) => {}
+            Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => {}
+            Err(e) => return Err(e.to_string()),
+        }
         let s = String::from_utf8(buffer).map_err(|e| {
             "Error converting HTTP Response to utf-8: ".to_string() + &e.to_string()
         })?;

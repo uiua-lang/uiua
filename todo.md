@@ -7,6 +7,7 @@
     - Excel
 - 0.11
   - Pattern matching
+  - Full HTTPS support
 - Multimedia
   - Sound input
   - Webcam input

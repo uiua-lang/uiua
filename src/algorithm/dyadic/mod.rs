@@ -741,14 +741,10 @@ impl Value {
         b_depth: usize,
         env: &Uiua,
     ) -> UiuaResult<Self> {
-        let by_ints = || {
-            let ints =
-                self.as_integer_array(env, "Rotation amount must be an array of integers")?;
-            if ints.element_count() == 0 {
-                return Err(env.error("Rotation amount cannot be empty"));
-            }
-            Ok(ints)
-        };
+        if self.row_count() == 0 {
+            return Ok(rotated);
+        }
+        let by_ints = || self.as_integer_array(env, "Rotation amount must be an array of integers");
         #[cfg(feature = "bytes")]
         if env.scalar_fill::<f64>().is_ok() {
             if let Value::Byte(bytes) = &rotated {

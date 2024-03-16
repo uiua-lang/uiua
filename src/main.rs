@@ -198,6 +198,7 @@ fn run() -> UiuaResult {
             App::Test {
                 path,
                 formatter_options,
+                args,
             } => {
                 let path = if let Some(path) = path {
                     path
@@ -213,7 +214,9 @@ fn run() -> UiuaResult {
                 let config =
                     FormatConfig::from_source(formatter_options.format_config_source, Some(&path))?;
                 format_file(&path, &config, false)?;
-                let mut rt = Uiua::with_native_sys();
+                let mut rt = Uiua::with_native_sys()
+                    .with_file_path(&path)
+                    .with_args(args);
                 rt.compile_run(|comp| {
                     comp.mode(RunMode::Test)
                         .print_diagnostics(true)
@@ -574,7 +577,7 @@ enum App {
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,
-        #[clap(trailing_var_arg = true)]
+        #[clap(trailing_var_arg = true, help = "Arguments to pass to the program")]
         args: Vec<String>,
     },
     #[clap(about = "Build an assembly (the .uasm format is currently unstable)")]
@@ -591,7 +594,7 @@ enum App {
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,
-        #[clap(trailing_var_arg = true)]
+        #[clap(trailing_var_arg = true, help = "Arguments to pass to the program")]
         args: Vec<String>,
     },
     #[clap(about = "Format and test a file")]
@@ -599,6 +602,8 @@ enum App {
         path: Option<PathBuf>,
         #[clap(flatten)]
         formatter_options: FormatterOptions,
+        #[clap(trailing_var_arg = true, help = "Arguments to pass to the program")]
+        args: Vec<String>,
     },
     #[clap(about = "Run .ua files in the current directory when they change")]
     Watch {
@@ -612,7 +617,7 @@ enum App {
         clear: bool,
         #[clap(long, help = "Read stdin from file")]
         stdin_file: Option<PathBuf>,
-        #[clap(trailing_var_arg = true)]
+        #[clap(trailing_var_arg = true, help = "Arguments to pass to the program")]
         args: Vec<String>,
     },
     #[clap(about = "Format a Uiua file or all files in the current directory")]

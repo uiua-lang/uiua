@@ -862,6 +862,9 @@ primitive!(
     /// [un][parse] on a non-scalar number array will [box] each string.
     /// ex: °⋕ 1_2_3
     /// ex: °⋕ ↯3_4⇡12
+    ///
+    /// [fill][parse] sets a default value for failed parses.
+    /// ex: ⬚5⋕ {"13" "124" "not a number"}
     (1, Parse, Misc, ("parse", '⋕')),
     /// Check if two arrays are exactly the same
     ///

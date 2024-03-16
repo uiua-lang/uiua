@@ -76,7 +76,8 @@ impl Value {
                         .and_then(|n| denom.parse::<f64>().map(|d| n / d)),
                     None => s.parse::<f64>(),
                 }
-                .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))?
+                .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))
+                .or_else(|e| env.num_fill().map_err(|_| e))?
                 .into()
             }
             (Value::Box(arr), []) => {

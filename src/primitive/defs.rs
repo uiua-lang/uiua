@@ -1429,12 +1429,6 @@ primitive!(
     /// The length of each group must not change.
     /// ex! ⍜⊕□⇌ ≠@ . $ These are some words
     ///
-    /// The indices array may have one extra element than the second array.
-    /// This value sets the number of buckets to use.
-    /// Here, the default behavior would generate 7 buckets, but we set it to 5 and 10 instead.
-    /// ex: ⌊÷10.[7 46 19 8 23 5 42 72 7 36 4 18 37]
-    ///   : ∩(⊕□ ⊂:) ? ⊃(10⊙∘|5⊙∘)
-    ///
     /// [group] is closely related to [partition].
     (2[1], Group, AggregatingModifier, ("group", '⊕')),
     /// Group sequential sections of an array

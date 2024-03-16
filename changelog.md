@@ -24,7 +24,6 @@ This version is not yet released. If you are reading this on the website, then t
 - [`under ⍜`](https://uiua.org/docs/under) [`join ⊂`](https://uiua.org/docs/join) now works with arrays of the same rank as long as the row count does not change
 - [`un °`](https://uiua.org/docs/un) [`scan \\`](https://uiua.org/docs/scan) now works with [`equals =`](https://uiua.org/docs/equals) and [`not equals ≠`](https://www.uiua.org/docs/not%20equals)
 - [`group ⊕`](https://uiua.org/docs/group) can now take multidimensional index arrays
-- [`group ⊕`](https://uiua.org/docs/group)'s indices can now have an extra number at the end to specify the number of groups to make
 - [`partition ⊜`](https://uiua.org/docs/partition) can now take multidimensional marker arrays
 - [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`pick ⊡`](https://uiua.org/docs/pick) now work with duplicate indices if the values at those indices are the same
 - [`rotate ↻`](https://uiua.org/docs/rotate) now works through boxes

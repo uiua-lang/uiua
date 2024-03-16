@@ -133,7 +133,9 @@
 ⍤⟜≍: "World! Hello" ⍜⊜□⇌ ≠@ . "Hello World!"
 ⍤⟜≍: "Just A Little Guy" ⍜⊜⊢⌵ ≠@ . "Just a little guy"
 ⍤⟜≍: {"Hello" "World!"} {⍜∩⊜□∘ ∩(≠@l.) "Hello" "World!"}
+
 ⍤⟜≍: "sdrow emo sera esehT" ⍜⊕□≡⍜°□⇌ ≠@ . $ These are some words
+⍤⟜≍: [0_2_∞ 3_0_0 0_5_0] ⍜⊕∘(↧0) -1[1_0_0 0_1_1 1_0_1] [1_2_∞ 3_∞_4 ∞_5_6]
 
 ⍤⟜≍: ⍜⍉∘. ↯3_3⇡9
 ⍤⟜≍: ⍜⍉∘. ↯2_3_4_5⇡120

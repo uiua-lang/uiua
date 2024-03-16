@@ -395,23 +395,27 @@ impl Value {
         )
     }
     /// Get the row at the given index
+    #[track_caller]
     pub fn row(&self, i: usize) -> Self {
-        self.generic_ref(
-            |arr| arr.row(i).into(),
-            |arr| arr.row(i).into(),
-            |arr| arr.row(i).into(),
-            |arr| arr.row(i).into(),
-            |arr| arr.row(i).into(),
-        )
+        match self {
+            Value::Num(arr) => arr.row(i).into(),
+            #[cfg(feature = "bytes")]
+            Value::Byte(arr) => arr.row(i).into(),
+            Value::Complex(arr) => arr.row(i).into(),
+            Value::Char(arr) => arr.row(i).into(),
+            Value::Box(arr) => arr.row(i).into(),
+        }
     }
+    #[track_caller]
     pub(crate) fn depth_row(&self, depth: usize, i: usize) -> Self {
-        self.generic_ref(
-            |arr| arr.depth_row(depth, i).into(),
-            |arr| arr.depth_row(depth, i).into(),
-            |arr| arr.depth_row(depth, i).into(),
-            |arr| arr.depth_row(depth, i).into(),
-            |arr| arr.depth_row(depth, i).into(),
-        )
+        match self {
+            Value::Num(arr) => arr.depth_row(depth, i).into(),
+            #[cfg(feature = "bytes")]
+            Value::Byte(arr) => arr.depth_row(depth, i).into(),
+            Value::Complex(arr) => arr.depth_row(depth, i).into(),
+            Value::Char(arr) => arr.depth_row(depth, i).into(),
+            Value::Box(arr) => arr.depth_row(depth, i).into(),
+        }
     }
     pub(crate) fn generic_into<T>(
         self,

@@ -3,12 +3,10 @@
         "RUSTFLAGS": "--cfg=web_sys_unstable_apis"
     },
     "rust-analyzer.cargo.features": [
-        "audio",
-        "bytes"
+        "audio"
     ],
     "rust-analyzer.check.features": [
-        "audio",
-        "bytes"
+        "audio"
     ],
     "rust-analyzer.showUnlinkedFileNotification": false
 }

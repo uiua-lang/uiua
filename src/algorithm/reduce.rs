@@ -8,8 +8,8 @@ use crate::{
     algorithm::{loops::flip, pervade::*},
     check::instrs_signature,
     cowslice::cowslice,
-    Array, ArrayValue, Complex, Function, ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult,
-    Value,
+    Array, ArrayValue, Complex, Function, ImplPrimitive, Instr, Primitive, Shape, Signature, Uiua,
+    UiuaResult, Value,
 };
 
 pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
@@ -966,7 +966,9 @@ fn generic_adjacent(f: Function, xs: Value, n: usize, env: &mut Uiua) -> UiuaRes
     let sig = f.signature();
     if sig != (2, 1) {
         return Err(env.error(format!(
-            "adjacent's function's signature must be |2.1, but it is {sig}"
+            "Adjacent's function's signature must be {}, but it is {}",
+            Signature::new(2, 1),
+            sig
         )));
     }
     if xs.row_count() < n {

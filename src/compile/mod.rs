@@ -767,30 +767,73 @@ code:
         let instrs = optimize_instrs(instrs, false, &self.asm);
         Ok((instrs, sig))
     }
-    fn words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult {
-        let mut words = words
-            .into_iter()
-            .rev()
-            .filter(|word| word.value.is_code())
-            .peekable();
-        while let Some(word) = words.next() {
-            if let Some(next) = words.peek() {
-                // First select diagnostic
-                if let (Word::Primitive(Primitive::Select), Word::Primitive(Primitive::First)) =
-                    (&word.value, &next.value)
-                {
-                    self.emit_diagnostic(
-                        format!(
-                            "Flip the order of {} and {} to improve performance",
-                            Primitive::First.format(),
-                            Primitive::Select.format()
-                        ),
-                        DiagnosticKind::Advice,
-                        word.span.clone(),
-                    );
-                }
+    fn words(&mut self, mut words: Vec<Sp<Word>>, call: bool) -> UiuaResult {
+        words.retain(|word| word.value.is_code());
+        words.reverse();
+        #[derive(Debug, Clone)]
+        struct PrevWord(Option<Primitive>, Option<Signature>, CodeSpan);
+        let mut a: Option<PrevWord> = None;
+        let mut b: Option<PrevWord> = None;
+        for word in words {
+            let span = word.span.clone();
+            let prim = match word.value {
+                Word::Primitive(prim) => Some(prim),
+                _ => None,
+            };
+
+            // First select diagnostic
+            if let (Some(PrevWord(Some(Primitive::Select), _, b_span)), Some(Primitive::First)) =
+                (&b, prim)
+            {
+                self.emit_diagnostic(
+                    format!(
+                        "Flip the order of {} and {} to improve performance",
+                        Primitive::First.format(),
+                        Primitive::Select.format()
+                    ),
+                    DiagnosticKind::Advice,
+                    b_span.clone().merge(span.clone()),
+                );
             }
+            // Flip monadic dup diagnostic
+            if let (
+                Some(PrevWord(Some(Primitive::Dup), _, a_span)),
+                Some(PrevWord(
+                    _,
+                    Some(Signature {
+                        args: 1,
+                        outputs: 1,
+                    }),
+                    _,
+                )),
+                Some(Primitive::Flip),
+            ) = (a, &b, prim)
+            {
+                self.emit_diagnostic(
+                    format!(
+                        "Prefer {} over {} {} here",
+                        Primitive::On,
+                        Primitive::Flip,
+                        Primitive::Dup
+                    ),
+                    DiagnosticKind::Style,
+                    a_span.merge(span.clone()),
+                );
+            }
+
+            let start = self.new_functions.last().unwrap().len();
+
+            // Compile the word
             self.word(word, call)?;
+
+            let new_functions = self.new_functions.last().unwrap();
+            let sig = if new_functions.len() >= start {
+                instrs_signature(&new_functions[start..]).ok()
+            } else {
+                None
+            };
+            a = b;
+            b = Some(PrevWord(prim, sig, span));
         }
         Ok(())
     }

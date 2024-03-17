@@ -169,7 +169,6 @@ impl GridFmt for Value {
         }
         match self {
             Value::Num(n) => n.fmt_grid(boxed, label),
-            #[cfg(feature = "bytes")]
             Value::Byte(b) => b.fmt_grid(boxed, label),
             Value::Complex(c) => c.fmt_grid(boxed, label),
             Value::Box(v) => v.fmt_grid(boxed, label),
@@ -211,7 +210,6 @@ impl GridFmt for Boxed {
     fn fmt_grid(&self, boxed: bool, label: bool) -> Grid {
         let mut grid = match self.as_value() {
             Value::Num(array) => array.fmt_grid(true, label),
-            #[cfg(feature = "bytes")]
             Value::Byte(array) => array.fmt_grid(true, label),
             Value::Complex(array) => array.fmt_grid(true, label),
             Value::Char(array) => array.fmt_grid(true, label),
@@ -254,7 +252,6 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                     keys_row_shape.make_row();
                     let mut row = match &keys.keys {
                         Value::Num(_) => shape_row::<f64>(&keys_row_shape),
-                        #[cfg(feature = "bytes")]
                         Value::Byte(_) => shape_row::<u8>(&keys_row_shape),
                         Value::Complex(_) => shape_row::<Complex>(&keys_row_shape),
                         Value::Char(_) => shape_row::<char>(&keys_row_shape),
@@ -395,7 +392,6 @@ impl<T: ArrayValue> Array<T> {
             keys_shape[0] = self.row_count();
             let mut s: String = match keys.keys {
                 Value::Num(_) => shape_row::<f64>(&keys_shape),
-                #[cfg(feature = "bytes")]
                 Value::Byte(_) => shape_row::<u8>(&keys_shape),
                 Value::Complex(_) => shape_row::<Complex>(&keys_shape),
                 Value::Char(_) => shape_row::<char>(&keys_shape),

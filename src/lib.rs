@@ -127,7 +127,6 @@ The `uiua` crate has the following noteable feature flags:
     - `image`: Enables image encoding and decoding
     - `gif`: Enables GIF encoding and decoding
     - `audio_encode`: Enables audio encoding and decoding
-- `bytes`: Enables a byte array type. This type is semantically equivalent to a numeric array, but takes up less space. It is returned by certain file and network functions, as well as some comparison functions.
 - `native_sys`: Enables the [`NativeSys`] backend. This is the default backend used by the interpreter.
 - `audio`: Enables audio features in the [`NativeSys`] backend.
 - `https`: Enables the `&httpsw` system function

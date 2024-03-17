@@ -8,7 +8,6 @@ use std::{
 
 use ecow::EcoVec;
 
-#[cfg(feature = "bytes")]
 use crate::algorithm::{op_bytes_ref_retry_fill, op_bytes_retry_fill};
 use crate::{
     algorithm::FillContext,
@@ -63,7 +62,6 @@ impl Value {
                 }
                 (&arr.shape, index_data)
             }
-            #[cfg(feature = "bytes")]
             Value::Byte(arr) => {
                 let mut index_data = Vec::with_capacity(arr.element_count());
                 for &n in &arr.data {
@@ -84,7 +82,6 @@ impl Value {
         let (index_shape, index_data) = self.as_shaped_indices(env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.pick(index_shape, &index_data, env)?),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => op_bytes_retry_fill(
                 a,
                 |a| a.pick(index_shape, &index_data, env).map(Into::into),
@@ -320,7 +317,6 @@ impl Value {
         let index = self.as_ints(env, "Index must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.take(&index, env)?),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => op_bytes_retry_fill(
                 a,
                 |a| a.take(&index, env).map(Into::into),
@@ -336,7 +332,6 @@ impl Value {
         let index = self.as_ints(env, "Index must be a list of integers")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.drop(&index, env)?),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => Value::Byte(a.drop(&index, env)?),
             Value::Complex(a) => Value::Complex(a.drop(&index, env)?),
             Value::Char(a) => Value::Char(a.drop(&index, env)?),
@@ -777,7 +772,6 @@ impl Value {
         let (indices_shape, indices_data) = self.as_shaped_indices(env)?;
         Ok(match from {
             Value::Num(a) => a.select(indices_shape, &indices_data, env)?.into(),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => op_bytes_ref_retry_fill(
                 a,
                 |a| Ok(a.select(indices_shape, &indices_data, env)?.into()),

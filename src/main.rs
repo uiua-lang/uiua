@@ -784,9 +784,6 @@ fn update(main: bool, check: bool) {
     if cfg!(feature = "audio") {
         features.push("audio");
     }
-    if cfg!(feature = "bytes") {
-        features.push("bytes");
-    }
     let feature_str;
     if !features.is_empty() {
         args.push("--features");

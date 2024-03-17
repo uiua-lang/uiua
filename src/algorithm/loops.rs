@@ -18,7 +18,6 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     let n = env.pop("repetition count")?;
     let n = match n {
         Value::Num(n) => n,
-        #[cfg(feature = "bytes")]
         Value::Byte(n) => n.convert(),
         val => {
             return Err(env.error(format!(
@@ -183,7 +182,6 @@ impl Value {
     fn partition_groups(self, markers: Array<isize>, env: &Uiua) -> UiuaResult<Vec<Self>> {
         Ok(match self {
             Value::Num(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
-            #[cfg(feature = "bytes")]
             Value::Byte(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
             Value::Complex(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
             Value::Char(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
@@ -435,7 +433,6 @@ impl Value {
     fn group_groups(self, indices: Array<isize>, env: &Uiua) -> UiuaResult<Vec<Self>> {
         Ok(match self {
             Value::Num(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
-            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             Value::Complex(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             Value::Char(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),

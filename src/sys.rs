@@ -1127,7 +1127,6 @@ impl SysOp {
                         let mut is_string = false;
                         let delim_bytes: Vec<u8> = match delim {
                             Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
-                            #[cfg(feature = "bytes")]
                             Value::Byte(arr) => arr.data.into(),
                             Value::Char(arr) => {
                                 is_string = true;
@@ -1161,7 +1160,6 @@ impl SysOp {
                                 .map_err(|e| env.error(e))?;
                             env.push(Array::from(bytes.as_slice()));
                         }
-                        #[cfg(feature = "bytes")]
                         Value::Byte(arr) => {
                             let delim: Vec<u8> = arr.data.into();
                             let bytes = env
@@ -1190,7 +1188,6 @@ impl SysOp {
                 let handle = env.pop(2)?.as_handle(env, "")?;
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
-                    #[cfg(feature = "bytes")]
                     Value::Byte(arr) => arr.data.into(),
                     Value::Complex(_) => return Err(env.error("Cannot write complex array")),
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
@@ -1250,7 +1247,6 @@ impl SysOp {
                 let data = env.pop(2)?;
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
-                    #[cfg(feature = "bytes")]
                     Value::Byte(arr) => arr.data.into(),
 
                     Value::Complex(_) => {
@@ -1295,7 +1291,6 @@ impl SysOp {
                 #[cfg(feature = "image")]
                 {
                     let bytes: crate::cowslice::CowSlice<u8> = match env.pop(1)? {
-                        #[cfg(feature = "bytes")]
                         Value::Byte(arr) => {
                             if arr.rank() != 1 {
                                 return Err(env.error(format!(
@@ -1415,7 +1410,6 @@ impl SysOp {
                 #[cfg(feature = "audio_encode")]
                 {
                     let bytes: crate::cowslice::CowSlice<u8> = match env.pop(1)? {
-                        #[cfg(feature = "bytes")]
                         Value::Byte(arr) => {
                             if arr.rank() != 1 {
                                 return Err(env.error(format!(
@@ -1738,7 +1732,6 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
                 value.type_name_plural()
             )))
         }
-        #[cfg(feature = "bytes")]
         Value::Byte(_) => {
             return Err(env.error(format!(
                 "Command must be a string or box array, but it is {}",
@@ -1788,7 +1781,6 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     }
     let bytes = match value {
         Value::Num(nums) => nums.data.iter().map(|f| (*f * 255.0) as u8).collect(),
-        #[cfg(feature = "bytes")]
         Value::Byte(bytes) => bytes.data.iter().map(|&b| (b > 0) as u8 * 255).collect(),
         _ => return Err("Image must be a numeric array".into()),
     };
@@ -1823,7 +1815,6 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
 pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
     let unrolled: Vec<f32> = match audio {
         Value::Num(nums) => nums.data.iter().map(|&f| f as f32).collect(),
-        #[cfg(feature = "bytes")]
         Value::Byte(byte) => byte.data.iter().map(|&b| b as f32).collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };
@@ -1864,7 +1855,6 @@ pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
 pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
     let interleaved: Vec<f64> = match audio {
         Value::Num(nums) => nums.data.iter().copied().collect(),
-        #[cfg(feature = "bytes")]
         Value::Byte(byte) => byte.data.iter().map(|&b| b as f64).collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };

@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Make bytes array non-optional
   - Proofread and update tutorial and tour
   - System functions
     - Excel

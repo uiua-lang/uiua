@@ -722,43 +722,36 @@ mod enabled {
                 (FfiType::Char | FfiType::UChar, Value::Num(arr)) if arr.rank() == 0 => {
                     scalar!(arr, c_char)
                 }
-                #[cfg(feature = "bytes")]
                 (FfiType::Char | FfiType::UChar, Value::Byte(arr)) if arr.rank() == 0 => {
                     scalar!(arr, c_char)
                 }
                 (FfiType::Short | FfiType::UShort, Value::Num(arr)) if arr.rank() == 0 => {
                     scalar!(arr, c_short)
                 }
-                #[cfg(feature = "bytes")]
                 (FfiType::Short | FfiType::UShort, Value::Byte(arr)) if arr.rank() == 0 => {
                     scalar!(arr, c_short)
                 }
                 (FfiType::Int | FfiType::UInt, Value::Num(arr)) if arr.rank() == 0 => {
                     scalar!(arr, c_int)
                 }
-                #[cfg(feature = "bytes")]
                 (FfiType::Int | FfiType::UInt, Value::Byte(arr)) if arr.rank() == 0 => {
                     scalar!(arr, c_int)
                 }
                 (FfiType::Long | FfiType::ULong, Value::Num(arr)) if arr.rank() == 0 => {
                     scalar!(arr, c_long)
                 }
-                #[cfg(feature = "bytes")]
                 (FfiType::Long | FfiType::ULong, Value::Byte(arr)) if arr.rank() == 0 => {
                     scalar!(arr, c_long)
                 }
                 (FfiType::LongLong | FfiType::ULongLong, Value::Num(arr)) if arr.rank() == 0 => {
                     scalar!(arr, c_longlong)
                 }
-                #[cfg(feature = "bytes")]
                 (FfiType::LongLong | FfiType::ULongLong, Value::Byte(arr)) if arr.rank() == 0 => {
                     scalar!(arr, c_longlong)
                 }
                 (FfiType::Float, Value::Num(arr)) if arr.rank() == 0 => scalar!(arr, c_float),
-                #[cfg(feature = "bytes")]
                 (FfiType::Float, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_float),
                 (FfiType::Double, Value::Num(arr)) if arr.rank() == 0 => scalar!(arr, c_double),
-                #[cfg(feature = "bytes")]
                 (FfiType::Double, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_double),
                 (FfiType::Ptr { inner, .. }, val) => match (&**inner, val) {
                     (FfiType::Char, Value::Char(arr)) => {
@@ -774,7 +767,6 @@ mod enabled {
                         ptr
                     }
                     (FfiType::Int, Value::Num(arr)) => list!(arr, c_int),
-                    #[cfg(feature = "bytes")]
                     (FfiType::Int, Value::Byte(arr)) => list!(arr, c_int),
                     (_, arg) => {
                         return Err(format!(
@@ -799,27 +791,20 @@ mod enabled {
                     }
                     (FfiType::Float, Value::Num(arr)) => list!(arr, c_float),
                     (FfiType::Double, Value::Num(arr)) => list!(arr, c_double),
-                    #[cfg(feature = "bytes")]
                     (FfiType::Char | FfiType::UChar, Value::Byte(arr)) => {
                         list!(arr, c_char)
                     }
-                    #[cfg(feature = "bytes")]
                     (FfiType::Short | FfiType::UShort, Value::Byte(arr)) => {
                         list!(arr, c_short)
                     }
-                    #[cfg(feature = "bytes")]
                     (FfiType::Int | FfiType::UInt, Value::Byte(arr)) => list!(arr, c_int),
-                    #[cfg(feature = "bytes")]
                     (FfiType::Long | FfiType::ULong, Value::Byte(arr)) => {
                         list!(arr, c_long)
                     }
-                    #[cfg(feature = "bytes")]
                     (FfiType::LongLong | FfiType::ULongLong, Value::Byte(arr)) => {
                         list!(arr, c_longlong)
                     }
-                    #[cfg(feature = "bytes")]
                     (FfiType::Float, Value::Byte(arr)) => list!(arr, c_float),
-                    #[cfg(feature = "bytes")]
                     (FfiType::Double, Value::Byte(arr)) => list!(arr, c_double),
                     (FfiType::Struct { fields }, val) => {
                         let mut all_reprs = Vec::new();
@@ -905,37 +890,24 @@ mod enabled {
                     }
                     (FfiType::Float, Value::Num(arr)) if arr.rank() == 0 => scalar!(arr, c_float),
                     (FfiType::Double, Value::Num(arr)) if arr.rank() == 0 => scalar!(arr, c_double),
-                    #[cfg(feature = "bytes")]
                     (FfiType::Char, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_char),
-                    #[cfg(feature = "bytes")]
                     (FfiType::UChar, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_uchar),
-                    #[cfg(feature = "bytes")]
                     (FfiType::Short, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_short),
-                    #[cfg(feature = "bytes")]
                     (FfiType::Int, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_int),
-                    #[cfg(feature = "bytes")]
                     (FfiType::Long, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_long),
-                    #[cfg(feature = "bytes")]
                     (FfiType::LongLong, Value::Byte(arr)) if arr.rank() == 0 => {
                         scalar!(arr, c_longlong)
                     }
-                    #[cfg(feature = "bytes")]
                     (FfiType::UChar, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_uchar),
-                    #[cfg(feature = "bytes")]
                     (FfiType::UShort, Value::Byte(arr)) if arr.rank() == 0 => {
                         scalar!(arr, c_ushort)
                     }
-                    #[cfg(feature = "bytes")]
                     (FfiType::UInt, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_uint),
-                    #[cfg(feature = "bytes")]
                     (FfiType::ULong, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_ulong),
-                    #[cfg(feature = "bytes")]
                     (FfiType::ULongLong, Value::Byte(arr)) if arr.rank() == 0 => {
                         scalar!(arr, c_ulonglong)
                     }
-                    #[cfg(feature = "bytes")]
                     (FfiType::Float, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_float),
-                    #[cfg(feature = "bytes")]
                     (FfiType::Double, Value::Byte(arr)) if arr.rank() == 0 => {
                         scalar!(arr, c_double)
                     }

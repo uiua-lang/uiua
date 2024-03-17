@@ -96,11 +96,9 @@ binary = [
   "native_sys",
   "ffi",
 ]
-bytes = []
 clipboard = ["arboard"]
 debug = []
 default = [
-  "bytes",
   "binary",
   "terminal_image",
   "lsp",

@@ -163,7 +163,6 @@ impl Value {
             let n = target_shape[0];
             match self {
                 Value::Num(a) => a.reshape_scalar(n),
-                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.reshape_scalar(n),
                 Value::Complex(a) => a.reshape_scalar(n),
                 Value::Char(a) => a.reshape_scalar(n),
@@ -172,7 +171,6 @@ impl Value {
         } else {
             match self {
                 Value::Num(a) => a.reshape(&target_shape, env),
-                #[cfg(feature = "bytes")]
                 Value::Byte(a) => {
                     if env.num_fill().is_ok() && env.byte_fill().is_err() {
                         let mut arr: Array<f64> = a.convert_ref();
@@ -456,7 +454,6 @@ impl Value {
         Ok(if self.rank() == 0 {
             match kept {
                 Value::Num(a) => a.scalar_keep(counts[0]).into(),
-                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.scalar_keep(counts[0]).into(),
                 Value::Complex(a) => a.scalar_keep(counts[0]).into(),
                 Value::Char(a) => a.scalar_keep(counts[0]).into(),
@@ -465,7 +462,6 @@ impl Value {
         } else {
             match kept {
                 Value::Num(a) => a.list_keep(&counts, env)?.into(),
-                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.list_keep(&counts, env)?.into(),
                 Value::Complex(a) => a.list_keep(&counts, env)?.into(),
                 Value::Char(a) => a.list_keep(&counts, env)?.into(),
@@ -745,7 +741,6 @@ impl Value {
             return Ok(rotated);
         }
         let by_ints = || self.as_integer_array(env, "Rotation amount must be an array of integers");
-        #[cfg(feature = "bytes")]
         if env.scalar_fill::<f64>().is_ok() {
             if let Value::Byte(bytes) = &rotated {
                 rotated = bytes.convert_ref::<f64>().into();
@@ -753,7 +748,6 @@ impl Value {
         }
         match &mut rotated {
             Value::Num(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             Value::Complex(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             Value::Char(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
@@ -877,7 +871,6 @@ impl Value {
         let size_spec = self.as_ints(env, "Window size must be an integer or list of integers")?;
         Ok(match from {
             Value::Num(a) => a.windows(&size_spec, env)?.into(),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => a.windows(&size_spec, env)?.into(),
             Value::Complex(a) => a.windows(&size_spec, env)?.into(),
             Value::Char(a) => a.windows(&size_spec, env)?.into(),

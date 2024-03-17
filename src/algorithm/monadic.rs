@@ -30,7 +30,6 @@ impl Value {
     pub(crate) fn deshape_depth(&mut self, depth: usize) {
         match self {
             Value::Num(n) => n.deshape_depth(depth),
-            #[cfg(feature = "bytes")]
             Value::Byte(b) => b.deshape_depth(depth),
             Value::Complex(c) => c.deshape_depth(depth),
             Value::Char(c) => c.deshape_depth(depth),
@@ -109,7 +108,6 @@ impl Value {
                     .collect();
                 Array::new(nums.shape.clone(), new_data).into()
             }
-            #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
                 let new_data: CowSlice<Boxed> = (bytes.data.iter().map(|v| v.to_string()))
                     .map(Value::from)
@@ -451,7 +449,6 @@ impl Value {
     pub(crate) fn transpose_depth(&mut self, depth: usize, amnt: i32) {
         match self {
             Value::Num(n) => n.transpose_depth(depth, amnt),
-            #[cfg(feature = "bytes")]
             Value::Byte(b) => b.transpose_depth(depth, amnt),
             Value::Complex(c) => c.transpose_depth(depth, amnt),
             Value::Char(c) => c.transpose_depth(depth, amnt),
@@ -779,7 +776,6 @@ impl Value {
     /// Encode the `bits` of the value
     pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
         match self {
-            #[cfg(feature = "bytes")]
             Value::Byte(n) => n.convert_ref().bits(env),
             Value::Num(n) => n.bits(env),
             _ => Err(env.error("Argument to bits must be an array of natural numbers")),
@@ -788,7 +784,6 @@ impl Value {
     /// Decode the `bits` of the value
     pub fn unbits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
-            #[cfg(feature = "bytes")]
             Value::Byte(n) => n.inverse_bits(env),
             Value::Num(n) => n.convert_ref_with(|n| n as u8).inverse_bits(env),
             _ => Err(env.error("Argument to inverse_bits must be an array of naturals")),
@@ -934,7 +929,6 @@ impl Value {
                         .map(Array::scalar)
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
-                #[cfg(feature = "bytes")]
                 Value::Byte(bytes) => {
                     for (i, n) in bytes.data.iter().enumerate() {
                         if *n != 0 {
@@ -971,7 +965,6 @@ impl Value {
                         .map(Array::scalar)
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
-                #[cfg(feature = "bytes")]
                 Value::Byte(bytes) => {
                     for (i, n) in bytes.data.iter().enumerate() {
                         if *n != 0 {
@@ -1207,7 +1200,6 @@ impl Value {
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
             Value::Num(n) => n.primes(env),
-            #[cfg(feature = "bytes")]
             Value::Byte(b) => b.convert_ref::<f64>().primes(env),
             value => Err(env.error(format!("Cannot get primes of {} array", value.type_name()))),
         }

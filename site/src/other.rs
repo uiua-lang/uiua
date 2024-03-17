@@ -93,7 +93,7 @@ pub fn Technical() -> impl IntoView {
 
         <Hd id="arrays">"Arrays"</Hd>
         <p>"Values on the stack are implemented as Rust "<code>"enum"</code>"s, where each variant contains a different array type."</p>
-        <p>"While the language itself only has 4 types, the interpreter can have 1 extra: a byte array. IO streams and some operations which have boolean results return byte arrays for space efficiency. This optimization is only enabled if the interpreter is built with the "<code>"bytes"</code>" feature."</p>
+        <p>"While the language itself only has 4 types, the interpreter can have 1 extra: a byte array. IO streams and some operations which have boolean results return byte arrays for space efficiency."</p>
         <p>"Array elements are stored in a reference-counted contiguous-memory container I call a "<em>"CowSlice"</em>" or clone-on-write slice. When an array is modified, its data is only copied if it is shared with another array. In addition, pulling out the rows of an array only increments the reference count of the data, and the row arrays have modified shapes and data offsets."</p>
         <p>"Array shapes are stored in a special array type that only allocates when there are more than 3 items."</p>
 

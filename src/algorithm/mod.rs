@@ -178,7 +178,6 @@ where
     // )
     match val {
         Value::Num(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
-        #[cfg(feature = "bytes")]
         Value::Byte(arr) => {
             *val = op_bytes_retry_fill(
                 arr.clone(),
@@ -668,7 +667,6 @@ fn op_bytes_retry_fill<T, E: FillError>(
 
 /// If a function fails on a byte array because no fill byte is defined,
 /// convert the byte array to a number array and try again.
-#[cfg(feature = "bytes")]
 fn op_bytes_ref_retry_fill<T>(
     bytes: &Array<u8>,
     on_bytes: impl FnOnce(&Array<u8>) -> UiuaResult<T>,
@@ -683,7 +681,6 @@ fn op_bytes_ref_retry_fill<T>(
 
 /// If a function fails on 2 byte arrays because no fill byte is defined,
 /// convert the byte arrays to number arrays and try again.
-#[cfg(feature = "bytes")]
 fn op2_bytes_retry_fill<T, C: FillContext>(
     a: Array<u8>,
     b: Array<u8>,

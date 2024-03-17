@@ -1132,7 +1132,6 @@ impl Value {
         }
         match self {
             Value::Num(_) => ctx.scalar_fill::<f64>().is_ok(),
-            #[cfg(feature = "bytes")]
             Value::Byte(_) => ctx.scalar_fill::<u8>().is_ok(),
             Value::Complex(_) => ctx.scalar_fill::<Complex>().is_ok(),
             Value::Char(_) => ctx.scalar_fill::<char>().is_ok(),
@@ -1145,7 +1144,6 @@ impl Value {
     {
         match self {
             Value::Num(arr) => arr.fill_length_to(len, ctx),
-            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.fill_length_to(len, ctx),
             Value::Complex(arr) => arr.fill_length_to(len, ctx),
             Value::Char(arr) => arr.fill_length_to(len, ctx),

@@ -42,7 +42,6 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
                 return generic_reduce(f, Value::Complex(nums), depth, env);
             }
         }
-        #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(bytes)) => {
             let fill = env.num_fill().ok();
             env.push::<Value>(match prim {
@@ -576,7 +575,6 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
             env.push(arr);
             Ok(())
         }
-        #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(bytes)) => {
             match prim {
                 Primitive::Eq => env.push(fast_scan(bytes, is_eq::generic)),
@@ -708,7 +706,6 @@ pub fn unscan(env: &mut Uiua) -> UiuaResult {
             }
             _ => xs = Value::Num(nums),
         },
-        #[cfg(feature = "bytes")]
         Value::Byte(bytes) => match f.as_flipped_primitive(&env.asm) {
             Some((Primitive::Sub, false)) => {
                 env.push(fast_invscan(bytes.convert(), sub::num_num));
@@ -871,7 +868,6 @@ pub fn adjacent(env: &mut Uiua) -> UiuaResult {
             Primitive::Min => fast_adjacent(nums, n, env, min::num_num),
             _ => return generic_adjacent(f, Value::Num(nums), n, env),
         }?),
-        #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(bytes)) => env.push::<Value>(match prim {
             Primitive::Add => fast_adjacent(bytes.convert(), n, env, add::num_num)?.into(),
             Primitive::Sub if flipped => {

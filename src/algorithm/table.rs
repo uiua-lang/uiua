@@ -123,7 +123,6 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
                 return generic_table(f, Value::Num(xs), Value::Num(ys), env);
             }
         }
-        #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(xs), Value::Byte(ys)) => match prim {
             Primitive::Eq => env.push(fast_table_list(xs, ys, is_eq::generic, env)?),
             Primitive::Ne => env.push(fast_table_list(xs, ys, is_ne::generic, env)?),
@@ -186,14 +185,12 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
                 return generic_table(f, Value::Complex(xs), Value::Complex(ys), env);
             }
         }
-        #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Num(xs), Value::Byte(ys)) => {
             let ys = ys.convert();
             if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env)? {
                 return generic_table(f, Value::Num(xs), Value::Num(ys), env);
             }
         }
-        #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(xs), Value::Num(ys)) => {
             let xs = xs.convert();
             if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env)? {

@@ -15,6 +15,7 @@ use rayon::prelude::*;
 use crate::{
     array::*,
     cowslice::{cowslice, CowSlice},
+    grid_fmt::GridFmt,
     value::Value,
     Boxed, Primitive, Shape, Uiua, UiuaResult,
 };
@@ -775,7 +776,7 @@ impl Value {
     /// Encode the `bits` of the value
     pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
         match self {
-            Value::Byte(n) => n.bits(env),
+            Value::Byte(n) => n.convert_ref().bits(env),
             Value::Num(n) => n.bits(env),
             _ => Err(env.error("Argument to bits must be an array of natural numbers")),
         }
@@ -783,32 +784,30 @@ impl Value {
     /// Decode the `bits` of the value
     pub fn unbits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
-            Value::Byte(n) => n.unbits(env),
-            Value::Num(n) => n.unbits(env),
+            Value::Byte(n) => n.inverse_bits(env),
+            Value::Num(n) => n.convert_ref_with(|n| n as u8).inverse_bits(env),
             _ => Err(env.error("Argument to inverse_bits must be an array of naturals")),
         }
     }
 }
 
-impl<T: RealArrayValue> Array<T> {
+impl Array<f64> {
     /// Encode the `bits` of the array
     pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
-        let mut nats = Vec::with_capacity(self.data.len());
+        let mut nats = Vec::new();
         for &n in &self.data {
-            match n.as_u128() {
-                Ok(n) => nats.push(n),
-                Err(AsIntError::TooLarge) => {
-                    return Err(env.error(format!(
-                        "{n} is too large for the {} algorithm",
-                        Primitive::Bits.format()
-                    )));
-                }
-                Err(_) => {
-                    return Err(env.error(format!(
-                        "Array must be a list of naturals, but {n} is not natural"
-                    )));
-                }
+            if n.fract().abs() > f64::EPSILON || n < 0.0 {
+                return Err(env.error(format!(
+                    "Array must be a list of naturals, but {n} is not natural"
+                )));
             }
+            if n > u128::MAX as f64 {
+                return Err(env.error(format!(
+                    "{n} is too large for the {} algorithm",
+                    Primitive::Bits.format()
+                )));
+            }
+            nats.push(n.round() as u128);
         }
         let mut max = if let Some(max) = nats.iter().max() {
             *max
@@ -840,10 +839,17 @@ impl<T: RealArrayValue> Array<T> {
     }
 }
 
-impl<T: RealArrayValue> Array<T> {
+impl Array<u8> {
     /// Decode the `bits` of the array
-    pub fn unbits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        if self.data.is_empty() {
+    pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        let mut bools = Vec::with_capacity(self.data.len());
+        for &b in &self.data {
+            if b > 1 {
+                return Err(env.error("Array must be a list of booleans"));
+            }
+            bools.push(b != 0);
+        }
+        if bools.is_empty() {
             if self.shape.is_empty() {
                 return Ok(Array::from(0.0));
             }
@@ -852,30 +858,18 @@ impl<T: RealArrayValue> Array<T> {
             let count: usize = shape.iter().product();
             return Ok(Array::new(shape, cowslice![0.0; count]));
         }
-        let to_bool = |n: T| {
-            n.as_bool().map_err(|e| {
-                env.error(e.format(
-                    format_args!(
-                        "Argument to {}{} must be an array of booleans",
-                        Primitive::Un.format(),
-                        Primitive::Bits.format(),
-                    ),
-                    self.data[0],
-                ))
-            })
-        };
         if self.rank() == 0 {
-            return Ok(Array::from(to_bool(self.data[0])? as u8 as f64));
+            return Ok(Array::from(bools[0] as u8 as f64));
         }
         let mut shape = self.shape.clone();
         let bit_string_len = shape.pop().unwrap();
         let mut new_data = EcoVec::from_elem(0.0, self.data.len() / bit_string_len);
         let new_data_slice = new_data.make_mut();
         // LSB first
-        for (i, bits) in self.data.chunks_exact(bit_string_len).enumerate() {
+        for (i, bits) in bools.chunks_exact(bit_string_len).enumerate() {
             let mut n: u128 = 0;
             for (j, b) in bits.iter().enumerate() {
-                if to_bool(*b)? {
+                if *b {
                     n |= 1u128.overflowing_shl(j as u32).0;
                 }
             }
@@ -888,14 +882,35 @@ impl<T: RealArrayValue> Array<T> {
 impl Value {
     /// Get the indices `where` the value is nonzero
     pub fn wher(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        match self {
-            Value::Num(arr) => arr.wher(env),
-            Value::Byte(arr) => arr.wher(env),
-            value => Err(env.error(format!(
-                "Argument to where must be an array of naturals, but it is {}",
-                value.type_name_plural()
-            ))),
-        }
+        Ok(if self.rank() <= 1 {
+            let counts = self.as_nats(env, "Argument to where must be an array of naturals")?;
+            let total: usize = counts.iter().fold(0, |acc, &b| acc.saturating_add(b));
+            let mut data = EcoVec::with_capacity(total);
+            for (i, &b) in counts.iter().enumerate() {
+                for _ in 0..b {
+                    let i = i as f64;
+                    data.push(i);
+                }
+            }
+            Array::from(data)
+        } else {
+            let counts =
+                self.as_natural_array(env, "Argument to where must be an array of naturals")?;
+            let total: usize = counts.data.iter().fold(0, |acc, &b| acc.saturating_add(b));
+            let mut data = EcoVec::with_capacity(total);
+            for (i, &b) in counts.data.iter().enumerate() {
+                for _ in 0..b {
+                    let mut i = i;
+                    let start = data.len();
+                    for &d in counts.shape.iter().rev() {
+                        data.insert(start, (i % d) as f64);
+                        i /= d;
+                    }
+                }
+            }
+            let shape = Shape::from([total, counts.rank()].as_ref());
+            Array::new(shape, data)
+        })
     }
     /// Get the `first` index `where` the value is nonzero
     pub fn first_where(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -1045,55 +1060,6 @@ impl Value {
     }
 }
 
-impl<T: RealArrayValue> Array<T> {
-    /// Get the indices `where` the array is nonzero
-    pub fn wher(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        let mut total: usize = 0;
-        for &n in &self.data {
-            let n = n.as_usize().map_err(|e| {
-                env.error(e.format(
-                    format_args!(
-                        "Argument to {} must be an array of naturals",
-                        Primitive::Where.format()
-                    ),
-                    n,
-                ))
-            })?;
-            total = total.saturating_add(n);
-        }
-        let mut i = 0;
-        Ok(if self.rank() <= 1 {
-            let mut data = eco_vec![0.0; total];
-            let data_slice = data.make_mut();
-            for (j, &b) in self.data.iter().enumerate() {
-                let b = b.as_usize().unwrap();
-                for _ in 0..b {
-                    data_slice[i] = j as f64;
-                    i += 1;
-                }
-            }
-            Array::from(data)
-        } else {
-            let mut data = eco_vec![0.0; total * self.rank()];
-            let data_slice = data.make_mut();
-            for (j, &b) in self.data.iter().enumerate() {
-                let b = b.as_usize().unwrap();
-                for _ in 0..b {
-                    let mut j = j;
-                    let start = i;
-                    for (k, &d) in self.shape.iter().enumerate().rev() {
-                        data_slice[start + k] = (j % d) as f64;
-                        j /= d;
-                        i += 1;
-                    }
-                }
-            }
-            let shape = Shape::from([total, self.rank()].as_ref());
-            Array::new(shape, data)
-        })
-    }
-}
-
 impl Value {
     /// Convert a string value to a list of UTF-8 bytes
     pub fn utf8(&self, env: &Uiua) -> UiuaResult<Self> {
@@ -1234,28 +1200,29 @@ impl Value {
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
             Value::Num(n) => n.primes(env),
-            Value::Byte(b) => b.primes(env),
+            Value::Byte(b) => b.convert_ref::<f64>().primes(env),
             value => Err(env.error(format!("Cannot get primes of {} array", value.type_name()))),
         }
     }
 }
 
-impl<T: RealArrayValue> Array<T> {
+impl Array<f64> {
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         let mut primes: Vec<Vec<u64>> = Vec::new();
         for &n in &self.data {
-            let mut m = match n.as_u64() {
-                Ok(n) => n,
-                Err(AsIntError::TooLarge) => {
-                    return Err(env.error(format!("{n} is too large for the primes algorithm")));
-                }
-                Err(AsIntError::NotInteger) => {
-                    return Err(env.error(format!("Cannot get primes of non-integer number {n}")));
-                }
-                Err(AsIntError::Negative) => {
-                    return Err(env.error(format!("Cannot get primes of non-positive number {n}")));
-                }
-            };
+            if n <= 0.0 {
+                return Err(env.error(format!(
+                    "Cannot get primes of non-positive number {}",
+                    n.grid_string(true)
+                )));
+            }
+            if n.fract() != 0.0 {
+                return Err(env.error(format!(
+                    "Cannot get primes of non-integer number {}",
+                    n.grid_string(true)
+                )));
+            }
+            let mut m = n as u64;
             if m == 1 {
                 primes.push(Vec::new());
                 continue;

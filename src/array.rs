@@ -838,12 +838,51 @@ impl ArrayValue for Complex {
 
 /// [`ArrayValue`]s that are real numbers
 pub trait RealArrayValue: ArrayValue + Copy {
-    /// Attempt to convert the value into a natural number
-    fn as_nat(self) -> Result<u128, AsNatError>;
+    /// Attempt to convert the value into a [`usize`]
+    fn as_usize(self) -> Result<usize, AsNatError>;
+    /// Attempt to convert the value into a [`isize`]
+    fn as_isize(self) -> Result<isize, AsNatError>;
+    /// Attempt to convert the value into a [`u64`]
+    fn as_u64(self) -> Result<u64, AsNatError>;
+    /// Attempt to convert the value into a [`u128`]
+    fn as_u128(self) -> Result<u128, AsNatError>;
 }
 
 impl RealArrayValue for f64 {
-    fn as_nat(self) -> Result<u128, AsNatError> {
+    fn as_usize(self) -> Result<usize, AsNatError> {
+        if self < 0.0 {
+            return Err(AsNatError::Negative);
+        }
+        if self.fract().abs() > f64::EPSILON {
+            return Err(AsNatError::NotInteger);
+        }
+        if self > usize::MAX as f64 {
+            return Err(AsNatError::TooLarge);
+        }
+        Ok(self.round() as usize)
+    }
+    fn as_isize(self) -> Result<isize, AsNatError> {
+        if self.fract().abs() > f64::EPSILON {
+            return Err(AsNatError::NotInteger);
+        }
+        if self > isize::MAX as f64 || self < isize::MIN as f64 {
+            return Err(AsNatError::TooLarge);
+        }
+        Ok(self.round() as isize)
+    }
+    fn as_u64(self) -> Result<u64, AsNatError> {
+        if self < 0.0 {
+            return Err(AsNatError::Negative);
+        }
+        if self.fract().abs() > f64::EPSILON {
+            return Err(AsNatError::NotInteger);
+        }
+        if self > u64::MAX as f64 {
+            return Err(AsNatError::TooLarge);
+        }
+        Ok(self.round() as u64)
+    }
+    fn as_u128(self) -> Result<u128, AsNatError> {
         if self < 0.0 {
             return Err(AsNatError::Negative);
         }
@@ -858,12 +897,21 @@ impl RealArrayValue for f64 {
 }
 
 impl RealArrayValue for u8 {
-    fn as_nat(self) -> Result<u128, AsNatError> {
+    fn as_usize(self) -> Result<usize, AsNatError> {
+        Ok(self as usize)
+    }
+    fn as_isize(self) -> Result<isize, AsNatError> {
+        Ok(self as isize)
+    }
+    fn as_u64(self) -> Result<u64, AsNatError> {
+        Ok(self as u64)
+    }
+    fn as_u128(self) -> Result<u128, AsNatError> {
         Ok(self as u128)
     }
 }
 
-/// Errors for [`NumericArrayValue::as_nat`]
+/// Errors for converting to a natural number
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(missing_docs)]
 pub enum AsNatError {

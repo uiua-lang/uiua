@@ -795,7 +795,7 @@ impl<T: RealArrayValue> Array<T> {
     pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
         let mut nats = Vec::with_capacity(self.data.len());
         for &n in &self.data {
-            match n.as_nat() {
+            match n.as_u128() {
                 Ok(n) => nats.push(n),
                 Err(AsNatError::TooLarge) => {
                     return Err(env.error(format!(
@@ -1209,9 +1209,9 @@ impl Value {
 
 impl<T: RealArrayValue> Array<T> {
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        let mut primes: Vec<Vec<u128>> = Vec::new();
+        let mut primes: Vec<Vec<u64>> = Vec::new();
         for &n in &self.data {
-            let mut m = match n.as_nat() {
+            let mut m = match n.as_u64() {
                 Ok(n) => n,
                 Err(AsNatError::TooLarge) => {
                     return Err(env.error(format!("{n} is too large for the primes algorithm")));

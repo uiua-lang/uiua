@@ -883,35 +883,14 @@ impl Array<u8> {
 impl Value {
     /// Get the indices `where` the value is nonzero
     pub fn wher(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        Ok(if self.rank() <= 1 {
-            let counts = self.as_nats(env, "Argument to where must be an array of naturals")?;
-            let total: usize = counts.iter().fold(0, |acc, &b| acc.saturating_add(b));
-            let mut data = EcoVec::with_capacity(total);
-            for (i, &b) in counts.iter().enumerate() {
-                for _ in 0..b {
-                    let i = i as f64;
-                    data.push(i);
-                }
-            }
-            Array::from(data)
-        } else {
-            let counts =
-                self.as_natural_array(env, "Argument to where must be an array of naturals")?;
-            let total: usize = counts.data.iter().fold(0, |acc, &b| acc.saturating_add(b));
-            let mut data = EcoVec::with_capacity(total);
-            for (i, &b) in counts.data.iter().enumerate() {
-                for _ in 0..b {
-                    let mut i = i;
-                    let start = data.len();
-                    for &d in counts.shape.iter().rev() {
-                        data.insert(start, (i % d) as f64);
-                        i /= d;
-                    }
-                }
-            }
-            let shape = Shape::from([total, counts.rank()].as_ref());
-            Array::new(shape, data)
-        })
+        match self {
+            Value::Num(arr) => arr.wher(env),
+            Value::Byte(arr) => arr.wher(env),
+            value => Err(env.error(format!(
+                "Argument to where must be an array of naturals, but it is {}",
+                value.type_name_plural()
+            ))),
+        }
     }
     /// Get the `first` index `where` the value is nonzero
     pub fn first_where(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
@@ -1057,6 +1036,55 @@ impl Value {
                 Array::new(shape, data).into()
             }
             shape => return Err(env.error(format!("Cannot unwhere rank-{} array", shape.len()))),
+        })
+    }
+}
+
+impl<T: RealArrayValue> Array<T> {
+    /// Get the indices `where` the array is nonzero
+    pub fn wher(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        let mut total: usize = 0;
+        for &n in &self.data {
+            let n = n.as_usize().map_err(|e| {
+                env.error(e.format(
+                    format_args!(
+                        "Argument to {} must be an array of naturals",
+                        Primitive::Where.format()
+                    ),
+                    n,
+                ))
+            })?;
+            total = total.saturating_add(n);
+        }
+        let mut i = 0;
+        Ok(if self.rank() <= 1 {
+            let mut data = eco_vec![0.0; total];
+            let data_slice = data.make_mut();
+            for (j, &b) in self.data.iter().enumerate() {
+                let b = b.as_usize().unwrap();
+                for _ in 0..b {
+                    data_slice[i] = j as f64;
+                    i += 1;
+                }
+            }
+            Array::from(data)
+        } else {
+            let mut data = eco_vec![0.0; total * self.rank()];
+            let data_slice = data.make_mut();
+            for (j, &b) in self.data.iter().enumerate() {
+                let b = b.as_usize().unwrap();
+                for _ in 0..b {
+                    let mut j = j;
+                    let start = i;
+                    for (k, &d) in self.shape.iter().enumerate().rev() {
+                        data_slice[start + k] = (j % d) as f64;
+                        j /= d;
+                        i += 1;
+                    }
+                }
+            }
+            let shape = Shape::from([total, self.rank()].as_ref());
+            Array::new(shape, data)
         })
     }
 }

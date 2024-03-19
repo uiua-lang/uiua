@@ -920,6 +920,16 @@ pub enum AsNatError {
     TooLarge,
 }
 
+impl AsNatError {
+    pub(crate) fn format(self, initial: impl fmt::Display, value: impl RealArrayValue) -> String {
+        match self {
+            Self::Negative => format!("{initial}, but {value} is negative"),
+            Self::NotInteger => format!("{initial}, but {value} is not an integer"),
+            Self::TooLarge => format!("{initial}, but {value} is too large"),
+        }
+    }
+}
+
 /// Trait for comparing array elements
 pub trait ArrayCmp<U = Self> {
     /// Compare two elements

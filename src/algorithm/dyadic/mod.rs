@@ -1226,6 +1226,12 @@ impl<T: ArrayValue> Array<T> {
                 Array::from_row_arrays(rows, env)?
             }
             Ordering::Less => {
+                if !of.shape.ends_with(&elems.shape) {
+                    return Err(env.error(format!(
+                        "Cannot look for array of shape {} in array of shape {}",
+                        self.shape, of.shape
+                    )));
+                }
                 if of.rank() - elems.rank() == 1 {
                     of.rows().any(|r| *elems == r).into()
                 } else {
@@ -1329,6 +1335,13 @@ impl<T: ArrayValue> Array<T> {
                 Array::from_row_arrays(rows, env)?
             }
             Ordering::Less => {
+                if !haystack.shape.ends_with(&needle.shape) {
+                    return Err(env.error(format!(
+                        "Cannot get index of array of shape {} in array of shape {}",
+                        needle.shape(),
+                        haystack.shape()
+                    )));
+                }
                 if haystack.rank() - needle.rank() == 1 {
                     (haystack
                         .row_slices()

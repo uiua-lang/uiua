@@ -836,6 +836,42 @@ impl ArrayValue for Complex {
     }
 }
 
+/// [`ArrayValue`]s that are real numbers
+pub trait RealArrayValue: ArrayValue + Copy {
+    /// Attempt to convert the value into a natural number
+    fn as_nat(self) -> Result<u128, AsNatError>;
+}
+
+impl RealArrayValue for f64 {
+    fn as_nat(self) -> Result<u128, AsNatError> {
+        if self < 0.0 {
+            return Err(AsNatError::Negative);
+        }
+        if self.fract().abs() > f64::EPSILON {
+            return Err(AsNatError::NotInteger);
+        }
+        if self > u128::MAX as f64 {
+            return Err(AsNatError::TooLarge);
+        }
+        Ok(self.round() as u128)
+    }
+}
+
+impl RealArrayValue for u8 {
+    fn as_nat(self) -> Result<u128, AsNatError> {
+        Ok(self as u128)
+    }
+}
+
+/// Errors for [`NumericArrayValue::as_nat`]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(missing_docs)]
+pub enum AsNatError {
+    Negative,
+    NotInteger,
+    TooLarge,
+}
+
 /// Trait for comparing array elements
 pub trait ArrayCmp<U = Self> {
     /// Compare two elements

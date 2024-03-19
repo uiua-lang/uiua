@@ -15,7 +15,6 @@ use rayon::prelude::*;
 use crate::{
     array::*,
     cowslice::{cowslice, CowSlice},
-    grid_fmt::GridFmt,
     value::Value,
     Boxed, Primitive, Shape, Uiua, UiuaResult,
 };
@@ -776,7 +775,7 @@ impl Value {
     /// Encode the `bits` of the value
     pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
         match self {
-            Value::Byte(n) => n.convert_ref().bits(env),
+            Value::Byte(n) => n.bits(env),
             Value::Num(n) => n.bits(env),
             _ => Err(env.error("Argument to bits must be an array of natural numbers")),
         }
@@ -791,23 +790,25 @@ impl Value {
     }
 }
 
-impl Array<f64> {
+impl<T: RealArrayValue> Array<T> {
     /// Encode the `bits` of the array
     pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
-        let mut nats = Vec::new();
+        let mut nats = Vec::with_capacity(self.data.len());
         for &n in &self.data {
-            if n.fract().abs() > f64::EPSILON || n < 0.0 {
-                return Err(env.error(format!(
-                    "Array must be a list of naturals, but {n} is not natural"
-                )));
+            match n.as_nat() {
+                Ok(n) => nats.push(n),
+                Err(AsNatError::TooLarge) => {
+                    return Err(env.error(format!(
+                        "{n} is too large for the {} algorithm",
+                        Primitive::Bits.format()
+                    )));
+                }
+                Err(AsNatError::NotInteger | AsNatError::Negative) => {
+                    return Err(env.error(format!(
+                        "Array must be a list of naturals, but {n} is not natural"
+                    )));
+                }
             }
-            if n > u128::MAX as f64 {
-                return Err(env.error(format!(
-                    "{n} is too large for the {} algorithm",
-                    Primitive::Bits.format()
-                )));
-            }
-            nats.push(n.round() as u128);
         }
         let mut max = if let Some(max) = nats.iter().max() {
             *max
@@ -1200,29 +1201,28 @@ impl Value {
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
             Value::Num(n) => n.primes(env),
-            Value::Byte(b) => b.convert_ref::<f64>().primes(env),
+            Value::Byte(b) => b.primes(env),
             value => Err(env.error(format!("Cannot get primes of {} array", value.type_name()))),
         }
     }
 }
 
-impl Array<f64> {
+impl<T: RealArrayValue> Array<T> {
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        let mut primes: Vec<Vec<u64>> = Vec::new();
+        let mut primes: Vec<Vec<u128>> = Vec::new();
         for &n in &self.data {
-            if n <= 0.0 {
-                return Err(env.error(format!(
-                    "Cannot get primes of non-positive number {}",
-                    n.grid_string(true)
-                )));
-            }
-            if n.fract() != 0.0 {
-                return Err(env.error(format!(
-                    "Cannot get primes of non-integer number {}",
-                    n.grid_string(true)
-                )));
-            }
-            let mut m = n as u64;
+            let mut m = match n.as_nat() {
+                Ok(n) => n,
+                Err(AsNatError::TooLarge) => {
+                    return Err(env.error(format!("{n} is too large for the primes algorithm")));
+                }
+                Err(AsNatError::NotInteger) => {
+                    return Err(env.error(format!("Cannot get primes of non-integer number {n}")));
+                }
+                Err(AsNatError::Negative) => {
+                    return Err(env.error(format!("Cannot get primes of non-positive number {n}")));
+                }
+            };
             if m == 1 {
                 primes.push(Vec::new());
                 continue;

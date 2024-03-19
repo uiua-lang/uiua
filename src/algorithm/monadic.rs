@@ -882,11 +882,13 @@ impl Array<u8> {
 impl Value {
     /// Get the indices `where` the value is nonzero
     pub fn wher(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        let counts =
+            self.as_natural_array(env, "Argument to where must be an array of naturals")?;
+        let total: usize = counts.data.iter().fold(0, |acc, &b| acc.saturating_add(b));
         Ok(if self.rank() <= 1 {
-            let counts = self.as_nats(env, "Argument to where must be an array of naturals")?;
-            let total: usize = counts.iter().fold(0, |acc, &b| acc.saturating_add(b));
+            validate_size::<f64>(total, env)?;
             let mut data = EcoVec::with_capacity(total);
-            for (i, &b) in counts.iter().enumerate() {
+            for (i, &b) in counts.data.iter().enumerate() {
                 for _ in 0..b {
                     let i = i as f64;
                     data.push(i);
@@ -894,10 +896,8 @@ impl Value {
             }
             Array::from(data)
         } else {
-            let counts =
-                self.as_natural_array(env, "Argument to where must be an array of naturals")?;
-            let total: usize = counts.data.iter().fold(0, |acc, &b| acc.saturating_add(b));
-            let mut data = EcoVec::with_capacity(total);
+            validate_size::<f64>(total * counts.rank(), env)?;
+            let mut data = EcoVec::with_capacity(total * counts.rank());
             for (i, &b) in counts.data.iter().enumerate() {
                 for _ in 0..b {
                     let mut i = i;

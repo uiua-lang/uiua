@@ -783,8 +783,8 @@ impl Value {
     /// Decode the `bits` of the value
     pub fn unbits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
-            Value::Byte(n) => n.inverse_bits(env),
-            Value::Num(n) => n.convert_ref_with(|n| n as u8).inverse_bits(env),
+            Value::Byte(n) => n.unbits(env),
+            Value::Num(n) => n.unbits(env),
             _ => Err(env.error("Argument to inverse_bits must be an array of naturals")),
         }
     }
@@ -797,13 +797,13 @@ impl<T: RealArrayValue> Array<T> {
         for &n in &self.data {
             match n.as_u128() {
                 Ok(n) => nats.push(n),
-                Err(AsNatError::TooLarge) => {
+                Err(AsIntError::TooLarge) => {
                     return Err(env.error(format!(
                         "{n} is too large for the {} algorithm",
                         Primitive::Bits.format()
                     )));
                 }
-                Err(AsNatError::NotInteger | AsNatError::Negative) => {
+                Err(_) => {
                     return Err(env.error(format!(
                         "Array must be a list of naturals, but {n} is not natural"
                     )));
@@ -840,17 +840,10 @@ impl<T: RealArrayValue> Array<T> {
     }
 }
 
-impl Array<u8> {
+impl<T: RealArrayValue> Array<T> {
     /// Decode the `bits` of the array
-    pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        let mut bools = Vec::with_capacity(self.data.len());
-        for &b in &self.data {
-            if b > 1 {
-                return Err(env.error("Array must be a list of booleans"));
-            }
-            bools.push(b != 0);
-        }
-        if bools.is_empty() {
+    pub fn unbits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        if self.data.is_empty() {
             if self.shape.is_empty() {
                 return Ok(Array::from(0.0));
             }
@@ -859,18 +852,30 @@ impl Array<u8> {
             let count: usize = shape.iter().product();
             return Ok(Array::new(shape, cowslice![0.0; count]));
         }
+        let to_bool = |n: T| {
+            n.as_bool().map_err(|e| {
+                env.error(e.format(
+                    format_args!(
+                        "Argument to {}{} must be an array of booleans",
+                        Primitive::Un.format(),
+                        Primitive::Bits.format(),
+                    ),
+                    self.data[0],
+                ))
+            })
+        };
         if self.rank() == 0 {
-            return Ok(Array::from(bools[0] as u8 as f64));
+            return Ok(Array::from(to_bool(self.data[0])? as u8 as f64));
         }
         let mut shape = self.shape.clone();
         let bit_string_len = shape.pop().unwrap();
         let mut new_data = EcoVec::from_elem(0.0, self.data.len() / bit_string_len);
         let new_data_slice = new_data.make_mut();
         // LSB first
-        for (i, bits) in bools.chunks_exact(bit_string_len).enumerate() {
+        for (i, bits) in self.data.chunks_exact(bit_string_len).enumerate() {
             let mut n: u128 = 0;
             for (j, b) in bits.iter().enumerate() {
-                if *b {
+                if to_bool(*b)? {
                     n |= 1u128.overflowing_shl(j as u32).0;
                 }
             }
@@ -1241,13 +1246,13 @@ impl<T: RealArrayValue> Array<T> {
         for &n in &self.data {
             let mut m = match n.as_u64() {
                 Ok(n) => n,
-                Err(AsNatError::TooLarge) => {
+                Err(AsIntError::TooLarge) => {
                     return Err(env.error(format!("{n} is too large for the primes algorithm")));
                 }
-                Err(AsNatError::NotInteger) => {
+                Err(AsIntError::NotInteger) => {
                     return Err(env.error(format!("Cannot get primes of non-integer number {n}")));
                 }
-                Err(AsNatError::Negative) => {
+                Err(AsIntError::Negative) => {
                     return Err(env.error(format!("Cannot get primes of non-positive number {n}")));
                 }
             };

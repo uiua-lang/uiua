@@ -16,3 +16,5 @@ F! ← F!^!
 F!+
 
 regex "([a-z]" "hello world"
+
+"Hello"_"Worrld"

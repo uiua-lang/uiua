@@ -1024,13 +1024,13 @@ code:
                 let instrs = self.new_functions.last_mut().unwrap();
                 // Inline constant arrays
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
-                    instrs.pop();
                     let values = inner.iter().rev().map(|instr| match instr {
                         Instr::Push(v) => v.clone(),
                         _ => unreachable!(),
                     });
                     match Value::from_row_values(values, &(&word.span, &self.asm.inputs)) {
                         Ok(val) => {
+                            instrs.pop();
                             self.push_instr(Instr::push(val));
                             return Ok(());
                         }

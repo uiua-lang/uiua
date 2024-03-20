@@ -96,6 +96,7 @@ binary = [
   "native_sys",
   "ffi",
 ]
+bytes = [] # No longer used
 clipboard = ["arboard"]
 debug = []
 default = [

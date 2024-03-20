@@ -35,7 +35,7 @@ Double ← +.
 Increment ← +1
 RangeDiff ↚ ⇡-
 Span ← +⟜RangeDiff
-Mac! ← /^2 [1 2 3 4 5]
+Mac! ← /^! [1 2 3 4 5]
 Foo ← 5
 Bar ← \"bar\""
                 .into(),

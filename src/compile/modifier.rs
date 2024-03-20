@@ -1112,6 +1112,9 @@ impl Compiler {
         span: &CodeSpan,
         call: bool,
     ) -> UiuaResult {
+        if self.pre_eval_mode == PreEvalMode::Lsp {
+            return self.word(operand, call);
+        }
         let mut comp = self.clone();
         let (instrs, sig) = comp.compile_operand_word(operand)?;
         if sig.args > 0 {

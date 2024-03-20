@@ -1754,12 +1754,13 @@ impl InvertPattern for Val {
         }
         for len in (1..input.len()).rev() {
             let chunk = &input[..len];
+            if (chunk.iter()).any(|instr| instr.is_temp() || matches!(instr, Instr::PushFunc(_))) {
+                continue;
+            }
             if let Ok(sig) = instrs_signature(chunk) {
-                if sig.args == 0
-                    && sig.outputs == 1
-                    && !chunk
-                        .iter()
-                        .any(|instr| instr.is_temp() || matches!(instr, Instr::PushFunc(_)))
+                if sig == (0, 1)
+                    || sig == (1, 2)
+                        && matches!(chunk, [Instr::Prim(Primitive::Dup, _), rest@ ..] if !rest.is_empty())
                 {
                     return Some((&input[len..], chunk.into()));
                 }

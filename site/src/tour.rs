@@ -26,9 +26,9 @@ pub fn Tour() -> impl IntoView {
         <p>"Unlike some other array languages, Uiua does not require a special keyboard configuration or an editor with custom keybindings. Instead, you can type either the ASCII symbol or the name of a built-in function, then the Uiua formatter will convert it to the correct Unicode glyph."</p>
         <p>"In this case, the ASCII symbol for multiplication is "<code>"*"</code>" and the name of the funny arrow is "<Prim prim=Range/>"."</p>
         <p>"On this website, you can format by clicking "<b>"Run"</b>" or by pressing "<b>"Ctrl+Enter"</b>" with the cursor in the text area. Try it out!"</p>
-        <Editor example="+1*2 range10" help={&["", "Click! ⇡⇡⇡⇡"]}/>
+        <Editor example="+1*2 range10" help={&["", "⇡⇡⇡⇡   Click!"]}/>
         <p>"You don't even have to type the whole name of a built-in function, just enough to disambiguate it from the others."</p>
-        <Editor example="rang10"/>
+        <Editor example="ran10"/>
         <p>"If you're ever not sure what a glyph is called, you can hover over it to see its name."</p>
         <p>"Click the "<code>"↧"</code>" on the right of the editor to see a list of all the built-in functions."</p>
 
@@ -70,7 +70,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="× 2_10 [1_2_3 4_5_6]"/>
         <p>"Arrays have a "<Prim prim=Shape/>" that describes how many elements they have along each axis."</p>
         <Editor example="△5\n△[]\n△[9 1 6]\n△[4_π_9 1_5_∞]"/>
-        <p>"The rank of an array is the number of axes it has."</p>
+        <p>"The "<em>"rank"</em>" of an array refers to the number of axes it has."</p>
         <p>"The "<Prim prim=Len/>" is the number of rows it has along its first axis."</p>
         <Editor example="a ← [1_2_3_4 5_6_7_8 9_10_11_12]\n△a\n⧻a\n⧻△a # rank"/>
         <p>"If you want to type that fancy "<code>"←"</code>" so you can give names to arrays, you can type "<code>"="</code>" after a name at the start of a line, and the formatter will convert it for you."</p>
@@ -100,16 +100,18 @@ pub fn Tour() -> impl IntoView {
 
         <Hd id="functions">"Functions"</Hd>
         <p>"If you bind a name with "<code>"←"</code>" and the code on the right does not have enough arguments to run, the code will be bound as a function and will not run until the name is used."</p>
-        <Editor example="f ← +1\nf5"/>
+        <Editor example="F ← +1\nF5"/>
         <Editor example="👋 ← ⊂\"Hello, \"\n👋\"World\""/>
 
         <Hd id="modifiers">"Modifiers"</Hd>
-        <p>"Modifiers (called operators or adverbs in some other array languages) are functions that take other functions as arguments. The built-in modifiers are parsed so that if their function argument(s) immediately follow them, the function is run inside the modifier rather than before it."</p>
+        <p>"Modifiers (called operators or adverbs in some other array languages) are functions that take other functions as arguments. Modifiers are parsed so that if their function argument(s) immediately follow them, the function is run inside the modifier rather than before it."</p>
         <p><Prim prim=Reduce/>" is a modifier many array-language aficionados will be familiar with. It takes its function and applies it \"between\" the items of an array."</p>
         <p>"One basic use of "<Prim prim=Reduce/>" is to sum an array."</p>
         <Editor example="/+ [1 2 3 4 5]"/>
-        <p>"It works on multi-dimensional arrays too! In this case, it adds each row to the next."</p>
+        <p>"It works on multi-dimensional arrays too! In this case, it adds each row to the next, effectively summing along the columns."</p>
         <Editor example="/+ .[1_2_3 4_5_6 7_8_9]"/>
+        <p>"This works with any function. For example, you can use "<Prim prim=Max/>" instead of "<Prim prim=Add/>" to get the maximum of each column rather than the sum."</p>
+        <Editor example="/↥ [1_2_3 4_5_2 3_1_8]"/>
         <p><Prim prim=Rows/>" applies a function to each row of an array."</p>
         <Editor example="x ← [1_2_3 4_5_6]\n  x\n ⇌x\n≡⇌x"/>
         <p><Prim prim=Rows/>" also works "<em>"between"</em>" two arrays if it is given a dyadic function like "<Prim prim=Join/>"."</p>
@@ -155,7 +157,7 @@ pub fn Tour() -> impl IntoView {
         <Editor example="\
 ↯4[0 2 4 7 12 9 7 4]
 ×220 ⁿ:2÷12
-÷2 ∿×τ ♭⊞× :÷⟜⇡⁅÷8 .&asr"/>
+÷2 ∿×τ ♭⍉⊞× ÷:⇡⁅÷8. &asr"/>
         <h3>"GIFs"</h3>
         <p>"Any array whose rows can all be turned into images can be turned into a GIF."</p>
         <p>"On this site, arrays that look like they should be GIFs will be displayed as GIFs. You can see some on the "<A href="/">"main page"</A>"."</p>
@@ -166,6 +168,6 @@ pub fn Tour() -> impl IntoView {
         <p>"For information on installing the native Uiua interpreter, see the "<A href="/install">"install page"</A>"."</p>
         <p>"For information on specific functions and modifiers, see the "<A href="/docs#functions">"functions section"</A>" of the main docs page."</p>
         <p>"To see some cool examples, click through the editor at the top of the "<A href="/">"home page"</A>". There are also some interesting, longer examples in the "<a href="https://github.com/uiua-lang/uiua/tree/main/examples">" main Uiua repository on GitHub"</a>"."</p>
-        <p>"Check out "<A href="../isms">"Uiuisms"</A>" for a curated list of Uiua functions for solving common problems."</p>
+        <p>"Check out "<A href="../isms">"Uiuisms"</A>" for a curated list of Uiua snippets for solving common problems."</p>
     }
 }

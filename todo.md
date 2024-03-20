@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.10
-  - Proofread and update tutorial and tour
+  - Proofread and update tutorial
   - System functions
     - Excel
 - 0.11

@@ -177,7 +177,7 @@ sys_op! {
     ///
     /// The result is a 2-element array of the height and width of the terminal.
     /// Height comes first so that the array can be used as a shape in [reshape].
-    (0, TermSize, Env, "&ts", "terminal size"),
+    (0, TermSize, Env, "&ts", "terminal size", [mutating]),
     /// Set the terminal to raw mode
     ///
     /// Expects a boolean.

@@ -592,16 +592,14 @@ impl<'a> Formatter<'a> {
             }
             Item::Binding(binding) => {
                 match binding.words.first().map(|w| &w.value) {
-                    Some(Word::Ref(r)) => {
-                        if r.root_module()
-                            .zip(self.prev_import_function.as_ref())
-                            .is_some_and(|(a, b)| a == b)
-                        {
-                            for _ in 0..self.config.multiline_indent {
-                                self.output.push(' ');
-                            }
-                        } else {
-                            self.prev_import_function = None;
+                    Some(Word::Ref(r))
+                        if binding.words.len() == 1
+                            && r.root_module()
+                                .zip(self.prev_import_function.as_ref())
+                                .is_some_and(|(a, b)| a == b) =>
+                    {
+                        for _ in 0..self.config.multiline_indent {
+                            self.output.push(' ');
                         }
                     }
                     _ => self.prev_import_function = None,
@@ -650,7 +648,9 @@ impl<'a> Formatter<'a> {
                 if let Some(name) = &import.name {
                     self.push(&name.span, &name.value);
                     self.output.push(' ');
-                    self.prev_import_function = Some(name.value.clone());
+                    if !matches!(import.lines.as_slice(), [.., None]) {
+                        self.prev_import_function = Some(name.value.clone());
+                    }
                 }
                 self.output.push_str("~ ");
                 self.push(&import.path.span, &format!("{:?}", import.path.value));

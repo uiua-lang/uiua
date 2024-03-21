@@ -413,6 +413,12 @@ impl<'a> VirtualEnv<'a> {
                     let g_sub_sig =
                         Signature::new(g_sig.args, (g_sig.outputs + copy_count).saturating_sub(1));
                     let comp_sig = f_sig.compose(g_sub_sig);
+                    if comp_sig.args < comp_sig.outputs && self.array_stack.is_empty() {
+                        return Err(SigCheckError::from(format!(
+                            "do with a function with signature {comp_sig}"
+                        ))
+                        .ambiguous());
+                    }
                     self.handle_args_outputs(
                         comp_sig.args,
                         comp_sig.outputs + g_sub_sig.outputs.saturating_sub(g_sig.args),

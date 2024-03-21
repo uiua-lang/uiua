@@ -46,7 +46,7 @@ pub(crate) struct Runtime {
     /// The thread's temp stack for inlining
     temp_stacks: [Vec<Value>; TempStack::CARDINALITY],
     /// The stack height at the start of each array currently being built
-    array_stack: Vec<usize>,
+    pub(crate) array_stack: Vec<usize>,
     /// The call stack
     call_stack: Vec<StackFrame>,
     /// The recur stack

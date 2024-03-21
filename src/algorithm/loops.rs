@@ -1,5 +1,7 @@
 //! Algorithms for looping modifiers
 
+use std::cmp::Ordering;
+
 use crate::{
     array::{Array, ArrayValue},
     value::Value,
@@ -133,12 +135,22 @@ pub fn do_(env: &mut Uiua) -> UiuaResult {
     let copy_count = g_sig.args.saturating_sub(g_sig.outputs - 1);
     let g_sub_sig = Signature::new(g_sig.args, g_sig.outputs + copy_count - 1);
     let comp_sig = f_sig.compose(g_sub_sig);
-    if comp_sig.args != comp_sig.outputs {
-        return Err(env.error(format!(
-            "Do's functions must have a net stack change of 0, \
-            but the composed signature of {f_sig} and {g_sig}, \
-            minus the condition, is {comp_sig}"
-        )));
+    match comp_sig.args.cmp(&comp_sig.outputs) {
+        Ordering::Less if env.rt.array_stack.is_empty() => {
+            return Err(env.error(format!(
+                "Do's functions cannot have a positive net stack \
+                change outside an array, but the composed signature of \
+                {f_sig} and {g_sig}, minus the condition, is {comp_sig}"
+            )))
+        }
+        Ordering::Greater => {
+            return Err(env.error(format!(
+                "Do's functions cannot have a negative net stack \
+                change, but the composed signature of {f_sig} and \
+                {g_sig}, minus the condition, is {comp_sig}"
+            )))
+        }
+        _ => {}
     }
     loop {
         if env.stack().len() < copy_count {
@@ -154,9 +166,7 @@ pub fn do_(env: &mut Uiua) -> UiuaResult {
         // Call condition
         env.call(g.clone())?;
         // Break if condition is false
-        let cond = env
-            .pop("do condition")?
-            .as_bool(env, "Do condition must be a boolean")?;
+        let cond = (env.pop("do condition")?).as_bool(env, "Do condition must be a boolean")?;
         if !cond {
             break;
         }

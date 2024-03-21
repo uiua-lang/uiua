@@ -1304,14 +1304,14 @@ impl Value {
             Ok(s)
         }
     }
-    pub(crate) fn from_csv(csv: &str, env: &mut Uiua) -> UiuaResult<Self> {
+    pub(crate) fn from_csv(_csv: &str, env: &mut Uiua) -> UiuaResult<Self> {
         #[cfg(not(feature = "csv"))]
         return Err(env.error("CSV support is not enabled in this environment"));
         #[cfg(feature = "csv")]
         {
             let mut reader = csv::ReaderBuilder::new()
                 .has_headers(false)
-                .from_reader(csv.as_bytes());
+                .from_reader(_csv.as_bytes());
             env.with_fill("".into(), |env| {
                 let mut rows = Vec::new();
                 for result in reader.records() {

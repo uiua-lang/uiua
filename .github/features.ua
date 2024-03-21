@@ -14,7 +14,7 @@ Features ← (
 
 ↘1⋯⇡ⁿ:2⧻. Features
 ≡(
-  ⬚"regex"/$"_,_" ▽
+  /$"_,_" ▽
   &p $"Checking with features: _".
   ⊂ Command ⊂ □"--features" □
   ⍤⟜≍: 0 &runi

@@ -45,7 +45,7 @@ pub(crate) fn match_format_pattern(parts: EcoVec<EcoString>, env: &mut Uiua) -> 
                     re.push('^');
                     for (i, part) in parts.iter().enumerate() {
                         if i > 0 {
-                            re.push_str("(.+)");
+                            re.push_str("(.+?|.*)");
                         }
                         re.push_str(&regex::escape(part));
                     }

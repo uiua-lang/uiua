@@ -648,9 +648,7 @@ impl<'a> Formatter<'a> {
                 if let Some(name) = &import.name {
                     self.push(&name.span, &name.value);
                     self.output.push(' ');
-                    if !matches!(import.lines.as_slice(), [.., None]) {
-                        self.prev_import_function = Some(name.value.clone());
-                    }
+                    self.prev_import_function = Some(name.value.clone());
                 }
                 self.output.push_str("~ ");
                 self.push(&import.path.span, &format!("{:?}", import.path.value));

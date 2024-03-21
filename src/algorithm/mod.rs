@@ -625,26 +625,25 @@ pub fn try_(env: &mut Uiua) -> UiuaResult {
             but their signatures are {f_sig} and {handler_sig} respectively."
         )));
     }
+    if handler_sig.args > f_sig.args + 1 {
+        return Err(env.error(format!(
+            "Handler function must have at most one more argument than the tried function, \
+            but their signatures are {handler_sig} and {f_sig} respectively."
+        )));
+    }
     if env.stack_height() < f_sig.args {
         for i in 0..f_sig.args {
             env.pop(i + 1)?;
         }
     }
-    let backup_count = if handler_sig.args == 0 || handler_sig.args == 1 {
-        0
-    } else {
-        handler_sig.args - 1
-    };
-    let backup = env.clone_stack_top(backup_count)?;
+    let backup = env.clone_stack_top(f_sig.args.min(handler_sig.args))?;
     if let Err(e) = env.call_clean_stack(f) {
+        if handler_sig.args > f_sig.args {
+            (env.rt.backend).save_error_color(e.message(), e.report().to_string());
+            env.push(e.value());
+        }
         for val in backup {
             env.push(val);
-        }
-        if handler_sig.args > 0 {
-            env.rt
-                .backend
-                .save_error_color(e.message(), e.report().to_string());
-            env.push(e.value());
         }
         env.call(handler)?;
     }

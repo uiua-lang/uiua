@@ -91,7 +91,6 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Map => Instr::ImplPrim(UnMap, span),
         Trace => Instr::ImplPrim(UnTrace, span),
         Stack => Instr::ImplPrim(UnStack, span),
-        Join => Instr::ImplPrim(UnJoin, span),
         Drop => Instr::ImplPrim(UnDrop, span),
         Keep => Instr::ImplPrim(UnKeep, span),
         Sys(SysOp::GifDecode) => Instr::Prim(Sys(SysOp::GifEncode), span),
@@ -126,7 +125,6 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         UnTrace => Instr::Prim(Trace, span),
         UnStack => Instr::Prim(Stack, span),
         UnBox => Instr::Prim(Box, span),
-        UnJoin => Instr::Prim(Join, span),
         UnDrop => Instr::Prim(Drop, span),
         UnCsv => Instr::Prim(Csv, span),
         UnKeep => Instr::Prim(Keep, span),
@@ -158,6 +156,7 @@ macro_rules! pat {
 }
 
 static INVERT_PATTERNS: &[&dyn InvertPattern] = {
+    use ImplPrimitive::*;
     use Primitive::*;
     &[
         &invert_call_pattern,
@@ -174,6 +173,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &invert_reduce_mul_pattern,
         &invert_primes_pattern,
         &invert_format_pattern,
+        &invert_join_val_pattern,
         &(Val, invert_repeat_pattern),
         &(Val, ([Rotate], [Neg, Rotate])),
         &([Rotate], [Neg, Rotate]),
@@ -190,6 +190,10 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &(Val, ([Flip, Log], [Pow])),
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
+        &(Val, ([Drop], [UnDrop])),
+        &(Val, ([UnDrop], [Drop])),
+        &pat!(Join, ([], UnJoin)),
+        &(Val, pat!(UnJoin, Join)),
         &invert_temp_pattern,
         &invert_push_pattern,
     ]
@@ -624,6 +628,33 @@ fn invert_format_pattern<'a>(
             span: *span
         }],
     ))
+}
+
+fn invert_join_val_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let (input, mut instrs) = Val.invert_extract(input, comp)?;
+    let [Instr::Prim(Primitive::Join, span), input @ ..] = input else {
+        return None;
+    };
+    let span = *span;
+    instrs.extend([
+        Instr::CopyToTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            span,
+        },
+        Instr::Prim(Primitive::Shape, span),
+        Instr::ImplPrim(ImplPrimitive::UnJoin, span),
+        Instr::PopTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            span,
+        },
+        Instr::ImplPrim(ImplPrimitive::MatchPattern, span),
+    ]);
+    Some((input, instrs))
 }
 
 fn invert_rectify_pattern<'a>(
@@ -1690,6 +1721,36 @@ where
     }
 }
 
+impl<T> InvertPattern for (&[ImplPrimitive], &[T])
+where
+    T: AsInstr + Sync,
+{
+    fn invert_extract<'a>(
+        &self,
+        input: &'a [Instr],
+        _: &mut Compiler,
+    ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+        let (a, b) = *self;
+        if a.len() > input.len() {
+            return None;
+        }
+        let mut spans = Vec::new();
+        for (instr, prim) in input.iter().zip(a.iter()) {
+            match instr {
+                Instr::ImplPrim(instr_prim, span) if instr_prim == prim => spans.push(*span),
+                _ => return None,
+            }
+        }
+        Some((
+            &input[a.len()..],
+            b.iter()
+                .zip(spans.iter().cycle())
+                .map(|(p, s)| p.as_instr(*s))
+                .collect(),
+        ))
+    }
+}
+
 impl<A, B> UnderPattern for (&[Primitive], &[A], &[B])
 where
     A: AsInstr,
@@ -1767,6 +1828,20 @@ where
 }
 
 impl<T, const A: usize, const B: usize> InvertPattern for ([Primitive; A], [T; B])
+where
+    T: AsInstr + Sync,
+{
+    fn invert_extract<'a>(
+        &self,
+        input: &'a [Instr],
+        comp: &mut Compiler,
+    ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+        let (a, b) = self;
+        (a.as_ref(), b.as_ref()).invert_extract(input, comp)
+    }
+}
+
+impl<T, const A: usize, const B: usize> InvertPattern for ([ImplPrimitive; A], [T; B])
 where
     T: AsInstr + Sync,
 {
@@ -1952,6 +2027,12 @@ impl AsInstr for PopTempN {
 impl AsInstr for i32 {
     fn as_instr(&self, _: usize) -> Instr {
         Instr::push(Value::from(*self))
+    }
+}
+
+impl AsInstr for [usize; 0] {
+    fn as_instr(&self, _: usize) -> Instr {
+        Instr::push(Value::default())
     }
 }
 

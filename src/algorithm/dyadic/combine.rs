@@ -2,8 +2,6 @@
 
 use std::{cmp::Ordering, mem::take};
 
-use ecow::EcoVec;
-
 use crate::algorithm::op2_bytes_retry_fill;
 use crate::{
     algorithm::{max_shape, FillContext},
@@ -198,13 +196,14 @@ impl Value {
                 .map(|(a, b)| (a.into(), b.into())),
         }
     }
-    pub(crate) fn unjoin(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub(crate) fn unjoin(self, shape: Self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        let shape = shape.as_nats(env, "Shape must be a natural numbers")?;
         self.generic_into(
-            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(&shape, env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(&shape, env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(&shape, env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(&shape, env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(&shape, env).map(|(a, b)| (a.into(), b.into())),
         )
     }
 }
@@ -437,26 +436,57 @@ impl<T: ArrayValue> Array<T> {
             }
         }
     }
-    pub(crate) fn unjoin(mut self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub(crate) fn unjoin(mut self, shape: &[usize], env: &Uiua) -> UiuaResult<(Self, Self)> {
         if self.rank() == 0 {
             return Err(env.error("Cannot unjoin a scalar"));
         }
-        if self.row_count() == 0 {
-            return Err(env.error("Cannot unjoin an empty array"));
+        match shape {
+            [] => {
+                if self.row_count() == 0 {
+                    return Err(env.error("Cannot unjoin an empty array"));
+                }
+            }
+            [len, rest @ ..] => {
+                if self.row_count() < *len {
+                    return Err(env.error(format!(
+                        "Cannot unjoin {len} rows from an array with {} rows",
+                        self.row_count()
+                    )));
+                }
+                if self.shape[1..] != *rest {
+                    return Err(env.error(format!(
+                        "Cannot unjoin array with shape {} from array with shape {}",
+                        FormatShape(shape),
+                        self.shape
+                    )));
+                }
+            }
         }
+
         let row_len = self.row_len();
-        let data_slice = self.data.as_mut_slice();
-        let first_data = EcoVec::from(&data_slice[..row_len]);
-        data_slice.rotate_left(row_len);
-        let new_data_len = data_slice.len() - row_len;
-        self.data.truncate(new_data_len);
-        let first = Array::new(&self.shape[1..], first_data);
-        self.shape[0] -= 1;
-        self.validate_shape();
-        if let Some(keys) = self.map_keys_mut() {
-            keys.drop(1);
+
+        let unjoin_count = shape.first().copied().unwrap_or(1);
+        let split_pos = unjoin_count * row_len;
+        let unjoined_slice = self.data.slice(..split_pos);
+        self.data = self.data.slice(split_pos..);
+        let mut unjoined_shape = self.shape.clone();
+        if shape.is_empty() {
+            unjoined_shape.make_row();
+        } else {
+            unjoined_shape[0] = unjoin_count;
         }
-        Ok((first, self))
+        self.shape[0] -= unjoin_count;
+        self.validate_shape();
+        let mut unjoined = Array::new(unjoined_shape, unjoined_slice);
+        if let Some(keys) = self.map_keys_mut() {
+            if !shape.is_empty() {
+                let mut unjoined_keys = keys.clone();
+                unjoined_keys.take(unjoin_count);
+                unjoined.meta_mut().map_keys = Some(unjoined_keys);
+            }
+            keys.drop(unjoin_count);
+        }
+        Ok((unjoined, self))
     }
 }
 

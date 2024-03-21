@@ -938,8 +938,9 @@ impl ImplPrimitive {
                 env.push(left);
             }
             ImplPrimitive::UnJoin => {
-                let val = env.pop(1)?;
-                let (first, rest) = val.unjoin(env)?;
+                let count = env.pop(1)?;
+                let val = env.pop(2)?;
+                let (first, rest) = val.unjoin(count, env)?;
                 env.push(rest);
                 env.push(first);
             }

@@ -2,6 +2,9 @@
 
 - 0.10
   - `try` with function pack
+  - Stabilize array macros
+    - Add to macros tutorial
+  - Stabilize maps
 - 0.11
   - Full HTTPS support
   - System functions

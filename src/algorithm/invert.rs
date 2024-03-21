@@ -11,6 +11,8 @@ use crate::{
     Value,
 };
 
+pub(crate) const DEBUG: bool = false;
+
 pub(crate) fn match_pattern(env: &mut Uiua) -> UiuaResult {
     let pat = env.pop(1)?;
     let val = env.pop(2)?;
@@ -94,15 +96,15 @@ macro_rules! pat {
     (($($matching:expr),*), ($($before:expr),*) $(,($($after:expr),*))? $(,)?) => {
         (
             [$($matching,)*],
-            [$(box_as_instr($before)),*],
-            $([$(box_as_instr($after)),*],)?
+            [$(&$before as &dyn AsInstr),*],
+            $([$(&$after as &dyn AsInstr),*],)?
         )
     };
     ($matching:expr, ($($before:expr),*) $(,($($after:expr),*))? $(,)?) => {
         (
             [$matching],
-            [$(box_as_instr($before)),*],
-            $([$(box_as_instr($after)),*],)?
+            [$(&$before as &dyn AsInstr),*],
+            $([$(&$after as &dyn AsInstr),*],)?
         )
     };
     ($matching:expr, $before:expr $(,($($after:expr),*))? $(,)?) => {
@@ -110,14 +112,9 @@ macro_rules! pat {
     };
 }
 
-pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<EcoVec<Instr>> {
+static INVERT_PATTERNS: &[&dyn InvertPattern] = {
     use Primitive::*;
-
-    if instrs.is_empty() {
-        return Some(EcoVec::new());
-    }
-
-    let patterns: &[&dyn InvertPattern] = &[
+    &[
         &invert_call_pattern,
         &invert_dump_pattern,
         &invert_invert_pattern,
@@ -149,19 +146,29 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         &([Dup, Mul], [Sqrt]),
         &invert_temp_pattern,
         &invert_push_pattern,
-    ];
+    ]
+};
 
-    // println!("inverting {:?}", instrs);
+pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<EcoVec<Instr>> {
+    if instrs.is_empty() {
+        return Some(EcoVec::new());
+    }
+
+    if DEBUG {
+        println!("inverting {:?}", instrs);
+    }
 
     let mut inverted = EcoVec::new();
     let mut curr_instrs = instrs;
     'find_pattern: loop {
-        for pattern in patterns {
+        for pattern in INVERT_PATTERNS {
             if let Some((input, mut inv)) = pattern.invert_extract(curr_instrs, comp) {
                 inv.extend(inverted);
                 inverted = inv;
                 if input.is_empty() {
-                    // println!("inverted {:?} to {:?}", instrs, inverted);
+                    if DEBUG {
+                        println!("inverted {:?} to {:?}", instrs, inverted);
+                    }
                     return Some(inverted);
                 }
                 curr_instrs = input;
@@ -410,7 +417,9 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // This must come last!
     ];
 
-    // println!("undering {:?}", instrs);
+    if DEBUG {
+        println!("undering {:?}", instrs);
+    }
 
     let comp_instrs_backup = comp.asm.instrs.clone();
 
@@ -420,15 +429,19 @@ pub(crate) fn under_instrs(
     'find_pattern: loop {
         for pattern in patterns {
             if let Some((input, (bef, aft))) = pattern.under_extract(curr_instrs, g_sig, comp) {
-                // println!(
-                //     "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
-                //     pattern,
-                //     &curr_instrs[..curr_instrs.len() - input.len()],
-                // );
+                if DEBUG {
+                    println!(
+                        "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
+                        pattern,
+                        &curr_instrs[..curr_instrs.len() - input.len()],
+                    );
+                }
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
-                    // println!("undered {:?} to {:?} {:?}", instrs, befores, afters);
+                    if DEBUG {
+                        println!("undered {:?} to {:?} {:?}", instrs, befores, afters);
+                    }
                     return Some((befores, afters));
                 }
                 curr_instrs = input;
@@ -444,7 +457,7 @@ pub(crate) fn under_instrs(
     None
 }
 
-trait InvertPattern {
+trait InvertPattern: Sync {
     fn invert_extract<'a>(
         &self,
         input: &'a [Instr],
@@ -645,8 +658,13 @@ fn under_from_inverse_pattern<'a>(
     }
     let mut end = input.len();
     loop {
-        if let Some(inverse) = invert_instrs(&input[..end], comp) {
-            return Some((&input[end..], (input[..end].into(), inverse)));
+        for pattern in INVERT_PATTERNS {
+            if let Some((inp, inverse)) = pattern.invert_extract(&input[..end], comp) {
+                if DEBUG {
+                    println!("inverted for under {:?} to {:?}", &input[..end], inverse);
+                }
+                return Some((inp, (input[..input.len() - inp.len()].into(), inverse)));
+            }
         }
         end -= 1;
         if end == 0 {
@@ -1582,7 +1600,7 @@ impl InvertPattern for Primitive {
 
 impl<T> InvertPattern for (&[Primitive], &[T])
 where
-    T: AsInstr,
+    T: AsInstr + Sync,
 {
     fn invert_extract<'a>(
         &self,
@@ -1688,7 +1706,7 @@ where
 
 impl<T, const A: usize, const B: usize> InvertPattern for ([Primitive; A], [T; B])
 where
-    T: AsInstr,
+    T: AsInstr + Sync,
 {
     fn invert_extract<'a>(
         &self,
@@ -1736,7 +1754,7 @@ where
 
 impl<F> InvertPattern for F
 where
-    F: for<'a> Fn(&'a [Instr], &mut Compiler) -> Option<(&'a [Instr], EcoVec<Instr>)>,
+    F: for<'a> Fn(&'a [Instr], &mut Compiler) -> Option<(&'a [Instr], EcoVec<Instr>)> + Sync,
 {
     fn invert_extract<'a>(
         &self,
@@ -1829,11 +1847,7 @@ impl UnderPattern for Val {
     }
 }
 
-fn box_as_instr(instr: impl AsInstr + 'static) -> Box<dyn AsInstr> {
-    Box::new(instr)
-}
-
-trait AsInstr: fmt::Debug {
+trait AsInstr: fmt::Debug + Sync {
     fn as_instr(&self, span: usize) -> Instr;
 }
 
@@ -1891,8 +1905,8 @@ impl AsInstr for ImplPrimitive {
     }
 }
 
-impl AsInstr for Box<dyn AsInstr> {
+impl<'a> AsInstr for &'a dyn AsInstr {
     fn as_instr(&self, span: usize) -> Instr {
-        self.as_ref().as_instr(span)
+        (*self).as_instr(span)
     }
 }

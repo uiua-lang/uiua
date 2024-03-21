@@ -591,7 +591,7 @@ code:
                 }
                 Instr::MatchFormatPattern { parts, span } => {
                     let parts = parts.clone();
-                    self.with_span(*span, |env| invert::match_format_pattern(&parts, env))
+                    self.with_span(*span, |env| invert::match_format_pattern(parts, env))
                 }
                 Instr::Label { label, span } => {
                     let label = if label.is_empty() {

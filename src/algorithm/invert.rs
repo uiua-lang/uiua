@@ -1,8 +1,9 @@
 //! Algorithms for invert and under
 
-use std::{cmp::Ordering, fmt};
+use std::{cell::RefCell, cmp::Ordering, collections::HashMap, fmt};
 
-use ecow::{eco_vec, EcoVec};
+use ecow::{eco_vec, EcoString, EcoVec};
+use regex::Regex;
 
 use crate::{
     check::instrs_signature,
@@ -22,41 +23,45 @@ pub(crate) fn match_pattern(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub(crate) fn match_format_pattern(parts: &[impl AsRef<str>], env: &mut Uiua) -> UiuaResult {
+pub(crate) fn match_format_pattern(parts: EcoVec<EcoString>, env: &mut Uiua) -> UiuaResult {
     let val = env
         .pop(1)?
         .as_string(env, "Matching a format pattern expects a string")?;
-    match parts {
+    match parts.as_slice() {
         [] => {}
         [part] => {
             if val != part.as_ref() {
                 return Err(env.error("Pattern match failed"));
             }
         }
-        parts => {
-            let mut extracted: Vec<String> = Vec::new();
-            let mut val = val.as_str();
-            for i in 0..parts.len() {
-                let part = parts[i].as_ref();
-                if !val.starts_with(part) {
+        _ => {
+            thread_local! {
+                static CACHE: RefCell<HashMap<EcoVec<EcoString>, Regex>> = RefCell::new(HashMap::new());
+            }
+            CACHE.with(|cache| {
+                let mut cache = cache.borrow_mut();
+                let re = cache.entry(parts.clone()).or_insert_with(|| {
+                    let mut re = String::new();
+                    re.push('^');
+                    for (i, part) in parts.iter().enumerate() {
+                        if i > 0 {
+                            re.push_str("(.+)");
+                        }
+                        re.push_str(&regex::escape(part));
+                    }
+                    re.push('$');
+                    Regex::new(&re).unwrap()
+                });
+                if !re.is_match(val.as_ref()) {
                     return Err(env.error("Pattern match failed"));
                 }
-                val = &val[part.len()..];
-                if i < parts.len() - 1 {
-                    let next_part = parts[i + 1].as_ref();
-                    let ex_end = if next_part.is_empty() {
-                        val.len()
-                    } else {
-                        val.find(next_part).unwrap_or(val.len())
-                    };
-                    let ex = val[..ex_end].to_string();
-                    extracted.push(ex);
-                    val = &val[ex_end..];
+                let captures = re.captures(val.as_ref()).unwrap();
+                let caps: Vec<_> = captures.iter().skip(1).flatten().collect();
+                for cap in caps.into_iter().rev() {
+                    env.push(cap.as_str());
                 }
-            }
-            for ex in extracted.into_iter().rev() {
-                env.push(ex);
-            }
+                Ok(())
+            })?;
         }
     }
     Ok(())

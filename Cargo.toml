@@ -29,6 +29,7 @@ paste = "1.0.14"
 pathdiff = "0.2.1"
 rand = {version = "0.8.5", features = ["small_rng"]}
 rayon = "1.9.0"
+regex = "1.10.3"
 serde = {version = "1", features = ["derive"]}
 serde_json = "1"
 serde_tuple = "0.5.0"
@@ -75,7 +76,6 @@ hound = {version = "3", optional = true}
 image = {version = "0.24.9", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "qoi"]}
 libffi = {version = "3", optional = true}
 libloading = {version = "0.8.3", optional = true}
-regex = {version = "1.10.3", optional = true}
 
 [features]
 audio = ["hodaun", "lockfree", "audio_encode"]
@@ -83,7 +83,6 @@ audio_encode = ["hound"]
 batteries = [
   "gif",
   "image",
-  "regex",
   "audio_encode",
   "csv",
 ]

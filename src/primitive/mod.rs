@@ -4,16 +4,18 @@
 
 mod defs;
 pub use defs::*;
-use ecow::EcoString;
+use ecow::{EcoString, EcoVec};
+use regex::Regex;
 
 use std::{
     borrow::{BorrowMut, Cow},
     cell::RefCell,
+    collections::HashMap,
     f64::{
         consts::{PI, TAU},
         INFINITY,
     },
-    fmt::{self},
+    fmt,
     sync::{
         atomic::{self, AtomicUsize},
         OnceLock,
@@ -1019,18 +1021,7 @@ impl ImplPrimitive {
     }
 }
 
-#[cfg(not(feature = "regex"))]
 fn regex(env: &mut Uiua) -> UiuaResult {
-    Err(env.error("Regex support is not enabled"))
-}
-
-#[cfg(feature = "regex")]
-fn regex(env: &mut Uiua) -> UiuaResult {
-    use std::collections::HashMap;
-
-    use ecow::EcoVec;
-    use regex::Regex;
-
     thread_local! {
         pub static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
     }

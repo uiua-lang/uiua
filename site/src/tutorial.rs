@@ -879,6 +879,8 @@ F 10 11"/>
         <Editor example="+,, 1 2\n&p $$ What are two numbers that add up to _?\n   $$ _ and _ do!"/>
         <p><code>"_"</code>"s still need to be escaped in raw format strings."</p>
         <Editor example="1 2 3\n$$ _\\__\\__"/>
+        <p>"Because format strings are just functions, you can use them with modifiers like "<Prim prim=Reduce/>". This is a common way to join a list of "<Prim prim=Box/>"ed strings."</p>
+        <Editor example="/$\"_ _\" {\"Separated\" \"by\" \"spaces\"}"/>
 
         <Hd id="stack-signatures">"Stack Signatures"</Hd>
         <p>"Bindings and inline functions can have a "<em>"stack signature"</em>" declared with a "<code>"|"</code>" followed by 1 or 2 numbers separated by a "<code>"."</code>". The first number is the number of arguments the function pops from the stack. The second number is the number of values the function pushes to the stack."</p>
@@ -975,7 +977,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="[⊙+ 1 2 3]"/>
         <p><Prim prim=Dip/>" can be chained to dig deeper into the stack, though try not to dig "<em>"too"</em>" deep, as it makes code harder to read."</p>
         <Editor example="[⊙⊙⊙⊙⊙⊙+ 1 2 3 4 5 6 7 8]"/>
-        <p>"One niche use of "<Prim prim=Dip/>" is to collect values from the stack into an array."</p>
+        <p>"One use of "<Prim prim=Dip/>" is to collect values from the stack into an array. Here, a chain of "<Prim prim=Dip/>"s are terminated with "<Prim prim=Identity/>"."</p>
         <Editor example="[⊙⊙⊙∘] 1 2 3 4 5"/>
         <Editor example="{⊙⊙∘} 1 2_3 \"wow\""/>
         <p><Prim prim=Gap/>" "<em>"discards"</em>" the top value on the stack and calls its function."</p>
@@ -1087,7 +1089,7 @@ fn TutorialInverses() -> impl IntoView {
         <p><Prim prim=Un/>"ing box array notation will unbox the items."</p>
         <Editor example="°[⊙⊙∘] {1 2_3 \"hmmm\"}"/>
         <Editor example="°{⊙⊙∘} {1 2_3 \"hmmm\"}"/>
-        <p>"You can find more uses of "<Prim prim=Un/>" in it's documentation."</p>
+        <p>"You can find more uses of "<Prim prim=Un/>" in it's documentation, including a list of all "<Prim prim=Un/>"-compatible functions and modifiers."</p>
 
         <Hd id="under"><Prim prim=Under/></Hd>
         <p><Prim prim=Under/>" expresses a more powerful inversion pattern. It captures the pattern of doing some transformation, modifying the data, then undoing the transformation."</p>
@@ -1122,7 +1124,7 @@ PassYear ← ⍜Age(+1)
 Dan ← Person "Dan" "Danson" 31
 FmtPerson Dan
 FmtPerson PassYear Dan"#/>
-        <p>"You can find more uses of "<Prim prim=Under/>" in it's documentation."</p>
+        <p>"You can find more uses of "<Prim prim=Under/>" in it's documentation, including a list of all "<Prim prim=Under/>"-compatible functions and modifiers."</p>
 
         <Hd id="setting-inverse">"Setting Inverses"</Hd>
         <p>"Many functions, especially more complex ones, do not have well-defined inverses. However, you can use the "<Prim prim=SetInverse/>" and "<Prim prim=SetUnder/>" modifiers to define them yourself."</p>
@@ -1415,6 +1417,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
         <p>"Notice that "<code>"0"</code>"s in the keys array cause the corresponding sections of the input array to be skipped, so "<code>"3"</code>" and "<code>"7"</code>" are omitted from the output."</p>
         <p>"We use "<Prim prim=Box/>" here because the resulting sections have different lengths. If we expect the sections to have the same lengths, we can use "<Prim prim=Identity/>" instead."</p>
         <Editor example="[1 2 3 4 5 6 7 8]\n[1 1 2 2 0 0 3 3]\n⊜∘"/>
+        <p><Prim prim=Partition/>" is very useful when working with strings. See the "<A href="/tutorial/strings">"Strings tutorial"</A>" for more."</p>
         <p>"A hint for one of the challenges below: "<Prim prim=Partition/>" works with "<Prim prim=Under/>"!"</p>
 
         <Hd id="challenges">"Challenges"</Hd>

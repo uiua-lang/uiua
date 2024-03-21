@@ -881,35 +881,43 @@ impl Array<u8> {
 
 impl Value {
     /// Get the indices `where` the value is nonzero
-    pub fn wher(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+    pub fn wher(&self, env: &Uiua) -> UiuaResult<Value> {
         let counts =
             self.as_natural_array(env, "Argument to where must be an array of naturals")?;
         let total: usize = counts.data.iter().fold(0, |acc, &b| acc.saturating_add(b));
-        Ok(if self.rank() <= 1 {
-            validate_size::<f64>(total, env)?;
-            let mut data = EcoVec::with_capacity(total);
-            for (i, &b) in counts.data.iter().enumerate() {
-                for _ in 0..b {
-                    let i = i as f64;
-                    data.push(i);
-                }
+        Ok(match self.rank() {
+            0 => {
+                validate_size::<u8>(total, env)?;
+                let data = eco_vec![0u8; total];
+                Array::new([total], data).into()
             }
-            Array::from(data)
-        } else {
-            validate_size::<f64>(total * counts.rank(), env)?;
-            let mut data = EcoVec::with_capacity(total * counts.rank());
-            for (i, &b) in counts.data.iter().enumerate() {
-                for _ in 0..b {
-                    let mut i = i;
-                    let start = data.len();
-                    for &d in counts.shape.iter().rev() {
-                        data.insert(start, (i % d) as f64);
-                        i /= d;
+            1 => {
+                validate_size::<f64>(total, env)?;
+                let mut data = EcoVec::with_capacity(total);
+                for (i, &b) in counts.data.iter().enumerate() {
+                    for _ in 0..b {
+                        let i = i as f64;
+                        data.push(i);
                     }
                 }
+                Array::from(data).into()
             }
-            let shape = Shape::from([total, counts.rank()].as_ref());
-            Array::new(shape, data)
+            _ => {
+                validate_size::<f64>(total * counts.rank(), env)?;
+                let mut data = EcoVec::with_capacity(total * counts.rank());
+                for (i, &b) in counts.data.iter().enumerate() {
+                    for _ in 0..b {
+                        let mut i = i;
+                        let start = data.len();
+                        for &d in counts.shape.iter().rev() {
+                            data.insert(start, (i % d) as f64);
+                            i /= d;
+                        }
+                    }
+                }
+                let shape = Shape::from([total, counts.rank()].as_ref());
+                Array::new(shape, data).into()
+            }
         })
     }
     /// Get the `first` index `where` the value is nonzero

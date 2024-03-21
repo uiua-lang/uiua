@@ -26,7 +26,7 @@ use rand::prelude::*;
 use serde::*;
 
 use crate::{
-    algorithm::{self, loops, reduce, table, zip},
+    algorithm::{self, invert, loops, reduce, table, zip},
     array::Array,
     boxed::Boxed,
     check::instrs_signature,
@@ -205,6 +205,7 @@ impl fmt::Display for ImplPrimitive {
             Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
             BothTrace => write!(f, "{Both}{Trace}"),
             UnBothTrace => write!(f, "{Un}{Both}{Trace}"),
+            MatchPattern => write!(f, "pattern match"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -1010,6 +1011,7 @@ impl ImplPrimitive {
                 env.push(random());
             }
             ImplPrimitive::Adjacent => reduce::adjacent(env)?,
+            ImplPrimitive::MatchPattern => invert::match_pattern(env)?,
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(depth, env)?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
         }

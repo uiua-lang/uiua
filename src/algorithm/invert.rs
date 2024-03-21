@@ -7,8 +7,18 @@ use ecow::{eco_vec, EcoVec};
 use crate::{
     check::instrs_signature,
     primitive::{ImplPrimitive, Primitive},
-    Compiler, Function, FunctionId, Instr, Signature, Span, SysOp, TempStack, Value,
+    Compiler, Function, FunctionId, Instr, Signature, Span, SysOp, TempStack, Uiua, UiuaResult,
+    Value,
 };
+
+pub(crate) fn match_pattern(env: &mut Uiua) -> UiuaResult {
+    let pat = env.pop(1)?;
+    let val = env.pop(2)?;
+    if val != pat {
+        return Err(env.error("Pattern match failed"));
+    }
+    Ok(())
+}
 
 fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
     use ImplPrimitive::*;
@@ -138,6 +148,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
         &invert_temp_pattern,
+        &invert_push_pattern,
     ];
 
     // println!("inverting {:?}", instrs);
@@ -525,6 +536,21 @@ fn invert_invert_pattern<'a>(
     Some((input, func.instrs(comp).into()))
 }
 
+fn invert_push_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::Push(val), input @ ..] = input else {
+        return None;
+    };
+    let mut instrs = eco_vec![Instr::Push(val.clone())];
+    instrs.push(Instr::ImplPrim(
+        ImplPrimitive::MatchPattern,
+        comp.asm.spans.len() - 1,
+    ));
+    Some((input, instrs))
+}
+
 fn invert_rectify_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
@@ -617,15 +643,15 @@ fn under_from_inverse_pattern<'a>(
     if input.is_empty() {
         return None;
     }
-    let mut end = 1;
+    let mut end = input.len();
     loop {
         if let Some(inverse) = invert_instrs(&input[..end], comp) {
             return Some((&input[end..], (input[..end].into(), inverse)));
         }
-        if end == input.len() {
+        end -= 1;
+        if end == 0 {
             return None;
         }
-        end += 1;
     }
 }
 
@@ -1221,8 +1247,8 @@ fn invert_array_pattern<'a>(
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
     let (input, inner, span, unbox) = try_array_wrap(input, comp)?;
+    let count = instrs_signature(inner).ok()?.outputs;
     let mut instrs = invert_instrs(inner, comp)?;
-    let count = instrs_signature(&instrs).ok()?.args;
     instrs.insert(0, Instr::Unpack { count, span, unbox });
     Some((input, instrs))
 }

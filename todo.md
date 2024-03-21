@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.10
-  - `try` with function pack
+  - Fix `under pop`
   - Stabilize array macros
     - Add to macros tutorial
   - Stabilize maps

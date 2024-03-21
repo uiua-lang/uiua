@@ -630,6 +630,7 @@ impl Compiler {
                 let f = operands.next().unwrap();
                 let span = f.span.clone();
                 let (instrs, _) = self.compile_operand_word(f)?;
+                self.add_span(span.clone());
                 if let Some(inverted) = invert_instrs(&instrs, self) {
                     let sig = instrs_signature(&inverted).map_err(|e| {
                         self.fatal_error(

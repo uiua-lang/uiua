@@ -42,7 +42,7 @@ impl Compiler {
                         }
                         return self.modified(new, call);
                     }
-                    Modifier::Primitive(Primitive::Fork | Primitive::Bracket) => {
+                    Modifier::Primitive(Primitive::Fork | Primitive::Bracket | Primitive::Try) => {
                         let mut branches = sw.branches.into_iter().rev();
                         let mut new = Modified {
                             modifier: modified.modifier.clone(),

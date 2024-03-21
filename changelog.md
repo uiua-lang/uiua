@@ -9,6 +9,8 @@ This version is not yet released. If you are reading this on the website, then t
   - They are no longer format strings by default
   - Raw strings can be made format strings with an extra `$`, i.e. `$$ …`
 - **Breaking Change** - [`try ⍣`](https://uiua.org/docs/try)'s handler function is now passed the original arguments *before* the error
+- [`try ⍣`](https://uiua.org/docs/try) now works with function packs of more than 2 functions
+  - This tries each function in the pack in order
 - Switch functions now format to use `⟨⟩` brackets
   - This makes them easier to identify when reading
   - It also allows switch functions to be used as modifier arguments without extra nesting

@@ -1857,6 +1857,11 @@ primitive!(
     /// If we want to provide a default value from the stack, we can ignore it in the tried function with [gap] and then use [identity] in the handler.
     /// ex: ⍣⋅⋕∘ 5 "12"  # No error
     ///   : ⍣⋅⋕∘ 5 "dog" # Error
+    /// [try] works with function packs of more than 2 functions. Each function will by tried in order, and all functions after the first will be passed the error value from the previous function.
+    /// ex: F ← ⍣(⋕|{⊂2⊙∘}|{⊙∘})
+    ///   : F "5"
+    ///   : F [1]
+    ///   : F "hi"
     ([2], Try, Misc, ("try", '⍣')),
     /// Throw an error if a condition is not met
     ///

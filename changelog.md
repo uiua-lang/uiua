@@ -15,6 +15,9 @@ This version is not yet released. If you are reading this on the website, then t
   - This makes them easier to identify when reading
   - It also allows switch functions to be used as modifier arguments without extra nesting
 - Switch functions now work with [`under ⍜`](https://uiua.org/docs/under)
+- Add pattern matching with [`un °`](https://uiua.org/docs/un)
+  - Constant values can now be inverted to form a function which errors if the top value on the stack does not match
+  - Format strings can be inverted to extract substrings
 - Git modules are no longer experimental
   - Modules are added automatically as Git submodules when imported
   - See the [Modules](https://uiua.org/tutorial/modules#git-modules) tutorial for more information

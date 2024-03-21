@@ -293,6 +293,9 @@ impl<'a> VirtualEnv<'a> {
             Instr::Format { parts, .. } => {
                 self.handle_args_outputs(parts.len().saturating_sub(1), 1)?
             }
+            Instr::MatchFormatPattern { parts, .. } => {
+                self.handle_args_outputs(1, parts.len().saturating_sub(1))?
+            }
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::Unpack { count, .. } => self.handle_args_outputs(1, *count)?,
             Instr::TouchStack { count, .. } => self.handle_args_outputs(*count, *count)?,

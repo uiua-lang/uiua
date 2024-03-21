@@ -17,9 +17,15 @@ use instant::Duration;
 use thread_local::ThreadLocal;
 
 use crate::{
-    algorithm, array::Array, boxed::Boxed, check::instrs_temp_signatures, function::*, lex::Span,
-    value::Value, Assembly, Compiler, Complex, Global, Ident, Inputs, IntoSysBackend, LocalName,
-    Primitive, SafeSys, SysBackend, TraceFrame, UiuaError, UiuaResult, VERSION,
+    algorithm::{self, invert},
+    array::Array,
+    boxed::Boxed,
+    check::instrs_temp_signatures,
+    function::*,
+    lex::Span,
+    value::Value,
+    Assembly, Compiler, Complex, Global, Ident, Inputs, IntoSysBackend, LocalName, Primitive,
+    SafeSys, SysBackend, TraceFrame, UiuaError, UiuaResult, VERSION,
 };
 
 /// The Uiua interpreter
@@ -582,6 +588,10 @@ code:
                         env.push(s);
                         Ok(())
                     })
+                }
+                Instr::MatchFormatPattern { parts, span } => {
+                    let parts = parts.clone();
+                    self.with_span(*span, |env| invert::match_format_pattern(&parts, env))
                 }
                 Instr::Label { label, span } => {
                     let label = if label.is_empty() {

@@ -22,6 +22,46 @@ pub(crate) fn match_pattern(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+pub(crate) fn match_format_pattern(parts: &[impl AsRef<str>], env: &mut Uiua) -> UiuaResult {
+    let val = env
+        .pop(1)?
+        .as_string(env, "Matching a format pattern expects a string")?;
+    match parts {
+        [] => {}
+        [part] => {
+            if val != part.as_ref() {
+                return Err(env.error("Pattern match failed"));
+            }
+        }
+        parts => {
+            let mut extracted: Vec<String> = Vec::new();
+            let mut val = val.as_str();
+            for i in 0..parts.len() {
+                let part = parts[i].as_ref();
+                if !val.starts_with(part) {
+                    return Err(env.error("Pattern match failed"));
+                }
+                val = &val[part.len()..];
+                if i < parts.len() - 1 {
+                    let next_part = parts[i + 1].as_ref();
+                    let ex_end = if next_part.is_empty() {
+                        val.len()
+                    } else {
+                        val.find(next_part).unwrap_or(val.len())
+                    };
+                    let ex = val[..ex_end].to_string();
+                    extracted.push(ex);
+                    val = &val[ex_end..];
+                }
+            }
+            for ex in extracted.into_iter().rev() {
+                env.push(ex);
+            }
+        }
+    }
+    Ok(())
+}
+
 fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
     use ImplPrimitive::*;
     use Primitive::*;
@@ -128,6 +168,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &invert_repeat_pattern,
         &invert_reduce_mul_pattern,
         &invert_primes_pattern,
+        &invert_format_pattern,
         &(Val, invert_repeat_pattern),
         &(Val, ([Rotate], [Neg, Rotate])),
         &([Rotate], [Neg, Rotate]),
@@ -562,6 +603,22 @@ fn invert_push_pattern<'a>(
         comp.asm.spans.len() - 1,
     ));
     Some((input, instrs))
+}
+
+fn invert_format_pattern<'a>(
+    input: &'a [Instr],
+    _: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::Format { parts, span }, input @ ..] = input else {
+        return None;
+    };
+    Some((
+        input,
+        eco_vec![Instr::MatchFormatPattern {
+            parts: parts.clone(),
+            span: *span
+        }],
+    ))
 }
 
 fn invert_rectify_pattern<'a>(

@@ -63,6 +63,11 @@ pub enum Instr {
         parts: EcoVec<EcoString>,
         span: usize,
     },
+    /// Match a format string pattern
+    MatchFormatPattern {
+        parts: EcoVec<EcoString>,
+        span: usize,
+    },
     /// Label an array
     Label {
         label: EcoString,
@@ -155,6 +160,7 @@ impl PartialEq for Instr {
             (Self::ImplPrim(a, _), Self::ImplPrim(b, _)) => a == b,
             (Self::Call(a), Self::Call(b)) => a == b,
             (Self::Format { parts: a, .. }, Self::Format { parts: b, .. }) => a == b,
+            (Self::MatchFormatPattern { parts: a, .. }, Self::Format { parts: b, .. }) => a == b,
             (Self::PushFunc(a), Self::PushFunc(b)) => a == b,
             (Self::PushTemp { count: a, .. }, Self::PushTemp { count: b, .. }) => a == b,
             (Self::PopTemp { count: a, .. }, Self::PopTemp { count: b, .. }) => a == b,
@@ -229,6 +235,7 @@ impl Hash for Instr {
             Instr::ImplPrim(prim, _) => (4, prim).hash(state),
             Instr::Call(index) => (5, index).hash(state),
             Instr::Format { parts, .. } => (6, parts).hash(state),
+            Instr::MatchFormatPattern { parts, .. } => (28, parts).hash(state),
             Instr::PushFunc(func) => (7, func).hash(state),
             Instr::PushTemp { count, stack, .. } => (8, count, stack).hash(state),
             Instr::PopTemp { count, stack, .. } => (9, count, stack).hash(state),
@@ -394,6 +401,16 @@ impl fmt::Display for Instr {
             Instr::Switch { count, .. } => write!(f, "<switch {count}>"),
             Instr::Format { parts, .. } => {
                 write!(f, "$\"")?;
+                for (i, part) in parts.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, "_")?
+                    }
+                    write!(f, "{part}")?
+                }
+                write!(f, "\"")
+            }
+            Instr::MatchFormatPattern { parts, .. } => {
+                write!(f, "°$\"")?;
                 for (i, part) in parts.iter().enumerate() {
                     if i > 0 {
                         write!(f, "_")?

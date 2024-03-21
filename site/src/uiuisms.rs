@@ -274,7 +274,7 @@ uiuisms!(
     /// Binomial coefficient
     "/×÷¬⟜+¯⇡ 3 5",
     /// Replace all of one element in a list with another
-    "⍜▽◌⊃=∘ [1 5 8 2] 5 3",
+    "⍜▽≡⋅∘=, 5 [1 5 8 5 2] 3",
     /// Boxed powerset
     "⍚▽⋯⇡ⁿ:2⧻⟜¤ [1 5 8 2]",
     /// Irrational number to n terms of continued fraction

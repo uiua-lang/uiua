@@ -1,11 +1,11 @@
 # Uiua Todo
 
 - 0.10
+  - `try` with function pack
+- 0.11
+  - Full HTTPS support
   - System functions
     - Excel
-- 0.11
-  - Pattern matching
-  - Full HTTPS support
 - Multimedia
   - Sound input
   - Webcam input

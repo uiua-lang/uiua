@@ -2470,7 +2470,6 @@ macro_rules! impl_primitive {
 
 impl_primitive!(
     // Inverses
-    (0, UnPop),
     (1, Asin),
     (1, UnBits),
     (1, UnWhere),

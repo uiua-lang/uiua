@@ -322,10 +322,6 @@ F ← +@A ⊟.
 ⍤⟜≍: ⊂:2_2 ⟜(⊂⊃△type≡F⇡)1
 ⍤⟜≍: ⊂:2_2 ⟜(⊂⊃△type≡F⇡)0
 
-# Filled Inverses
-⍤⟜≍: 0 ⬚0°◌
-⍤⟜≍: [0 1] ⬚[0 1]°◌
-
 # Various bindings
 X ← |0 5
 ⍤⟜≍: 5 X

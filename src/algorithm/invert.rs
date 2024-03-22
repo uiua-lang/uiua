@@ -219,6 +219,8 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         break;
     }
 
+    // println!("inverting {instrs:?} failed with remaining {curr_instrs:?}");
+
     None
 }
 
@@ -550,7 +552,7 @@ fn invert_trivial_pattern<'a>(
                 return Some((input, eco_vec![inv]));
             }
         }
-        [instr @ SetOutputComment { .. }, input @ ..] => {
+        [instr @ (SetOutputComment { .. } | TouchStack { .. }), input @ ..] => {
             return Some((input, eco_vec![instr.clone()]));
         }
         [ImplPrim(prim, span), input @ ..] => {

@@ -91,7 +91,6 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Map => Instr::ImplPrim(UnMap, span),
         Trace => Instr::ImplPrim(UnTrace, span),
         Stack => Instr::ImplPrim(UnStack, span),
-        Drop => Instr::ImplPrim(UnDrop, span),
         Sys(SysOp::GifDecode) => Instr::Prim(Sys(SysOp::GifEncode), span),
         Sys(SysOp::GifEncode) => Instr::Prim(Sys(SysOp::GifDecode), span),
         Sys(SysOp::AudioDecode) => Instr::Prim(Sys(SysOp::AudioEncode), span),
@@ -124,7 +123,6 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         UnTrace => Instr::Prim(Trace, span),
         UnStack => Instr::Prim(Stack, span),
         UnBox => Instr::Prim(Box, span),
-        UnDrop => Instr::Prim(Drop, span),
         UnCsv => Instr::Prim(Csv, span),
         BothTrace => Instr::ImplPrim(UnBothTrace, span),
         UnBothTrace => Instr::ImplPrim(BothTrace, span),
@@ -187,8 +185,6 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &(Val, ([Flip, Log], [Pow])),
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
-        &(Val, ([Drop], [UnDrop])),
-        &(Val, ([UnDrop], [Drop])),
         &pat!(Join, ([], UnJoin)),
         &(Val, pat!(UnJoin, Join)),
         &invert_temp_pattern,
@@ -373,7 +369,6 @@ pub(crate) fn under_instrs(
         // Array restructuring
         &maybe_val!(stash2!(Take, UndoTake)),
         &maybe_val!(stash2!(Drop, UndoDrop)),
-        &maybe_val!(stash2!(UnDrop, (Flip, Pop, Drop))),
         &maybe_val!(pat!(
             Keep,
             (CopyToTempN(2), Keep),

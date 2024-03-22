@@ -46,7 +46,6 @@ struct GlobalNativeSys {
 enum SysStream<'a> {
     File(dashmap::mapref::one::RefMut<'a, Handle, Buffered<File>>),
     Child(dashmap::mapref::one::RefMut<'a, Handle, Child>),
-    TcpListener(dashmap::mapref::one::RefMut<'a, Handle, TcpListener>),
     TcpSocket(dashmap::mapref::one::RefMut<'a, Handle, Buffered<TcpStream>>),
 }
 
@@ -93,8 +92,6 @@ impl GlobalNativeSys {
             SysStream::File(file)
         } else if let Some(child) = self.child_procs.get_mut(&handle) {
             SysStream::Child(child)
-        } else if let Some(listener) = self.tcp_listeners.get_mut(&handle) {
-            SysStream::TcpListener(listener)
         } else if let Some(socket) = self.tcp_sockets.get_mut(&handle) {
             SysStream::TcpSocket(socket)
         } else {
@@ -260,7 +257,6 @@ impl SysBackend for NativeSys {
                 buf.truncate(n);
                 buf
             }
-            SysStream::TcpListener(_) => return Err("Cannot read from a tcp listener".to_string()),
             SysStream::TcpSocket(mut socket) => {
                 socket.flush().map_err(|e| e.to_string())?;
                 let mut buf = vec![0; len];
@@ -285,7 +281,6 @@ impl SysBackend for NativeSys {
                     .map_err(|e| e.to_string())?;
                 buf
             }
-            SysStream::TcpListener(_) => return Err("Cannot read from a tcp listener".to_string()),
             SysStream::TcpSocket(mut socket) => {
                 socket.flush().map_err(|e| e.to_string())?;
                 let mut buf = Vec::new();
@@ -311,7 +306,6 @@ impl SysBackend for NativeSys {
             SysStream::Child(mut child) => (child.stdin.as_mut().unwrap())
                 .write_all(conts)
                 .map_err(|e| e.to_string()),
-            SysStream::TcpListener(_) => Err("Cannot write to a tcp listener".to_string()),
             SysStream::TcpSocket(mut socket) => socket.write_all(conts).map_err(|e| e.to_string()),
         }
     }

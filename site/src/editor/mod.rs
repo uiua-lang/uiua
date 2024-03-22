@@ -35,7 +35,7 @@ pub enum EditorMode {
 }
 
 thread_local! {
-    static ID: Cell<u64> = Cell::new(0);
+    static ID: Cell<u64> = const { Cell::new(0) };
 }
 
 /// An editor for Uiua code

@@ -25,7 +25,7 @@ thread_local! {
         (PathBuf::from("example.ua"),
         example_ua(|ex| ex.clone()).into())
     ].into());
-    static REQ: RefCell<Option<FetchReq>> = RefCell::new(None);
+    static REQ: RefCell<Option<FetchReq>> = const { RefCell::new(None) };
 }
 
 pub fn drop_file(path: PathBuf, contents: Vec<u8>) {

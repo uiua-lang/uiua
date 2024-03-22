@@ -202,7 +202,7 @@ impl Compiler {
                     // Add
                     match instrs_signature(&instrs) {
                         Ok(sig) => {
-                            let func = self.add_function(
+                            let func = self.make_function(
                                 FunctionId::Named(r.name.value.clone()),
                                 sig,
                                 instrs,
@@ -341,7 +341,7 @@ impl Compiler {
             let instrs = self.new_functions.pop().unwrap();
             match instrs_signature(&instrs) {
                 Ok(sig) => {
-                    let func = self.add_function(
+                    let func = self.make_function(
                         FunctionId::Anonymous(modified.modifier.span),
                         sig,
                         instrs,
@@ -366,7 +366,7 @@ impl Compiler {
                 if call {
                     self.push_all_instrs($instrs);
                 } else {
-                    let func = self.add_function(
+                    let func = self.make_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
                         $sig,
                         $instrs.to_vec(),
@@ -477,7 +477,7 @@ impl Compiler {
                     self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = self.add_function(
+                    let func = self.make_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
                         sig,
                         instrs,
@@ -533,7 +533,7 @@ impl Compiler {
                     self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = self.add_function(
+                    let func = self.make_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
                         sig,
                         instrs,
@@ -586,7 +586,7 @@ impl Compiler {
                     self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = self.add_function(
+                    let func = self.make_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
                         sig,
                         instrs,
@@ -617,7 +617,7 @@ impl Compiler {
                     self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = self.add_function(
+                    let func = self.make_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
                         sig,
                         instrs,
@@ -642,7 +642,7 @@ impl Compiler {
                         self.push_all_instrs(inverted);
                     } else {
                         let id = FunctionId::Anonymous(modified.modifier.span.clone());
-                        let func = self.add_function(id, sig, inverted);
+                        let func = self.make_function(id, sig, inverted);
                         self.push_instr(Instr::PushFunc(func));
                     }
                 } else {
@@ -690,7 +690,7 @@ impl Compiler {
                     } else {
                         match instrs_signature(&instrs) {
                             Ok(sig) => {
-                                let func = self.add_function(
+                                let func = self.make_function(
                                     FunctionId::Anonymous(modified.modifier.span.clone()),
                                     sig,
                                     instrs,
@@ -739,7 +739,7 @@ impl Compiler {
                         self.push_all_instrs(instrs);
                         self.push_instr(Instr::PopSig);
                     } else {
-                        let func = self.add_function(
+                        let func = self.make_function(
                             FunctionId::Anonymous(modified.modifier.span.clone()),
                             sig,
                             instrs,
@@ -753,10 +753,10 @@ impl Compiler {
                 if !call {
                     self.new_functions.push(EcoVec::new());
                 }
-                let fill = take(&mut self.scope.fill);
-                self.scope.fill = true;
-                self.word(operands.next().unwrap(), false)?;
-                self.scope.fill = fill;
+                let mode = replace(&mut self.pre_eval_mode, PreEvalMode::Lsp);
+                let res = self.word(operands.next().unwrap(), false);
+                self.pre_eval_mode = mode;
+                res?;
                 self.word(operands.next().unwrap(), false)?;
                 let span = self.add_span(modified.modifier.span.clone());
                 self.push_instr(Instr::Prim(Primitive::Fill, span));
@@ -768,7 +768,7 @@ impl Compiler {
                             format!("Cannot infer function signature: {e}"),
                         )
                     })?;
-                    let func = self.add_function(
+                    let func = self.make_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
                         sig,
                         instrs,
@@ -837,7 +837,7 @@ impl Compiler {
                         modified.modifier.span.clone(),
                     );
                 }
-                let content_func = self.add_function(
+                let content_func = self.make_function(
                     FunctionId::Anonymous(m.modifier.span.clone()),
                     sig,
                     content_instrs,
@@ -902,7 +902,7 @@ impl Compiler {
                     ),
                     _ => {}
                 }
-                let func = self.add_function(function_id, sig, instrs);
+                let func = self.make_function(function_id, sig, instrs);
                 let span = self.add_span(modified.modifier.span.clone());
                 let instrs = [Instr::PushFunc(func), Instr::Prim(Table, span)];
                 finish!(instrs, sig);
@@ -1153,7 +1153,7 @@ impl Compiler {
         if !call {
             let instrs = self.new_functions.pop().unwrap();
             let sig = Signature::new(0, val_count);
-            let func = self.add_function(FunctionId::Anonymous(span.clone()), sig, instrs);
+            let func = self.make_function(FunctionId::Anonymous(span.clone()), sig, instrs);
             self.push_instr(Instr::PushFunc(func));
         }
         Ok(())

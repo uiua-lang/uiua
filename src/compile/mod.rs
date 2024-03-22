@@ -167,8 +167,6 @@ pub(crate) struct Scope {
     stack_height: Result<usize, Sp<SigCheckError>>,
     /// The stack of referenced bind locals
     bind_locals: Vec<HashSet<usize>>,
-    /// Whether currently compiling fill's second function
-    fill: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -190,7 +188,6 @@ impl Default for Scope {
             experimental: false,
             stack_height: Ok(0),
             bind_locals: Vec::new(),
-            fill: false,
         }
     }
 }
@@ -599,7 +596,7 @@ code:
         Ok(())
     }
     #[must_use]
-    pub(crate) fn add_function<I>(&mut self, id: FunctionId, sig: Signature, instrs: I) -> Function
+    pub(crate) fn make_function<I>(&mut self, id: FunctionId, sig: Signature, instrs: I) -> Function
     where
         I: IntoIterator<Item = Instr> + fmt::Debug,
         I::IntoIter: ExactSizeIterator,
@@ -856,7 +853,7 @@ code:
                 if call {
                     self.push_instr(Instr::push(n));
                 } else {
-                    let f = self.add_function(
+                    let f = self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
                         vec![Instr::push(n)],
@@ -873,7 +870,7 @@ code:
                 if call {
                     self.push_instr(Instr::push(val));
                 } else {
-                    let f = self.add_function(
+                    let f = self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
                         vec![Instr::push(val)],
@@ -885,7 +882,7 @@ code:
                 if call {
                     self.push_instr(Instr::push(s));
                 } else {
-                    let f = self.add_function(
+                    let f = self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
                         vec![Instr::push(s)],
@@ -908,7 +905,7 @@ code:
                 if call {
                     self.push_instr(instr);
                 } else {
-                    let f = self.add_function(
+                    let f = self.make_function(
                         FunctionId::Anonymous(word.span),
                         Signature::new(1, 1),
                         vec![instr],
@@ -924,8 +921,11 @@ code:
                 if call {
                     self.push_instr(instr)
                 } else {
-                    let f =
-                        self.add_function(FunctionId::Anonymous(word.span), signature, vec![instr]);
+                    let f = self.make_function(
+                        FunctionId::Anonymous(word.span),
+                        signature,
+                        vec![instr],
+                    );
                     self.push_instr(Instr::PushFunc(f));
                 }
             }
@@ -953,8 +953,11 @@ code:
                 if call {
                     self.push_instr(instr)
                 } else {
-                    let f =
-                        self.add_function(FunctionId::Anonymous(word.span), signature, vec![instr]);
+                    let f = self.make_function(
+                        FunctionId::Anonymous(word.span),
+                        signature,
+                        vec![instr],
+                    );
                     self.push_instr(Instr::PushFunc(f));
                 }
             }
@@ -1047,7 +1050,7 @@ code:
                 if !call {
                     let instrs = self.new_functions.pop().unwrap();
                     let sig = instrs_signature(&instrs).unwrap();
-                    let func = self.add_function(FunctionId::Anonymous(word.span), sig, instrs);
+                    let func = self.make_function(FunctionId::Anonymous(word.span), sig, instrs);
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
@@ -1128,7 +1131,7 @@ code:
                 if !call {
                     let instrs = self.new_functions.pop().unwrap();
                     let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
-                    let func = self.add_function(FunctionId::Anonymous(word.span), sig, instrs);
+                    let func = self.make_function(FunctionId::Anonymous(word.span), sig, instrs);
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
@@ -1154,7 +1157,7 @@ code:
                     match instrs_signature(&instrs) {
                         Ok(sig) => {
                             let func =
-                                self.add_function(FunctionId::Anonymous(word.span), sig, instrs);
+                                self.make_function(FunctionId::Anonymous(word.span), sig, instrs);
                             self.push_instr(Instr::PushFunc(func));
                         }
                         Err(e) => {
@@ -1186,7 +1189,7 @@ code:
                     if call {
                         self.push_instr(Instr::NoInline);
                     } else {
-                        let f = self.add_function(
+                        let f = self.make_function(
                             FunctionId::Anonymous(word.span.clone()),
                             Signature::new(0, 0),
                             vec![Instr::NoInline],
@@ -1363,7 +1366,7 @@ code:
             if call {
                 self.push_all_instrs([Instr::PushSig(sig), instr, Instr::PopSig]);
             } else {
-                let f = self.add_function(FunctionId::Anonymous(span), sig, [instr]);
+                let f = self.make_function(FunctionId::Anonymous(span), sig, [instr]);
                 self.push_instr(Instr::PushFunc(f));
             }
         } else if !self.scope.bind_locals.is_empty()
@@ -1389,7 +1392,7 @@ code:
             if call {
                 self.push_instr(instr);
             } else {
-                let f = self.add_function(
+                let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
                     vec![instr],
@@ -1406,7 +1409,7 @@ code:
         match global {
             Global::Const(Some(val)) if call => self.push_instr(Instr::push(val)),
             Global::Const(Some(val)) => {
-                let f = self.add_function(
+                let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
                     vec![Instr::push(val)],
@@ -1415,7 +1418,7 @@ code:
             }
             Global::Const(None) if call => self.push_instr(Instr::CallGlobal { index, call }),
             Global::Const(None) => {
-                let f = self.add_function(
+                let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
                     vec![Instr::CallGlobal { index, call }],
@@ -1476,7 +1479,7 @@ code:
             return Ok(Function::clone(f));
         }
 
-        Ok(self.add_function(id, sig, instrs))
+        Ok(self.make_function(id, sig, instrs))
     }
     fn compile_func_instrs(
         &mut self,
@@ -1610,7 +1613,7 @@ code:
                     ));
                 }
             };
-            let function = self.add_function(FunctionId::Anonymous(span), sig, instrs);
+            let function = self.make_function(FunctionId::Anonymous(span), sig, instrs);
             self.push_instr(Instr::PushFunc(function));
         }
         Ok(())
@@ -1661,7 +1664,7 @@ code:
             let instrs = [Instr::Prim(prim, span_i)];
             match instrs_signature(&instrs) {
                 Ok(sig) => {
-                    let func = self.add_function(FunctionId::Primitive(prim), sig, instrs);
+                    let func = self.make_function(FunctionId::Primitive(prim), sig, instrs);
                     self.push_instr(Instr::PushFunc(func))
                 }
                 Err(e) => self.add_error(span, format!("Cannot infer function signature: {e}")),
@@ -1752,7 +1755,7 @@ code:
         let signature = signature.into();
         let index = self.asm.dynamic_functions.len();
         self.asm.dynamic_functions.push(Arc::new(f));
-        self.add_function(
+        self.make_function(
             FunctionId::Unnamed,
             signature,
             vec![Instr::Dynamic(DynamicFunction { index, signature })],
@@ -1791,8 +1794,7 @@ code:
     fn pre_eval_instrs(&mut self, instrs: EcoVec<Instr>) -> (EcoVec<Instr>, Vec<UiuaError>) {
         let mut errors = Vec::new();
         let instrs = optimize_instrs(instrs, true, &self.asm);
-        if self.scope.fill
-            || self.pre_eval_mode == PreEvalMode::Lazy
+        if self.pre_eval_mode == PreEvalMode::Lazy
             || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
             || (instrs.iter())
                 .any(|instr| matches!(instr, Instr::PushLocals { .. } | Instr::PopLocals))

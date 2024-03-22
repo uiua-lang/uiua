@@ -1089,7 +1089,7 @@ fn make_fn(instrs: EcoVec<Instr>, span: usize, comp: &mut Compiler) -> Option<Fu
         return None;
     };
     let id = FunctionId::Anonymous(span);
-    Some(comp.add_function(id, sig, instrs))
+    Some(comp.make_function(id, sig, instrs))
 }
 
 fn under_each_pattern<'a>(

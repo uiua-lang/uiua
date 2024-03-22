@@ -100,7 +100,7 @@ impl Compiler {
                     ),
                 );
             }
-            let function = self.add_function(FunctionId::Named(name.clone()), sig, instrs);
+            let function = self.make_function(FunctionId::Named(name.clone()), sig, instrs);
             self.scope.names.insert(name.clone(), local);
             (self.asm).add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
             let mac = ArrayMacro {
@@ -190,7 +190,7 @@ impl Compiler {
                     }
                 }
 
-                comp.add_function(FunctionId::Named(name.clone()), sig, instrs)
+                comp.make_function(FunctionId::Named(name.clone()), sig, instrs)
             },
         );
         let words_span = binding
@@ -226,7 +226,7 @@ impl Compiler {
                 let mut f = make(instrs, sig, comp);
                 f.recursive = true;
                 let instrs = vec![Instr::PushFunc(f), Instr::Prim(Primitive::This, span_index)];
-                comp.add_function(FunctionId::Named(name.clone()), sig, instrs)
+                comp.make_function(FunctionId::Named(name.clone()), sig, instrs)
             });
         }
 

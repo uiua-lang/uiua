@@ -44,36 +44,36 @@ pub(crate) fn optimize_instrs_mut(
             instrs.pop();
             instrs.push(Instr::ImplPrim(Last, span))
         }
-        // Combine push temps
-        (
-            [.., Instr::PushTemp {
-                stack: a_stack,
-                count: a_count,
-                ..
-            }],
-            Instr::PushTemp {
-                stack: b_stack,
-                count: b_count,
-                ..
-            },
-        ) if *a_stack == b_stack => {
-            *a_count += b_count;
-        }
-        // Combine pop temps
-        (
-            [.., Instr::PopTemp {
-                stack: a_stack,
-                count: a_count,
-                ..
-            }],
-            Instr::PopTemp {
-                stack: b_stack,
-                count: b_count,
-                ..
-            },
-        ) if *a_stack == b_stack => {
-            *a_count += b_count;
-        }
+        // // Combine push temps
+        // (
+        //     [.., Instr::PushTemp {
+        //         stack: a_stack,
+        //         count: a_count,
+        //         ..
+        //     }],
+        //     Instr::PushTemp {
+        //         stack: b_stack,
+        //         count: b_count,
+        //         ..
+        //     },
+        // ) if *a_stack == b_stack => {
+        //     *a_count += b_count;
+        // }
+        // // Combine pop temps
+        // (
+        //     [.., Instr::PopTemp {
+        //         stack: a_stack,
+        //         count: a_count,
+        //         ..
+        //     }],
+        //     Instr::PopTemp {
+        //         stack: b_stack,
+        //         count: b_count,
+        //         ..
+        //     },
+        // ) if *a_stack == b_stack => {
+        //     *a_count += b_count;
+        // }
         // Dips
         (
             [.., Instr::PushTemp {

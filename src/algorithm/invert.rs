@@ -176,7 +176,6 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &invert_join_val_pattern,
         &(Val, invert_repeat_pattern),
         &(Val, ([Rotate], [Neg, Rotate])),
-        &([Rotate], [Neg, Rotate]),
         &pat!(Sqrt, (Dup, Mul)),
         &(Val, IgnoreMany(Flip), ([Add], [Sub])),
         &(Val, ([Sub], [Add])),

@@ -136,8 +136,7 @@ impl Compiler {
         }
         if placeholder_count > 0 || ident_margs > 0 {
             self.scope.names.insert(name.clone(), local);
-            self.asm
-                .add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
+            (self.asm).add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
             let mut words = binding.words.clone();
             recurse_words(&mut words, &mut |word| match &word.value {
                 Word::Ref(r) => {
@@ -193,9 +192,7 @@ impl Compiler {
                 comp.make_function(FunctionId::Named(name.clone()), sig, instrs)
             },
         );
-        let words_span = binding
-            .words
-            .first()
+        let words_span = (binding.words.first())
             .zip(binding.words.last())
             .map(|(f, l)| f.span.clone().merge(l.span.clone()))
             .unwrap_or_else(|| {
@@ -271,7 +268,13 @@ impl Compiler {
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
                     self.compile_bind_function(&name, local, func, span_index, comment)?;
                 } else if sig == (0, 1) && !is_setinv && !is_setund {
-                    // Binding is a constant or noadic function
+                    if let &[Instr::Prim(Primitive::Tag, span)] = instrs.as_slice() {
+                        instrs.push(Instr::Label {
+                            label: name.clone(),
+                            span,
+                        })
+                    }
+                    // Binding is a constant
                     let val = if let [Instr::Push(v)] = instrs.as_slice() {
                         Some(v.clone())
                     } else {

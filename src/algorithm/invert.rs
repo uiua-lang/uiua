@@ -811,73 +811,78 @@ fn under_setinverse_setunder_pattern<'a>(
     ))
 }
 
-macro_rules! temp_wrap {
-    ($name:ident, $variant:ident) => {
-        fn $name<'a>(
-            input: &'a [Instr],
-            _: &mut Compiler,
-        ) -> Option<(&'a [Instr], &'a Instr, &'a [Instr], &'a Instr, usize)> {
-            let (
-                instr @ Instr::$variant {
-                    stack: TempStack::Inline,
-                    count,
-                    ..
-                },
-                input,
-            ) = input.split_first()?
-            else {
-                return None;
-            };
-            // Find end
-            let mut depth = *count;
-            let mut max_depth = depth;
-            let mut end = 0;
-            for (i, instr) in input.iter().enumerate() {
-                match instr {
-                    Instr::PushTemp {
-                        count,
-                        stack: TempStack::Inline,
-                        ..
-                    }
-                    | Instr::CopyToTemp {
-                        count,
-                        stack: TempStack::Inline,
-                        ..
-                    } => {
-                        depth += *count;
-                        max_depth = max_depth.max(depth);
-                    }
-                    Instr::PopTemp {
-                        count,
-                        stack: TempStack::Inline,
-                        ..
-                    } => {
-                        depth = depth.saturating_sub(*count);
-                        if depth == 0 {
-                            end = i;
-                            break;
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            let (inner, input) = input.split_at(end);
-            let end_instr = input.first()?;
-            let input = &input[1..];
-            Some((input, instr, inner, end_instr, max_depth))
-        }
-    };
+type TempWrap<'a> = (&'a [Instr], &'a Instr, &'a [Instr], &'a Instr, usize);
+
+fn try_push_temp_wrap(input: &[Instr]) -> Option<TempWrap> {
+    temp_wrap_impl(input, |instr| match instr {
+        Instr::PushTemp {
+            stack: TempStack::Inline,
+            count,
+            ..
+        } => Some(*count),
+        _ => None,
+    })
 }
 
-temp_wrap!(try_push_temp_wrap, PushTemp);
-temp_wrap!(try_copy_temp_wrap, CopyToTemp);
+fn try_copy_temp_wrap(input: &[Instr]) -> Option<TempWrap> {
+    temp_wrap_impl(input, |instr| match instr {
+        Instr::CopyToTemp {
+            stack: TempStack::Inline,
+            count,
+            ..
+        } => Some(*count),
+        _ => None,
+    })
+}
+
+fn temp_wrap_impl(input: &[Instr], f: impl Fn(&Instr) -> Option<usize>) -> Option<TempWrap> {
+    let (instr, input) = input.split_first()?;
+    let count = f(instr)?;
+    // Find end
+    let mut depth = count;
+    let mut max_depth = depth;
+    let mut end = 0;
+    for (i, instr) in input.iter().enumerate() {
+        match instr {
+            Instr::PushTemp {
+                count,
+                stack: TempStack::Inline,
+                ..
+            }
+            | Instr::CopyToTemp {
+                count,
+                stack: TempStack::Inline,
+                ..
+            } => {
+                depth += *count;
+                max_depth = max_depth.max(depth);
+            }
+            Instr::PopTemp {
+                count,
+                stack: TempStack::Inline,
+                ..
+            } => {
+                depth = depth.saturating_sub(*count);
+                if depth == 0 {
+                    end = i;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+    let (inner, input) = input.split_at(end);
+    let end_instr = input.first()?;
+    let input = &input[1..];
+    Some((input, instr, inner, end_instr, max_depth))
+}
 
 fn invert_temp_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
     let (input, instr, inner, end_instr, _) =
-        try_push_temp_wrap(input, comp).or_else(|| try_copy_temp_wrap(input, comp))?;
+        try_push_temp_wrap(input).or_else(|| try_copy_temp_wrap(input))?;
     let mut instrs = invert_instrs(inner, comp)?;
     instrs.insert(0, instr.clone());
     instrs.push(end_instr.clone());
@@ -911,7 +916,7 @@ fn under_copy_temp_pattern<'a>(
     g_sig: Signature,
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
-    let (input, instr, inner, end_instr, _) = try_copy_temp_wrap(input, comp)?;
+    let (input, instr, inner, end_instr, _) = try_copy_temp_wrap(input)?;
     let (mut inner_befores, mut inner_afters) = under_instrs(inner, g_sig, comp)?;
     let Some((
         Instr::CopyToTemp {
@@ -950,7 +955,7 @@ fn under_push_temp_pattern<'a>(
     g_sig: Signature,
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
-    let (input, start_instr, inner, end_instr, _) = try_push_temp_wrap(input, comp)?;
+    let (input, start_instr, inner, end_instr, _) = try_push_temp_wrap(input)?;
     // Calcular inner functions and signatures
     let (inner_befores, inner_afters) = under_instrs(inner, g_sig, comp)?;
     let inner_befores_sig = instrs_signature(&inner_befores).ok()?;

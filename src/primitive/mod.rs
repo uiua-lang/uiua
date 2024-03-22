@@ -927,9 +927,9 @@ impl ImplPrimitive {
                 env.push(left);
             }
             ImplPrimitive::UnJoin => {
-                let count = env.pop(1)?;
+                let shape = env.pop(1)?;
                 let val = env.pop(2)?;
-                let (first, rest) = val.unjoin(count, env)?;
+                let (first, rest) = val.unjoin(shape, env)?;
                 env.push(rest);
                 env.push(first);
             }

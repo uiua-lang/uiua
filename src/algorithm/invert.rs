@@ -624,29 +624,35 @@ fn invert_format_pattern<'a>(
 
 fn invert_join_val_pattern<'a>(
     input: &'a [Instr],
-    comp: &mut Compiler,
+    _: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let (input, mut instrs) = Val.invert_extract(input, comp)?;
-    let [Instr::Prim(Primitive::Join, span), input @ ..] = input else {
-        return None;
-    };
-    let span = *span;
-    instrs.extend([
-        Instr::CopyToTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            span,
-        },
-        Instr::Prim(Primitive::Shape, span),
-        Instr::ImplPrim(ImplPrimitive::UnJoin, span),
-        Instr::PopTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            span,
-        },
-        Instr::ImplPrim(ImplPrimitive::MatchPattern, span),
-    ]);
-    Some((input, instrs))
+    for i in 0..input.len() {
+        if let &Instr::Prim(Primitive::Join, span) = &input[i] {
+            let before = &input[..i];
+            if before.is_empty() {
+                return None;
+            }
+            let input = &input[i + 1..];
+            let mut instrs = EcoVec::from(before);
+            instrs.extend([
+                Instr::CopyToTemp {
+                    stack: TempStack::Inline,
+                    count: 1,
+                    span,
+                },
+                Instr::Prim(Primitive::Shape, span),
+                Instr::ImplPrim(ImplPrimitive::UnJoin, span),
+                Instr::PopTemp {
+                    stack: TempStack::Inline,
+                    count: 1,
+                    span,
+                },
+                Instr::ImplPrim(ImplPrimitive::MatchPattern, span),
+            ]);
+            return Some((input, instrs));
+        }
+    }
+    None
 }
 
 fn invert_rectify_pattern<'a>(

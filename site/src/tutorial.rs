@@ -1506,6 +1506,35 @@ F!!!+×⊂ [1 2 3][4 5 6]"/>
         <p>"If we wanted to call each of two functions twice, we could use a similar pattern to what we use in normal Uiua code."</p>
         <Editor example="[,, 1 2]\nF‼ ← ^!^!^!^!^,^,\nF‼(⊂1|⊂2) []"/>
 
+        <Hd id="two-kinds">"Two Kinds of Macros"</Hd>
+        <p>"The macros described so far are called "<em>"stack macros"</em>", because they move operands around on a stack."</p>
+        <p>"But Uiua actually has a second kind of macro. "<em>"Array macros"</em>" put their operands in an array. The array can then be arbitrarily manipulated with normal Uiua code."</p>
+
+        <Hd id="array-macros">"Array Macros"</Hd>
+        <p>"Array macros are defined by putting a "<code>"^"</code>" right after the binding's "<code>"←"</code>". Array macro names must still end in some number of "<code>"!"</code>"s."</p>
+        <p>"Here is a simple example that simply prints its operands. It returns an empty string as the actual generated code."</p>
+        <Editor example="F‼ ←^ \"\" &p\nF‼⊂(+1)"/>
+        <p>"As you can see, the operands are passed to the function as an array of boxed strings."</p>
+        <p>"Array macros may be passed a function pack operand. Each operand from the pack will put in the array."</p>
+        <Editor example="F! ←^ \"\" &p\nF!(+|-|×|÷)"/>
+        <p>"The array macro's function must return either a string or an array of boxed strings. This value will be converted back to Uiua code and compiled as normal."</p>
+        <p>"Format strings can help a lot in generating new code. For example, if we wanted to make a version of "<Prim prim=Both/>" that calls its function on an arbitrary number of sets of values, we could use "<Prim prim=Keep/>" and "<Prim prim=Bracket/>"."</p>
+        <Editor example="All‼ ←^ $\"⊓(_)\" /$\"_|_\" ▽⋕ °{⊙∘}\n[All‼3+ 1 2 3 4 5 6]"/>
+        <p>"First, we extract the two operands: the count and the function. The count comes in as a string, so we have to "<Prim prim=Parse/>" it before using "<Prim prim=Keep/>" to make an array of copies of the function."</p>
+        <p>"We use "<Prim prim=Reduce/>" with a format string to form the branches of a function pack, then use another format string to put them in "<Prim prim=Bracket/>"."</p>
+        <p>"The resulting string is then compiled as Uiua code."</p>
+        <br/>
+        <p>"Array macros have the ability to create new bindings, including new macros."</p>
+        <Editor example="Def‼ ←^ $\"_\\n_\" ⊃(/$\"_ ← _\"|/$\"Also_ ← _\")\nDef‼(X|5)\n+ X AlsoX"/>
+        <p>"This is a simple example, but this concept can be used to create very powerful meta-programming tools."</p>
+
+        <Hd id="which-to-use">"What kind of macro should I use?"</Hd>
+        <p>"Which kind of macro you use depends on what kind of code you are writing."</p>
+        <p>"Array macros are much more powerful than stack macros, but they can be more complicated to write."</p>
+        <p>"Additionally, stack macros are "<a href="https://en.wikipedia.org/wiki/hygienic_macro">"hygienic"</a>". When a stack macro refers to names of things, bindings you have definined in the surrounding code will not interfere; you will never accidentally use the wrong binding. Array macros make no such guarantees."</p>
+        <p>"If you conteptually just want to define your own modifier, a stack macro is probably the simplest way to go."</p>
+        <p>"If you want the full power (and all the complexity) of compile-time meta-programming, you'll need to use an array macro."</p>
+
         <Hd id="challenges">"Challenges"</Hd>
 
         <Challenge

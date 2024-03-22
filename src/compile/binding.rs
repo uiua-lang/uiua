@@ -52,13 +52,6 @@ impl Compiler {
         let ident_margs = ident_modifier_args(&name);
         if binding.array_macro {
             // Array macro
-            if !self.scope.experimental {
-                self.add_error(
-                    span.clone(),
-                    "Array macros are experimental. To use them, \
-                    add `# Experimental!` to the top of the file.",
-                );
-            }
             if ident_margs == 0 {
                 self.add_error(
                     span.clone(),

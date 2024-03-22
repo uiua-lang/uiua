@@ -1512,11 +1512,11 @@ F!!!+×⊂ [1 2 3][4 5 6]"/>
 
         <Hd id="array-macros">"Array Macros"</Hd>
         <p>"Array macros are defined by putting a "<code>"^"</code>" right after the binding's "<code>"←"</code>". Array macro names must still end in some number of "<code>"!"</code>"s."</p>
-        <p>"Here is a simple example that simply prints its operands. It returns an empty string as the actual generated code."</p>
-        <Editor example="F‼ ←^ \"\" &p\nF‼⊂(+1)"/>
+        <p>"Here is a basic example that simply prints its operands. It returns the number "<code>"5"</code>" as the actual generated code."</p>
+        <Editor example="F‼ ←^ \"5\" &pf\nF‼⊂(+1)"/>
         <p>"As you can see, the operands are passed to the function as an array of boxed strings."</p>
         <p>"Array macros may be passed a function pack operand. Each operand from the pack will put in the array."</p>
-        <Editor example="F! ←^ \"\" &p\nF!(+|-|×|÷)"/>
+        <Editor example="F! ←^ $\"_\"\nF!(+|-|×|÷)"/>
         <p>"The array macro's function must return either a string or an array of boxed strings. This value will be converted back to Uiua code and compiled as normal."</p>
         <p>"Format strings can help a lot in generating new code. For example, if we wanted to make a version of "<Prim prim=Both/>" that calls its function on an arbitrary number of sets of values, we could use "<Prim prim=Keep/>" and "<Prim prim=Bracket/>"."</p>
         <Editor example="All‼ ←^ $\"⊓(_)\" /$\"_|_\" ▽⋕ °{⊙∘}\n[All‼3+ 1 2 3 4 5 6]"/>

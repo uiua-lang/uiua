@@ -1,6 +1,8 @@
 # Uiua Todo
 
 - 0.10
+  - Auto-label `tag`
+  - Pattern matching tutorial
   - Stabilize array macros
     - Add to macros tutorial
   - Stabilize maps

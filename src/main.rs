@@ -899,63 +899,67 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
     let mut colored = String::new();
     let (spans, inputs) = uiua::lsp::spans_with_compiler(code, compiler);
 
-    let noadic = (237, 94, 106);
-    let monadic = (149, 209, 106);
-    let monadic_mod = (240, 195, 111);
-    let dyadic_mod = (204, 107, 233);
-    let dyadic = (84, 176, 252);
+    let noadic = Color::Red;
+    let monadic = Color::Green;
+    let monadic_mod = Color::Yellow;
+    let dyadic_mod = Color::Magenta;
+    let dyadic = Color::Blue;
 
     for span in spans {
-        let (r, g, b) = match span.value {
+        let color = match span.value {
             SpanKind::Primitive(prim) => match prim.class() {
-                PrimClass::Stack => (209, 218, 236),
-                PrimClass::Constant => (237, 94, 36),
+                PrimClass::Stack if prim.modifier_args().is_none() => None,
+                PrimClass::Constant => None,
                 _ => {
                     if let Some(margs) = prim.modifier_args() {
-                        if margs == 1 {
-                            monadic_mod
-                        } else {
-                            dyadic_mod
-                        }
+                        Some(if margs == 1 { monadic_mod } else { dyadic_mod })
                     } else {
                         match prim.args() {
-                            Some(0) => noadic,
-                            Some(1) => monadic,
-                            Some(2) => dyadic,
-                            _ => (255, 255, 255),
+                            Some(0) => Some(noadic),
+                            Some(1) => Some(monadic),
+                            Some(2) => Some(dyadic),
+                            _ => None,
                         }
                     }
                 }
             },
             SpanKind::Ident(Some(docs)) => match docs.kind {
                 BindingDocsKind::Function { sig, .. } => match sig.args {
-                    0 => noadic,
-                    1 => monadic,
-                    2 => dyadic,
-                    _ => (255, 255, 255),
+                    0 => Some(noadic),
+                    1 => Some(monadic),
+                    2 => Some(dyadic),
+                    _ => None,
                 },
-                BindingDocsKind::Modifier(margs) => match margs {
+                BindingDocsKind::Modifier(margs) => Some(match margs {
                     1 => monadic_mod,
                     _ => dyadic_mod,
-                },
-                _ => (255, 255, 255),
+                }),
+                _ => None,
             },
-            SpanKind::String => (32, 249, 252),
-            SpanKind::Number => (255, 136, 68),
-            SpanKind::Comment | SpanKind::OutputComment => (127, 127, 127),
-            SpanKind::Strand => (200, 200, 200),
+            SpanKind::String => Some(Color::Cyan),
+            SpanKind::Number => Some(Color::TrueColor {
+                r: 235,
+                g: 136,
+                b: 68,
+            }),
+            SpanKind::Comment | SpanKind::OutputComment | SpanKind::Strand => {
+                Some(Color::BrightBlack)
+            }
             SpanKind::Ident(None)
             | SpanKind::Label
             | SpanKind::Signature
             | SpanKind::Whitespace
             | SpanKind::Placeholder(_)
             | SpanKind::Delimiter
-            | SpanKind::FuncDelim(_) => (255, 255, 255),
+            | SpanKind::FuncDelim(_) => None,
         };
-        colored.push_str(&format!(
-            "{}",
-            span.span.as_str(&inputs, |s| s.truecolor(r, g, b))
-        ));
+        span.span.as_str(&inputs, |s| {
+            colored.push_str(&if let Some(color) = color {
+                s.color(color).to_string()
+            } else {
+                s.to_string()
+            });
+        })
     }
     colored
 }

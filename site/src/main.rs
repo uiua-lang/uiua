@@ -541,9 +541,11 @@ fn site() {
                             continue;
                         };
                         let code = code
+                            .replace("\\\\n", "<escaped-newline>")
+                            .replace("\\n", "\n")
                             .replace("\\\"", "\"")
                             .replace("\\\\", "\\")
-                            .replace("\\n", "\n");
+                            .replace("<escaped-newline>", "\\n");
                         if code.contains("\"git:")
                             || [uiua::SysOp::AudioPlay, uiua::SysOp::GifShow]
                                 .iter()

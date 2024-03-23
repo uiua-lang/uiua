@@ -18,6 +18,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add pattern matching with [`un °`](https://uiua.org/docs/un)
   - Constant values can now be inverted to form a function which errors if the top value on the stack does not match
   - Format strings can be inverted to extract substrings
+  - Read more in the new [Pattern Matching](https://uiua.org/tutorial/patternmatching) tutorial
 - Git modules are no longer experimental
   - Modules are added automatically as Git submodules when imported
   - See the [Modules](https://uiua.org/tutorial/modules#git-modules) tutorial for more information
@@ -86,7 +87,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Various performance improvements
 - Lots of bug and crash fixes
 ### Website
-- Add a [Working with Strings](https://uiua.org/tutorial/strings) tutorial
+- Tutorials
+  - Add a [Working with Strings](https://uiua.org/tutorial/strings) tutorial
+  - Add array macros to the [Macros](https://uiua.org/tutorial/macros) tutorial
+  - Add the [Pattern Matching](https://uiua.org/tutorial/patternmatching) tutorial
 - Hide experimental glyphs in the editor by default
   - They can be toggled on in the settings
 - An `# Experimental!` comment can now be easily inserted via a settings button or with `Ctrl+E`

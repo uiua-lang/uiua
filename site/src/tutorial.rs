@@ -1296,13 +1296,13 @@ fn TutorialPatternMatching() -> impl IntoView {
         <p><Prim prim=Un/>" can be applied to a constant value to form a function that throws an error if the top value on the stack does not match the constant."</p>
         <Editor example="°5 5"/>
         <Editor example="°5 3"/> // Should fail
-        <p>"This is not very useful on it's own, but it can be composed with other inverses to form more complex patterns."</p>
+        <p>"This is not very useful on its own, but it can be composed with other inverses to form more complex patterns."</p>
         <p>"A primary pattern of note is using stack array notation with planet notation to form patterns that match arrays with certain values."</p>
         <Editor example="°[1⊙3] [1 2 3]"/>
         <Editor example="°[1⊙3] [4 5 6]"/> // Should fail
         <p>"These can be arbitrarily nested."</p>
         <Editor example="°[1 2⊙⊙(5∘)] [1 2 3 4 5 6]"/>
-        <p><Prim prim=Un/><Prim prim=Join/>" with a consta t can also be used to match arrays with a certain prefix."</p>
+        <p><Prim prim=Un/><Prim prim=Join/>" with a constant can also be used to match arrays with a certain prefix."</p>
         <Editor example="°(⊂1) [1 2 3]"/>
         <Editor example="°(⊂1) [4 5 6]"/> // Should fail
         <Editor example="°(⊂1_2) [1 2 3]"/>
@@ -1311,7 +1311,7 @@ fn TutorialPatternMatching() -> impl IntoView {
 
         <Hd id="with-try">"Matching multiple patterns with "<Prim prim=Try/></Hd>
         <p>"Single patterns are of limited usefulness on their own. Because they throw errors when matching fails, you can attempt to match additional errors using "<Prim prim=Try/>"."</p>
-        <p><Prim prim=Try/>" accepts arbitrarily long function packs, so you can match as many patterns as you want in a simpl way."</p>
+        <p><Prim prim=Try/>" accepts arbitrarily long function packs, so you can match as many patterns as you want in a simple way."</p>
         <Editor example="F ← ⍣(×10°[1⊙3]|°(⊂5)|⇌)\nF [5 6 7]\nF [1 2 3]\nF \"abc\""/>
 
         <Hd id="format-string-patterns">"Format String Patterns"</Hd>

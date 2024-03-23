@@ -1052,9 +1052,9 @@ pub struct ChallengeDef {
 }
 
 #[component]
-pub fn Challenge<'a>(
+pub fn Challenge<'a, P: IntoView + 'static>(
     number: u8,
-    prompt: &'a str,
+    prompt: P,
     example: &'a str,
     answer: &'a str,
     tests: &'a [&'a str],
@@ -1072,15 +1072,10 @@ pub fn Challenge<'a>(
         flip,
         did_init_run: Cell::new(false),
     };
-    let (main_part, rest) = if let Some((a, b)) = prompt.split_once('.') {
-        (a.to_string(), b.to_string())
-    } else {
-        (prompt.to_string(), String::new())
-    };
     view! {
         <div class="challenge">
             <h3>"Challenge "{number}</h3>
-            <p>"Write a program that "<strong>{main_part}</strong>"."{rest}</p>
+            <p>"Write a program that "<strong>{prompt}</strong>"."</p>
             <Editor challenge=def example=default/>
         </div>
     }

@@ -73,9 +73,9 @@ pub fn Tutorial() -> impl IntoView {
                 TutorialPage::Bindings => TutorialBindings().into_view(),
                 TutorialPage::Functions => TutorialFunctions().into_view(),
                 TutorialPage::ControlFlow => TutorialControlFlow().into_view(),
-                TutorialPage::PatternMatching => TutorialPatternMatching().into_view(),
                 TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
                 TutorialPage::Inverses => TutorialInverses().into_view(),
+                TutorialPage::PatternMatching => TutorialPatternMatching().into_view(),
                 TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
                 TutorialPage::ThinkingWithArrays => TutorialThinkingWithArrays().into_view(),
                 TutorialPage::Macros => TutorialMacros().into_view(),
@@ -1296,8 +1296,11 @@ fn TutorialPatternMatching() -> impl IntoView {
         <p><Prim prim=Un/>" can be applied to a constant value to form a function that throws an error if the top value on the stack does not match the constant."</p>
         <Editor example="°5 5"/>
         <Editor example="°5 3"/> // Should fail
+        <p>"This works for arrays as well."</p>
+        <Editor example="°[1 2 3] [1 2 3]"/>
+        <Editor example="°[1 2 3] [4 5 6]"/> // Should fail
         <p>"This is not very useful on its own, but it can be composed with other inverses to form more complex patterns."</p>
-        <p>"A primary pattern of note is using stack array notation with planet notation to form patterns that match arrays with certain values."</p>
+        <p>"A primary pattern of note is using stack array notation with planet notation to form patterns that match arrays with certain values and extract the others."</p>
         <Editor example="°[1⊙3] [1 2 3]"/>
         <Editor example="°[1⊙3] [4 5 6]"/> // Should fail
         <p>"These can be arbitrarily nested."</p>
@@ -1312,14 +1315,43 @@ fn TutorialPatternMatching() -> impl IntoView {
         <Hd id="with-try">"Matching multiple patterns with "<Prim prim=Try/></Hd>
         <p>"Single patterns are of limited usefulness on their own. Because they throw errors when matching fails, you can attempt to match additional errors using "<Prim prim=Try/>"."</p>
         <p><Prim prim=Try/>" accepts arbitrarily long function packs, so you can match as many patterns as you want in a simple way."</p>
+        <p>"In this example, we run different code depending on which pattern matches."</p>
         <Editor example="F ← ⍣(×10°[1⊙3]|°(⊂5)|⇌)\nF [5 6 7]\nF [1 2 3]\nF \"abc\""/>
+        <p>"Having more or longer patterns may be easier to read if each pattern gets it's own line."</p>
+        <Editor example="F ← ⍣(\n  ×10 °[1⊙3]\n| °(⊂5)\n| ⇌\n)"/>
 
         <Hd id="format-string-patterns">"Format String Patterns"</Hd>
         <p><Prim prim=Un/>" works with format strings to extract substrings where the "<code>"_"</code>"s are. While the "<Prim prim=Regex/>" function is available, is is often more complex than is necessary. In these cases, format string patterns are more appropriate."</p>
-        <Editor example="{°$\"_, _, _\" \"1, 2, 3\"}"/>
-        <Editor example="{°$\"_, _, _\" \"1, 2, 3, 4, 5\"}"/>
+        <Editor example="°$\"_, _, _\" \"1, 2, 3\""/>
+        <Editor example="°$\"_, _, _\" \"1, 2, 3, 4, 5\""/>
         <Editor example="°$\"Hello, _!\" \"Hello, World!\""/>
         <p>"More precisely, format string patterns form a regex that replaces all "<code>"_"</code>"s from the format string with "<code>"(.+?|.*)"</code>"."</p>
+
+        <Hd id="challenges">"Challenges"</Hd>
+
+        <Challenge
+            number=1
+            prompt=view!("removes a leading "<code>"0"</code>" from an array of numbers or prepends a "<code>"0"</code>" if it is missing")
+            example="[0 1 2 3]"
+            answer="⍣°(⊂0)(⊂0)"
+            tests={&["[4 0 9]", "[0 0 3 4]"]}
+            hidden="[0 0 0 0]"/>
+
+        <Challenge
+            number=2
+            prompt=view!("splits a string on the first "<code>"-"</code>" and returns the two parts")
+            example="\"hello-world\""
+            answer="°$\"_-_\""
+            tests={&["\"foo-bar\"", "\"1-2-3\""]}
+            hidden="\"-\""/>
+
+        <Challenge
+            number=3
+            prompt=view!("matches the argument against string prefixes "<code>"a"</code>", "<code>"bc"</code>", or "<code>"def"</code>" and adds "<code>"1"</code>", "<code>"2"</code>", or "<code>"3"</code>" to the second argument respectively, or adds "<code>"10"</code>" otherwise")
+            example="\"definate\" 5"
+            answer="⍣(+1 ◌°$\"a_\"|+2 ◌°$\"bc_\"|+3 ◌°$\"def_\"|+10 ◌)"
+            tests={&["\"abc\" 1", "\"bcause\" [1 2 3]"]}
+            hidden="\"wow\" 4"/>
     }
 }
 

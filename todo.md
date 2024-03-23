@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Pattern matching tutorial
   - Stabilize maps
 - 0.11
   - Full HTTPS support

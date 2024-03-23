@@ -47,7 +47,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add `df`, `ddf`, etc shortcuts for [`dip ⊙`](https://uiua.org/docs/dip) [`fix ¤`](https://uiua.org/docs/fix)
 - Existing macros are now called "stack macros" to distinguish them from the new "array macros"
   - Stack macros are now [hygienic](https://en.wikipedia.org/wiki/Hygienic_macro)
-- Add experimental array macros, which allow code to be generated and manipulated at compile time as strings
+- Add array macros, which allow code to be generated and manipulated at compile time as strings
   - These are specified with a `^` immediately following a binding's arrow
 - Add the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, which searches an array for a value and returns a multidimensional index
   - [`coordinate ⟔`](https://uiua.org/docs/coordinate) is to [`pick ⊡`](https://uiua.org/docs/pick) as [`indexof ⊗`](https://uiua.org/docs/indexof) is to [`select ⊏`](https://uiua.org/docs/select)

@@ -2,8 +2,6 @@
 
 - 0.10
   - Pattern matching tutorial
-  - Stabilize array macros
-    - Add to macros tutorial
   - Stabilize maps
 - 0.11
   - Full HTTPS support

@@ -1244,6 +1244,15 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p>"To use a switch function as a modifier argument, you must double-nest the "<code>"()"</code>"s. These will get formatted to a single set of "<code>"⟨⟩"</code>"s."</p>
         <Editor example="[dip((*|+)) 0 1 2 3]"/>
 
+        <Hd id="recursion">"Recursion"</Hd>
+        <p>"A bound function that refers to its own name is a "<a href="https://en.wikipedia.org/wiki/Recursion_(computer_science)">"recursive function"</a>". A function that calls itself can easily recurse infinitely, so it is important to have a "<em>"base case"</em>" that stops the recursion when a condition is met. Switch functions are great for this."</p>
+        <p>"As a simple example, here is a function that calculates the factorial of a number. Note that you should not actually do this, as "<Prims prims=[Reduce, Mul, Add]/><code>"1"</code>" is shorter, faster, and more idiomatic."</p>
+        <Editor example="Fact ← |1 ⟨×Fact-1.|1⟩<2.\nFact 5"/>
+        <p>"The base case is when the input is "<code>"1"</code>". In this case, the function returns "<code>"1"</code>". Otherwise, it multiplies the input by the result of calling itself with the input decremented by "<code>"1"</code>"."</p>
+        <p>"Recursive functions are required to have signatures declared."</p>
+        <p>"Recursion is only recommended if a particular problem "<em>"really"</em>" calls for it. Recursion in Uiua can be slow, and there is a limit to how deep you can recur."</p>
+        <p>"It is usually better to use either array-based methods or iteration with "<Prim prim=Repeat/>" or "<Prim prim=Do/>"."</p>
+
         <Hd id="assert"><Prim prim=Assert/></Hd>
         <p>"The "<Prim prim=Assert/>" function takes any value and a condition. If the condition is anything but "<code>"1"</code>", the value is thrown as an error that can be caught with "<Prim prim=Try/>"."</p>
         <Editor example="F ← ⍣(¯⍤10≤10.)∘\nF 5\nF 12"/>

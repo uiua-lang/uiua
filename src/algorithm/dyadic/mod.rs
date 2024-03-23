@@ -272,12 +272,13 @@ impl<T: ArrayValue> Array<T> {
                         self.data = cowslice![self.data[0].clone(); target_len];
                     } else {
                         let start = self.data.len();
-                        self.data.modify(|data| {
-                            data.reserve(target_len - data.len());
-                            for i in 0..target_len - start {
-                                data.push(data[i % start].clone());
-                            }
-                        });
+                        let old_data = self.data.clone();
+                        self.data.reserve(target_len - self.data.len());
+                        let additional = target_len - start;
+                        for _ in 0..additional / start {
+                            self.data.extend_from_slice(&old_data);
+                        }
+                        self.data.extend_from_slice(&old_data[..additional % start]);
                     }
                 }
             }
@@ -496,13 +497,12 @@ impl<T: ArrayValue> Array<T> {
         // Scalar kept
         if self.rank() == 0 {
             self.shape.push(count);
-            self.data.modify(|data| {
-                let value = data[0].clone();
-                data.clear();
-                for _ in 0..count {
-                    data.push(value.clone());
-                }
-            });
+            let value = self.data[0].clone();
+            self.data.clear();
+            unsafe {
+                self.data
+                    .extend_from_trusted((0..count).map(|_| value.clone()))
+            };
             self.validate_shape();
             return self;
         }
@@ -519,12 +519,10 @@ impl<T: ArrayValue> Array<T> {
         // Keep ≥2 is a repeat
         self.shape[0] *= count;
         let old_data = self.data.clone();
-        self.data.modify(|data| {
-            data.reserve(data.len() * count);
-            for _ in 1..count {
-                data.extend_from_slice(&old_data);
-            }
-        });
+        self.data.reserve(self.data.len() * count);
+        for _ in 1..count {
+            self.data.extend_from_slice(&old_data);
+        }
         self.validate_shape();
         self
     }

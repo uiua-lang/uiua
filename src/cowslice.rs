@@ -135,7 +135,7 @@ impl<T: Clone> CowSlice<T> {
             }
         })
     }
-    pub fn modify<F, R>(&mut self, f: F) -> R
+    fn modify<F, R>(&mut self, f: F) -> R
     where
         F: FnOnce(&mut EcoVec<T>) -> R,
     {
@@ -176,6 +176,45 @@ impl<T: Clone> CowSlice<T> {
         other.extend_from_slice(&self[at..]);
         self.truncate(at);
         other
+    }
+    pub fn remove<R>(&mut self, range: R)
+    where
+        R: RangeBounds<usize>,
+    {
+        self.modify(|data| {
+            let start = match range.start_bound() {
+                Bound::Included(&start) => start,
+                Bound::Excluded(&start) => start + 1,
+                Bound::Unbounded => 0,
+            };
+            let end = match range.end_bound() {
+                Bound::Included(&end) => end + 1,
+                Bound::Excluded(&end) => end,
+                Bound::Unbounded => data.len(),
+            };
+            assert!(start <= end);
+            data.make_mut().rotate_left(start);
+            data.truncate(data.len() - (end - start));
+        })
+    }
+    pub fn extend_from_array<const N: usize>(&mut self, array: [T; N]) {
+        self.modify(|data| unsafe { data.extend_from_trusted(array) })
+    }
+    pub fn extend_from_vec(&mut self, vec: Vec<T>) {
+        self.modify(|data| unsafe { data.extend_from_trusted(vec) })
+    }
+    pub fn extend_from_ecovec(&mut self, vec: EcoVec<T>) {
+        self.modify(|data| unsafe { data.extend_from_trusted(vec) })
+    }
+    pub fn extend_from_cowslice(&mut self, slice: CowSlice<T>) {
+        self.modify(|data| unsafe { data.extend_from_trusted(slice.data) })
+    }
+    pub unsafe fn extend_from_trusted<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = T>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        self.modify(|data| data.extend_from_trusted(iter))
     }
 }
 

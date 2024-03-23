@@ -183,10 +183,7 @@ where
     F: PervasiveFn<A::Value, B::Value, Output = C> + Clone,
 {
     match (a.shape(), b.shape()) {
-        ([], []) => c.modify(|c| {
-            c.push(f.call(a.data()[0].clone(), b.data()[0].clone(), env)?);
-            Ok(())
-        })?,
+        ([], []) => c.extend_from_array([f.call(a.data()[0].clone(), b.data()[0].clone(), env)?]),
         (ash, bsh) if ash == bsh => {
             c.try_extend(
                 a.data()

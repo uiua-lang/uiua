@@ -20,6 +20,7 @@ pub enum TutorialPage {
     AdvancedStack,
     Inverses,
     ControlFlow,
+    PatternMatching,
     AdvancedArray,
     ThinkingWithArrays,
     Macros,
@@ -43,6 +44,7 @@ impl TutorialPage {
             Self::AdvancedStack => "Advanced Stack Manipulation",
             Self::Inverses => "Inverses",
             Self::ControlFlow => "Control Flow",
+            Self::PatternMatching => "Pattern Matching",
             Self::AdvancedArray => "Advanced Array Manipulation",
             Self::ThinkingWithArrays => "Thinking With Arrays",
             Self::Macros => "Macros",
@@ -71,6 +73,7 @@ pub fn Tutorial() -> impl IntoView {
                 TutorialPage::Bindings => TutorialBindings().into_view(),
                 TutorialPage::Functions => TutorialFunctions().into_view(),
                 TutorialPage::ControlFlow => TutorialControlFlow().into_view(),
+                TutorialPage::PatternMatching => TutorialPatternMatching().into_view(),
                 TutorialPage::AdvancedStack => TutorialAdvancedStack().into_view(),
                 TutorialPage::Inverses => TutorialInverses().into_view(),
                 TutorialPage::AdvancedArray => TutorialAdvancedArray().into_view(),
@@ -1213,14 +1216,15 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Hd id="try">"Catching errors with "<Prim prim=Try/></Hd>
         <p>"The "<Prim prim=Try/>" modifier takes two functions. If the first function throws an error, the second function is called to handle it."</p>
         <p>"The function must have the same number of outputs."</p>
-        <p>"The handler function must have a number of arguments equal to 0, 1, or 1 + the number of arguments to the first function."</p>
+        <p>"The handler function can take at most 1 more agument that the first function."</p>
         <p>"We can see how this works by using it with "<Prim prim=Parse/>"."</p>
         <p>"If the handler function has 0 arguments, then it is simply called. This is a nice way to provide default values in the event of a failure."</p>
         <Editor example="⍣⋕0 \"5\"\n⍣⋕0 \"dog\""/>
-        <p>"If the handler function has 1 argument, then the error is passed to it."</p>
+        <p>"If the handler function has 1 argument, then the original argument is passed to it."</p>
         <Editor example="⍣⋕∘ \"5\"\n⍣⋕∘ \"dog\""/>
-        <p>"If the handler function has 1 + the number of arguments to the first function, then the error is passed to it along with the original arguments."</p>
+        <p>"If the handler function takes 1 more argument than the first function, then the error is also passed to it."</p>
         <Editor example="⍣⋕{⊙∘} \"5\"\n⍣⋕{⊙∘} \"dog\""/>
+        <p>"You can read about more uses of "<Prim prim=Try/>" in its documentation."</p>
 
         <Hd id="switch">"Switch Functions"</Hd>
         <p>"A "<A href="/tutorial/advancedstack#function-packs">"function pack"</A>" that is used outside a modifier becomes a "<em>"switch function"</em>". Switch functions take an array of natural numbers called the "<em>"selector"</em>" and call the function at the corresponding index in the pack."</p>
@@ -1277,6 +1281,45 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
             answer="⍢(×⇌.|≤1000/↥)"
             tests={&["[1 2 3]", "[¯6 5 1]"]}
             hidden="7"/>
+    }
+}
+
+#[component]
+fn TutorialPatternMatching() -> impl IntoView {
+    use Primitive::*;
+    view! {
+        <Title text="Pattern Matching - Uiua Docs"/>
+        <h1>"Pattern Matching"</h1>
+        <p>"Uiua has a powerful mechanism for matching patterns in arrays to conditionally extract data."</p>
+
+        <Hd id="un-patterns"><Prim prim=Un/>" Patterns"</Hd>
+        <p><Prim prim=Un/>" can be applied to a constant value to form a function that throws an error if the top value on the stack does not match the constant."</p>
+        <Editor example="°5 5"/>
+        <Editor example="°5 3"/> // Should fail
+        <p>"This is not very useful on it's own, but it can be composed with other inverses to form more complex patterns."</p>
+        <p>"A primary pattern of note is using stack array notation with planet notation to form patterns that match arrays with certain values."</p>
+        <Editor example="°[1⊙3] [1 2 3]"/>
+        <Editor example="°[1⊙3] [4 5 6]"/> // Should fail
+        <p>"These can be arbitrarily nested."</p>
+        <Editor example="°[1 2⊙⊙(5∘)] [1 2 3 4 5 6]"/>
+        <p><Prim prim=Un/><Prim prim=Join/>" with a consta t can also be used to match arrays with a certain prefix."</p>
+        <Editor example="°(⊂1) [1 2 3]"/>
+        <Editor example="°(⊂1) [4 5 6]"/> // Should fail
+        <Editor example="°(⊂1_2) [1 2 3]"/>
+        <p>"To match a suffix, you can use "<Prim prim=Under/><Prim prim=Reverse/>"."</p>
+        <Editor example="⍜⇌°(⊂3) [1 2 3]"/>
+
+        <Hd id="with-try">"Matching multiple patterns with "<Prim prim=Try/></Hd>
+        <p>"Single patterns are of limited usefulness on their own. Because they throw errors when matching fails, you can attempt to match additional errors using "<Prim prim=Try/>"."</p>
+        <p><Prim prim=Try/>" accepts arbitrarily long function packs, so you can match as many patterns as you want in a simpl way."</p>
+        <Editor example="F ← ⍣(×10°[1⊙3]|°(⊂5)|⇌)\nF [5 6 7]\nF [1 2 3]\nF \"abc\""/>
+
+        <Hd id="format-string-patterns">"Format String Patterns"</Hd>
+        <p><Prim prim=Un/>" works with format strings to extract substrings where the "<code>"_"</code>"s are. While the "<Prim prim=Regex/>" function is available, is is often more complex than is necessary. In these cases, format string patterns are more appropriate."</p>
+        <Editor example="{°$\"_, _, _\" \"1, 2, 3\"}"/>
+        <Editor example="{°$\"_, _, _\" \"1, 2, 3, 4, 5\"}"/>
+        <Editor example="°$\"Hello, _!\" \"Hello, World!\""/>
+        <p>"More precisely, format string patterns form a regex that replaces all "<code>"_"</code>"s from the format string with "<code>"(.+?|.*)"</code>"."</p>
     }
 }
 

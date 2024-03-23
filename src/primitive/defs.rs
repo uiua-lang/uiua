@@ -2145,6 +2145,8 @@ primitive!(
     /// ex: # Experimental!
     ///   : ≡get [1 3 3 2] ¤ map 1_2_3 4_5_6
     ///
+    /// Map keys are stored as metadata on the values array. For this reason, they cannot be put in arrays together without being [box]ed, as the metadata for each map would be lost.
+    ///
     /// Regardless of the size of the map, operations on it have O(1) amortized time complexity.
     /// In this example, we time [get] and [insert] operations on maps from 10 entries up to 100,000 entries.
     /// ex: # Experimental!

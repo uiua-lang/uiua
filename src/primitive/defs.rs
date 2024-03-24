@@ -1873,7 +1873,7 @@ primitive!(
     /// ex! ⍤. =8 9
     ///
     /// Errors thrown by [assert] can be caught with [try].
-    (2(0), Assert, Misc, ("assert", '⍤')),
+    (2(0), Assert, Misc, ("assert", '⍤'), impure),
     /// Set a function to recur to
     ///
     /// A function must have been set with [this] before calling [recur].

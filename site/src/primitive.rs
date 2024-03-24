@@ -165,6 +165,7 @@ fn all_uns() -> impl IntoView {
                 <th>"Example"</th>
             </tr>
             { inverse_row([Un], No, "", "°°⊟ 1 2") }
+            { inverse_row_impl("Constant", Optional, "Pattern match", "°8 8") }
             { inverse_row([Identity], No, "Self inverse", "°∘ 5") }
             { inverse_row([Flip], No, "Self inverse", "°: 2 5") }
             { inverse_row([Neg], No, "Self inverse", "°¯ 5") }
@@ -207,6 +208,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Csv], No, "", "°csv \"1,2\\n3,4\"") }
             { inverse_row([Rotate], Required, "", "°(↻1) [1 2 3 4]") }
             { inverse_row([Join], No, "", "°⊂ [1 2 3 4]") }
+            { inverse_row([Join], Required, "Pattern match", "°(⊂1) [1 2 3 4]") }
             { inverse_row([Scan], No, view!("Only works with "<Prims prims=[Add, Mul, Eq, Ne]/>), "°\\+ [1 3 6 10 15]") }
             { inverse_row([Reduce, Mul], No, "Prime factors", "°/× 60") }
             { inverse_row([Repeat], No, "Inner function must be invertible", "°⍥(×2)5 1024") }

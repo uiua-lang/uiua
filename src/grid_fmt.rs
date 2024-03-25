@@ -14,7 +14,7 @@ use crate::{
     array::{Array, ArrayValue},
     boxed::Boxed,
     value::Value,
-    Complex, Primitive,
+    Complex, Primitive, WILDCARD_NAN,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -62,6 +62,8 @@ impl GridFmt for f64 {
             format!("{minus}∞")
         } else if f.to_bits() == EMPTY_NAN.to_bits() || f.to_bits() == TOMBSTONE_NAN.to_bits() {
             return vec![vec!['⋅']];
+        } else if f.to_bits() == WILDCARD_NAN.to_bits() {
+            return vec![vec!['W']];
         } else if positive.fract() == 0.0 || positive.is_nan() {
             format!("{minus}{positive}")
         } else {

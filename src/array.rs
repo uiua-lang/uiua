@@ -727,6 +727,10 @@ pub trait ArrayValue:
     }
 }
 
+/// A NaN value that always compares as equal
+pub const WILDCARD_NAN: f64 =
+    unsafe { std::mem::transmute(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000_0003) };
+
 impl ArrayValue for f64 {
     const NAME: &'static str = "number";
     const SYMBOL: char = 'ℝ';
@@ -848,8 +852,14 @@ pub trait ArrayCmp<U = Self> {
 
 impl ArrayCmp for f64 {
     fn array_cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other)
-            .unwrap_or_else(|| self.is_nan().cmp(&other.is_nan()))
+        self.partial_cmp(other).unwrap_or_else(|| {
+            if self.to_bits() == WILDCARD_NAN.to_bits() || other.to_bits() == WILDCARD_NAN.to_bits()
+            {
+                Ordering::Equal
+            } else {
+                self.is_nan().cmp(&other.is_nan())
+            }
+        })
     }
 }
 

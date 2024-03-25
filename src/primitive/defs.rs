@@ -1,5 +1,7 @@
 //! All primitive definitions
 
+use crate::WILDCARD_NAN;
+
 use super::*;
 
 /// The definition of a shadowable constant
@@ -45,6 +47,8 @@ constant!(
     ("i", crate::Complex::I),
     /// IEEE 754-2008's `NaN`
     ("NaN", std::f64::NAN),
+    /// The wildcard `NaN` value that equals any other number
+    ("W", WILDCARD_NAN),
     /// The maximum integer that can be represented exactly
     ("MaxInt", 2f64.powi(53)),
     /// A string identifying the operating system

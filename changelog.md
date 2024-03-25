@@ -50,6 +50,8 @@ This version is not yet released. If you are reading this on the website, then t
   - Stack macros are now [hygienic](https://en.wikipedia.org/wiki/Hygienic_macro)
 - Add array macros, which allow code to be generated and manipulated at compile time as strings
   - These are specified with a `^` immediately following a binding's arrow
+- Add the wildcard constant `W`, which matches any number
+  - This works well with [`match ≍`](https://uiua.org/docs/match), [`find ⌕`](https://uiua.org/docs/find), and [`mask ⦷`](https://uiua.org/docs/mask)
 - Add the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, which searches an array for a value and returns a multidimensional index
   - [`coordinate ⟔`](https://uiua.org/docs/coordinate) is to [`pick ⊡`](https://uiua.org/docs/pick) as [`indexof ⊗`](https://uiua.org/docs/indexof) is to [`select ⊏`](https://uiua.org/docs/select)
 - Experimental function strands now use the `‿` character, which formats from `__`

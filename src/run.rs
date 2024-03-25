@@ -9,7 +9,6 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
-    time::Instant,
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};

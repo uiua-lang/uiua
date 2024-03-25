@@ -695,14 +695,14 @@ impl<'i> Parser<'i> {
         // Collect items
         let mut items = Vec::new();
         while (tokens.iter()).any(|tok| self.try_exact(tok.clone()).is_some()) {
-            let item = match self.try_modified() {
+            let item = match inner(self) {
                 Some(mut item) => {
                     if let Word::Spaces = item.value {
                         if items.is_empty() {
                             break;
                         }
                         self.errors.push(self.expected([Expectation::Term]));
-                        item = match self.try_modified() {
+                        item = match inner(self) {
                             Some(item) => item,
                             None => {
                                 self.errors.push(self.expected([Expectation::Term]));

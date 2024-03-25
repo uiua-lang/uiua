@@ -9,6 +9,7 @@ use std::{
     path::{Path, PathBuf},
     str::FromStr,
     sync::Arc,
+    time::Instant,
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
@@ -25,7 +26,7 @@ use crate::{
     lex::Span,
     value::Value,
     Assembly, Compiler, Complex, Global, Ident, Inputs, IntoSysBackend, LocalName, Primitive,
-    SafeSys, SysBackend, TraceFrame, UiuaError, UiuaResult, VERSION,
+    SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult, VERSION,
 };
 
 /// The Uiua interpreter
@@ -451,6 +452,15 @@ code:
             }
             let res = match instr {
                 Instr::Comment(_) => Ok(()),
+                // Pause execution timer during &sc
+                &Instr::Prim(prim @ Primitive::Sys(SysOp::ScanLine), span) => {
+                    self.with_prim_span(span, Some(prim), |env| {
+                        let start = instant::now();
+                        let res = prim.run(env);
+                        env.rt.execution_start += instant::now() - start;
+                        res
+                    })
+                }
                 &Instr::Prim(prim, span) => {
                     self.with_prim_span(span, Some(prim), |env| prim.run(env))
                 }

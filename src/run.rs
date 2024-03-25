@@ -56,9 +56,9 @@ pub(crate) struct Runtime {
     /// The locals stack
     pub(crate) locals_stack: Vec<Vec<Value>>,
     /// A limit on the execution duration in milliseconds
-    execution_limit: Option<f64>,
+    pub(crate) execution_limit: Option<f64>,
     /// The time at which execution started
-    execution_start: f64,
+    pub(crate) execution_start: f64,
     /// Whether to print the time taken to execute each instruction
     time_instrs: bool,
     /// Whether to do top-level IO
@@ -742,13 +742,18 @@ code:
                 return Err(self.trace_error(err, frame));
             }
             self.rt.call_stack.last_mut().unwrap().pc += 1;
-            if let Some(limit) = self.rt.execution_limit {
-                if instant::now() - self.rt.execution_start > limit {
-                    return Err(UiuaError::Timeout(
-                        self.span(),
-                        self.inputs().clone().into(),
-                    ));
-                }
+            self.respect_execution_limit()?;
+        }
+        Ok(())
+    }
+    /// Timeout if an execution limit is set and has been exceeded
+    pub fn respect_execution_limit(&self) -> UiuaResult {
+        if let Some(limit) = self.rt.execution_limit {
+            if instant::now() - self.rt.execution_start > limit {
+                return Err(UiuaError::Timeout(
+                    self.span(),
+                    self.inputs().clone().into(),
+                ));
             }
         }
         Ok(())

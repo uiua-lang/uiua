@@ -1521,10 +1521,14 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
             }
             SysOp::Sleep => {
-                let seconds = env
+                let mut seconds = env
                     .pop(1)?
                     .as_num(env, "Sleep time must be a number")?
                     .max(0.0);
+                if let Some(limit) = env.rt.execution_limit {
+                    let max = limit - env.rt.execution_start;
+                    seconds = seconds.min(max);
+                }
                 env.rt.backend.sleep(seconds).map_err(|e| env.error(e))?;
             }
             SysOp::TcpListen => {

@@ -1325,7 +1325,7 @@ fn TutorialPatternMatching() -> impl IntoView {
         <Editor example="°$\"_, _, _\" \"1, 2, 3\""/>
         <Editor example="°$\"_, _, _\" \"1, 2, 3, 4, 5\""/>
         <Editor example="°$\"Hello, _!\" \"Hello, World!\""/>
-        <p>"More precisely, format string patterns form a regex that replaces all "<code>"_"</code>"s from the format string with "<code>"(.+?|.*)"</code>"."</p>
+        <p>"More precisely, format string patterns form a regex that replaces all "<code>"_"</code>"s from the format string with "<code>"(.+?|.*)"</code>", where "<code>"."</code>" also matches newlines."</p>
 
         <Hd id="challenges">"Challenges"</Hd>
 

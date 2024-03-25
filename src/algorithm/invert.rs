@@ -42,7 +42,7 @@ pub(crate) fn match_format_pattern(parts: EcoVec<EcoString>, env: &mut Uiua) -> 
                 let mut cache = cache.borrow_mut();
                 let re = cache.entry(parts.clone()).or_insert_with(|| {
                     let mut re = String::new();
-                    re.push('^');
+                    re.push_str("(?s)^");
                     for (i, part) in parts.iter().enumerate() {
                         if i > 0 {
                             re.push_str("(.+?|.*)");

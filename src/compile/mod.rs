@@ -1179,6 +1179,18 @@ code:
             Word::Func(func) => self.func(func, word.span, call)?,
             Word::Switch(sw) => self.switch(sw, word.span, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call),
+            Word::SemicolonPop => {
+                self.emit_diagnostic(
+                    format!(
+                        "Using `;` for {} is deprecated and will be \
+                        removed in the future. Type `pop` or `po` instead.",
+                        Primitive::Pop.format()
+                    ),
+                    DiagnosticKind::Warning,
+                    word.span.clone(),
+                );
+                self.primitive(Primitive::Pop, word.span, call)
+            }
             Word::Modified(m) => self.modified(*m, call)?,
             Word::Placeholder(_) => {
                 // We could error here, but it's easier to handle it higher up

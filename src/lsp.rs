@@ -384,6 +384,9 @@ impl Spanner {
                 Word::Primitive(prim) => {
                     spans.push(word.span.clone().sp(SpanKind::Primitive(*prim)))
                 }
+                Word::SemicolonPop => {
+                    spans.push(word.span.clone().sp(SpanKind::Primitive(Primitive::Pop)))
+                }
                 Word::Modified(m) => {
                     let modifier_span = &m.modifier.span;
                     match &m.modifier.value {

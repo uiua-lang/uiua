@@ -982,6 +982,7 @@ impl<'a> Formatter<'a> {
                 self.output.push(if use_angle { '⟩' } else { ')' });
             }
             Word::Primitive(prim) => self.push(&word.span, &prim.to_string()),
+            Word::SemicolonPop => self.push(&word.span, ";"),
             Word::Modified(m) => {
                 match &m.modifier.value {
                     Modifier::Primitive(prim) => self.push(&m.modifier.span, &prim.to_string()),
@@ -1252,6 +1253,7 @@ fn word_is_multiline(word: &Word) -> bool {
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }),
         Word::Primitive(_) => false,
+        Word::SemicolonPop => false,
         Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),
         Word::Placeholder(_) => false,
         Word::Comment(_) => true,

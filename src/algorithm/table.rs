@@ -175,7 +175,7 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
             Primitive::Min => env.push(fast_table_list(xs, ys, min::byte_byte, env)?),
             Primitive::Max => env.push(fast_table_list(xs, ys, max::byte_byte, env)?),
             Primitive::Join | Primitive::Couple => {
-                env.push(fast_table_list_join_or_couple(xs, ys, flipped))
+                env.push(fast_table_list_join_or_couple(xs, ys, flipped, env)?)
             }
             _ => generic_table(f, Value::Byte(xs), Value::Byte(ys), env)?,
         },
@@ -213,17 +213,17 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
         }
         // Boxes
         (Some((Primitive::Join | Primitive::Couple, flipped)), Value::Box(xs), ys) => env.push(
-            fast_table_list_join_or_couple(xs, ys.coerce_to_boxes(), flipped),
+            fast_table_list_join_or_couple(xs, ys.coerce_to_boxes(), flipped, env)?,
         ),
         (Some((Primitive::Join | Primitive::Couple, flipped)), xs, Value::Box(ys)) => env.push(
-            fast_table_list_join_or_couple(xs.coerce_to_boxes(), ys, flipped),
+            fast_table_list_join_or_couple(xs.coerce_to_boxes(), ys, flipped, env)?,
         ),
         // Chars
         (
             Some((Primitive::Join | Primitive::Couple, flipped)),
             Value::Char(xs),
             Value::Char(ys),
-        ) => env.push(fast_table_list_join_or_couple(xs, ys, flipped)),
+        ) => env.push(fast_table_list_join_or_couple(xs, ys, flipped, env)?),
         (_, xs, ys) => match f.as_flipped_impl_primitive(&env.asm) {
             // Random
             Some((ImplPrimitive::ReplaceRand2, _)) => {
@@ -292,7 +292,7 @@ macro_rules! table_math {
                 Primitive::Min => env.push(fast_table_list(xs, ys, min::$f, env)?),
                 Primitive::Max => env.push(fast_table_list(xs, ys, max::$f, env)?),
                 Primitive::Join | Primitive::Couple => {
-                    env.push(fast_table_list_join_or_couple(xs, ys, flipped))
+                    env.push(fast_table_list_join_or_couple(xs, ys, flipped, env)?)
                 }
                 _ => return Ok(Err((xs, ys))),
             }
@@ -331,8 +331,10 @@ fn fast_table_list_join_or_couple<T: ArrayValue + Default>(
     a: Array<T>,
     b: Array<T>,
     flipped: bool,
-) -> Array<T> {
+    env: &Uiua,
+) -> UiuaResult<Array<T>> {
     let elem_count = a.data.len() * b.data.len() * 2;
+    validate_size::<T>(elem_count, env)?;
     let mut new_data = eco_vec![T::default(); elem_count];
     let data_slice = new_data.make_mut();
     let mut i = 0;
@@ -358,5 +360,5 @@ fn fast_table_list_join_or_couple<T: ArrayValue + Default>(
     let mut new_shape = a.shape;
     new_shape.extend_from_slice(&b.shape);
     new_shape.push(2);
-    Array::new(new_shape, new_data)
+    Ok(Array::new(new_shape, new_data))
 }

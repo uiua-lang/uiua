@@ -247,7 +247,7 @@ uiuisms!(
     "⍜°ℂ¯ +i1",
     /// Cosine
     "∿+η 1",
-    /// Arc tangent
+    /// Tangent
     "÷:°∠ 1",
     /// Factorial
     "/×+1⇡ 5",

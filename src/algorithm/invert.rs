@@ -73,6 +73,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
     Some(match prim {
         Identity => Instr::Prim(Identity, span),
         Flip => Instr::Prim(Flip, span),
+        Pop => Instr::ImplPrim(UnPop, span),
         Neg => Instr::Prim(Neg, span),
         Not => Instr::Prim(Not, span),
         Sin => Instr::ImplPrim(Asin, span),
@@ -107,6 +108,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
     use ImplPrimitive::*;
     use Primitive::*;
     Some(match prim {
+        UnPop => Instr::Prim(Pop, span),
         Asin => Instr::Prim(Sin, span),
         TransposeN(n) => Instr::ImplPrim(TransposeN(-n), span),
         UnBits => Instr::Prim(Bits, span),

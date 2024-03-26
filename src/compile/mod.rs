@@ -1952,9 +1952,12 @@ fn instrs_can_pre_eval(instrs: &[Instr], asm: &Assembly) -> bool {
             Instr::PushFunc(_) | Instr::BeginArray
         )
         || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
-        || instrs
-            .iter()
-            .any(|instr| matches!(instr, Instr::Prim(SetInverse | SetUnder, _)))
+        || instrs.iter().any(|instr| {
+            matches!(
+                instr,
+                Instr::Prim(SetInverse | SetUnder, _) | Instr::ImplPrim(ImplPrimitive::UnPop, _)
+            )
+        })
     {
         return false;
     }

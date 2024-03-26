@@ -757,9 +757,7 @@ code:
         let sig = if let Some(sig) = sig {
             sig
         } else {
-            instrs_signature(&instrs).map_err(|e| {
-                self.fatal_error(span, format!("Cannot infer function signature: {e}"))
-            })?
+            self.sig_of(&instrs, &span)?
         };
         let instrs = optimize_instrs(instrs, false, &self.asm);
         Ok((instrs, sig))
@@ -1178,7 +1176,7 @@ code:
             }
             Word::Func(func) => self.func(func, word.span, call)?,
             Word::Switch(sw) => self.switch(sw, word.span, call)?,
-            Word::Primitive(p) => self.primitive(p, word.span, call),
+            Word::Primitive(p) => self.primitive(p, word.span, call)?,
             Word::SemicolonPop => {
                 self.emit_diagnostic(
                     format!(
@@ -1189,7 +1187,7 @@ code:
                     DiagnosticKind::Warning,
                     word.span.clone(),
                 );
-                self.primitive(Primitive::Pop, word.span, call)
+                self.primitive(Primitive::Pop, word.span, call)?
             }
             Word::Modified(m) => self.modified(*m, call)?,
             Word::Placeholder(_) => {
@@ -1666,7 +1664,7 @@ code:
             );
         }
     }
-    fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) {
+    fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
         self.handle_primitive_experimental(prim, &span);
         self.handle_primitive_deprecation(prim, &span);
         let span_i = self.add_span(span.clone());
@@ -1674,14 +1672,11 @@ code:
             self.push_instr(Instr::Prim(prim, span_i));
         } else {
             let instrs = [Instr::Prim(prim, span_i)];
-            match instrs_signature(&instrs) {
-                Ok(sig) => {
-                    let func = self.make_function(FunctionId::Primitive(prim), sig, instrs);
-                    self.push_instr(Instr::PushFunc(func))
-                }
-                Err(e) => self.add_error(span, format!("Cannot infer function signature: {e}")),
-            }
+            let sig = self.sig_of(&instrs, &span)?;
+            let func = self.make_function(FunctionId::Primitive(prim), sig, instrs);
+            self.push_instr(Instr::PushFunc(func));
         }
+        Ok(())
     }
     fn inlinable(&self, instrs: &[Instr]) -> bool {
         use ImplPrimitive::*;
@@ -1913,6 +1908,14 @@ code:
             }
         })
     }
+    fn sig_of(&self, instrs: &[Instr], span: &CodeSpan) -> UiuaResult<Signature> {
+        instrs_signature(instrs).map_err(|e| {
+            self.fatal_error(
+                span.clone(),
+                format!("Cannot infer function signature: {e}"),
+            )
+        })
+    }
 }
 
 fn instrs_can_pre_eval(instrs: &[Instr], asm: &Assembly) -> bool {
@@ -1949,9 +1952,12 @@ fn instrs_can_pre_eval(instrs: &[Instr], asm: &Assembly) -> bool {
             Instr::PushFunc(_) | Instr::BeginArray
         )
         || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
-        || instrs
-            .iter()
-            .any(|instr| matches!(instr, Instr::Prim(SetInverse | SetUnder, _)))
+        || instrs.iter().any(|instr| {
+            matches!(
+                instr,
+                Instr::Prim(SetInverse | SetUnder, _) | Instr::ImplPrim(ImplPrimitive::UnPop, _)
+            )
+        })
     {
         return false;
     }

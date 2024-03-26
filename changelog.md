@@ -22,6 +22,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Git modules are no longer experimental
   - Modules are added automatically as Git submodules when imported
   - See the [Modules](https://uiua.org/tutorial/modules#git-modules) tutorial for more information
+- [`map`](https://uiua.org/docs/map) and related functions [`insert`](https://uiua.org/docs/insert), [`has`](https://uiua.org/docs/has), [`get`](https://uiua.org/docs/get), and [`remove`](https://uiua.org/docs/remove) are no longer experimental
 - Add the [`mask ⦷`](https://uiua.org/docs/mask) function, which creates a mask of occurrences of one array in another
   - This works similarly to [`find ⌕`](https://uiua.org/docs/find), but is better when you need a mask or to distinguish between adjacent occurrences
 - Change [`sine ∿`](https://uiua.org/docs/sine)'s glyph
@@ -50,6 +51,8 @@ This version is not yet released. If you are reading this on the website, then t
   - Stack macros are now [hygienic](https://en.wikipedia.org/wiki/Hygienic_macro)
 - Add array macros, which allow code to be generated and manipulated at compile time as strings
   - These are specified with a `^` immediately following a binding's arrow
+  - They are documented in the [Macros](https://uiua.org/tutorial/macros) tutorial
+- [`un °`](https://uiua.org/docs/un) [`pop ◌`](https://uiua.org/docs/pop) can now be used to retrieve the [`fill ⬚`](https://uiua.org/docs/fill) value
 - Add the wildcard constant `W`, which matches any number
   - This works well with [`match ≍`](https://uiua.org/docs/match), [`find ⌕`](https://uiua.org/docs/find), and [`mask ⦷`](https://uiua.org/docs/mask)
 - Add the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, which searches an array for a value and returns a multidimensional index

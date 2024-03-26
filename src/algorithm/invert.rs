@@ -73,6 +73,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
     Some(match prim {
         Identity => Instr::Prim(Identity, span),
         Flip => Instr::Prim(Flip, span),
+        Pop => Instr::ImplPrim(UnPop, span),
         Neg => Instr::Prim(Neg, span),
         Not => Instr::Prim(Not, span),
         Sin => Instr::ImplPrim(Asin, span),
@@ -107,6 +108,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
     use ImplPrimitive::*;
     use Primitive::*;
     Some(match prim {
+        UnPop => Instr::Prim(Pop, span),
         Asin => Instr::Prim(Sin, span),
         TransposeN(n) => Instr::ImplPrim(TransposeN(-n), span),
         UnBits => Instr::Prim(Bits, span),
@@ -155,7 +157,6 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
     &[
         &invert_call_pattern,
         &invert_dump_pattern,
-        &invert_invert_pattern,
         &invert_rectify_pattern,
         &invert_setinverse_pattern,
         &invert_setunder_setinverse_pattern,
@@ -579,16 +580,6 @@ fn under_trivial_pattern<'a>(
         [Comment(_) | PushSig(_) | PopSig, input @ ..] => Some((input, (eco_vec![], eco_vec![]))),
         _ => None,
     }
-}
-
-fn invert_invert_pattern<'a>(
-    input: &'a [Instr],
-    comp: &mut Compiler,
-) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::PushFunc(func), Instr::Prim(Primitive::Un, _), input @ ..] = input else {
-        return None;
-    };
-    Some((input, func.instrs(comp).into()))
 }
 
 fn invert_push_pattern<'a>(

@@ -200,20 +200,10 @@ impl Compiler {
                     let instrs =
                         self.temp_scope(mac.names, |comp| comp.compile_words(mac.words, true))?;
                     // Add
-                    match instrs_signature(&instrs) {
-                        Ok(sig) => {
-                            let func = self.make_function(
-                                FunctionId::Named(r.name.value.clone()),
-                                sig,
-                                instrs,
-                            );
-                            self.push_instr(Instr::PushFunc(func));
-                        }
-                        Err(e) => self.add_error(
-                            modified.modifier.span.clone(),
-                            format!("Cannot infer function signature: {e}"),
-                        ),
-                    }
+                    let sig = self.sig_of(&instrs, &modified.modifier.span)?;
+                    let func =
+                        self.make_function(FunctionId::Named(r.name.value.clone()), sig, instrs);
+                    self.push_instr(Instr::PushFunc(func));
                     if call {
                         let span = self.add_span(modified.modifier.span);
                         self.push_instr(Instr::Call(span));
@@ -333,26 +323,16 @@ impl Compiler {
 
         if call {
             self.push_all_instrs(instrs);
-            self.primitive(prim, modified.modifier.span, true);
+            self.primitive(prim, modified.modifier.span, true)?;
         } else {
             self.new_functions.push(EcoVec::new());
             self.push_all_instrs(instrs);
-            self.primitive(prim, modified.modifier.span.clone(), true);
+            self.primitive(prim, modified.modifier.span.clone(), true)?;
             let instrs = self.new_functions.pop().unwrap();
-            match instrs_signature(&instrs) {
-                Ok(sig) => {
-                    let func = self.make_function(
-                        FunctionId::Anonymous(modified.modifier.span),
-                        sig,
-                        instrs,
-                    );
-                    self.push_instr(Instr::PushFunc(func));
-                }
-                Err(e) => self.add_error(
-                    modified.modifier.span.clone(),
-                    format!("Cannot infer function signature: {e}"),
-                ),
-            }
+            let sig = self.sig_of(&instrs, &modified.modifier.span)?;
+            let func =
+                self.make_function(FunctionId::Anonymous(modified.modifier.span), sig, instrs);
+            self.push_instr(Instr::PushFunc(func));
         }
         Ok(())
     }
@@ -632,12 +612,7 @@ impl Compiler {
                 let (instrs, _) = self.compile_operand_word(f)?;
                 self.add_span(span.clone());
                 if let Some(inverted) = invert_instrs(&instrs, self) {
-                    let sig = instrs_signature(&inverted).map_err(|e| {
-                        self.fatal_error(
-                            span.clone(),
-                            format!("Cannot infer function signature: {e}"),
-                        )
-                    })?;
+                    let sig = self.sig_of(&inverted, &span)?;
                     if call {
                         self.push_all_instrs(inverted);
                     } else {
@@ -656,18 +631,8 @@ impl Compiler {
                 let (f_instrs, _) = self.compile_operand_word(f)?;
                 let (g_instrs, g_sig) = self.compile_operand_word(operands.next().unwrap())?;
                 if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig, self) {
-                    let before_sig = instrs_signature(&f_before).map_err(|e| {
-                        self.fatal_error(
-                            f_span.clone(),
-                            format!("Cannot infer function signature: {e}"),
-                        )
-                    })?;
-                    let after_sig = instrs_signature(&f_after).map_err(|e| {
-                        self.fatal_error(
-                            f_span.clone(),
-                            format!("Cannot infer function signature: {e}"),
-                        )
-                    })?;
+                    let before_sig = self.sig_of(&f_before, &f_span)?;
+                    let after_sig = self.sig_of(&f_after, &f_span)?;
                     let mut instrs = if call {
                         eco_vec![Instr::PushSig(before_sig)]
                     } else {
@@ -688,20 +653,13 @@ impl Compiler {
                     if call {
                         self.push_all_instrs(instrs);
                     } else {
-                        match instrs_signature(&instrs) {
-                            Ok(sig) => {
-                                let func = self.make_function(
-                                    FunctionId::Anonymous(modified.modifier.span.clone()),
-                                    sig,
-                                    instrs,
-                                );
-                                self.push_instr(Instr::PushFunc(func));
-                            }
-                            Err(e) => self.add_error(
-                                modified.modifier.span.clone(),
-                                format!("Cannot infer function signature: {e}"),
-                            ),
-                        }
+                        let sig = self.sig_of(&instrs, &modified.modifier.span)?;
+                        let func = self.make_function(
+                            FunctionId::Anonymous(modified.modifier.span.clone()),
+                            sig,
+                            instrs,
+                        );
+                        self.push_instr(Instr::PushFunc(func));
                     }
                 } else {
                     return Err(self.fatal_error(f_span, "No inverse found"));
@@ -762,12 +720,7 @@ impl Compiler {
                 self.push_instr(Instr::Prim(Primitive::Fill, span));
                 if !call {
                     let instrs = self.new_functions.pop().unwrap();
-                    let sig = instrs_signature(&instrs).map_err(|e| {
-                        self.fatal_error(
-                            modified.modifier.span.clone(),
-                            format!("Cannot infer function signature: {e}"),
-                        )
-                    })?;
+                    let sig = self.sig_of(&instrs, &modified.modifier.span)?;
                     let func = self.make_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
                         sig,

@@ -189,23 +189,30 @@ pub fn partition(env: &mut Uiua) -> UiuaResult {
 }
 
 impl Value {
-    fn partition_groups(self, markers: Array<isize>, env: &Uiua) -> UiuaResult<Vec<Self>> {
-        Ok(match self {
-            Value::Num(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
-            Value::Byte(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
-            Value::Complex(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
-            Value::Char(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
-            Value::Box(arr) => (arr.partition_groups(markers, env)?.map(Into::into)).collect(),
-        })
-    }
-}
-
-impl<T: ArrayValue> Array<T> {
     fn partition_groups(
         self,
         markers: Array<isize>,
         env: &Uiua,
-    ) -> UiuaResult<impl Iterator<Item = Self>> {
+    ) -> UiuaResult<Box<dyn ExactSizeIterator<Item = Self>>> {
+        Ok(match self {
+            Value::Num(arr) => arr.partition_groups(markers, env)?,
+            Value::Byte(arr) => arr.partition_groups(markers, env)?,
+            Value::Complex(arr) => arr.partition_groups(markers, env)?,
+            Value::Char(arr) => arr.partition_groups(markers, env)?,
+            Value::Box(arr) => arr.partition_groups(markers, env)?,
+        })
+    }
+}
+
+impl<T: ArrayValue> Array<T>
+where
+    Value: From<Array<T>>,
+{
+    fn partition_groups(
+        self,
+        markers: Array<isize>,
+        env: &Uiua,
+    ) -> UiuaResult<Box<dyn ExactSizeIterator<Item = Value>>> {
         if !self.shape().starts_with(markers.shape()) {
             return Err(env.error(format!(
                 "Cannot partition array of shape {} with markers of shape {}",
@@ -214,7 +221,7 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         let mut groups = Vec::new();
-        if markers.rank() == 1 {
+        Ok(if markers.rank() == 1 {
             let mut last_marker = isize::MAX;
             for (row, marker) in self.into_rows().zip(markers.data) {
                 if marker > 0 {
@@ -225,6 +232,12 @@ impl<T: ArrayValue> Array<T> {
                 }
                 last_marker = marker;
             }
+            Box::new(
+                groups
+                    .into_iter()
+                    .map(Array::from_row_arrays_infallible)
+                    .map(Into::into),
+            )
         } else {
             let row_shape: Shape = self.shape()[markers.rank()..].into();
             let indices = multi_partition_indices(markers);
@@ -235,8 +248,13 @@ impl<T: ArrayValue> Array<T> {
                 }
                 groups.push(group);
             }
-        }
-        Ok(groups.into_iter().map(Array::from_row_arrays_infallible))
+            Box::new(
+                groups
+                    .into_iter()
+                    .map(Array::from_row_arrays_infallible)
+                    .map(Into::into),
+            )
+        })
     }
 }
 
@@ -555,20 +573,24 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn collapse_groups(
+fn collapse_groups<I>(
     prim: Primitive,
-    get_groups: impl Fn(Value, Array<isize>, &Uiua) -> UiuaResult<Vec<Value>>,
+    get_groups: impl Fn(Value, Array<isize>, &Uiua) -> UiuaResult<I>,
     agg_indices_error: &'static str,
     red_indices_error: &'static str,
     env: &mut Uiua,
-) -> UiuaResult {
+) -> UiuaResult
+where
+    I: IntoIterator<Item = Value>,
+    I::IntoIter: ExactSizeIterator,
+{
     let f = env.pop_function()?;
     let sig = f.signature();
     match (sig.args, sig.outputs) {
         (0 | 1, outputs) => {
             let indices = env.pop(1)?.as_integer_array(env, agg_indices_error)?;
             let values = env.pop(2)?;
-            let groups = get_groups(values, indices, env)?;
+            let groups = get_groups(values, indices, env)?.into_iter();
             let mut rows = multi_output(outputs, Vec::with_capacity(groups.len()));
             env.without_fill(|env| -> UiuaResult {
                 for group in groups {

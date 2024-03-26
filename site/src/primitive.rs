@@ -215,6 +215,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Trace], No, "", "°⸮ 5") }
             { inverse_row([Stack], No, "", "°? 5") }
             { inverse_row([Dump], No, "", "°dump△ [2 3 4]") }
+            { inverse_row([Pop], RequiresFill, "", "⬚5°◌") }
             { inverse_row([Sys(AudioEncode)], No, "", None) }
             { inverse_row([Sys(ImEncode)], No, "", None) }
             { inverse_row([Sys(GifEncode)], No, "", None) }
@@ -299,6 +300,7 @@ enum ValueRequirement {
     No,
     Optional,
     Required,
+    RequiresFill,
 }
 
 fn inverse_row<const N: usize>(
@@ -325,9 +327,10 @@ fn inverse_row_impl(
         <tr>
             <td>{prims}</td>
             <td>{ match value_req {
-                ValueRequirement::No => "No",
-                ValueRequirement::Optional => "Optional",
-                ValueRequirement::Required => "Required",
+                ValueRequirement::No => "No".into_view(),
+                ValueRequirement::Optional => "Optional".into_view(),
+                ValueRequirement::Required => "Required".into_view(),
+                ValueRequirement::RequiresFill => view!(<Prim prim=Primitive::Fill/>).into_view(),
             } }</td>
             <td>{notes}</td>
             <td>{ example.into().map(|ex| view!(<Editor example=ex/>)) }</td>

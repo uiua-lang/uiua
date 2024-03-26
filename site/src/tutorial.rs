@@ -702,7 +702,7 @@ fn TutorialTypes() -> impl IntoView {
         <p>"Raw strings that follow each other form multi-line strings."</p>
         <Editor example="$ Hello\n$ World!"/>
         <p>"This style of string is useful when your string contains a lot of quotes that you don't want to escape."</p>
-        <Editor example="$ An then she was like, \"No way!\"\n$ And I was like, \"Way...\""/>
+        <Editor example="$ And then she was like, \"No way!\"\n$ And I was like, \"Way...\""/>
         <p>"Characters in character or string literals can also be specified with 2 or 4 hex digits by using escape codes "<code>"\\x"</code>" and "<code>"\\u"</code>" respectively."</p>
         <Editor example="\"\\x41\\x42\\x43\""/>
         <Editor example="@\\u2665"/>
@@ -765,14 +765,6 @@ fn TutorialTypes() -> impl IntoView {
 
         <Challenge
             number=1
-            prompt="capitalizes an all-lowercase string"
-            example="\"hello\""
-            answer="-32"
-            tests={&["\"uiua\"", "\"gato\"", "\"tacit\""]}
-            hidden="\"wowza\""/>
-
-        <Challenge
-            number=2
             prompt="increments the first character of a string"
             example="\"`rray\""
             answer="⊂:↘1:+1⊢."

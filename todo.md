@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.10
-  - Stabilize maps
+  - Improve `partition` implementation
 - 0.11
   - Full HTTPS support
   - System functions

@@ -1317,7 +1317,7 @@ fn TutorialPatternMatching() -> impl IntoView {
         <p><Prim prim=Try/>" accepts arbitrarily long function packs, so you can match as many patterns as you want in a simple way."</p>
         <p>"In this example, we run different code depending on which pattern matches."</p>
         <Editor example="F ← ⍣(×10°[1⊙3]|°(⊂5)|⇌)\nF [5 6 7]\nF [1 2 3]\nF \"abc\""/>
-        <p>"Having more or longer patterns may be easier to read if each pattern gets it's own line."</p>
+        <p>"Having more or longer patterns may be easier to read if each pattern gets its own line."</p>
         <Editor example="F ← ⍣(\n  ×10 °[1⊙3]\n| °(⊂5)\n| ⇌\n)"/>
 
         <Hd id="format-string-patterns">"Format String Patterns"</Hd>

@@ -765,14 +765,6 @@ fn TutorialTypes() -> impl IntoView {
 
         <Challenge
             number=1
-            prompt="capitalizes an all-lowercase string"
-            example="\"hello\""
-            answer="-32"
-            tests={&["\"uiua\"", "\"gato\"", "\"tacit\""]}
-            hidden="\"wowza\""/>
-
-        <Challenge
-            number=2
             prompt="increments the first character of a string"
             example="\"`rray\""
             answer="⊂:↘1:+1⊢."

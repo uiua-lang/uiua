@@ -1838,6 +1838,11 @@ primitive!(
     ///
     /// [un][pop] can be used to retrieve the [fill] value.
     /// ex: ⬚3(+°◌°◌)
+    ///
+    /// The fill value will be temporarily popped from the fill stack when inside looping modifiers like [rows] and [each].
+    /// ex! ⬚5≡(⊂°◌) [1]
+    /// This can be worked around by stacking the fill value.
+    /// ex: ⬚5⬚°◌≡(⊂°◌) [1]
     ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Call a function and catch errors
     ///

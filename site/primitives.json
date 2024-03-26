@@ -631,8 +631,7 @@
     "args": 2,
     "outputs": 1,
     "class": "Map",
-    "description": "Get the value corresponding to a key in a map array",
-    "experimental": true
+    "description": "Get the value corresponding to a key in a map array"
   },
   "greater or equal": {
     "ascii": ">=",
@@ -661,8 +660,7 @@
     "args": 2,
     "outputs": 1,
     "class": "Map",
-    "description": "Check if a map array has a key",
-    "experimental": true
+    "description": "Check if a map array has a key"
   },
   "identity": {
     "glyph": "∘",
@@ -689,8 +687,7 @@
     "args": 3,
     "outputs": 1,
     "class": "Map",
-    "description": "Insert a key-value pair into a map array",
-    "experimental": true
+    "description": "Insert a key-value pair into a map array"
   },
   "inventory": {
     "glyph": "⍚",
@@ -746,8 +743,7 @@
     "args": 2,
     "outputs": 1,
     "class": "Map",
-    "description": "Create a hashmap from lists of keys and values",
-    "experimental": true
+    "description": "Create a hashmap from lists of keys and values"
   },
   "mask": {
     "glyph": "⦷",
@@ -960,8 +956,7 @@
     "args": 2,
     "outputs": 1,
     "class": "Map",
-    "description": "Remove the value corresponding to a key from a map array",
-    "experimental": true
+    "description": "Remove the value corresponding to a key from a map array"
   },
   "repeat": {
     "glyph": "⍥",

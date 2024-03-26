@@ -2115,32 +2115,26 @@ primitive!(
     /// The related map functions [insert], [has], and [get], all treat the array as an actual hashmap, so they have O(1) amortized time complexity.
     /// Because the values array maintains insertion order, the [remove] function has O(n) time complexity.
     ///
-    /// ex: # Experimental!
-    ///   : map 1_2 3_4
+    /// ex: map 1_2 3_4
     ///   : map {"Alice" "Bob" "Carol"} [3_8 12_2 4_5]
     /// Use [get] to get the value corresponding to a key.
-    /// ex: # Experimental!
-    ///   : map 1_2 3_4
+    /// ex: map 1_2 3_4
     ///   : get 2 .
     /// Use [insert] to insert additional key-value pairs.
-    /// ex: # Experimental!
-    ///   : map 1_2 3_4
+    /// ex: map 1_2 3_4
     ///   : insert 5 6
     /// An empty array can be used as an empty map, event if it was not created with [map].
-    /// ex: # Experimental!
-    ///   : has 5 []
+    /// ex: has 5 []
     ///   : insert 1 2 []
     /// You can use [un][map] to get the keys and values back.
-    /// ex: # Experimental!
-    ///   : []
+    /// ex: []
     ///   : insert 1 2_3
     ///   : insert 4 5_6
     ///   : insert 7 8_9
     ///   : °map .
     ///
     /// Pervasive operations work on the values of a map, but not on the keys.
-    /// ex: # Experimental!
-    ///   : ×10 map 1_2_3 4_5_6
+    /// ex: ×10 map 1_2_3 4_5_6
     /// Some normal array operations work on maps:
     /// - [reverse]
     /// - [rotate]
@@ -2154,18 +2148,15 @@ primitive!(
     /// Operations that do not specifically work on maps will remove the keys and turn the map into a normal array.
     ///
     /// [fix]ing a map will [fix] the keys and values. This exposes the true structure of the keys array.
-    /// ex: # Experimental!
-    ///   : ¤ map 1_2_3 4_5_6
+    /// ex: ¤ map 1_2_3 4_5_6
     /// This is usually only useful with [rows].
-    /// ex: # Experimental!
-    ///   : ≡get [1 3 3 2] ¤ map 1_2_3 4_5_6
+    /// ex: ≡get [1 3 3 2] ¤ map 1_2_3 4_5_6
     ///
     /// Map keys are stored as metadata on the values array. For this reason, they cannot be put in arrays together without being [box]ed, as the metadata for each map would be lost.
     ///
     /// Regardless of the size of the map, operations on it have O(1) amortized time complexity.
     /// In this example, we time [get] and [insert] operations on maps from 10 entries up to 100,000 entries.
-    /// ex: # Experimental!
-    ///   : Times ← (
+    /// ex: Times ← (
     ///   :   map.⇡
     ///   :   [⊙◌⍜now(get 5):
     ///   :    ⊙◌⍜now(insert 1 2).]
@@ -2179,35 +2170,29 @@ primitive!(
     /// See [map] for an overview of map arrays.
     ///
     /// The array is used as an actual hashmap, so some entries may be empty.
-    /// ex: # Experimental!
-    ///   : []
+    /// ex: []
     ///   : insert 1 2
     ///   : insert 3 4
     ///   : insert 5 6
     /// If the key is already present, it is replaced.
-    /// ex: # Experimental!
-    ///   : []
+    /// ex: []
     ///   : insert 1 2
     ///   : insert 3 4
     ///   : insert 3 5
     /// Keys that are already present keep their order.
-    /// ex: # Experimental!
-    ///   : map 1_2_3 4_5_6
+    /// ex: map 1_2_3 4_5_6
     ///   : insert 1 10
     /// Here is a pattern for [remove]ing a key if it is present before [insert]ing it, so that the key moves to the end.
     /// ex: # Experimental!
     /// map 1_2_3 4_5_6
     /// insert⟜⍜⊙◌remove 1 10
     /// All keys (and all values) must have the same shape and type.
-    /// ex! # Experimental!
-    ///   : map 1 ["wow"]
+    /// ex! map 1 ["wow"]
     ///   : insert "hi" "there"
     /// [box] keys or values if you need to. Values will coerce to boxes if necessary.
-    /// ex: # Experimental!
-    ///   : map 1 ["wow"]
+    /// ex: map 1 ["wow"]
     ///   : insert □"hi" □"there"
-    /// ex: # Experimental!
-    ///   : map □1 □"wow"
+    /// ex: map □1 □"wow"
     ///   : insert "hi" "there"
     ///
     /// See also: [has], [get], [remove]
@@ -2216,8 +2201,7 @@ primitive!(
     ///
     /// See [map] for an overview of map arrays.
     ///
-    /// ex: # Experimental!
-    ///   : map 1_2 3_4
+    /// ex: map 1_2 3_4
     ///   : [fork(has 2|has 5)].
     ///
     /// See also: [insert], [get], [remove]
@@ -2226,28 +2210,22 @@ primitive!(
     ///
     /// See [map] for an overview of map arrays.
     ///
-    /// ex: # Experimental!
-    ///   : map 1_2 3_4
+    /// ex: map 1_2 3_4
     ///   : get 2 .
     /// If the key is not found, an error is thrown.
-    /// ex! # Experimental!
-    ///   : map 1_2 3_4
+    /// ex! map 1_2 3_4
     ///   : get 5 .
     /// You can use [try] or [has] to avoid the error.
-    /// ex: # Experimental!
-    ///   : map 1_2 3_4
+    /// ex: map 1_2 3_4
     ///   : ⍣get0 5 .
-    /// ex: # Experimental!
-    ///   : map 1_2 3_4
+    /// ex: map 1_2 3_4
     ///   : (⋅⋅0|get) has,, 5 .
     /// You can provide a default value with [fill].
-    /// ex: # Experimental!
-    ///   : map 1_2 3_4
+    /// ex: map 1_2 3_4
     ///   : ⬚0get 1 .
     ///   : ⬚0get 5 :
     /// You can use [under][get] to modify the value at the key.
-    /// ex: # Experimental!
-    ///   : /map⍉ [1_2 3_4 5_6]
+    /// ex: /map⍉ [1_2 3_4 5_6]
     ///   : ⍜(get3|×10)
     ///
     /// See also: [insert], [has], [remove]
@@ -2258,8 +2236,7 @@ primitive!(
     ///
     /// The key is removed if it is present.
     /// If the key is not present, the array is unchanged.
-    /// ex: # Experimental!
-    ///   : map 1_2 3_4
+    /// ex: map 1_2 3_4
     ///   : remove 2 .
     ///   : remove 5 .
     ///
@@ -2412,8 +2389,7 @@ primitive!(
     /// If you know there are headers, you can use [un][join] to separate them.
     /// ex: ⊙⋕°⊂ °csv "#,Count\n1,5\n2,21\n3,8\n"
     /// You can easily create a [map] with the headers as keys.
-    /// ex: # Experimental!
-    ///   : map⊙(⍉⋕)°⊂ °csv "#,Count\n1,5\n2,21\n3,8\n"
+    /// ex: map⊙(⍉⋕)°⊂ °csv "#,Count\n1,5\n2,21\n3,8\n"
     (1, Csv, Misc, "csv"),
     /// Convert a value to its code representation
     ///

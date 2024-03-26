@@ -370,7 +370,6 @@ impl Primitive {
             Coordinate
                 | (This | Recur)
                 | (Rectify | All | Cascade | By)
-                | (Map | Insert | Has | Get | Remove)
                 | Bind
                 | (Shapes | Types)
                 | Sys(SysOp::FFI)

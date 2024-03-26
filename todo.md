@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Stabilize maps
 - 0.11
   - Full HTTPS support
   - System functions

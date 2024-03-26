@@ -216,9 +216,9 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Stack], No, "", "°? 5") }
             { inverse_row([Dump], No, "", "°dump△ [2 3 4]") }
             { inverse_row([Pop], RequiresFill, "", "⬚5°◌") }
-            { inverse_row([Sys(AudioEncode)], No, "", None) }
-            { inverse_row([Sys(ImEncode)], No, "", None) }
-            { inverse_row([Sys(GifEncode)], No, "", None) }
+            { inverse_row([Sys(AudioEncode)], No, "Decodes bytes", None) }
+            { inverse_row([Sys(ImEncode)], No, "Decodes bytes", None) }
+            { inverse_row([Sys(GifEncode)], No, "Decodes bytes", None) }
             { inverse_row([Sys(ClipboardGet)], No, "", None) }
             { inverse_row([Sys(ClipboardSet)], No, "", None) }
         </table>

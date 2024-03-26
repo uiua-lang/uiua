@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.10
+  - Improve `partition` implementation
 - 0.11
   - Full HTTPS support
   - System functions

@@ -292,6 +292,9 @@ primitive!(
     /// For example, [gen] returns both a random number and a seed for the next call.
     /// When you have all the random numbers you need, you often want to discard the seed.
     /// ex: ⌊×10[◌⍥gen10 0]
+    ///
+    /// [un][pop] can be used to retrieve the [fill] value.
+    /// ex: ⬚3(+°◌°◌)
     (1(0), Pop, Stack, ("pop", '◌')),
     /// Do nothing with one value
     ///
@@ -1832,6 +1835,9 @@ primitive!(
     /// To [fill] with a value that is on the stack, use [identity].
     /// ex: F = ⬚∘+
     ///   : F 100 [1 2 3 4] [5 6]
+    ///
+    /// [un][pop] can be used to retrieve the [fill] value.
+    /// ex: ⬚3(+°◌°◌)
     ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Call a function and catch errors
     ///

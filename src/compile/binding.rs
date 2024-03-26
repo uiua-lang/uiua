@@ -324,10 +324,11 @@ impl Compiler {
                         let val = val.clone();
                         self.asm.instrs.pop();
                         self.asm.bind_const(local, Some(val), span_index, comment);
-                        let last_slice = self.asm.top_slices.last_mut().unwrap();
-                        last_slice.len -= 1;
-                        if last_slice.len == 0 {
-                            self.asm.top_slices.pop();
+                        if let Some(last_slice) = self.asm.top_slices.last_mut() {
+                            last_slice.len -= 1;
+                            if last_slice.len == 0 {
+                                self.asm.top_slices.pop();
+                            }
                         }
                     } else {
                         self.asm.bind_const(local, None, span_index, comment);

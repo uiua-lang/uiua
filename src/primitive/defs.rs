@@ -49,14 +49,14 @@ constant!(
     ("NaN", std::f64::NAN),
     /// The wildcard `NaN` value that equals any other number
     ("W", WILDCARD_NAN),
-    /// Marker for shape fill
-    ("Shp", 0),
-    /// Marker for default fill
-    ("Def", 1),
-    /// Marker for alternate fill
-    ("Alt", 2),
     /// Marker for context fill
-    ("Ctx", 3),
+    ("Ctx", 0),
+    /// Marker for shape fill
+    ("Shp", 1),
+    /// Marker for default fill
+    ("Def", 2),
+    /// Marker for alternate fill
+    ("Alt", 3),
     /// The maximum integer that can be represented exactly
     ("MaxInt", 2f64.powi(53)),
     /// A string identifying the operating system
@@ -1830,6 +1830,8 @@ primitive!(
     ///   : c ← (°□⊡2°◌)
     ///   : ⬚{⊙⊙∘}(×b+c×a a) 2 3 4
     /// While this example does not explicitly use `Ctx`, it may be necessary when loops are involved.
+    /// Any fill specifier that is either `0` or not a scalar integer evaluates to the `Ctx` fill kind. This means you can often use [duplicate] as a shorthand for `Ctx`.
+    /// ex: ⬚(.{⊙∘}|°◌) 1 2
     ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Call a function and catch errors
     ///

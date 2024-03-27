@@ -687,15 +687,12 @@ impl Primitive {
                 }
                 env.call(fill)?;
                 let kind = if outputs == 2 {
-                    let kind = env
-                        .pop("fill kind")?
-                        .as_nat(env, "Fill kind must be a natural number")?;
-                    let kind = match kind {
-                        0 => FillKind::Shape,
-                        1 => FillKind::Default,
-                        2 => FillKind::Alternate,
-                        3 => FillKind::Context,
-                        n => return Err(env.error(format!("Invalid fill kind: {n}"))),
+                    let kind = match env.pop("fill kind")?.as_nat(env, "") {
+                        Ok(0) | Err(_) => FillKind::Context,
+                        Ok(1) => FillKind::Shape,
+                        Ok(2) => FillKind::Default,
+                        Ok(3) => FillKind::Alternate,
+                        Ok(n) => return Err(env.error(format!("Invalid fill kind: {n}"))),
                     };
                     Some(kind)
                 } else {

@@ -53,8 +53,8 @@ This version is not yet released. If you are reading this on the website, then t
   - These are specified with a `^` immediately following a binding's arrow
   - They are documented in the [Macros](https://uiua.org/tutorial/macros) tutorial
 - [`un °`](https://uiua.org/docs/un) [`pop ◌`](https://uiua.org/docs/pop) can now be used to retrieve the [`fill ⬚`](https://uiua.org/docs/fill) value
-- Add the wildcard constant `W`, which matches any number
-  - This works well with [`match ≍`](https://uiua.org/docs/match), [`find ⌕`](https://uiua.org/docs/find), and [`mask ⦷`](https://uiua.org/docs/mask)
+- Add the wildcard constant `W`, which matches any number, and `@\W`, which matches any character
+  - These work well with [`match ≍`](https://uiua.org/docs/match), [`find ⌕`](https://uiua.org/docs/find), and [`mask ⦷`](https://uiua.org/docs/mask)
 - Add the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, which searches an array for a value and returns a multidimensional index
   - [`coordinate ⟔`](https://uiua.org/docs/coordinate) is to [`pick ⊡`](https://uiua.org/docs/pick) as [`indexof ⊗`](https://uiua.org/docs/indexof) is to [`select ⊏`](https://uiua.org/docs/select)
 - Experimental function strands now use the `‿` character, which formats from `__`

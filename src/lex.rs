@@ -13,7 +13,7 @@ use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{ast::PlaceholderOp, Inputs, Primitive};
+use crate::{ast::PlaceholderOp, Inputs, Primitive, WILDCARD_CHAR};
 
 /// Lex a Uiua source file
 pub fn lex(
@@ -1197,6 +1197,7 @@ impl<'a> Lexer<'a> {
                 "\"" => '"'.to_string(),
                 "'" => '\''.to_string(),
                 "_" => char::MAX.to_string(),
+                "W" => WILDCARD_CHAR.to_string(),
                 "x" => {
                     let mut code = 0;
                     for _ in 0..2 {

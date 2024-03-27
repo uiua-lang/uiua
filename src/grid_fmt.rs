@@ -14,7 +14,7 @@ use crate::{
     array::{Array, ArrayValue},
     boxed::Boxed,
     value::Value,
-    Complex, Primitive, WILDCARD_NAN,
+    Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -180,8 +180,10 @@ impl GridFmt for Value {
 }
 
 pub fn format_char_inner(c: char) -> String {
-    if c == char::MAX {
-        return '_'.to_string();
+    match c {
+        char::MAX => return '_'.to_string(),
+        WILDCARD_CHAR => return '�'.to_string(),
+        _ => {}
     }
     let formatted = format!("{c:?}");
     if c == '\'' {

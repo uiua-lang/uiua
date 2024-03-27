@@ -411,6 +411,7 @@ $$ _ line
 # Wildcard
 ⍤⟜≍: [W 2 3] [1 2 3]
 ⍤⟜≍: [1 W 3] [1 2 3]
+⍤⟜≍: "hello" "he\Wlo"
 
 # Complex
 ⍤⟜≍: i ℂ1 0

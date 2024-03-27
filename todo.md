@@ -2,7 +2,9 @@
 
 - 0.10
   - Improve `partition` implementation
+  - `fill`ed `scan`
 - 0.11
+  - Non-`|2.1` `reduce`
   - Full HTTPS support
   - System functions
     - Excel

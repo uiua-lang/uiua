@@ -5,7 +5,7 @@ use std::cmp::Ordering;
 use crate::{
     array::{Array, ArrayValue},
     value::Value,
-    Boxed, Function, Primitive, Shape, Signature, Uiua, UiuaResult,
+    Boxed, FillKind, Function, Primitive, Shape, Signature, Uiua, UiuaResult,
 };
 
 use super::multi_output;
@@ -613,7 +613,7 @@ where
             let indices = env.pop(1)?.as_integer_array(env, red_indices_error)?;
             let values = env.pop(2)?;
             let mut groups = get_groups(values, indices, env)?.into_iter();
-            let mut acc = match env.value_fill().cloned() {
+            let mut acc = match env.value_fill(FillKind::Default).cloned() {
                 Some(acc) => acc,
                 None => groups.next().ok_or_else(|| {
                     env.error(format!(

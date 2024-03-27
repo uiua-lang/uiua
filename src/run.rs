@@ -52,7 +52,7 @@ pub(crate) struct Runtime {
     /// The recur stack
     this_stack: Vec<usize>,
     /// The fill stack
-    fill_stack: Vec<Value>,
+    fill_stack: Vec<Fill>,
     /// The locals stack
     pub(crate) locals_stack: Vec<Vec<Value>>,
     /// A limit on the execution duration in milliseconds
@@ -169,6 +169,25 @@ impl FromStr for RunMode {
             _ => Err(format!("unknown run mode `{}`", s)),
         }
     }
+}
+
+#[derive(Clone)]
+struct Fill {
+    value: Value,
+    kind: Option<FillKind>,
+}
+
+/// Kinds of fill values
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FillKind {
+    /// Fill to make shapes agree
+    Shape,
+    /// Fill to provide a default value
+    Default,
+    /// Fill to provide a value to enable an alternate behavior
+    Alternate,
+    /// Fill to set a context
+    Context,
 }
 
 impl Default for Runtime {
@@ -1151,17 +1170,17 @@ code:
     pub(crate) fn truncate_temp_stack(&mut self, stack: TempStack, size: usize) {
         self.rt.temp_stacks[stack as usize].truncate(size);
     }
-    pub(crate) fn num_fill(&self) -> Result<f64, &'static str> {
-        match self.rt.fill_stack.last() {
+    pub(crate) fn num_fill(&self, kind: FillKind) -> Result<f64, &'static str> {
+        match self.value_fill(kind) {
             Some(Value::Num(n)) if n.rank() == 0 => Ok(n.data[0]),
-            Some(Value::Num(_)) => Err(self.fill_error(true)),
+            Some(Value::Num(_)) => Err(self.fill_error(true, kind)),
             Some(Value::Byte(n)) if n.rank() == 0 => Ok(n.data[0] as f64),
-            Some(Value::Byte(_)) => Err(self.fill_error(true)),
-            _ => Err(self.fill_error(false)),
+            Some(Value::Byte(_)) => Err(self.fill_error(true, kind)),
+            _ => Err(self.fill_error(false, kind)),
         }
     }
-    pub(crate) fn byte_fill(&self) -> Result<u8, &'static str> {
-        match self.rt.fill_stack.last() {
+    pub(crate) fn byte_fill(&self, kind: FillKind) -> Result<u8, &'static str> {
+        match self.value_fill(kind) {
             Some(Value::Num(n))
                 if n.rank() == 0
                     && n.data[0].fract() == 0.0
@@ -1169,45 +1188,47 @@ code:
             {
                 Ok(n.data[0] as u8)
             }
-            Some(Value::Num(n)) if n.rank() == 0 => Err(self.fill_error(false)),
-            Some(Value::Num(_)) => Err(self.fill_error(true)),
+            Some(Value::Num(n)) if n.rank() == 0 => Err(self.fill_error(false, kind)),
+            Some(Value::Num(_)) => Err(self.fill_error(true, kind)),
             Some(Value::Byte(n)) if n.rank() == 0 => Ok(n.data[0]),
-            Some(Value::Byte(_)) => Err(self.fill_error(true)),
-            _ => Err(self.fill_error(false)),
+            Some(Value::Byte(_)) => Err(self.fill_error(true, kind)),
+            _ => Err(self.fill_error(false, kind)),
         }
     }
-    pub(crate) fn char_fill(&self) -> Result<char, &'static str> {
-        match self.rt.fill_stack.last() {
+    pub(crate) fn char_fill(&self, kind: FillKind) -> Result<char, &'static str> {
+        match self.value_fill(kind) {
             Some(Value::Char(c)) if c.rank() == 0 => Ok(c.data[0]),
-            Some(Value::Char(_)) => Err(self.fill_error(true)),
-            _ => Err(self.fill_error(false)),
+            Some(Value::Char(_)) => Err(self.fill_error(true, kind)),
+            _ => Err(self.fill_error(false, kind)),
         }
     }
-    pub(crate) fn box_fill(&self) -> Result<Boxed, &'static str> {
-        match self.rt.fill_stack.last() {
+    pub(crate) fn box_fill(&self, kind: FillKind) -> Result<Boxed, &'static str> {
+        match self.value_fill(kind) {
             Some(Value::Box(b)) if b.rank() == 0 => Ok(b.data[0].clone()),
-            Some(Value::Box(_)) => Err(self.fill_error(true)),
+            Some(Value::Box(_)) => Err(self.fill_error(true, kind)),
             Some(val) => Ok(Boxed(val.clone())),
-            None => Err(self.fill_error(false)),
+            None => Err(self.fill_error(false, kind)),
         }
     }
-    pub(crate) fn complex_fill(&self) -> Result<Complex, &'static str> {
-        match self.rt.fill_stack.last() {
+    pub(crate) fn complex_fill(&self, kind: FillKind) -> Result<Complex, &'static str> {
+        match self.value_fill(kind) {
             Some(Value::Num(n)) if n.rank() == 0 => Ok(Complex::new(n.data[0], 0.0)),
-            Some(Value::Num(_)) => Err(self.fill_error(true)),
+            Some(Value::Num(_)) => Err(self.fill_error(true, kind)),
             Some(Value::Byte(n)) if n.rank() == 0 => Ok(Complex::new(n.data[0] as f64, 0.0)),
-            Some(Value::Byte(_)) => Err(self.fill_error(true)),
+            Some(Value::Byte(_)) => Err(self.fill_error(true, kind)),
             Some(Value::Complex(c)) if c.rank() == 0 => Ok(c.data[0]),
-            Some(Value::Complex(_)) => Err(self.fill_error(true)),
-            _ => Err(self.fill_error(false)),
+            Some(Value::Complex(_)) => Err(self.fill_error(true, kind)),
+            _ => Err(self.fill_error(false, kind)),
         }
     }
-    pub(crate) fn value_fill(&self) -> Option<&Value> {
-        self.rt.fill_stack.last()
+    pub(crate) fn value_fill(&self, kind: FillKind) -> Option<&Value> {
+        (self.rt.fill_stack.iter().rev())
+            .find(|fill| fill.kind.map_or(true, |k| k == kind))
+            .map(|fill| &fill.value)
     }
-    fn fill_error(&self, scalar: bool) -> &'static str {
+    fn fill_error(&self, scalar: bool, kind: FillKind) -> &'static str {
         if scalar {
-            match self.rt.fill_stack.last() {
+            match self.value_fill(kind) {
                 Some(Value::Num(_)) => ". A number fill is set, but is is not a scalar.",
                 Some(Value::Byte(_)) => ". A number fill is set, but is is not a scalar.",
                 Some(Value::Char(_)) => ". A character fill is set, but is is not a scalar.",
@@ -1216,7 +1237,7 @@ code:
                 None => "",
             }
         } else {
-            match self.rt.fill_stack.last() {
+            match self.value_fill(kind) {
                 Some(Value::Num(_)) => ". A number fill is set, but the array is not numbers.",
                 Some(Value::Byte(_)) => ". A number fill is set, but the array is not numbers.",
                 Some(Value::Char(_)) => {
@@ -1233,19 +1254,25 @@ code:
     /// Do something with the fill context set
     pub(crate) fn with_fill<T>(
         &mut self,
-        fill: Value,
+        value: Value,
+        kind: Option<FillKind>,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<T> {
-        self.rt.fill_stack.push(fill);
+        self.rt.fill_stack.push(Fill { value, kind });
         let res = in_ctx(self);
         self.rt.fill_stack.pop();
         res
     }
     /// Do something with the top fill context unset
     pub(crate) fn without_fill<T>(&mut self, in_ctx: impl FnOnce(&mut Self) -> T) -> T {
-        let fill = self.rt.fill_stack.pop();
+        let Some(pos) = (self.rt.fill_stack.iter())
+            .rposition(|fill| fill.kind.map_or(true, |k| k != FillKind::Context))
+        else {
+            return in_ctx(self);
+        };
+        let fill = self.rt.fill_stack.remove(pos);
         let res = in_ctx(self);
-        self.rt.fill_stack.extend(fill);
+        self.rt.fill_stack.insert(pos, fill);
         res
     }
     pub(crate) fn call_frames(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {

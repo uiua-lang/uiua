@@ -9,8 +9,8 @@ use ecow::EcoVec;
 use serde::*;
 
 use crate::{
-    algorithm::ArrayCmpSlice, Array, ArrayValue, Boxed, Complex, FormatShape, Uiua, UiuaResult,
-    Value,
+    algorithm::ArrayCmpSlice, Array, ArrayValue, Boxed, Complex, FillKind, FormatShape, Uiua,
+    UiuaResult, Value,
 };
 
 use super::FillContext;
@@ -116,7 +116,8 @@ impl Value {
     /// Get a value from a map array
     pub fn get(&self, key: &Value, env: &Uiua) -> UiuaResult<Value> {
         if self.row_count() == 0 {
-            return (env.value_fill().cloned()).ok_or_else(|| env.error("Key not found in map"));
+            return (env.value_fill(FillKind::Default).cloned())
+                .ok_or_else(|| env.error("Key not found in map"));
         }
         let keys =
             (self.meta().map_keys.as_ref()).ok_or_else(|| env.error("Value is not a map"))?;
@@ -133,7 +134,7 @@ impl Value {
             }
             Ok(self.row(index))
         } else {
-            env.value_fill()
+            env.value_fill(FillKind::Default)
                 .cloned()
                 .ok_or_else(|| env.error("Key not found in map"))
         }

@@ -35,7 +35,7 @@ use crate::{
     lex::AsciiToken,
     sys::*,
     value::*,
-    FunctionId, Signature, Uiua, UiuaError, UiuaResult,
+    FillKind, FunctionId, Signature, Uiua, UiuaError, UiuaResult,
 };
 
 /// Categories of primitives
@@ -668,9 +668,32 @@ impl Primitive {
             Primitive::Fill => {
                 let fill = env.pop_function()?;
                 let f = env.pop_function()?;
+                let outputs = fill.signature().outputs;
+                if ![1, 2].contains(&outputs) {
+                    return Err(env.error(format!(
+                        "{} function must have 1 or 2 outputs, but its signature is {}",
+                        Primitive::Fill.format(),
+                        fill.signature()
+                    )));
+                }
                 env.call(fill)?;
+                let kind = if outputs == 2 {
+                    let kind = env
+                        .pop("fill kind")?
+                        .as_nat(env, "Fill kind must be a natural number")?;
+                    let kind = match kind {
+                        0 => FillKind::Shape,
+                        1 => FillKind::Default,
+                        2 => FillKind::Alternate,
+                        3 => FillKind::Context,
+                        n => return Err(env.error(format!("Invalid fill kind: {n}"))),
+                    };
+                    Some(kind)
+                } else {
+                    None
+                };
                 let fill_value = env.pop("fill value")?;
-                env.with_fill(fill_value, |env| env.call(f))?;
+                env.with_fill(fill_value, kind, |env| env.call(f))?;
             }
             Primitive::This => {
                 let f = env.pop_function()?;
@@ -847,7 +870,8 @@ impl ImplPrimitive {
         match self {
             ImplPrimitive::UnPop => {
                 env.push(
-                    env.value_fill()
+                    env.value_fill(FillKind::Default)
+                        .or_else(|| env.value_fill(FillKind::Context))
                         .ok_or_else(|| env.error("No fill set").fill())?
                         .clone(),
                 );
@@ -1042,8 +1066,11 @@ fn regex(env: &mut Uiua) -> UiuaResult {
             let row: EcoVec<Boxed> = caps
                 .iter()
                 .flat_map(|m| {
-                    m.map(|m| Boxed(Value::from(m.as_str())))
-                        .or_else(|| env.value_fill().cloned().map(Value::boxed_if_not))
+                    m.map(|m| Boxed(Value::from(m.as_str()))).or_else(|| {
+                        env.value_fill(FillKind::Shape)
+                            .cloned()
+                            .map(Value::boxed_if_not)
+                    })
                 })
                 .collect();
             matches.append(row.into(), env)?;

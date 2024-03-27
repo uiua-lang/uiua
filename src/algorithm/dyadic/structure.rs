@@ -8,11 +8,14 @@ use std::{
 
 use ecow::EcoVec;
 
-use crate::algorithm::{op_bytes_ref_retry_fill, op_bytes_retry_fill};
 use crate::{
     algorithm::FillContext,
     cowslice::{cowslice, CowSlice},
     Array, ArrayValue, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
+};
+use crate::{
+    algorithm::{op_bytes_ref_retry_fill, op_bytes_retry_fill},
+    FillKind,
 };
 
 impl<T: Clone> Array<T> {
@@ -204,7 +207,7 @@ impl<T: ArrayValue> Array<T> {
             let row_len: usize = self.shape[d + 1..].iter().product();
             let s = s as isize;
             if i >= s || i < -s {
-                match env.scalar_fill::<T>() {
+                match env.scalar_fill::<T>(FillKind::Default) {
                     Ok(fill) => {
                         picked = cowslice![fill; row_len];
                         continue;
@@ -390,7 +393,7 @@ impl<T: ArrayValue> Array<T> {
                 let mut filled = false;
                 if taking >= 0 {
                     if abs_taking > row_count {
-                        match T::get_fill(env) {
+                        match T::get_fill(FillKind::Shape, env) {
                             Ok(fill) => {
                                 filled = true;
                                 self.data.extend_from_slice(&vec![
@@ -415,7 +418,7 @@ impl<T: ArrayValue> Array<T> {
                         self.data.truncate(abs_taking * row_len);
                     }
                 } else if abs_taking > row_count {
-                    match T::get_fill(env) {
+                    match T::get_fill(FillKind::Shape, env) {
                         Ok(fill) => {
                             filled = true;
                             let new_data =
@@ -476,7 +479,7 @@ impl<T: ArrayValue> Array<T> {
                     let mut arr = Array::from_row_arrays_infallible(new_rows);
                     // Extend with fill values if necessary
                     if abs_taking > arr.row_count() {
-                        match T::get_fill(env) {
+                        match T::get_fill(FillKind::Shape, env) {
                             Ok(fill) => {
                                 let row_len: usize =
                                     sub_index.iter().map(|&i| i.unsigned_abs()).product();
@@ -507,7 +510,7 @@ impl<T: ArrayValue> Array<T> {
                     let mut arr = Array::from_row_arrays_infallible(new_rows);
                     // Prepend with fill values if necessary
                     if abs_taking > arr.row_count() {
-                        match T::get_fill(env) {
+                        match T::get_fill(FillKind::Shape, env) {
                             Ok(fill) => {
                                 let row_len: usize =
                                     sub_index.iter().map(|&i| i.unsigned_abs()).product();
@@ -829,7 +832,7 @@ impl<T: ArrayValue> Array<T> {
             let i = if i >= 0 {
                 let ui = i as usize;
                 if ui >= row_count {
-                    match env.scalar_fill::<T>() {
+                    match env.scalar_fill::<T>(FillKind::Shape) {
                         Ok(fill) => {
                             selected.extend(repeat(fill).take(row_len));
                             continue;
@@ -848,7 +851,7 @@ impl<T: ArrayValue> Array<T> {
             } else {
                 let pos_i = (row_count as isize + i) as usize;
                 if pos_i >= row_count {
-                    match env.scalar_fill::<T>() {
+                    match env.scalar_fill::<T>(FillKind::Shape) {
                         Ok(fill) => {
                             selected.extend(repeat(fill).take(row_len));
                             continue;

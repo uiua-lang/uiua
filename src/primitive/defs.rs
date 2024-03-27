@@ -49,6 +49,14 @@ constant!(
     ("NaN", std::f64::NAN),
     /// The wildcard `NaN` value that equals any other number
     ("W", WILDCARD_NAN),
+    /// Marker for shape fill
+    ("Shape", 0),
+    /// Marker for default fill
+    ("Default", 1),
+    /// Marker for alternate fill
+    ("Alt", 2),
+    /// Marker for context fill
+    ("Ctx", 3),
     /// The maximum integer that can be represented exactly
     ("MaxInt", 2f64.powi(53)),
     /// A string identifying the operating system

@@ -13,7 +13,7 @@ use crate::{
     algorithm::map::MapKeys,
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
-    Boxed, Complex, HandleKind, Shape, Uiua, Value,
+    Boxed, Complex, FillKind, HandleKind, Shape, Uiua, Value,
 };
 
 /// Uiua's array type
@@ -692,7 +692,7 @@ pub trait ArrayValue:
     /// An ID for the type
     const TYPE_ID: u8;
     /// Get the fill value from the environment
-    fn get_fill(env: &Uiua) -> Result<Self, &'static str>;
+    fn get_fill(kind: FillKind, env: &Uiua) -> Result<Self, &'static str>;
     /// Hash the value
     fn array_hash<H: Hasher>(&self, hasher: &mut H);
     /// Get the proxy value
@@ -735,8 +735,8 @@ impl ArrayValue for f64 {
     const NAME: &'static str = "number";
     const SYMBOL: char = 'ℝ';
     const TYPE_ID: u8 = 0;
-    fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
-        env.num_fill()
+    fn get_fill(kind: FillKind, env: &Uiua) -> Result<Self, &'static str> {
+        env.num_fill(kind)
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         let v = if self.is_nan() {
@@ -757,8 +757,8 @@ impl ArrayValue for u8 {
     const NAME: &'static str = "number";
     const SYMBOL: char = 'ℝ';
     const TYPE_ID: u8 = 0;
-    fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
-        env.byte_fill()
+    fn get_fill(kind: FillKind, env: &Uiua) -> Result<Self, &'static str> {
+        env.byte_fill(kind)
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         (*self as f64).to_bits().hash(hasher)
@@ -772,8 +772,8 @@ impl ArrayValue for char {
     const NAME: &'static str = "character";
     const SYMBOL: char = '@';
     const TYPE_ID: u8 = 2;
-    fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
-        env.char_fill()
+    fn get_fill(kind: FillKind, env: &Uiua) -> Result<Self, &'static str> {
+        env.char_fill(kind)
     }
     fn format_delims() -> (&'static str, &'static str) {
         ("", "")
@@ -803,8 +803,8 @@ impl ArrayValue for Boxed {
     const NAME: &'static str = "box";
     const SYMBOL: char = '□';
     const TYPE_ID: u8 = 3;
-    fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
-        env.box_fill()
+    fn get_fill(kind: FillKind, env: &Uiua) -> Result<Self, &'static str> {
+        env.box_fill(kind)
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         self.0.hash(hasher);
@@ -824,8 +824,8 @@ impl ArrayValue for Complex {
     const NAME: &'static str = "complex";
     const SYMBOL: char = 'ℂ';
     const TYPE_ID: u8 = 1;
-    fn get_fill(env: &Uiua) -> Result<Self, &'static str> {
-        env.complex_fill()
+    fn get_fill(kind: FillKind, env: &Uiua) -> Result<Self, &'static str> {
+        env.complex_fill(kind)
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
         for n in [self.re, self.im] {

@@ -25,6 +25,10 @@ This version is not yet released. If you are reading this on the website, then t
 - [`map`](https://uiua.org/docs/map) and related functions [`insert`](https://uiua.org/docs/insert), [`has`](https://uiua.org/docs/has), [`get`](https://uiua.org/docs/get), and [`remove`](https://uiua.org/docs/remove) are no longer experimental
 - Add the [`mask ⦷`](https://uiua.org/docs/mask) function, which creates a mask of occurrences of one array in another
   - This works similarly to [`find ⌕`](https://uiua.org/docs/find), but is better when you need a mask or to distinguish between adjacent occurrences
+- [`fill ⬚`](https://uiua.org/docs/fill) can now be marked with what kind of fill they are.
+  - Fill behaviors of different functions use different fill kinds
+  - This prevents a lot of the pitfalls of using [`fill ⬚`](https://uiua.org/docs/fill)
+  - [`fill ⬚`](https://uiua.org/docs/fill) can now use function packs with more than 2 functions
 - Change [`sine ∿`](https://uiua.org/docs/sine)'s glyph
   - `∿` is more representative of what it does
   - Most circle glyphs like `○` are used for array functions or stack manipulation

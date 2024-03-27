@@ -28,7 +28,9 @@ This version is not yet released. If you are reading this on the website, then t
 - [`fill ⬚`](https://uiua.org/docs/fill) can now be marked with what kind of fill they are.
   - Fill behaviors of different functions use different fill kinds
   - This prevents a lot of the pitfalls of using [`fill ⬚`](https://uiua.org/docs/fill)
+  - Unspecified fill values can still be used
   - [`fill ⬚`](https://uiua.org/docs/fill) can now use function packs with more than 2 functions
+  - See more details in [`fill ⬚`](https://uiua.org/docs/fill)'s documentation
 - Change [`sine ∿`](https://uiua.org/docs/sine)'s glyph
   - `∿` is more representative of what it does
   - Most circle glyphs like `○` are used for array functions or stack manipulation
@@ -100,6 +102,10 @@ This version is not yet released. If you are reading this on the website, then t
   - Add a [Working with Strings](https://uiua.org/tutorial/strings) tutorial
   - Add array macros to the [Macros](https://uiua.org/tutorial/macros) tutorial
   - Add the [Pattern Matching](https://uiua.org/tutorial/patternmatching) tutorial
+- Add some modifier compatibility tables to documentation
+  - [`un °`](https://uiua.org/docs/un)
+  - [`under ⍜`](https://uiua.org/docs/under)
+  - [`fill ⬚`](https://uiua.org/docs/fill)
 - Hide experimental glyphs in the editor by default
   - They can be toggled on in the settings
 - An `# Experimental!` comment can now be easily inserted via a settings button or with `Ctrl+E`

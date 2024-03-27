@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.10
+  - `fill` kind table
   - Improve `partition` implementation
   - `fill`ed `scan`
 - 0.11

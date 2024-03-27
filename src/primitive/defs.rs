@@ -50,9 +50,9 @@ constant!(
     /// The wildcard `NaN` value that equals any other number
     ("W", WILDCARD_NAN),
     /// Marker for shape fill
-    ("Shape", 0),
+    ("Shp", 0),
     /// Marker for default fill
-    ("Default", 1),
+    ("Def", 1),
     /// Marker for alternate fill
     ("Alt", 2),
     /// Marker for context fill

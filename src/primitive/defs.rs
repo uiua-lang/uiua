@@ -301,7 +301,7 @@ primitive!(
     /// When you have all the random numbers you need, you often want to discard the seed.
     /// ex: ⌊×10[◌⍥gen10 0]
     ///
-    /// [un][pop] can be used to retrieve the [fill] value.
+    /// [un][pop] can be used to retrieve the `Ctx` [fill] value.
     /// ex: ⬚3(+°◌°◌)
     (1(0), Pop, Stack, ("pop", '◌')),
     /// Do nothing with one value
@@ -1797,60 +1797,39 @@ primitive!(
     /// [fill] allows you to specify a value that will be used to extend the shape of one or both of the operands to make an operation succeed.
     /// The function is modified to take a fill value which will be used to fill in shapes.
     ///
-    /// [fill] allows you to set default values for [take].
-    /// ex: ⬚0↙ 7 [8 3 9 2 1]
-    /// ex: ⬚π↙ ¯6 [1 2 3]
-    /// ex: ⬚42↙ 4 [1_2_3 4_5_6]
-    ///
-    /// Using [fill] with [couple] will fill both arrays until their shapes match.
-    /// ex: ⬚0⊟ 1 2_3
-    /// ex: ⬚0⊟ 1_2 3_4_5_6
-    /// ex: ⬚0⊟ 1_2_3 [4_5 6_7]
-    ///
-    /// Using [fill] with [join] will fill both arrays until the [join] makes sense.
-    /// ex: ⬚0⊂ 1 [2_3_4 5_6_7]
-    /// ex: ⬚0⊂ [1_2 3_4] 5_6_7
-    ///
-    /// Because array construction is implemented in terms of [couple] and [join], [fill] can be used when building arrays.
-    /// ex: ⬚0[1 2_3 4_5_6]
-    ///
-    /// This also means that modifiers like [rows] and [each] work with [fill].
-    /// ex: ⬚∞≡⇡ [4 5 8]
-    ///
-    /// [fill] also works with pervasive operations where the shapes don't match.
-    /// ex: ⬚0+ 1_2_3 10_9_8_7_6_5
-    ///
-    /// Many functions, like [scan] and [partition], implicitly build arrays and require compatible shapes.
-    /// [fill] can be used with them as well. In some cases, this prevents the need to use [box].
-    /// ex: ⬚0\⊂ 1_2_3_4_5
-    /// ex: ⬚@ ⊜∘≠@ . "No □ needed!"
-    ///
-    /// [fill] will prevent [pick] and [select] from throwing an error if an index is out of bounds.
-    /// ex: ⬚∞⊏ 3_7_0 [8 3 9 2 0]
-    ///
-    /// [fill] allows the list of counts for [keep] to be shorter than the kept array.
-    /// This is especially useful when used with functions like [windows] or [find] which make an array shorter than their input.
-    /// ex: ⬚0▽ ≡/>◫2. [1 8 0 2 7 2 3]
-    ///
-    /// [fill][reshape] fills in the shape with the fill element instead of cycling the data.
-    /// ex:   ↯ 3_5 ⇡9
-    ///   : ⬚0↯ 3_5 ⇡9
-    ///
-    /// [fill][rotate] fills in array elements instead of wrapping them.
-    /// ex: ⬚0↻ 2 [1 2 3 4 5]
-    ///   :   ↻ 2 [1 2 3 4 5]
-    ///
-    /// To [fill] with a value that is on the stack, use [identity].
-    /// ex: F = ⬚∘+
-    ///   : F 100 [1 2 3 4] [5 6]
-    ///
-    /// [un][pop] can be used to retrieve the [fill] value.
-    /// ex: ⬚3(+°◌°◌)
-    ///
-    /// The fill value will be temporarily popped from the fill stack when inside looping modifiers like [rows] and [each].
-    /// ex! ⬚5≡(⊂°◌) [1]
-    /// This can be worked around by stacking the fill value.
-    /// ex: ⬚5⬚°◌≡(⊂°◌) [1]
+    /// ex: ⬚0[1 2_3_4 5_6]
+    /// ex: ⬚10+ [1 2 3 4] [5 6]
+    /// ex: ⬚0≡⇡ [3 6 2]
+    /// A fill value can be pulled from the stack with [identity].
+    /// ex: ⬚∘[1 2_3_4] 0
+    /// ex: ⬚∘+ ∞ [1 2] [3 4 5 6]
+    /// There are multiple kinds of fill values. By default, a generic, all-encompassing fill value is set.
+    /// This can have problems for functions that can use multiple kinds of fill values. For example, [scan].
+    /// ex: ⬚0\⊂ [1 2 3]
+    /// Here, the fill value is used as both an initial value *and* a shape-filling value.
+    /// By returning a second value from [fill]'s first function, you can specify which fill you want to set.
+    /// The fill kind specifiers are available as [shadowable constants](/docs/constants).
+    /// They are:
+    /// - `Shp` - Use the fill value to make shapes agree
+    /// - `Def` - Use the fill value as a default or initial value
+    /// - `Alt` - Use the fill value in some alternate version of the operation
+    /// - `Ctx` - Use the fill value as context
+    /// The above use of [fill] with [scan] can be rewritten with these specifiers. A function pack can be used to set multiple fills.
+    /// ex: ⬚(Def5|Shp0|\⊂) [1 2 3]
+    /// The `Ctx` fill kind is special in that it is available inside looping modifiers like [rows], while other fill kinds are not.
+    /// Other fill kinds are not available inside loops so that a [fill] used to modify the behavior of the loop itself does not pollute the behavior functions inside the loop.
+    /// [un][pop] is the only way to retrieve the `Ctx` fill value.
+    /// Here, we have to re-bind the fill value to the generic fill kind so that it works with [couple] inside [rows].
+    /// ex! ⬚0≡(⬚°◌⊟1) [1_2 3_4]
+    /// ex: ⬚(Ctx0)≡(⬚°◌⊟1) [1_2 3_4]
+    /// However, you'd often simply set the fill inside the loop.
+    /// ex: ≡⬚0(⊟1) [1_2 3_4]
+    /// `Ctx` fills can be used to make a sort of ad-hoc variable system.
+    /// ex: a ← (°□⊡0°◌)
+    ///   : b ← (°□⊡1°◌)
+    ///   : c ← (°□⊡2°◌)
+    ///   : ⬚{⊙⊙∘}(×b+c×a a) 2 3 4
+    /// While this example does not explicitly use `Ctx`, it may be necessary when loops are involved.
     ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Call a function and catch errors
     ///

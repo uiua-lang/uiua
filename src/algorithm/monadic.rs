@@ -1312,7 +1312,7 @@ impl Value {
             let mut reader = csv::ReaderBuilder::new()
                 .has_headers(false)
                 .from_reader(_csv.as_bytes());
-            env.with_fill("".into(), None, |env| {
+            env.with_fill("".into(), Some(FillKind::Default), |env| {
                 let mut rows = Vec::new();
                 for result in reader.records() {
                     let record = result.map_err(|e| env.error(e))?;

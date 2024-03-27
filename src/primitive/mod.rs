@@ -879,8 +879,7 @@ impl ImplPrimitive {
         match self {
             ImplPrimitive::UnPop => {
                 env.push(
-                    env.value_fill(FillKind::Default)
-                        .or_else(|| env.value_fill(FillKind::Context))
+                    env.value_fill(FillKind::Context)
                         .ok_or_else(|| env.error("No fill set").fill())?
                         .clone(),
                 );

@@ -832,7 +832,7 @@ impl<T: ArrayValue> Array<T> {
             let i = if i >= 0 {
                 let ui = i as usize;
                 if ui >= row_count {
-                    match env.scalar_fill::<T>(FillKind::Shape) {
+                    match env.scalar_fill::<T>(FillKind::Default) {
                         Ok(fill) => {
                             selected.extend(repeat(fill).take(row_len));
                             continue;
@@ -851,7 +851,7 @@ impl<T: ArrayValue> Array<T> {
             } else {
                 let pos_i = (row_count as isize + i) as usize;
                 if pos_i >= row_count {
-                    match env.scalar_fill::<T>(FillKind::Shape) {
+                    match env.scalar_fill::<T>(FillKind::Default) {
                         Ok(fill) => {
                             selected.extend(repeat(fill).take(row_len));
                             continue;

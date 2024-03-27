@@ -190,6 +190,17 @@ pub enum FillKind {
     Context,
 }
 
+impl fmt::Display for FillKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FillKind::Shape => write!(f, "Shp"),
+            FillKind::Default => write!(f, "Def"),
+            FillKind::Alternate => write!(f, "Alt"),
+            FillKind::Context => write!(f, "Ctx"),
+        }
+    }
+}
+
 impl Default for Runtime {
     fn default() -> Self {
         Runtime {

@@ -442,9 +442,9 @@ impl<'a> VirtualEnv<'a> {
                     self.handle_sig(f_sig)?;
                 }
                 Fill => {
-                    let fill = self.pop_func()?;
-                    self.handle_sig(fill.signature())?;
-                    let _fill_value = self.pop()?;
+                    let fill_sig = self.pop_func()?.signature();
+                    self.handle_sig(fill_sig)?;
+                    self.handle_args_outputs(fill_sig.outputs, 0)?;
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }

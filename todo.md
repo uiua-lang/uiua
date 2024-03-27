@@ -3,7 +3,6 @@
 - 0.10
   - `fill` kind table
   - Improve `partition` implementation
-  - `fill`ed `scan`
 - 0.11
   - Non-`|2.1` `reduce`
   - Full HTTPS support

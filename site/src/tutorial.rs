@@ -1591,11 +1591,11 @@ F!!!+×⊂ [1 2 3][4 5 6]"/>
         <p>"Here is a basic example that simply prints its operands. It returns the number "<code>"5"</code>" as the actual generated code."</p>
         <Editor example="F‼ ←^ \"5\" &pf\nF‼⊂(+1)"/>
         <p>"As you can see, the operands are passed to the function as an array of boxed strings."</p>
-        <p>"Array macros may be passed a function pack operand. Each operand from the pack will put in the array."</p>
+        <p>"Array macros may be passed a function pack operand. Each operand from the pack will be put in the array."</p>
         <Editor example="F! ←^ $\"_\"\nF!(+|-|×|÷)"/>
         <p>"The array macro's function must return either a string or an array of boxed strings. This value will be converted back to Uiua code and compiled as normal."</p>
-        <p>"Format strings can help a lot in generating new code. For example, if we wanted to make a version of "<Prim prim=Both/>" that calls its function on an arbitrary number of sets of values, we could use "<Prim prim=Keep/>" and "<Prim prim=Bracket/>"."</p>
-        <Editor example="All‼ ←^ $\"⊓(_)\" /$\"_|_\" ▽⋕ °{⊙∘}\n[All‼3+ 1 2 3 4 5 6]"/>
+        <p>"Format strings can help a lot in generating new code. For example, if we wanted to make a version of "<Prim prim=Both/>" that calls its function on an arbitrary number of sets of values, we could use "<Prim prim=Reshape/>" and "<Prim prim=Bracket/>"."</p>
+        <Editor example="All‼ ←^ $\"⊓(_)\" /$\"_|_\" ↯⋕ °{⊙∘}\n[All‼3+ 1 2 3 4 5 6]"/>
         <p>"First, we extract the two operands: the count and the function. The count comes in as a string, so we have to "<Prim prim=Parse/>" it before using "<Prim prim=Keep/>" to make an array of copies of the function."</p>
         <p>"We use "<Prim prim=Reduce/>" with a format string to form the branches of a function pack, then use another format string to put them in "<Prim prim=Bracket/>"."</p>
         <p>"The resulting string is then compiled as Uiua code."</p>

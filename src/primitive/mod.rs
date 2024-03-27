@@ -669,12 +669,21 @@ impl Primitive {
                 let fill = env.pop_function()?;
                 let f = env.pop_function()?;
                 let outputs = fill.signature().outputs;
-                if ![1, 2].contains(&outputs) {
+                if outputs > 2 {
                     return Err(env.error(format!(
-                        "{} function must have 1 or 2 outputs, but its signature is {}",
+                        "{} function can have at most 2 outputs, but its signature is {}",
                         Primitive::Fill.format(),
                         fill.signature()
                     )));
+                }
+                if outputs == 0 {
+                    return env
+                        .without_fill_but(
+                            fill.signature().args,
+                            |env| env.call(fill),
+                            |env| env.call(f),
+                        )
+                        .and_then(|(a, b)| a.and(b));
                 }
                 env.call(fill)?;
                 let kind = if outputs == 2 {

@@ -1275,6 +1275,24 @@ code:
         self.rt.fill_stack.insert(pos, fill);
         res
     }
+    pub(crate) fn without_fill_but<R, T>(
+        &mut self,
+        n: usize,
+        but: impl FnOnce(&mut Self) -> R,
+        in_ctx: impl FnOnce(&mut Self) -> T,
+    ) -> UiuaResult<(R, T)> {
+        if n > self.rt.fill_stack.len() {
+            return Err(self.error("No fill set"));
+        }
+        let fills = self.rt.fill_stack.split_off(self.rt.fill_stack.len() - n);
+        for fill in fills.iter().rev().cloned() {
+            self.push(fill.value);
+        }
+        let res1 = but(self);
+        let res2 = in_ctx(self);
+        self.rt.fill_stack.extend(fills.into_iter().rev());
+        Ok((res1, res2))
+    }
     pub(crate) fn call_frames(&self) -> impl DoubleEndedIterator<Item = &StackFrame> {
         self.rt.call_stack.iter()
     }

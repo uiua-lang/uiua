@@ -49,8 +49,8 @@ pub(crate) struct Runtime {
     pub(crate) array_stack: Vec<usize>,
     /// The call stack
     call_stack: Vec<StackFrame>,
-    /// The recur stack
-    this_stack: Vec<usize>,
+    /// The stack for tracking recursion points
+    recur_stack: Vec<usize>,
     /// The fill stack
     fill_stack: Vec<Fill>,
     /// The locals stack
@@ -216,7 +216,7 @@ impl Default for Runtime {
                 pc: 0,
                 spans: Vec::new(),
             }],
-            this_stack: Vec::new(),
+            recur_stack: Vec::new(),
             fill_stack: Vec::new(),
             locals_stack: Vec::new(),
             backend: Arc::new(SafeSys::default()),
@@ -1316,15 +1316,15 @@ code:
     }
     pub(crate) fn call_with_this(&mut self, f: Function) -> UiuaResult {
         let call_height = self.rt.call_stack.len();
-        let with_height = self.rt.this_stack.len();
-        self.rt.this_stack.push(self.rt.call_stack.len());
+        let with_height = self.rt.recur_stack.len();
+        self.rt.recur_stack.push(self.rt.call_stack.len());
         let res = self.call(f);
         self.rt.call_stack.truncate(call_height);
-        self.rt.this_stack.truncate(with_height);
+        self.rt.recur_stack.truncate(with_height);
         res
     }
     pub(crate) fn recur(&mut self) -> UiuaResult {
-        let Some(i) = self.rt.this_stack.last().copied() else {
+        let Some(i) = self.rt.recur_stack.last().copied() else {
             return Err(self.error("No recursion context set"));
         };
         let mut frame = self.rt.call_stack[i].clone();
@@ -1364,7 +1364,7 @@ code:
                 temp_stacks: [Vec::new(), Vec::new()],
                 array_stack: Vec::new(),
                 fill_stack: Vec::new(),
-                this_stack: self.rt.this_stack.clone(),
+                recur_stack: self.rt.recur_stack.clone(),
                 locals_stack: Vec::new(),
                 call_stack: Vec::new(),
                 time_instrs: self.rt.time_instrs,

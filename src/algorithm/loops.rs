@@ -167,9 +167,7 @@ pub fn do_(env: &mut Uiua) -> UiuaResult {
             }
         }
         // Copy necessary condition args
-        for _ in 0..copy_count {
-            env.push(env.stack()[env.stack().len() - copy_count].clone());
-        }
+        env.dup_n(copy_count)?;
         // Call condition
         env.call(g.clone())?;
         // Break if condition is false

@@ -1091,6 +1091,21 @@ code:
         }
         Ok(self.rt.stack.iter().rev().take(n).rev().cloned().collect())
     }
+    pub(crate) fn dup_n(&mut self, n: usize) -> UiuaResult {
+        if self.rt.stack.len() < n {
+            return Err(self.error(format!(
+                "Stack was empty evaluating argument {}",
+                n - self.rt.stack.len()
+            )));
+        }
+        for bottom in &mut self.rt.array_stack {
+            *bottom = (*bottom).min(self.rt.stack.len() - n);
+        }
+        for _ in 0..n {
+            self.push(self.rt.stack[self.rt.stack.len() - n].clone());
+        }
+        Ok(())
+    }
     pub(crate) fn monadic_ref<V: Into<Value>>(&mut self, f: fn(&Value) -> V) -> UiuaResult {
         let value = self.pop(1)?;
         self.push(f(&value));

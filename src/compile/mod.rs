@@ -1718,12 +1718,9 @@ code:
         kind: DiagnosticKind,
         span: CodeSpan,
     ) {
-        self.diagnostics.insert(Diagnostic::new(
-            message.into(),
-            span,
-            kind,
-            self.asm.inputs.clone(),
-        ));
+        let inputs = self.asm.inputs.clone();
+        self.diagnostics
+            .insert(Diagnostic::new(message.into(), span, kind, inputs));
     }
     fn add_error(&mut self, span: impl Into<Span>, message: impl ToString) {
         let e = UiuaError::Run(
@@ -1923,14 +1920,13 @@ fn instrs_can_pre_eval(instrs: &[Instr], asm: &Assembly) -> bool {
     if instrs.is_empty() {
         return true;
     }
+    // Begin and end array instructions must be balanced
     let begin_array_pos = (instrs.iter()).position(|instr| matches!(instr, Instr::BeginArray));
-    let begin_array_count = instrs
-        .iter()
+    let begin_array_count = (instrs.iter())
         .filter(|instr| matches!(instr, Instr::BeginArray))
         .count();
     let end_array_pos = (instrs.iter()).position(|instr| matches!(instr, Instr::EndArray { .. }));
-    let end_array_count = instrs
-        .iter()
+    let end_array_count = (instrs.iter())
         .filter(|instr| matches!(instr, Instr::EndArray { .. }))
         .count();
     let array_allowed = begin_array_count == end_array_count
@@ -1939,8 +1935,8 @@ fn instrs_can_pre_eval(instrs: &[Instr], asm: &Assembly) -> bool {
             (None, None) => true,
             _ => false,
         };
-    let locals_allowed = instrs
-        .iter()
+    // Local instructions must be balanced
+    let locals_allowed = (instrs.iter())
         .position(|instr| matches!(instr, Instr::PushLocals { .. }))
         .map_or(true, |pos| {
             pos == 0 && instrs.ends_with(&[Instr::PopLocals])
@@ -1991,24 +1987,16 @@ fn collect_placeholder(words: &[Sp<Word>]) -> Vec<Sp<PlaceholderOp>> {
         match &word.value {
             Word::Placeholder(op) => ops.push(word.span.clone().sp(*op)),
             Word::Strand(items) => ops.extend(collect_placeholder(items)),
-            Word::Array(arr) => {
-                for line in &arr.lines {
-                    ops.extend(collect_placeholder(line));
-                }
-            }
-            Word::Func(func) => {
-                for line in &func.lines {
-                    ops.extend(collect_placeholder(line));
-                }
-            }
+            Word::Array(arr) => arr.lines.iter().for_each(|line| {
+                ops.extend(collect_placeholder(line));
+            }),
+            Word::Func(func) => func.lines.iter().for_each(|line| {
+                ops.extend(collect_placeholder(line));
+            }),
             Word::Modified(m) => ops.extend(collect_placeholder(&m.operands)),
-            Word::Switch(sw) => {
-                for branch in &sw.branches {
-                    for line in &branch.value.lines {
-                        ops.extend(collect_placeholder(line));
-                    }
-                }
-            }
+            Word::Switch(sw) => sw.branches.iter().for_each(|branch| {
+                (branch.value.lines.iter()).for_each(|line| ops.extend(collect_placeholder(line)))
+            }),
             _ => {}
         }
     }
@@ -2036,24 +2024,16 @@ fn recurse_words(words: &mut Vec<Sp<Word>>, f: &mut dyn FnMut(&mut Sp<Word>)) {
         f(word);
         match &mut word.value {
             Word::Strand(items) => recurse_words(items, f),
-            Word::Array(arr) => {
-                for line in &mut arr.lines {
-                    recurse_words(line, f);
-                }
-            }
-            Word::Func(func) => {
-                for line in &mut func.lines {
-                    recurse_words(line, f);
-                }
-            }
+            Word::Array(arr) => arr.lines.iter_mut().for_each(|line| {
+                recurse_words(line, f);
+            }),
+            Word::Func(func) => func.lines.iter_mut().for_each(|line| {
+                recurse_words(line, f);
+            }),
             Word::Modified(m) => recurse_words(&mut m.operands, f),
-            Word::Switch(sw) => {
-                for branch in &mut sw.branches {
-                    for line in &mut branch.value.lines {
-                        recurse_words(line, f);
-                    }
-                }
-            }
+            Word::Switch(sw) => sw.branches.iter_mut().for_each(|branch| {
+                (branch.value.lines.iter_mut()).for_each(|line| recurse_words(line, f))
+            }),
             _ => {}
         }
     }

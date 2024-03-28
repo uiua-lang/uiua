@@ -180,23 +180,23 @@ struct Fill {
 /// Kinds of fill values
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FillKind {
+    /// Fill to set a context
+    Context,
     /// Fill to make shapes agree
     Shape,
     /// Fill to provide a default value
     Default,
-    /// Fill to provide a value to enable an alternate behavior
-    Alternate,
-    /// Fill to set a context
-    Context,
+    /// Fill to provide an initial value
+    Init,
 }
 
 impl fmt::Display for FillKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            FillKind::Context => write!(f, "Ctx"),
             FillKind::Shape => write!(f, "Shp"),
             FillKind::Default => write!(f, "Def"),
-            FillKind::Alternate => write!(f, "Alt"),
-            FillKind::Context => write!(f, "Ctx"),
+            FillKind::Init => write!(f, "Init"),
         }
     }
 }

@@ -691,7 +691,7 @@ impl Primitive {
                         Ok(0) | Err(_) => FillKind::Context,
                         Ok(1) => FillKind::Shape,
                         Ok(2) => FillKind::Default,
-                        Ok(3) => FillKind::Alternate,
+                        Ok(3) => FillKind::Init,
                         Ok(n) => return Err(env.error(format!("Invalid fill kind: {n}"))),
                     };
                     Some(kind)

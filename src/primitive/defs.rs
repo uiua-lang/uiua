@@ -55,8 +55,8 @@ constant!(
     ("Shp", 1),
     /// Marker for default fill
     ("Def", 2),
-    /// Marker for alternate fill
-    ("Alt", 3),
+    /// Marker for init fill
+    ("Init", 3),
     /// The maximum integer that can be represented exactly
     ("MaxInt", 2f64.powi(53)),
     /// A string identifying the operating system
@@ -1812,10 +1812,10 @@ primitive!(
     /// They are:
     /// - `Shp` - Use the fill value to make shapes agree
     /// - `Def` - Use the fill value as a default or initial value
-    /// - `Alt` - Use the fill value in some alternate version of the operation
+    /// - `Init` - Use the fill value as an initial value in a loop
     /// - `Ctx` - Use the fill value as context
     /// The above use of [fill] with [scan] can be rewritten with these specifiers. A function pack can be used to set multiple fills.
-    /// ex: ⬚(Def5|Shp0|\⊂) [1 2 3]
+    /// ex: ⬚(Init5|Shp0|\⊂) [1 2 3]
     /// The `Ctx` fill kind is special in that it is available inside looping modifiers like [rows], while other fill kinds are not.
     /// Other fill kinds are not available inside loops so that a [fill] used to modify the behavior of the loop itself does not pollute the behavior functions inside the loop.
     /// [un][pop] is the only way to retrieve the `Ctx` fill value.

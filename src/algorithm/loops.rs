@@ -613,7 +613,7 @@ where
             let indices = env.pop(1)?.as_integer_array(env, red_indices_error)?;
             let values = env.pop(2)?;
             let mut groups = get_groups(values, indices, env)?.into_iter();
-            let mut acc = match env.value_fill(FillKind::Default).cloned() {
+            let mut acc = match env.value_fill(FillKind::Init).cloned() {
                 Some(acc) => acc,
                 None => groups.next().ok_or_else(|| {
                     env.error(format!(

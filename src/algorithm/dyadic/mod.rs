@@ -678,7 +678,7 @@ impl Value {
             return Ok(rotated);
         }
         let by_ints = || self.as_integer_array(env, "Rotation amount must be an array of integers");
-        if env.scalar_fill::<f64>(FillKind::Alternate).is_ok() {
+        if env.scalar_fill::<f64>(FillKind::Default).is_ok() {
             if let Value::Byte(bytes) = &rotated {
                 rotated = bytes.convert_ref::<f64>().into();
             }
@@ -712,7 +712,7 @@ impl<T: ArrayValue> Array<T> {
         env: &Uiua,
     ) -> UiuaResult {
         let mut filled = false;
-        let fill = env.scalar_fill::<T>(FillKind::Alternate);
+        let fill = env.scalar_fill::<T>(FillKind::Init);
         self.depth_slices(&by, depth, by_depth, env, |ash, a, bsh, b, env| {
             if bsh.len() > 1 {
                 return Err(env.error(format!("Cannot rotate by rank {} array", bsh.len())));

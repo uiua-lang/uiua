@@ -169,16 +169,16 @@ fn all_fills() -> impl IntoView {
             { fill_row(Select, Default, "", "⬚10⊏ 5 [1 2 3]") }
             { fill_row(Take, Shp, "", "⬚0↙5 [1 2 3]") }
             { fill_row(Reshape, Shp, "Fills excess elements", "⬚0↯ 2_4 [1 2 3]") }
-            { fill_row(Rotate, Alternate, "Fills instead of wrapping", "⬚0↻ 2 [1 2 3 4 5]") }
-            { fill_row(Reduce, Default, "Sets initial value", "⬚10/+ [1 2 3]") }
-            { fill_row(Scan, Default, "Sets initial value", "⬚(Def10)\\+ [1 2 3]") }
+            { fill_row(Rotate, Default, "Fills instead of wrapping", "⬚0↻ 2 [1 2 3 4 5]") }
+            { fill_row(Reduce, Init, "Sets initial value", "⬚10/+ [1 2 3]") }
+            { fill_row(Scan, Init, "Sets initial value", "⬚(Init10)\\+ [1 2 3]") }
             { fill_row(Scan, Shp, "", "⬚(Shp10)\\⊂ [1 2 3]") }
             { fill_row(Rows, Shp, "", "⬚0≡⇡ [4 7 3]") }
             { fill_row(Each, Shp, "", "⬚0∵⇡ [3_2 2_4]") }
             { fill_row(Partition, Shp, "", "⬚@ ⊜∘ ≠@ . \"Hey there\"") }
-            { fill_row(Partition, Default, "Sets initial value", "⬚\"- \"⊜⊂ ≠@ . \"Hello world!\"") }
+            { fill_row(Partition, Init, "Sets initial value", "⬚\"- \"⊜⊂ ≠@ . \"Hello world!\"") }
             { fill_row(Group, Shp, "", "⬚0⊕∘ ◿3. [1 8 4 9 3 8 2]") }
-            { fill_row(Group, Default, "Sets initial value", "⬚[]⊕⊂ ◿3. [1 8 4 9 3 8 2]") }
+            { fill_row(Group, Init, "Sets initial value", "⬚[]⊕⊂ ◿3. [1 8 4 9 3 8 2]") }
             { fill_row_impl(view!(<Prims prims=[Un, Pop]/>), Context, "", "⬚(Ctx5)°◌") }
         </table>
     }

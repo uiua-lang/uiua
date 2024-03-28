@@ -19,7 +19,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
     match (f.as_flipped_primitive(&env.asm), xs) {
         (Some((Primitive::Join, false)), mut xs)
             if env.value_fill(FillKind::Shape).is_none()
-                && env.value_fill(FillKind::Default).is_none() =>
+                && env.value_fill(FillKind::Init).is_none() =>
         {
             let depth = depth.min(xs.rank());
             if xs.rank() - depth < 2 {
@@ -46,7 +46,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
             }
         }
         (Some((prim, flipped)), Value::Byte(bytes)) => {
-            let fill = env.num_fill(FillKind::Default).ok();
+            let fill = env.num_fill(FillKind::Init).ok();
             env.push::<Value>(match prim {
                 Primitive::Add => {
                     fast_reduce_different(bytes, 0.0, fill, depth, add::num_num, add::num_byte)
@@ -114,7 +114,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
                         .into()
                 }
                 Primitive::Max => {
-                    let byte_fill = env.byte_fill(FillKind::Default).ok();
+                    let byte_fill = env.byte_fill(FillKind::Init).ok();
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -130,7 +130,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
                     }
                 }
                 Primitive::Min => {
-                    let byte_fill = env.byte_fill(FillKind::Default).ok();
+                    let byte_fill = env.byte_fill(FillKind::Init).ok();
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -149,7 +149,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
             })
         }
         (_, xs) => {
-            if env.value_fill(FillKind::Default).is_none() {
+            if env.value_fill(FillKind::Init).is_none() {
                 if xs.row_count() == 0 {
                     let val = reduce_identity(f.instrs(env), xs).ok_or_else(|| {
                         env.error(format!(
@@ -279,7 +279,7 @@ macro_rules! reduce_math {
         where
             $ty: From<f64>,
         {
-            let fill = env.$fill(FillKind::Default).ok();
+            let fill = env.$fill(FillKind::Init).ok();
             env.push(match prim {
                 Primitive::Add => fast_reduce(xs, 0.0.into(), fill, depth, add::$f),
                 Primitive::Sub if flipped => {
@@ -524,7 +524,7 @@ fn generic_reduce_inner(
                 let val = Value::from_row_values(new_rows, env)?;
                 Ok(val)
             } else {
-                let mut acc = (env.value_fill(FillKind::Default).cloned())
+                let mut acc = (env.value_fill(FillKind::Init).cloned())
                     .or_else(|| rows.next())
                     .ok_or_else(|| {
                         env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
@@ -558,7 +558,7 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     }
     match (f.as_flipped_primitive(&env.asm), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => {
-            let fill = env.num_fill(FillKind::Default).ok();
+            let fill = env.num_fill(FillKind::Init).ok();
             let arr = match prim {
                 Primitive::Eq => fast_scan(nums, fill, |a, b| is_eq::num_num(a, b) as f64),
                 Primitive::Ne => fast_scan(nums, fill, |a, b| is_ne::num_num(a, b) as f64),
@@ -580,8 +580,8 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
             Ok(())
         }
         (Some((prim, flipped)), Value::Byte(bytes)) => {
-            let byte_fill = env.byte_fill(FillKind::Default).ok();
-            let num_fill = env.num_fill(FillKind::Default).ok();
+            let byte_fill = env.byte_fill(FillKind::Init).ok();
+            let num_fill = env.num_fill(FillKind::Init).ok();
             if byte_fill.is_none() && num_fill.is_some() {
                 env.push_func(f);
                 env.push(Value::Num(bytes.convert()));
@@ -702,7 +702,7 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     let row_count = xs.row_count();
     let mut rows = xs.into_rows();
     let mut acc = env
-        .value_fill(FillKind::Default)
+        .value_fill(FillKind::Init)
         .cloned()
         .unwrap_or_else(|| rows.next().unwrap());
     let mut scanned = Vec::with_capacity(row_count);

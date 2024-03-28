@@ -86,10 +86,17 @@ fn repeat_impl(f: Function, n: f64, env: &mut Uiua) -> UiuaResult {
                 Primitive::Repeat.format()
             )));
         }
-        if sig.args != sig.outputs {
+        if !env.rt.array_stack.is_empty() && sig.args > sig.outputs {
             return Err(env.error(format!(
-                "Converging {}'s function must have a net stack change of 0, \
-                but its signature is {sig}",
+                "Converging {}'s function must have a net positive stack \
+                change inside an array, but its signature is {sig}",
+                Primitive::Repeat.format()
+            )));
+        }
+        if env.rt.array_stack.is_empty() && sig.args != sig.outputs {
+            return Err(env.error(format!(
+                "Converging {}'s function must have a net stack change of 0 \
+                outside an array, but its signature is {sig}",
                 Primitive::Repeat.format()
             )));
         }

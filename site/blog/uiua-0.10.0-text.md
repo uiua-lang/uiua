@@ -13,7 +13,7 @@ While there are many changes, I want to highlight a few of them here.
 
 ## Pattern Matching
 
-Using [un](https://uiua.org/docs/un) on a constant value will now match a pattern. When used with [try](https://uiua.org/docs/try), this can be used to conditionally match, extract, and process values.
+Using [`un`](https://uiua.org/docs/un) on a constant value will now match a pattern. When used with [`try`](https://uiua.org/docs/try), this can be used to conditionally match, extract, and process values.
 
 ```uiua
 F ← ⍣(×10°[1⊙3]|°(⊂5)|⇌)
@@ -48,9 +48,11 @@ In the native interpreter, this automatically creates a Git submodule.
 
 On the web, it fetches a `lib.ua` file from the repository.
 
-## [mask](https://uiua.org/docs/mask)
+You can read more in the updated [Modules](https://uiua.org/tutorial/modules) tutorial.
 
-[mask](https://uiua.org/docs/mask) is a new function that is similar to [find](https://uiua.org/docs/find), but it returns full masks of matches rather than just the first positions.
+## [`mask`](https://uiua.org/docs/mask)
+
+[`mask`](https://uiua.org/docs/mask) is a new function that is similar to [`find`](https://uiua.org/docs/find), but it returns full masks of matches rather than just the first positions.
 
 ```uiua
 ⦷ " - " "Hey - how-are -  you"
@@ -59,11 +61,32 @@ On the web, it fetches a `lib.ua` file from the repository.
 ⊜□¬⦷⊙. " - " "Hey - how-are -  you"
 ```
 
+This simplifies a lot of string-processing code in particular. A new [strings](https://uiua.org/tutorial/strings) tutorial has been added as well.
+
 ## Other Changes
 
 Switch functions now format to use `⟨⟩` brackets. This makes them easier to distinguish from function packs.
 ```uiua
-F ← ⟨↥2|×10⟩<2.
+F ← ⟨×10|↥2⟩<2.
 F 0
 F 5
 ```
+
+[`map`](https://uiua.org/docs/map) and related functions are no longer experimental!
+```uiua
+map 1_2_3 4_5_6
+```
+
+The new [`&clget`](https://uiua.org/docs/&clget) and [`&clset`](https://uiua.org/docs/&clset) functions provide access to the clipboard.
+
+The interpreter's built-in language server now supports [many more features](https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode).
+
+There are a ton more! Again, you can read the full changelog [here](https://uiua.org/docs/changelog).
+
+## ♥
+
+As always, I'd like to thank everyone who contributed to this release, whether by directly contributing code, reporting bugs, or just using Uiua and providing feedback.
+
+Uiua is in many ways a novel and unique language, and I think it is only through our collective effort that we can properly explore its design space.
+
+With your help, I hope to continue to improve Uiua to the point of stability.

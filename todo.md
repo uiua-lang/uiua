@@ -1,8 +1,10 @@
 # Uiua Todo
 
 - 0.10
+  - Release it!
 - 0.11
   - Non-`|2.1` `reduce`
+  - `un insert` pattern
   - Full HTTPS support
   - System functions
     - Excel

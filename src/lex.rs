@@ -186,6 +186,7 @@ impl PartialEq<InputSrc> for PathBuf {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(untagged)]
 enum InputSrcRep {
     File(PathBuf),
     Str(usize),

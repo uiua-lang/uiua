@@ -135,8 +135,18 @@ impl Assembly {
 
         let mut bindings = EcoVec::new();
         for line in bindings_src.lines().filter(|line| !line.is_empty()) {
-            let binding: BindingInfo = serde_json::from_str(line).map_err(|e| e.to_string())?;
-            bindings.push(binding);
+            let (public, line) = if let Some(line) = line.strip_prefix("private ") {
+                (false, line)
+            } else {
+                (true, line)
+            };
+            let kind: BindingKind = serde_json::from_str(line).map_err(|e| e.to_string())?;
+            bindings.push(BindingInfo {
+                kind,
+                public,
+                span: CodeSpan::dummy(),
+                comment: None,
+            });
         }
 
         let mut spans = EcoVec::new();
@@ -189,7 +199,10 @@ impl Assembly {
 
         uasm.push_str("\nBINDINGS\n");
         for binding in &self.bindings {
-            uasm.push_str(&serde_json::to_string(binding).unwrap());
+            if !binding.public {
+                uasm.push_str("private ");
+            }
+            uasm.push_str(&serde_json::to_string(&binding.kind).unwrap());
             uasm.push('\n');
         }
 
@@ -233,40 +246,27 @@ impl AsMut<Assembly> for Assembly {
 }
 
 /// Information about a binding
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct BindingInfo {
     /// The binding kind
     pub kind: BindingKind,
     /// Whether the binding is public
-    #[serde(default = "tru", skip_serializing_if = "is_true")]
     pub public: bool,
-    #[serde(skip, default = "CodeSpan::dummy")]
-    #[allow(dead_code)]
     /// The span of the original binding name
     pub span: CodeSpan,
-    #[serde(skip)]
-    #[allow(dead_code)]
     /// The comment preceding the binding
     pub comment: Option<Arc<str>>,
 }
 
-fn is_true(value: &bool) -> bool {
-    *value
-}
-
-fn tru() -> bool {
-    true
-}
-
 /// A kind of global binding
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum BindingKind {
     /// A constant value
     Const(Option<Value>),
     /// A function
     Func(Function),
     /// A module
-    #[allow(missing_docs)]
     Module(PathBuf),
     /// A macro
     Macro,

@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.10
-  - Document `fill` nullifying `fix`
+  - Pad setting for autoplay audio
   - Improve `partition` implementation
 - 0.11
   - Non-`|2.1` `reduce`

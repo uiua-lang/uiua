@@ -113,6 +113,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add horizontal scrolling to pad output
 - Pad tabs are now given titles according to their contents
 - The pad now renders strings that are SVG as images
+- Add a pad setting for autoplaying audio
 
 ## 0.9.5 - 2024-02-28
 ### Interpreter

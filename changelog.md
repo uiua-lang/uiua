@@ -78,6 +78,7 @@ This version is not yet released. If you are reading this on the website, then t
   - It is rarely used and easy to express with other functions
 - Remove `unpack ⊐` for good
 - Remove `&i` for good
+- Make [`reduce /`](https://uiua.org/docs/reduce) with a monadic function a hard error
 ### Interpreter
 - Code is now analyzed for purity
   - All pure top-level expressions will attempt to evaluate at compile time

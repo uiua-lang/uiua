@@ -305,24 +305,6 @@ impl Compiler {
         // Compile operands
         let instrs = self.compile_words(modified.operands, false)?;
 
-        // Reduce monadic deprectation message
-        if let (Modifier::Primitive(Primitive::Reduce), [Instr::PushFunc(f)]) =
-            (&modified.modifier.value, instrs.as_slice())
-        {
-            if f.signature().args == 1 {
-                self.emit_diagnostic(
-                    format!(
-                        "{} with a monadic function is deprecated. \
-                        Prefer {} with stack array notation, i.e. `°[⊙⊙∘]`",
-                        Primitive::Reduce.format(),
-                        Primitive::Un.format()
-                    ),
-                    DiagnosticKind::Warning,
-                    modified.modifier.span.clone(),
-                );
-            }
-        }
-
         if call {
             self.push_all_instrs(instrs);
             self.primitive(prim, modified.modifier.span, true)?;
@@ -780,18 +762,6 @@ impl Compiler {
                 }
                 let operand = m.code_operands().next().unwrap().clone();
                 let (content_instrs, sig) = self.compile_operand_word(operand)?;
-                if sig.args == 1 {
-                    self.emit_diagnostic(
-                        format!(
-                            "{} with a monadic function is deprecated. \
-                                        Prefer {} with stack array notation, i.e. `°[⊙⊙∘]`",
-                            Primitive::Reduce.format(),
-                            Primitive::Un.format()
-                        ),
-                        DiagnosticKind::Warning,
-                        modified.modifier.span.clone(),
-                    );
-                }
                 let content_func = self.make_function(
                     FunctionId::Anonymous(m.modifier.span.clone()),
                     sig,

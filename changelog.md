@@ -70,6 +70,10 @@ This version is not yet released. If you are reading this on the website, then t
   - This is useful in array macros
 - Add `# No inline!` semantic comment, which prevents a function and its callers from being inlined
   - This enables better stack traces on errors
+- Deprecate [`bind`](https://uiua.org/docs/bind)
+  - It undermines the priniciples of the language
+  - It makes certain optimizations impossible
+  - [`fill ⬚`](https://uiua.org/docs/fill) and/or [`map`](https://uiua.org/docs/map) can be used to achieve similar effects
 - Deprecate [`deal`](https://uiua.org/docs/deal)
   - It is rarely used and easy to express with other functions
 - Remove `unpack ⊐` for good

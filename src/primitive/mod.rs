@@ -334,32 +334,35 @@ impl Primitive {
     }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         use Primitive::*;
-        match self {
-            Cross => Some(format!("use {} instead", Table.format())),
-            Cascade => Some(format!("use {} or {} instead", Fork.format(), On.format())),
-            Rectify => Some(String::new()),
-            All => Some(String::new()),
-            This | Recur => Some("use the name of a binding to recur instead".into()),
-            Sys(SysOp::GifDecode) => Some(format!(
+        Some(match self {
+            Cross => format!("use {} instead", Table.format()),
+            Cascade => format!("use {} or {} instead", Fork.format(), On.format()),
+            Rectify => String::new(),
+            All => String::new(),
+            This | Recur => "use the name of a binding to recur instead".into(),
+            Sys(SysOp::GifDecode) => format!(
                 "use {} {} instead",
                 Un.format(),
                 Sys(SysOp::GifEncode).format()
-            )),
-            Sys(SysOp::AudioDecode) => Some(format!(
+            ),
+            Sys(SysOp::AudioDecode) => format!(
                 "use {} {} instead",
                 Un.format(),
                 Sys(SysOp::AudioEncode).format()
-            )),
-            Sys(SysOp::ImDecode) => Some(format!(
+            ),
+            Sys(SysOp::ImDecode) => format!(
                 "use {} {} instead",
                 Un.format(),
                 Sys(SysOp::ImEncode).format()
-            )),
-            Deal => Some(format!(
-                "use {Select}{Rise}[{Pop}{Repeat}{Gen}]{Len}{Over} instead"
-            )),
-            _ => None,
-        }
+            ),
+            Deal => format!("use {Select}{Rise}[{Pop}{Repeat}{Gen}]{Len}{Over} instead"),
+            Bind => format!(
+                "use planet notation, {}, and/or {} shenanigans instead",
+                Map.format(),
+                Fill.format()
+            ),
+            _ => return None,
+        })
     }
     /// Check if this primitive is experimental
     #[allow(unused_parens)]

@@ -1,5 +1,3 @@
-# Experimental!
-
 {1 3 "hi" [1 2 3]}
 {2 4 "there" [4 5 6]}
 map:

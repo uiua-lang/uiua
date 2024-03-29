@@ -1,8 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Pad setting for autoplay audio
-  - Improve `partition` implementation
 - 0.11
   - Non-`|2.1` `reduce`
   - Full HTTPS support

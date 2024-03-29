@@ -70,6 +70,10 @@ This version is not yet released. If you are reading this on the website, then t
   - This is useful in array macros
 - Add `# No inline!` semantic comment, which prevents a function and its callers from being inlined
   - This enables better stack traces on errors
+- Deprecate [`bind`](https://uiua.org/docs/bind)
+  - It undermines the priniciples of the language
+  - It makes certain optimizations impossible
+  - [`fill ⬚`](https://uiua.org/docs/fill) and/or [`map`](https://uiua.org/docs/map) can be used to achieve similar effects
 - Deprecate [`deal`](https://uiua.org/docs/deal)
   - It is rarely used and easy to express with other functions
 - Remove `unpack ⊐` for good
@@ -113,6 +117,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add horizontal scrolling to pad output
 - Pad tabs are now given titles according to their contents
 - The pad now renders strings that are SVG as images
+- Add a pad setting for autoplaying audio
 
 ## 0.9.5 - 2024-02-28
 ### Interpreter

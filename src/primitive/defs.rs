@@ -1803,6 +1803,14 @@ primitive!(
     /// A fill value can be pulled from the stack with [identity].
     /// ex: ⬚∘[1 2_3_4] 0
     /// ex: ⬚∘+ ∞ [1 2] [3 4 5 6]
+    ///
+    /// Beware that [fill] nullifies [fix] for use in repeating a value multiple times in loops.
+    /// ex:   ≡⊂¤ [1 2 3] [4 5]
+    ///   : ⬚0≡⊂¤ [1 2 3] [4 5]
+    /// This is because [fix] works by making an array with 1 row, but [fill] tries to make the [length]s match.
+    /// To get the expected behavior, use [box] and [content] instead of [fix].
+    /// ex: ⬚0≡◇⊂□ [1 2 3] [4 5]
+    ///
     /// There are multiple kinds of fill values. By default, a generic, all-encompassing fill value is set.
     /// This can have problems for functions that can use multiple kinds of fill values. For example, [scan].
     /// ex: ⬚0\⊂ [1 2 3]

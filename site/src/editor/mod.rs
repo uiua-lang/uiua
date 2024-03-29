@@ -240,7 +240,7 @@ pub fn Editor<'a>(
 
         // Run code
         set_output.set(view!(<div class="running-text">"Running"</div>).into_view());
-        let mut allow_autoplay = !matches!(mode, EditorMode::Example);
+        let allow_autoplay = !matches!(mode, EditorMode::Example) && get_autoplay();
         let render_output_item = move |item| match item {
             OutputItem::String(s) => {
                 if s.is_empty() {
@@ -268,7 +268,6 @@ pub fn Editor<'a>(
                 let encoded = STANDARD.encode(bytes);
                 let src = format!("data:audio/wav;base64,{}", encoded);
                 if allow_autoplay {
-                    allow_autoplay = false;
                     view!(<div><audio class="output-audio" controls autoplay src=src/></div>)
                         .into_view()
                 } else {
@@ -1158,9 +1157,8 @@ pub fn Editor<'a>(
     let toggle_right_to_left = move |_| {
         set_right_to_left(!get_right_to_left());
     };
-    let toggle_autorun = move |_| {
-        set_autorun(!get_autorun());
-    };
+    let toggle_autorun = move |_| set_autorun(!get_autorun());
+    let toggle_autoplay = move |_| set_autoplay(!get_autoplay());
     let toggle_show_experimental = move |_| {
         set_show_experimental(!get_show_experimental());
     };
@@ -1228,6 +1226,13 @@ pub fn Editor<'a>(
                                 type="checkbox"
                                 checked=get_autorun
                                 on:change=toggle_autorun/>
+                        </div>
+                        <div title="Automatically play audio">
+                            "Autoplay audio:"
+                            <input
+                                type="checkbox"
+                                checked=get_autoplay
+                                on:change=toggle_autoplay/>
                         </div>
                         <div title="Show experimental primitive glyphs">
                             "Show experimental:"

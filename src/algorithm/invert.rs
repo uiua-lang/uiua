@@ -169,6 +169,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &invert_primes_pattern,
         &invert_format_pattern,
         &invert_join_val_pattern,
+        &invert_unjoin_pattern,
         &(Val, invert_repeat_pattern),
         &(Val, ([Rotate], [Neg, Rotate])),
         &pat!(Sqrt, (Dup, Mul)),
@@ -185,7 +186,6 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
         &pat!(Join, ([], UnJoin)),
-        &(Val, pat!(UnJoin, Join)),
         &invert_temp_pattern,
         &invert_push_pattern,
     ]
@@ -644,6 +644,19 @@ fn invert_join_val_pattern<'a>(
         }
     }
     None
+}
+
+fn invert_unjoin_pattern<'a>(
+    input: &'a [Instr],
+    _: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::Push(val), Instr::ImplPrim(ImplPrimitive::UnJoin, span), input @ ..] = input else {
+        return None;
+    };
+    if *val != Value::default() {
+        return None;
+    }
+    Some((input, eco_vec![Instr::Prim(Primitive::Join, *span)]))
 }
 
 fn invert_rectify_pattern<'a>(

@@ -353,7 +353,8 @@
     "modifier_args": 1,
     "class": "OtherModifier",
     "description": "Bind local values",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "bits": {
     "glyph": "⋯",

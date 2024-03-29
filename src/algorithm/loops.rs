@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 
 use crate::{
     array::{Array, ArrayValue},
+    cowslice::CowSlice,
     value::Value,
     Boxed, FillKind, Function, Primitive, Shape, Signature, Uiua, UiuaResult,
 };
@@ -209,9 +210,54 @@ impl Value {
     }
 }
 
+struct PartitionIter<T> {
+    len: usize,
+    curr: usize,
+    markers: CowSlice<isize>,
+    source: Array<T>,
+}
+
+impl<T> Iterator for PartitionIter<T>
+where
+    T: Clone,
+    Array<T>: Into<Value>,
+{
+    type Item = Value;
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.curr < self.markers.len() {
+            let marker = self.markers[self.curr];
+            if marker <= 0 {
+                self.curr += 1;
+            } else {
+                let start = self.curr;
+                while self.curr < self.markers.len() && self.markers[self.curr] == marker {
+                    self.curr += 1;
+                }
+                let end = self.curr;
+                let group_data = self.source.data.slice(start..end);
+                let mut shape = self.source.shape.clone();
+                shape[0] = end - start;
+                return Some(Array::new(shape, group_data).into());
+            }
+        }
+        None
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.len - self.curr;
+        (len, Some(len))
+    }
+}
+
+impl<T> ExactSizeIterator for PartitionIter<T>
+where
+    T: Clone,
+    Array<T>: Into<Value>,
+{
+}
+
 impl<T: ArrayValue> Array<T>
 where
-    Value: From<Array<T>>,
+    Array<T>: Into<Value>,
 {
     fn partition_groups(
         self,
@@ -227,22 +273,20 @@ where
         }
         let mut groups = Vec::new();
         Ok(if markers.rank() == 1 {
+            let mut count = 0;
             let mut last_marker = isize::MAX;
-            for (row, marker) in self.into_rows().zip(markers.data) {
-                if marker > 0 {
-                    if marker != last_marker {
-                        groups.push(Vec::new());
-                    }
-                    groups.last_mut().unwrap().push(row);
+            for &marker in &markers.data {
+                if marker > 0 && marker != last_marker {
+                    count += 1;
                 }
                 last_marker = marker;
             }
-            Box::new(
-                groups
-                    .into_iter()
-                    .map(Array::from_row_arrays_infallible)
-                    .map(Into::into),
-            )
+            Box::new(PartitionIter {
+                len: count,
+                curr: 0,
+                markers: markers.data,
+                source: self,
+            })
         } else {
             let row_shape: Shape = self.shape()[markers.rank()..].into();
             let indices = multi_partition_indices(markers);

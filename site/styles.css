@@ -404,7 +404,7 @@ li {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 0.2em 0.6em;
+    gap: 0.2em 1em;
 }
 
 #settings-left {

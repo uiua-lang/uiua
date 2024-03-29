@@ -1,8 +1,6 @@
 # Uiua Todo
 
 - 0.10
-  - Document `fill` nullifying `fix`
-  - Improve `partition` implementation
 - 0.11
   - Non-`|2.1` `reduce`
   - Full HTTPS support

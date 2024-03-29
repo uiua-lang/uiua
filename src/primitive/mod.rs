@@ -631,42 +631,6 @@ impl Primitive {
             Primitive::Pop => {
                 env.pop(1)?;
             }
-            Primitive::Dip => {
-                return Err(env.error("Dip was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::On => {
-                return Err(env.error("On was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::By => {
-                return Err(env.error("Off was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Gap => {
-                return Err(env.error("Gap was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Un => {
-                return Err(env.error("Invert was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Under => {
-                return Err(env.error("Under was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Bind => {
-                return Err(env.error("Bind was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Content => {
-                return Err(env.error("Content was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Both => {
-                return Err(env.error("Both was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Fork => {
-                return Err(env.error("Fork was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Cascade => {
-                return Err(env.error("Cascade was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Bracket => {
-                return Err(env.error("Bracket was not inlined. This is a bug in the interpreter"))
-            }
             Primitive::All => algorithm::all(env)?,
             Primitive::Fill => {
                 let fill = env.pop_function()?;
@@ -778,9 +742,6 @@ impl Primitive {
                     .or_default()
                     .insert(args, outputs.clone());
             }
-            Primitive::Comptime => {
-                return Err(env.error("Comptime was not inlined. This is a bug in the interpreter"));
-            }
             Primitive::Spawn => {
                 let f = env.pop_function()?;
                 env.spawn(f.signature().args, false, |env| env.call(f))?;
@@ -859,14 +820,26 @@ impl Primitive {
             Primitive::Dump => dump(env, false)?,
             Primitive::Regex => regex(env)?,
             Primitive::Csv => env.monadic_ref_env(Value::to_csv)?,
-            Primitive::Stringify => {
-                return Err(env.error("stringify was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Quote => {
-                return Err(env.error("quote was not inlined. This is a bug in the interpreter"))
-            }
-            Primitive::Sig => {
-                return Err(env.error("signature was not inlined. This is a bug in the interpreter"))
+            Primitive::Stringify
+            | Primitive::Quote
+            | Primitive::Sig
+            | Primitive::Comptime
+            | Primitive::Dip
+            | Primitive::On
+            | Primitive::By
+            | Primitive::Gap
+            | Primitive::Un
+            | Primitive::Under
+            | Primitive::Bind
+            | Primitive::Content
+            | Primitive::Both
+            | Primitive::Fork
+            | Primitive::Cascade
+            | Primitive::Bracket => {
+                return Err(env.error(format!(
+                    "{} was not inlined. This is a bug in the interpreter",
+                    self.format()
+                )))
             }
             Primitive::Sys(io) => io.run(env)?,
         }

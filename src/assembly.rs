@@ -113,20 +113,30 @@ impl Assembly {
         let (top_slices_src, rest) = rest.split_once("BINDINGS").ok_or("No bindings")?;
         let (bindings_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
         let (spans_src, rest) = rest.trim().split_once("FILES").ok_or("No files")?;
-        let (files_src, rest) = rest
-            .trim()
-            .split_once("STRING INPUTS")
-            .ok_or("No string inputs")?;
+        let (files_src, rest) = rest.trim().split_once("STRING INPUTS").unwrap_or(("", ""));
         let strings_src = rest.trim();
 
         let mut instrs = EcoVec::new();
-        for line in instrs_src.lines().filter(|line| !line.is_empty()) {
-            let instr: Instr = serde_json::from_str(line).map_err(|e| e.to_string())?;
+        for line in instrs_src.lines().filter(|line| !line.trim().is_empty()) {
+            let instr: Instr = serde_json::from_str(line)
+                .or_else(|e| {
+                    let (key, val) = line.split_once(' ').ok_or("No key")?;
+                    let json = format!("{{{key:?}: {val:?}}}");
+                    serde_json::from_str(&json).map_err(|_| e.to_string())
+                })
+                .or_else(|e| {
+                    let (key, val) = line.split_once(' ').ok_or("No key")?;
+                    let json = format!("[{key:?},{val:?}]");
+                    serde_json::from_str(&json).map_err(|_| e.to_string())
+                })?;
             instrs.push(instr);
         }
 
         let mut top_slices = Vec::new();
-        for line in top_slices_src.lines().filter(|line| !line.is_empty()) {
+        for line in top_slices_src
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+        {
             let (start, len) = line.split_once(' ').ok_or("No start")?;
             let start = start.parse::<usize>().map_err(|e| e.to_string())?;
             let len = len.parse::<usize>().map_err(|e| e.to_string())?;
@@ -134,13 +144,18 @@ impl Assembly {
         }
 
         let mut bindings = EcoVec::new();
-        for line in bindings_src.lines().filter(|line| !line.is_empty()) {
+        for line in bindings_src.lines().filter(|line| !line.trim().is_empty()) {
             let (public, line) = if let Some(line) = line.strip_prefix("private ") {
                 (false, line)
             } else {
                 (true, line)
             };
-            let kind: BindingKind = serde_json::from_str(line).map_err(|e| e.to_string())?;
+            let kind: BindingKind = serde_json::from_str(line).or_else(|e| {
+                let (key, val) = line.split_once("\" ").ok_or("No key")?;
+                let key = format!("{key}\"");
+                let json = format!("{{{key:?}: {val:?}}}");
+                serde_json::from_str(&json).map_err(|_| e.to_string())
+            })?;
             bindings.push(BindingInfo {
                 kind,
                 public,
@@ -151,13 +166,13 @@ impl Assembly {
 
         let mut spans = EcoVec::new();
         spans.push(Span::Builtin);
-        for line in spans_src.lines().filter(|line| !line.is_empty()) {
+        for line in spans_src.lines().filter(|line| !line.trim().is_empty()) {
             let span: Span = serde_json::from_str(line).map_err(|e| e.to_string())?;
             spans.push(span);
         }
 
         let files = DashMap::new();
-        for line in files_src.lines().filter(|line| !line.is_empty()) {
+        for line in files_src.lines().filter(|line| !line.trim().is_empty()) {
             let (path, src) = line.split_once(": ").ok_or("No path")?;
             let path = PathBuf::from(path);
             let src: EcoString = serde_json::from_str(src).map_err(|e| e.to_string())?;
@@ -188,7 +203,28 @@ impl Assembly {
         let mut uasm = String::new();
 
         for instr in &self.instrs {
-            uasm.push_str(&serde_json::to_string(instr).unwrap());
+            let json = serde_json::to_value(instr).unwrap();
+            match &json {
+                serde_json::Value::Object(map) => {
+                    if map.len() == 1 {
+                        let key = map.keys().next().unwrap();
+                        let value = map.values().next().unwrap();
+                        uasm.push_str(&format!("{} {}\n", key, value));
+                        continue;
+                    }
+                }
+                serde_json::Value::Array(arr) => {
+                    if arr.len() == 2 {
+                        if let serde_json::Value::String(key) = &arr[0] {
+                            let value = &arr[1];
+                            uasm.push_str(&format!("{} {}\n", key, value));
+                            continue;
+                        }
+                    }
+                }
+                _ => (),
+            }
+            uasm.push_str(&json.to_string());
             uasm.push('\n');
         }
 
@@ -201,6 +237,14 @@ impl Assembly {
         for binding in &self.bindings {
             if !binding.public {
                 uasm.push_str("private ");
+            }
+            if let serde_json::Value::Object(map) = serde_json::to_value(&binding.kind).unwrap() {
+                if map.len() == 1 {
+                    let key = map.keys().next().unwrap();
+                    let value = map.values().next().unwrap();
+                    uasm.push_str(&format!("{} {}\n", key, value));
+                    continue;
+                }
             }
             uasm.push_str(&serde_json::to_string(&binding.kind).unwrap());
             uasm.push('\n');
@@ -216,17 +260,15 @@ impl Assembly {
         for entry in &self.inputs.files {
             let key = entry.key();
             let value = entry.value();
-            uasm.push_str(&format!(
-                "{}: {}\n",
-                key.to_string_lossy(),
-                serde_json::to_string(value).unwrap()
-            ));
+            uasm.push_str(&format!("{:?} {:?}\n", key.to_string_lossy(), value));
         }
 
-        uasm.push_str("\nSTRING INPUTS\n");
-        for src in &self.inputs.strings {
-            uasm.push_str(&serde_json::to_string(src).unwrap());
-            uasm.push('\n');
+        if !self.inputs.strings.is_empty() {
+            uasm.push_str("\nSTRING INPUTS\n");
+            for src in &self.inputs.strings {
+                uasm.push_str(&serde_json::to_string(src).unwrap());
+                uasm.push('\n');
+            }
         }
 
         uasm
@@ -395,11 +437,12 @@ impl<'de> Deserialize<'de> for Instr {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 enum InstrRep {
     Comment(Ident),
     CallGlobal(usize, bool),
     BindGlobal(usize, usize),
-    BeginArray(()),
+    BeginArray,
     EndArray(bool, usize),
     Call(usize),
     PushFunc(Function),
@@ -409,7 +452,7 @@ enum InstrRep {
     Label(EcoString, usize),
     Dynamic(DynamicFunction),
     PushLocals(usize, usize),
-    PopLocals(()),
+    PopLocals,
     GetLocal(usize, usize),
     Unpack(usize, usize, bool),
     TouchStack(usize, usize),
@@ -419,9 +462,9 @@ enum InstrRep {
     CopyFromTemp(TempStack, usize, usize, usize),
     DropTemp(TempStack, usize, usize),
     PushSig(Signature),
-    PopSig(()),
+    PopSig,
     SetOutputComment(usize, usize),
-    NoInline(()),
+    NoInline,
     #[serde(untagged)]
     Push(Value),
     #[serde(untagged)]
@@ -437,7 +480,7 @@ impl From<Instr> for InstrRep {
             Instr::Push(value) => Self::Push(value),
             Instr::CallGlobal { index, call } => Self::CallGlobal(index, call),
             Instr::BindGlobal { span, index } => Self::BindGlobal(span, index),
-            Instr::BeginArray => Self::BeginArray(()),
+            Instr::BeginArray => Self::BeginArray,
             Instr::EndArray { boxed, span } => Self::EndArray(boxed, span),
             Instr::Prim(prim, span) => Self::Prim(prim, span),
             Instr::ImplPrim(prim, span) => Self::ImplPrim(prim, span),
@@ -454,7 +497,7 @@ impl From<Instr> for InstrRep {
             Instr::Label { label, span } => Self::Label(label, span),
             Instr::Dynamic(func) => Self::Dynamic(func),
             Instr::PushLocals { count, span } => Self::PushLocals(count, span),
-            Instr::PopLocals => Self::PopLocals(()),
+            Instr::PopLocals => Self::PopLocals,
             Instr::GetLocal { index, span } => Self::GetLocal(index, span),
             Instr::Unpack { count, span, unbox } => Self::Unpack(count, span, unbox),
             Instr::TouchStack { count, span } => Self::TouchStack(count, span),
@@ -469,9 +512,9 @@ impl From<Instr> for InstrRep {
             } => Self::CopyFromTemp(stack, offset, count, span),
             Instr::DropTemp { stack, count, span } => Self::DropTemp(stack, count, span),
             Instr::PushSig(sig) => Self::PushSig(sig),
-            Instr::PopSig => Self::PopSig(()),
+            Instr::PopSig => Self::PopSig,
             Instr::SetOutputComment { i, n } => Self::SetOutputComment(i, n),
-            Instr::NoInline => Self::NoInline(()),
+            Instr::NoInline => Self::NoInline,
         }
     }
 }
@@ -483,7 +526,7 @@ impl From<InstrRep> for Instr {
             InstrRep::Push(value) => Self::Push(value),
             InstrRep::CallGlobal(index, call) => Self::CallGlobal { index, call },
             InstrRep::BindGlobal(span, index) => Self::BindGlobal { span, index },
-            InstrRep::BeginArray(()) => Self::BeginArray,
+            InstrRep::BeginArray => Self::BeginArray,
             InstrRep::EndArray(boxed, span) => Self::EndArray { boxed, span },
             InstrRep::Prim(prim, span) => Self::Prim(prim, span),
             InstrRep::ImplPrim(prim, span) => Self::ImplPrim(prim, span),
@@ -500,7 +543,7 @@ impl From<InstrRep> for Instr {
             InstrRep::Label(label, span) => Self::Label { label, span },
             InstrRep::Dynamic(func) => Self::Dynamic(func),
             InstrRep::PushLocals(count, span) => Self::PushLocals { count, span },
-            InstrRep::PopLocals(()) => Self::PopLocals,
+            InstrRep::PopLocals => Self::PopLocals,
             InstrRep::GetLocal(index, span) => Self::GetLocal { index, span },
             InstrRep::Unpack(count, span, unbox) => Self::Unpack { count, span, unbox },
             InstrRep::TouchStack(count, span) => Self::TouchStack { count, span },
@@ -515,9 +558,9 @@ impl From<InstrRep> for Instr {
             },
             InstrRep::DropTemp(stack, count, span) => Self::DropTemp { stack, count, span },
             InstrRep::PushSig(sig) => Self::PushSig(sig),
-            InstrRep::PopSig(()) => Self::PopSig,
+            InstrRep::PopSig => Self::PopSig,
             InstrRep::SetOutputComment(i, n) => Self::SetOutputComment { i, n },
-            InstrRep::NoInline(()) => Self::NoInline,
+            InstrRep::NoInline => Self::NoInline,
         }
     }
 }

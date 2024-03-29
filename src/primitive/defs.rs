@@ -180,7 +180,7 @@ macro_rules! primitive {
     ),* $(,)?) => {
         /// A built-in function
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence, Serialize, Deserialize)]
-        #[serde(rename_all = "snake_case")]
+        #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
         #[allow(rustdoc::broken_intra_doc_links)]
         pub enum Primitive {
             $(
@@ -2419,7 +2419,7 @@ macro_rules! impl_primitive {
         /// Primitives that exist as an implementation detail
         #[doc(hidden)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-        #[serde(rename_all = "snake_case")]
+        #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
         pub enum ImplPrimitive {
             $($variant,)*
             TransposeN(i32),

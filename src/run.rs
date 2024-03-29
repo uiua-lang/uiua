@@ -324,14 +324,10 @@ impl Uiua {
         Ok(comp)
     }
     /// Run a string as Uiua code
-    ///
-    /// This is equivalent to [`Uiua::load_str`]`(&mut self, intput).and_then(`[`Chunk::run`]`)`
     pub fn run_str(&mut self, input: &str) -> UiuaResult<Compiler> {
         self.compile_run(|comp| comp.load_str(input))
     }
     /// Run a file as Uiua code
-    ///
-    /// This is equivalent to [`Uiua::load_file`]`(&mut self, path).and_then(`[`Chunk::run`]`)`
     pub fn run_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<Compiler> {
         self.compile_run(|comp| comp.load_file(path))
     }

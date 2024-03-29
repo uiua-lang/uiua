@@ -181,6 +181,7 @@ macro_rules! primitive {
         /// A built-in function
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Sequence, Serialize, Deserialize)]
         #[serde(rename_all = "snake_case")]
+        #[allow(rustdoc::broken_intra_doc_links)]
         pub enum Primitive {
             $(
                 #[doc = $doc_rust]

@@ -34,7 +34,7 @@ pub struct Array<T> {
 }
 
 /// Non-shape metadata for an array
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ArrayMeta {
     /// The label
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -55,7 +55,7 @@ pub struct ArrayMeta {
 
 bitflags! {
     /// Flags for an array
-    #[derive(Clone, Copy, Default, Serialize, Deserialize)]
+    #[derive(Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
     pub struct ArrayFlags: u8 {
         /// No flags
         const NONE = 0;
@@ -947,8 +947,8 @@ impl<T: ArrayValueSer> From<ArrayRep<T>> for Array<T> {
 }
 
 impl<T: ArrayValueSer> From<Array<T>> for ArrayRep<T> {
-    fn from(arr: Array<T>) -> Self {
-        if let Some(meta) = arr.meta {
+    fn from(mut arr: Array<T>) -> Self {
+        if let Some(meta) = arr.meta.take().filter(|meta| **meta != DEFAULT_META) {
             return ArrayRep::Full(arr.shape, T::make_collection(arr.data), meta);
         }
         match arr.rank() {

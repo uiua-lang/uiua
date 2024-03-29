@@ -307,7 +307,7 @@ impl Value {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MapKeys {
     pub(crate) keys: Value,
     indices: Vec<usize>,

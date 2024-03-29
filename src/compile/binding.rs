@@ -95,7 +95,12 @@ impl Compiler {
             }
             let function = self.make_function(FunctionId::Named(name.clone()), sig, instrs);
             self.scope.names.insert(name.clone(), local);
-            (self.asm).add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
+            (self.asm).add_global_at(
+                local,
+                BindingKind::Macro,
+                Some(span.clone()),
+                comment.clone(),
+            );
             let mac = ArrayMacro {
                 function,
                 names: self.scope.names.clone(),
@@ -129,7 +134,12 @@ impl Compiler {
         }
         if placeholder_count > 0 || ident_margs > 0 {
             self.scope.names.insert(name.clone(), local);
-            (self.asm).add_global_at(local, Global::Macro, Some(span.clone()), comment.clone());
+            (self.asm).add_global_at(
+                local,
+                BindingKind::Macro,
+                Some(span.clone()),
+                comment.clone(),
+            );
             let mut words = binding.words.clone();
             recurse_words(&mut words, &mut |word| match &word.value {
                 Word::Ref(r) => {
@@ -396,7 +406,7 @@ impl Compiler {
             };
             self.asm.add_global_at(
                 local,
-                Global::Module(module_path.clone()),
+                BindingKind::Module(module_path.clone()),
                 Some(name.span.clone()),
                 prev_com.or_else(|| imported.comment.clone()),
             );

@@ -120,14 +120,14 @@ fn run() -> UiuaResult {
                     .with_args(args)
                     .time_instrs(time_instrs);
                 if path.extension().is_some_and(|ext| ext == "uasm") {
-                    let json = match fs::read_to_string(&path) {
+                    let uasm = match fs::read_to_string(&path) {
                         Ok(json) => json,
                         Err(e) => {
                             eprintln!("Failed to read assembly: {e}");
                             return Ok(());
                         }
                     };
-                    let assembly = match serde_json::from_str::<Assembly>(&json) {
+                    let assembly = match Assembly::from_uasm(&uasm) {
                         Ok(assembly) => assembly,
                         Err(e) => {
                             eprintln!("Failed to parse assembly: {e}");
@@ -167,14 +167,8 @@ fn run() -> UiuaResult {
                     .load_file(&path)?
                     .finish();
                 let output = output.unwrap_or_else(|| path.with_extension("uasm"));
-                let json = match serde_json::to_string(&assembly) {
-                    Ok(json) => json,
-                    Err(e) => {
-                        eprintln!("Failed to serialize assembly: {e}");
-                        return Ok(());
-                    }
-                };
-                if let Err(e) = fs::write(output, json) {
+                let uasm = assembly.to_uasm();
+                if let Err(e) = fs::write(output, uasm) {
                     eprintln!("Failed to write assembly: {e}");
                 }
             }

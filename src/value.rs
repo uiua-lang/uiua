@@ -11,11 +11,7 @@ use ecow::{EcoString, EcoVec};
 use serde::*;
 
 use crate::{
-    algorithm::{
-        map::{MapKeys, EMPTY_NAN, TOMBSTONE_NAN},
-        pervade::*,
-        FillContext,
-    },
+    algorithm::{map::MapKeys, pervade::*, FillContext},
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
@@ -26,13 +22,13 @@ use crate::{
 ///
 /// This enum is used to represent all possible array types.
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(from = "ValueRep", into = "ValueRep")]
+#[serde(untagged)]
 #[repr(C)]
 pub enum Value {
-    /// Common number array
-    Num(Array<f64>),
     /// Byte array used for some boolean operations and for I/O
     Byte(Array<u8>),
+    /// Common number array
+    Num(Array<f64>),
     /// Complex number array
     Complex(Array<Complex>),
     /// Common character array
@@ -1862,112 +1858,5 @@ impl ValueBuilder {
     }
     pub fn finish(self) -> Value {
         self.value.unwrap_or_default()
-    }
-}
-
-#[derive(Clone, Copy, Serialize, Deserialize)]
-enum F64Rep {
-    #[serde(rename = "NaN")]
-    NaN,
-    #[serde(rename = "empty")]
-    MapEmpty,
-    #[serde(rename = "tomb")]
-    MapTombstone,
-    #[serde(rename = "∞")]
-    Infinity,
-    #[serde(rename = "-∞")]
-    NegInfinity,
-    #[serde(untagged)]
-    Num(f64),
-}
-
-impl From<f64> for F64Rep {
-    fn from(n: f64) -> Self {
-        if n.is_nan() {
-            if n.to_bits() == EMPTY_NAN.to_bits() {
-                Self::MapEmpty
-            } else if n.to_bits() == TOMBSTONE_NAN.to_bits() {
-                Self::MapTombstone
-            } else {
-                Self::NaN
-            }
-        } else if n.is_infinite() {
-            if n.is_sign_positive() {
-                Self::Infinity
-            } else {
-                Self::NegInfinity
-            }
-        } else {
-            Self::Num(n)
-        }
-    }
-}
-
-impl From<F64Rep> for f64 {
-    fn from(rep: F64Rep) -> Self {
-        match rep {
-            F64Rep::NaN => f64::NAN,
-            F64Rep::MapEmpty => EMPTY_NAN,
-            F64Rep::MapTombstone => TOMBSTONE_NAN,
-            F64Rep::Infinity => f64::INFINITY,
-            F64Rep::NegInfinity => f64::NEG_INFINITY,
-            F64Rep::Num(n) => n,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(untagged)]
-enum ValueRep {
-    Byte(Array<u8>),
-    Num(Array<F64Rep>),
-    Complex(Array<Complex>),
-    Char {
-        #[serde(rename = "s", default, skip_serializing_if = "<[_]>::is_empty")]
-        shape: Shape,
-        #[serde(rename = "d", default, skip_serializing_if = "String::is_empty")]
-        data: String,
-        #[serde(
-            rename = "m",
-            flatten,
-            default,
-            skip_serializing_if = "Option::is_none"
-        )]
-        meta: Option<ArrayMeta>,
-    },
-    Box(Array<Boxed>),
-}
-
-impl From<ValueRep> for Value {
-    fn from(value: ValueRep) -> Self {
-        match value {
-            ValueRep::Byte(arr) => arr.into(),
-            ValueRep::Num(arr) => arr.convert::<f64>().into(),
-            ValueRep::Complex(arr) => arr.into(),
-            ValueRep::Char { shape, data, meta } => {
-                let mut arr = Array::new(shape, data.chars().collect::<EcoVec<_>>());
-                if let Some(meta) = meta {
-                    *arr.meta_mut() = meta;
-                }
-                arr.into()
-            }
-            ValueRep::Box(arr) => arr.into(),
-        }
-    }
-}
-
-impl From<Value> for ValueRep {
-    fn from(value: Value) -> Self {
-        match value {
-            Value::Byte(arr) => Self::Byte(arr),
-            Value::Num(arr) => Self::Num(arr.convert_with(F64Rep::from)),
-            Value::Complex(arr) => Self::Complex(arr),
-            Value::Char(arr) => Self::Char {
-                shape: arr.shape().clone(),
-                data: arr.data().iter().collect(),
-                meta: arr.meta.map(|m| (*m).clone()),
-            },
-            Value::Box(arr) => Self::Box(arr),
-        }
     }
 }

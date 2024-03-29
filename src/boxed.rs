@@ -9,8 +9,25 @@ use crate::value::Value;
 
 /// The element type for box arrays
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
-#[serde(transparent)]
+#[serde(from = "BoxedRep", into = "BoxedRep")]
 pub struct Boxed(pub Value);
+
+#[derive(Serialize, Deserialize)]
+struct BoxedRep {
+    boxed: Value,
+}
+
+impl From<Boxed> for BoxedRep {
+    fn from(b: Boxed) -> Self {
+        Self { boxed: b.0 }
+    }
+}
+
+impl From<BoxedRep> for Boxed {
+    fn from(b: BoxedRep) -> Self {
+        Self(b.boxed)
+    }
+}
 
 impl Boxed {
     /// Get the inner value

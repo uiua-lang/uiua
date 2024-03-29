@@ -29,9 +29,9 @@ use crate::{
     lsp::{CodeMeta, SigDecl},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, parse, split_words, unsplit_words},
-    Array, Assembly, Boxed, Diagnostic, DiagnosticKind, Global, Ident, ImplPrimitive, InputSrc,
-    IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment, SysBackend, Uiua, UiuaError,
-    UiuaResult, Value, CONSTANTS, VERSION,
+    Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, Ident, ImplPrimitive,
+    InputSrc, IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment, SysBackend, Uiua,
+    UiuaError, UiuaResult, Value, CONSTANTS, VERSION,
 };
 
 /// The Uiua compiler
@@ -1277,22 +1277,22 @@ code:
                 )
             })?;
         path_locals.push(module_local);
-        let global = &self.asm.bindings[module_local.index].global;
+        let global = &self.asm.bindings[module_local.index].kind;
         let mut module = match global {
-            Global::Module(module) => module,
-            Global::Func(_) => {
+            BindingKind::Module(module) => module,
+            BindingKind::Func(_) => {
                 return Err(self.fatal_error(
                     first.module.span.clone(),
                     format!("`{}` is a function, not a module", first.module.value),
                 ))
             }
-            Global::Const(_) => {
+            BindingKind::Const(_) => {
                 return Err(self.fatal_error(
                     first.module.span.clone(),
                     format!("`{}` is a constant, not a module", first.module.value),
                 ))
             }
-            Global::Macro => {
+            BindingKind::Macro => {
                 return Err(self.fatal_error(
                     first.module.span.clone(),
                     format!("`{}` is a modifier, not a module", first.module.value),
@@ -1315,22 +1315,22 @@ code:
                     )
                 })?;
             path_locals.push(submod_local);
-            let global = &self.asm.bindings[submod_local.index].global;
+            let global = &self.asm.bindings[submod_local.index].kind;
             module = match global {
-                Global::Module(module) => module,
-                Global::Func(_) => {
+                BindingKind::Module(module) => module,
+                BindingKind::Func(_) => {
                     return Err(self.fatal_error(
                         comp.module.span.clone(),
                         format!("`{}` is a function, not a module", comp.module.value),
                     ))
                 }
-                Global::Const(_) => {
+                BindingKind::Const(_) => {
                     return Err(self.fatal_error(
                         comp.module.span.clone(),
                         format!("`{}` is a constant, not a module", comp.module.value),
                     ))
                 }
-                Global::Macro => {
+                BindingKind::Macro => {
                     return Err(self.fatal_error(
                         comp.module.span.clone(),
                         format!("`{}` is a modifier, not a module", comp.module.value),
@@ -1415,10 +1415,10 @@ code:
         Ok(())
     }
     fn global_index(&mut self, index: usize, span: CodeSpan, call: bool) {
-        let global = self.asm.bindings[index].global.clone();
+        let global = self.asm.bindings[index].kind.clone();
         match global {
-            Global::Const(Some(val)) if call => self.push_instr(Instr::push(val)),
-            Global::Const(Some(val)) => {
+            BindingKind::Const(Some(val)) if call => self.push_instr(Instr::push(val)),
+            BindingKind::Const(Some(val)) => {
                 let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
@@ -1426,8 +1426,8 @@ code:
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
-            Global::Const(None) if call => self.push_instr(Instr::CallGlobal { index, call }),
-            Global::Const(None) => {
+            BindingKind::Const(None) if call => self.push_instr(Instr::CallGlobal { index, call }),
+            BindingKind::Const(None) => {
                 let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
@@ -1435,7 +1435,7 @@ code:
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
-            Global::Func(f) if self.inlinable(f.instrs(self)) => {
+            BindingKind::Func(f) if self.inlinable(f.instrs(self)) => {
                 if call {
                     // Inline instructions
                     self.push_instr(Instr::PushSig(f.signature()));
@@ -1446,15 +1446,15 @@ code:
                     self.push_instr(Instr::PushFunc(f));
                 }
             }
-            Global::Func(f) => {
+            BindingKind::Func(f) => {
                 self.push_instr(Instr::PushFunc(f));
                 if call {
                     let span = self.add_span(span);
                     self.push_instr(Instr::Call(span));
                 }
             }
-            Global::Module { .. } => self.add_error(span, "Cannot import module item here."),
-            Global::Macro => {
+            BindingKind::Module { .. } => self.add_error(span, "Cannot import module item here."),
+            BindingKind::Macro => {
                 // We could error here, but it's easier to handle it higher up
             }
         }

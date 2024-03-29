@@ -14,7 +14,7 @@ use crate::{
     lex::CodeSpan,
     primitive::{ImplPrimitive, Primitive},
     value::Value,
-    Assembly, Global, Ident,
+    Assembly, BindingKind, Ident,
 };
 
 /// A Uiua bytecode instruction
@@ -300,9 +300,9 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly) -> bool {
         match instr {
             Instr::CallGlobal { index, .. } => {
                 if let Some(binding) = asm.bindings.get(*index) {
-                    match &binding.global {
-                        Global::Const(Some(_)) => {}
-                        Global::Func(f) => {
+                    match &binding.kind {
+                        BindingKind::Const(Some(_)) => {}
+                        BindingKind::Func(f) => {
                             if !instrs_are_pure(f.instrs(asm), asm) {
                                 return false;
                             }
@@ -343,9 +343,9 @@ pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], asm: &Assembly) -> bool
         match instr {
             Instr::CallGlobal { index, .. } => {
                 if let Some(binding) = asm.bindings.get(*index) {
-                    match &binding.global {
-                        Global::Const(Some(_)) => {}
-                        Global::Func(f) => {
+                    match &binding.kind {
+                        BindingKind::Const(Some(_)) => {}
+                        BindingKind::Func(f) => {
                             if !instrs_are_limit_bounded(f.instrs(asm), asm) {
                                 return false;
                             }

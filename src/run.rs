@@ -24,7 +24,7 @@ use crate::{
     function::*,
     lex::Span,
     value::Value,
-    Assembly, Compiler, Complex, Global, Ident, Inputs, IntoSysBackend, LocalName, Primitive,
+    Assembly, BindingKind, Compiler, Complex, Ident, Inputs, IntoSysBackend, LocalName, Primitive,
     SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult, VERSION,
 };
 
@@ -495,25 +495,25 @@ code:
                     Ok(())
                 }
                 &Instr::CallGlobal { index, call, .. } => {
-                    match self.asm.bindings[index].global.clone() {
-                        Global::Const(Some(val)) => {
+                    match self.asm.bindings[index].kind.clone() {
+                        BindingKind::Const(Some(val)) => {
                             self.rt.stack.push(val);
                             Ok(())
                         }
-                        Global::Const(None) => Err(self.error(
+                        BindingKind::Const(None) => Err(self.error(
                             "Called unbound constant. \
                             This is a bug in the interpreter.",
                         )),
-                        Global::Func(f) if call => self.call(f),
-                        Global::Func(f) => {
+                        BindingKind::Func(f) if call => self.call(f),
+                        BindingKind::Func(f) => {
                             self.rt.function_stack.push(f);
                             Ok(())
                         }
-                        Global::Module { .. } => Err(self.error(
+                        BindingKind::Module { .. } => Err(self.error(
                             "Called module global. \
                             This is a bug in the interpreter.",
                         )),
-                        Global::Macro => Err(self.error(
+                        BindingKind::Macro => Err(self.error(
                             "Called modifier global. \
                             This is a bug in the interpreter.",
                         )),
@@ -1057,7 +1057,7 @@ code:
     pub fn bound_values(&self) -> HashMap<Ident, Value> {
         let mut bindings = HashMap::new();
         for binding in &self.asm.bindings {
-            if let Global::Const(Some(val)) = &binding.global {
+            if let BindingKind::Const(Some(val)) = &binding.kind {
                 let name = binding.span.as_str(self.inputs(), |s| s.into());
                 bindings.insert(name, val.clone());
             }
@@ -1068,7 +1068,7 @@ code:
     pub fn bound_functions(&self) -> HashMap<Ident, Function> {
         let mut bindings = HashMap::new();
         for binding in &self.asm.bindings {
-            if let Global::Func(f) = &binding.global {
+            if let BindingKind::Func(f) = &binding.kind {
                 let name = binding.span.as_str(self.inputs(), |s| s.into());
                 bindings.insert(name, f.clone());
             }

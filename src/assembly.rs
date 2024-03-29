@@ -10,17 +10,16 @@ use crate::{
 };
 
 /// A compiled Uiua assembly
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct Assembly {
     pub(crate) instrs: EcoVec<Instr>,
     /// The sections of the instructions that are top-level expressions
     pub(crate) top_slices: Vec<FuncSlice>,
     /// A list of global bindings
     pub bindings: EcoVec<BindingInfo>,
-    #[serde(skip)]
-    pub(crate) dynamic_functions: EcoVec<DynFn>,
     pub(crate) spans: EcoVec<Span>,
     pub(crate) inputs: Inputs,
+    pub(crate) dynamic_functions: EcoVec<DynFn>,
 }
 
 type DynFn = Arc<dyn Fn(&mut Uiua) -> UiuaResult + Send + Sync + 'static>;
@@ -61,7 +60,7 @@ impl Assembly {
         comment: Option<Arc<str>>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(local, Global::Func(function), span.code(), comment);
+        self.add_global_at(local, BindingKind::Func(function), span.code(), comment);
     }
     pub(crate) fn bind_const(
         &mut self,
@@ -71,18 +70,18 @@ impl Assembly {
         comment: Option<Arc<str>>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(local, Global::Const(value), span.code(), comment);
+        self.add_global_at(local, BindingKind::Const(value), span.code(), comment);
     }
     pub(crate) fn add_global_at(
         &mut self,
         local: LocalName,
-        global: Global,
+        global: BindingKind,
         span: Option<CodeSpan>,
         comment: Option<Arc<str>>,
     ) {
         let binding = BindingInfo {
             public: local.public,
-            global,
+            kind: global,
             span: span.unwrap_or_else(CodeSpan::dummy),
             comment,
         };
@@ -91,7 +90,7 @@ impl Assembly {
         } else {
             while self.bindings.len() < local.index {
                 self.bindings.push(BindingInfo {
-                    global: Global::Const(None),
+                    kind: BindingKind::Const(None),
                     public: false,
                     span: CodeSpan::dummy(),
                     comment: None,
@@ -103,6 +102,121 @@ impl Assembly {
     /// Make top-level expressions not run
     pub fn remove_top_level(&mut self) {
         self.top_slices.clear();
+    }
+    /// Parse a `.uasm` file into an assembly
+    pub fn from_uasm(src: &str) -> Result<Self, String> {
+        let rest = src;
+        let (instrs_src, rest) = rest
+            .trim()
+            .split_once("TOP SLICES")
+            .ok_or("No top slices")?;
+        let (top_slices_src, rest) = rest.split_once("BINDINGS").ok_or("No bindings")?;
+        let (bindings_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
+        let (spans_src, rest) = rest.trim().split_once("FILES").ok_or("No files")?;
+        let (files_src, rest) = rest
+            .trim()
+            .split_once("STRING INPUTS")
+            .ok_or("No string inputs")?;
+        let strings_src = rest.trim();
+
+        let mut instrs = EcoVec::new();
+        for line in instrs_src.lines().filter(|line| !line.is_empty()) {
+            let instr: Instr = serde_json::from_str(line).map_err(|e| e.to_string())?;
+            instrs.push(instr);
+        }
+
+        let mut top_slices = Vec::new();
+        for line in top_slices_src.lines().filter(|line| !line.is_empty()) {
+            let (start, len) = line.split_once(' ').ok_or("No start")?;
+            let start = start.parse::<usize>().map_err(|e| e.to_string())?;
+            let len = len.parse::<usize>().map_err(|e| e.to_string())?;
+            top_slices.push(FuncSlice { start, len });
+        }
+
+        let mut bindings = EcoVec::new();
+        for line in bindings_src.lines().filter(|line| !line.is_empty()) {
+            let binding: BindingInfo = serde_json::from_str(line).map_err(|e| e.to_string())?;
+            bindings.push(binding);
+        }
+
+        let mut spans = EcoVec::new();
+        spans.push(Span::Builtin);
+        for line in spans_src.lines().filter(|line| !line.is_empty()) {
+            let span: Span = serde_json::from_str(line).map_err(|e| e.to_string())?;
+            spans.push(span);
+        }
+
+        let files = DashMap::new();
+        for line in files_src.lines().filter(|line| !line.is_empty()) {
+            let (path, src) = line.split_once(": ").ok_or("No path")?;
+            let path = PathBuf::from(path);
+            let src: EcoString = serde_json::from_str(src).map_err(|e| e.to_string())?;
+            files.insert(path, src);
+        }
+
+        let mut strings = EcoVec::new();
+        for line in strings_src.lines() {
+            let src: EcoString = serde_json::from_str(line).map_err(|e| e.to_string())?;
+            strings.push(src);
+        }
+
+        Ok(Self {
+            instrs,
+            top_slices,
+            bindings,
+            spans,
+            inputs: Inputs {
+                files,
+                strings,
+                ..Inputs::default()
+            },
+            dynamic_functions: EcoVec::new(),
+        })
+    }
+    /// Serialize the assembly into a `.uasm` file
+    pub fn to_uasm(&self) -> String {
+        let mut uasm = String::new();
+
+        for instr in &self.instrs {
+            uasm.push_str(&serde_json::to_string(instr).unwrap());
+            uasm.push('\n');
+        }
+
+        uasm.push_str("\nTOP SLICES\n");
+        for slice in &self.top_slices {
+            uasm.push_str(&format!("{} {}\n", slice.start, slice.len));
+        }
+
+        uasm.push_str("\nBINDINGS\n");
+        for binding in &self.bindings {
+            uasm.push_str(&serde_json::to_string(binding).unwrap());
+            uasm.push('\n');
+        }
+
+        uasm.push_str("\nSPANS\n");
+        for span in self.spans.iter().skip(1) {
+            uasm.push_str(&serde_json::to_string(span).unwrap());
+            uasm.push('\n');
+        }
+
+        uasm.push_str("\nFILES\n");
+        for entry in &self.inputs.files {
+            let key = entry.key();
+            let value = entry.value();
+            uasm.push_str(&format!(
+                "{}: {}\n",
+                key.to_string_lossy(),
+                serde_json::to_string(value).unwrap()
+            ));
+        }
+
+        uasm.push_str("\nSTRING INPUTS\n");
+        for src in &self.inputs.strings {
+            uasm.push_str(&serde_json::to_string(src).unwrap());
+            uasm.push('\n');
+        }
+
+        uasm
     }
 }
 
@@ -121,8 +235,8 @@ impl AsMut<Assembly> for Assembly {
 /// Information about a binding
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BindingInfo {
-    /// The global binding type
-    pub global: Global,
+    /// The binding kind
+    pub kind: BindingKind,
     /// Whether the binding is public
     #[serde(default = "tru", skip_serializing_if = "is_true")]
     pub public: bool,
@@ -144,9 +258,9 @@ fn tru() -> bool {
     true
 }
 
-/// A type of global binding
+/// A kind of global binding
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Global {
+pub enum BindingKind {
     /// A constant value
     Const(Option<Value>),
     /// A function
@@ -158,8 +272,8 @@ pub enum Global {
     Macro,
 }
 
-impl Global {
-    /// Get the signature of the global
+impl BindingKind {
+    /// Get the signature of the binding
     pub fn signature(&self) -> Option<Signature> {
         match self {
             Self::Const(_) => Some(Signature::new(0, 1)),

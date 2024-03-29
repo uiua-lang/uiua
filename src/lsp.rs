@@ -14,7 +14,7 @@ use crate::{
     ident_modifier_args, instrs_are_pure,
     lex::{CodeSpan, Sp},
     parse::parse,
-    Assembly, BindingInfo, Compiler, Global, Ident, InputSrc, Inputs, PreEvalMode, Primitive,
+    Assembly, BindingInfo, BindingKind, Compiler, Ident, InputSrc, Inputs, PreEvalMode, Primitive,
     SafeSys, Signature, SysBackend, UiuaError, Value, CONSTANTS,
 };
 
@@ -248,16 +248,16 @@ impl Spanner {
     fn make_binding_docs(&self, binfo: &BindingInfo) -> BindingDocs {
         let mut comment = binfo.comment.clone();
         if comment.is_none() {
-            match &binfo.global {
-                Global::Const(None) => comment = Some("constant".into()),
-                Global::Module { .. } => comment = Some("module".into()),
-                Global::Macro => comment = Some("macro".into()),
+            match &binfo.kind {
+                BindingKind::Const(None) => comment = Some("constant".into()),
+                BindingKind::Module { .. } => comment = Some("module".into()),
+                BindingKind::Macro => comment = Some("macro".into()),
                 _ => {}
             }
         }
-        let kind = match &binfo.global {
-            Global::Const(val) => BindingDocsKind::Constant(val.clone()),
-            Global::Func(f) => BindingDocsKind::Function {
+        let kind = match &binfo.kind {
+            BindingKind::Const(val) => BindingDocsKind::Constant(val.clone()),
+            BindingKind::Func(f) => BindingDocsKind::Function {
                 sig: f.signature(),
                 invertible: {
                     let instrs = f.instrs(&self.asm);
@@ -271,10 +271,10 @@ impl Spanner {
                 },
                 pure: instrs_are_pure(f.instrs(&self.asm), &self.asm),
             },
-            Global::Macro => {
+            BindingKind::Macro => {
                 BindingDocsKind::Modifier(binfo.span.as_str(self.inputs(), ident_modifier_args))
             }
-            Global::Module { .. } => BindingDocsKind::Module,
+            BindingKind::Module { .. } => BindingDocsKind::Module,
         };
         BindingDocs {
             src_span: binfo.span.clone(),
@@ -764,20 +764,20 @@ mod server {
                 span: &CodeSpan,
                 binding: &BindingInfo,
             ) -> CompletionItem {
-                let kind = match &binding.global {
-                    Global::Const(Some(val)) if val.meta().map_keys.is_some() => {
+                let kind = match &binding.kind {
+                    BindingKind::Const(Some(val)) if val.meta().map_keys.is_some() => {
                         CompletionItemKind::STRUCT
                     }
-                    Global::Const(_) => CompletionItemKind::CONSTANT,
-                    Global::Func(_) => CompletionItemKind::FUNCTION,
-                    Global::Macro => CompletionItemKind::FUNCTION,
-                    Global::Module { .. } => CompletionItemKind::MODULE,
+                    BindingKind::Const(_) => CompletionItemKind::CONSTANT,
+                    BindingKind::Func(_) => CompletionItemKind::FUNCTION,
+                    BindingKind::Macro => CompletionItemKind::FUNCTION,
+                    BindingKind::Module { .. } => CompletionItemKind::MODULE,
                 };
                 CompletionItem {
                     label: name.clone(),
                     kind: Some(kind),
                     label_details: Some(CompletionItemLabelDetails {
-                        description: (binding.global.signature())
+                        description: (binding.kind.signature())
                             .map(|sig| format!("{:<4}", sig.to_string())),
                         ..Default::default()
                     }),
@@ -809,7 +809,7 @@ mod server {
                     span.end.line as usize == line && span.end.col as usize == col
                 })
             {
-                if let Global::Module(module) = &doc.asm.bindings[*index].global {
+                if let BindingKind::Module(module) = &doc.asm.bindings[*index].kind {
                     let mut completions = Vec::new();
                     let mut span = span.clone();
                     span.start = span.end;
@@ -895,7 +895,7 @@ mod server {
                     continue;
                 };
 
-                if let Global::Module(module) = &binding.global {
+                if let BindingKind::Module(module) = &binding.kind {
                     for binding in self.bindings_in_file(doc_uri, module) {
                         if !binding.public {
                             continue;

@@ -9,7 +9,7 @@ const STAND_DATA_SIGNATURE: &[u8] = b"Uiua standalone";
 pub fn build_exe(root: &Path) -> UiuaResult<Vec<u8>> {
     let asm = Compiler::with_backend(NativeSys).load_file(root)?.finish();
     // Serialize the files
-    let asm_bytes = serde_json::to_vec(&asm).expect("failed to serialize assembly");
+    let asm_bytes = asm.to_uasm().into_bytes();
     // Append the files to the current exe
     let mut bytes = env::current_exe()
         .and_then(fs::read)
@@ -33,7 +33,8 @@ fn load_asm() -> io::Result<Option<Assembly>> {
     let asm_len = u64::from_le_bytes(len_bytes.try_into().unwrap());
     let start = bytes.len() - asm_len as usize;
     // Deserialize the files
-    let asm: Assembly = serde_json::from_slice(&bytes[start..])?;
+    let uasm: String = std::str::from_utf8(&bytes[start..]).unwrap().to_string();
+    let asm = Assembly::from_uasm(&uasm).unwrap();
     Ok(Some(asm))
 }
 

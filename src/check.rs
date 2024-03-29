@@ -360,13 +360,7 @@ impl<'a> VirtualEnv<'a> {
                                         ((n - 1) * (sig.args - sig.outputs) + sig.args, sig.outputs)
                                     }
                                 };
-                                for _ in 0..args {
-                                    self.pop()?;
-                                }
-                                self.set_min_height();
-                                for _ in 0..outputs {
-                                    self.stack.push(BasicValue::Other);
-                                }
+                                self.handle_args_outputs(args, outputs)?;
                             }
                         } else if n.is_infinite() {
                             if sig.args != sig.outputs {
@@ -382,15 +376,10 @@ impl<'a> VirtualEnv<'a> {
                         // If n is unknown, then the function must be compatible with |1.1
                         let sig = f.signature();
                         if f.signature().is_compatible_with(Signature::new(1, 1)) {
-                            for _ in 0..sig.args {
-                                self.pop()?;
-                            }
-                            self.set_min_height();
-                            for _ in 0..sig.outputs {
-                                self.stack.push(BasicValue::Other);
-                            }
+                            self.handle_sig(sig)?;
                         } else {
-                            // If we are creating an array, then the function just has to have more outputs than args.
+                            // If we are creating an array, then the function
+                            // just has to have more outputs than args.
                             let creating_array =
                                 sig.args < sig.outputs && !self.array_stack.is_empty();
                             if creating_array {
@@ -537,16 +526,10 @@ impl<'a> VirtualEnv<'a> {
                     for _ in 0..prim.modifier_args().unwrap_or(0) {
                         self.pop_func()?;
                     }
-                    for _ in 0..args {
-                        self.pop()?;
-                    }
-                    self.set_min_height();
                     let outputs = prim
                         .outputs()
                         .ok_or_else(|| format!("{prim} has indeterminate outputs"))?;
-                    for _ in 0..outputs {
-                        self.stack.push(BasicValue::Other);
-                    }
+                    self.handle_args_outputs(args, outputs)?;
                 }
             },
             Instr::ImplPrim(prim @ ImplPrimitive::ReduceContent, _) => {

@@ -10,7 +10,7 @@ use crate::{
     Uiua, UiuaResult,
 };
 
-use super::{fill_value_shapes, multi_output, FillContext, MultiOutput};
+use super::{fill_value_shapes, fixed_rows, multi_output, FillContext, FixedRowsData, MultiOutput};
 
 type ValueUnFn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
 type ValueBinFn = Box<dyn Fn(Value, Value, usize, usize, &mut Uiua) -> UiuaResult<Value>>;
@@ -578,67 +578,19 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
     }
 }
 
-fn rowsn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
-    for a in 0..args.len() {
-        let a_can_fill = args[a].length_is_fillable(env);
-        for b in a + 1..args.len() {
-            let b_can_fill = args[b].length_is_fillable(env);
-            let mut err = None;
-            if a_can_fill {
-                let b_row_count = args[b].row_count();
-                err = args[a].fill_length_to(b_row_count, env).err();
-            }
-            if err.is_none() && b_can_fill {
-                let a_row_count = args[a].row_count();
-                err = args[b].fill_length_to(a_row_count, env).err();
-            }
-            if err.is_none()
-                && args[a].row_count() != args[b].row_count()
-                && args[a].row_count() != 1
-                && args[b].row_count() != 1
-            {
-                err = Some("");
-            }
-            if let Some(e) = err {
-                return Err(env.error(format!(
-                    "Cannot {} arrays with different number of rows, shapes {} and {}{e}",
-                    Primitive::Rows.format(),
-                    args[a].shape(),
-                    args[b].shape(),
-                )));
-            }
-        }
-    }
-    let mut row_count = 0;
-    let mut all_scalar = true;
-    let mut all_1 = true;
+fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    let FixedRowsData {
+        mut rows,
+        row_count,
+        is_empty,
+        all_scalar,
+        per_meta,
+    } = fixed_rows(Primitive::Rows.format(), f.signature(), args, env)?;
     let outputs = f.signature().outputs;
-    let is_empty = outputs > 0 && args.iter().any(|v| v.row_count() == 0);
-    let mut per_meta = Vec::new();
-    let mut arg_elems: Vec<_> = args
-        .into_iter()
-        .map(|mut v| {
-            all_scalar = all_scalar && v.rank() == 0;
-            if v.row_count() == 1 {
-                v.unfix();
-                Err(v)
-            } else {
-                let proxy = is_empty.then(|| v.proxy_row(env));
-                row_count = row_count.max(v.row_count());
-                all_1 = false;
-                per_meta.push(v.take_per_meta());
-                Ok(v.into_rows().chain(proxy))
-            }
-        })
-        .collect();
-    if all_1 {
-        row_count = 1;
-    }
     let mut new_values = multi_output(outputs, Vec::new());
-    let per_meta = PersistentMeta::xor_all(per_meta);
     env.without_fill(|env| -> UiuaResult {
-        for _ in 0..row_count + is_empty as usize {
-            for arg in arg_elems.iter_mut().rev() {
+        for _ in 0..row_count {
+            for arg in rows.iter_mut().rev() {
                 match arg {
                     Ok(rows) => env.push(rows.next().unwrap()),
                     Err(row) => env.push(row.clone()),

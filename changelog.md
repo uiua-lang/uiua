@@ -1,7 +1,11 @@
 # Uiua Changelog
 
 Uiua is not yet stable.
-<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
+
+## 0.11.0 - 2024-??-??
+This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Language
+- [`reduce /`](https://uiua.org/docs/reduce) can now take multiple arguments and have multiple outputs
 
 ## 0.11.0 - 2024-??-??
 ### Language
@@ -40,6 +44,9 @@ Uiua is not yet stable.
 
 ## 0.10.0 - 2024-04-04
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
+
+## 0.10.0 - 2024-??-??
+<!-- You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0). -->
 ### Language
 - **Breaking Change** - Multiline strings are now also *raw strings* which do not require escaping
   - They are no longer format strings by default

@@ -12,6 +12,8 @@ use crate::{
     UiuaResult, Value,
 };
 
+use super::{fixed_rows, multi_output, FixedRowsData};
+
 pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
@@ -147,7 +149,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
                 _ => return generic_reduce(f, Value::Byte(bytes), depth, env),
             })
         }
-        (_, xs) => {
+        (_, xs) if f.signature() == (2, 1) => {
             if env.value_fill().is_none() {
                 if xs.row_count() == 0 {
                     let val = reduce_identity(f.instrs(env), xs).ok_or_else(|| {
@@ -167,6 +169,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
             }
             generic_reduce(f, xs, depth, env)?
         }
+        (_, xs) => generic_reduce(f, xs, depth, env)?,
     }
     Ok(())
 }
@@ -443,8 +446,11 @@ where
 }
 
 fn generic_reduce(f: Function, xs: Value, depth: usize, env: &mut Uiua) -> UiuaResult {
-    let val = generic_reduce_inner(f, xs, depth, identity, env)?;
-    env.push(val);
+    env.push(xs);
+    let vals = generic_reduce_inner(f, depth, identity, env)?;
+    for val in vals.into_iter().rev() {
+        env.push(val);
+    }
     Ok(())
 }
 
@@ -470,48 +476,32 @@ pub fn reduce_content(env: &mut Uiua) -> UiuaResult {
         env.push(acc);
         return Ok(());
     }
-    let val = generic_reduce_inner(f, xs, 0, Value::unboxed, env)?;
-    env.push(val);
+    env.push(xs);
+    let vals = generic_reduce_inner(f, 0, Value::unboxed, env)?;
+    for val in vals.into_iter().rev() {
+        env.push(val);
+    }
     Ok(())
 }
 
 fn generic_reduce_inner(
     f: Function,
-    xs: Value,
     depth: usize,
     process: impl Fn(Value) -> Value + Copy,
     env: &mut Uiua,
-) -> UiuaResult<Value> {
+) -> UiuaResult<Vec<Value>> {
     let sig = f.signature();
-    if sig != (2, 1) {
-        return Err(env.error(format!(
-            "{}'s function's signature must be |2.1, but it is {sig}",
-            Primitive::Reduce.format(),
-        )));
-    }
     match (sig.args, sig.outputs) {
         (2, 1) => {
-            let mut rows = xs.into_rows();
-            if depth > 0 {
-                let mut new_rows = Vec::with_capacity(rows.len());
-                for row in rows {
-                    new_rows.push(generic_reduce_inner(
-                        f.clone(),
-                        row,
-                        depth - 1,
-                        process,
-                        env,
-                    )?);
-                }
-                Value::from_row_values(new_rows, env)
-            } else {
+            let mut rows = env.pop(1)?.into_rows();
+            if depth == 0 {
                 let mut acc = (env.value_fill().cloned())
                     .or_else(|| rows.next())
                     .ok_or_else(|| {
                         env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
                     })?;
                 acc = process(acc);
-                acc = env.without_fill(|env| -> UiuaResult<Value> {
+                env.without_fill(|env| -> UiuaResult<Value> {
                     for row in rows {
                         env.push(process(row));
                         env.push(acc);
@@ -519,12 +509,112 @@ fn generic_reduce_inner(
                         acc = env.pop("reduced function result")?;
                     }
                     Ok(acc)
+                })
+            } else {
+                let mut new_rows = Vec::with_capacity(rows.len());
+                for row in rows {
+                    env.push(row);
+                    let value = generic_reduce_inner(f.clone(), depth - 1, process, env)?
+                        .into_iter()
+                        .next()
+                        .unwrap();
+                    new_rows.push(value);
+                }
+                Value::from_row_values(new_rows, env)
+            }
+            .map(|val| vec![val])
+        }
+        (_, 0) => Err(env.error(format!(
+            "{}'s function must have at least one output, \
+            but its signature is {sig}",
+            Primitive::Reduce.format(),
+        ))),
+        (args, outputs) if args > outputs => {
+            let arg_count = args - outputs;
+            let mut arg_values = Vec::with_capacity(arg_count);
+            for i in 0..arg_count {
+                arg_values.push(env.pop(i + 1)?);
+            }
+            let FixedRowsData {
+                mut rows,
+                mut row_count,
+                is_empty,
+                all_scalar,
+                per_meta,
+            } = fixed_rows(Primitive::Reduce.format(), outputs, arg_values, env)?;
+            if depth == 0 {
+                let mut accs = Vec::with_capacity(outputs);
+                let fill = env.value_fill().cloned();
+                if fill.is_none() {
+                    row_count = row_count.saturating_sub(1);
+                }
+                for row in &mut rows {
+                    let acc = (env.value_fill().cloned())
+                        .or_else(|| match row {
+                            Ok(row) => row.next(),
+                            Err(row) => Some(row.clone()),
+                        })
+                        .ok_or_else(|| {
+                            env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
+                        })?;
+                    accs.push(process(acc));
+                }
+                env.without_fill(|env| {
+                    for _ in 0..row_count {
+                        for arg in rows.iter_mut().rev() {
+                            env.push(process(match arg {
+                                Ok(rows) => rows.next().unwrap(),
+                                Err(row) => row.clone(),
+                            }))
+                        }
+                        for acc in accs.drain(..).rev() {
+                            env.push(acc);
+                        }
+                        env.call(f.clone())?;
+                        for i in 0..outputs {
+                            accs.push(env.pop(i + 1)?);
+                        }
+                    }
+                    for _ in 0..arg_count - outputs {
+                        env.pop("accumulator")?;
+                    }
+                    Ok(accs)
+                })
+            } else {
+                let mut new_values = multi_output(outputs, Vec::with_capacity(rows.len()));
+                env.without_fill(|env| -> UiuaResult {
+                    for _ in 0..row_count {
+                        for arg in rows.iter_mut().rev() {
+                            match arg {
+                                Ok(rows) => env.push(rows.next().unwrap()),
+                                Err(row) => env.push(row.clone()),
+                            }
+                        }
+                        let vals = generic_reduce_inner(f.clone(), depth - 1, process, env)?;
+                        for (val, output) in vals.into_iter().zip(&mut new_values) {
+                            output.push(val);
+                        }
+                    }
+                    Ok(())
                 })?;
-                Ok(acc)
+                let mut result = Vec::with_capacity(outputs);
+                for new_values in new_values {
+                    let mut rowsed = Value::from_row_values(new_values, env)?;
+                    if all_scalar {
+                        rowsed.unfix();
+                    } else if is_empty {
+                        rowsed.pop_row();
+                    }
+                    rowsed.validate_shape();
+                    rowsed.set_per_meta(per_meta.clone());
+                    result.push(rowsed);
+                }
+                Ok(result)
             }
         }
         _ => Err(env.error(format!(
-            "{}'s function's signature must be |2.1, but it is {sig}",
+            "{}'s function must have more arguments than outputs, \
+            but its signature is {sig}",
             Primitive::Reduce.format(),
         ))),
     }

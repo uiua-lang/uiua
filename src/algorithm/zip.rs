@@ -579,14 +579,14 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
 }
 
 fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+    let outputs = f.signature().outputs;
     let FixedRowsData {
         mut rows,
         row_count,
         is_empty,
         all_scalar,
         per_meta,
-    } = fixed_rows(Primitive::Rows.format(), f.signature(), args, env)?;
-    let outputs = f.signature().outputs;
+    } = fixed_rows(Primitive::Rows.format(), outputs, args, env)?;
     let mut new_values = multi_output(outputs, Vec::new());
     env.without_fill(|env| -> UiuaResult {
         for _ in 0..row_count {

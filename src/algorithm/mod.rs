@@ -627,7 +627,7 @@ struct FixedRowsData {
 
 fn fixed_rows(
     prim: impl fmt::Display,
-    sig: Signature,
+    outputs: usize,
     mut args: Vec<Value>,
     env: &Uiua,
 ) -> UiuaResult<FixedRowsData> {
@@ -663,7 +663,6 @@ fn fixed_rows(
     let mut row_count = 0;
     let mut all_scalar = true;
     let mut all_1 = true;
-    let outputs = sig.outputs;
     let is_empty = outputs > 0 && args.iter().any(|v| v.row_count() == 0);
     let mut per_meta = Vec::new();
     let fixed_rows: FixedRows = args

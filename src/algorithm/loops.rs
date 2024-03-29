@@ -234,10 +234,10 @@ where
                     self.curr += 1;
                 }
                 let end = self.curr;
-                let group_data = self.source.data.slice(start..end);
+                let data = self.source.data.slice(start..end);
                 let mut shape = self.source.shape.clone();
                 shape[0] = end - start;
-                return Some(Array::new(shape, group_data).into());
+                return Some(Array::new(shape, data).into());
             }
         }
         None

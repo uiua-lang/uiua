@@ -2160,7 +2160,6 @@ primitive!(
     ///   : )
     ///   : ⁿ:10+1⇡5
     ///   : ≡Times.
-    ///
     (2, Map, Map, "map"),
     /// Insert a key-value pair into a map array
     ///

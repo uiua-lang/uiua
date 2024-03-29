@@ -2172,9 +2172,8 @@ primitive!(
     /// ex: map 1_2_3 4_5_6
     ///   : insert 1 10
     /// Here is a pattern for [remove]ing a key if it is present before [insert]ing it, so that the key moves to the end.
-    /// ex: # Experimental!
-    /// map 1_2_3 4_5_6
-    /// insert⟜⍜⊙◌remove 1 10
+    /// ex: map 1_2_3 4_5_6
+    ///   : insert⟜⍜⊙◌remove 1 10
     /// All keys (and all values) must have the same shape and type.
     /// ex! map 1 ["wow"]
     ///   : insert "hi" "there"

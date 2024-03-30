@@ -160,7 +160,6 @@ pub fn do_(env: &mut Uiua) -> UiuaResult {
         }
         _ => {}
     }
-    dbg!(copy_count);
     loop {
         // Make sure there are enough values
         if env.stack().len() < copy_count {

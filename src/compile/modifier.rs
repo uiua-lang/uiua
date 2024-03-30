@@ -463,33 +463,42 @@ impl Compiler {
                 let (a_instrs, a_sig) = self.compile_operand_word(first_op)?;
                 let (b_instrs, b_sig) = self.compile_operand_word(operands.next().unwrap())?;
                 let span = self.add_span(modified.modifier.span.clone());
-                let count = a_sig.args.max(b_sig.args);
-                let mut instrs = vec![Instr::PushTemp {
-                    stack: TempStack::Inline,
-                    count,
-                    span,
-                }];
-                if b_sig.args > 0 {
-                    instrs.push(Instr::CopyFromTemp {
+                let mut instrs = Vec::new();
+                if a_sig.args > 0 {
+                    instrs.push(Instr::CopyToTemp {
                         stack: TempStack::Inline,
-                        offset: count - b_sig.args,
-                        count: b_sig.args,
+                        count: a_sig.args,
                         span,
                     });
+                }
+                if a_sig.args > b_sig.args {
+                    let diff = a_sig.args - b_sig.args;
+                    if b_sig.args > 0 {
+                        instrs.push(Instr::PushTemp {
+                            stack: TempStack::Inline,
+                            count: b_sig.args,
+                            span,
+                        });
+                    }
+                    for _ in 0..diff {
+                        instrs.push(Instr::Prim(Pop, span));
+                    }
+                    if b_sig.args > 0 {
+                        instrs.push(Instr::PopTemp {
+                            stack: TempStack::Inline,
+                            count: b_sig.args,
+                            span,
+                        });
+                    }
                 }
                 instrs.extend(b_instrs);
-                if count - a_sig.args > 0 {
-                    instrs.push(Instr::DropTemp {
+                if a_sig.args > 0 {
+                    instrs.push(Instr::PopTemp {
                         stack: TempStack::Inline,
-                        count: count - a_sig.args,
+                        count: a_sig.args,
                         span,
                     });
                 }
-                instrs.push(Instr::PopTemp {
-                    stack: TempStack::Inline,
-                    count: a_sig.args,
-                    span,
-                });
                 instrs.extend(a_instrs);
                 let sig = Signature::new(a_sig.args.max(b_sig.args), a_sig.outputs + b_sig.outputs);
                 if call {

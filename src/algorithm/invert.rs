@@ -186,6 +186,10 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
         &pat!(Join, ([], UnJoin)),
+        &pat!(
+            Select,
+            (CopyToInline(1), Deduplicate, PopInline(1), Classify)
+        ),
         &invert_temp_pattern,
         &invert_push_pattern,
     ]
@@ -248,45 +252,45 @@ pub(crate) fn under_instrs(
     /// Copy 1 value to the temp stack before the "before", and pop it before the "after"
     macro_rules! stash1 {
         (($($before:expr),*)) => {
-            pat!(($($before),*), (CopyToTempN(1), $($before),*), (PopTempN(1), $($before),*))
+            pat!(($($before),*), (CopyToUnder(1), $($before),*), (PopUnder(1), $($before),*))
         };
         (($($before:expr),*), ($($after:expr),*)) => {
-            pat!(($($before),*), (CopyToTempN(1), $($before),*), (PopTempN(1), $($after),*))
+            pat!(($($before),*), (CopyToUnder(1), $($before),*), (PopUnder(1), $($after),*))
         };
         (($($before:expr),*), $after:expr) => {
-            pat!(($($before),*), (CopyToTempN(1), $($before),*), (PopTempN(1), $after))
+            pat!(($($before),*), (CopyToUnder(1), $($before),*), (PopUnder(1), $after))
         };
         ($before:expr, ($($after:expr),*)) => {
-            pat!($before, (CopyToTempN(1), $before), (PopTempN(1), $($after),*))
+            pat!($before, (CopyToUnder(1), $before), (PopUnder(1), $($after),*))
         };
         ($before:expr, $after:expr) => {
-            pat!($before, (CopyToTempN(1), $before), (PopTempN(1), $after))
+            pat!($before, (CopyToUnder(1), $before), (PopUnder(1), $after))
         };
     }
 
     /// Copy 1 value to the temp stack after the "before", and pop it before the "after"
     macro_rules! store1copy {
         ($before:expr, $after:expr) => {
-            pat!($before, ($before, CopyToTempN(1)), (PopTempN(1), $after),)
+            pat!($before, ($before, CopyToUnder(1)), (PopUnder(1), $after),)
         };
     }
 
     /// Copy 2 values to the temp stack before the "before", and pop them before the "after"
     macro_rules! stash2 {
         (($($before:expr),*)) => {
-            pat!(($($before),*), (CopyToTempN(2), $($before),*), (PopTempN(2), $($before),*))
+            pat!(($($before),*), (CopyToUnder(2), $($before),*), (PopUnder(2), $($before),*))
         };
         (($($before:expr),*), ($($after:expr),*)) => {
-            pat!(($($before),*), (CopyToTempN(2), $($before),*), (PopTempN(2), $($after),*))
+            pat!(($($before),*), (CopyToUnder(2), $($before),*), (PopUnder(2), $($after),*))
         };
         (($($before:expr),*), $after:expr) => {
-            pat!(($($before),*), (CopyToTempN(2), $($before),*), (PopTempN(2), $after))
+            pat!(($($before),*), (CopyToUnder(2), $($before),*), (PopUnder(2), $after))
         };
         ($before:expr, ($($after:expr),*)) => {
-            pat!($before, (CopyToTempN(2), $before), (PopTempN(2), $($after),*))
+            pat!($before, (CopyToUnder(2), $before), (PopUnder(2), $($after),*))
         };
         ($before:expr, $after:expr) => {
-            pat!($before, (CopyToTempN(2), $before), (PopTempN(2), $after))
+            pat!($before, (CopyToUnder(2), $before), (PopUnder(2), $after))
         };
     }
 
@@ -308,8 +312,8 @@ pub(crate) fn under_instrs(
         ($before:expr) => {
             pat!(
                 $before,
-                (Dup, $before, Flip, Over, Sub, PushTempN(1)),
-                (PopTempN(1), Add)
+                (Dup, $before, Flip, Over, Sub, PushToUnder(1)),
+                (PopUnder(1), Add)
             )
         };
     }
@@ -350,8 +354,8 @@ pub(crate) fn under_instrs(
         &dyad!(Div, Mul),
         &maybe_val!(pat!(
             Mod,
-            (Over, Over, Flip, Over, Div, Floor, Mul, PushTempN(1), Mod),
-            (PopTempN(1), Add)
+            (Over, Over, Flip, Over, Div, Floor, Mul, PushToUnder(1), Mod),
+            (PopUnder(1), Add)
         )),
         // Exponential math
         &maybe_val!(stash1!((Flip, Pow), Log)),
@@ -366,37 +370,37 @@ pub(crate) fn under_instrs(
         &stash1!(Abs, (Sign, Mul)),
         &stash1!(Sign, (Abs, Mul)),
         // Pop
-        &pat!(Pop, (PushTempN(1)), (PopTempN(1))),
+        &pat!(Pop, (PushToUnder(1)), (PopUnder(1))),
         // Array restructuring
         &maybe_val!(stash2!(Take, UndoTake)),
         &maybe_val!(stash2!(Drop, UndoDrop)),
         &maybe_val!(pat!(
             Keep,
-            (CopyToTempN(2), Keep),
-            (PopTempN(1), Flip, PopTempN(1), UndoKeep),
+            (CopyToUnder(2), Keep),
+            (PopUnder(1), Flip, PopUnder(1), UndoKeep),
         )),
         &stash1!(Rotate, (Neg, Rotate)),
         &maybe_val!(pat!(
             Join,
-            (Over, Shape, Over, Shape, PushTempN(2), Join),
-            (PopTempN(2), UndoJoin),
+            (Over, Shape, Over, Shape, PushToUnder(2), Join),
+            (PopUnder(2), UndoJoin),
         )),
         // Rise and fall
         &pat!(
             Rise,
-            (CopyToTempN(1), Rise, Dup, Rise, PushTempN(1)),
-            (PopTempN(1), Select, PopTempN(1), Flip, Select)
+            (CopyToUnder(1), Rise, Dup, Rise, PushToUnder(1)),
+            (PopUnder(1), Select, PopUnder(1), Flip, Select)
         ),
         &pat!(
             Fall,
-            (CopyToTempN(1), Fall, Dup, Rise, PushTempN(1)),
-            (PopTempN(1), Select, PopTempN(1), Flip, Select)
+            (CopyToUnder(1), Fall, Dup, Rise, PushToUnder(1)),
+            (PopUnder(1), Select, PopUnder(1), Flip, Select)
         ),
         // Index of
         &maybe_val!(pat!(
             IndexOf,
-            (Over, PushTempN(1), IndexOf),
-            (PopTempN(1), Flip, Select)
+            (Over, PushToUnder(1), IndexOf),
+            (PopUnder(1), Flip, Select)
         )),
         // Value retrieval
         &stash1!(First, UndoFirst),
@@ -406,45 +410,45 @@ pub(crate) fn under_instrs(
         // Map control
         &maybe_val!(pat!(
             Get,
-            (CopyToTempN(2), Get),
-            (PopTempN(1), Flip, PopTempN(1), Insert),
+            (CopyToUnder(2), Get),
+            (PopUnder(1), Flip, PopUnder(1), Insert),
         )),
         &maybe_val!(stash2!(Remove, UndoRemove)),
         &maybe_val!(pat!(
             Insert,
-            (CopyToTempN(3), Insert),
-            (PopTempN(3), UndoInsert)
+            (CopyToUnder(3), Insert),
+            (PopUnder(3), UndoInsert)
         )),
         // Shaping
         &stash1!(Shape, (Flip, Reshape)),
         &pat!(
             Deshape,
-            (Dup, Shape, PushTempN(1), Deshape),
-            (PopTempN(1), 0, UndoRerank),
+            (Dup, Shape, PushToUnder(1), Deshape),
+            (PopUnder(1), 0, UndoRerank),
         ),
         &maybe_val!(pat!(
             Rerank,
-            (Over, Shape, Over, PushTempN(2), Rerank),
-            (PopTempN(2), UndoRerank),
+            (Over, Shape, Over, PushToUnder(2), Rerank),
+            (PopUnder(2), UndoRerank),
         )),
         &maybe_val!(pat!(
             Reshape,
-            (Over, Shape, PushTempN(1), Reshape),
-            (PopTempN(1), UndoReshape),
+            (Over, Shape, PushToUnder(1), Reshape),
+            (PopUnder(1), UndoReshape),
         )),
         // Classify and deduplicate
         &pat!(
             Classify,
-            (Dup, Deduplicate, PushTempN(1), Classify),
-            (PopTempN(1), Flip, Select),
+            (Dup, Deduplicate, PushToUnder(1), Classify),
+            (PopUnder(1), Flip, Select),
         ),
         &pat!(
             Deduplicate,
-            (Dup, Classify, PushTempN(1), Deduplicate),
-            (PopTempN(1), Select),
+            (Dup, Classify, PushToUnder(1), Deduplicate),
+            (PopUnder(1), Select),
         ),
         // System stuff
-        &pat!(Now, (Now, PushTempN(1)), (PopTempN(1), Now, Flip, Sub)),
+        &pat!(Now, (Now, PushToUnder(1)), (PopUnder(1), Now, Flip, Sub)),
         &maybe_val!(store1copy!(Sys(SysOp::FOpen), Sys(SysOp::Close))),
         &maybe_val!(store1copy!(Sys(SysOp::FCreate), Sys(SysOp::Close))),
         &maybe_val!(store1copy!(Sys(SysOp::RunStream), Sys(SysOp::Close))),
@@ -943,7 +947,11 @@ fn under_copy_temp_pattern<'a>(
         },
     )) = inner_befores.first().zip(inner_afters.first())
     else {
-        return None;
+        return if g_sig.args == g_sig.outputs {
+            Some((input, (inner_befores, inner_afters)))
+        } else {
+            None
+        };
     };
     if g_sig.args > g_sig.outputs {
         inner_befores.insert(0, instr.clone());
@@ -1997,8 +2005,8 @@ trait AsInstr: fmt::Debug + Sync {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct PushTempN(usize);
-impl AsInstr for PushTempN {
+struct PushToUnder(usize);
+impl AsInstr for PushToUnder {
     fn as_instr(&self, span: usize) -> Instr {
         Instr::PushTemp {
             stack: TempStack::Under,
@@ -2009,8 +2017,8 @@ impl AsInstr for PushTempN {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct CopyToTempN(usize);
-impl AsInstr for CopyToTempN {
+struct CopyToUnder(usize);
+impl AsInstr for CopyToUnder {
     fn as_instr(&self, span: usize) -> Instr {
         Instr::CopyToTemp {
             stack: TempStack::Under,
@@ -2021,11 +2029,35 @@ impl AsInstr for CopyToTempN {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct PopTempN(usize);
-impl AsInstr for PopTempN {
+struct CopyToInline(usize);
+impl AsInstr for CopyToInline {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::CopyToTemp {
+            stack: TempStack::Inline,
+            count: self.0,
+            span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PopUnder(usize);
+impl AsInstr for PopUnder {
     fn as_instr(&self, span: usize) -> Instr {
         Instr::PopTemp {
             stack: TempStack::Under,
+            count: self.0,
+            span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PopInline(usize);
+impl AsInstr for PopInline {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::PopTemp {
+            stack: TempStack::Inline,
             count: self.0,
             span,
         }

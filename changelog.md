@@ -40,6 +40,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`inventory ⍚`](https://uiua.org/docs/inventory) can now take 3 or more arrays
 - [`repeat ⍥`](https://uiua.org/docs/repeat) can now take non-scalar repetition counts
   - This repeats the function a different number of times for each row of the inputs
+- [`select ⊏`](https://uiua.org/docs/select) can now be used with [`un °`](https://uiua.org/docs/un) to separate into [`classify ⊛`](https://uiua.org/docs/classify) and [`deduplicate ◴`](https://uiua.org/docs/deduplicate)
 - Characters can now be [`multiply ×`](https://uiua.org/docs/multiply)d or [`divide ÷`](https://uiua.org/docs/divide)d by numbers to possibly toggle their case
 - Add the [`csv`](https://uiua.org/docs/csv) function, which encodes and decodes CSV data
 - Add the [`&clget`](https://uiua.org/docs/&clget) and [`&clset`](https://uiua.org/docs/&clset) system functions, which allow copying and pasting text to and from the system clipboard

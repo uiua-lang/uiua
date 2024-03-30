@@ -1045,7 +1045,8 @@ fn under_push_temp_pattern<'a>(
                     *start_count -= inner_afters_sig.outputs;
                     *end_count = (*end_count).min(inner_befores_sig.outputs);
                 }
-                if inner_afters_sig.outputs > 0 {
+                let outers_sig = instrs_signature(input).ok()?;
+                if (both || outers_sig.args <= outers_sig.outputs) && inner_afters_sig.outputs > 0 {
                     afters.insert(0, start_instr);
                     afters.push(end_instr);
                 }

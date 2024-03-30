@@ -376,7 +376,7 @@ impl Compiler {
                         binding.name.span.clone(),
                         format!(
                             "Cannot infer function signature: {e}{}",
-                            if e.ambiguous {
+                            if e.kind == SigCheckErrorKind::Ambiguous {
                                 ". A signature can be declared after the `←`."
                             } else {
                                 ""

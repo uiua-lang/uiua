@@ -20,7 +20,7 @@ use instant::Duration;
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
     ast::*,
-    check::{instrs_all_signatures, instrs_signature, SigCheckError},
+    check::{instrs_all_signatures, instrs_signature, SigCheckError, SigCheckErrorKind},
     example_ua,
     format::format_word,
     function::*,
@@ -1075,6 +1075,32 @@ code:
                 for lines in arr.lines.into_iter().rev() {
                     inner.extend(self.compile_words(lines, true)?);
                 }
+                // Validate inner loop correctness
+                if let Err(e) = instrs_signature(&inner) {
+                    let sig = (0..=inner.len())
+                        .find_map(|i| instrs_signature(&inner[i..]).ok())
+                        .unwrap();
+                    match e.kind {
+                        SigCheckErrorKind::LoopExcess if sig.args > 0 => self.emit_diagnostic(
+                            format!(
+                                "This array contains a loop that has a variable \
+                                number of outputs. The code after the loop has \
+                                signature {sig}, which may result in a variable \
+                                number of values being pulled into the array."
+                            ),
+                            DiagnosticKind::Warning,
+                            word.span.clone(),
+                        ),
+                        SigCheckErrorKind::LoopOverreach => self.emit_diagnostic(
+                            "This array contains a loop that has a variable \
+                            number of inputs. This may result in a variable \
+                            number of values being pulled into the array.",
+                            DiagnosticKind::Warning,
+                            word.span.clone(),
+                        ),
+                        _ => {}
+                    }
+                }
                 // Diagnostic for array of characters
                 if line_count <= 1
                     && !arr.boxes
@@ -1163,7 +1189,7 @@ code:
                                 word.span,
                                 format!(
                                     "Cannot infer function signature: {e}{}",
-                                    if e.ambiguous {
+                                    if e.kind == SigCheckErrorKind::Ambiguous {
                                         ". A signature can be declared after the opening `(`."
                                     } else {
                                         ""
@@ -1527,7 +1553,7 @@ code:
                         span,
                         format!(
                             "Cannot infer function signature: {e}{}",
-                            if e.ambiguous {
+                            if e.kind == SigCheckErrorKind::Ambiguous {
                                 ". A signature can be declared after the opening `(`."
                             } else {
                                 ""
@@ -1614,7 +1640,7 @@ code:
                         span,
                         format!(
                             "Cannot infer function signature: {e}{}",
-                            if e.ambiguous {
+                            if e.kind == SigCheckErrorKind::Ambiguous {
                                 ". A signature can be declared after the opening `(`."
                             } else {
                                 ""

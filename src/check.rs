@@ -50,16 +50,36 @@ struct VirtualEnv<'a> {
     popped: Vec<usize>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SigCheckError {
     pub message: String,
-    pub ambiguous: bool,
+    pub kind: SigCheckErrorKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SigCheckErrorKind {
+    Incorrect,
+    Ambiguous,
+    LoopOverreach,
+    LoopExcess,
 }
 
 impl SigCheckError {
     pub fn ambiguous(self) -> Self {
         Self {
-            ambiguous: true,
+            kind: SigCheckErrorKind::Ambiguous,
+            ..self
+        }
+    }
+    pub fn loop_overreach(self) -> Self {
+        Self {
+            kind: SigCheckErrorKind::LoopOverreach,
+            ..self
+        }
+    }
+    pub fn loop_excess(self) -> Self {
+        Self {
+            kind: SigCheckErrorKind::LoopExcess,
             ..self
         }
     }
@@ -69,7 +89,7 @@ impl<'a> From<&'a str> for SigCheckError {
     fn from(s: &'a str) -> Self {
         Self {
             message: s.to_string(),
-            ambiguous: false,
+            kind: SigCheckErrorKind::Incorrect,
         }
     }
 }
@@ -78,7 +98,7 @@ impl From<String> for SigCheckError {
     fn from(s: String) -> Self {
         Self {
             message: s,
-            ambiguous: false,
+            kind: SigCheckErrorKind::Incorrect,
         }
     }
 }
@@ -340,54 +360,68 @@ impl<'a> VirtualEnv<'a> {
                                 self.handle_args_outputs(args, outputs)?;
                             }
                         } else if n.is_infinite() {
-                            if sig.args != sig.outputs {
-                                return Err(SigCheckError::from(format!(
-                                    "repeat with infinity and a function with signature {sig}"
-                                )));
+                            match sig.args.cmp(&sig.outputs) {
+                                Ordering::Equal => {}
+                                Ordering::Greater => {
+                                    return Err(SigCheckError::from(format!(
+                                        "repeat with infinity and a function with signature {sig}"
+                                    ))
+                                    .loop_overreach());
+                                }
+                                Ordering::Less => {
+                                    return Err(SigCheckError::from(format!(
+                                        "repeat with infinity and a function with signature {sig}"
+                                    ))
+                                    .loop_excess());
+                                }
                             }
                             self.handle_sig(sig)?;
                         } else {
                             return Err("repeat without a natural number or infinity".into());
                         }
                     } else {
-                        // If n is unknown, then the function must be compatible with |1.1
+                        // If n is unknown, then what we do depends on the signature
                         let sig = f.signature();
-                        if f.signature().is_compatible_with(Signature::new(1, 1)) {
-                            self.handle_sig(sig)?;
-                        } else {
-                            // If we are creating an array, then the function
-                            // just has to have more outputs than args.
-                            let creating_array =
-                                sig.args < sig.outputs && !self.array_stack.is_empty();
-                            if creating_array {
-                                self.handle_sig(sig)?;
-                            } else {
+                        match sig.args.cmp(&sig.outputs) {
+                            Ordering::Equal => self.handle_sig(sig)?,
+                            Ordering::Greater => {
                                 return Err(SigCheckError::from(format!(
                                     "repeat with no number and a function with signature {sig}"
                                 ))
-                                .ambiguous());
-                            };
+                                .loop_overreach());
+                            }
+                            Ordering::Less if self.array_stack.is_empty() => {
+                                return Err(SigCheckError::from(format!(
+                                    "repeat with no number and a function with signature {sig}"
+                                ))
+                                .loop_excess());
+                            }
+                            Ordering::Less => self.handle_sig(sig)?,
                         }
                     }
                 }
                 Do => {
-                    let f = self.pop_func()?;
-                    let g = self.pop_func()?;
-                    let f_sig = f.signature();
-                    let g_sig = g.signature();
-                    let copy_count = g_sig.args.saturating_sub(g_sig.outputs.saturating_sub(1));
-                    let g_sub_sig =
-                        Signature::new(g_sig.args, (g_sig.outputs + copy_count).saturating_sub(1));
-                    let comp_sig = f_sig.compose(g_sub_sig);
+                    let body = self.pop_func()?;
+                    let cond = self.pop_func()?;
+                    let body_sig = body.signature();
+                    let cond_sig = cond.signature();
+                    let copy_count = cond_sig
+                        .args
+                        .saturating_sub(cond_sig.outputs.saturating_sub(1));
+                    let cond_sub_sig = Signature::new(
+                        cond_sig.args,
+                        (cond_sig.outputs + copy_count).saturating_sub(1),
+                    );
+                    let comp_sig = body_sig.compose(cond_sub_sig);
                     if comp_sig.args < comp_sig.outputs && self.array_stack.is_empty() {
                         return Err(SigCheckError::from(format!(
                             "do with a function with signature {comp_sig}"
                         ))
-                        .ambiguous());
+                        .loop_excess());
                     }
                     self.handle_args_outputs(
                         comp_sig.args,
-                        comp_sig.outputs + g_sub_sig.outputs.saturating_sub(g_sig.args),
+                        comp_sig.outputs + cond_sub_sig.outputs.saturating_sub(cond_sig.args),
                     )?;
                 }
                 All => {

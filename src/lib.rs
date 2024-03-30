@@ -263,7 +263,7 @@ mod tests {
                 let res = comp
                     .load_str_src(section, &path)
                     .and_then(|comp| env.run_asm(&comp.finish()));
-                if res.is_ok() {
+                if res.is_ok() && comp.take_diagnostics().is_empty() {
                     panic!(
                         "Test succeeded when it should have failed in {}:\n{}",
                         path.display(),

@@ -504,8 +504,7 @@ fn generic_reduce_inner(
                         env,
                     )?);
                 }
-                let val = Value::from_row_values(new_rows, env)?;
-                Ok(val)
+                Value::from_row_values(new_rows, env)
             } else {
                 let mut acc = (env.value_fill(FillKind::Init).cloned())
                     .or_else(|| rows.next())
@@ -541,80 +540,50 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     }
     match (f.as_flipped_primitive(&env.asm), xs) {
         (Some((prim, flipped)), Value::Num(nums)) => {
-            let fill = env.num_fill(FillKind::Init).ok();
             let arr = match prim {
-                Primitive::Eq => fast_scan(nums, fill, |a, b| is_eq::num_num(a, b) as f64),
-                Primitive::Ne => fast_scan(nums, fill, |a, b| is_ne::num_num(a, b) as f64),
-                Primitive::Add => fast_scan(nums, fill, add::num_num),
-                Primitive::Sub if flipped => fast_scan(nums, fill, flip(sub::num_num)),
-                Primitive::Sub => fast_scan(nums, fill, sub::num_num),
-                Primitive::Mul => fast_scan(nums, fill, mul::num_num),
-                Primitive::Div if flipped => fast_scan(nums, fill, flip(div::num_num)),
-                Primitive::Div => fast_scan(nums, fill, div::num_num),
-                Primitive::Mod if flipped => fast_scan(nums, fill, flip(modulus::num_num)),
-                Primitive::Mod => fast_scan(nums, fill, modulus::num_num),
-                Primitive::Atan if flipped => fast_scan(nums, fill, flip(atan2::num_num)),
-                Primitive::Atan => fast_scan(nums, fill, atan2::num_num),
-                Primitive::Max => fast_scan(nums, fill, max::num_num),
-                Primitive::Min => fast_scan(nums, fill, min::num_num),
+                Primitive::Eq => fast_scan(nums, |a, b| is_eq::num_num(a, b) as f64),
+                Primitive::Ne => fast_scan(nums, |a, b| is_ne::num_num(a, b) as f64),
+                Primitive::Add => fast_scan(nums, add::num_num),
+                Primitive::Sub if flipped => fast_scan(nums, flip(sub::num_num)),
+                Primitive::Sub => fast_scan(nums, sub::num_num),
+                Primitive::Mul => fast_scan(nums, mul::num_num),
+                Primitive::Div if flipped => fast_scan(nums, flip(div::num_num)),
+                Primitive::Div => fast_scan(nums, div::num_num),
+                Primitive::Mod if flipped => fast_scan(nums, flip(modulus::num_num)),
+                Primitive::Mod => fast_scan(nums, modulus::num_num),
+                Primitive::Atan if flipped => fast_scan(nums, flip(atan2::num_num)),
+                Primitive::Atan => fast_scan(nums, atan2::num_num),
+                Primitive::Max => fast_scan(nums, max::num_num),
+                Primitive::Min => fast_scan(nums, min::num_num),
                 _ => return generic_scan(f, Value::Num(nums), env),
             };
             env.push(arr);
             Ok(())
         }
         (Some((prim, flipped)), Value::Byte(bytes)) => {
-            let byte_fill = env.byte_fill(FillKind::Init).ok();
-            let num_fill = env.num_fill(FillKind::Init).ok();
-            if byte_fill.is_none() && num_fill.is_some() {
-                env.push_func(f);
-                env.push(Value::Num(bytes.convert()));
-                return scan(env);
-            }
             match prim {
-                Primitive::Eq => env.push(fast_scan(bytes, byte_fill, is_eq::generic)),
-                Primitive::Ne => env.push(fast_scan(bytes, byte_fill, is_ne::generic)),
-                Primitive::Add => {
-                    env.push(fast_scan::<f64>(bytes.convert(), num_fill, add::num_num))
+                Primitive::Eq => env.push(fast_scan(bytes, is_eq::generic)),
+                Primitive::Ne => env.push(fast_scan(bytes, is_ne::generic)),
+                Primitive::Add => env.push(fast_scan::<f64>(bytes.convert(), add::num_num)),
+                Primitive::Sub if flipped => {
+                    env.push(fast_scan::<f64>(bytes.convert(), flip(sub::num_num)))
                 }
-                Primitive::Sub if flipped => env.push(fast_scan::<f64>(
-                    bytes.convert(),
-                    num_fill,
-                    flip(sub::num_num),
-                )),
-                Primitive::Sub => {
-                    env.push(fast_scan::<f64>(bytes.convert(), num_fill, sub::num_num))
+                Primitive::Sub => env.push(fast_scan::<f64>(bytes.convert(), sub::num_num)),
+                Primitive::Mul => env.push(fast_scan::<f64>(bytes.convert(), mul::num_num)),
+                Primitive::Div if flipped => {
+                    env.push(fast_scan::<f64>(bytes.convert(), flip(div::num_num)))
                 }
-                Primitive::Mul => {
-                    env.push(fast_scan::<f64>(bytes.convert(), num_fill, mul::num_num))
+                Primitive::Div => env.push(fast_scan::<f64>(bytes.convert(), div::num_num)),
+                Primitive::Mod if flipped => {
+                    env.push(fast_scan::<f64>(bytes.convert(), flip(modulus::num_num)))
                 }
-                Primitive::Div if flipped => env.push(fast_scan::<f64>(
-                    bytes.convert(),
-                    num_fill,
-                    flip(div::num_num),
-                )),
-                Primitive::Div => {
-                    env.push(fast_scan::<f64>(bytes.convert(), num_fill, div::num_num))
+                Primitive::Mod => env.push(fast_scan::<f64>(bytes.convert(), modulus::num_num)),
+                Primitive::Atan if flipped => {
+                    env.push(fast_scan::<f64>(bytes.convert(), flip(atan2::num_num)))
                 }
-                Primitive::Mod if flipped => env.push(fast_scan::<f64>(
-                    bytes.convert(),
-                    num_fill,
-                    flip(modulus::num_num),
-                )),
-                Primitive::Mod => env.push(fast_scan::<f64>(
-                    bytes.convert(),
-                    num_fill,
-                    modulus::num_num,
-                )),
-                Primitive::Atan if flipped => env.push(fast_scan::<f64>(
-                    bytes.convert(),
-                    num_fill,
-                    flip(atan2::num_num),
-                )),
-                Primitive::Atan => {
-                    env.push(fast_scan::<f64>(bytes.convert(), num_fill, atan2::num_num))
-                }
-                Primitive::Max => env.push(fast_scan(bytes, byte_fill, u8::max)),
-                Primitive::Min => env.push(fast_scan(bytes, byte_fill, u8::min)),
+                Primitive::Atan => env.push(fast_scan::<f64>(bytes.convert(), atan2::num_num)),
+                Primitive::Max => env.push(fast_scan(bytes, u8::max)),
+                Primitive::Min => env.push(fast_scan(bytes, u8::min)),
                 _ => return generic_scan(f, Value::Byte(bytes), env),
             }
             Ok(())
@@ -623,7 +592,7 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn fast_scan<T>(mut arr: Array<T>, default: Option<T>, f: impl Fn(T, T) -> T) -> Array<T>
+fn fast_scan<T>(mut arr: Array<T>, f: impl Fn(T, T) -> T) -> Array<T>
 where
     T: ArrayValue + Copy,
 {
@@ -632,11 +601,6 @@ where
         1 => {
             if arr.row_count() == 0 {
                 return arr;
-            }
-            if let Some(default) = default {
-                arr.data.extend_from_array([default]);
-                arr.data.as_mut_slice().rotate_right(1);
-                arr.shape[0] += 1;
             }
             let mut acc = arr.data[0];
             for val in arr.data.as_mut_slice().iter_mut().skip(1) {
@@ -649,11 +613,6 @@ where
             let row_len: usize = arr.row_len();
             if arr.row_count() == 0 {
                 return arr;
-            }
-            if let Some(default) = default {
-                arr.data.extend_from_vec(vec![default; row_len]);
-                arr.data.as_mut_slice().rotate_right(row_len);
-                arr.shape[0] += 1;
             }
             let shape = arr.shape.clone();
             let mut new_data = EcoVec::with_capacity(arr.data.len());
@@ -684,10 +643,7 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     }
     let row_count = xs.row_count();
     let mut rows = xs.into_rows();
-    let mut acc = env
-        .value_fill(FillKind::Init)
-        .cloned()
-        .unwrap_or_else(|| rows.next().unwrap());
+    let mut acc = rows.next().unwrap();
     let mut scanned = Vec::with_capacity(row_count);
     scanned.push(acc.clone());
     env.without_fill(|env| -> UiuaResult {

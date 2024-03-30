@@ -256,23 +256,6 @@ impl<'a> VirtualEnv<'a> {
                 }
                 self.set_min_height();
             }
-            Instr::CopyFromTemp {
-                count,
-                stack,
-                offset,
-                ..
-            } => {
-                let mut vals = Vec::with_capacity(*count + *offset);
-                for i in 0..*count + *offset {
-                    let val = self.pop_temp(*stack)?;
-                    if i >= *offset {
-                        self.stack.push(val.clone());
-                    }
-                    vals.push(val);
-                }
-                self.set_min_height();
-                self.temp_stacks[*stack as usize].extend(vals.into_iter().rev());
-            }
             Instr::Label { .. } => self.handle_args_outputs(1, 1)?,
             Instr::PushFunc(f) => self.function_stack.push(Cow::Borrowed(f)),
             &Instr::Switch {
@@ -299,12 +282,6 @@ impl<'a> VirtualEnv<'a> {
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::Unpack { count, .. } => self.handle_args_outputs(1, *count)?,
             Instr::TouchStack { count, .. } => self.handle_args_outputs(*count, *count)?,
-            Instr::DropTemp { count, stack, .. } => {
-                for _ in 0..*count {
-                    self.pop_temp(*stack)?;
-                }
-                self.set_min_height();
-            }
             Instr::Prim(prim, _) => match prim {
                 Reduce => {
                     let sig = self.pop_func()?.signature();

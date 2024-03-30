@@ -110,17 +110,6 @@ pub enum Instr {
         count: usize,
         span: usize,
     },
-    CopyFromTemp {
-        stack: TempStack,
-        offset: usize,
-        count: usize,
-        span: usize,
-    },
-    DropTemp {
-        stack: TempStack,
-        count: usize,
-        span: usize,
-    },
     SetOutputComment {
         i: usize,
         n: usize,
@@ -164,19 +153,6 @@ impl PartialEq for Instr {
             (Self::PushFunc(a), Self::PushFunc(b)) => a == b,
             (Self::PushTemp { count: a, .. }, Self::PushTemp { count: b, .. }) => a == b,
             (Self::PopTemp { count: a, .. }, Self::PopTemp { count: b, .. }) => a == b,
-            (
-                Self::CopyFromTemp {
-                    offset: ao,
-                    count: ac,
-                    ..
-                },
-                Self::CopyFromTemp {
-                    offset: bo,
-                    count: bc,
-                    ..
-                },
-            ) => ao == bo && ac == bc,
-            (Self::DropTemp { count: a, .. }, Self::DropTemp { count: b, .. }) => a == b,
             (Self::TouchStack { count: a, .. }, Self::TouchStack { count: b, .. }) => a == b,
             (Self::Comment(a), Self::Comment(b)) => a == b,
             (Self::CallGlobal { index: a, .. }, Self::CallGlobal { index: b, .. }) => a == b,
@@ -240,13 +216,6 @@ impl Hash for Instr {
             Instr::PushTemp { count, stack, .. } => (8, count, stack).hash(state),
             Instr::PopTemp { count, stack, .. } => (9, count, stack).hash(state),
             Instr::CopyToTemp { count, stack, .. } => (10, count, stack).hash(state),
-            Instr::CopyFromTemp {
-                offset,
-                count,
-                stack,
-                ..
-            } => (11, offset, count, stack).hash(state),
-            Instr::DropTemp { count, stack, .. } => (12, count, stack).hash(state),
             Instr::TouchStack { count, .. } => (13, count).hash(state),
             Instr::Comment(_) => (14, 0).hash(state),
             Instr::CallGlobal { index, call } => (15, index, call).hash(state),
@@ -276,15 +245,6 @@ impl Instr {
     pub fn push(val: impl Into<Value>) -> Self {
         let val = val.into();
         Self::Push(val)
-    }
-    pub(crate) fn is_temp(&self) -> bool {
-        matches!(
-            self,
-            Self::PushTemp { .. }
-                | Self::PopTemp { .. }
-                | Self::CopyFromTemp { .. }
-                | Self::DropTemp { .. }
-        )
     }
     pub(crate) fn is_compile_only(&self) -> bool {
         matches!(self, Self::PushSig(_) | Self::PopSig)
@@ -435,16 +395,9 @@ impl fmt::Display for Instr {
             Instr::TouchStack { count, .. } => write!(f, "<touch {count}>"),
             Instr::PushTemp { stack, count, .. } => write!(f, "<push {stack} {count}>"),
             Instr::PopTemp { stack, count, .. } => write!(f, "<pop {stack} {count}>"),
-            Instr::CopyFromTemp {
-                stack,
-                offset,
-                count,
-                ..
-            } => write!(f, "<copy from {stack} {offset}/{count}>"),
             Instr::CopyToTemp { stack, count, .. } => {
                 write!(f, "<copy to {stack} {count}>")
             }
-            Instr::DropTemp { stack, count, .. } => write!(f, "<drop {stack} {count}>"),
             Instr::SetOutputComment { i, n, .. } => write!(f, "<set output comment {i}({n})>"),
             Instr::PushSig(sig) => write!(f, "{sig}"),
             Instr::PopSig => write!(f, "-|"),

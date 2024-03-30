@@ -1033,11 +1033,15 @@ fn under_push_temp_pattern<'a>(
             }
         }
         if before_temp_count > 0 {
-            eco_vec![Instr::DropTemp {
+            let mut instrs = eco_vec![Instr::PopTemp {
                 count: before_temp_count,
                 stack: TempStack::Under,
                 span: 0,
-            }]
+            }];
+            for _ in 0..before_temp_count {
+                instrs.push(Instr::Prim(Primitive::Pop, before_temp_count))
+            }
+            instrs
         } else {
             EcoVec::new()
         }
@@ -1951,7 +1955,12 @@ impl InvertPattern for Val {
         }
         for len in (1..input.len()).rev() {
             let chunk = &input[..len];
-            if (chunk.iter()).any(|instr| instr.is_temp() || matches!(instr, Instr::PushFunc(_))) {
+            if (chunk.iter()).any(|instr| {
+                matches!(
+                    instr,
+                    Instr::PushFunc(_) | Instr::PushTemp { .. } | Instr::PopTemp { .. }
+                )
+            }) {
                 continue;
             }
             if let Ok(sig) = instrs_signature(chunk) {

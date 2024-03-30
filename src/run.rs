@@ -681,30 +681,6 @@ code:
                     }
                     Ok(())
                 }),
-                &Instr::CopyFromTemp {
-                    stack,
-                    offset,
-                    count,
-                    span,
-                } => self.with_span(span, |env| {
-                    if env.rt.temp_stacks[stack as usize].len() < offset + count {
-                        return Err(env.error("Stack was empty when copying saved value"));
-                    }
-                    let start = env.rt.temp_stacks[stack as usize].len() - offset;
-                    for i in 0..count {
-                        let value = env.rt.temp_stacks[stack as usize][start - i - 1].clone();
-                        env.push(value);
-                    }
-                    Ok(())
-                }),
-                &Instr::DropTemp { stack, count, span } => self.with_span(span, |env| {
-                    let stack = &mut env.rt.temp_stacks[stack as usize];
-                    if stack.len() < count {
-                        return Err(env.error("Stack was empty when dropping saved value"));
-                    }
-                    stack.truncate(stack.len() - count);
-                    Ok(())
-                }),
                 Instr::PushSig(_) => Err(self.error(
                     "PushSig should have been removed before running. \
                     This is a bug in the interpreter.",

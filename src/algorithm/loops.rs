@@ -130,37 +130,39 @@ fn repeat_impl(f: Function, n: f64, env: &mut Uiua) -> UiuaResult {
 
 pub fn do_(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
-    let f = env.pop_function()?;
-    let g = env.pop_function()?;
-    let f_sig = f.signature();
-    let g_sig = g.signature();
-    if g_sig.outputs < 1 {
+    let body = env.pop_function()?;
+    let cond = env.pop_function()?;
+    let body_sig = body.signature();
+    let cond_sig = cond.signature();
+    if cond_sig.outputs < 1 {
         return Err(env.error(format!(
             "Do's condition function must return at least 1 value, \
-            but its signature is {g_sig}"
+            but its signature is {cond_sig}"
         )));
     }
-    let copy_count = g_sig.args.saturating_sub(g_sig.outputs - 1);
-    let g_sub_sig = Signature::new(g_sig.args, g_sig.outputs + copy_count - 1);
-    let comp_sig = f_sig.compose(g_sub_sig);
+    let copy_count = cond_sig.args.saturating_sub(cond_sig.outputs - 1);
+    let cond_sub_sig = Signature::new(cond_sig.args, cond_sig.outputs + copy_count - 1);
+    let comp_sig = body_sig.compose(cond_sub_sig);
     match comp_sig.args.cmp(&comp_sig.outputs) {
         Ordering::Less if env.rt.array_stack.is_empty() => {
             return Err(env.error(format!(
                 "Do's functions cannot have a positive net stack \
                 change outside an array, but the composed signature of \
-                {f_sig} and {g_sig}, minus the condition, is {comp_sig}"
+                {body_sig} and {cond_sig}, minus the condition, is {comp_sig}"
             )))
         }
         Ordering::Greater => {
             return Err(env.error(format!(
                 "Do's functions cannot have a negative net stack \
-                change, but the composed signature of {f_sig} and \
-                {g_sig}, minus the condition, is {comp_sig}"
+                change, but the composed signature of {body_sig} and \
+                {cond_sig}, minus the condition, is {comp_sig}"
             )))
         }
         _ => {}
     }
+    dbg!(copy_count);
     loop {
+        // Make sure there are enough values
         if env.stack().len() < copy_count {
             // Pop until it fails
             for i in 0..copy_count {
@@ -170,14 +172,14 @@ pub fn do_(env: &mut Uiua) -> UiuaResult {
         // Copy necessary condition args
         env.dup_n(copy_count)?;
         // Call condition
-        env.call(g.clone())?;
+        env.call(cond.clone())?;
         // Break if condition is false
         let cond = (env.pop("do condition")?).as_bool(env, "Do condition must be a boolean")?;
         if !cond {
             break;
         }
         // Call body
-        env.call(f.clone())?;
+        env.call(body.clone())?;
     }
     Ok(())
 }

@@ -1046,11 +1046,12 @@ code:
                 n - self.rt.stack.len()
             )));
         }
+        let start = self.rt.stack.len() - n;
         for bottom in &mut self.rt.array_stack {
-            *bottom = (*bottom).min(self.rt.stack.len() - n);
+            *bottom = (*bottom).min(start);
         }
-        for _ in 0..n {
-            self.push(self.rt.stack[self.rt.stack.len() - n].clone());
+        for i in 0..n {
+            self.push(self.rt.stack[start + i].clone());
         }
         Ok(())
     }

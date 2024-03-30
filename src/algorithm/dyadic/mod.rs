@@ -370,7 +370,7 @@ impl Value {
     /// `rerank` this value with another
     pub fn rerank(&mut self, rank: &Self, env: &Uiua) -> UiuaResult {
         self.take_map_keys();
-        let irank = rank.as_int(env, "Rank must be a natural number")?;
+        let irank = rank.as_int(env, "Rank must be an integer")?;
         let shape = self.shape_mut();
         let rank = irank.unsigned_abs();
         if irank >= 0 {
@@ -413,7 +413,7 @@ impl Value {
             }
             return Ok(());
         }
-        let irank = rank.as_int(env, "Rank must be a natural number")?;
+        let irank = rank.as_int(env, "Rank must be an integer")?;
         let orig_shape = orig_shape.as_nats(env, "Shape must be a list of natural numbers")?;
         let rank = irank.unsigned_abs();
         let new_shape: Shape = if irank >= 0 {

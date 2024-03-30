@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{FillKind, PrimClass, PrimDocFragment, PrimDocLine, Primitive, SysOp};
+use uiua::{PrimClass, PrimDocFragment, PrimDocLine, Primitive, SysOp};
 
 use crate::{editor::Editor, Hd, Prim, Prims};
 
@@ -147,62 +147,56 @@ pub fn AllFunctions() -> impl IntoView {
 }
 
 fn all_fills() -> impl IntoView {
-    use FillKind::{Shape as Shp, *};
     use Primitive::*;
     view! {
         <Hd id="fills"><Prim prim=Fill/>"-compatible functions"</Hd>
         <table class="header-centered-table cell-centered-table" style="width: 100%">
             <tr>
                 <th>"Function"</th>
-                <th>"Kind"</th>
                 <th>"Notes"</th>
                 <th>"Example"</th>
             </tr>
-            { fill_row_impl("Pervasive Dyadics", Shp, "", "⬚10+ [1 2] [3 4 5 6]") }
-            { fill_row_impl("Arrays", Shp, "", "⬚0[1 2_3_4 5_6]") }
-            { fill_row(First, Default, "", "⬚5⊢ []") }
-            { fill_row(Parse, Default, "", "⬚10⋕ {\"1\" \"2\" \"dog\"}") }
-            { fill_row(Couple, Shp, "", "⬚0⊟ [1 2 3 4] [5 6]") }
-            { fill_row(Join, Shp, "", "⬚0⊂ [1_2 3_4] [5 6 7]") }
-            { fill_row(Keep, Shp, "", "⬚0▽ [1 0 1] \"abcdef\"") }
-            { fill_row(Pick, Default, "", "⬚10⊡ 5 [1 2 3]") }
-            { fill_row(Select, Default, "", "⬚10⊏ 5 [1 2 3]") }
-            { fill_row(Take, Shp, "", "⬚0↙5 [1 2 3]") }
-            { fill_row(Reshape, Shp, "Fills excess elements", "⬚0↯ 2_4 [1 2 3]") }
-            { fill_row(Rotate, Default, "Fills instead of wrapping", "⬚0↻ 2 [1 2 3 4 5]") }
-            { fill_row(Reduce, Init, "Sets initial value", "⬚10/+ [1 2 3]") }
-            { fill_row(Scan, Init, "Sets initial value", "⬚(Init10)\\+ [1 2 3]") }
-            { fill_row(Scan, Shp, "", "⬚(Shp10)\\⊂ [1 2 3]") }
-            { fill_row(Rows, Shp, "", "⬚0≡⇡ [4 7 3]") }
-            { fill_row(Each, Shp, "", "⬚0∵⇡ [3_2 2_4]") }
-            { fill_row(Partition, Shp, "", "⬚@ ⊜∘ ≠@ . \"Hey there\"") }
-            { fill_row(Partition, Init, "Sets initial value", "⬚\"- \"⊜⊂ ≠@ . \"Hello world!\"") }
-            { fill_row(Group, Shp, "", "⬚0⊕∘ ◿3. [1 8 4 9 3 8 2]") }
-            { fill_row(Group, Init, "Sets initial value", "⬚[]⊕⊂ ◿3. [1 8 4 9 3 8 2]") }
-            { fill_row_impl(view!(<Prims prims=[Un, Pop]/>), Context, "", "⬚(Ctx5)°◌") }
+            { fill_row_impl("Pervasive Dyadics", "", "⬚10+ [1 2] [3 4 5 6]") }
+            { fill_row_impl("Arrays", "", "⬚0[1 2_3_4 5_6]") }
+            { fill_row(First, "Default scalar for empty array", "⬚5⊢ []") }
+            { fill_row(Parse, "Default for non-number strings", "⬚10⋕ {\"1\" \"2\" \"dog\"}") }
+            { fill_row(Couple, "Matches shapes", "⬚0⊟ [1 2 3 4] [5 6]") }
+            { fill_row(Join, "Makes shapes work", "⬚0⊂ [1_2 3_4] [5 6 7]") }
+            { fill_row(Keep, "Fills mask", "⬚0▽ [1 0 1] \"abcdef\"") }
+            { fill_row(Pick, "Out-of-bounds default", "⬚10⊡ 5 [1 2 3]") }
+            { fill_row(Select, "Out-of-bounds default", "⬚10⊏ 5 [1 2 3]") }
+            { fill_row(Take, "Out-of-bounds default", "⬚0↙5 [1 2 3]") }
+            { fill_row(Reshape, "Fills excess elements", "⬚0↯ 2_4 [1 2 3]") }
+            { fill_row(Rotate, "Fills instead of wrapping", "⬚0↻ 2 [1 2 3 4 5]") }
+            { fill_row(Reduce, "Sets initial value", "⬚10/+ [1 2 3]") }
+            { fill_row(Scan, "Fills row shapes", "⬚(Shp10)\\⊂ [1 2 3]") }
+            { fill_row(Rows, "Fills row shapes", "⬚0≡⇡ [4 7 3]") }
+            { fill_row(Each, "Fills row shapes", "⬚0∵⇡ [3_2 2_4]") }
+            { fill_row(Partition, "Fills row shapes", "⬚@ ⊜∘ ≠@ . \"Hey there\"") }
+            { fill_row(Partition, "Sets initial value", "⬚\"- \"⊜⊂ ≠@ . \"Hello world!\"") }
+            { fill_row(Group, "Fills row shapes", "⬚0⊕∘ ◿3. [1 8 4 9 3 8 2]") }
+            { fill_row(Group, "Sets initial value", "⬚[]⊕⊂ ◿3. [1 8 4 9 3 8 2]") }
+            { fill_row_impl(view!(<Prims prims=[Un, Pop]/>), "", "⬚(Ctx5)°◌") }
         </table>
     }
 }
 
 fn fill_row(
     prim: Primitive,
-    kind: FillKind,
     notes: impl IntoView,
     example: impl Into<Option<&'static str>>,
 ) -> impl IntoView {
-    fill_row_impl(view!(<Prim prim=prim/>), kind, notes, example)
+    fill_row_impl(view!(<Prim prim=prim/>), notes, example)
 }
 
 fn fill_row_impl(
     prim: impl IntoView,
-    kind: FillKind,
     notes: impl IntoView,
     example: impl Into<Option<&'static str>>,
 ) -> impl IntoView {
     view! {
         <tr>
             <td>{prim}</td>
-            <td><code>{kind.to_string()}</code></td>
             <td>{notes}</td>
             <td>{ example.into().map(|ex| view!(<Editor example=ex/>)) }</td>
         </tr>

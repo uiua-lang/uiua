@@ -2,10 +2,8 @@
 
 use std::{cmp::Ordering, mem::take};
 
-use crate::algorithm::op2_bytes_retry_fill;
-use crate::FillKind;
 use crate::{
-    algorithm::{max_shape, FillContext},
+    algorithm::{max_shape, op2_bytes_retry_fill, FillContext},
     cowslice::cowslice,
     Array, ArrayValue, FormatShape, Primitive, Uiua, UiuaResult, Value,
 };
@@ -232,7 +230,7 @@ impl<T: ArrayValue> Array<T> {
                 if self.shape() == [0] {
                     return Ok(other);
                 }
-                let target_shape = match ctx.scalar_fill::<T>(FillKind::Shape) {
+                let target_shape = match ctx.scalar_fill::<T>() {
                     Ok(fill) => {
                         let target_shape = max_shape(&self.shape, &other.shape);
                         let row_shape = &target_shape[1..];
@@ -282,7 +280,7 @@ impl<T: ArrayValue> Array<T> {
                 } else {
                     let map_keys = self.take_map_keys().zip(other.take_map_keys());
                     if self.shape[1..] != other.shape[1..] {
-                        match ctx.scalar_fill::<T>(FillKind::Shape) {
+                        match ctx.scalar_fill::<T>() {
                             Ok(fill) => {
                                 if map_keys.is_some() {
                                     return Err(ctx.error(format!(
@@ -339,7 +337,7 @@ impl<T: ArrayValue> Array<T> {
     }
     fn append<C: FillContext>(&mut self, mut other: Self, ctx: &C) -> Result<(), C::Error> {
         self.combine_meta(other.meta());
-        let target_shape = match ctx.scalar_fill::<T>(FillKind::Shape) {
+        let target_shape = match ctx.scalar_fill::<T>() {
             Ok(fill) => {
                 while self.rank() <= other.rank() {
                     self.shape.push(1);
@@ -587,7 +585,7 @@ impl<T: ArrayValue> Array<T> {
         crate::profile_function!();
         self.combine_meta(other.meta());
         if self.shape != other.shape {
-            match ctx.scalar_fill::<T>(FillKind::Shape) {
+            match ctx.scalar_fill::<T>() {
                 Ok(fill) => {
                     let new_shape = max_shape(&self.shape, &other.shape);
                     self.fill_to_shape(&new_shape, fill.clone());

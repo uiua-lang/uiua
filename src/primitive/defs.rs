@@ -49,14 +49,6 @@ constant!(
     ("NaN", std::f64::NAN),
     /// The wildcard `NaN` value that equals any other number
     ("W", WILDCARD_NAN),
-    /// Marker for context fill
-    ("Ctx", 0),
-    /// Marker for shape fill
-    ("Shp", 1),
-    /// Marker for default fill
-    ("Def", 2),
-    /// Marker for init fill
-    ("Init", 3),
     /// The maximum integer that can be represented exactly
     ("MaxInt", 2f64.powi(53)),
     /// A string identifying the operating system
@@ -1812,35 +1804,11 @@ primitive!(
     /// To get the expected behavior, use [box] and [content] instead of [fix].
     /// ex: ⬚0≡◇⊂□ [1 2 3] [4 5]
     ///
-    /// There are multiple kinds of fill values. By default, a generic, all-encompassing fill value is set.
-    /// This can have problems for functions that can use multiple kinds of fill values. For example, [scan].
-    /// ex: ⬚0\⊂ [1 2 3]
-    /// Here, the fill value is used as both an initial value *and* a shape-filling value.
-    /// By returning a second value from [fill]'s first function, you can specify which fill you want to set.
-    /// The fill kind specifiers are available as [shadowable constants](/docs/constants).
-    /// They are:
-    /// - `Shp` - Use the fill value to make shapes agree
-    /// - `Def` - Use the fill value as a default or initial value
-    /// - `Init` - Use the fill value as an initial value in a loop
-    /// - `Ctx` - Use the fill value as context
-    /// The above use of [fill] with [scan] can be rewritten with these specifiers. A function pack can be used to set multiple fills.
-    /// ex: ⬚(Init5|Shp0|\⊂) [1 2 3]
-    /// The `Ctx` fill kind is special in that it is available inside looping modifiers like [rows], while other fill kinds are not.
-    /// Other fill kinds are not available inside loops so that a [fill] used to modify the behavior of the loop itself does not pollute the behavior functions inside the loop.
-    /// [un][pop] is the only way to retrieve the `Ctx` fill value.
-    /// Here, we have to re-bind the fill value to the generic fill kind so that it works with [couple] inside [rows].
-    /// ex! ⬚0≡(⬚°◌⊟1) [1_2 3_4]
-    /// ex: ⬚(Ctx0)≡(⬚°◌⊟1) [1_2 3_4]
-    /// However, you'd often simply set the fill inside the loop.
-    /// ex: ≡⬚0(⊟1) [1_2 3_4]
-    /// `Ctx` fills can be used to make a sort of ad-hoc variable system.
+    /// [fill] can be used to make a sort of ad-hoc variable system.
     /// ex: a ← (°□⊡0°◌)
     ///   : b ← (°□⊡1°◌)
     ///   : c ← (°□⊡2°◌)
     ///   : ⬚{⊙⊙∘}(×b+c×a a) 2 3 4
-    /// While this example does not explicitly use `Ctx`, it may be necessary when loops are involved.
-    /// Any fill specifier that is either `0` or not a scalar integer evaluates to the `Ctx` fill kind. This means you can often use [duplicate] as a shorthand for `Ctx`.
-    /// ex: ⬚(.{⊙∘}|°◌) 1 2
     ([2], Fill, OtherModifier, ("fill", '⬚')),
     /// Call a function and catch errors
     ///

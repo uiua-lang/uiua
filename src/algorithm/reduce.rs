@@ -8,8 +8,8 @@ use crate::{
     algorithm::{loops::flip, pervade::*},
     check::instrs_signature,
     cowslice::cowslice,
-    Array, ArrayValue, Complex, FillKind, Function, ImplPrimitive, Instr, Primitive, Shape,
-    Signature, Uiua, UiuaResult, Value,
+    Array, ArrayValue, Complex, Function, ImplPrimitive, Instr, Primitive, Shape, Signature, Uiua,
+    UiuaResult, Value,
 };
 
 pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
@@ -18,8 +18,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(1)?;
     match (f.as_flipped_primitive(&env.asm), xs) {
         (Some((Primitive::Join, false)), mut xs)
-            if env.value_fill(FillKind::Shape).is_none()
-                && env.value_fill(FillKind::Init).is_none() =>
+            if env.value_fill().is_none() && env.value_fill().is_none() =>
         {
             let depth = depth.min(xs.rank());
             if xs.rank() - depth < 2 {
@@ -46,7 +45,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
             }
         }
         (Some((prim, flipped)), Value::Byte(bytes)) => {
-            let fill = env.num_fill(FillKind::Init).ok();
+            let fill = env.num_fill().ok();
             env.push::<Value>(match prim {
                 Primitive::Add => {
                     fast_reduce_different(bytes, 0.0, fill, depth, add::num_num, add::num_byte)
@@ -114,7 +113,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
                         .into()
                 }
                 Primitive::Max => {
-                    let byte_fill = env.byte_fill(FillKind::Init).ok();
+                    let byte_fill = env.byte_fill().ok();
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -130,7 +129,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
                     }
                 }
                 Primitive::Min => {
-                    let byte_fill = env.byte_fill(FillKind::Init).ok();
+                    let byte_fill = env.byte_fill().ok();
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -149,7 +148,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
             })
         }
         (_, xs) => {
-            if env.value_fill(FillKind::Init).is_none() {
+            if env.value_fill().is_none() {
                 if xs.row_count() == 0 {
                     let val = reduce_identity(f.instrs(env), xs).ok_or_else(|| {
                         env.error(format!(
@@ -279,7 +278,7 @@ macro_rules! reduce_math {
         where
             $ty: From<f64>,
         {
-            let fill = env.$fill(FillKind::Init).ok();
+            let fill = env.$fill().ok();
             env.push(match prim {
                 Primitive::Add => fast_reduce(xs, 0.0.into(), fill, depth, add::$f),
                 Primitive::Sub if flipped => {
@@ -506,7 +505,7 @@ fn generic_reduce_inner(
                 }
                 Value::from_row_values(new_rows, env)
             } else {
-                let mut acc = (env.value_fill(FillKind::Init).cloned())
+                let mut acc = (env.value_fill().cloned())
                     .or_else(|| rows.next())
                     .ok_or_else(|| {
                         env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))

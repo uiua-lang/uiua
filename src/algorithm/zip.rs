@@ -6,8 +6,8 @@ use ecow::{eco_vec, EcoVec};
 
 use crate::{
     algorithm::pervade::bin_pervade_generic, function::Function, random, value::Value, Array,
-    ArrayValue, Boxed, Complex, FillKind, ImplPrimitive, Instr, PersistentMeta, Primitive, Shape,
-    Uiua, UiuaResult,
+    ArrayValue, Boxed, Complex, ImplPrimitive, Instr, PersistentMeta, Primitive, Shape, Uiua,
+    UiuaResult,
 };
 
 use super::{fill_value_shapes, fixed_rows, multi_output, FillContext, FixedRowsData, MultiOutput};
@@ -1083,11 +1083,11 @@ impl Value {
             return false;
         }
         match self {
-            Value::Num(_) => ctx.scalar_fill::<f64>(FillKind::Shape).is_ok(),
-            Value::Byte(_) => ctx.scalar_fill::<u8>(FillKind::Shape).is_ok(),
-            Value::Complex(_) => ctx.scalar_fill::<Complex>(FillKind::Shape).is_ok(),
-            Value::Char(_) => ctx.scalar_fill::<char>(FillKind::Shape).is_ok(),
-            Value::Box(_) => ctx.scalar_fill::<Boxed>(FillKind::Shape).is_ok(),
+            Value::Num(_) => ctx.scalar_fill::<f64>().is_ok(),
+            Value::Byte(_) => ctx.scalar_fill::<u8>().is_ok(),
+            Value::Complex(_) => ctx.scalar_fill::<Complex>().is_ok(),
+            Value::Char(_) => ctx.scalar_fill::<char>().is_ok(),
+            Value::Box(_) => ctx.scalar_fill::<Boxed>().is_ok(),
         }
     }
     pub(crate) fn fill_length_to<C>(&mut self, len: usize, ctx: &C) -> Result<(), &'static str>
@@ -1112,7 +1112,7 @@ impl<T: ArrayValue> Array<T> {
         if self.rank() == 0 || self.row_count() >= len {
             return Ok(());
         }
-        let fill = ctx.scalar_fill::<T>(FillKind::Shape)?;
+        let fill = ctx.scalar_fill::<T>()?;
         let more_elems = (len - self.row_count()) * self.row_len();
         self.data.reserve(more_elems);
         self.data.extend(repeat(fill).take(more_elems));

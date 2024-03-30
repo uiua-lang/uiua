@@ -35,7 +35,7 @@ use crate::{
     lex::AsciiToken,
     sys::*,
     value::*,
-    FillKind, FunctionId, Signature, Uiua, UiuaError, UiuaResult,
+    FunctionId, Signature, Uiua, UiuaError, UiuaResult,
 };
 
 /// Categories of primitives
@@ -644,29 +644,15 @@ impl Primitive {
                     )));
                 }
                 if outputs == 0 {
-                    return env
-                        .without_fill_but(
-                            fill.signature().args,
-                            |env| env.call(fill),
-                            |env| env.call(f),
-                        )
-                        .and_then(|(a, b)| a.and(b));
+                    return env.without_fill_but(
+                        fill.signature().args,
+                        |env| env.call(fill),
+                        |env| env.call(f),
+                    );
                 }
                 env.call(fill)?;
-                let kind = if outputs == 2 {
-                    let kind = match env.pop("fill kind")?.as_nat(env, "") {
-                        Ok(0) | Err(_) => FillKind::Context,
-                        Ok(1) => FillKind::Shape,
-                        Ok(2) => FillKind::Default,
-                        Ok(3) => FillKind::Init,
-                        Ok(n) => return Err(env.error(format!("Invalid fill kind: {n}"))),
-                    };
-                    Some(kind)
-                } else {
-                    None
-                };
                 let fill_value = env.pop("fill value")?;
-                env.with_fill(fill_value, kind, |env| env.call(f))?;
+                env.with_fill(fill_value, |env| env.call(f))?;
             }
             Primitive::This => {
                 let f = env.pop_function()?;
@@ -851,11 +837,8 @@ impl ImplPrimitive {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             ImplPrimitive::UnPop => {
-                env.push(
-                    env.value_fill(FillKind::Context)
-                        .ok_or_else(|| env.error("No fill set").fill())?
-                        .clone(),
-                );
+                let val = (env.value_fill()).ok_or_else(|| env.error("No fill set").fill())?;
+                env.push(val.clone());
             }
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
             ImplPrimitive::UndoKeep => {
@@ -1047,11 +1030,8 @@ fn regex(env: &mut Uiua) -> UiuaResult {
             let row: EcoVec<Boxed> = caps
                 .iter()
                 .flat_map(|m| {
-                    m.map(|m| Boxed(Value::from(m.as_str()))).or_else(|| {
-                        env.value_fill(FillKind::Shape)
-                            .cloned()
-                            .map(Value::boxed_if_not)
-                    })
+                    m.map(|m| Boxed(Value::from(m.as_str())))
+                        .or_else(|| env.value_fill().cloned().map(Value::boxed_if_not))
                 })
                 .collect();
             matches.append(row.into(), env)?;

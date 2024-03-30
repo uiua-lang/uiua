@@ -294,7 +294,7 @@ primitive!(
     /// When you have all the random numbers you need, you often want to discard the seed.
     /// ex: ⌊×10[◌⍥gen10 0]
     ///
-    /// [un][pop] can be used to retrieve the `Ctx` [fill] value.
+    /// [un][pop] can be used to retrieve the [fill] value.
     /// ex: ⬚3(+°◌°◌)
     (1(0), Pop, Stack, ("pop", '◌')),
     /// Do nothing with one value
@@ -1610,6 +1610,8 @@ primitive!(
     ([1], Bind, OtherModifier, ("bind", 'λ')),
     /// Invert the behavior of a function
     ///
+    /// A list of all [un]-compatible functions can be found [below](#uns).
+    ///
     /// ex: °√ 5
     /// Two functions that are invertible alone can be inverted together
     /// ex: °(+1√) 5
@@ -1680,6 +1682,8 @@ primitive!(
     ///
     /// This is a more powerful version of [un].
     /// Conceptually, [under] transforms a value, modifies it, then reverses the transformation.
+    ///
+    /// A list of all [under]-compatible functions can be found [below](#unders).
     ///
     /// [under] takes 2 functions `f` and `g` and some other arguments `xs`.
     /// It applies `f` to `xs`, then applies `g` to the result.
@@ -1790,6 +1794,8 @@ primitive!(
     /// [fill] allows you to specify a value that will be used to extend the shape of one or both of the operands to make an operation succeed.
     /// The function is modified to take a fill value which will be used to fill in shapes.
     ///
+    /// A list of all [fill]-compatible functions can be found [below](#fills).
+    ///
     /// ex: ⬚0[1 2_3_4 5_6]
     /// ex: ⬚10+ [1 2 3 4] [5 6]
     /// ex: ⬚0≡⇡ [3 6 2]
@@ -1804,7 +1810,20 @@ primitive!(
     /// To get the expected behavior, use [box] and [content] instead of [fix].
     /// ex: ⬚0≡◇⊂□ [1 2 3] [4 5]
     ///
-    /// [fill] can be used to make a sort of ad-hoc variable system.
+    /// Fill values are temporarily removed for the body of looping modifiers that can use them to fix their row shapes.
+    /// These include [reduce], [scan], [rows], [each], [partition], and [group].
+    /// ex! ⬚0≡(⊟1_2) [3 4]
+    /// [un][pop] can be used to retrieve the fill value. This ignores loop nesting and so can be used to "pull" the fill into the loop.
+    /// ex: ⬚0≡(⬚°◌⊟1_2) [3 4]
+    ///
+    /// [fill][pop] can be used to temporarily remove the fill value.
+    /// ex: ⬚0  ↻ 2 [1 2 3 4 5]
+    ///   : ⬚0⬚◌↻ 2 [1 2 3 4 5]
+    /// This *does* affect [un][pop].
+    /// ex: ⬚0  °◌
+    /// ex! ⬚0⬚◌°◌
+    ///
+    /// [fill] and [un][pop] can be used to make a sort of ad-hoc variable system.
     /// ex: a ← (°□⊡0°◌)
     ///   : b ← (°□⊡1°◌)
     ///   : c ← (°□⊡2°◌)

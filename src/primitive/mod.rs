@@ -636,9 +636,9 @@ impl Primitive {
                 let fill = env.pop_function()?;
                 let f = env.pop_function()?;
                 let outputs = fill.signature().outputs;
-                if outputs > 2 {
+                if outputs > 1 {
                     return Err(env.error(format!(
-                        "{} function can have at most 2 outputs, but its signature is {}",
+                        "{} function can have at most 1 output, but its signature is {}",
                         Primitive::Fill.format(),
                         fill.signature()
                     )));
@@ -837,7 +837,7 @@ impl ImplPrimitive {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
             ImplPrimitive::UnPop => {
-                let val = (env.value_fill()).ok_or_else(|| env.error("No fill set").fill())?;
+                let val = (env.last_fill()).ok_or_else(|| env.error("No fill set").fill())?;
                 env.push(val.clone());
             }
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,

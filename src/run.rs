@@ -174,12 +174,7 @@ impl FromStr for RunMode {
 #[derive(Clone)]
 struct Fill {
     value: Value,
-}
-
-impl Fill {
-    fn removable(&self) -> bool {
-        true
-    }
+    removed: bool,
 }
 
 impl Default for Runtime {
@@ -1225,6 +1220,11 @@ code:
         }
     }
     pub(crate) fn value_fill(&self) -> Option<&Value> {
+        (self.rt.fill_stack.iter().rev())
+            .find(|fill| !fill.removed)
+            .map(|fill| &fill.value)
+    }
+    pub(crate) fn last_fill(&self) -> Option<&Value> {
         self.rt.fill_stack.last().map(|fill| &fill.value)
     }
     fn fill_error(&self, scalar: bool) -> &'static str {
@@ -1258,19 +1258,22 @@ code:
         value: Value,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<T> {
-        self.rt.fill_stack.push(Fill { value });
+        self.rt.fill_stack.push(Fill {
+            value,
+            removed: false,
+        });
         let res = in_ctx(self);
         self.rt.fill_stack.pop();
         res
     }
     /// Do something with the top fill context unset
     pub(crate) fn without_fill<T>(&mut self, in_ctx: impl FnOnce(&mut Self) -> T) -> T {
-        let Some(pos) = (self.rt.fill_stack.iter()).rposition(|fill| fill.removable()) else {
+        let Some(pos) = (self.rt.fill_stack.iter()).rposition(|fill| !fill.removed) else {
             return in_ctx(self);
         };
-        let fill = self.rt.fill_stack.remove(pos);
+        self.rt.fill_stack[pos].removed = true;
         let res = in_ctx(self);
-        self.rt.fill_stack.insert(pos, fill);
+        self.rt.fill_stack[pos].removed = false;
         res
     }
     pub(crate) fn without_fill_but(

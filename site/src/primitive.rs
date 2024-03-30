@@ -169,14 +169,14 @@ fn all_fills() -> impl IntoView {
             { fill_row(Reshape, "Fills excess elements", "⬚0↯ 2_4 [1 2 3]") }
             { fill_row(Rotate, "Fills instead of wrapping", "⬚0↻ 2 [1 2 3 4 5]") }
             { fill_row(Reduce, "Sets initial value", "⬚10/+ [1 2 3]") }
-            { fill_row(Scan, "Fills row shapes", "⬚(Shp10)\\⊂ [1 2 3]") }
+            { fill_row(Scan, "Fills row shapes", "⬚10\\⊂ [1 2 3]") }
             { fill_row(Rows, "Fills row shapes", "⬚0≡⇡ [4 7 3]") }
             { fill_row(Each, "Fills row shapes", "⬚0∵⇡ [3_2 2_4]") }
             { fill_row(Partition, "Fills row shapes", "⬚@ ⊜∘ ≠@ . \"Hey there\"") }
             { fill_row(Partition, "Sets initial value", "⬚\"- \"⊜⊂ ≠@ . \"Hello world!\"") }
             { fill_row(Group, "Fills row shapes", "⬚0⊕∘ ◿3. [1 8 4 9 3 8 2]") }
             { fill_row(Group, "Sets initial value", "⬚[]⊕⊂ ◿3. [1 8 4 9 3 8 2]") }
-            { fill_row_impl(view!(<Prims prims=[Un, Pop]/>), "", "⬚(Ctx5)°◌") }
+            { fill_row_impl(view!(<Prims prims=[Un, Pop]/>), "Get fill value", "⬚5°◌") }
         </table>
     }
 }

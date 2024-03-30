@@ -402,7 +402,7 @@ impl Compiler {
             self.next_global += 1;
             let local = LocalName {
                 index: global_index,
-                public: false,
+                public: true,
             };
             self.asm.add_global_at(
                 local,
@@ -426,7 +426,7 @@ impl Compiler {
                     item.value.clone(),
                     LocalName {
                         index: local.index,
-                        public: false,
+                        public: true,
                     },
                 );
             } else {

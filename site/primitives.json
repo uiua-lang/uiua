@@ -916,15 +916,6 @@
     "class": "MonadicArray",
     "description": "Make an array of all natural numbers less than a number"
   },
-  "rectify": {
-    "glyph": "⌅",
-    "outputs": 1,
-    "modifier_args": 1,
-    "class": "InversionModifier",
-    "description": "Set a function as its own inverse",
-    "experimental": true,
-    "deprecated": true
-  },
   "recur": {
     "glyph": "↫",
     "args": 0,

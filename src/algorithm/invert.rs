@@ -157,7 +157,6 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
     &[
         &invert_call_pattern,
         &invert_dump_pattern,
-        &invert_rectify_pattern,
         &invert_setinverse_pattern,
         &invert_setunder_setinverse_pattern,
         &invert_trivial_pattern,
@@ -662,16 +661,6 @@ fn invert_unjoin_pattern<'a>(
         return None;
     }
     Some((input, eco_vec![Instr::Prim(Primitive::Join, *span)]))
-}
-
-fn invert_rectify_pattern<'a>(
-    input: &'a [Instr],
-    comp: &mut Compiler,
-) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::PushFunc(f), Instr::Prim(Primitive::Rectify, _), input @ ..] = input else {
-        return None;
-    };
-    Some((input, f.instrs(comp).into()))
 }
 
 fn invert_setinverse_pattern<'a>(

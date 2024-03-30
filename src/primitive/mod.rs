@@ -337,7 +337,6 @@ impl Primitive {
         Some(match self {
             Cross => format!("use {} instead", Table.format()),
             Cascade => format!("use {} or {} instead", Fork.format(), On.format()),
-            Rectify => String::new(),
             All => String::new(),
             This | Recur => "use the name of a binding to recur instead".into(),
             Sys(SysOp::GifDecode) => format!(
@@ -372,7 +371,7 @@ impl Primitive {
             self,
             Coordinate
                 | (This | Recur)
-                | (Rectify | All | Cascade | By)
+                | (All | Cascade | By)
                 | Bind
                 | (Shapes | Types)
                 | Sys(SysOp::FFI)
@@ -754,10 +753,6 @@ impl Primitive {
                 env.try_recv(id)?;
             }
             Primitive::Now => env.push(instant::now() / 1000.0),
-            Primitive::Rectify => {
-                let f = env.pop_function()?;
-                env.call(f)?;
-            }
             Primitive::SetInverse => {
                 let f = env.pop_function()?;
                 let _inv = env.pop_function()?;
@@ -1665,11 +1660,7 @@ mod tests {
             for prim in Primitive::non_deprecated() {
                 if matches!(
                     prim,
-                    Primitive::Rand
-                        | Primitive::Trace
-                        | Primitive::Rectify
-                        | Primitive::Recur
-                        | Primitive::Parse
+                    Primitive::Rand | Primitive::Trace | Primitive::Recur | Primitive::Parse
                 ) {
                     continue;
                 }

@@ -1620,21 +1620,6 @@ primitive!(
     /// A function's [un]-inverse can be set with [setinv].
     /// For more about inverses, see the [Inverse Tutorial](/tutorial/inverses).
     ([1], Un, InversionModifier, ("un", '°')),
-    /// Set a function as its own inverse
-    ///
-    /// ex: # Experimental!
-    ///   : F ← ⌅⧻
-    ///   : F   1_2_4
-    ///   : °F  1_2_4
-    ///   : ⍜F∘ 1_2_4 # Calls ⧻ twice
-    /// This is useful when combined with [under]. It allows you to call a function twice with another function in between.
-    /// Finding the standard deviation of a list of numbers requires finding the mean twice. Here, we only need to write the mean code once.
-    /// ex: # Experimental!
-    ///   : StdDev ← √⍜⌅(÷⊃⧻/+)(×.-).
-    ///   : StdDev [1 2 5 8 9]
-    ///
-    /// For more complex inverse defining, see [setinv] and [setund].
-    ([1], Rectify, InversionModifier, ("rectify", '⌅')),
     /// Set the [un]-compatible inverse of a function
     ///
     /// The first function is the uninverted function, and the second function is the inverse.

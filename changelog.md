@@ -73,6 +73,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Deprecate [`deal`](https://uiua.org/docs/deal)
   - It is rarely used and easy to express with other functions
 - Remove `unpack ⊐` for good
+- Remove `rectify ⌅` for good
 - Remove `&i` for good
 - Make [`reduce /`](https://uiua.org/docs/reduce) with a monadic function a hard error
 ### Interpreter
@@ -370,7 +371,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add an *experimental* distinction for some functions/modifiers
   - Experimental features are opt-in and must be enabled by putting an `# Experimental!` comment at the top of a file
 - Add the experimental [`all ⋔`](https://uiua.org/docs/all) modifier, which is a variadic generalization of [`both ∩`](https://uiua.org/docs/both)
-- Add the experimental [`rectify ⌅`](https://uiua.org/docs/rectify) modifier, which sets a function's inverse to itself
+- Add the experimental `rectify ⌅` modifier, which sets a function's inverse to itself
 - Add the experimental [`setinv`](https://uiua.org/docs/setinv) modifier, which sets the inverse of a function
 - Add the experimental [`setunder`](https://uiua.org/docs/setund) modifier, which sets the [`under ⍜`](https://uiua.org/docs/under)-compatible inverse of a function
 - Add the experimental [`this ↬`](https://uiua.org/docs/this) modifier, which sets a function to recur to

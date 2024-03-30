@@ -148,7 +148,7 @@ impl Value {
     pub fn reshape(&mut self, shape: &Self, env: &Uiua) -> UiuaResult {
         let target_shape = shape.as_number_list(
             env,
-            "Shape should be a single natural number \
+            "Shape should be a single integer \
             or a list of integers or infinity",
             |n| n.fract() == 0.0 || n.is_infinite(),
             |n| {
@@ -194,7 +194,7 @@ impl Value {
         if old_shape.as_nat(env, "").is_ok() {
             return Err(env.error("Cannot undo scalar reshae"));
         }
-        let orig_shape = old_shape.as_nats(env, "Shape should be a list of natural numbers")?;
+        let orig_shape = old_shape.as_nats(env, "Shape should be a list of integers")?;
         if orig_shape.iter().product::<usize>() == self.shape().iter().product::<usize>() {
             *self.shape_mut() = Shape::from(orig_shape.as_slice());
             Ok(())

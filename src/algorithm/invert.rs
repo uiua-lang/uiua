@@ -170,6 +170,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &invert_format_pattern,
         &invert_join_val_pattern,
         &invert_unjoin_pattern,
+        &invert_split_pattern,
         &(Val, invert_repeat_pattern),
         &(Val, ([Rotate], [Neg, Rotate])),
         &pat!(Sqrt, (Dup, Mul)),
@@ -947,11 +948,7 @@ fn under_copy_temp_pattern<'a>(
         },
     )) = inner_befores.first().zip(inner_afters.first())
     else {
-        return if g_sig.args == g_sig.outputs {
-            Some((input, (inner_befores, inner_afters)))
-        } else {
-            None
-        };
+        return None;
     };
     if g_sig.args > g_sig.outputs {
         inner_befores.insert(0, instr.clone());
@@ -962,9 +959,9 @@ fn under_copy_temp_pattern<'a>(
         let (start_count, end_count) = temp_pair_counts(&mut instr_copy, &mut end_instr_copy)?;
         *start_count = *before_count;
         *end_count = *after_count;
-        inner_befores.make_mut()[0] = instr_copy.clone();
+        inner_befores.make_mut()[0] = instr_copy;
         inner_afters.make_mut()[0] = instr.clone();
-        inner_befores.push(end_instr_copy.clone());
+        inner_befores.push(end_instr_copy);
         inner_afters.push(end_instr.clone());
     }
     Some((input, (inner_befores, inner_afters)))
@@ -1455,6 +1452,40 @@ fn under_touch_pattern<'a>(
         });
     }
     Some((input, (eco_vec![instr.clone()], afters)))
+}
+
+fn invert_split_pattern<'a>(
+    input: &'a [Instr],
+    _: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::CopyToTemp {
+        stack: TempStack::Inline,
+        count: 1,
+        ..
+    }, input @ ..] = input
+    else {
+        return None;
+    };
+    let pop_pos = input.iter().position(|instr| {
+        matches!(
+            instr,
+            Instr::PopTemp {
+                stack: TempStack::Inline,
+                count: 1,
+                ..
+            }
+        )
+    })?;
+    let (a, b) = input.split_at(pop_pos);
+    let b = &b[1..];
+    let (input, instrs) = match (a, b) {
+        (
+            [Instr::Prim(Primitive::Deduplicate, _)],
+            [Instr::Prim(Primitive::Classify, span), input @ ..],
+        ) => (input, eco_vec![Instr::Prim(Primitive::Select, *span)]),
+        _ => return None,
+    };
+    Some((input, instrs))
 }
 
 fn invert_scan_pattern<'a>(

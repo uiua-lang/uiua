@@ -539,6 +539,9 @@ impl<T: ArrayValue + ArrayCmp<U>, U: ArrayValue> PartialEq<Array<U>> for Array<T
         if self.shape() != other.shape() {
             return false;
         }
+        if self.map_keys() != other.map_keys() {
+            return false;
+        }
         self.data
             .iter()
             .zip(&other.data)
@@ -573,6 +576,9 @@ impl<T: ArrayValue> Ord for Array<T> {
 
 impl<T: ArrayValue> Hash for Array<T> {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
+        if let Some(keys) = self.map_keys() {
+            keys.hash(hasher);
+        }
         if let Some(scalar) = self.as_scalar() {
             if let Some(value) = scalar.nested_value() {
                 value.hash(hasher);

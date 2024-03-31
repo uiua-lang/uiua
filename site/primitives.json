@@ -451,15 +451,6 @@
     "class": "DyadicArray",
     "description": "Combine two arrays as rows of a new array"
   },
-  "cross": {
-    "glyph": "⊠",
-    "args": 2,
-    "outputs": 1,
-    "modifier_args": 1,
-    "class": "IteratingModifier",
-    "description": "Apply a function to each combination of rows of arrays",
-    "deprecated": true
-  },
   "csv": {
     "args": 1,
     "outputs": 1,

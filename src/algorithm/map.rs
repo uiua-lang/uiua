@@ -98,6 +98,9 @@ impl Value {
     }
     /// Turn a map array into its keys and values
     pub fn unmap(mut self, env: &Uiua) -> UiuaResult<(Value, Value)> {
+        // if !self.is_map() && self.row_count() == 0 {
+        //     self.shape_mut().make_row();
+        // }
         let mut keys = self
             .take_map_keys()
             .ok_or_else(|| env.error("Value is not a map"))?;
@@ -306,7 +309,7 @@ impl Value {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct MapKeys {
     pub(crate) keys: Value,
     indices: Vec<usize>,
@@ -631,6 +634,34 @@ impl MapKeys {
             }
         }
         Ok(to_remove)
+    }
+}
+
+impl PartialEq for MapKeys {
+    fn eq(&self, other: &Self) -> bool {
+        self.len == other.len
+            && self.fix_stack == other.fix_stack
+            && (self.keys.rows().zip(&self.indices))
+                .filter(|(k, _)| !k.is_any_empty_cell() && !k.is_any_tombstone())
+                .all(|(k, i)| other.get(&k) == Some(*i))
+            && (other.keys.rows().zip(&other.indices))
+                .filter(|(k, _)| !k.is_any_empty_cell() && !k.is_any_tombstone())
+                .all(|(k, i)| self.get(&k) == Some(*i))
+    }
+}
+
+impl Eq for MapKeys {}
+
+impl Hash for MapKeys {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.len.hash(state);
+        self.fix_stack.hash(state);
+        for (k, index) in self.keys.rows().zip(&self.indices) {
+            if !k.is_any_empty_cell() && !k.is_any_tombstone() {
+                k.hash(state);
+                index.hash(state);
+            }
+        }
     }
 }
 

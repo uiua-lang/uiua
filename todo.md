@@ -6,6 +6,8 @@
   - Non-`|2.1` `reduce`
   - `un insert` pattern
   - Allow warnings to be disabled
+  - List-filled `keep`
+  - `duplicate` and `over` patterns
   - Spatial thinking tutorial/blog
   - Full HTTPS support
   - System functions

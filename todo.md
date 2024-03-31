@@ -5,6 +5,8 @@
 - 0.11
   - Non-`|2.1` `reduce`
   - `un insert` pattern
+  - Allow warnings to be disabled
+  - Spatial thinking tutorial/blog
   - Full HTTPS support
   - System functions
     - Excel

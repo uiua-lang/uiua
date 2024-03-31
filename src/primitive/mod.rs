@@ -335,7 +335,6 @@ impl Primitive {
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         use Primitive::*;
         Some(match self {
-            Cross => format!("use {} instead", Table.format()),
             Cascade => format!("use {} or {} instead", Fork.format(), On.format()),
             All => String::new(),
             This | Recur => "use the name of a binding to recur instead".into(),
@@ -591,7 +590,7 @@ impl Primitive {
             Primitive::Fold => reduce::fold(env)?,
             Primitive::Each => zip::each(env)?,
             Primitive::Rows => zip::rows(env)?,
-            Primitive::Table | Primitive::Cross => table::table(env)?,
+            Primitive::Table => table::table(env)?,
             Primitive::Inventory => zip::inventory(env)?,
             Primitive::Repeat => loops::repeat(env)?,
             Primitive::Do => loops::do_(env)?,

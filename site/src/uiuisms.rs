@@ -196,7 +196,7 @@ uiuisms!(
     /// Filter by a fixed predicate
     "▽ =0◿3 . ⇡10",
     /// Find the most common row in an array
-    r#"⍜⊛(⊢⍖°⊚) "Hello World!""#,
+    r#"⊏⊢⍖°⊚°⊏ "Hello World!""#,
     /// Convert a string to uppercase
     r#"⌵ "These are Words""#,
     /// Convert a string to lowercase
@@ -214,7 +214,7 @@ uiuisms!(
     /// Trim whitespace
     r#"▽×⍜⇌∩\↥.≠@ . "  abc xyz   ""#,
     /// Upscale a 2d matrix or colored image
-    "30 [0_1 1_0.5]\n°⍉▽▽⧻⟜:⍉▽▽⧻,⟜:\n30 [[0_0_1 0_1_0] [1_0_0 0_0_0]]\n°⍉▽▽⧻⟜:⍉▽▽⧻,⟜:",
+    "30 [0_1 1_0.5]\n⍉◌⍥⟜(⍉▽▽⧻,)2\n30 [[0_0_1 0_1_0] [1_0_0 0_0_0]]\n⍉◌⍥⟜(⍉▽▽⧻,)2",
     /// Linearly interpolate between two values
     "⍜-× 10 0 0.2\n⍜⊙-× 0.2 10 0",
     /// Set the value of an array at an index
@@ -238,7 +238,7 @@ uiuisms!(
     /// Matrix product
     "[7_8_9 10_11_12] [1_2 3_4 5_6]\n⍜⍉⊞(/+×)",
     /// Matrix power (Also works with scalars)
-    "4 [1_2 3_4]\n⊙◌⍥(⊞(/+×)⊙⍉,):⊞=.⇡⧻,",
+    "4 [1_2 3_4]\n⊙◌⍥(⊞(/+×),⍉):⊞=.⇡⧻,",
     /// Repeat a function and collect intermediate results into an array
     "[⍥(×2.)] 10 1",
     /// Pad an array with 0s
@@ -278,7 +278,7 @@ uiuisms!(
     /// Boxed powerset
     "⍚▽⋯⇡ⁿ:2⧻⟜¤ [1 5 8 2]",
     /// Irrational number to n terms of continued fraction
-    "⊙◌⍥(⊂⊙⊃⌊(÷:1◿1)):[] 10 e",
+    "⇌◌⍥(⊙⊂÷:1◿1⟜⌊)⊙⊙[] 10 e",
     /// Bitwise XOR
     "⍜∩⋯⬚0≠ 42 65",
     /// Boxed chunks of array

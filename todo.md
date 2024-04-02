@@ -3,7 +3,7 @@
 - 0.10
   - Release it!
 - 0.11
-  - Non-`|2.1` `reduce`
+  - Map patterns
   - `un insert` pattern
   - Allow warnings to be disabled
   - List-filled `keep`

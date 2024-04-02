@@ -1,4 +1,5 @@
 use std::{
+    any::TypeId,
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
@@ -477,12 +478,17 @@ impl<T: ArrayValue> Array<T> {
 
 impl<T: Clone> Array<T> {
     /// Convert the elements of the array
+    #[inline(always)]
     pub fn convert<U>(self) -> Array<U>
     where
-        T: Into<U>,
-        U: Clone,
+        T: Into<U> + 'static,
+        U: Clone + 'static,
     {
-        self.convert_with(Into::into)
+        if TypeId::of::<T>() == TypeId::of::<U>() {
+            unsafe { std::mem::transmute(self) }
+        } else {
+            self.convert_with(Into::into)
+        }
     }
     /// Convert the elements of the array with a function
     pub fn convert_with<U: Clone>(self, f: impl FnMut(T) -> U) -> Array<U> {

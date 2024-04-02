@@ -359,6 +359,8 @@ impl Primitive {
                 Map.format(),
                 Fill.format()
             ),
+            Types => format!("use {} and pattern matching instead", Type.format()),
+            Shapes => format!("use {} and pattern matching instead", Shape.format()),
             _ => return None,
         })
     }

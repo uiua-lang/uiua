@@ -1050,7 +1050,8 @@
     "modifier_args": 1,
     "class": "OtherModifier",
     "description": "Validate the shapes of some arrays",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "sign": {
     "glyph": "±",
@@ -1185,7 +1186,8 @@
     "modifier_args": 1,
     "class": "OtherModifier",
     "description": "Validate the types of some arrays",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "un": {
     "glyph": "°",

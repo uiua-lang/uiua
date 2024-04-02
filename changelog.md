@@ -72,6 +72,7 @@ This version is not yet released. If you are reading this on the website, then t
   - [`fill ⬚`](https://uiua.org/docs/fill) and/or [`map`](https://uiua.org/docs/map) can be used to achieve similar effects
 - Deprecate [`deal`](https://uiua.org/docs/deal)
   - It is rarely used and easy to express with other functions
+- Deprecate experimental [`shapes`](https://uiua.org/docs/shapes) and [`types`](https://uiua.org/docs/types) modifiers in favor of pattern matching
 - Remove `cross ⊠` for good
 - Remove `unpack ⊐` for good
 - Remove `rectify ⌅` for good

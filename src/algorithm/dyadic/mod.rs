@@ -248,9 +248,7 @@ impl<T: ArrayValue> Array<T> {
         if (axes.first()).map_or(true, |&d| d.unsigned_abs() != self.row_count()) {
             self.take_map_keys();
         }
-        let reversed_axes: Vec<usize> = axes
-            .iter()
-            .enumerate()
+        let reversed_axes: Vec<usize> = (axes.iter().enumerate())
             .filter_map(|(i, &s)| if s < 0 { Some(i) } else { None })
             .collect();
         let shape: Shape = axes.iter().map(|&s| s.unsigned_abs()).collect();
@@ -422,17 +420,13 @@ impl Value {
                 .iter()
                 .take(orig_shape.len().saturating_sub(rank))
                 .chain(
-                    self.shape()
-                        .iter()
-                        .skip((rank + 1).saturating_sub(orig_shape.len()).max(1)),
+                    (self.shape().iter()).skip((rank + 1).saturating_sub(orig_shape.len()).max(1)),
                 )
                 .copied()
                 .collect()
         } else {
             // Negative rank
-            orig_shape
-                .iter()
-                .take(rank)
+            (orig_shape.iter().take(rank))
                 .chain(self.shape().iter().skip(1))
                 .copied()
                 .collect()
@@ -1369,10 +1363,7 @@ impl<T: ArrayValue> Array<T> {
                         elem.array_hash(&mut hasher);
                         let hash = hasher.finish();
                         result_data.push(
-                            searched_in
-                                .data
-                                .iter()
-                                .enumerate()
+                            (searched_in.data.iter().enumerate())
                                 .find(|&(i, of)| elem.array_eq(of) && used.insert((hash, i)))
                                 .map(|(i, _)| i)
                                 .unwrap_or(searched_in.row_count())
@@ -1408,17 +1399,13 @@ impl<T: ArrayValue> Array<T> {
                     if searched_for.rank() == 0 {
                         let searched_for = &searched_for.data[0];
                         Array::from(
-                            searched_in
-                                .data
-                                .iter()
+                            (searched_in.data.iter())
                                 .position(|of| searched_for.array_eq(of))
                                 .unwrap_or(searched_in.row_count())
                                 as f64,
                         )
                     } else {
-                        (searched_in
-                            .rows()
-                            .position(|r| r == *searched_for)
+                        ((searched_in.rows().position(|r| r == *searched_for))
                             .unwrap_or(searched_in.row_count()) as f64)
                             .into()
                     }

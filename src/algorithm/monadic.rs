@@ -1313,7 +1313,8 @@ impl Value {
                 .has_headers(false)
                 .flexible(true)
                 .from_reader(_csv.as_bytes());
-            env.with_fill("".into(), |env| {
+            let fill = env.value_fill().cloned().unwrap_or_else(|| "".into());
+            env.with_fill(fill, |env| {
                 let mut rows = Vec::new();
                 for result in reader.records() {
                     let record = result.map_err(|e| env.error(e))?;

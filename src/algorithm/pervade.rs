@@ -8,7 +8,9 @@ use std::{
     slice::{self, ChunksExact},
 };
 
-use crate::{array::*, cowslice::CowSlice, Uiua, UiuaError, UiuaResult};
+use ecow::eco_vec;
+
+use crate::{array::*, Uiua, UiuaError, UiuaResult};
 use crate::{Complex, Shape};
 
 use super::fill_array_shapes;
@@ -164,15 +166,15 @@ where
     fill_array_shapes(&mut a, &mut b, env)?;
     // Pervade
     let shape = a.shape().max(b.shape()).clone();
-    let mut data = CowSlice::with_capacity(a.element_count().max(b.element_count()));
-    bin_pervade_recursive(&a, &b, &mut data, env, f).map_err(Into::into)?;
+    let mut data = eco_vec![C::default(); shape.elements()];
+    bin_pervade_recursive(&a, &b, data.make_mut(), env, f).map_err(Into::into)?;
     Ok(Array::new(shape, data))
 }
 
 fn bin_pervade_recursive<A, B, C, F>(
     a: &A,
     b: &B,
-    c: &mut CowSlice<C>,
+    c: &mut [C],
     env: &Uiua,
     f: F,
 ) -> Result<(), F::Error>
@@ -183,28 +185,33 @@ where
     F: PervasiveFn<A::Value, B::Value, Output = C> + Clone,
 {
     match (a.shape(), b.shape()) {
-        ([], []) => c.extend_from_array([f.call(a.data()[0].clone(), b.data()[0].clone(), env)?]),
+        ([], []) => c[0] = f.call(a.data()[0].clone(), b.data()[0].clone(), env)?,
         (ash, bsh) if ash == bsh => {
-            c.try_extend(
-                a.data()
-                    .iter()
-                    .zip(b.data())
-                    .map(|(a, b)| f.call(a.clone(), b.clone(), env)),
-            )?;
+            for ((a, b), c) in a.data().iter().zip(b.data()).zip(c) {
+                *c = f.call(a.clone(), b.clone(), env)?;
+            }
         }
         ([], bsh) => {
-            for brow in b.rows() {
-                bin_pervade_recursive(a, &(&bsh[1..], brow), c, env, f.clone())?;
+            for (brow, crow) in b.rows().zip(c.chunks_exact_mut(b.row_len())) {
+                bin_pervade_recursive(a, &(&bsh[1..], brow), crow, env, f.clone())?;
             }
         }
         (ash, []) => {
-            for arow in a.rows() {
-                bin_pervade_recursive(&(&ash[1..], arow), b, c, env, f.clone())?;
+            for (arow, crow) in a.rows().zip(c.chunks_exact_mut(a.row_len())) {
+                bin_pervade_recursive(&(&ash[1..], arow), b, crow, env, f.clone())?;
             }
         }
         (ash, bsh) => {
-            for (arow, brow) in a.rows().zip(b.rows()) {
-                bin_pervade_recursive(&(&ash[1..], arow), &(&bsh[1..], brow), c, env, f.clone())?;
+            for ((arow, brow), crow) in
+                (a.rows().zip(b.rows())).zip(c.chunks_exact_mut(a.row_len().max(b.row_len())))
+            {
+                bin_pervade_recursive(
+                    &(&ash[1..], arow),
+                    &(&bsh[1..], brow),
+                    crow,
+                    env,
+                    f.clone(),
+                )?;
             }
         }
     }

@@ -665,7 +665,7 @@ impl FromIterator<String> for Array<Boxed> {
 /// A trait for types that can be used as array elements
 #[allow(unused_variables)]
 pub trait ArrayValue:
-    Clone + fmt::Debug + fmt::Display + GridFmt + ArrayCmp + Send + Sync + 'static
+    Default + Clone + fmt::Debug + fmt::Display + GridFmt + ArrayCmp + Send + Sync + 'static
 {
     /// The type name
     const NAME: &'static str;

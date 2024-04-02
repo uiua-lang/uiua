@@ -146,7 +146,7 @@ pub fn Site() -> impl IntoView {
                         <div id="top">
                             <div id="header">
                                 <div id="header-left">
-                                    <h1><A id="header-uiua" href="/"><img src="/uiua-logo.png" style="height: 1em" alt="Uiua logo" />" Uiua"</A></h1>
+                                    <h1><A id="header-uiua" href="/"><img src="/assets/uiua-logo.png" style="height: 1em" alt="Uiua logo" />" Uiua"</A></h1>
                                     <p id="subtitle">{ subtitle.clone() }</p>
                                 </div>
                                 <div id="nav">
@@ -179,7 +179,7 @@ pub fn Site() -> impl IntoView {
 }
 
 fn weewuh() {
-    if let Ok(audio) = HtmlAudioElement::new_with_src("/wee-wuh.mp3") {
+    if let Ok(audio) = HtmlAudioElement::new_with_src("/assets/wee-wuh.mp3") {
         _ = audio.play();
     }
 }

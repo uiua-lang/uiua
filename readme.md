@@ -1,5 +1,5 @@
 
-<img src="site/uiua-logo.png" width="140"/> 
+<img src="site/assets/uiua-logo.png" width="140"/> 
 
 # Uiua
 

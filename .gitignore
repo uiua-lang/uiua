@@ -8,7 +8,7 @@ site/dist
 *.wav
 *.png
 *.txt
-!*/uiua-logo.png
+!site/assets/*
 
 *.ua
 *.uasm

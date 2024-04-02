@@ -171,7 +171,7 @@ where
     Ok(Array::new(shape, data))
 }
 
-fn bin_pervade_recursive<A, B, C, F>(
+pub fn bin_pervade_recursive<A, B, C, F>(
     a: &A,
     b: &B,
     c: &mut [C],

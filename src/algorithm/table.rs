@@ -7,7 +7,7 @@ use crate::{
     function::Function,
     random,
     value::Value,
-    Array, ArrayValue, ImplPrimitive, Primitive, Shape, Uiua, UiuaResult,
+    Array, ArrayValue, ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult,
 };
 
 use super::{loops::flip, multi_output, validate_size};
@@ -25,6 +25,30 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
             if n == 2 && xs.rank() <= 1 && ys.rank() <= 1 {
                 table_list(f, xs, ys, env)
             } else {
+                if let [Instr::Prim(Primitive::Mul, _), Instr::PushFunc(f), Instr::Prim(Primitive::Reduce, _)] =
+                    f.instrs(&env.asm)
+                {
+                    if let Some((Primitive::Add, _)) = f.as_flipped_primitive(&env.asm) {
+                        match (&xs, &ys) {
+                            (Value::Num(a), Value::Num(b)) => {
+                                return a.matrix_mul(b, env).map(|val| env.push(val))
+                            }
+                            (Value::Num(a), Value::Byte(b)) => {
+                                return a.matrix_mul(&b.convert_ref(), env).map(|val| env.push(val))
+                            }
+                            (Value::Byte(a), Value::Num(b)) => {
+                                return a.convert_ref().matrix_mul(b, env).map(|val| env.push(val))
+                            }
+                            (Value::Byte(a), Value::Byte(b)) => {
+                                return a
+                                    .convert_ref()
+                                    .matrix_mul(&b.convert_ref(), env)
+                                    .map(|val| env.push(val))
+                            }
+                            _ => {}
+                        }
+                    }
+                }
                 generic_table(f, xs, ys, env)
             }
         }

@@ -13,8 +13,10 @@ use std::{
 };
 
 use ecow::{eco_vec, EcoVec};
+use rayon::prelude::*;
 
 use crate::{
+    algorithm::pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
     array::*,
     boxed::Boxed,
     cowslice::{cowslice, CowSlice},
@@ -22,7 +24,7 @@ use crate::{
     Shape, Uiua, UiuaResult,
 };
 
-use super::{ArrayCmpSlice, FillContext};
+use super::{shape_prefixes_match, ArrayCmpSlice, FillContext};
 
 impl Value {
     pub(crate) fn bin_coerce_to_boxes<T, C: FillContext, E: ToString>(
@@ -1429,5 +1431,59 @@ impl<T: ArrayValue> Array<T> {
                 }
             }
         })
+    }
+}
+
+impl Array<f64> {
+    pub(crate) fn matrix_mul(&self, other: &Self, env: &Uiua) -> UiuaResult<Self> {
+        let (a, b) = (self, other);
+        let a_row_shape = a.shape().row();
+        let b_row_shape = b.shape().row();
+        if !shape_prefixes_match(&a_row_shape, &b_row_shape) {
+            return Err(env.error(format!(
+                "Cannot multiply arrays of shape {} and {}",
+                a.shape(),
+                b.shape()
+            )));
+        }
+        let prod_shape = if a_row_shape.len() >= b_row_shape.len() {
+            &a_row_shape
+        } else {
+            &b_row_shape
+        };
+        let prod_row_shape = prod_shape.row();
+        let prod_elems = prod_row_shape.elements();
+        let mut result_data = eco_vec![0.0; self.row_count() * other.row_count() * prod_elems];
+        let result_slice = result_data.make_mut();
+        let mut result_shape = Shape::from([a.row_count(), b.row_count()]);
+        result_shape.extend(prod_row_shape.iter().copied());
+        let inner = |a_row: &[f64], res_row: &mut [f64]| {
+            let mut prod_row = vec![0.0; prod_shape.elements()];
+            let mut i = 0;
+            for b_row in b.row_slices() {
+                _ = bin_pervade_recursive(
+                    &(&*a_row_shape, a_row),
+                    &(&*b_row_shape, b_row),
+                    &mut prod_row,
+                    env,
+                    InfalliblePervasiveFn::new(pervade::mul::num_num),
+                );
+                let (sum, rest) = prod_row.split_at_mut(prod_elems);
+                for chunk in rest.chunks_exact(prod_elems) {
+                    for (a, b) in sum.iter_mut().zip(chunk.iter()) {
+                        *a += *b;
+                    }
+                }
+                res_row[i..i + prod_elems].copy_from_slice(sum);
+                i += prod_elems;
+            }
+        };
+        let iter = (a.row_slices()).zip(result_slice.chunks_exact_mut(b.row_count() * prod_elems));
+        if a.row_count() > 100 || b.row_count() > 100 {
+            (iter.par_bridge()).for_each(|(a_row, res_row)| inner(a_row, res_row));
+        } else {
+            iter.for_each(|(a_row, res_row)| inner(a_row, res_row));
+        }
+        Ok(Array::new(result_shape, result_data))
     }
 }

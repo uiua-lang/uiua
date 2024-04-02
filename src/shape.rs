@@ -45,6 +45,10 @@ impl Shape {
     pub fn remove(&mut self, index: usize) -> usize {
         self.dims.remove(index)
     }
+    /// Get the row count
+    pub fn row_count(&self) -> usize {
+        self.dims.first().copied().unwrap_or(1)
+    }
     /// Get the row shape
     pub fn row(&self) -> Shape {
         let mut shape = self.clone();

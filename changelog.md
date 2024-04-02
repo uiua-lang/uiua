@@ -101,6 +101,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Improve the supported binding type coverage of [`&ffi`](https://uiua.org/docs/&ffi)
 - Add warnings for when a loop in an array may have a variable signature
 - Various performance improvements
+  - Optimize and multithread `⊞(/+×)`, which is a common component of matrix multiplication
 - Lots of bug and crash fixes
 ### Website
 - Tutorials

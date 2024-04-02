@@ -2,7 +2,7 @@
 
 Uiua is not yet stable.
 
-## 0.10.0 - 2024-??-??
+## 0.10.0 - 2024-04-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 <!-- You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0). -->
 ### Language

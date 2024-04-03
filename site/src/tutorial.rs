@@ -1088,7 +1088,7 @@ fn TutorialInverses() -> impl IntoView {
 
         <Hd id="under"><Prim prim=Under/></Hd>
         <p><Prim prim=Under/>" expresses a more powerful inversion pattern. It captures the pattern of doing some transformation, modifying the data, then undoing the transformation."</p>
-        <p>"This may not seem imediately useful, but you'll find it is a pattern you encounter everwhere, even in your everday life. You might open a drawer, take something out, then close the drawer. You might get on a bus, the bus travels, then you get off the bus."</p>
+        <p>"This may not seem immediately useful, but you'll find it is a pattern you encounter everwhere, even in your everday life. You might open a drawer, take something out, then close the drawer. You might get on a bus, the bus travels, then you get off the bus."</p>
         <p><Prim prim=Under/>" takes two functions which we will call "<code>"F"</code>" and "<code>"G"</code>". It calls "<code>"F"</code>", then calls "<code>"G"</code>", then calls an inverse of "<code>"F"</code>"."</p>
         <p>"Many functions that do not work with "<Prim prim=Un/>" work with "<Prim prim=Under/>" because "<Prim prim=Under/>" can keep track of "<em>"context"</em>". One example of this in action is "<Prim prim=Under/><Prim prim=Pick/>", which allows us to modify an element or row of an array."</p>
         <Editor example="⍜(⊡2|×10) [1 2 3 4]"/>

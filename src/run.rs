@@ -954,7 +954,7 @@ code:
     pub fn pop_string(&mut self) -> UiuaResult<String> {
         self.pop_convert(Value::as_string)
     }
-    /// Simulates popping a value and imediately pushing it back
+    /// Simulates popping a value and immediately pushing it back
     pub(crate) fn touch_array_stack(&mut self, n: usize) -> UiuaResult {
         if self.rt.stack.len() < n {
             return Err(self.error(format!(

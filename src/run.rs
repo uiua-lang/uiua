@@ -899,6 +899,9 @@ code:
             self.inputs().clone().into(),
         )
     }
+    pub(crate) fn pattern_match_error(&self) -> UiuaError {
+        UiuaError::PatternMatch(self.span(), self.inputs().clone().into())
+    }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {
         let res = self.rt.stack.pop().ok_or_else(|| {

@@ -195,14 +195,37 @@ impl Value {
                 .map(|(a, b)| (a.into(), b.into())),
         }
     }
-    pub(crate) fn unjoin(self, shape: Self, env: &Uiua) -> UiuaResult<(Self, Self)> {
-        let shape = shape.as_nats(env, "Shape must be a natural numbers")?;
+    pub(crate) fn unjoin(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         self.generic_into(
-            |arr| arr.unjoin(&shape, env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.unjoin(&shape, env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.unjoin(&shape, env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.unjoin(&shape, env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.unjoin(&shape, env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
+        )
+    }
+    pub(crate) fn unjoin_shape(self, shape: &[usize], env: &Uiua) -> UiuaResult<(Self, Self)> {
+        self.generic_into(
+            |arr| {
+                arr.unjoin_shape(shape, env)
+                    .map(|(a, b)| (a.into(), b.into()))
+            },
+            |arr| {
+                arr.unjoin_shape(shape, env)
+                    .map(|(a, b)| (a.into(), b.into()))
+            },
+            |arr| {
+                arr.unjoin_shape(shape, env)
+                    .map(|(a, b)| (a.into(), b.into()))
+            },
+            |arr| {
+                arr.unjoin_shape(shape, env)
+                    .map(|(a, b)| (a.into(), b.into()))
+            },
+            |arr| {
+                arr.unjoin_shape(shape, env)
+                    .map(|(a, b)| (a.into(), b.into()))
+            },
         )
     }
 }
@@ -435,7 +458,20 @@ impl<T: ArrayValue> Array<T> {
             }
         }
     }
-    pub(crate) fn unjoin(mut self, shape: &[usize], env: &Uiua) -> UiuaResult<(Self, Self)> {
+    pub(crate) fn unjoin(mut self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot unjoin a scalar"));
+        }
+        if self.row_count() < 1 {
+            return Err(env.error("Cannot unjoin an empty array"));
+        }
+        let first = self.row(0);
+        self.data = self.data.slice(self.row_len()..);
+        self.shape[0] -= 1;
+        self.validate_shape();
+        Ok((first, self))
+    }
+    pub(crate) fn unjoin_shape(mut self, shape: &[usize], env: &Uiua) -> UiuaResult<(Self, Self)> {
         if self.rank() == 0 {
             return Err(env.error("Cannot unjoin a scalar"));
         }

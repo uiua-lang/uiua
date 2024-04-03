@@ -2436,7 +2436,8 @@ impl_primitive!(
     (0[1], UnDump, impure),
     (1, Primes),
     (1, UnBox),
-    (2(2), UnJoin),
+    (1(2), UnJoin),
+    (2(2), UnJoinPattern),
     (1, UnCsv),
     (2(0), MatchPattern),
     // Unders

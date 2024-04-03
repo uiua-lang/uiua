@@ -35,6 +35,8 @@ pub enum UiuaError {
     Timeout(Span, Box<Inputs>),
     /// A wrapper marking this error as being fill-related
     Fill(Box<Self>),
+    /// A pattern match failed
+    PatternMatch(Span, Box<Inputs>),
     /// The interpreter panicked
     Panic(String),
     /// Multiple errors
@@ -79,6 +81,7 @@ impl fmt::Display for UiuaError {
             UiuaError::Throw(value, span, _) => write!(f, "{span}: {value}"),
             UiuaError::Timeout(..) => write!(f, "Maximum execution time exceeded"),
             UiuaError::Fill(error) => error.fmt(f),
+            UiuaError::PatternMatch(span, _) => write!(f, "{span}: Pattern match failed"),
             UiuaError::Panic(message) => message.fmt(f),
             UiuaError::Multi(errors) => {
                 for error in errors {
@@ -114,10 +117,18 @@ impl UiuaError {
         }
     }
     /// Check if the error is fill-related
-    pub(crate) fn is_fill(&self) -> bool {
+    pub fn is_fill(&self) -> bool {
         match self {
             UiuaError::Traced { error, .. } => error.is_fill(),
             UiuaError::Fill(_) => true,
+            _ => false,
+        }
+    }
+    /// Check if the error is a pattern match failure
+    pub fn is_pattern_match(&self) -> bool {
+        match self {
+            UiuaError::Traced { error, .. } => error.is_pattern_match(),
+            UiuaError::PatternMatch(..) => true,
             _ => false,
         }
     }
@@ -223,6 +234,9 @@ impl UiuaError {
                 [("Maximum execution time exceeded", span.clone())],
             ),
             UiuaError::Fill(error) => error.report(),
+            UiuaError::PatternMatch(span, inputs) => {
+                Report::new_multi(kind, inputs, [("Pattern match failed", span.clone())])
+            }
             UiuaError::Panic(message) => Report::new(kind, message),
             UiuaError::Load(..) | UiuaError::Format(..) => Report::new(kind, self.to_string()),
             UiuaError::Multi(errors) => {

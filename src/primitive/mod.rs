@@ -190,7 +190,7 @@ impl fmt::Display for ImplPrimitive {
             UndoRerank => write!(f, "{Under}{Rerank}"),
             UndoReshape => write!(f, "{Un}{Reshape}"),
             UndoJoin => write!(f, "{Under}{Join}"),
-            UnJoin => write!(f, "{Un}{Join}"),
+            UnJoin | UnJoinPattern => write!(f, "{Un}{Join}"),
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
             LastMinIndex => write!(f, "{First}{Reverse}{Rise}"),
@@ -918,9 +918,15 @@ impl ImplPrimitive {
                 env.push(left);
             }
             ImplPrimitive::UnJoin => {
-                let shape = env.pop(1)?;
+                let val = env.pop(1)?;
+                let (first, rest) = val.unjoin(env)?;
+                env.push(rest);
+                env.push(first);
+            }
+            ImplPrimitive::UnJoinPattern => {
+                let shape = (env.pop(1))?.as_nats(env, "Shape must be a natural numbers")?;
                 let val = env.pop(2)?;
-                let (first, rest) = val.unjoin(shape, env)?;
+                let (first, rest) = val.unjoin_shape(&shape, env)?;
                 env.push(rest);
                 env.push(first);
             }

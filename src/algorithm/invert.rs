@@ -592,6 +592,9 @@ fn invert_push_pattern<'a>(
     let [Instr::Push(val), input @ ..] = input else {
         return None;
     };
+    if let [Instr::ImplPrim(ImplPrimitive::MatchPattern, _), input @ ..] = input {
+        return Some((input, eco_vec![Instr::Push(val.clone())]));
+    }
     let mut instrs = eco_vec![Instr::Push(val.clone())];
     instrs.push(Instr::ImplPrim(
         ImplPrimitive::MatchPattern,
@@ -734,11 +737,12 @@ fn under_from_inverse_pattern<'a>(
     let mut end = input.len();
     loop {
         for pattern in INVERT_PATTERNS {
-            if let Some((inp, inverse)) = pattern.invert_extract(&input[..end], comp) {
+            if let Some((inp, after)) = pattern.invert_extract(&input[..end], comp) {
+                let before = EcoVec::from(&input[..input.len() - inp.len()]);
                 if DEBUG {
-                    println!("inverted for under {:?} to {:?}", &input[..end], inverse);
+                    println!("inverted for under {:?} to {:?}", before, after);
                 }
-                return Some((inp, (input[..input.len() - inp.len()].into(), inverse)));
+                return Some((inp, (before, after)));
             }
         }
         end -= 1;
@@ -1044,6 +1048,10 @@ fn under_push_temp_pattern<'a>(
                     afters.insert(0, start_instr);
                     afters.push(end_instr);
                 }
+            }
+            Ordering::Equal if inner_afters_sig.args + 1 == inner_afters_sig.outputs => {
+                afters.insert(0, start_instr);
+                afters.push(end_instr);
             }
             _ => {}
         }
@@ -1407,7 +1415,7 @@ fn under_unpack_pattern<'a>(
             boxed: *unbox,
         },
     ]);
-    Some((input, (befores, afters)))
+    Some((&[], (befores, afters)))
 }
 
 fn under_touch_pattern<'a>(

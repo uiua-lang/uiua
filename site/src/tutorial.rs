@@ -1708,6 +1708,7 @@ fn TutorialModules() -> impl IntoView {
         <p>"On the site, code is pulled from a "<code>"lib.ua"</code>" file at the root of the repository. Loading other files is not supported."</p>
         <p>"To use Git modules in the "<A href="/docs/install">"native interpreter"</A>", you must have Git installed. The repository is added as a Git submodule and the "<code>"lib.ua"</code>" file is loaded as the module's contents."</p>
         <p>"The native interpreter also supports adding an additional "<code>"branch: <branch-name>"</code>" specifier after the URL."</p>
+        <p>"You can find a curated list of Uiua modules "<a href="https://github.com/uiua-lang/uiua-modules">"here"</a>"."</p>
     }
 }
 

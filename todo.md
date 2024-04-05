@@ -1,7 +1,5 @@
 # Uiua Todo
 
-- 0.10
-  - Release it!
 - 0.11
   - Map patterns
   - `un insert` pattern
@@ -11,6 +9,7 @@
   - `min` and `max` patterns
   - Spatial thinking tutorial/blog
   - Full HTTPS support
+  - `uiua fmtio`
   - System functions
     - Excel
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly

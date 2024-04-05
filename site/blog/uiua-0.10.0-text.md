@@ -1,10 +1,10 @@
 # Announcing Uiua 0.10.0
 
-2024-04-??
+2024-04-04
 
 Uiua 0.10.0 is now available!
 
-You can find the full changelog [here](https://uiua.org/docs/changelog).
+You can find the full changelog [here](https://uiua.org/docs/changelog#0.10.0---2024-04-04).
 
 This release contains so many changes, improvements, and new features that I thought it deserved a blog post.
 From here on, major releases will be announced in this way.
@@ -16,7 +16,11 @@ While there are many changes, I want to highlight a few of them here.
 Using [`un`](https://uiua.org/docs/un) on a constant value will now match a pattern. When used with [`try`](https://uiua.org/docs/try), this can be used to conditionally match, extract, and process values.
 
 ```uiua
-F ← ⍣(×10°[1⊙3]|°(⊂5)|⇌)
+F ← ⍣(
+  ×10 °[1⊙3] # Extract and multiply..
+| °(⊂5)      # ..or remove leading 5..
+| ⇌          # ..else reverse
+)
 F [1 2 3]
 F [5 6 7]
 F "cool!"
@@ -67,12 +71,13 @@ This simplifies a lot of string-processing code in particular. A new [strings](h
 
 Switch functions now format to use `⟨⟩` brackets. This makes them easier to distinguish from function packs.
 ```uiua
-F ← ⟨×10|↥2⟩<2.
+F ← (×10|↥2)<2. # This..
+F ← ⟨×10|↥2⟩<2. # Formats to this
 F 0
 F 5
 ```
 
-[`map`](https://uiua.org/docs/map) and related functions are no longer experimental!
+[`map`](https://uiua.org/docs/map) and related functions are no longer experimental! See the [`map`](https://uiua.org/docs/map) docs for an overview.
 ```uiua
 map 1_2_3 4_5_6
 ```
@@ -81,9 +86,9 @@ The new [`&clget`](https://uiua.org/docs/&clget) and [`&clset`](https://uiua.org
 
 The interpreter's built-in language server now supports [many more features](https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode).
 
-There are a ton more! Again, you can read the full changelog [here](https://uiua.org/docs/changelog).
+There are a ton more! Again, you can read the full changelog [here](https://uiua.org/docs/changelog#0.10.0---2024-04-04).
 
-## ♥
+## 💖
 
 As always, I'd like to thank everyone who contributed to this release, whether by directly contributing code, reporting bugs, or just using Uiua and providing feedback.
 

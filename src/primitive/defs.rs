@@ -2105,7 +2105,7 @@ primitive!(
     /// Operations that do not specifically work on maps will remove the keys and turn the map into a normal array.
     ///
     /// [fix]ing a map will [fix] the keys and values. This exposes the true structure of the keys array.
-    /// ex: ¤ map 1_2_3 4_5_6
+    /// ex: ¤ map 3_10_5 "abc"
     /// This is usually only useful with [rows].
     /// ex: ≡get [1 3 3 2] ¤ map 1_2_3 4_5_6
     ///

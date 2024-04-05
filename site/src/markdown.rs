@@ -52,7 +52,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
                     return view!(<Prim prim=prim/>).into_view();
                 }
             }
-            text.into_view()
+            view!({text}" ").into_view()
         }
         NodeValue::Heading(heading) => {
             let id = all_text(node).to_lowercase().replace(' ', "-");

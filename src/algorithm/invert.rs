@@ -1467,12 +1467,19 @@ fn invert_scan_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::PushFunc(f), Instr::Prim(Primitive::Scan, span), input @ ..] = input else {
+    let [Instr::PushFunc(f), instr, input @ ..] = input else {
         return None;
     };
+    let (Instr::Prim(Primitive::Scan, span) | Instr::ImplPrim(ImplPrimitive::UnScan, span)) = instr
+    else {
+        return None;
+    };
+    let un = matches!(instr, Instr::ImplPrim(ImplPrimitive::UnScan, _));
     let inverse = match f.as_flipped_primitive(&comp.asm) {
-        Some((Primitive::Add, false)) => eco_vec![Instr::Prim(Primitive::Sub, *span)],
-        Some((Primitive::Mul, false)) => eco_vec![Instr::Prim(Primitive::Div, *span)],
+        Some((Primitive::Add, false)) if !un => eco_vec![Instr::Prim(Primitive::Sub, *span)],
+        Some((Primitive::Mul, false)) if !un => eco_vec![Instr::Prim(Primitive::Div, *span)],
+        Some((Primitive::Sub, false)) if un => eco_vec![Instr::Prim(Primitive::Add, *span)],
+        Some((Primitive::Div, false)) if un => eco_vec![Instr::Prim(Primitive::Mul, *span)],
         Some((Primitive::Eq, false)) => eco_vec![Instr::Prim(Primitive::Eq, *span)],
         Some((Primitive::Ne, false)) => eco_vec![Instr::Prim(Primitive::Ne, *span)],
         _ => {

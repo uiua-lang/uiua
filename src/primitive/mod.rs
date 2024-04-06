@@ -924,7 +924,7 @@ impl ImplPrimitive {
                 env.push(first);
             }
             ImplPrimitive::UnJoinPattern => {
-                let shape = (env.pop(1))?.as_nats(env, "Shape must be a natural numbers")?;
+                let shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
                 let val = env.pop(2)?;
                 let (first, rest) = val.unjoin_shape(&shape, env)?;
                 env.push(rest);

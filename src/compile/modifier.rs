@@ -199,8 +199,9 @@ impl Compiler {
                         modified.modifier.span.clone(),
                     )?;
                     // Compile
-                    let instrs =
-                        self.temp_scope(mac.names, |comp| comp.compile_words(mac.words, true))?;
+                    let instrs = self.suppress_diagnostics(|comp| {
+                        comp.temp_scope(mac.names, |comp| comp.compile_words(mac.words, true))
+                    })?;
                     // Add
                     let sig = self.sig_of(&instrs, &modified.modifier.span)?;
                     let func =
@@ -284,8 +285,10 @@ impl Compiler {
                     self.code_meta
                         .macro_expansions
                         .insert(full_span, (r.name.value.clone(), code.clone()));
-                    self.temp_scope(mac.names, |comp| {
-                        comp.quote(&code, &modified.modifier.span, call)
+                    self.suppress_diagnostics(|comp| {
+                        comp.temp_scope(mac.names, |comp| {
+                            comp.quote(&code, &modified.modifier.span, call)
+                        })
                     })?;
                 } else {
                     return Err(self.fatal_error(
@@ -319,6 +322,16 @@ impl Compiler {
             self.push_instr(Instr::PushFunc(func));
         }
         Ok(())
+    }
+    fn suppress_diagnostics<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
+        let diagnostics = take(&mut self.diagnostics);
+        let print_diagnostics = take(&mut self.print_diagnostics);
+        let res = f(self);
+        self.diagnostics
+            .retain(|d| d.kind >= DiagnosticKind::Warning);
+        self.diagnostics.extend(diagnostics);
+        self.print_diagnostics = print_diagnostics;
+        res
     }
     pub(super) fn inline_modifier(&mut self, modified: &Modified, call: bool) -> UiuaResult<bool> {
         use Primitive::*;

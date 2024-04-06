@@ -293,12 +293,12 @@ impl Ord for Diagnostic {
 /// Kinds of non-error diagnostics
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum DiagnosticKind {
-    /// Something that really needs to be fixed
-    Warning,
-    /// Something that should be fixed for performance reasons
-    Advice,
     /// Bad code style
     Style,
+    /// Something that should be fixed for performance reasons
+    Advice,
+    /// Something that really needs to be fixed
+    Warning,
 }
 
 impl fmt::Display for Diagnostic {

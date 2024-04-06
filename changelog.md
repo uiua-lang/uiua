@@ -3,6 +3,12 @@
 Uiua is not yet stable.
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.10.1 - 2024-04-06
+### Interpreter
+- [`under ⍜`](https://uiua.org/docs/under) of pattern matching now works correctly
+- [`under ⍜`](https://uiua.org/docs/under) [`un °`](https://uiua.org/docs/un) [`scan \\`](https://uiua.org/docs/scan) now works correctly
+- Style and advice diagnostics are no longer emitted from macros
+
 ## 0.10.0 - 2024-04-04
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 ### Language

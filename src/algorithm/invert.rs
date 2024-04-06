@@ -169,6 +169,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &invert_primes_pattern,
         &invert_format_pattern,
         &invert_join_val_pattern,
+        &invert_unjoin_pattern_pattern,
         &invert_split_pattern,
         &(Val, invert_repeat_pattern),
         &(Val, ([Rotate], [Neg, Rotate])),
@@ -653,6 +654,38 @@ fn invert_join_val_pattern<'a>(
                 },
                 Instr::ImplPrim(ImplPrimitive::MatchPattern, span),
             ]);
+            return Some((input, instrs));
+        }
+    }
+    None
+}
+
+fn invert_unjoin_pattern_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    for i in 0..input.len() {
+        if let &Instr::ImplPrim(ImplPrimitive::UnJoinPattern, span) = &input[i] {
+            let [before @ .., Instr::CopyToTemp {
+                stack: TempStack::Inline,
+                count: 1,
+                ..
+            }, Instr::Prim(Primitive::Shape, _)] = &input[..i]
+            else {
+                return None;
+            };
+            let [Instr::PopTemp {
+                stack: TempStack::Inline,
+                count: 1,
+                ..
+            }, Instr::ImplPrim(ImplPrimitive::MatchPattern, _), input @ ..] = &input[i + 1..]
+            else {
+                return None;
+            };
+            let ([], mut instrs) = Val.invert_extract(before, comp)? else {
+                return None;
+            };
+            instrs.push(Instr::Prim(Primitive::Join, span));
             return Some((input, instrs));
         }
     }

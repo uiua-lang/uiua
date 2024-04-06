@@ -234,7 +234,7 @@ mod tests {
             if let Some(diag) = comp
                 .take_diagnostics()
                 .into_iter()
-                .find(|d| d.kind < DiagnosticKind::Advice)
+                .find(|d| d.kind > DiagnosticKind::Advice)
             {
                 panic!("Test failed in {}:\n{}", path.display(), diag.report());
             }

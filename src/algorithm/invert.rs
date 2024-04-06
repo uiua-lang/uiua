@@ -607,16 +607,23 @@ fn invert_format_pattern<'a>(
     input: &'a [Instr],
     _: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::Format { parts, span }, input @ ..] = input else {
-        return None;
-    };
-    Some((
-        input,
-        eco_vec![Instr::MatchFormatPattern {
-            parts: parts.clone(),
-            span: *span
-        }],
-    ))
+    Some(match input {
+        [Instr::Format { parts, span }, input @ ..] => (
+            input,
+            eco_vec![Instr::MatchFormatPattern {
+                parts: parts.clone(),
+                span: *span
+            }],
+        ),
+        [Instr::MatchFormatPattern { parts, span }, input @ ..] => (
+            input,
+            eco_vec![Instr::Format {
+                parts: parts.clone(),
+                span: *span
+            }],
+        ),
+        _ => return None,
+    })
 }
 
 fn invert_join_val_pattern<'a>(

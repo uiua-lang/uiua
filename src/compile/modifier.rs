@@ -184,7 +184,8 @@ impl Compiler {
                 }
                 // Handle recursion depth
                 self.macro_depth += 1;
-                if self.macro_depth > 20 {
+                const MAX_MACRO_DEPTH: usize = if cfg!(debug_assertions) { 10 } else { 20 };
+                if self.macro_depth > MAX_MACRO_DEPTH {
                     return Err(
                         self.fatal_error(modified.modifier.span.clone(), "Macro recurs too deep")
                     );

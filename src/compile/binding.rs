@@ -50,7 +50,13 @@ impl Compiler {
 
         // Handle macro
         let ident_margs = ident_modifier_args(&name);
+        let placeholder_count = count_placeholders(&binding.words);
         if binding.array_macro {
+            if placeholder_count > 0 {
+                return Err(
+                    self.fatal_error(span.clone(), "Array macros may not contain placeholders")
+                );
+            }
             // Array macro
             if ident_margs == 0 {
                 self.add_error(
@@ -109,7 +115,6 @@ impl Compiler {
             return Ok(());
         }
         // Stack macro
-        let placeholder_count = count_placeholders(&binding.words);
         match (ident_margs > 0, placeholder_count > 0) {
             (true, true) | (false, false) => {}
             (true, false) => {

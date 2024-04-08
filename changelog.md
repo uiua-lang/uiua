@@ -3,6 +3,10 @@
 Uiua is not yet stable.
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.10.2 - 2024-04-08
+### Interpreter
+- Fix a bug in [`repeat ⍥`](https://uiua.org/docs/repeat) with [`infinity ∞`](https://uiua.org/docs/infinity) signature inference
+
 ## 0.10.1 - 2024-04-07
 ### Interpreter
 - [`under ⍜`](https://uiua.org/docs/under) of pattern matching now works correctly

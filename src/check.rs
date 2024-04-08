@@ -361,21 +361,20 @@ impl<'a> VirtualEnv<'a> {
                             }
                         } else if n.is_infinite() {
                             match sig.args.cmp(&sig.outputs) {
-                                Ordering::Equal => {}
                                 Ordering::Greater => {
                                     return Err(SigCheckError::from(format!(
                                         "repeat with infinity and a function with signature {sig}"
                                     ))
                                     .loop_overreach());
                                 }
-                                Ordering::Less => {
+                                Ordering::Less if self.array_stack.is_empty() => {
                                     return Err(SigCheckError::from(format!(
                                         "repeat with infinity and a function with signature {sig}"
                                     ))
                                     .loop_excess());
                                 }
+                                _ => self.handle_sig(sig)?,
                             }
-                            self.handle_sig(sig)?;
                         } else {
                             return Err("repeat without a natural number or infinity".into());
                         }

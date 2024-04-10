@@ -158,9 +158,9 @@ uiuisms!(
     /// Convert a list to a string
     r#"/$"_, _" [10 20 30 40]"#,
     /// Parse a string as a base 2 number
-    r#"°⋯⇌-@0 "110""#,
+    r#"°⋯⇌∵⋕ "110""#,
     /// Parse a string as a base 3 <= X <= 9 number
-    r#"/+×ⁿ⇌⇡⧻,⊙-:@0 3 "210""#,
+    r#"/+×∵⋕:ⁿ⇌⇡⧻, 3 "210""#,
     /// Interleave two arrays
     "♭⍉⊟ [1 2 3 4] [5 6 7 8]",
     /// Intersperse an item between the rows of an array
@@ -182,7 +182,7 @@ uiuisms!(
     /// Join a list of boxed strings
     r#"/◇⊂ {"a" "bc" "def"}"#,
     /// Find the nth fibonacci number
-    "◌⍥(+⟜:)⊙.:1 10",
+    "◌⍥(:⟜+)⊙.:1 10",
     /// Find the GCD of two numbers
     "◌⍢⊃◿∘± 35 360",
     /// Remove all instances of an element from a list

@@ -5,7 +5,7 @@ Uiua is not yet stable.
 
 ## 0.10.3 - 2024-04-09
 ### Interpreter
-- Fix a crash involving pervasing operations on some 0-length arrays
+- Fix a crash involving pervasive operations on some 0-length arrays
 
 ## 0.10.2 - 2024-04-08
 ### Interpreter

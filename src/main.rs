@@ -700,7 +700,7 @@ fn uiua_files() -> Vec<PathBuf> {
         .collect()
 }
 
-const WATCHING: &str = "watching for changes...";
+const WATCHING: &str = "\x1b[0mwatching for changes...";
 fn print_watching() {
     #[cfg(feature = "raw_mode")]
     rawrrr::disable_raw();

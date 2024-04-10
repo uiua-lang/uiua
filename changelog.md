@@ -3,6 +3,10 @@
 Uiua is not yet stable.
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.10.3 - 2024-04-09
+### Interpreter
+- Fix a crash involving pervasing operations on some 0-length arrays
+
 ## 0.10.2 - 2024-04-08
 ### Interpreter
 - Fix a bug in [`repeat ⍥`](https://uiua.org/docs/repeat) with [`infinity ∞`](https://uiua.org/docs/infinity) signature inference

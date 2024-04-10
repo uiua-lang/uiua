@@ -3471,7 +3471,7 @@ dependencies = [
 
 [[package]]
 name = "uiua"
-version = "0.10.2"
+version = "0.10.3"
 dependencies = [
  "arboard",
  "bitflags 2.5.0",

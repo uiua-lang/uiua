@@ -182,7 +182,7 @@ uiuisms!(
     /// Join a list of boxed strings
     r#"/◇⊂ {"a" "bc" "def"}"#,
     /// Find the nth fibonacci number
-    "◌⍥(+⟜:)⊙.:1 10",
+    "⊢⍥(⇌\\+):1_0",
     /// Find the GCD of two numbers
     "◌⍢⊃◿∘± 35 360",
     /// Remove all instances of an element from a list

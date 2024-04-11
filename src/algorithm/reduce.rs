@@ -549,14 +549,17 @@ fn generic_reduce_inner(
                     row_count = row_count.saturating_sub(1);
                 }
                 for row in &mut rows {
-                    let acc = (env.value_fill().cloned())
-                        .or_else(|| match row {
-                            Ok(row) => row.next(),
-                            Err(row) => Some(row.clone()),
-                        })
-                        .ok_or_else(|| {
-                            env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
-                        })?;
+                    let acc = match row {
+                        Ok(row) => (env.value_fill().cloned())
+                            .or_else(|| row.next())
+                            .ok_or_else(|| {
+                                env.error(format!(
+                                    "Cannot {} empty array",
+                                    Primitive::Reduce.format()
+                                ))
+                            })?,
+                        Err(row) => row.clone(),
+                    };
                     accs.push(process(acc));
                 }
                 env.without_fill(|env| {

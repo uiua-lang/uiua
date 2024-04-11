@@ -849,16 +849,15 @@ code:
     fn word(&mut self, word: Sp<Word>, call: bool) -> UiuaResult {
         match word.value {
             Word::Number(_, n) => {
-                if call {
-                    self.push_instr(Instr::push(n));
-                } else {
-                    let f = self.make_function(
+                let mut instr = Instr::push(n);
+                if !call {
+                    instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        vec![Instr::push(n)],
-                    );
-                    self.push_instr(Instr::PushFunc(f))
+                        vec![instr],
+                    ));
                 }
+                self.push_instr(instr);
             }
             Word::Char(c) => {
                 let val: Value = if c.chars().count() == 1 {
@@ -866,28 +865,26 @@ code:
                 } else {
                     c.into()
                 };
-                if call {
-                    self.push_instr(Instr::push(val));
-                } else {
-                    let f = self.make_function(
+                let mut instr = Instr::push(val);
+                if !call {
+                    instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        vec![Instr::push(val)],
-                    );
-                    self.push_instr(Instr::PushFunc(f))
+                        vec![instr],
+                    ));
                 }
+                self.push_instr(instr);
             }
             Word::String(s) | Word::MultilineString(s) => {
-                if call {
-                    self.push_instr(Instr::push(s));
-                } else {
-                    let f = self.make_function(
+                let mut instr = Instr::push(s);
+                if !call {
+                    instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        vec![Instr::push(s)],
-                    );
-                    self.push_instr(Instr::PushFunc(f));
+                        vec![instr],
+                    ));
                 }
+                self.push_instr(instr);
             }
             Word::Label(label) => {
                 if !self.scope.experimental {
@@ -897,36 +894,32 @@ code:
                         `# Experimental!` to the top of the file.",
                     );
                 }
-                let instr = Instr::Label {
+                let mut instr = Instr::Label {
                     label: label.into(),
                     span: self.add_span(word.span.clone()),
                 };
-                if call {
-                    self.push_instr(instr);
-                } else {
-                    let f = self.make_function(
-                        FunctionId::Anonymous(word.span),
-                        Signature::new(1, 1),
+                if !call {
+                    instr = Instr::PushFunc(self.make_function(
+                        FunctionId::Anonymous(word.span.clone()),
+                        Signature::new(0, 1),
                         vec![instr],
-                    );
-                    self.push_instr(Instr::PushFunc(f));
+                    ));
                 }
+                self.push_instr(instr);
             }
             Word::FormatString(frags) => {
                 let signature = Signature::new(frags.len() - 1, 1);
                 let parts = frags.into_iter().map(Into::into).collect();
                 let span = self.add_span(word.span.clone());
-                let instr = Instr::Format { parts, span };
-                if call {
-                    self.push_instr(instr)
-                } else {
-                    let f = self.make_function(
-                        FunctionId::Anonymous(word.span),
+                let mut instr = Instr::Format { parts, span };
+                if !call {
+                    instr = Instr::PushFunc(self.make_function(
+                        FunctionId::Anonymous(word.span.clone()),
                         signature,
                         vec![instr],
-                    );
-                    self.push_instr(Instr::PushFunc(f));
+                    ));
                 }
+                self.push_instr(instr);
             }
             Word::MultilineFormatString(lines) => {
                 let signature = Signature::new(
@@ -948,17 +941,15 @@ code:
                     }
                 }
                 parts.push(curr_part);
-                let instr = Instr::Format { parts, span };
-                if call {
-                    self.push_instr(instr)
-                } else {
-                    let f = self.make_function(
-                        FunctionId::Anonymous(word.span),
+                let mut instr = Instr::Format { parts, span };
+                if !call {
+                    instr = Instr::PushFunc(self.make_function(
+                        FunctionId::Anonymous(word.span.clone()),
                         signature,
                         vec![instr],
-                    );
-                    self.push_instr(Instr::PushFunc(f));
+                    ));
                 }
+                self.push_instr(instr);
             }
             Word::Ref(r) => self.reference(r, call)?,
             Word::IncompleteRef { path, in_macro_arg } => {
@@ -1223,16 +1214,16 @@ code:
             Word::SemanticComment(sc) => match sc {
                 SemanticComment::Experimental => self.scope.experimental = true,
                 SemanticComment::NoInline => {
-                    if call {
-                        self.push_instr(Instr::NoInline);
-                    } else {
+                    let mut instr = Instr::NoInline;
+                    if !call {
                         let f = self.make_function(
                             FunctionId::Anonymous(word.span.clone()),
                             Signature::new(0, 0),
                             vec![Instr::NoInline],
                         );
-                        self.push_instr(Instr::PushFunc(f));
+                        instr = Instr::PushFunc(f);
                     }
+                    self.push_instr(instr);
                 }
                 SemanticComment::Boo => {
                     self.add_error(word.span.clone(), "The compiler is scared!")

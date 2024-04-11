@@ -192,6 +192,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         ),
         &invert_temp_pattern,
         &invert_push_pattern,
+        &pat!(Dup, (Over, ImplPrimitive::MatchPattern)),
     ]
 };
 

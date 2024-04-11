@@ -3,6 +3,10 @@
 Uiua is not yet stable.
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.11.0 - 2024-??-??
+### Language
+- Add [`un °`](https://uiua.org/docs/un) [`duplicate .`](https://uiua.org/docs/duplicate) pattern matching
+
 ## 0.10.3 - 2024-04-09
 ### Interpreter
 - Fix a crash involving pervasive operations on some 0-length arrays

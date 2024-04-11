@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - Map patterns
   - `un insert` pattern
   - Allow warnings to be disabled
   - List-filled `keep`
@@ -11,6 +10,7 @@
   - Full HTTPS support
   - `uiua fmtio`
   - System functions
+    - Make array into stream
     - Excel
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Multimedia

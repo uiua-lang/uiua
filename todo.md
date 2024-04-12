@@ -11,7 +11,6 @@
   - Optimize some linear algebra stuff
     - Matrix product
     - Matrix inverse?
-    - Determinant?
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Multimedia
   - Sound input

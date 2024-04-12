@@ -846,11 +846,12 @@ where
                 for group in groups {
                     env.push(group);
                     env.call(f.clone())?;
-                    for i in 0..outputs.max(1) {
+                    for i in 0..outputs {
                         let value = env.pop(|| format!("{}'s function result", prim.format()))?;
-                        if sig.args == 1 {
-                            rows[i].push(value);
-                        }
+                        rows[i].push(value);
+                    }
+                    if sig.args == 0 {
+                        env.pop("excess value")?;
                     }
                 }
                 Ok(())

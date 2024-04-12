@@ -194,6 +194,15 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &invert_temp_pattern,
         &invert_push_pattern,
         &pat!(Dup, (Over, ImplPrimitive::MatchPattern)),
+        &pat!(
+            Over,
+            (
+                PushToInline(1),
+                Over,
+                PopInline(1),
+                ImplPrimitive::MatchPattern
+            )
+        ),
     ]
 };
 
@@ -2129,6 +2138,18 @@ impl AsInstr for CopyToUnder {
     fn as_instr(&self, span: usize) -> Instr {
         Instr::CopyToTemp {
             stack: TempStack::Under,
+            count: self.0,
+            span,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PushToInline(usize);
+impl AsInstr for PushToInline {
+    fn as_instr(&self, span: usize) -> Instr {
+        Instr::PushTemp {
+            stack: TempStack::Inline,
             count: self.0,
             span,
         }

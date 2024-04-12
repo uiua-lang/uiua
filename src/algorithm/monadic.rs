@@ -76,7 +76,7 @@ impl Value {
                     None => s.parse::<f64>(),
                 }
                 .map_err(|e| env.error(format!("Cannot parse into number: {}", e)))
-                .or_else(|e| env.num_fill().map_err(|_| e))?
+                .or_else(|e| env.num_scalar_fill().map_err(|_| e))?
                 .into()
             }
             (Value::Box(arr), []) => {

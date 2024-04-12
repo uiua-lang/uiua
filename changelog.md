@@ -6,6 +6,7 @@ Uiua is not yet stable.
 ## 0.11.0 - 2024-??-??
 ### Language
 - Add [`un °`](https://uiua.org/docs/un) [`duplicate .`](https://uiua.org/docs/duplicate) pattern matching
+- [`insert`](https://uiua.org/docs/insert) can now be used with [`un °`](https://uiua.org/docs/un) to extract a map entry and pattern match it
 ### Interpreter
 - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`first ⊢`](https://uiua.org/docs/first) and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
 

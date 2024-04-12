@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - `un insert` pattern
   - Allow warnings to be disabled
   - List-filled `keep`
   - `duplicate` and `over` patterns

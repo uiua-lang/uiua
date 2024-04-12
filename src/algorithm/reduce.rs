@@ -45,7 +45,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
             }
         }
         (Some((prim, flipped)), Value::Byte(bytes)) => {
-            let fill = env.num_fill().ok();
+            let fill = env.num_scalar_fill().ok();
             env.push::<Value>(match prim {
                 Primitive::Add => {
                     fast_reduce_different(bytes, 0.0, fill, depth, add::num_num, add::num_byte)
@@ -113,7 +113,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
                         .into()
                 }
                 Primitive::Max => {
-                    let byte_fill = env.byte_fill().ok();
+                    let byte_fill = env.byte_scalar_fill().ok();
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -129,7 +129,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
                     }
                 }
                 Primitive::Min => {
-                    let byte_fill = env.byte_fill().ok();
+                    let byte_fill = env.byte_scalar_fill().ok();
                     if bytes.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
                         fast_reduce_different(
                             bytes,
@@ -307,8 +307,8 @@ macro_rules! reduce_math {
     };
 }
 
-reduce_math!(reduce_nums, f64, num_num, num_fill);
-reduce_math!(reduce_coms, Complex, com_x, complex_fill);
+reduce_math!(reduce_nums, f64, num_num, num_scalar_fill);
+reduce_math!(reduce_coms, Complex, com_x, complex_scalar_fill);
 
 fn fast_reduce_different<T, U>(
     arr: Array<T>,

@@ -119,13 +119,17 @@ impl FillError for Infallible {
 
 pub trait FillContext: ErrorContext {
     fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str>;
+    fn array_fill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str>;
     fn fill_error(error: Self::Error) -> Self::Error;
     fn is_fill_error(error: &Self::Error) -> bool;
 }
 
 impl FillContext for Uiua {
     fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
-        T::get_fill(self)
+        T::get_scalar_fill(self)
+    }
+    fn array_fill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str> {
+        T::get_array_fill(self)
     }
     fn fill_error(error: Self::Error) -> Self::Error {
         error.fill()
@@ -139,6 +143,9 @@ impl FillContext for () {
     fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
         Err(". No fill is set.")
     }
+    fn array_fill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str> {
+        Err(". No fill is set.")
+    }
     fn fill_error(error: Self::Error) -> Self::Error {
         error
     }
@@ -149,6 +156,9 @@ impl FillContext for () {
 
 impl FillContext for (&CodeSpan, &Inputs) {
     fn scalar_fill<T: ArrayValue>(&self) -> Result<T, &'static str> {
+        Err(". No fill is set.")
+    }
+    fn array_fill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str> {
         Err(". No fill is set.")
     }
     fn fill_error(error: Self::Error) -> Self::Error {
@@ -340,132 +350,6 @@ where
         ))))
     }
 }
-
-// pub(crate) fn fill_array_shapes<A, B, C>(
-//     a: &mut Array<A>,
-//     b: &mut Array<B>,
-//     ctx: &C,
-// ) -> Result<(), C::Error>
-// where
-//     A: ArrayValue,
-//     B: ArrayValue,
-//     C: FillContext,
-// {
-//     if shape_prefixes_match(&a.shape, &b.shape) {
-//         return Ok(());
-//     }
-//     if a.row_count() == 1 && ctx.scalar_fill::<A>().is_err() {
-//         let fixes = (a.shape.iter())
-//             .take_while(|&&dim| dim == 1)
-//             .count()
-//             .min(a.shape.len());
-//         if (b.shape.iter().rev())
-//             .zip(a.shape[fixes..].iter().rev())
-//             .all(|(b, a)| b == a)
-//         {
-//             a.shape.drain(..fixes);
-//             for &dim in b.shape.iter().take(fixes).rev() {
-//                 a.reshape_scalar(Ok(dim as isize));
-//             }
-//         }
-//     }
-//     if b.row_count() == 1 && ctx.scalar_fill::<B>().is_err() {
-//         let fixes = (b.shape.iter())
-//             .take_while(|&&dim| dim == 1)
-//             .count()
-//             .min(b.shape.len());
-//         if (a.shape.iter().rev())
-//             .zip(b.shape[fixes..].iter().rev())
-//             .all(|(a, b)| a == b)
-//         {
-//             b.shape.drain(..fixes);
-//             for &dim in a.shape.iter().take(fixes).rev() {
-//                 b.reshape_scalar(Ok(dim as isize));
-//             }
-//         }
-//     }
-//     if shape_prefixes_match(&a.shape, &b.shape) {
-//         return Ok(());
-//     }
-//     let mut fill_error = None;
-//     // Fill in missing rows
-//     match a.row_count().cmp(&b.row_count()) {
-//         Ordering::Less => match ctx.scalar_fill() {
-//             Ok(fill) => {
-//                 let mut target_shape = a.shape().to_vec();
-//                 target_shape[0] = b.row_count();
-//                 a.fill_to_shape(&target_shape, fill);
-//             }
-//             Err(e) => fill_error = Some(e),
-//         },
-//         Ordering::Greater => match ctx.scalar_fill() {
-//             Ok(fill) => {
-//                 let mut target_shape = b.shape().to_vec();
-//                 target_shape[0] = a.row_count();
-//                 b.fill_to_shape(&target_shape, fill);
-//             }
-//             Err(e) => fill_error = Some(e),
-//         },
-//         Ordering::Equal => fill_error = Some(""),
-//     }
-//     if shape_prefixes_match(&a.shape, &b.shape) {
-//         return Ok(());
-//     }
-//     // Fill in missing dimensions
-//     match a.rank().cmp(&b.rank()) {
-//         Ordering::Less => match ctx.scalar_fill() {
-//             Ok(fill) => {
-//                 let mut target_shape = a.shape.clone();
-//                 target_shape.insert(0, b.row_count());
-//                 a.fill_to_shape(&target_shape, fill);
-//                 fill_error = None;
-//             }
-//             Err(e) => fill_error = Some(e),
-//         },
-//         Ordering::Greater => match ctx.scalar_fill() {
-//             Ok(fill) => {
-//                 let mut target_shape = b.shape.clone();
-//                 target_shape.insert(0, a.row_count());
-//                 b.fill_to_shape(&target_shape, fill);
-//                 fill_error = None;
-//             }
-//             Err(e) => fill_error = Some(e),
-//         },
-//         Ordering::Equal => {
-//             let target_shape = max_shape(a.shape(), b.shape());
-//             if a.shape() != *target_shape {
-//                 match ctx.scalar_fill() {
-//                     Ok(fill) => {
-//                         a.fill_to_shape(&target_shape, fill);
-//                         fill_error = None;
-//                     }
-//                     Err(e) => fill_error = Some(e),
-//                 }
-//             }
-//             if b.shape() != *target_shape {
-//                 match ctx.scalar_fill() {
-//                     Ok(fill) => {
-//                         b.fill_to_shape(&target_shape, fill);
-//                         fill_error = None;
-//                     }
-//                     Err(e) => fill_error = Some(e),
-//                 }
-//             }
-//         }
-//     }
-//     if !shape_prefixes_match(&a.shape, &b.shape) && fill_error.is_none() {
-//         fill_error = Some(". A ⬚ fill attempt failed.");
-//     }
-//     if let Some(e) = fill_error {
-//         return Err(C::fill_error(ctx.error(format!(
-//             "Shapes {} and {} do not match{e}",
-//             a.shape(),
-//             b.shape(),
-//         ))));
-//     }
-
-//     Ok(())
-// }
 
 pub fn all(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;

@@ -390,7 +390,7 @@ impl<T: ArrayValue> Array<T> {
                 let mut filled = false;
                 if taking >= 0 {
                     if abs_taking > row_count {
-                        match T::get_fill(env) {
+                        match T::get_scalar_fill(env) {
                             Ok(fill) => {
                                 filled = true;
                                 self.data.extend_from_slice(&vec![
@@ -415,7 +415,7 @@ impl<T: ArrayValue> Array<T> {
                         self.data.truncate(abs_taking * row_len);
                     }
                 } else if abs_taking > row_count {
-                    match T::get_fill(env) {
+                    match T::get_scalar_fill(env) {
                         Ok(fill) => {
                             filled = true;
                             let new_data =
@@ -476,7 +476,7 @@ impl<T: ArrayValue> Array<T> {
                     let mut arr = Array::from_row_arrays_infallible(new_rows);
                     // Extend with fill values if necessary
                     if abs_taking > arr.row_count() {
-                        match T::get_fill(env) {
+                        match T::get_scalar_fill(env) {
                             Ok(fill) => {
                                 let row_len: usize =
                                     sub_index.iter().map(|&i| i.unsigned_abs()).product();
@@ -507,7 +507,7 @@ impl<T: ArrayValue> Array<T> {
                     let mut arr = Array::from_row_arrays_infallible(new_rows);
                     // Prepend with fill values if necessary
                     if abs_taking > arr.row_count() {
-                        match T::get_fill(env) {
+                        match T::get_scalar_fill(env) {
                             Ok(fill) => {
                                 let row_len: usize =
                                     sub_index.iter().map(|&i| i.unsigned_abs()).product();

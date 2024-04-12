@@ -1149,7 +1149,7 @@ code:
     pub(crate) fn truncate_temp_stack(&mut self, stack: TempStack, size: usize) {
         self.rt.temp_stacks[stack as usize].truncate(size);
     }
-    pub(crate) fn num_fill(&self) -> Result<f64, &'static str> {
+    pub(crate) fn num_scalar_fill(&self) -> Result<f64, &'static str> {
         match self.value_fill() {
             Some(Value::Num(n)) if n.rank() == 0 => Ok(n.data[0]),
             Some(Value::Num(_)) => Err(self.fill_error(true)),
@@ -1158,7 +1158,14 @@ code:
             _ => Err(self.fill_error(false)),
         }
     }
-    pub(crate) fn byte_fill(&self) -> Result<u8, &'static str> {
+    pub(crate) fn num_array_fill(&self) -> Result<Array<f64>, &'static str> {
+        match self.value_fill() {
+            Some(Value::Num(n)) => Ok(n.clone()),
+            Some(Value::Byte(n)) => Ok(n.convert_ref()),
+            _ => Err(self.fill_error(false)),
+        }
+    }
+    pub(crate) fn byte_scalar_fill(&self) -> Result<u8, &'static str> {
         match self.value_fill() {
             Some(Value::Num(n))
                 if n.rank() == 0
@@ -1174,14 +1181,27 @@ code:
             _ => Err(self.fill_error(false)),
         }
     }
-    pub(crate) fn char_fill(&self) -> Result<char, &'static str> {
+    pub(crate) fn byte_array_fill(&self) -> Result<Array<u8>, &'static str> {
+        match self.value_fill() {
+            Some(Value::Num(n)) => Ok(n.data.iter().copied().map(|n| n as u8).collect()),
+            Some(Value::Byte(n)) => Ok(n.clone()),
+            _ => Err(self.fill_error(false)),
+        }
+    }
+    pub(crate) fn char_scalar_fill(&self) -> Result<char, &'static str> {
         match self.value_fill() {
             Some(Value::Char(c)) if c.rank() == 0 => Ok(c.data[0]),
             Some(Value::Char(_)) => Err(self.fill_error(true)),
             _ => Err(self.fill_error(false)),
         }
     }
-    pub(crate) fn box_fill(&self) -> Result<Boxed, &'static str> {
+    pub(crate) fn char_array_fill(&self) -> Result<Array<char>, &'static str> {
+        match self.value_fill() {
+            Some(Value::Char(c)) => Ok(c.clone()),
+            _ => Err(self.fill_error(false)),
+        }
+    }
+    pub(crate) fn box_scalar_fill(&self) -> Result<Boxed, &'static str> {
         match self.value_fill() {
             Some(Value::Box(b)) if b.rank() == 0 => Ok(b.data[0].clone()),
             Some(Value::Box(_)) => Err(self.fill_error(true)),
@@ -1189,7 +1209,14 @@ code:
             None => Err(self.fill_error(false)),
         }
     }
-    pub(crate) fn complex_fill(&self) -> Result<Complex, &'static str> {
+    pub(crate) fn box_array_fill(&self) -> Result<Array<Boxed>, &'static str> {
+        match self.value_fill() {
+            Some(Value::Box(b)) => Ok(b.clone()),
+            Some(val) => Ok(Array::new([], [Boxed(val.clone())])),
+            None => Err(self.fill_error(false)),
+        }
+    }
+    pub(crate) fn complex_scalar_fill(&self) -> Result<Complex, &'static str> {
         match self.value_fill() {
             Some(Value::Num(n)) if n.rank() == 0 => Ok(Complex::new(n.data[0], 0.0)),
             Some(Value::Num(_)) => Err(self.fill_error(true)),
@@ -1197,6 +1224,14 @@ code:
             Some(Value::Byte(_)) => Err(self.fill_error(true)),
             Some(Value::Complex(c)) if c.rank() == 0 => Ok(c.data[0]),
             Some(Value::Complex(_)) => Err(self.fill_error(true)),
+            _ => Err(self.fill_error(false)),
+        }
+    }
+    pub(crate) fn complex_array_fill(&self) -> Result<Array<Complex>, &'static str> {
+        match self.value_fill() {
+            Some(Value::Num(n)) => Ok(n.convert_ref()),
+            Some(Value::Byte(n)) => Ok(n.convert_ref()),
+            Some(Value::Complex(c)) => Ok(c.clone()),
             _ => Err(self.fill_error(false)),
         }
     }

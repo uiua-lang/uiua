@@ -190,14 +190,26 @@ impl Value {
     }
     pub(crate) fn proxy_scalar(&self, env: &Uiua) -> Self {
         match self {
-            Self::Num(_) => env.num_fill().unwrap_or_else(|_| f64::proxy()).into(),
-            Self::Byte(_) => env.byte_fill().unwrap_or_else(|_| u8::proxy()).into(),
+            Self::Num(_) => env
+                .num_scalar_fill()
+                .unwrap_or_else(|_| f64::proxy())
+                .into(),
+            Self::Byte(_) => env
+                .byte_scalar_fill()
+                .unwrap_or_else(|_| u8::proxy())
+                .into(),
             Self::Complex(_) => env
-                .complex_fill()
+                .complex_scalar_fill()
                 .unwrap_or_else(|_| Complex::proxy())
                 .into(),
-            Self::Char(_) => env.char_fill().unwrap_or_else(|_| char::proxy()).into(),
-            Self::Box(_) => env.box_fill().unwrap_or_else(|_| Boxed::proxy()).into(),
+            Self::Char(_) => env
+                .char_scalar_fill()
+                .unwrap_or_else(|_| char::proxy())
+                .into(),
+            Self::Box(_) => env
+                .box_scalar_fill()
+                .unwrap_or_else(|_| Boxed::proxy())
+                .into(),
         }
     }
     pub(crate) fn proxy_row(&self, env: &Uiua) -> Self {
@@ -209,35 +221,38 @@ impl Value {
         match self {
             Self::Num(_) => Array::new(
                 shape,
-                repeat(env.num_fill().unwrap_or_else(|_| f64::proxy()))
+                repeat(env.num_scalar_fill().unwrap_or_else(|_| f64::proxy()))
                     .take(elem_count)
                     .collect::<CowSlice<_>>(),
             )
             .into(),
             Self::Byte(_) => Array::new(
                 shape,
-                repeat(env.byte_fill().unwrap_or_else(|_| u8::proxy()))
+                repeat(env.byte_scalar_fill().unwrap_or_else(|_| u8::proxy()))
                     .take(elem_count)
                     .collect::<CowSlice<_>>(),
             )
             .into(),
             Self::Complex(_) => Array::new(
                 shape,
-                repeat(env.complex_fill().unwrap_or_else(|_| Complex::proxy()))
-                    .take(elem_count)
-                    .collect::<CowSlice<_>>(),
+                repeat(
+                    env.complex_scalar_fill()
+                        .unwrap_or_else(|_| Complex::proxy()),
+                )
+                .take(elem_count)
+                .collect::<CowSlice<_>>(),
             )
             .into(),
             Self::Char(_) => Array::new(
                 shape,
-                repeat(env.char_fill().unwrap_or_else(|_| char::proxy()))
+                repeat(env.char_scalar_fill().unwrap_or_else(|_| char::proxy()))
                     .take(elem_count)
                     .collect::<CowSlice<_>>(),
             )
             .into(),
             Self::Box(_) => Array::new(
                 shape,
-                repeat(env.box_fill().unwrap_or_else(|_| Boxed::proxy()))
+                repeat(env.box_scalar_fill().unwrap_or_else(|_| Boxed::proxy()))
                     .take(elem_count)
                     .collect::<CowSlice<_>>(),
             )
@@ -1410,14 +1425,14 @@ impl Value {
     /// Get the `absolute value` of a value
     pub fn abs(self, env: &Uiua) -> UiuaResult<Self> {
         match self {
-            Value::Char(mut chars) if chars.rank() == 1 && env.char_fill().is_ok() => {
+            Value::Char(mut chars) if chars.rank() == 1 && env.char_scalar_fill().is_ok() => {
                 chars.data = (chars.data.into_iter())
                     .flat_map(|c| c.to_uppercase())
                     .collect();
                 chars.shape = chars.data.len().into();
                 Ok(chars.into())
             }
-            Value::Char(chars) if chars.rank() > 1 && env.char_fill().is_ok() => {
+            Value::Char(chars) if chars.rank() > 1 && env.char_scalar_fill().is_ok() => {
                 let mut rows = Vec::new();
                 for row in chars.row_shaped_slices(Shape::from(*chars.shape.last().unwrap())) {
                     rows.push(Array::<char>::from_iter(
@@ -1436,7 +1451,7 @@ impl Value {
     /// `negate` a value
     pub fn neg(self, env: &Uiua) -> UiuaResult<Self> {
         match self {
-            Value::Char(mut chars) if chars.rank() == 1 && env.char_fill().is_ok() => {
+            Value::Char(mut chars) if chars.rank() == 1 && env.char_scalar_fill().is_ok() => {
                 let mut new_data = EcoVec::with_capacity(chars.data.len());
                 for c in chars.data {
                     if c.is_uppercase() {
@@ -1449,7 +1464,7 @@ impl Value {
                 chars.shape = chars.data.len().into();
                 Ok(chars.into())
             }
-            Value::Char(chars) if chars.rank() > 1 && env.char_fill().is_ok() => {
+            Value::Char(chars) if chars.rank() > 1 && env.char_scalar_fill().is_ok() => {
                 let mut rows = Vec::new();
                 for row in chars.row_shaped_slices(Shape::from(*chars.shape.last().unwrap())) {
                     let mut new_data = EcoVec::with_capacity(row.data().len());
@@ -1475,7 +1490,7 @@ impl Value {
 
 macro_rules! val_retry {
     (Byte, $env:expr) => {
-        $env.num_fill().is_ok()
+        $env.num_scalar_fill().is_ok()
     };
     ($variant:ident, $env:expr) => {
         false

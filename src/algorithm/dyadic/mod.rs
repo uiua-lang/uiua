@@ -174,7 +174,7 @@ impl Value {
             match self {
                 Value::Num(a) => a.reshape(&target_shape, env),
                 Value::Byte(a) => {
-                    if env.num_fill().is_ok() && env.byte_fill().is_err() {
+                    if env.num_scalar_fill().is_ok() && env.byte_scalar_fill().is_err() {
                         let mut arr: Array<f64> = a.convert_ref();
                         arr.reshape(&target_shape, env)?;
                         *self = arr.into();
@@ -528,7 +528,7 @@ impl<T: ArrayValue> Array<T> {
         let mut amount = Cow::Borrowed(counts);
         match amount.len().cmp(&self.row_count()) {
             Ordering::Equal => {}
-            Ordering::Less => match env.scalar_fill::<f64>() {
+            Ordering::Less => match env.num_scalar_fill() {
                 Ok(fill) => {
                     if fill < 0.0 || fill.fract() != 0.0 {
                         return Err(env.error(format!(
@@ -550,7 +550,7 @@ impl<T: ArrayValue> Array<T> {
                 }
             },
             Ordering::Greater => {
-                return Err(env.error(match env.scalar_fill::<f64>() {
+                return Err(env.error(match env.num_scalar_fill() {
                     Ok(_) => {
                         format!(
                             "Cannot keep array with shape {} with array of shape {}. \
@@ -672,7 +672,7 @@ impl Value {
             return Ok(rotated);
         }
         let by_ints = || self.as_integer_array(env, "Rotation amount must be an array of integers");
-        if env.scalar_fill::<f64>().is_ok() {
+        if env.num_scalar_fill().is_ok() {
             if let Value::Byte(bytes) = &rotated {
                 rotated = bytes.convert_ref::<f64>().into();
             }

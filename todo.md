@@ -1,13 +1,17 @@
 # Uiua Todo
 
 - 0.11
-  - Allow warnings to be disabled
+  - Allow warnings to be disabled?
   - Spatial thinking tutorial/blog
   - Full HTTPS support
   - `uiua fmtio`
   - System functions
     - Make array into stream
     - Excel
+  - Optimize some linear algebra stuff
+    - Matrix product
+    - Matrix inverse?
+    - Determinant?
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Multimedia
   - Sound input

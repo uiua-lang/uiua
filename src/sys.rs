@@ -483,6 +483,11 @@ sys_op! {
     /// Returns a stream handle
     /// [under][&tcpc] calls [&cl] automatically.
     (1, TcpConnect, Tcp, "&tcpc", "tcp - connect", [mutating]),
+    /// Create a TCP socket with TLS support
+    ///
+    /// Returns a stream handle
+    /// [under][&tlsc] calls [&cl] automatically.
+    (1, TlsConnect, Tcp, "&tlsc", "tls - connect", [mutating]),
     /// Set a TCP socket to non-blocking mode
     (1, TcpSetNonBlocking, Tcp, "&tcpsnb", "tcp - set non-blocking", [mutating]),
     /// Set the read timeout of a TCP socket in seconds
@@ -640,6 +645,7 @@ pub enum HandleKind {
     File(PathBuf),
     TcpListener(SocketAddr),
     TcpSocket(SocketAddr),
+    TlsSocket(SocketAddr),
     ChildProcess(String),
 }
 
@@ -649,6 +655,7 @@ impl fmt::Display for HandleKind {
             Self::File(path) => write!(f, "file {}", path.display()),
             Self::TcpListener(addr) => write!(f, "tcp listener {}", addr),
             Self::TcpSocket(addr) => write!(f, "tcp socket {}", addr),
+            Self::TlsSocket(addr) => write!(f, "tls socket {}", addr),
             Self::ChildProcess(com) => write!(f, "child {com}"),
         }
     }
@@ -804,6 +811,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Create a TCP socket and connect it to an address
     fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
         Err("TCP sockets are not supported in this environment".into())
+    }
+    /// Create a TCP socket with TLS support and connect it to an address
+    fn tls_connect(&self, addr: &str) -> Result<Handle, String> {
+        Err("TLS sockets are not supported in this environment".into())
     }
     /// Get the connection address of a TCP socket or listener
     fn tcp_addr(&self, handle: Handle) -> Result<SocketAddr, String> {
@@ -1558,6 +1569,15 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
                 let sock_addr = env.rt.backend.tcp_addr(handle).map_err(|e| env.error(e))?;
                 let handle = handle.value(HandleKind::TcpSocket(sock_addr));
+                env.push(handle);
+            }
+            SysOp::TlsConnect => {
+                let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
+                let handle = (env.rt.backend)
+                    .tls_connect(&addr)
+                    .map_err(|e| env.error(e))?;
+                let sock_addr = env.rt.backend.tcp_addr(handle).map_err(|e| env.error(e))?;
+                let handle = handle.value(HandleKind::TlsSocket(sock_addr));
                 env.push(handle);
             }
             SysOp::TcpAddr => {

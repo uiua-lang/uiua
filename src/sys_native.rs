@@ -30,6 +30,7 @@ struct GlobalNativeSys {
     child_procs: DashMap<Handle, Child>,
     tcp_listeners: DashMap<Handle, TcpListener>,
     tcp_sockets: DashMap<Handle, Buffered<TcpStream>>,
+    tls_sockets: DashMap<Handle, TlsSocket>,
     hostnames: DashMap<Handle, String>,
     git_paths: DashMap<String, Result<PathBuf, String>>,
     #[cfg(feature = "audio")]
@@ -47,6 +48,36 @@ enum SysStream<'a> {
     File(dashmap::mapref::one::RefMut<'a, Handle, Buffered<File>>),
     Child(dashmap::mapref::one::RefMut<'a, Handle, Child>),
     TcpSocket(dashmap::mapref::one::RefMut<'a, Handle, Buffered<TcpStream>>),
+    TlsSocket(dashmap::mapref::one::RefMut<'a, Handle, TlsSocket>),
+}
+
+struct TlsSocket {
+    socket: Buffered<TcpStream>,
+    client: rustls::ClientConnection,
+}
+
+impl Read for TlsSocket {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        rustls::Stream::new(&mut self.client, &mut self.socket).read(buf)
+    }
+    fn read_to_end(&mut self, buf: &mut Vec<u8>) -> std::io::Result<usize> {
+        rustls::Stream::new(&mut self.client, &mut self.socket).read_to_end(buf)
+    }
+    fn read_to_string(&mut self, buf: &mut String) -> std::io::Result<usize> {
+        rustls::Stream::new(&mut self.client, &mut self.socket).read_to_string(buf)
+    }
+    fn read_exact(&mut self, buf: &mut [u8]) -> std::io::Result<()> {
+        rustls::Stream::new(&mut self.client, &mut self.socket).read_exact(buf)
+    }
+}
+
+impl Write for TlsSocket {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        rustls::Stream::new(&mut self.client, &mut self.socket).write(buf)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.socket.flush()
+    }
 }
 
 impl Default for GlobalNativeSys {
@@ -58,6 +89,7 @@ impl Default for GlobalNativeSys {
             child_procs: DashMap::new(),
             tcp_listeners: DashMap::new(),
             tcp_sockets: DashMap::new(),
+            tls_sockets: DashMap::new(),
             hostnames: DashMap::new(),
             git_paths: DashMap::new(),
             #[cfg(feature = "audio")]
@@ -81,6 +113,7 @@ impl GlobalNativeSys {
                 && !self.child_procs.contains_key(&handle)
                 && !self.tcp_listeners.contains_key(&handle)
                 && !self.tcp_sockets.contains_key(&handle)
+                && !self.tls_sockets.contains_key(&handle)
             {
                 return handle;
             }
@@ -94,9 +127,24 @@ impl GlobalNativeSys {
             SysStream::Child(child)
         } else if let Some(socket) = self.tcp_sockets.get_mut(&handle) {
             SysStream::TcpSocket(socket)
+        } else if let Some(tls_socket) = self.tls_sockets.get_mut(&handle) {
+            SysStream::TlsSocket(tls_socket)
         } else {
             return Err("Invalid file handle".to_string());
         })
+    }
+    fn get_tcp_stream<T>(
+        &self,
+        handle: Handle,
+        f: impl FnOnce(&mut Buffered<TcpStream>) -> T,
+    ) -> Option<T> {
+        if let Some(mut sock) = self.tcp_sockets.get_mut(&handle) {
+            Some(f(&mut sock))
+        } else if let Some(mut sock) = self.tls_sockets.get_mut(&handle) {
+            Some(f(&mut sock.socket))
+        } else {
+            None
+        }
     }
 }
 
@@ -264,6 +312,13 @@ impl SysBackend for NativeSys {
                 buf.truncate(n);
                 buf
             }
+            SysStream::TlsSocket(mut socket) => {
+                socket.flush().map_err(|e| e.to_string())?;
+                let mut buf = vec![0; len];
+                let n = socket.read(&mut buf).map_err(|e| e.to_string())?;
+                buf.truncate(n);
+                buf
+            }
         })
     }
     fn read_all(&self, handle: Handle) -> Result<Vec<u8>, String> {
@@ -282,6 +337,12 @@ impl SysBackend for NativeSys {
                 buf
             }
             SysStream::TcpSocket(mut socket) => {
+                socket.flush().map_err(|e| e.to_string())?;
+                let mut buf = Vec::new();
+                socket.read_to_end(&mut buf).map_err(|e| e.to_string())?;
+                buf
+            }
+            SysStream::TlsSocket(mut socket) => {
                 socket.flush().map_err(|e| e.to_string())?;
                 let mut buf = Vec::new();
                 socket.read_to_end(&mut buf).map_err(|e| e.to_string())?;
@@ -307,6 +368,7 @@ impl SysBackend for NativeSys {
                 .write_all(conts)
                 .map_err(|e| e.to_string()),
             SysStream::TcpSocket(mut socket) => socket.write_all(conts).map_err(|e| e.to_string()),
+            SysStream::TlsSocket(mut socket) => socket.write_all(conts).map_err(|e| e.to_string()),
         }
     }
     #[cfg(feature = "clipboard")]
@@ -488,60 +550,65 @@ impl SysBackend for NativeSys {
         );
         Ok(handle)
     }
+    fn tls_connect(&self, addr: &str) -> Result<Handle, String> {
+        let handle = NATIVE_SYS.new_handle();
+        let root_store =
+            rustls::RootCertStore::from_iter(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+        let config = rustls::ClientConfig::builder()
+            .with_root_certificates(root_store)
+            .with_no_client_auth();
+        let stream = TcpStream::connect(addr).map_err(|e| e.to_string())?;
+        let server_name = if let Some(name) =
+            (addr.split(':').next()).and_then(|addr| addr.to_string().try_into().ok())
+        {
+            name
+        } else {
+            rustls::pki_types::ServerName::IpAddress(
+                stream.peer_addr().map_err(|e| e.to_string())?.ip().into(),
+            )
+        };
+        let client =
+            rustls::ClientConnection::new(config.into(), server_name).map_err(|e| e.to_string())?;
+        NATIVE_SYS.tls_sockets.insert(
+            handle,
+            TlsSocket {
+                socket: Buffered::new_writer(stream),
+                client,
+            },
+        );
+        Ok(handle)
+    }
     fn tcp_addr(&self, handle: Handle) -> Result<SocketAddr, String> {
-        NATIVE_SYS
-            .tcp_sockets
-            .get(&handle)
-            .map(|s| s.get_ref().peer_addr())
-            .or_else(|| {
-                NATIVE_SYS
-                    .tcp_listeners
-                    .get(&handle)
-                    .map(|l| l.local_addr())
-            })
+        (NATIVE_SYS.get_tcp_stream(handle, |s| s.get_ref().peer_addr()))
+            .or_else(|| (NATIVE_SYS.tcp_listeners.get(&handle)).map(|l| l.local_addr()))
             .ok_or_else(|| "Invalid tcp socket handle".to_string())
             .and_then(|r| r.map_err(|e| e.to_string()))
     }
     fn tcp_set_non_blocking(&self, handle: Handle, non_blocking: bool) -> Result<(), String> {
-        let socket = NATIVE_SYS
-            .tcp_sockets
-            .get(&handle)
-            .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
-        socket
-            .get_ref()
-            .set_nonblocking(non_blocking)
-            .map_err(|e| e.to_string())?;
-        Ok(())
+        NATIVE_SYS
+            .get_tcp_stream(handle, |s| s.get_ref().set_nonblocking(non_blocking))
+            .ok_or_else(|| "Invalid tcp socket handle".to_string())?
+            .map_err(|e| e.to_string())
     }
     fn tcp_set_read_timeout(
         &self,
         handle: Handle,
         timeout: Option<Duration>,
     ) -> Result<(), String> {
-        let socket = NATIVE_SYS
-            .tcp_sockets
-            .get(&handle)
-            .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
-        socket
-            .get_ref()
-            .set_read_timeout(timeout)
-            .map_err(|e| e.to_string())?;
-        Ok(())
+        NATIVE_SYS
+            .get_tcp_stream(handle, |s| s.get_ref().set_read_timeout(timeout))
+            .ok_or_else(|| "Invalid tcp socket handle".to_string())?
+            .map_err(|e| e.to_string())
     }
     fn tcp_set_write_timeout(
         &self,
         handle: Handle,
         timeout: Option<Duration>,
     ) -> Result<(), String> {
-        let socket = NATIVE_SYS
-            .tcp_sockets
-            .get(&handle)
-            .ok_or_else(|| "Invalid tcp socket handle".to_string())?;
-        socket
-            .get_ref()
-            .set_write_timeout(timeout)
-            .map_err(|e| e.to_string())?;
-        Ok(())
+        NATIVE_SYS
+            .get_tcp_stream(handle, |s| s.get_ref().set_write_timeout(timeout))
+            .ok_or_else(|| "Invalid tcp socket handle".to_string())?
+            .map_err(|e| e.to_string())
     }
     fn close(&self, handle: Handle) -> Result<(), String> {
         if let Some((_, mut child)) = NATIVE_SYS.child_procs.remove(&handle) {
@@ -550,6 +617,9 @@ impl SysBackend for NativeSys {
         } else if let Some((_, mut file)) = NATIVE_SYS.files.remove(&handle) {
             file.flush().map_err(|e| e.to_string())
         } else if let Some((_, mut socket)) = NATIVE_SYS.tcp_sockets.remove(&handle) {
+            NATIVE_SYS.hostnames.remove(&handle);
+            socket.flush().map_err(|e| e.to_string())
+        } else if let Some((_, mut socket)) = NATIVE_SYS.tls_sockets.remove(&handle) {
             NATIVE_SYS.hostnames.remove(&handle);
             socket.flush().map_err(|e| e.to_string())
         } else if NATIVE_SYS.tcp_listeners.remove(&handle).is_some() {

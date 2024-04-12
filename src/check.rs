@@ -423,6 +423,10 @@ impl<'a> VirtualEnv<'a> {
                         comp_sig.outputs + cond_sub_sig.outputs.saturating_sub(cond_sig.args),
                     )?;
                 }
+                Un => {
+                    let sig = self.pop_func()?.signature();
+                    self.handle_args_outputs(sig.outputs, sig.args)?;
+                }
                 All => {
                     let f_sig = self.pop_func()?.signature();
                     let g_sig = self.pop_func()?.signature();

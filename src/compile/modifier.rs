@@ -612,11 +612,14 @@ impl Compiler {
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
-            Un => {
+            Un if !self.in_inverse => {
                 let mut operands = modified.code_operands().cloned();
                 let f = operands.next().unwrap();
                 let span = f.span.clone();
-                let (instrs, _) = self.compile_operand_word(f)?;
+                self.in_inverse = !self.in_inverse;
+                let f_res = self.compile_operand_word(f);
+                self.in_inverse = !self.in_inverse;
+                let (instrs, _) = f_res?;
                 self.add_span(span.clone());
                 if let Some(inverted) = invert_instrs(&instrs, self) {
                     let sig = self.sig_of(&inverted, &span)?;
@@ -635,7 +638,10 @@ impl Compiler {
                 let mut operands = modified.code_operands().cloned();
                 let f = operands.next().unwrap();
                 let f_span = f.span.clone();
-                let (f_instrs, _) = self.compile_operand_word(f)?;
+                self.in_inverse = !self.in_inverse;
+                let f_res = self.compile_operand_word(f);
+                self.in_inverse = !self.in_inverse;
+                let (f_instrs, _) = f_res?;
                 let (g_instrs, g_sig) = self.compile_operand_word(operands.next().unwrap())?;
                 if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig, self) {
                     let before_sig = self.sig_of(&f_before, &f_span)?;

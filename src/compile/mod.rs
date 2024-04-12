@@ -61,6 +61,8 @@ pub struct Compiler {
     array_macros: HashMap<usize, ArrayMacro>,
     /// The depth of macro expansion
     macro_depth: usize,
+    /// Whether the compiler is in an inverse
+    in_inverse: bool,
     /// Accumulated errors
     errors: Vec<UiuaError>,
     /// Primitives that have emitted errors because they are experimental
@@ -97,6 +99,7 @@ impl Default for Compiler {
             stack_macros: HashMap::new(),
             array_macros: HashMap::new(),
             macro_depth: 0,
+            in_inverse: false,
             errors: Vec::new(),
             experimental_prim_errors: HashSet::new(),
             deprecated_prim_errors: HashSet::new(),

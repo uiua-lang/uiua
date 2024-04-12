@@ -154,6 +154,7 @@ macro_rules! pat {
 }
 
 static INVERT_PATTERNS: &[&dyn InvertPattern] = {
+    use ImplPrimitive::*;
     use Primitive::*;
     &[
         &invert_call_pattern,
@@ -191,18 +192,12 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
             Select,
             (CopyToInline(1), Deduplicate, PopInline(1), Classify)
         ),
+        &(Val, pat!(Min, (Over, Ge, 1, MatchPattern))),
+        &(Val, pat!(Max, (Over, Le, 1, MatchPattern))),
         &invert_temp_pattern,
         &invert_push_pattern,
-        &pat!(Dup, (Over, ImplPrimitive::MatchPattern)),
-        &pat!(
-            Over,
-            (
-                PushToInline(1),
-                Over,
-                PopInline(1),
-                ImplPrimitive::MatchPattern
-            )
-        ),
+        &pat!(Dup, (Over, MatchPattern)),
+        &pat!(Over, (PushToInline(1), Over, PopInline(1), MatchPattern)),
     ]
 };
 

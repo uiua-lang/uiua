@@ -2,7 +2,6 @@
 
 - 0.11
   - Allow warnings to be disabled
-  - `min` and `max` patterns
   - Spatial thinking tutorial/blog
   - Full HTTPS support
   - `uiua fmtio`

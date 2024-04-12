@@ -6,6 +6,8 @@ Uiua is not yet stable.
 ## 0.11.0 - 2024-??-??
 ### Language
 - Add [`un °`](https://uiua.org/docs/un) [`duplicate .`](https://uiua.org/docs/duplicate) pattern matching
+### Interpreter
+- Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`first ⊢`](https://uiua.org/docs/first) and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
 
 ## 0.10.3 - 2024-04-09
 ### Interpreter

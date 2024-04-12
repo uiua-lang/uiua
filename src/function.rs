@@ -661,6 +661,11 @@ impl Function {
             .filter(|(_, flipped)| !flipped)
             .map(|(prim, _)| prim)
     }
+    pub(crate) fn as_impl_primitive(&self, asm: &Assembly) -> Option<ImplPrimitive> {
+        self.as_flipped_impl_primitive(asm)
+            .filter(|(_, flipped)| !flipped)
+            .map(|(prim, _)| prim)
+    }
     pub(crate) fn as_flipped_primitive(&self, asm: &Assembly) -> Option<(Primitive, bool)> {
         match &self.id {
             FunctionId::Primitive(prim) => Some((*prim, false)),

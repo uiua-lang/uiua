@@ -1,12 +1,12 @@
 //! Algorithms for looping modifiers
 
-use std::cmp::Ordering;
+use std::{cmp::Ordering, collections::HashSet, ptr};
 
 use crate::{
     array::{Array, ArrayValue},
     cowslice::CowSlice,
     value::Value,
-    Boxed, Function, Primitive, Shape, Signature, Uiua, UiuaResult,
+    Boxed, FormatShape, Function, ImplPrimitive, Primitive, Shape, Signature, Uiua, UiuaResult,
 };
 
 use super::multi_output;
@@ -188,9 +188,9 @@ pub fn partition(env: &mut Uiua) -> UiuaResult {
     collapse_groups(
         Primitive::Partition,
         Value::partition_groups,
+        Value::partition_firsts,
+        Value::partition_lasts,
         "⊜ partition indices array must be a list of integers",
-        "⊜ partition's function has signature |2.1, so it is the reducing form. \
-        Its indices array must be a list of integers",
         env,
     )
 }
@@ -207,6 +207,24 @@ impl Value {
             Value::Complex(arr) => arr.partition_groups(markers, env)?,
             Value::Char(arr) => arr.partition_groups(markers, env)?,
             Value::Box(arr) => arr.partition_groups(markers, env)?,
+        })
+    }
+    fn partition_firsts(self, markers: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        Ok(match self {
+            Value::Num(arr) => arr.partition_firsts(markers, env)?.into(),
+            Value::Byte(arr) => arr.partition_firsts(markers, env)?.into(),
+            Value::Complex(arr) => arr.partition_firsts(markers, env)?.into(),
+            Value::Char(arr) => arr.partition_firsts(markers, env)?.into(),
+            Value::Box(arr) => arr.partition_firsts(markers, env)?.into(),
+        })
+    }
+    fn partition_lasts(self, markers: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        Ok(match self {
+            Value::Num(arr) => arr.partition_lasts(markers, env)?.into(),
+            Value::Byte(arr) => arr.partition_lasts(markers, env)?.into(),
+            Value::Complex(arr) => arr.partition_lasts(markers, env)?.into(),
+            Value::Char(arr) => arr.partition_lasts(markers, env)?.into(),
+            Value::Box(arr) => arr.partition_lasts(markers, env)?.into(),
         })
     }
 }
@@ -305,6 +323,82 @@ where
                     .map(Into::into),
             )
         })
+    }
+    fn partition_firsts(mut self, markers: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        if markers.len() != self.row_count() {
+            return Err(env.error(format!(
+                "Cannot partition array of shape {} with markers of shape {}",
+                self.shape(),
+                FormatShape(&[markers.len()])
+            )));
+        }
+        if self.shape.len() == 0 {
+            self.shape.insert(0, 0);
+        } else {
+            self.shape[0] = 0;
+        }
+        let row_len = self.row_len();
+        let data = self.data.as_mut_slice();
+        let mut last_marker = isize::MAX;
+        for (i, &marker) in markers.iter().enumerate() {
+            if marker > 0 && marker != last_marker {
+                let dest_start = self.shape[0] * row_len;
+                let src_start = i * row_len;
+                if dest_start != src_start {
+                    unsafe {
+                        ptr::swap_nonoverlapping(
+                            data.as_mut_ptr().add(dest_start),
+                            data.as_mut_ptr().add(src_start),
+                            row_len,
+                        );
+                    }
+                }
+                self.shape[0] += 1;
+            }
+            last_marker = marker;
+        }
+        self.data.truncate(self.shape[0] * row_len);
+        self.validate_shape();
+        Ok(self)
+    }
+    fn partition_lasts(mut self, markers: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        if markers.len() != self.row_count() {
+            return Err(env.error(format!(
+                "Cannot partition array of shape {} with markers of shape {}",
+                self.shape(),
+                FormatShape(&[markers.len()])
+            )));
+        }
+        let row_count = self.row_count();
+        if self.shape.len() == 0 {
+            self.shape.insert(0, 0);
+        } else {
+            self.shape[0] = 0;
+        }
+        let row_len = self.row_len();
+        let data = self.data.as_mut_slice();
+        let mut last_marker = isize::MAX;
+        for (i, &marker) in markers.iter().enumerate().rev() {
+            if marker > 0 && marker != last_marker {
+                self.shape[0] += 1;
+                let dest_start = (row_count - self.shape[0]) * row_len;
+                let src_start = i * row_len;
+                if dest_start != src_start {
+                    unsafe {
+                        ptr::swap_nonoverlapping(
+                            data.as_mut_ptr().add(dest_start),
+                            data.as_mut_ptr().add(src_start),
+                            row_len,
+                        );
+                    }
+                }
+            }
+            last_marker = marker;
+        }
+        data.rotate_right(self.shape[0] * row_len);
+        self.data.truncate(self.shape[0] * row_len);
+        self.validate_shape();
+        Ok(self)
     }
 }
 
@@ -500,9 +594,9 @@ pub fn group(env: &mut Uiua) -> UiuaResult {
     collapse_groups(
         Primitive::Group,
         Value::group_groups,
+        Value::group_firsts,
+        Value::group_lasts,
         "⊕ group indices array must be an array of integers",
-        "⊕ group's function has signature |2.1, so it is the reducing form. \
-        Its indices array must be a list of integers",
         env,
     )
 }
@@ -515,6 +609,24 @@ impl Value {
             Value::Complex(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             Value::Char(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
             Value::Box(arr) => arr.group_groups(indices, env)?.map(Into::into).collect(),
+        })
+    }
+    fn group_firsts(self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        Ok(match self {
+            Value::Num(arr) => arr.group_firsts(indices, env)?.into(),
+            Value::Byte(arr) => arr.group_firsts(indices, env)?.into(),
+            Value::Complex(arr) => arr.group_firsts(indices, env)?.into(),
+            Value::Char(arr) => arr.group_firsts(indices, env)?.into(),
+            Value::Box(arr) => arr.group_firsts(indices, env)?.into(),
+        })
+    }
+    fn group_lasts(self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        Ok(match self {
+            Value::Num(arr) => arr.group_lasts(indices, env)?.into(),
+            Value::Byte(arr) => arr.group_lasts(indices, env)?.into(),
+            Value::Complex(arr) => arr.group_lasts(indices, env)?.into(),
+            Value::Char(arr) => arr.group_lasts(indices, env)?.into(),
+            Value::Box(arr) => arr.group_lasts(indices, env)?.into(),
         })
     }
 }
@@ -547,6 +659,78 @@ impl<T: ArrayValue> Array<T> {
             }
         }
         Ok(groups.into_iter().map(Array::from_row_arrays_infallible))
+    }
+    fn group_firsts(self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        if indices.len() != self.row_count() {
+            return Err(env.error(format!(
+                "Cannot {} array of shape {} with indices of shape {}",
+                Primitive::Group.format(),
+                self.shape(),
+                FormatShape(&[indices.len()])
+            )));
+        }
+        let Some(&max_index) = indices.iter().max() else {
+            return Ok(self);
+        };
+        let group_count = max_index.max(0) as usize + 1;
+        let row_len = self.row_len();
+        let mut encountered = HashSet::new();
+        let mut data = self.data.clone();
+        data.truncate(group_count * row_len);
+        let data_slice = data.as_mut_slice();
+        let mut shape = self.shape.clone();
+        if shape.len() == 0 {
+            shape.insert(0, group_count);
+        } else {
+            shape[0] = group_count;
+        }
+        for (&index, row) in indices.iter().zip(self.row_slices()) {
+            if index >= 0 && encountered.insert(index) {
+                let start = index.unsigned_abs() * row_len;
+                let end = start + row_len;
+                data_slice[start..end].clone_from_slice(row);
+            }
+        }
+        if encountered.len() != group_count {
+            return Err(env.error("Cannot take first because a group was empty"));
+        }
+        Ok(Array::new(shape, data))
+    }
+    fn group_lasts(self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        if indices.len() != self.row_count() {
+            return Err(env.error(format!(
+                "Cannot {} array of shape {} with indices of shape {}",
+                Primitive::Group.format(),
+                self.shape(),
+                FormatShape(&[indices.len()])
+            )));
+        }
+        let Some(&max_index) = indices.iter().max() else {
+            return Ok(self);
+        };
+        let group_count = max_index.max(0) as usize + 1;
+        let row_len = self.row_len();
+        let mut encountered = HashSet::new();
+        let mut data = self.data.clone();
+        data.truncate(group_count * row_len);
+        let data_slice = data.as_mut_slice();
+        let mut shape = self.shape.clone();
+        if shape.len() == 0 {
+            shape.insert(0, group_count);
+        } else {
+            shape[0] = group_count;
+        }
+        for (&index, row) in indices.iter().zip(self.row_slices()).rev() {
+            if index >= 0 && encountered.insert(index) {
+                let start = index.unsigned_abs() * row_len;
+                let end = start + row_len;
+                data_slice[start..end].clone_from_slice(row);
+            }
+        }
+        if encountered.len() != group_count {
+            return Err(env.error("Cannot take last because a group was empty"));
+        }
+        Ok(Array::new(shape, data))
     }
 }
 
@@ -626,8 +810,9 @@ pub fn undo_group_part2(env: &mut Uiua) -> UiuaResult {
 fn collapse_groups<I>(
     prim: Primitive,
     get_groups: impl Fn(Value, Array<isize>, &Uiua) -> UiuaResult<I>,
-    agg_indices_error: &'static str,
-    red_indices_error: &'static str,
+    firsts: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Value>,
+    lasts: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Value>,
+    indices_error: &'static str,
     env: &mut Uiua,
 ) -> UiuaResult
 where
@@ -638,8 +823,23 @@ where
     let sig = f.signature();
     match (sig.args, sig.outputs) {
         (0 | 1, outputs) => {
-            let indices = env.pop(1)?.as_integer_array(env, agg_indices_error)?;
+            let indices = env.pop(1)?.as_integer_array(env, indices_error)?;
             let values = env.pop(2)?;
+
+            // Optimizations
+            if indices.rank() == 1 {
+                if let Some(Primitive::First) = f.as_primitive(&env.asm) {
+                    let val = firsts(values, &indices.data, env)?;
+                    env.push(val);
+                    return Ok(());
+                }
+                if let Some(ImplPrimitive::Last) = f.as_impl_primitive(&env.asm) {
+                    let val = lasts(values, &indices.data, env)?;
+                    env.push(val);
+                    return Ok(());
+                }
+            }
+
             let groups = get_groups(values, indices, env)?.into_iter();
             let mut rows = multi_output(outputs, Vec::with_capacity(groups.len()));
             env.without_fill(|env| -> UiuaResult {
@@ -660,7 +860,7 @@ where
             }
         }
         (2, 1) => {
-            let indices = env.pop(1)?.as_integer_array(env, red_indices_error)?;
+            let indices = env.pop(1)?.as_integer_array(env, indices_error)?;
             let values = env.pop(2)?;
             let mut groups = get_groups(values, indices, env)?.into_iter();
             let mut acc = match env.value_fill().cloned() {

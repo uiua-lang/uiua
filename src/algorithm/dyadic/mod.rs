@@ -528,18 +528,38 @@ impl<T: ArrayValue> Array<T> {
         let mut amount = Cow::Borrowed(counts);
         match amount.len().cmp(&self.row_count()) {
             Ordering::Equal => {}
-            Ordering::Less => match env.num_scalar_fill() {
+            Ordering::Less => match env.num_array_fill() {
                 Ok(fill) => {
-                    if fill < 0.0 || fill.fract() != 0.0 {
+                    if let Some(n) = fill.data.iter().find(|&&n| n < 0.0 || n.fract() != 0.0) {
                         return Err(env.error(format!(
-                            "Fill value for keep must be a non-negative \
-                            integer, but it is {fill}"
+                            "Fill value for keep must be an array of \
+                            non-negative integers, but one of the \
+                            values is {n}"
                         )));
                     }
-                    let fill = fill as usize;
-                    let mut new_amount = amount.to_vec();
-                    new_amount.extend(repeat(fill).take(self.row_count() - amount.len()));
-                    amount = new_amount.into();
+                    match fill.rank() {
+                        0 => {
+                            let fill = fill.data[0] as usize;
+                            let mut new_amount = amount.to_vec();
+                            new_amount.extend(repeat(fill).take(self.row_count() - amount.len()));
+                            amount = new_amount.into();
+                        }
+                        1 => {
+                            let mut new_amount = amount.to_vec();
+                            new_amount.extend(
+                                (fill.data.iter().map(|&n| n as usize).cycle())
+                                    .take(self.row_count() - amount.len()),
+                            );
+                            amount = new_amount.into();
+                        }
+                        _ => {
+                            return Err(env.error(format!(
+                                "Fill value for keep must be a scalar or a 1D array, \
+                                but it has shape {}",
+                                fill.shape
+                            )));
+                        }
+                    }
                 }
                 Err(e) => {
                     return Err(env.error(format!(
@@ -550,7 +570,7 @@ impl<T: ArrayValue> Array<T> {
                 }
             },
             Ordering::Greater => {
-                return Err(env.error(match env.num_scalar_fill() {
+                return Err(env.error(match env.num_array_fill() {
                     Ok(_) => {
                         format!(
                             "Cannot keep array with shape {} with array of shape {}. \

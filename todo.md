@@ -2,7 +2,6 @@
 
 - 0.11
   - Allow warnings to be disabled
-  - List-filled `keep`
   - `duplicate` and `over` patterns
   - `min` and `max` patterns
   - Spatial thinking tutorial/blog

@@ -53,27 +53,29 @@ enum SysStream<'a> {
 
 struct TlsSocket {
     socket: Buffered<TcpStream>,
+    #[cfg(feature = "https")]
     client: rustls::ClientConnection,
 }
 
 impl Read for TlsSocket {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        rustls::Stream::new(&mut self.client, &mut self.socket).read(buf)
-    }
-    fn read_to_end(&mut self, buf: &mut Vec<u8>) -> std::io::Result<usize> {
-        rustls::Stream::new(&mut self.client, &mut self.socket).read_to_end(buf)
-    }
-    fn read_to_string(&mut self, buf: &mut String) -> std::io::Result<usize> {
-        rustls::Stream::new(&mut self.client, &mut self.socket).read_to_string(buf)
-    }
-    fn read_exact(&mut self, buf: &mut [u8]) -> std::io::Result<()> {
-        rustls::Stream::new(&mut self.client, &mut self.socket).read_exact(buf)
+    fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
+        #[cfg(feature = "https")]
+        {
+            rustls::Stream::new(&mut self.client, &mut self.socket).read(_buf)
+        }
+        #[cfg(not(feature = "https"))]
+        Ok(0)
     }
 }
 
 impl Write for TlsSocket {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        rustls::Stream::new(&mut self.client, &mut self.socket).write(buf)
+    fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {
+        #[cfg(feature = "https")]
+        {
+            rustls::Stream::new(&mut self.client, &mut self.socket).write(_buf)
+        }
+        #[cfg(not(feature = "https"))]
+        Ok(0)
     }
     fn flush(&mut self) -> std::io::Result<()> {
         self.socket.flush()
@@ -550,6 +552,7 @@ impl SysBackend for NativeSys {
         );
         Ok(handle)
     }
+    #[cfg(feature = "https")]
     fn tls_connect(&self, addr: &str) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
         let root_store =

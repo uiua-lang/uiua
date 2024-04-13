@@ -615,6 +615,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "coolor"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37e93977247fb916abeee1ff8c6594c9b421fd9c26c9b720a3944acb2a7de27b"
+
+[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3163,6 +3169,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "terminal-light"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2ecb7b6ab8a3eeff2b61770d313d1e971f184e29321785c62ef523b132437b7"
+dependencies = [
+ "coolor",
+ "crossterm",
+ "thiserror",
+ "xterm-query",
+]
+
+[[package]]
 name = "terminal_size"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3513,6 +3531,7 @@ dependencies = [
  "serde_tuple",
  "serde_yaml",
  "term_size",
+ "terminal-light",
  "thread_local",
  "tinyvec",
  "tokio",
@@ -4078,6 +4097,16 @@ name = "xdg"
 version = "2.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "213b7324336b53d2414b2db8537e56544d981803139155afa84f76eeebb7a546"
+
+[[package]]
+name = "xterm-query"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f29504d0a2ca8c1714781c1395a8a660d2557b2cf9c9669433153fc903e9bfc"
+dependencies = [
+ "nix",
+ "thiserror",
+]
 
 [[package]]
 name = "xxhash-rust"

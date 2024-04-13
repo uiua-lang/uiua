@@ -818,15 +818,18 @@ fn print_stack(stack: &[Value], color: bool) {
         return;
     }
     for (i, value) in stack.iter().enumerate() {
-        const W: u8 = 255;
-        const B: u8 = 200;
+        let (w, b) = if terminal_light::luma().is_ok_and(|luma| luma > 0.6) {
+            (0, 35)
+        } else {
+            (255, 200)
+        };
         let (r, g, b) = match (i + 3) % 6 {
-            0 => (W, B, B),
-            1 => (W, W, B),
-            2 => (B, W, B),
-            3 => (B, W, W),
-            4 => (B, B, W),
-            5 => (W, B, W),
+            0 => (w, b, b),
+            1 => (w, w, b),
+            2 => (b, w, b),
+            3 => (b, w, w),
+            4 => (b, b, w),
+            5 => (w, b, w),
             _ => unreachable!(),
         };
         println!("{}", value.show().truecolor(r, g, b));

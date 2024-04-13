@@ -62,6 +62,7 @@ color-backtrace = {version = "0.6.1", optional = true}
 ctrlc = {version = "=3.4.4", optional = true}
 notify = {version = "6", optional = true}
 rustyline = {version = "14.0.0", optional = true}
+terminal-light = {version = "1.4.0", optional = true}
 tokio = {version = "1", optional = true, features = ["io-std", "rt"]}
 tower-lsp = {version = "0.20.0", optional = true, features = ["proposed"]}
 
@@ -94,6 +95,7 @@ binary = [
   "rustyline",
   "native_sys",
   "ffi",
+  "terminal-light",
 ]
 bytes = [] # No longer used
 clipboard = ["arboard"]

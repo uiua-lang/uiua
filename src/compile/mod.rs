@@ -1077,7 +1077,7 @@ code:
                         .unwrap();
                     match e.kind {
                         SigCheckErrorKind::LoopExcess(body_sig)
-                            if body_sig.outputs - body_sig.args != after_sig.args =>
+                            if after_sig.args > body_sig.outputs - body_sig.args =>
                         {
                             self.emit_diagnostic(
                                 format!(

@@ -1072,20 +1072,24 @@ code:
                 }
                 // Validate inner loop correctness
                 if let Err(e) = instrs_signature(&inner) {
-                    let sig = (0..=inner.len())
+                    let after_sig = (0..=inner.len())
                         .find_map(|i| instrs_signature(&inner[i..]).ok())
                         .unwrap();
                     match e.kind {
-                        SigCheckErrorKind::LoopExcess if sig.args > 0 => self.emit_diagnostic(
-                            format!(
-                                "This array contains a loop that has a variable \
-                                number of outputs. The code after the loop has \
-                                signature {sig}, which may result in a variable \
-                                number of values being pulled into the array."
-                            ),
-                            DiagnosticKind::Warning,
-                            word.span.clone(),
-                        ),
+                        SigCheckErrorKind::LoopExcess(body_sig)
+                            if body_sig.outputs - body_sig.args != after_sig.args =>
+                        {
+                            self.emit_diagnostic(
+                                format!(
+                                    "This array contains a loop that has a variable \
+                                    number of outputs. The code left of the loop has \
+                                    signature {after_sig}, which may result in a variable \
+                                    number of values being pulled into the array."
+                                ),
+                                DiagnosticKind::Warning,
+                                word.span.clone(),
+                            )
+                        }
                         SigCheckErrorKind::LoopOverreach => self.emit_diagnostic(
                             "This array contains a loop that has a variable \
                             number of inputs. This may result in a variable \

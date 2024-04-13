@@ -307,7 +307,13 @@ impl Compiler {
         };
 
         // Compile operands
+        if let Primitive::SetInverse = prim {
+            self.in_inverse = !self.in_inverse;
+        }
         let instrs = self.compile_words(modified.operands, false)?;
+        if let Primitive::SetInverse = prim {
+            self.in_inverse = !self.in_inverse;
+        }
 
         if call {
             self.push_all_instrs(instrs);

@@ -1825,8 +1825,12 @@ code:
         let instrs = optimize_instrs(instrs, true, &self.asm);
         if self.pre_eval_mode == PreEvalMode::Lazy
             || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
-            || (instrs.iter())
-                .any(|instr| matches!(instr, Instr::PushLocals { .. } | Instr::PopLocals))
+            || (instrs.iter()).any(|instr| {
+                matches!(
+                    instr,
+                    Instr::PushLocals { .. } | Instr::PopLocals | Instr::NoInline
+                )
+            })
         {
             return (instrs, errors);
         }

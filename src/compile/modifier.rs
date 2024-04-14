@@ -828,7 +828,7 @@ impl Compiler {
                     } else {
                         format!(
                             "{m}'s function is pervasive, \
-                        so {m} is redundant here.",
+                            so {m} is redundant here.",
                             m = Each.format(),
                         )
                     },

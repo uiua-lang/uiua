@@ -1567,28 +1567,18 @@ macro_rules! value_bin_impl {
                         val
                     }
                     (Value::Box(a), b) => {
-                        let mut val: Value = match a.into_unboxed() {
-                            Ok(a) => Boxed(Value::$name(a, b, a_depth, b_depth, env)?).into(),
-                            Err(a) => {
-                                let b = b.coerce_as_boxes().into_owned();
-                                bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
-                                    Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
-                                }))?.into()
-                            }
-                        };
+                        let b = b.coerce_as_boxes().into_owned();
+                        let mut val: Value = bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
+                            Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
+                        }))?.into();
                         val.reset_meta_flags();
                         val
                     },
                     (a, Value::Box(b)) => {
-                        let mut val: Value = match b.into_unboxed() {
-                            Ok(b) => Boxed(Value::$name(a, b, a_depth, b_depth, env)?).into(),
-                            Err(b) => {
-                                let a = a.coerce_as_boxes().into_owned();
-                                bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
-                                    Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
-                                }))?.into()
-                            }
-                        };
+                        let a = a.coerce_as_boxes().into_owned();
+                        let mut val: Value = bin_pervade(a, b, a_depth, b_depth, env, FalliblePerasiveFn::new(|a: Boxed, b: Boxed, env: &Uiua| {
+                            Ok(Boxed(Value::$name(a.0, b.0, a_depth, b_depth, env)?))
+                        }))?.into();
                         val.reset_meta_flags();
                         val
                     },

@@ -314,7 +314,7 @@ impl Value {
         if from.rank() == 0 {
             return Err(env.error("Cannot take from scalar"));
         }
-        let index = self.as_ints(env, "Index must be a list of integers")?;
+        let index = self.as_ints_or_infs(env, "Index must be a list of integers or infinity")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.take(&index, env)?),
             Value::Byte(a) => op_bytes_retry_fill(
@@ -378,7 +378,7 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     /// `take` from this array
-    pub fn take(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
+    pub fn take(mut self, index: &[Result<isize, bool>], env: &Uiua) -> UiuaResult<Self> {
         let map_keys = self.take_map_keys();
         let row_count = self.row_count();
         let mut arr = match index {
@@ -386,6 +386,7 @@ impl<T: ArrayValue> Array<T> {
             &[taking] => {
                 let row_len = self.row_len();
                 let row_count = self.row_count();
+                let taking = taking.unwrap_or(row_count as isize);
                 let abs_taking = taking.unsigned_abs();
                 let mut filled = false;
                 if taking >= 0 {
@@ -459,13 +460,14 @@ impl<T: ArrayValue> Array<T> {
                         index.len()
                     )));
                 }
+                let taking = taking.unwrap_or(row_count as isize);
                 let abs_taking = taking.unsigned_abs();
                 if sub_index
                     .iter()
                     .zip(&self.shape[1..])
-                    .all(|(&i, &s)| i.unsigned_abs() == s)
+                    .all(|(&i, &s)| i.map_or(true, |i| i.unsigned_abs() == s))
                 {
-                    return self.take(&[taking], env);
+                    return self.take(&[Ok(taking)], env);
                 }
                 let mut new_rows = Vec::with_capacity(abs_taking);
                 let mut arr = if taking >= 0 {
@@ -478,8 +480,11 @@ impl<T: ArrayValue> Array<T> {
                     if abs_taking > arr.row_count() {
                         match T::get_scalar_fill(env) {
                             Ok(fill) => {
-                                let row_len: usize =
-                                    sub_index.iter().map(|&i| i.unsigned_abs()).product();
+                                let row_len: usize = sub_index
+                                    .iter()
+                                    .zip(&self.shape[1..])
+                                    .map(|(&i, &s)| i.map_or(s, isize::unsigned_abs))
+                                    .product();
                                 arr.data.extend(
                                     repeat(fill).take((abs_taking - arr.row_count()) * row_len),
                                 );
@@ -509,8 +514,11 @@ impl<T: ArrayValue> Array<T> {
                     if abs_taking > arr.row_count() {
                         match T::get_scalar_fill(env) {
                             Ok(fill) => {
-                                let row_len: usize =
-                                    sub_index.iter().map(|&i| i.unsigned_abs()).product();
+                                let row_len: usize = sub_index
+                                    .iter()
+                                    .zip(&self.shape[1..])
+                                    .map(|(&i, &s)| i.map_or(s, |i| i.unsigned_abs()))
+                                    .product();
                                 arr.data = repeat(fill)
                                     .take((abs_taking - arr.row_count()) * row_len)
                                     .chain(arr.data)
@@ -531,13 +539,18 @@ impl<T: ArrayValue> Array<T> {
                     }
                     arr
                 };
-                arr.shape = index.iter().map(|&i| i.unsigned_abs()).collect();
+                arr.shape = index
+                    .iter()
+                    .zip(&self.shape)
+                    .map(|(&i, &s)| i.map_or(s, isize::unsigned_abs))
+                    .collect();
                 arr.validate_shape();
                 arr
             }
         };
         if let Some(mut map_keys) = map_keys {
             if let Some(taking) = index.first().copied() {
+                let taking = taking.unwrap_or(row_count as isize);
                 if taking.unsigned_abs() > row_count {
                     return Err(env.error(format!(
                         "Cannot {} {} a map array",

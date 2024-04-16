@@ -9,6 +9,7 @@ Uiua is not yet stable.
 - Add [`un °`](https://uiua.org/docs/un) [`min ↧`](https://uiua.org/docs/min) and [`un °`](https://uiua.org/docs/un) [`max ↥`](https://uiua.org/docs/max) pattern matching
 - [`insert`](https://uiua.org/docs/insert) can now be used with [`un °`](https://uiua.org/docs/un) to extract a map entry and pattern match it
 - [`fill ⬚`](https://uiua.org/docs/fill)ed [`keep ▽`](https://uiua.org/docs/keep)'s fill value may now be a list
+- [`infinity ∞`](https://uiua.org/docs/infinity) can now be passed in a list to [`take ↙`](https://uiua.org/docs/take) to take every row along that axis
 ### Interpreter
 - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`first ⊢`](https://uiua.org/docs/first) and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
 

@@ -1031,6 +1031,10 @@ primitive!(
     /// ex: ⬚π↙ 7 [8 3 9 2 0]
     /// This works with negative values as well.
     /// ex: ⬚π↙ ¯7 [8 3 9 2 0]
+    ///
+    /// [infinity] can be used to take every row along an axis.
+    /// ex: ↯2_3_4⇡24
+    ///   : ↙¯1_∞_2.
     (2, Take, DyadicArray, ("take", '↙')),
     /// Drop the first n elements of an array
     ///

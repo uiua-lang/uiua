@@ -148,18 +148,10 @@ impl<T: Clone + std::fmt::Debug> Array<T> {
 impl Value {
     /// `reshape` this value with another
     pub fn reshape(&mut self, shape: &Self, env: &Uiua) -> UiuaResult {
-        let target_shape = shape.as_number_list(
+        let target_shape = shape.as_ints_or_infs(
             env,
             "Shape should be a single integer \
             or a list of integers or infinity",
-            |n| n.fract() == 0.0 || n.is_infinite(),
-            |n| {
-                if n.is_infinite() {
-                    Err(n.is_sign_negative())
-                } else {
-                    Ok(n as isize)
-                }
-            },
         )?;
         if shape.rank() == 0 {
             let n = target_shape[0];

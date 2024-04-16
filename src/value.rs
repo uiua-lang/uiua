@@ -630,6 +630,24 @@ impl Value {
     pub fn as_ints(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
         self.as_number_list(env, requirement, |f| f.fract() == 0.0, |f| f as isize)
     }
+    pub(crate) fn as_ints_or_infs(
+        &self,
+        env: &Uiua,
+        requirement: &'static str,
+    ) -> UiuaResult<Vec<Result<isize, bool>>> {
+        self.as_number_list(
+            env,
+            requirement,
+            |n| n.fract() == 0.0 || n.is_infinite(),
+            |n| {
+                if n.is_infinite() {
+                    Err(n.is_sign_negative())
+                } else {
+                    Ok(n as isize)
+                }
+            },
+        )
+    }
     /// Attempt to convert the array to a single boolean
     ///
     /// The `requirement` parameter is used in error messages.

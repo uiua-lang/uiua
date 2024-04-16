@@ -235,11 +235,8 @@ impl<'a> VirtualEnv<'a> {
             }
             Instr::BeginArray => self.array_stack.push(self.stack.len()),
             Instr::EndArray { .. } => {
-                let bottom = self
-                    .array_stack
-                    .pop()
-                    .ok_or("EndArray without BeginArray")?;
-                let mut items: Vec<_> = self.stack.drain(bottom..).collect();
+                let bottom = (self.array_stack.pop()).ok_or("EndArray without BeginArray")?;
+                let mut items: Vec<_> = self.stack.drain(bottom.min(self.stack.len())..).collect();
                 self.set_min_height();
                 items.reverse();
                 self.stack.push(BasicValue::Arr(items));

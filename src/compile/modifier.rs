@@ -647,6 +647,16 @@ impl Compiler {
                 let f_res = self.compile_operand_word(f);
                 self.in_inverse = !self.in_inverse;
                 let (f_instrs, _) = f_res?;
+
+                // Under pop diagnostic
+                if let [Instr::Prim(Pop, _)] = f_instrs.as_slice() {
+                    self.emit_diagnostic(
+                        format!("Prefer {} over `⍜◌` for clarity", Dip.format()),
+                        DiagnosticKind::Style,
+                        modified.modifier.span.clone().merge(f_span.clone()),
+                    );
+                }
+
                 let (g_instrs, g_sig) = self.compile_operand_word(operands.next().unwrap())?;
                 if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig, self) {
                     let before_sig = self.sig_of(&f_before, &f_span)?;

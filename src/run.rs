@@ -1,3 +1,5 @@
+//! The Uiua interpreter/runtime
+
 use std::{
     cell::RefCell,
     cmp::Ordering,

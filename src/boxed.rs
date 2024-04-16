@@ -1,3 +1,5 @@
+//! The [`Boxed`] type
+
 use std::{
     borrow::{Borrow, BorrowMut},
     fmt,

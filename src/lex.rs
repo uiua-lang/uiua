@@ -1,3 +1,5 @@
+//! The Uiua lexer
+
 use std::{
     collections::VecDeque,
     error::Error,

@@ -1,3 +1,5 @@
+//! Signature checker implementation
+
 use std::{borrow::Cow, cmp::Ordering, fmt};
 
 use enum_iterator::Sequence;

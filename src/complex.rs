@@ -1,3 +1,5 @@
+//! The [`Complex`] type
+
 use std::{f64::consts::E, fmt, ops::*};
 
 use serde::*;

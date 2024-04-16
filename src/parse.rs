@@ -1,3 +1,5 @@
+//! The Uiua parser
+
 use std::{error::Error, f64::consts::PI, fmt, mem::replace};
 
 use ecow::EcoString;

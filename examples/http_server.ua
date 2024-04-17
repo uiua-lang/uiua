@@ -41,7 +41,7 @@ HandlePageLoadError ← ⋅(
   ⟨NotFound◌|ServerError⟩
 )
 Page ← |1 ⍣(
-  ExtMime GetExt :&frab.
+  ExtMime GetExt ⟜&frab
   Response "200 OK"
 )HandlePageLoadError ⊂"docs"
 Home ← |0 Page "/index.html"

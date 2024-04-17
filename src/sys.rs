@@ -1,7 +1,6 @@
 use std::{
     any::Any,
     fmt,
-    io::{stdin, Read},
     mem::take,
     net::SocketAddr,
     path::{Path, PathBuf},
@@ -686,6 +685,25 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn scan_line_stdin(&self) -> Result<Option<String>, String> {
         Err("Reading from stdin is not supported in this environment".into())
     }
+    /// Read a number of bytes from stdin
+    fn scan_stdin(&self, count: usize) -> Result<Vec<u8>, String> {
+        Err("Reading from stdin is not supported in this environment".into())
+    }
+    /// Read from stdin until a delimiter is reached
+    fn scan_until_stdin(&self, delim: &[u8]) -> Result<Vec<u8>, String> {
+        let mut buffer = Vec::new();
+        loop {
+            let bytes = self.scan_stdin(1)?;
+            if bytes.is_empty() {
+                break;
+            }
+            buffer.extend_from_slice(&bytes);
+            if buffer.ends_with(delim) {
+                break;
+            }
+        }
+        Ok(buffer)
+    }
     /// Set the terminal to raw mode
     fn set_raw_mode(&self, raw_mode: bool) -> Result<(), String> {
         Err("Setting raw mode is not supported in this environment".into())
@@ -1065,12 +1083,7 @@ impl SysOp {
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
                     Handle::STDIN => {
                         if let Some(count) = count {
-                            stdin()
-                                .lock()
-                                .bytes()
-                                .take(count)
-                                .collect::<Result<Vec<_>, _>>()
-                                .map_err(|e| env.error(e))?
+                            env.rt.backend.scan_stdin(count).map_err(|e| env.error(e))?
                         } else {
                             return Err(env.error("Cannot read an infinite amount from stdin"));
                         }
@@ -1102,12 +1115,7 @@ impl SysOp {
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
                     Handle::STDIN => {
                         if let Some(count) = count {
-                            stdin()
-                                .lock()
-                                .bytes()
-                                .take(count)
-                                .collect::<Result<Vec<_>, _>>()
-                                .map_err(|e| env.error(e))?
+                            env.rt.backend.scan_stdin(count).map_err(|e| env.error(e))?
                         } else {
                             return Err(env.error("Cannot read an infinite amount from stdin"));
                         }
@@ -1145,15 +1153,11 @@ impl SysOp {
                             }
                             _ => return Err(env.error("Delimiter must be a string or byte array")),
                         };
-                        let mut buffer = Vec::new();
-                        let stdin = stdin().lock();
-                        for byte in stdin.bytes() {
-                            let byte = byte.map_err(|e| env.error(e))?;
-                            buffer.push(byte);
-                            if buffer.ends_with(&delim_bytes) {
-                                break;
-                            }
-                        }
+                        let buffer = env
+                            .rt
+                            .backend
+                            .scan_until_stdin(&delim_bytes)
+                            .map_err(|e| env.error(e))?;
                         if is_string {
                             let s = String::from_utf8_lossy(&buffer).into_owned();
                             env.push(s);

@@ -194,6 +194,9 @@ impl SysBackend for NativeSys {
         stderr.flush().map_err(|e| e.to_string())
     }
     fn print_str_trace(&self, s: &str) {
+        if !NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed) {
+            return;
+        }
         eprint!("{s}");
         _ = stderr().flush();
     }
@@ -220,6 +223,14 @@ impl SysBackend for NativeSys {
             }
         }
         Ok(Some(String::from_utf8(buffer).map_err(|e| e.to_string())?))
+    }
+    fn scan_stdin(&self, count: usize) -> Result<Vec<u8>, String> {
+        if !NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed) {
+            return Ok(Vec::new());
+        }
+        let mut buffer = vec![0; count];
+        stdin().read_exact(&mut buffer).map_err(|e| e.to_string())?;
+        Ok(buffer)
     }
     fn save_error_color(&self, message: String, colored: String) {
         NATIVE_SYS.colored_errors.insert(message, colored);

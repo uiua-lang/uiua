@@ -306,6 +306,32 @@ impl Compiler {
             }
         };
 
+        // De-sugar loop fork
+        if let Primitive::Rows
+        | Primitive::Each
+        | Primitive::Table
+        | Primitive::Group
+        | Primitive::Partition
+        | Primitive::Inventory = prim
+        {
+            let op = modified.code_operands().next().unwrap();
+            if let Word::Modified(m) = &op.value {
+                if let Modifier::Primitive(Primitive::Fork) = &m.modifier.value {
+                    let mut m = (**m).clone();
+                    for op in m.operands.iter_mut().filter(|w| w.value.is_code()) {
+                        op.value = Word::Modified(
+                            Modified {
+                                modifier: modified.modifier.clone(),
+                                operands: vec![op.clone()],
+                            }
+                            .into(),
+                        );
+                    }
+                    return self.modified(m, call);
+                }
+            }
+        }
+
         // Compile operands
         let old_in_inverse = self.in_inverse;
         if let Primitive::SetInverse = prim {
@@ -851,8 +877,8 @@ impl Compiler {
                 // Normal table compilation, but get some diagnostics
                 let operand = modified.code_operands().next().unwrap().clone();
                 let op_span = operand.span.clone();
-                let function_id = FunctionId::Anonymous(op_span.clone());
-                let (instrs, sig) = self.compile_operand_word(operand)?;
+                let instrs_len = self.asm.instrs.len();
+                let (_, sig) = self.compile_operand_word(operand)?;
                 match sig.args {
                     0 => self.emit_diagnostic(
                         format!("{} of 0 arguments is redundant", Table.format()),
@@ -871,10 +897,8 @@ impl Compiler {
                     ),
                     _ => {}
                 }
-                let func = self.make_function(function_id, sig, instrs);
-                let span = self.add_span(modified.modifier.span.clone());
-                let instrs = [Instr::PushFunc(func), Instr::Prim(Table, span)];
-                finish!(instrs, sig);
+                self.asm.instrs.truncate(instrs_len);
+                return Ok(false);
             }
             Content => {
                 let operand = modified.code_operands().next().unwrap().clone();

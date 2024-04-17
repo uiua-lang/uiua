@@ -12,6 +12,7 @@ Uiua is not yet stable.
 - [`infinity ∞`](https://uiua.org/docs/infinity) can now be passed in a list to [`take ↙`](https://uiua.org/docs/take) to take every row along that axis
 ### Interpreter
 - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`length ⧻`](https://uiua.org/docs/length), [`first ⊢`](https://uiua.org/docs/first), and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
+- Optimize iterating modifiers with a top-level fork
 
 ## 0.10.3 - 2024-04-09
 ### Interpreter

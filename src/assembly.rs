@@ -113,7 +113,10 @@ impl Assembly {
         let (top_slices_src, rest) = rest.split_once("BINDINGS").ok_or("No bindings")?;
         let (bindings_src, rest) = rest.trim().split_once("SPANS").ok_or("No spans")?;
         let (spans_src, rest) = rest.trim().split_once("FILES").ok_or("No files")?;
-        let (files_src, rest) = rest.trim().split_once("STRING INPUTS").unwrap_or(("", ""));
+        let (files_src, rest) = rest
+            .trim()
+            .split_once("STRING INPUTS")
+            .unwrap_or((rest, ""));
         let strings_src = rest.trim();
 
         let mut instrs = EcoVec::new();
@@ -121,14 +124,18 @@ impl Assembly {
             let instr: Instr = serde_json::from_str(line)
                 .or_else(|e| {
                     let (key, val) = line.split_once(' ').ok_or("No key")?;
-                    let json = format!("{{{key:?}: {val:?}}}");
+                    let json = format!("{{{key:?}: {val}}}");
+                    dbg!(&json);
                     serde_json::from_str(&json).map_err(|_| e.to_string())
                 })
                 .or_else(|e| {
                     let (key, val) = line.split_once(' ').ok_or("No key")?;
-                    let json = format!("[{key:?},{val:?}]");
-                    serde_json::from_str(&json).map_err(|_| e.to_string())
-                })?;
+                    let json = format!("[{key:?},{val}]");
+                    dbg!(&json);
+                    serde_json::from_str(&json).map_err(|_| e)
+                })
+                .or_else(|e| serde_json::from_str(&format!("\"{line}\"")).map_err(|_| e))
+                .unwrap();
             instrs.push(instr);
         }
 
@@ -172,8 +179,10 @@ impl Assembly {
         }
 
         let files = DashMap::new();
+        dbg!(files_src);
         for line in files_src.lines().filter(|line| !line.trim().is_empty()) {
             let (path, src) = line.split_once(": ").ok_or("No path")?;
+            println!("path: {path:?}, src: {src:?}");
             let path = PathBuf::from(path);
             let src: EcoString = serde_json::from_str(src).map_err(|e| e.to_string())?;
             files.insert(path, src);
@@ -222,6 +231,11 @@ impl Assembly {
                         }
                     }
                 }
+                serde_json::Value::String(s) => {
+                    uasm.push_str(s);
+                    uasm.push('\n');
+                    continue;
+                }
                 _ => (),
             }
             uasm.push_str(&json.to_string());
@@ -260,7 +274,7 @@ impl Assembly {
         for entry in &self.inputs.files {
             let key = entry.key();
             let value = entry.value();
-            uasm.push_str(&format!("{:?} {:?}\n", key.to_string_lossy(), value));
+            uasm.push_str(&format!("{}: {:?}\n", key.display(), value));
         }
 
         if !self.inputs.strings.is_empty() {

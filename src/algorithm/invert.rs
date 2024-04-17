@@ -660,16 +660,14 @@ fn invert_format_pattern<'a>(
 
 fn invert_join_val_pattern<'a>(
     input: &'a [Instr],
-    _: &mut Compiler,
+    comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
     for i in 0..input.len() {
         if let &Instr::Prim(Primitive::Join, span) = &input[i] {
-            let before = &input[..i];
-            if before.is_empty() {
-                return None;
-            }
-            let input = &input[i + 1..];
-            let mut instrs = EcoVec::from(before);
+            let Some((input, before)) = Val.invert_extract(&input[..i], comp) else {
+                continue;
+            };
+            let mut instrs = before;
             instrs.extend([
                 Instr::CopyToTemp {
                     stack: TempStack::Inline,

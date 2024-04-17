@@ -440,7 +440,6 @@ mod server {
     use std::{
         env::current_dir,
         path::{Path, PathBuf},
-        sync::Arc,
     };
 
     use dashmap::DashMap;
@@ -951,14 +950,7 @@ mod server {
             } else {
                 return Ok(None);
             };
-
-            match format_str(
-                &doc.input,
-                &FormatConfig {
-                    backend: Arc::new(crate::NativeSys),
-                    ..FormatConfig::find().unwrap_or_default()
-                },
-            ) {
+            match format_str(&doc.input, &FormatConfig::find().unwrap_or_default()) {
                 Ok(formatted) => {
                     let range = Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));
                     Ok(Some(vec![TextEdit {

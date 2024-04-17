@@ -8,7 +8,6 @@ use std::{
     fs,
     iter::repeat,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 use instant::Duration;
@@ -19,7 +18,7 @@ use crate::{
     grid_fmt::GridFmt,
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
-    Compiler, FunctionId, Ident, InputSrc, Inputs, RunMode, SafeSys, Signature, SysBackend, Uiua,
+    Compiler, FunctionId, Ident, InputSrc, Inputs, PreEvalMode, RunMode, SafeSys, Signature, Uiua,
     UiuaError, UiuaResult, Value,
 };
 
@@ -200,8 +199,6 @@ The following configuration options are available:
             )*
             /// The source inputs for the formatter
             pub inputs: Inputs,
-            /// The system backend used for output comments
-            pub backend: Arc<dyn SysBackend>,
         }
 
         paste! {
@@ -225,7 +222,6 @@ The following configuration options are available:
                         $name: $default,
                     )*
                     inputs: Inputs::default(),
-                    backend: Arc::new(SafeSys::default()),
                 }
             }
         }
@@ -237,7 +233,6 @@ The following configuration options are available:
                         $name: config.$name.unwrap_or($default),
                     )*
                     inputs: Inputs::default(),
-                    backend: Arc::new(SafeSys::default()),
                 }
             }
         }
@@ -1199,14 +1194,14 @@ impl<'a> Formatter<'a> {
     }
     fn output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {
         let values = self.output_comments.get_or_insert_with(|| {
-            let mut env = Uiua::with_backend(self.config.backend.clone())
-                .with_execution_limit(Duration::from_secs(2));
+            let mut env = Uiua::with_safe_sys().with_execution_limit(Duration::from_secs(2));
 
             #[cfg(feature = "native_sys")]
             let enabled = crate::sys_native::set_output_enabled(false);
             let res = env.compile_run(|comp| {
-                comp.print_diagnostics(true)
+                comp.print_diagnostics(false)
                     .mode(RunMode::All)
+                    .pre_eval_mode(PreEvalMode::Lazy)
                     .load_str_src(&self.inputs.get(&self.src), self.src.clone())
             });
             #[cfg(feature = "native_sys")]

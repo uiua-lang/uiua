@@ -1,6 +1,6 @@
 mod utils;
 
-use std::{cell::Cell, iter::repeat, path::PathBuf, rc::Rc, sync::Arc, time::Duration};
+use std::{cell::Cell, iter::repeat, path::PathBuf, rc::Rc, time::Duration};
 
 use base64::engine::{general_purpose::STANDARD, Engine};
 
@@ -17,7 +17,7 @@ use web_sys::{
 };
 
 use crate::{
-    backend::{drop_file, OutputItem, WebBackend},
+    backend::{drop_file, OutputItem},
     element,
     examples::EXAMPLES,
     prim_class, Prim,
@@ -182,7 +182,6 @@ pub fn Editor<'a>(
                 &code_text,
                 &FormatConfig {
                     trailing_newline: mode == EditorMode::Pad,
-                    backend: Arc::new(WebBackend::default()),
                     ..Default::default()
                 },
             ) {
@@ -274,12 +273,11 @@ pub fn Editor<'a>(
                     view!(<div><audio class="output-audio" controls src=src/></div>).into_view()
                 }
             }
-            OutputItem::Svg(s) => {
-                view!(<div><img 
+            OutputItem::Svg(s) => view!(<div><img 
                     class="output-image" 
                     src={format!("data:image/svg+xml;utf8, {}", urlencoding::encode(&s))}/>
-                </div>).into_view()
-            }
+                </div>)
+            .into_view(),
             OutputItem::Report(report) => report_view(&report).into_view(),
             OutputItem::Separator => view!(<div class="output-item"><hr/></div>).into_view(),
         };

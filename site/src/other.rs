@@ -273,6 +273,11 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[Rows, Reduce]/><code>"F"</code><Prims prims=[Windows]/></th><td>"Make "<Prim prim=Windows/>" then "<Prim prim=Reduce/>" each row"</td><td>"Apply "<code>"F"</code>" to adjacent rows"</td></tr>
             <tr><th><Prims prims=[Rows, Reduce]/><code>"F"</code></th><td><Prim prim=Reduce/>" each row"</td><td><Prim prim=Reduce/>" each column"</td></tr>
         </table>
+
+        <Hd id="other-optimizations">"Other Optimizations"</Hd>
+        <ul>
+            <li><Prim prim=Group/>" and "<Prim prim=Partition/>" are optimized to be fast with "<Prim prim=First/>" and "<Prims prims=[First, Reverse]/>"."</li>
+        </ul>
     }
 }
 

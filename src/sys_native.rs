@@ -241,6 +241,9 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "raw_mode")]
     fn set_raw_mode(&self, raw_mode: bool) -> Result<(), String> {
+        if !NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed) {
+            return Ok(());
+        }
         if raw_mode {
             rawrrr::enable_raw()
         } else {

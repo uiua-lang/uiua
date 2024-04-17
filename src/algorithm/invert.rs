@@ -8,8 +8,8 @@ use regex::Regex;
 use crate::{
     check::instrs_signature,
     primitive::{ImplPrimitive, Primitive},
-    Compiler, Function, FunctionId, Instr, Signature, Span, SysOp, TempStack, Uiua, UiuaResult,
-    Value,
+    BindingKind, Compiler, Function, FunctionId, Instr, Signature, Span, SysOp, TempStack, Uiua,
+    UiuaResult, Value,
 };
 
 pub(crate) const DEBUG: bool = false;
@@ -621,13 +621,19 @@ fn invert_push_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::Push(val), input @ ..] = input else {
-        return None;
+    let (instr, input) = match input {
+        [instr @ Instr::Push(_), input @ ..] => (instr, input),
+        [instr @ Instr::CallGlobal { index, .. }, input @ ..]
+            if matches!(comp.asm.bindings[*index].kind, BindingKind::Const(_)) =>
+        {
+            (instr, input)
+        }
+        _ => return None,
     };
     if let [Instr::ImplPrim(ImplPrimitive::MatchPattern, _), input @ ..] = input {
-        return Some((input, eco_vec![Instr::Push(val.clone())]));
+        return Some((input, eco_vec![instr.clone()]));
     }
-    let mut instrs = eco_vec![Instr::Push(val.clone())];
+    let mut instrs = eco_vec![instr.clone()];
     instrs.push(Instr::ImplPrim(
         ImplPrimitive::MatchPattern,
         comp.asm.spans.len() - 1,

@@ -1,6 +1,12 @@
 //! Algorithms for looping modifiers
 
-use std::{cmp::Ordering, collections::HashSet, ptr};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    ptr,
+};
+
+use ecow::{eco_vec, EcoVec};
 
 use crate::{
     array::{Array, ArrayValue},
@@ -190,6 +196,7 @@ pub fn partition(env: &mut Uiua) -> UiuaResult {
         Value::partition_groups,
         Value::partition_firsts,
         Value::partition_lasts,
+        partition_lens,
         "⊜ partition indices array must be a list of integers",
         env,
     )
@@ -402,6 +409,34 @@ where
     }
 }
 
+fn partition_lens(markers: &[isize]) -> Array<f64> {
+    let mut lens = EcoVec::new();
+    let mut prev = isize::MAX;
+    let mut len = 0;
+    for &marker in markers {
+        if marker > 0 {
+            if marker == prev {
+                len += 1;
+            } else {
+                if len > 0 {
+                    lens.push(len as f64);
+                }
+                len = 1;
+            }
+        } else {
+            if len > 0 {
+                lens.push(len as f64);
+            }
+            len = 0;
+        }
+        prev = marker;
+    }
+    if len > 0 {
+        lens.push(len as f64);
+    }
+    lens.into()
+}
+
 fn multi_partition_indices(markers: Array<isize>) -> Vec<(isize, Vec<usize>)> {
     if markers.element_count() == 0 {
         return Vec::new();
@@ -596,6 +631,21 @@ pub fn group(env: &mut Uiua) -> UiuaResult {
         Value::group_groups,
         Value::group_firsts,
         Value::group_lasts,
+        |indices| {
+            let buckets = (indices.iter().max().copied().unwrap_or(-1) + 1).max(0) as usize;
+            let mut len_counts = HashMap::with_capacity(buckets);
+            for &index in indices {
+                if index >= 0 {
+                    *len_counts.entry(index.unsigned_abs()).or_insert(0) += 1;
+                }
+            }
+            let mut lens: EcoVec<f64> = eco_vec![0.0; buckets];
+            let slice = lens.make_mut();
+            for (index, len) in len_counts {
+                slice[index] = len as f64;
+            }
+            lens.into()
+        },
         "⊕ group indices array must be an array of integers",
         env,
     )
@@ -650,11 +700,11 @@ impl<T: ArrayValue> Array<T> {
                 .into_iter()
                 .map(Array::from_row_arrays_infallible));
         };
-        let group_count = max_index.max(0) as usize + 1;
-        let mut groups: Vec<Vec<Self>> = vec![Vec::new(); group_count];
+        let buckets = (max_index.max(-1) + 1).max(0) as usize;
+        let mut groups: Vec<Vec<Self>> = vec![Vec::new(); buckets];
         let row_shape = self.shape()[indices.rank()..].into();
         for (g, r) in (indices.data.into_iter()).zip(self.into_row_shaped_slices(row_shape)) {
-            if g >= 0 && g < group_count as isize {
+            if g >= 0 && g < buckets as isize {
                 groups[g as usize].push(r);
             }
         }
@@ -669,20 +719,20 @@ impl<T: ArrayValue> Array<T> {
                 FormatShape(&[indices.len()])
             )));
         }
-        let Some(&max_index) = indices.iter().max() else {
-            return Ok(self);
-        };
-        let group_count = max_index.max(0) as usize + 1;
+        let buckets = (indices.iter().copied().max().unwrap_or(-1) + 1).max(0) as usize;
+        if self.row_count() < buckets {
+            return Err(env.error("Cannot take first because a group was empty"));
+        }
         let row_len = self.row_len();
         let mut encountered = HashSet::new();
         let mut data = self.data.clone();
-        data.truncate(group_count * row_len);
+        data.truncate(buckets * row_len);
         let data_slice = data.as_mut_slice();
         let mut shape = self.shape.clone();
         if shape.len() == 0 {
-            shape.insert(0, group_count);
+            shape.insert(0, buckets);
         } else {
-            shape[0] = group_count;
+            shape[0] = buckets;
         }
         for (&index, row) in indices.iter().zip(self.row_slices()) {
             if index >= 0 && encountered.insert(index) {
@@ -691,7 +741,7 @@ impl<T: ArrayValue> Array<T> {
                 data_slice[start..end].clone_from_slice(row);
             }
         }
-        if encountered.len() != group_count {
+        if encountered.len() != buckets {
             return Err(env.error("Cannot take first because a group was empty"));
         }
         Ok(Array::new(shape, data))
@@ -705,20 +755,20 @@ impl<T: ArrayValue> Array<T> {
                 FormatShape(&[indices.len()])
             )));
         }
-        let Some(&max_index) = indices.iter().max() else {
-            return Ok(self);
-        };
-        let group_count = max_index.max(0) as usize + 1;
+        let buckets = (indices.iter().copied().max().unwrap_or(-1) + 1).max(0) as usize;
+        if self.row_count() < buckets {
+            return Err(env.error("Cannot take last because a group was empty"));
+        }
         let row_len = self.row_len();
         let mut encountered = HashSet::new();
         let mut data = self.data.clone();
-        data.truncate(group_count * row_len);
+        data.truncate(buckets * row_len);
         let data_slice = data.as_mut_slice();
         let mut shape = self.shape.clone();
         if shape.len() == 0 {
-            shape.insert(0, group_count);
+            shape.insert(0, buckets);
         } else {
-            shape[0] = group_count;
+            shape[0] = buckets;
         }
         for (&index, row) in indices.iter().zip(self.row_slices()).rev() {
             if index >= 0 && encountered.insert(index) {
@@ -727,7 +777,7 @@ impl<T: ArrayValue> Array<T> {
                 data_slice[start..end].clone_from_slice(row);
             }
         }
-        if encountered.len() != group_count {
+        if encountered.len() != buckets {
             return Err(env.error("Cannot take last because a group was empty"));
         }
         Ok(Array::new(shape, data))
@@ -812,6 +862,7 @@ fn collapse_groups<I>(
     get_groups: impl Fn(Value, Array<isize>, &Uiua) -> UiuaResult<I>,
     firsts: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Value>,
     lasts: impl Fn(Value, &[isize], &Uiua) -> UiuaResult<Value>,
+    lens: impl Fn(&[isize]) -> Array<f64>,
     indices_error: &'static str,
     env: &mut Uiua,
 ) -> UiuaResult
@@ -836,6 +887,18 @@ where
                 if let Some(ImplPrimitive::Last) = f.as_impl_primitive(&env.asm) {
                     let val = lasts(values, &indices.data, env)?;
                     env.push(val);
+                    return Ok(());
+                }
+                if let Some(Primitive::Len) = f.as_primitive(&env.asm) {
+                    if indices.row_count() != values.row_count() {
+                        return Err(env.error(format!(
+                            "Cannot {} array of shape {} with indices of shape {}",
+                            prim.format(),
+                            values.shape(),
+                            indices.shape()
+                        )));
+                    }
+                    env.push(lens(&indices.data));
                     return Ok(());
                 }
             }

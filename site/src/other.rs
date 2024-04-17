@@ -276,7 +276,7 @@ pub fn Optimizations() -> impl IntoView {
 
         <Hd id="other-optimizations">"Other Optimizations"</Hd>
         <ul>
-            <li><Prim prim=Group/>" and "<Prim prim=Partition/>" are optimized to be fast with "<Prim prim=First/>" and "<Prims prims=[First, Reverse]/>"."</li>
+            <li><Prim prim=Group/>" and "<Prim prim=Partition/>" are optimized to be fast with "<Prim prim=Len/>", "<Prim prim=First/>", and "<Prims prims=[First, Reverse]/>"."</li>
         </ul>
     }
 }

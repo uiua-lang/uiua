@@ -125,13 +125,11 @@ impl Assembly {
                 .or_else(|e| {
                     let (key, val) = line.split_once(' ').ok_or("No key")?;
                     let json = format!("{{{key:?}: {val}}}");
-                    dbg!(&json);
                     serde_json::from_str(&json).map_err(|_| e.to_string())
                 })
                 .or_else(|e| {
                     let (key, val) = line.split_once(' ').ok_or("No key")?;
                     let json = format!("[{key:?},{val}]");
-                    dbg!(&json);
                     serde_json::from_str(&json).map_err(|_| e)
                 })
                 .or_else(|e| serde_json::from_str(&format!("\"{line}\"")).map_err(|_| e))
@@ -179,10 +177,8 @@ impl Assembly {
         }
 
         let files = DashMap::new();
-        dbg!(files_src);
         for line in files_src.lines().filter(|line| !line.trim().is_empty()) {
             let (path, src) = line.split_once(": ").ok_or("No path")?;
-            println!("path: {path:?}, src: {src:?}");
             let path = PathBuf::from(path);
             let src: EcoString = serde_json::from_str(src).map_err(|e| e.to_string())?;
             files.insert(path, src);

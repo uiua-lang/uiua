@@ -184,9 +184,9 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &(Val, ([Div], [Mul])),
         &(Val, ([Flip, Div], [Flip, Div])),
         &(Val, pat!(Pow, (1, Flip, Div, Pow))),
-        &(Val, pat!((Flip, Pow), (Flip, 1, Flip, Div, Pow))),
+        &(Val, ([Flip, Pow], [Log])),
         &(Val, ([Log], [Flip, Pow])),
-        &(Val, ([Flip, Log], [Pow])),
+        &(Val, pat!((Flip, Log), (Flip, 1, Flip, Div, Pow))),
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
         &pat!(

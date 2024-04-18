@@ -768,12 +768,12 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("Creating files is not supported in this environment".into())
     }
     /// Open a file
-    fn open_file(&self, path: &Path) -> Result<Handle, String> {
+    fn open_file(&self, path: &Path, write: bool) -> Result<Handle, String> {
         Err("Opening files is not supported in this environment".into())
     }
     /// Read all bytes from a file
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
-        let handle = self.open_file(path)?;
+        let handle = self.open_file(path, false)?;
         let bytes = self.read(handle, usize::MAX)?;
         self.close(handle)?;
         Ok(bytes)
@@ -1049,7 +1049,7 @@ impl SysOp {
             SysOp::FOpen => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let handle = (env.rt.backend)
-                    .open_file(path.as_ref())
+                    .open_file(path.as_ref(), true)
                     .map_err(|e| env.error(e))?
                     .value(HandleKind::File(path.into()));
                 env.push(handle);

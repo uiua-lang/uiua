@@ -262,18 +262,18 @@ impl SysBackend for NativeSys {
         }
         Ok(paths)
     }
-    fn open_file(&self, path: &Path) -> Result<Handle, String> {
+    fn open_file(&self, path: &Path, write: bool) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
         let file = OpenOptions::new()
             .read(true)
-            .write(true)
+            .write(write)
             .open(path)
             .map_err(|e| format!("{e} {}", path.display()))?;
         NATIVE_SYS.files.insert(handle, BufReader::new(file));
         Ok(handle)
     }
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
-        let handle = self.open_file(path)?;
+        let handle = self.open_file(path, false)?;
         let bytes = self.read_all(handle)?;
         self.close(handle)?;
         Ok(bytes)

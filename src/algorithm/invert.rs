@@ -173,6 +173,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &invert_join_val_pattern,
         &invert_insert_pattern,
         &invert_split_pattern,
+        &invert_rows_pattern,
         &(Val, invert_repeat_pattern),
         &(Val, ([Rotate], [Neg, Rotate])),
         &pat!(Sqrt, (Dup, Mul)),
@@ -1201,6 +1202,19 @@ fn under_each_pattern<'a>(
         Instr::Prim(Primitive::Each, span),
     ];
     Some((input, (befores, afters)))
+}
+
+fn invert_rows_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::PushFunc(f), instr @ Instr::Prim(Primitive::Rows, span), input @ ..] = input else {
+        return None;
+    };
+    let instrs = f.instrs(comp).to_vec();
+    let inverse = invert_instrs(&instrs, comp)?;
+    let f = make_fn(inverse, *span, comp)?;
+    Some((input, eco_vec![Instr::PushFunc(f), instr.clone()]))
 }
 
 fn under_rows_pattern<'a>(

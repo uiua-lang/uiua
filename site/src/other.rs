@@ -276,7 +276,7 @@ pub fn Optimizations() -> impl IntoView {
 
         <Hd id="other-optimizations">"Other Optimizations"</Hd>
         <ul>
-            <li><Prim prim=Rows/>", "<Prim prim=Each/>", "<Prim prim=Table/>", "<Prim prim=Group/>", "<Prim prim=Partition/>", and "<Prim prim=Inventory/>" are all optimized when a "<Prim prim=Fork/>" is at the top level of their function. For example, "<Prims prims=[Table, Fork]/><code>"F"</code><code>"G"</code>" is optimized to "<Prims prims=[Fork, Table]/><code>"F"</code><Prims prims=[Fork, Table]/><code>"G"</code>"."</li>
+            <li><Prim prim=Rows/>", "<Prim prim=Each/>", "<Prim prim=Table/>", "<Prim prim=Group/>", "<Prim prim=Partition/>", and "<Prim prim=Inventory/>" are all optimized when a "<Prim prim=Fork/>" is at the top level of their function. For example, "<Prims prims=[Table, Fork]/><code>"F"</code><code>"G"</code>" is optimized to "<Prims prims=[Fork, Table]/><code>"F"</code><Prims prims=[Table]/><code>"G"</code>"."</li>
             <li><Prim prim=Group/>" and "<Prim prim=Partition/>" are optimized to be fast with "<Prim prim=Len/>", "<Prim prim=First/>", and "<Prims prims=[First, Reverse]/>"."</li>
         </ul>
     }

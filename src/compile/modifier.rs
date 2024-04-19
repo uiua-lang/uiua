@@ -331,7 +331,8 @@ impl Compiler {
                 }
             }
             if let Word::Modified(m) = &op.value {
-                if let Modifier::Primitive(Primitive::Fork) = &m.modifier.value {
+                if let Modifier::Primitive(Primitive::Fork | Primitive::Bracket) = &m.modifier.value
+                {
                     let mut m = (**m).clone();
                     for op in m.operands.iter_mut().filter(|w| w.value.is_code()) {
                         if let Some(new) = self.desugar_operand(&m.modifier, op.clone())? {

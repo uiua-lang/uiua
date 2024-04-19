@@ -1059,7 +1059,7 @@ impl<T: ArrayValue> Array<T> {
         Ok(arr)
     }
     /// Try to `mask` this array in another
-    pub fn mask(&self, haystack: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+    pub fn mask(&self, haystack: &Self, env: &Uiua) -> UiuaResult<Value> {
         let needle = self;
         if needle.rank() > haystack.rank() {
             return Err(env.error(format!(
@@ -1068,13 +1068,17 @@ impl<T: ArrayValue> Array<T> {
                 haystack.rank()
             )));
         }
-        let mut result_data = eco_vec![0u8; haystack.element_count()];
         if (needle.shape.iter().rev())
             .zip(haystack.shape.iter().rev())
             .any(|(n, h)| n > h)
         {
-            return Ok(Array::new(haystack.shape.clone(), result_data));
+            return Ok(Array::new(
+                haystack.shape.clone(),
+                eco_vec![0u8; haystack.element_count()],
+            )
+            .into());
         }
+        let mut result_data = eco_vec![0.0; haystack.element_count()];
         let res = result_data.make_mut();
         let needle_data = needle.data.as_slice();
         let mut needle_shape = needle.shape.clone();
@@ -1085,7 +1089,7 @@ impl<T: ArrayValue> Array<T> {
         let mut curr = Vec::new();
         let mut offset = Vec::new();
         let mut sum = vec![0; needle_shape.len()];
-        let mut match_num = 0;
+        let mut match_num = 0u64;
         for i in 0..res.len() {
             // Check if the needle matches the haystack at the current index
             haystack.shape.flat_to_dims(i, &mut curr);
@@ -1096,7 +1100,7 @@ impl<T: ArrayValue> Array<T> {
                     *s = *c + *o;
                 }
                 if (haystack.shape.dims_to_flat(&sum)).map_or(true, |k| {
-                    res[k] > 0 || !needle_data[j].array_eq(&haystack.data[k])
+                    res[k] > 0.0 || !needle_data[j].array_eq(&haystack.data[k])
                 }) {
                     matches = false;
                     break;
@@ -1111,11 +1115,13 @@ impl<T: ArrayValue> Array<T> {
                         *s = *c + *o;
                     }
                     let k = haystack.shape.dims_to_flat(&sum).unwrap();
-                    res[k] = match_num;
+                    res[k] = match_num as f64;
                 }
             }
         }
-        Ok(Array::new(haystack.shape.clone(), result_data))
+        let mut val: Value = Array::new(haystack.shape.clone(), result_data).into();
+        val.compress();
+        Ok(val)
     }
 }
 

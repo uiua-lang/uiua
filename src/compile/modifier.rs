@@ -7,6 +7,130 @@ use crate::format::format_words;
 use super::*;
 
 impl Compiler {
+    fn desugar_operand(
+        &self,
+        modifier: &Sp<Modifier>,
+        operand: Sp<Word>,
+    ) -> UiuaResult<Option<Modified>> {
+        let Sp {
+            value: Word::Switch(sw @ Switch { angled: false, .. }),
+            span,
+        } = operand
+        else {
+            return Ok(None);
+        };
+        match &modifier.value {
+            Modifier::Primitive(Primitive::Dip) => {
+                let mut branches = sw.branches.into_iter().rev();
+                let mut new = Modified {
+                    modifier: modifier.clone(),
+                    operands: vec![branches.next().unwrap().map(Word::Func)],
+                };
+                for branch in branches {
+                    let mut lines = branch.value.lines;
+                    (lines.last_mut().unwrap())
+                        .push(span.clone().sp(Word::Modified(Box::new(new))));
+                    new = Modified {
+                        modifier: modifier.clone(),
+                        operands: vec![branch.span.clone().sp(Word::Func(Func {
+                            id: FunctionId::Anonymous(branch.span.clone()),
+                            signature: None,
+                            lines,
+                            closed: true,
+                        }))],
+                    };
+                }
+                Ok(Some(new))
+            }
+            Modifier::Primitive(
+                Primitive::Fork | Primitive::Bracket | Primitive::Try | Primitive::Fill,
+            ) => {
+                let mut branches = sw.branches.into_iter().rev();
+                let mut new = Modified {
+                    modifier: modifier.clone(),
+                    operands: {
+                        let mut ops: Vec<_> = branches
+                            .by_ref()
+                            .take(2)
+                            .map(|w| w.map(Word::Func))
+                            .collect();
+                        ops.reverse();
+                        ops
+                    },
+                };
+                for branch in branches {
+                    new = Modified {
+                        modifier: modifier.clone(),
+                        operands: vec![
+                            branch.map(Word::Func),
+                            span.clone().sp(Word::Modified(Box::new(new))),
+                        ],
+                    };
+                }
+                Ok(Some(new))
+            }
+            Modifier::Primitive(Primitive::Cascade) => {
+                let mut branches = sw.branches.into_iter().rev();
+                let mut new = Modified {
+                    modifier: modifier.clone(),
+                    operands: {
+                        let mut ops: Vec<_> = branches
+                            .by_ref()
+                            .take(2)
+                            .map(|w| w.map(Word::Func))
+                            .collect();
+                        ops.reverse();
+                        ops
+                    },
+                };
+                for branch in branches {
+                    new = Modified {
+                        modifier: modifier.clone(),
+                        operands: vec![
+                            branch.map(Word::Func),
+                            span.clone().sp(Word::Modified(Box::new(new))),
+                        ],
+                    };
+                }
+                Ok(Some(new))
+            }
+            m if m.args() >= 2 => {
+                if sw.branches.len() != m.args() {
+                    return Err(self.fatal_error(
+                        modifier.span.clone().merge(span),
+                        format!(
+                            "{} requires {} function arguments, but the \
+                                    function pack has {} functions",
+                            m,
+                            m.args(),
+                            sw.branches.len()
+                        ),
+                    ));
+                }
+                let new = Modified {
+                    modifier: modifier.clone(),
+                    operands: sw.branches.into_iter().map(|w| w.map(Word::Func)).collect(),
+                };
+                Ok(Some(new))
+            }
+            m => 'blk: {
+                if let Modifier::Ref(name) = m {
+                    if let Ok((_, local)) = self.ref_local(name) {
+                        if self.array_macros.contains_key(&local.index) {
+                            break 'blk Ok(None);
+                        }
+                    }
+                }
+                Err(self.fatal_error(
+                    modifier.span.clone().merge(span),
+                    format!(
+                        "{m} cannot use a function pack. If you meant to \
+                            use a switch function, add a layer of parentheses."
+                    ),
+                ))
+            }
+        }
+    }
     #[allow(clippy::collapsible_match)]
     pub(super) fn modified(&mut self, mut modified: Modified, call: bool) -> UiuaResult {
         let mut op_count = modified.code_operands().count();
@@ -14,122 +138,8 @@ impl Compiler {
         // De-sugar function pack
         if op_count == 1 {
             let operand = modified.code_operands().next().unwrap().clone();
-            if let Sp {
-                value: Word::Switch(sw @ Switch { angled: false, .. }),
-                span,
-            } = operand
-            {
-                match &modified.modifier.value {
-                    Modifier::Primitive(Primitive::Dip) => {
-                        let mut branches = sw.branches.into_iter().rev();
-                        let mut new = Modified {
-                            modifier: modified.modifier.clone(),
-                            operands: vec![branches.next().unwrap().map(Word::Func)],
-                        };
-                        for branch in branches {
-                            let mut lines = branch.value.lines;
-                            (lines.last_mut().unwrap())
-                                .push(span.clone().sp(Word::Modified(Box::new(new))));
-                            new = Modified {
-                                modifier: modified.modifier.clone(),
-                                operands: vec![branch.span.clone().sp(Word::Func(Func {
-                                    id: FunctionId::Anonymous(branch.span.clone()),
-                                    signature: None,
-                                    lines,
-                                    closed: true,
-                                }))],
-                            };
-                        }
-                        return self.modified(new, call);
-                    }
-                    Modifier::Primitive(
-                        Primitive::Fork | Primitive::Bracket | Primitive::Try | Primitive::Fill,
-                    ) => {
-                        let mut branches = sw.branches.into_iter().rev();
-                        let mut new = Modified {
-                            modifier: modified.modifier.clone(),
-                            operands: {
-                                let mut ops: Vec<_> = branches
-                                    .by_ref()
-                                    .take(2)
-                                    .map(|w| w.map(Word::Func))
-                                    .collect();
-                                ops.reverse();
-                                ops
-                            },
-                        };
-                        for branch in branches {
-                            new = Modified {
-                                modifier: modified.modifier.clone(),
-                                operands: vec![
-                                    branch.map(Word::Func),
-                                    span.clone().sp(Word::Modified(Box::new(new))),
-                                ],
-                            };
-                        }
-                        return self.modified(new, call);
-                    }
-                    Modifier::Primitive(Primitive::Cascade) => {
-                        let mut branches = sw.branches.into_iter().rev();
-                        let mut new = Modified {
-                            modifier: modified.modifier.clone(),
-                            operands: {
-                                let mut ops: Vec<_> = branches
-                                    .by_ref()
-                                    .take(2)
-                                    .map(|w| w.map(Word::Func))
-                                    .collect();
-                                ops.reverse();
-                                ops
-                            },
-                        };
-                        for branch in branches {
-                            new = Modified {
-                                modifier: modified.modifier.clone(),
-                                operands: vec![
-                                    branch.map(Word::Func),
-                                    span.clone().sp(Word::Modified(Box::new(new))),
-                                ],
-                            };
-                        }
-                        return self.modified(new, call);
-                    }
-                    modifier if modifier.args() >= 2 => {
-                        if sw.branches.len() != modifier.args() {
-                            return Err(self.fatal_error(
-                                modified.modifier.span.clone().merge(span),
-                                format!(
-                                    "{} requires {} function arguments, but the \
-                                    function pack has {} functions",
-                                    modifier,
-                                    modifier.args(),
-                                    sw.branches.len()
-                                ),
-                            ));
-                        }
-                        let new = Modified {
-                            modifier: modified.modifier.clone(),
-                            operands: sw.branches.into_iter().map(|w| w.map(Word::Func)).collect(),
-                        };
-                        return self.modified(new, call);
-                    }
-                    modifier => 'blk: {
-                        if let Modifier::Ref(name) = modifier {
-                            if let Ok((_, local)) = self.ref_local(name) {
-                                if self.array_macros.contains_key(&local.index) {
-                                    break 'blk;
-                                }
-                            }
-                        }
-                        return Err(self.fatal_error(
-                            modified.modifier.span.clone().merge(span),
-                            format!(
-                                "{modifier} cannot use a function pack. If you meant to \
-                                use a switch function, add a layer of parentheses."
-                            ),
-                        ));
-                    }
-                }
+            if let Some(new) = self.desugar_operand(&modified.modifier, operand)? {
+                return self.modified(new, call);
             }
         }
 
@@ -314,11 +324,19 @@ impl Compiler {
         | Primitive::Partition
         | Primitive::Inventory = prim
         {
-            let op = modified.code_operands().next().unwrap();
+            let mut op = modified.code_operands().next().unwrap();
+            if let Word::Func(func) = &op.value {
+                if func.lines.len() == 1 && func.lines[0].len() == 1 {
+                    op = &func.lines[0][0];
+                }
+            }
             if let Word::Modified(m) = &op.value {
                 if let Modifier::Primitive(Primitive::Fork) = &m.modifier.value {
                     let mut m = (**m).clone();
                     for op in m.operands.iter_mut().filter(|w| w.value.is_code()) {
+                        if let Some(new) = self.desugar_operand(&m.modifier, op.clone())? {
+                            op.value = Word::Modified(new.into());
+                        }
                         op.value = Word::Modified(
                             Modified {
                                 modifier: modified.modifier.clone(),

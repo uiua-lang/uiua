@@ -794,30 +794,50 @@ code:
                     b_span.clone().merge(span.clone()),
                 );
             }
-            // Flip monadic dup diagnostic
-            if let (
-                Some(PrevWord(Some(Primitive::Dup), _, a_span)),
-                Some(PrevWord(
-                    _,
-                    Some(Signature {
-                        args: 1,
-                        outputs: 1,
-                    }),
-                    _,
-                )),
-                Some(Primitive::Flip),
-            ) = (a, &b, prim)
-            {
-                self.emit_diagnostic(
-                    format!(
-                        "Prefer {} over {} {} here",
-                        Primitive::On,
-                        Primitive::Flip,
-                        Primitive::Dup
-                    ),
-                    DiagnosticKind::Style,
-                    a_span.merge(span.clone()),
-                );
+            match (a, &b, prim) {
+                // Flip monadic dup diagnostic
+                (
+                    Some(PrevWord(Some(Primitive::Dup), _, a_span)),
+                    Some(PrevWord(
+                        _,
+                        Some(Signature {
+                            args: 1,
+                            outputs: 1,
+                        }),
+                        _,
+                    )),
+                    Some(Primitive::Flip),
+                ) => {
+                    self.emit_diagnostic(
+                        format!(
+                            "Prefer {} over {} {} here",
+                            Primitive::On,
+                            Primitive::Flip,
+                            Primitive::Dup
+                        ),
+                        DiagnosticKind::Style,
+                        a_span.merge(span.clone()),
+                    );
+                }
+                // Keep unique dup diagnostic
+                (
+                    Some(PrevWord(Some(Primitive::Dup), _, a_span)),
+                    Some(PrevWord(Some(Primitive::Unique), _, _)),
+                    Some(Primitive::Keep),
+                ) => {
+                    self.emit_diagnostic(
+                        format!(
+                            "Prefer {} over {}{}{}",
+                            Primitive::Deduplicate.format(),
+                            Primitive::Keep,
+                            Primitive::Unique,
+                            Primitive::Dup
+                        ),
+                        DiagnosticKind::Advice,
+                        a_span.merge(span.clone()),
+                    );
+                }
+                _ => {}
             }
 
             let start = self.new_functions.last().unwrap().len();

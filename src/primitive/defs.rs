@@ -780,9 +780,9 @@ primitive!(
     /// ex: ◰ 7_7_8_0_1_2_0
     /// ex: ◰ "Hello, World!"
     /// ex: ◰ [3_2 1_4 3_2 5_6 1_4 7_8]
-    /// [keep][unique][duplicate] deduplicates an array and keeps the first occurrence of each element.
-    /// ex: ▽◰. 7_7_8_0_1_2_0
-    /// This can also be used to deduplicate by a certain property.
+    /// [keep][unique][duplicate] is equivalent to [deduplicate].
+    /// ex! ▽◰. 7_7_8_0_1_2_0
+    /// [unique] is mainly useful for deduplicating by a certain property.
     /// Here, we deduplicate by the [absolute value] of the elements.
     /// ex: ▽◰⌵. [1 ¯2 ¯5 2 3 1 5]
     (1, Unique, MonadicArray, ("unique", '◰')),

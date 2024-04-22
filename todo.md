@@ -5,6 +5,8 @@
   - Spatial thinking tutorial/blog
   - Full HTTPS support
   - `uiua fmtio`
+  - Fix `un dip` and `un on`
+  - Add negative `bits`
   - System functions
     - Make array into stream
     - Excel

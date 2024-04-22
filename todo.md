@@ -1,11 +1,13 @@
 # Uiua Todo
 
 - 0.11
+  - Change how scalar `keep` works
+  - Make `un fix` different than `under fix`
+  - Fix `un dip` and `un on`
   - Allow warnings to be disabled?
   - Spatial thinking tutorial/blog
   - Full HTTPS support
   - `uiua fmtio`
-  - Fix `un dip` and `un on`
   - Add negative `bits`
   - System functions
     - Make array into stream

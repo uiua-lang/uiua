@@ -150,6 +150,37 @@ impl<T: ArrayValue> Array<T> {
         let deshaped = self.shape.split_off(depth).into_iter().product();
         self.shape.push(deshaped);
     }
+    /// Add a 1-length dimension to the front of the array's shape
+    pub fn fix(&mut self) {
+        self.fix_depth(0);
+    }
+    pub(crate) fn fix_depth(&mut self, depth: usize) {
+        let depth = depth.min(self.rank());
+        self.shape.insert(depth, 1);
+        if depth == 0 {
+            if let Some(keys) = self.map_keys_mut() {
+                keys.fix();
+            }
+        }
+    }
+    /// Remove a 1-length dimension from the front of the array's shape
+    pub fn unfix(&mut self, env: &Uiua) -> UiuaResult {
+        if let Some(keys) = self.map_keys_mut() {
+            keys.unfix();
+        }
+        match self.shape.unfix() {
+            Some(1) => Ok(()),
+            Some(d) => Err(env.error(format!("Cannot unfix array with length {d}"))),
+            None => Err(env.error("Cannot unfix scalar")),
+        }
+    }
+    /// Collapse the top two dimensions of the array's shape
+    pub fn undo_fix(&mut self) {
+        if let Some(keys) = self.map_keys_mut() {
+            keys.unfix();
+        }
+        self.shape.unfix();
+    }
 }
 
 impl Value {

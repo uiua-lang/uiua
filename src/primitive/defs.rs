@@ -2447,6 +2447,7 @@ impl_primitive!(
     (1, UnCsv),
     (2(0), MatchPattern),
     // Unders
+    (1, UndoFix),
     (3, UndoSelect),
     (3, UndoPick),
     (3, UndoTake),

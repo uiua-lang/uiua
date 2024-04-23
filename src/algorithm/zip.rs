@@ -217,7 +217,7 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
         let mut new_shape = new_shape.clone();
         let mut eached = Value::from_row_values(new_values, env)?;
         if is_scalar {
-            eached.unfix();
+            eached.undo_fix();
         } else if is_empty {
             eached.pop_row();
         }
@@ -431,7 +431,7 @@ pub fn rows1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
     for new_rows in new_rows.into_iter().rev() {
         let mut val = Value::from_row_values(new_rows, env)?;
         if is_scalar {
-            val.unfix();
+            val.undo_fix();
         } else if is_empty {
             val.pop_row();
         }
@@ -447,7 +447,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
     let both_scalar = xs.rank() == 0 && ys.rank() == 0;
     match (xs.row_count(), ys.row_count()) {
         (_, 1) if !ys.length_is_fillable(env) => {
-            ys.unfix();
+            ys.undo_fix();
             let is_empty = outputs > 0 && xs.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
             let per_meta = xs.take_per_meta();
@@ -474,7 +474,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             for new_rows in new_rows.into_iter().rev() {
                 let mut val = Value::from_row_values(new_rows, env)?;
                 if both_scalar {
-                    val.unfix();
+                    val.undo_fix();
                 } else if is_empty {
                     val.pop_row();
                 }
@@ -484,7 +484,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             Ok(())
         }
         (1, _) if !xs.length_is_fillable(env) => {
-            xs.unfix();
+            xs.undo_fix();
             let is_empty = outputs > 0 && ys.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
             let per_meta = ys.take_per_meta();
@@ -511,7 +511,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             for new_rows in new_rows.into_iter().rev() {
                 let mut val = Value::from_row_values(new_rows, env)?;
                 if both_scalar {
-                    val.unfix();
+                    val.undo_fix();
                 } else if is_empty {
                     val.pop_row();
                 }
@@ -566,7 +566,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             for new_rows in new_rows.into_iter().rev() {
                 let mut val = Value::from_row_values(new_rows, env)?;
                 if both_scalar {
-                    val.unfix();
+                    val.undo_fix();
                 } else if is_empty {
                     val.pop_row();
                 }
@@ -606,7 +606,7 @@ fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for new_values in new_values.into_iter().rev() {
         let mut rowsed = Value::from_row_values(new_values, env)?;
         if all_scalar {
-            rowsed.unfix();
+            rowsed.undo_fix();
         } else if is_empty {
             rowsed.pop_row();
         }
@@ -687,7 +687,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 new_values.into_iter().collect::<EcoVec<_>>(),
             );
             if both_scalar {
-                new_arr.unfix();
+                new_arr.undo_fix();
             }
             env.push(new_arr);
         }
@@ -714,7 +714,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (_, 1) => {
                 let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    ys.unfix();
+                    ys.undo_fix();
                     for Boxed(x) in xs.data.into_iter() {
                         env.push(ys.clone());
                         env.push(x);
@@ -731,7 +731,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (1, _) => {
                 let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    xs.unfix();
+                    xs.undo_fix();
                     for Boxed(y) in ys.data.into_iter() {
                         env.push(y);
                         env.push(xs.clone());
@@ -792,7 +792,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (_, 1) => {
                 let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    ys.unfix();
+                    ys.undo_fix();
                     ys.unbox();
                     for Boxed(x) in xs.data.into_iter() {
                         env.push(ys.clone());
@@ -810,7 +810,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (1, _) => {
                 let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    xs.unfix();
+                    xs.undo_fix();
                     for y in ys.into_rows() {
                         env.push(y);
                         env.push(xs.clone());
@@ -870,7 +870,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (_, 1) => {
                 let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    ys.unfix();
+                    ys.undo_fix();
                     for x in xs.into_rows() {
                         env.push(ys.clone());
                         env.push(x);
@@ -887,7 +887,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (1, _) => {
                 let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    xs.unfix();
+                    xs.undo_fix();
                     xs.unbox();
                     for Boxed(y) in ys.data.into_iter() {
                         env.push(y);
@@ -925,14 +925,14 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 for new_rows in new_rows.into_iter().rev() {
                     let mut arr = Array::from_iter(new_rows);
                     if both_scalar {
-                        arr.unfix();
+                        arr.undo_fix();
                     }
                     env.push(arr);
                 }
                 Ok(())
             }
             (_, 1) => {
-                ys.unfix();
+                ys.undo_fix();
                 ys.unbox();
                 let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
                 env.without_fill(|env| -> UiuaResult {
@@ -949,14 +949,14 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 for new_rows in new_rows.into_iter().rev() {
                     let mut arr = Array::from_iter(new_rows);
                     if both_scalar {
-                        arr.unfix();
+                        arr.undo_fix();
                     }
                     env.push(arr);
                 }
                 Ok(())
             }
             (1, _) => {
-                xs.unfix();
+                xs.undo_fix();
                 xs.unbox();
                 let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
                 env.without_fill(|env| -> UiuaResult {
@@ -973,7 +973,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 for new_rows in new_rows.into_iter().rev() {
                     let mut arr = Array::from_iter(new_rows);
                     if both_scalar {
-                        arr.unfix();
+                        arr.undo_fix();
                     }
                     env.push(arr);
                 }
@@ -1031,7 +1031,7 @@ fn inventoryn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
                 if v.rank() == 0 {
                     v.unbox();
                 } else {
-                    v.unfix();
+                    v.undo_fix();
                 }
                 Err(v)
             } else {
@@ -1064,7 +1064,7 @@ fn inventoryn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     for new_values in new_values.into_iter().rev() {
         let mut arr = Array::<Boxed>::from_iter(new_values);
         if all_scalar {
-            arr.unfix();
+            arr.undo_fix();
         } else if is_empty {
             arr.pop_row();
         }

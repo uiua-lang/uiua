@@ -454,26 +454,6 @@ impl<T: ArrayValue> Array<T> {
         let row_len = self.row_len();
         &mut self.data.as_mut_slice()[row * row_len..(row + 1) * row_len]
     }
-    /// Add a 1-length dimension to the front of the array's shape
-    pub fn fix(&mut self) {
-        self.fix_depth(0);
-    }
-    pub(crate) fn fix_depth(&mut self, depth: usize) {
-        let depth = depth.min(self.rank());
-        self.shape.insert(depth, 1);
-        if depth == 0 {
-            if let Some(keys) = self.map_keys_mut() {
-                keys.fix();
-            }
-        }
-    }
-    /// Remove a 1-length dimension from the front of the array's shape
-    pub fn unfix(&mut self) -> bool {
-        if let Some(keys) = self.map_keys_mut() {
-            keys.unfix();
-        }
-        self.shape.unfix()
-    }
 }
 
 impl<T: Clone> Array<T> {

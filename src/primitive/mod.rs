@@ -184,6 +184,7 @@ impl fmt::Display for ImplPrimitive {
             UndoGroup1 | UndoGroup2 => write!(f, "{Under}{Group}"),
             Asin => write!(f, "{Un}{Sin}"),
             Last => write!(f, "{First}{Reverse}"),
+            UndoFix => write!(f, "{Under}{Fix}"),
             UndoFirst => write!(f, "{Under}{First}"),
             UndoLast => write!(f, "{Under}{Last}"),
             UndoKeep => write!(f, "{Under}{Keep}"),
@@ -945,9 +946,8 @@ impl ImplPrimitive {
                 env.push(im);
             }
             ImplPrimitive::UnParse => env.monadic_ref_env(Value::unparse)?,
-            ImplPrimitive::UnFix => env.monadic_mut(|val| {
-                val.unfix();
-            })?,
+            ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
+            ImplPrimitive::UndoFix => env.monadic_mut(Value::undo_fix)?,
             ImplPrimitive::UnScan => reduce::unscan(env)?,
             ImplPrimitive::UnTrace => trace(env, true)?,
             ImplPrimitive::BothTrace => both_trace(env, false)?,

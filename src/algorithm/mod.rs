@@ -671,7 +671,7 @@ fn fixed_rows(
         .map(|mut v| {
             all_scalar = all_scalar && v.rank() == 0;
             if v.row_count() == 1 {
-                v.unfix();
+                v.undo_fix();
                 Err(v)
             } else {
                 let proxy = is_empty.then(|| v.proxy_row(env));

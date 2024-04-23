@@ -427,6 +427,8 @@ pub(crate) fn under_instrs(
             (PopUnder(3), UndoInsert)
         )),
         // Shaping
+        &pat!(Fix, (Fix), (UndoFix)),
+        &pat!(UndoFix, (UndoFix), (Fix)),
         &stash1!(Shape, (Flip, Reshape)),
         &pat!(
             Deshape,

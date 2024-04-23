@@ -531,7 +531,7 @@ impl MapKeys {
         if let Some((len, indices)) = self.fix_stack.pop() {
             self.len = len;
             self.indices = indices;
-            self.keys.unfix();
+            self.keys.undo_fix();
             true
         } else {
             false

@@ -377,8 +377,12 @@ impl Value {
         unsafe { self.repr_mut() }.arr.fix_depth(depth)
     }
     /// Remove a 1-length dimension from the front of the value's shape
-    pub fn unfix(&mut self) -> bool {
-        unsafe { self.repr_mut() }.arr.unfix()
+    pub fn unfix(&mut self, env: &Uiua) -> UiuaResult {
+        unsafe { self.repr_mut() }.arr.unfix(env)
+    }
+    /// Remove a 1-length dimension from the front of the value's shape
+    pub fn undo_fix(&mut self) {
+        unsafe { self.repr_mut() }.arr.undo_fix();
     }
     pub(crate) fn validate_shape(&self) {
         self.generic_ref(

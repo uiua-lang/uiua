@@ -777,7 +777,7 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
     for i in 0..iterable_count {
         let mut val = env.pop(("iterated array", i + 1))?;
         arrays.push(if val.row_count() == 1 {
-            val.unfix();
+            val.undo_fix();
             Err(val)
         } else {
             Ok(val.into_rows())

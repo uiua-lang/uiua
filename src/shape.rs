@@ -66,19 +66,17 @@ impl Shape {
         }
     }
     /// Unfix the shape
-    pub fn unfix(&mut self) -> bool {
+    ///
+    /// Returns the first dimension
+    pub fn unfix(&mut self) -> Option<usize> {
         match &mut **self {
-            [1, ..] => {
-                self.remove(0);
-                true
-            }
+            [1, ..] => Some(self.remove(0)),
             [a, b, ..] => {
                 let new_first_dim = *a * *b;
                 *b = new_first_dim;
-                self.remove(0);
-                true
+                Some(self.remove(0))
             }
-            _ => false,
+            _ => None,
         }
     }
     /// Extend the shape with the given dimensions

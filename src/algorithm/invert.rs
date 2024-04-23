@@ -973,12 +973,30 @@ fn invert_temp_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let (input, instr, inner, end_instr, _) =
-        try_push_temp_wrap(input).or_else(|| try_copy_temp_wrap(input))?;
-    let mut instrs = invert_instrs(inner, comp)?;
-    instrs.insert(0, instr.clone());
-    instrs.push(end_instr.clone());
-    Some((input, instrs))
+    if let Some((input, instr, inner, end_instr, _)) = try_push_temp_wrap(input) {
+        let mut instrs = invert_instrs(inner, comp)?;
+        instrs.insert(0, instr.clone());
+        instrs.push(end_instr.clone());
+        return Some((input, instrs));
+    }
+    if let Some((input, Instr::CopyToTemp { span, .. }, inner, end_instr, count)) =
+        try_copy_temp_wrap(input)
+    {
+        let inverse = invert_instrs(inner, comp)?;
+        let mut instrs = eco_vec![Instr::PushTemp {
+            stack: TempStack::Inline,
+            count,
+            span: *span
+        },];
+        instrs.extend(inverse);
+        instrs.push(end_instr.clone());
+        instrs.extend([
+            Instr::Prim(Primitive::Over, *span),
+            Instr::ImplPrim(ImplPrimitive::MatchPattern, *span),
+        ]);
+        return Some((input, instrs));
+    }
+    None
 }
 
 fn under_flip_pattern<'a>(

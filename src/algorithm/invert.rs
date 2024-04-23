@@ -157,24 +157,24 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
     use ImplPrimitive::*;
     use Primitive::*;
     &[
-        &invert_call_pattern,
-        &invert_un_pattern,
-        &invert_dump_pattern,
-        &invert_setinverse_pattern,
-        &invert_setunder_setinverse_pattern,
-        &invert_trivial_pattern,
-        &invert_array_pattern,
-        &invert_unpack_pattern,
-        &invert_scan_pattern,
-        &invert_repeat_pattern,
-        &invert_reduce_mul_pattern,
-        &invert_primes_pattern,
-        &invert_format_pattern,
-        &invert_join_val_pattern,
-        &invert_insert_pattern,
-        &invert_split_pattern,
-        &invert_rows_pattern,
-        &(Val, invert_repeat_pattern),
+        &InvertPatternFn(invert_call_pattern, "call"),
+        &InvertPatternFn(invert_un_pattern, "un"),
+        &InvertPatternFn(invert_dump_pattern, "dump"),
+        &InvertPatternFn(invert_setinverse_pattern, "setinverse"),
+        &InvertPatternFn(invert_setunder_setinverse_pattern, "setunder_setinverse"),
+        &InvertPatternFn(invert_trivial_pattern, "trivial"),
+        &InvertPatternFn(invert_array_pattern, "array"),
+        &InvertPatternFn(invert_unpack_pattern, "unpack"),
+        &InvertPatternFn(invert_scan_pattern, "scan"),
+        &InvertPatternFn(invert_repeat_pattern, "repeat"),
+        &InvertPatternFn(invert_reduce_mul_pattern, "reduce_mul"),
+        &InvertPatternFn(invert_primes_pattern, "primes"),
+        &InvertPatternFn(invert_format_pattern, "format"),
+        &InvertPatternFn(invert_join_val_pattern, "join_val"),
+        &InvertPatternFn(invert_insert_pattern, "insert"),
+        &InvertPatternFn(invert_split_pattern, "split"),
+        &InvertPatternFn(invert_rows_pattern, "rows"),
+        &(Val, InvertPatternFn(invert_repeat_pattern, "repeat")),
         &(Val, ([Rotate], [Neg, Rotate])),
         &pat!(Sqrt, (Dup, Mul)),
         &(Val, IgnoreMany(Flip), ([Add], [Sub])),
@@ -195,8 +195,8 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         ),
         &(Val, pat!(Min, (Over, Ge, 1, MatchPattern))),
         &(Val, pat!(Max, (Over, Le, 1, MatchPattern))),
-        &invert_temp_pattern,
-        &invert_push_pattern,
+        &InvertPatternFn(invert_temp_pattern, "temp"),
+        &InvertPatternFn(invert_push_pattern, "push"),
         &pat!(Dup, (Over, MatchPattern)),
         &pat!(Over, (PushToInline(1), Over, PopInline(1), MatchPattern)),
     ]
@@ -216,6 +216,13 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
     'find_pattern: loop {
         for pattern in INVERT_PATTERNS {
             if let Some((input, mut inv)) = pattern.invert_extract(curr_instrs, comp) {
+                if DEBUG {
+                    println!(
+                        "matched pattern {:?} on {:?} to {inv:?}",
+                        pattern,
+                        &curr_instrs[..curr_instrs.len() - input.len()],
+                    );
+                }
                 inv.extend(inverted);
                 inverted = inv;
                 if input.is_empty() {
@@ -515,7 +522,7 @@ pub(crate) fn under_instrs(
     None
 }
 
-trait InvertPattern: Sync {
+trait InvertPattern: fmt::Debug + Sync {
     fn invert_extract<'a>(
         &self,
         input: &'a [Instr],
@@ -1804,6 +1811,7 @@ impl<A: InvertPattern, B: InvertPattern, C: InvertPattern> InvertPattern for (A,
     }
 }
 
+#[derive(Debug)]
 struct IgnoreMany<T>(T);
 impl<T: InvertPattern> InvertPattern for IgnoreMany<T> {
     fn invert_extract<'a>(
@@ -2032,7 +2040,13 @@ where
     }
 }
 
-impl<F> InvertPattern for F
+struct InvertPatternFn<F>(F, &'static str);
+impl<F> fmt::Debug for InvertPatternFn<F> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "InvertPatternFn({})", self.1)
+    }
+}
+impl<F> InvertPattern for InvertPatternFn<F>
 where
     F: for<'a> Fn(&'a [Instr], &mut Compiler) -> Option<(&'a [Instr], EcoVec<Instr>)> + Sync,
 {
@@ -2041,7 +2055,7 @@ where
         input: &'a [Instr],
         comp: &mut Compiler,
     ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-        self(input, comp)
+        (self.0)(input, comp)
     }
 }
 

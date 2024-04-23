@@ -2,7 +2,6 @@
 
 - 0.11
   - Change how scalar `keep` works
-  - Make `un fix` different than `under fix`
   - Fix `un dip` and `un on`
   - Allow warnings to be disabled?
   - Spatial thinking tutorial/blog

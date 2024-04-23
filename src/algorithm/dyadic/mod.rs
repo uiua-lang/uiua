@@ -505,12 +505,14 @@ impl<T: ArrayValue> Array<T> {
             return self;
         }
         // Keep ≥2 is a repeat
-        self.shape[0] *= count;
-        let old_data = self.data.clone();
-        self.data.reserve(self.data.len() * count);
-        for _ in 1..count {
-            self.data.extend_from_slice(&old_data);
+        let mut new_data = EcoVec::with_capacity(count * self.data.len());
+        for row in self.row_slices() {
+            for _ in 0..count {
+                new_data.extend_from_slice(row);
+            }
         }
+        self.shape[0] *= count;
+        self.data = new_data.into();
         self.validate_shape();
         self
     }

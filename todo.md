@@ -1,8 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - Change how scalar `keep` works
-  - Fix `un dip` and `un on`
   - Allow warnings to be disabled?
   - Spatial thinking tutorial/blog
   - Full HTTPS support

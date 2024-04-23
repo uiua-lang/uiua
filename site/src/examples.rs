@@ -59,7 +59,7 @@ const LIFE: &str = "\
 Life ← ↥⊙↧∩=3,2-,/+≡↻☇1-1⇡3_3¤.
 ⁅×0.6 ∵⋅⚂ ↯⟜⊚ 30 # Init
 ⇌◌⍥(⟜⊂Life)100⟜¤ # Run
-≡(▽▽⧻⟜:⍉▽▽⧻,,):5 # Upscale";
+≡(⍜⊙⍉▽⟜▽)5       # Upscale";
 
 pub const EXAMPLES: &[&str] = &[
     AVG, D3, UIUA, PRIMES, LOGO, CHORD, SPIRAL, QUADRATIC, STRIPES, PALINDROME, AUTOMATA, ROMAN,

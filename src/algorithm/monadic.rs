@@ -805,108 +805,128 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// Encode the `bits` of the value
-    pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
+    pub fn bits(&self, env: &Uiua) -> UiuaResult<Value> {
         match self {
-            Value::Byte(n) => n.convert_ref().bits(env),
+            Value::Byte(n) => n.bits(env),
             Value::Num(n) => n.bits(env),
             _ => Err(env.error("Argument to bits must be an array of natural numbers")),
         }
     }
     /// Decode the `bits` of the value
-    pub fn unbits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+    pub fn unbits(&self, env: &Uiua) -> UiuaResult<Value> {
         match self {
             Value::Byte(n) => n.inverse_bits(env),
-            Value::Num(n) => n.convert_ref_with(|n| n as u8).inverse_bits(env),
-            _ => Err(env.error("Argument to inverse_bits must be an array of naturals")),
+            Value::Num(n) => n.inverse_bits(env),
+            _ => Err(env.error("Argument to inverse_bits must be an array of integers")),
         }
     }
 }
 
-impl Array<f64> {
+impl<T: RealArrayValue> Array<T> {
     /// Encode the `bits` of the array
-    pub fn bits(&self, env: &Uiua) -> UiuaResult<Array<u8>> {
-        let mut nats = Vec::new();
+    pub fn bits(&self, env: &Uiua) -> UiuaResult<Value> {
+        let mut nats = Vec::with_capacity(self.data.len());
+        let mut negatives = Vec::with_capacity(self.data.len());
+        let mut any_neg = false;
         for &n in &self.data {
-            if n.fract().abs() > f64::EPSILON || n < 0.0 {
+            if !n.is_int() {
                 return Err(env.error(format!(
-                    "Array must be a list of naturals, but {n} is not natural"
+                    "Array must be a list of integers, but {n} is not an integer"
                 )));
             }
-            if n > u128::MAX as f64 {
+            let n = n.to_f64();
+            if n.abs() > u128::MAX as f64 {
                 return Err(env.error(format!(
                     "{n} is too large for the {} algorithm",
                     Primitive::Bits.format()
                 )));
             }
-            nats.push(n.round() as u128);
+            nats.push(n.abs().round() as u128);
+            negatives.push(n.is_sign_negative());
+            any_neg |= n.is_sign_negative();
         }
         let mut max = if let Some(max) = nats.iter().max() {
             *max
         } else {
             let mut shape = self.shape.clone();
             shape.push(0);
-            return Ok(Array::new(shape, CowSlice::new()));
+            return Ok(Array::<u8>::new(shape, CowSlice::new()).into());
         };
         let mut max_bits = 0;
         while max != 0 {
             max_bits += 1;
             max >>= 1;
         }
-        let mut new_data = EcoVec::from_elem(0, self.data.len() * max_bits);
-        let new_data_slice = new_data.make_mut();
-        // LSB first
-        for (i, n) in nats.into_iter().enumerate() {
-            for j in 0..max_bits {
-                let index = i * max_bits + j;
-                new_data_slice[index] = u8::from(n & (1 << j) != 0);
-            }
-        }
         let mut shape = self.shape.clone();
         shape.push(max_bits);
-        let mut arr = Array::new(shape, new_data);
-        arr.validate_shape();
-        arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
-        Ok(arr)
+        let mut val: Value = if any_neg {
+            // If any number is negative, make a f64 array
+            let mut new_data = eco_vec![0.0; self.data.len() * max_bits];
+            let new_data_slice = new_data.make_mut();
+            // LSB first
+            for (i, (n, is_neg)) in nats.into_iter().zip(negatives).enumerate() {
+                for j in 0..max_bits {
+                    let index = i * max_bits + j;
+                    new_data_slice[index] = u8::from(n & (1 << j) != 0) as f64;
+                    if is_neg {
+                        new_data_slice[index] = -new_data_slice[index];
+                    }
+                }
+            }
+            Array::new(shape, new_data).into()
+        } else {
+            // If all numbers are natural, make a u8 array
+            let mut new_data = eco_vec![0; self.data.len() * max_bits];
+            let new_data_slice = new_data.make_mut();
+            // LSB first
+            for (i, n) in nats.into_iter().enumerate() {
+                for j in 0..max_bits {
+                    let index = i * max_bits + j;
+                    new_data_slice[index] = u8::from(n & (1 << j) != 0);
+                }
+            }
+            Array::new(shape, new_data).into()
+        };
+        val.validate_shape();
+        val.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+        Ok(val)
     }
 }
 
-impl Array<u8> {
+impl<T> Array<T>
+where
+    T: RealArrayValue,
+    Array<T>: Into<Value>,
+{
     /// Decode the `bits` of the array
-    pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        let mut bools = Vec::with_capacity(self.data.len());
-        for &b in &self.data {
-            if b > 1 {
-                return Err(env.error("Array must be a list of booleans"));
+    pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Value> {
+        for &n in &self.data {
+            if !n.is_int() {
+                return Err(env.error(format!(
+                    "Array must be a list of integers, but {n} is not an integer"
+                )));
             }
-            bools.push(b != 0);
-        }
-        if bools.is_empty() {
-            if self.shape.is_empty() {
-                return Ok(Array::from(0.0));
-            }
-            let mut shape = self.shape.clone();
-            shape.pop();
-            let count: usize = shape.iter().product();
-            return Ok(Array::new(shape, cowslice![0.0; count]));
         }
         if self.rank() == 0 {
-            return Ok(Array::from(bools[0] as u8 as f64));
+            return Ok(self.clone().into());
         }
         let mut shape = self.shape.clone();
-        let bit_string_len = shape.pop().unwrap();
-        let mut new_data = EcoVec::from_elem(0.0, self.data.len() / bit_string_len);
+        let bits_slice_len = shape.pop().unwrap();
+        let elems = shape.elements();
+        if bits_slice_len == 0 {
+            return Ok(Array::<u8>::new(shape, eco_vec![0; elems]).into());
+        }
+        let mut new_data = eco_vec![0.0; elems];
         let new_data_slice = new_data.make_mut();
         // LSB first
-        for (i, bits) in bools.chunks_exact(bit_string_len).enumerate() {
-            let mut n: u128 = 0;
-            for (j, b) in bits.iter().enumerate() {
-                if *b {
-                    n |= 1u128.overflowing_shl(j as u32).0;
-                }
+        for (i, bits) in self.data.chunks_exact(bits_slice_len).enumerate() {
+            let mut n = 0.0;
+            for (j, bit) in bits.iter().enumerate() {
+                n += bit.to_f64() * 2.0f64.powi(j as i32);
             }
-            new_data_slice[i] = n as f64;
+            new_data_slice[i] = n;
         }
-        Ok(Array::new(shape, new_data))
+        Ok(Array::new(shape, new_data).into())
     }
 }
 

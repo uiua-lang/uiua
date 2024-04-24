@@ -832,6 +832,32 @@ impl ArrayValue for Complex {
     }
 }
 
+/// Trait for [`ArrayValue`]s that are real numbers
+pub trait RealArrayValue: ArrayValue + Copy {
+    /// Whether the value is an integer
+    fn is_int(&self) -> bool;
+    /// Convert the value to an `f64`
+    fn to_f64(&self) -> f64;
+}
+
+impl RealArrayValue for f64 {
+    fn is_int(&self) -> bool {
+        self.fract().abs() < f64::EPSILON
+    }
+    fn to_f64(&self) -> f64 {
+        *self
+    }
+}
+
+impl RealArrayValue for u8 {
+    fn is_int(&self) -> bool {
+        true
+    }
+    fn to_f64(&self) -> f64 {
+        *self as f64
+    }
+}
+
 /// Trait for comparing array elements
 pub trait ArrayCmp<U = Self> {
     /// Compare two elements

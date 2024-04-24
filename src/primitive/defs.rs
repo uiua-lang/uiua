@@ -963,7 +963,7 @@ primitive!(
     /// Scalar shapes will copy the array as rows of a new array.
     /// ex: ↯ 4 [1 2 3 4 5]
     /// ex: ↯ 2 [1_2_3 4_5_6]
-    /// This is in constrast to scalar [keep], which repeats the rows but preserves rank.
+    /// This is in constrast to scalar [keep], which repeats each row but preserves rank.
     /// ex: ▽ 4 [1 2 3 4 5]
     /// ex: ▽ 2 [1_2_3 4_5_6]
     ///
@@ -1102,7 +1102,7 @@ primitive!(
     /// In this example, the input string is [duplicate]ed, and a mask is created from it using `greater or equal``@a`. Then, [keep] uses the mask to filter the string.
     /// ex: ▽≥@a . "lOWERCASe onLY"
     ///
-    /// [keep] with a scalar for the first argument repeats the rows of the second argument that many times.
+    /// [keep] with a scalar for the first argument repeats each row of the second argument that many times.
     /// ex: ▽ 3 [1 2 3]
     /// ex: ▽ 2 [1_2_3 4_5_6]
     /// This is in constrast to scalar [reshape], which copies the array as rows of a new array.

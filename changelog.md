@@ -10,6 +10,8 @@ Uiua is not yet stable.
   - Collapsing the top two dimensions of an array can still be done with [`reduce /`](https://uiua.org/docs/reduce)[`join ⊂`](https://uiua.org/docs/join)
 - **Breaking Change** - [`un °`](https://uiua.org/docs/un) [`on ⟜`](https://uiua.org/docs/on) now does pattern matching
 - **Breaking Change** - [`keep ▽`](https://uiua.org/docs/keep) with a scalar counts array now copies each row that many times
+  - This matches the behaviors of APL and BQN, and is generally more useful
+  - The old behavior can be achieved with `/⊂↯`
 - [`bits ⋯`](https://uiua.org/docs/bits) can now take negative numbers
 - [`un °`](https://uiua.org/docs/un) [`bits ⋯`](https://uiua.org/docs/bits) can now take non-booleans
 - Add [`un °`](https://uiua.org/docs/un) [`duplicate .`](https://uiua.org/docs/duplicate) and [`un °`](https://uiua.org/docs/un) [`over ,`](https://uiua.org/docs/over) pattern matching

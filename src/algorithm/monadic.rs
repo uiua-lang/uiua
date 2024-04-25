@@ -859,7 +859,7 @@ impl<T: RealArrayValue> Array<T> {
         }
         let mut shape = self.shape.clone();
         shape.push(max_bits);
-        let mut val: Value = if any_neg {
+        let val: Value = if any_neg {
             // If any number is negative, make a f64 array
             let mut new_data = eco_vec![0.0; self.data.len() * max_bits];
             let new_data_slice = new_data.make_mut();
@@ -885,10 +885,11 @@ impl<T: RealArrayValue> Array<T> {
                     new_data_slice[index] = u8::from(n & (1 << j) != 0);
                 }
             }
-            Array::new(shape, new_data).into()
+            let mut arr = Array::new(shape, new_data);
+            arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
+            arr.into()
         };
         val.validate_shape();
-        val.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
         Ok(val)
     }
 }

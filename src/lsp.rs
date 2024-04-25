@@ -5,7 +5,6 @@
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
     slice,
-    sync::Arc,
 };
 
 use crate::{
@@ -43,7 +42,7 @@ pub struct BindingDocs {
     /// The span of the binding name where it was defined
     pub src_span: CodeSpan,
     /// The comment of the binding
-    pub comment: Option<Arc<str>>,
+    pub comment: Option<EcoString>,
     /// Whether the binding is public
     pub is_public: bool,
     /// The specific binding kind
@@ -431,6 +430,7 @@ impl Spanner {
     }
 }
 
+use ecow::EcoString;
 #[cfg(feature = "lsp")]
 #[doc(hidden)]
 pub use server::run_language_server;

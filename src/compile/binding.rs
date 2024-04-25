@@ -3,7 +3,7 @@
 use super::*;
 
 impl Compiler {
-    pub(super) fn binding(&mut self, binding: Binding, comment: Option<Arc<str>>) -> UiuaResult {
+    pub(super) fn binding(&mut self, binding: Binding, comment: Option<EcoString>) -> UiuaResult {
         let public = binding.public;
 
         // Alias re-bound imports
@@ -396,7 +396,7 @@ impl Compiler {
     pub(super) fn import(
         &mut self,
         import: crate::ast::Import,
-        prev_com: Option<Arc<str>>,
+        prev_com: Option<EcoString>,
     ) -> UiuaResult {
         // Import module
         let module_path = self.import_module(&import.path.value, &import.path.span)?;

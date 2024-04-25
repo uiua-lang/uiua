@@ -57,7 +57,7 @@ impl Assembly {
         local: LocalName,
         function: Function,
         span: usize,
-        comment: Option<Arc<str>>,
+        comment: Option<EcoString>,
     ) {
         let span = self.spans[span].clone();
         self.add_global_at(local, BindingKind::Func(function), span.code(), comment);
@@ -67,7 +67,7 @@ impl Assembly {
         local: LocalName,
         value: Option<Value>,
         span: usize,
-        comment: Option<Arc<str>>,
+        comment: Option<EcoString>,
     ) {
         let span = self.spans[span].clone();
         self.add_global_at(local, BindingKind::Const(value), span.code(), comment);
@@ -77,7 +77,7 @@ impl Assembly {
         local: LocalName,
         global: BindingKind,
         span: Option<CodeSpan>,
-        comment: Option<Arc<str>>,
+        comment: Option<EcoString>,
     ) {
         let binding = BindingInfo {
             public: local.public,
@@ -307,7 +307,7 @@ pub struct BindingInfo {
     /// The span of the original binding name
     pub span: CodeSpan,
     /// The comment preceding the binding
-    pub comment: Option<Arc<str>>,
+    pub comment: Option<EcoString>,
 }
 
 /// A kind of global binding

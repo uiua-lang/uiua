@@ -117,7 +117,7 @@ impl Default for Compiler {
 #[derive(Clone)]
 pub struct Import {
     /// The top level comment
-    pub comment: Option<Arc<str>>,
+    pub comment: Option<EcoString>,
     /// Map module-local names to global indices
     names: IndexMap<Ident, LocalName>,
     /// Whether the import uses experimental features
@@ -161,7 +161,7 @@ struct CurrentBinding {
 pub(crate) struct Scope {
     kind: ScopeKind,
     /// The top level comment
-    comment: Option<Arc<str>>,
+    comment: Option<EcoString>,
     /// Map local names to global indices
     names: IndexMap<Ident, LocalName>,
     /// Whether to allow experimental features
@@ -456,14 +456,14 @@ code:
         &mut self,
         item: Item,
         in_test: bool,
-        prev_comment: &mut Option<Arc<str>>,
+        prev_comment: &mut Option<EcoString>,
     ) -> UiuaResult {
         fn words_should_run_anyway(words: &[Sp<Word>]) -> bool {
             (words.iter()).any(|w| matches!(&w.value, Word::SemanticComment(_)))
         }
-        let prev_com = prev_comment.take();
         let mut lines = match item {
             Item::TestScope(items) => {
+                prev_comment.take();
                 self.in_scope(ScopeKind::Test, |env| env.items(items.value, true))?;
                 return Ok(());
             }
@@ -473,37 +473,34 @@ code:
                     RunMode::Normal => !in_test,
                     RunMode::All | RunMode::Test => true,
                 };
+                let prev_com = prev_comment.take();
                 if can_run || words_should_run_anyway(&binding.words) {
                     self.binding(binding, prev_com)?;
                 }
                 return Ok(());
             }
-            Item::Import(import) => return self.import(import, prev_com),
+            Item::Import(import) => return self.import(import, prev_comment.take()),
         };
 
         // Compile top-level words
-        if lines.iter().flatten().all(|w| !w.value.is_code()) {
-            let mut comment = String::new();
-            for (i, line) in lines.iter().enumerate() {
-                if line.is_empty() {
-                    comment.clear();
-                    continue;
+
+        // Get top-level comments
+        for line in &lines {
+            if let [Sp {
+                value: Word::Comment(com),
+                ..
+            }] = line.as_slice()
+            {
+                if let Some(curr_com) = prev_comment {
+                    curr_com.push('\n');
+                    curr_com.push_str(com);
+                } else {
+                    *prev_comment = Some(com.as_str().into());
                 }
-                if i > 0 {
-                    comment.push('\n');
-                }
-                for word in line {
-                    if let Word::Comment(c) = &word.value {
-                        comment.push_str(c);
-                    }
-                }
-            }
-            *prev_comment = if comment.trim().is_empty() {
-                None
             } else {
-                Some(comment.trim().into())
-            };
-        };
+                *prev_comment = None;
+            }
+        }
         let can_run = match self.mode {
             RunMode::Normal => !in_test,
             RunMode::Test => in_test,
@@ -627,7 +624,7 @@ code:
         local: LocalName,
         function: Function,
         span: usize,
-        comment: Option<Arc<str>>,
+        comment: Option<EcoString>,
     ) -> UiuaResult {
         self.scope.names.insert(name.clone(), local);
         self.asm.bind_function(local, function, span, comment);

@@ -205,6 +205,9 @@ G ← setinvsetund("normal"|"do"|"undo")"inverse"
 ⍤⟜≍: "normal" G
 ⍤⟜≍: "inverse" °G
 ⍤⟜≍: {"undo""do"} {⍜G∘}
+H ← setinv(setund(+|⟜+|-)|setund(-|⟜-|+))
+⍤⟜≍: 2 ⍜H∘ 1 2
+⍤⟜≍: 2 ⍜°H∘ 1 2
 
 ⍤⟜≍: ⟜⍜°/×∘ 70
 ⍤⟜≍: ⟜⍜°/×∘ +1⇡100

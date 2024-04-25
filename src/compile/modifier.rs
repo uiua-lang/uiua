@@ -356,8 +356,9 @@ impl Compiler {
         if let Primitive::SetInverse = prim {
             self.in_inverse = false;
         }
-        let instrs = self.compile_words(modified.operands, false)?;
+        let res = self.compile_words(modified.operands, false);
         self.in_inverse = old_in_inverse;
+        let instrs = res?;
 
         if call {
             self.push_all_instrs(instrs);

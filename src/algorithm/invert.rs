@@ -564,7 +564,7 @@ fn invert_un_pattern<'a>(
 
 fn under_un_pattern<'a>(
     input: &'a [Instr],
-    _: Signature,
+    g_sig: Signature,
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
     let [Instr::PushFunc(f), Instr::Prim(Primitive::Un, _), input @ ..] = input else {
@@ -572,6 +572,13 @@ fn under_un_pattern<'a>(
     };
     let instrs = EcoVec::from(f.instrs(comp));
     let befores = invert_instrs(&instrs, comp)?;
+    if let [Instr::PushFunc(_), Instr::PushFunc(_), Instr::Prim(Primitive::SetInverse, _)] =
+        befores.as_slice()
+    {
+        if let Some(under) = under_instrs(&befores, g_sig, comp) {
+            return Some((input, under));
+        }
+    }
     Some((input, (befores, instrs)))
 }
 

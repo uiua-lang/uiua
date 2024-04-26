@@ -543,7 +543,7 @@ fn generic_reduce_inner(
                 per_meta,
             } = fixed_rows(Primitive::Reduce.format(), outputs, arg_values, env)?;
             if depth == 0 {
-                let mut accs = Vec::with_capacity(outputs);
+                let mut accs = Vec::with_capacity(arg_count);
                 let fill = env.value_fill().cloned();
                 if fill.is_none() {
                     row_count = row_count.saturating_sub(1);
@@ -574,13 +574,11 @@ fn generic_reduce_inner(
                             env.push(acc);
                         }
                         env.call(f.clone())?;
-                        for i in 0..outputs {
+                        for i in 0..arg_count {
                             accs.push(env.pop(i + 1)?);
                         }
                     }
-                    for _ in 0..arg_count - outputs {
-                        env.pop("accumulator")?;
-                    }
+                    accs.truncate(outputs);
                     Ok(accs)
                 })
             } else {
@@ -604,7 +602,7 @@ fn generic_reduce_inner(
                 for new_values in new_values {
                     let mut rowsed = Value::from_row_values(new_values, env)?;
                     if all_scalar {
-                        rowsed.unfix();
+                        rowsed.undo_fix();
                     } else if is_empty {
                         rowsed.pop_row();
                     }

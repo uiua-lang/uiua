@@ -369,6 +369,7 @@ impl Primitive {
     #[allow(unused_parens)]
     pub fn is_experimental(&self) -> bool {
         use Primitive::*;
+        use SysOp::*;
         matches!(
             self,
             Coordinate
@@ -376,7 +377,7 @@ impl Primitive {
                 | (All | Cascade | By)
                 | Bind
                 | (Shapes | Types)
-                | Sys(SysOp::FFI)
+                | Sys(FFI | TlsListen | TlsConnect)
                 | (Repr | Stringify | Quote | Sig)
         )
     }

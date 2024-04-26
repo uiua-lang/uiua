@@ -472,7 +472,9 @@ sys_op! {
     (0(0)[1], AudioStream, Audio, "&ast", "audio - stream", [mutating]),
     /// Create a TCP listener and bind it to an address
     (1, TcpListen, Tcp, "&tcpl", "tcp - listen", [mutating]),
-    /// Accept a connection with a TCP listener
+    /// Create a TLS listener and bind it to an address
+    (1, TlsListen, Tcp, "&tlsl", "tls - listen", [mutating]),
+    /// Accept a connection with a TCP or TLS listener
     ///
     /// Returns a stream handle
     /// [under][&tcpl] calls [&cl] automatically.
@@ -643,6 +645,7 @@ pub type AudioStreamFn = Box<dyn FnMut(&[f64]) -> UiuaResult<Vec<[f64; 2]>> + Se
 pub enum HandleKind {
     File(PathBuf),
     TcpListener(SocketAddr),
+    TlsListener(SocketAddr),
     TcpSocket(SocketAddr),
     TlsSocket(SocketAddr),
     ChildProcess(String),
@@ -653,6 +656,7 @@ impl fmt::Display for HandleKind {
         match self {
             Self::File(path) => write!(f, "file {}", path.display()),
             Self::TcpListener(addr) => write!(f, "tcp listener {}", addr),
+            Self::TlsListener(addr) => write!(f, "tls listener {}", addr),
             Self::TcpSocket(addr) => write!(f, "tcp socket {}", addr),
             Self::TlsSocket(addr) => write!(f, "tls socket {}", addr),
             Self::ChildProcess(com) => write!(f, "child {com}"),
@@ -821,6 +825,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Create a TCP listener and bind it to an address
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
         Err("TCP listeners are not supported in this environment".into())
+    }
+    /// Create a TLS listener and bind it to an address
+    fn tls_listen(&self, addr: &str, cert: &[u8], key: &[u8]) -> Result<Handle, String> {
+        Err("TLS listeners are not supported in this environment".into())
     }
     /// Accept a connection with a TCP listener
     fn tcp_accept(&self, handle: Handle) -> Result<Handle, String> {
@@ -1553,6 +1561,21 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
                 let sock_addr = env.rt.backend.tcp_addr(handle).map_err(|e| env.error(e))?;
                 let handle = handle.value(HandleKind::TcpListener(sock_addr));
+                env.push(handle);
+            }
+            SysOp::TlsListen => {
+                let addr = env.pop(1)?.as_string(env, "Address must be a string")?;
+                let cert = env
+                    .pop(2)?
+                    .into_bytes(env, "Cert must be a byte or character array")?;
+                let key = env
+                    .pop(3)?
+                    .into_bytes(env, "Key must be a byte or character array")?;
+                let handle = (env.rt.backend)
+                    .tls_listen(&addr, &cert, &key)
+                    .map_err(|e| env.error(e))?;
+                let sock_addr = env.rt.backend.tcp_addr(handle).map_err(|e| env.error(e))?;
+                let handle = handle.value(HandleKind::TlsListener(sock_addr));
                 env.push(handle);
             }
             SysOp::TcpAccept => {

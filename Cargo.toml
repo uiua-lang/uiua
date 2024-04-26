@@ -77,6 +77,7 @@ hound = {version = "3", optional = true}
 image = {version = "0.24.9", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "qoi"]}
 libffi = {version = "3", optional = true}
 libloading = {version = "0.8.3", optional = true}
+rustls-pemfile = {version = "2.1.2", optional = true}
 
 [features]
 audio = ["hodaun", "lockfree", "audio_encode"]
@@ -105,7 +106,7 @@ default = [
   "terminal_image",
   "lsp",
   "stand",
-  "https",
+  "tls",
   "invoke",
   "trash",
   "native_sys",
@@ -115,7 +116,6 @@ default = [
 ]
 ffi = ["libffi", "libloading"]
 gif = ["dep:gif", "image"]
-https = ["httparse", "rustls", "webpki-roots"]
 invoke = ["open"]
 lsp = ["tower-lsp", "tokio", "native_sys"]
 native_sys = []
@@ -123,6 +123,7 @@ profile = ["serde_yaml"]
 raw_mode = ["rawrrr", "native_sys"]
 stand = ["native_sys"]
 terminal_image = ["viuer", "image"]
+tls = ["httparse", "rustls", "webpki-roots", "rustls-pemfile"]
 
 [[bin]]
 name = "uiua"

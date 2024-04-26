@@ -15,7 +15,6 @@ use std::{
 use crate::{Handle, SysBackend};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
-use parking_lot::Mutex;
 
 /// The defualt native system backend
 #[derive(Default)]
@@ -27,19 +26,20 @@ struct GlobalNativeSys {
     files: DashMap<Handle, BufReader<File>>,
     child_procs: DashMap<Handle, Child>,
     tcp_listeners: DashMap<Handle, TcpListener>,
+    tls_listeners: DashMap<Handle, TlsListener>,
     tcp_sockets: DashMap<Handle, TcpStream>,
     tls_sockets: DashMap<Handle, TlsSocket>,
     hostnames: DashMap<Handle, String>,
     git_paths: DashMap<String, Result<PathBuf, String>>,
     #[cfg(feature = "audio")]
-    audio_stream_time: Mutex<Option<f64>>,
+    audio_stream_time: parking_lot::Mutex<Option<f64>>,
     #[cfg(feature = "audio")]
-    audio_time_socket: Mutex<Option<std::sync::Arc<std::net::UdpSocket>>>,
+    audio_time_socket: parking_lot::Mutex<Option<std::sync::Arc<std::net::UdpSocket>>>,
     colored_errors: DashMap<String, String>,
     #[cfg(feature = "ffi")]
     ffi: crate::FfiState,
     #[cfg(all(feature = "gif", feature = "invoke"))]
-    gifs_child: Mutex<Option<Child>>,
+    gifs_child: parking_lot::Mutex<Option<Child>>,
 }
 
 enum SysStream<'a> {
@@ -51,33 +51,59 @@ enum SysStream<'a> {
 
 struct TlsSocket {
     stream: TcpStream,
-    #[cfg(feature = "https")]
-    client: Mutex<rustls::ClientConnection>,
+    #[cfg(feature = "tls")]
+    conn: parking_lot::Mutex<TslConnection>,
+}
+
+#[cfg(feature = "tls")]
+enum TslConnection {
+    Client(rustls::ClientConnection),
+    Server(rustls::ServerConnection),
 }
 
 impl Read for &TlsSocket {
     fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
-        #[cfg(feature = "https")]
+        #[cfg(feature = "tls")]
         {
-            rustls::Stream::new(&mut *self.client.lock(), &mut &self.stream).read(_buf)
+            match &mut *self.conn.lock() {
+                TslConnection::Client(conn) => {
+                    rustls::Stream::new(conn, &mut &self.stream).read(_buf)
+                }
+                TslConnection::Server(conn) => {
+                    rustls::Stream::new(conn, &mut &self.stream).read(_buf)
+                }
+            }
         }
-        #[cfg(not(feature = "https"))]
+        #[cfg(not(feature = "tls"))]
         Ok(0)
     }
 }
 
 impl Write for &TlsSocket {
     fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {
-        #[cfg(feature = "https")]
+        #[cfg(feature = "tls")]
         {
-            rustls::Stream::new(&mut *self.client.lock(), &mut &self.stream).write(_buf)
+            match &mut *self.conn.lock() {
+                TslConnection::Client(conn) => {
+                    rustls::Stream::new(conn, &mut &self.stream).write(_buf)
+                }
+                TslConnection::Server(conn) => {
+                    rustls::Stream::new(conn, &mut &self.stream).write(_buf)
+                }
+            }
         }
-        #[cfg(not(feature = "https"))]
+        #[cfg(not(feature = "tls"))]
         Ok(0)
     }
     fn flush(&mut self) -> std::io::Result<()> {
         (&mut &self.stream).flush()
     }
+}
+
+struct TlsListener {
+    listener: TcpListener,
+    #[cfg(feature = "tls")]
+    config: std::sync::Arc<rustls::ServerConfig>,
 }
 
 impl Default for GlobalNativeSys {
@@ -88,19 +114,20 @@ impl Default for GlobalNativeSys {
             files: DashMap::new(),
             child_procs: DashMap::new(),
             tcp_listeners: DashMap::new(),
+            tls_listeners: DashMap::new(),
             tcp_sockets: DashMap::new(),
             tls_sockets: DashMap::new(),
             hostnames: DashMap::new(),
             git_paths: DashMap::new(),
             #[cfg(feature = "audio")]
-            audio_stream_time: Mutex::new(None),
+            audio_stream_time: parking_lot::Mutex::new(None),
             #[cfg(feature = "audio")]
-            audio_time_socket: Mutex::new(None),
+            audio_time_socket: parking_lot::Mutex::new(None),
             colored_errors: DashMap::new(),
             #[cfg(feature = "ffi")]
             ffi: Default::default(),
             #[cfg(all(feature = "gif", feature = "invoke"))]
-            gifs_child: Mutex::new(None),
+            gifs_child: parking_lot::Mutex::new(None),
         }
     }
 }
@@ -133,7 +160,14 @@ impl GlobalNativeSys {
             return Err("Invalid file handle".to_string());
         })
     }
-    fn get_tcp_read_stream<T>(&self, handle: Handle, f: impl FnOnce(&TcpStream) -> T) -> Option<T> {
+    fn get_tcp_listener<T>(&self, handle: Handle, f: impl FnOnce(&TcpListener) -> T) -> Option<T> {
+        if let Some(listener) = self.tcp_listeners.get(&handle) {
+            Some(f(&listener))
+        } else {
+            (self.tls_listeners.get(&handle)).map(|listener| f(&listener.listener))
+        }
+    }
+    fn get_tcp_stream<T>(&self, handle: Handle, f: impl FnOnce(&TcpStream) -> T) -> Option<T> {
         if let Some(sock) = self.tcp_sockets.get(&handle) {
             Some(f(&sock))
         } else {
@@ -528,16 +562,54 @@ impl SysBackend for NativeSys {
         NATIVE_SYS.tcp_listeners.insert(handle, listener);
         Ok(handle)
     }
-    fn tcp_accept(&self, handle: Handle) -> Result<Handle, String> {
-        let listener = NATIVE_SYS
-            .tcp_listeners
-            .get_mut(&handle)
-            .ok_or_else(|| "Invalid tcp listener handle".to_string())?;
-        let (stream, _) = listener.accept().map_err(|e| e.to_string())?;
-        drop(listener);
+    #[cfg(feature = "tls")]
+    fn tls_listen(&self, addr: &str, cert: &[u8], key: &[u8]) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
-        NATIVE_SYS.tcp_sockets.insert(handle, stream);
+        let listener = TcpListener::bind(addr).map_err(|e| e.to_string())?;
+        let certs = rustls_pemfile::certs(&mut BufReader::new(cert))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| e.to_string())?;
+        let private_key = rustls_pemfile::private_key(&mut BufReader::new(key))
+            .map_err(|e| e.to_string())?
+            .ok_or("No private key found")?;
+        let config = rustls::ServerConfig::builder()
+            .with_no_client_auth()
+            .with_single_cert(certs, private_key)
+            .map_err(|e| e.to_string())?
+            .into();
+        let listener = TlsListener { listener, config };
+        NATIVE_SYS.tls_listeners.insert(handle, listener);
         Ok(handle)
+    }
+    fn tcp_accept(&self, handle: Handle) -> Result<Handle, String> {
+        if let Some(listener) = NATIVE_SYS.tcp_listeners.get_mut(&handle) {
+            let (stream, _) = listener.accept().map_err(|e| e.to_string())?;
+            drop(listener);
+            let handle = NATIVE_SYS.new_handle();
+            NATIVE_SYS.tcp_sockets.insert(handle, stream);
+            Ok(handle)
+        } else {
+            #[cfg(feature = "tls")]
+            {
+                if let Some(listener) = NATIVE_SYS.tls_listeners.get_mut(&handle) {
+                    let (stream, _) = listener.listener.accept().map_err(|e| e.to_string())?;
+                    let conn = rustls::ServerConnection::new(listener.config.clone())
+                        .map_err(|e| e.to_string())?;
+                    let handle = NATIVE_SYS.new_handle();
+                    NATIVE_SYS.tls_sockets.insert(
+                        handle,
+                        TlsSocket {
+                            stream,
+                            #[cfg(feature = "tls")]
+                            conn: parking_lot::Mutex::new(TslConnection::Server(conn)),
+                        },
+                    );
+                }
+                return Ok(handle);
+            }
+            #[allow(unreachable_code)]
+            Err("Invalid tcp listener handle".to_string())
+        }
     }
     fn tcp_connect(&self, addr: &str) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
@@ -545,14 +617,11 @@ impl SysBackend for NativeSys {
         NATIVE_SYS.tcp_sockets.insert(handle, stream);
         NATIVE_SYS.hostnames.insert(
             handle,
-            addr.split_once(':')
-                .ok_or("No colon in address")?
-                .0
-                .to_string(),
+            (addr.split_once(':').ok_or("No colon in address")?.0).to_string(),
         );
         Ok(handle)
     }
-    #[cfg(feature = "https")]
+    #[cfg(feature = "tls")]
     fn tls_connect(&self, addr: &str) -> Result<Handle, String> {
         let handle = NATIVE_SYS.new_handle();
         let root_store =
@@ -576,21 +645,21 @@ impl SysBackend for NativeSys {
             handle,
             TlsSocket {
                 stream,
-                #[cfg(feature = "https")]
-                client: Mutex::new(client),
+                #[cfg(feature = "tls")]
+                conn: parking_lot::Mutex::new(TslConnection::Client(client)),
             },
         );
         Ok(handle)
     }
     fn tcp_addr(&self, handle: Handle) -> Result<SocketAddr, String> {
-        (NATIVE_SYS.get_tcp_read_stream(handle, |s| s.peer_addr()))
-            .or_else(|| (NATIVE_SYS.tcp_listeners.get(&handle)).map(|l| l.local_addr()))
+        (NATIVE_SYS.get_tcp_stream(handle, |s| s.peer_addr()))
+            .or_else(|| NATIVE_SYS.get_tcp_listener(handle, |l| l.local_addr()))
             .ok_or_else(|| "Invalid tcp socket handle".to_string())
             .and_then(|r| r.map_err(|e| e.to_string()))
     }
     fn tcp_set_non_blocking(&self, handle: Handle, non_blocking: bool) -> Result<(), String> {
         NATIVE_SYS
-            .get_tcp_read_stream(handle, |s| s.set_nonblocking(non_blocking))
+            .get_tcp_stream(handle, |s| s.set_nonblocking(non_blocking))
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?
             .map_err(|e| e.to_string())
     }
@@ -600,7 +669,7 @@ impl SysBackend for NativeSys {
         timeout: Option<Duration>,
     ) -> Result<(), String> {
         NATIVE_SYS
-            .get_tcp_read_stream(handle, |s| s.set_read_timeout(timeout))
+            .get_tcp_stream(handle, |s| s.set_read_timeout(timeout))
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?
             .map_err(|e| e.to_string())
     }
@@ -610,7 +679,7 @@ impl SysBackend for NativeSys {
         timeout: Option<Duration>,
     ) -> Result<(), String> {
         NATIVE_SYS
-            .get_tcp_read_stream(handle, |s| s.set_write_timeout(timeout))
+            .get_tcp_stream(handle, |s| s.set_write_timeout(timeout))
             .ok_or_else(|| "Invalid tcp socket handle".to_string())?
             .map_err(|e| e.to_string())
     }
@@ -626,7 +695,9 @@ impl SysBackend for NativeSys {
         } else if let Some((_, socket)) = NATIVE_SYS.tls_sockets.remove(&handle) {
             NATIVE_SYS.hostnames.remove(&handle);
             (&mut &socket).flush().map_err(|e| e.to_string())
-        } else if NATIVE_SYS.tcp_listeners.remove(&handle).is_some() {
+        } else if NATIVE_SYS.tcp_listeners.remove(&handle).is_some()
+            || NATIVE_SYS.tls_listeners.remove(&handle).is_some()
+        {
             NATIVE_SYS.hostnames.remove(&handle);
             Ok(())
         } else {
@@ -676,7 +747,7 @@ impl SysBackend for NativeSys {
     fn change_directory(&self, path: &str) -> Result<(), String> {
         env::set_current_dir(path).map_err(|e| e.to_string())
     }
-    #[cfg(feature = "https")]
+    #[cfg(feature = "tls")]
     fn https_get(&self, request: &str, handle: Handle) -> Result<String, String> {
         use std::io;
 
@@ -819,7 +890,7 @@ impl SysBackend for NativeSys {
 ///     "GET / HTTP/1.0\r\nhost: example.com\r\n\r\n"
 /// )
 /// ```
-#[cfg(feature = "https")]
+#[cfg(feature = "tls")]
 fn check_http(mut request: String, hostname: &str) -> Result<String, String> {
     let mut headers = [httparse::EMPTY_HEADER; 64];
     let mut req = httparse::Request::new(&mut headers);

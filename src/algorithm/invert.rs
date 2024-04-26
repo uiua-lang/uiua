@@ -472,6 +472,7 @@ pub(crate) fn under_instrs(
         &maybe_val!(store1copy!(Sys(SysOp::TlsConnect), Sys(SysOp::Close))),
         &maybe_val!(store1copy!(Sys(SysOp::TcpAccept), Sys(SysOp::Close))),
         &maybe_val!(store1copy!(Sys(SysOp::TcpListen), Sys(SysOp::Close))),
+        &maybe_val!(store1copy!(Sys(SysOp::TlsListen), Sys(SysOp::Close))),
         &maybe_val!(stash1!(Sys(SysOp::FReadAllStr), Sys(SysOp::FWriteAll))),
         &maybe_val!(stash1!(Sys(SysOp::FReadAllBytes), Sys(SysOp::FWriteAll))),
         &pat!(BothTrace, (BothTrace), (UnTrace)),

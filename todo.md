@@ -2,8 +2,6 @@
 
 - 0.11
   - Allow warnings to be disabled?
-  - Spatial thinking tutorial/blog
-  - Full HTTPS support
   - `uiua fmtio`
   - System functions
     - Make array into stream
@@ -12,6 +10,7 @@
     - Matrix product
     - Matrix inverse?
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
+- Spatial thinking tutorial/blog
 - Multimedia
   - Sound input
   - Webcam input

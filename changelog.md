@@ -5,10 +5,6 @@ Uiua is not yet stable.
 ## 0.11.0 - 2024-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
-- [`reduce /`](https://uiua.org/docs/reduce) can now take multiple arguments and have multiple outputs
-
-## 0.11.0 - 2024-??-??
-### Language
 - **Breaking Change** - [`un °`](https://uiua.org/docs/un) [`fix ¤`](https://uiua.org/docs/fix) now does pattern matching
   - [`under ⍜`](https://uiua.org/docs/under) [`fix ¤`](https://uiua.org/docs/fix) retains the old behavior
   - Collapsing the top two dimensions of an array can still be done with [`reduce /`](https://uiua.org/docs/reduce)[`join ⊂`](https://uiua.org/docs/join)
@@ -23,6 +19,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`insert`](https://uiua.org/docs/insert) can now be used with [`un °`](https://uiua.org/docs/un) to extract a map entry and pattern match it
 - [`fill ⬚`](https://uiua.org/docs/fill)ed [`keep ▽`](https://uiua.org/docs/keep)'s fill value may now be a list
 - [`infinity ∞`](https://uiua.org/docs/infinity) can now be passed in a list to [`take ↙`](https://uiua.org/docs/take) to take every row along that axis
+- [`reduce /`](https://uiua.org/docs/reduce) can now take multiple arguments and have multiple outputs
 ### Interpreter
 - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`length ⧻`](https://uiua.org/docs/length), [`first ⊢`](https://uiua.org/docs/first), and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
 - Optimize iterating modifiers with a top-level [`fork ⊃`](https://uiua.org/docs/fork) or [`bracket ⊓`](https://uiua.org/docs/bracket)

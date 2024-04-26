@@ -139,8 +139,8 @@ pub fn Tour() -> impl IntoView {
         <Editor example="{1 2_3_4 5_6}"/>
         <p>"Pervasive functions work on "<Prim prim=Box/>"ed elements without needing to "<Prim prim=Un/><Prim prim=Box/>" them."</p>
         <Editor example="+5 {1 2_3_4 5_6}"/>
-        <p>"For more complex operations, though, you'll need to use "<Prim prim=Un/><Prim prim=Box/>". Using it with "<Prim prim=Under/>" will re-"<Prim prim=Box/>" the result."</p>
-        <Editor example="{\"dog\" \"cat\" \"fish\"}\n∵⍜°□(⊂⇌.)."/>
+        <p>"For more complex operations, you can use to use the "<Prim prim=Inventory/>" modifier, which calls a function on the content of each box."</p>
+        <Editor example="{\"dog\" \"cat\" \"fish\"}\n⍚(⊂⇌.)."/>
 
         <Hd id="multimedia">"Multimedia"</Hd>
         <p>"Uiua can natively generate images, audio, and GIFs."</p>
@@ -148,7 +148,7 @@ pub fn Tour() -> impl IntoView {
         <h3>"Images"</h3>
         <p>"Image data can either be a rank 2 array of grayscale pixel data or a rank 3 array of grayscale with alpha, RGB, or RGBA pixel data."</p>
         <p>"This minimal example uses three different functions on x/y coordinates to generate RGB values and make a pretty gradient."</p>
-        <Editor example="⍉[⊃⊃⊞+⊞-⊞×].÷⟜⇡100"/>
+        <Editor example="⍉[⊞⊃⊃+-×].÷⟜⇡100"/>
         <p>"The Uiua logo is made with Uiua itself!"</p>
         <Editor example=LOGO/>
         <h3>"Audio"</h3>

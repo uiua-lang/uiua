@@ -507,11 +507,11 @@ impl<'a> Formatter<'a> {
             let mut lines: Vec<String> = (self.output.split('\n'))
                 .map(|s| {
                     if s.ends_with(' ') {
-                        let mut s = s.trim_end().to_string();
-                        if s.ends_with('@') {
-                            s.push(' ');
+                        let mut trim_s = s.trim_end().to_string();
+                        if trim_s.ends_with(['@', '$']) && trim_s != s {
+                            trim_s.push(' ');
                         }
-                        s
+                        trim_s
                     } else {
                         s.to_string()
                     }

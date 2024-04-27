@@ -919,6 +919,7 @@ impl<'a> Lexer<'a> {
                             let checkpoint = self.loc;
                             while self.next_char_exact("\r") {}
                             if self.next_char_if(|c| c.ends_with('\n')).is_some() {
+                                // Eat leading whitespace on next line
                                 while self
                                     .next_char_if(|c| {
                                         c.chars().all(char::is_whitespace) && !c.ends_with('\n')
@@ -926,6 +927,7 @@ impl<'a> Lexer<'a> {
                                     .is_some()
                                 {}
                                 start = self.loc;
+                                // Check for matching $ on next line
                                 if !format_raw && (self.next_chars_exact(["$", " "]))
                                     || format_raw
                                         && (self.next_chars_exact(["$", "$", " "])

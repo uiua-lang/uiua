@@ -163,7 +163,7 @@ where
     // Account for depths
     reshape_depths(&mut a, &mut b, a_depth, b_depth);
     // Fill
-    fill_array_shapes(&mut a, &mut b, env)?;
+    fill_array_shapes(&mut a, &mut b, a_depth, b_depth, env)?;
     // Pervade
     let shape = a.shape().max(b.shape()).clone();
     let mut data = eco_vec![C::default(); shape.elements()];
@@ -233,7 +233,7 @@ where
     // Account for depths
     reshape_depths(a, &mut b, a_depth, b_depth);
     // Fill
-    fill_array_shapes(a, &mut b, env)?;
+    fill_array_shapes(a, &mut b, a_depth, b_depth, env)?;
     // Pervade
     let ash = a.shape.dims();
     let bsh = b.shape.dims();

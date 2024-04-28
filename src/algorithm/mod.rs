@@ -101,7 +101,7 @@ impl ErrorContext for () {
     }
 }
 
-pub trait FillError {
+pub trait FillError: fmt::Debug {
     fn is_fill(&self) -> bool;
 }
 
@@ -328,6 +328,8 @@ where
 pub(crate) fn fill_array_shapes<A, B, C>(
     a: &mut Array<A>,
     b: &mut Array<B>,
+    a_depth: usize,
+    b_depth: usize,
     ctx: &C,
 ) -> Result<(), C::Error>
 where
@@ -335,19 +337,45 @@ where
     B: ArrayValue,
     C: FillContext,
 {
-    let a_err = fill_array_shape(a, b.shape(), true, ctx).err();
-    let b_err = fill_array_shape(b, a.shape(), true, ctx).err();
-
-    if shape_prefixes_match(&a.shape, &b.shape) {
-        Ok(())
-    } else if let Some(e) = a_err.or(b_err) {
-        Err(e)
-    } else {
-        Err(C::fill_error(ctx.error(format!(
-            "Shapes {} and {} do not match",
-            a.shape(),
-            b.shape(),
-        ))))
+    let a_depth = a_depth.min(a.rank());
+    let b_depth = b_depth.min(b.rank());
+    match (a_depth, b_depth) {
+        (0, 0) => {
+            let a_err = fill_array_shape(a, b.shape(), true, ctx).err();
+            let b_err = fill_array_shape(b, a.shape(), true, ctx).err();
+            if shape_prefixes_match(&a.shape, &b.shape) {
+                Ok(())
+            } else {
+                Err(a_err.or(b_err).unwrap_or_else(|| {
+                    C::fill_error(ctx.error(format!(
+                        "Shapes {} and {} do not match",
+                        a.shape(),
+                        b.shape(),
+                    )))
+                }))
+            }
+        }
+        (_, _) => {
+            if a.row_count() != b.row_count() {
+                return Err(C::fill_error(ctx.error(format!(
+                    "Shapes {} and {} do not match",
+                    a.shape(),
+                    b.shape(),
+                ))));
+            }
+            if !shape_prefixes_match(&a.shape[a_depth..], &b.shape[b_depth..]) {
+                let mut new_a_rows = Vec::with_capacity(a.row_count());
+                let mut new_b_rows = Vec::with_capacity(b.row_count());
+                for (mut a_row, mut b_row) in a.rows().zip(b.rows()) {
+                    fill_array_shapes(&mut a_row, &mut b_row, a_depth - 1, b_depth - 1, ctx)?;
+                    new_a_rows.push(a_row);
+                    new_b_rows.push(b_row);
+                }
+                *a = Array::from_row_arrays_infallible(new_a_rows);
+                *b = Array::from_row_arrays_infallible(new_b_rows);
+            }
+            Ok(())
+        }
     }
 }
 

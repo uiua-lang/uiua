@@ -45,8 +45,6 @@ impl GridFmt for u8 {
     }
 }
 
-const ROUND_TO: f64 = 3.0 * f64::EPSILON;
-
 impl GridFmt for f64 {
     fn fmt_grid(&self, boxed: bool, _label: bool) -> Grid {
         let f = *self;
@@ -112,9 +110,9 @@ impl GridFmt for f64 {
 
 impl GridFmt for Complex {
     fn fmt_grid(&self, boxed: bool, label: bool) -> Grid {
-        if self.im.abs() < ROUND_TO {
+        if self.im.abs() == 0.0 {
             self.re.fmt_grid(boxed, label)
-        } else if self.re.abs() < ROUND_TO {
+        } else if self.re.abs() == 0.0 {
             if self.im == 1.0 {
                 vec![boxed_scalar(boxed).chain(['i']).collect()]
             } else if self.im == -1.0 {

@@ -63,7 +63,7 @@ pub enum SigCheckErrorKind {
     Incorrect,
     Ambiguous,
     LoopOverreach,
-    LoopExcess(Signature),
+    LoopExcess { sig: Signature, inf: bool },
 }
 
 impl SigCheckError {
@@ -79,9 +79,9 @@ impl SigCheckError {
             ..self
         }
     }
-    pub fn loop_excess(self, sig: Signature) -> Self {
+    pub fn loop_excess(self, sig: Signature, inf: bool) -> Self {
         Self {
-            kind: SigCheckErrorKind::LoopExcess(sig),
+            kind: SigCheckErrorKind::LoopExcess { sig, inf },
             ..self
         }
     }
@@ -359,7 +359,7 @@ impl<'a> VirtualEnv<'a> {
                                     return Err(SigCheckError::from(format!(
                                         "repeat with infinity and a function with signature {sig}"
                                     ))
-                                    .loop_excess(sig));
+                                    .loop_excess(sig, true));
                                 }
                                 _ => self.handle_sig(sig)?,
                             }
@@ -381,7 +381,7 @@ impl<'a> VirtualEnv<'a> {
                                 return Err(SigCheckError::from(format!(
                                     "repeat with no number and a function with signature {sig}"
                                 ))
-                                .loop_excess(sig));
+                                .loop_excess(sig, false));
                             }
                             Ordering::Less => self.handle_sig(sig)?,
                         }
@@ -404,7 +404,7 @@ impl<'a> VirtualEnv<'a> {
                         return Err(SigCheckError::from(format!(
                             "do with a function with signature {comp_sig}"
                         ))
-                        .loop_excess(comp_sig));
+                        .loop_excess(comp_sig, false));
                     }
                     self.handle_args_outputs(
                         comp_sig.args,

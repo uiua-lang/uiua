@@ -6,6 +6,7 @@ use std::{
     collections::{hash_map::DefaultHasher, BTreeSet, HashMap, HashSet},
     fmt, fs,
     hash::{Hash, Hasher},
+    iter::repeat,
     mem::{replace, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
@@ -1088,33 +1089,52 @@ code:
                     inner.extend(self.compile_words(lines, true)?);
                 }
                 // Validate inner loop correctness
-                if let Err(e) = instrs_signature(&inner) {
-                    let after_sig = (0..=inner.len())
-                        .find_map(|i| instrs_signature(&inner[i..]).ok())
-                        .unwrap();
-                    match e.kind {
-                        SigCheckErrorKind::LoopExcess(body_sig)
-                            if after_sig.args > body_sig.outputs - body_sig.args =>
-                        {
-                            self.emit_diagnostic(
-                                format!(
+                if self.current_binding.is_some() {
+                    if let Err(e) = instrs_signature(&inner) {
+                        let after_sig = (0..=inner.len())
+                            .find_map(|i| instrs_signature(&inner[i..]).ok())
+                            .unwrap();
+                        match e.kind {
+                            SigCheckErrorKind::LoopExcess { sig: body_sig, inf }
+                                if body_sig.args > 0
+                                    && (body_sig.outputs < body_sig.args
+                                        || body_sig.outputs > body_sig.args
+                                            && after_sig.args
+                                                != body_sig.outputs - body_sig.args
+                                            && !inf)
+                                    || body_sig.args == 0 && after_sig.args > 0 =>
+                            {
+                                let mut message = format!(
                                     "This array contains a loop that has a variable \
                                     number of outputs. The code left of the loop has \
                                     signature {after_sig}, which may result in a variable \
                                     number of values being pulled into the array."
-                                ),
+                                );
+                                if body_sig.outputs > body_sig.args
+                                    && after_sig.args < body_sig.outputs - body_sig.args
+                                {
+                                    let diff = body_sig.outputs - body_sig.args;
+                                    let replacement: String =
+                                        repeat('⊙').take(diff - 1).chain(['∘']).collect();
+                                    message.push_str(&format!(
+                                    " To fix this, insert `{replacement}` to the left of the loop."
+                                ));
+                                }
+                                self.emit_diagnostic(
+                                    message,
+                                    DiagnosticKind::Warning,
+                                    word.span.clone(),
+                                )
+                            }
+                            SigCheckErrorKind::LoopOverreach => self.emit_diagnostic(
+                                "This array contains a loop that has a variable \
+                                number of inputs. This may result in a variable \
+                                number of values being pulled into the array.",
                                 DiagnosticKind::Warning,
                                 word.span.clone(),
-                            )
+                            ),
+                            _ => {}
                         }
-                        SigCheckErrorKind::LoopOverreach => self.emit_diagnostic(
-                            "This array contains a loop that has a variable \
-                            number of inputs. This may result in a variable \
-                            number of values being pulled into the array.",
-                            DiagnosticKind::Warning,
-                            word.span.clone(),
-                        ),
-                        _ => {}
                     }
                 }
                 // Diagnostic for array of characters

@@ -813,7 +813,6 @@ impl<T: ArrayValue> Array<T> {
     }
     /// Count the number of unique rows in the array
     pub fn count_unique(&self) -> usize {
-        dbg!();
         let mut seen = HashSet::new();
         self.row_slices()
             .filter(|row| seen.insert(ArrayCmpSlice(row)))

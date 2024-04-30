@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - Optimize `len dedup`
   - Allow warnings to be disabled?
   - `uiua fmtio`
   - System functions

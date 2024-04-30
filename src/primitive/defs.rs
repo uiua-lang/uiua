@@ -2478,4 +2478,5 @@ impl_primitive!(
     (2, ReplaceRand2, impure),
     (2, Adjacent),
     (2(2), BothTrace, impure),
+    (1, CountUnique),
 );

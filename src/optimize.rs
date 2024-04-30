@@ -44,6 +44,11 @@ pub(crate) fn optimize_instrs_mut(
             instrs.pop();
             instrs.push(Instr::ImplPrim(Last, span))
         }
+        // Count unique
+        ([.., Instr::Prim(Deduplicate, _)], Instr::Prim(Len, span)) => {
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(CountUnique, span))
+        }
         // // Combine push temps
         // (
         //     [.., Instr::PushTemp {

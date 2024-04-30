@@ -23,6 +23,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`length ⧻`](https://uiua.org/docs/length), [`first ⊢`](https://uiua.org/docs/first), and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
 - Optimize iterating modifiers with a top-level [`fork ⊃`](https://uiua.org/docs/fork) or [`bracket ⊓`](https://uiua.org/docs/bracket)
+- Optimize [`length ⧻`](https://uiua.org/docs/length) [`deduplicate ◴`](https://uiua.org/docs/deduplicate)]
 - Lots of bug fixes
 
 ## 0.10.3 - 2024-04-09

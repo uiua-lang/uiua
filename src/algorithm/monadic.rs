@@ -665,6 +665,16 @@ impl Value {
         )
         .into()
     }
+    /// Count the unique rows of the value
+    pub fn count_unique(&self) -> usize {
+        self.generic_ref(
+            Array::count_unique,
+            Array::count_unique,
+            Array::count_unique,
+            Array::count_unique,
+            Array::count_unique,
+        )
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -800,6 +810,14 @@ impl<T: ArrayValue> Array<T> {
         arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
         arr.meta_mut().map_keys = map_keys;
         arr
+    }
+    /// Count the number of unique rows in the array
+    pub fn count_unique(&self) -> usize {
+        dbg!();
+        let mut seen = HashSet::new();
+        self.row_slices()
+            .filter(|row| seen.insert(ArrayCmpSlice(row)))
+            .count()
     }
 }
 

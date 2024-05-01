@@ -174,6 +174,7 @@ impl fmt::Display for ImplPrimitive {
             UnDump => write!(f, "{Un}{Dump}"),
             UnBox => write!(f, "{Un}{Box}"),
             UnCsv => write!(f, "{Un}{Csv}"),
+            UnXlsx => write!(f, "{Un}{Xlsx}"),
             UndoTake => write!(f, "{Under}{Take}"),
             UndoDrop => write!(f, "{Under}{Drop}"),
             UndoSelect => write!(f, "{Under}{Select}"),
@@ -805,6 +806,9 @@ impl Primitive {
             Primitive::Dump => dump(env, false)?,
             Primitive::Regex => regex(env)?,
             Primitive::Csv => env.monadic_ref_env(Value::to_csv)?,
+            Primitive::Xlsx => {
+                env.monadic_ref_env(|value, env| value.to_xlsx(env).map(EcoVec::from))?
+            }
             Primitive::Stringify
             | Primitive::Quote
             | Primitive::Sig
@@ -964,6 +968,11 @@ impl ImplPrimitive {
             ImplPrimitive::UnCsv => {
                 let csv = env.pop(1)?.as_string(env, "CSV expects a string")?;
                 let val = Value::from_csv(&csv, env)?;
+                env.push(val);
+            }
+            ImplPrimitive::UnXlsx => {
+                let xlsx = env.pop(1)?.as_bytes(env, "XLSX expects bytes")?;
+                let val = Value::from_xlsx(&xlsx, env)?;
                 env.push(val);
             }
             ImplPrimitive::UndoInsert => {

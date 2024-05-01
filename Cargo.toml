@@ -71,6 +71,7 @@ serde_yaml = {version = "0.9.33", optional = true}
 
 # Feature dependencies
 arboard = {version = "3", optional = true}
+calamine = {version = "0.24.0", optional = true}
 csv = {version = "1", optional = true}
 gif = {version = "0.13.1", optional = true}
 hound = {version = "3", optional = true}
@@ -78,6 +79,7 @@ image = {version = "0.24.9", optional = true, default-features = false, features
 libffi = {version = "3", optional = true}
 libloading = {version = "0.8.3", optional = true}
 rustls-pemfile = {version = "2.1.2", optional = true}
+simple_excel_writer = {version = "0.2.0", optional = true}
 
 [features]
 audio = ["hodaun", "lockfree", "audio_encode"]
@@ -87,6 +89,7 @@ batteries = [
   "image",
   "audio_encode",
   "csv",
+  "xlsx",
 ]
 binary = [
   "ctrlc",
@@ -124,6 +127,7 @@ raw_mode = ["rawrrr", "native_sys"]
 stand = ["native_sys"]
 terminal_image = ["viuer", "image"]
 tls = ["httparse", "rustls", "webpki-roots", "rustls-pemfile"]
+xlsx = ["calamine", "simple_excel_writer"]
 
 [[bin]]
 name = "uiua"

@@ -1335,6 +1335,12 @@ impl From<usize> for Value {
     }
 }
 
+impl From<i64> for Value {
+    fn from(i: i64) -> Self {
+        Value::from(i as f64)
+    }
+}
+
 impl From<String> for Value {
     fn from(s: String) -> Self {
         s.chars().collect()

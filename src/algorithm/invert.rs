@@ -101,6 +101,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Sys(SysOp::ClipboardSet) => Instr::Prim(Sys(SysOp::ClipboardGet), span),
         Sys(SysOp::ClipboardGet) => Instr::Prim(Sys(SysOp::ClipboardSet), span),
         Csv => Instr::ImplPrim(UnCsv, span),
+        Xlsx => Instr::ImplPrim(UnXlsx, span),
         _ => return None,
     })
 }
@@ -126,6 +127,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         UnJoin => Instr::Prim(Join, span),
         UnBox => Instr::Prim(Box, span),
         UnCsv => Instr::Prim(Csv, span),
+        UnXlsx => Instr::Prim(Xlsx, span),
         BothTrace => Instr::ImplPrim(UnBothTrace, span),
         UnBothTrace => Instr::ImplPrim(BothTrace, span),
         _ => return None,

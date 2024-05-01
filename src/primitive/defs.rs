@@ -2356,6 +2356,17 @@ primitive!(
     /// You can easily create a [map] with the headers as keys.
     /// ex: map⊙(⍉⋕)°⊂ °csv "#,Count\n1,5\n2,21\n3,8\n"
     (1, Csv, Misc, "csv"),
+    /// Encode an array into XLSX bytes
+    ///
+    /// The input value must be a sheet array or a [map] array with sheet names as keys and sheet arrays as values.
+    /// Sheet arrays may be at most rank `2`.
+    ///
+    /// You can use [un][xlsx] to decode an XLSX byte array back into a sheet map.
+    /// In the resulting sheet map, each sheet will be a boxed rank-`2` array of boxed values.
+    ///
+    /// While it is not useful to display the output bytes here, we can see how the result of decoding works:
+    /// ex: °xlsx xlsx . ↯3_6⇡18
+    (1, Xlsx, Misc, "xlsx"),
     /// Convert a value to its code representation
     ///
     /// ex: # Experimental!
@@ -2449,6 +2460,7 @@ impl_primitive!(
     (1(2), UnJoin),
     (2(2), UnJoinPattern),
     (1, UnCsv),
+    (1, UnXlsx),
     (2(0), MatchPattern),
     // Unders
     (1, UndoFix),

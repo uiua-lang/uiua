@@ -2,12 +2,7 @@
 
 - 0.11
   - Allow warnings to be disabled?
-  - System functions
-    - Make array into stream
-    - Excel
-  - Optimize some linear algebra stuff
-    - Matrix product
-    - Matrix inverse?
+  - JSON en/decoding
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Spatial thinking tutorial/blog
 - Multimedia

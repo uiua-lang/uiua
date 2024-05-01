@@ -1249,5 +1249,11 @@
     "outputs": 1,
     "class": "DyadicArray",
     "description": "The n-wise windows of an array"
+  },
+  "xlsx": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Encode an array into XLSX bytes"
   }
 }

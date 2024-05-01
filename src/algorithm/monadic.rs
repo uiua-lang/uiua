@@ -1373,6 +1373,63 @@ impl Value {
             Ok(s)
         }
     }
+    pub(crate) fn to_xlsx(&self, env: &Uiua) -> UiuaResult<Vec<u8>> {
+        #[cfg(not(feature = "simple_excel_writer"))]
+        return Err(env.error("XLSX encoding is not enabled in this environment"));
+        #[cfg(feature = "simple_excel_writer")]
+        {
+            use simple_excel_writer::*;
+            let sheet_arrays = if self.is_map() {
+                let mut sheet_arrays = Vec::new();
+                for (k, v) in self.map_kv() {
+                    let name = k.as_string(env, "Sheet name must be a string")?;
+                    if v.rank() > 2 {
+                        return Err(env.error(format!(
+                            "Cannot write a rank-{} array to an Xlsx sheet",
+                            v.rank()
+                        )));
+                    }
+                    sheet_arrays.push((name, v));
+                }
+                sheet_arrays
+            } else {
+                vec![("Sheet1".into(), self.clone())]
+            };
+            let mut workbook = Workbook::create_in_memory();
+            for (sheet_name, array) in sheet_arrays {
+                let mut sheet = workbook.create_sheet(&sheet_name);
+                workbook
+                    .write_sheet(&mut sheet, |writer| {
+                        for row in array.into_rows() {
+                            let mut sheet_row = Row::new();
+                            for row in row.into_rows() {
+                                match row {
+                                    Value::Num(n) => sheet_row.add_cell(n.data[0]),
+                                    Value::Byte(b) => sheet_row.add_cell(b.data[0] as f64),
+                                    Value::Char(c) => sheet_row.add_cell(c.data[0].to_string()),
+                                    Value::Complex(c) => sheet_row.add_cell(c.data[0].to_string()),
+                                    Value::Box(b) => {
+                                        let Boxed(b) = &b.data[0];
+                                        if b.row_count() == 0 {
+                                            sheet_row.add_empty_cells(1);
+                                        } else {
+                                            sheet_row.add_cell(b.format())
+                                        }
+                                    }
+                                }
+                            }
+                            writer.append_row(sheet_row)?;
+                        }
+                        Ok(())
+                    })
+                    .map_err(|e| env.error(e))?;
+            }
+            workbook
+                .close()
+                .map(Option::unwrap)
+                .map_err(|e| env.error(e))
+        }
+    }
     pub(crate) fn from_csv(_csv: &str, env: &mut Uiua) -> UiuaResult<Self> {
         #[cfg(not(feature = "csv"))]
         return Err(env.error("CSV support is not enabled in this environment"));
@@ -1395,6 +1452,51 @@ impl Value {
                 }
                 Array::from_row_arrays(rows, env).map(Into::into)
             })
+        }
+    }
+    pub(crate) fn from_xlsx(_xlsx: &[u8], env: &mut Uiua) -> UiuaResult<Self> {
+        #[cfg(not(feature = "calamine"))]
+        return Err(env.error("XLSX decoding is not enabled in this environment"));
+        #[cfg(feature = "calamine")]
+        {
+            use calamine::*;
+
+            let mut workbook: Xlsx<_> =
+                open_workbook_from_rs(std::io::Cursor::new(_xlsx)).map_err(|e| env.error(e))?;
+            let sheet_names = workbook.sheet_names();
+            let fill = env.value_fill().cloned().unwrap_or_else(|| "".into());
+            let mut sheet_values = EcoVec::new();
+            env.with_fill(fill, |env| {
+                for sheet_name in &sheet_names {
+                    let sheet = workbook
+                        .worksheet_range(sheet_name)
+                        .map_err(|e| env.error(e))?;
+                    let mut rows = Vec::new();
+                    for row in sheet.rows() {
+                        let mut cells = EcoVec::new();
+                        for cell in row {
+                            cells.push(Boxed(match cell {
+                                &Data::Int(i) => i.into(),
+                                &Data::Float(f) => f.into(),
+                                Data::String(s) => s.clone().into(),
+                                &Data::Bool(b) => b.into(),
+                                Data::DateTime(dt) => dt.to_string().into(),
+                                Data::DateTimeIso(dt) => dt.to_string().into(),
+                                Data::DurationIso(dur) => dur.to_string().into(),
+                                Data::Error(e) => e.to_string().into(),
+                                Data::Empty => String::new().into(),
+                            }));
+                        }
+                        rows.push(Array::from(cells));
+                    }
+                    sheet_values.push(Boxed(Array::from_row_arrays(rows, env)?.into()));
+                }
+                Ok(())
+            })?;
+            let keys: Value = sheet_names.into_iter().map(|s| Boxed(s.into())).collect();
+            let mut values: Value = Array::from(sheet_values).into();
+            values.map(keys, env)?;
+            Ok(values)
         }
     }
 }

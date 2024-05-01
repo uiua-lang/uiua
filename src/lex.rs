@@ -1090,7 +1090,8 @@ impl<'a> Lexer<'a> {
         while let Some(token) = post.next() {
             let s = &self.input[token.span.byte_range()];
             processed.push(
-                if is_numbery(s) || (["`", "¯"].contains(&s) && post.nth_is(0, is_numbery)) {
+                if is_signed_numbery(s) || (["`", "¯"].contains(&s) && post.nth_is(0, is_numbery))
+                {
                     let mut span = token.span;
                     if ["`", "¯"].contains(&s) {
                         let n_tok = post.next().unwrap();
@@ -1098,7 +1099,8 @@ impl<'a> Lexer<'a> {
                     }
                     if post.nth_is(0, |s| s == "/")
                         && post.nth_is(1, |s| {
-                            is_numbery(s) || (["`", "¯"].contains(&s) && post.nth_is(2, is_numbery))
+                            is_signed_numbery(s)
+                                || (["`", "¯"].contains(&s) && post.nth_is(2, is_numbery))
                         })
                     {
                         let _slash = post.next().unwrap();
@@ -1262,7 +1264,7 @@ enum EscapeMode {
     UnderscoreOnly,
 }
 
-fn is_numbery(mut s: &str) -> bool {
+fn is_signed_numbery(mut s: &str) -> bool {
     if s.starts_with(['`', '¯']) {
         let c_len = s.chars().next().unwrap().len_utf8();
         s = &s[c_len..];
@@ -1270,6 +1272,10 @@ fn is_numbery(mut s: &str) -> bool {
     if s.is_empty() {
         return false;
     }
+    is_numbery(s)
+}
+
+fn is_numbery(s: &str) -> bool {
     s.chars().all(|c| c.is_ascii_digit())
         || s == "∞"
         || (3..="infinity".len()).rev().any(|n| s == &"infinity"[..n])

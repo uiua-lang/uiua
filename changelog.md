@@ -19,7 +19,9 @@ This version is not yet released. If you are reading this on the website, then t
 - [`insert`](https://uiua.org/docs/insert) can now be used with [`un °`](https://uiua.org/docs/un) to extract a map entry and pattern match it
 - [`fill ⬚`](https://uiua.org/docs/fill)ed [`keep ▽`](https://uiua.org/docs/keep)'s fill value may now be a list
 - [`infinity ∞`](https://uiua.org/docs/infinity) can now be passed in a list to [`take ↙`](https://uiua.org/docs/take) or [`drop ↘`](https://uiua.org/docs/drop) to take/drop every row along an axis
-- [`reduce /`](https://uiua.org/docs/reduce) can now take multiple arguments and have multiple outputs
+- [`reduce /`](https://uiua.org/docs/reduce) can now take a function with more than 2 arguments
+  - Each additional argument increases the number of arguments passed to [`reduce /`](https://uiua.org/docs/reduce) by 1
+  - Additional arguments are passed to the function on every iteration
 - Add [`&tlsc`](https://uiua.org/docs/&tlsc) and [`&tlsa`](https://uiua.org/docs/&tlsa) system functions, which allow making TLS connections
   - These are currently experimental, but they will likely replace [`&httpsw`](https://uiua.org/docs/&httpsw)
 ### Interpreter

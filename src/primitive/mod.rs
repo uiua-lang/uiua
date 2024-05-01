@@ -173,6 +173,7 @@ impl fmt::Display for ImplPrimitive {
             UnStack => write!(f, "{Un}{Stack}"),
             UnDump => write!(f, "{Un}{Dump}"),
             UnBox => write!(f, "{Un}{Box}"),
+            UnJson => write!(f, "{Un}{Json}"),
             UnCsv => write!(f, "{Un}{Csv}"),
             UnXlsx => write!(f, "{Un}{Xlsx}"),
             UndoTake => write!(f, "{Under}{Take}"),
@@ -965,6 +966,11 @@ impl ImplPrimitive {
             ImplPrimitive::UnBox => {
                 let val = env.pop(1)?;
                 env.push(val.unboxed());
+            }
+            ImplPrimitive::UnJson => {
+                let json = env.pop(1)?.as_string(env, "JSON expects a string")?;
+                let val = Value::from_json_string(&json, env)?;
+                env.push(val);
             }
             ImplPrimitive::UnCsv => {
                 let csv = env.pop(1)?.as_string(env, "CSV expects a string")?;

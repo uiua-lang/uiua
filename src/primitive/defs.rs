@@ -2465,6 +2465,7 @@ impl_primitive!(
     (1, UnBox),
     (1(2), UnJoin),
     (2(2), UnJoinPattern),
+    (1, UnJson),
     (1, UnCsv),
     (1, UnXlsx),
     (2(0), MatchPattern),

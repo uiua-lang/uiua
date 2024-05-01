@@ -2,7 +2,6 @@
 
 - 0.11
   - Allow warnings to be disabled?
-  - JSON en/decoding
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Spatial thinking tutorial/blog
 - Multimedia

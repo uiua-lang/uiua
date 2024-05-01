@@ -1372,6 +1372,58 @@ impl Value {
             }
         })
     }
+    pub(crate) fn from_json_string(json: &str, env: &Uiua) -> UiuaResult<Self> {
+        let json_value: serde_json::Value = serde_json::from_str(json).map_err(|e| env.error(e))?;
+        Self::from_json_value(json_value, env)
+    }
+    pub(crate) fn from_json_value(json_value: serde_json::Value, _env: &Uiua) -> UiuaResult<Self> {
+        Ok(match json_value {
+            serde_json::Value::Null => f64::NAN.into(),
+            serde_json::Value::Bool(b) => b.into(),
+            serde_json::Value::Number(n) => {
+                if let Some(n) = n.as_f64() {
+                    if n.fract() == 0.0 && n < u8::MAX as f64 {
+                        (n as u8).into()
+                    } else {
+                        n.into()
+                    }
+                } else {
+                    0.0.into()
+                }
+            }
+            serde_json::Value::String(s) => s.into(),
+            serde_json::Value::Array(arr) => {
+                let mut rows = Vec::with_capacity(arr.len());
+                for value in arr {
+                    rows.push(Value::from_json_value(value, _env)?);
+                }
+                if rows.windows(2).all(|win| {
+                    win[0].shape() == win[1].shape() && win[0].type_name() == win[1].type_name()
+                }) {
+                    Value::from_row_values_infallible(rows)
+                } else {
+                    Array::from(rows.into_iter().map(Boxed).collect::<EcoVec<_>>()).into()
+                }
+            }
+            serde_json::Value::Object(map) => {
+                let mut keys = EcoVec::with_capacity(map.len());
+                let mut values = Vec::with_capacity(map.len());
+                for (k, v) in map {
+                    keys.push(Boxed(k.into()));
+                    values.push(Value::from_json_value(v, _env)?);
+                }
+                let mut values = if values.windows(2).all(|win| {
+                    win[0].shape() == win[1].shape() && win[0].type_name() == win[1].type_name()
+                }) {
+                    Value::from_row_values_infallible(values)
+                } else {
+                    Array::from(values.into_iter().map(Boxed).collect::<EcoVec<_>>()).into()
+                };
+                values.map(keys.into(), _env)?;
+                values
+            }
+        })
+    }
 }
 
 impl Value {

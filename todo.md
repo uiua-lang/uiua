@@ -2,7 +2,6 @@
 
 - 0.11
   - Allow warnings to be disabled?
-  - `uiua fmtio`
   - System functions
     - Make array into stream
     - Excel

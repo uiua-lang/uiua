@@ -3,7 +3,7 @@ compile_error!("To compile the uiua interpreter binary, you must enable the `bin
 
 use std::{
     env, fmt, fs,
-    io::{self, stderr, Write},
+    io::{self, stderr, stdin, BufRead, Write},
     path::{Path, PathBuf},
     process::{exit, Child, Command, Stdio},
     sync::mpsc::channel,
@@ -79,16 +79,35 @@ fn run() -> UiuaResult {
             App::Fmt {
                 path,
                 formatter_options,
+                io,
             } => {
                 let config = FormatConfig::from_source(
                     formatter_options.format_config_source,
                     path.as_deref(),
                 )?;
 
-                if let Some(path) = path {
-                    format_single_file(path, &config, formatter_options.stdout)?;
+                if io {
+                    let mut buffer = String::new();
+                    let mut code = String::new();
+                    let stdin = stdin();
+                    let mut stdin = stdin.lock();
+                    loop {
+                        buffer.clear();
+                        if stdin.read_line(&mut buffer).is_err() {
+                            break;
+                        }
+                        if buffer.is_empty() {
+                            break;
+                        }
+                        code.push_str(&buffer);
+                        code.push('\n');
+                    }
+                    let formatted = format_str(&code, &config)?;
+                    print!("{}", formatted.output);
+                } else if let Some(path) = path {
+                    format_single_file(path, &config)?;
                 } else {
-                    format_multi_files(&config, formatter_options.stdout)?;
+                    format_multi_files(&config)?;
                 }
             }
             App::Run {
@@ -141,7 +160,7 @@ fn run() -> UiuaResult {
                             formatter_options.format_config_source,
                             Some(&path),
                         )?;
-                        format_file(&path, &config, false)?;
+                        format_file(&path, &config)?;
                     }
                     let mode = mode.unwrap_or(RunMode::Normal);
                     rt.compile_run(|comp| {
@@ -207,7 +226,7 @@ fn run() -> UiuaResult {
                 };
                 let config =
                     FormatConfig::from_source(formatter_options.format_config_source, Some(&path))?;
-                format_file(&path, &config, false)?;
+                format_file(&path, &config)?;
                 let mut rt = Uiua::with_native_sys()
                     .with_file_path(&path)
                     .with_args(args);
@@ -448,7 +467,7 @@ fn watch(
         };
         for i in 0..TRIES {
             let formatted = if let (Some(config), true) = (&config, format) {
-                format_file(&path, config, false).map(|f| f.output)
+                format_file(&path, config).map(|f| f.output)
             } else {
                 fs::read_to_string(&path).map_err(|e| UiuaError::Load(path.clone(), e.into()))
             };
@@ -619,6 +638,8 @@ enum App {
         path: Option<PathBuf>,
         #[clap(flatten)]
         formatter_options: FormatterOptions,
+        #[clap(long, help = "Format lines read from stdin")]
+        io: bool,
     },
     #[cfg(feature = "lsp")]
     #[clap(about = "Run the Language Server")]
@@ -660,13 +681,6 @@ struct FormatterOptions {
         help = "Select the formatter configuration source (one of search-file, default, or a path to a fmt.ua file)"
     )]
     format_config_source: FormatConfigSource,
-    #[clap(
-        short = 'O',
-        long = "to-stdout",
-        default_value_t = false,
-        help = "Print result of formatted file to stdout"
-    )]
-    stdout: bool,
 }
 
 #[cfg(feature = "audio")]
@@ -790,22 +804,14 @@ fn update(main: bool, check: bool) {
     }
 }
 
-fn format_single_file(path: PathBuf, config: &FormatConfig, stdout: bool) -> Result<(), UiuaError> {
-    let output = format_file(path, config, stdout)?.output;
-    if stdout {
-        println!("{output}");
-    }
+fn format_single_file(path: PathBuf, config: &FormatConfig) -> Result<(), UiuaError> {
+    format_file(path, config)?;
     Ok(())
 }
 
-fn format_multi_files(config: &FormatConfig, stdout: bool) -> Result<(), UiuaError> {
+fn format_multi_files(config: &FormatConfig) -> Result<(), UiuaError> {
     for path in uiua_files() {
-        let path_as_string = path.to_string_lossy().into_owned();
-        let output = format_file(path, config, stdout)?.output;
-        if stdout {
-            println!("{path_as_string}");
-            println!("{output}");
-        }
+        format_file(path, config)?;
     }
     Ok(())
 }

@@ -339,7 +339,18 @@ impl Value {
         })
     }
     pub(crate) fn undo_take(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = index.as_ints(env, "Index must be a list of integers")?;
+        let index = match index.as_ints(env, "") {
+            Ok(indices) => indices,
+            Err(_) => {
+                let with_infs =
+                    index.as_ints_or_infs(env, "Index must be a list of integers or infinity")?;
+                let mut indices = Vec::with_capacity(with_infs.len());
+                for (i, d) in with_infs.into_iter().zip(into.shape()) {
+                    indices.push(i.unwrap_or(*d as isize));
+                }
+                indices
+            }
+        };
         self.generic_bin_into(
             into,
             |a, b| a.undo_take(&index, b, env).map(Into::into),

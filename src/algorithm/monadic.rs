@@ -1338,6 +1338,43 @@ impl Array<f64> {
 }
 
 impl Value {
+    pub(crate) fn to_json_string(&self, env: &Uiua) -> UiuaResult<String> {
+        let json = self.to_json_value(env)?;
+        serde_json::to_string(&json).map_err(|e| env.error(e))
+    }
+    pub(crate) fn to_json_value(&self, env: &Uiua) -> UiuaResult<serde_json::Value> {
+        Ok(match self {
+            Value::Num(n) if n.rank() == 0 => serde_json::Number::from_f64(n.data[0])
+                .map(Into::into)
+                .unwrap_or(serde_json::Value::Null),
+            Value::Byte(b) if b.rank() == 0 => serde_json::Value::Number(b.data[0].into()),
+            Value::Complex(_) => return Err(env.error("Cannot convert complex numbers to JSON")),
+            Value::Char(c) if c.rank() == 0 => serde_json::Value::String(c.data[0].to_string()),
+            Value::Char(c) if c.rank() == 1 => serde_json::Value::String(c.data.iter().collect()),
+            Value::Box(b) if b.rank() == 0 => b.data[0].0.to_json_value(env)?,
+            value => {
+                if value.is_map() {
+                    let mut map = serde_json::Map::with_capacity(value.row_count());
+                    for (k, v) in value.map_kv() {
+                        let k = k.as_string(env, "JSON map keys must be strings")?;
+                        let v = v.to_json_value(env)?;
+                        map.insert(k, v);
+                    }
+                    serde_json::Value::Object(map)
+                } else {
+                    serde_json::Value::Array(
+                        value
+                            .rows()
+                            .map(|row| row.to_json_value(env))
+                            .collect::<Result<_, _>>()?,
+                    )
+                }
+            }
+        })
+    }
+}
+
+impl Value {
     pub(crate) fn to_csv(&self, env: &Uiua) -> UiuaResult<String> {
         #[cfg(not(feature = "csv"))]
         return Err(env.error("CSV support is not enabled in this environment"));

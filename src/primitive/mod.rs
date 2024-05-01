@@ -805,6 +805,7 @@ impl Primitive {
             Primitive::Stack => stack(env, false)?,
             Primitive::Dump => dump(env, false)?,
             Primitive::Regex => regex(env)?,
+            Primitive::Json => env.monadic_ref_env(Value::to_json_string)?,
             Primitive::Csv => env.monadic_ref_env(Value::to_csv)?,
             Primitive::Xlsx => {
                 env.monadic_ref_env(|value, env| value.to_xlsx(env).map(EcoVec::from))?

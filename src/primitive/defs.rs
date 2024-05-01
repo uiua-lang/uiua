@@ -2340,6 +2340,12 @@ primitive!(
     /// At the moment, this is only useful for debugging.
     /// While theoretically, it could be used in a macro to choose a branch of a switch function appropriate for the function, this is not yet possible because of the way that macros and signature checking work.
     (0(2)[1], Sig, OtherModifier, "signature"),
+    /// Encode an array into a JSON string
+    ///
+    /// ex: json [1 2 3]
+    /// ex: json ["some" "words"]
+    /// ex: json map {"hey" "there" "buddy"} {1 2 [3 4 5]}
+    (1, Json, Misc, "json"),
     /// Encode an array into a CSV string
     ///
     /// The input array must be at most rank-`2`.

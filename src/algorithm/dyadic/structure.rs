@@ -329,7 +329,7 @@ impl Value {
     }
     /// Use this value to `drop` from another
     pub fn drop(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = self.as_ints(env, "Index must be a list of integers")?;
+        let index = self.as_ints_or_infs(env, "Index must be a list of integers or infinity")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.drop(&index, env)?),
             Value::Byte(a) => Value::Byte(a.drop(&index, env)?),
@@ -368,7 +368,18 @@ impl Value {
         )
     }
     pub(crate) fn undo_drop(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let index = index.as_ints(env, "Index must be a list of integers")?;
+        let index = match index.as_ints(env, "") {
+            Ok(indices) => indices,
+            Err(_) => {
+                let with_infs =
+                    index.as_ints_or_infs(env, "Index must be a list of integers or infinity")?;
+                let mut indices = Vec::with_capacity(with_infs.len());
+                for (i, d) in with_infs.into_iter().zip(into.shape()) {
+                    indices.push(i.unwrap_or(*d as isize));
+                }
+                indices
+            }
+        };
         self.generic_bin_into(
             into,
             |a, b| a.undo_drop(&index, b, env).map(Into::into),
@@ -550,11 +561,10 @@ impl<T: ArrayValue> Array<T> {
                     }
                     arr
                 };
-                arr.shape = index
-                    .iter()
-                    .zip(&self.shape)
-                    .map(|(&i, &s)| i.map_or(s, isize::unsigned_abs))
-                    .collect();
+                arr.shape = self.shape;
+                for (i, s) in index.iter().zip(&mut *arr.shape) {
+                    *s = i.map_or(*s, isize::unsigned_abs);
+                }
                 arr.validate_shape();
                 arr
             }
@@ -580,7 +590,7 @@ impl<T: ArrayValue> Array<T> {
         Ok(arr)
     }
     /// `drop` from this array
-    pub fn drop(mut self, index: &[isize], env: &Uiua) -> UiuaResult<Self> {
+    pub fn drop(mut self, index: &[Result<isize, bool>], env: &Uiua) -> UiuaResult<Self> {
         if self.rank() == 0 {
             return Err(env.error("Cannot drop from scalar"));
         }
@@ -589,6 +599,7 @@ impl<T: ArrayValue> Array<T> {
         let mut arr = match index {
             [] => self,
             &[dropping] => {
+                let dropping = dropping.unwrap_or(row_count as isize);
                 let row_len = self.row_len();
                 let row_count = self.row_count();
                 let abs_dropping = dropping.unsigned_abs().min(row_count);
@@ -612,6 +623,7 @@ impl<T: ArrayValue> Array<T> {
                         index.len()
                     )));
                 }
+                let dropping = dropping.unwrap_or(row_count as isize);
                 let abs_dropping = dropping.unsigned_abs();
                 let mut new_rows = Vec::with_capacity(abs_dropping);
                 let row_count = self.row_count();
@@ -627,11 +639,11 @@ impl<T: ArrayValue> Array<T> {
                 };
                 if row_count == abs_dropping {
                     let mut shape = self.shape;
-                    for (s, n) in shape
-                        .iter_mut()
-                        .zip(once(abs_dropping).chain(sub_index.iter().map(|&i| i.unsigned_abs())))
-                    {
-                        *s = s.saturating_sub(n);
+                    for (s, n) in shape.iter_mut().zip(once(&Err(true)).chain(sub_index)) {
+                        *s = match n {
+                            Ok(n) => s.saturating_sub(n.unsigned_abs()),
+                            Err(_) => 0,
+                        };
                     }
                     Array::new(shape, CowSlice::new())
                 } else {
@@ -641,10 +653,11 @@ impl<T: ArrayValue> Array<T> {
         };
         if let Some(mut map_keys) = map_keys {
             if let Some(dropping) = index.first().copied() {
-                if dropping >= 0 {
-                    map_keys.drop(dropping.unsigned_abs());
+                let abs_dropping = dropping.map_or(row_count, isize::unsigned_abs);
+                if dropping.map_or(true, |i| i >= 0) {
+                    map_keys.drop(abs_dropping);
                 } else {
-                    let taken = row_count.saturating_sub(dropping.unsigned_abs());
+                    let taken = row_count.saturating_sub(abs_dropping);
                     map_keys.take(taken);
                 }
             }
@@ -688,7 +701,7 @@ impl<T: ArrayValue> Array<T> {
         Ok(match index {
             [] => into,
             &[untaking] => {
-                let into = into.drop(&[untaking], env)?;
+                let into = into.drop(&[Ok(untaking)], env)?;
                 if untaking >= 0 {
                     from.join(into, env)
                 } else {

@@ -402,10 +402,10 @@ impl<T: ArrayValue> Array<T> {
         }
     }
     pub(crate) fn unfirst(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.join(into.drop(&[1], env)?, env)
+        self.join(into.drop(&[Ok(1)], env)?, env)
     }
     pub(crate) fn unlast(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        into.drop(&[-1], env)?.join(self, env)
+        into.drop(&[Ok(-1)], env)?.join(self, env)
     }
 }
 

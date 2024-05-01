@@ -443,7 +443,7 @@ impl<T: ArrayValue> Array<T> {
                 let left_shape = &self.shape[1..];
                 let left_data = self.data.slice(..self.row_len());
                 let left = Array::new(left_shape, left_data);
-                let right = self.drop(&[1], env)?;
+                let right = self.drop(&[Ok(1)], env)?;
                 Ok((left, right))
             }
             Ordering::Greater => {
@@ -453,7 +453,7 @@ impl<T: ArrayValue> Array<T> {
                 let right_shape = &self.shape[1..];
                 let right_data = self.data.slice((self.row_count() - 1) * self.row_len()..);
                 let right = Array::new(right_shape, right_data);
-                let left = self.drop(&[-1], env)?;
+                let left = self.drop(&[Ok(-1)], env)?;
                 Ok((left, right))
             }
         }

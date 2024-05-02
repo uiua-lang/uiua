@@ -338,15 +338,6 @@
     "class": "DyadicPervasive",
     "description": "Add values"
   },
-  "all": {
-    "glyph": "⋔",
-    "outputs": 1,
-    "modifier_args": 2,
-    "class": "Planet",
-    "description": "Call a function on many distinct sets of values",
-    "experimental": true,
-    "deprecated": true
-  },
   "assert": {
     "glyph": "⍤",
     "args": 2,
@@ -406,15 +397,6 @@
     "class": "Stack",
     "description": "Duplicate a function's last argument before calling it",
     "experimental": true
-  },
-  "cascade": {
-    "glyph": "⪾",
-    "outputs": 1,
-    "modifier_args": 2,
-    "class": "Planet",
-    "description": "Call one function after another, reusing some values",
-    "experimental": true,
-    "deprecated": true
   },
   "ceiling": {
     "glyph": "⌈",

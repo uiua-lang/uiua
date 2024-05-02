@@ -339,8 +339,6 @@ impl Primitive {
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         use Primitive::*;
         Some(match self {
-            Cascade => format!("use {} or {} instead", Fork.format(), On.format()),
-            All => String::new(),
             Sys(SysOp::GifDecode) => format!(
                 "use {} {} instead",
                 Un.format(),
@@ -375,7 +373,7 @@ impl Primitive {
         matches!(
             self,
             Coordinate
-                | (All | Cascade | By)
+                | By
                 | Bind
                 | (Shapes | Types)
                 | Sys(FFI | TlsListen | TlsConnect)
@@ -634,7 +632,6 @@ impl Primitive {
             Primitive::Pop => {
                 env.pop(1)?;
             }
-            Primitive::All => algorithm::all(env)?,
             Primitive::Fill => {
                 let fill = env.pop_function()?;
                 let f = env.pop_function()?;
@@ -818,7 +815,6 @@ impl Primitive {
             | Primitive::Content
             | Primitive::Both
             | Primitive::Fork
-            | Primitive::Cascade
             | Primitive::Bracket => {
                 return Err(env.error(format!(
                     "{} was not inlined. This is a bug in the interpreter",

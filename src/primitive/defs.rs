@@ -1703,21 +1703,6 @@ primitive!(
     /// If the functions take different numbers of arguments, then the number of arguments is the maximum. Functions that take fewer than the maximum will work on the top values.
     /// ex: [⊃+¯ 3 5]
     ([2], Fork, Planet, ("fork", '⊃')),
-    /// Call one function after another, reusing some values
-    ///
-    /// [cascade]'s second function is called, then its first argument(s) are reused, along with its output, as arguments to the first function.
-    /// ex: # Experimental!
-    ///   : ×⟜+ 5 2
-    ///   :  ⪾×+ 5 2
-    /// Nesting [cascade] can be useful, and doing so is equivalent to using a function pack.
-    /// ex: # Experimental!
-    ///   : ÷:-÷2:⇡..  10
-    ///   : ⪾⪾÷(-÷2)⇡  10
-    ///   : ⪾(÷|-÷2|⇡) 10
-    /// In the examples above, [cascade] only reuses a single argument. However, it can reuse multiple arguments.
-    /// ex: # Experimental!
-    ///   : ⪾$"_ + _ = _"+ 1 2
-    ([2], Cascade, Planet, ("cascade", '⪾')),
     /// Call two functions on two distinct sets of values
     ///
     /// ex: ⊓⇌◴ 1_2_3 [1 4 2 4 2]
@@ -1732,24 +1717,6 @@ primitive!(
     /// [bracket] is a nice way to check if a number is within a range.
     /// ex: ×,,⊓≥≤5,8 . [6 2 5 9 6 5 0 4]
     ([2], Bracket, Planet, ("bracket", '⊓')),
-    /// Call a function on many distinct sets of values
-    ///
-    /// For just 2 sets of values, [both] is often simpler.
-    ///
-    /// The second function will be called, then the first function will be called on groups of values.
-    /// To do something similar to [both] on more than 2 sets of values, you can use [dip] and [identity] to select values.
-    /// ex: # Experimental!
-    ///   : ⋔(↯3)⊙⊙∘ 1 2 3
-    /// If you wanted to use 3 different constants, you could put the constants in the second function.
-    /// ex: # Experimental!
-    ///   : ⋔↯(2 3 4) 1 2 3
-    /// This can also be done if the constants are on the stack.
-    /// ex: # Experimental!
-    ///   : ⋔↯⊙⊙∘ 2 3 4 1 2 3
-    /// This can also be an interesting way to reorder many values.
-    /// ex: # Experimental!
-    ///   : [⋔⊙∘⊙⊙∘ 1 2 3 4 5 6]
-    ([2], All, Planet, ("all", '⋔')),
     /// Repeat a function while a condition holds
     ///
     /// The first function is the loop function, and it is run as long as the condition is true.

@@ -387,7 +387,6 @@ fn prim_class(prim: Primitive) -> &'static str {
         Primitive::Identity => code_font!("stack-function"),
         Primitive::Transpose => code_font!("monadic-function trans text-gradient"),
         Primitive::Both => code_font!("monadic-modifier bi text-gradient"),
-        Primitive::All => code_font!("dyadic-modifier pan text-gradient"),
         prim if prim.class() == PrimClass::Stack && prim.modifier_args().is_none() => {
             code_font!("stack-function")
         }

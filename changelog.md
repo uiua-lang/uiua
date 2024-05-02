@@ -12,6 +12,8 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`keep ▽`](https://uiua.org/docs/keep) with a scalar counts array now copies each row that many times
   - This matches the behaviors of APL and BQN, and is generally more useful
   - The old behavior can be achieved with `/⊂↯`
+- Add the [`json`](https://uiua.org/docs/json) function, which encodes and decodes JSON data
+- Add the [`xlsx`](https://uiua.org/docs/xlsx) function, which encodes and decodes XLSX data
 - [`bits ⋯`](https://uiua.org/docs/bits) can now take negative numbers
 - [`un °`](https://uiua.org/docs/un) [`bits ⋯`](https://uiua.org/docs/bits) can now take non-booleans
 - Add [`un °`](https://uiua.org/docs/un) [`duplicate .`](https://uiua.org/docs/duplicate) and [`un °`](https://uiua.org/docs/un) [`over ,`](https://uiua.org/docs/over) pattern matching

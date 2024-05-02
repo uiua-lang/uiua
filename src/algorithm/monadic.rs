@@ -1344,9 +1344,16 @@ impl Value {
     }
     pub(crate) fn to_json_value(&self, env: &Uiua) -> UiuaResult<serde_json::Value> {
         Ok(match self {
-            Value::Num(n) if n.rank() == 0 => serde_json::Number::from_f64(n.data[0])
-                .map(Into::into)
-                .unwrap_or(serde_json::Value::Null),
+            Value::Num(n) if n.rank() == 0 => {
+                let n = n.data[0];
+                if n.fract() == 0.0 && n.abs() < i64::MAX as f64 {
+                    serde_json::Value::Number((n as i64).into())
+                } else {
+                    serde_json::Number::from_f64(n)
+                        .map(Into::into)
+                        .unwrap_or(serde_json::Value::Null)
+                }
+            }
             Value::Byte(b) if b.rank() == 0 => serde_json::Value::Number(b.data[0].into()),
             Value::Complex(_) => return Err(env.error("Cannot convert complex numbers to JSON")),
             Value::Char(c) if c.rank() == 0 => serde_json::Value::String(c.data[0].to_string()),
@@ -1382,7 +1389,7 @@ impl Value {
             serde_json::Value::Bool(b) => b.into(),
             serde_json::Value::Number(n) => {
                 if let Some(n) = n.as_f64() {
-                    if n.fract() == 0.0 && n < u8::MAX as f64 {
+                    if n >= 0.0 && n.fract() == 0.0 && n < u8::MAX as f64 {
                         (n as u8).into()
                     } else {
                         n.into()

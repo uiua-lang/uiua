@@ -2343,8 +2343,17 @@ primitive!(
     /// Encode an array into a JSON string
     ///
     /// ex: json [1 2 3]
-    /// ex: json ["some" "words"]
+    /// ex: json {"some" "words"}
     /// ex: json map {"hey" "there" "buddy"} {1 2 [3 4 5]}
+    /// You can use [un][json] to decode a JSON string back into an array.
+    /// ex: °json "[4,5,6]"
+    /// ex: °json $ ["what's","the","plan"]
+    /// ex: °json $ {"foo": "bar", "baz": [1, 2, 3]}
+    ///
+    /// Note that `NaN` and [infinity] convert to JSON `null`, and JSON `null` converts to `NaN`.
+    /// This means that [infinity] is converted to `NaN` in a round-trip.
+    /// ex: json [1 ¯5 NaN ∞]
+    /// ex: °json "[1,null,-3,null]"
     (1, Json, Misc, "json"),
     /// Encode an array into a CSV string
     ///
@@ -2364,8 +2373,12 @@ primitive!(
     (1, Csv, Misc, "csv"),
     /// Encode an array into XLSX bytes
     ///
+    /// XLSX is a spreadsheet format that can be edited in programs like Microsoft Excel, Google Sheets, and LibreOffice Calc.
+    /// Spreadsheets are just arrays, so array languages like Uiua are a natural fit for working with them.
+    ///
     /// The input value must be a sheet array or a [map] array with sheet names as keys and sheet arrays as values.
     /// Sheet arrays may be at most rank `2`.
+    /// XLSX is a binary format, so the output is a byte array.
     ///
     /// You can use [un][xlsx] to decode an XLSX byte array back into a sheet map.
     /// In the resulting sheet map, each sheet will be a boxed rank-`2` array of boxed values.

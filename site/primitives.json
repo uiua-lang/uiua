@@ -709,6 +709,12 @@
     "class": "DyadicArray",
     "description": "Append two arrays end-to-end"
   },
+  "json": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Encode an array into a JSON string"
+  },
   "keep": {
     "glyph": "▽",
     "args": 2,

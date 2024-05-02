@@ -457,6 +457,14 @@ Z ← comptime(+1Y)
 Fact ← |1 ⟨×Fact-1.|1⟩<2.
 ⍤⟜≍: 120 Fact 5
 
+# Json
+⍤⟜≍: "[1,2,3]" json [1 2 3]
+⍤⟜≍: "[\"some\",\"words\"]" json {"some" "words"}
+⍤⟜≍: "{\"buddy\":[3,4,5],\"hey\":1,\"there\":2}" json map {"hey" "there" "buddy"} {1 2 [3 4 5]}
+⍤⟜≍: [4 5 6] °json "[4,5,6]"
+⍤⟜≍: {"what's" "the" "plan"} °json $ ["what's","the","plan"]
+⍤⟜≍: ⇌map {"foo" "baz"} {"bar" 1_2_3} °json $ {"foo": "bar", "baz": [1, 2, 3]}
+
 # Csv
 ⍤⟜≍ ⟜⍜csv∘ [{"hi" "there"} {"my" "friend"}]
 ⍤⟜≍: ⋕ ⍜csv∘ . ↯3_4⇡12

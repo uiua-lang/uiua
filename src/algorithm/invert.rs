@@ -164,8 +164,8 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(invert_call_pattern, "call"),
         &InvertPatternFn(invert_un_pattern, "un"),
         &InvertPatternFn(invert_dump_pattern, "dump"),
-        &InvertPatternFn(invert_setinverse_pattern, "setinverse"),
-        &InvertPatternFn(invert_setunder_setinverse_pattern, "setunder_setinverse"),
+        &InvertPatternFn(invert_setinv_pattern, "setinv"),
+        &InvertPatternFn(invert_setund_setinv_pattern, "setund_setinv"),
         &InvertPatternFn(invert_trivial_pattern, "trivial"),
         &InvertPatternFn(invert_array_pattern, "array"),
         &InvertPatternFn(invert_unpack_pattern, "unpack"),
@@ -352,8 +352,9 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_each_pattern, "each"),
         &UnderPatternFn(under_partition_pattern, "partition"),
         &UnderPatternFn(under_group_pattern, "group"),
-        &UnderPatternFn(under_setunder_pattern, "setunder"),
-        &UnderPatternFn(under_setinverse_setunder_pattern, "setinverse setunder"),
+        &UnderPatternFn(under_setinv_setund_pattern, "setinv setund"), // This must come before setinv
+        &maybe_val!(UnderPatternFn(under_setinv_pattern, "setinv")),
+        &maybe_val!(UnderPatternFn(under_setund_pattern, "setund")),
         &UnderPatternFn(under_trivial_pattern, "trivial"),
         &UnderPatternFn(under_array_pattern, "array"),
         &UnderPatternFn(under_unpack_pattern, "unpack"),
@@ -761,7 +762,7 @@ fn invert_insert_pattern<'a>(
     Some((input, instrs))
 }
 
-fn invert_setinverse_pattern<'a>(
+fn invert_setinv_pattern<'a>(
     input: &'a [Instr],
     _: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
@@ -773,7 +774,7 @@ fn invert_setinverse_pattern<'a>(
     Some((input, eco_vec![normal.clone(), inv.clone(), set.clone(),]))
 }
 
-fn invert_setunder_setinverse_pattern<'a>(
+fn invert_setund_setinv_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
@@ -861,7 +862,20 @@ fn under_from_inverse_pattern<'a>(
     }
 }
 
-fn under_setunder_pattern<'a>(
+fn under_setinv_pattern<'a>(
+    input: &'a [Instr],
+    _: Signature,
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    let [Instr::PushFunc(inv), Instr::PushFunc(normal), Instr::Prim(Primitive::SetInverse, _), input @ ..] =
+        input
+    else {
+        return None;
+    };
+    Some((input, (normal.instrs(comp).into(), inv.instrs(comp).into())))
+}
+
+fn under_setund_pattern<'a>(
     input: &'a [Instr],
     _: Signature,
     comp: &mut Compiler,
@@ -895,7 +909,7 @@ fn under_setunder_pattern<'a>(
     Some((input, (befores, afters)))
 }
 
-fn under_setinverse_setunder_pattern<'a>(
+fn under_setinv_setund_pattern<'a>(
     input: &'a [Instr],
     _: Signature,
     comp: &mut Compiler,

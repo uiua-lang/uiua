@@ -1475,31 +1475,42 @@ impl Value {
         #[cfg(feature = "simple_excel_writer")]
         {
             use simple_excel_writer::*;
+            if self.rank() > 3 {
+                return Err(env.error(format!(
+                    "Cannot write a rank-{} array to an XLSX workbook",
+                    self.rank()
+                )));
+            }
             let sheet_arrays = if self.is_map() {
                 let mut sheet_arrays = Vec::new();
                 for (k, v) in self.map_kv() {
                     let name = k.as_string(env, "Sheet name must be a string")?;
                     if v.rank() > 2 {
                         return Err(env.error(format!(
-                            "Cannot write a rank-{} array to an Xlsx sheet",
+                            "Cannot write a rank-{} array to an XLSX sheet",
                             v.rank()
                         )));
                     }
                     sheet_arrays.push((name, v));
                 }
                 sheet_arrays
+            } else if self.rank() == 3 {
+                self.rows()
+                    .enumerate()
+                    .map(|(i, row)| (format!("Sheet {}", i + 1), row))
+                    .collect()
             } else {
                 vec![("Sheet1".into(), self.clone())]
             };
             let mut workbook = Workbook::create_in_memory();
-            for (sheet_name, array) in sheet_arrays {
+            for (sheet_name, value) in sheet_arrays {
                 let mut sheet = workbook.create_sheet(&sheet_name);
                 workbook
                     .write_sheet(&mut sheet, |writer| {
-                        for row in array.into_rows() {
+                        for row in value.unboxed().into_rows() {
                             let mut sheet_row = Row::new();
-                            for row in row.into_rows() {
-                                match row {
+                            for cell in row.unboxed().into_rows() {
+                                match cell {
                                     Value::Num(n) => sheet_row.add_cell(n.data[0]),
                                     Value::Byte(b) => sheet_row.add_cell(b.data[0] as f64),
                                     Value::Char(c) => sheet_row.add_cell(c.data[0].to_string()),

@@ -1856,29 +1856,6 @@ primitive!(
     ///
     /// Errors thrown by [assert] can be caught with [try].
     (2(0), Assert, Misc, ("assert", '⍤'), impure),
-    /// Set a function to recur to
-    ///
-    /// A function must have been set with [this] before calling [recur].
-    /// Here is a recursive factorial function.
-    /// ex: # Experimental!
-    ///   : ↬((|1 ×↫-1.|1)<2.) 5
-    /// This is only for demonstration purposes, as factorial can be implemented much more simply.
-    /// ex: # Experimental!
-    ///   : /×+1⇡ 5
-    ([1], This, Misc, ("this", '↬')),
-    /// Call a function recursively
-    ///
-    /// A function must have been set with [this] before calling [recur].
-    /// Here is a recursive factorial function.
-    /// ex: # Experimental!
-    ///   : ↬((|1 ×↫-1.|1)<2.) 5
-    /// This is only for demonstration purposes, as factorial can be implemented much more simply.
-    /// ex: /×+1⇡ 5
-    ///
-    /// The presence of a [recur] prevents the signature checker from working, so a signature must always be provided at the innermost function that contains a [recur].
-    /// ex: # Experimental!
-    ///   : ↬((+∩(|2 ↫ -)1,2|1)<2.) 5
-    (0(None), Recur, Misc, ("recur", '↫')),
     /// Generate a random number in the range `[0, 1)`
     ///
     /// If you need a seeded random number, use [gen].

@@ -1434,7 +1434,7 @@ code:
             };
             curr.referenced = true;
             (self.code_meta.global_references).insert(span.clone().sp(ident), curr.global_index);
-            let instr = Instr::Prim(Primitive::Recur, self.add_span(span.clone()));
+            let instr = Instr::Recur(self.add_span(span.clone()));
             if call {
                 self.push_all_instrs([Instr::PushSig(sig), instr, Instr::PopSig]);
             } else {

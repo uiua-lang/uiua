@@ -26,6 +26,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Additional arguments are passed to the function on every iteration
 - Add [`&tlsc`](https://uiua.org/docs/&tlsc) and [`&tlsa`](https://uiua.org/docs/&tlsa) system functions, which allow making TLS connections
   - These are currently experimental, but they will likely replace [`&httpsw`](https://uiua.org/docs/&httpsw)
+- Remove `this ↬` and `recur ↫` for good
 ### Interpreter
 - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`length ⧻`](https://uiua.org/docs/length), [`first ⊢`](https://uiua.org/docs/first), and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
 - Optimize iterating modifiers with a top-level [`fork ⊃`](https://uiua.org/docs/fork) or [`bracket ⊓`](https://uiua.org/docs/bracket)

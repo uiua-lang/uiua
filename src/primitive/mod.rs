@@ -341,7 +341,6 @@ impl Primitive {
         Some(match self {
             Cascade => format!("use {} or {} instead", Fork.format(), On.format()),
             All => String::new(),
-            This | Recur => "use the name of a binding to recur instead".into(),
             Sys(SysOp::GifDecode) => format!(
                 "use {} {} instead",
                 Un.format(),
@@ -376,7 +375,6 @@ impl Primitive {
         matches!(
             self,
             Coordinate
-                | (This | Recur)
                 | (All | Cascade | By)
                 | Bind
                 | (Shapes | Types)
@@ -659,11 +657,6 @@ impl Primitive {
                 let fill_value = env.pop("fill value")?;
                 env.with_fill(fill_value, |env| env.call(f))?;
             }
-            Primitive::This => {
-                let f = env.pop_function()?;
-                env.call_with_this(f)?;
-            }
-            Primitive::Recur => env.recur()?,
             Primitive::Try => algorithm::try_(env)?,
             Primitive::Assert => {
                 let msg = env.pop(1)?;
@@ -1698,10 +1691,7 @@ mod tests {
                 assert_eq!(test(&short), Some(prim));
             }
             for prim in Primitive::non_deprecated() {
-                if matches!(
-                    prim,
-                    Primitive::Rand | Primitive::Trace | Primitive::Recur | Primitive::Parse
-                ) {
+                if matches!(prim, Primitive::Rand | Primitive::Trace | Primitive::Parse) {
                     continue;
                 }
                 let char_test = match prim.glyph() {

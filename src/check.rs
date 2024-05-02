@@ -243,10 +243,11 @@ impl<'a> VirtualEnv<'a> {
                 items.reverse();
                 self.stack.push(BasicValue::Arr(items));
             }
-            Instr::Call(_) => {
+            Instr::Call(_) | Instr::CallRecursive(_) => {
                 let sig = self.pop_func()?.signature();
                 self.handle_sig(sig)?
             }
+            Instr::Recur(_) => return Err(SigCheckError::from("recur present").ambiguous()),
             Instr::PushLocals { count, .. } => self.handle_args_outputs(*count, 0)?,
             Instr::PopLocals => {}
             Instr::GetLocal { .. } => self.stack.push(BasicValue::Other),
@@ -509,11 +510,6 @@ impl<'a> VirtualEnv<'a> {
                     let _after = self.pop_func()?;
                     self.handle_sig(f.signature())?;
                 }
-                This => {
-                    let f = self.pop_func()?;
-                    self.handle_sig(f.signature())?;
-                }
-                Recur => return Err(SigCheckError::from("recur present").ambiguous()),
                 Dump => {
                     self.pop_func()?;
                 }

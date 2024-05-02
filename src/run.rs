@@ -556,6 +556,11 @@ code:
                 &Instr::Call(span) => self
                     .pop_function()
                     .and_then(|f| self.call_with_span(f, span)),
+                &Instr::CallRecursive(span) => self.with_span(span, |env| {
+                    let f = env.pop_function()?;
+                    env.call_recursive(f)
+                }),
+                &Instr::Recur(span) => self.with_span(span, |env| env.recur()),
                 Instr::PushFunc(f) => {
                     self.rt.function_stack.push(f.clone());
                     Ok(())
@@ -1328,7 +1333,7 @@ code:
         self.rt.do_top_io = do_io;
         res
     }
-    pub(crate) fn call_with_this(&mut self, f: Function) -> UiuaResult {
+    pub(crate) fn call_recursive(&mut self, f: Function) -> UiuaResult {
         let call_height = self.rt.call_stack.len();
         let with_height = self.rt.recur_stack.len();
         self.rt.recur_stack.push(self.rt.call_stack.len());

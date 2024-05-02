@@ -927,14 +927,6 @@
     "class": "MonadicArray",
     "description": "Make an array of all natural numbers less than a number"
   },
-  "recur": {
-    "glyph": "↫",
-    "args": 0,
-    "class": "Misc",
-    "description": "Call a function recursively",
-    "experimental": true,
-    "deprecated": true
-  },
   "recv": {
     "args": 1,
     "outputs": 1,
@@ -1157,15 +1149,6 @@
     "outputs": 1,
     "class": "Constant",
     "description": "The ratio of a circle's circumference to its radius"
-  },
-  "this": {
-    "glyph": "↬",
-    "outputs": 1,
-    "modifier_args": 1,
-    "class": "Misc",
-    "description": "Set a function to recur to",
-    "experimental": true,
-    "deprecated": true
   },
   "trace": {
     "glyph": "⸮",

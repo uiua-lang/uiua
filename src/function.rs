@@ -49,6 +49,10 @@ pub enum Instr {
     ImplPrim(ImplPrimitive, usize),
     /// Call a function
     Call(usize),
+    /// Call a recursive function
+    CallRecursive(usize),
+    /// Recur
+    Recur(usize),
     /// Push a function onto the function stack
     PushFunc(Function),
     /// Execute a switch function
@@ -209,7 +213,9 @@ impl Hash for Instr {
             Instr::EndArray { boxed, .. } => (2, boxed).hash(state),
             Instr::Prim(prim, _) => (3, prim).hash(state),
             Instr::ImplPrim(prim, _) => (4, prim).hash(state),
-            Instr::Call(index) => (5, index).hash(state),
+            Instr::Call(_) => 5.hash(state),
+            Instr::CallRecursive(_) => 29.hash(state),
+            Instr::Recur(_) => 30.hash(state),
             Instr::Format { parts, .. } => (6, parts).hash(state),
             Instr::MatchFormatPattern { parts, .. } => (28, parts).hash(state),
             Instr::PushFunc(func) => (7, func).hash(state),
@@ -357,6 +363,8 @@ impl fmt::Display for Instr {
             Instr::Prim(prim, _) => write!(f, "{prim}"),
             Instr::ImplPrim(prim, _) => write!(f, "{prim}"),
             Instr::Call(_) => write!(f, "call"),
+            Instr::CallRecursive(_) => write!(f, "call recursive"),
+            Instr::Recur(_) => write!(f, "recur"),
             Instr::PushFunc(func) => write!(f, "push({func})"),
             Instr::Switch { count, .. } => write!(f, "<switch {count}>"),
             Instr::Format { parts, .. } => {

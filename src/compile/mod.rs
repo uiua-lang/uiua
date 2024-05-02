@@ -1735,7 +1735,7 @@ code:
         }
         for instr in instrs {
             match instr {
-                Instr::Prim(Trace | Dump | Stack | Assert | Shapes | Types, _) => return false,
+                Instr::Prim(Trace | Dump | Stack | Assert, _) => return false,
                 Instr::ImplPrim(UnTrace | UnDump | UnStack | BothTrace | UnBothTrace, _) => {
                     return false
                 }

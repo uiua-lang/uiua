@@ -4,7 +4,7 @@
 
 mod defs;
 pub use defs::*;
-use ecow::{EcoString, EcoVec};
+use ecow::EcoVec;
 use regex::Regex;
 
 use std::{
@@ -355,8 +355,6 @@ impl Primitive {
                 Sys(SysOp::ImEncode).format()
             ),
             Deal => format!("use {Select}{Rise}[{Pop}{Repeat}{Gen}]{Len}{Over} instead"),
-            Types => format!("use {} and pattern matching instead", Type.format()),
-            Shapes => format!("use {} and pattern matching instead", Shape.format()),
             _ => return None,
         })
     }
@@ -367,11 +365,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            Coordinate
-                | By
-                | (Shapes | Types)
-                | Sys(FFI | TlsListen | TlsConnect)
-                | (Repr | Stringify | Quote | Sig)
+            Coordinate | By | Sys(FFI | TlsListen | TlsConnect) | (Repr | Stringify | Quote | Sig)
         )
     }
     /// Check if this primitive is deprecated
@@ -784,8 +778,6 @@ impl Primitive {
                 vals.map(keys, env)?;
                 env.push(vals);
             }
-            Primitive::Shapes => shapes(env)?,
-            Primitive::Types => types(env)?,
             Primitive::Trace => trace(env, false)?,
             Primitive::Stack => stack(env, false)?,
             Primitive::Dump => dump(env, false)?,
@@ -1051,88 +1043,6 @@ pub fn random() -> f64 {
         static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
     }
     RNG.with(|rng| rng.borrow_mut().gen::<f64>())
-}
-
-fn shapes(env: &mut Uiua) -> UiuaResult {
-    validate_impl(env, "Shapes", "Shapes", "Shape", "Shape", |val| {
-        val.shape().iter().copied().collect()
-    })
-}
-
-fn types(env: &mut Uiua) -> UiuaResult {
-    validate_impl(env, "Types", "Types", "Type", "Type", |val| {
-        val.type_id().into()
-    })
-}
-
-fn validate_impl(
-    env: &mut Uiua,
-    name: &'static str,
-    cap_name: &'static str,
-    kind: &'static str,
-    cap_kind: &'static str,
-    get_val: impl Fn(&Value) -> Value,
-) -> UiuaResult {
-    let f = env.pop_function()?;
-    let sig = f.signature();
-    if sig.outputs != 1 {
-        return Err(env.error(format!(
-            "{cap_name} expects a function with 1 output, \
-            but its signature is {sig}",
-        )));
-    }
-    if sig.args == 0 {
-        return Err(env.error(format!(
-            "{cap_name} expects a function at least 1 argument, \
-            but its signature is {sig}",
-        )));
-    }
-    let args = env.clone_stack_top(sig.args)?;
-    let labels: Vec<Option<EcoString>> = args
-        .iter()
-        .rev()
-        .map(|val| val.meta().label.clone())
-        .collect();
-    for arg in args {
-        env.push(get_val(&arg));
-    }
-    env.call(f)?;
-    let res = env.pop(1)?;
-    let rank = res.rank();
-    let res = res.as_bools(env, "Output should be a single boolean or a boolean array")?;
-    if rank == 0 && sig.args > 1 {
-        if res.iter().any(|b| !*b) {
-            let mut args = String::new();
-            for (i, label) in labels.iter().enumerate() {
-                if i > 0 {
-                    args.push_str(", ");
-                }
-                if let Some(label) = label {
-                    args.push_str(&format!("${label}"));
-                } else {
-                    args.push_str(&format!("arg {}", i + 1))
-                }
-            }
-            return Err(env.error(format!("{cap_kind} validation failed for {}", args)));
-        }
-    } else if res.len() != sig.args {
-        return Err(env.error(format!(
-            "This {name} output should have length {}, but it has length {}",
-            sig.args,
-            res.len(),
-        )));
-    } else {
-        for (i, (b, label)) in res.iter().zip(labels).enumerate() {
-            if !b {
-                return Err(env.error(if let Some(label) = label {
-                    format!("{kind} validation failed for ${label}")
-                } else {
-                    format!("{kind} validation failed for arg {}", i + 1)
-                }));
-            }
-        }
-    }
-    Ok(())
 }
 
 fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {

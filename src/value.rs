@@ -847,7 +847,10 @@ impl Value {
             |f| f as u8,
         )
     }
-    pub(crate) fn as_bools(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<bool>> {
+    /// Attempt to convert the array to a list of booleans
+    ///
+    /// The `requirement` parameter is used in error messages.
+    pub fn as_bools(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<bool>> {
         self.as_number_list(env, requirement, |f| f == 0.0 || f == 1.0, |f| f == 1.0)
     }
     /// Attempt to convert the array to a list of integers or infinity

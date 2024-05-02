@@ -352,15 +352,6 @@
     "class": "DyadicPervasive",
     "description": "Take the arctangent of two numbers"
   },
-  "bind": {
-    "glyph": "λ",
-    "outputs": 1,
-    "modifier_args": 1,
-    "class": "OtherModifier",
-    "description": "Bind local values",
-    "experimental": true,
-    "deprecated": true
-  },
   "bits": {
     "glyph": "⋯",
     "args": 1,
@@ -1038,15 +1029,6 @@
     "class": "MonadicArray",
     "description": "Get the dimensions of an array"
   },
-  "shapes": {
-    "args": 0,
-    "outputs": 0,
-    "modifier_args": 1,
-    "class": "OtherModifier",
-    "description": "Validate the shapes of some arrays",
-    "experimental": true,
-    "deprecated": true
-  },
   "sign": {
     "glyph": "±",
     "args": 1,
@@ -1164,15 +1146,6 @@
     "outputs": 1,
     "class": "Misc",
     "description": "Check the type of an array"
-  },
-  "types": {
-    "args": 0,
-    "outputs": 0,
-    "modifier_args": 1,
-    "class": "OtherModifier",
-    "description": "Validate the types of some arrays",
-    "experimental": true,
-    "deprecated": true
   },
   "un": {
     "glyph": "°",

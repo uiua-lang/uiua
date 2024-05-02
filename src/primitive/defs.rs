@@ -65,6 +65,14 @@ constant!(
     ("Sep", std::path::MAIN_SEPARATOR),
     /// The number of processors available
     ("NumProcs", num_cpus::get() as f64),
+    /// A NULL pointer for use in FFI
+    ("NULL", {
+        let mut arr = Array::<u8>::default();
+        arr.meta_mut().pointer = Some(0);
+        Value::from(arr)
+    }),
+    /// An uninitialed pointer for use in FFI
+    ("Uninit", 0),
     /// The days of the week
     (
         "Days",

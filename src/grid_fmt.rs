@@ -229,7 +229,11 @@ impl GridFmt for Boxed {
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, boxed: bool, label: bool) -> Grid {
         let mut metagrid: Option<Metagrid> = None;
-        let mut grid = if self.shape.is_empty() && !self.is_map() {
+        let mut grid = if let Some(pointer) = self.meta().pointer {
+            vec![boxed_scalar(boxed)
+                .chain(format!("0x{:x}", pointer).chars())
+                .collect()]
+        } else if self.shape.is_empty() && !self.is_map() {
             // Scalar
             self.data[0].fmt_grid(boxed, label)
         } else if self.shape == [0] && !self.is_map() {

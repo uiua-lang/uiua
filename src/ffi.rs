@@ -62,9 +62,17 @@ impl FromStr for FfiType {
         // Parse pointer
         if let Some(mut s) = s.strip_suffix('*') {
             s = s.trim();
+            let mut inner: Self = s.parse()?;
+            if let FfiType::Ptr {
+                mutable: m @ true, ..
+            } = &mut inner
+            {
+                *m = mutable;
+                mutable = true;
+            }
             return Ok(FfiType::Ptr {
                 mutable,
-                inner: Box::new(s.parse()?),
+                inner: Box::new(inner),
             });
         }
         if let Some(mut s) = s.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
@@ -130,7 +138,7 @@ impl fmt::Display for FfiType {
             FfiType::ULong => write!(f, "unsigned long"),
             FfiType::ULongLong => write!(f, "unsigned long long"),
             FfiType::Ptr { mutable, inner } => {
-                write!(f, "{}{}*", if *mutable { "" } else { "const " }, inner)
+                write!(f, "({}{inner}*)", if *mutable { "" } else { "const " })
             }
             FfiType::List {
                 mutable,
@@ -227,6 +235,8 @@ mod enabled {
         libraries: DashMap<String, libloading::Library>,
     }
 
+    const DEBUG: bool = false;
+
     impl FfiState {
         pub(crate) fn do_ffi(
             &self,
@@ -236,6 +246,9 @@ mod enabled {
             arg_tys: &[FfiType],
             args: &[Value],
         ) -> Result<Value, String> {
+            if DEBUG {
+                println!("call FFI function {name}");
+            }
             if !self.libraries.contains_key(file) {
                 let lib = unsafe { libloading::Library::new(file) }.map_err(|e| e.to_string())?;
                 self.libraries.insert(file.to_string(), lib);
@@ -271,7 +284,9 @@ mod enabled {
                 cif_arg_tys.push(ffity_to_cty(arg_ty));
                 if let Some(len) = lengths[i] {
                     // Bind length
-                    // println!("bind {i} len: {len}");
+                    if DEBUG {
+                        println!("bind {i} len: {len}");
+                    }
                     _ = match arg_ty {
                         FfiType::Int => bindings.push_value(len as c_int),
                         FfiType::UInt => bindings.push_value(len as c_uint),
@@ -295,8 +310,10 @@ mod enabled {
                 } else {
                     // Bind normal argument
                     let arg = args.next().ok_or("Not enough arguments")?;
-                    // println!("bind {i} arg: {arg:?}");
-                    // println!("  as {arg_ty}");
+                    if DEBUG {
+                        println!("bind {i} arg: {arg:?}");
+                        println!("  as {arg_ty}");
+                    }
                     bindings.bind_arg(i, arg_ty, arg)?;
                 }
             }
@@ -305,6 +322,13 @@ mod enabled {
             }
 
             // Call and get return value
+            assert_eq!(
+                cif_arg_tys.len(),
+                bindings.args.len(),
+                "Expected {} arguments, got {}",
+                cif_arg_tys.len(),
+                bindings.args.len()
+            );
             let cif = Cif::new(cif_arg_tys, ffity_to_cty(&return_ty));
             let fptr = CodePtr::from_fun(*fptr);
             let mut results = Vec::new();
@@ -455,6 +479,9 @@ mod enabled {
                         if lengths[i].is_some() {
                             continue;
                         }
+                        if DEBUG {
+                            println!("out {i} arg: {ty}");
+                        }
                         match &**inner {
                             FfiType::Char => unsafe {
                                 let ptr = bindings.get::<c_char>(i);
@@ -474,6 +501,12 @@ mod enabled {
                             FfiType::Struct { fields } => {
                                 let repr = bindings.get_repr(i);
                                 results.push(bindings.struct_repr_to_value(repr, fields)?);
+                            }
+                            FfiType::Ptr { .. } => {
+                                let ptr = *bindings.get::<*mut ()>(i);
+                                let mut val = Value::from(ptr as usize);
+                                val.meta_mut().pointer = Some(ptr as usize);
+                                results.push(val);
                             }
                             _ => {
                                 return Err(format!(
@@ -703,6 +736,9 @@ mod enabled {
             val: &Value,
             arg: bool,
         ) -> Result<*mut (), String> {
+            if DEBUG {
+                println!("    arg {i}, type {ty}, val: {val:?}");
+            }
             macro_rules! scalar {
                 ($arr:expr, $ty:ty) => {{
                     let val = $arr.data[0] as $ty;
@@ -766,15 +802,16 @@ mod enabled {
                         self.push_raw_ptr(ptr);
                         ptr
                     }
+                    (FfiType::Void, val) => {
+                        let ptr = self.push_value(val.clone());
+                        self.no_arg();
+                        self.push_ptr(ptr)
+                    }
                     (FfiType::Int, Value::Num(arr)) => list!(arr, c_int),
                     (FfiType::Int, Value::Byte(arr)) => list!(arr, c_int),
-                    (_, arg) => {
-                        return Err(format!(
-                            "Array of {} with shape {} is not a valid \
-                            argument {i} for FFI type {ty}",
-                            arg.type_name_plural(),
-                            arg.shape()
-                        ))
+                    (inner, val) => {
+                        let ptr = self.bind(i, inner, val)?;
+                        self.push_ptr(ptr)
                     }
                 },
                 (FfiType::List { inner, .. }, val) => match (&**inner, val) {

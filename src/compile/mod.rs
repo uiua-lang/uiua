@@ -169,8 +169,6 @@ pub(crate) struct Scope {
     experimental: bool,
     /// The stack height between top-level statements
     stack_height: Result<usize, Sp<SigCheckError>>,
-    /// The stack of referenced bind locals
-    bind_locals: Vec<HashSet<usize>>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -191,7 +189,6 @@ impl Default for Scope {
             names: IndexMap::new(),
             experimental: false,
             stack_height: Ok(0),
-            bind_locals: Vec::new(),
         }
     }
 }
@@ -1440,16 +1437,6 @@ code:
             } else {
                 let f = self.make_function(FunctionId::Anonymous(span), sig, [instr]);
                 self.push_instr(Instr::PushFunc(f));
-            }
-        } else if !self.scope.bind_locals.is_empty()
-            && ident.chars().all(|c| c.is_ascii_lowercase())
-        {
-            // Name is a local variable
-            let span = self.add_span(span);
-            for c in ident.chars().rev() {
-                let index = c as usize - 'a' as usize;
-                self.scope.bind_locals.last_mut().unwrap().insert(index);
-                self.push_instr(Instr::GetLocal { index, span });
             }
         } else if let Some(local) = self.find_name(&ident, skip_local) {
             // Name exists in scope

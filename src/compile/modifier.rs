@@ -725,37 +725,6 @@ impl Compiler {
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
-            Bind => {
-                let operand = modified.code_operands().next().unwrap().clone();
-                let operand_span = operand.span.clone();
-                self.scope.bind_locals.push(HashSet::new());
-                let (mut instrs, mut sig) = self.compile_operand_word(operand)?;
-                let locals = self.scope.bind_locals.pop().unwrap();
-                let local_count = locals.into_iter().max().map_or(0, |i| i + 1);
-                let span = self.add_span(modified.modifier.span.clone());
-                if local_count < 3 {
-                    self.emit_diagnostic(
-                        format!(
-                            "{} should be reserved for functions with at least 3 arguments, \
-                            but this function has {} arguments",
-                            Bind.format(),
-                            local_count
-                        ),
-                        DiagnosticKind::Advice,
-                        operand_span,
-                    );
-                }
-                instrs.insert(
-                    0,
-                    Instr::PushLocals {
-                        count: local_count,
-                        span,
-                    },
-                );
-                instrs.push(Instr::PopLocals);
-                sig.args += local_count;
-                finish!(instrs, sig);
-            }
             Comptime => {
                 let word = modified.code_operands().next().unwrap().clone();
                 self.do_comptime(prim, word, &modified.modifier.span, call)?;

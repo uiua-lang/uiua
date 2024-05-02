@@ -355,11 +355,6 @@ impl Primitive {
                 Sys(SysOp::ImEncode).format()
             ),
             Deal => format!("use {Select}{Rise}[{Pop}{Repeat}{Gen}]{Len}{Over} instead"),
-            Bind => format!(
-                "use planet notation, {}, and/or {} shenanigans instead",
-                Map.format(),
-                Fill.format()
-            ),
             Types => format!("use {} and pattern matching instead", Type.format()),
             Shapes => format!("use {} and pattern matching instead", Shape.format()),
             _ => return None,
@@ -374,7 +369,6 @@ impl Primitive {
             self,
             Coordinate
                 | By
-                | Bind
                 | (Shapes | Types)
                 | Sys(FFI | TlsListen | TlsConnect)
                 | (Repr | Stringify | Quote | Sig)
@@ -811,7 +805,6 @@ impl Primitive {
             | Primitive::Gap
             | Primitive::Un
             | Primitive::Under
-            | Primitive::Bind
             | Primitive::Content
             | Primitive::Both
             | Primitive::Fork

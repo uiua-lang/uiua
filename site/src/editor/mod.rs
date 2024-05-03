@@ -111,12 +111,14 @@ pub fn Editor<'a>(
                 .count(),
         )
     };
+    let (code_view, set_code_view) = create_signal("Loading...".into_view());
 
     // Initialize the state
     let state = Rc::new(State {
         code_id: code_id(),
         set_line_count,
         set_copied_link,
+        set_code_view,
         past: Default::default(),
         future: Default::default(),
         challenge,
@@ -1330,7 +1332,7 @@ pub fn Editor<'a>(
                                 style={format!("height: {code_height_em}em;")}
                                 on:input=code_input
                                 on:paste=code_paste>
-                                "Loading..."
+                                { move || code_view.get() }
                             </div>
                         </div>
                     </div>

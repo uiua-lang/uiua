@@ -19,7 +19,7 @@ use uiua::{
     Report, ReportFragment, ReportKind, SpanKind, SysBackend, Uiua, UiuaError, UiuaResult, Value,
 };
 use wasm_bindgen::JsCast;
-use web_sys::{HtmlBrElement, HtmlDivElement, HtmlStyleElement, Node};
+use web_sys::{Comment, HtmlBrElement, HtmlDivElement, HtmlSpanElement, HtmlStyleElement, Node};
 
 use crate::{
     backend::{OutputItem, WebBackend},
@@ -33,6 +33,7 @@ pub struct State {
     pub code_id: String,
     pub set_line_count: WriteSignal<usize>,
     pub set_copied_link: WriteSignal<bool>,
+    pub set_code_view: WriteSignal<View>,
     pub past: RefCell<Vec<Record>>,
     pub future: RefCell<Vec<Record>>,
     pub curr: RefCell<Record>,
@@ -85,7 +86,7 @@ impl State {
             self.past.borrow_mut().push(prev);
             self.future.borrow_mut().clear();
         }
-        set_code_html(&self.code_id, code);
+        self.set_code_view(code);
         if matches!(cursor, Cursor::Ignore) {
             if let Some(before) = maybe_before {
                 self.set_cursor(before);
@@ -99,11 +100,11 @@ impl State {
             self.set_line_count();
         }
     }
+    pub fn set_code_view(&self, code: &str) {
+        self.set_code_view.set(gen_code_view(code));
+    }
     pub fn set_cursor(&self, to: (u32, u32)) {
         set_code_cursor(&self.code_id, to.0, to.1);
-    }
-    pub fn set_code_html(&self, code: &str) {
-        set_code_html(&self.code_id, code);
     }
     fn set_changed(&self) {
         self.set_copied_link.set(false);
@@ -120,7 +121,7 @@ impl State {
     pub fn undo(&self) {
         let prev = self.past.borrow_mut().pop();
         if let Some(prev) = prev {
-            self.set_code_html(&prev.code);
+            self.set_code_view(&prev.code);
             let mut curr = self.curr.borrow_mut();
             self.set_cursor(curr.before);
             self.future.borrow_mut().push(replace(&mut *curr, prev));
@@ -129,7 +130,7 @@ impl State {
     }
     pub fn redo(&self) {
         if let Some(next) = self.future.borrow_mut().pop() {
-            self.set_code_html(&next.code);
+            self.set_code_view(&next.code);
             let mut curr = self.curr.borrow_mut();
             self.set_cursor(next.after);
             self.past.borrow_mut().push(replace(&mut *curr, next));
@@ -287,6 +288,7 @@ fn children_of(node: &Node) -> impl Iterator<Item = Node> {
         curr = node.next_sibling();
         Some(node)
     })
+    .filter(|node| node.dyn_ref::<Comment>().is_none())
 }
 
 pub fn code_text(id: &str) -> String {
@@ -298,7 +300,7 @@ pub fn code_text(id: &str) -> String {
         }
         for span_node in children_of(&div_node) {
             let fragment = span_node.text_content().unwrap();
-            // log!("text fragment: {:?}", fragment);
+            // logging::log!("text fragment: {:?}", fragment);
             text.push_str(&fragment);
         }
     }
@@ -306,7 +308,7 @@ pub fn code_text(id: &str) -> String {
         return parent.inner_text();
     }
 
-    // log!("code_text -> {:?}", text);
+    // logging::log!("code_text -> {:?}", text);
 
     text
 }
@@ -329,8 +331,8 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
             curr += 1;
         }
         if children_of(&div_node).count() == 1
-            && div_node
-                .first_child()
+            && children_of(&div_node)
+                .next()
                 .unwrap()
                 .dyn_into::<HtmlBrElement>()
                 .is_ok()
@@ -429,17 +431,22 @@ fn set_code_cursor(id: &str, start: u32, end: u32) {
     let find_pos = |mut pos: u32| {
         let mut text_len;
         let mut last_node = None;
-        'divs: for (i, div_node) in children_of(&elem).enumerate() {
+        'divs: for (i, div_node) in children_of(&elem)
+            .filter_map(|node| node.dyn_into::<HtmlDivElement>().ok())
+            .enumerate()
+        {
             if i > 0 {
                 if pos > 0 {
                     pos -= 1;
-                    last_node = Some(div_node.first_child().unwrap());
+                    last_node = Some(children_of(&div_node).next().unwrap());
                 } else {
                     break 'divs;
                 }
             }
-            for span_node in children_of(&div_node) {
-                if let Some(node) = span_node.first_child() {
+            for span_node in
+                children_of(&div_node).filter(|node| node.dyn_ref::<HtmlSpanElement>().is_some())
+            {
+                if let Some(node) = children_of(&span_node).next() {
                     text_len = node.text_content().unwrap().chars().count() as u32;
                     last_node = Some(node);
                 } else {
@@ -478,101 +485,230 @@ fn set_code_cursor(id: &str, start: u32, end: u32) {
     }
 }
 
-fn set_code_html(id: &str, code: &str) {
-    // log!("set_code_html({:?})", code);
+#[derive(Debug)]
+enum CodeFragment {
+    Unspanned(String),
+    Br,
+    Span(String, SpanKind),
+}
 
-    let elem = element::<HtmlDivElement>(id);
-    if code.is_empty() {
-        elem.set_inner_html("<div class=\"code-line\"><br/></div>");
-        return;
+struct CodeLines {
+    frags: Vec<Vec<CodeFragment>>,
+}
+
+impl CodeLines {
+    fn line(&mut self) -> &mut Vec<CodeFragment> {
+        self.frags.last_mut().unwrap()
     }
+    fn frag(&mut self) -> &mut CodeFragment {
+        self.line().last_mut().unwrap()
+    }
+    fn push_str(&mut self, s: &str) {
+        match self.frag() {
+            CodeFragment::Unspanned(ref mut unspanned) => unspanned.push_str(s),
+            _ => self.line().push(CodeFragment::Unspanned(s.to_string())),
+        }
+    }
+    fn new_line(&mut self) {
+        if self.line().is_empty() {
+            self.line().push(CodeFragment::Br);
+        }
+        self.frags.push(Vec::new());
+    }
+}
 
-    let mut html = "<div class=\"code-line\">".to_string();
+fn build_code_lines(code: &str) -> CodeLines {
+    let mut lines = CodeLines {
+        frags: vec![Vec::new()],
+    };
 
     let chars: Vec<char> = code.chars().collect();
 
-    let push_unspanned = |html: &mut String, mut target: usize, curr: &mut usize| {
+    let push_unspanned = |lines: &mut CodeLines, mut target: usize, curr: &mut usize| {
         target = target.min(chars.len());
         if *curr >= target {
             return;
         }
-        html.push_str(r#"<span class="code-span">"#);
+        lines.line().push(CodeFragment::Unspanned(String::new()));
         let mut unspanned = String::new();
         while *curr < target {
             if chars[*curr] == '\n' {
                 if !unspanned.is_empty() {
-                    // log!("unspanned: {:?}", unspanned);
-                    html.push_str(&escape_html(&unspanned));
+                    // logging::log!("unspanned: {:?}", unspanned);
+                    lines.push_str(&escape_html(&unspanned));
                     unspanned.clear();
                 }
-                // log!("newline");
-                html.push_str("</span></div><div class=\"code-line\">");
+                // logging::log!("newline");
+                lines.new_line();
                 *curr += 1;
                 while *curr < target && chars[*curr] == '\n' {
-                    html.push_str("<br/></div><div class=\"code-line\">");
+                    lines.new_line();
                     *curr += 1;
                 }
-                html.push_str("<span class=\"code-span\">");
+                lines.line().push(CodeFragment::Unspanned(String::new()));
                 continue;
             }
             unspanned.push(chars[*curr]);
             *curr += 1;
         }
         if !unspanned.is_empty() {
-            // log!("unspanned: {:?}", unspanned);
-            html.push_str(&escape_html(&unspanned));
+            // logging::log!("unspanned: {:?}", unspanned);
+            lines.push_str(&escape_html(&unspanned));
         }
-        html.push_str("</span>");
+        lines.line().push(CodeFragment::Unspanned(String::new()));
     };
 
     let mut end = 0;
-    // logging::log!("{:#?}", spans(code));
     for span in spans_with_backend(code, WebBackend::default()).0 {
         let kind = span.value;
         let span = span.span;
-        push_unspanned(&mut html, span.start.char_pos as usize, &mut end);
+        push_unspanned(&mut lines, span.start.char_pos as usize, &mut end);
 
         let text: String = chars[span.start.char_pos as usize..span.end.char_pos as usize]
             .iter()
             .collect();
         // logging::log!("spanned: {:?} {:?}", kind, text);
-        let color_class = match kind {
-            SpanKind::Primitive(prim) => prim_class(prim),
-            SpanKind::Number => "number-literal",
-            SpanKind::String => "string-literal-span",
-            SpanKind::Comment | SpanKind::OutputComment => "comment-span",
-            SpanKind::Strand => "strand-span",
-            _ => "",
-        };
 
         if !text.is_empty() && text.chars().all(|c| c == '\n') {
-            html.push_str("</div>");
+            lines.new_line();
             for _ in 0..text.chars().count() - 1 {
-                html.push_str("<div class=\"code-line\"><br/></div>");
+                lines.new_line();
             }
-            html.push_str("<div class=\"code-line\">");
         } else {
             for (i, text) in text.lines().enumerate() {
                 if i > 0 {
-                    html.push_str("</div><div class=\"code-line\">");
+                    lines.new_line();
                 }
-                html.push_str(&match kind {
-                    SpanKind::Primitive(prim) => {
-                        let name = prim.name();
-                        let mut title = format!("{}: {}", name, prim.doc().short_text());
-                        if let Some(ascii) = prim.ascii() {
-                            title = format!("({}) {}", ascii, title);
+                lines
+                    .line()
+                    .push(CodeFragment::Span(text.into(), kind.clone()));
+            }
+        }
+
+        end = span.end.char_pos as usize;
+    }
+
+    push_unspanned(&mut lines, chars.len(), &mut end);
+
+    for line in &mut lines.frags {
+        line.retain(|frag| !matches!(frag, CodeFragment::Unspanned(s) if s.is_empty()));
+    }
+
+    lines
+}
+
+fn gen_code_view(code: &str) -> View {
+    // logging::log!("gen_code_view({:?})", code);
+    let CodeLines { frags } = build_code_lines(code);
+    let mut line_views = Vec::new();
+    for line in frags {
+        if line.is_empty() {
+            line_views.push(view!(<div class="code-line"><br/></div>));
+            continue;
+        }
+        let mut frag_views = Vec::new();
+        for frag in line {
+            match frag {
+                CodeFragment::Unspanned(s) => {
+                    frag_views.push(view!(<span class="code-span">{s}</span>).into_view())
+                }
+                CodeFragment::Br => frag_views.push(view!(<br/>).into_view()),
+                CodeFragment::Span(text, kind) => {
+                    let color_class = match kind {
+                        SpanKind::Primitive(prim) => prim_class(prim),
+                        SpanKind::Number => "number-literal",
+                        SpanKind::String => "string-literal-span",
+                        SpanKind::Comment | SpanKind::OutputComment => "comment-span",
+                        SpanKind::Strand => "strand-span",
+                        _ => "",
+                    };
+                    match kind {
+                        SpanKind::Primitive(prim) => {
+                            let name = prim.name();
+                            let mut title = format!("{}: {}", name, prim.doc().short_text());
+                            if let Some(ascii) = prim.ascii() {
+                                title = format!("({}) {}", ascii, title);
+                            }
+                            let class = format!("code-span code-hover {}", color_class);
+                            frag_views.push(
+                                view!(<span class=class data-title=title>{text}</span>
+                                )
+                                .into_view(),
+                            )
                         }
-                        format!(
-                            r#"<span 
-                            class="code-span code-hover {color_class}" 
-                            data-title={title:?}>{}</span>"#,
-                            escape_html(text)
-                        )
-                    }
-                    SpanKind::Ident(ref docs) => {
-                        if let Some(docs) = docs {
-                            let class = binding_class(text, docs);
+                        SpanKind::String => {
+                            let class = format!("code-span code-hover {}", color_class);
+                            if text == "@ " {
+                                let space_class =
+                                    format!("code-span code-hover space-character {}", color_class);
+                                frag_views.push(
+                                    view!(
+                                        <span class=class data-title="space character">@</span>
+                                        <span class=space_class data-title="space character"> </span>
+                                    ).into_view(),
+                                )
+                            } else {
+                                let title = if text.starts_with('@') {
+                                    "character"
+                                } else {
+                                    "string"
+                                };
+                                frag_views.push(
+                                    view!(<span class=class data-title=title>{text}</span>)
+                                        .into_view(),
+                                )
+                            }
+                        }
+                        SpanKind::Signature => {
+                            let class = format!("code-span code-hover {}", color_class);
+                            let title = format!("{kind:?}").to_lowercase();
+                            frag_views.push(
+                                view!(<span class=class data-title=title>{text}</span>).into_view(),
+                            )
+                        }
+                        SpanKind::Placeholder(op) => {
+                            let class = format!("code-span code-hover {}", color_class);
+                            let title = format!("placeholder {}", op.name());
+                            frag_views.push(
+                                view!(<span class=class data-title=title>{text}</span>).into_view(),
+                            )
+                        }
+                        SpanKind::Label => {
+                            let label = text.trim_start_matches('$');
+                            let mut components = [0f32; 3];
+                            const MIN: f32 = 0.2;
+                            const MAX: f32 = 0.8;
+                            let first = label.bytes().next();
+                            for (i, c) in label.bytes().map(|c| c.to_ascii_lowercase()).enumerate()
+                            {
+                                let j = (i + first.unwrap().to_ascii_lowercase() as usize) % 3;
+                                let mul = 1.0 - (i / 3 % 3) as f32 * 0.333;
+                                let t = mul * (c.saturating_sub(b'a') as f32 / 26.0);
+                                let target = MIN + (MAX - MIN) * t;
+                                components[j] = components[j].max(target);
+                            }
+                            // Normalize to a pastel color
+                            for c in &mut components {
+                                *c = 0.5 + 0.5 * *c;
+                            }
+                            let components = components.map(|c| (c * 255.0).round() as u8);
+                            let style = format!(
+                                "color: rgb({}, {}, {})",
+                                components[0], components[1], components[2]
+                            );
+                            frag_views.push(
+                                view!(<span class="code-span code-hover" style=style>{text}</span>)
+                                    .into_view(),
+                            )
+                        }
+                        SpanKind::FuncDelim(sig) => {
+                            let class = format!("code-span code-hover {}", color_class);
+                            let title = sig.to_string();
+                            frag_views.push(
+                                view!(<span class=class data-title=title>{text}</span>).into_view(),
+                            )
+                        }
+                        SpanKind::Ident(Some(docs)) => {
                             let mut title = String::new();
                             match &docs.kind {
                                 BindingDocsKind::Function { sig, .. } => {
@@ -607,124 +743,26 @@ fn set_code_html(id: &str, code: &str) {
                                     _ => {}
                                 }
                             }
-                            format!(
-                                r#"<span 
-                                    class="code-span code-hover {class} {private}" 
-                                    data-title="{title}">{}</span>"#,
-                                escape_html(text)
-                            )
-                        } else {
-                            format!(
-                                r#"<span class="code-span {color_class}">{}</span>"#,
-                                escape_html(text)
+                            let class = format!(
+                                "code-span code-hover {} {}",
+                                binding_class(&text, &docs),
+                                private
+                            );
+                            frag_views.push(
+                                view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
-                    }
-                    SpanKind::String => {
-                        if text == "@ " {
-                            format!(
-                                r#"<span
-                                class="code-span code-hover {color_class}" 
-                                data-title="space character">@</span><span
-                                class="code-span code-hover {color_class} space-character" 
-                                data-title="space character"> </span>"#
-                            )
-                        } else {
-                            let title = if text.starts_with('@') {
-                                "character"
-                            } else {
-                                "string"
-                            };
-                            format!(
-                                r#"<span
-                                class="code-span code-hover {color_class}" 
-                                data-title={title}>{}</span>"#,
-                                escape_html(text)
-                            )
+                        _ => {
+                            let class = format!("code-span {color_class}");
+                            frag_views.push(view!(<span class=class>{text}</span>).into_view())
                         }
                     }
-                    SpanKind::Signature => format!(
-                        r#"<span 
-                        class="code-span code-hover {color_class}" 
-                        data-title="{}">{}</span>"#,
-                        format!("{kind:?}").to_lowercase(),
-                        escape_html(text)
-                    ),
-                    SpanKind::Placeholder(op) => format!(
-                        r#"<span 
-                        class="code-span code-hover {color_class}" 
-                        data-title="placeholder {}">{}</span>"#,
-                        op.name(),
-                        escape_html(text)
-                    ),
-                    SpanKind::Label => {
-                        let label = text.trim_start_matches('$');
-                        let mut components = [0f32; 3];
-                        const MIN: f32 = 0.2;
-                        const MAX: f32 = 0.8;
-                        let first = label.bytes().next();
-                        for (i, c) in label.bytes().map(|c| c.to_ascii_lowercase()).enumerate() {
-                            let j = (i + first.unwrap().to_ascii_lowercase() as usize) % 3;
-                            let mul = 1.0 - (i / 3 % 3) as f32 * 0.333;
-                            let t = mul * (c.saturating_sub(b'a') as f32 / 26.0);
-                            let target = MIN + (MAX - MIN) * t;
-                            components[j] = components[j].max(target);
-                        }
-                        // Normalize to a pastel color
-                        for c in &mut components {
-                            *c = 0.5 + 0.5 * *c;
-                        }
-                        let components = components.map(|c| (c * 255.0).round() as u8);
-                        let style = format!(
-                            "color: rgb({}, {}, {})",
-                            components[0], components[1], components[2]
-                        );
-                        format!(
-                            r#"<span 
-                            class="code-span code-hover"
-                            style={style:?}
-                            data-title="label">{}</span>"#,
-                            escape_html(text)
-                        )
-                    }
-                    SpanKind::FuncDelim(sig) => {
-                        let title = sig.to_string();
-                        format!(
-                            r#"<span 
-                            class="code-span code-hover {color_class}" 
-                            data-title={title}>{}</span>"#,
-                            escape_html(text)
-                        )
-                    }
-                    _ => format!(
-                        r#"<span class="code-span {color_class}">{}</span>"#,
-                        escape_html(text)
-                    ),
-                });
+                }
             }
         }
-
-        end = span.end.char_pos as usize;
+        line_views.push(view!(<div class="code-line">{frag_views}</div>))
     }
-
-    push_unspanned(&mut html, code.chars().count(), &mut end);
-
-    html.push_str("</div>");
-
-    html = html
-        .replace(
-            "<div class=\"code-line\"><span class=\"code-span\"></span></div>",
-            "<div class=\"code-line\"><br/></div>",
-        )
-        .replace(
-            "<div class=\"code-line\"></div>",
-            "<div class=\"code-line\"><br/></div>",
-        )
-        .replace("<span class=\"code-span\"></span>", "");
-
-    // log!("html: {}", html);
-
-    elem.set_inner_html(&html);
+    line_views.into_view()
 }
 
 fn escape_html(s: &str) -> Cow<str> {

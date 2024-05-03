@@ -230,7 +230,7 @@ mod enabled {
     use libffi::middle::*;
 
     use super::*;
-    use crate::{Array, Boxed, Value};
+    use crate::{Array, Boxed, ConstantDef, Value};
 
     #[derive(Default)]
     pub struct FfiState {
@@ -515,7 +515,9 @@ mod enabled {
                                         println!("    inner ptr to char: {ptr:p}");
                                     }
                                     results.push(if ptr.is_null() {
-                                        Array::<char>::default().into()
+                                        let mut val = Value::default();
+                                        val.meta_mut().pointer = Some(0);
+                                        val
                                     } else {
                                         let s = CStr::from_ptr(ptr)
                                             .to_str()

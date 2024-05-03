@@ -1,13 +1,13 @@
 //! Algorithms for zipping modifiers
 
-use std::{iter::repeat, slice};
+use std::{boxed, iter::repeat, mem::swap, slice};
 
 use ecow::{eco_vec, EcoVec};
 
 use crate::{
-    algorithm::pervade::bin_pervade_generic, function::Function, random, value::Value, Array,
-    ArrayValue, Boxed, Complex, ImplPrimitive, Instr, PersistentMeta, Primitive, Shape, Uiua,
-    UiuaResult,
+    algorithm::pervade::bin_pervade_generic, cowslice::CowSlice, function::Function, random,
+    value::Value, Array, ArrayValue, Boxed, Complex, ImplPrimitive, Instr, PersistentMeta,
+    Primitive, Shape, Uiua, UiuaResult,
 };
 
 use super::{fill_value_shapes, fixed_rows, multi_output, FillContext, FixedRowsData, MultiOutput};
@@ -75,22 +75,66 @@ fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> 
 
 fn f_mon_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUnFn, usize)> {
     use Primitive::*;
-    match f.instrs(env) {
+    Some(match f.instrs(env) {
         &[Instr::Prim(prim, span)] => {
             let f = prim_mon_fast_fn(prim, span)?;
-            return Some((f, 0));
+            (f, 0)
         }
         &[Instr::ImplPrim(prim, span)] => {
             let f = impl_prim_mon_fast_fn(prim, span)?;
-            return Some((f, 0));
+            (f, 0)
         }
         [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
             let (f, d) = f_mon_fast_fn(f, env)?;
-            return Some((f, d + 1));
+            (f, d + 1)
         }
-        _ => (),
+        [Instr::Prim(Pop, _), Instr::Push(repl)] => {
+            let replacement = repl.clone();
+            (
+                boxed::Box::new(move |val, depth, _| {
+                    Ok(val.replace_depth(replacement.clone(), depth))
+                }),
+                0,
+            )
+        }
+        _ => return None,
+    })
+}
+
+impl Value {
+    fn replace_depth(&self, mut replacement: Value, depth: usize) -> Value {
+        let depth = self.rank().min(depth);
+        replacement.generic_mut_shallow(
+            |arr| arr.repeat_shape(Shape::from(&self.shape()[..depth])),
+            |arr| arr.repeat_shape(Shape::from(&self.shape()[..depth])),
+            |arr| arr.repeat_shape(Shape::from(&self.shape()[..depth])),
+            |arr| arr.repeat_shape(Shape::from(&self.shape()[..depth])),
+            |arr| arr.repeat_shape(Shape::from(&self.shape()[..depth])),
+        );
+        replacement
     }
-    None
+}
+
+impl<T: Clone> Array<T> {
+    fn repeat_shape(&mut self, mut shape_prefix: Shape) {
+        let count = shape_prefix.elements();
+        swap(&mut self.shape, &mut shape_prefix);
+        self.shape.extend(shape_prefix);
+        match count {
+            0 => {
+                self.data = CowSlice::default();
+            }
+            1 => {}
+            n => {
+                let mut new_data = self.data.clone();
+                for _ in 1..n {
+                    new_data.extend_from_slice(&self.data);
+                }
+                self.data = new_data;
+            }
+        }
+        self.validate_shape();
+    }
 }
 
 fn spanned_dy_fn(

@@ -222,7 +222,7 @@ where
             .take_while(|&&dim| dim == 1)
             .count()
             .min(arr.shape.len());
-        let same_under_fixes = (target.iter().rev())
+        let same_under_fixes = (target.iter().skip(fixes).rev())
             .zip(arr.shape[fixes..].iter().rev())
             .all(|(b, a)| b == a);
         if same_under_fixes {

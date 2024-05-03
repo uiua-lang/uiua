@@ -230,7 +230,7 @@ mod enabled {
     use libffi::middle::*;
 
     use super::*;
-    use crate::{Array, Boxed, ConstantDef, Value};
+    use crate::{Array, Boxed, Value};
 
     #[derive(Default)]
     pub struct FfiState {

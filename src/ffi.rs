@@ -213,6 +213,7 @@ fn struct_fields_size_align(fields: &[FfiType]) -> (usize, usize) {
     (size, align)
 }
 
+#[allow(dead_code)]
 pub(crate) const DEBUG: bool = false;
 
 #[cfg(feature = "ffi")]

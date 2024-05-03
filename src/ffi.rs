@@ -138,7 +138,7 @@ impl fmt::Display for FfiType {
             FfiType::ULong => write!(f, "unsigned long"),
             FfiType::ULongLong => write!(f, "unsigned long long"),
             FfiType::Ptr { mutable, inner } => {
-                write!(f, "({}{inner}*)", if *mutable { "" } else { "const " })
+                write!(f, "{}{inner}*", if *mutable { "" } else { "const " })
             }
             FfiType::List {
                 mutable,
@@ -213,6 +213,8 @@ fn struct_fields_size_align(fields: &[FfiType]) -> (usize, usize) {
     (size, align)
 }
 
+pub(crate) const DEBUG: bool = false;
+
 #[cfg(feature = "ffi")]
 pub(crate) use enabled::*;
 #[cfg(feature = "ffi")]
@@ -234,8 +236,6 @@ mod enabled {
     pub struct FfiState {
         libraries: DashMap<String, libloading::Library>,
     }
-
-    const DEBUG: bool = false;
 
     impl FfiState {
         pub(crate) fn do_ffi(
@@ -295,12 +295,14 @@ mod enabled {
                         FfiType::LongLong => bindings.push_value(len as c_longlong),
                         FfiType::ULongLong => bindings.push_value(len as c_ulonglong),
                         FfiType::Ptr { inner, .. } => match &**inner {
-                            FfiType::Int => bindings.push_ptr(len as c_int),
-                            FfiType::UInt => bindings.push_ptr(len as c_uint),
-                            FfiType::Long => bindings.push_ptr(len as c_long),
-                            FfiType::ULong => bindings.push_ptr(len as c_ulong),
-                            FfiType::LongLong => bindings.push_ptr(len as c_longlong),
-                            FfiType::ULongLong => bindings.push_ptr(len as c_ulonglong),
+                            FfiType::Int => bindings.alloc_and_push_ptr_to(len as c_int),
+                            FfiType::UInt => bindings.alloc_and_push_ptr_to(len as c_uint),
+                            FfiType::Long => bindings.alloc_and_push_ptr_to(len as c_long),
+                            FfiType::ULong => bindings.alloc_and_push_ptr_to(len as c_ulong),
+                            FfiType::LongLong => bindings.alloc_and_push_ptr_to(len as c_longlong),
+                            FfiType::ULongLong => {
+                                bindings.alloc_and_push_ptr_to(len as c_ulonglong)
+                            }
                             _ => {
                                 return Err(format!("{arg_ty} is not a valid FFI type for lengths"))
                             }
@@ -470,7 +472,7 @@ mod enabled {
                     }
                 };
             }
-            for (i, ty) in arg_tys.iter().enumerate().rev() {
+            for (i, ty) in arg_tys.iter().enumerate() {
                 match ty {
                     FfiType::Ptr {
                         mutable: true,
@@ -502,12 +504,45 @@ mod enabled {
                                 let repr = bindings.get_repr(i);
                                 results.push(bindings.struct_repr_to_value(repr, fields)?);
                             }
-                            FfiType::Ptr { .. } => {
-                                let ptr = *bindings.get::<*mut ()>(i);
-                                let mut val = Value::from(ptr as usize);
-                                val.meta_mut().pointer = Some(ptr as usize);
-                                results.push(val);
-                            }
+                            FfiType::Ptr { inner, .. } => match &**inner {
+                                FfiType::Char => unsafe {
+                                    let ptr = *bindings.get::<*mut ()>(i) as *mut *const c_char;
+                                    if DEBUG {
+                                        println!("    outer ptr to char: {ptr:p}");
+                                    }
+                                    let ptr = *ptr;
+                                    if DEBUG {
+                                        println!("    inner ptr to char: {ptr:p}");
+                                    }
+                                    results.push(if ptr.is_null() {
+                                        Array::<char>::default().into()
+                                    } else {
+                                        let s = CStr::from_ptr(ptr)
+                                            .to_str()
+                                            .map_err(|e| e.to_string())?;
+                                        Value::from(s)
+                                    })
+                                },
+                                FfiType::Void => unsafe {
+                                    let ptr = *bindings.get::<*mut ()>(i) as *mut *const ();
+                                    if DEBUG {
+                                        println!("    outer ptr to void: {ptr:p}");
+                                    }
+                                    let ptr = *ptr;
+                                    if DEBUG {
+                                        println!("    inner ptr to void: {ptr:p}");
+                                    }
+                                    let mut val = Value::from(ptr as usize);
+                                    val.meta_mut().pointer = Some(ptr as usize);
+                                    results.push(val);
+                                },
+                                _ => {
+                                    let ptr = *bindings.get::<*mut ()>(i);
+                                    let mut val = Value::from(ptr as usize);
+                                    val.meta_mut().pointer = Some(ptr as usize);
+                                    results.push(val);
+                                }
+                            },
                             _ => {
                                 return Err(format!(
                                     "Invalid or unsupported FFI out parameter type {ty}"
@@ -569,6 +604,8 @@ mod enabled {
         }
     }
 
+    type ListStorage<T> = (*mut T, Box<[T]>);
+
     #[derive(Default)]
     struct FfiBindings {
         arg_data: Vec<Box<dyn Any>>,
@@ -582,12 +619,13 @@ mod enabled {
             self.args.pop().unwrap();
             self.other_data.push(self.arg_data.pop().unwrap());
         }
-        fn push_ptr<T: Any + Copy + std::fmt::Debug>(&mut self, arg: T) -> *mut () {
+        fn alloc_and_push_ptr_to<T: Any + Copy + std::fmt::Debug>(&mut self, arg: T) -> *mut () {
             let mut bx = Box::<T>::new(arg);
             let ptr: *mut T = &mut *bx;
+            if DEBUG {
+                println!("      create *mut {}: {ptr:p}", type_name::<T>());
+            }
             self.arg_data.push(Box::new((ptr, bx)));
-            // println!("len ptr a: {:p}", ptr);
-            // println!("ptr val: {:?}", unsafe { *ptr });
             self.args.push(Arg::new(
                 &(self.arg_data.last().unwrap())
                     .downcast_ref::<(*mut T, Box<T>)>()
@@ -604,28 +642,18 @@ mod enabled {
         fn push_raw_ptr<T: 'static>(&mut self, ptr: *mut T) {
             self.arg_data.push(Box::new(ptr));
             self.args.push(Arg::new(
-                self.arg_data
-                    .last()
-                    .unwrap()
-                    .downcast_ref::<*mut T>()
-                    .unwrap_or_else(|| {
-                        panic!("Value wasn't expected type {}", type_name::<*mut T>())
-                    }),
+                (self.arg_data.last().unwrap().downcast_ref::<*mut T>()).unwrap_or_else(|| {
+                    panic!("Value wasn't expected type {}", type_name::<*mut T>())
+                }),
             ));
         }
         fn push_value<T: Any>(&mut self, arg: T) -> *mut () {
             self.arg_data.push(Box::new(arg));
             self.args.push(Arg::new(
-                self.arg_data
-                    .last()
-                    .unwrap()
-                    .downcast_ref::<T>()
+                (self.arg_data.last().unwrap().downcast_ref::<T>())
                     .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>())),
             ));
-            self.arg_data
-                .last()
-                .unwrap()
-                .downcast_ref::<T>()
+            (self.arg_data.last().unwrap().downcast_ref::<T>())
                 .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<T>()))
                 as *const T as *mut ()
         }
@@ -636,10 +664,7 @@ mod enabled {
                     .downcast_ref::<Vec<u8>>()
                     .unwrap()[0],
             ));
-            self.arg_data
-                .last()
-                .unwrap()
-                .downcast_ref::<Vec<u8>>()
+            (self.arg_data.last().unwrap().downcast_ref::<Vec<u8>>())
                 .unwrap_or_else(|| panic!("Value wasn't expected type {}", type_name::<Vec<u8>>()))
                 .as_ptr() as *mut ()
         }
@@ -659,7 +684,7 @@ mod enabled {
             ));
             ptr as *mut ()
         }
-        fn push_string(&mut self, arg: String) -> *mut () {
+        fn push_string(&mut self, arg: String) -> *mut c_char {
             let list: Box<[c_char]> = arg
                 .chars()
                 .map(|c| c as c_char)
@@ -667,45 +692,66 @@ mod enabled {
                 .collect();
             self.push_list::<c_char>(list)
         }
-        fn push_list<T: Any + 'static>(&mut self, mut arg: Box<[T]>) -> *mut () {
-            // println!("push {} elem list", arg.len());
+        fn push_list<T: Any + 'static>(&mut self, mut arg: Box<[T]>) -> *mut T {
             let ptr = &mut arg[0] as *mut T;
-            // println!("list ptr a: {:p}", ptr);
+            if DEBUG {
+                println!("      create *mut {}: {ptr:p}", type_name::<T>());
+            }
             self.arg_data.push(Box::new((ptr, arg)));
             self.args.push(Arg::new(
                 &(self.arg_data.last_mut().unwrap())
-                    .downcast_mut::<(*mut T, Box<[T]>)>()
+                    .downcast_mut::<ListStorage<T>>()
                     .unwrap_or_else(|| {
                         panic!(
                             "Value wasn't expected type {}",
-                            type_name::<(*mut T, Box<[T]>)>()
+                            type_name::<ListStorage<T>>()
                         )
                     })
                     .0,
             ));
-            ptr as *mut ()
+            ptr
         }
         fn get<T: Any>(&self, index: usize) -> &T {
             let any = &self.arg_data[index];
             any.downcast_ref::<T>()
-                .or_else(|| any.downcast_ref::<(*mut T, Box<T>)>().map(|(_, b)| &**b))
-                .or_else(|| any.downcast_ref::<(*mut T, Box<[T]>)>().map(|(_, b)| &b[0]))
+                .map(|t| {
+                    if DEBUG {
+                        println!("  exact type");
+                    }
+                    t
+                })
+                .or_else(|| {
+                    any.downcast_ref::<(*mut T, Box<T>)>().map(|(p, _)| {
+                        if DEBUG {
+                            println!("  ptr type");
+                        }
+                        unsafe { &**p }
+                    })
+                })
+                .or_else(|| {
+                    any.downcast_ref::<ListStorage<T>>().map(|(_, b)| {
+                        if DEBUG {
+                            println!("  list type");
+                        }
+                        &b[0]
+                    })
+                })
                 .unwrap_or_else(|| {
                     panic!(
                         "Value wasn't expected type {}, {}, or {}",
                         type_name::<T>(),
                         type_name::<(*mut T, Box<T>)>(),
-                        type_name::<(*mut T, Box<[T]>)>()
+                        type_name::<ListStorage<T>>()
                     )
                 })
         }
         fn get_list_mut<T: 'static>(&mut self, index: usize) -> (*mut T, &mut Box<[T]>) {
             let (ptr, vec) = self.arg_data[index]
-                .downcast_mut::<(*mut T, Box<[T]>)>()
+                .downcast_mut::<ListStorage<T>>()
                 .unwrap_or_else(|| {
                     panic!(
                         "Value wasn't expected type {}",
-                        type_name::<(*mut T, Box<[T]>)>()
+                        type_name::<ListStorage<T>>()
                     )
                 });
             (*ptr, vec)
@@ -747,7 +793,7 @@ mod enabled {
             }
             macro_rules! list {
                 ($arr:expr, $ty:ty) => {
-                    self.push_list($arr.data.iter().map(|&i| i as $ty).collect())
+                    self.push_list($arr.data.iter().map(|&i| i as $ty).collect()) as *mut ()
                 };
             }
             let ptr = match (ty, val) {
@@ -791,7 +837,7 @@ mod enabled {
                 (FfiType::Double, Value::Byte(arr)) if arr.rank() == 0 => scalar!(arr, c_double),
                 (FfiType::Ptr { inner, .. }, val) => match (&**inner, val) {
                     (FfiType::Char, Value::Char(arr)) => {
-                        self.push_string(arr.data.iter().copied().collect())
+                        self.push_string(arr.data.iter().copied().collect()) as *mut ()
                     }
                     (FfiType::Struct { fields }, val) => {
                         let repr = self.value_to_struct_repr(val, fields)?;
@@ -805,13 +851,22 @@ mod enabled {
                     (FfiType::Void, val) => {
                         let ptr = self.push_value(val.clone());
                         self.no_arg();
-                        self.push_ptr(ptr)
+                        self.alloc_and_push_ptr_to(ptr)
                     }
                     (FfiType::Int, Value::Num(arr)) => list!(arr, c_int),
                     (FfiType::Int, Value::Byte(arr)) => list!(arr, c_int),
                     (inner, val) => {
                         let ptr = self.bind(i, inner, val)?;
-                        self.push_ptr(ptr)
+                        if DEBUG {
+                            println!("    inner ptr to {inner}: {ptr:p}");
+                        }
+                        let ptr = self.alloc_and_push_ptr_to(ptr);
+                        self.no_arg();
+                        if DEBUG {
+                            println!("    outer ptr to {inner}: {ptr:p}");
+                        }
+                        self.push_raw_ptr(ptr);
+                        ptr
                     }
                 },
                 (FfiType::List { inner, .. }, val) => match (&**inner, val) {

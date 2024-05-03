@@ -315,5 +315,8 @@ mod tests {
         if crate::algorithm::invert::DEBUG {
             panic!("invert::DEBUG is true");
         }
+        if crate::ffi::DEBUG {
+            panic!("ffi::DEBUG is true");
+        }
     }
 }

@@ -9,6 +9,8 @@ Lib ← &ffi ⊂LibPath
 ⍤⟜≍: [3 2 1] Lib {"int:1" "reversed" "const int:1" "int"} {[1 2 3]}
 ⍤⟜≍: {1 [2 3]} Lib {"int" "head_tail" "int:1" "int*"} {[1 2 3]}
 ⍤⟜≍: [0 1 2 3] Lib {"void" "multi_list" "const int:1" "int" "const int:3" "int" "int:5" "int"} {1_2 3_4 [...0]}
+⍤⟜≍: "Hello, World!" Lib {"void" "change_string" "const char**"} {"xxx"}
+⍤⟜≍: "1 + 2 = 3" Lib {"void" "change_string_to_sum" "int" "int" "const char**"} {1 2 "xxx"}
 
 VecII ← "{double; double}"
 ⍤⟜≍: 5 Lib {"double" "vec2_len" VecII} {[3 4]}

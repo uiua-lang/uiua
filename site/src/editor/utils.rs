@@ -816,15 +816,17 @@ fn gen_code_view(code: &str) -> View {
 fn escape_html(s: &str) -> Cow<str> {
     if s.contains(['&', '<', '>', '"', '\''].as_ref()) {
         let mut escaped = String::with_capacity(s.len());
+        let mut prev = '\0';
         for c in s.chars() {
             match c {
-                '&' => escaped.push_str("&amp;"),
+                '&' if prev != '\\' => escaped.push_str("&amp;"),
                 '<' => escaped.push_str("&lt;"),
                 '>' => escaped.push_str("&gt;"),
                 '"' => escaped.push_str("&quot;"),
                 '\'' => escaped.push_str("&#x27;"),
                 _ => escaped.push(c),
             }
+            prev = c;
         }
         Cow::Owned(escaped)
     } else {

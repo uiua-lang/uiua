@@ -4,7 +4,10 @@ use std::{cell::Cell, iter::repeat, path::PathBuf, rc::Rc, time::Duration};
 
 use base64::engine::{general_purpose::STANDARD, Engine};
 
-use leptos::{ev::keydown, *};
+use leptos::{
+    ev::{keydown, keyup},
+    *,
+};
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
@@ -13,7 +16,7 @@ use uiua::{
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
     DragEvent, Event, FileReader, HtmlDivElement, HtmlInputElement, HtmlSelectElement,
-    KeyboardEvent, MouseEvent,
+     MouseEvent,
 };
 
 use crate::{
@@ -397,23 +400,14 @@ pub fn Editor<'a>(
         state().set_code(&new_code, cursor);
     };
 
-    let on_mac = window()
-        .navigator()
-        .user_agent()
-        .unwrap()
-        .to_lowercase()
-        .contains("mac");
-    let os_ctrl = move |event: &KeyboardEvent| {
-        if on_mac {
-            event.meta_key()
-        } else {
-            event.ctrl_key()
-        }
-    };
-
     // Handle key events
+    window_event_listener(keyup, move |event| {
+        let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();
+        update_ctrl(event);
+    });
     window_event_listener(keydown, move |event| {
         let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();
+        update_ctrl(event);
         let focused = event
             .target()
             .and_then(|t| t.dyn_into::<HtmlDivElement>().ok())
@@ -772,7 +766,7 @@ pub fn Editor<'a>(
         }
         // Navigate to the docs page on ctrl/shift+click
         let onclick = move |event: MouseEvent| {
-            if !on_mac && event.ctrl_key() || on_mac && event.meta_key() {
+            if os_ctrl(&event) {
                 // Open the docs page
                 window()
                     .open_with_url_and_target(&format!("/docs/{}", prim.name()), "_blank")
@@ -893,7 +887,7 @@ pub fn Editor<'a>(
         let class = format!("glyph-button {class}");
         // Navigate to the docs page on ctrl/shift+click
         let onclick = move |event: MouseEvent| {
-            if !doc.is_empty() && (!on_mac && event.ctrl_key() || on_mac && event.meta_key()) {
+            if !doc.is_empty() && os_ctrl(&event) {
                 // Open the docs page
                 window()
                     .open_with_url_and_target(&format!("/tutorial/{doc}"), "_blank")
@@ -1404,6 +1398,7 @@ pub fn Editor<'a>(
 }
 
 pub const EDITOR_SHORTCUTS: &str = " shift Enter   - Run + Format
+ctrl/⌘ Click   - Open glyph docs
 ctrl/⌘ /       - Toggle line comment
 ctrl/⌘ 4       - Toggle multiline string
    alt Up/Down - Swap lines

@@ -524,7 +524,9 @@ fn TutorialArrays() -> impl IntoView {
 
         <Hd id="useful-array-operations">"Useful Array Operations"</Hd>
         <p>"You don't need to memorize all of these right now. This is just a brief introduction to some of the array operations so that you won't be surprised when you see them later."</p>
-        <p>"If you ever see a glyph that you don't recognize in an example, you can mouse over it in the editor to learn its name. You can also click the names of functions in the site text to see their documentation."</p>
+        <p>"If you ever see a glyph that you don't recognize in an example, you can mouse over it in the editor to learn its name."</p>
+        <p>"You can ctrl-click any glyph in the editor to see its documentation."</p>
+        <p>"You can also click the names of functions in the site text to see their documentation."</p>
         <p><Prim prim=Couple/>" turns two arrays into rows of a new array."</p>
         <Editor example="⊟ 1_2_3 [4 5 6]"/>
         <p><Prim prim=First/>" gets the first row of an array."</p>

@@ -19,7 +19,10 @@ use uiua::{
     Report, ReportFragment, ReportKind, SpanKind, SysBackend, Uiua, UiuaError, UiuaResult, Value,
 };
 use wasm_bindgen::JsCast;
-use web_sys::{Comment, HtmlBrElement, HtmlDivElement, HtmlSpanElement, HtmlStyleElement, Node};
+use web_sys::{
+    Comment, Event, HtmlBrElement, HtmlDivElement, HtmlSpanElement, HtmlStyleElement,
+    KeyboardEvent, MouseEvent, Node,
+};
 
 use crate::{
     backend::{OutputItem, WebBackend},
@@ -517,6 +520,40 @@ impl CodeLines {
     }
 }
 
+pub fn on_mac() -> bool {
+    window()
+        .navigator()
+        .user_agent()
+        .unwrap()
+        .to_lowercase()
+        .contains("mac")
+}
+
+pub fn os_ctrl(event: &Event) -> bool {
+    if let Some(event) = event.dyn_ref::<KeyboardEvent>() {
+        if on_mac() {
+            event.meta_key()
+        } else {
+            event.ctrl_key()
+        }
+    } else if let Some(event) = event.dyn_ref::<MouseEvent>() {
+        if on_mac() {
+            event.meta_key()
+        } else {
+            event.ctrl_key()
+        }
+    } else {
+        false
+    }
+}
+
+pub fn update_ctrl(event: &Event) {
+    document()
+        .body()
+        .unwrap()
+        .set_class_name(if os_ctrl(event) { "ctrl-pressed" } else { "" });
+}
+
 fn build_code_lines(code: &str) -> CodeLines {
     let mut lines = CodeLines {
         frags: vec![Vec::new()],
@@ -629,12 +666,26 @@ fn gen_code_view(code: &str) -> View {
                             if let Some(ascii) = prim.ascii() {
                                 title = format!("({}) {}", ascii, title);
                             }
-                            let class = format!("code-span code-hover {}", color_class);
-                            frag_views.push(
-                                view!(<span class=class data-title=title>{text}</span>
-                                )
-                                .into_view(),
-                            )
+                            let class =
+                                format!("code-span code-hover code-underline {}", color_class);
+                            let onmouseover = move |event: web_sys::MouseEvent| update_ctrl(&event);
+                            let onclick = move |event: web_sys::MouseEvent| {
+                                if os_ctrl(&event) {
+                                    window()
+                                        .open_with_url_and_target(
+                                            &format!("/docs/{}", prim.name()),
+                                            "_blank",
+                                        )
+                                        .unwrap();
+                                }
+                            };
+                            let view = view!(<span
+                                    class=class
+                                    data-title=title
+                                    on:mouseover=onmouseover
+                                    on:click=onclick>{text}</span>)
+                            .into_view();
+                            frag_views.push(view)
                         }
                         SpanKind::String => {
                             let class = format!("code-span code-hover {}", color_class);

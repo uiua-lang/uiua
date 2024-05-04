@@ -519,6 +519,11 @@ input[type=number] {
     -moz-text-fill-color: #eee;
 }
 
+.ctrl-pressed .code-underline:hover {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 .output-frame {
     display: flex;
     justify-content: space-between;

@@ -30,6 +30,7 @@ pub fn Tour() -> impl IntoView {
         <p>"You don't even have to type the whole name of a built-in function, just enough to disambiguate it from the others."</p>
         <Editor example="ran10"/>
         <p>"If you're ever not sure what a glyph is called, you can hover over it to see its name."</p>
+        <p>"You can ctrl-click any glyph in the editor to see its documentation."</p>
         <p>"Click the "<code>"↧"</code>" on the right of the editor to see a list of all the built-in functions."</p>
 
         <Hd id="the-stack">"The Stack"</Hd>

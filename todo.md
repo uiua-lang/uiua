@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - Make glyphs clickable in the pad
   - Allow warnings to be disabled?
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Spatial thinking tutorial/blog

@@ -42,6 +42,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Optimize [`length ⧻`](https://uiua.org/docs/length) [`deduplicate ◴`](https://uiua.org/docs/deduplicate)
 - Add the `--io` flag to the `uiua fmt` command, which formats code from stdin to stdout
 - Lots of bug fixes
+### Website
+- You can now ctrl+click on a glyph in the editor to open its documentation
 
 ## 0.10.3 - 2024-04-09
 ### Interpreter

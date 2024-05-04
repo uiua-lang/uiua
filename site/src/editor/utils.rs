@@ -695,7 +695,7 @@ fn gen_code_view(code: &str) -> View {
                                 frag_views.push(
                                     view!(
                                         <span class=class data-title="space character">@</span>
-                                        <span class=space_class data-title="space character"> </span>
+                                        <span class=space_class data-title="space character">" "</span>
                                     ).into_view(),
                                 )
                             } else {

@@ -20,8 +20,8 @@ use uiua::{
 };
 use wasm_bindgen::JsCast;
 use web_sys::{
-    Comment, Event, HtmlBrElement, HtmlDivElement, HtmlSpanElement, HtmlStyleElement,
-    KeyboardEvent, MouseEvent, Node,
+    Comment, Event, HtmlBrElement, HtmlDivElement, HtmlStyleElement, KeyboardEvent, MouseEvent,
+    Node,
 };
 
 use crate::{
@@ -434,10 +434,7 @@ fn set_code_cursor(id: &str, start: u32, end: u32) {
     let find_pos = |mut pos: u32| {
         let mut text_len;
         let mut last_node = None;
-        'divs: for (i, div_node) in children_of(&elem)
-            .filter_map(|node| node.dyn_into::<HtmlDivElement>().ok())
-            .enumerate()
-        {
+        'divs: for (i, div_node) in children_of(&elem).enumerate() {
             if i > 0 {
                 if pos > 0 {
                     pos -= 1;
@@ -446,9 +443,7 @@ fn set_code_cursor(id: &str, start: u32, end: u32) {
                     break 'divs;
                 }
             }
-            for span_node in
-                children_of(&div_node).filter(|node| node.dyn_ref::<HtmlSpanElement>().is_some())
-            {
+            for span_node in children_of(&div_node) {
                 if let Some(node) = children_of(&span_node).next() {
                     text_len = node.text_content().unwrap().chars().count() as u32;
                     last_node = Some(node);

@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - Fix weird character boundaries in pad
   - Add arg/output doc comments
   - Allow warnings to be disabled?
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly

@@ -285,9 +285,17 @@ impl Spanner {
 
     fn words_spans(&self, words: &[Sp<Word>]) -> Vec<Sp<SpanKind>> {
         let mut spans = Vec::new();
-        for word in words {
+        'words: for word in words {
             match &word.value {
-                Word::Number(..) => spans.push(word.span.clone().sp(SpanKind::Number)),
+                Word::Number(s, _) => {
+                    for prim in Primitive::all().filter(|p| p.is_constant()) {
+                        if prim.name().starts_with(s) || prim.to_string() == *s {
+                            spans.push(word.span.clone().sp(SpanKind::Primitive(prim)));
+                            continue 'words;
+                        }
+                    }
+                    spans.push(word.span.clone().sp(SpanKind::Number))
+                }
                 Word::Char(_)
                 | Word::String(_)
                 | Word::MultilineString(_)

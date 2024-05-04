@@ -76,6 +76,7 @@ csv = {version = "1", optional = true}
 gif = {version = "0.13.1", optional = true}
 hound = {version = "3", optional = true}
 image = {version = "0.24.9", optional = true, default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "qoi"]}
+json5 = {version = "0.4.1", optional = true}
 libffi = {version = "3", optional = true}
 libloading = {version = "0.8.3", optional = true}
 rustls-pemfile = {version = "2.1.2", optional = true}
@@ -90,6 +91,7 @@ batteries = [
   "audio_encode",
   "csv",
   "xlsx",
+  "json5",
 ]
 binary = [
   "ctrlc",

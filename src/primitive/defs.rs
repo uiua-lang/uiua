@@ -2237,6 +2237,10 @@ primitive!(
     /// ex: °json $ ["what's","the","plan"]
     /// ex: °json $ {"foo": "bar", "baz": [1, 2, 3]}
     ///
+    /// While [json] always produces ECMA-compliant JSON, [un][json] can parse [JSON5](https://json5.org/).
+    /// This means that you can use single quotes, unquoted keys, trailing commas, and comments.
+    /// ex: °json $ {foo: 'bar', /* cool */ baz: [1, 2, 3,],}
+    ///
     /// Note that `NaN` and [infinity] convert to JSON `null`, and JSON `null` converts to `NaN`.
     /// This means that [infinity] is converted to `NaN` in a round-trip.
     /// ex: json [1 ¯5 NaN ∞]

@@ -1380,7 +1380,10 @@ impl Value {
         })
     }
     pub(crate) fn from_json_string(json: &str, env: &Uiua) -> UiuaResult<Self> {
+        #[cfg(not(feature = "json5"))]
         let json_value: serde_json::Value = serde_json::from_str(json).map_err(|e| env.error(e))?;
+        #[cfg(feature = "json5")]
+        let json_value: serde_json::Value = json5::from_str(json).map_err(|e| env.error(e))?;
         Self::from_json_value(json_value, env)
     }
     pub(crate) fn from_json_value(json_value: serde_json::Value, _env: &Uiua) -> UiuaResult<Self> {

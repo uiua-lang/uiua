@@ -3180,6 +3180,7 @@ dependencies = [
  "serde",
  "serde_json",
  "uiua",
+ "unicode-segmentation",
  "urlencoding",
  "wasm-bindgen",
  "wasm-bindgen-futures",

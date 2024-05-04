@@ -18,6 +18,7 @@ use uiua::{
     value_to_gif_bytes, value_to_image, value_to_wav_bytes, Compiler, DiagnosticKind, Inputs,
     Report, ReportFragment, ReportKind, SpanKind, SysBackend, Uiua, UiuaError, UiuaResult, Value,
 };
+use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;
 use web_sys::{
     Comment, Event, HtmlBrElement, HtmlDivElement, HtmlStyleElement, KeyboardEvent, MouseEvent,
@@ -554,7 +555,7 @@ fn build_code_lines(code: &str) -> CodeLines {
         frags: vec![Vec::new()],
     };
 
-    let chars: Vec<char> = code.chars().collect();
+    let chars: Vec<&str> = code.graphemes(true).collect();
 
     let push_unspanned = |lines: &mut CodeLines, mut target: usize, curr: &mut usize| {
         target = target.min(chars.len());
@@ -564,7 +565,7 @@ fn build_code_lines(code: &str) -> CodeLines {
         lines.line().push(CodeFragment::Unspanned(String::new()));
         let mut unspanned = String::new();
         while *curr < target {
-            if chars[*curr] == '\n' {
+            if chars[*curr] == "\n" {
                 if !unspanned.is_empty() {
                     // logging::log!("unspanned: {:?}", unspanned);
                     lines.push_str(&escape_html(&unspanned));
@@ -573,14 +574,14 @@ fn build_code_lines(code: &str) -> CodeLines {
                 // logging::log!("newline");
                 lines.new_line();
                 *curr += 1;
-                while *curr < target && chars[*curr] == '\n' {
+                while *curr < target && chars[*curr] == "\n" {
                     lines.new_line();
                     *curr += 1;
                 }
                 lines.line().push(CodeFragment::Unspanned(String::new()));
                 continue;
             }
-            unspanned.push(chars[*curr]);
+            unspanned.push_str(chars[*curr]);
             *curr += 1;
         }
         if !unspanned.is_empty() {
@@ -598,6 +599,7 @@ fn build_code_lines(code: &str) -> CodeLines {
 
         let text: String = chars[span.start.char_pos as usize..span.end.char_pos as usize]
             .iter()
+            .copied()
             .collect();
         // logging::log!("spanned: {:?} {:?}", kind, text);
 

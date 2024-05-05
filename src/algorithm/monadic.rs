@@ -222,6 +222,32 @@ fn range(shape: &[isize], env: &Uiua) -> UiuaResult<Result<CowSlice<f64>, CowSli
     if shape.is_empty() {
         return Ok(Err(cowslice![0]));
     }
+    let mut prod = 1usize;
+    for &d in shape {
+        if d != 0 {
+            let (new, overflow) = prod.overflowing_mul(d.unsigned_abs());
+            if overflow {
+                let mut starting_with = "[".to_string();
+                for (i, d) in shape.iter().take(3).enumerate() {
+                    if i > 0 {
+                        starting_with.push_str(" × ");
+                    }
+                    starting_with.push_str(&d.to_string());
+                }
+                if shape.len() > 3 {
+                    starting_with.push_str(" × …");
+                }
+                starting_with.push(']');
+                return Err(env.error(format!(
+                    "{} of length-{} shape {} would be too large",
+                    Primitive::Range.format(),
+                    shape.len(),
+                    starting_with
+                )));
+            }
+            prod = new;
+        }
+    }
     if shape.contains(&0) {
         return Ok(Err(CowSlice::new()));
     }

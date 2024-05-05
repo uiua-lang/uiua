@@ -567,7 +567,7 @@ fn build_code_lines(code: &str) -> CodeLines {
         while *curr < target {
             if chars[*curr] == "\n" {
                 if !unspanned.is_empty() {
-                    // logging::log!("unspanned: {:?}", unspanned);
+                    // logging::log!("unspanned: `{}`", unspanned);
                     lines.push_str(&escape_html(&unspanned));
                     unspanned.clear();
                 }
@@ -585,7 +585,7 @@ fn build_code_lines(code: &str) -> CodeLines {
             *curr += 1;
         }
         if !unspanned.is_empty() {
-            // logging::log!("unspanned: {:?}", unspanned);
+            // logging::log!("unspanned: `{}`", unspanned);
             lines.push_str(&escape_html(&unspanned));
         }
         lines.line().push(CodeFragment::Unspanned(String::new()));
@@ -601,7 +601,7 @@ fn build_code_lines(code: &str) -> CodeLines {
             .iter()
             .copied()
             .collect();
-        // logging::log!("spanned: {:?} {:?}", kind, text);
+        // logging::log!("spanned: {:?} `{}`", kind, text);
 
         if !text.is_empty() && text.chars().all(|c| c == '\n') {
             lines.new_line();
@@ -632,7 +632,7 @@ fn build_code_lines(code: &str) -> CodeLines {
 }
 
 fn gen_code_view(code: &str) -> View {
-    // logging::log!("gen_code_view({:?})", code);
+    // logging::log!("gen_code_view({})", code);
     let CodeLines { frags } = build_code_lines(code);
     let mut line_views = Vec::new();
     for line in frags {
@@ -644,6 +644,7 @@ fn gen_code_view(code: &str) -> View {
         for frag in line {
             match frag {
                 CodeFragment::Unspanned(s) => {
+                    // logging::log!("unspanned escaped: `{}`", s);
                     frag_views.push(view!(<span class="code-span">{s}</span>).into_view())
                 }
                 CodeFragment::Br => frag_views.push(view!(<br/>).into_view()),
@@ -818,13 +819,17 @@ fn escape_html(s: &str) -> Cow<str> {
         let mut escaped = String::with_capacity(s.len());
         let mut prev = '\0';
         for c in s.chars() {
-            match c {
-                '&' if prev != '\\' => escaped.push_str("&amp;"),
-                '<' => escaped.push_str("&lt;"),
-                '>' => escaped.push_str("&gt;"),
-                '"' => escaped.push_str("&quot;"),
-                '\'' => escaped.push_str("&#x27;"),
-                _ => escaped.push(c),
+            if prev != '\\' {
+                match c {
+                    '&' => escaped.push_str("&amp;"),
+                    '<' => escaped.push_str("&lt;"),
+                    '>' => escaped.push_str("&gt;"),
+                    // '"' => escaped.push_str("&quot;"),
+                    // '\'' => escaped.push_str("&#x27;"),
+                    _ => escaped.push(c),
+                }
+            } else {
+                escaped.push(c);
             }
             prev = c;
         }

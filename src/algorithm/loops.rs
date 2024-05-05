@@ -250,6 +250,7 @@ where
 {
     type Item = Value;
     fn next(&mut self) -> Option<Self::Item> {
+        let row_len = self.source.row_len();
         while self.curr < self.markers.len() {
             let marker = self.markers[self.curr];
             if marker <= 0 {
@@ -260,7 +261,7 @@ where
                     self.curr += 1;
                 }
                 let end = self.curr;
-                let data = self.source.data.slice(start..end);
+                let data = self.source.data.slice(start * row_len..end * row_len);
                 let mut shape = self.source.shape.clone();
                 shape[0] = end - start;
                 return Some(Array::new(shape, data).into());

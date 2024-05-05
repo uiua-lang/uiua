@@ -24,7 +24,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`reduce /`](https://uiua.org/docs/reduce) can now take a function with more than 2 arguments
   - Each additional argument increases the number of arguments passed to [`reduce /`](https://uiua.org/docs/reduce) by 1
   - Additional arguments are passed to the function on every iteration
-- Add [`&tlsc`](https://uiua.org/docs/&tlsc) and [`&tlsa`](https://uiua.org/docs/&tlsa) system functions, which allow making TLS connections
+- Add [`&tlsc`](https://uiua.org/docs/&tlsc) and [`&tlsl`](https://uiua.org/docs/&tlsl) system functions, which allow making TLS connections
   - These are currently experimental, but they will likely replace [`&httpsw`](https://uiua.org/docs/&httpsw)
 - Remove previously deprecated primitives:
   - `this ↬`

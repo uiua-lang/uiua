@@ -471,8 +471,12 @@ sys_op! {
     /// How long the audio is can be configure in the editor settings.
     (0(0)[1], AudioStream, Audio, "&ast", "audio - stream", [mutating]),
     /// Create a TCP listener and bind it to an address
+    ///
+    /// See also: [&tlsl]
     (1, TcpListen, Tcp, "&tcpl", "tcp - listen", [mutating]),
     /// Create a TLS listener and bind it to an address
+    ///
+    /// See also: [&tcpl]
     (1, TlsListen, Tcp, "&tlsl", "tls - listen", [mutating]),
     /// Accept a connection with a TCP or TLS listener
     ///
@@ -483,11 +487,15 @@ sys_op! {
     ///
     /// Returns a stream handle
     /// [under][&tcpc] calls [&cl] automatically.
+    ///
+    /// See also: [&tlsc]
     (1, TcpConnect, Tcp, "&tcpc", "tcp - connect", [mutating]),
     /// Create a TCP socket with TLS support
     ///
     /// Returns a stream handle
     /// [under][&tlsc] calls [&cl] automatically.
+    ///
+    /// See also: [&tcpc]
     (1, TlsConnect, Tcp, "&tlsc", "tls - connect", [mutating]),
     /// Set a TCP socket to non-blocking mode
     (1, TcpSetNonBlocking, Tcp, "&tcpsnb", "tcp - set non-blocking", [mutating]),

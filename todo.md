@@ -2,8 +2,8 @@
 
 - 0.11
   - Add arg/output doc comments
-  - Allow boolean outputs to json
   - Allow warnings to be disabled?
+  - `°⟜+`?
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Spatial thinking tutorial/blog
 - Multimedia

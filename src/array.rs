@@ -56,12 +56,14 @@ pub struct ArrayMeta {
 
 bitflags! {
     /// Flags for an array
-    #[derive(Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
     pub struct ArrayFlags: u8 {
         /// No flags
         const NONE = 0;
         /// The array is boolean
         const BOOLEAN = 1;
+        /// The array was *created from* a boolean
+        const BOOLEAN_LITERAL = 2;
     }
 }
 
@@ -401,7 +403,11 @@ impl<T: ArrayValue> Array<T> {
         let row_len = self.row_len();
         let start = row * row_len;
         let end = start + row_len;
-        Self::new(&self.shape[1..], self.data.slice(start..end))
+        let mut row = Self::new(&self.shape[1..], self.data.slice(start..end));
+        if self.meta().flags != ArrayFlags::NONE {
+            row.meta_mut().flags = self.meta().flags;
+        }
+        row
     }
     #[track_caller]
     pub(crate) fn depth_row(&self, depth: usize, row: usize) -> Self {
@@ -629,7 +635,9 @@ impl From<Vec<bool>> for Array<u8> {
 
 impl From<bool> for Array<u8> {
     fn from(data: bool) -> Self {
-        Self::new(Shape::scalar(), cowslice![u8::from(data)])
+        let mut arr = Self::new(Shape::scalar(), cowslice![u8::from(data)]);
+        arr.meta_mut().flags |= ArrayFlags::BOOLEAN | ArrayFlags::BOOLEAN_LITERAL;
+        arr
     }
 }
 

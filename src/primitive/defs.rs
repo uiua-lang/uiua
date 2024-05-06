@@ -65,6 +65,10 @@ constant!(
     ("Sep", std::path::MAIN_SEPARATOR),
     /// The number of processors available
     ("NumProcs", num_cpus::get() as f64),
+    /// A boolean `true` value for use in `json`
+    ("True", true),
+    /// A boolean `false` value for use in `json`
+    ("False", false),
     /// A NULL pointer for use in FFI
     ("NULL", {
         let mut arr = Array::<u8>::default();
@@ -2236,6 +2240,9 @@ primitive!(
     /// ex: °json "[4,5,6]"
     /// ex: °json $ ["what's","the","plan"]
     /// ex: °json $ {"foo": "bar", "baz": [1, 2, 3]}
+    ///
+    /// While the number literals `0` and `1` are converted to their number equivalents in JSON, the shadowable constants `True` and `False` are converted to JSON `true` and `false`.
+    /// ex: json {0 1 2 3 True False}
     ///
     /// While [json] always produces ECMA-compliant JSON, [un][json] can parse [JSON5](https://json5.org/).
     /// This means that you can use single quotes, unquoted keys, trailing commas, and comments.

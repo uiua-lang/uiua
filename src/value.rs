@@ -1328,7 +1328,7 @@ impl FromIterator<usize> for Value {
 
 impl From<bool> for Value {
     fn from(b: bool) -> Self {
-        Value::from(b as u8)
+        Value::from(Array::<u8>::from(b))
     }
 }
 

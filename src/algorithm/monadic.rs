@@ -1380,7 +1380,14 @@ impl Value {
                         .unwrap_or(serde_json::Value::Null)
                 }
             }
-            Value::Byte(b) if b.rank() == 0 => serde_json::Value::Number(b.data[0].into()),
+            Value::Byte(bytes) if bytes.rank() == 0 => {
+                let b = bytes.data[0];
+                if bytes.meta().flags.contains(ArrayFlags::BOOLEAN_LITERAL) {
+                    serde_json::Value::Bool(b != 0)
+                } else {
+                    serde_json::Value::Number(b.into())
+                }
+            }
             Value::Complex(_) => return Err(env.error("Cannot convert complex numbers to JSON")),
             Value::Char(c) if c.rank() == 0 => serde_json::Value::String(c.data[0].to_string()),
             Value::Char(c) if c.rank() == 1 => serde_json::Value::String(c.data.iter().collect()),

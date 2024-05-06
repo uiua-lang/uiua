@@ -248,7 +248,15 @@ impl Compiler {
                             env.push(sigs);
                         }
                         env.push(formatted);
+
+                        #[cfg(feature = "native_sys")]
+                        let enabled = crate::sys_native::set_output_enabled(
+                            self.pre_eval_mode != PreEvalMode::Lsp,
+                        );
                         env.call(mac.function)?;
+                        #[cfg(feature = "native_sys")]
+                        crate::sys_native::set_output_enabled(enabled);
+
                         let val = env.pop("macro result")?;
 
                         // Parse the macro output

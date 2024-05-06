@@ -1,5 +1,4 @@
 use std::{
-    borrow::Cow,
     cell::{Cell, RefCell},
     iter,
     mem::{replace, take},
@@ -568,7 +567,7 @@ fn build_code_lines(code: &str) -> CodeLines {
             if chars[*curr] == "\n" {
                 if !unspanned.is_empty() {
                     // logging::log!("unspanned: `{}`", unspanned);
-                    lines.push_str(&escape_html(&unspanned));
+                    lines.push_str(&unspanned);
                     unspanned.clear();
                 }
                 // logging::log!("newline");
@@ -586,7 +585,7 @@ fn build_code_lines(code: &str) -> CodeLines {
         }
         if !unspanned.is_empty() {
             // logging::log!("unspanned: `{}`", unspanned);
-            lines.push_str(&escape_html(&unspanned));
+            lines.push_str(&unspanned);
         }
         lines.line().push(CodeFragment::Unspanned(String::new()));
     };
@@ -812,31 +811,6 @@ fn gen_code_view(code: &str) -> View {
         line_views.push(view!(<div class="code-line">{frag_views}</div>))
     }
     line_views.into_view()
-}
-
-fn escape_html(s: &str) -> Cow<str> {
-    if s.contains(['&', '<', '>', '"', '\''].as_ref()) {
-        let mut escaped = String::with_capacity(s.len());
-        let mut prev = '\0';
-        for c in s.chars() {
-            if prev != '\\' {
-                match c {
-                    '&' => escaped.push_str("&amp;"),
-                    '<' => escaped.push_str("&lt;"),
-                    '>' => escaped.push_str("&gt;"),
-                    // '"' => escaped.push_str("&quot;"),
-                    // '\'' => escaped.push_str("&#x27;"),
-                    _ => escaped.push(c),
-                }
-            } else {
-                escaped.push(c);
-            }
-            prev = c;
-        }
-        Cow::Owned(escaped)
-    } else {
-        Cow::Borrowed(s)
-    }
 }
 
 fn init_rt() -> Uiua {

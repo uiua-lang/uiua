@@ -412,7 +412,7 @@ impl From<&str> for DocComment {
         let sig_line = text.lines().position(|line| {
             line.trim_start().starts_with('?') || line.contains("--") && !line.contains("---")
         });
-        let text = if let Some(i) = sig_line {
+        let raw_text = if let Some(i) = sig_line {
             let mut sig_text = text.lines().nth(i).unwrap();
             // Trim question mark and whitespace
             sig_text = sig_text.trim().trim_start_matches('?').trim();
@@ -481,6 +481,13 @@ impl From<&str> for DocComment {
         } else {
             text.into()
         };
+        let mut text = EcoString::new();
+        for (i, line) in raw_text.lines().enumerate() {
+            if i > 0 {
+                text.push('\n');
+            }
+            text.push_str(line.trim());
+        }
         DocComment { text, sig }
     }
 }

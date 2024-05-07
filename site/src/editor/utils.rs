@@ -745,7 +745,7 @@ fn gen_code_view(code: &str) -> View {
                                 components[0], components[1], components[2]
                             );
                             frag_views.push(
-                                view!(<span class="code-span code-hover" style=style>{text}</span>)
+                                view!(<span class="code-span code-hover" style=style data-title="label">{text}</span>)
                                     .into_view(),
                             )
                         }
@@ -780,9 +780,17 @@ fn gen_code_view(code: &str) -> View {
                                 };
                             if let Some(comment) = &docs.comment {
                                 if !title.is_empty() {
-                                    title.push(' ');
+                                    if comment.text.contains('\n') && comment.sig.is_none() {
+                                        title.push('\n');
+                                    } else {
+                                        title.push(' ');
+                                    }
                                 }
-                                title.push_str(&comment.text);
+                                if let Some(sig) = &comment.sig {
+                                    title.push_str(&sig.to_string());
+                                    title.push('\n');
+                                }
+                                title.push_str(&comment.text.replace("\n\n\n", "\n"));
                             } else {
                                 match docs.kind {
                                     BindingDocsKind::Constant(None) => title.push_str("constant"),

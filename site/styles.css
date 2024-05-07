@@ -510,10 +510,10 @@ input[type=number] {
     padding: 0.2em;
     border-radius: 0.2em;
     pointer-events: none;
-    margin-top: -1.5em;
+    margin-top: 1.9em;
     margin-left: -2em;
     text-decoration: none;
-    white-space: nowrap;
+    white-space: pre-wrap;
     overflow: visible;
     -webkit-text-fill-color: #eee;
     -moz-text-fill-color: #eee;

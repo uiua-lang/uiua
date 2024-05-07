@@ -105,7 +105,7 @@ impl Compiler {
                 local,
                 BindingKind::Macro,
                 Some(span.clone()),
-                comment.clone(),
+                comment.map(|text| DocComment::from(text.as_str())),
             );
             let mac = ArrayMacro {
                 function,
@@ -143,7 +143,7 @@ impl Compiler {
                 local,
                 BindingKind::Macro,
                 Some(span.clone()),
-                comment.clone(),
+                comment.map(|text| DocComment::from(text.as_str())),
             );
             let mut words = binding.words.clone();
             recurse_words(&mut words, &mut |word| match &word.value {
@@ -191,7 +191,6 @@ impl Compiler {
                                     DiagnosticKind::Style,
                                     dup_span,
                                 );
-                                comp.flush_diagnostics();
                             }
                         }
                     }
@@ -274,7 +273,7 @@ impl Compiler {
                     // Binding is a single inline function
                     sig = f.signature();
                     let func = make_fn(f.instrs(self).into(), f.signature(), self);
-                    self.compile_bind_function(&name, local, func, spandex, comment)?;
+                    self.compile_bind_function(&name, local, func, spandex, comment.as_deref())?;
                 } else if sig == (0, 1) && !is_setinv && !is_setund {
                     if let &[Instr::Prim(Primitive::Tag, span)] = instrs.as_slice() {
                         instrs.push(Instr::Label {
@@ -296,7 +295,7 @@ impl Compiler {
                         }
                     };
                     let is_const = val.is_some();
-                    self.asm.bind_const(local, val, spandex, comment);
+                    self.compile_bind_const(&name, local, val, spandex, comment.as_deref());
                     self.scope.names.insert(name.clone(), local);
                     if is_const {
                         self.asm.instrs.truncate(instrs_start);
@@ -338,7 +337,13 @@ impl Compiler {
                     if let Some(Instr::Push(val)) = self.asm.instrs.last() {
                         let val = val.clone();
                         self.asm.instrs.pop();
-                        self.asm.bind_const(local, Some(val), spandex, comment);
+                        self.compile_bind_const(
+                            &name,
+                            local,
+                            Some(val),
+                            spandex,
+                            comment.as_deref(),
+                        );
                         if let Some(last_slice) = self.asm.top_slices.last_mut() {
                             last_slice.len -= 1;
                             if last_slice.len == 0 {
@@ -346,7 +351,7 @@ impl Compiler {
                             }
                         }
                     } else {
-                        self.asm.bind_const(local, None, spandex, comment);
+                        self.compile_bind_const(&name, local, None, spandex, comment.as_deref());
                         let start = self.asm.instrs.len();
                         self.asm.instrs.push(Instr::BindGlobal {
                             span: spandex,
@@ -358,7 +363,7 @@ impl Compiler {
                 } else {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);
-                    self.compile_bind_function(&name, local, func, spandex, comment)?;
+                    self.compile_bind_function(&name, local, func, spandex, comment.as_deref())?;
                 }
 
                 self.code_meta.function_sigs.insert(
@@ -375,7 +380,7 @@ impl Compiler {
                     // Binding is a normal function
                     instrs.insert(0, Instr::NoInline);
                     let func = make_fn(instrs, sig.value, self);
-                    self.compile_bind_function(&name, local, func, spandex, comment)?;
+                    self.compile_bind_function(&name, local, func, spandex, comment.as_deref())?;
                 } else {
                     self.add_error(
                         binding.name.span.clone(),
@@ -406,7 +411,9 @@ impl Compiler {
                 local,
                 BindingKind::Module(module_path.clone()),
                 Some(name.span.clone()),
-                prev_com.or_else(|| imported.comment.clone()),
+                prev_com
+                    .or_else(|| imported.comment.clone())
+                    .map(|text| DocComment::from(text.as_str())),
             );
             self.scope.names.insert(name.value.clone(), local);
         }

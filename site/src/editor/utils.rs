@@ -782,7 +782,7 @@ fn gen_code_view(code: &str) -> View {
                                 if !title.is_empty() {
                                     title.push(' ');
                                 }
-                                title.push_str(comment);
+                                title.push_str(&comment.text);
                             } else {
                                 match docs.kind {
                                     BindingDocsKind::Constant(None) => title.push_str("constant"),

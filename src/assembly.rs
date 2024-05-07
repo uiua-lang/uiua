@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{fmt, iter::once, path::PathBuf, sync::Arc};
 
 use dashmap::DashMap;
 use ecow::{eco_vec, EcoString, EcoVec};
@@ -57,7 +57,7 @@ impl Assembly {
         local: LocalName,
         function: Function,
         span: usize,
-        comment: Option<EcoString>,
+        comment: Option<DocComment>,
     ) {
         let span = self.spans[span].clone();
         self.add_global_at(local, BindingKind::Func(function), span.code(), comment);
@@ -67,7 +67,7 @@ impl Assembly {
         local: LocalName,
         value: Option<Value>,
         span: usize,
-        comment: Option<EcoString>,
+        comment: Option<DocComment>,
     ) {
         let span = self.spans[span].clone();
         self.add_global_at(local, BindingKind::Const(value), span.code(), comment);
@@ -77,7 +77,7 @@ impl Assembly {
         local: LocalName,
         global: BindingKind,
         span: Option<CodeSpan>,
-        comment: Option<EcoString>,
+        comment: Option<DocComment>,
     ) {
         let binding = BindingInfo {
             public: local.public,
@@ -307,7 +307,7 @@ pub struct BindingInfo {
     /// The span of the original binding name
     pub span: CodeSpan,
     /// The comment preceding the binding
-    pub comment: Option<EcoString>,
+    pub comment: Option<DocComment>,
 }
 
 /// A kind of global binding
@@ -337,6 +337,151 @@ impl BindingKind {
     /// Check if the global is a once-bound constant
     pub fn is_constant(&self) -> bool {
         matches!(self, Self::Const(_))
+    }
+}
+
+/// A comment that documents a binding
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct DocComment {
+    /// The comment text
+    pub text: EcoString,
+    /// The signature of the binding
+    pub sig: Option<DocCommentSig>,
+}
+
+/// A signature in a doc comment
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct DocCommentSig {
+    /// The arguments of the signature
+    pub args: Vec<DocCommentArg>,
+    /// The outputs of the signature
+    pub outputs: Option<Vec<DocCommentArg>>,
+}
+
+impl DocCommentSig {
+    /// Whether the doc comment signature matches a given function signature
+    pub fn matches_sig(&self, sig: Signature) -> bool {
+        self.args.len() == sig.args
+            && (self.outputs.as_ref()).map_or(true, |o| o.len() == sig.outputs)
+    }
+    pub(crate) fn sig_string(&self) -> String {
+        if let Some(outputs) = &self.outputs {
+            format!(
+                "signature {}",
+                Signature::new(self.args.len(), outputs.len())
+            )
+        } else {
+            format!("{} args", self.args.len())
+        }
+    }
+}
+
+impl fmt::Display for DocCommentSig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.outputs.is_none() {
+            write!(f, "? ")?;
+        }
+        for (i, arg) in self.args.iter().enumerate() {
+            if i > 0 {
+                write!(f, " ")?;
+            }
+            write!(f, "{}", arg.name)?;
+        }
+        if let Some(outputs) = &self.outputs {
+            write!(f, " --")?;
+            for output in outputs {
+                write!(f, " {}", output.name)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+/// An argument in a doc comment signature
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct DocCommentArg {
+    /// The name of the argument
+    pub name: EcoString,
+    /// A type descriptor for the argument
+    pub ty: Option<EcoString>,
+}
+
+impl From<&str> for DocComment {
+    fn from(text: &str) -> Self {
+        let mut sig = None;
+        let sig_line = text.lines().position(|line| {
+            line.trim_start().starts_with('?') || line.contains("--") && !line.contains("---")
+        });
+        let text = if let Some(i) = sig_line {
+            let mut sig_text = text.lines().nth(i).unwrap();
+            // Trim question mark and whitespace
+            sig_text = sig_text.trim().trim_start_matches('?').trim();
+            let has_divider = sig_text.contains("--");
+            // Split into args and outputs
+            let (mut args_text, mut outputs_text) =
+                sig_text.split_once("--").unwrap_or((sig_text, ""));
+            args_text = args_text.trim();
+            outputs_text = outputs_text.trim();
+            // Parse args and outputs
+            let mut args = Vec::new();
+            let mut outputs = Vec::new();
+            for (args, text) in once((&mut args, args_text))
+                .chain(has_divider.then_some((&mut outputs, outputs_text)))
+            {
+                // Tokenize text
+                let mut tokens = Vec::new();
+                for frag in text.split_whitespace() {
+                    for (i, token) in frag.split(':').enumerate() {
+                        if i > 0 {
+                            tokens.push(":");
+                        }
+                        tokens.push(token);
+                    }
+                }
+                // Parse tokens into args
+                let mut curr_arg_name = None;
+                let mut tokens = tokens.into_iter().peekable();
+                while let Some(token) = tokens.next() {
+                    if token == ":" {
+                        let ty = tokens.next().unwrap_or_default();
+                        args.push(DocCommentArg {
+                            name: curr_arg_name.take().unwrap_or_default(),
+                            ty: if ty.is_empty() { None } else { Some(ty.into()) },
+                        });
+                    } else {
+                        if let Some(curr) = curr_arg_name.take() {
+                            args.push(DocCommentArg {
+                                name: curr,
+                                ty: None,
+                            });
+                        }
+                        curr_arg_name = Some(token.into());
+                    }
+                }
+                if let Some(curr) = curr_arg_name.take() {
+                    args.push(DocCommentArg {
+                        name: curr,
+                        ty: None,
+                    });
+                }
+            }
+
+            sig = Some(DocCommentSig {
+                args,
+                outputs: has_divider.then_some(outputs),
+            });
+
+            let mut text: EcoString = (text.lines().take(i))
+                .chain(once("\n"))
+                .chain(text.lines().skip(i + 1))
+                .flat_map(|s| s.chars().chain(Some('\n')))
+                .collect();
+            text.pop();
+            text
+        } else {
+            text.into()
+        };
+        DocComment { text, sig }
     }
 }
 

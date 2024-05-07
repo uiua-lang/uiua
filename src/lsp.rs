@@ -13,8 +13,8 @@ use crate::{
     ident_modifier_args, instrs_are_pure,
     lex::{CodeSpan, Sp},
     parse::parse,
-    Assembly, BindingInfo, BindingKind, Compiler, Ident, InputSrc, Inputs, PreEvalMode, Primitive,
-    SafeSys, Signature, SysBackend, UiuaError, Value, CONSTANTS,
+    Assembly, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc, Inputs, PreEvalMode,
+    Primitive, SafeSys, Signature, SysBackend, UiuaError, Value, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -42,7 +42,7 @@ pub struct BindingDocs {
     /// The span of the binding name where it was defined
     pub src_span: CodeSpan,
     /// The comment of the binding
-    pub comment: Option<EcoString>,
+    pub comment: Option<DocComment>,
     /// Whether the binding is public
     pub is_public: bool,
     /// The specific binding kind
@@ -438,7 +438,6 @@ impl Spanner {
     }
 }
 
-use ecow::EcoString;
 #[cfg(feature = "lsp")]
 #[doc(hidden)]
 pub use server::run_language_server;
@@ -732,7 +731,7 @@ mod server {
                                 value.push_str("[`° un`](https://uiua.org/docs/un)");
                             }
                             if underable {
-                                if invertible {
+                                if pure || invertible {
                                     value.push_str(" | ");
                                 }
                                 value.push_str("[`⍜ under`](https://uiua.org/docs/under)");
@@ -743,7 +742,12 @@ mod server {
                 }
                 if let Some(comment) = &docs.comment {
                     value.push_str("\n\n");
-                    value.push_str(comment);
+                    if let Some(sig) = &comment.sig {
+                        value.push('`');
+                        value.push_str(&sig.to_string());
+                        value.push_str("`\n\n");
+                    }
+                    value.push_str(&comment.text);
                 }
                 Hover {
                     contents: HoverContents::Markup(MarkupContent {
@@ -791,7 +795,7 @@ mod server {
                     documentation: binding.comment.as_ref().map(|c| {
                         Documentation::MarkupContent(MarkupContent {
                             kind: MarkupKind::Markdown,
-                            value: c.to_string(),
+                            value: c.text.to_string(),
                         })
                     }),
                     text_edit: Some(CompletionTextEdit::Edit(TextEdit {

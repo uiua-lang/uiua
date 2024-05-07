@@ -26,6 +26,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Additional arguments are passed to the function on every iteration
 - Add [`&tlsc`](https://uiua.org/docs/&tlsc) and [`&tlsl`](https://uiua.org/docs/&tlsl) system functions, which allow making TLS connections
   - These are currently experimental, but they will likely replace [`&httpsw`](https://uiua.org/docs/&httpsw)
+- Add argument documentation comments
 - Remove previously deprecated primitives:
   - `this ↬`
   - `recur ↫`

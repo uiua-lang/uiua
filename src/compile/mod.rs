@@ -30,9 +30,9 @@ use crate::{
     lsp::{CodeMeta, SigDecl},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, parse, split_words, unsplit_words},
-    Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, Ident, ImplPrimitive,
-    InputSrc, IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment, SysBackend, Uiua,
-    UiuaError, UiuaResult, Value, CONSTANTS, VERSION,
+    Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, DocComment, Ident,
+    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment,
+    SysBackend, Uiua, UiuaError, UiuaResult, Value, CONSTANTS, VERSION,
 };
 
 /// The Uiua compiler
@@ -369,6 +369,12 @@ impl Compiler {
 
         let res = self.catching_crash(input, |env| env.items(items, false));
 
+        if self.print_diagnostics {
+            for diagnostic in self.take_diagnostics() {
+                eprintln!("{}", diagnostic.report());
+            }
+        }
+
         if let InputSrc::File(_) = &src {
             self.current_imports.pop();
         }
@@ -622,11 +628,58 @@ code:
         local: LocalName,
         function: Function,
         span: usize,
-        comment: Option<EcoString>,
+        comment: Option<&str>,
     ) -> UiuaResult {
+        let comment = comment.map(|text| {
+            let comment = DocComment::from(text);
+            if let Some(sig) = &comment.sig {
+                if !sig.matches_sig(function.signature()) {
+                    self.emit_diagnostic(
+                        format!(
+                            "{}'s comment describes {}, \
+                            but its code has signature {}",
+                            name,
+                            sig.sig_string(),
+                            function.signature(),
+                        ),
+                        DiagnosticKind::Warning,
+                        self.get_span(span).clone().code().unwrap(),
+                    );
+                }
+            }
+            comment
+        });
         self.scope.names.insert(name.clone(), local);
         self.asm.bind_function(local, function, span, comment);
         Ok(())
+    }
+    fn compile_bind_const(
+        &mut self,
+        name: &Ident,
+        local: LocalName,
+        value: Option<Value>,
+        span: usize,
+        comment: Option<&str>,
+    ) {
+        let span = self.get_span(span).clone().code();
+        let comment = comment.map(|text| {
+            let comment = DocComment::from(text);
+            if let Some(sig) = &comment.sig {
+                self.emit_diagnostic(
+                    format!(
+                        "{}'s comment describes {}, \
+                        but it is a constant",
+                        name,
+                        sig.sig_string(),
+                    ),
+                    DiagnosticKind::Warning,
+                    span.clone().unwrap(),
+                );
+            }
+            comment
+        });
+        self.asm
+            .add_global_at(local, BindingKind::Const(value), span, comment);
     }
     /// Import a module
     pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
@@ -726,15 +779,7 @@ code:
 
         self.new_functions.push(EcoVec::new());
         self.words(words, call)?;
-        self.flush_diagnostics();
         Ok(self.new_functions.pop().unwrap())
-    }
-    fn flush_diagnostics(&mut self) {
-        if self.print_diagnostics {
-            for diagnostic in self.take_diagnostics() {
-                eprintln!("{}", diagnostic.report());
-            }
-        }
     }
     fn compile_operand_word(&mut self, word: Sp<Word>) -> UiuaResult<(EcoVec<Instr>, Signature)> {
         let span = word.span.clone();

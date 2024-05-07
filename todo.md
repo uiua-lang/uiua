@@ -4,6 +4,7 @@
   - Add arg/output doc comments
   - Allow warnings to be disabled?
   - `°⟜+`?
+  - Dynamic modules (maybe 0.12)
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Spatial thinking tutorial/blog
 - Multimedia

@@ -11,6 +11,7 @@ pub enum OtherTutorialPage {
     Strings,
     Audio,
     Images,
+    Documentation,
 }
 
 impl OtherTutorialPage {
@@ -24,6 +25,7 @@ impl OtherTutorialPage {
             }
             Self::Audio => Audio().into_view(),
             Self::Images => ImagesAndGifs().into_view(),
+            Self::Documentation => Documentation().into_view(),
         }
     }
 }
@@ -147,5 +149,29 @@ fn strings_challenges() -> impl IntoView {
             tests={&["\"What is 1 + 2?\"", "\"99 bottles of beer on the wall, 99 bottles of beer\"", "\"(555) 555-5555\""]}
             best_answer="+∩⊢⇌. ⊜⋕ ×⊓≥≤@0,@9."
             hidden="\"123\""/>
+    }
+}
+
+#[component]
+pub fn Documentation() -> impl IntoView {
+    view! {
+        <Title text="Documenting Code - Uiua Docs"/>
+        <h1>"Documenting Code"</h1>
+        <p>"Uiua interprets comments in certain contexts as documentation."</p>
+        <p>"For example, writing a comment directly above a binding will make it the documentation for that binding. A binding's documentation will be show when hovering over any references to it, both on this site and when using the language server "<A href="/docs/install#editor-support">"in your native editor"</A>"."</p>
+        <p>"Hover over any of the instances of the name "<code>"Avg"</code>" in the example below to see the documentation."</p>
+        <Editor example="# Get the average of an array\nAvg ← ÷⧻⟜/+\nAvg [1 2 7 6]"/>
+        <p>"Multiple lines of documentation can be written by using multiple comments."</p>
+        <Editor example="# Remove the first instance of one array from another\n# The first array must be one rank lower than the second\nRemFirst ← ⬚1▽¬°⊚⊗⊙.\nRemFirst 1_2 [3_5 1_2 0_2]"/>
+        <p>"If both your binding code and your documentation are short, you can write them on the same line."</p>
+        <Editor example="Avg ← ÷⧻⟜/+ # Average of an array"/>
+        <p>"If you start a line in a comment with "<code>"?"</code>", subsequent words will be interpreted as argument names."</p>
+        <p>"These are handled separately from the rest of the comment, and they will be checked against a function's signature."</p>
+        <Editor example="# Remove the first instance of one array from another\n# ? needle haystack\nRemFirst ← ⬚1▽¬°⊚⊗⊙."/>
+        <Editor example="# Do the thing\n# ? x y\nFoo ← ≡↻⇡⧻⟜¤"/>
+        <p>"The "<code>"?"</code>" is similar to the "<Prim prim=Primitive::Stack/>" function because the arguments indicate the intended state of the stack before the function is called."</p>
+        <p>"If you also want to give names to a function's outputs, separate them from the arguments with "<code>"--"</code>"."</p>
+        <p>"In this case, the leading "<code>"?"</code>" is optional."</p>
+        <Editor example="# divisor dividend -- quotient remainder\nDivRem ← ⌊⊃÷◿\nDivRem 3 7"/>
     }
 }

@@ -27,6 +27,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`&tlsc`](https://uiua.org/docs/&tlsc) and [`&tlsl`](https://uiua.org/docs/&tlsl) system functions, which allow making TLS connections
   - These are currently experimental, but they will likely replace [`&httpsw`](https://uiua.org/docs/&httpsw)
 - Add argument documentation comments
+  - You can read more about this in the new [Documenting Code](https://uiua.org/tutorial/documentation) tutorial
 - Remove previously deprecated primitives:
   - `this ↬`
   - `recur ↫`
@@ -44,6 +45,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the `--io` flag to the `uiua fmt` command, which formats code from stdin to stdout
 - Lots of bug fixes
 ### Website
+- Add a [Documenting Code](https://uiua.org/tutorial/documentation) tutorial
 - You can now ctrl+click on a glyph in the editor to open its documentation
 
 ## 0.10.3 - 2024-04-09

@@ -225,6 +225,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <Hd id="other-tutorials">"Other Tutorials"</Hd>
         <p>"These tutorials cover more specific topics. They assume you have read the main tutorial above, but they can be read in any order."</p>
         <ul>
+            <li><A href="/tutorial/documentation">"Documenting Code"</A>" - how to document Uiua code"</li>
             <li><A href="/tutorial/strings">"Strings"</A>" - how to manipulate strings"</li>
             <li><A href="/tutorial/audio">"Audio"</A>" - how to generate and play audio"</li>
             <li><A href="/tutorial/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>

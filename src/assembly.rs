@@ -386,11 +386,17 @@ impl fmt::Display for DocCommentSig {
                 write!(f, " ")?;
             }
             write!(f, "{}", arg.name)?;
+            if let Some(ty) = &arg.ty {
+                write!(f, ":{}", ty)?;
+            }
         }
         if let Some(outputs) = &self.outputs {
             write!(f, " --")?;
             for output in outputs {
                 write!(f, " {}", output.name)?;
+                if let Some(ty) = &output.ty {
+                    write!(f, ":{}", ty)?;
+                }
             }
         }
         Ok(())

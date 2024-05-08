@@ -168,7 +168,7 @@ pub fn Documentation() -> impl IntoView {
         <p>"If you start a line in a comment with "<code>"?"</code>", subsequent words will be interpreted as argument names."</p>
         <p>"These are handled separately from the rest of the comment, and they will be checked against a function's signature."</p>
         <Editor example="# Remove the first instance of one array from another\n# ? needle haystack\nRemFirst ← ⬚1▽¬°⊚⊗⊙."/>
-        <Editor example="# Do the thing\n# ? x y\nFoo ← ≡↻⇡⧻⟜¤"/>
+        <Editor example="# Do the thing\n# ? x y\nFoo ← ≡↻⇡⧻⟜¤"/> // Should fail
         <p>"The "<code>"?"</code>" is similar to the "<Prim prim=Primitive::Stack/>" function because the arguments indicate the intended state of the stack before the function is called."</p>
         <p>"If you also want to give names to a function's outputs, separate them from the arguments with "<code>"--"</code>"."</p>
         <p>"In this case, the leading "<code>"?"</code>" is optional."</p>

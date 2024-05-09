@@ -162,12 +162,12 @@ pub fn Documentation() -> impl IntoView {
         <p>"Hover over any of the instances of the name "<code>"Avg"</code>" in the example below to see the documentation."</p>
         <Editor example="# Get the average of an array\nAvg ← ÷⧻⟜/+\nAvg [1 2 7 6]"/>
         <p>"Multiple lines of documentation can be written by using multiple comments."</p>
-        <Editor example="# Remove the first instance of one array from another\n# The first array must be one rank lower than the second\nRemFirst ← ⬚1▽¬°⊚⊗⊙.\nRemFirst 1_2 [3_5 1_2 0_2]"/>
+        <Editor example="# Remove the first instance of one array from another\n# The first array must be one rank lower than the second\nRemFirst ← ⍜↻(↘1)⊗⊙.\nRemFirst 1_2 [3_5 1_2 0_2 1_2]"/>
         <p>"If both your binding code and your documentation are short, you can write them on the same line."</p>
         <Editor example="Avg ← ÷⧻⟜/+ # Average of an array"/>
         <p>"If you start a line in a comment with "<code>"?"</code>", subsequent words will be interpreted as argument names."</p>
         <p>"These are handled separately from the rest of the comment, and they will be checked against a function's signature."</p>
-        <Editor example="# Remove the first instance of one array from another\n# ? needle haystack\nRemFirst ← ⬚1▽¬°⊚⊗⊙."/>
+        <Editor example="# Remove the first instance of one array from another\n# ? needle haystack\nRemFirst ← ⍜↻(↘1)⊗⊙."/>
         <Editor example="# Do the thing\n# ? x y\nFoo ← ≡↻⇡⧻⟜¤"/> // Should fail
         <p>"The "<code>"?"</code>" is similar to the "<Prim prim=Primitive::Stack/>" function because the arguments indicate the intended state of the stack before the function is called."</p>
         <p>"If you also want to give names to a function's outputs, separate them from the arguments with "<code>"--"</code>"."</p>

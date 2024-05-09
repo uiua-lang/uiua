@@ -532,8 +532,11 @@ impl<T: ArrayValue> Array<T> {
         if depth == 0 && self.is_map() {
             self.take_map_keys();
         }
+        if self.rank() == 0 {
+            return;
+        }
         depth = depth.min(self.rank());
-        let trans_count = amnt.unsigned_abs() as usize;
+        let trans_count = amnt.unsigned_abs() as usize % self.rank();
         let trans_rank = self.rank() - depth;
         // Early return if nothing would actually happen
         if trans_rank < 2 || depth + trans_count == self.rank() || trans_count == 0 {

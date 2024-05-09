@@ -248,9 +248,6 @@ impl<'a> VirtualEnv<'a> {
                 self.handle_sig(sig)?
             }
             Instr::Recur(_) => return Err(SigCheckError::from("recur present").ambiguous()),
-            Instr::PushLocals { count, .. } => self.handle_args_outputs(*count, 0)?,
-            Instr::PopLocals => {}
-            Instr::GetLocal { .. } => self.stack.push(BasicValue::Other),
             Instr::PushTemp { count, stack, .. } => {
                 for _ in 0..*count {
                     let val = self.pop()?;

@@ -79,17 +79,6 @@ pub enum Instr {
     },
     /// Call a dynamic function
     Dynamic(DynamicFunction),
-    /// Bind some local values
-    PushLocals {
-        count: usize,
-        span: usize,
-    },
-    PopLocals,
-    /// Get a local value
-    GetLocal {
-        index: usize,
-        span: usize,
-    },
     Unpack {
         count: usize,
         span: usize,
@@ -177,9 +166,6 @@ impl PartialEq for Instr {
             ) => a == b && au == bu && asig == bsig,
             (Self::Label { label: a, .. }, Self::Label { label: b, .. }) => a == b,
             (Self::Dynamic(a), Self::Dynamic(b)) => a == b,
-            (Self::PushLocals { count: a, .. }, Self::PushLocals { count: b, .. }) => a == b,
-            (Self::PopLocals, Self::PopLocals) => true,
-            (Self::GetLocal { index: a, .. }, Self::GetLocal { index: b, .. }) => a == b,
             (
                 Self::Unpack {
                     count: a,
@@ -234,9 +220,6 @@ impl Hash for Instr {
             } => (17, count, under_cond, sig).hash(state),
             Instr::Label { label, .. } => (18, label).hash(state),
             Instr::Dynamic(df) => (19, df).hash(state),
-            Instr::PushLocals { count, .. } => (20, count).hash(state),
-            Instr::PopLocals => 21.hash(state),
-            Instr::GetLocal { index, .. } => (22, index).hash(state),
             Instr::Unpack { count, unbox, .. } => (23, count, unbox).hash(state),
             Instr::SetOutputComment { i, n, .. } => (24, i, n).hash(state),
             Instr::PushSig(sig) => (25, sig).hash(state),
@@ -389,9 +372,6 @@ impl fmt::Display for Instr {
             }
             Instr::Label { label, .. } => write!(f, "${label}"),
             Instr::Dynamic(df) => write!(f, "{df:?}"),
-            Instr::PushLocals { count, .. } => write!(f, "<push {count} locals>"),
-            Instr::PopLocals => write!(f, "<pop locals>"),
-            Instr::GetLocal { index, .. } => write!(f, "<get local {index}>"),
             Instr::Unpack {
                 count,
                 unbox: false,

@@ -1894,12 +1894,7 @@ code:
         let instrs = optimize_instrs(instrs, true, &self.asm);
         if self.pre_eval_mode == PreEvalMode::Lazy
             || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
-            || (instrs.iter()).any(|instr| {
-                matches!(
-                    instr,
-                    Instr::PushLocals { .. } | Instr::PopLocals | Instr::NoInline
-                )
-            })
+            || instrs.iter().any(|instr| matches!(instr, Instr::NoInline))
         {
             return (instrs, errors);
         }
@@ -1916,7 +1911,7 @@ code:
                         sig.args == 0 && sig.outputs > 0 && temps.iter().all(|&sig| sig == (0, 0))
                     })
                 {
-                    // println!("section: {section:?}");
+                    println!("section: {section:?}");
                     match self.comptime_instrs(section.into()) {
                         Ok(Some(values)) => {
                             for val in &values {
@@ -2033,14 +2028,7 @@ fn instrs_can_pre_eval(instrs: &[Instr], asm: &Assembly) -> bool {
             (None, None) => true,
             _ => false,
         };
-    // Local instructions must be balanced
-    let locals_allowed = (instrs.iter())
-        .position(|instr| matches!(instr, Instr::PushLocals { .. }))
-        .map_or(true, |pos| {
-            pos == 0 && instrs.ends_with(&[Instr::PopLocals])
-        });
     if !array_allowed
-        || !locals_allowed
         || matches!(
             instrs.last().unwrap(),
             Instr::PushFunc(_) | Instr::BeginArray

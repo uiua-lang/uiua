@@ -55,8 +55,6 @@ pub(crate) struct Runtime {
     recur_stack: Vec<usize>,
     /// The fill stack
     fill_stack: Vec<Fill>,
-    /// The locals stack
-    pub(crate) locals_stack: Vec<Vec<Value>>,
     /// A limit on the execution duration in milliseconds
     pub(crate) execution_limit: Option<f64>,
     /// The time at which execution started
@@ -196,7 +194,6 @@ impl Default for Runtime {
             }],
             recur_stack: Vec::new(),
             fill_stack: Vec::new(),
-            locals_stack: Vec::new(),
             backend: Arc::new(SafeSys::default()),
             time_instrs: false,
             last_time: 0.0,
@@ -571,29 +568,6 @@ code:
                     span,
                     under_cond,
                 } => self.with_span(span, |env| algorithm::switch(count, sig, under_cond, env)),
-                &Instr::PushLocals { count, span } => self.with_span(span, |env| {
-                    let mut locals = Vec::new();
-                    for i in 0..count {
-                        locals.push(env.pop(i + 1)?);
-                    }
-                    env.rt.locals_stack.push(locals);
-                    Ok(())
-                }),
-                Instr::PopLocals => self.rt.locals_stack.pop().map(drop).ok_or_else(|| {
-                    self.error("No locals to pop. This is a bug in the interpreter.")
-                }),
-                &Instr::GetLocal { index, span } => self.with_span(span, |env| {
-                    let locals = env.rt.locals_stack.last().ok_or_else(|| {
-                        env.error("No locals to get. This is a bug in the interpreter.")
-                    })?;
-                    let val = locals.get(index).cloned().ok_or_else(|| {
-                        env.error(format!(
-                            "Local {index} does not exist. This is a bug in the interpreter."
-                        ))
-                    })?;
-                    env.push(val);
-                    Ok(())
-                }),
                 Instr::Format { parts, span } => {
                     let parts = parts.clone();
                     self.with_span(*span, |env| {
@@ -1384,7 +1358,6 @@ code:
                 array_stack: Vec::new(),
                 fill_stack: Vec::new(),
                 recur_stack: self.rt.recur_stack.clone(),
-                locals_stack: Vec::new(),
                 call_stack: Vec::new(),
                 time_instrs: self.rt.time_instrs,
                 last_time: self.rt.last_time,

@@ -519,84 +519,20 @@ impl<T: ArrayValue> Array<T> {
     /// `keep` this array with some counts
     pub fn list_keep(mut self, counts: &[usize], env: &Uiua) -> UiuaResult<Self> {
         self.take_map_keys();
-        let mut amount = Cow::Borrowed(counts);
-        match amount.len().cmp(&self.row_count()) {
-            Ordering::Equal => {}
-            Ordering::Less => match env.num_array_fill() {
-                Ok(fill) => {
-                    if let Some(n) = fill.data.iter().find(|&&n| n < 0.0 || n.fract() != 0.0) {
-                        return Err(env.error(format!(
-                            "Fill value for keep must be an array of \
-                            non-negative integers, but one of the \
-                            values is {n}"
-                        )));
-                    }
-                    match fill.rank() {
-                        0 => {
-                            let fill = fill.data[0] as usize;
-                            let mut new_amount = amount.to_vec();
-                            new_amount.extend(repeat(fill).take(self.row_count() - amount.len()));
-                            amount = new_amount.into();
-                        }
-                        1 => {
-                            let mut new_amount = amount.to_vec();
-                            new_amount.extend(
-                                (fill.data.iter().map(|&n| n as usize).cycle())
-                                    .take(self.row_count() - amount.len()),
-                            );
-                            amount = new_amount.into();
-                        }
-                        _ => {
-                            return Err(env.error(format!(
-                                "Fill value for keep must be a scalar or a 1D array, \
-                                but it has shape {}",
-                                fill.shape
-                            )));
-                        }
-                    }
-                }
-                Err(e) => {
-                    return Err(env.error(format!(
-                        "Cannot keep array with shape {} with array of shape {}{e}",
-                        self.shape(),
-                        FormatShape(&[amount.len()])
-                    )));
-                }
-            },
-            Ordering::Greater => {
-                return Err(env.error(match env.num_array_fill() {
-                    Ok(_) => {
-                        format!(
-                            "Cannot keep array with shape {} with array of shape {}. \
-                            A fill value is available, but keep can only been filled \
-                            if there are fewer counts than rows.",
-                            self.shape(),
-                            FormatShape(&[amount.len()])
-                        )
-                    }
-                    Err(e) => {
-                        format!(
-                            "Cannot keep array with shape {} with array of shape {}{e}",
-                            self.shape(),
-                            FormatShape(&[amount.len()])
-                        )
-                    }
-                }))
-            }
-        }
+        let counts = pad_keep_counts(counts, self.row_count(), env)?;
         if self.rank() == 0 {
-            if amount.len() != 1 {
+            if counts.len() != 1 {
                 return Err(env.error("Scalar array can only be kept with a single number"));
             }
-            let mut new_data = EcoVec::with_capacity(amount[0]);
-            for _ in 0..amount[0] {
+            let mut new_data = EcoVec::with_capacity(counts[0]);
+            for _ in 0..counts[0] {
                 new_data.push(self.data[0].clone());
             }
             self = new_data.into();
         } else {
             let mut all_bools = true;
             let mut true_count = 0;
-            for &n in amount.iter() {
+            for &n in counts.iter() {
                 match n {
                     0 => {}
                     1 => true_count += 1,
@@ -611,7 +547,7 @@ impl<T: ArrayValue> Array<T> {
                 let new_flat_len = true_count * row_len;
                 let mut new_data = CowSlice::with_capacity(new_flat_len);
                 if row_len > 0 {
-                    for (b, r) in amount.iter().zip(self.data.chunks_exact(row_len)) {
+                    for (b, r) in counts.iter().zip(self.data.chunks_exact(row_len)) {
                         if *b == 1 {
                             new_data.extend_from_slice(r);
                         }
@@ -623,14 +559,14 @@ impl<T: ArrayValue> Array<T> {
                 let mut new_data = CowSlice::new();
                 let mut new_len = 0;
                 if row_len > 0 {
-                    for (n, r) in amount.iter().zip(self.data.chunks_exact(row_len)) {
+                    for (n, r) in counts.iter().zip(self.data.chunks_exact(row_len)) {
                         new_len += *n;
                         for _ in 0..*n {
                             new_data.extend_from_slice(r);
                         }
                     }
                 } else {
-                    new_len = amount.iter().sum();
+                    new_len = counts.iter().sum();
                 }
                 self.data = new_data;
                 self.shape[0] = new_len;
@@ -640,6 +576,7 @@ impl<T: ArrayValue> Array<T> {
         Ok(self)
     }
     fn undo_keep(self, counts: &[usize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+        let counts = pad_keep_counts(counts, into.row_count(), env)?;
         if counts.iter().any(|&n| n > 1) {
             return Err(env.error("Cannot invert keep with non-boolean counts"));
         }
@@ -668,6 +605,79 @@ impl<T: ArrayValue> Array<T> {
         }
         Self::from_row_arrays(new_rows, env)
     }
+}
+
+fn pad_keep_counts<'a>(
+    counts: &'a [usize],
+    len: usize,
+    env: &Uiua,
+) -> UiuaResult<Cow<'a, [usize]>> {
+    let mut amount = Cow::Borrowed(counts);
+    match amount.len().cmp(&len) {
+        Ordering::Equal => {}
+        Ordering::Less => match env.num_array_fill() {
+            Ok(fill) => {
+                if let Some(n) = fill.data.iter().find(|&&n| n < 0.0 || n.fract() != 0.0) {
+                    return Err(env.error(format!(
+                        "Fill value for keep must be an array of \
+                        non-negative integers, but one of the \
+                        values is {n}"
+                    )));
+                }
+                match fill.rank() {
+                    0 => {
+                        let fill = fill.data[0] as usize;
+                        let mut new_amount = amount.to_vec();
+                        new_amount.extend(repeat(fill).take(len - amount.len()));
+                        amount = new_amount.into();
+                    }
+                    1 => {
+                        let mut new_amount = amount.to_vec();
+                        new_amount.extend(
+                            (fill.data.iter().map(|&n| n as usize).cycle())
+                                .take(len - amount.len()),
+                        );
+                        amount = new_amount.into();
+                    }
+                    _ => {
+                        return Err(env.error(format!(
+                            "Fill value for keep must be a scalar or a 1D array, \
+                            but it has shape {}",
+                            fill.shape
+                        )));
+                    }
+                }
+            }
+            Err(e) => {
+                return Err(env.error(format!(
+                    "Cannot keep array with shape {} with array of shape {}{e}",
+                    len,
+                    FormatShape(&[amount.len()])
+                )))
+            }
+        },
+        Ordering::Greater => {
+            return Err(env.error(match env.num_array_fill() {
+                Ok(_) => {
+                    format!(
+                        "Cannot keep array with shape {} with array of shape {}. \
+                        A fill value is available, but keep can only been filled \
+                        if there are fewer counts than rows.",
+                        len,
+                        FormatShape(&[amount.len()])
+                    )
+                }
+                Err(e) => {
+                    format!(
+                        "Cannot keep array with shape {} with array of shape {}{e}",
+                        len,
+                        FormatShape(&[amount.len()])
+                    )
+                }
+            }))
+        }
+    }
+    Ok(amount)
 }
 
 impl Value {

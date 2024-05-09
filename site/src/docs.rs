@@ -367,7 +367,7 @@ impl Allowed {
             for (pattern, pat_classes) in [
                 ("stack", [PrimClass::Stack].as_slice()),
                 (
-                    "pervasive",
+                    "pervasive pervade",
                     &[PrimClass::MonadicPervasive, PrimClass::DyadicPervasive],
                 ),
                 ("array", &[PrimClass::MonadicArray, PrimClass::DyadicArray]),
@@ -406,7 +406,7 @@ impl Allowed {
                 ("stdio", &[PrimClass::Sys(SysOpClass::StdIO)]),
                 ("thread", &[PrimClass::Thread]),
                 ("map", &[PrimClass::Map]),
-                ("local", &[PrimClass::Local]),
+                ("encoding encode", &[PrimClass::Encoding]),
                 ("misc", &[PrimClass::Sys(SysOpClass::Misc)]),
             ] {
                 if pattern.split_whitespace().any(|pat| pat.starts_with(part)) {
@@ -450,7 +450,7 @@ impl Allowed {
                 PrimClass::Planet => "planet-modifiers",
                 PrimClass::Thread => "threads",
                 PrimClass::Map => "map-functions",
-                PrimClass::Local => "locals",
+                PrimClass::Encoding => "encoding",
                 PrimClass::Misc => "misc-functions",
                 PrimClass::Sys(_) => "system-functions",
             };
@@ -524,7 +524,7 @@ impl Allowed {
                 ),
                 PrimClass::Thread => ("Thread".into_view(), "Work with OS threads"),
                 PrimClass::Map => ("Map".into_view(), "Use arrays as hash maps"),
-                PrimClass::Local => ("Local".into_view(), "Bind local values"),
+                PrimClass::Encoding => ("Encoding".into_view(), "Convert to and from different encodings"),
                 PrimClass::Misc => ("Miscellaneous".into_view(), ""),
                 PrimClass::Sys(class) => {
                     match class {

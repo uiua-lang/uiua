@@ -55,7 +55,7 @@ pub enum PrimClass {
     Planet,
     Thread,
     Map,
-    Local,
+    Encoding,
     Misc,
     Sys(SysOpClass),
 }
@@ -95,7 +95,7 @@ impl fmt::Debug for PrimClass {
             Planet => write!(f, "Planet"),
             Thread => write!(f, "Thread"),
             Map => write!(f, "Map"),
-            Local => write!(f, "Local"),
+            Encoding => write!(f, "Encoding"),
             Misc => write!(f, "Misc"),
             Sys(op) => op.fmt(f),
         }

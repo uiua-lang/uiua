@@ -1965,7 +1965,7 @@ primitive!(
     /// Character math can only convert to and from UTF-32.
     /// ex: -@\0 "👩🏽‍👩🏻‍👦🏻‍👧🏽"
     /// ex: utf "👩🏽‍👩🏻‍👦🏻‍👧🏽"
-    (1, Utf, Misc, "utf"),
+    (1, Utf, Encoding, "utf"),
     /// Generate a unique tag
     ///
     /// Tags are just numbers and are unique across multiple threads, but not across multiple runs.
@@ -2252,7 +2252,7 @@ primitive!(
     /// This means that [infinity] is converted to `NaN` in a round-trip.
     /// ex: json [1 ¯5 NaN ∞]
     /// ex: °json "[1,null,-3,null]"
-    (1, Json, Misc, "json"),
+    (1, Json, Encoding, "json"),
     /// Encode an array into a CSV string
     ///
     /// The input array must be at most rank-`2`.
@@ -2268,7 +2268,7 @@ primitive!(
     /// ex: ⊙⋕°⊂ °csv "#,Count\n1,5\n2,21\n3,8\n"
     /// You can easily create a [map] with the headers as keys.
     /// ex: map⊙(⍉⋕)°⊂ °csv "#,Count\n1,5\n2,21\n3,8\n"
-    (1, Csv, Misc, "csv"),
+    (1, Csv, Encoding, "csv"),
     /// Encode an array into XLSX bytes
     ///
     /// XLSX is a spreadsheet format that can be edited in programs like Microsoft Excel, Google Sheets, and LibreOffice Calc.
@@ -2283,7 +2283,7 @@ primitive!(
     ///
     /// While it is not useful to display the output bytes here, we can see how the result of decoding works:
     /// ex: °xlsx xlsx . ↯3_6⇡18
-    (1, Xlsx, Misc, "xlsx"),
+    (1, Xlsx, Encoding, "xlsx"),
     /// Convert a value to its code representation
     ///
     /// ex: # Experimental!

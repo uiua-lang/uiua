@@ -1911,7 +1911,8 @@ code:
                         sig.args == 0 && sig.outputs > 0 && temps.iter().all(|&sig| sig == (0, 0))
                     })
                 {
-                    println!("section: {section:?}");
+                    // println!("section: {section:?}");
+                    let mut success = false;
                     match self.comptime_instrs(section.into()) {
                         Ok(Some(values)) => {
                             for val in &values {
@@ -1920,11 +1921,17 @@ code:
                             let new_instrs =
                                 new_instrs.get_or_insert_with(|| instrs[..start].into());
                             new_instrs.extend(values.into_iter().map(Instr::Push));
+                            success = true;
                         }
                         Ok(None) => {}
                         Err(e) if e.is_fill() => {}
                         Err(e) if e.message().contains("No locals to get") => {}
                         Err(e) => errors.push(e),
+                    }
+                    if !success {
+                        if let Some(new_instrs) = &mut new_instrs {
+                            new_instrs.extend(section.iter().cloned());
+                        }
                     }
                     start = end;
                     continue 'start;

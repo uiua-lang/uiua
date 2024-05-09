@@ -482,7 +482,12 @@ impl From<&str> for DocComment {
                 .chain(text.lines().skip(i + 1))
                 .flat_map(|s| s.chars().chain(Some('\n')))
                 .collect();
-            text.pop();
+            while text.ends_with('\n') {
+                text.pop();
+            }
+            if text.starts_with('\n') {
+                text = text.trim_start_matches('\n').into();
+            }
             text
         } else {
             text.into()

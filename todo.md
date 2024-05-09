@@ -1,12 +1,12 @@
 # Uiua Todo
 
 - 0.11
-  - Add arg/output doc comments
-  - Allow warnings to be disabled?
+  - Optimize `keep` with long runs of `1`s
   - `°⟜+`?
-  - Dynamic modules (maybe 0.12)
+  - Allow warnings to be disabled?
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
-- Spatial thinking tutorial/blog
+- Writing good code tutorial
+- Dynamic modules (maybe 0.12)
 - Multimedia
   - Sound input
   - Webcam input

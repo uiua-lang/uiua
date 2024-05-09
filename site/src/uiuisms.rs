@@ -171,8 +171,6 @@ uiuisms!(
     "⊃↙↘ 3 [1 2 3 4 5]",
     /// Insert a value into an array at an index
     "⍜⊙↻⊂ π 3 [1 2 3 4 5]",
-    /// Remove the row at an index
-    r#"▽≠⇡⧻, 2 "walking""#,
     /// Split an array by a delimiter
     r#"⊜□≠, @, "split,this,up""#,
     /// Split an array by a delimiter with fill elements

@@ -213,6 +213,8 @@ static PSEUDO_INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &([Sub], [Add]),
         &([Mul], [Div]),
         &([Div], [Mul]),
+        &([Rotate], [Neg, Rotate]),
+        &([Neg, Rotate], [Rotate]),
     ]
 };
 
@@ -247,78 +249,6 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
                 }
                 curr_instrs = input;
                 continue 'find_pattern;
-            }
-        }
-        break;
-    }
-
-    None
-}
-
-/// Find the "pseudo-inverse" of a sequence of instructions
-///
-/// A pseudo-inverse does not necessarily have the opposite signature of the original instructions,
-/// but it is used for some cases like `°⟜`
-fn pseudo_invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<EcoVec<Instr>> {
-    if instrs.is_empty() {
-        return Some(EcoVec::new());
-    }
-    if DEBUG {
-        println!("pseudo-inverting {:?}", instrs);
-    }
-
-    let mut inverted = EcoVec::new();
-    let mut curr_instrs = instrs;
-    let mut matched_pseudo = false;
-    'find_pattern: loop {
-        if !matched_pseudo {
-            for pattern in PSEUDO_INVERT_PATTERNS {
-                if let Some((input, mut inv)) = pattern.invert_extract(curr_instrs, comp) {
-                    if DEBUG {
-                        println!(
-                            "matched pseudo-pattern {:?} on {:?} to {inv:?}",
-                            pattern,
-                            &curr_instrs[..curr_instrs.len() - input.len()],
-                        );
-                    }
-                    inv.extend(inverted);
-                    inverted = inv;
-                    if input.is_empty() {
-                        if DEBUG {
-                            println!("inverted {:?} to {:?}", instrs, inverted);
-                        }
-                        return Some(inverted);
-                    }
-                    curr_instrs = input;
-                    matched_pseudo = true;
-                    continue 'find_pattern;
-                }
-            }
-        }
-        if DEBUG {
-            println!("no matching pseudo-patterns for {:?}", curr_instrs);
-        }
-        for pattern in INVERT_PATTERNS {
-            if let Some((input, mut inv)) = pattern.invert_extract(curr_instrs, comp) {
-                if instrs_signature(&inv).is_ok_and(|sig| sig.args == sig.outputs) {
-                    if DEBUG {
-                        println!(
-                            "matched (in pseudo) pattern {:?} on {:?} to {inv:?}",
-                            pattern,
-                            &curr_instrs[..curr_instrs.len() - input.len()],
-                        );
-                    }
-                    inv.extend(inverted);
-                    inverted = inv;
-                    if input.is_empty() {
-                        if DEBUG {
-                            println!("(in pseudo) inverted {:?} to {:?}", instrs, inverted);
-                        }
-                        return Some(inverted);
-                    }
-                    curr_instrs = input;
-                    continue 'find_pattern;
-                }
             }
         }
         break;
@@ -1091,6 +1021,7 @@ fn invert_temp_pattern<'a>(
     if let Some((input, start_instr @ Instr::CopyToTemp { span, .. }, inner, end_instr, count)) =
         try_copy_temp_wrap(input)
     {
+        // Pattern matching
         if let Some(inverse) = invert_instrs(inner, comp) {
             let mut instrs = eco_vec![Instr::PushTemp {
                 stack: TempStack::Inline,
@@ -1105,11 +1036,33 @@ fn invert_temp_pattern<'a>(
             ]);
             return Some((input, instrs));
         }
-        if let Some(pseudo_inverse) = pseudo_invert_instrs(inner, comp) {
-            let mut instrs = eco_vec![start_instr.clone()];
-            instrs.extend(pseudo_inverse);
-            instrs.push(end_instr.clone());
-            return Some((input, instrs));
+        // Pseudo-inverse
+        for mid in 0..inner.len() {
+            let (before, after) = inner.split_at(mid);
+            for pat in PSEUDO_INVERT_PATTERNS {
+                if let Some((after, pseudo_inv)) = pat.invert_extract(after, comp) {
+                    if let Some(after_inv) = invert_instrs(after, comp) {
+                        let mut instrs = eco_vec![start_instr.clone()];
+
+                        if !after_inv.is_empty() {
+                            instrs.push(Instr::PushTemp {
+                                stack: TempStack::Inline,
+                                count,
+                                span: *span,
+                            });
+                            instrs.extend(after_inv);
+                            instrs.push(end_instr.clone());
+                        }
+
+                        instrs.extend_from_slice(before);
+
+                        instrs.extend(pseudo_inv);
+
+                        instrs.push(end_instr.clone());
+                        return Some((input, instrs));
+                    }
+                }
+            }
         }
     }
     None

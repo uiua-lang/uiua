@@ -51,7 +51,7 @@ pub fn Site() -> impl IntoView {
         "A programming language for variable dislikers",
     ];
     let subtitles_rare = [
-        view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>).into_view(),
+        view!("Check out "<a href="https://arraycast.com/">"The Array Cast"</a>"!").into_view(),
         view!(<a href="https://youtu.be/seVSlKazsNk">"Point-Free or Die"</a>).into_view(),
         view! {
             <div style="font-style: normal">
@@ -63,6 +63,7 @@ pub fn Site() -> impl IntoView {
             </div>
         }
         .into_view(),
+        view!("Check out "<a href="https://tacittalk.com/">"Tacit Talk"</a>"!").into_view(),
         view! {
             <div class="long-subtitle">
                 <div style="display: flex; gap: 0.5em;">

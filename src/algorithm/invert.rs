@@ -12,7 +12,7 @@ use crate::{
     UiuaResult, Value,
 };
 
-pub(crate) const DEBUG: bool = false;
+pub(crate) const DEBUG: bool = true;
 
 pub(crate) fn match_pattern(env: &mut Uiua) -> UiuaResult {
     let pat = env.pop(1)?;
@@ -1047,7 +1047,7 @@ fn invert_temp_pattern<'a>(
                         if !after_inv.is_empty() {
                             instrs.push(Instr::PushTemp {
                                 stack: TempStack::Inline,
-                                count,
+                                count, // This may need to be before's arg count instead
                                 span: *span,
                             });
                             instrs.extend(after_inv);
@@ -2179,12 +2179,7 @@ impl InvertPattern for Val {
         }
         for len in (1..input.len()).rev() {
             let chunk = &input[..len];
-            if (chunk.iter()).any(|instr| {
-                matches!(
-                    instr,
-                    Instr::PushFunc(_) | Instr::PushTemp { .. } | Instr::PopTemp { .. }
-                )
-            }) {
+            if chunk.iter().any(Instr::is_temp) {
                 continue;
             }
             if let Ok(sig) = instrs_signature(chunk) {

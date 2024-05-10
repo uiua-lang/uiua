@@ -241,6 +241,12 @@ impl Instr {
     pub(crate) fn is_code(&self) -> bool {
         !matches!(self, Self::NoInline)
     }
+    pub(crate) fn is_temp(&self) -> bool {
+        matches!(
+            self,
+            Self::PushTemp { .. } | Self::PopTemp { .. } | Self::CopyToTemp { .. }
+        )
+    }
 }
 
 /// Whether some instructions are pure

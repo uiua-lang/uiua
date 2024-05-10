@@ -206,11 +206,21 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
     ]
 };
 
+static PSEUDO_INVERT_PATTERNS: &[&dyn InvertPattern] = {
+    use Primitive::*;
+    &[
+        &([Add], [Sub]),
+        &([Sub], [Add]),
+        &([Mul], [Div]),
+        &([Div], [Mul]),
+    ]
+};
+
+/// Invert a sequence of instructions
 pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<EcoVec<Instr>> {
     if instrs.is_empty() {
         return Some(EcoVec::new());
     }
-
     if DEBUG {
         println!("inverting {:?}", instrs);
     }
@@ -242,7 +252,77 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         break;
     }
 
-    // println!("inverting {instrs:?} failed with remaining {curr_instrs:?}");
+    None
+}
+
+/// Find the "pseudo-inverse" of a sequence of instructions
+///
+/// A pseudo-inverse does not necessarily have the opposite signature of the original instructions,
+/// but it is used for some cases like `°⟜`
+fn pseudo_invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<EcoVec<Instr>> {
+    if instrs.is_empty() {
+        return Some(EcoVec::new());
+    }
+    if DEBUG {
+        println!("pseudo-inverting {:?}", instrs);
+    }
+
+    let mut inverted = EcoVec::new();
+    let mut curr_instrs = instrs;
+    let mut matched_pseudo = false;
+    'find_pattern: loop {
+        if !matched_pseudo {
+            for pattern in PSEUDO_INVERT_PATTERNS {
+                if let Some((input, mut inv)) = pattern.invert_extract(curr_instrs, comp) {
+                    if DEBUG {
+                        println!(
+                            "matched pseudo-pattern {:?} on {:?} to {inv:?}",
+                            pattern,
+                            &curr_instrs[..curr_instrs.len() - input.len()],
+                        );
+                    }
+                    inv.extend(inverted);
+                    inverted = inv;
+                    if input.is_empty() {
+                        if DEBUG {
+                            println!("inverted {:?} to {:?}", instrs, inverted);
+                        }
+                        return Some(inverted);
+                    }
+                    curr_instrs = input;
+                    matched_pseudo = true;
+                    continue 'find_pattern;
+                }
+            }
+        }
+        if DEBUG {
+            println!("no matching pseudo-patterns for {:?}", curr_instrs);
+        }
+        for pattern in INVERT_PATTERNS {
+            if let Some((input, mut inv)) = pattern.invert_extract(curr_instrs, comp) {
+                if instrs_signature(&inv).is_ok_and(|sig| sig.args == sig.outputs) {
+                    if DEBUG {
+                        println!(
+                            "matched (in pseudo) pattern {:?} on {:?} to {inv:?}",
+                            pattern,
+                            &curr_instrs[..curr_instrs.len() - input.len()],
+                        );
+                    }
+                    inv.extend(inverted);
+                    inverted = inv;
+                    if input.is_empty() {
+                        if DEBUG {
+                            println!("(in pseudo) inverted {:?} to {:?}", instrs, inverted);
+                        }
+                        return Some(inverted);
+                    }
+                    curr_instrs = input;
+                    continue 'find_pattern;
+                }
+            }
+        }
+        break;
+    }
 
     None
 }
@@ -1000,28 +1080,37 @@ fn invert_temp_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    // Push temp
     if let Some((input, instr, inner, end_instr, _)) = try_push_temp_wrap(input) {
         let mut instrs = invert_instrs(inner, comp)?;
         instrs.insert(0, instr.clone());
         instrs.push(end_instr.clone());
         return Some((input, instrs));
     }
-    if let Some((input, Instr::CopyToTemp { span, .. }, inner, end_instr, count)) =
+    // Copy temp
+    if let Some((input, start_instr @ Instr::CopyToTemp { span, .. }, inner, end_instr, count)) =
         try_copy_temp_wrap(input)
     {
-        let inverse = invert_instrs(inner, comp)?;
-        let mut instrs = eco_vec![Instr::PushTemp {
-            stack: TempStack::Inline,
-            count,
-            span: *span
-        },];
-        instrs.extend(inverse);
-        instrs.push(end_instr.clone());
-        instrs.extend([
-            Instr::Prim(Primitive::Over, *span),
-            Instr::ImplPrim(ImplPrimitive::MatchPattern, *span),
-        ]);
-        return Some((input, instrs));
+        if let Some(inverse) = invert_instrs(inner, comp) {
+            let mut instrs = eco_vec![Instr::PushTemp {
+                stack: TempStack::Inline,
+                count,
+                span: *span
+            }];
+            instrs.extend(inverse);
+            instrs.push(end_instr.clone());
+            instrs.extend([
+                Instr::Prim(Primitive::Over, *span),
+                Instr::ImplPrim(ImplPrimitive::MatchPattern, *span),
+            ]);
+            return Some((input, instrs));
+        }
+        if let Some(pseudo_inverse) = pseudo_invert_instrs(inner, comp) {
+            let mut instrs = eco_vec![start_instr.clone()];
+            instrs.extend(pseudo_inverse);
+            instrs.push(end_instr.clone());
+            return Some((input, instrs));
+        }
     }
     None
 }

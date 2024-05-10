@@ -164,14 +164,15 @@ pub fn Documentation() -> impl IntoView {
         <p>"Multiple lines of documentation can be written by using multiple comments."</p>
         <Editor example="# Remove the first instance of one array from another\n# The first array must be one rank lower than the second\nRemFirst ← ⍜↻(↘1)⊗⊙.\nRemFirst 1_2 [3_5 1_2 0_2 1_2]"/>
         <p>"If both your binding code and your documentation are short, you can write them on the same line."</p>
-        <Editor example="Avg ← ÷⧻⟜/+ # Average of an array"/>
+        <Editor example="Avg ← ÷⧻⟜/+ # Average of an array\nAvg [1_2 3_4 5_9]"/>
         <p>"If you start a line in a comment with "<code>"?"</code>", subsequent words will be interpreted as argument names."</p>
         <p>"These are handled separately from the rest of the comment, and they will be checked against a function's signature."</p>
-        <Editor example="# Remove the first instance of one array from another\n# ? needle haystack\nRemFirst ← ⍜↻(↘1)⊗⊙."/>
+        <Editor example="# Remove the first instance of one array from another\n# ? Needle Haystack\nRemFirst ← ⍜↻(↘1)⊗⊙."/>
+        <p>"These names should follow the same conventions as binding names."</p>
         <Editor example="# Do the thing\n# ? x y\nFoo ← ≡↻⇡⧻⟜¤"/> // Should fail
         <p>"The "<code>"?"</code>" is similar to the "<Prim prim=Primitive::Stack/>" function because the arguments indicate the intended state of the stack before the function is called."</p>
-        <p>"If you also want to give names to a function's outputs, separate them from the arguments with "<code>"--"</code>"."</p>
+        <p>"If you also want to give names to a function's outputs, you can list them in front of the "<code>"?"</code>". This lets you read the comment signature right-to-left, the same way as normal Uiua code."</p>
         <p>"In this case, the leading "<code>"?"</code>" is optional."</p>
-        <Editor example="# divisor dividend -- quotient remainder\nDivRem ← ⌊⊃÷◿\nDivRem 3 7"/>
+        <Editor example="# Quotient Remainder ? Divisor Dividend\nDivRem ← ⌊⊃÷◿\nDivRem 3 7"/>
     }
 }

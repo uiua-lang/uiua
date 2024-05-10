@@ -5,8 +5,8 @@ use ecow::{eco_vec, EcoString, EcoVec};
 use serde::*;
 
 use crate::{
-    CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc, Instr,
-    IntoInputSrc, LocalName, Primitive, Signature, Span, TempStack, Uiua, UiuaResult, Value,
+    is_ident_char, CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc,
+    Instr, IntoInputSrc, LocalName, Primitive, Signature, Span, TempStack, Uiua, UiuaResult, Value,
 };
 
 /// A compiled Uiua assembly
@@ -378,9 +378,16 @@ impl DocCommentSig {
 
 impl fmt::Display for DocCommentSig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.outputs.is_none() {
-            write!(f, "? ")?;
+        if let Some(outputs) = &self.outputs {
+            for output in outputs {
+                write!(f, " {}", output.name)?;
+                if let Some(ty) = &output.ty {
+                    write!(f, ":{}", ty)?;
+                }
+            }
+            write!(f, " ")?;
         }
+        write!(f, "? ")?;
         for (i, arg) in self.args.iter().enumerate() {
             if i > 0 {
                 write!(f, " ")?;
@@ -388,15 +395,6 @@ impl fmt::Display for DocCommentSig {
             write!(f, "{}", arg.name)?;
             if let Some(ty) = &arg.ty {
                 write!(f, ":{}", ty)?;
-            }
-        }
-        if let Some(outputs) = &self.outputs {
-            write!(f, " --")?;
-            for output in outputs {
-                write!(f, " {}", output.name)?;
-                if let Some(ty) = &output.ty {
-                    write!(f, ":{}", ty)?;
-                }
             }
         }
         Ok(())
@@ -416,24 +414,20 @@ impl From<&str> for DocComment {
     fn from(text: &str) -> Self {
         let mut sig = None;
         let sig_line = text.lines().position(|line| {
-            line.trim_start().starts_with('?') || line.contains("--") && !line.contains("---")
+            line.chars().filter(|&c| c == '?').count() == 1
+                && !line.trim().ends_with('?')
+                && (line.chars()).all(|c| c.is_whitespace() || "?:".contains(c) || is_ident_char(c))
         });
         let raw_text = if let Some(i) = sig_line {
-            let mut sig_text = text.lines().nth(i).unwrap();
-            // Trim question mark and whitespace
-            sig_text = sig_text.trim().trim_start_matches('?').trim();
-            let has_divider = sig_text.contains("--");
+            let sig_text = text.lines().nth(i).unwrap();
             // Split into args and outputs
-            let (mut args_text, mut outputs_text) =
-                sig_text.split_once("--").unwrap_or((sig_text, ""));
-            args_text = args_text.trim();
+            let (mut outputs_text, mut args_text) = sig_text.split_once('?').unwrap();
             outputs_text = outputs_text.trim();
+            args_text = args_text.trim();
             // Parse args and outputs
             let mut args = Vec::new();
             let mut outputs = Vec::new();
-            for (args, text) in once((&mut args, args_text))
-                .chain(has_divider.then_some((&mut outputs, outputs_text)))
-            {
+            for (args, text) in [(&mut args, args_text), (&mut outputs, outputs_text)] {
                 // Tokenize text
                 let mut tokens = Vec::new();
                 for frag in text.split_whitespace() {
@@ -474,7 +468,7 @@ impl From<&str> for DocComment {
 
             sig = Some(DocCommentSig {
                 args,
-                outputs: has_divider.then_some(outputs),
+                outputs: (!outputs.is_empty()).then_some(outputs),
             });
 
             let mut text: EcoString = (text.lines().take(i))

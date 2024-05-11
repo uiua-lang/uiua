@@ -30,6 +30,11 @@ This version is not yet released. If you are reading this on the website, then t
   - These are currently experimental, but they will likely replace [`&httpsw`](https://uiua.org/docs/&httpsw)
 - Add argument documentation comments
   - You can read more about this in the new [Documenting Code](https://uiua.org/tutorial/documentation) tutorial
+- Add some useful shadowable constants for working with compile-time file paths
+  - `ThisFile` - The relative path of the current source file
+  - `ThisFileName` - The name of the current source file
+  - `ThisFileDir` - The directory of the current source file
+  - `WorkingDir` - The compile-time working directory
 - Remove previously deprecated primitives:
   - `this ↬`
   - `recur ↫`

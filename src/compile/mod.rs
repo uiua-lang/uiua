@@ -161,6 +161,8 @@ struct CurrentBinding {
 #[derive(Clone)]
 pub(crate) struct Scope {
     kind: ScopeKind,
+    /// The name of the current file, if any
+    file_path: Option<PathBuf>,
     /// The top level comment
     comment: Option<EcoString>,
     /// Map local names to global indices
@@ -185,6 +187,7 @@ impl Default for Scope {
     fn default() -> Self {
         Self {
             kind: ScopeKind::File,
+            file_path: None,
             comment: None,
             names: IndexMap::new(),
             experimental: false,
@@ -365,6 +368,7 @@ impl Compiler {
         }
         if let InputSrc::File(path) = &src {
             self.current_imports.push(path.to_path_buf());
+            self.scope.file_path = Some(path.to_path_buf());
         }
 
         let res = self.catching_crash(input, |env| env.items(items, false));
@@ -1489,7 +1493,7 @@ code:
             self.global_index(local.index, span, call);
         } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
             // Name is a built-in constant
-            let instr = Instr::push(constant.value.clone());
+            let instr = Instr::push(constant.value.resolve(self.scope.file_path.as_deref()));
             self.code_meta
                 .constant_references
                 .insert(span.clone().sp(ident));

@@ -519,6 +519,12 @@ F‼ ←^ $"_ ← _\n" °⊟
 F‼Y5
 ⍤⟜≍: 5 Y
 
+# ThisFile
+⍤⟜≍: $"tests_units.ua" Sep ThisFile
+⍤⟜≍: ThisFile /◇⊂ {ThisFileDir Sep ThisFileName}
+◌&fras /◇⊂ {WorkingDir Sep ThisFile}
+◌&fras /◇⊂ {WorkingDir Sep ThisFileDir Sep ThisFileName}
+
 # Experimental!
 
 # Coordinate

@@ -83,6 +83,7 @@ pub fn spans_with_compiler(input: &str, compiler: &Compiler) -> (Vec<Sp<SpanKind
     let src = InputSrc::Str(compiler.asm.inputs.strings.len().saturating_sub(1));
     let (items, _, _) = parse(input, src.clone(), &mut compiler.asm.inputs);
     let spanner = Spanner {
+        src,
         asm: compiler.asm,
         code_meta: compiler.code_meta,
         errors: Vec::new(),
@@ -134,11 +135,10 @@ pub struct SigDecl {
 pub(crate) type SigDecls = HashMap<CodeSpan, SigDecl>;
 
 struct Spanner {
+    src: InputSrc,
     asm: Assembly,
     code_meta: CodeMeta,
-    #[allow(dead_code)]
     errors: Vec<UiuaError>,
-    #[allow(dead_code)]
     diagnostics: Vec<crate::Diagnostic>,
 }
 
@@ -146,13 +146,14 @@ impl Spanner {
     fn new(src: InputSrc, input: &str, backend: impl SysBackend) -> Self {
         let mut compiler = Compiler::with_backend(backend);
         compiler.pre_eval_mode(PreEvalMode::Lsp);
-        let errors = match compiler.load_str_src(input, src) {
+        let errors = match compiler.load_str_src(input, src.clone()) {
             Ok(_) => Vec::new(),
             Err(UiuaError::Multi(errors)) => errors,
             Err(e) => vec![e],
         };
         let diagnostics = compiler.take_diagnostics().into_iter().collect();
         Self {
+            src,
             asm: compiler.asm,
             code_meta: compiler.code_meta,
             errors,
@@ -233,7 +234,12 @@ impl Spanner {
             let Some(constant) = CONSTANTS.iter().find(|c| c.name == name.value) else {
                 continue;
             };
-            let val = constant.value.clone();
+            let path = if let InputSrc::File(path) = &self.src {
+                Some(&**path)
+            } else {
+                None
+            };
+            let val = constant.value.resolve(path);
             return Some(BindingDocs {
                 src_span: span.clone(),
                 comment: Some(constant.doc.into()),

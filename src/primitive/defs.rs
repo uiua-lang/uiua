@@ -1,5 +1,7 @@
 //! All primitive definitions
 
+use std::path::Path;
+
 use crate::WILDCARD_NAN;
 
 use super::*;
@@ -9,9 +11,57 @@ pub struct ConstantDef {
     /// The constant's name
     pub name: &'static str,
     /// The constant's value
-    pub value: Lazy<Value>,
+    pub value: Lazy<ConstantValue>,
     /// The constant's documentation
     pub doc: &'static str,
+}
+
+/// The value of a shadowable constant
+pub enum ConstantValue {
+    /// A static value that is always the same
+    Static(Value),
+    /// The path of the current source file relative to the current working directory
+    ThisFile,
+    /// The name of the current source file
+    ThisFileName,
+    /// The name of the directory containing the current source file
+    ThisFileDir,
+    /// The compile-time working directory
+    WorkingDir,
+}
+
+impl ConstantValue {
+    /// Resolve the constant to a value
+    pub(crate) fn resolve(&self, current_file_path: Option<&Path>) -> Value {
+        match self {
+            ConstantValue::Static(val) => val.clone(),
+            ConstantValue::ThisFile => {
+                current_file_path.map_or_else(|| "".into(), |p| p.display().to_string().into())
+            }
+            ConstantValue::ThisFileName => current_file_path
+                .and_then(|p| p.file_name().map(|f| f.to_string_lossy().into_owned()))
+                .unwrap_or_default()
+                .into(),
+            ConstantValue::ThisFileDir => current_file_path
+                .and_then(|p| p.parent().map(|f| f.display().to_string()))
+                .unwrap_or_default()
+                .into(),
+            ConstantValue::WorkingDir => std::env::current_dir()
+                .unwrap_or_default()
+                .display()
+                .to_string()
+                .into(),
+        }
+    }
+}
+
+impl<T> From<T> for ConstantValue
+where
+    T: Into<Value>,
+{
+    fn from(val: T) -> Self {
+        ConstantValue::Static(val.into())
+    }
 }
 
 macro_rules! constant {
@@ -37,7 +87,7 @@ macro_rules! constant {
                     doc: $doc,
                 },
             )*];
-    }
+    };
 }
 
 constant!(
@@ -63,6 +113,14 @@ constant!(
     ("DllExt", std::env::consts::DLL_EXTENSION),
     /// The primary path separator character
     ("Sep", std::path::MAIN_SEPARATOR),
+    /// The path of the current source file relative to `WorkingDir`
+    ("ThisFile", ConstantValue::ThisFile),
+    /// The name of the current source file
+    ("ThisFileName", ConstantValue::ThisFileName),
+    /// The name of the directory containing the current source file
+    ("ThisFileDir", ConstantValue::ThisFileDir),
+    /// The compile-time working directory
+    ("WorkingDir", ConstantValue::WorkingDir),
     /// The number of processors available
     ("NumProcs", num_cpus::get() as f64),
     /// A boolean `true` value for use in `json`

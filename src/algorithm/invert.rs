@@ -2188,10 +2188,7 @@ impl InvertPattern for Val {
                 continue;
             }
             if let Ok(sig) = instrs_signature(chunk) {
-                if sig == (0, 1)
-                    || sig == (1, 2)
-                        && matches!(chunk, [Instr::Prim(Primitive::Dup, _), rest@ ..] if !rest.is_empty())
-                {
+                if sig == (0, 1) {
                     return Some((&input[len..], chunk.into()));
                 }
             }

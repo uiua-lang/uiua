@@ -1536,8 +1536,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
             number=5
             prompt="reverses each word in a string but keeps the words in the same order"
             example=r#""get in the racecar""#
-            answer="⍜⊜□≡⍜°□⇌ ≠@ ."
-            best_answer="⍜⊜□⍚⇌ ≠@ ."
+            answer="⍜⊜□≡⇌ ≠@ ."
             tests={&[r#""arrays are neat""#, r#""wow mom""#]}
             hidden=r#""Wow, mom!""#/>
     }

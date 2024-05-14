@@ -138,7 +138,9 @@ struct Spanner {
     src: InputSrc,
     asm: Assembly,
     code_meta: CodeMeta,
+    #[allow(dead_code)]
     errors: Vec<UiuaError>,
+    #[allow(dead_code)]
     diagnostics: Vec<crate::Diagnostic>,
 }
 

@@ -45,6 +45,7 @@ fn prim_mon_fast_fn(prim: Primitive, span: usize) -> Option<ValueUnFn> {
             Value::reverse_depth(&mut v, d);
             Ok(v)
         }),
+        Classify => spanned_mon_fn(span, |v, d, _| Ok(v.classify_depth(d))),
         Fix => spanned_mon_fn(span, |mut v, d, _| {
             v.fix_depth(d);
             Ok(v)

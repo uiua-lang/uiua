@@ -357,7 +357,7 @@ impl<T: ArrayValue> Array<T> {
         (0..self.row_count()).map(|row| self.row(row))
     }
     pub(crate) fn row_shaped_slice(&self, index: usize, row_shape: Shape) -> Self {
-        let row_len: usize = row_shape.iter().product();
+        let row_len = row_shape.elements();
         let start = index * row_len;
         let end = start + row_len;
         Self::new(row_shape, self.data.slice(start..end))
@@ -367,7 +367,7 @@ impl<T: ArrayValue> Array<T> {
         &self,
         row_shape: Shape,
     ) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + '_ {
-        let row_len: usize = row_shape.iter().product();
+        let row_len = row_shape.elements();
         let row_count = self.element_count() / row_len;
         (0..row_count).map(move |i| {
             let start = i * row_len;
@@ -377,7 +377,7 @@ impl<T: ArrayValue> Array<T> {
     }
     /// Get an iterator over the row arrays of the array that have the given shape
     pub fn into_row_shaped_slices(self, row_shape: Shape) -> impl DoubleEndedIterator<Item = Self> {
-        let row_len: usize = row_shape.iter().product();
+        let row_len = row_shape.elements();
         let zero_count = if row_len == 0 { self.row_count() } else { 0 };
         let row_sh = row_shape.clone();
         let nonzero = self

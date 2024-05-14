@@ -49,6 +49,10 @@ impl Shape {
     pub fn row_count(&self) -> usize {
         self.dims.first().copied().unwrap_or(1)
     }
+    /// Get the row length
+    pub fn row_len(&self) -> usize {
+        self.dims.iter().skip(1).product()
+    }
     /// Get the row shape
     pub fn row(&self) -> Shape {
         let mut shape = self.clone();

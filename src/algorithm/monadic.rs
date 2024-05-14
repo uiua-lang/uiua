@@ -673,6 +673,20 @@ impl Value {
         }
         val
     }
+    pub(crate) fn classify_depth(&self, depth: usize) -> Self {
+        let map_keys = self.map_keys().cloned();
+        let mut val = self.generic_ref(
+            |a| a.classify_depth(depth),
+            |a| a.classify_depth(depth),
+            |a| a.classify_depth(depth),
+            |a| a.classify_depth(depth),
+            |a| a.classify_depth(depth),
+        );
+        if let Some(map_keys) = map_keys {
+            val.meta_mut().map_keys = Some(map_keys);
+        }
+        val
+    }
     /// `deduplicate` the rows of the value
     pub fn deduplicate(&mut self, env: &Uiua) -> UiuaResult {
         self.generic_mut_shallow(
@@ -795,6 +809,52 @@ impl<T: ArrayValue> Array<T> {
             classified.push(class);
         }
         classified
+    }
+    fn classify_depth(&self, mut depth: usize) -> Value {
+        if self.rank() == 0 {
+            return 0.into();
+        }
+        depth = depth.min(self.rank());
+        let row_shape = Shape::from(&self.shape[depth..]);
+        let mut classes = HashMap::new();
+        let row_row_count = row_shape.row_count();
+        let classified_shape = Shape::from(&self.shape[..=depth.min(self.rank() - 1)]);
+        let mut i = 0;
+        if row_row_count < 256 {
+            // Fits in a u8
+            let mut classified = eco_vec![0u8; classified_shape.elements()];
+            if row_shape.elements() == 0 || row_shape.row_len() == 0 {
+                return Array::new(classified_shape, classified).into();
+            }
+            let classified_slice = classified.make_mut();
+            for row in self.data.chunks_exact(row_shape.elements()) {
+                classes.clear();
+                for row in row.chunks_exact(row_shape.row_len()) {
+                    let new_class = classes.len();
+                    let class = *classes.entry(ArrayCmpSlice(row)).or_insert(new_class);
+                    classified_slice[i] = class as u8;
+                    i += 1;
+                }
+            }
+            Array::new(classified_shape, classified).into()
+        } else {
+            // Doesn't fit in a u8
+            let mut classified = eco_vec![0.0; classified_shape.elements()];
+            if row_shape.elements() == 0 || row_shape.row_len() == 0 {
+                return Array::new(classified_shape, classified).into();
+            }
+            let classified_slice = classified.make_mut();
+            for row in self.data.chunks_exact(row_shape.elements()) {
+                classes.clear();
+                for row in row.chunks_exact(row_shape.row_len()) {
+                    let new_class = classes.len();
+                    let class = *classes.entry(ArrayCmpSlice(row)).or_insert(new_class);
+                    classified_slice[i] = class as f64;
+                    i += 1;
+                }
+            }
+            Array::new(classified_shape, classified).into()
+        }
     }
     /// `deduplicate` the rows of the array
     pub fn deduplicate(&mut self, env: &Uiua) -> UiuaResult {

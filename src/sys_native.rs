@@ -320,6 +320,9 @@ impl SysBackend for NativeSys {
     }
     fn delete(&self, path: &str) -> Result<(), String> {
         let path = Path::new(path);
+        if !path.exists() {
+            return Ok(());
+        }
         if path.is_dir() {
             fs::remove_dir_all(path).map_err(|e| e.to_string())
         } else {

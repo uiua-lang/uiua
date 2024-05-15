@@ -1,9 +1,11 @@
 # Uiua Todo
 
 - 0.11
-  - Fix `under dup` bug
-    - Example failing case: `⍜(÷2×+1.)∘⇡10`
+  - Smarter `under dup`?
+  - Optimize `rows` unpack
   - Allow warnings to be disabled?
+- Trace images/audio in pad
+- Blog posts -> RSS
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Writing good code tutorial
 - Dynamic modules (maybe 0.12)

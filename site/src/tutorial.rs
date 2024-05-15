@@ -1518,7 +1518,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
 
         <Challenge
             number=3
-            prompt="multiplies by 10 each number that comes after a multiple of 3 (the first number is never multiplied)"
+            prompt="for every multiple of 3 in a list, multiplies the following number by 10"
             example="[1 2 3 4 5 6 7]"
             answer="⍜▽(×10) ⬚0↻¯1 =0◿3."
             tests={&["[2 9 3 8 7 1]", "[3 3 3 3]"]}

@@ -448,6 +448,10 @@ impl FuncSlice {
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
+    /// Get the end of the instructions
+    pub fn end(&self) -> usize {
+        self.start + self.len
+    }
 }
 
 impl AddAssign<usize> for FuncSlice {

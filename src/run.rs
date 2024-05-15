@@ -406,15 +406,11 @@ code:
         }
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
+        let slice = frame.slice;
         self.rt.call_stack.push(frame);
         let mut formatted_instr = String::new();
-        loop {
-            let frame = self.rt.call_stack.last().unwrap();
-            let Some(instr) = self.asm.instrs[frame.slice.start..][..frame.slice.len].get(frame.pc)
-            else {
-                self.rt.call_stack.pop().unwrap();
-                break;
-            };
+        for i in slice.start..slice.end() {
+            let instr = &self.asm.instrs[i];
             // Uncomment to debug
             // for val in &self.rt.stack {
             //     print!("{:?} ", val);
@@ -443,7 +439,6 @@ code:
             //     }
             // }
             // println!("\n    {:?}", instr);
-
             if self.rt.time_instrs {
                 formatted_instr = format!("{instr:?}");
                 self.rt.last_time = instant::now();
@@ -701,6 +696,7 @@ code:
             self.rt.call_stack.last_mut().unwrap().pc += 1;
             self.respect_execution_limit()?;
         }
+        self.rt.call_stack.pop();
         Ok(())
     }
     /// Timeout if an execution limit is set and has been exceeded

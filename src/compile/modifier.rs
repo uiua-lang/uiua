@@ -243,6 +243,7 @@ impl Compiler {
                     (|| -> UiuaResult {
                         self.prepare_env()?;
                         let env = &mut self.macro_env;
+
                         // Run the macro function
                         if let Some(sigs) = op_sigs {
                             env.push(sigs);
@@ -1080,7 +1081,7 @@ impl Compiler {
         if let Some(last_slice) = top_slices.last() {
             (self.macro_env.asm.top_slices).retain(|slice| slice.start > last_slice.start);
         }
-        self.macro_env.no_io(Uiua::run_top_slices)?;
+        // self.macro_env.no_io(Uiua::run_top_slices)?;
         Ok(())
     }
     /// Run a function in a temporary scope with the given names.

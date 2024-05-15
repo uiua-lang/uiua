@@ -1046,10 +1046,6 @@ pub fn random() -> f64 {
 }
 
 fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
-    if !env.rt.do_top_io {
-        env.touch_array_stack(1)?;
-        return Ok(());
-    }
     let val = env.pop(1)?;
     let span: String = if inverse {
         format!("{}{} {}", Primitive::Un, Primitive::Trace, env.span())
@@ -1073,10 +1069,6 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
 }
 
 fn both_trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
-    if !env.rt.do_top_io {
-        env.touch_array_stack(2)?;
-        return Ok(());
-    }
     let a = env.pop(1)?;
     let b = env.pop(2)?;
     let span: String = if inverse {
@@ -1112,9 +1104,6 @@ fn both_trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
 }
 
 fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
-    if !env.rt.do_top_io {
-        return Ok(());
-    }
     let span = if inverse {
         format!("{}{} {}", Primitive::Un, Primitive::Stack, env.span())
     } else {
@@ -1150,9 +1139,6 @@ fn stack(env: &Uiua, inverse: bool) -> UiuaResult {
 }
 
 fn dump(env: &mut Uiua, inverse: bool) -> UiuaResult {
-    if !env.rt.do_top_io {
-        return Ok(());
-    }
     let f = env.pop_function()?;
     if f.signature() != (1, 1) {
         return Err(env.error(format!(

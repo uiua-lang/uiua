@@ -276,7 +276,7 @@ impl Spanner {
                     let mut compiler = Compiler::new().with_assembly(self.asm.clone());
                     under_instrs(instrs, (1, 1).into(), &mut compiler).is_some()
                 },
-                pure: instrs_are_pure(f.instrs(&self.asm), &self.asm, Purity::Impure),
+                pure: instrs_are_pure(f.instrs(&self.asm), &self.asm, Purity::Pure),
             },
             BindingKind::Macro => {
                 BindingDocsKind::Modifier(binfo.span.as_str(self.inputs(), ident_modifier_args))

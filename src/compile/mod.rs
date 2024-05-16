@@ -221,10 +221,13 @@ impl PreEvalMode {
     fn matches_instrs(&self, instrs: &[Instr], asm: &Assembly) -> bool {
         match self {
             PreEvalMode::Normal => {
-                instrs_are_pure(instrs, asm) && instrs_are_limit_bounded(instrs, asm)
+                instrs_are_pure(instrs, asm, Purity::Pure) && instrs_are_limit_bounded(instrs, asm)
             }
             PreEvalMode::Lazy => false,
-            PreEvalMode::Lsp => instrs_are_limit_bounded(instrs, asm),
+            PreEvalMode::Lsp => {
+                instrs_are_pure(instrs, asm, Purity::Impure)
+                    && instrs_are_limit_bounded(instrs, asm)
+            }
         }
     }
 }
@@ -1910,7 +1913,7 @@ code:
                 if !instrs_can_pre_eval(section, &self.asm) {
                     continue;
                 }
-                if instrs_are_pure(section, &self.asm)
+                if instrs_are_pure(section, &self.asm, Purity::Pure)
                     && instrs_all_signatures(section).is_ok_and(|(sig, temps)| {
                         sig.args == 0 && sig.outputs > 0 && temps.iter().all(|&sig| sig == (0, 0))
                     })

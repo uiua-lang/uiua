@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use crate::WILDCARD_NAN;
+use crate::{Purity, WILDCARD_NAN};
 
 use super::*;
 
@@ -237,7 +237,7 @@ macro_rules! primitive {
                 $(($outputs:expr))?
                 $([$mod_args:expr])?
             ,)?
-            $variant:ident, $class:ident, $names:expr $(,$impure:vis impure)*
+            $variant:ident, $class:ident, $names:expr $(,$purity:ident)*
         )
     ),* $(,)?) => {
         /// A built-in function
@@ -306,11 +306,11 @@ macro_rules! primitive {
                 }
             }
             /// Whether the primitive is pure
-            pub fn is_pure(&self) -> bool {
+            pub fn purity(&self) -> Purity {
                 match self {
-                    $($(Primitive::$variant => {$impure false},)*)*
-                    Primitive::Sys(op) => op.is_pure(),
-                    _ => true
+                    $($(Primitive::$variant => Purity::$purity,)*)*
+                    Primitive::Sys(op) => op.purity(),
+                    _ => Purity::Pure
                 }
             }
         }
@@ -1874,7 +1874,7 @@ primitive!(
     /// ex! ⍤. =8 9
     ///
     /// Errors thrown by [assert] can be caught with [try].
-    (2(0), Assert, Misc, ("assert", '⍤'), impure),
+    (2(0), Assert, Misc, ("assert", '⍤'), Impure),
     /// Generate a random number in the range `[0, 1)`
     ///
     /// If you need a seeded random number, use [gen].
@@ -1888,7 +1888,7 @@ primitive!(
     /// `each``gap``rand` and `table``gap``gap``rand` are optimized in the interpreter to generate a lot of random numbers very fast.
     /// ex: ⌊×10 ∵⋅⚂ ⇡10
     /// ex: ⌊×10 ⊞⋅⋅⚂ .⇡10
-    (0, Rand, Misc, ("random", '⚂'), impure),
+    (0, Rand, Misc, ("random", '⚂'), Impure),
     /// Memoize a function
     ///
     /// If a function is [memo]ized, then its results are cached.
@@ -1965,7 +1965,7 @@ primitive!(
     /// The sending thread can send a value with [send].
     ///
     /// Unlike [tryrecv], [recv] blocks until a value is received.
-    (1, Recv, Thread, "recv", impure),
+    (1, Recv, Thread, "recv", Impure),
     /// Try to receive a value from a thread
     ///
     /// Expects a thread id returned by [spawn] or [pool].
@@ -1975,7 +1975,7 @@ primitive!(
     /// Unlike [recv], [tryrecv] does not block.
     /// If no value is available, then an error is thrown.
     /// The error can be caught with [try].
-    (1, TryRecv, Thread, "tryrecv", impure),
+    (1, TryRecv, Thread, "tryrecv", Impure),
     /// Generate a random number between 0 and 1 from a seed, as well as the next seed
     ///
     /// If you don't care about a seed, you can use [random].
@@ -1995,7 +1995,7 @@ primitive!(
     /// If you don't care about a seed, just seed with [random].
     /// ex: deal⚂ [1 2 3 4 5]
     /// ex: deal⚂ [1_2 3_4 5_6 7_8]
-    (2, Deal, Misc, "deal", impure),
+    (2, Deal, Misc, "deal", Impure),
     /// Match a regex pattern
     ///
     /// Returns a rank-2 array of [box]ed strings, with one string per matching group and one row per match
@@ -2029,7 +2029,7 @@ primitive!(
     /// Tags are just numbers and are unique across multiple threads, but not across multiple runs.
     /// ex: [⍥tag5]
     ///   : [⍥tag5]
-    (0, Tag, Misc, "tag", impure),
+    (0, Tag, Misc, "tag", Impure),
     /// Check the type of an array
     ///
     /// `0` indicates a number array.
@@ -2048,7 +2048,7 @@ primitive!(
     /// ex: now
     /// [under][now] can be used to time a function.
     /// ex: ⍜now(5&sl1)
-    (0, Now, Misc, "now", impure),
+    (0, Now, Misc, "now", Impure),
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`
@@ -2217,7 +2217,7 @@ primitive!(
     ///   : +×-×+
     /// ex: 2_3_10 ? 17 ↯3_4⇡12
     ///   : ++
-    (0(0), Stack, Stack, ("stack", '?'), impure),
+    (0(0), Stack, Stack, ("stack", '?'), Impure),
     /// Debug print the top value on the stack without popping it
     ///
     /// ex: ⸮[1 2 3]
@@ -2229,7 +2229,7 @@ primitive!(
     /// To see them, use [trace].
     /// ex: [1 5 2 9 11 0 7 12 8 3]
     ///   : ▽×⸮≥5:⸮≤10..
-    (1, Trace, Stack, ("trace", '⸮'), impure),
+    (1, Trace, Stack, ("trace", '⸮'), Impure),
     /// Debug print all the values currently on stack without popping them
     ///
     /// The function is used to preprocess the values before printing.
@@ -2252,7 +2252,7 @@ primitive!(
     /// Errors encountered within [dump]'s function are caught and dumped as strings.
     /// ex: 1_2_3 4 5_6_7
     ///   : dump⊢
-    (0(0)[1], Dump, Stack, "dump", impure),
+    (0(0)[1], Dump, Stack, "dump", Impure),
     /// Convert code into a string instead of compiling it
     ///
     /// ex: # Experimental!
@@ -2368,7 +2368,7 @@ macro_rules! impl_primitive {
             $(($outputs:expr))?
             $([$margs:expr])?,
             $variant:ident
-            $(, $impure:vis impure)?
+            $(, $purity:ident)?
         )
     ),* $(,)?) => {
         /// Primitives that exist as an implementation detail
@@ -2402,10 +2402,10 @@ macro_rules! impl_primitive {
                     _ => None
                 }
             }
-            pub fn is_pure(&self) -> bool {
+            pub fn purity(&self) -> Purity {
                 match self {
-                    $($(ImplPrimitive::$variant => {$impure false},)*)*
-                    _ => true
+                    $($(ImplPrimitive::$variant => {Purity::$purity},)*)*
+                    _ => Purity::Pure
                 }
             }
         }
@@ -2426,10 +2426,10 @@ impl_primitive!(
     (1, UnFix),
     (1[1], UnScan),
     (1(2), UnMap),
-    (1, UnTrace, impure),
-    (2(2), UnBothTrace, impure),
-    (0(0), UnStack, impure),
-    (0[1], UnDump, impure),
+    (1, UnTrace, Impure),
+    (2(2), UnBothTrace, Impure),
+    (0(0), UnStack, Impure),
+    (0[1], UnDump, Impure),
     (1, Primes),
     (1, UnBox),
     (1(2), UnJoin),
@@ -2466,9 +2466,9 @@ impl_primitive!(
     (1, SortUp),
     (1, SortDown),
     (1[1], ReduceContent),
-    (1, ReplaceRand, impure),
-    (2, ReplaceRand2, impure),
+    (1, ReplaceRand, Impure),
+    (2, ReplaceRand2, Impure),
     (2, Adjacent),
-    (2(2), BothTrace, impure),
+    (2(2), BothTrace, Impure),
     (1, CountUnique),
 );

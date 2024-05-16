@@ -193,6 +193,10 @@ pub fn set_audio_stream_time_port(port: u16) -> std::io::Result<()> {
     Ok(())
 }
 
+pub(crate) fn output_enabled() -> bool {
+    NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed)
+}
+
 pub(crate) fn set_output_enabled(enabled: bool) -> bool {
     NATIVE_SYS
         .output_enabled
@@ -207,7 +211,7 @@ impl SysBackend for NativeSys {
         self
     }
     fn print_str_stdout(&self, s: &str) -> Result<(), String> {
-        if !NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed) {
+        if !output_enabled() {
             return Ok(());
         }
         let mut stdout = stdout().lock();
@@ -215,19 +219,22 @@ impl SysBackend for NativeSys {
         stdout.flush().map_err(|e| e.to_string())
     }
     fn print_str_stderr(&self, s: &str) -> Result<(), String> {
+        if !output_enabled() {
+            return Ok(());
+        }
         let mut stderr = stderr().lock();
         stderr.write_all(s.as_bytes()).map_err(|e| e.to_string())?;
         stderr.flush().map_err(|e| e.to_string())
     }
     fn print_str_trace(&self, s: &str) {
-        if !NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed) {
+        if !output_enabled() {
             return;
         }
         eprint!("{s}");
         _ = stderr().flush();
     }
     fn scan_line_stdin(&self) -> Result<Option<String>, String> {
-        if !NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed) {
+        if !output_enabled() {
             return Ok(None);
         }
         let mut buffer = Vec::new();
@@ -251,7 +258,7 @@ impl SysBackend for NativeSys {
         Ok(Some(String::from_utf8(buffer).map_err(|e| e.to_string())?))
     }
     fn scan_stdin(&self, count: usize) -> Result<Vec<u8>, String> {
-        if !NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed) {
+        if !output_enabled() {
             return Ok(Vec::new());
         }
         let mut buffer = vec![0; count];
@@ -267,7 +274,7 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "raw_mode")]
     fn set_raw_mode(&self, raw_mode: bool) -> Result<(), String> {
-        if !NATIVE_SYS.output_enabled.load(atomic::Ordering::Relaxed) {
+        if !output_enabled() {
             return Ok(());
         }
         if raw_mode {

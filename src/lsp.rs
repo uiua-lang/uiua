@@ -14,7 +14,7 @@ use crate::{
     lex::{CodeSpan, Sp},
     parse::parse,
     Assembly, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc, Inputs, PreEvalMode,
-    Primitive, SafeSys, Signature, SysBackend, UiuaError, Value, CONSTANTS,
+    Primitive, Purity, SafeSys, Signature, SysBackend, UiuaError, Value, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -276,7 +276,7 @@ impl Spanner {
                     let mut compiler = Compiler::new().with_assembly(self.asm.clone());
                     under_instrs(instrs, (1, 1).into(), &mut compiler).is_some()
                 },
-                pure: instrs_are_pure(f.instrs(&self.asm), &self.asm),
+                pure: instrs_are_pure(f.instrs(&self.asm), &self.asm, Purity::Impure),
             },
             BindingKind::Macro => {
                 BindingDocsKind::Modifier(binfo.span.as_str(self.inputs(), ident_modifier_args))
@@ -512,6 +512,9 @@ mod server {
 
     #[doc(hidden)]
     pub fn run_language_server() {
+        #[cfg(feature = "native_sys")]
+        crate::sys_native::set_output_enabled(false);
+
         tokio::runtime::Builder::new_current_thread()
             .build()
             .unwrap()

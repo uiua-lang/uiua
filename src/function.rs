@@ -243,8 +243,19 @@ impl Instr {
     }
 }
 
+/// Levels of purity for an operation
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Purity {
+    /// The operation visibly affects the environment
+    Mutating,
+    /// The operation reads from the environment but does not visibly affect it
+    Impure,
+    /// The operation is completely pure
+    Pure,
+}
+
 /// Whether some instructions are pure
-pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly) -> bool {
+pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly, min_purity: Purity) -> bool {
     for instr in instrs {
         match instr {
             Instr::CallGlobal { index, .. } => {
@@ -252,7 +263,7 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly) -> bool {
                     match &binding.kind {
                         BindingKind::Const(Some(_)) => {}
                         BindingKind::Func(f) => {
-                            if !instrs_are_pure(f.instrs(asm), asm) {
+                            if !instrs_are_pure(f.instrs(asm), asm, min_purity) {
                                 return false;
                             }
                         }
@@ -262,17 +273,17 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly) -> bool {
             }
             Instr::BindGlobal { .. } => return false,
             Instr::Prim(prim, _) => {
-                if !prim.is_pure() {
+                if prim.purity() < min_purity {
                     return false;
                 }
             }
             Instr::ImplPrim(prim, _) => {
-                if !prim.is_pure() {
+                if prim.purity() < min_purity {
                     return false;
                 }
             }
             Instr::PushFunc(f) => {
-                if !instrs_are_pure(f.instrs(asm), asm) {
+                if !instrs_are_pure(f.instrs(asm), asm, min_purity) {
                     return false;
                 }
             }
@@ -304,7 +315,7 @@ pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], asm: &Assembly) -> bool
                 }
             }
             Instr::Prim(Send | Recv, _) => return false,
-            Instr::Prim(Sys(op), _) if op.is_mutating() => return false,
+            Instr::Prim(Sys(op), _) if op.purity() <= Purity::Mutating => return false,
             Instr::PushFunc(f) => {
                 if f.recursive || !instrs_are_limit_bounded(f.instrs(asm), asm) {
                     return false;

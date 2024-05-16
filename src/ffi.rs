@@ -233,6 +233,14 @@ mod enabled {
     use super::*;
     use crate::{Array, Boxed, Value};
 
+    macro_rules! dbgln {
+        ($($arg:tt)*) => {
+            if DEBUG {
+                println!($($arg)*);
+            }
+        }
+    }
+
     #[derive(Default)]
     pub struct FfiState {
         libraries: DashMap<String, libloading::Library>,
@@ -247,9 +255,7 @@ mod enabled {
             arg_tys: &[FfiType],
             args: &[Value],
         ) -> Result<Value, String> {
-            if DEBUG {
-                println!("call FFI function {name}");
-            }
+            dbgln!("call FFI function {name}");
             if !self.libraries.contains_key(file) {
                 let lib = unsafe { libloading::Library::new(file) }.map_err(|e| e.to_string())?;
                 self.libraries.insert(file.to_string(), lib);
@@ -285,9 +291,7 @@ mod enabled {
                 cif_arg_tys.push(ffity_to_cty(arg_ty));
                 if let Some(len) = lengths[i] {
                     // Bind length
-                    if DEBUG {
-                        println!("bind {i} len: {len}");
-                    }
+                    dbgln!("bind {i} len: {len}");
                     _ = match arg_ty {
                         FfiType::Int => bindings.push_value(len as c_int),
                         FfiType::UInt => bindings.push_value(len as c_uint),
@@ -313,10 +317,8 @@ mod enabled {
                 } else {
                     // Bind normal argument
                     let arg = args.next().ok_or("Not enough arguments")?;
-                    if DEBUG {
-                        println!("bind {i} arg: {arg:?}");
-                        println!("  as {arg_ty}");
-                    }
+                    dbgln!("bind {i} arg: {arg:?}");
+                    dbgln!("  as {arg_ty}");
                     bindings.bind_arg(i, arg_ty, arg)?;
                 }
             }
@@ -482,9 +484,7 @@ mod enabled {
                         if lengths[i].is_some() {
                             continue;
                         }
-                        if DEBUG {
-                            println!("out {i} arg: {ty}");
-                        }
+                        dbgln!("out {i} arg: {ty}");
                         match &**inner {
                             FfiType::Char => unsafe {
                                 let ptr = bindings.get::<c_char>(i);
@@ -508,13 +508,9 @@ mod enabled {
                             FfiType::Ptr { inner, .. } => match &**inner {
                                 FfiType::Char => unsafe {
                                     let ptr = *bindings.get::<*mut ()>(i) as *mut *const c_char;
-                                    if DEBUG {
-                                        println!("    outer ptr to char: {ptr:p}");
-                                    }
+                                    dbgln!("    outer ptr to char: {ptr:p}");
                                     let ptr = *ptr;
-                                    if DEBUG {
-                                        println!("    inner ptr to char: {ptr:p}");
-                                    }
+                                    dbgln!("    inner ptr to char: {ptr:p}");
                                     results.push(if ptr.is_null() {
                                         let mut val = Value::default();
                                         val.meta_mut().pointer = Some(0);
@@ -528,13 +524,9 @@ mod enabled {
                                 },
                                 FfiType::Void => unsafe {
                                     let ptr = *bindings.get::<*mut ()>(i) as *mut *const ();
-                                    if DEBUG {
-                                        println!("    outer ptr to void: {ptr:p}");
-                                    }
+                                    dbgln!("    outer ptr to void: {ptr:p}");
                                     let ptr = *ptr;
-                                    if DEBUG {
-                                        println!("    inner ptr to void: {ptr:p}");
-                                    }
+                                    dbgln!("    inner ptr to void: {ptr:p}");
                                     let mut val = Value::from(ptr as usize);
                                     val.meta_mut().pointer = Some(ptr as usize);
                                     results.push(val);
@@ -625,9 +617,7 @@ mod enabled {
         fn alloc_and_push_ptr_to<T: Any + Copy + std::fmt::Debug>(&mut self, arg: T) -> *mut () {
             let mut bx = Box::<T>::new(arg);
             let ptr: *mut T = &mut *bx;
-            if DEBUG {
-                println!("      create *mut {}: {ptr:p}", type_name::<T>());
-            }
+            dbgln!("      create *mut {}: {ptr:p}", type_name::<T>());
             self.arg_data.push(Box::new((ptr, bx)));
             self.args.push(Arg::new(
                 &(self.arg_data.last().unwrap())
@@ -697,9 +687,7 @@ mod enabled {
         }
         fn push_list<T: Any + 'static>(&mut self, mut arg: Box<[T]>) -> *mut T {
             let ptr = &mut arg[0] as *mut T;
-            if DEBUG {
-                println!("      create *mut {}: {ptr:p}", type_name::<T>());
-            }
+            dbgln!("      create *mut {}: {ptr:p}", type_name::<T>());
             self.arg_data.push(Box::new((ptr, arg)));
             self.args.push(Arg::new(
                 &(self.arg_data.last_mut().unwrap())
@@ -718,24 +706,18 @@ mod enabled {
             let any = &self.arg_data[index];
             any.downcast_ref::<T>()
                 .map(|t| {
-                    if DEBUG {
-                        println!("  exact type");
-                    }
+                    dbgln!("  exact type");
                     t
                 })
                 .or_else(|| {
                     any.downcast_ref::<(*mut T, Box<T>)>().map(|(p, _)| {
-                        if DEBUG {
-                            println!("  ptr type");
-                        }
+                        dbgln!("  ptr type");
                         unsafe { &**p }
                     })
                 })
                 .or_else(|| {
                     any.downcast_ref::<ListStorage<T>>().map(|(_, b)| {
-                        if DEBUG {
-                            println!("  list type");
-                        }
+                        dbgln!("  list type");
                         &b[0]
                     })
                 })
@@ -785,9 +767,7 @@ mod enabled {
             val: &Value,
             arg: bool,
         ) -> Result<*mut (), String> {
-            if DEBUG {
-                println!("    arg {i}, type {ty}, val: {val:?}");
-            }
+            dbgln!("    arg {i}, type {ty}, val: {val:?}");
             macro_rules! scalar {
                 ($arr:expr, $ty:ty) => {{
                     let val = $arr.data[0] as $ty;
@@ -860,14 +840,10 @@ mod enabled {
                     (FfiType::Int, Value::Byte(arr)) => list!(arr, c_int),
                     (inner, val) => {
                         let ptr = self.bind(i, inner, val)?;
-                        if DEBUG {
-                            println!("    inner ptr to {inner}: {ptr:p}");
-                        }
+                        dbgln!("    inner ptr to {inner}: {ptr:p}");
                         let ptr = self.alloc_and_push_ptr_to(ptr);
                         self.no_arg();
-                        if DEBUG {
-                            println!("    outer ptr to {inner}: {ptr:p}");
-                        }
+                        dbgln!("    outer ptr to {inner}: {ptr:p}");
                         self.push_raw_ptr(ptr);
                         ptr
                     }
@@ -1034,8 +1010,8 @@ mod enabled {
                 }
                 offset += size;
             }
-            // println!("repr: {:?}", repr);
-            // println!("repr: {:x?}", repr);
+            // dbgln!("repr: {:?}", repr);
+            // dbgln!("repr: {:x?}", repr);
             Ok(repr)
         }
         /// Convert a C-ABI-compatiable struct byte representation to a [`Value`]

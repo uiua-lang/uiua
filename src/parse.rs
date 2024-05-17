@@ -894,11 +894,14 @@ impl<'i> Parser<'i> {
             let span = start.merge(end);
             span.sp(Word::MultilineFormatString(lines))
         } else if let Some(start) = self.try_exact(OpenBracket) {
+            while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
+            let signature = self.try_signature(Bar);
             while self.try_exact(Newline).is_some() {}
             let items = self.multiline_words(false);
             let end = self.expect_close(CloseBracket);
             let span = start.merge(end.span);
             let arr = Arr {
+                signature,
                 lines: items,
                 boxes: false,
                 closed: end.value,
@@ -919,11 +922,14 @@ impl<'i> Parser<'i> {
             }
             span.sp(Word::Array(arr))
         } else if let Some(start) = self.try_exact(OpenCurly) {
+            while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
+            let signature = self.try_signature(Bar);
             while self.try_exact(Newline).is_some() {}
             let items = self.multiline_words(false);
             let end = self.expect_close(CloseCurly);
             let span = start.merge(end.span);
             span.sp(Word::Array(Arr {
+                signature,
                 lines: items,
                 boxes: true,
                 closed: end.value,

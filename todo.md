@@ -3,7 +3,6 @@
 - 0.11
   - `un on min/max`
   - `un on join`
-  - Allow signatures in stack array notation
   - Optimize `rows` unpack
 - Trace images/audio in pad
 - Blog posts -> RSS

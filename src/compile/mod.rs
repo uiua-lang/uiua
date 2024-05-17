@@ -1137,9 +1137,24 @@ code:
                 for lines in arr.lines.into_iter().rev() {
                     inner.extend(self.compile_words(lines, true)?);
                 }
+                // Validate signature
+                let inner_sig = instrs_signature(&inner);
+                if let Some(declared_sig) = arr.signature {
+                    if let Ok(inner_sig) = inner_sig {
+                        if inner_sig != declared_sig.value {
+                            self.add_error(
+                                declared_sig.span.clone(),
+                                format!(
+                                    "Array signature mismatch: declared {} but inferred {}",
+                                    declared_sig.value, inner_sig
+                                ),
+                            );
+                        }
+                    }
+                }
                 // Validate inner loop correctness
                 if self.current_binding.is_some() {
-                    if let Err(e) = instrs_signature(&inner) {
+                    if let Err(e) = inner_sig {
                         let after_sig = (0..=inner.len())
                             .find_map(|i| instrs_signature(&inner[i..]).ok())
                             .unwrap();

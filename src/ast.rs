@@ -345,6 +345,8 @@ impl fmt::Display for Ref {
 /// A stack array notation term
 #[derive(Clone)]
 pub struct Arr {
+    /// The array's inner signature
+    pub signature: Option<Sp<Signature>>,
     /// The words in the array
     pub lines: Vec<Vec<Sp<Word>>>,
     /// Whether this is a box array

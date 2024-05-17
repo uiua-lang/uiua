@@ -334,6 +334,9 @@ impl Spanner {
                 }
                 Word::Array(arr) => {
                     spans.push(word.span.just_start(self.inputs()).sp(SpanKind::Delimiter));
+                    if let Some(sig) = &arr.signature {
+                        spans.push(sig.span.clone().sp(SpanKind::Signature));
+                    }
                     spans.extend(arr.lines.iter().flat_map(|w| self.words_spans(w)));
                     if arr.closed {
                         let end = word.span.just_end(self.inputs());

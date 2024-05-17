@@ -33,6 +33,7 @@ pub enum DocsPage {
     Combinators,
     Optimizations,
     FormatConfig,
+    Experimental,
 }
 
 impl IntoParam for DocsPage {
@@ -53,6 +54,7 @@ impl IntoParam for DocsPage {
             "combinators" => Ok(Self::Combinators),
             "optimizations" => Ok(Self::Optimizations),
             "format-config" => Ok(Self::FormatConfig),
+            "experimental" => Ok(Self::Experimental),
             value => Ok(Self::Search(value.into())),
         }
     }
@@ -86,6 +88,9 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Optimizations => Optimizations().into_view(),
             DocsPage::FormatConfig => {
                 title_markdown("Formatter Configuration", "/text/format_config.md", ()).into_view()
+            }
+            DocsPage::Experimental => {
+                title_markdown("Experimental Features", "/text/experimental.md", ()).into_view()
             }
         };
 

@@ -27,6 +27,28 @@ The `λ` will format from `'` if followed by letters.
 [λccaabb 1 2 3]
 ```
 
+## Labels
+
+Labels are a way to give names to values. This is to aid in readability and debugging.
+
+Labels are written with a `$` followed by some letters.
+
+```
+# Experimental!
+$foo 1 $bar [2 3 4]
+$baz "hi!"
+```
+
+Labeled values put in an array will lose their labels unless they are [`box`]()ed.
+
+```
+# Experimental!
+[$a 1 $b 2 $c 3]
+{$a 1 $b 2 $c 3}
+```
+
+Labels cannot be inspected by code.
+
 ## Function Strands
 
 Function strands allow you to combine two terms without parentheses. They are written with a `‿` between the terms.

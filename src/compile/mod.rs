@@ -1784,7 +1784,7 @@ code:
         if !self.scope.experimental {
             self.add_error(
                 span.clone(),
-                "Swizzles is experimental. To use one, add \
+                "Swizzles are experimental. To use them, add \
                 `# Experimental!` to the top of the file.",
             );
         }

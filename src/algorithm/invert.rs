@@ -731,36 +731,54 @@ fn under_dup_pattern<'a>(
     let (monadic_befores, monadic_afters) = under_instrs(monadic_part, g_sig, comp)?;
 
     let mut befores = eco_vec![Instr::Prim(Primitive::Dup, *dup_span),];
-    if monadic_sig != (0, 0) {
-        befores.push(Instr::CopyToTemp {
-            stack: TempStack::Under,
-            count: 1,
-            span: *dup_span,
-        });
-    }
-    befores.extend(monadic_befores);
-    befores.extend(dyadic_part.iter().cloned());
-
     let mut afters = EcoVec::new();
-    if monadic_sig != (0, 0) {
-        afters.push(Instr::PopTemp {
-            stack: TempStack::Under,
-            count: 1,
-            span: *dup_span,
-        });
-    }
+
+    let temp = |temp: bool| {
+        if temp {
+            befores.push(Instr::CopyToTemp {
+                stack: TempStack::Under,
+                count: 1,
+                span: *dup_span,
+            });
+        }
+        befores.extend(monadic_befores);
+        befores.extend(dyadic_part.iter().cloned());
+
+        if temp {
+            afters.push(Instr::PopTemp {
+                stack: TempStack::Under,
+                count: 1,
+                span: *dup_span,
+            });
+        }
+    };
+
     match dyadic_part {
         [Instr::Prim(Primitive::Add, span)] if monadic_sig == (0, 0) => {
+            temp(false);
             afters.push(Instr::push(2));
-            afters.push(Instr::Prim(Primitive::Div, *span))
+            afters.push(Instr::Prim(Primitive::Div, *span));
         }
-        [Instr::Prim(Primitive::Add, span)] => afters.push(Instr::Prim(Primitive::Sub, *span)),
-        [Instr::Prim(Primitive::Sub, span)] => afters.push(Instr::Prim(Primitive::Add, *span)),
+        [Instr::Prim(Primitive::Add, span)] => {
+            temp(true);
+            afters.push(Instr::Prim(Primitive::Sub, *span));
+        }
+        [Instr::Prim(Primitive::Sub, span)] => {
+            temp(true);
+            afters.push(Instr::Prim(Primitive::Add, *span));
+        }
         [Instr::Prim(Primitive::Mul, span)] if monadic_sig == (0, 0) => {
-            afters.push(Instr::Prim(Primitive::Sqrt, *span))
+            temp(false);
+            afters.push(Instr::Prim(Primitive::Sqrt, *span));
         }
-        [Instr::Prim(Primitive::Mul, span)] => afters.push(Instr::Prim(Primitive::Div, *span)),
-        [Instr::Prim(Primitive::Div, span)] => afters.push(Instr::Prim(Primitive::Mul, *span)),
+        [Instr::Prim(Primitive::Mul, span)] => {
+            temp(true);
+            afters.push(Instr::Prim(Primitive::Div, *span));
+        }
+        [Instr::Prim(Primitive::Div, span)] => {
+            temp(true);
+            afters.push(Instr::Prim(Primitive::Mul, *span));
+        }
         _ => return None,
     }
     afters.extend(monadic_afters);

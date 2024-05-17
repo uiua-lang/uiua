@@ -939,7 +939,7 @@ code:
         if self.rt.stack.len() < n {
             return Err(self.error(format!(
                 "Stack was empty evaluating argument {}",
-                n - self.rt.stack.len()
+                self.rt.stack.len() + 1
             )));
         }
         for bottom in &mut self.rt.array_stack {

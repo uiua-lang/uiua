@@ -1,6 +1,6 @@
 mod utils;
 
-use std::{cell::Cell, iter::repeat, path::PathBuf, rc::Rc, time::Duration};
+use std::{cell::Cell, iter::repeat, path::PathBuf, time::Duration};
 
 use base64::engine::{general_purpose::STANDARD, Engine};
 
@@ -114,14 +114,14 @@ pub fn Editor<'a>(
                 .count(),
         )
     };
-    let (code_view, set_code_view) = create_signal("Loading...".into_view());
+    let (get_code, set_code) = create_signal("Loading...".to_string());
 
     // Initialize the state
-    let state = Rc::new(State {
+    let state = State {
         code_id: code_id(),
         set_line_count,
         set_copied_link,
-        set_code_view,
+        set_code,
         past: Default::default(),
         future: Default::default(),
         challenge,
@@ -134,11 +134,9 @@ pub fn Editor<'a>(
                 before: (len, len),
                 after: (len, len),
             }
-        }
-        .into(),
-    });
-    let (state, _) = create_signal(state);
-    let state = move || state.get_untracked();
+        },
+    };
+    let (get_state, state) = create_signal(state);
 
     // Get the code with output comments cleaned up
     let clean_code = move || {
@@ -202,14 +200,14 @@ pub fn Editor<'a>(
                 } else {
                     cursor
                 };
-                state().set_code(&formatted.output, cursor);
+                state.update(|state| state.set_code(&formatted.output, cursor));
                 formatted.output
             } else {
-                state().set_code(&code_text, cursor);
+                state.update(|state| state.set_code(&code_text, cursor));
                 code_text.clone()
             }
         } else {
-            state().set_code(&code_text, cursor);
+            state.update(|state| state.set_code(&code_text, cursor));
             code_text.clone()
         };
 
@@ -288,28 +286,32 @@ pub fn Editor<'a>(
         };
         set_timeout(
             move || {
-                let output = state().run_code(&input);
-                if state().loading_module.take() {
-                    set_timeout(
-                        move || {
-                            let output = state().run_code(&input);
-                            let (diags, items): (Vec<_>, Vec<_>) =
-                                output.into_iter().partition(OutputItem::is_report);
-                            let items: Vec<_> = items.into_iter().map(render_output_item).collect();
-                            let diags: Vec<_> = diags.into_iter().map(render_output_item).collect();
-                            set_output.set(items.into_view());
-                            set_diag_output.set(diags.into_view());
-                        },
-                        Duration::from_millis(200),
-                    );
-                } else {
-                    let (diags, items): (Vec<_>, Vec<_>) =
-                        output.into_iter().partition(OutputItem::is_report);
-                    let items: Vec<_> = items.into_iter().map(render_output_item).collect();
-                    let diags: Vec<_> = diags.into_iter().map(render_output_item).collect();
-                    set_output.set(items.into_view());
-                    set_diag_output.set(diags.into_view());
-                }
+                state.update(|st| {
+                    let output = st.run_code(&input);
+                    if st.loading_module.take() {
+                        set_timeout(
+                            move || {
+                                state.update(|state| {
+                                    let output = state.run_code(&input);
+                                    let (diags, items): (Vec<_>, Vec<_>) =
+                                        output.into_iter().partition(OutputItem::is_report);
+                                    let items: Vec<_> = items.into_iter().map(render_output_item).collect();
+                                    let diags: Vec<_> = diags.into_iter().map(render_output_item).collect();
+                                    set_output.set(items.into_view());
+                                    set_diag_output.set(diags.into_view());
+                                });
+                            },
+                            Duration::from_millis(200),
+                        );
+                    } else {
+                        let (diags, items): (Vec<_>, Vec<_>) =
+                            output.into_iter().partition(OutputItem::is_report);
+                        let items: Vec<_> = items.into_iter().map(render_output_item).collect();
+                        let diags: Vec<_> = diags.into_iter().map(render_output_item).collect();
+                        set_output.set(items.into_view());
+                        set_diag_output.set(diags.into_view());
+                    }
+                });
             },
             Duration::ZERO,
         );
@@ -327,13 +329,13 @@ pub fn Editor<'a>(
                 .chain(code.chars().skip(end))
                 .collect();
             let offset = inserted.chars().count() as u32;
-            state().set_code(&new, Cursor::Set(start + offset, start + offset));
+            state.update(|state| state.set_code(&new, Cursor::Set(start + offset, start + offset)));
         };
     };
 
     // Remove a code range
     let remove_code = move |start: u32, end: u32| {
-        // logging::log!("start: {start}, end: {end}");
+        logging::log!("remove start: {start}, end: {end}");
         if start == end {
             return;
         }
@@ -344,7 +346,7 @@ pub fn Editor<'a>(
             .take(start as usize)
             .chain(code.chars().skip(end))
             .collect();
-        state().set_code(&new, Cursor::Set(start, start));
+        state.update(|state| state.set_code(&new, Cursor::Set(start, start)));
     };
 
     // Surround the selected text with delimiters
@@ -359,13 +361,13 @@ pub fn Editor<'a>(
         new_code.extend(chars.by_ref().take((end - start) as usize));
         new_code.push(close);
         new_code.extend(chars);
-        state().set_code(&new_code, Cursor::Set(start + 1, end + 1));
+        state.update(|state| state.set_code(&new_code, Cursor::Set(start + 1, end + 1)));
     };
 
     // Update the code when the textarea is changed
     let code_input = move |event: Event| {
         let event = event.dyn_into::<web_sys::InputEvent>().unwrap();
-        // to prevent double input of yet to be composed input events
+        // to prevent double input of yet-to-be-composed input events
         if event.is_composing() {
             return;
         }
@@ -377,7 +379,7 @@ pub fn Editor<'a>(
         if let Some((start, _)) = get_code_cursor() {
             let code = code_text();
             update_token_count(&code);
-            state().set_code(&code, Cursor::Set(start, start));
+            state.update(|state| state.set_code(&code, Cursor::Set(start, start)));
         }
     };
 
@@ -397,7 +399,7 @@ pub fn Editor<'a>(
         } else {
             Cursor::Ignore
         };
-        state().set_code(&new_code, cursor);
+        state.update(|state| state.set_code(&new_code, cursor));
     };
 
     // Handle key events
@@ -463,7 +465,7 @@ pub fn Editor<'a>(
                     let (start, _) = get_code_cursor().unwrap();
                     if right_char.is_some_and(|c| ")}]".contains(c)) {
                         replace_code(&format!("\n{}", " ".repeat(indent.saturating_sub(2))));
-                        state().set_cursor((start, start));
+                        state.update(|state| state.set_cursor((start, start)));
                     }
                 }
             }
@@ -519,7 +521,7 @@ pub fn Editor<'a>(
                         }
                     })
                     .collect();
-                state().set_code(&new_code, Cursor::Set(start, start));
+                state.update(|state| state.set_code(&new_code, Cursor::Set(start, start)));
             }
             "Delete" => {
                 let (start, end) = get_code_cursor().unwrap();
@@ -554,7 +556,7 @@ pub fn Editor<'a>(
             // Select all
             "a" if os_ctrl(event) => {
                 let code = code_text();
-                state().set_code(&code, Cursor::Set(0, code.chars().count() as u32));
+                state.update(|state| state.set_code(&code, Cursor::Set(0, code.chars().count() as u32)));
             }
             // Copy
             "c" if os_ctrl(event) => {
@@ -582,9 +584,9 @@ pub fn Editor<'a>(
                 remove_code(start, end);
             }
             // Undo
-            "z" if os_ctrl(event) => state().undo(),
+            "z" if os_ctrl(event) => state.update(|state| state.undo()),
             // Redo
-            "y" if os_ctrl(event) => state().redo(),
+            "y" if os_ctrl(event) => state.update(|state| state.redo()),
             // Insert # Experimental! comment
             "e" if os_ctrl(event) => insert_experimental(),
             // Toggle line comment
@@ -620,7 +622,7 @@ pub fn Editor<'a>(
                     }
                 }
                 let new_code = lines.join("\n");
-                state().set_code(&new_code, Cursor::Set(start, end));
+                state.update(|state| state.set_code(&new_code, Cursor::Set(start, end)));
             }
             // Handle double quote delimiters
             "\"" => {
@@ -635,7 +637,7 @@ pub fn Editor<'a>(
                 if (start != end || can_couple) && !at_behind {
                     surround_code('"', '"');
                 } else if start == end && code_text().chars().nth(start as usize) == Some('"') {
-                    state().set_cursor((start + 1, start + 1));
+                    state.update(|state| state.set_cursor((start + 1, start + 1)));
                 } else {
                     replace_code(key);
                 }
@@ -668,7 +670,7 @@ pub fn Editor<'a>(
                 let (start, end) = get_code_cursor().unwrap();
                 let close = key.chars().next().unwrap();
                 if start == end && code_text().chars().nth(start as usize) == Some(close) {
-                    state().set_cursor((start + 1, start + 1));
+                    state.update(|state| state.set_cursor((start + 1, start + 1)));
                 } else {
                     handled = false;
                 }
@@ -699,7 +701,7 @@ pub fn Editor<'a>(
                         }
                         new_end += line.chars().count() as u32 + 1;
                     }
-                    state().set_code(&swapped, Cursor::Set(new_end, new_end));
+                    state.update(|state| state.set_code(&swapped, Cursor::Set(new_end, new_end)));
                 }
             }
             // Intercept forward/back keyboard navigation
@@ -728,8 +730,10 @@ pub fn Editor<'a>(
         move |_| {
             set_example.update(|e| {
                 *e = (*e + 1) % examples.len();
-                state().set_code(&examples[*e], Cursor::Ignore);
-                state().clear_history();
+                state.update(|state| {
+                    state.set_code(&examples[*e], Cursor::Ignore);
+                    state.clear_history();
+                });
                 run(false, false);
             })
         }
@@ -740,8 +744,10 @@ pub fn Editor<'a>(
         move |_| {
             set_example.update(|e| {
                 *e = (*e + examples.len() - 1) % examples.len();
-                state().set_code(&examples[*e], Cursor::Ignore);
-                state().clear_history();
+                state.update(|state| {
+                    state.set_code(&examples[*e], Cursor::Ignore);
+                    state.clear_history();
+                });
                 run(false, false);
             })
         }
@@ -983,7 +989,7 @@ pub fn Editor<'a>(
             if no_run {
                 let code = initial_code.get().unwrap();
                 set_initial_code.set(None);
-                state().set_code(&code, Cursor::Ignore);
+                state.update(|state| state.set_code(&code, Cursor::Ignore));
             } else {
                 run(false, false)
             }
@@ -1043,14 +1049,14 @@ pub fn Editor<'a>(
                 } else {
                     "&frab"
                 };
-                state().set_code(
+                state.update(|state| state.set_code(
                     &if byte_count < 10000 {
                         format!("{function} {file_name:?}\n")
                     } else {
                         format!("# {byte_count} bytes\n# {function} {file_name:?}\n")
                     },
                     Cursor::Ignore,
-                );
+                ));
             }
             run(true, false);
         }) as Box<dyn FnMut(_)>);
@@ -1327,7 +1333,12 @@ pub fn Editor<'a>(
                                 style={format!("height: {code_height_em}em;")}
                                 on:input=code_input
                                 on:paste=code_paste>
-                                { move || code_view.get() }
+                                { 
+                                    move || {
+                                        println!("update code view");
+                                        gen_code_view(&get_code.get())
+                                    } 
+                                }
                             </div>
                         </div>
                     </div>
@@ -1339,10 +1350,10 @@ pub fn Editor<'a>(
                             <div class="output-wrapper">
                                 <div id=format!("output-{id}") class="output sized-code">
                                     { move || output.get() }
-                                    {state().challenge.as_ref().map(|chal| {
+                                    { move || get_state.get().challenge.as_ref().map(|chal| {
                                         let intended = chal.intended_answer.clone();
                                         let click_intended = move|_| {
-                                            state().set_code(&intended, Cursor::Ignore);
+                                            get_state.get().set_code(&intended, Cursor::Ignore);
                                         };
                                         view! {
                                         <div>
@@ -1355,7 +1366,7 @@ pub fn Editor<'a>(
                                             </button>
                                             {chal.best_answer.clone().map(|ans| {
                                                 let click_ans = move|_| {
-                                                    state().set_code(&ans, Cursor::Ignore);
+                                                    get_state.get().set_code(&ans, Cursor::Ignore);
                                                 };
                                                 view! {
                                                     <button

@@ -1,5 +1,5 @@
 use std::{
-    cell::{Cell, RefCell},
+    cell::Cell,
     iter,
     mem::{replace, take},
     str::FromStr,
@@ -32,20 +32,21 @@ use crate::{
 };
 
 /// Handles setting the code in the editor, setting the cursor, and managing the history
+#[derive(Clone)]
 pub struct State {
     pub code_id: String,
     pub set_line_count: WriteSignal<usize>,
     pub set_copied_link: WriteSignal<bool>,
-    pub set_code_view: WriteSignal<View>,
-    pub past: RefCell<Vec<Record>>,
-    pub future: RefCell<Vec<Record>>,
-    pub curr: RefCell<Record>,
+    pub set_code: WriteSignal<String>,
+    pub past: Vec<Record>,
+    pub future: Vec<Record>,
+    pub curr: Record,
     pub challenge: Option<ChallengeDef>,
     pub loading_module: Cell<bool>,
 }
 
 /// A record of a code change
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Record {
     pub code: String,
     pub before: (u32, u32),
@@ -53,7 +54,7 @@ pub struct Record {
 }
 
 /// Ways to set the cursor
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum Cursor {
     Set(u32, u32),
     Keep,
@@ -62,7 +63,8 @@ pub enum Cursor {
 
 impl State {
     /// Set the code and cursor
-    pub fn set_code(&self, code: &str, cursor: Cursor) {
+    pub fn set_code(&mut self, code: &str, cursor: Cursor) {
+        // logging::log!("set_code({:?}, {:?})", code, cursor);
         let after = match cursor {
             Cursor::Set(start, end) => (start, end),
             Cursor::Keep => get_code_cursor_impl(&self.code_id).unwrap_or_else(|| {
@@ -76,18 +78,18 @@ impl State {
         };
         let maybe_before = get_code_cursor_impl(&self.code_id);
         let before = maybe_before
-            .or_else(|| self.past.borrow().last().map(|r| r.after))
+            .or_else(|| self.past.last().map(|r| r.after))
             .unwrap_or(after);
         let new_curr = Record {
             code: code.into(),
             before,
             after,
         };
-        let prev = replace(&mut *self.curr.borrow_mut(), new_curr);
+        let prev = replace(&mut self.curr, new_curr);
         let changed = prev.code != code;
         if changed {
-            self.past.borrow_mut().push(prev);
-            self.future.borrow_mut().clear();
+            self.past.push(prev);
+            self.future.clear();
         }
         self.set_code_view(code);
         if matches!(cursor, Cursor::Ignore) {
@@ -104,7 +106,7 @@ impl State {
         }
     }
     pub fn set_code_view(&self, code: &str) {
-        self.set_code_view.set(gen_code_view(code));
+        self.set_code.set(code.into());
     }
     pub fn set_cursor(&self, to: (u32, u32)) {
         set_code_cursor(&self.code_id, to.0, to.1);
@@ -117,26 +119,24 @@ impl State {
         self.set_line_count
             .set(children_of(&element(&self.code_id)).count());
     }
-    pub fn clear_history(&self) {
-        self.past.borrow_mut().clear();
-        self.future.borrow_mut().clear();
+    pub fn clear_history(&mut self) {
+        self.past.clear();
+        self.future.clear();
     }
-    pub fn undo(&self) {
-        let prev = self.past.borrow_mut().pop();
+    pub fn undo(&mut self) {
+        let prev = self.past.pop();
         if let Some(prev) = prev {
             self.set_code_view(&prev.code);
-            let mut curr = self.curr.borrow_mut();
-            self.set_cursor(curr.before);
-            self.future.borrow_mut().push(replace(&mut *curr, prev));
+            self.set_cursor(self.curr.before);
+            self.future.push(replace(&mut self.curr, prev));
             self.set_changed();
         }
     }
-    pub fn redo(&self) {
-        if let Some(next) = self.future.borrow_mut().pop() {
+    pub fn redo(&mut self) {
+        if let Some(next) = self.future.pop() {
             self.set_code_view(&next.code);
-            let mut curr = self.curr.borrow_mut();
             self.set_cursor(next.after);
-            self.past.borrow_mut().push(replace(&mut *curr, next));
+            self.past.push(replace(&mut self.curr, next));
             self.set_changed();
         }
     }
@@ -630,8 +630,8 @@ fn build_code_lines(code: &str) -> CodeLines {
     lines
 }
 
-fn gen_code_view(code: &str) -> View {
-    // logging::log!("gen_code_view({})", code);
+pub fn gen_code_view(code: &str) -> View {
+    // logging::log!("gen_code_view({code:?})");
     let CodeLines { frags } = build_code_lines(code);
     let mut line_views = Vec::new();
     for line in frags {
@@ -1129,6 +1129,7 @@ pub fn report_view(report: &Report) -> impl IntoView {
     }
 }
 
+#[derive(Clone)]
 pub struct ChallengeDef {
     pub example: String,
     pub intended_answer: String,

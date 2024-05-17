@@ -1,9 +1,9 @@
 # Uiua Todo
 
 - 0.11
-  - Fix pad bug when selecting all text with mouse
   - `un on min/max`
   - `un on join`
+  - Add experimental features page
   - Optimize `rows` unpack
 - Trace images/audio in pad
 - Blog posts -> RSS

@@ -180,10 +180,11 @@ pub fn Site() -> impl IntoView {
 }
 
 fn weewuh() {
-    let src = if (instant::now() / 1000.0 % 1.0 * 100.0) as u32 == 0 {
-        "/assets/ooh-ee-ooh-ah.mp3"
-    } else {
-        "/assets/wee-wuh.mp3"
+    let i = (instant::now() / 1000.0 % 1.0 * 100.0) as u32;
+    let src = match i {
+        0 => "/assets/ooh-ee-ooh-ah.mp3",
+        1..=10 => "/assets/wee-wah.mp3",
+        _ => "/assets/wee-wuh.mp3",
     };
     if let Ok(audio) = HtmlAudioElement::new_with_src(src) {
         _ = audio.play();

@@ -28,7 +28,7 @@ use crate::{
     backend::{OutputItem, WebBackend},
     binding_class,
     editor::Editor,
-    element, prim_class,
+    element, prim_class, sig_class,
 };
 
 /// Handles setting the code in the editor, setting the cursor, and managing the history
@@ -648,12 +648,13 @@ fn gen_code_view(code: &str) -> View {
                 }
                 CodeFragment::Br => frag_views.push(view!(<br/>).into_view()),
                 CodeFragment::Span(text, kind) => {
-                    let color_class = match kind {
-                        SpanKind::Primitive(prim) => prim_class(prim),
+                    let color_class = match &kind {
+                        SpanKind::Primitive(prim) => prim_class(*prim),
                         SpanKind::Number => "number-literal",
                         SpanKind::String => "string-literal-span",
                         SpanKind::Comment | SpanKind::OutputComment => "comment-span",
                         SpanKind::Strand => "strand-span",
+                        SpanKind::Swizzle(sw) => sig_class(sw.signature()),
                         _ => "",
                     };
                     match kind {
@@ -721,11 +722,11 @@ fn gen_code_view(code: &str) -> View {
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
-                        SpanKind::Swizzle => {
+                        SpanKind::Swizzle(sw) => {
                             let class = format!("code-span code-hover {}", color_class);
+                            let title = format!("swizzle {}", sw.signature());
                             frag_views.push(
-                                view!(<span class=class data-title="swizzle">{text}</span>)
-                                    .into_view(),
+                                view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
                         SpanKind::Label => {

@@ -41,6 +41,13 @@ pub(crate) fn instrs_all_signatures(
     Ok((env.sig(), env.temp_signatures()))
 }
 
+pub(crate) fn instrs_signature_no_temp(instrs: &[Instr]) -> Option<Signature> {
+    let (sig, temps) = instrs_all_signatures(instrs).ok()?;
+    (temps.iter())
+        .all(|sig| sig.args == sig.outputs)
+        .then_some(sig)
+}
+
 /// An environment that emulates the runtime but only keeps track of the stack.
 struct VirtualEnv<'a> {
     stack: Vec<BasicValue>,

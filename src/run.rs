@@ -411,6 +411,7 @@ code:
         let mut formatted_instr = String::new();
         for i in slice.start..slice.end() {
             let instr = &self.asm.instrs[i];
+
             // Uncomment to debug
             // for val in &self.rt.stack {
             //     print!("{:?} ", val);
@@ -439,6 +440,7 @@ code:
             //     }
             // }
             // println!("\n    {:?}", instr);
+
             if self.rt.time_instrs {
                 formatted_instr = format!("{instr:?}");
                 self.rt.last_time = instant::now();

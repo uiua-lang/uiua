@@ -6,7 +6,7 @@ use ecow::{eco_vec, EcoString, EcoVec};
 use regex::Regex;
 
 use crate::{
-    check::instrs_signature,
+    check::{instrs_signature, instrs_signature_no_temp},
     primitive::{ImplPrimitive, Primitive},
     BindingKind, Compiler, Function, FunctionId, Instr, Signature, Span, SysOp, TempStack, Uiua,
     UiuaResult, Value,
@@ -178,6 +178,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(invert_insert_pattern, "insert"),
         &InvertPatternFn(invert_split_pattern, "split"),
         &InvertPatternFn(invert_rows_pattern, "rows"),
+        &InvertPatternFn(invert_dup_pattern, "dup"),
         &(Val, InvertPatternFn(invert_repeat_pattern, "repeat")),
         &(Val, ([Rotate], [Neg, Rotate])),
         &pat!(Sqrt, (Dup, Mul)),
@@ -201,8 +202,6 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &(Val, pat!(Max, (Over, Le, 1, MatchPattern))),
         &InvertPatternFn(invert_temp_pattern, "temp"),
         &InvertPatternFn(invert_push_pattern, "push"),
-        &pat!(Dup, (Over, MatchPattern)),
-        &pat!(Over, (PushToInline(1), Over, PopInline(1), MatchPattern)),
     ]
 };
 
@@ -372,6 +371,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_repeat_pattern, "repeat"),
         &UnderPatternFn(under_fold_pattern, "fold"),
         &UnderPatternFn(under_switch_pattern, "switch"),
+        &UnderPatternFn(under_dup_pattern, "dup"),
         // Basic math
         &dyad!(Flip, Add, Sub),
         &dyad!(Flip, Mul, Div),
@@ -496,7 +496,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_push_temp_pattern, "push temp"),
         &UnderPatternFn(under_copy_temp_pattern, "copy temp"),
         &UnderPatternFn(under_un_pattern, "un"),
-        &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // This must come last!
+        &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // These must come last!
     ];
 
     if DEBUG {
@@ -649,6 +649,122 @@ fn under_trivial_pattern<'a>(
         [Comment(_) | PushSig(_) | PopSig, input @ ..] => Some((input, (eco_vec![], eco_vec![]))),
         _ => None,
     }
+}
+
+fn invert_dup_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::Prim(Primitive::Dup, dup_span), input @ ..] = input else {
+        return None;
+    };
+    let Some(dyadic_i) = (0..=input.len())
+        .find(|&i| instrs_signature_no_temp(&input[..i]).is_some_and(|sig| sig == (2, 1)))
+    else {
+        let sig = instrs_signature(input).ok()?;
+        return if sig.args == sig.outputs {
+            let inv = eco_vec![
+                Instr::Prim(Primitive::Over, *dup_span),
+                Instr::ImplPrim(ImplPrimitive::MatchPattern, *dup_span)
+            ];
+            Some((input, inv))
+        } else {
+            None
+        };
+    };
+    let dyadic_whole = &input[..dyadic_i];
+    let input = &input[dyadic_i..];
+    let monadic_i = (0..=dyadic_whole.len()).rev().find(|&i| {
+        instrs_signature_no_temp(&dyadic_whole[..i])
+            .is_some_and(|sig| sig.args == 0 && sig.outputs == 0)
+    })?;
+    let monadic_part = &dyadic_whole[..monadic_i];
+    let dyadic_part = &dyadic_whole[monadic_i..];
+    if DEBUG {
+        println!("inverse monadic part: {monadic_part:?}");
+        println!("inverse dyadic part: {dyadic_part:?}");
+    }
+    let monadic_inv = invert_instrs(monadic_part, comp)?;
+    let inverse = match *dyadic_part {
+        [Instr::Prim(Primitive::Add, span)] => {
+            let mut inv = monadic_inv;
+            inv.push(Instr::push(2));
+            inv.push(Instr::Prim(Primitive::Div, span));
+            inv
+        }
+        [Instr::Prim(Primitive::Mul, span)] => {
+            let mut inv = eco_vec![Instr::Prim(Primitive::Sqrt, span)];
+            if !monadic_inv.is_empty() {
+                inv.push(Instr::Prim(Primitive::Dup, *dup_span));
+                inv.extend(monadic_inv);
+                inv.push(Instr::Prim(Primitive::Pop, span));
+            }
+            inv
+        }
+        _ => return None,
+    };
+    Some((input, inverse))
+}
+
+fn under_dup_pattern<'a>(
+    input: &'a [Instr],
+    g_sig: Signature,
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    let [Instr::Prim(Primitive::Dup, dup_span), input @ ..] = input else {
+        return None;
+    };
+    let dyadic_i = (0..=input.len())
+        .find(|&i| instrs_signature_no_temp(&input[..i]).is_some_and(|sig| sig == (2, 1)))?;
+    let dyadic_whole = &input[..dyadic_i];
+    let input = &input[dyadic_i..];
+    let (monadic_i, monadic_sig) = (0..=dyadic_whole.len())
+        .rev()
+        .filter_map(|i| instrs_signature_no_temp(&dyadic_whole[..i]).map(|sig| (i, sig)))
+        .find(|(_, sig)| sig.args == sig.outputs)?;
+    let monadic_part = &dyadic_whole[..monadic_i];
+    let dyadic_part = &dyadic_whole[monadic_i..];
+    if DEBUG {
+        println!("under monadic part: {monadic_part:?}");
+        println!("under dyadic part: {dyadic_part:?}");
+    }
+    let (monadic_befores, monadic_afters) = under_instrs(monadic_part, g_sig, comp)?;
+
+    let mut befores = eco_vec![Instr::Prim(Primitive::Dup, *dup_span),];
+    if monadic_sig != (0, 0) {
+        befores.push(Instr::CopyToTemp {
+            stack: TempStack::Under,
+            count: 1,
+            span: *dup_span,
+        });
+    }
+    befores.extend(monadic_befores);
+    befores.extend(dyadic_part.iter().cloned());
+
+    let mut afters = EcoVec::new();
+    if monadic_sig != (0, 0) {
+        afters.push(Instr::PopTemp {
+            stack: TempStack::Under,
+            count: 1,
+            span: *dup_span,
+        });
+    }
+    match dyadic_part {
+        [Instr::Prim(Primitive::Add, span)] if monadic_sig == (0, 0) => {
+            afters.push(Instr::push(2));
+            afters.push(Instr::Prim(Primitive::Div, *span))
+        }
+        [Instr::Prim(Primitive::Add, span)] => afters.push(Instr::Prim(Primitive::Sub, *span)),
+        [Instr::Prim(Primitive::Sub, span)] => afters.push(Instr::Prim(Primitive::Add, *span)),
+        [Instr::Prim(Primitive::Mul, span)] if monadic_sig == (0, 0) => {
+            afters.push(Instr::Prim(Primitive::Sqrt, *span))
+        }
+        [Instr::Prim(Primitive::Mul, span)] => afters.push(Instr::Prim(Primitive::Div, *span)),
+        [Instr::Prim(Primitive::Div, span)] => afters.push(Instr::Prim(Primitive::Mul, *span)),
+        _ => return None,
+    }
+    afters.extend(monadic_afters);
+    Some((input, (befores, afters)))
 }
 
 fn invert_push_pattern<'a>(

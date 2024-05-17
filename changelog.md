@@ -18,7 +18,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`xlsx`](https://uiua.org/docs/xlsx) function, which encodes and decodes XLSX data
 - [`bits ⋯`](https://uiua.org/docs/bits) can now take negative numbers
 - [`un °`](https://uiua.org/docs/un) [`bits ⋯`](https://uiua.org/docs/bits) can now take non-booleans
-- Add [`un °`](https://uiua.org/docs/un) [`duplicate .`](https://uiua.org/docs/duplicate) and [`un °`](https://uiua.org/docs/un) [`over ,`](https://uiua.org/docs/over) pattern matching
+- Add [`un °`](https://uiua.org/docs/un) [`duplicate .`](https://uiua.org/docs/duplicate) pattern matching
 - Add [`un °`](https://uiua.org/docs/un) [`min ↧`](https://uiua.org/docs/min) and [`un °`](https://uiua.org/docs/un) [`max ↥`](https://uiua.org/docs/max) pattern matching
 - [`insert`](https://uiua.org/docs/insert) can now be used with [`un °`](https://uiua.org/docs/un) to extract a map entry and pattern match it
 - [`fill ⬚`](https://uiua.org/docs/fill)ed [`keep ▽`](https://uiua.org/docs/keep)'s fill value may now be a list

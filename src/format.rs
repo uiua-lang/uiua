@@ -991,6 +991,7 @@ impl<'a> Formatter<'a> {
             }
             Word::Placeholder(op) => self.push(&word.span, &op.to_string()),
             Word::StackSwizzle(s) => self.push(&word.span, &s.to_string()),
+            Word::ArraySwizzle(s) => self.push(&word.span, &s.to_string()),
             Word::Spaces => self.push(&word.span, " "),
             Word::Comment(comment) => {
                 let beginning_of_line = self
@@ -1257,6 +1258,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),
         Word::Placeholder(_) => false,
         Word::StackSwizzle(_) => false,
+        Word::ArraySwizzle(_) => false,
         Word::Comment(_) => true,
         Word::Spaces => false,
         Word::BreakLine | Word::UnbreakLine => false,

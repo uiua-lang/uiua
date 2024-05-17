@@ -955,7 +955,8 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             | SpanKind::Placeholder(_)
             | SpanKind::Delimiter
             | SpanKind::FuncDelim(_)
-            | SpanKind::Swizzle(_) => None,
+            | SpanKind::StackSwizzle(_)
+            | SpanKind::ArraySwizzle(_) => None,
         };
         span.span.as_str(&inputs, |s| {
             colored.push_str(&if let Some(color) = color {

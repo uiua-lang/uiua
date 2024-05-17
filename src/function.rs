@@ -74,7 +74,7 @@ pub enum Instr {
         parts: EcoVec<EcoString>,
         span: usize,
     },
-    /// Execute a swizzle
+    /// Execute a stack swizzle
     StackSwizzle(StackSwizzle, usize),
     /// Label an array
     Label {
@@ -289,6 +289,35 @@ impl StackSwizzle {
             slice[j as usize] = i as u8;
         }
         Some(Self { indices })
+    }
+}
+
+/// A swizzle for an array
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct ArraySwizzle {
+    /// The indices of the array elements
+    pub indices: EcoVec<i8>,
+}
+
+impl fmt::Display for ArraySwizzle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ξ")?;
+        for &i in &self.indices {
+            let c = if i < 0 {
+                (b'A' - 1 + i.unsigned_abs()) as char
+            } else {
+                (b'a' + i.unsigned_abs()) as char
+            };
+            write!(f, "{c}")?;
+        }
+        Ok(())
+    }
+}
+
+impl ArraySwizzle {
+    /// Get the signature of the swizzle
+    pub fn signature(&self) -> Signature {
+        Signature::new(1, self.indices.len())
     }
 }
 

@@ -16,7 +16,7 @@ use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{ast::PlaceholderOp, Inputs, Primitive, StackSwizzle, WILDCARD_CHAR};
+use crate::{ast::PlaceholderOp, ArraySwizzle, Inputs, Primitive, StackSwizzle, WILDCARD_CHAR};
 
 /// Lex a Uiua source file
 pub fn lex(
@@ -473,7 +473,8 @@ pub enum Token {
     MultilineFormatStr(Vec<String>),
     Simple(AsciiToken),
     Glyph(Primitive),
-    Swizzle(StackSwizzle),
+    StackSwizzle(StackSwizzle),
+    ArraySwizzle(ArraySwizzle),
     LeftArrow,
     LeftStrokeArrow,
     LeftArrowTilde,
@@ -541,7 +542,13 @@ impl Token {
     }
     pub(crate) fn as_stack_swizzle(&self) -> Option<&StackSwizzle> {
         match self {
-            Token::Swizzle(s) => Some(s),
+            Token::StackSwizzle(s) => Some(s),
+            _ => None,
+        }
+    }
+    pub(crate) fn as_array_swizzle(&self) -> Option<&ArraySwizzle> {
+        match self {
+            Token::ArraySwizzle(s) => Some(s),
             _ => None,
         }
     }
@@ -579,7 +586,8 @@ impl fmt::Display for Token {
                 }
                 Ok(())
             }
-            Token::Swizzle(s) => s.fmt(f),
+            Token::StackSwizzle(s) => s.fmt(f),
+            Token::ArraySwizzle(s) => s.fmt(f),
             Token::Simple(t) => t.fmt(f),
             Token::Glyph(p) => p.fmt(f),
             Token::Undertie => write!(f, "‿"),
@@ -802,17 +810,27 @@ impl<'a> Lexer<'a> {
                 "_" => self.end(Underscore, start),
                 "|" => self.end(Bar, start),
                 ";" => self.end(Semicolon, start),
-                "'" if self.next_char_exact("'") => self.end(Quote2, start),
+                "'" if self.next_char_exact("'") => {
+                    if let Some(indices) = self.array_swizzle_indices() {
+                        self.end(ArraySwizzle(crate::ArraySwizzle { indices }), start)
+                    } else {
+                        self.end(Quote2, start)
+                    }
+                }
                 "'" => {
-                    if let Some(indices) = self.swizzle_indices() {
-                        self.end(Swizzle(crate::StackSwizzle { indices }), start)
+                    if let Some(indices) = self.stack_swizzle_indices() {
+                        self.end(StackSwizzle(crate::StackSwizzle { indices }), start)
                     } else {
                         self.end(Quote, start)
                     }
                 }
                 "λ" => {
-                    let indices = self.swizzle_indices().unwrap_or_default();
-                    self.end(Swizzle(crate::StackSwizzle { indices }), start)
+                    let indices = self.stack_swizzle_indices().unwrap_or_default();
+                    self.end(StackSwizzle(crate::StackSwizzle { indices }), start)
+                }
+                "ξ" => {
+                    let indices = self.array_swizzle_indices().unwrap_or_default();
+                    self.end(ArraySwizzle(crate::ArraySwizzle { indices }), start)
                 }
                 "~" => self.end(Tilde, start),
                 "`" => {
@@ -1254,11 +1272,28 @@ impl<'a> Lexer<'a> {
             c.into()
         }))
     }
-    fn swizzle_indices(&mut self) -> Option<EcoVec<u8>> {
+    fn stack_swizzle_indices(&mut self) -> Option<EcoVec<u8>> {
         let mut indices = EcoVec::new();
         while let Some(c) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_lowercase())) {
             for c in c.chars() {
                 indices.push(c as u8 - b'a');
+            }
+        }
+        if indices.is_empty() {
+            None
+        } else {
+            Some(indices)
+        }
+    }
+    fn array_swizzle_indices(&mut self) -> Option<EcoVec<i8>> {
+        let mut indices = EcoVec::new();
+        while let Some(c) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_alphabetic())) {
+            for c in c.chars() {
+                if c.is_lowercase() {
+                    indices.push((c as u8 - b'a') as i8);
+                } else {
+                    indices.push(-1 - (c as u8 - b'A') as i8);
+                }
             }
         }
         if indices.is_empty() {

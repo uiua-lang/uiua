@@ -948,6 +948,8 @@ impl<'i> Parser<'i> {
             sc.map(Word::SemanticComment)
         } else if let Some(sw) = self.next_token_map(Token::as_stack_swizzle) {
             sw.cloned().map(Word::StackSwizzle)
+        } else if let Some(sw) = self.next_token_map(Token::as_array_swizzle) {
+            sw.cloned().map(Word::ArraySwizzle)
         } else {
             return None;
         })

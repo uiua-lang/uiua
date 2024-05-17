@@ -13,8 +13,9 @@ use crate::{
     ident_modifier_args, instrs_are_pure,
     lex::{CodeSpan, Sp},
     parse::parse,
-    Assembly, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc, Inputs, PreEvalMode,
-    Primitive, Purity, SafeSys, Signature, StackSwizzle, SysBackend, UiuaError, Value, CONSTANTS,
+    ArraySwizzle, Assembly, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc,
+    Inputs, PreEvalMode, Primitive, Purity, SafeSys, Signature, StackSwizzle, SysBackend,
+    UiuaError, Value, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -34,7 +35,8 @@ pub enum SpanKind {
     Placeholder(PlaceholderOp),
     Delimiter,
     FuncDelim(Signature),
-    Swizzle(StackSwizzle),
+    StackSwizzle(StackSwizzle),
+    ArraySwizzle(ArraySwizzle),
 }
 
 /// Documentation information for a binding
@@ -429,7 +431,10 @@ impl Spanner {
                     spans.push(word.span.clone().sp(SpanKind::Placeholder(*op)))
                 }
                 Word::StackSwizzle(sw) => {
-                    spans.push(word.span.clone().sp(SpanKind::Swizzle(sw.clone())))
+                    spans.push(word.span.clone().sp(SpanKind::StackSwizzle(sw.clone())))
+                }
+                Word::ArraySwizzle(sw) => {
+                    spans.push(word.span.clone().sp(SpanKind::ArraySwizzle(sw.clone())))
                 }
             }
         }
@@ -699,12 +704,22 @@ mod server {
                     }
                 }
             }
-            // Hovering a swizzle
-            let mut swizzle: Option<Sp<&StackSwizzle>> = None;
+            // Hovering a stack swizzle
+            let mut stack_swizzle: Option<Sp<&StackSwizzle>> = None;
             for span_kind in &doc.spans {
-                if let SpanKind::Swizzle(s) = &span_kind.value {
+                if let SpanKind::StackSwizzle(s) = &span_kind.value {
                     if span_kind.span.contains_line_col(line, col) {
-                        swizzle = Some(span_kind.span.clone().sp(s));
+                        stack_swizzle = Some(span_kind.span.clone().sp(s));
+                        break;
+                    }
+                }
+            }
+            // Hovering an array swizzle
+            let mut array_swizzle: Option<Sp<&ArraySwizzle>> = None;
+            for span_kind in &doc.spans {
+                if let SpanKind::ArraySwizzle(s) = &span_kind.value {
+                    if span_kind.span.contains_line_col(line, col) {
+                        array_swizzle = Some(span_kind.span.clone().sp(s));
                         break;
                     }
                 }
@@ -797,11 +812,19 @@ mod server {
                     }),
                     range: Some(uiua_span_to_lsp(&sig.span)),
                 }
-            } else if let Some(sw) = swizzle {
+            } else if let Some(sw) = stack_swizzle {
                 Hover {
                     contents: HoverContents::Markup(MarkupContent {
                         kind: MarkupKind::Markdown,
-                        value: format!("swizzle `{}`", sw.value.signature()),
+                        value: format!("stack swizzle `{}`", sw.value.signature()),
+                    }),
+                    range: Some(uiua_span_to_lsp(&sw.span)),
+                }
+            } else if let Some(sw) = array_swizzle {
+                Hover {
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value: format!("array swizzle `{}`", sw.value.signature()),
                     }),
                     range: Some(uiua_span_to_lsp(&sw.span)),
                 }
@@ -1175,13 +1198,14 @@ mod server {
                         },
                         BindingDocsKind::Module => MODULE_STT,
                     },
-                    SpanKind::Swizzle(sw) => match sw.signature().args {
+                    SpanKind::StackSwizzle(sw) => match sw.signature().args {
                         1 => MONADIC_FUNCTION_STT,
                         2 => DYADIC_FUNCTION_STT,
                         3 => TRIADIC_FUNCTION_STT,
                         4 => TETRADIC_FUNCTION_STT,
                         _ => continue,
                     },
+                    SpanKind::ArraySwizzle(_) => MONADIC_FUNCTION_STT,
                     _ => continue,
                 };
                 let token_type = SEMANTIC_TOKEN_TYPES

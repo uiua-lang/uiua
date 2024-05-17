@@ -7,7 +7,7 @@ use crate::{
     function::{FunctionId, Signature},
     lex::{CodeSpan, Sp},
     parse::ident_modifier_args,
-    Ident, Primitive, SemanticComment, StackSwizzle,
+    ArraySwizzle, Ident, Primitive, SemanticComment, StackSwizzle,
 };
 
 /// A top-level item
@@ -116,6 +116,7 @@ pub enum Word {
     Modified(Box<Modified>),
     Placeholder(PlaceholderOp),
     StackSwizzle(StackSwizzle),
+    ArraySwizzle(ArraySwizzle),
     Comment(String),
     Spaces,
     BreakLine,
@@ -170,6 +171,8 @@ impl PartialEq for Word {
             }
             (Self::Placeholder(_), Self::Placeholder(_)) => false,
             (Self::Comment(a), Self::Comment(b)) => a == b,
+            (Self::StackSwizzle(a), Self::StackSwizzle(b)) => a == b,
+            (Self::ArraySwizzle(a), Self::ArraySwizzle(b)) => a == b,
             _ => discriminant(self) == discriminant(other),
         }
     }
@@ -235,6 +238,7 @@ impl fmt::Debug for Word {
             Word::Comment(comment) => write!(f, "# {comment}"),
             Word::Placeholder(op) => write!(f, "{op}"),
             Word::StackSwizzle(swizzle) => write!(f, "{swizzle}"),
+            Word::ArraySwizzle(swizzle) => write!(f, "{swizzle}"),
             Word::BreakLine => write!(f, "'"),
             Word::UnbreakLine => write!(f, "''"),
             Word::SemanticComment(comment) => write!(f, "{comment}"),

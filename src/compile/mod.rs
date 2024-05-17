@@ -1265,7 +1265,8 @@ code:
             Word::Placeholder(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
-            Word::StackSwizzle(sw) => self.swizzle(sw, word.span, call),
+            Word::StackSwizzle(sw) => self.stack_swizzle(sw, word.span, call),
+            Word::ArraySwizzle(sw) => self.array_swizzle(sw, word.span, call)?,
             Word::SemanticComment(sc) => match sc {
                 SemanticComment::Experimental => self.scope.experimental = true,
                 SemanticComment::NoInline => {
@@ -1788,7 +1789,7 @@ code:
         }
         Ok(())
     }
-    fn swizzle(&mut self, sw: StackSwizzle, span: CodeSpan, call: bool) {
+    fn stack_swizzle(&mut self, sw: StackSwizzle, span: CodeSpan, call: bool) {
         self.experimental_error(&span, || {
             "Swizzles are experimental. To use them, add \
             `# Experimental!` to the top of the file."
@@ -1817,10 +1818,39 @@ code:
             Instr::StackSwizzle(sw, spandex)
         };
         if !call {
-            instr =
-                Instr::PushFunc(self.make_function(FunctionId::Anonymous(span), sig, vec![instr]));
+            instr = Instr::PushFunc(self.make_function(FunctionId::Anonymous(span), sig, [instr]));
         }
         self.push_instr(instr);
+    }
+    fn array_swizzle(&mut self, sw: ArraySwizzle, span: CodeSpan, call: bool) -> UiuaResult {
+        if !self.scope.experimental {
+            self.add_error(
+                span.clone(),
+                "Swizzles are experimental. To use them, add \
+                `# Experimental!` to the top of the file.",
+            );
+        }
+        let sig = sw.signature();
+        let arr = Array::from_iter(sw.indices.iter().map(|&i| i as f64));
+        let spandex = self.add_span(span.clone());
+        let mut instrs = vec![
+            Instr::push(arr),
+            Instr::Prim(Primitive::Select, spandex),
+            Instr::Unpack {
+                count: sig.outputs,
+                span: spandex,
+                unbox: false,
+            },
+        ];
+        if !call {
+            instrs = vec![Instr::PushFunc(self.make_function(
+                FunctionId::Anonymous(span),
+                sig,
+                instrs,
+            ))];
+        }
+        self.push_all_instrs(instrs);
+        Ok(())
     }
     fn inlinable(&self, instrs: &[Instr]) -> bool {
         use ImplPrimitive::*;

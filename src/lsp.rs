@@ -691,6 +691,16 @@ mod server {
                     }
                 }
             }
+            // Hovering a swizzle
+            let mut swizzle: Option<Sp<&StackSwizzle>> = None;
+            for span_kind in &doc.spans {
+                if let SpanKind::Swizzle(s) = &span_kind.value {
+                    if span_kind.span.contains_line_col(line, col) {
+                        swizzle = Some(span_kind.span.clone().sp(s));
+                        break;
+                    }
+                }
+            }
 
             Ok(Some(if let Some((prim, range)) = prim_range {
                 Hover {
@@ -778,6 +788,14 @@ mod server {
                         value: format!("```uiua\n{}\n```", sig.value),
                     }),
                     range: Some(uiua_span_to_lsp(&sig.span)),
+                }
+            } else if let Some(sw) = swizzle {
+                Hover {
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value: format!("swizzle `{}`", sw.value.signature()),
+                    }),
+                    range: Some(uiua_span_to_lsp(&sw.span)),
                 }
             } else {
                 return Ok(None);
@@ -1148,6 +1166,13 @@ mod server {
                             _ => continue,
                         },
                         BindingDocsKind::Module => MODULE_STT,
+                    },
+                    SpanKind::Swizzle(sw) => match sw.signature().args {
+                        1 => MONADIC_FUNCTION_STT,
+                        2 => DYADIC_FUNCTION_STT,
+                        3 => TRIADIC_FUNCTION_STT,
+                        4 => TETRADIC_FUNCTION_STT,
+                        _ => continue,
                     },
                     _ => continue,
                 };

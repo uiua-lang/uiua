@@ -74,7 +74,7 @@ pub enum Instr {
         span: usize,
     },
     /// Execute a swizzle
-    Swizzle(Swizzle, usize),
+    StackSwizzle(StackSwizzle, usize),
     /// Label an array
     Label {
         label: EcoString,
@@ -187,7 +187,7 @@ impl PartialEq for Instr {
             (Self::PushSig(a), Self::PushSig(b)) => a == b,
             (Self::PopSig, Self::PopSig) => true,
             (Self::NoInline, Self::NoInline) => true,
-            (Self::Swizzle(a, _), Self::Swizzle(b, _)) => a == b,
+            (Self::StackSwizzle(a, _), Self::StackSwizzle(b, _)) => a == b,
             _ => false,
         }
     }
@@ -229,7 +229,7 @@ impl Hash for Instr {
             Instr::PushSig(sig) => (25, sig).hash(state),
             Instr::PopSig => 26.hash(state),
             Instr::NoInline => 27.hash(state),
-            Instr::Swizzle(swizzle, _) => (31, swizzle).hash(state),
+            Instr::StackSwizzle(swizzle, _) => (31, swizzle).hash(state),
         }
     }
 }
@@ -250,12 +250,12 @@ impl Instr {
 
 /// A swizzle for the stack
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Swizzle {
+pub struct StackSwizzle {
     /// The indices of the stack elements
     pub indices: EcoVec<u8>,
 }
 
-impl fmt::Display for Swizzle {
+impl fmt::Display for StackSwizzle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "λ")?;
         for &i in &self.indices {
@@ -265,7 +265,7 @@ impl fmt::Display for Swizzle {
     }
 }
 
-impl Swizzle {
+impl StackSwizzle {
     pub(crate) fn args(&self) -> usize {
         (self.indices.iter().max().copied()).map_or(0, |max| max as usize + 1)
     }
@@ -445,7 +445,7 @@ impl fmt::Display for Instr {
             Instr::CopyToTemp { stack, count, .. } => {
                 write!(f, "<copy to {stack} {count}>")
             }
-            Instr::Swizzle(swizzle, _) => write!(f, "{swizzle}"),
+            Instr::StackSwizzle(swizzle, _) => write!(f, "{swizzle}"),
             Instr::SetOutputComment { i, n, .. } => write!(f, "<set output comment {i}({n})>"),
             Instr::PushSig(sig) => write!(f, "{sig}"),
             Instr::PopSig => write!(f, "-|"),

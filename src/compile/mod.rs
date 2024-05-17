@@ -1304,7 +1304,7 @@ code:
             Word::Placeholder(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
-            Word::Swizzle(sw) => self.swizzle(sw, word.span, call)?,
+            Word::StackSwizzle(sw) => self.swizzle(sw, word.span, call)?,
             Word::SemanticComment(sc) => match sc {
                 SemanticComment::Experimental => self.scope.experimental = true,
                 SemanticComment::NoInline => {
@@ -1780,7 +1780,7 @@ code:
         }
         Ok(())
     }
-    fn swizzle(&mut self, sw: Swizzle, span: CodeSpan, call: bool) -> UiuaResult {
+    fn swizzle(&mut self, sw: StackSwizzle, span: CodeSpan, call: bool) -> UiuaResult {
         if !self.scope.experimental {
             self.add_error(
                 span.clone(),
@@ -1789,7 +1789,7 @@ code:
             );
         }
         let sig = sw.signature();
-        let mut instr = Instr::Swizzle(sw, self.add_span(span.clone()));
+        let mut instr = Instr::StackSwizzle(sw, self.add_span(span.clone()));
         if !call {
             instr =
                 Instr::PushFunc(self.make_function(FunctionId::Anonymous(span), sig, vec![instr]));

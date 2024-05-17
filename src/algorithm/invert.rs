@@ -790,10 +790,10 @@ fn invert_swizzle_pattern<'a>(
     input: &'a [Instr],
     _: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::Swizzle(swizzle, span), input @ ..] = input else {
+    let [Instr::StackSwizzle(swizzle, span), input @ ..] = input else {
         return None;
     };
-    let instrs = eco_vec![Instr::Swizzle(swizzle.inverse()?, *span)];
+    let instrs = eco_vec![Instr::StackSwizzle(swizzle.inverse()?, *span)];
     Some((input, instrs))
 }
 

@@ -16,7 +16,7 @@ use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{ast::PlaceholderOp, Inputs, Primitive, Swizzle, WILDCARD_CHAR};
+use crate::{ast::PlaceholderOp, Inputs, Primitive, StackSwizzle, WILDCARD_CHAR};
 
 /// Lex a Uiua source file
 pub fn lex(
@@ -473,7 +473,7 @@ pub enum Token {
     MultilineFormatStr(Vec<String>),
     Simple(AsciiToken),
     Glyph(Primitive),
-    Swizzle(Swizzle),
+    Swizzle(StackSwizzle),
     LeftArrow,
     LeftStrokeArrow,
     LeftArrowTilde,
@@ -539,7 +539,7 @@ impl Token {
             _ => None,
         }
     }
-    pub(crate) fn as_swizzle(&self) -> Option<&Swizzle> {
+    pub(crate) fn as_stack_swizzle(&self) -> Option<&StackSwizzle> {
         match self {
             Token::Swizzle(s) => Some(s),
             _ => None,
@@ -805,14 +805,14 @@ impl<'a> Lexer<'a> {
                 "'" if self.next_char_exact("'") => self.end(Quote2, start),
                 "'" => {
                     if let Some(indices) = self.swizzle_indices() {
-                        self.end(Swizzle(crate::Swizzle { indices }), start)
+                        self.end(Swizzle(crate::StackSwizzle { indices }), start)
                     } else {
                         self.end(Quote, start)
                     }
                 }
                 "λ" => {
                     let indices = self.swizzle_indices().unwrap_or_default();
-                    self.end(Swizzle(crate::Swizzle { indices }), start)
+                    self.end(Swizzle(crate::StackSwizzle { indices }), start)
                 }
                 "~" => self.end(Tilde, start),
                 "`" => {

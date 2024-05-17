@@ -940,8 +940,8 @@ impl<'i> Parser<'i> {
             span.sp(Word::SemicolonPop)
         } else if let Some(sc) = self.next_token_map(Token::as_semantic_comment) {
             sc.map(Word::SemanticComment)
-        } else if let Some(sw) = self.next_token_map(Token::as_swizzle) {
-            sw.cloned().map(Word::Swizzle)
+        } else if let Some(sw) = self.next_token_map(Token::as_stack_swizzle) {
+            sw.cloned().map(Word::StackSwizzle)
         } else {
             return None;
         })

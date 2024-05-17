@@ -14,7 +14,7 @@ use crate::{
     lex::{CodeSpan, Sp},
     parse::parse,
     Assembly, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc, Inputs, PreEvalMode,
-    Primitive, Purity, SafeSys, Signature, Swizzle, SysBackend, UiuaError, Value, CONSTANTS,
+    Primitive, Purity, SafeSys, Signature, StackSwizzle, SysBackend, UiuaError, Value, CONSTANTS,
 };
 
 /// Kinds of span in Uiua code, meant to be used in the language server or other IDE tools
@@ -34,7 +34,7 @@ pub enum SpanKind {
     Placeholder(PlaceholderOp),
     Delimiter,
     FuncDelim(Signature),
-    Swizzle(Swizzle),
+    Swizzle(StackSwizzle),
 }
 
 /// Documentation information for a binding
@@ -425,7 +425,7 @@ impl Spanner {
                 Word::Placeholder(op) => {
                     spans.push(word.span.clone().sp(SpanKind::Placeholder(*op)))
                 }
-                Word::Swizzle(sw) => {
+                Word::StackSwizzle(sw) => {
                     spans.push(word.span.clone().sp(SpanKind::Swizzle(sw.clone())))
                 }
             }

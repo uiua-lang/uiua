@@ -6,7 +6,7 @@ use serde::*;
 
 use crate::{
     is_ident_char, CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc,
-    Instr, IntoInputSrc, LocalName, Primitive, Signature, Span, Swizzle, TempStack, Uiua,
+    Instr, IntoInputSrc, LocalName, Primitive, Signature, Span, StackSwizzle, TempStack, Uiua,
     UiuaResult, Value,
 };
 
@@ -619,7 +619,7 @@ enum InstrRep {
     Switch(usize, Signature, usize, bool),
     Format(EcoVec<EcoString>, usize),
     MatchFormatPattern(EcoVec<EcoString>, usize),
-    Swizzle(EcoVec<u8>, usize),
+    StackSwizzle(EcoVec<u8>, usize),
     Label(EcoString, usize),
     Dynamic(DynamicFunction),
     Unpack(usize, usize, bool),
@@ -662,7 +662,7 @@ impl From<Instr> for InstrRep {
             } => Self::Switch(count, sig, span, under_cond),
             Instr::Format { parts, span } => Self::Format(parts, span),
             Instr::MatchFormatPattern { parts, span } => Self::MatchFormatPattern(parts, span),
-            Instr::Swizzle(swizzle, span) => Self::Swizzle(swizzle.indices, span),
+            Instr::StackSwizzle(swizzle, span) => Self::StackSwizzle(swizzle.indices, span),
             Instr::Label { label, span } => Self::Label(label, span),
             Instr::Dynamic(func) => Self::Dynamic(func),
             Instr::Unpack { count, span, unbox } => Self::Unpack(count, span, unbox),
@@ -701,7 +701,9 @@ impl From<InstrRep> for Instr {
             },
             InstrRep::Format(parts, span) => Self::Format { parts, span },
             InstrRep::MatchFormatPattern(parts, span) => Self::MatchFormatPattern { parts, span },
-            InstrRep::Swizzle(indices, span) => Self::Swizzle(Swizzle { indices }, span),
+            InstrRep::StackSwizzle(indices, span) => {
+                Self::StackSwizzle(StackSwizzle { indices }, span)
+            }
             InstrRep::Label(label, span) => Self::Label { label, span },
             InstrRep::Dynamic(func) => Self::Dynamic(func),
             InstrRep::Unpack(count, span, unbox) => Self::Unpack { count, span, unbox },

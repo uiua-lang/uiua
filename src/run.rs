@@ -580,7 +580,7 @@ code:
                     let parts = parts.clone();
                     self.with_span(*span, |env| invert::match_format_pattern(parts, env))
                 }
-                Instr::Swizzle(swizzle, span) => {
+                Instr::StackSwizzle(swizzle, span) => {
                     let swizzle = swizzle.clone();
                     self.with_span(*span, |env| env.swizzle(&swizzle))
                 }
@@ -1527,7 +1527,7 @@ code:
                 .channel
         })
     }
-    fn swizzle(&mut self, swizzle: &Swizzle) -> UiuaResult {
+    fn swizzle(&mut self, swizzle: &StackSwizzle) -> UiuaResult {
         let args = swizzle.args();
         self.touch_array_stack(args)?;
         let end = self.rt.stack.len();

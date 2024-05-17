@@ -275,6 +275,9 @@ impl Swizzle {
     }
     /// Get the inverse of the swizzle
     pub fn inverse(&self) -> Option<Self> {
+        if self.args() != self.indices.len() {
+            return None;
+        }
         let set: HashSet<_> = self.indices.iter().copied().collect();
         if set.len() != self.indices.len() {
             return None;

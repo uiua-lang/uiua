@@ -824,6 +824,7 @@ pub fn Editor<'a>(
 
     // Additional code buttons
     for (glyph, title, class, surround, doc) in [
+        ("λ", "swizzle (')", "experimental-glyph-button", None, ""),
         ("_", "strand", "strand-span", None, "arrays#creating-arrays"),
         (
             "[]",

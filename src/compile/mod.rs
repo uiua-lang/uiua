@@ -1304,7 +1304,7 @@ code:
             Word::Placeholder(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
-            Word::StackSwizzle(sw) => self.swizzle(sw, word.span, call)?,
+            Word::StackSwizzle(sw) => self.swizzle(sw, word.span, call),
             Word::SemanticComment(sc) => match sc {
                 SemanticComment::Experimental => self.scope.experimental = true,
                 SemanticComment::NoInline => {
@@ -1780,7 +1780,7 @@ code:
         }
         Ok(())
     }
-    fn swizzle(&mut self, sw: StackSwizzle, span: CodeSpan, call: bool) -> UiuaResult {
+    fn swizzle(&mut self, sw: StackSwizzle, span: CodeSpan, call: bool) {
         if !self.scope.experimental {
             self.add_error(
                 span.clone(),
@@ -1795,7 +1795,6 @@ code:
                 Instr::PushFunc(self.make_function(FunctionId::Anonymous(span), sig, vec![instr]));
         }
         self.push_instr(instr);
-        Ok(())
     }
     fn inlinable(&self, instrs: &[Instr]) -> bool {
         use ImplPrimitive::*;

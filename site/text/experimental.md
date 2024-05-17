@@ -51,7 +51,9 @@ Labels cannot be inspected by code.
 
 ## Function Strands
 
-Function strands allow you to combine two terms without parentheses. They are written with a `‿` between the terms.
+Function strands allow you to combine two terms without parentheses. 
+They are written with a `‿` between the terms. 
+The `‿` will format from `__`.
 
 Function strands bind less tightly than modifiers, so the first term can never be a modifier.
 

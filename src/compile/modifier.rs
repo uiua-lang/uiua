@@ -598,10 +598,12 @@ impl Compiler {
                 let mut operands = modified.code_operands().cloned();
                 let f = operands.next().unwrap();
                 let span = f.span.clone();
+
                 self.in_inverse = !self.in_inverse;
                 let f_res = self.compile_operand_word(f);
                 self.in_inverse = !self.in_inverse;
                 let (instrs, _) = f_res?;
+
                 self.add_span(span.clone());
                 if let Some(inverted) = invert_instrs(&instrs, self) {
                     let sig = self.sig_of(&inverted, &span)?;
@@ -620,6 +622,7 @@ impl Compiler {
                 let mut operands = modified.code_operands().cloned();
                 let f = operands.next().unwrap();
                 let f_span = f.span.clone();
+
                 self.in_inverse = !self.in_inverse;
                 let f_res = self.compile_operand_word(f);
                 self.in_inverse = !self.in_inverse;
@@ -716,11 +719,19 @@ impl Compiler {
                 if !call {
                     self.new_functions.push(EcoVec::new());
                 }
+
+                // Filled function
                 let mode = replace(&mut self.pre_eval_mode, PreEvalMode::Lsp);
                 let res = self.word(operands.next().unwrap(), false);
                 self.pre_eval_mode = mode;
                 res?;
-                self.word(operands.next().unwrap(), false)?;
+
+                // Get fill function
+                let in_inverse = replace(&mut self.in_inverse, false);
+                let res = self.word(operands.next().unwrap(), false);
+                self.in_inverse = in_inverse;
+                res?;
+
                 let span = self.add_span(modified.modifier.span.clone());
                 self.push_instr(Instr::Prim(Primitive::Fill, span));
                 if !call {

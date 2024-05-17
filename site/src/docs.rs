@@ -243,6 +243,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/constants">"Constants"</A>" - a list of the shadowable constants"</li>
             <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the Uiua formatter"</li>
             <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
+            <li><A href="/docs/experimental">"Experimental Features"</A>" - an overview of experimental features"</li>
             <li><A href="/docs/stack-idioms">"Stack Idioms"</A>" - common ways of manipulating the stack"</li>
             <li><A href="/docs/isms">"Uiuisms"</A>" - a curated list of Uiua functions for solving common problems."</li>
         </ul>

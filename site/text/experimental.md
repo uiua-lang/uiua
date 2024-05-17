@@ -4,6 +4,29 @@ Uiua has a number of features that are considered experimental. They are availab
 
 Using experimental features requires an `# Experimental!` comment to be placed at the top of a Uiua source file.
 
+## Experimental Functions/Modifiers
+
+- [`by`]()
+- [`coordinate`]()
+- [`repr`]()
+- [`stringify`]()
+- [`&ffi`]()
+- [`&tlsc`]()
+- [`&tlsl`]()
+
+## Swizzles
+
+Swizzles allow you to reorder the stack in a concise way.
+They are written with a `λ` followed by some lowercase letters.
+The `λ` will format from `'` if followed by letters.
+
+```
+# Experimental!
+[λcba 1 2 3 4 5]
+[λbbbbba 1 2]
+[λccaabb 1 2 3]
+```
+
 ## Function Strands
 
 Function strands allow you to combine two terms without parentheses. They are written with a `‿` between the terms.
@@ -17,17 +40,4 @@ Function strands bind less tightly than modifiers, so the first term can never b
 ```
 # Experimental!
 ↯⟜⇡‿/+ 2_3
-```
-
-## Swizzles
-
-Swizzles allow you to reorder the stack in a concise way.
-They are written with a `λ` followed by some lowercase letters.
-The `λ` will format from `'` if followed by letters.
-
-```
-# Experimental!
-[λcba 1 2 3 4 5]
-[λbbbbba 1 2]
-[λccaabb 1 2 3]
 ```

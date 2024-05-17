@@ -576,7 +576,9 @@ fn invert_un_pattern<'a>(
     let [Instr::PushFunc(f), Instr::Prim(Primitive::Un, _), input @ ..] = input else {
         return None;
     };
-    Some((input, f.instrs(comp).into()))
+    let f_instrs = EcoVec::from(f.instrs(comp));
+    invert_instrs(&f_instrs, comp)?;
+    Some((input, f_instrs))
 }
 
 fn under_un_pattern<'a>(
@@ -1006,7 +1008,10 @@ fn under_from_inverse_pattern<'a>(
             if let Some((inp, after)) = pattern.invert_extract(&input[..end], comp) {
                 let before = EcoVec::from(&input[..input.len() - inp.len()]);
                 if DEBUG {
-                    println!("inverted for under {:?} to {:?}", before, after);
+                    println!(
+                        "inverted for under ({:?}) {:?} to {:?}",
+                        pattern, before, after
+                    );
                 }
                 return Some((inp, (before, after)));
             }

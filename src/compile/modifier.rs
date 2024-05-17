@@ -623,6 +623,7 @@ impl Compiler {
                 let f = operands.next().unwrap();
                 let f_span = f.span.clone();
 
+                // The inverted function
                 self.in_inverse = !self.in_inverse;
                 let f_res = self.compile_operand_word(f);
                 self.in_inverse = !self.in_inverse;
@@ -637,7 +638,9 @@ impl Compiler {
                     );
                 }
 
+                // The not inverted function
                 let (g_instrs, g_sig) = self.compile_operand_word(operands.next().unwrap())?;
+
                 if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig, self) {
                     let before_sig = self.sig_of(&f_before, &f_span)?;
                     let after_sig = self.sig_of(&f_after, &f_span)?;

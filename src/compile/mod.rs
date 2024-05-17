@@ -1875,7 +1875,19 @@ code:
         )
     }
     fn validate_local(&mut self, name: &str, local: LocalName, span: &CodeSpan) {
-        if !local.public && (self.scope.names.get(name)).map_or(true, |l| l.index != local.index) {
+        if local.public {
+            return;
+        }
+        if !local.public
+            && (self.scope.names.get(name))
+                .or_else(|| {
+                    self.higher_scopes
+                        .last()
+                        .filter(|_| self.scope.kind == ScopeKind::Test)
+                        .and_then(|scope| scope.names.get(name))
+                })
+                .map_or(true, |l| l.index != local.index)
+        {
             self.add_error(span.clone(), format!("`{}` is private", name));
         }
     }

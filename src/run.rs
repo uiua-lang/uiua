@@ -580,6 +580,10 @@ code:
                     let parts = parts.clone();
                     self.with_span(*span, |env| invert::match_format_pattern(parts, env))
                 }
+                Instr::Swizzle(swizzle, span) => {
+                    let swizzle = swizzle.clone();
+                    self.with_span(*span, |env| env.swizzle(&swizzle))
+                }
                 Instr::Label { label, span } => {
                     let label = if label.is_empty() {
                         None
@@ -1522,6 +1526,18 @@ code:
                 .ok_or_else(|| self.error("Invalid thread id"))?
                 .channel
         })
+    }
+    fn swizzle(&mut self, swizzle: &Swizzle) -> UiuaResult {
+        let args = swizzle.args();
+        self.touch_array_stack(args)?;
+        let start = self.rt.stack.len() - args;
+        for &i in swizzle.indices.iter() {
+            self.rt
+                .stack
+                .push(self.rt.stack[start + i as usize].clone());
+        }
+        self.rt.stack.drain(start..start + args);
+        Ok(())
     }
 }
 

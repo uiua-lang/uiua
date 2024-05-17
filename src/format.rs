@@ -982,6 +982,7 @@ impl<'a> Formatter<'a> {
                 self.format_words(&m.operands, true, depth, false);
             }
             Word::Placeholder(op) => self.push(&word.span, &op.to_string()),
+            Word::Swizzle(s) => self.push(&word.span, &s.to_string()),
             Word::Spaces => self.push(&word.span, " "),
             Word::Comment(comment) => {
                 let beginning_of_line = self
@@ -1247,6 +1248,7 @@ fn word_is_multiline(word: &Word) -> bool {
         Word::SemicolonPop => false,
         Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),
         Word::Placeholder(_) => false,
+        Word::Swizzle(_) => false,
         Word::Comment(_) => true,
         Word::Spaces => false,
         Word::BreakLine | Word::UnbreakLine => false,

@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - Smarter `under dup`?
   - Optimize `rows` unpack
   - Allow warnings to be disabled?
 - Trace images/audio in pad

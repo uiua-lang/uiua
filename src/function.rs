@@ -72,6 +72,8 @@ pub enum Instr {
         parts: EcoVec<EcoString>,
         span: usize,
     },
+    /// Execute a swizzle
+    Swizzle(Swizzle, usize),
     /// Label an array
     Label {
         label: EcoString,
@@ -184,6 +186,7 @@ impl PartialEq for Instr {
             (Self::PushSig(a), Self::PushSig(b)) => a == b,
             (Self::PopSig, Self::PopSig) => true,
             (Self::NoInline, Self::NoInline) => true,
+            (Self::Swizzle(a, _), Self::Swizzle(b, _)) => a == b,
             _ => false,
         }
     }
@@ -225,6 +228,7 @@ impl Hash for Instr {
             Instr::PushSig(sig) => (25, sig).hash(state),
             Instr::PopSig => 26.hash(state),
             Instr::NoInline => 27.hash(state),
+            Instr::Swizzle(swizzle, _) => (31, swizzle).hash(state),
         }
     }
 }
@@ -240,6 +244,33 @@ impl Instr {
     }
     pub(crate) fn is_code(&self) -> bool {
         !matches!(self, Self::NoInline)
+    }
+}
+
+/// A swizzle for the stack
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct Swizzle {
+    /// The indices of the stack elements
+    pub indices: EcoVec<u8>,
+}
+
+impl fmt::Display for Swizzle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "λ")?;
+        for &i in &self.indices {
+            write!(f, "{}", (b'a' + i) as char)?;
+        }
+        Ok(())
+    }
+}
+
+impl Swizzle {
+    pub(crate) fn args(&self) -> usize {
+        (self.indices.iter().max().copied()).map_or(0, |max| max as usize + 1)
+    }
+    /// Get the signature of the swizzle
+    pub fn signature(&self) -> Signature {
+        Signature::new(self.args(), self.indices.len())
     }
 }
 
@@ -397,6 +428,7 @@ impl fmt::Display for Instr {
             Instr::CopyToTemp { stack, count, .. } => {
                 write!(f, "<copy to {stack} {count}>")
             }
+            Instr::Swizzle(swizzle, _) => write!(f, "{swizzle}"),
             Instr::SetOutputComment { i, n, .. } => write!(f, "<set output comment {i}({n})>"),
             Instr::PushSig(sig) => write!(f, "{sig}"),
             Instr::PopSig => write!(f, "-|"),

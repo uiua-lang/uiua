@@ -10,12 +10,13 @@ use std::{
     sync::Arc,
 };
 
+use ecow::EcoVec;
 use enum_iterator::{all, Sequence};
 use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{ast::PlaceholderOp, Inputs, Primitive, WILDCARD_CHAR};
+use crate::{ast::PlaceholderOp, Inputs, Primitive, Swizzle, WILDCARD_CHAR};
 
 /// Lex a Uiua source file
 pub fn lex(
@@ -472,6 +473,7 @@ pub enum Token {
     MultilineFormatStr(Vec<String>),
     Simple(AsciiToken),
     Glyph(Primitive),
+    Swizzle(Swizzle),
     LeftArrow,
     LeftStrokeArrow,
     LeftArrowTilde,
@@ -537,6 +539,12 @@ impl Token {
             _ => None,
         }
     }
+    pub(crate) fn as_swizzle(&self) -> Option<&Swizzle> {
+        match self {
+            Token::Swizzle(s) => Some(s),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -571,6 +579,7 @@ impl fmt::Display for Token {
                 }
                 Ok(())
             }
+            Token::Swizzle(s) => s.fmt(f),
             Token::Simple(t) => t.fmt(f),
             Token::Glyph(p) => p.fmt(f),
             Token::Undertie => write!(f, "‿"),
@@ -794,7 +803,17 @@ impl<'a> Lexer<'a> {
                 "|" => self.end(Bar, start),
                 ";" => self.end(Semicolon, start),
                 "'" if self.next_char_exact("'") => self.end(Quote2, start),
-                "'" => self.end(Quote, start),
+                "'" => {
+                    if let Some(indices) = self.swizzle_indices() {
+                        self.end(Swizzle(crate::Swizzle { indices }), start)
+                    } else {
+                        self.end(Quote, start)
+                    }
+                }
+                "λ" => {
+                    let indices = self.swizzle_indices().unwrap_or_default();
+                    self.end(Swizzle(crate::Swizzle { indices }), start)
+                }
                 "~" => self.end(Tilde, start),
                 "`" => {
                     if self.number("-") {
@@ -1234,6 +1253,19 @@ impl<'a> Lexer<'a> {
         } else {
             c.into()
         }))
+    }
+    fn swizzle_indices(&mut self) -> Option<EcoVec<u8>> {
+        let mut indices = EcoVec::new();
+        while let Some(c) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_lowercase())) {
+            for c in c.chars() {
+                indices.push(c as u8 - b'a');
+            }
+        }
+        if indices.is_empty() {
+            None
+        } else {
+            Some(indices)
+        }
     }
     fn parse_string_contents(
         &mut self,

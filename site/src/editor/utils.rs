@@ -721,6 +721,13 @@ fn gen_code_view(code: &str) -> View {
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
+                        SpanKind::Swizzle => {
+                            let class = format!("code-span code-hover {}", color_class);
+                            frag_views.push(
+                                view!(<span class=class data-title="swizzle">{text}</span>)
+                                    .into_view(),
+                            )
+                        }
                         SpanKind::Label => {
                             let label = text.trim_start_matches('$');
                             let mut components = [0f32; 3];

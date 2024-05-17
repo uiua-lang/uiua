@@ -34,6 +34,7 @@ pub enum SpanKind {
     Placeholder(PlaceholderOp),
     Delimiter,
     FuncDelim(Signature),
+    Swizzle,
 }
 
 /// Documentation information for a binding
@@ -424,6 +425,7 @@ impl Spanner {
                 Word::Placeholder(op) => {
                     spans.push(word.span.clone().sp(SpanKind::Placeholder(*op)))
                 }
+                Word::Swizzle(_) => spans.push(word.span.clone().sp(SpanKind::Swizzle)),
             }
         }
         spans.retain(|sp| !sp.span.as_str(self.inputs(), str::is_empty));

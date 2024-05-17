@@ -14,6 +14,9 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`keep ▽`](https://uiua.org/docs/keep) with a scalar counts array now copies each row that many times
   - This matches the behaviors of APL and BQN, and is generally more useful
   - The old behavior can be achieved with `/⊂↯`
+- Add experimental swizzles, which allow for more flexible stack reordering
+  - Swizzles are written with a `λ` followed by a list of lowercase letters
+  - The `λ` formats from `'` when it is in front of the letters
 - Add the [`json`](https://uiua.org/docs/json) function, which encodes and decodes JSON data
 - Add the [`xlsx`](https://uiua.org/docs/xlsx) function, which encodes and decodes XLSX data
 - [`bits ⋯`](https://uiua.org/docs/bits) can now take negative numbers

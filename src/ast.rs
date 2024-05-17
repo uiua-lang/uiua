@@ -7,7 +7,7 @@ use crate::{
     function::{FunctionId, Signature},
     lex::{CodeSpan, Sp},
     parse::ident_modifier_args,
-    Ident, Primitive, SemanticComment,
+    Ident, Primitive, SemanticComment, Swizzle,
 };
 
 /// A top-level item
@@ -115,6 +115,7 @@ pub enum Word {
     SemicolonPop,
     Modified(Box<Modified>),
     Placeholder(PlaceholderOp),
+    Swizzle(Swizzle),
     Comment(String),
     Spaces,
     BreakLine,
@@ -233,6 +234,7 @@ impl fmt::Debug for Word {
             Word::Spaces => write!(f, "' '"),
             Word::Comment(comment) => write!(f, "# {comment}"),
             Word::Placeholder(op) => write!(f, "{op}"),
+            Word::Swizzle(swizzle) => write!(f, "{swizzle}"),
             Word::BreakLine => write!(f, "'"),
             Word::UnbreakLine => write!(f, "''"),
             Word::SemanticComment(comment) => write!(f, "{comment}"),

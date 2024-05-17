@@ -225,7 +225,6 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Un], No, "", "°°⊟ 1 2") }
             { inverse_row_impl("Constant", Optional, "Pattern match", "°8 8") }
             { inverse_row([Dup], No, "Pattern match", "°. 4 4") }
-            { inverse_row([Over], No, "Pattern match", "°, 3 4 3") }
             { inverse_row([Min], Required, "Pattern match", "°(↧5) 3") }
             { inverse_row([Max], Required, "Pattern match", "°(↥3) 5") }
             { inverse_row([Identity], No, "Self inverse", "°∘ 5") }

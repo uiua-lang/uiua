@@ -1789,7 +1789,28 @@ code:
             );
         }
         let sig = sw.signature();
-        let mut instr = Instr::StackSwizzle(sw, self.add_span(span.clone()));
+        let spandex = self.add_span(span.clone());
+        let equivalent = match sw.indices.as_slice() {
+            [0] => Some(Primitive::Identity),
+            [1, 0] => Some(Primitive::Flip),
+            [0, 0] => Some(Primitive::Dup),
+            [1, 0, 1] => Some(Primitive::Over),
+            _ => None,
+        };
+        let mut instr = if let Some(prim) = equivalent {
+            self.emit_diagnostic(
+                format!(
+                    "This swizzle is equivalent to {}. \
+                    Use that instead.",
+                    prim.format()
+                ),
+                DiagnosticKind::Style,
+                span.clone(),
+            );
+            Instr::Prim(prim, spandex)
+        } else {
+            Instr::StackSwizzle(sw, spandex)
+        };
         if !call {
             instr =
                 Instr::PushFunc(self.make_function(FunctionId::Anonymous(span), sig, vec![instr]));

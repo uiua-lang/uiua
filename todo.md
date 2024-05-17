@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - Add swizzle equivalence and lints
   - Fix pad bug when selecting all text with mouse
   - `un on min/max`
   - `un on join`

@@ -1,11 +1,12 @@
 use std::{
     cmp::Ordering,
+    collections::HashSet,
     fmt,
     hash::{Hash, Hasher},
     ops::{Add, AddAssign},
 };
 
-use ecow::{EcoString, EcoVec};
+use ecow::{eco_vec, EcoString, EcoVec};
 use enum_iterator::Sequence;
 use serde::*;
 use serde_tuple::*;
@@ -271,6 +272,19 @@ impl Swizzle {
     /// Get the signature of the swizzle
     pub fn signature(&self) -> Signature {
         Signature::new(self.args(), self.indices.len())
+    }
+    /// Get the inverse of the swizzle
+    pub fn inverse(&self) -> Option<Self> {
+        let set: HashSet<_> = self.indices.iter().copied().collect();
+        if set.len() != self.indices.len() {
+            return None;
+        }
+        let mut indices = eco_vec![0; self.indices.len()];
+        let slice = indices.make_mut();
+        for (i, &j) in self.indices.iter().enumerate() {
+            slice[j as usize] = i as u8;
+        }
+        Some(Self { indices })
     }
 }
 

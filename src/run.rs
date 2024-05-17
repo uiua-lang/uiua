@@ -1530,11 +1530,11 @@ code:
     fn swizzle(&mut self, swizzle: &Swizzle) -> UiuaResult {
         let args = swizzle.args();
         self.touch_array_stack(args)?;
-        let start = self.rt.stack.len() - args;
-        for &i in swizzle.indices.iter() {
-            self.rt
-                .stack
-                .push(self.rt.stack[start + i as usize].clone());
+        let end = self.rt.stack.len();
+        let start = end - args;
+        for &i in swizzle.indices.iter().rev() {
+            let val = self.rt.stack[end - 1 - i as usize].clone();
+            self.rt.stack.push(val);
         }
         self.rt.stack.drain(start..start + args);
         Ok(())

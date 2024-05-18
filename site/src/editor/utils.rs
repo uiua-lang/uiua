@@ -303,21 +303,29 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
     let (anchor_node, anchor_offset) = (sel.anchor_node()?, sel.anchor_offset());
     let (focus_node, focus_offset) = (sel.focus_node()?, sel.focus_offset());
     // logging::log!("anchor: {:?}, focus: {:?}", anchor_node, focus_node);
+    // logging::log!(
+    //     "anchor_offset: {:?}, focus_offset: {:?}",
+    //     anchor_offset,
+    //     focus_offset
+    // );
     if !parent.contains(Some(&anchor_node)) || !parent.contains(Some(&focus_node)) {
         return None;
     }
     let anchor_is_parent = parent.is_same_node(Some(&anchor_node));
     let focus_is_parent = parent.is_same_node(Some(&focus_node));
+    // logging::log!("anchor_is_parent: {anchor_is_parent}, focus_is_parent: {focus_is_parent}");
     let mut start = 0;
     let mut end = 0;
     let mut curr = 0;
     if anchor_is_parent || focus_is_parent {
+        const PARENT_OFFSET: u32 = if cfg!(debug_assertions) { 2 } else { 0 };
         // This is the case when you double click in a spot off the end of a line
         for (i, div_node) in children_of(&parent).enumerate() {
+            let i = i as u32;
             if i > 0 {
                 curr += 1;
             }
-            if i + 2 == anchor_offset as usize && i + 3 == focus_offset as usize {
+            if i + PARENT_OFFSET == anchor_offset && i + PARENT_OFFSET + 1 == focus_offset {
                 start = curr;
             }
             let is_br = children_of(&div_node).count() == 1
@@ -334,7 +342,7 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
                 }
             }
 
-            if i + 2 == anchor_offset as usize && i + 3 == focus_offset as usize {
+            if i + PARENT_OFFSET == anchor_offset && i + PARENT_OFFSET + 1 == focus_offset {
                 end = curr;
             }
         }

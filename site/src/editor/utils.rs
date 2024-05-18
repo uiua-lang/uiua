@@ -66,9 +66,10 @@ impl State {
     /// Set the code and cursor
     pub fn set_code(&mut self, code: &str, cursor: Cursor) {
         // logging::log!("set_code({:?}, {:?})", code, cursor);
+        let maybe_before = get_code_cursor_impl(&self.code_id);
         let after = match cursor {
             Cursor::Set(start, end) => (start, end),
-            Cursor::Keep => get_code_cursor_impl(&self.code_id).unwrap_or_else(|| {
+            Cursor::Keep => maybe_before.unwrap_or_else(|| {
                 let len = code.chars().count() as u32;
                 (len, len)
             }),
@@ -77,7 +78,6 @@ impl State {
                 (len, len)
             }
         };
-        let maybe_before = get_code_cursor_impl(&self.code_id);
         let before = maybe_before
             .or_else(|| self.past.last().map(|r| r.after))
             .unwrap_or(after);
@@ -306,93 +306,99 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
     if !parent.contains(Some(&anchor_node)) || !parent.contains(Some(&focus_node)) {
         return None;
     }
-    let mut start = anchor_offset;
-    let mut end = focus_offset;
+    let anchor_is_parent = parent.is_same_node(Some(&anchor_node));
+    let focus_is_parent = parent.is_same_node(Some(&focus_node));
+    let mut start = 0;
+    let mut end = 0;
     let mut curr = 0;
-    let mut found_start = false;
-    let mut found_end = false;
-    let child_count = children_of(&parent).count();
-    for (i, div_node) in children_of(&parent).enumerate() {
-        if i > 0 {
-            curr += 1;
+    if anchor_is_parent || focus_is_parent {
+        // This is the case when you double click in a spot off the end of a line
+        for (i, div_node) in children_of(&parent).enumerate() {
+            if i > 0 {
+                curr += 1;
+            }
+            if i + 2 == anchor_offset as usize && i + 3 == focus_offset as usize {
+                start = curr;
+            }
+            let is_br = children_of(&div_node).count() == 1
+                && children_of(&div_node)
+                    .next()
+                    .unwrap()
+                    .dyn_into::<HtmlBrElement>()
+                    .is_ok();
+            if is_br {
+            } else {
+                for span_node in children_of(&div_node) {
+                    let text_content = span_node.text_content().unwrap();
+                    curr += text_content.chars().count() as u32;
+                }
+            }
+
+            if i + 2 == anchor_offset as usize && i + 3 == focus_offset as usize {
+                end = curr;
+            }
         }
-        if children_of(&div_node).count() == 1
-            && children_of(&div_node)
-                .next()
-                .unwrap()
-                .dyn_into::<HtmlBrElement>()
-                .is_ok()
-        {
-            // This is the case when you click on an empty line
-            // logging::log!("br");
-            if div_node.contains(Some(&anchor_node)) {
-                start = curr + anchor_offset;
-                if div_node.is_same_node(Some(&anchor_node)) && i + 1 < child_count {
-                    start -= 1;
-                }
-                found_start = true;
-                // logging::log!("start -> {:?}", start);
+    } else {
+        start = anchor_offset;
+        end = focus_offset;
+        let child_count = children_of(&parent).count();
+        for (i, div_node) in children_of(&parent).enumerate() {
+            if i > 0 {
+                curr += 1;
             }
-            if div_node.contains(Some(&focus_node)) {
-                end = curr + focus_offset;
-                if div_node.is_same_node(Some(&focus_node)) && i + 1 < child_count {
-                    end -= 1;
-                }
-                found_end = true;
-                // logging::log!("end -> {:?}", end);
-            }
-        } else {
-            // This is the normal case
-            // logging::log!("normal");
-            for span_node in children_of(&div_node) {
-                let text_content = span_node.text_content().unwrap();
-                // logging::log!("text_content: {:?}", text_content);
-                let len = text_content.chars().count() as u32;
-                if span_node.contains(Some(&anchor_node)) {
-                    let anchor_char_offset =
-                        utf16_offset_to_char_offset(&text_content, anchor_offset);
-                    start = curr + anchor_char_offset;
-                    found_start = true;
-                    // logging::log!(
-                    //     "start change: curr: {}, offset: {}",
-                    //     curr,
-                    //     anchor_char_offset
-                    // );
+            if children_of(&div_node).count() == 1
+                && children_of(&div_node)
+                    .next()
+                    .unwrap()
+                    .dyn_into::<HtmlBrElement>()
+                    .is_ok()
+            {
+                // This is the case when you click on an empty line
+                // logging::log!("br");
+                if div_node.contains(Some(&anchor_node)) {
+                    start = curr + anchor_offset;
+                    if div_node.is_same_node(Some(&anchor_node)) && i + 1 < child_count {
+                        start = start.saturating_sub(1);
+                    }
                     // logging::log!("start -> {:?}", start);
                 }
-                if span_node.contains(Some(&focus_node)) {
-                    let focus_char_offset =
-                        utf16_offset_to_char_offset(&text_content, focus_offset);
-                    end = curr + focus_char_offset;
-                    found_end = true;
-                    // logging::log!("end change: curr: {}, offset: {}", curr, focus_char_offset);
+                if div_node.contains(Some(&focus_node)) {
+                    end = curr + focus_offset;
+                    if div_node.is_same_node(Some(&focus_node)) && i + 1 < child_count {
+                        end = end.saturating_sub(1);
+                    }
                     // logging::log!("end -> {:?}", end);
                 }
-                // Increment curr by the length of the text in the node
-                // logging::log!("curr {} -> {}", curr, curr + len);
-                curr += len;
+            } else {
+                // This is the normal case
+                // logging::log!("normal");
+                for span_node in children_of(&div_node) {
+                    let text_content = span_node.text_content().unwrap();
+                    // logging::log!("text_content: {:?}", text_content);
+                    let len = text_content.chars().count() as u32;
+                    if span_node.contains(Some(&anchor_node)) {
+                        let anchor_char_offset =
+                            utf16_offset_to_char_offset(&text_content, anchor_offset);
+                        start = curr + anchor_char_offset;
+                        // logging::log!(
+                        //     "start change: curr: {}, offset: {}",
+                        //     curr,
+                        //     anchor_char_offset
+                        // );
+                        // logging::log!("start -> {:?}", start);
+                    }
+                    if span_node.contains(Some(&focus_node)) {
+                        let focus_char_offset =
+                            utf16_offset_to_char_offset(&text_content, focus_offset);
+                        end = curr + focus_char_offset;
+                        // logging::log!("end change: curr: {}, offset: {}", curr, focus_char_offset);
+                        // logging::log!("end -> {:?}", end);
+                    }
+                    // Increment curr by the length of the text in the node
+                    // logging::log!("curr {} -> {}", curr, curr + len);
+                    curr += len;
+                }
             }
-        }
-    }
-    // This case occurs when double clicking a line in Firefox
-    if !found_start || !found_end {
-        let text_content = parent.inner_text();
-        let start_offset = text_content
-            .lines()
-            .take(start as usize)
-            .map(|s| s.chars().count() + 1)
-            .sum::<usize>();
-        let end_offset = text_content
-            .lines()
-            .take(end as usize)
-            .map(|s| s.chars().count() + 1)
-            .sum::<usize>()
-            - 1;
-        if !found_start {
-            start = utf16_offset_to_char_offset(&text_content, start_offset as u32);
-        }
-        if !found_end {
-            end = utf16_offset_to_char_offset(&text_content, end_offset as u32);
         }
     }
     // logging::log!("get_code_cursor -> {:?}, {:?}", start, end);

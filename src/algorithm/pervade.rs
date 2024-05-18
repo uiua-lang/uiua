@@ -20,9 +20,6 @@ pub trait Arrayish {
     type Value: ArrayValue;
     fn shape(&self) -> &[usize];
     fn data(&self) -> &[Self::Value];
-    fn rank(&self) -> usize {
-        self.shape().len()
-    }
     fn flat_len(&self) -> usize {
         self.data().len()
     }

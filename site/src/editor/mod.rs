@@ -830,7 +830,7 @@ pub fn Editor<'a>(
 
     // Additional code buttons
     for (glyph, title, class, surround, doc) in [
-        ("λ", "swizzle (')", "experimental-glyph-button", None, ""),
+        ("λ", "(') swizzle", "experimental-glyph-button", None, ""),
         ("_", "strand", "strand-span", None, "arrays#creating-arrays"),
         (
             "[]",
@@ -861,7 +861,7 @@ pub fn Editor<'a>(
             None,
             "",
         ),
-        ("¯", "negative (`)", "number-literal", None, ""),
+        ("¯", "(`) negative", "number-literal", None, ""),
         (
             "@",
             "character",
@@ -885,8 +885,8 @@ pub fn Editor<'a>(
         ),
         ("!", "macro", "", None, "macros"),
         ("^", "placeholder", "", None, "custommodifiers"),
-        ("←", "binding (=)", "", None, "bindings"),
-        ("↚", "private binding (=~)", "", None, "modules#visibility"),
+        ("←", "(=) binding", "", None, "bindings"),
+        ("↚", "(=~) private binding", "", None, "modules#visibility"),
         ("~", "import", "", None, "modules"),
         ("|", "signature", "", None, "functions#stack-signatures"),
         ("#", "comment", "comment-span", None, "basic#comments"),

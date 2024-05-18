@@ -59,6 +59,7 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
     let sig = f.signature();
     match sig.args {
         2 => {
+            validate_size::<f64>(sig.outputs * xs.row_count() * ys.row_count(), env)?;
             let new_shape = Shape::from([xs.row_count(), ys.row_count()]);
             let outputs = sig.outputs;
             let mut items = multi_output(outputs, Value::builder(xs.row_count() * ys.row_count()));
@@ -91,6 +92,14 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
             for i in 3..n {
                 others.push(env.pop(i + 1)?);
             }
+            validate_size::<f64>(
+                sig.outputs
+                    * xs.row_count()
+                    * ys.row_count()
+                    * zs.row_count()
+                    * others.iter().map(|a| a.row_count()).product::<usize>(),
+                env,
+            )?;
             let mut new_shape = Shape::with_capacity(n);
             for arg in [&xs, &ys, &zs].into_iter().chain(&others) {
                 new_shape.push(arg.row_count());
@@ -141,6 +150,7 @@ fn generic_table(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResul
 
 pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
+    validate_size::<f64>(f.signature().outputs * xs.row_count() * ys.row_count(), env)?;
     match (f.as_flipped_primitive(&env.asm), xs, ys) {
         (Some((prim, flipped)), Value::Num(xs), Value::Num(ys)) => {
             if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env)? {

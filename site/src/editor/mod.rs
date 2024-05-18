@@ -467,7 +467,7 @@ pub fn Editor<'a>(
                             .code
                             .lines()
                             .nth(start_line - 1)
-                            .unwrap()
+                            .unwrap_or_default()
                             .chars()
                             .take_while(|c| c.is_whitespace())
                             .count();

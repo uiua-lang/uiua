@@ -302,6 +302,7 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
     let sel = window().get_selection().ok()??;
     let (anchor_node, anchor_offset) = (sel.anchor_node()?, sel.anchor_offset());
     let (focus_node, focus_offset) = (sel.focus_node()?, sel.focus_offset());
+    // logging::log!("anchor: {:?}, focus: {:?}", anchor_node, focus_node);
     if !parent.contains(Some(&anchor_node)) || !parent.contains(Some(&focus_node)) {
         return None;
     }
@@ -310,6 +311,7 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
     let mut curr = 0;
     let mut found_start = false;
     let mut found_end = false;
+    let child_count = children_of(&parent).count();
     for (i, div_node) in children_of(&parent).enumerate() {
         if i > 0 {
             curr += 1;
@@ -322,16 +324,26 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
                 .is_ok()
         {
             // This is the case when you click on an empty line
+            // logging::log!("br");
             if div_node.contains(Some(&anchor_node)) {
                 start = curr + anchor_offset;
+                if div_node.is_same_node(Some(&anchor_node)) && i + 1 < child_count {
+                    start -= 1;
+                }
                 found_start = true;
+                // logging::log!("start -> {:?}", start);
             }
             if div_node.contains(Some(&focus_node)) {
                 end = curr + focus_offset;
+                if div_node.is_same_node(Some(&focus_node)) && i + 1 < child_count {
+                    end -= 1;
+                }
                 found_end = true;
+                // logging::log!("end -> {:?}", end);
             }
         } else {
             // This is the normal case
+            // logging::log!("normal");
             for span_node in children_of(&div_node) {
                 let text_content = span_node.text_content().unwrap();
                 // logging::log!("text_content: {:?}", text_content);
@@ -357,7 +369,7 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
                     // logging::log!("end -> {:?}", end);
                 }
                 // Increment curr by the length of the text in the node
-                // logging::log!("len {} -> {}", curr, curr + len);
+                // logging::log!("curr {} -> {}", curr, curr + len);
                 curr += len;
             }
         }

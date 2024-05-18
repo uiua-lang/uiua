@@ -1898,7 +1898,7 @@ code:
                 .or_else(|| {
                     self.higher_scopes
                         .last()
-                        .filter(|_| self.scope.kind == ScopeKind::Test)
+                        .filter(|_| self.scope.kind != ScopeKind::File)
                         .and_then(|scope| scope.names.get(name))
                 })
                 .map_or(true, |l| l.index != local.index)

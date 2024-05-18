@@ -5,6 +5,7 @@
   - `un on join`
   - Optimize `rows` unpack
   - Change how number error bounds are shown
+  - Fix using private macros from macros
 - Trace images/audio in pad
 - Blog posts -> RSS
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly

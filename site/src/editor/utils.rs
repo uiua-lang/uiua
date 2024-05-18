@@ -365,14 +365,20 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
                 // logging::log!("br");
                 if div_node.contains(Some(&anchor_node)) {
                     start = curr + anchor_offset;
-                    if div_node.is_same_node(Some(&anchor_node)) && i + 1 < child_count {
+                    if cfg!(debug_assertions)
+                        && div_node.is_same_node(Some(&anchor_node))
+                        && i + 1 < child_count
+                    {
                         start = start.saturating_sub(1);
                     }
                     // logging::log!("start -> {:?}", start);
                 }
                 if div_node.contains(Some(&focus_node)) {
                     end = curr + focus_offset;
-                    if div_node.is_same_node(Some(&focus_node)) && i + 1 < child_count {
+                    if cfg!(debug_assertions)
+                        && div_node.is_same_node(Some(&focus_node))
+                        && i + 1 < child_count
+                    {
                         end = end.saturating_sub(1);
                     }
                     // logging::log!("end -> {:?}", end);

@@ -519,13 +519,15 @@ fn generic_reduce_inner(
                     Ok(acc)
                 })
             } else {
-                let mut new_rows = Vec::with_capacity(rows.len());
-                for row in rows {
-                    env.push(row);
-                    let val = generic_reduce_inner(f.clone(), depth - 1, process, env)?;
-                    new_rows.push(val);
-                }
-                Value::from_row_values(new_rows, env)
+                env.without_fill(|env| {
+                    let mut new_rows = Vec::with_capacity(rows.len());
+                    for row in rows {
+                        env.push(row);
+                        let val = generic_reduce_inner(f.clone(), depth - 1, process, env)?;
+                        new_rows.push(val);
+                    }
+                    Value::from_row_values(new_rows, env)
+                })
             }
         }
         n => {

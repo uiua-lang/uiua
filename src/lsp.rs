@@ -497,10 +497,15 @@ mod server {
     impl LspDoc {
         fn new(path: impl AsRef<Path>, input: String) -> Self {
             let path = path.as_ref();
+            let path = path
+                .to_string_lossy()
+                .strip_prefix("\\\\?\\")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| path.to_path_buf());
             let path = current_dir()
                 .ok()
-                .and_then(|curr| pathdiff::diff_paths(path, curr))
-                .unwrap_or_else(|| path.to_path_buf());
+                .and_then(|curr| pathdiff::diff_paths(&path, curr))
+                .unwrap_or(path);
             let src = InputSrc::File(path.into());
             let (items, _, _) = parse(&input, src.clone(), &mut Inputs::default());
             let spanner = Spanner::new(src, &input, NativeSys);
@@ -641,7 +646,7 @@ mod server {
         }
 
         async fn did_open(&self, params: DidOpenTextDocumentParams) {
-            let path = not_weird_path(uri_path(&params.text_document.uri));
+            let path = uri_path(&params.text_document.uri);
             self.docs.insert(
                 params.text_document.uri,
                 LspDoc::new(path, params.text_document.text),
@@ -649,7 +654,7 @@ mod server {
         }
 
         async fn did_change(&self, params: DidChangeTextDocumentParams) {
-            let path = not_weird_path(uri_path(&params.text_document.uri));
+            let path = uri_path(&params.text_document.uri);
             let doc = LspDoc::new(path, params.content_changes[0].text.clone());
             self.docs.insert(params.text_document.uri, doc);
         }
@@ -1839,13 +1844,6 @@ mod server {
         let path = uri.path().replace("/c%3A", "C:");
         let path = PathBuf::from(path);
         path.canonicalize().unwrap_or(path)
-    }
-
-    fn not_weird_path(path: PathBuf) -> PathBuf {
-        path.to_string_lossy()
-            .strip_prefix("\\\\?\\")
-            .map(PathBuf::from)
-            .unwrap_or(path)
     }
 
     fn lsp_pos_to_uiua(pos: Position) -> (usize, usize) {

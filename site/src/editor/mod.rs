@@ -830,36 +830,36 @@ pub fn Editor<'a>(
 
     // Additional code buttons
     for (glyph, title, class, surround, doc) in [
-        ("λ", "(') swizzle", "experimental-glyph-button", None, ""),
-        ("_", "strand", "strand-span", None, "arrays#creating-arrays"),
+        ("λ", "(') swizzle", "experimental-glyph-button", None, "docs/experimental#swizzles"),
+        ("_", "strand", "strand-span", None, "tutorial/arrays#creating-arrays"),
         (
             "[]",
             "array",
             "",
             Some(('[', ']')),
-            "arrays#creating-arrays",
+            "tutorial/arrays#creating-arrays",
         ),
         (
             "{}",
             "box array",
             "",
             Some(('{', '}')),
-            "arrays#nested-arrays",
+            "tutorial/arrays#nested-arrays",
         ),
         (
             "()",
             "function",
             "",
             Some(('(', ')')),
-            "functions#inline-functions",
+            "tutorial/functions#inline-functions",
         ),
-        ("⟨⟩", "switch", "", Some(('⟨', '⟩')), "controlflow#switch"),
+        ("⟨⟩", "switch", "", Some(('⟨', '⟩')), "tutorial/controlflow#switch"),
         (
             "‿",
             "function strand",
             "strand-span experimental-glyph-button",
             None,
-            "",
+            "docs/experimental#function-strands",
         ),
         ("¯", "(`) negative", "number-literal", None, ""),
         (
@@ -867,29 +867,29 @@ pub fn Editor<'a>(
             "character",
             "string-literal-span",
             None,
-            "types#characters",
+            "tutorial/types#characters",
         ),
         (
             "$",
             "format/multiline string",
             "string-literal-span",
             None,
-            "functions#format-strings",
+            "tutorial/functions#format-strings",
         ),
         (
             "\"",
             "string",
             "string-literal-span",
             Some(('"', '"')),
-            "types#characters",
+            "tutorial/types#characters",
         ),
-        ("!", "macro", "", None, "macros"),
-        ("^", "placeholder", "", None, "custommodifiers"),
-        ("←", "(=) binding", "", None, "bindings"),
-        ("↚", "(=~) private binding", "", None, "modules#visibility"),
-        ("~", "import", "", None, "modules"),
-        ("|", "signature", "", None, "functions#stack-signatures"),
-        ("#", "comment", "comment-span", None, "basic#comments"),
+        ("!", "macro", "", None, "tutorial/macros"),
+        ("^", "placeholder", "", None, "tutorial/custommodifiers"),
+        ("←", "(=) binding", "", None, "tutorial/bindings"),
+        ("↚", "(=~) private binding", "", None, "tutorial/modules#visibility"),
+        ("~", "import", "", None, "tutorial/modules"),
+        ("|", "signature", "", None, "tutorial/functions#stack-signatures"),
+        ("#", "comment", "comment-span", None, "tutorial/basic#comments"),
     ] {
         let class = format!("glyph-button {class}");
         // Navigate to the docs page on ctrl/shift+click
@@ -897,11 +897,11 @@ pub fn Editor<'a>(
             if !doc.is_empty() && os_ctrl(&event) {
                 // Open the docs page
                 window()
-                    .open_with_url_and_target(&format!("/tutorial/{doc}"), "_blank")
+                    .open_with_url_and_target(&format!("/{doc}"), "_blank")
                     .unwrap();
             } else if !doc.is_empty() && event.shift_key() {
                 // Redirect to the docs page
-                use_navigate()(&format!("/tutorial/{doc}"), NavigateOptions::default());
+                use_navigate()(&format!("/{doc}"), NavigateOptions::default());
             } else if let Some((open, close)) = surround {
                 surround_code(open, close);
             } else {

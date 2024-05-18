@@ -15,8 +15,7 @@ use uiua::{
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
-    DragEvent, Event, FileReader, HtmlDivElement, HtmlInputElement, HtmlSelectElement,
-     MouseEvent,
+    DragEvent, Event, FileReader, HtmlDivElement, HtmlInputElement, HtmlSelectElement, MouseEvent,
 };
 
 use crate::{
@@ -99,7 +98,7 @@ pub fn Editor<'a>(
     let (output, set_output) = create_signal(View::default());
     let (token_count, set_token_count) = create_signal(0);
 
-    let code_text = move || code_text(&code_id());
+    // let code_text = move || code_text(&code_id());
     let get_code_cursor = move || get_code_cursor_impl(&code_id());
     let (copied_link, set_copied_link) = create_signal(false);
     let (settings_open, set_settings_open) = create_signal(false);
@@ -126,6 +125,7 @@ pub fn Editor<'a>(
         future: Default::default(),
         challenge,
         loading_module: Default::default(),
+        code: String::new(),
         curr: {
             let code = initial_code.get_untracked().unwrap();
             let len = code.chars().count() as u32;
@@ -137,10 +137,15 @@ pub fn Editor<'a>(
         },
     };
     let (get_state, state) = create_signal(state);
+    let state_code = move || {
+        let mut code = String::new();
+        state.update(|state| code = state.code.clone());
+        code
+    };
 
     // Get the code with output comments cleaned up
     let clean_code = move || {
-        let code = code_text();
+        let code = state_code();
         let mut cleaned = String::new();
         let mut in_output_comment = false;
         for line in code.lines() {
@@ -165,7 +170,7 @@ pub fn Editor<'a>(
     // Run the code
     let run = move |format: bool, set_cursor: bool| {
         // Get code
-        let mut code_text = code_text();
+        let mut code_text = state_code();
         let mut cursor = if set_cursor {
             Cursor::Keep
         } else {
@@ -276,7 +281,7 @@ pub fn Editor<'a>(
                     view!(<div><audio class="output-audio" controls src=src/></div>).into_view()
                 }
             }
-            OutputItem::Svg(s) => view!(<div><img 
+            OutputItem::Svg(s) => view!(<div><img
                     class="output-image" 
                     src={format!("data:image/svg+xml;utf8, {}", urlencoding::encode(&s))}/>
                 </div>)
@@ -295,8 +300,10 @@ pub fn Editor<'a>(
                                     let output = state.run_code(&input);
                                     let (diags, items): (Vec<_>, Vec<_>) =
                                         output.into_iter().partition(OutputItem::is_report);
-                                    let items: Vec<_> = items.into_iter().map(render_output_item).collect();
-                                    let diags: Vec<_> = diags.into_iter().map(render_output_item).collect();
+                                    let items: Vec<_> =
+                                        items.into_iter().map(render_output_item).collect();
+                                    let diags: Vec<_> =
+                                        diags.into_iter().map(render_output_item).collect();
                                     set_output.set(items.into_view());
                                     set_diag_output.set(diags.into_view());
                                 });
@@ -318,10 +325,10 @@ pub fn Editor<'a>(
     };
 
     // Replace the selected text in the editor with the given string
-    let replace_code = move |inserted: &str| {
+    let replace_code = move |state: &mut State, inserted: &str| {
         if let Some((start, end)) = get_code_cursor() {
             let (start, end) = (start.min(end), start.max(end) as usize);
-            let code = code_text();
+            let code = state.code.clone();
             let new: String = code
                 .chars()
                 .take(start as usize)
@@ -329,31 +336,31 @@ pub fn Editor<'a>(
                 .chain(code.chars().skip(end))
                 .collect();
             let offset = inserted.chars().count() as u32;
-            state.update(|state| state.set_code(&new, Cursor::Set(start + offset, start + offset)));
+            state.set_code(&new, Cursor::Set(start + offset, start + offset))
         };
     };
 
     // Remove a code range
-    let remove_code = move |start: u32, end: u32| {
-        logging::log!("remove start: {start}, end: {end}");
+    let remove_code = move |state: &mut State, start: u32, end: u32| {
+        // logging::log!("remove start: {start}, end: {end}");
         if start == end {
             return;
         }
         let (start, end) = (start.min(end), start.max(end) as usize);
-        let code = code_text();
+        let code = state.code.clone();
         let new: String = code
             .chars()
             .take(start as usize)
             .chain(code.chars().skip(end))
             .collect();
-        state.update(|state| state.set_code(&new, Cursor::Set(start, start)));
+        state.set_code(&new, Cursor::Set(start, start));
     };
 
     // Surround the selected text with delimiters
-    let surround_code = move |open: char, close: char| {
+    let surround_code = move |state: &mut State, open: char, close: char| {
         let (start, end) = get_code_cursor().unwrap();
         let (start, end) = (start.min(end), start.max(end));
-        let code = code_text();
+        let code = state.code.clone();
         let mut chars = code.chars();
         let mut new_code = String::new();
         new_code.extend(chars.by_ref().take(start as usize));
@@ -361,7 +368,7 @@ pub fn Editor<'a>(
         new_code.extend(chars.by_ref().take((end - start) as usize));
         new_code.push(close);
         new_code.extend(chars);
-        state.update(|state| state.set_code(&new_code, Cursor::Set(start + 1, end + 1)));
+        state.set_code(&new_code, Cursor::Set(start + 1, end + 1));
     };
 
     // Update the code when the textarea is changed
@@ -377,29 +384,33 @@ pub fn Editor<'a>(
             return;
         }
         if let Some((start, _)) = get_code_cursor() {
-            let code = code_text();
-            update_token_count(&code);
-            state.update(|state| state.set_code(&code, Cursor::Set(start, start)));
+            state.update(|state| {
+                let code = state.code.clone();
+                update_token_count(&code);
+                state.set_code(&code, Cursor::Set(start, start));
+            });
         }
     };
 
     // Insert an # Experimental! comment at the top of the code
     let insert_experimental = move || {
-        let code = code_text();
-        if code.starts_with("# Experimental!") {
-            return;
-        }
-        let new_code = format!("# Experimental!\n{}", code);
-        let cursor = if let Some((start, end)) = get_code_cursor() {
-            if start == 0 {
-                Cursor::Set(16, 16)
-            } else {
-                Cursor::Set(start + 16, end + 16)
+        state.update(|state| {
+            let code = state.code.clone();
+            if code.starts_with("# Experimental!") {
+                return;
             }
-        } else {
-            Cursor::Ignore
-        };
-        state.update(|state| state.set_code(&new_code, cursor));
+            let new_code = format!("# Experimental!\n{}", code);
+            let cursor = if let Some((start, end)) = get_code_cursor() {
+                if start == 0 {
+                    Cursor::Set(16, 16)
+                } else {
+                    Cursor::Set(start + 16, end + 16)
+                }
+            } else {
+                Cursor::Ignore
+            };
+            state.set_code(&new_code, cursor);
+        });
     };
 
     // Handle key events
@@ -444,45 +455,106 @@ pub fn Editor<'a>(
                     run(true, true);
                 } else {
                     let (start, _) = get_code_cursor().unwrap();
-                    let code = code_text();
-                    let left_char = if start > 0 {
-                        code.chars().nth(start as usize - 1)
-                    } else {
-                        None
-                    };
-                    let right_char = code.chars().nth(start as usize);
-                    let (start_line, _) = line_col(&code, start as usize);
-                    let curr_line_indent = code
-                        .lines()
-                        .nth(start_line - 1)
-                        .unwrap()
-                        .chars()
-                        .take_while(|c| c.is_whitespace())
-                        .count();
-                    let indent = curr_line_indent
-                        + 2 * left_char.is_some_and(|c| "({[".contains(c)) as usize;
-                    replace_code(&format!("\n{}", " ".repeat(indent)));
-                    let (start, _) = get_code_cursor().unwrap();
-                    if right_char.is_some_and(|c| ")}]".contains(c)) {
-                        replace_code(&format!("\n{}", " ".repeat(indent.saturating_sub(2))));
-                        state.update(|state| state.set_cursor((start, start)));
-                    }
+                    state.update(|state| {
+                        let left_char = if start > 0 {
+                            state.code.chars().nth(start as usize - 1)
+                        } else {
+                            None
+                        };
+                        let right_char = state.code.chars().nth(start as usize);
+                        let (start_line, _) = line_col(&state.code, start as usize);
+                        let curr_line_indent = state
+                            .code
+                            .lines()
+                            .nth(start_line - 1)
+                            .unwrap()
+                            .chars()
+                            .take_while(|c| c.is_whitespace())
+                            .count();
+                        let indent = curr_line_indent
+                            + 2 * left_char.is_some_and(|c| "({[".contains(c)) as usize;
+                        replace_code(state, &format!("\n{}", " ".repeat(indent)));
+                        let (start, _) = get_code_cursor().unwrap();
+                        if right_char.is_some_and(|c| ")}]".contains(c)) {
+                            replace_code(
+                                state,
+                                &format!("\n{}", " ".repeat(indent.saturating_sub(2))),
+                            );
+                            state.set_cursor((start, start));
+                        }
+                    });
                 }
             }
             "Backspace" => {
                 let (start, end) = get_code_cursor().unwrap();
                 // logging::log!("backspace start: {start}, end: {end}");
-                if start == end {
-                    if start > 0 {
+                state.update(|state| {
+                    if start == end {
+                        if start > 0 {
+                            let mut removal_count = 1;
+                            if os_ctrl(event) {
+                                removal_count = 0;
+                                let code = state.code.clone();
+                                let chars: Vec<_> = code.chars().take(start as usize).collect();
+                                let last_char = *chars.last().unwrap();
+                                let class = char_class(last_char);
+                                let mut encountered_space = false;
+                                for &c in chars.iter().rev() {
+                                    if c.is_whitespace() && c != '\n'
+                                        || char_class(c) == class && !encountered_space
+                                    {
+                                        removal_count += 1;
+                                    } else {
+                                        break;
+                                    }
+                                    encountered_space |= c.is_whitespace();
+                                }
+                            }
+                            remove_code(state, start - removal_count, start);
+                        }
+                    } else {
+                        remove_code(state, start, end);
+                    }
+                });
+            }
+            "Delete" if event.shift_key() => {
+                // Delete lines between cursor start and end
+                state.update(|state| {
+                    let (start, end) = get_code_cursor().unwrap();
+                    let (start, end) = (start.min(end), start.max(end));
+                    let (start_line, _) = line_col(&state.code, start as usize);
+                    let (end_line, _) = line_col(&state.code, end as usize);
+                    let new_code: String = state
+                        .code
+                        .lines()
+                        .enumerate()
+                        .filter_map(|(i, line)| {
+                            if i < start_line - 1 || i >= end_line {
+                                if i == 0 || start_line == 1 && i == end_line {
+                                    Some(line.into())
+                                } else {
+                                    Some(format!("\n{}", line))
+                                }
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
+                    state.set_code(&new_code, Cursor::Set(start, start));
+                });
+            }
+            "Delete" => {
+                let (start, end) = get_code_cursor().unwrap();
+                state.update(|state| {
+                    if start == end {
                         let mut removal_count = 1;
                         if os_ctrl(event) {
                             removal_count = 0;
-                            let code = code_text();
-                            let chars: Vec<_> = code.chars().take(start as usize).collect();
-                            let last_char = *chars.last().unwrap();
-                            let class = char_class(last_char);
+                            let chars: Vec<_> = state.code.chars().skip(end as usize).collect();
+                            let first_char = *chars.first().unwrap();
+                            let class = char_class(first_char);
                             let mut encountered_space = false;
-                            for &c in chars.iter().rev() {
+                            for &c in chars.iter() {
                                 if c.is_whitespace() && c != '\n'
                                     || char_class(c) == class && !encountered_space
                                 {
@@ -493,76 +565,27 @@ pub fn Editor<'a>(
                                 encountered_space |= c.is_whitespace();
                             }
                         }
-                        remove_code(start - removal_count, start);
+                        remove_code(state, start, start + removal_count);
+                    } else {
+                        remove_code(state, start, end);
                     }
-                } else {
-                    remove_code(start, end);
-                }
-            }
-            "Delete" if event.shift_key() => {
-                // Delete lines between cursor start and end
-                let code = code_text();
-                let (start, end) = get_code_cursor().unwrap();
-                let (start, end) = (start.min(end), start.max(end));
-                let (start_line, _) = line_col(&code, start as usize);
-                let (end_line, _) = line_col(&code, end as usize);
-                let new_code: String = code
-                    .lines()
-                    .enumerate()
-                    .filter_map(|(i, line)| {
-                        if i < start_line - 1 || i >= end_line {
-                            if i == 0 || start_line == 1 && i == end_line {
-                                Some(line.into())
-                            } else {
-                                Some(format!("\n{}", line))
-                            }
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-                state.update(|state| state.set_code(&new_code, Cursor::Set(start, start)));
-            }
-            "Delete" => {
-                let (start, end) = get_code_cursor().unwrap();
-                if start == end {
-                    let mut removal_count = 1;
-                    if os_ctrl(event) {
-                        removal_count = 0;
-                        let code = code_text();
-                        let chars: Vec<_> = code.chars().skip(end as usize).collect();
-                        let first_char = *chars.first().unwrap();
-                        let class = char_class(first_char);
-                        let mut encountered_space = false;
-                        for &c in chars.iter() {
-                            if c.is_whitespace() && c != '\n'
-                                || char_class(c) == class && !encountered_space
-                            {
-                                removal_count += 1;
-                            } else {
-                                break;
-                            }
-                            encountered_space |= c.is_whitespace();
-                        }
-                    }
-                    remove_code(start, start + removal_count);
-                } else {
-                    remove_code(start, end);
-                }
+                });
             }
             "Tab" => {
-                replace_code("  ");
+                state.update(|state| replace_code(state, "  "));
             }
             // Select all
             "a" if os_ctrl(event) => {
-                let code = code_text();
-                state.update(|state| state.set_code(&code, Cursor::Set(0, code.chars().count() as u32)));
+                state.update(|state| {
+                    let code = state.code.clone();
+                    state.set_code(&code, Cursor::Set(0, code.chars().count() as u32))
+                });
             }
             // Copy
             "c" if os_ctrl(event) => {
                 let (start, end) = get_code_cursor().unwrap();
                 let (start, end) = (start.min(end), start.max(end));
-                let code = code_text();
+                let code = state_code();
                 let text: String = code
                     .chars()
                     .skip(start as usize)
@@ -574,14 +597,16 @@ pub fn Editor<'a>(
             "x" if os_ctrl(event) => {
                 let (start, end) = get_code_cursor().unwrap();
                 let (start, end) = (start.min(end), start.max(end));
-                let code = code_text();
-                let text: String = code
-                    .chars()
-                    .skip(start as usize)
-                    .take((end - start) as usize)
-                    .collect();
-                _ = window().navigator().clipboard().unwrap().write_text(&text);
-                remove_code(start, end);
+                state.update(|state| {
+                    let text: String = state
+                        .code
+                        .chars()
+                        .skip(start as usize)
+                        .take((end - start) as usize)
+                        .collect();
+                    _ = window().navigator().clipboard().unwrap().write_text(&text);
+                    remove_code(state, start, end);
+                });
             }
             // Undo
             "z" if os_ctrl(event) => state.update(|state| state.undo()),
@@ -591,56 +616,60 @@ pub fn Editor<'a>(
             "e" if os_ctrl(event) => insert_experimental(),
             // Toggle line comment
             "/" | "4" if os_ctrl(event) => {
-                let code = code_text();
-                let (start, end) = get_code_cursor().unwrap();
-                let (start, end) = (start.min(end), start.max(end));
-                let (start_line, _) = line_col(&code, start as usize);
-                let (end_line, _) = line_col(&code, end as usize);
-                let mut lines: Vec<String> = code.lines().map(Into::into).collect();
-                let range = &mut lines[start_line - 1..end_line];
-                let prefix = if key == "/" { '#' } else { '$' };
-                if range.iter().all(|line| line.trim().starts_with(prefix)) {
-                    // Toggle comments off
-                    for line in range {
-                        let space_count = line.chars().take_while(|c| *c == ' ').count();
-                        *line = repeat(' ')
-                            .take(space_count)
-                            .chain(
-                                line.trim()
-                                    .trim_start_matches(prefix)
-                                    .trim_start_matches(' ')
-                                    .chars(),
-                            )
-                            .collect();
+                state.update(|state| {
+                    let code = state.code.clone();
+                    let (start, end) = get_code_cursor().unwrap();
+                    let (start, end) = (start.min(end), start.max(end));
+                    let (start_line, _) = line_col(&code, start as usize);
+                    let (end_line, _) = line_col(&code, end as usize);
+                    let mut lines: Vec<String> = code.lines().map(Into::into).collect();
+                    let range = &mut lines[start_line - 1..end_line];
+                    let prefix = if key == "/" { '#' } else { '$' };
+                    if range.iter().all(|line| line.trim().starts_with(prefix)) {
+                        // Toggle comments off
+                        for line in range {
+                            let space_count = line.chars().take_while(|c| *c == ' ').count();
+                            *line = repeat(' ')
+                                .take(space_count)
+                                .chain(
+                                    line.trim()
+                                        .trim_start_matches(prefix)
+                                        .trim_start_matches(' ')
+                                        .chars(),
+                                )
+                                .collect();
+                        }
+                    } else {
+                        // Toggle comments on
+                        for line in range {
+                            let spot = line.chars().take_while(|c| " \t".contains(*c)).count();
+                            line.insert(spot, ' ');
+                            line.insert(spot, prefix);
+                        }
                     }
-                } else {
-                    // Toggle comments on
-                    for line in range {
-                        let spot = line.chars().take_while(|c| " \t".contains(*c)).count();
-                        line.insert(spot, ' ');
-                        line.insert(spot, prefix);
-                    }
-                }
-                let new_code = lines.join("\n");
-                state.update(|state| state.set_code(&new_code, Cursor::Set(start, end)));
+                    let new_code = lines.join("\n");
+                    state.set_code(&new_code, Cursor::Set(start, end));
+                });
             }
             // Handle double quote delimiters
             "\"" => {
                 let (start, end) = get_code_cursor().unwrap();
-                let code = code_text();
-                let can_couple = code
-                    .chars()
-                    .nth(start as usize)
-                    .map_or(true, |c| c.is_whitespace() || "(){}[]".contains(c));
-                let at_behind =
-                    code_text().chars().nth((start as usize).saturating_sub(1)) == Some('@');
-                if (start != end || can_couple) && !at_behind {
-                    surround_code('"', '"');
-                } else if start == end && code_text().chars().nth(start as usize) == Some('"') {
-                    state.update(|state| state.set_cursor((start + 1, start + 1)));
-                } else {
-                    replace_code(key);
-                }
+                state.update(|state| {
+                    let code = state.code.clone();
+                    let can_couple = code
+                        .chars()
+                        .nth(start as usize)
+                        .map_or(true, |c| c.is_whitespace() || "(){}[]".contains(c));
+                    let at_behind =
+                        code.chars().nth((start as usize).saturating_sub(1)) == Some('@');
+                    if (start != end || can_couple) && !at_behind {
+                        surround_code(state, '"', '"');
+                    } else if start == end && code.chars().nth(start as usize) == Some('"') {
+                        state.set_cursor((start + 1, start + 1));
+                    } else {
+                        replace_code(state, key);
+                    }
+                });
             }
             // Handle open delimiters
             "(" | "[" | "{" => {
@@ -653,65 +682,76 @@ pub fn Editor<'a>(
                     _ => unreachable!(),
                 };
                 let (start, end) = get_code_cursor().unwrap();
-                let can_couple = code_text()
-                    .chars()
-                    .nth(start as usize)
-                    .map_or(true, |c| c.is_whitespace() || "(){}[]".contains(c));
-                let at_behind =
-                    code_text().chars().nth((start as usize).saturating_sub(1)) == Some('@');
-                if (start != end || can_couple) && !at_behind {
-                    surround_code(open, close);
-                } else {
-                    replace_code(key);
-                }
+                state.update(|state| {
+                    let can_couple = state
+                        .code
+                        .chars()
+                        .nth(start as usize)
+                        .map_or(true, |c| c.is_whitespace() || "(){}[]".contains(c));
+                    let at_behind =
+                        state.code.chars().nth((start as usize).saturating_sub(1)) == Some('@');
+                    if (start != end || can_couple) && !at_behind {
+                        surround_code(state, open, close);
+                    } else {
+                        replace_code(state, key);
+                    }
+                });
             }
             // Handle close delimiters
             ")" | "]" | "}" => {
                 let (start, end) = get_code_cursor().unwrap();
                 let close = key.chars().next().unwrap();
-                if start == end && code_text().chars().nth(start as usize) == Some(close) {
-                    state.update(|state| state.set_cursor((start + 1, start + 1)));
-                } else {
-                    handled = false;
-                }
+                state.update(|state| {
+                    if start == end && state.code.chars().nth(start as usize) == Some(close) {
+                        state.set_cursor((start + 1, start + 1));
+                    } else {
+                        handled = false;
+                    }
+                });
             }
             // Line swapping with alt+up/down
             key @ ("ArrowUp" | "ArrowDown") if event.alt_key() => {
                 let (_, end) = get_code_cursor().unwrap();
-                let code = code_text();
-                let (line, col) = line_col(&code, end as usize);
-                let line_index = line - 1;
-                let up = key == "ArrowUp";
-                let mut lines: Vec<String> = code.lines().map(Into::into).collect();
-                if up && line_index > 0 || !up && line_index < lines.len() - 1 {
-                    let swap_index = if up { line_index - 1 } else { line_index + 1 };
-                    lines.swap(line_index, swap_index);
-                    let swapped: String = lines.join("\n");
-                    let mut new_end = 0;
-                    for (i, line) in lines.iter().enumerate() {
-                        if i == swap_index {
-                            let line_len = line.chars().count();
-                            if col < line_len {
-                                new_end += col as u32;
-                                new_end -= 1;
-                            } else {
-                                new_end += line_len as u32;
+                state.update(|state| {
+                    let code = state.code.clone();
+                    let (line, col) = line_col(&code, end as usize);
+                    let line_index = line - 1;
+                    let up = key == "ArrowUp";
+                    let mut lines: Vec<String> = code.lines().map(Into::into).collect();
+                    if up && line_index > 0 || !up && line_index < lines.len() - 1 {
+                        let swap_index = if up { line_index - 1 } else { line_index + 1 };
+                        lines.swap(line_index, swap_index);
+                        let swapped: String = lines.join("\n");
+                        let mut new_end = 0;
+                        for (i, line) in lines.iter().enumerate() {
+                            if i == swap_index {
+                                let line_len = line.chars().count();
+                                if col < line_len {
+                                    new_end += col as u32;
+                                    new_end -= 1;
+                                } else {
+                                    new_end += line_len as u32;
+                                }
+                                break;
                             }
-                            break;
+                            new_end += line.chars().count() as u32 + 1;
                         }
-                        new_end += line.chars().count() as u32 + 1;
+                        state.set_code(&swapped, Cursor::Set(new_end, new_end));
                     }
-                    state.update(|state| state.set_code(&swapped, Cursor::Set(new_end, new_end)));
-                }
+                });
             }
             // Intercept forward/back keyboard navigation
             "ArrowLeft" | "ArrowRight" if event.alt_key() => {}
+            // Normal key input
+            key if key.chars().count() == 1 && !os_ctrl(event) && !event.alt_key() => {
+                state.update(|state| replace_code(state, key));
+            }
             _ => handled = false,
         }
         if handled {
             event.prevent_default();
             event.stop_propagation();
-            update_token_count(&code_text());
+            update_token_count(&state_code());
         }
     });
 
@@ -721,7 +761,7 @@ pub fn Editor<'a>(
         event.prevent_default();
         event.stop_propagation();
         let text = event.clipboard_data().unwrap().get_data("text").unwrap();
-        replace_code(&text);
+        state.update(|state| replace_code(state, &text));
     };
 
     // Go to the next example
@@ -784,7 +824,7 @@ pub fn Editor<'a>(
                     NavigateOptions::default(),
                 );
             } else {
-                replace_code(&prim.to_string());
+                state.update(|state| replace_code(state, &prim.to_string()));
             }
         };
         // Show the glyph doc on mouseover
@@ -830,8 +870,20 @@ pub fn Editor<'a>(
 
     // Additional code buttons
     for (glyph, title, class, surround, doc) in [
-        ("λ", "(') swizzle", "experimental-glyph-button", None, "docs/experimental#swizzles"),
-        ("_", "strand", "strand-span", None, "tutorial/arrays#creating-arrays"),
+        (
+            "λ",
+            "(') swizzle",
+            "experimental-glyph-button",
+            None,
+            "docs/experimental#swizzles",
+        ),
+        (
+            "_",
+            "strand",
+            "strand-span",
+            None,
+            "tutorial/arrays#creating-arrays",
+        ),
         (
             "[]",
             "array",
@@ -853,7 +905,13 @@ pub fn Editor<'a>(
             Some(('(', ')')),
             "tutorial/functions#inline-functions",
         ),
-        ("⟨⟩", "switch", "", Some(('⟨', '⟩')), "tutorial/controlflow#switch"),
+        (
+            "⟨⟩",
+            "switch",
+            "",
+            Some(('⟨', '⟩')),
+            "tutorial/controlflow#switch",
+        ),
         (
             "‿",
             "function strand",
@@ -886,10 +944,28 @@ pub fn Editor<'a>(
         ("!", "macro", "", None, "tutorial/macros"),
         ("^", "placeholder", "", None, "tutorial/custommodifiers"),
         ("←", "(=) binding", "", None, "tutorial/bindings"),
-        ("↚", "(=~) private binding", "", None, "tutorial/modules#visibility"),
+        (
+            "↚",
+            "(=~) private binding",
+            "",
+            None,
+            "tutorial/modules#visibility",
+        ),
         ("~", "import", "", None, "tutorial/modules"),
-        ("|", "signature", "", None, "tutorial/functions#stack-signatures"),
-        ("#", "comment", "comment-span", None, "tutorial/basic#comments"),
+        (
+            "|",
+            "signature",
+            "",
+            None,
+            "tutorial/functions#stack-signatures",
+        ),
+        (
+            "#",
+            "comment",
+            "comment-span",
+            None,
+            "tutorial/basic#comments",
+        ),
     ] {
         let class = format!("glyph-button {class}");
         // Navigate to the docs page on ctrl/shift+click
@@ -903,9 +979,9 @@ pub fn Editor<'a>(
                 // Redirect to the docs page
                 use_navigate()(&format!("/{doc}"), NavigateOptions::default());
             } else if let Some((open, close)) = surround {
-                surround_code(open, close);
+                state.update(|state| surround_code(state, open, close));
             } else {
-                replace_code(glyph)
+                state.update(|state| replace_code(state, glyph))
             }
         };
         // Show the doc on mouseover
@@ -1038,26 +1114,28 @@ pub fn Editor<'a>(
             let path = PathBuf::from(&file_name);
             drop_file(path.clone(), bytes.to_vec());
             set_drag_message.set("");
-            if code_text().trim().is_empty() {
-                let function = if path.extension().is_some_and(|ext| ext == "ua") {
-                    "~"
-                } else if path
-                    .extension()
-                    .map_or(true, |ext| ["txt", "md"].iter().any(|e| e == &ext))
-                {
-                    "&fras"
-                } else {
-                    "&frab"
-                };
-                state.update(|state| state.set_code(
-                    &if byte_count < 10000 {
-                        format!("{function} {file_name:?}\n")
+            state.update(|state| {
+                if state.code.trim().is_empty() {
+                    let function = if path.extension().is_some_and(|ext| ext == "ua") {
+                        "~"
+                    } else if path
+                        .extension()
+                        .map_or(true, |ext| ["txt", "md"].iter().any(|e| e == &ext))
+                    {
+                        "&fras"
                     } else {
-                        format!("# {byte_count} bytes\n# {function} {file_name:?}\n")
-                    },
-                    Cursor::Ignore,
-                ));
-            }
+                        "&frab"
+                    };
+                    state.set_code(
+                        &if byte_count < 10000 {
+                            format!("{function} {file_name:?}\n")
+                        } else {
+                            format!("# {byte_count} bytes\n# {function} {file_name:?}\n")
+                        },
+                        Cursor::Ignore,
+                    )
+                }
+            });
             run(true, false);
         }) as Box<dyn FnMut(_)>);
         reader
@@ -1088,7 +1166,7 @@ pub fn Editor<'a>(
                 if let Some((start, end)) = get_code_cursor().filter(|(start, end)| start != end) {
                     let st = start.min(end);
                     let en = start.max(end);
-                    let code: String = code_text()
+                    let code: String = state_code()
                         .chars()
                         .skip(st as usize)
                         .take((en - st) as usize)
@@ -1333,11 +1411,11 @@ pub fn Editor<'a>(
                                 style={format!("height: {code_height_em}em;")}
                                 on:input=code_input
                                 on:paste=code_paste>
-                                { 
+                                {
                                     move || {
                                         println!("update code view");
                                         gen_code_view(&get_code.get())
-                                    } 
+                                    }
                                 }
                             </div>
                         </div>

@@ -41,6 +41,7 @@ pub struct State {
     pub past: Vec<Record>,
     pub future: Vec<Record>,
     pub curr: Record,
+    pub code: String,
     pub challenge: Option<ChallengeDef>,
     pub loading_module: Cell<bool>,
 }
@@ -105,7 +106,9 @@ impl State {
             self.set_line_count();
         }
     }
-    pub fn set_code_view(&self, code: &str) {
+    pub fn set_code_view(&mut self, code: &str) {
+        // logging::log!("set code: {code:?}");
+        self.code = code.into();
         self.set_code.set(code.into());
     }
     pub fn set_cursor(&self, to: (u32, u32)) {
@@ -292,28 +295,6 @@ fn children_of(node: &Node) -> impl Iterator<Item = Node> {
         Some(node)
     })
     .filter(|node| node.dyn_ref::<Comment>().is_none())
-}
-
-pub fn code_text(id: &str) -> String {
-    let parent = element::<HtmlDivElement>(id);
-    let mut text = String::new();
-    for (i, div_node) in children_of(&parent).enumerate() {
-        if i > 0 {
-            text.push('\n');
-        }
-        for span_node in children_of(&div_node) {
-            let fragment = span_node.text_content().unwrap();
-            // logging::log!("text fragment: {:?}", fragment);
-            text.push_str(&fragment);
-        }
-    }
-    if text.is_empty() {
-        return parent.inner_text();
-    }
-
-    // logging::log!("code_text -> {:?}", text);
-
-    text
 }
 
 pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {

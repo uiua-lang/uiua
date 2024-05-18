@@ -513,7 +513,7 @@ fn pad_src() -> String {
         .with_untracked(|params| params.get("src").cloned())
         .unwrap_or_default();
     if let Some((_, encoded)) = src.split_once("__") {
-        logging::log!("{:?}", encoded);
+        // logging::log!("{:?}", encoded);
         if let Ok(decoded) = URL_SAFE.decode(encoded.as_bytes()) {
             src = String::from_utf8_lossy(&decoded).to_string();
         }

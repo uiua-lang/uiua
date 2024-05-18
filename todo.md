@@ -10,6 +10,7 @@
 - Writing good code tutorial
 - Dynamic modules (maybe 0.12)
 - Multimedia
+  - Plots
   - Sound input
   - Webcam input
 - System APIs

@@ -14,6 +14,10 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`keep ▽`](https://uiua.org/docs/keep) with a scalar counts array now copies each row that many times
   - This matches the behaviors of APL and BQN, and is generally more useful
   - The old behavior can be achieved with `/⊂↯`
+- **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill) values are no longer accessible through function calls
+  - This makes it harder to accidentally use a fill value without meaning to
+  - This does not affect [`un °`](https://uiua.org/docs/un)[`pop ◌`](https://uiua.org/docs/pop)
+  - This can be circumvented with [`fill ⬚`](https://uiua.org/docs/fill)[`un °`](https://uiua.org/docs/un)[`pop ◌`](https://uiua.org/docs/pop)
 - Add experimental **swizzles**, which allow for more flexible stack reordering
   - Swizzles are written with a `λ` followed by a list of lowercase letters
   - The `λ` formats from `'` when it is in front of the letters

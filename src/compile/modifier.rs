@@ -729,7 +729,7 @@ impl Compiler {
                 self.pre_eval_mode = mode;
                 res?;
 
-                // Get fill function
+                // Get-fill function
                 let in_inverse = replace(&mut self.in_inverse, false);
                 let res = self.word(operands.next().unwrap(), false);
                 self.in_inverse = in_inverse;

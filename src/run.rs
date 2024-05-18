@@ -10,7 +10,10 @@ use std::{
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
     str::FromStr,
-    sync::Arc,
+    sync::{
+        atomic::{self, AtomicBool},
+        Arc,
+    },
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
@@ -172,7 +175,16 @@ impl FromStr for RunMode {
 #[derive(Clone)]
 struct Fill {
     value: Value,
-    removed: bool,
+    removed: Arc<AtomicBool>,
+}
+
+impl Fill {
+    fn removed(&self) -> bool {
+        self.removed.load(atomic::Ordering::Relaxed)
+    }
+    fn set_removed(&self, removed: bool) {
+        self.removed.store(removed, atomic::Ordering::Relaxed);
+    }
 }
 
 impl Default for Runtime {
@@ -1217,7 +1229,7 @@ code:
     }
     pub(crate) fn value_fill(&self) -> Option<&Value> {
         (self.rt.fill_stack.iter().rev())
-            .find(|fill| !fill.removed)
+            .find(|fill| !fill.removed())
             .map(|fill| &fill.value)
     }
     pub(crate) fn last_fill(&self) -> Option<&Value> {
@@ -1248,6 +1260,11 @@ code:
             }
         }
     }
+    pub(crate) fn use_fill(&mut self) {
+        if let Some(fill) = self.rt.fill_stack.last_mut() {
+            fill.set_removed(true);
+        }
+    }
     /// Do something with the fill context set
     pub(crate) fn with_fill<T>(
         &mut self,
@@ -1256,7 +1273,7 @@ code:
     ) -> UiuaResult<T> {
         self.rt.fill_stack.push(Fill {
             value,
-            removed: false,
+            removed: Arc::new(false.into()),
         });
         let res = in_ctx(self);
         self.rt.fill_stack.pop();
@@ -1264,12 +1281,12 @@ code:
     }
     /// Do something with the top fill context unset
     pub(crate) fn without_fill<T>(&mut self, in_ctx: impl FnOnce(&mut Self) -> T) -> T {
-        let Some(pos) = (self.rt.fill_stack.iter()).rposition(|fill| !fill.removed) else {
+        let Some(pos) = (self.rt.fill_stack.iter()).rposition(|fill| !fill.removed()) else {
             return in_ctx(self);
         };
-        self.rt.fill_stack[pos].removed = true;
+        self.rt.fill_stack[pos].set_removed(true);
         let res = in_ctx(self);
-        self.rt.fill_stack[pos].removed = false;
+        self.rt.fill_stack[pos].set_removed(false);
         res
     }
     pub(crate) fn without_fill_but(

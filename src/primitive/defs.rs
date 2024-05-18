@@ -1817,6 +1817,15 @@ primitive!(
     /// [un][pop] can be used to retrieve the fill value. This ignores loop nesting and so can be used to "pull" the fill into the loop.
     /// ex: ⬚0≡(⬚°◌⊟1_2) [3 4]
     ///
+    /// Fill values cannot cross the boundary of a named function call.
+    /// ex: ⬚0/⊂ [1 2 3]
+    ///   : F ← /⊂
+    ///   : ⬚0F [1 2 3]
+    /// [un][pop] *can* get the fill value through the function call. This means you can use [fill][un][pop] to get the fill value into a function.
+    /// ex: F ← ⬚°◌/⊂
+    ///   : ⬚0F [1 2 3]
+    /// This property includes stack macros, but *not* array macros.
+    ///
     /// [fill][pop] can be used to temporarily remove the fill value.
     /// ex: ⬚0  ↻ 2 [1 2 3 4 5]
     ///   : ⬚0⬚◌↻ 2 [1 2 3 4 5]

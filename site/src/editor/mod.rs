@@ -705,7 +705,7 @@ pub fn Editor<'a>(
                     if start == end && state.code.chars().nth(start as usize) == Some(close) {
                         state.set_cursor((start + 1, start + 1));
                     } else {
-                        handled = false;
+                        replace_code(state, key);
                     }
                 });
             }

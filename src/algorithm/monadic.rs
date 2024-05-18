@@ -197,11 +197,11 @@ impl Value {
                 if max <= 256 {
                     (0..max).map(|i| i as u8).collect()
                 } else {
-                    validate_size::<f64>(max.unsigned_abs(), env)?;
+                    validate_size::<f64>([max.unsigned_abs()], env)?;
                     (0..max).map(|i| i as f64).collect()
                 }
             } else {
-                validate_size::<f64>(max.unsigned_abs(), env)?;
+                validate_size::<f64>([max.unsigned_abs()], env)?;
                 (max..0).map(|i| i as f64).rev().collect()
             });
         }
@@ -279,7 +279,7 @@ fn range(shape: &[isize], env: &Uiua) -> UiuaResult<Result<CowSlice<f64>, CowSli
     let any_neg = shape.iter().any(|&d| d < 0);
     let max = shape.iter().map(|d| d.unsigned_abs()).max().unwrap();
     if max <= 256 && !any_neg {
-        validate_size::<u8>(len, env)?;
+        validate_size::<u8>([len], env)?;
         let mut data: EcoVec<u8> = eco_vec![0; len];
         let data_slice = data.make_mut();
         for i in 0..elem_count {
@@ -289,7 +289,7 @@ fn range(shape: &[isize], env: &Uiua) -> UiuaResult<Result<CowSlice<f64>, CowSli
         }
         Ok(Err(data.into()))
     } else {
-        validate_size::<f64>(len, env)?;
+        validate_size::<f64>([len], env)?;
         let mut data: EcoVec<f64> = eco_vec![0.0; len];
         let data_slice = data.make_mut();
         for i in 0..elem_count {
@@ -1045,12 +1045,12 @@ impl Value {
         let total: usize = counts.data.iter().fold(0, |acc, &b| acc.saturating_add(b));
         Ok(match self.rank() {
             0 => {
-                validate_size::<u8>(total, env)?;
+                validate_size::<u8>([total], env)?;
                 let data = eco_vec![0u8; total];
                 Array::new([total], data).into()
             }
             1 => {
-                validate_size::<f64>(total, env)?;
+                validate_size::<f64>([total], env)?;
                 let mut data = EcoVec::with_capacity(total);
                 for (i, &b) in counts.data.iter().enumerate() {
                     for _ in 0..b {
@@ -1061,7 +1061,7 @@ impl Value {
                 Array::from(data).into()
             }
             _ => {
-                validate_size::<f64>(total * counts.rank(), env)?;
+                validate_size::<f64>([total, counts.rank()], env)?;
                 let mut data = EcoVec::with_capacity(total * counts.rank());
                 for (i, &b) in counts.data.iter().enumerate() {
                     for _ in 0..b {

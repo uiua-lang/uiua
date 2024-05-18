@@ -58,18 +58,30 @@ fn max_shape(a: &[usize], b: &[usize]) -> Shape {
     new_shape
 }
 
-pub fn validate_size<T>(elements: usize, env: &Uiua) -> UiuaResult {
-    let elem_size = size_of::<T>();
-    let size = elements * elem_size;
+pub fn validate_size<T>(sizes: impl IntoIterator<Item = usize>, env: &Uiua) -> UiuaResult<usize> {
+    let (elements, mut overflowed) =
+        sizes
+            .into_iter()
+            .map(|s| s as u64)
+            .fold((1u64, false), |(acc, ovf), s| {
+                let (new_acc, new_ovf) = acc.overflowing_mul(s);
+                (new_acc, ovf || new_ovf)
+            });
+    let elem_size = size_of::<T>() as u64;
+    let (size, ovf) = elements.overflowing_mul(elem_size);
+    overflowed |= ovf;
+    if overflowed {
+        return Err(env.error("Array size calculation overflowed"));
+    }
     let max_mega = if cfg!(target_arch = "wasm32") {
         256
     } else {
         4096
     };
-    if size > max_mega * 1024usize.pow(2) {
+    if size > max_mega * 1024u64.pow(2) {
         return Err(env.error(format!("Array of {} elements would be too large", elements)));
     }
-    Ok(())
+    Ok(elements as usize)
 }
 
 pub trait ErrorContext {

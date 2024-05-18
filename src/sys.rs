@@ -1072,7 +1072,7 @@ impl SysOp {
                     .pop(1)?
                     .as_nat_or_inf(env, "Count must be an integer or infinity")?;
                 if let Some(count) = count {
-                    validate_size::<u8>(count, env)?;
+                    validate_size::<u8>([count], env)?;
                 }
                 let handle = env.pop(2)?.as_handle(env, "")?;
                 let bytes = match handle {
@@ -1104,7 +1104,7 @@ impl SysOp {
                     .pop(1)?
                     .as_nat_or_inf(env, "Count must be an integer or infinity")?;
                 if let Some(count) = count {
-                    validate_size::<u8>(count, env)?;
+                    validate_size::<u8>([count], env)?;
                 }
                 let handle = env.pop(2)?.as_handle(env, "")?;
                 let bytes = match handle {

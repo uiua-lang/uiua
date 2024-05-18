@@ -640,16 +640,16 @@ mod server {
             self.debug("Uiua language server initialized").await;
         }
 
-        async fn did_open(&self, param: DidOpenTextDocumentParams) {
-            let path = uri_path(&param.text_document.uri);
+        async fn did_open(&self, params: DidOpenTextDocumentParams) {
+            let path = not_weird_path(uri_path(&params.text_document.uri));
             self.docs.insert(
-                param.text_document.uri,
-                LspDoc::new(path, param.text_document.text),
+                params.text_document.uri,
+                LspDoc::new(path, params.text_document.text),
             );
         }
 
         async fn did_change(&self, params: DidChangeTextDocumentParams) {
-            let path = uri_path(&params.text_document.uri);
+            let path = not_weird_path(uri_path(&params.text_document.uri));
             let doc = LspDoc::new(path, params.content_changes[0].text.clone());
             self.docs.insert(params.text_document.uri, doc);
         }
@@ -1839,6 +1839,13 @@ mod server {
         let path = uri.path().replace("/c%3A", "C:");
         let path = PathBuf::from(path);
         path.canonicalize().unwrap_or(path)
+    }
+
+    fn not_weird_path(path: PathBuf) -> PathBuf {
+        path.to_string_lossy()
+            .strip_prefix("\\\\?\\")
+            .map(PathBuf::from)
+            .unwrap_or(path)
     }
 
     fn lsp_pos_to_uiua(pos: Position) -> (usize, usize) {

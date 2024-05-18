@@ -4,6 +4,7 @@
   - `un on min/max`
   - `un on join`
   - Optimize `rows` unpack
+- Media window
 - Trace images/audio in pad
 - Blog posts -> RSS
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly

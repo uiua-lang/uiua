@@ -32,6 +32,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add [`&tlsc`](https://uiua.org/docs/&tlsc) and [`&tlsl`](https://uiua.org/docs/&tlsl) system functions, which allow making TLS connections
   - These are currently experimental, but they will likely replace [`&httpsw`](https://uiua.org/docs/&httpsw)
 - Signatures can now be specified in stack array notation immediately after a `[` or `{`
+- Change how long decimal numbers are formatted
+  - Sequences of repeated digits are now replaced with `…`
 - Add argument documentation comments
   - You can read more about this in the new [Documenting Code](https://uiua.org/tutorial/documentation) tutorial
 - Add some useful shadowable constants for working with compile-time file paths

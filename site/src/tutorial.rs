@@ -666,9 +666,11 @@ fn TutorialTypes() -> impl IntoView {
         </ul>
 
         <Hd id="numbers">"Numbers"</Hd>
-        <p>"Numbers are decimal numbers with floating precision. They use a 64-bit floating-point representation."</p>
+        <p>"Numbers are decimal numbers with floating precision. They use the IEEE-754 double-precision floating-point format."</p>
         <Editor example="[5 6e3 0 3.2 3/4 ¯1.1 π ∞]"/>
         <p>"Most math operations can only be applied to numbers."</p>
+        <p>"In cases where a number with a fractional part has repeating decimals, or when floating-point errors create tiny differences, the number will be shown with repeated decimal digits replaced by a "<code>"…"</code>"."</p>
+        <Editor example="1/3\n1/12\n1/24\n+ 0.1 0.2"/>
         <p>"Even though numbers can have a fractional part, many built-in functions require whole numbers. These functions will return an error if given a non-whole number."</p>
         <p>"One such example is "<Prim prim=Pick/>"."</p>
         <Editor example="⊡ 2 [4 7 9 1 0]"/>

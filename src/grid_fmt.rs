@@ -65,44 +65,37 @@ impl GridFmt for f64 {
         } else if positive.fract() == 0.0 || positive.is_nan() {
             format!("{minus}{positive}")
         } else {
-            let formatted = format!("{minus}{positive}");
-            let consecutive = |c: char| {
-                let mut max = 0;
-                let mut curr = 0;
-                for ch in formatted.chars() {
-                    if ch == c {
-                        curr += 1;
-                        max = max.max(curr);
-                    } else {
-                        curr = 0;
-                    }
+            let mut formatted = format!("{minus}{positive}");
+            let mut consecutive_start = 0;
+            let mut consecutive_len = 0;
+            let mut hit_decimal = false;
+            for (i, c) in formatted.chars().enumerate() {
+                if c == '.' {
+                    hit_decimal = true;
+                } else if !hit_decimal {
+                    continue;
                 }
-                max
-            };
-            if consecutive('0') > 5 || consecutive('9') > 5 {
-                let mut rounded = f;
-                let mut epsilon = false;
-                for i in 0..16 {
-                    let mul = 10f64.powf((i + 1) as f64);
-                    rounded = (f * mul).round() / mul;
-                    let diff = (f - rounded).abs();
-                    if diff > 0.0 && diff < f64::EPSILON {
-                        epsilon = true;
-                        break;
-                    }
+                let local_len = formatted
+                    .chars()
+                    .skip(i + 1)
+                    .take_while(|&d| d == c)
+                    .count();
+                if local_len > consecutive_len {
+                    consecutive_start = i;
+                    consecutive_len = local_len;
                 }
-                if epsilon {
-                    if f < rounded {
-                        format!("{minus}{}-ε", rounded.abs())
-                    } else {
-                        format!("{minus}{}+ε", rounded.abs())
-                    }
-                } else {
-                    formatted
-                }
-            } else {
-                formatted
             }
+            if consecutive_len >= 5 {
+                if consecutive_start + consecutive_len + 1 == formatted.len() {
+                    formatted.replace_range(consecutive_start + 3.., "…")
+                } else {
+                    formatted.replace_range(
+                        consecutive_start + 2..consecutive_start + consecutive_len,
+                        "…",
+                    )
+                }
+            }
+            formatted
         };
         vec![boxed_scalar(boxed).chain(s.chars()).collect()]
     }

@@ -744,7 +744,7 @@ impl<'a> Formatter<'a> {
         match &word.value {
             Word::Number(s, n) => {
                 let grid_str = n.grid_string(false);
-                let formatted = if !grid_str.contains('ε')
+                let formatted = if !grid_str.contains('…')
                     && grid_str.chars().count() < s.trim_end_matches('i').chars().count()
                 {
                     grid_str

@@ -1082,31 +1082,44 @@ impl SysOp {
                     .pop(1)?
                     .as_nat_or_inf(env, "Count must be an integer or infinity")?;
                 if let Some(count) = count {
-                    validate_size::<u8>([count], env)?;
+                    validate_size::<char>([count], env)?;
                 }
                 let handle = env.pop(2)?.as_handle(env, "")?;
-                let bytes = match handle {
+                let s = match handle {
                     Handle::STDOUT => return Err(env.error("Cannot read from stdout")),
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
                     Handle::STDIN => {
                         if let Some(count) = count {
-                            env.rt.backend.scan_stdin(count).map_err(|e| env.error(e))?
+                            let bytes =
+                                env.rt.backend.scan_stdin(count).map_err(|e| env.error(e))?;
+                            todo!()
                         } else {
                             return Err(env.error("Cannot read an infinite amount from stdin"));
                         }
                     }
                     _ => {
                         if let Some(count) = count {
-                            env.rt
+                            let buf = env
+                                .rt
                                 .backend
                                 .read(handle, count)
-                                .map_err(|e| env.error(e))?
+                                .map_err(|e| env.error(e))?;
+                            match String::from_utf8(buf) {
+                                Ok(s) => s,
+                                Err(e) => {
+                                    let valid_to = e.utf8_error().valid_up_to();
+                                    let mut buf = e.into_bytes();
+                                    let rest = buf.split_off(valid_to);
+                                    String::from_utf8(buf).unwrap()
+                                }
+                            }
                         } else {
-                            env.rt.backend.read_all(handle).map_err(|e| env.error(e))?
+                            let bytes =
+                                env.rt.backend.read_all(handle).map_err(|e| env.error(e))?;
+                            String::from_utf8(bytes).map_err(|e| env.error(e))?
                         }
                     }
                 };
-                let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
                 env.push(s);
             }
             SysOp::ReadBytes => {

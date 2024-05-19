@@ -481,7 +481,7 @@ impl Compiler {
                                 );
                             }
                         }
-                        Signature::new(sig.args, sig.outputs + 1)
+                        Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
                     _ => unreachable!(),
                 };

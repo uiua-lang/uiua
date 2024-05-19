@@ -36,7 +36,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`&exit`](https://uiua.org/docs/&exit) system function, which exits the program with a status code
 - Add [`&tlsc`](https://uiua.org/docs/&tlsc) and [`&tlsl`](https://uiua.org/docs/&tlsl) system functions, which allow making TLS connections
   - These are currently experimental, but they will likely replace [`&httpsw`](https://uiua.org/docs/&httpsw)
-- [`&rs`](https://uiua.org/docs/&rs) will now read at most the given number of *characters* rather than bytes
+- [`&rs`](https://uiua.org/docs/&rs) will now attempt to read additional bytes to resolve a UTF-8 character
 - Signatures can now be specified in stack array notation immediately after a `[` or `{`
 - Change how long decimal numbers are formatted
   - Sequences of repeated digits are now replaced with `…`

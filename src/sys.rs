@@ -232,7 +232,7 @@ sys_op! {
     /// On the web, this example will hang for 1 second.
     /// ex: ⚂ &sl 1
     (1(0), Sleep, Misc, "&sl", "sleep", Mutating),
-    /// Read at most n characters from a stream
+    /// Read characters formed by at most n bytes from a stream
     ///
     /// Expects a count and a stream handle.
     /// The stream handle `0` is stdin.

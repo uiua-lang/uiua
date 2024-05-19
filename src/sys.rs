@@ -232,17 +232,24 @@ sys_op! {
     /// On the web, this example will hang for 1 second.
     /// ex: ⚂ &sl 1
     (1(0), Sleep, Misc, "&sl", "sleep", Mutating),
-    /// Read at most n bytes from a stream
+    /// Read at most n characters from a stream
     ///
     /// Expects a count and a stream handle.
     /// The stream handle `0` is stdin.
     /// Using [infinity] as the count will read until the end of the stream.
+    ///
+    /// [&rs] will attempt to read the given number of *bytes* from the stream.
+    /// If the read bytes are not valid UTF-8, up to 3 additional bytes will be read in an attempt to finish a valid UTF-8 character.
+    ///
+    /// See also: [&rb]
     (2, ReadStr, Stream, "&rs", "read to string", Mutating),
     /// Read at most n bytes from a stream
     ///
     /// Expects a count and a stream handle.
     /// The stream handle `0` is stdin.
     /// Using [infinity] as the count will read until the end of the stream.
+    ///
+    /// See also: [&rs]
     (2, ReadBytes, Stream, "&rb", "read to bytes", Mutating),
     /// Read from a stream until a delimiter is reached
     ///
@@ -1090,9 +1097,28 @@ impl SysOp {
                     Handle::STDERR => return Err(env.error("Cannot read from stderr")),
                     Handle::STDIN => {
                         if let Some(count) = count {
-                            let bytes =
-                                env.rt.backend.scan_stdin(count).map_err(|e| env.error(e))?;
-                            todo!()
+                            let buf = env.rt.backend.scan_stdin(count).map_err(|e| env.error(e))?;
+                            match String::from_utf8(buf) {
+                                Ok(s) => s,
+                                Err(e) => {
+                                    let valid_to = e.utf8_error().valid_up_to();
+                                    let mut buf = e.into_bytes();
+                                    let mut rest = buf.split_off(valid_to);
+                                    for _ in 0..3 {
+                                        rest.extend(
+                                            env.rt
+                                                .backend
+                                                .scan_stdin(1)
+                                                .map_err(|e| env.error(e))?,
+                                        );
+                                        if let Ok(s) = std::str::from_utf8(&rest) {
+                                            buf.extend_from_slice(s.as_bytes());
+                                            break;
+                                        }
+                                    }
+                                    String::from_utf8(buf).map_err(|e| env.error(e))?
+                                }
+                            }
                         } else {
                             return Err(env.error("Cannot read an infinite amount from stdin"));
                         }
@@ -1109,8 +1135,20 @@ impl SysOp {
                                 Err(e) => {
                                     let valid_to = e.utf8_error().valid_up_to();
                                     let mut buf = e.into_bytes();
-                                    let rest = buf.split_off(valid_to);
-                                    String::from_utf8(buf).unwrap()
+                                    let mut rest = buf.split_off(valid_to);
+                                    for _ in 0..3 {
+                                        rest.extend(
+                                            env.rt
+                                                .backend
+                                                .read(handle, 1)
+                                                .map_err(|e| env.error(e))?,
+                                        );
+                                        if let Ok(s) = std::str::from_utf8(&rest) {
+                                            buf.extend_from_slice(s.as_bytes());
+                                            break;
+                                        }
+                                    }
+                                    String::from_utf8(buf).map_err(|e| env.error(e))?
                                 }
                             }
                         } else {

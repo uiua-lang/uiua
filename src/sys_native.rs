@@ -272,6 +272,9 @@ impl SysBackend for NativeSys {
         let (w, h) = term_size::dimensions().ok_or("Failed to get terminal size")?;
         Ok((w, h.saturating_sub(1)))
     }
+    fn exit(&self, code: i32) -> Result<(), String> {
+        std::process::exit(code)
+    }
     #[cfg(feature = "raw_mode")]
     fn set_raw_mode(&self, raw_mode: bool) -> Result<(), String> {
         if !output_enabled() {

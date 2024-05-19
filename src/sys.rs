@@ -170,6 +170,8 @@ sys_op! {
     /// The result is a 2-element array of the height and width of the terminal.
     /// Height comes first so that the array can be used as a shape in [reshape].
     (0, TermSize, Env, "&ts", "terminal size", Mutating),
+    /// Exit the program with a status code
+    (1(0), Exit, Misc, "&exit", "exit", Mutating),
     /// Set the terminal to raw mode
     ///
     /// Expects a boolean.
@@ -721,6 +723,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn term_size(&self) -> Result<(usize, usize), String> {
         Err("Getting the terminal size is not supported in this environment".into())
     }
+    /// Exit the program with a status code
+    fn exit(&self, status: i32) -> Result<(), String> {
+        Err("Exiting is not supported in this environment".into())
+    }
     /// Check if a file exists
     fn file_exists(&self, path: &str) -> bool {
         false
@@ -1020,6 +1026,10 @@ impl SysOp {
             SysOp::TermSize => {
                 let (width, height) = env.rt.backend.term_size().map_err(|e| env.error(e))?;
                 env.push(cowslice![height as f64, width as f64])
+            }
+            SysOp::Exit => {
+                let status = env.pop(1)?.as_int(env, "Status must be an integer")? as i32;
+                (env.rt.backend).exit(status).map_err(|e| env.error(e))?;
             }
             SysOp::RawMode => {
                 let raw_mode = env.pop(1)?.as_bool(env, "Raw mode must be a boolean")?;

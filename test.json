@@ -1,0 +1,30 @@
+[
+    {
+        "title": "The Shawshank Redemption",
+        "type": "Drama"
+    },
+    {
+        "title": "The Godfather",
+        "type": "Drama"
+    },
+    {
+        "title": "The Dark Knight",
+        "type": "Action"
+    },
+    {
+        "title": "The Godfather: Part II",
+        "type": "Drama"
+    },
+    {
+        "title": "The Lord of the Rings: The Return of the King",
+        "type": "Fantasy"
+    },
+    {
+        "title": "Pulp Fiction",
+        "type": "Crime"
+    },
+    {
+        "title": "Schindler's List",
+        "type": "Biography"
+    }
+]

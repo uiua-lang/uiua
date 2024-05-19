@@ -1501,7 +1501,11 @@ impl Value {
             serde_json::Value::Array(arr) => {
                 let mut rows = Vec::with_capacity(arr.len());
                 for value in arr {
-                    rows.push(Value::from_json_value(value, _env)?);
+                    let mut value = Value::from_json_value(value, _env)?;
+                    if value.map_keys().is_some() {
+                        value = Boxed(value).into();
+                    }
+                    rows.push(value);
                 }
                 if rows.windows(2).all(|win| {
                     win[0].shape() == win[1].shape() && win[0].type_name() == win[1].type_name()
@@ -1516,7 +1520,11 @@ impl Value {
                 let mut values = Vec::with_capacity(map.len());
                 for (k, v) in map {
                     keys.push(Boxed(k.into()));
-                    values.push(Value::from_json_value(v, _env)?);
+                    let mut value = Value::from_json_value(v, _env)?;
+                    if value.map_keys().is_some() {
+                        value = Boxed(value).into();
+                    }
+                    values.push(value);
                 }
                 let mut values = if values.windows(2).all(|win| {
                     win[0].shape() == win[1].shape() && win[0].type_name() == win[1].type_name()

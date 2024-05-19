@@ -4,6 +4,7 @@
   - `un on min/max`
   - `un on join`
   - Optimize `rows` unpack
+  - Fix alt+arrow pad bug
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

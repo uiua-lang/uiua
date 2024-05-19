@@ -743,7 +743,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (a, b) if a == b && xs.shape() == ys.shape() => {
                 let shape = xs.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    for (Boxed(x), Boxed(y)) in xs.data.into_iter().zip(ys.data.into_iter()) {
+                    for (Boxed(x), Boxed(y)) in xs.data.into_iter().zip(ys.data) {
                         env.push(y);
                         env.push(x);
                         env.call(f.clone())?;
@@ -777,7 +777,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
                     xs.undo_fix();
-                    for Boxed(y) in ys.data.into_iter() {
+                    for Boxed(y) in ys.data {
                         env.push(y);
                         env.push(xs.clone());
                         env.call(f.clone())?;
@@ -798,7 +798,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             ))),
         },
         // Left box array
-        (Value::Box(xs), ys) if ys.shape().starts_with(xs.shape()) => {
+        (Value::Box(xs), ys) if xs.rank() > 0 && ys.shape().starts_with(xs.shape()) => {
             let shape = xs.shape().clone();
             let ys_row_shape = ys.shape()[xs.rank()..].into();
             env.without_fill(|env| -> UiuaResult {
@@ -875,14 +875,11 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             ))),
         },
         // Right box array
-        (xs, Value::Box(ys)) if xs.shape().starts_with(ys.shape()) => {
+        (xs, Value::Box(ys)) if ys.rank() > 0 && xs.shape().starts_with(ys.shape()) => {
             let shape = ys.shape().clone();
             let xs_row_shape = xs.shape()[ys.rank()..].into();
             env.without_fill(|env| -> UiuaResult {
-                for (x, Boxed(y)) in xs
-                    .into_row_shaped_slices(xs_row_shape)
-                    .zip(ys.data.into_iter())
-                {
+                for (x, Boxed(y)) in xs.into_row_shaped_slices(xs_row_shape).zip(ys.data) {
                     env.push(y);
                     env.push(x);
                     env.call(f.clone())?;
@@ -899,7 +896,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
             (a, b) if a == b => {
                 let shape = ys.shape().clone();
                 env.without_fill(|env| -> UiuaResult {
-                    for (x, Boxed(y)) in xs.into_rows().zip(ys.data.into_iter()) {
+                    for (x, Boxed(y)) in xs.into_rows().zip(ys.data) {
                         env.push(y);
                         env.push(x);
                         env.call(f.clone())?;
@@ -934,7 +931,7 @@ fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
                 env.without_fill(|env| -> UiuaResult {
                     xs.undo_fix();
                     xs.unbox();
-                    for Boxed(y) in ys.data.into_iter() {
+                    for Boxed(y) in ys.data {
                         env.push(y);
                         env.push(xs.clone());
                         env.call(f.clone())?;

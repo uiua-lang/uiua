@@ -328,7 +328,10 @@ pub fn Editor<'a>(
     let replace_code = move |state: &mut State, inserted: &str| {
         if let Some((start, end)) = get_code_cursor() {
             let (start, end) = (start.min(end), start.max(end) as usize);
+            // logging::log!("replace start: {start}, end: {end}");
             let code = state.code.clone();
+            // logging::log!("code: {code:?}");
+            // logging::log!("insert: {inserted:?}");
             let new: String = code
                 .chars()
                 .take(start as usize)
@@ -449,7 +452,11 @@ pub fn Editor<'a>(
         }
         let key = event.key();
         let key = key.as_str();
+        // logging::log!("key: {key:?}");
         match key {
+            "Process" => {
+                // IME composition
+            }
             "Enter" => {
                 if os_ctrl(event) || event.shift_key() {
                     run(true, true);
@@ -753,6 +760,18 @@ pub fn Editor<'a>(
             event.stop_propagation();
             update_token_count(&state_code());
         }
+    });
+
+    // Handle composition events
+    window_event_listener(ev::compositionend, move |event| {
+        // logging::log!("composition end");
+        let event = event.dyn_into::<web_sys::CompositionEvent>().unwrap();
+        state.update(|state| {
+            if let Some(s) = event.data() {
+                // logging::log!("composition end data: {s:?}");
+                replace_code(state, &s);
+            }
+        });
     });
 
     // Handle paste evens
@@ -1400,7 +1419,9 @@ pub fn Editor<'a>(
                             <div class="line-numbers">
                                 { line_numbers }
                             </div>
-                            // The text entry area
+                            /////////////////////////
+                            // The text entry area //
+                            /////////////////////////
                             <div
                                 id={code_id}
                                 contenteditable="true"
@@ -1418,6 +1439,7 @@ pub fn Editor<'a>(
                                     }
                                 }
                             </div>
+                            /////////////////////////
                         </div>
                     </div>
                     <div class="output-frame">

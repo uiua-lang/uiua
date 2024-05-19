@@ -61,6 +61,12 @@
     "class": "Misc",
     "description": "Set the contents of the clipboard"
   },
+  "&exit": {
+    "args": 1,
+    "outputs": 0,
+    "class": "Misc",
+    "description": "Exit the program with a status code"
+  },
   "&fc": {
     "args": 1,
     "outputs": 1,

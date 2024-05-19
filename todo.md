@@ -4,7 +4,6 @@
   - `un on min/max`
   - `un on join`
   - Optimize `rows` unpack
-  - Make `&rs` read a number of characters rather than bytes
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

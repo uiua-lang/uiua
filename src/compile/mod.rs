@@ -1137,65 +1137,18 @@ code:
                 for lines in arr.lines.into_iter().rev() {
                     inner.extend(self.compile_words(lines, true)?);
                 }
-                // Validate signature
-                let inner_sig = instrs_signature(&inner);
-                if let Some(declared_sig) = arr.signature {
-                    if let Ok(inner_sig) = inner_sig {
-                        if inner_sig != declared_sig.value {
-                            self.add_error(
-                                declared_sig.span.clone(),
-                                format!(
-                                    "Array signature mismatch: declared {} but inferred {}",
-                                    declared_sig.value, inner_sig
-                                ),
-                            );
-                        }
-                    }
-                }
                 // Validate inner loop correctness
-                if self.current_binding.is_some() {
-                    if let Err(e) = inner_sig {
-                        let after_sig = (0..=inner.len())
-                            .find_map(|i| instrs_signature(&inner[i..]).ok())
-                            .unwrap();
-                        match e.kind {
-                            SigCheckErrorKind::LoopExcess { sig: body_sig, inf }
-                                if body_sig.args > 0
-                                    && (body_sig.outputs < body_sig.args
-                                        || body_sig.outputs > body_sig.args
-                                            && after_sig.args != body_sig.args
-                                            && !inf)
-                                    || body_sig.args == 0 && after_sig.args > 0 =>
-                            {
-                                let mut message = format!(
-                                    "This array contains a loop that has a variable \
-                                    number of outputs. The code left of the loop has \
-                                    signature {after_sig}, which may result in a variable \
-                                    number of values being pulled into the array."
-                                );
-                                if after_sig.args > body_sig.args {
-                                } else {
-                                    let replacement: String =
-                                        repeat('⊙').take(body_sig.args - 1).chain(['∘']).collect();
-                                    message.push_str(&format!(
-                                        " To fix this, insert `{replacement}` to the left of the loop."
-                                    ));
-                                }
-                                self.emit_diagnostic(
-                                    message,
-                                    DiagnosticKind::Warning,
-                                    word.span.clone(),
-                                )
-                            }
-                            SigCheckErrorKind::LoopOverreach => self.emit_diagnostic(
-                                "This array contains a loop that has a variable \
-                                number of inputs. This may result in a variable \
-                                number of values being pulled into the array.",
-                                DiagnosticKind::Warning,
-                                word.span.clone(),
+                let inner_sig = self.validate_array_loop_sig(&inner, &word.span);
+                // Validate signature
+                if let Some((declared_sig, inner_sig)) = arr.signature.zip(inner_sig) {
+                    if inner_sig != declared_sig.value {
+                        self.add_error(
+                            declared_sig.span.clone(),
+                            format!(
+                                "Array signature mismatch: declared {} but inferred {}",
+                                declared_sig.value, inner_sig
                             ),
-                            _ => {}
-                        }
+                        );
                     }
                 }
                 // Diagnostic for array of characters
@@ -1339,6 +1292,57 @@ code:
             Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::UnbreakLine => {}
         }
         Ok(())
+    }
+    fn validate_array_loop_sig(&mut self, instrs: &[Instr], span: &CodeSpan) -> Option<Signature> {
+        let inner_sig = instrs_signature(instrs);
+        if self.current_binding.is_none() {
+            return inner_sig.ok();
+        }
+        let Err(e) = &inner_sig else {
+            return inner_sig.ok();
+        };
+        let before_sig = (0..instrs.len())
+            .rev()
+            .find_map(|i| instrs_signature(&instrs[..i]).ok())
+            .unwrap();
+        let after_sig = (0..=instrs.len())
+            .find_map(|i| instrs_signature(&instrs[i..]).ok())
+            .unwrap();
+        match e.kind {
+            SigCheckErrorKind::LoopExcess { sig: body_sig, inf } => {
+                let positive_body_sig = body_sig.outputs > body_sig.args;
+                let balanced_after_args = body_sig.args.saturating_sub(before_sig.outputs);
+                if body_sig.args > 0
+                    && (positive_body_sig && after_sig.args != balanced_after_args && !inf)
+                    || body_sig.args == 0 && after_sig.args > 0
+                {
+                    let mut message = format!(
+                        "This array contains a loop that has a variable \
+                        number of outputs. The code left of the loop has \
+                        signature {after_sig}, which may result in a variable \
+                        number of values being pulled into the array."
+                    );
+                    if after_sig.args > body_sig.args {
+                    } else {
+                        let replacement: String =
+                            repeat('⊙').take(body_sig.args - 1).chain(['∘']).collect();
+                        message.push_str(&format!(
+                            " To fix this, insert `{replacement}` to the left of the loop."
+                        ));
+                    }
+                    self.emit_diagnostic(message, DiagnosticKind::Warning, span.clone())
+                }
+            }
+            SigCheckErrorKind::LoopOverreach => self.emit_diagnostic(
+                "This array contains a loop that has a variable \
+                number of inputs. This may result in a variable \
+                number of values being pulled into the array.",
+                DiagnosticKind::Warning,
+                span.clone(),
+            ),
+            _ => {}
+        }
+        inner_sig.ok()
     }
     fn ref_local(&self, r: &Ref) -> UiuaResult<(Vec<LocalName>, LocalName)> {
         if let Some((module, path_locals)) = self.ref_path(&r.path, r.in_macro_arg)? {

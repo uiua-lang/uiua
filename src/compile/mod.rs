@@ -22,7 +22,6 @@ use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
     ast::*,
     check::{instrs_all_signatures, instrs_signature, SigCheckError, SigCheckErrorKind},
-    example_ua,
     format::format_word,
     function::*,
     ident_modifier_args,
@@ -32,7 +31,7 @@ use crate::{
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, DocComment, Ident,
     ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment,
-    SysBackend, Uiua, UiuaError, UiuaResult, Value, CONSTANTS, VERSION,
+    SysBackend, Uiua, UiuaError, UiuaResult, Value, CONSTANTS, EXAMPLE_UA, VERSION,
 };
 
 /// The Uiua compiler
@@ -724,7 +723,7 @@ code:
                 .file_read_all(&path)
                 .or_else(|e| {
                     if path.ends_with(Path::new("example.ua")) {
-                        Ok(example_ua(|ex| ex.as_bytes().to_vec()))
+                        Ok(EXAMPLE_UA.as_bytes().to_vec())
                     } else {
                         Err(e)
                     }

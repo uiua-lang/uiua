@@ -4,7 +4,7 @@ use enum_iterator::{all, Sequence};
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
-use uiua::{example_ua, Primitive, SysOp};
+use uiua::{Primitive, SysOp, EXAMPLE_UA};
 
 use crate::{editor::*, other_tutorial::OtherTutorialParams, Hd, Prim, Prims};
 
@@ -1671,7 +1671,7 @@ fn TutorialModules() -> impl IntoView {
         <p>"Using modules involves loading files from the file system."</p>
         <p>"This website has a virtual file system. You can write to virtual files with "<Prim prim=Sys(SysOp::FWriteAll)/>". You can also drag and drop files from your computer into the editor to make them available to import."</p>
         <p>"There is also a test module that can always be imported as "<code>"example.ua"</code>". Its contents is:"</p>
-        <Editor example={&example_ua(|ex| ex.clone())}/>
+        <Editor example=EXAMPLE_UA/>
 
         <Hd id="importing">"Importing Modules"</Hd>
         <p>"Modules can be imported by file path with "<code>"~"</code>"."</p>

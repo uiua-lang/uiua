@@ -22,11 +22,8 @@ use crate::{
     Purity, Signature, Uiua, UiuaResult, Value,
 };
 
-/// Access the built-in `example.ua` file
-pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
-    static EXAMPLE_UA: Lazy<Mutex<String>> = Lazy::new(|| {
-        Mutex::new(
-            "\
+/// The text of Uiua's example module
+pub const EXAMPLE_UA: &str = "\
 # Uiua's example module
 
 Square ← ×.
@@ -36,11 +33,12 @@ RangeDiff ↚ ⇡-
 Span ← +⟜RangeDiff
 Mac! ← /^! [1 2 3 4 5]
 Foo ← 5
-Bar ← \"bar\""
-                .into(),
-        )
-    });
-    f(&mut EXAMPLE_UA.lock())
+Bar ← \"bar\"";
+
+/// Access the built-in `example.ua` file
+pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
+    static S: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(EXAMPLE_UA.to_string()));
+    f(&mut S.lock())
 }
 
 macro_rules! sys_op {
@@ -1291,7 +1289,7 @@ impl SysOp {
                     .file_read_all(path.as_ref())
                     .or_else(|e| {
                         if path == "example.ua" {
-                            Ok(example_ua(|ex| ex.as_bytes().to_vec()))
+                            Ok(EXAMPLE_UA.as_bytes().to_vec())
                         } else {
                             Err(e)
                         }
@@ -1306,7 +1304,7 @@ impl SysOp {
                     .file_read_all(path.as_ref())
                     .or_else(|e| {
                         if path == "example.ua" {
-                            Ok(example_ua(|ex| ex.as_bytes().to_vec()))
+                            Ok(EXAMPLE_UA.as_bytes().to_vec())
                         } else {
                             Err(e)
                         }

@@ -242,6 +242,7 @@ mod tests {
                 panic!("{} had a non-empty stack", path.display());
             }
         }
+        _ = std::fs::remove_file("example.ua");
     }
 
     #[test]

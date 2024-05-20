@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.11
+  - Make `repeat` in array sigature checking totally correct
   - `un on min/max`
   - `un on join`
   - Optimize `rows` unpack

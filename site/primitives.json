@@ -212,7 +212,7 @@
     "args": 2,
     "outputs": 1,
     "class": "Stream",
-    "description": "Read at most n bytes from a stream"
+    "description": "Read characters formed by at most n bytes from a stream"
   },
   "&ru": {
     "args": 2,

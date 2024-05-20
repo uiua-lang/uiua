@@ -1163,8 +1163,7 @@ code:
                                 if body_sig.args > 0
                                     && (body_sig.outputs < body_sig.args
                                         || body_sig.outputs > body_sig.args
-                                            && after_sig.args
-                                                != body_sig.outputs - body_sig.args
+                                            && after_sig.args != body_sig.args
                                             && !inf)
                                     || body_sig.args == 0 && after_sig.args > 0 =>
                             {
@@ -1174,15 +1173,13 @@ code:
                                     signature {after_sig}, which may result in a variable \
                                     number of values being pulled into the array."
                                 );
-                                if body_sig.outputs > body_sig.args
-                                    && after_sig.args < body_sig.outputs - body_sig.args
-                                {
-                                    let diff = body_sig.outputs - body_sig.args;
+                                if after_sig.args > body_sig.args {
+                                } else {
                                     let replacement: String =
-                                        repeat('⊙').take(diff - 1).chain(['∘']).collect();
+                                        repeat('⊙').take(body_sig.args - 1).chain(['∘']).collect();
                                     message.push_str(&format!(
-                                    " To fix this, insert `{replacement}` to the left of the loop."
-                                ));
+                                        " To fix this, insert `{replacement}` to the left of the loop."
+                                    ));
                                 }
                                 self.emit_diagnostic(
                                     message,

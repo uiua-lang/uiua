@@ -9,6 +9,7 @@ use crate::{title_markdown, Challenge, Editor, Hd, Prim};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum OtherTutorialPage {
     Strings,
+    FilesAndStreams,
     Audio,
     Images,
     Documentation,
@@ -22,6 +23,9 @@ impl OtherTutorialPage {
         match self {
             Self::Strings => {
                 title_markdown("Strings", "/text/strings.md", strings_challenges).into_view()
+            }
+            Self::FilesAndStreams => {
+                title_markdown("Files and Streams", "/text/files_and_streams.md", ()).into_view()
             }
             Self::Audio => Audio().into_view(),
             Self::Images => ImagesAndGifs().into_view(),

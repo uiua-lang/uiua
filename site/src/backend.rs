@@ -230,6 +230,7 @@ impl SysBackend for WebBackend {
     }
     fn create_file(&self, path: &Path) -> Result<Handle, String> {
         let handle = self.new_handle();
+        self.file_mut(path, true, |_| {})?;
         self.streams.lock().unwrap().insert(
             handle,
             VirtualStream {

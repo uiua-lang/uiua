@@ -232,6 +232,7 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         <ul>
             <li><A href="/tutorial/documentation">"Documenting Code"</A>" - how to document Uiua code"</li>
             <li><A href="/tutorial/strings">"Strings"</A>" - how to manipulate strings"</li>
+            <li><A href="/tutorial/filesandstreams">"Files and Streams"</A>" - how to read and write files and streams"</li>
             <li><A href="/tutorial/audio">"Audio"</A>" - how to generate and play audio"</li>
             <li><A href="/tutorial/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
         </ul>

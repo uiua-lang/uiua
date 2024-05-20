@@ -35,9 +35,20 @@ Mac! ← /^! [1 2 3 4 5]
 Foo ← 5
 Bar ← \"bar\"";
 
+/// The text of Uiua's example text file
+pub const EXAMPLE_TXT: &str = "\
+This is a simple text file for 
+use in example Uiua code ✨";
+
 /// Access the built-in `example.ua` file
 pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
     static S: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(EXAMPLE_UA.to_string()));
+    f(&mut S.lock())
+}
+
+/// Access the built-in `example.txt` file
+pub fn example_txt<T>(f: impl FnOnce(&mut String) -> T) -> T {
+    static S: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(EXAMPLE_TXT.to_string()));
     f(&mut S.lock())
 }
 
@@ -234,7 +245,9 @@ sys_op! {
     ///
     /// Expects a count and a stream handle.
     /// The stream handle `0` is stdin.
+    /// ex: &rs 4 &fo "example.txt"
     /// Using [infinity] as the count will read until the end of the stream.
+    /// ex: &rs ∞ &fo "example.txt"
     ///
     /// [&rs] will attempt to read the given number of *bytes* from the stream.
     /// If the read bytes are not valid UTF-8, up to 3 additional bytes will be read in an attempt to finish a valid UTF-8 character.
@@ -245,7 +258,9 @@ sys_op! {
     ///
     /// Expects a count and a stream handle.
     /// The stream handle `0` is stdin.
+    /// ex: &rb 4 &fo "example.txt"
     /// Using [infinity] as the count will read until the end of the stream.
+    /// ex: &rb ∞ &fo "example.txt"
     ///
     /// See also: [&rs]
     (2, ReadBytes, Stream, "&rb", "read to bytes", Mutating),
@@ -254,12 +269,15 @@ sys_op! {
     /// Expects a delimiter and a stream handle.
     /// The result will be a rank-`1` byte or character array. The type will match the type of the delimiter.
     /// The stream handle `0` is stdin.
+    /// ex: &ru "Uiua" &fo "example.txt"
     (2, ReadUntil, Stream, "&ru", "read until", Mutating),
     /// Write an array to a stream
     ///
     /// If the stream is a file, the file may not be written to until it is closed with [&cl].
     /// The stream handle `1` is stdout.
     /// The stream handle `2` is stderr.
+    /// ex: &cl &w "Hello, world!" . &fc "file.txt"
+    ///   : &fras "file.txt"
     (2(0), Write, Stream, "&w", "write", Mutating),
     /// Invoke a path with the system's default program
     (1(1), Invoke, Command, "&invk", "invoke", Mutating),
@@ -269,6 +287,7 @@ sys_op! {
     (1(0), Close, Stream, "&cl", "close handle", Mutating),
     /// Open a file and return a handle to it
     ///
+    /// ex: &fo "example.txt"
     /// The file can be read from with [&rs], [&rb], or [&ru].
     /// The file can be written to with [&w].
     /// In some cases, the file may not be actually written to until it is closed with [&cl].
@@ -276,6 +295,7 @@ sys_op! {
     (1, FOpen, Filesystem, "&fo", "file - open"),
     /// Create a file and return a handle to it
     ///
+    /// ex: &fc "file.txt"
     /// The file can be read from with [&rs], [&rb], or [&ru].
     /// The file can be written to with [&w].
     /// In some cases, the file may not be actually written to until it is closed with [&cl].
@@ -283,16 +303,20 @@ sys_op! {
     (1, FCreate, Filesystem, "&fc", "file - create", Mutating),
     /// Delete a file or directory
     ///
+    /// ex: &fde "example.txt"
     /// Deletes the file or directory at the given path.
     /// Be careful with this function, as deleted files and directories cannot be recovered!
     /// For a safer alternative, see [&ftr].
     (1(0), FDelete, Filesystem, "&fde", "file - delete", Mutating),
     /// Move a file or directory to the trash
     ///
+    /// ex: &ftr "example.txt"
     /// Moves the file or directory at the given path to the trash.
     /// This is a safer alternative to [&fde].
     (1(0), FTrash, Filesystem, "&ftr", "file - trash", Mutating),
     /// Check if a file exists at a path
+    ///
+    /// ex: &fe "example.txt"
     (1, FExists, Filesystem, "&fe", "file - exists"),
     /// List the contents of a directory
     ///
@@ -301,16 +325,16 @@ sys_op! {
     (1, FListDir, Filesystem, "&fld", "file - list directory"),
     /// Check if a path is a file
     ///
-    /// ex: &fif "example.ua"
+    /// ex: &fif "example.txt"
     (1, FIsFile, Filesystem, "&fif", "file - is file"),
     /// Read all the contents of a file into a string
     ///
     /// Expects a path and returns a rank-`1` character array.
     ///
-    /// ex: &fras "example.ua"
+    /// ex: &fras "example.txt"
     /// You can use [under][&fras] to write back to the file after modifying the string.
-    /// ex: ⍜&fras(⊂:"\n# Wow!") "example.ua"
-    ///   : &p&fras "example.ua"
+    /// ex: ⍜&fras(⊂:"\n# Wow!") "example.txt"
+    ///   : &p&fras "example.txt"
     ///
     /// See [&frab] for reading into a byte array.
     (1, FReadAllStr, Filesystem, "&fras", "file - read all to string"),
@@ -318,10 +342,10 @@ sys_op! {
     ///
     /// Expects a path and returns a rank-`1` numeric array.
     ///
-    /// ex: &frab "example.ua"
+    /// ex: &frab "example.txt"
     /// You can use [under][&frab] to write back to the file after modifying the array.
-    /// ex: ⍜&frab(⊂:-@\0"\n# Wow!") "example.ua"
-    ///   : &p&fras "example.ua"
+    /// ex: ⍜&frab(⊂:-@\0"\n# Wow!") "example.txt"
+    ///   : &p&fras "example.txt"
     ///
     /// See [&fras] for reading into a rank-`1` character array.
     (1, FReadAllBytes, Filesystem, "&frab", "file - read all to bytes"),
@@ -1287,12 +1311,10 @@ impl SysOp {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let bytes = (env.rt.backend)
                     .file_read_all(path.as_ref())
-                    .or_else(|e| {
-                        if path == "example.ua" {
-                            Ok(EXAMPLE_UA.as_bytes().to_vec())
-                        } else {
-                            Err(e)
-                        }
+                    .or_else(|e| match path.as_str() {
+                        "example.ua" => Ok(EXAMPLE_UA.as_bytes().to_vec()),
+                        "example.txt" => Ok(EXAMPLE_TXT.as_bytes().to_vec()),
+                        _ => Err(e),
                     })
                     .map_err(|e| env.error(e))?;
                 let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
@@ -1302,12 +1324,10 @@ impl SysOp {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;
                 let bytes = (env.rt.backend)
                     .file_read_all(path.as_ref())
-                    .or_else(|e| {
-                        if path == "example.ua" {
-                            Ok(EXAMPLE_UA.as_bytes().to_vec())
-                        } else {
-                            Err(e)
-                        }
+                    .or_else(|e| match path.as_str() {
+                        "example.ua" => Ok(EXAMPLE_UA.as_bytes().to_vec()),
+                        "example.txt" => Ok(EXAMPLE_TXT.as_bytes().to_vec()),
+                        _ => Err(e),
                     })
                     .map_err(|e| env.error(e))?;
                 let bytes = bytes.into_iter().map(Into::into);

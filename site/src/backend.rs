@@ -9,7 +9,7 @@ use std::{
 
 use crate::{editor::get_ast_time, weewuh};
 use leptos::*;
-use uiua::{Handle, Report, SysBackend, EXAMPLE_UA};
+use uiua::{Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
@@ -48,7 +48,14 @@ impl Default for WebBackend {
             trace: String::new().into(),
             streams: HashMap::new().into(),
             files: Mutex::new(
-                [(PathBuf::from("example.ua"), EXAMPLE_UA.as_bytes().to_vec())].into(),
+                [
+                    (PathBuf::from("example.ua"), EXAMPLE_UA.as_bytes().to_vec()),
+                    (
+                        PathBuf::from("example.txt"),
+                        EXAMPLE_TXT.as_bytes().to_vec(),
+                    ),
+                ]
+                .into(),
             ),
         }
     }

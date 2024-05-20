@@ -4,8 +4,7 @@
   - `un on min/max`
   - `un on join`
   - Optimize `rows` unpack
-  - Virtual streams for the pad
-  - Streams tutorial
+  - Files/Streams tutorial
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

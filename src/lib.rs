@@ -238,7 +238,7 @@ mod tests {
             {
                 panic!("Test failed in {}:\n{}", path.display(), diag.report());
             }
-            if env.run_str("◌").is_ok() {
+            if !env.take_stack().is_empty() {
                 panic!("{} had a non-empty stack", path.display());
             }
         }

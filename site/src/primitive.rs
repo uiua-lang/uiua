@@ -399,3 +399,40 @@ fn inverse_row_impl(
         </tr>
     }
 }
+
+#[cfg(test)]
+#[test]
+fn prim_docs() {
+    use uiua::{PrimDocLine, Uiua};
+
+    use crate::backend::WebBackend;
+    for prim in Primitive::non_deprecated() {
+        for line in &prim.doc().lines {
+            if let PrimDocLine::Example(ex) = line {
+                if ["&sl", "&tcpc", "&ast", "&clset"]
+                    .iter()
+                    .any(|prim| ex.input().contains(prim))
+                {
+                    continue;
+                }
+                println!("{prim} example:\n{}", ex.input());
+                match Uiua::with_backend(WebBackend::default()).run_str(ex.input()) {
+                    Ok(mut comp) => {
+                        if let Some(diag) = comp.take_diagnostics().into_iter().next() {
+                            if !ex.should_error() {
+                                panic!("\nExample failed:\n{}\n{}", ex.input(), diag.report());
+                            }
+                        } else if ex.should_error() {
+                            panic!("Example should have failed: {}", ex.input());
+                        }
+                    }
+                    Err(e) => {
+                        if !ex.should_error() {
+                            panic!("\nExample failed:\n{}\n{}", ex.input(), e.report());
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

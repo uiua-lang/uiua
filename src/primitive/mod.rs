@@ -1353,12 +1353,6 @@ impl PrimExample {
     pub fn should_error(&self) -> bool {
         self.should_error
     }
-    /// Check whether the example should run automatically in certain contexts
-    pub fn should_run(&self) -> bool {
-        !["&sl", "&tcpc", "&ast", "&fwa", "&fld", "&fif", "&clset"]
-            .iter()
-            .any(|prim| self.input.contains(prim))
-    }
     /// Get the example's output
     pub fn output(&self) -> &Result<Vec<String>, String> {
         self.output.get_or_init(|| {
@@ -1529,7 +1523,13 @@ mod tests {
         for prim in Primitive::non_deprecated() {
             for line in &prim.doc().lines {
                 if let PrimDocLine::Example(ex) = line {
-                    if !ex.should_run() {
+                    if [
+                        "&sl", "&tcpc", "&ast", "&clset", "&fo", "&fc", "&fde", "&ftr", "&fld",
+                        "&fif", "&fras",
+                    ]
+                    .iter()
+                    .any(|prim| ex.input.contains(prim))
+                    {
                         continue;
                     }
                     println!("{prim} example:\n{}", ex.input);

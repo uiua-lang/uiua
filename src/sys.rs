@@ -603,7 +603,7 @@ sys_op! {
 ///
 /// Other handles can be used by files or sockets.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Handle(pub(crate) u64);
+pub struct Handle(pub u64);
 
 impl Handle {
     const STDIN: Self = Self(0);

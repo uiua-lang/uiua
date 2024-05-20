@@ -1,7 +1,7 @@
 use std::{
     any::Any,
     cell::RefCell,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     io::Cursor,
     path::{Path, PathBuf},
     sync::Mutex,
@@ -9,7 +9,7 @@ use std::{
 
 use crate::{editor::get_ast_time, weewuh};
 use leptos::*;
-use uiua::{example_ua, Report, SysBackend};
+use uiua::{example_ua, Handle, Report, SysBackend};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
@@ -18,18 +18,24 @@ pub struct WebBackend {
     pub stdout: Mutex<Vec<OutputItem>>,
     pub stderr: Mutex<String>,
     pub trace: Mutex<String>,
+    streams: Mutex<HashMap<Handle, VirtualStream>>,
+    files: Mutex<HashMap<PathBuf, Vec<u8>>>,
+}
+
+struct VirtualStream {
+    path: Option<PathBuf>,
+    contents: Vec<u8>,
+    pos: usize,
+    writeable: bool,
 }
 
 thread_local! {
-    static FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = RefCell::new([
-        (PathBuf::from("example.ua"),
-        example_ua(|ex| ex.clone()).into())
-    ].into());
+    static GLOBAL_FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = Default::default();
     static REQ: RefCell<Option<FetchReq>> = const { RefCell::new(None) };
 }
 
 pub fn drop_file(path: PathBuf, contents: Vec<u8>) {
-    FILES.with(|dropped_files| {
+    GLOBAL_FILES.with(|dropped_files| {
         dropped_files.borrow_mut().insert(path, contents);
     });
 }
@@ -40,6 +46,14 @@ impl Default for WebBackend {
             stdout: Vec::new().into(),
             stderr: String::new().into(),
             trace: String::new().into(),
+            streams: HashMap::new().into(),
+            files: Mutex::new(
+                [(
+                    PathBuf::from("example.ua"),
+                    example_ua(|ex| ex.clone()).into(),
+                )]
+                .into(),
+            ),
         }
     }
 }
@@ -59,6 +73,53 @@ pub enum OutputItem {
 impl OutputItem {
     pub fn is_report(&self) -> bool {
         matches!(self, OutputItem::Report(_))
+    }
+}
+
+impl WebBackend {
+    fn new_handle(&self) -> Handle {
+        let streams = self.streams.lock().unwrap();
+        for index in Handle::FIRST_UNRESERVED.0..u64::MAX {
+            let handle = Handle(index);
+            if !streams.contains_key(&handle) {
+                return handle;
+            }
+        }
+        panic!("Ran out of file handles");
+    }
+    fn file<T>(&self, path: &Path, f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
+        let files = self.files.lock().unwrap();
+        if let Some(contents) = files.get(path) {
+            Ok(f(contents))
+        } else {
+            GLOBAL_FILES.with(|dropped_files| {
+                if let Some(contents) = dropped_files.borrow().get(path) {
+                    Ok(f(contents))
+                } else {
+                    Err(format!("File not found: {}", path.display()))
+                }
+            })
+        }
+    }
+    fn file_mut<T>(
+        &self,
+        path: &Path,
+        create: bool,
+        f: impl FnOnce(&mut Vec<u8>) -> T,
+    ) -> Result<T, String> {
+        let mut files = self.files.lock().unwrap();
+        if !files.contains_key(path) {
+            if let Some(contents) =
+                GLOBAL_FILES.with(|dropped_files| dropped_files.borrow().get(path).cloned())
+            {
+                files.insert(path.to_path_buf(), contents);
+            } else if create {
+                files.insert(path.to_path_buf(), Vec::new());
+            } else {
+                return Err(format!("File not found: {}", path.display()));
+            }
+        }
+        Ok(f(files.get_mut(path).unwrap()))
     }
 }
 
@@ -125,29 +186,117 @@ impl SysBackend for WebBackend {
             path = &path[1..];
         }
         let path = Path::new(path);
-        FILES.with(|files| {
+        let mut set = HashSet::new();
+        GLOBAL_FILES.with(|files| {
             let files = files.borrow();
-            let mut in_dir = Vec::new();
             for file in files.keys() {
                 if file.parent() == Some(path) {
-                    in_dir.push(file.file_name().unwrap().to_string_lossy().into());
+                    set.insert(file.file_name().unwrap().to_string_lossy().into());
                 }
             }
-            Ok(in_dir)
-        })
+        });
+        for file in self.files.lock().unwrap().keys() {
+            if file.parent() == Some(path) {
+                set.insert(file.file_name().unwrap().to_string_lossy().into());
+            }
+        }
+        Ok(set.into_iter().collect())
     }
     fn is_file(&self, path: &str) -> Result<bool, String> {
-        Ok(FILES.with(|files| files.borrow().contains_key(Path::new(path))))
+        Ok(self.file(path.as_ref(), |_| {}).is_ok())
     }
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
-        drop_file(path.to_path_buf(), contents.to_vec());
-        Ok(())
+        self.file_mut(path, true, |file| *file = contents.to_vec())
     }
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
-        FILES.with(|files| {
-            (files.borrow().get(path).cloned())
-                .ok_or_else(|| format!("File not found: {}", path.display()))
-        })
+        self.file(path, |contents| contents.to_vec())
+    }
+    fn open_file(&self, path: &Path, write: bool) -> Result<Handle, String> {
+        let handle = self.new_handle();
+        let contents = self.file_read_all(path)?;
+        self.streams.lock().unwrap().insert(
+            handle,
+            VirtualStream {
+                path: Some(path.to_path_buf()),
+                contents,
+                pos: 0,
+                writeable: write,
+            },
+        );
+        Ok(handle)
+    }
+    fn create_file(&self, path: &Path) -> Result<Handle, String> {
+        let handle = self.new_handle();
+        self.streams.lock().unwrap().insert(
+            handle,
+            VirtualStream {
+                path: Some(path.to_path_buf()),
+                contents: Vec::new(),
+                pos: 0,
+                writeable: true,
+            },
+        );
+        Ok(handle)
+    }
+    fn close(&self, handle: Handle) -> Result<(), String> {
+        let stream = self
+            .streams
+            .lock()
+            .unwrap()
+            .remove(&handle)
+            .ok_or("Invalid stream handle")?;
+        if let Some(path) = stream.path {
+            self.file_write_all(&path, &stream.contents)?;
+        }
+        Ok(())
+    }
+    fn write(&self, handle: Handle, contents: &[u8]) -> Result<(), String> {
+        let mut streams = self.streams.lock().unwrap();
+        let stream = streams.get_mut(&handle).ok_or("Invalid stream handle")?;
+        if !stream.writeable {
+            return Err("Stream is not writeable".into());
+        }
+        let end = stream.pos + contents.len();
+        if stream.contents.len() < end {
+            stream.contents.resize(end, 0);
+        }
+        stream.contents[stream.pos..end].copy_from_slice(contents);
+        stream.pos = end;
+        Ok(())
+    }
+    fn read(&self, handle: Handle, len: usize) -> Result<Vec<u8>, String> {
+        let mut streams = self.streams.lock().unwrap();
+        let stream = streams.get_mut(&handle).ok_or("Invalid stream handle")?;
+        let end = (stream.pos + len).min(stream.contents.len());
+        let data = stream.contents[stream.pos..end].to_vec();
+        stream.pos = end;
+        Ok(data)
+    }
+    fn read_all(&self, handle: Handle) -> Result<Vec<u8>, String> {
+        let mut streams = self.streams.lock().unwrap();
+        let stream = streams.get_mut(&handle).ok_or("Invalid stream handle")?;
+        let data = stream.contents[stream.pos..].to_vec();
+        stream.pos = stream.contents.len();
+        Ok(data)
+    }
+    fn read_until(&self, handle: Handle, delim: &[u8]) -> Result<Vec<u8>, String> {
+        let mut streams = self.streams.lock().unwrap();
+        let stream = streams.get_mut(&handle).ok_or("Invalid stream handle")?;
+        let pos = stream
+            .contents
+            .windows(delim.len())
+            .position(|w| w == delim)
+            .unwrap_or(stream.contents.len());
+        let data = stream.contents[stream.pos..pos].to_vec();
+        stream.pos = (pos + delim.len()).min(stream.contents.len());
+        Ok(data)
+    }
+    fn delete(&self, path: &str) -> Result<(), String> {
+        self.files.lock().unwrap().remove(Path::new(path));
+        Ok(())
+    }
+    fn trash(&self, path: &str) -> Result<(), String> {
+        self.delete(path)
     }
     fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
         (self.stdout.lock().unwrap()).push(OutputItem::Audio(wav_bytes));
@@ -204,7 +353,7 @@ impl SysBackend for WebBackend {
             .join(repo_owner)
             .join(repo_name)
             .join("lib.ua");
-        if FILES.with(|dropped_files| dropped_files.borrow().contains_key(&path)) {
+        if GLOBAL_FILES.with(|dropped_files| dropped_files.borrow().contains_key(&path)) {
             return Ok(path);
         }
         let mut url = url

@@ -71,7 +71,7 @@ $ 78 101 1 8
 ## Finding substrings with [`mask`]()
 
 What if we want to split by a non-scalar delimiter? Simply dropping a string delimiter into the code above produces an error.
-```uiua
+```uiua should fail
 ⊜□ ≠" - ". "foo - bar - ba-az"
 ```
 We might try [`find`](). While there may be cases when this output is useful, it is not quite what we want here.
@@ -129,7 +129,7 @@ regex "\\d{3,4}" "(555) 310-1984"
 regex "a([bc])" "abracadabra"
 ```
 Optional captures may need [`fill`]() to avoid errors.
-```uiua
+```uiua should fail
 regex "foo(bar)?(baz)?" "foobar\nfoobaz"
 ```
 ```uiua

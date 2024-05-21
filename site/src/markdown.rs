@@ -137,3 +137,52 @@ fn all_text<'a>(node: &'a AstNode<'a>) -> String {
     }
     text
 }
+
+#[cfg(test)]
+#[test]
+fn text_code_blocks() {
+    for entry in std::fs::read_dir("text").unwrap() {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        println!("Testing code blocks in {:?}", path.display());
+        let text = std::fs::read_to_string(path).unwrap();
+        let arena = Arena::new();
+        let text = text
+            .replace("```", "<code block delim>")
+            .replace("``", "` `")
+            .replace("<code block delim>", "```");
+        let root = parse_document(&arena, &text, &ComrakOptions::default());
+
+        fn text_code_blocks<'a>(node: &'a AstNode<'a>) -> Vec<(String, bool)> {
+            let mut blocks = Vec::new();
+            for child in node.children() {
+                match &child.data.borrow().value {
+                    NodeValue::CodeBlock(block) if block.info.contains("uiua") => {
+                        let should_fail = block.info.contains("should fail");
+                        blocks.push((block.literal.clone(), should_fail))
+                    }
+                    _ => blocks.extend(text_code_blocks(child)),
+                }
+            }
+            blocks
+        }
+
+        for (block, should_fail) in text_code_blocks(root) {
+            println!("Code block:\n{}", block);
+            let mut env = uiua::Uiua::with_backend(crate::backend::WebBackend::default());
+            let res = env.run_str(&block);
+            match res {
+                Ok(_) => {
+                    if should_fail {
+                        panic!("\nBlock should have failed:\n{block}")
+                    }
+                }
+                Err(e) => {
+                    if !should_fail {
+                        panic!("\nBlock failed:\n{block}\n{e}")
+                    }
+                }
+            }
+        }
+    }
+}

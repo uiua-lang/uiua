@@ -20,7 +20,7 @@ Swizzles allow you to reorder the stack in a concise way.
 They are written with a `λ` followed by some lowercase letters.
 The `λ` will format from `'` if followed by letters.
 
-```
+```uiua
 # Experimental!
 [λcba 1 2 3 4 5]
 [λbbbbba 1 2]
@@ -33,7 +33,7 @@ Labels are a way to give names to values. This is to aid in readability and debu
 
 Labels are written with a `$` followed by some letters.
 
-```
+```uiua
 # Experimental!
 $foo 1 $bar [2 3 4]
 $baz "hi!"
@@ -41,7 +41,7 @@ $baz "hi!"
 
 Labeled values put in an array will lose their labels unless they are [`box`]()ed.
 
-```
+```uiua
 # Experimental!
 [$a 1 $b 2 $c 3]
 {$a 1 $b 2 $c 3}
@@ -57,11 +57,11 @@ The `‿` will format from `__`.
 
 Function strands bind less tightly than modifiers, so the first term can never be a modifier.
 
-```
+```uiua
 # Experimental!
 ≡⊢‿⇌ [1_2_3 4_5_6 7_8_9]
 ```
-```
+```uiua
 # Experimental!
 ↯⟜⇡‿/+ 2_3
 ```

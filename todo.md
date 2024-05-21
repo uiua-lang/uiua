@@ -4,7 +4,6 @@
   - `un on min/max`
   - `un on join`
   - Optimize `rows` unpack
-  - Test code blocks in site text files
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

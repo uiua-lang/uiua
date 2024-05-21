@@ -49,7 +49,8 @@ impl GridFmt for f64 {
     fn fmt_grid(&self, boxed: bool, _label: bool) -> Grid {
         let f = *self;
         let positive = f.abs();
-        let minus = if f < 0.0 { "¯" } else { "" };
+        let is_neg = f < 0.0;
+        let minus = if is_neg { "¯" } else { "" };
         let s = if (positive - PI).abs() < f64::EPSILON {
             format!("{minus}π")
         } else if (positive - TAU).abs() < f64::EPSILON {
@@ -65,37 +66,43 @@ impl GridFmt for f64 {
         } else if positive.fract() == 0.0 || positive.is_nan() {
             format!("{minus}{positive}")
         } else {
-            let mut formatted = format!("{minus}{positive}");
-            let mut consecutive_start = 0;
-            let mut consecutive_len = 0;
-            let mut hit_decimal = false;
-            for (i, c) in formatted.chars().enumerate() {
-                if c == '.' {
-                    hit_decimal = true;
-                } else if !hit_decimal {
-                    continue;
+            let mut pos_formatted = positive.to_string();
+            if pos_formatted.len() >= 18 {
+                let mut consecutive_start = 0;
+                let mut consecutive_len = 0;
+                let mut hit_decimal = false;
+                for (i, c) in pos_formatted.chars().enumerate() {
+                    if c == '.' {
+                        hit_decimal = true;
+                    } else if !hit_decimal {
+                        continue;
+                    }
+                    let local_len = pos_formatted
+                        .chars()
+                        .skip(i + 1)
+                        .take_while(|&d| d == c)
+                        .count();
+                    if local_len > consecutive_len {
+                        consecutive_start = i;
+                        consecutive_len = local_len;
+                    }
                 }
-                let local_len = formatted
-                    .chars()
-                    .skip(i + 1)
-                    .take_while(|&d| d == c)
-                    .count();
-                if local_len > consecutive_len {
-                    consecutive_start = i;
-                    consecutive_len = local_len;
+                if consecutive_len >= 5 {
+                    if consecutive_start + consecutive_len + 1 == pos_formatted.len() {
+                        pos_formatted.replace_range(consecutive_start + 3.., "…")
+                    } else {
+                        pos_formatted.replace_range(
+                            consecutive_start + 2..consecutive_start + consecutive_len,
+                            "…",
+                        )
+                    }
                 }
             }
-            if consecutive_len >= 5 {
-                if consecutive_start + consecutive_len + 1 == formatted.len() {
-                    formatted.replace_range(consecutive_start + 3.., "…")
-                } else {
-                    formatted.replace_range(
-                        consecutive_start + 2..consecutive_start + consecutive_len,
-                        "…",
-                    )
-                }
+            if is_neg {
+                format!("{minus}{pos_formatted}")
+            } else {
+                pos_formatted
             }
-            formatted
         };
         vec![boxed_scalar(boxed).chain(s.chars()).collect()]
     }

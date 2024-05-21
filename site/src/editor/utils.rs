@@ -107,7 +107,7 @@ impl State {
         }
     }
     pub fn set_code_view(&mut self, code: &str) {
-        logging::log!("set code: {code:?}");
+        // logging::log!("set code: {code:?}");
         self.code = code.into();
         self.set_code.set(code.into());
     }

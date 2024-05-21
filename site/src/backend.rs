@@ -286,13 +286,13 @@ impl SysBackend for WebBackend {
     fn read_until(&self, handle: Handle, delim: &[u8]) -> Result<Vec<u8>, String> {
         let mut streams = self.streams.lock().unwrap();
         let stream = streams.get_mut(&handle).ok_or("Invalid stream handle")?;
-        let pos = stream
-            .contents
+        let offset = stream.contents[stream.pos..]
             .windows(delim.len())
             .position(|w| w == delim)
             .unwrap_or(stream.contents.len());
-        let data = stream.contents[stream.pos..pos].to_vec();
-        stream.pos = (pos + delim.len()).min(stream.contents.len());
+        let end = stream.pos + offset;
+        let data = stream.contents[stream.pos..end].to_vec();
+        stream.pos = (end + delim.len()).min(stream.contents.len());
         Ok(data)
     }
     fn delete(&self, path: &str) -> Result<(), String> {

@@ -4,6 +4,7 @@ mod modifier;
 use std::{
     cell::RefCell,
     collections::{hash_map::DefaultHasher, BTreeSet, HashMap, HashSet},
+    env::current_dir,
     fmt, fs,
     hash::{Hash, Hasher},
     iter::repeat,
@@ -370,7 +371,14 @@ impl Compiler {
         }
         if let InputSrc::File(path) = &src {
             self.current_imports.push(path.to_path_buf());
-            self.scope.file_path = Some(path.to_path_buf());
+            self.scope.file_path = Some(if path.is_absolute() {
+                current_dir()
+                    .ok()
+                    .and_then(|dir| pathdiff::diff_paths(path, dir))
+                    .unwrap_or_else(|| path.to_path_buf())
+            } else {
+                path.to_path_buf()
+            });
         }
 
         let res = self.catching_crash(input, |env| env.items(items, false));

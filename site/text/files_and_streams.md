@@ -25,7 +25,7 @@ To write an entire array to a file, we can use [`&fwa`]() (file write all). The 
 &fwa "file.txt" "Hello, world!"
 ```
 
-Each editor on website has a virtual file system, which means that we can read from files after they have been written to. This is useful for testing file writing functions.
+Each editor on this site has a virtual file system, which means that we can read from files after they have been written to. This is useful for testing file writing functions.
 
 ```
 &fwa "file.bin" ⇡10
@@ -34,7 +34,7 @@ Each editor on website has a virtual file system, which means that we can read f
 
 ## Streams
 
-Stream are an abstraction for send and receiving data in chunks from some source. Similar concepts exist in many programming languages, inluding Uiua.
+Stream are an abstraction for sending and receiving data in chunks from some source. Similar concepts exist in many programming languages, inluding Uiua.
 
 In this tutorial, we will focus on using streams to interact with files. However, Uiua also uses streams for other input/output sources, particularly network sockets.
 

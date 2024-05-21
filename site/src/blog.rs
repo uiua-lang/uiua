@@ -42,15 +42,25 @@ fn BlogHome() -> impl IntoView {
     view! {
         <Title text="Uiua Blog"/>
         <h1>"Uiua Blog"</h1>
-        <Fetch src="https://uiua.org/blog/list.txt" f=|list| {
-            list.lines().filter(|line| !line.is_empty() && !line.starts_with('#')).map(|name| {
-                let (path, name) = name.split_once(": ").unwrap_or_default();
+        // <Fetch src="https://uiua.org/blog/list.txt" f=|list| {
+        //     list.lines().filter(|line| !line.is_empty() && !line.starts_with('#')).map(|name| {
+        //         let (path, name) = name.split_once(": ").unwrap_or_default();
+        //         let (date, name) = name.split_once(" - ").unwrap_or_default();
+        //         let name = name.to_string();
+        //         let date = date.to_string();
+        //         view!(<h3><span class="output-faint">{date}" - "</span><A href={format!("/blog/{path}")}>{name}</A></h3>)
+        //     }).collect::<Vec<_>>().into_view()
+        // }/>
+        {
+            let list = include_str!("../blog/list.txt");
+            list.lines().filter(|line| !line.is_empty() && !line.starts_with('#')).map(|line| {
+                let (path, name) = line.split_once(": ").unwrap_or_default();
                 let (date, name) = name.split_once(" - ").unwrap_or_default();
                 let name = name.to_string();
                 let date = date.to_string();
                 view!(<h3><span class="output-faint">{date}" - "</span><A href={format!("/blog/{path}")}>{name}</A></h3>)
             }).collect::<Vec<_>>().into_view()
-        }/>
+        }
     }
 }
 

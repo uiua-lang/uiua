@@ -42,7 +42,7 @@ fn BlogHome() -> impl IntoView {
     view! {
         <Title text="Uiua Blog"/>
         <h1>"Uiua Blog"</h1>
-        <Fetch src="/blog/list.txt" f=|list| {
+        <Fetch src="https://uiua.org/blog/list.txt" f=|list| {
             list.lines().filter(|line| !line.is_empty() && !line.starts_with('#')).map(|name| {
                 let (path, name) = name.split_once(": ").unwrap_or_default();
                 let (date, name) = name.split_once(" - ").unwrap_or_default();

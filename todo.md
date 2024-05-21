@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - `un on min/max`
   - `un on join`
 - Media window
 - Trace images/audio in pad

@@ -215,6 +215,8 @@ static PSEUDO_INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &([Div], [Mul]),
         &([Rotate], [Neg, Rotate]),
         &([Neg, Rotate], [Rotate]),
+        &([Min], [Min]),
+        &([Max], [Max]),
     ]
 };
 

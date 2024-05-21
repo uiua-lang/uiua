@@ -65,6 +65,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Lots of bug fixes
 ### Website
 - Add a [Documenting Code](https://uiua.org/tutorial/documentation) tutorial
+- Add a [Files and Streams](https://uiua.org/tutorial/filesandstreams) tutorial
 - Add an [Experimental Features](https://uiua.org/docs/experimental) page
 - You can now ctrl+click on a glyph in the editor to open its documentation
 

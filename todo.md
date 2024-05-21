@@ -3,7 +3,6 @@
 - 0.11
   - `un on min/max`
   - `un on join`
-  - Optimize `rows` unpack
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

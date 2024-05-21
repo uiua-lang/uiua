@@ -388,6 +388,7 @@ impl Primitive {
             "ran" => return Some(Primitive::Range),
             "tra" => return Some(Primitive::Transpose),
             "par" => return Some(Primitive::Partition),
+            "dup" => return Some(Primitive::Dup),
             _ => {}
         }
         if let Some(prim) = Primitive::non_deprecated().find(|p| p.name() == name) {

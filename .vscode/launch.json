@@ -6,7 +6,10 @@
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceRoot}/target/debug/uiua",
-            "args": ["eval", "+1 5"],
+            "args": [
+                "run",
+                "main.ua"
+            ],
             "cwd": "${workspaceRoot}",
         },
         {
@@ -14,7 +17,10 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceRoot}/target/debug/uiua.exe",
-            "args": ["eval", "+1 5"],
+            "args": [
+                "run",
+                "main.ua"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
             "environment": [],

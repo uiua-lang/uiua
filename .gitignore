@@ -1,8 +1,6 @@
 .vscode
 .idea
 /target
-/docs
-/site/blog/*.html
 site/dist
 /uiua-modules
 

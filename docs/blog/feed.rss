@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Uiua Blog</title>
+<description>Blog of the Uiua Programming Language</description>
+<link>https://uiua.org/blog</link>
+<atom:link href="https://uiua.org/blog/feed.rss" rel="self" type="application/rss+xml"></atom:link>
+<lastBuildDate>Tue, 24 Sep 2024 20:30:40 +0000</lastBuildDate>
+<item><link>https://uiua.org/blog/uiua-0.12.0</link>
+<guid isPermaLink="false">95d63645-10e4-4312-bbe3-f0a6254c0144</guid>
+<pubDate>Fri, 16 Aug 2024 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.12.0</title></item>
+<item><link>https://uiua.org/blog/uiua-0.11.0</link>
+<guid isPermaLink="false">32cba0cb-2378-4cf9-894c-ea65e2a3ffda</guid>
+<pubDate>Sun, 2 Jun 2024 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.11.0</title></item>
+<item><link>https://uiua.org/blog/uiua-0.10.0</link>
+<guid isPermaLink="false">6841da9d-9b35-4992-92b3-0c6820606733</guid>
+<pubDate>Thu, 4 Apr 2024 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.10.0</title></item>
+<item><link>https://uiua.org/blog/what-will-1-look-like</link>
+<guid isPermaLink="false">113ee6ab-1d29-4115-9a1e-4bb2701d23f0</guid>
+<pubDate>Fri, 19 Jan 2024 00:00:00 +0000</pubDate>
+<title>What will Uiua 1.0 look like?</title></item>
+<item><link>https://uiua.org/blog/second-class-functions</link>
+<guid isPermaLink="false">c6a7b400-5d2b-413a-888b-4cd675c8c1db</guid>
+<pubDate>Fri, 15 Dec 2023 00:00:00 +0000</pubDate>
+<title>Why doesn't Uiua have first-class functions?</title></item></channel></rss>

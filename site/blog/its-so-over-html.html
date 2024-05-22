@@ -1,0 +1,115 @@
+<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://uiua.org/styles.css">
+    </head><body><div id=top><p><a href="https://uiua.org" data-title=>Uiua</a></p><p><a href="https://uiua.org/blog" data-title=>Blog Home</a></p><h1 id="it's-so-over-,">It's So <a href="https://uiua.org/docs/over" data-title=>over ,</a></h1><p><strong>You can read this post with full editor features <a href="https://uiua.org/blog/its-so-over" data-title=>here</a>.</strong></p><p>2025-02-15</p><hr/><p>In the coming Uiua version 0.15.0, the <a href="https://uiua.org/docs/over" data-title=>over ,</a> function will be deprecated. This change is already live on the website and in new builds.</p><p><a href="https://uiua.org/docs/over" data-title=>over ,</a> copied the second-to-top value on the stack to the top of the stack. This is a pretty common primitive in many stack languages, so its removal may seem like an odd choice.</p><p>This change is part of Uiua's general shift toward more structured forms of stack management. The last year has seen many <a href="https://uiua.org/tutorial/evenmoreargument" data-title=>stack manipulation modifiers</a> added to the language. In particular, basically all uses of <a href="https://uiua.org/docs/over" data-title=>over ,</a> can be replaced with <a 
+                        href="https://uiua.org/docs/with" 
+                        data-title="Call a function but keep its last argument before its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⤙</span> with</code>
+                    </a> or <a 
+                        href="https://uiua.org/docs/below" 
+                        data-title="Keep all arguments to a function after the outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">◡</span> below</code>
+                    </a>.</p><p>Here are some examples of how to replace common uses of <a href="https://uiua.org/docs/over" data-title=>over ,</a>:</p><p>The shortest literal replacement for <a href="https://uiua.org/docs/over" data-title=>over ,</a> is <a 
+                        href="https://uiua.org/docs/with" 
+                        data-title="Call a function but keep its last argument before its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⤙</span> with</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/identity" 
+                        data-title="Do nothing with one value"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font stack-function">∘</span> identity</code>
+                    </a>, though it is generally not preferred.</p><code class="code-block">[⤙∘ 1 2]  # [1 1 2]</code><p>Consider that this particular example could be written without <a 
+                        href="https://uiua.org/docs/identity" 
+                        data-title="Do nothing with one value"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font stack-function">∘</span> identity</code>
+                    </a> as well. This is because of <a 
+                        href="https://uiua.org/docs/with" 
+                        data-title="Call a function but keep its last argument before its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⤙</span> with</code>
+                    </a>'s behavior on noadic functions.</p><code class="code-block">[⤙1 2]  # 1:2: ⤙ with's function must take at least 1 argument, but its signature is |0.1</code><p>The common pattern of <code>,,</code> preserved a dyadic function's arguments on the stack. This can be replaced with <a 
+                        href="https://uiua.org/docs/below" 
+                        data-title="Keep all arguments to a function after the outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">◡</span> below</code>
+                    </a>.</p><code class="code-block">[◡+ 2 3]          # [5 2 3]
+{◡⊟ 1_2_3 4_5_6}  
+
+# [5 2 3]
+# ┌─                       
+#   1 2 3│[1 2 3]│[4 5 6]  
+#   4 5 6│       │         
+#                         ┘</code><p>Another common pattern is needing to call a monadic function on the second value on the stack, preserving that value and putting the result on top. This can be done with <a 
+                        href="https://uiua.org/docs/below" 
+                        data-title="Keep all arguments to a function after the outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">◡</span> below</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/gap" 
+                        data-title="Discard the first argument then call a function"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⋅</span> gap</code>
+                    </a>.</p><code class="code-block">◡⋅△ 1_2_3 [4_5 6_7]  
+
+# ╭─     
+# ╷ 4 5  
+#   6 7  
+#       ╯
+# [1 2 3]
+# [2 2]</code><p>Finally, <a href="https://uiua.org/docs/over" data-title=>over ,</a> was sometimes used to intersperse a value between constants. This can now be done with <a 
+                        href="https://uiua.org/docs/with" 
+                        data-title="Call a function but keep its last argument before its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⤙</span> with</code>
+                    </a>.</p><code class="code-block">2⤙4 [1 2 3 4 5]  # 1:2: ⤙ with's function must take at least 1 argument, but its signature is |0.1</code><code class="code-block">×⊓≥< 2⤙4 [1 2 3 4 5]  # 1:7: ⤙ with's function must take at least 1 argument, but its signature is |0.1</code><p>It's reasonable to ask, with the recent stabilization of <a 
+                        href="https://uiua.org/docs/backward" 
+                        data-title="Call a function with its arguments swapped"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">˜</span> backward</code>
+                    </a>, and the addition of the <code># Experimental!</code> <a 
+                        href="https://uiua.org/docs/self" 
+                        data-title="Call a function with the same array as all arguments"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">˙</span> self</code>
+                    </a> modifier, is deprecation on the horizon for <a 
+                        href="https://uiua.org/docs/flip" 
+                        data-title="Swap the top two values on the stack"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font stack-function">:</span> flip</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/duplicate" 
+                        data-title="Duplicate the top value on the stack"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font stack-function">.</span> duplicate</code>
+                    </a>? The short answer is no, not at the moment. <a 
+                        href="https://uiua.org/docs/flip" 
+                        data-title="Swap the top two values on the stack"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font stack-function">:</span> flip</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/duplicate" 
+                        data-title="Duplicate the top value on the stack"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font stack-function">.</span> duplicate</code>
+                    </a> are a bit more fundamental than <a href="https://uiua.org/docs/over" data-title=>over ,</a> was, and they allow for certain nice notations.</p><p>That's all! <a href="https://uiua.org/docs/over" data-title=>over ,</a> was one of the oldest primitives in Uiua, but part of the language has always been about exploring the best ways to write tacit code. <a href="https://uiua.org/docs/over" data-title=>over ,</a> can make the stack harder to reason about, as it requires keeping the state of the stack at various points in your head. We have since discovered better ways to do the same thing, and so we say goodbye to <a href="https://uiua.org/docs/over" data-title=>over ,</a>. 🫡</p></div></body></html>

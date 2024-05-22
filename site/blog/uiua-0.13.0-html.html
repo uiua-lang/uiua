@@ -1,0 +1,230 @@
+<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://uiua.org/styles.css">
+    </head><body><div id=top><p><a href="https://uiua.org" data-title=>Uiua</a></p><p><a href="https://uiua.org/blog" data-title=>Blog Home</a></p><h1 id="announcing-uiua-0.13.0">Announcing Uiua 0.13.0</h1><p><strong>You can read this post with full editor features <a href="https://uiua.org/blog/uiua-0.13.0" data-title=>here</a>.</strong></p><p>2024-10-21</p><hr/><p>Uiua 0.13.0 is now available!</p><p>You can find the full changelog <a href="https://uiua.org/docs/changelog#0.13.0---2024-10-21" data-title=>here</a>.</p><p>Uiua is a general purpose, stack-based, array-oriented programming language with a focus on tacit code.</p><p>This release, like most, is the biggest one yet! Here are some highlights:</p><h2 id="new-inverses">New Inverses</h2><p>A new inversion modifier, <a 
+                        href="https://uiua.org/docs/anti" 
+                        data-title="Invert the behavior of a function, treating its first argument as a constant"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⌝</span> anti</code>
+                    </a>, has been added.</p><p>It captures certain useful inversion patterns. In general, it inverts a function as if its first argument were a constant.</p><code class="code-block">°(+1) 5  # 4
+⌝+ 1 5   # 4 4</code><p>This enables some useful functionality.</p><code class="code-block">⌝↘ 3 [1 2 3]           # [0 0 0 1 2 3]
+⬚@.⌝⊏ 1_10_4_5 "abcd"  # ".a..cd....b" [0 0 0 1 2 3]</code><p>The new <a 
+                        href="https://uiua.org/docs/obverse" 
+                        data-title="Define the various inverses of a function"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⌅</span> obverse</code>
+                    </a> replaces, extends, unifies, and deprecates the existing <code>setinv</code> and <code>setund</code> modifiers.</p><p>It allows you set multiple kinds of inverses at once.</p><p>The <a href="https://uiua.org/tutorial/Inverses" data-title=>Inverses Tutorial</a> has been updated to include <a 
+                        href="https://uiua.org/docs/anti" 
+                        data-title="Invert the behavior of a function, treating its first argument as a constant"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⌝</span> anti</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/obverse" 
+                        data-title="Define the various inverses of a function"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⌅</span> obverse</code>
+                    </a>.</p><p><a 
+                        href="https://uiua.org/docs/un" 
+                        data-title="Invert the behavior of a function"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">°</span> un</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/by" 
+                        data-title="Call a function but keep its last argument after its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⊸</span> by</code>
+                    </a> can now be used to access the "undo" part of a function's <a 
+                        href="https://uiua.org/docs/under" 
+                        data-title="Operate on a transformed array, then reverse the transformation"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⍜</span> under</code>
+                    </a> functionality.</p><p>This allows for "setter"-type behavior. For example, you can set the <a 
+                        href="https://uiua.org/docs/first" 
+                        data-title="Get the first row of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⊢</span> first</code>
+                    </a> row of an array:</p><code class="code-block">°⊸⊢ 5 [1 2 3 4]  # [5 2 3 4]</code><p>Or set the magnitude of a complex number:</p><code class="code-block">°⊸⌵ 10 . ℂ3 4  # 8+6i 4+3i</code><h2 id="new-stack-manipulation-modifiers">New Stack Manipulation Modifiers</h2><p>The <a 
+                        href="https://uiua.org/docs/with" 
+                        data-title="Call a function but keep its last argument before its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⤙</span> with</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/below" 
+                        data-title="Keep all arguments to a function after the outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">◡</span> below</code>
+                    </a> modifiers have been stabilized.</p><p><a 
+                        href="https://uiua.org/docs/with" 
+                        data-title="Call a function but keep its last argument before its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⤙</span> with</code>
+                    </a> keeps its function's last argument on top of the stack.</p><code class="code-block">⊟⤙+1 5        # [5 6]
+⊂⤙⊡1 "hello"  # "helloe" [5 6]</code><p><a 
+                        href="https://uiua.org/docs/below" 
+                        data-title="Keep all arguments to a function after the outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">◡</span> below</code>
+                    </a> preserves a function's arguments below its outputs on the stack.</p><code class="code-block">[◡+] 1 2  # [3 1 2]</code><h2 id="orient-⤸"><a 
+                        href="https://uiua.org/docs/orient" 
+                        data-title="Change the order of the axes of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⤸</span> orient</code>
+                    </a></h2><p><a 
+                        href="https://uiua.org/docs/orient" 
+                        data-title="Change the order of the axes of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⤸</span> orient</code>
+                    </a> has been stabilized. It reorders the axes of an array, rearranging the elements as necessary.</p><code class="code-block">°△3_3_2   
+
+# ╭─                   
+# ╷ 0 1   6  7  12 13  
+# ╷ 2 3   8  9  14 15  
+#   4 5  10 11  16 17  
+#                     ╯
+{⊙∘} ⤙⤸1  
+
+# ┌─                                       
+#   0 1   6  7  12 13│ 0  1   2  3   4  5  
+#   2 3   8  9  14 15│ 6  7   8  9  10 11  
+#   4 5  10 11  16 17│12 13  14 15  16 17  
+#                                         ┘</code><p><a 
+                        href="https://uiua.org/docs/anti" 
+                        data-title="Invert the behavior of a function, treating its first argument as a constant"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⌝</span> anti</code>
+                    </a><a 
+                        href="https://uiua.org/docs/orient" 
+                        data-title="Change the order of the axes of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⤸</span> orient</code>
+                    </a> allows you to combine axes, which is equivalent to taking the diagonal along those axes.</p><code class="code-block">°△3_3     
+
+# ╭─       
+# ╷ 0 1 2  
+#   3 4 5  
+#   6 7 8  
+#         ╯
+⌝⤸ 0_0 .  
+
+# ╭─       
+# ╷ 0 1 2  
+#   3 4 5  
+#   6 7 8  
+#         ╯
+# [0 4 8]</code><h2 id="assert-⍤-tests"><a 
+                        href="https://uiua.org/docs/assert" 
+                        data-title="Throw an error if a condition is not met"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⍤</span> assert</code>
+                    </a> Tests</h2><p>Top-level <a 
+                        href="https://uiua.org/docs/assert" 
+                        data-title="Throw an error if a condition is not met"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⍤</span> assert</code>
+                    </a>ions are now interpreted as tests in some contexts. This includes in the website pad, or the <code>uiua watch</code> and <code>uiua test</code> commands, but <em>not</em> the <code>uiua run</code> command.</p><code class="code-block">⍤⤙≍ 3 +1 2               
+⍤⤙≍ [1 2 3] ⊂1 [2 3]     
+⍤⤙≍ "Hello" ⍜⊢⌵ "hello"  </code><h2 id="formatter-changes">Formatter Changes</h2><p>Consecutive single-line bindings now have their <code>←</code>s aligned. Try formatting this example:</p><code class="code-block">F ← +1       
+Avg ← ÷⧻⟜/+  
+Re ← ◌°ℂ     </code><p>Modules now use fancy delimiters. They format from the existing <code>---</code>s. Try it out!</p><code class="code-block">---MyModule  
+  F = +*10
+---</code><h2 id="line-manipulation">Line Manipulation</h2><p>The behavior of <code>;</code> and <code>;;</code> has been changed.</p><p>The main useful change is the formatter will reverse code that is separated by <code>;</code>s, so you don't have to press <code>←</code> quite as much.</p><p>Try it out:</p><code class="code-block">1 2;+; *10 # Format!# 30</code><p>You can read more about this functionality <a href="https://uiua.org/tutorial/codetactility#line-manipulation" data-title=>here</a>.</p><h2 id="new-cli-commands">New CLI Commands</h2><p>The native interpreter has two new commands: <code>uiua find</code> and <code>uiua doc</code>.</p><p><code>uiua find</code> searches a file or directory for a string of formatted uiua code. This is useful when you cannot easily type some glyphs in your editor's default find interface.</p><p><code>uiua doc</code> prints documentation for a function or modifier. That's it! It is the same documentation that is present on the website.</p><h2 id="#-experimental!"><code># Experimental!</code></h2><p>This release added a lot of experimental features. Experimental features are not guaranteed to make it into the stable language, but they are added so they can be tried out.</p><p>Experimental features can be enabled by putting an <code># Experimental!</code> comment at the top of a file.</p><p><a href="https://uiua.org/docs/experimental#subscripts" data-title=>Subscripts</a> are an interesting way to augment the behavior of a function or modifier.</p><p>Subscript numbers may immediately follow a glyph. These can be typed with <code>,</code> followed by some digits.</p><code class="code-block"># Experimental!     
+[∩,3+ 1 2 3 4 5 6] # Try formatting!# [3 7 11]</code><code class="code-block"># Experimental!
+√₃ 27   # 3
+√₄ 625  # 5 3</code><code class="code-block"># Experimental!
+⁅₃ π  # 3.142</code><code class="code-block"># Experimental!   
+⊟₄ 1 2 3 4        # [1 2 3 4]
+□₃ "abc" 5 °△2_3  
+
+# [1 2 3 4]
+# ┌─                
+#   "abc"│∙5│0 1 2  
+#        │  │3 4 5  
+#                  ┘</code><code class="code-block"># Experimental!
+⍜(×10|-2) 5  # 4.8
+⍜×₁₀-₂ 5     # 4.8 4.8</code><p>Subscript behavior is not defined in a general way. Each function or modifier may interpret a subscript differently.</p><p>All behaviors are specified <a href="https://uiua.org/docs/experimental#subscript-modifiers" data-title=>here</a>.</p><p><a href="https://uiua.org/docs/experimental#data-definitions" data-title=>Data Definitions</a> define a module that has a constructor and getters. The constructed object is just a normal array.</p><code class="code-block"># Experimental! 
+~Foo {Bar Baz}  
+Foo 1 "Hi"      
+
+# ┌─           
+#    Bar│Baz   
+#   ∙1  │"Hi"  
+#             ┘
+Foo~Baz .       
+
+# ┌─           
+#    Bar│Baz   
+#   ∙1  │"Hi"  
+#             ┘
+# "Hi"</code><code class="code-block"># Experimental!       
+~Color [r g b a ← 1]  
+Color 0.5 1 0.2       # [0.5 1 0.2 1]
+Color!(+r⟜b) .        # 0.7 [0.5 1 0.2 1]</code><p><code>enum</code>-like constructs are also possible. These automatically add tags to the array to disambiguate variants.</p><code class="code-block"># Experimental!        
+┌─╴Foo                 
+  |Bar {A B}
+  |Baz [x y z]
+  |Qux 
+└─╴
+Foo~Bar "Neat" "Cool"
+Foo~Baz 1 2 4
+Foo~Qux</code><p>You can read about everything data definitions can do <a href="https://uiua.org/docs/experimental#data-definitions" data-title=>here</a>.</p><h2 id="contributors">Contributors</h2><p>No previous Uiua release has had so many direct code contributions!</p><p>In particular, I'd like to thank:</p><ul><li><p><a href="https://github.com/omnikar/" data-title=>Omnikar</a> for implementing <a 
+                        href="https://uiua.org/docs/un" 
+                        data-title="Invert the behavior of a function"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">°</span> un</code>
+                    </a><a 
+                        href="https://uiua.org/docs/by" 
+                        data-title="Call a function but keep its last argument after its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⊸</span> by</code>
+                    </a></p></li><li><p><a href="https://github.com/amatgil" data-title=>amatgil</a> for implementing the new behavior for <a 
+                        href="https://uiua.org/docs/gen" 
+                        data-title="Generate an array of random numbers with a seed"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">gen</span></code>
+                    </a> and the experimental <a href="https://uiua.org/docs/around" data-title=>around ’</a> function</p></li><li><p><a href="https://github.com/Marcos-cat/" data-title=>Marcos-cat</a> for implementing <a 
+                        href="https://uiua.org/docs/fill" 
+                        data-title="Set the fill value for a function"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⬚</span> fill</code>
+                    </a>ed <a 
+                        href="https://uiua.org/docs/csv" 
+                        data-title="Encode an array into a CSV string"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">csv</span></code>
+                    </a>, <a 
+                        href="https://uiua.org/docs/memberof" 
+                        data-title="Check if each row of one array exists in another"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">∊</span> memberof</code>
+                    </a><a 
+                        href="https://uiua.org/docs/range" 
+                        data-title="Make an array of all natural numbers less than a number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⇡</span> range</code>
+                    </a> optimization, and a more persistent pad virtual filesystem</p></li></ul><p>Also, check out <a href="https://github.com/omnikar/" data-title=>Omnikar</a>'s awesome <a href="https://github.com/omnikar/uiua-plot" data-title=>uiua-plot</a> library for making plots and graphs in Uiua!</p><h2 id="💟">💟</h2><p>Thanks as always to everyone in the Uiua community, and to Uiua's generous <a href="https://github.com/sponsors/uiua-lang" data-title=>GitHub Sponsors</a>!</p><p>Again, you can find the full changelog for this release <a href="https://uiua.org/docs/changelog#0.13.0---2024-10-21" data-title=>here</a>.</p><p>You can join the <a href="https://discord.gg/3r9nrfYhCc" data-title=>Uiua Discord</a> to chat about the language, ask questions, or get help. We also do code challenges and discuss language features!</p><h2 id="🐈\u{200d}⬛🐈">🐈‍⬛🐈</h2><code class="code-block">▽⟜≡▽ 0.5 Cats  </code></div></body></html>

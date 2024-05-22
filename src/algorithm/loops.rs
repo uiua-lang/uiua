@@ -15,7 +15,7 @@ use crate::{
     Boxed, FormatShape, Function, ImplPrimitive, Primitive, Shape, Signature, Uiua, UiuaResult,
 };
 
-use super::multi_output;
+use super::{multi_output, validate_size_impl};
 
 pub fn flip<A, B, C>(f: impl Fn(A, B) -> C + Copy) -> impl Fn(B, A) -> C + Copy {
     move |b, a| f(a, b)
@@ -84,9 +84,9 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
 }
 
 fn repeat_impl(f: Function, n: f64, env: &mut Uiua) -> UiuaResult {
+    let sig = f.signature();
     if n.is_infinite() {
         // Converging repeat
-        let sig = f.signature();
         if sig.args == 0 {
             return Err(env.error(format!(
                 "Converging {}'s function must have at least 1 argument",
@@ -127,6 +127,15 @@ fn repeat_impl(f: Function, n: f64, env: &mut Uiua) -> UiuaResult {
             return Err(env.error("Repetitions must be a natural number or infinity"));
         }
         let n = n as usize;
+        if sig.outputs > sig.args {
+            let delta = sig.outputs - sig.args;
+            if validate_size_impl::<Value>([n, delta]).is_err() {
+                return Err(env.error(format!(
+                    "{} would create too many values on the stack",
+                    Primitive::Repeat.format()
+                )));
+            }
+        }
         for _ in 0..n {
             env.call(f.clone())?;
         }

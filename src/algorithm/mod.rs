@@ -58,7 +58,23 @@ fn max_shape(a: &[usize], b: &[usize]) -> Shape {
     new_shape
 }
 
+pub enum SizeError {
+    Overflow,
+    TooLarge(usize),
+}
+
 pub fn validate_size<T>(sizes: impl IntoIterator<Item = usize>, env: &Uiua) -> UiuaResult<usize> {
+    validate_size_impl::<T>(sizes).map_err(|e| match e {
+        SizeError::Overflow => env.error("Array size calculation overflowed"),
+        SizeError::TooLarge(size) => {
+            env.error(format!("Array of {size} elements would be too large"))
+        }
+    })
+}
+
+pub(crate) fn validate_size_impl<T>(
+    sizes: impl IntoIterator<Item = usize>,
+) -> Result<usize, SizeError> {
     let (elements, mut overflowed) =
         sizes
             .into_iter()
@@ -71,7 +87,7 @@ pub fn validate_size<T>(sizes: impl IntoIterator<Item = usize>, env: &Uiua) -> U
     let (size, ovf) = elements.overflowing_mul(elem_size);
     overflowed |= ovf;
     if overflowed {
-        return Err(env.error("Array size calculation overflowed"));
+        return Err(SizeError::Overflow);
     }
     let max_mega = if cfg!(target_arch = "wasm32") {
         256
@@ -79,7 +95,7 @@ pub fn validate_size<T>(sizes: impl IntoIterator<Item = usize>, env: &Uiua) -> U
         4096
     };
     if size > max_mega * 1024u64.pow(2) {
-        return Err(env.error(format!("Array of {} elements would be too large", elements)));
+        return Err(SizeError::TooLarge(elements as usize));
     }
     Ok(elements as usize)
 }

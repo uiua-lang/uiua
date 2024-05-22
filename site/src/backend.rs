@@ -9,6 +9,7 @@ use std::{
 
 use crate::{editor::get_ast_time, weewuh};
 use leptos::*;
+use leptos_query::{create_query, QueryOptions};
 use uiua::{Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
@@ -31,7 +32,7 @@ struct VirtualStream {
 
 thread_local! {
     static GLOBAL_FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = Default::default();
-    static REQ: RefCell<Option<FetchReq>> = const { RefCell::new(None) };
+    static REQ: RefCell<Option<FetchReq>> = Default::default();
 }
 
 pub fn drop_file(path: PathBuf, contents: Vec<u8>) {
@@ -384,37 +385,45 @@ impl SysBackend for WebBackend {
 }
 
 struct FetchReq {
-    src: String,
-    resouce: Resource<(), Result<String, String>>,
+    url: String,
+    query: Box<dyn Fn() -> Option<Result<String, String>>>,
+    tries: u32,
 }
 
-pub fn try_fetch_sync(src: &str) -> Option<Result<String, String>> {
+pub fn try_fetch_sync(url: &str) -> Option<Result<String, String>> {
     REQ.with(|req| {
         let mut req = req.borrow_mut();
-        if let Some(req) = req.as_mut().filter(|req| req.src == src) {
-            req.resouce.get()
+        let url = url.to_string();
+        if let Some(req) = req.as_mut().filter(|req| req.url == url) {
+            req.tries += 1;
+            if req.tries > 20 {
+                return Some(Err("Failed to fetch".into()));
+            }
+            (req.query)()
         } else {
-            let src = src.to_string();
             *req = Some(FetchReq {
-                src: src.clone(),
-                resouce: create_resource(
-                    || (),
-                    move |_| {
-                        let src = src.clone();
-                        async move { fetch(&src).await }
-                    },
-                ),
+                url: url.clone(),
+                query: {
+                    let query_res = create_query(fetch_string, QueryOptions::default())
+                        .use_query(move || url.clone());
+                    Box::new(move || query_res.data.get())
+                },
+                tries: 0,
             });
             None
         }
     })
 }
 
-pub async fn fetch(src: &str) -> Result<String, String> {
+async fn fetch_string(s: String) -> Result<String, String> {
+    fetch(&s).await
+}
+
+pub async fn fetch(url: &str) -> Result<String, String> {
     let mut opts = RequestInit::new();
     opts.method("GET");
     opts.mode(RequestMode::Cors);
-    let request = Request::new_with_str_and_init(src, &opts).map_err(|e| format!("{e:?}"))?;
+    let request = Request::new_with_str_and_init(url, &opts).map_err(|e| format!("{e:?}"))?;
     let window = web_sys::window().unwrap();
     let resp_value = JsFuture::from(window.fetch_with_request(&request))
         .await

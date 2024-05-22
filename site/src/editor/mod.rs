@@ -455,9 +455,6 @@ pub fn Editor<'a>(
         let key = key.as_str();
         // logging::log!("key: {key:?}");
         match key {
-            "Process" => {
-                // IME composition
-            }
             "Enter" => {
                 if os_ctrl(event) || event.shift_key() {
                     run(true, true);

@@ -1,0 +1,1 @@
+importScripts("./worker.js");wasm_bindgen("./worker_bg.wasm");

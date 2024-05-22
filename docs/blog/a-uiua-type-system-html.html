@@ -1,0 +1,203 @@
+<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://uiua.org/styles.css">
+    </head><body><div id=top><p><a href="https://uiua.org" data-title=>Uiua</a></p><p><a href="https://uiua.org/blog" data-title=>Blog Home</a></p><h1 id="a-uiua-type-system">A Uiua Type System</h1><p><strong>You can read this post with full editor features <a href="https://uiua.org/blog/a-uiua-type-system" data-title=>here</a>.</strong></p><p>2026-08-01</p><hr/><p>This blog post explains the rationale and design of Uiua's <code># Experimental!</code> new type system.</p><h2 id="a-dynamic-language">A Dynamic Language</h2><p>Uiua, like most array languages, is dynamically-typed. While the shape and the scalar type of an array can often be known at compile-time, the language is not designed in a way that makes this <em>always</em> possible. Anything that involves shapes or scalar types derived from user input, the environment, or randomness can necessarily only be know at run time. Consider these examples:</p><p>Runtime variable scalar type:</p><code class="code-block">F ← ⍥(˜-@a)⚂₁₀   
+⊃(F|F|F|F|F) @U  # 12 12 12 12 12</code><p>Runtime variable shape:</p><code class="code-block">↯ ⁅◿10×10now 0  # [0]</code><p>In most cases, this make Uiua programs simpler to write. You don't need to specify concrete information about array in function type signatures as you would in a statically typed language. Also, functions can work on many different types and shapes of array.</p><code class="code-block">F ← ⊂↯               
+F 4 0 [1 2 3]        # [0 0 0 0 1 2 3]
+F 3 [1 2] [3_5 5_6]  
+
+# [0 0 0 0 1 2 3]
+# ╭─     
+# ╷ 1 2  
+#   1 2  
+#   1 2  
+#   3 5  
+#   5 6  
+#       ╯
+F 8 @U "iua"         
+
+# [0 0 0 0 1 2 3]
+# ╭─     
+# ╷ 1 2  
+#   1 2  
+#   1 2  
+#   3 5  
+#   5 6  
+#       ╯
+# "UUUUUUUUiua"</code><p>While there is a small performance overhead of checking the types at runtime, the array paradigm makes it easy to do the checks only single time for an operation on many values.</p><p>However, this dynamism can be a double-edged sword, especially in larger and/or longer-lived codebases where maintainability is a concern.</p><h2 id="prior-art">Prior Art</h2><p>This is not a new problem in dynamically-typed languages. Many of the prominent dynamic languages have systems for <em>gradual</em> types: opt-in type checking for the parts of the code that really need it. This generally comes in the form of either some tooling-supported type specification syntax (JSDoc, Python types, LDoc, etc) or a full super-set language (TypeScript, Luau, etc).</p><p>While the specifics of each of these systems can vary, the user interacts with most type systems in a similar way: they specify input and/or output types, and the compiler/interpreter/tooling uses that information to check types and compile/runtime and/or show the types in documentation. This is a useful mode of interaction, and any potential Uiua type system should support both type checking and type documentation.</p><h2 id="potential-system:-a-language-for-types">Potential System: A language for types</h2><p>Most languages with types have an entire sub-language for specifying types. Consider the type that is a hash map with strings as keys and where each value is a tuple of a float and a list of integers. This is generally expressed in a similar way in all languages, with varying levels of verbosity, from Haskell's <code>Map String (Float, [Int])</code> to C++'s <code>std::unordered_map<std::string, std::pair<float, std::vector<int>>></code>. There are languages that break this mold though, such as OCaml <code>(string, float * int list) Hashtbl.t</code>, which puts the hash map type <em>after</em> the inner types, or Zig <code>std.StringHashMap(struct { f32, []usize })</code>, in which generic types are functions.</p><p>The actual semantics of these systems vary widely, but the goal is generally for the type of a value to be able to be specific enough to uphold certain invariants, for catching errors at check-time and/or allowing for optimizations when a type is known.</p><p>Array languages are slightly different in that while we do model our domains in our data, basically every value is some kind of array. This could make an array language's type system potentially very simple. Simply specify the scalar type and the shape of each value. Something so simple might not even need to be implemented as a type system, as it might be so little cognitive overhead as to be manageable by the user themselves.</p><p>But of course, even array types are not so simple. The most common variance in an array value is its shape. Some axes may be a static, known size, but other can be dynamic. The rank of the array itself may even be unknown at compile time; this is one of the consequences of rank polymorphism. On top of this shape variability is managing the types of nested arrays, which in Uiua come in the form of boxes. Do all the boxed items have the same inner type? Do they vary because we are using the box array as a way to group heterogeneous data, as in a <a href="https://www.uiua.org/tutorial/Data%20Definitions" data-title=>data definition</a>? All of these should be encodable in a type system.</p><p>If Uiua were to take a similar approach to the languages referenced above, it may have some type sub-language that can be added to existing doc signature comments.</p><code class="code-block"># Magnitude:Real ? Numbers:Real[_]
+Mag ← ⍜˙×/+  </code><p>In this imaginary syntax, <code>[_]</code> indicates an array of rank one with an unknown axis length. Of course, we then have to ask how this type signature could be expanded to take into account the rank-polymorphic nature of this function.</p><code class="code-block">Mag ← ⍜˙×/+     
+Mag [3 4]       # 5
+Mag [3_5 4_12]  # [5 13] 5</code><p>A syntax would be needed to specify the variable-rank shape of the input and the corresponding reduced-rank output. The system becomes a burden on both the user, who may end up writing more type code than actual code, and the implementer (me), who has to implement a complex type system that takes into account many constraints.</p><p>There is also a Uiua-specific reason that I did not ultimately choose a system like this.</p><h2 id="formatting">Formatting</h2><p>Uiua's formatter does more than <em>any</em> language that is even semi-popular. Not only does it turn words into glyphs and align brackets and things, but it also includes <a href="https://www.uiua.org/tutorial/codetactility#line-manipulation" data-title=>line manipulation</a>, comment-rewriting (<a href="https://www.uiua.org/tutorial/Basic%20Data%20Manipulation%20and%20Formatting#output-comments" data-title=>Output Comments</a>), rich unicode delimiters (<a href="https://www.uiua.org/tutorial/Modules" data-title=>Modules</a>), and snippet-like <a href="https://www.uiua.org/docs/idioms#multi-aliases" data-title=>multi-glyph aliases</a>.</p><p>The Uiua formatter is a fundamental part of how the language is meant to be used, and indeed it can be leveraged by a type system to do things other languages can't or don't.</p><p>Some strongly typed languages like OCaml or TypeScript have very powerful type systems that can figure out a <em>lot</em> for you. You often don't even need to provide types annotations for certain things. However, this can cause problems when, for example, the type of the value you return from a function is not what you think it is. This can then bubble up through multiple functions and the resulting type error is attached to code far from where the actual problem is. So people write the type annotation even when they don't strictly have to. But if they write the annotations anyway, what was the point of making the type systems so powerful in the first place?</p><p>Uiua's new type system can figure out some argument and output types and then <em>insert them</em> into the code itself, allowing the user to verify the correctness of their function without having to explicitly specify return types themselves. Other languages may have LSP implementations that provide this as a code action, but Uiua can give it first-class support and closely integrate it into the language.</p><p>We'll see further down how Uiua can take advantage of the formatter to insert types.</p><h2 id="⊨-validate"><a
+                        href="https://uiua.org/docs/validate"
+                        data-title="Validate a value's type and/or shape"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊨</span> validate</code>
+                    </a></h2><p><a
+                        href="https://uiua.org/docs/validate"
+                        data-title="Validate a value's type and/or shape"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊨</span> validate</code>
+                    </a> is a new function that takes both a <em>type specification</em> and a value and either returns the value unchanged or errors if the type specification does not match the value. Like everything else in Uiua, the type specification is just an array. This is so that while you have to know how to construct a type specification for the type you want, you still write it in normal Uiua rather than a separate language.</p><p>You can read the specifics of type specifications in <a
+                        href="https://uiua.org/docs/validate"
+                        data-title="Validate a value's type and/or shape"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊨</span> validate</code>
+                    </a>'s documentation, but in short, it is either a scalar character representing the scalar type, a list of numbers representing the shape, or a box list containing both the scalar type and the axis lengths. <code>∞ infinity</code> serves as a wildcard axis length. Most of the scalar characters specifying types have single-glyph <a href="https://www.uiua.org/docs/constants" data-title=>constants</a> that format from an alias, such as <code>nat</code> -> <code>ℕ</code> for natural numbers.</p><code class="code-block"># Experimental!        
+⊨ℕ 5                  # Scalar natural number# 5
+⊨𝕌 @X                 # Scalar unicode character# @X 5
+⊨[2 3] [1_2_3 4_5_6]  # Any 2×3 array
+
+# 5
+# @X
+# ╭─       
+# ╷ 1 2 3  
+#   4 5 6  
+#         ╯
+⊨{ℝ 2 2} [4_¯5.1 3_0] # 2×2 array of real numbers
+
+# 5
+# @X
+# ╭─       
+# ╷ 1 2 3  
+#   4 5 6  
+#         ╯
+# ╭─        
+# ╷ 4 ¯5.1  
+#   3  0    
+#          ╯
+⊨{𝕌∞} "Uiua"          # List of characters; `str` alias
+
+# 5
+# @X
+# ╭─       
+# ╷ 1 2 3  
+#   4 5 6  
+#         ╯
+# ╭─        
+# ╷ 4 ¯5.1  
+#   3  0    
+#          ╯
+# "Uiua"</code><p>Here are some examples of the error messages.</p><code class="code-block"># Experimental!                    
+⍣⊨⋅⋅∘ ℕ ¯3                         # "1:2: Type error: expected array of ℕ but found array of ℤ"
+⍣⊨⋅⋅∘ 𝕌 6                          # "1:2: Type error: expected array of 𝕌 but found array of ℕ" "1:2: Type error: expected array of ℕ but found array of ℤ"
+⍣⊨⋅⋅∘ [2 3] [1_2 3_4 5_6]          # "1:2: Type error: expected shape [2×3] but found shape [3×2]" "1:2: Type error: expected array of 𝕌 but found array of ℕ" "1:2: Type error: expected array of ℕ but found array of ℤ"
+⍣⊨⋅⋅∘ {ℝ ∞ 3} [4_¯5.1 3_0]         # "1:2: Type error: expected shape [_×3] but found shape [2×2]" "1:2: Type error: expected shape [2×3] but found shape [3×2]" "1:2: Type error: expected array of 𝕌 but found array of ℕ" "1:2: Type error: expected array of ℕ but found array of ℤ"
+⍣⊨⋅⋅∘ {𝕌∞} ["Uiua" " is " "cool"]  # "1:2: Type error: expected shape [_] but found shape [3×4]" "1:2: Type error: expected shape [_×3] but found shape [2×2]" "1:2: Type error: expected shape [2×3] but found shape [3×2]" "1:2: Type error: expected array of 𝕌 but found array of ℕ" "1:2: Type error: expected array of ℕ but found array of ℤ"</code><p>Type specifications can be nested to validate structure-like box arrays.</p><code class="code-block"># Experimental!              
+⊨{{𝕌∞} ℕ} {"Dan" 31}         # ["Dan"│∙31]
+⍣⊨⋅⋅∘ {{𝕌∞} ℕ} {"Dan"}       # "1:2: Type error: expected shape [2] but found shape [1]" ["Dan"│∙31]
+⍣⊨⋅⋅∘ {{𝕌∞} ℕ} {[1 2 3] 10}  # "1:2: Type error: expected array of 𝕌 but found array of ℕ" "1:2: Type error: expected shape [2] but found shape [1]" ["Dan"│∙31]</code><p>Structure-like type specifications are built into data definitions as a <code>t</code> item. Use <a
+                        href="https://uiua.org/docs/validate"
+                        data-title="Validate a value's type and/or shape"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊨</span> validate</code>
+                    </a> in the initializer to specify a field's type.</p><code class="code-block"># Experimental!                  
+~Person {Name ← ⊨{𝕌∞}|Age ← ⊨ℕ}  
+Person.t                         # Person: [[@𝕌│∙∞]│@ℕ]
+⊨Person.t Person "Dan" 31        
+
+# Person: [[@𝕌│∙∞]│@ℕ]
+# ┌─            
+#   Name │ Age  
+#   "Dan"│∙31   
+#              ┘</code><p>Sided <a
+                        href="https://uiua.org/docs/validate"
+                        data-title="Validate a value's type and/or shape"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊨</span> validate</code>
+                    </a> specifies that the shape is a shape prefix or suffix so that arrays of different ranks are allowed. This example requires that the shape <em>starts</em> with <code>2</code>.</p><code class="code-block"># Experimental!               
+⊨⌞ [2] [1 2]                  # [1 2]
+⊨⌞ [2] [1_2 3_4]              
+
+# [1 2]
+# ╭─     
+# ╷ 1 2  
+#   3 4  
+#       ╯
+⊨⌞ [2] [1_2_3 4_5_6]          
+
+# [1 2]
+# ╭─     
+# ╷ 1 2  
+#   3 4  
+#       ╯
+# ╭─       
+# ╷ 1 2 3  
+#   4 5 6  
+#         ╯
+⊨⌞ [2] [[1_2 3_4] [5_6 7_8]]  
+
+# [1 2]
+# ╭─     
+# ╷ 1 2  
+#   3 4  
+#       ╯
+# ╭─       
+# ╷ 1 2 3  
+#   4 5 6  
+#         ╯
+# ╭─          
+# ╷ 1 2  5 6  
+# ╷ 3 4  7 8  
+#            ╯</code><h2 id="type-signature-comments">Type Signature Comments</h2><p>Comments that start with <code>#?</code> are <em>type signature comments</em>. The formatter will replace them with a representation of the overall signature of the function below.</p><code class="code-block"># Experimental!       
+#? Try formatting!    
+F ← /+ val{num∞}      
+#? Try formatting!    
+F ← /+ val{num3 ∞ 2}  </code><p><code>_</code> in this example indicates an axis of unknown length.</p><p>The <code>…</code> in this next example indicates some number of unknown axes between the known ones. Notice we can use <a
+                        href="https://uiua.org/docs/bracket"
+                        data-title="Call two functions on two distinct sets of values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⊓</span> bracket</code>
+                    </a> to specify multiple argument types. Also note that even though we didn't specify the scalar types of the arguments, the output scalar type is still characters <code>𝕌</code>, as <a
+                        href="https://uiua.org/docs/add"
+                        data-title="Add values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">+</span> add</code>
+                    </a> assumes numeric scalar types when a type is unknown.</p><code class="code-block"># Experimental!          
+#? 2×3×…𝕌 ? [3] [2×…]    
+F ← +@a+¤ ⊓(⊨[3]|⊨⌞[2])  
+F [0 1 2] [0_0_0 0_1_0]  
+
+# ╭─       
+# ╷ "abc"  
+#   "acc"  
+#         ╯</code><p>If a function with a signature comment has a type error, it is shown as a warning.</p><code class="code-block"># Experimental!
+#?           
+F ← + ∩(⊨𝕌)  </code><p>Sometimes <a
+                        href="https://uiua.org/docs/validate"
+                        data-title="Validate a value's type and/or shape"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊨</span> validate</code>
+                    </a> is not even necessary, like when a primitive used in a function has single possible output type.</p><code class="code-block"># Experimental!                   
+#? ℝ ? str                        
+SumFile ← /+⊜⋕¬⊸∊" \t\n\r" &fras  </code><p>You can type check all function in a scope with the <code># Type check!</code> semantic comment.</p><code class="code-block"># Experimental!
+# Type check!
+F ← + °⊟↙3   
+G ← ≡↻°⊏     
+H ← ↯⊓json⋕  </code><h2 id="type-checking">Type Checking</h2><p>The type checker analyzes Uiua code at compile time when a type signature comment or <code># Type check!</code> is present. It is a kind of runtime that runs the code on types instead of concrete values. Which built-in functions are fully or partially supported is best-effort and will gradually be added to over time. Currently, <a
+                        href="https://uiua.org/docs/validate"
+                        data-title="Validate a value's type and/or shape"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊨</span> validate</code>
+                    </a> informs the compile-time type checker, but it also always runs at runtime as well, as the type system can't catch everything. In addition, while compile-time validation occurs, the type system does not currently inform optimizations.</p><p><a
+                        href="https://uiua.org/docs/validate"
+                        data-title="Validate a value's type and/or shape"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊨</span> validate</code>
+                    </a> serves as an input to this type system while type signature comments and warnings provide output. These both remain <code># Experimental!</code> for the time being as there is a lot of design that could be tweaked or overhauled. It's possible we (or I) decide that a Uiua type system is not even necessary at all. That said, the original motivation for a type system was verbose code I saw of people writing their own versions of <a
+                        href="https://uiua.org/docs/validate"
+                        data-title="Validate a value's type and/or shape"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊨</span> validate</code>
+                    </a>, and this well-integrated system is surely better than that.</p><p>While the type system isn't expected to be used on even the majority of Uiua code, it may be useful for large codebases or public-facing library functions. Uiua will stick with the array paradigm's dynamically-typed roots. I'll leave the creation of a fully statically typed array language to someone else.</p></div></body></html>

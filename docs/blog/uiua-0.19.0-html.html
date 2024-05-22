@@ -1,0 +1,244 @@
+<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://uiua.org/styles.css">
+    </head><body><div id=top><p><a href="https://uiua.org" data-title=>Uiua</a></p><p><a href="https://uiua.org/blog" data-title=>Blog Home</a></p><h1 id="announcing-uiua-0.19.0">Announcing Uiua 0.19.0</h1><p><strong>You can read this post with full editor features <a href="https://uiua.org/blog/uiua-0.19.0" data-title=>here</a>.</strong></p><p>2026-08-26</p><hr/><p><strong>🥳 Uiua 0.19.0 is now available! ✨</strong></p><p>You can find the full changelog <a href="https://uiua.org/docs/changelog#0.19.0---2026-08-26" data-title=>here</a>.</p><p>You can download pre-built binaries <a href="https://github.com/uiua-lang/uiua/releases" data-title=>here</a>.</p><p>Uiua is a general-purpose array-oriented programming language with a focus on tacit code.</p><p>All the biggest features added in Uiua 0.19.0 are still <code># Experimental!</code>, but there are also many smaller stable changes.</p><h2 id="notable-small-stable-features">Notable Small Stable Features</h2><h3 id="new-module-access-syntax">New Module Access Syntax</h3><p>Accessing module items now uses <code>.</code> rather than <code>~</code>. This is easier to type and nicer to read. Imports and data definitions still use <code>~</code>. <a href="https://uiua.org/tutorial/Data Definitions#chained-access" data-title=>Chained field access</a> now uses <code>‥</code> instead of <code>≈</code>.</p><code class="code-block">~Date {Year Month Day}                   
+~Stats {Str ← 10|Dex ← 10|Con ← 10}      
+~Person {Name Dob ← Date|Stats ← Stats}  
+Person "Dan" 1396 2 29                   
+
+# ┌─                                                
+#   Name │┌─ Dob               │┌─ Stats            
+#   "Dan"│   Year│ Month│ Day  │   Str│ Dex│ Con    
+#        │  ∙1396│∙2    │∙29   │  ∙10 │∙10 │∙10     
+#        │                    ┘│                 ┘  
+#                                                  ┘
+⊃(Person.Name                            
+| Date.Year Person.Dob
+| Person.Stats‥Dex)</code><h3 id="all-trig-functions">All Trig Functions</h3><p><a
+                        href="https://uiua.org/docs/sine"
+                        data-title="Get the sine of a number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">∿</span> sine</code>
+                    </a> and <a
+                        href="https://uiua.org/docs/atangent"
+                        data-title="Take the arctangent of two numbers"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">∠</span> atangent</code>
+                    </a> have been in the language since the beginning, but all trigonometric and hyperbolic functions are now present as glyphless primitive <code>monadic</code> functions. They also have properly implemented inverses, and work on both real and <a
+                        href="https://uiua.org/docs/complex"
+                        data-title="Make a complex number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">ℂ</span> complex</code>
+                    </a> numbers.</p><p>The new functions are <a
+                        href="https://uiua.org/docs/cos"
+                        data-title="Get the cosine of a number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">cos</span></code>
+                    </a>, <a
+                        href="https://uiua.org/docs/tan"
+                        data-title="Get the tangent of a number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">tan</span></code>
+                    </a>, <a
+                        href="https://uiua.org/docs/sinh"
+                        data-title="Get the hyperbolic sine of a number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">sinh</span></code>
+                    </a>, <a
+                        href="https://uiua.org/docs/cosh"
+                        data-title="Get the hyperbolic cosine of a number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">cosh</span></code>
+                    </a>, and <a
+                        href="https://uiua.org/docs/tanh"
+                        data-title="Get the hyperbolic tangent of a number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">tanh</span></code>
+                    </a>.</p><h3 id="power-set-tuples-⧅">Power Set <a
+                        href="https://uiua.org/docs/tuples"
+                        data-title="Get permutations or combinations of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⧅</span> tuples</code>
+                    </a></h3><p>This is a <strong>breaking change</strong> for <code>monadic</code> <a
+                        href="https://uiua.org/docs/tuples"
+                        data-title="Get permutations or combinations of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⧅</span> tuples</code>
+                    </a>. It now gives the power set rather than prefixes. Sided subscripts give prefixes or suffixes.</p><code class="code-block">⧅□  ⇡3  # [[]│0│1│2│0 1│0 2│1 2│0 1 2]
+⧅⌞□ ⇡4  # [0│0 1│0 1 2│0 1 2 3] [[]│0│1│2│0 1│0 2│1 2│0 1 2]
+⧅⌟□ ⇡4  # [0 1 2 3│1 2 3│2 3│3] [0│0 1│0 1 2│0 1 2 3] [[]│0│1│2│0 1│0 2│1 2│0 1 2]</code><h3 id="rise-⍏-and-fall-⍖-subscripts"><a
+                        href="https://uiua.org/docs/rise"
+                        data-title="Get the indices into an array if it were sorted ascending"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⍏</span> rise</code>
+                    </a> and <a
+                        href="https://uiua.org/docs/fall"
+                        data-title="Get the indices into an array if it were sorted descending"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⍖</span> fall</code>
+                    </a> Subscripts</h3><p>Numeric subscripts for <a
+                        href="https://uiua.org/docs/rise"
+                        data-title="Get the indices into an array if it were sorted ascending"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⍏</span> rise</code>
+                    </a> and <a
+                        href="https://uiua.org/docs/fall"
+                        data-title="Get the indices into an array if it were sorted descending"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⍖</span> fall</code>
+                    </a> give a list of multi-dimensional indices that would sort each rank-n subarray if indexed with <a
+                        href="https://uiua.org/docs/pick"
+                        data-title="Index a row or elements from an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊡</span> pick</code>
+                    </a>.</p><code class="code-block">[3_1_5 2_0_4]  
+
+# ╭─       
+# ╷ 3 1 5  
+#   2 0 4  
+#         ╯
+◡⊡⊸⍏₀          
+
+# ╭─       
+# ╷ 3 1 5  
+#   2 0 4  
+#         ╯
+# ╭─     
+# ╷ 1 1  
+#   0 1  
+#   1 0  
+#   0 0  
+#   1 2  
+#   0 2  
+#       ╯
+# [0 1 2 3 4 5]</code><p>This makes it easy to work with multidimensional ordered data.</p><h2 id="a-note-on-the-purpose-of-#-experimental!">A Note on the Purpose of <code># Experimental!</code></h2><p>From its inception, Uiua has been a testing ground for tacit array programming language design concepts. This has since expanded to include trying out things that most languages do not provide out of the box, but which are nice to have at hand, well-integrated into the language. Currently stabilized instances of this include <a
+                        href="https://uiua.org/docs/json"
+                        data-title="Encode an array into a JSON string"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">json</span></code>
+                    </a>, <a
+                        href="https://uiua.org/docs/hsv"
+                        data-title="Convert a color array from RGB to HSV"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">hsv</span></code>
+                    </a>, <a href="https://uiua.org/docs/image" data-title=>image</a>/<a
+                        href="https://uiua.org/docs/audio"
+                        data-title="Encode audio into a byte array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font triadic-function">audio</span></code>
+                    </a>/<a
+                        href="https://uiua.org/docs/gif"
+                        data-title="Encode an array of image frames in a GIF-encoded byte array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">gif</span></code>
+                    </a> encoding, and one of my personal favorites, <a
+                        href="https://uiua.org/docs/path"
+                        data-title="Find the shortest path between two things"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">path</span></code>
+                    </a>. Most of these features exist baked into the language because they are either commonly used and simple enough to be a lightweight addition, or complex enough to implement on one's own that having a simple, fast version at hand makes the language much more powerful.</p><p>However, there are some other features that most languages do not include out of the box that are currently still <code># Experimental!</code>. This is because they often push the limits of what a language should include out of the box. <a
+                        href="https://uiua.org/docs/layout"
+                        data-title="Render text into an image array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">layout</span></code>
+                    </a> is really useful for text rendering, and is especially nice to have because images already have such good support, but does a <em>language</em> really need to include a font parser and layout engine? <a
+                        href="https://uiua.org/docs/voxels"
+                        data-title="Project a voxel array to an image"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">voxels</span></code>
+                    </a> is great for multidimensional visualizations, but absent context, I think most people would say that rendering voxel scenes should probably be the responsibility of a library. I will call these types of features <em>boundary</em> features.</p><p>This boundary-pushing is not the case for all <code># Experimental!</code> features. Some are more Uiua-specific, like <a
+                        href="https://uiua.org/docs/reach"
+                        data-title="Call a function skipping the second argument"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">∪</span> reach</code>
+                    </a> or <a
+                        href="https://uiua.org/docs/pattern"
+                        data-title="Choose different cases based on pattern matching"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⍡</span> pattern</code>
+                    </a>. Whether they are stabilized is less a question of what belongs in a language and more a question of how Uiua should work. I will call these types of features <em>Uiua-specific</em> features.</p><p>Some other <code># Experimental!</code> features are essentially certain to be eventually stabilized, with the only thing delaying that being whether their API and behavior is the best it can be. These are things like <a
+                        href="https://uiua.org/docs/recur"
+                        data-title="Execute a recursive or tree algorithm"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font triadic-modifier">recur</span></code>
+                    </a> and <a
+                        href="https://uiua.org/docs/&ffi"
+                        data-title="Call a foreign function interface"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">&ffi</span></code>
+                    </a> (and related memory functions). I will call these types of features <em>necessary</em> features.</p><p>With all this said, Uiua 0.19.0 has three big experimental features. One is a boundary feature, one is a Uiua-specific feature, and the third is maybe somewhere in between.</p><h2 id="custom-subscripts">Custom Subscripts</h2><p>Since their initial addition in version 0.13.0 (almost 2 years ago, how time flies), <a href="https://uiua.org/docs/subscripts" data-title=>subscripts</a> have become a key way in which Uiua gains access to new built-in behavior without adding a ton of new glyphs.</p><p>However, it was not previously possible to define subscript behavior for your own functions without simply adding a version of the function with each possible subscript value.</p><p>Now, with <a href="https://www.uiua.org/docs/experimental#custom-subscript-functions" data-title=>Custom Subscript Functions</a>, you can! By the classification scheme detailed above, this is a <em>Uiua-specific</em> feature.</p><p>By defining a function with a <code><code>ₙ</code></code> (which formats from <code>,n</code>) at the end of its name, you can define subscript behavior. This functions similarly to existing <a href="https://www.uiua.org/tutorial/Macros#placeholders-and-!s" data-title=>index macros</a>. You can either use a <code><code>ₙ</code></code> in the subscript of inner functions, or you can use <code>^n</code> to get the value of the subscript number directly.</p><code class="code-block"># Experimental!
+Fₙ ← [∩ₙ+]  
+F₁ 1 2      # [3]
+F₂ 1 2 3 4  # [3 7] [3]</code><p>You can also define a normal version of the function for flexibility.</p><code class="code-block"># Experimental!
+G  ← ↯2     
+Gₙ ← ↯2_^n  
+G 4         # [4 4]
+G₂ 5        
+
+# [4 4]
+# ╭─     
+# ╷ 5 5  
+#   5 5  
+#       ╯
+G₃ 0        
+
+# [4 4]
+# ╭─     
+# ╷ 5 5  
+#   5 5  
+#       ╯
+# ╭─       
+# ╷ 0 0 0  
+#   0 0 0  
+#         ╯</code><p>Custom subscripts are currently limited to numeric subscripts. Sided subscripts are not currently supported.</p><h2 id="a-type-system">A Type System</h2><p>Uiua 0.19.0 adds an <code># Experimental!</code> type system! I've already detailed its design philosophy and functionality in <a href="https://www.uiua.org/blog/a-uiua-type-system" data-title=>this blog post</a>, so I won't go into a ton of detail here.</p><p>For the basics, you can read the documentation for <a
+                        href="https://uiua.org/docs/validate"
+                        data-title="Validate a value's type and/or shape"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊨</span> validate</code>
+                    </a> and <a href="https://www.uiua.org/docs/experimental#type-checking" data-title=>type signature comments</a>.</p><p>This is somewhere between the three kinds of <code># Experimental!</code> features detailed above. Many languages have static type systems, and many do not. This new system is meant to see whether a type system is appropriate for Uiua.</p><h2 id="multivector-scalars">Multivector Scalars</h2><p>Uiua 0.19.0 includes a complete rewrite and overhaul of the <code># Experimental!</code> <a href="https://en.wikipedia.org/wiki/Geometric_algebra" data-title=>Geometric Algebra</a> system by adding a multivector scalar type for arrays. Multivectors are algebraic objects which are useful for doing geometric operations in multiple dimensions. This includes things like rotations, intersections, and projections. Multivectors can be thought of as a sort of superset of complex numbers, but they are also much more.</p><p>Multivector arrays can be created with the <a
+                        href="https://uiua.org/docs/multivector"
+                        data-title="Create a multivector"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">𝕍</span> multivector</code>
+                    </a> functions. There is also a full Uiua <a href="https://www.uiua.org/docs/experimental#geometric-algebra" data-title=>Geometric Algebra tutorial</a>. Its end result is this gif of a rotating tesseract!</p><code class="code-block"># Experimental!         
+-⊸¬ ÷⟜⇡₀ 12            # Edge points# [¯1 ¯0.8333… ¯0.66…67 ¯0.5 ¯0.33…34 ¯0.166…657 0 0.166…674 0.33…326 0.5 0.66…67 0.8333… 1]
+𝕍 ⍥(◴⊂⟜≡⇌♭₂⊞⊂¯1_1)3    # Cube points
+ₑ×¯e₁₂÷2×η÷⟜⇡20        # Rotors
+⊞(×⊃¯⌟˜×)              # Rotate points
+¯₄+e₀                  # Convert to PGA
+⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 0 0 0] # Lines from points to camera
+⨱ +2e₀𝕍[1 0 0 0]       # Project to frustum space
+¯₄+e₀𝕍 ↘0_0_2°𝕍¯₄±     # Shift to 3D
+⍜∩¯₄⨱ ¯₄+e₀𝕍[¯4 ¯3 ¯2] # Lines from points to camera
+⨱ +2e₀𝕍[1 0 0]         # Project to frustum plane
+↘0_0_2 °𝕍¯₄±           # Convert back to numbers
+⬚0≡(⍉°⊚) ⁅×100 ⧋-/↧⊸♭₂ # Render</code><p>Multivectors are very much a <em>boundary</em> feature.</p><h2 id="🙏🏻-thank-you!">🙏🏻 Thank You!</h2><p>You can find the full changelog for this release <a href="https://uiua.org/docs/changelog#0.19.0---2026-08-26" data-title=>here</a>.</p><p>This is the longest it has even been between Uiua releases. Thanks to everyone in the Uiua community for being patient! And of course a huge thank you as always to Uiua's generous <a href="https://github.com/sponsors/uiua-lang" data-title=>sponsors</a> ❤️!</p><p>You can join the <a href="https://discord.gg/3r9nrfYhCc" data-title=>Uiua Discord</a> to chat about the language, ask questions, or get help. We also do code challenges and discuss language features!</p></div></body></html>

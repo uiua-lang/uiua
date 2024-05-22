@@ -590,8 +590,8 @@ fn invert_un_pattern<'a>(
         return None;
     };
     let f_instrs = EcoVec::from(f.instrs(comp));
-    invert_instrs(&f_instrs, comp)?;
-    Some((input, f_instrs))
+    let double_inv = invert_instrs(&invert_instrs(&f_instrs, comp)?, comp)?;
+    Some((input, double_inv))
 }
 
 fn under_un_pattern<'a>(

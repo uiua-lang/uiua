@@ -1,0 +1,238 @@
+<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://uiua.org/styles.css">
+    </head><body><div id=top><p><a href="https://uiua.org" data-title=>Uiua</a></p><p><a href="https://uiua.org/blog" data-title=>Blog Home</a></p><h1 id="announcing-uiua-0.12.0">Announcing Uiua 0.12.0</h1><p><strong>You can read this post with full editor features <a href="https://uiua.org/blog/uiua-0.12.0" data-title=>here</a>.</strong></p><p>2024-08-16</p><hr/><p>Uiua 0.12.0 is now available!</p><p>You can find the full changelog <a href="https://uiua.org/docs/changelog#0.12.0---2024-08-16" data-title=>here</a>.</p><p>Uiua is a general purpose, stack-based, array-oriented programming language with a focus on tacit code.</p><p>This is a pretty big release! In addition to stable features, it contains a lot of experimental features to try out.</p><p>Here are some of the highlights:</p><h2 id="new-tutorials">New Tutorials</h2><p>There are two new tutorials on the site:</p><ul><li><p>[Tacit Code](https://uiua.org/tutorial/Tacit Code)</p></li><li><p><a href="https://uiua.org/tutorial/codetactility" data-title=>Code Tactility</a></p></li></ul><h2 id="scoped-modules">Scoped Modules</h2><p>Modules can now be declared without needing a new file.</p><p>This is done with <code>---</code>s and a name.A <code>~</code> following the name lets you export names from within into the outer scope.</p><code class="code-block">---MyMod ~ Go  
+  Foo ← 5
+  Go ← +1
+---
+Go MyMod~Foo</code><p>A module containing a function called <code>Call</code> or <code>New</code> can be called as a function.</p><code class="code-block">---Foo          
+  Call ← /++1⇡
+---
+Foo 5</code><p>Using a module name as a macro (with a <code>!</code> at the end of the name) will make the module's names available inside that scope.</p><code class="code-block">---Foo                
+  A ← 10
+  F ← +1
+  G ← ×2
+---
+Foo!(G F ×A) [1 2 3]</code><h2 id="switch-⨬"><a 
+                        href="https://uiua.org/docs/switch" 
+                        data-title="Call the function at the given index"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⨬</span> switch</code>
+                    </a></h2><p>Dedicated switch function syntax has been replaced with the <a 
+                        href="https://uiua.org/docs/switch" 
+                        data-title="Call the function at the given index"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⨬</span> switch</code>
+                    </a> modifier.</p><p>In addition, it has been expanded to do an implicit <a 
+                        href="https://uiua.org/docs/rows" 
+                        data-title="Apply a function to each row of an array or arrays"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">≡</span> rows</code>
+                    </a>.</p><code class="code-block">⨬(∘|+1|×2) [0 1 2] 5  # [5 6 10]</code><p>Existing <code>⟨⟩</code>s will continue to parse and will format to <a 
+                        href="https://uiua.org/docs/switch" 
+                        data-title="Call the function at the given index"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⨬</span> switch</code>
+                    </a> with a function pack.</p><h2 id="subscript-digits-in-identifiers">Subscript digits in identifiers</h2><p>Unlike most programming languages, Uiua identifiers cannot contain digits.</p><p>But sometimes you want digits in your names! You can now use <em>subscript</em> digits in identifiers.</p><p>These format from a comma <code>,</code> followed by some digits.</p><code class="code-block">Sha,256 ← "todo" # This
+Sha₂₅₆ ← "todo"   # Formats to this</code><h2 id="new-primitive-functionality">New Primitive Functionality</h2><p>Several primitive functions have new functionality</p><p><a 
+                        href="https://uiua.org/docs/un" 
+                        data-title="Invert the behavior of a function"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">°</span> un</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/shape" 
+                        data-title="Get the dimensions of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">△</span> shape</code>
+                    </a> now generates a <a 
+                        href="https://uiua.org/docs/range" 
+                        data-title="Make an array of all natural numbers less than a number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⇡</span> range</code>
+                    </a> array with the given shape.</p><code class="code-block">°△ 2_3_4  
+
+# ╭─                        
+# ╷ 0 1  2  3  12 13 14 15  
+# ╷ 4 5  6  7  16 17 18 19  
+#   8 9 10 11  20 21 22 23  
+#                          ╯</code><p><a 
+                        href="https://uiua.org/docs/couple" 
+                        data-title="Combine two arrays as rows of a new array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊟</span> couple</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/join" 
+                        data-title="Append two arrays end-to-end"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊂</span> join</code>
+                    </a> are now more permissive of arguments with different ranks. The array with a smaller rank will be repeated.</p><code class="code-block">⊟ 1_2_3 4  
+
+# ╭─       
+# ╷ 1 2 3  
+#   4 4 4  
+#         ╯</code><code class="code-block">⊂ [1_2_3 4_5_6] 7  
+
+# ╭─       
+# ╷ 1 2 3  
+#   4 5 6  
+#   7 7 7  
+#         ╯</code><p><a 
+                        href="https://uiua.org/docs/keep" 
+                        data-title="Discard or copy some rows of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">▽</span> keep</code>
+                    </a> will now cycle the counts array.</p><code class="code-block">▽ 0_1_2 [1 2 3 4 5 6]  # [2 3 3 5 6 6]</code><p><a 
+                        href="https://uiua.org/docs/keep" 
+                        data-title="Discard or copy some rows of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">▽</span> keep</code>
+                    </a> also now allows a scalar non-integer to scale an array. This is useful for image and audio arrays.</p><code class="code-block">▽ 0.5 [1 2 3 4 5 6]  # [1 3 5]
+▽ 1.5 [1 2 3 4 5 6]  # [1 1 2 3 3 4 5 5 6] [1 3 5]</code><h2 id="memberof-∊"><a 
+                        href="https://uiua.org/docs/memberof" 
+                        data-title="Check if each row of one array exists in another"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">∊</span> memberof</code>
+                    </a></h2><p><a href="" data-title=>member ∊</a> is now deprecated. It was almost always used along with <a 
+                        href="https://uiua.org/docs/flip" 
+                        data-title="Swap the top two values on the stack"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font stack-function">:</span> flip</code>
+                    </a>.</p><p>It has been replaced with <a 
+                        href="https://uiua.org/docs/memberof" 
+                        data-title="Check if each row of one array exists in another"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">∊</span> memberof</code>
+                    </a>, which has the exact same functionality, except its arguments are flipped.</p><code class="code-block">F ← ∊"abc"    
+F "beefcake"  # [1 0 0 0 1 1 0 0]</code><p>This makes it work nicely with <a 
+                        href="https://uiua.org/docs/by" 
+                        data-title="Call a function but keep its last argument after its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⊸</span> by</code>
+                    </a>!</p><code class="code-block">⊜□¬⊸∊ " ," "To be, or not"  # ["To"│"be"│"or"│"not"]</code><h2 id="experimental-features">Experimental Features</h2><p>This release adds a <em>lot</em> of experimental features to try out.</p><p>While it's unlikely that all of these will be eventually stabilized, they are made available for you to try out and see how they feel.</p><p>You can view to full list of experimental features <a href="https://uiua.org/docs/experimental" data-title=>here</a>, but here are a few highlights:</p><h3 id="more-stack-modifiers">More Stack Modifiers</h3><p>The <a 
+                        href="https://uiua.org/docs/with" 
+                        data-title="Call a function but keep its last argument before its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⤙</span> with</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/off" 
+                        data-title="Call a function but keep its first argument after its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⤚</span> off</code>
+                    </a> modifiers are complements to <a 
+                        href="https://uiua.org/docs/on" 
+                        data-title="Call a function but keep its first argument before its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⟜</span> on</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/by" 
+                        data-title="Call a function but keep its last argument after its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⊸</span> by</code>
+                    </a>.</p><p><a 
+                        href="https://uiua.org/docs/with" 
+                        data-title="Call a function but keep its last argument before its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⤙</span> with</code>
+                    </a> keeps its function's <em>last</em> argument on <em>top</em> of the stack while <a 
+                        href="https://uiua.org/docs/off" 
+                        data-title="Call a function but keep its first argument after its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⤚</span> off</code>
+                    </a> keeps its function's <em>first</em> argument <em>below</em> the outputs on the stack.</p><code class="code-block"># Experimental!
+[⤙+ 2 5]  # [5 7]
+[⤚+ 2 5]  # [7 2] [5 7]</code><p>The <a 
+                        href="https://uiua.org/docs/above" 
+                        data-title="Keep all arguments to a function above the outputs on the stack"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">◠</span> above</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/below" 
+                        data-title="Keep all arguments to a function after the outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">◡</span> below</code>
+                    </a> modifiers keep <em>all</em> of a function's arguments above or below the outputs on the stack.</p><code class="code-block"># Experimental!
+[◠(++) 1 2 3]  # [1 2 3 6]
+[◡(++) 1 2 3]  # [6 1 2 3] [1 2 3 6]</code><p><code>chunks ⑄</code> is similar to <a 
+                        href="https://uiua.org/docs/windows" 
+                        data-title="The n-wise windows of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">◫</span> windows</code>
+                    </a> except the parts of the array do not overlap.</p><code class="code-block"># Experimental!
+⑄ 2_3 °△ 4_9  # 1:1: Unknown identifier `⑄`
+≡≡□           
+
+# ╭─                            
+# ╷  0  1  2  3  4  5  6  7  8  
+#    9 10 11 12 13 14 15 16 17  
+#   18 19 20 21 22 23 24 25 26  
+#   27 28 29 30 31 32 33 34 35  
+#                              ╯
+# [2 3]
+# [□]</code><p><a 
+                        href="https://uiua.org/docs/orient" 
+                        data-title="Change the order of the axes of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⤸</span> orient</code>
+                    </a> transposes an array's axes by moving the axes at the given indices to the front of the <a 
+                        href="https://uiua.org/docs/shape" 
+                        data-title="Get the dimensions of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">△</span> shape</code>
+                    </a>.</p><p>This simplifies complex shape transformations that would otherwise be done with several <a 
+                        href="https://uiua.org/docs/transpose" 
+                        data-title="Rotate the shape of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function trans text-gradient">⍉</span> transpose</code>
+                    </a>s and <a 
+                        href="https://uiua.org/docs/rows" 
+                        data-title="Apply a function to each row of an array or arrays"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">≡</span> rows</code>
+                    </a>s.</p><code class="code-block"># Experimental!
+°△ 2_3_4_5  
+
+# ╭─                                                     
+# ╷  0  1  2  3  4  20 21 22 23 24   40  41  42  43  44  
+# ╷  5  6  7  8  9  25 26 27 28 29   45  46  47  48  49  
+# ╷ 10 11 12 13 14  30 31 32 33 34   50  51  52  53  54  
+#   15 16 17 18 19  35 36 37 38 39   55  56  57  58  59  
+#                                                        
+#   60 61 62 63 64  80 81 82 83 84  100 101 102 103 104  
+#   65 66 67 68 69  85 86 87 88 89  105 106 107 108 109  
+#   70 71 72 73 74  90 91 92 93 94  110 111 112 113 114  
+#   75 76 77 78 79  95 96 97 98 99  115 116 117 118 119  
+#                                                       ╯
+△ ⤸ 1_3     # [3 5 2 4]</code><h2 id="💖">💖</h2><p>As always, a heartfelt thank-you to everyone in the Uiua community! Your contributions are what make Uiua great.</p><p>If you want to support Uiua's development, you can become one of its excellent <a href="https://github.com/sponsors/uiua-lang" data-title=>sponsors</a>!</p><p>Again, you can find the full changelog for this release <a href="https://uiua.org/docs/changelog#0.12.0---2024-08-16" data-title=>here</a>.</p><p>You can join the <a href="https://discord.gg/3r9nrfYhCc" data-title=>Uiua Discord</a> to chat about the language, ask questions, or get help.</p><h2 id="media-constants">Media Constants</h2><p>A final fun note!</p><p>A few built-in image and audio constants have been added. These are useful for testing and demonstrating image and audio functions!</p><code class="code-block">Logo      
+▽⟜≡▽ 0.5 # Scales the image down
+Lena      
+▽⟜≡▽ 0.5  
+Music     </code></div></body></html>

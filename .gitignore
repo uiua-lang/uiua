@@ -1,8 +1,6 @@
 .vscode
 .idea
 /target
-/docs
-/site/blog/*.html
 site/dist
 /uiua-modules
 
@@ -24,6 +22,7 @@ uiua.tmLanguage.json
 !/site/*.ua
 !/site/text/*.ua
 !/site/assets/**
+!/docs/assets/**
 
 # symlink created by `nix build`
 result

@@ -1,0 +1,78 @@
+<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://uiua.org/styles.css">
+    </head><body><div id=top><p><a href="https://uiua.org" data-title=>Uiua</a></p><p><a href="https://uiua.org/blog" data-title=>Blog Home</a></p><h1 id="announcing-uiua-0.10.0">Announcing Uiua 0.10.0</h1><p><strong>You can read this post with full editor features <a href="https://uiua.org/blog/uiua-0.10.0" data-title=>here</a>.</strong></p><p>2024-04-04</p><hr/><p>Uiua 0.10.0 is now available!</p><p>You can find the full changelog <a href="https://uiua.org/docs/changelog#0.10.0---2024-04-04" data-title=>here</a>.</p><p>This release contains so many changes, improvements, and new features that I thought it deserved a blog post.From here on, major releases will be announced in this way.</p><p>While there are many changes, I want to highlight a few of them here.</p><h2 id="pattern-matching">Pattern Matching</h2><p>Using <a 
+                        href="https://uiua.org/docs/un" 
+                        data-title="Invert the behavior of a function"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">°</span> un</code>
+                    </a> on a constant value will now match a pattern. When used with <a 
+                        href="https://uiua.org/docs/try" 
+                        data-title="Call a function and catch errors"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⍣</span> try</code>
+                    </a>, this can be used to conditionally match, extract, and process values.</p><code class="code-block">F ← ⍣(        
+  ×10 °[1⊙3] # Extract and multiply..
+| °(⊂5)      # ..or remove leading 5..
+| ⇌          # ..else reverse
+)
+F [1 2 3]
+F [5 6 7]
+F "cool!"</code><p>You can read more in the <a href="https://uiua.org/tutorial/patternmatching" data-title=>Pattern Matching</a> tutorial.</p><h2 id="array-macros">Array Macros</h2><p>Array macros are a powerful new feature that allow full compile-time metaprogramming.</p><p>They allow Uiua code to directly manipulate other Uiua code, enabling a wide range of new possibilities.</p><code class="code-block">F! ←^ ≡$"_ ← _\n" "ABC"  
+F!(1|2|3)                
+[A B C B B]              # [1 2 3 2 2]</code><p>You can read more in the updated <a href="https://uiua.org/tutorial/macros" data-title=>Macros</a> tutorial.</p><h2 id="git-modules">Git Modules</h2><p>You can now prefix a module path with <code>git:</code> to import a git repository from a URL.</p><code class="code-block">~ "git: github.com/uiua-lang/example-module" ~ Upscale  
+Upscale 3 [1_2 3_4]</code><p>In the native interpreter, this automatically creates a Git submodule.</p><p>On the web, it fetches a <code>lib.ua</code> file from the repository.</p><p>You can read more in the updated <a href="https://uiua.org/tutorial/modules" data-title=>Modules</a> tutorial.</p><h2 id="mask"><a 
+                        href="https://uiua.org/docs/mask" 
+                        data-title="Mask the occurences of one array in another"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⦷</span> mask</code>
+                    </a></h2><p><a 
+                        href="https://uiua.org/docs/mask" 
+                        data-title="Mask the occurences of one array in another"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⦷</span> mask</code>
+                    </a> is a new function that is similar to <a 
+                        href="https://uiua.org/docs/find" 
+                        data-title="Find the occurences of one array in another"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⌕</span> find</code>
+                    </a>, but it returns full masks of matches rather than just the first positions.</p><code class="code-block">⦷ " - " "Hey - how-are -  you"  # [0 0 0 1 1 1 0 0 0 0 0 0 0 2 2 2 0 0 0 0]</code><code class="code-block">⊜□¬⦷⊙. " - " "Hey - how-are -  you"  # {"Hey" "how-are" " you"}</code><p>This simplifies a lot of string-processing code in particular. A new <a href="https://uiua.org/tutorial/strings" data-title=>strings</a> tutorial has been added as well.</p><h2 id="other-changes">Other Changes</h2><p>Switch functions now format to use <code>⟨⟩</code> brackets. This makes them easier to distinguish from function packs.</p><code class="code-block">F ← (×10|↥2)<2. # This..# 1:5: Function packs are not allowed without a modifier
+F ← ⟨×10|↥2⟩<2. # Formats to this
+F 0              # 2
+F 5              # 50</code><p><a 
+                        href="https://uiua.org/docs/map" 
+                        data-title="Create a hashmap from a list of keys and list values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">map</span></code>
+                    </a> and related functions are no longer experimental! See the <a 
+                        href="https://uiua.org/docs/map" 
+                        data-title="Create a hashmap from a list of keys and list values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">map</span></code>
+                    </a> docs for an overview.</p><code class="code-block">map 1_2_3 4_5_6  
+
+# ╭─       
+#   1 → 4  
+#   2 → 5  
+#   3 → 6  
+#         ╯</code><p>The new <a 
+                        href="https://uiua.org/docs/&clget" 
+                        data-title="Get the contents of the clipboard"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font noadic-function">&clget</span></code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/&clset" 
+                        data-title="Set the contents of the clipboard"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">&clset</span></code>
+                    </a> functions provide access to the clipboard.</p><p>The interpreter's built-in language server now supports <a href="https://marketplace.visualstudio.com/items?itemName=uiua-lang.uiua-vscode" data-title=>many more features</a>.</p><p>There are a ton more! Again, you can read the full changelog <a href="https://uiua.org/docs/changelog#0.10.0---2024-04-04" data-title=>here</a>.</p><h2 id="💖">💖</h2><p>As always, I'd like to thank everyone who contributed to this release, whether by directly contributing code, reporting bugs, or just using Uiua and providing feedback.</p><p>Uiua is in many ways a novel and unique language, and I think it is only through our collective effort that we can properly explore its design space.</p><p>With your help, I hope to continue to improve Uiua to the point of stability.</p></div></body></html>

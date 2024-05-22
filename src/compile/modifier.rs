@@ -1111,6 +1111,7 @@ impl Compiler {
             kind: ScopeKind::Temp,
             names,
             experimental: self.scope.experimental,
+            experimental_error: self.scope.experimental_error,
             ..Default::default()
         };
         self.higher_scopes

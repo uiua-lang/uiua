@@ -66,12 +66,8 @@ pub struct Compiler {
     in_inverse: bool,
     /// Accumulated errors
     errors: Vec<UiuaError>,
-    /// Primitives that have emitted errors because they are experimental
-    experimental_prim_errors: HashSet<Primitive>,
     /// Primitives that have emitted errors because they are deprecated
     deprecated_prim_errors: HashSet<Primitive>,
-    /// Whether an error has been emitted for experimental function strand
-    experimental_function_strand_error: bool,
     /// Accumulated diagnostics
     diagnostics: BTreeSet<Diagnostic>,
     /// Print diagnostics as they are encountered
@@ -102,9 +98,7 @@ impl Default for Compiler {
             macro_depth: 0,
             in_inverse: false,
             errors: Vec::new(),
-            experimental_prim_errors: HashSet::new(),
             deprecated_prim_errors: HashSet::new(),
-            experimental_function_strand_error: false,
             diagnostics: BTreeSet::new(),
             print_diagnostics: false,
             comptime: true,
@@ -169,6 +163,8 @@ pub(crate) struct Scope {
     names: IndexMap<Ident, LocalName>,
     /// Whether to allow experimental features
     experimental: bool,
+    /// Whether an error has been emitted for experimental features
+    experimental_error: bool,
     /// The stack height between top-level statements
     stack_height: Result<usize, Sp<SigCheckError>>,
 }
@@ -191,6 +187,7 @@ impl Default for Scope {
             comment: None,
             names: IndexMap::new(),
             experimental: false,
+            experimental_error: false,
             stack_height: Ok(0),
         }
     }
@@ -752,14 +749,13 @@ code:
             self.imports.insert(path.clone(), import);
         }
         let import = self.imports.get(&path).unwrap();
-        if import.experimental && !self.scope.experimental {
-            self.add_error(
-                span.clone(),
+        if import.experimental {
+            self.experimental_error(span, || {
                 format!(
                     "Module `{path_str}` is experimental. \
                     To use it, add `# Experimental!` to the top of this file."
-                ),
-            );
+                )
+            });
         }
         Ok(path)
     }
@@ -964,13 +960,10 @@ code:
                 self.push_instr(instr);
             }
             Word::Label(label) => {
-                if !self.scope.experimental {
-                    self.add_error(
-                        word.span.clone(),
-                        "Labels are experimental. To use them, add \
-                        `# Experimental!` to the top of the file.",
-                    );
-                }
+                self.experimental_error(&word.span, || {
+                    "Labels are experimental. To use them, add \
+                    `# Experimental!` to the top of the file."
+                });
                 let mut instr = Instr::Label {
                     label: label.into(),
                     span: self.add_span(word.span.clone()),
@@ -1223,14 +1216,10 @@ code:
                         "Function strands cannot contain more than two items",
                     );
                 }
-                if !self.scope.experimental && !self.experimental_function_strand_error {
-                    self.experimental_function_strand_error = true;
-                    self.add_error(
-                        word.span.clone(),
-                        "Function strands are experimental. To use them, add \
-                        `# Experimental!` to the top of the file.",
-                    );
-                }
+                self.experimental_error(&word.span, || {
+                    "Function strands are experimental. To use them, add \
+                    `# Experimental!` to the top of the file."
+                });
                 let instrs = self.compile_words(words, true)?;
                 if call {
                     self.push_all_instrs(instrs);
@@ -1775,18 +1764,14 @@ code:
         }
     }
     fn handle_primitive_experimental(&mut self, prim: Primitive, span: &CodeSpan) {
-        if prim.is_experimental()
-            && !self.scope.experimental
-            && self.experimental_prim_errors.insert(prim)
-        {
-            self.add_error(
-                span.clone(),
+        if prim.is_experimental() {
+            self.experimental_error(span, || {
                 format!(
                     "{} is experimental. To use it, add \
                     `# Experimental!` to the top of the file.",
                     prim.format()
-                ),
-            );
+                )
+            });
         }
     }
     fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
@@ -1804,13 +1789,10 @@ code:
         Ok(())
     }
     fn swizzle(&mut self, sw: StackSwizzle, span: CodeSpan, call: bool) {
-        if !self.scope.experimental {
-            self.add_error(
-                span.clone(),
-                "Swizzles are experimental. To use them, add \
-                `# Experimental!` to the top of the file.",
-            );
-        }
+        self.experimental_error(&span, || {
+            "Swizzles are experimental. To use them, add \
+            `# Experimental!` to the top of the file."
+        });
         let sig = sw.signature();
         let spandex = self.add_span(span.clone());
         let equivalent = match sw.indices.as_slice() {
@@ -1890,6 +1872,15 @@ code:
             self.asm.inputs.clone().into(),
         );
         self.errors.push(e);
+    }
+    fn experimental_error<S>(&mut self, span: &CodeSpan, message: impl FnOnce() -> S)
+    where
+        S: ToString,
+    {
+        if !self.scope.experimental && !self.scope.experimental_error {
+            self.scope.experimental_error = true;
+            self.add_error(span.clone(), message().to_string());
+        }
     }
     fn fatal_error(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
         UiuaError::Run(

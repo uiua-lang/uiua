@@ -2,7 +2,6 @@
 
 - 0.11
   - `un keep` - Split into deduped and adjacent counts
-  - Deduplicate experimental errors
   - Deduplicate fill signature errors
 - Media window
 - Trace images/audio in pad

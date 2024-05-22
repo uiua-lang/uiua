@@ -1,0 +1,372 @@
+<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://uiua.org/styles.css">
+    </head><body><div id=top><p><a href="https://uiua.org" data-title=>Uiua</a></p><p><a href="https://uiua.org/blog" data-title=>Blog Home</a></p><h1 id="how-the-uiua-logo-works">How the Uiua Logo Works</h1><p><strong>You can read this post with full editor features <a href="https://uiua.org/blog/how-the-uiua-logo-works" data-title=>here</a>.</strong></p><p>2025-05-29</p><hr/><p>This post explains how the code that generates the Uiua logo works.</p><code class="code-block">U ← /=⊞<0.2_0.7 /+×⟜ⁿ1_2      
+I ← <⊙(⌵/ℂ) # Circle          
+u ← +0.1⧋↧ ⊃(I0.95|⊂⊙0.5⇌˙×)  
+A ← ×⊃U(I1) # Alpha           
+⧋(⊂⊃u A) ˙⊞⊟-⊸¬÷⟜⇡200         </code><p>In principle, this code implements <a href="https://www.desmos.com/calculator/2oy5odi1gc" data-title=>4 mathematical functions</a> for the boundaries of the logo shape, as well as a simple function that defines a color gradient.</p><p>These functions all operate pervasively on a coordinate grid, which is a common practice when generating images in Uiua. In particular, this grid represents the square range from <code>[¯1 ¯1]</code> to <code>[1 1]</code>.</p><h3 id="the-grid">The Grid</h3><p>Before we can generate a whole grid, let's start with that simple range. To generate <code>N</code> numbers between <code>0</code> and <code>1</code>, we can start with the <a 
+                        href="https://uiua.org/docs/divide" 
+                        data-title="Divide values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">÷</span> divide</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/on" 
+                        data-title="Call a function but keep its first argument before its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⟜</span> on</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/range" 
+                        data-title="Make an array of all natural numbers less than a number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⇡</span> range</code>
+                    </a> idiom. This generates a range, then divides each number by the original max. We'll start with a small number of elements so that they all fit nicely on the screen.</p><code class="code-block">÷⟜⇡8  # [0 0.125 0.25 0.375 0.5 0.625 0.75 0.875]</code><p>To convert this range from the bounds <code>[0 1)</code> to <code>[¯1 1)</code>, we can use the "wrench" idiom <a 
+                        href="https://uiua.org/docs/subtract" 
+                        data-title="Subtract values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">-</span> subtract</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/by" 
+                        data-title="Call a function but keep its last argument after its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⊸</span> by</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/not" 
+                        data-title="Logical not"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">¬</span> not</code>
+                    </a>.</p><code class="code-block">-⊸¬ ÷⟜⇡8  # [¯1 ¯0.75 ¯0.5 ¯0.25 0 0.25 0.5 0.75]</code><p>Then creating our coordinates is a simple matter of calling <a 
+                        href="https://uiua.org/docs/table" 
+                        data-title="Apply a function to each combination of rows of some arrays"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⊞</span> table</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/couple" 
+                        data-title="Combine two arrays as rows of a new array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊟</span> couple</code>
+                    </a> on the list and its <a 
+                        href="https://uiua.org/docs/self" 
+                        data-title="Call a function with the same array as all arguments"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">˙</span> self</code>
+                    </a>.</p><code class="code-block">˙⊞⊟ -⊸¬ ÷⟜⇡8  
+
+# ╭─                                                                                            
+# ╷ ¯1 ¯1     ¯0.75 ¯1     ¯0.5 ¯1     ¯0.25 ¯1     0 ¯1     0.25 ¯1     0.5 ¯1     0.75 ¯1     
+# ╷ ¯1 ¯0.75  ¯0.75 ¯0.75  ¯0.5 ¯0.75  ¯0.25 ¯0.75  0 ¯0.75  0.25 ¯0.75  0.5 ¯0.75  0.75 ¯0.75  
+#   ¯1 ¯0.5   ¯0.75 ¯0.5   ¯0.5 ¯0.5   ¯0.25 ¯0.5   0 ¯0.5   0.25 ¯0.5   0.5 ¯0.5   0.75 ¯0.5   
+#   ¯1 ¯0.25  ¯0.75 ¯0.25  ¯0.5 ¯0.25  ¯0.25 ¯0.25  0 ¯0.25  0.25 ¯0.25  0.5 ¯0.25  0.75 ¯0.25  
+#   ¯1  0     ¯0.75  0     ¯0.5  0     ¯0.25  0     0  0     0.25  0     0.5  0     0.75  0     
+#   ¯1  0.25  ¯0.75  0.25  ¯0.5  0.25  ¯0.25  0.25  0  0.25  0.25  0.25  0.5  0.25  0.75  0.25  
+#   ¯1  0.5   ¯0.75  0.5   ¯0.5  0.5   ¯0.25  0.5   0  0.5   0.25  0.5   0.5  0.5   0.75  0.5   
+#   ¯1  0.75  ¯0.75  0.75  ¯0.5  0.75  ¯0.25  0.75  0  0.75  0.25  0.75  0.5  0.75  0.75  0.75  
+#                                                                                              ╯</code><p>This array has the shape <code>[N N 2]</code>. To make it easier to access all the x components or all the y components at once, we can <a 
+                        href="https://uiua.org/docs/un" 
+                        data-title="Invert the behavior of a function"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">°</span> un</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/transpose" 
+                        data-title="Rotate the shape of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function trans text-gradient">⍉</span> transpose</code>
+                    </a> the array so that the <code>2</code> axis is at the front.</p><code class="code-block">°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡8  
+
+# ╭─                                                                                      
+# ╷ ¯1    ¯1    ¯1    ¯1    ¯1    ¯1    ¯1    ¯1     ¯1 ¯0.75 ¯0.5 ¯0.25 0 0.25 0.5 0.75  
+# ╷ ¯0.75 ¯0.75 ¯0.75 ¯0.75 ¯0.75 ¯0.75 ¯0.75 ¯0.75  ¯1 ¯0.75 ¯0.5 ¯0.25 0 0.25 0.5 0.75  
+#   ¯0.5  ¯0.5  ¯0.5  ¯0.5  ¯0.5  ¯0.5  ¯0.5  ¯0.5   ¯1 ¯0.75 ¯0.5 ¯0.25 0 0.25 0.5 0.75  
+#   ¯0.25 ¯0.25 ¯0.25 ¯0.25 ¯0.25 ¯0.25 ¯0.25 ¯0.25  ¯1 ¯0.75 ¯0.5 ¯0.25 0 0.25 0.5 0.75  
+#    0     0     0     0     0     0     0     0     ¯1 ¯0.75 ¯0.5 ¯0.25 0 0.25 0.5 0.75  
+#    0.25  0.25  0.25  0.25  0.25  0.25  0.25  0.25  ¯1 ¯0.75 ¯0.5 ¯0.25 0 0.25 0.5 0.75  
+#    0.5   0.5   0.5   0.5   0.5   0.5   0.5   0.5   ¯1 ¯0.75 ¯0.5 ¯0.25 0 0.25 0.5 0.75  
+#    0.75  0.75  0.75  0.75  0.75  0.75  0.75  0.75  ¯1 ¯0.75 ¯0.5 ¯0.25 0 0.25 0.5 0.75  
+#                                                                                        ╯</code><p>Now we are ready to start calling our functions on these coordinates. Note that because Uiua renders images with the first axis of the area being the vertical one, with positive direction going down, what would be coordinates of the form <code>[x y]</code> become <code>[¯y x]</code> here.</p><h3 id="circles">Circles</h3><p>Let's start with circles. A coordinate lies within a circle if its distance from the center of the circle is less that the circle's radius. Our coordinate grid is centered on the origin, as will be all of our circles, so generating a circle is a simple matter of calculating the distance a coordinate is from the origin and applying some threshold.</p><p>One way to do this is to implement the Pythagorean theorem directly using <a 
+                        href="https://uiua.org/docs/under" 
+                        data-title="Operate on a transformed array, then reverse the transformation"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⍜</span> under</code>
+                    </a>.</p><code class="code-block">°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100  
+<1 ⍜°√/+           </code><p>This squares every number in the grid, <a 
+                        href="https://uiua.org/docs/add" 
+                        data-title="Add values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">+</span> add</code>
+                    </a>s the x and y components, and then takes their <a 
+                        href="https://uiua.org/docs/sqrt" 
+                        data-title="Take the square root of a number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">√</span> sqrt</code>
+                    </a>. A threshold value is applied with <a 
+                        href="https://uiua.org/docs/less than" 
+                        data-title="Compare for less than"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function"><</span> less than</code>
+                    </a>.</p><p>However, because Uiua supports <a 
+                        href="https://uiua.org/docs/complex" 
+                        data-title="Make a complex number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">ℂ</span> complex</code>
+                    </a> numbers, we can achieve the same behavior by taking the <a 
+                        href="https://uiua.org/docs/absolute value" 
+                        data-title="Get the absolute value of a number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⌵</span> absolute value</code>
+                    </a> of a complex number that has the x and y components as its real and imaginary components.</p><code class="code-block">°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100  
+<1 ⌵/ℂ             </code><p>We'll need 2 different circles with different radii, so let's make this a function that takes the radius as a parameter.</p><code class="code-block">I ← <⊙(⌵/ℂ)        
+                   
+°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100  
+I 1 # ← Try changing</code><h3 id="parabolas">Parabolas</h3><p>Next we'll look at the two parabola functions. Both functions are of the form <code>y + 2x² = h</code>, where <code>h</code> offsets the parabola vertically.</p><p>Because we only need to modify the x component, we can simply do so with <a 
+                        href="https://uiua.org/docs/under" 
+                        data-title="Operate on a transformed array, then reverse the transformation"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⍜</span> under</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/last" 
+                        data-title="Get the last row of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⊣</span> last</code>
+                    </a>.</p><code class="code-block">°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100  
+/+ ⍜⊣(×2ⁿ2)        </code><p>Alternatively, we could notice that power and coefficients are the same for both the x and y terms (<code>2</code> and <code>2</code> for x and <code>1</code> and <code>1</code> for y), so we can reuse the same array for both operations.</p><code class="code-block">°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100  
+/+ ×⟜ⁿ1_2          </code><p>Notice how we've created of sort of parabola field. If we apply a threshold to it, we get a nice <code>U</code> shape.</p><code class="code-block">°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100  
+<0.2 /+ ×⟜ⁿ1_2     </code><p>To apply both our parabola thresholds, we can use <a 
+                        href="https://uiua.org/docs/both" 
+                        data-title="Call a function on two sets of values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier bi text-gradient">∩</span> both</code>
+                    </a> with a right <a href="https://www.uiua.org/docs/subscripts#sided" data-title=>sided subscript</a>.</p><code class="code-block">°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100     
+∩⌟<0.2 0.7 /+ ×⟜ⁿ1_2  </code><p>We can create the mask we need for the full <code>U</code> shape by simply getting the places where one mask <a 
+                        href="https://uiua.org/docs/equals" 
+                        data-title="Compare for equality"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">=</span> equals</code>
+                    </a> the other. Let's put that in a conveniently named function.</p><code class="code-block">U ← =∩⌟<0.2 0.7 /+ ×⟜ⁿ1_2  
+U °⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100        </code><h3 id="alpha-channel">Alpha Channel</h3><p>The logo has a transparency channel defined as the intersection between the circle and parabola masks. We'll use <a 
+                        href="https://uiua.org/docs/fork" 
+                        data-title="Call two functions on the same values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⊃</span> fork</code>
+                    </a> so we can pass the grid to both functions, and <a 
+                        href="https://uiua.org/docs/multiply" 
+                        data-title="Multiply values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">×</span> multiply</code>
+                    </a> to get the intersection.</p><code class="code-block">U ← =∩⌟<0.2 0.7 /+ ×⟜ⁿ1_2  
+I ← <⊙(⌵/ℂ)                
+A ← ×⊃U(I1)                
+                           
+A °⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100        </code><h3 id="colors">Colors</h3><p>Now we'll look at the color gradient. The RGB color channels are defined as follows:</p><ul><li><p><code>R = x² + 0.1</code></p></li><li><p><code>G = y² + 0.1</code></p></li><li><p><code>B = 0.6</code></p></li></ul><p>We can square with <a 
+                        href="https://uiua.org/docs/self" 
+                        data-title="Call a function with the same array as all arguments"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">˙</span> self</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/multiply" 
+                        data-title="Multiply values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">×</span> multiply</code>
+                    </a>.</p><p>Because our coordinates are <code>[¯y x]</code> instead of <code>[x y]</code>, we'll have to <a 
+                        href="https://uiua.org/docs/reverse" 
+                        data-title="Reverse the rows of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⇌</span> reverse</code>
+                    </a> them to be in the correct order. We <a 
+                        href="https://uiua.org/docs/join" 
+                        data-title="Append two arrays end-to-end"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊂</span> join</code>
+                    </a> <code>0.5</code> to the end as the blue channel rather than <code>0.6</code> so that we can simply <a 
+                        href="https://uiua.org/docs/add" 
+                        data-title="Add values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">+</span> add</code>
+                    </a> <code>0.1</code> to all the channels after.</p><p>We'll temporarily <a 
+                        href="https://uiua.org/docs/transpose" 
+                        data-title="Rotate the shape of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function trans text-gradient">⍉</span> transpose</code>
+                    </a> so that we can see the colors.</p><code class="code-block">°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100  
+⍉ +0.1 ⊂⊙0.5 ⇌˙×   </code><p>We also need to apply a 10% gray color to the outer rim of the circle. This rim is 95% the radius of the full circle. We'll pass our grid to a second function using <a 
+                        href="https://uiua.org/docs/fork" 
+                        data-title="Call two functions on the same values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⊃</span> fork</code>
+                    </a>. We can again use our circle function from earlier.</p><code class="code-block">I ← <⊙(⌵/ℂ)                  
+                             
+°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100            
+⊃(⍉ I0.95|⍉ +0.1 ⊂⊙0.5 ⇌˙×)  </code><p>We can apply the mask with <a 
+                        href="https://uiua.org/docs/minimum" 
+                        data-title="Take the minimum of two arrays"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">↧</span> minimum</code>
+                    </a>. <a 
+                        href="https://uiua.org/docs/fix" 
+                        data-title="Add a length-1 axis to an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">¤</span> fix</code>
+                    </a> is needed to make the shapes agree.</p><p>Because the rim also needs <code>0.1</code> added to it, we can do that addition a single time to the masked color gradient. We'll bind this all as another function.</p><code class="code-block">I ← <⊙(⌵/ℂ)                     
+u ← +0.1 ↧¤ ⊃(I0.95|⊂⊙0.5 ⇌˙×)  
+                                
+°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100               
+⍉ u                             </code><h3 id="putting-it-all-together">Putting It All Together</h3><p>Now that we have both the RGB and the alpha channels, we can simply compose them with <a 
+                        href="https://uiua.org/docs/fork" 
+                        data-title="Call two functions on the same values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⊃</span> fork</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/join" 
+                        data-title="Append two arrays end-to-end"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊂</span> join</code>
+                    </a>!</p><p>Note that while while there is a space between them, <code>u</code> and <code>A</code> are both being used as operands to <a 
+                        href="https://uiua.org/docs/fork" 
+                        data-title="Call two functions on the same values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⊃</span> fork</code>
+                    </a>.</p><code class="code-block">U ← =∩⌟<0.2 0.7 /+ ×⟜ⁿ1_2       
+I ← <⊙(⌵/ℂ)                     
+u ← +0.1 ↧¤ ⊃(I0.95|⊂⊙0.5 ⇌˙×)  
+A ← ×⊃U(I1)                     
+                                
+⍉ ⊂⊃u A °⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡100       </code><p>Seeing <code><a href="/docs/un" class="prim-code-a">
+                <code class="prim-code" data-title="un: Invert the behavior of a function"><span class="prim-glyph code-font monadic-modifier">°</span></code>
+            </a><a href="/docs/transpose" class="prim-code-a">
+                <code class="prim-code" data-title="transpose: Rotate the shape of an array"><span class="prim-glyph code-font monadic-function trans text-gradient">⍉</span></code>
+            </a></code> being followed not long after by <code><a href="/docs/transpose" class="prim-code-a">
+                <code class="prim-code" data-title="transpose: Rotate the shape of an array"><span class="prim-glyph code-font monadic-function trans text-gradient">⍉</span></code>
+            </a></code> is a great instance to refactor to use <a 
+                        href="https://uiua.org/docs/under" 
+                        data-title="Operate on a transformed array, then reverse the transformation"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⍜</span> under</code>
+                    </a>.</p><code class="code-block">U ← =∩⌟<0.2 0.7 /+ ×⟜ⁿ1_2       
+I ← <⊙(⌵/ℂ)                     
+u ← +0.1 ↧¤ ⊃(I0.95|⊂⊙0.5 ⇌˙×)  
+A ← ×⊃U(I1)                     
+⍜°⍉(⊂⊃u A) ˙⊞⊟ -⊸¬ ÷⟜⇡256       </code><p>🎉 And that's the logo! 🥳</p><h3 id="parameterizing">Parameterizing</h3><p>One next step we might think to take is extracting some of those constants to make them parameters. Doing this within Uiua's full-tacit model can trip some people up, but we'll see it's not too scary!</p><p>First, we can parameterize the size of the image. This is simple enough.</p><code class="code-block">U ← =∩⌟<0.2 0.7 /+ ×⟜ⁿ1_2       
+I ← <⊙(⌵/ℂ)                     
+u ← +0.1 ↧¤ ⊃(I0.95|⊂⊙0.5 ⇌˙×)  
+A ← ×⊃U(I1)                     
+L ← ⍜°⍉(⊂⊃u A) ˙⊞⊟ -⊸¬ ÷⟜⇡      
+L 128                           </code><p>Next, we can parameterize the parabola offsets. It would be convenient to be able to bundle them together, so lets tweak the <code>U</code> function a bit first to work on an array of two numbers rather than 2 separate scalars.</p><code class="code-block">U ← /=⊞<0.2_0.7 /+ ×⟜ⁿ1_2       
+I ← <⊙(⌵/ℂ)                     
+u ← +0.1 ↧¤ ⊃(I0.95|⊂⊙0.5 ⇌˙×)  
+A ← ×⊃U(I1)                     
+L ← ⍜°⍉(⊂⊃u A) ˙⊞⊟ -⊸¬ ÷⟜⇡      
+L 128                           </code><p>Then we replace the <code>0.2_0.7</code> array with a <a 
+                        href="https://uiua.org/docs/dip" 
+                        data-title="Skip the first argument and call a function on later arguments"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⊙</span> dip</code>
+                    </a>. This changes the signature of <code>U</code>, so we'll have to put a few <a 
+                        href="https://uiua.org/docs/dip" 
+                        data-title="Skip the first argument and call a function on later arguments"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⊙</span> dip</code>
+                    </a>s and <a 
+                        href="https://uiua.org/docs/gap" 
+                        data-title="Discard the first argument then call a function"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⋅</span> gap</code>
+                    </a>s throughout its call path. <a 
+                        href="https://uiua.org/docs/gap" 
+                        data-title="Discard the first argument then call a function"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⋅</span> gap</code>
+                    </a> is generally needed in <a 
+                        href="https://uiua.org/docs/fork" 
+                        data-title="Call two functions on the same values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⊃</span> fork</code>
+                    </a> tines where that value is not used.</p><code class="code-block">U ← /=⊞< ⊙(/+ ×⟜ⁿ1_2)           
+I ← <⊙(⌵/ℂ)                     
+u ← +0.1 ↧¤ ⊃(I0.95|⊂⊙0.5 ⇌˙×)  
+A ← ×⊃U⋅(I1)                    
+L ← ⍉ ⊂⊃⋅u A ⊙(°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡)  
+L 0.2_0.7 128                   </code><p>We could go crazy and parameterize everything, but for now, lets just also parameterize the rim radius. We'll turn the <code>u</code> function into a dyadic function that takes the radius, and again add <a 
+                        href="https://uiua.org/docs/dip" 
+                        data-title="Skip the first argument and call a function on later arguments"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⊙</span> dip</code>
+                    </a>s and <a 
+                        href="https://uiua.org/docs/gap" 
+                        data-title="Discard the first argument then call a function"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⋅</span> gap</code>
+                    </a>s accordingly.</p><p>Note here that the <a 
+                        href="https://uiua.org/docs/fork" 
+                        data-title="Call two functions on the same values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⊃</span> fork</code>
+                    </a> in the <code>L</code> function can actually become sided <a 
+                        href="https://uiua.org/docs/bracket" 
+                        data-title="Call two functions on two distinct sets of values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⊓</span> bracket</code>
+                    </a>.</p><code class="code-block">U ← /=⊞< ⊙(/+ ×⟜ⁿ1_2)            
+I ← <⊙(⌵/ℂ)                      
+u ← +0.1 ↧¤ ⊃I⋅(⊂⊙0.5 ⇌˙×)       
+A ← ×⊃U⋅(I1)                     
+L ← ⍉ ⊂⊓⌟u A ⊙⊙(°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡)  
+L 0.95 0.2_0.7 128               </code><p>With more parameters, it can be hard to remember what goes where. Let's document everything real quick.</p><code class="code-block">U ← /=⊞< ⊙(/+ ×⟜ⁿ1_2)      # U shape
+I ← <⊙(⌵/ℂ)                # Circle
+u ← +0.1 ↧¤ ⊃I⋅(⊂⊙0.5 ⇌˙×) # Rgb 
+A ← ×⊃U⋅(I1)               # Alpha
+# ? Rim UBounds Size             
+L ← ⍉ ⊂⊓⌟u A ⊙⊙(°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡)  </code><p>Now we can make wacky versions of the logo!</p><code class="code-block">U ← /=⊞< ⊙(/+ ×⟜ⁿ1_2)      # U shape
+I ← <⊙(⌵/ℂ)                # Circle
+u ← +0.1 ↧¤ ⊃I⋅(⊂⊙0.5 ⇌˙×) # Rgb 
+A ← ×⊃U⋅(I1)               # Alpha
+# ? Rim UBounds Size             
+L ← ⍉ ⊂⊓⌟u A ⊙⊙(°⍉ ˙⊞⊟ -⊸¬ ÷⟜⇡)  
+                                 
+L 0.9 0.1_0.8 100                
+L 0.6 0_0.3 128                  
+L 0.4 ¯2_0 200                   </code></div></body></html>

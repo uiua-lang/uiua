@@ -943,7 +943,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        vec![instr],
+                        [instr],
                     ));
                 }
                 self.push_instr(instr);
@@ -954,7 +954,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        vec![instr],
+                        [instr],
                     ));
                 }
                 self.push_instr(instr);
@@ -972,7 +972,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        vec![instr],
+                        [instr],
                     ));
                 }
                 self.push_instr(instr);
@@ -986,7 +986,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         signature,
-                        vec![instr],
+                        [instr],
                     ));
                 }
                 self.push_instr(instr);
@@ -1016,7 +1016,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         signature,
-                        vec![instr],
+                        [instr],
                     ));
                 }
                 self.push_instr(instr);

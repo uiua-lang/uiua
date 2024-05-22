@@ -542,6 +542,9 @@ F! ←^ ⊂□°⋕X
 F‼ ←^ $"_ ← _\n" °⊟
 F‼Y5
 ⍤⟜≍: 5 Y
+Foo! ←^ "t ←rand" ◌
+Hi ← Foo!+"a"
+⍤⟜≍: "a" Hi
 
 # ThisFile
 ⍤⟜≍: $"tests_units.ua" Sep ThisFile

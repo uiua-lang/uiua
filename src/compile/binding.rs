@@ -294,11 +294,16 @@ impl Compiler {
                             }
                         }
                     };
+
                     let is_const = val.is_some();
                     self.compile_bind_const(&name, local, val, spandex, comment.as_deref());
                     self.scope.names.insert(name.clone(), local);
                     if is_const {
-                        self.asm.instrs.truncate(instrs_start);
+                        if !(self.asm.top_slices.last())
+                            .is_some_and(|slice| slice.start >= instrs_start)
+                        {
+                            self.asm.instrs.truncate(instrs_start);
+                        }
                     } else {
                         // Add binding instrs to top slices
                         instrs.push(Instr::BindGlobal {

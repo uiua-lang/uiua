@@ -207,6 +207,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
 };
 
 static PSEUDO_INVERT_PATTERNS: &[&dyn InvertPattern] = {
+    use ImplPrimitive::*;
     use Primitive::*;
     &[
         &([Add], [Sub]),
@@ -217,6 +218,16 @@ static PSEUDO_INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &([Neg, Rotate], [Rotate]),
         &([Min], [Min]),
         &([Max], [Max]),
+        &pat!(
+            Join,
+            (
+                CopyToInline(1),
+                Shape,
+                UnJoinPattern,
+                PopInline(1),
+                ImplPrimitive::MatchPattern
+            )
+        ),
     ]
 };
 
@@ -1174,24 +1185,15 @@ fn invert_temp_pattern<'a>(
     if let Some((input, start_instr @ Instr::CopyToTemp { span, .. }, inner, end_instr, count)) =
         try_copy_temp_wrap(input)
     {
-        // Pattern matching
-        if let Some(inverse) = invert_instrs(inner, comp) {
-            let mut instrs = eco_vec![Instr::PushTemp {
-                stack: TempStack::Inline,
-                count,
-                span: *span
-            }];
-            instrs.extend(inverse);
-            instrs.push(end_instr.clone());
-            instrs.extend([
-                Instr::Prim(Primitive::Over, *span),
-                Instr::ImplPrim(ImplPrimitive::MatchPattern, *span),
-            ]);
-            return Some((input, instrs));
-        }
         // Pseudo-inverse
         for mid in 0..inner.len() {
             let (before, after) = inner.split_at(mid);
+            let Ok(before_sig) = instrs_signature(before) else {
+                continue;
+            };
+            if before_sig.args == 0 && before_sig.outputs != 0 {
+                continue;
+            }
             for pat in PSEUDO_INVERT_PATTERNS {
                 if let Some((after, pseudo_inv)) = pat.invert_extract(after, comp) {
                     if let Some(after_inv) = invert_instrs(after, comp) {
@@ -1216,6 +1218,21 @@ fn invert_temp_pattern<'a>(
                     }
                 }
             }
+        }
+        // Pattern matching
+        if let Some(inverse) = invert_instrs(inner, comp) {
+            let mut instrs = eco_vec![Instr::PushTemp {
+                stack: TempStack::Inline,
+                count,
+                span: *span
+            }];
+            instrs.extend(inverse);
+            instrs.push(end_instr.clone());
+            instrs.extend([
+                Instr::Prim(Primitive::Over, *span),
+                Instr::ImplPrim(ImplPrimitive::MatchPattern, *span),
+            ]);
+            return Some((input, instrs));
         }
     }
     None

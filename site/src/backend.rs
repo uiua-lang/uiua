@@ -406,7 +406,7 @@ pub fn try_fetch_sync(url: &str) -> Option<Result<String, String>> {
                 query: {
                     let query_res = create_query(fetch_string, QueryOptions::default())
                         .use_query(move || url.clone());
-                    Box::new(move || query_res.data.get())
+                    Box::new(move || query_res.data.try_get().flatten())
                 },
                 tries: 0,
             });

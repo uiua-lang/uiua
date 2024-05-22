@@ -267,3 +267,7 @@ workspace = true
 
 [profile.dev]
 incremental = true
+
+[profile.release]
+lto = true
+opt-level = 'z'

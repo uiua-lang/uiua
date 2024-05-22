@@ -468,19 +468,29 @@ pub fn Editor<'a>(
                         };
                         let right_char = state.code.chars().nth(start as usize);
                         let (start_line, _) = line_col(&state.code, start as usize);
-                        let curr_line_indent = state
+                        let curr_line = state.code.lines().nth(start_line - 1).unwrap_or_default();
+                        let curr_line_indent =
+                            curr_line.chars().take_while(|c| c.is_whitespace()).count();
+                        let line_start = state
                             .code
                             .lines()
-                            .nth(start_line - 1)
-                            .unwrap_or_default()
+                            .take(start_line - 1)
+                            .map(|line| line.chars().count() + 1)
+                            .sum::<usize>();
+                        let line_before_left: String = state
+                            .code
                             .chars()
-                            .take_while(|c| c.is_whitespace())
-                            .count();
+                            .take(start.saturating_sub(1) as usize)
+                            .skip(line_start)
+                            .collect();
+                        let before_is_stringy =
+                            line_before_left.ends_with('@') || line_before_left.ends_with("$ ");
                         let indent = curr_line_indent
-                            + 2 * left_char.is_some_and(|c| "({[".contains(c)) as usize;
+                            + 2 * left_char.is_some_and(|c| "({[".contains(c) && !before_is_stringy)
+                                as usize;
                         replace_code(state, &format!("\n{}", " ".repeat(indent)));
                         let (start, _) = get_code_cursor().unwrap();
-                        if right_char.is_some_and(|c| ")}]".contains(c)) {
+                        if right_char.is_some_and(|c| ")}]".contains(c) && !before_is_stringy) {
                             replace_code(
                                 state,
                                 &format!("\n{}", " ".repeat(indent.saturating_sub(2))),

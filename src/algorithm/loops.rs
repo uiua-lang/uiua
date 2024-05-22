@@ -683,10 +683,7 @@ fn multi_partition_indices(markers: &Array<i64>) -> Vec<(i64, Vec<usize>)> {
             *c = 0;
         }
     }
-    let mut shape_muls: Vec<usize> = markers
-        .shape()
-        .iter()
-        .rev()
+    let mut shape_muls: Vec<usize> = (markers.shape().iter().rev())
         .scan(1, |mul, &dim| {
             let prev = *mul;
             *mul *= dim;

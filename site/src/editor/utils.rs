@@ -318,8 +318,8 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
     let mut end = 0;
     let mut curr = 0;
     if anchor_is_parent || focus_is_parent {
-        const PARENT_OFFSET: u32 = if cfg!(debug_assertions) { 2 } else { 0 };
         // This is the case when you double click in a spot off the end of a line
+        const PARENT_OFFSET: u32 = if cfg!(debug_assertions) { 2 } else { 0 };
         for (i, div_node) in children_of(&parent).enumerate() {
             let i = i as u32;
             if i > 0 {
@@ -386,6 +386,8 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
             } else {
                 // This is the normal case
                 // logging::log!("normal");
+                let mut found = false;
+                let beginning_curr = curr;
                 for span_node in children_of(&div_node) {
                     let text_content = span_node.text_content().unwrap();
                     // logging::log!("text_content: {:?}", text_content);
@@ -394,6 +396,7 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
                         let anchor_char_offset =
                             utf16_offset_to_char_offset(&text_content, anchor_offset);
                         start = curr + anchor_char_offset;
+                        found = true;
                         // logging::log!(
                         //     "start change: curr: {}, offset: {}",
                         //     curr,
@@ -405,12 +408,23 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
                         let focus_char_offset =
                             utf16_offset_to_char_offset(&text_content, focus_offset);
                         end = curr + focus_char_offset;
+                        found = true;
                         // logging::log!("end change: curr: {}, offset: {}", curr, focus_char_offset);
                         // logging::log!("end -> {:?}", end);
                     }
                     // Increment curr by the length of the text in the node
                     // logging::log!("curr {} -> {}", curr, curr + len);
                     curr += len;
+                }
+                if !found {
+                    if div_node.is_same_node(Some(&anchor_node)) {
+                        start = beginning_curr + anchor_offset;
+                        // logging::log!("start -> {:?}", start);
+                    }
+                    if div_node.is_same_node(Some(&focus_node)) {
+                        end = beginning_curr + focus_offset;
+                        // logging::log!("end -> {:?}", end);
+                    }
                 }
             }
         }

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Uiua</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="prefetch" href="https://raw.githubusercontent.com/uiua-lang/example-module/main/lib.ua" as="fetch" />
+  <link rel="prefetch" href="https://raw.githubusercontent.com/omnikar/uiua-math/main/lib.ua" as="fetch" />
+  <link rel="prefetch" href="https://raw.githubusercontent.com/omnikar/uiua-plot/main/lib.ua" as="fetch" />
+  <link rel="prefetch" href="/assets/elevation.webp" as="image">
+  <link rel="prefetch" href="/assets/bad-apple.gif" as="image">
+  <link rel="prefetch" href="/assets/amen-break.wav" as="fetch">
+  <link rel="prefetch" href="https://raw.githubusercontent.com/omnikar/uiua-math/main/lib.ua" as="fetch">
+  <link rel="prefetch" href="https://raw.githubusercontent.com/omnikar/uiua-plot/main/lib.ua" as="fetch">
+  <noscript>
+    <style>
+      .jsonly {
+        display: none
+      }
+    </style>
+  </noscript>
+  <!-- Begin Single Page Apps for GitHub Pages -->
+  <script type="text/javascript">
+    // Single Page Apps for GitHub Pages
+    // MIT License
+    // https://github.com/rafgraph/spa-github-pages
+    // This script checks to see if a redirect is present in the query string,
+    // converts it back into the correct url and adds it to the
+    // browser's history using window.history.replaceState(...),
+    // which won't cause the browser to attempt to load the new url.
+    // When the single page app is loaded further down in this file,
+    // the correct url will be waiting in the browser's history for
+    // the single page app to route accordingly.
+    (function (l) {
+      if (l.search[1] === '/') {
+        var decoded = l.search.slice(1).split('&').map(function (s) {
+          return s.replace(/~and~/g, '&')
+        }).join('?');
+        window.history.replaceState(null, null,
+          l.pathname.slice(0, -1) + decoded + l.hash
+        );
+      }
+    }(window.location))
+  </script>
+  <!-- End Single Page Apps for GitHub Pages -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A tacit array programming language" />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+  
+<script type="module">
+import init, * as bindings from '/site-7432ee48b061a1b.js';
+const wasm = await init({ module_or_path: '/site-7432ee48b061a1b_bg.wasm' });
+
+
+window.wasmBindings = bindings;
+
+
+dispatchEvent(new CustomEvent("TrunkApplicationStarted", {detail: {wasm}}));
+
+</script>
+  
+  <link rel="stylesheet" href="/styles-afc516e659b21a74.css"/>
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+<link rel="modulepreload" href="/site-7432ee48b061a1b.js" crossorigin="anonymous"><link rel="preload" href="/site-7432ee48b061a1b_bg.wasm" crossorigin="anonymous" as="fetch" type="application/wasm"></head>
+
+<body>
+  <div id="top">
+    <div id="header">
+      <div id="header-left">
+        <h1><a id="header-uiua" href="/"><img id="logo-image" src="/assets/uiua-logo.png" style="height: 1em"
+            alt="Uiua" /> Uiua</a>
+        </h1>
+        <p id="subtitle">&nbsp;</p>
+      </div>
+      <div id="nav" class="desktop-only">
+        <a class="pls-no-block" href="https://github.com/sponsors/uiua-lang">Support Uiua's development</a>
+      </div>
+    </div>
+    <div id="main-nav" style="display: none;">
+      <input type="checkbox" id="mobile-menu-toggle"/>
+      <label id="mobile-menu-label" class="mobile-only" for="mobile-menu-toggle" aria-label="Menu">☰</label>
+      <div id="links-grid">
+        <div id="links">
+          <div>
+            <a class="mobile-only" href="https://github.com/sponsors/uiua-lang">Support Uiua's development</a>
+            <a href="/install">Installation</a>
+            <a href="/docs">Documentation</a>
+            <a href="/tour">Language Tour</a>
+          </div>
+          <div>
+            <a href="/tutorial/Introduction" class="slow-pulse">Tutorial</a>
+            <a href="/pad">Pad</a>
+            <a href="/blog">Blog</a>
+            <a href="https://discord.gg/3r9nrfYhCc">Discord</a>
+            <a href="https://github.com/uiua-lang/uiua">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <noscript>
+        <p>JavaScript is required on this site. Please enable it and reload the page.</p>
+      </noscript>
+      <h3 id="loading-text" style="display: none;" class="jsonly running-text">Loading...</h3>
+      <div id="main-skeleton" style="display: none;">
+        <div class="jsonly skeleton" style="height: 300px;"></div>
+        <div class="jsonly what-is-uiua" style="min-height: 140px; margin-top: 1em; padding: 1em;">
+          <div class="skeleton" style="min-height: 90px;"></div>
+          <div class="skeleton" style="min-height: 90px;"></div>
+          <div class="skeleton" style="min-height: 90px;"></div>
+        </div>
+        <div class="jsonly features" style="margin-top: 2em">
+          <div>
+            <div class="skeleton" style="margin-top: 1em; height: 240px"></div>
+            <div class="skeleton" style="margin-top: 1em; height: 200px"></div>
+            <div class="skeleton" style="margin-top: 1em; height: 140px"></div>
+          </div>
+          <div>
+            <div class="skeleton" style="margin-top: 1em; height: 200px"></div>
+            <div class="skeleton" style="margin-top: 1em; height: 140px"></div>
+            <div class="skeleton" style="margin-top: 1em; height: 240px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+<script type="text/javascript">
+  if (new Date().getMonth() === 5) {
+    document.getElementById("logo-image").src = "/assets/uiua-logo-pride.png";
+  }
+  const skeletons = window.location.pathname === "/" ? ["main-nav", "main-skeleton"] : ["loading-text"];
+  for (const id of skeletons) {
+    document.getElementById(id).style.display = "block";
+  }
+</script>
+
+</html>

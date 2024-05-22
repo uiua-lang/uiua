@@ -1,0 +1,102 @@
+<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://uiua.org/styles.css">
+    </head><body><div id=top><p><a href="https://uiua.org" data-title=>Uiua</a></p><p><a href="https://uiua.org/blog" data-title=>Blog Home</a></p><h1 id="subscripts">Subscripts</h1><p><strong>You can read this post with full editor features <a href="https://uiua.org/blog/subscripts" data-title=>here</a>.</strong></p><p>2024-11-25</p><hr/><p>If you get into any level of mathematics above a middle school level, you're likely to encounter notation that involves <em>subscripts</em>: little numbers or letters that sit across the baseline of the text and indicate different things about the thing to their left.</p><p><img src="https://wikimedia.org/api/rest_v1/media/math/render/svg/ee372c649dea0a05bf1ace77c9d6faf051d9cc8d" alt="Matrix multiplication with subscript notation" title="Matrix multiplication with subscript notation" class="image-visibility markdown-image"/></p><p>One common use of subscripts is to indicate indices. In many (perhaps the majoriy of?) programming languages, the subscript index notation of mathematics is replaced with the familiar <code>[]</code> square bracket syntax. Even APL, of which Uiua is a descendent, uses square brackets for this purpose. This is a nice, uniform syntax that is - critically - easy to type on an ASCII keyboard. But it loses a bit of the art, beauty, and expressiveness of mathematical notation.</p><h2 id="subscripts-in-uiua">Subscripts in Uiua</h2><p>Uiua's [formatter](https://www.uiua.org/tutorial/Basic Data Manipulation and Formatting#formatting) and its embrace of Unicode glyphs free it from the constraints many other languages have. This makes it possible to explore powerful and/or aesthetic syntactic constructs that would either be impossible or cumbersome to express in other languages. Look no further than the <a href="https://www.uiua.org/tutorial/Modules#scoped-modules" data-title=>fancy module delimiters</a>.</p><p>Uiua has actually allowed subscript numbers in identifiers for a while. Since identifiers cannot contain regular digits, this allows you to put numbers in them anyway.</p><code class="code-block">Md₅    ← ∘ # TODO
+Sha₂₅₆ ← ∘ # TODO</code><p>Subscripts for use beyond identifiers were originally proposed in the <a href="https://discord.gg/3r9nrfYhCc" data-title=>Uiua discord</a> as almost a joke. A whimsical syntax for modifying the behavior of certain functions and modifiers. But people got to talking about what could be possible, and I implemented subscripts as an experimental feature. At time of writing, subscripts have just been stabilized.</p><p>Uiua subscripts are written with a comma <code>,</code> followed by some digits. They can also be negative. The formatter will convert this into nice unicode subscript digits.</p><code class="code-block"># Try formatting!
++,1 5  # 6
+×₂ 12  # 24 6</code><p>But what are they for? In the example above, they are equivalent to just not using them at all. For mathematical operators, they are only really good for reducing the number of parentheses needed. This is valuable in its own right for readability, but it is not reason enough to add an entire syntax for it.</p><p>However, subscripts on some functions and modifiers allow you to express things that would otherwise be impossible.</p><h2 id="a-brief-history-of-uiua's-rank-functionality">A brief history of Uiua's rank functionality</h2><p>Uiua has gone through a few iterations of ways to express operating at a certain <em>rank</em> of an array. The other array languages simply have a <code>rank</code> operator that allows the direct specification of the rank to operate at. This approach works and is very general. At one point, Uiua had something similar in a modifier called <code>≑ level</code>. This took a number or list of numbers indicating the ranks to operate at, as well as the function to operate on the array. While this worked, something about it never sat right with me. In an array language, the structure and rank of an array are, in most cases, the structure of the computation itself. There's something odd about having some numbers in your code that refer to actual <em>numbers</em>, and then other numbers that refer to the computation.</p><p>The first attempt to alleviate this discomfort I felt was the infamous <em>Ocean Notation</em>. It was a series of glyphs that had special parsing rules but whose function was <em>only</em> to create rank lists for use with level <code>≑ level</code>. This mostly eliminated rank-indicating numbers from the code. While this system was kind of neat, it added too many new symbols for the programmer to learn with very little payoff, and it was not general enough to handle all cases.</p><p><code>≑ level</code> was eventually replaced with Uiua's current system involving <a 
+                        href="https://uiua.org/docs/rows" 
+                        data-title="Apply a function to each row of an array or arrays"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">≡</span> rows</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/fix" 
+                        data-title="Add a length-1 axis to an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">¤</span> fix</code>
+                    </a>. This system is simple, composable, and easy to learn. However, it cannot handle a common use of <code>rank</code> in other array languages: how do you operate on rank-N subarrays of an array of arbitrary rank? To fill this hole, the <code>☇ rerank</code> function was added. This set the rank of the <em>rows</em> of an array to the given number. This also worked, and the system was complete.</p><p>But there were those numbers in the code again. You'd most often write <code>☇1</code> or <code>☇2</code> to change the rank of an array, collapsing the leading dimensions, sometimes temporarily. The thing is, you <em>never</em> need this number to be dynamic. It is <em>always</em> a number sitting there in the code itself, a static value, known at compile time. Sometimes it had to be relative to the rank of the array, in which case you would use a static negative number, but a static value nontheless.</p><h2 id="some-uses-of-subscripts">Some uses of subscripts</h2><p>As subscripts were experimented with, we realized that they could replace all uses of <code>☇ rerank</code>.</p><p>Want to collapse an array to a certain rank? That's subscripted <a 
+                        href="https://uiua.org/docs/deshape" 
+                        data-title="Make an array 1-dimensional"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">♭</span> deshape</code>
+                    </a>.</p><code class="code-block">⍉ ♭₂ ⇡2_2_3  
+
+# ╭─                         
+# ╷ 0 0 0 0 0 0 1 1 1 1 1 1  
+#   0 0 0 1 1 1 0 0 0 1 1 1  
+#   0 1 2 0 1 2 0 1 2 0 1 2  
+#                           ╯</code><p>Want to call a function on all rank-N subarrays of an array? That's subscripted <a 
+                        href="https://uiua.org/docs/rows" 
+                        data-title="Apply a function to each row of an array or arrays"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">≡</span> rows</code>
+                    </a>.</p><code class="code-block">≡₁□ °△2_3_4  
+
+# ┌─                                     
+# ╷ 0 1 2 3    │4 5 6 7    │8 9 10 11    
+#   ───────────┼───────────┼───────────  
+#   12 13 14 15│16 17 18 19│20 21 22 23  
+#                                       ┘
+≡₂□ °△2_3_4  
+
+# ┌─                                     
+# ╷ 0 1 2 3    │4 5 6 7    │8 9 10 11    
+#   ───────────┼───────────┼───────────  
+#   12 13 14 15│16 17 18 19│20 21 22 23  
+#                                       ┘
+# ┌─                       
+#   0 1  2  3│12 13 14 15  
+#   4 5  6  7│16 17 18 19  
+#   8 9 10 11│20 21 22 23  
+#                         ┘</code><p>But there's more than just messing with rank!</p><p>What do you do when you want to collect some number of values from the stack into an array? The previous direction was to use <code>[]</code>s or <code>{}</code>s with <a 
+                        href="https://uiua.org/docs/dip" 
+                        data-title="Skip the first argument and call a function on later arguments"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⊙</span> dip</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/identity" 
+                        data-title="Do nothing with one value"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font stack-function">∘</span> identity</code>
+                    </a>.</p><code class="code-block">[⊙⊙⊙∘] 1 2 3 4       # [1 2 3 4]
+{⊙⊙∘} 5 "Hi!" 1_2_3  # [∙5│"Hi!"│1 2 3] [1 2 3 4]</code><p>But this is unnecessarily verbose. This can now be done with subscripted <a 
+                        href="https://uiua.org/docs/couple" 
+                        data-title="Combine two arrays as rows of a new array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊟</span> couple</code>
+                    </a> or <a 
+                        href="https://uiua.org/docs/box" 
+                        data-title="Turn an array into a box"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">□</span> box</code>
+                    </a>!</p><code class="code-block">⊟₄ 1 2 3 4        # [1 2 3 4]
+□₃ 5 "Hi!" 1_2_3  # [∙5│"Hi!"│1 2 3] [1 2 3 4]</code><p>How do you take the Nth root of a number? Previously, you'd have to raise to the power of the reciprocal. Now you can just use subscripted <a 
+                        href="https://uiua.org/docs/sqrt" 
+                        data-title="Take the square root of a number"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">√</span> sqrt</code>
+                    </a>.</p><code class="code-block">ⁿ÷:1 3 125  # 4.999…
+√₃ 125      # 4.999… 4.999…</code><p>Something similarly useful happens with <a 
+                        href="https://uiua.org/docs/round" 
+                        data-title="Round to the nearest integer"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⁅</span> round</code>
+                    </a>.</p><code class="code-block">⍜×⁅ 1e3 π  # 3.142
+⁅₃ π       # 3.142 3.142</code><p>Subscripts also solve the infamous problem of calling <a 
+                        href="https://uiua.org/docs/both" 
+                        data-title="Call a function on two sets of values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier bi text-gradient">∩</span> both</code>
+                    </a> on 3 sets of arguments.</p><code class="code-block">[∩₃+ 1 2 3 4 5 6]  # [3 7 11]</code><p>This is all to not even mention all the ways that subscripts simply help avoid parentheses, which reduces line noise and makes code easier to read.</p><p>You can find a full list of all the currently implemented subscripts <a href="https://uiua.org/docs/subscripts" data-title=>here</a>.</p><h2 id="going-forward">Going forward</h2><p>One thing not listed above, and which is certainly more subjective, is that subscripts are <em>pretty</em>. They evoke the beauty of mathematical notation, a little number that you write to augment meaning. They make me smile! 😊</p><p>Much more is possible as well. One likely future use of subscripts is as a way to indicate non-base-10 numeric literals. Also, allowing for non-numeric subscripts would open up a whole new avenue of exploration.</p><p>I hope you enjoy this new feature. It is available in the <a href="https://uiua.org/pad" data-title=>online pad</a> and in the latest release of the <a href="https://github.com/uiua-lang/uiua/releases" data-title=>native interpreter</a>.</p></div></body></html>

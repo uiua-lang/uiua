@@ -1,0 +1,124 @@
+<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://uiua.org/styles.css">
+    </head><body><div id=top><p><a href="https://uiua.org" data-title=>Uiua</a></p><p><a href="https://uiua.org/blog" data-title=>Blog Home</a></p><h1 id="announcing-uiua-0.15.0">Announcing Uiua 0.15.0</h1><p><strong>You can read this post with full editor features <a href="https://uiua.org/blog/uiua-0.15.0" data-title=>here</a>.</strong></p><p>2025-04-03</p><hr/><p>Uiua 0.15.0 is now available!</p><p>You can find the full changelog <a href="https://uiua.org/docs/changelog#0.15.0---2025-04-03" data-title=>here</a>.</p><p>You can download pre-built binaries <a href="https://github.com/uiua-lang/uiua/releases" data-title=>here</a>.</p><p>Uiua is a general purpose, stack-based, array-oriented programming language with a focus on tacit code.</p><p>Here are some highlights of this release:</p><h2 id="data-definitions">Data Definitions</h2><p>Data definitions are a newly stabilized feature that allows names to be given to the rows of heterogeneous arrays. This is similar to structures or classes in other languages.</p><p>There is [new tutorial](https://uiua.org/tutorial/Data Definitions) detailing all the features of data definitions, but here are a few examples:</p><p>Simple data definitions can be defined following a <code>~</code>. We can then use the name of the definition to construct an array, and we can use the field names to access the fields.</p><code class="code-block">~Customer {Name Phone Address}                
+Customer "John Doe" "555-1234" "123 Main St"  
+
+# ┌─                                     
+#   Name      │Phone     │Address        
+#   "John Doe"│"555-1234"│"123 Main St"  
+#                                       ┘
+Customer~Name .                               
+
+# ┌─                                     
+#   Name      │Phone     │Address        
+#   "John Doe"│"555-1234"│"123 Main St"  
+#                                       ┘
+# "John Doe"</code><p>If we want to add functions associated with the data definition, we can put the definition inside a module. We can use a <a href="https://www.uiua.org/tutorial/Modules#module-import-macros" data-title=>module import macro</a> to easily access the items in the module.</p><code class="code-block">┌─╴Customer                                        
+  ~ {Name Phone Address}
+  Format   ← $"_ lives at _" ⊃(Name|Address)
+  HouseNum ← ⋕▽⊸∊+@0⇡10 Address
+└─╴
+
+Customer!(
+  New "Bob" "555-1234" "123 Main St"
+  $"_'s house number is _" ⊃(Name|HouseNum)
+
+  Format New "Alice" "555-2843" "456 Broadway St"
+)</code><p>Enum-like data definitions can be defined in a module with <code>|</code>s. [Pattern matching](https://www.uiua.org/tutorial/Pattern Matching) can be used to do different things based on the variant.</p><code class="code-block">┌─╴Shape                              
+  |Circle {Radius}
+  |Rectangle {Width Height}
+  |Point
+  Area ← $Area ⍣(
+    ×π˙× °Circle
+  | × °Rectangle
+  | 0)
+  Format ← ⍣(
+    $"Circle has radius _" °Circle
+  | $"Rectangle is _×_" °Rectangle
+  | "Point"
+  )
+└─╴
+
+Shape!(⊃(Area|Format) Circle 4)
+Shape!(⊃(Area|Format) Rectangle 3 5)</code><h2 id="backward-˜-stabilization"><a 
+                        href="https://uiua.org/docs/backward" 
+                        data-title="Call a function with its arguments swapped"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">˜</span> backward</code>
+                    </a> Stabilization</h2><p>The <a 
+                        href="https://uiua.org/docs/backward" 
+                        data-title="Call a function with its arguments swapped"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">˜</span> backward</code>
+                    </a> modifier has been stabilized. <a 
+                        href="https://uiua.org/docs/backward" 
+                        data-title="Call a function with its arguments swapped"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">˜</span> backward</code>
+                    </a> <a 
+                        href="https://uiua.org/docs/flip" 
+                        data-title="Swap the top two values on the stack"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font stack-function">:</span> flip</code>
+                    </a>s the arguments of its function.</p><code class="code-block"> - 3 5  # 2
+˜- 3 5  # ¯2 2</code><code class="code-block"> map 1_2_3 "abc"  
+
+# ╭─        
+#   1 → @a  
+#   2 → @b  
+#   3 → @c  
+#          ╯
+˜map 1_2_3 "abc"  
+
+# ╭─        
+#   1 → @a  
+#   2 → @b  
+#   3 → @c  
+#          ╯
+# ╭─        
+#   @a → 1  
+#   @b → 2  
+#   @c → 3  
+#          ╯</code><code class="code-block"> ⊂ 0 [1 2 3]  # [0 1 2 3]
+˜⊂ 0 [1 2 3]  # [1 2 3 0] [0 1 2 3]</code><code class="code-block">°˜⊂ [1 2 3 4]  # [2 3 4] 1</code><p><a 
+                        href="https://uiua.org/docs/backward" 
+                        data-title="Call a function with its arguments swapped"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">˜</span> backward</code>
+                    </a> is usually used on dyadic functions, but it can also be used on tetradic (4 argument) functions. In this case, it swaps the second and third arguments, leaving the first and fourth arguments unchanged. This can be a useful stack permutation.</p><code class="code-block"> ⊟₄ 1 2 3 4  # [1 2 3 4]
+˜⊟₄ 1 2 3 4  # [1 3 2 4] [1 2 3 4]</code><code class="code-block">˜∩⬚0↙ ◡˜∩⧻ [1 2 3] [4 5 6 7 8]  # [1 2 3 0 0] [4 5 6]</code><h2 id="sided-subscripts">Sided Subscripts</h2><p>Sided subscripts are <a href="https://www.uiua.org/docs/subscripts" data-title=>subscripts</a> that instead of changing how a function works based on a number, do it based on a "side", either left or right.</p><p>Sided subscripts are formatted from <code>,<</code> and <code>,></code>. They are currently only stabilized for <a 
+                        href="https://uiua.org/docs/both" 
+                        data-title="Call a function on two sets of values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier bi text-gradient">∩</span> both</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/bracket" 
+                        data-title="Call two functions on two distinct sets of values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⊓</span> bracket</code>
+                    </a>. These cases simplify some common stack manipulation patterns.</p><p>There is a <a href="https://www.uiua.org/tutorial/evenmoreargument#sided-subscripts" data-title=>short tutorial section</a> about them, but here are some simple examples:</p><code class="code-block">{∩⌟⊟ 1 2 3}  # [1 3│2 3]
+{∩⌞⊟ 1 2 3}  # [1 2│1 3] [1 3│2 3]</code><code class="code-block">{⊓⌟⊂⊟ 1_2 3_4 5_6}  
+
+# ┌─               
+#   [1 2 5 6]│3 4  
+#            │5 6  
+#                 ┘
+{⊓⌞⊂⊟ 1_2 3_4 5_6}  
+
+# ┌─               
+#   [1 2 5 6]│3 4  
+#            │5 6  
+#                 ┘
+# ┌─               
+#   [1 2 3 4]│1 2  
+#            │5 6  
+#                 ┘</code><h2 id="over-,-deprecation"><a href="https://www.uiua.org/docs/over" data-title=>over ,</a> Deprecation</h2><p>The <a href="https://www.uiua.org/docs/over" data-title=>over ,</a> function has been deprecated in favor of more structured stack manipulation modifiers.</p><p>You can read more about this change in the short <a href="https://www.uiua.org/blog/its-so-over" data-title=>blog post</a>.</p><h2 id="✨">✨</h2><p>Thanks to everyone who contributed to this release!</p><p>As always, a big thank you to Uiua's wonderful <a href="https://github.com/sponsors/uiua-lang" data-title=>GitHub sponsors</a>!</p><p>Again, you can find the full changelog for this release <a href="https://uiua.org/docs/changelog#0.15.0---2025-04-03" data-title=>here</a>.</p><p>You can join the <a href="https://discord.gg/3r9nrfYhCc" data-title=>Uiua Discord</a> to chat about the language, ask questions, or get help. We also do code challenges and discuss language features!</p></div></body></html>

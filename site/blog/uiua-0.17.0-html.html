@@ -1,0 +1,167 @@
+<!DOCTYPE html><html><head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://uiua.org/styles.css">
+    </head><body><div id=top><p><a href="https://uiua.org" data-title=>Uiua</a></p><p><a href="https://uiua.org/blog" data-title=>Blog Home</a></p><h1 id="announcing-uiua-0.17.0">Announcing Uiua 0.17.0</h1><p><strong>You can read this post with full editor features <a href="https://uiua.org/blog/uiua-0.17.0" data-title=>here</a>.</strong></p><p>2025-09-23</p><hr/><p>Uiua 0.17.0 is now available!</p><p>You can find the full changelog <a href="https://uiua.org/docs/changelog#0.17.0---2025-09-23" data-title=>here</a>.</p><p>You can download pre-built binaries <a href="https://github.com/uiua-lang/uiua/releases" data-title=>here</a>.</p><p>Uiua is a general purpose array-oriented programming language with a focus on tacit code.</p><p>This release is mostly focused on bug and crash fixes; there are no major new features.</p><p>That said, there are still some notable smaller changes and additions in this release:</p><h2 id="new-subscript-formatting">New Subscript Formatting</h2><p>Subscripts now format from a <code>,</code> rather than <code>__</code> like they did previously.</p><code class="code-block">coup,3 2 3 5 # Try formatting# [2 3 5]</code><p>This makes them typable with one keystroke instead of three, which is nice as more things in the language use subscripts.</p><h2 id="primes-in-binding-names">Primes in Binding Names</h2><p>Binding names can now contain Unicode prime glyphs. These format from <code>'</code>s at the end of the name.</p><p>Try formatting this example:</p><code class="code-block">A' = 1    
+B'' = 2   
+C''' = 3  </code><h2 id="array-pack-syntax">Array Pack Syntax</h2><p>It is common to wrap the results of a <a 
+                        href="https://uiua.org/docs/fork" 
+                        data-title="Call two functions on the same values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⊃</span> fork</code>
+                    </a> or <a 
+                        href="https://uiua.org/docs/bracket" 
+                        data-title="Call two functions on two distinct sets of values"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⊓</span> bracket</code>
+                    </a> function pack in an array to collect the results.</p><code class="code-block">[⊃(⊢|⊣|/+)] [3 8 2 9 5]         # [3 5 27]
+{⊓(⍉|+|⇡)} [1_2 3_4] 6 10_20 5  
+
+# [3 5 27]
+# ┌─                         
+#   1 3│[16 26]│[0 1 2 3 4]  
+#   2 4│       │             
+#                           ┘</code><p>The parentheses of the function pack can be replaced with the array brackets.</p><code class="code-block">⊃[⊢|⊣|/+] [3 8 2 9 5]         # [3 5 27]
+⊓{⍉|+|⇡} [1_2 3_4] 6 10_20 5  
+
+# [3 5 27]
+# ┌─                         
+#   1 3│[16 26]│[0 1 2 3 4]  
+#   2 4│       │             
+#                           ┘</code><h2 id="indexin-⨂"><a 
+                        href="https://uiua.org/docs/indexin" 
+                        data-title="Find the first index in an array of each row of another array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⨂</span> indexin</code>
+                    </a></h2><p><a 
+                        href="https://uiua.org/docs/indexof" 
+                        data-title="Find the first index of each row of one array in another"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font text-gradient caution">⊗</span> indexof</code>
+                    </a> is now deprecated. It was almost always used along with <a 
+                        href="https://uiua.org/docs/backward" 
+                        data-title="Call a function with its arguments swapped"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">˜</span> backward</code>
+                    </a>, and this change also makes its argument order convention match that of <a 
+                        href="https://uiua.org/docs/memberof" 
+                        data-title="Check if each row of one array exists in another"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">∊</span> memberof</code>
+                    </a>.</p><p>It has been replaced with <a 
+                        href="https://uiua.org/docs/indexin" 
+                        data-title="Find the first index in an array of each row of another array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⨂</span> indexin</code>
+                    </a>, which has the exact same functionality, except its arguments are flipped.</p><code class="code-block">F ← ⨂"abcde"  
+F "beefcake"  # [1 4 4 5 2 0 5 4]</code><p><a 
+                        href="https://uiua.org/docs/indexof" 
+                        data-title="Find the first index of each row of one array in another"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font text-gradient caution">⊗</span> indexof</code>
+                    </a> will be automatically replaced in existing code.</p><h2 id="stabilized-primitives">Stabilized Primitives</h2><ul><li><p><a 
+                        href="https://uiua.org/docs/occurrences" 
+                        data-title="Mark each row of an array with its occurrence count"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⧆</span> occurrences</code>
+                    </a></p><code class="code-block">⧆ "lego helmet"  # [0 0 0 0 0 0 1 1 0 2 0]
+⧆ "abbacaab"     # [0 0 1 1 0 2 3 2] [0 0 0 0 0 0 1 1 0 2 0]
+⧆₁ "abbacaab"    # [1 1 0 0 1 0 0 0] [0 0 1 1 0 2 3 2] [0 0 0 0 0 0 1 1 0 2 0]</code><ul><li><p>Replaces and deprecates <a 
+                        href="https://uiua.org/docs/unique" 
+                        data-title="Get a mask of first occurrences of items in an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">◰</span> unique</code>
+                    </a></p></li><li><p><a 
+                        href="https://uiua.org/docs/unique" 
+                        data-title="Get a mask of first occurrences of items in an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">◰</span> unique</code>
+                    </a> will be automatically replaced</p></li></ul></li><li><p><a 
+                        href="https://uiua.org/docs/self" 
+                        data-title="Call a function with the same array as all arguments"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">˙</span> self</code>
+                    </a></p><code class="code-block">˙× 5   # 25
+˙⊟ 10  # [10 10] 25
+˙⊟₃ τ  # [τ τ τ] [10 10] 25</code></li></ul><h2 id="notable-breaking-changes">Notable Breaking Changes</h2><p>Subscripted <a 
+                        href="https://uiua.org/docs/join" 
+                        data-title="Append two arrays end-to-end"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">⊂</span> join</code>
+                    </a> now joins that many arrays.</p><code class="code-block">⊂₃ "wow" @  "cool"            # "wow cool"
+⊂₄ 1 2_3 4_5_6 7              # [1 2 3 4 5 6 7] "wow cool"
+/◇⊂₃ @, {"dog" "cat" "bird"}  # "dog,cat,bird" [1 2 3 4 5 6 7] "wow cool"</code><p><a 
+                        href="https://uiua.org/docs/dip" 
+                        data-title="Skip the first argument and call a function on later arguments"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⊙</span> dip</code>
+                    </a> and <a 
+                        href="https://uiua.org/docs/on" 
+                        data-title="Call a function but keep its first argument before its outputs"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-modifier">⟜</span> on</code>
+                    </a> function packs no longer apply their modifier to the leftmost function. This makes certain patterns easier to read and write.</p><code class="code-block">⊙(⊂|÷|+) 1 2 3 5  # [1 4]
+⊂⊙(÷⊙+) 1 2 3 5   # [1 4] [1 4]</code><p><a 
+                        href="https://uiua.org/docs/under" 
+                        data-title="Operate on a transformed array, then reverse the transformation"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-modifier">⍜</span> under</code>
+                    </a><a 
+                        href="https://uiua.org/docs/shape" 
+                        data-title="Get the dimensions of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">△</span> shape</code>
+                    </a> now tiles the original array to match the new shape instead of <a 
+                        href="https://uiua.org/docs/reshape" 
+                        data-title="Change the shape of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">↯</span> reshape</code>
+                    </a>ing.</p><code class="code-block">⍜⊙△⊂ 2_3 ["ab" "cd"]  
+
+# ╭─                  
+# ╷ "ab"  "ab"  "ab"  
+# ╷ "cd"  "cd"  "cd"  
+# ╷                   
+#   "ab"  "ab"  "ab"  
+#   "cd"  "cd"  "cd"  
+#                    ╯</code><p><a 
+                        href="https://uiua.org/docs/reverse" 
+                        data-title="Reverse the rows of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function">⇌</span> reverse</code>
+                    </a>, <a 
+                        href="https://uiua.org/docs/transpose" 
+                        data-title="Rotate the shape of an array"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font monadic-function trans text-gradient">⍉</span> transpose</code>
+                    </a>, and <a 
+                        href="https://uiua.org/docs/rotate" 
+                        data-title="Rotate the elements of an array by n"
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class="prim-glyph code-font dyadic-function">↻</span> rotate</code>
+                    </a> no longer work through boxes.</p><h2 id="thank-you!">Thank You!</h2><p>There are lots of other small changes and improvements. You can find the full changelog for this release <a href="https://uiua.org/docs/changelog#0.17.0---2025-09-23" data-title=>here</a>.</p><p>Thanks to Uiua's generous <a href="https://github.com/sponsors/uiua-lang" data-title=>GitHub sponsors</a>, who help pay my rent!</p><p>Extra special thanks to everyone who directly contributed code to this release, including <a href="https://github.com/magistau" data-title=>magistau</a>, <a href="https://github.com/Marcos-cat" data-title=>Marcos-cat</a>, <a href="https://github.com/Omnikar" data-title=>Omnikar</a>, <a href="https://github.com/amatgil" data-title=>amatgil</a>, <a href="https://github.com/Jacob-Lockwood" data-title=>Jacob Lockwood</a>, <a href="https://github.com/lemonlime4" data-title=>lemonlime4</a>, <a href="https://github.com/RubenVerg" data-title=>Madeline Vergani</a>, and <a href="https://github.com/alex-s168" data-title=>alex-s168</a>! Your care for fixing bugs and docs, and for making quality-of-life improvements, are what makes the Uiua community great!</p><p>You can join the <a href="https://discord.gg/3r9nrfYhCc" data-title=>Uiua Discord</a> to chat about the language, ask questions, or get help. We also do code challenges and discuss language features!</p><code class="code-block">°⍉ -⊸¬÷¤¤⟜⇡˙⊟100              # Coords
+≡⌟× +1 ×0.1 ∿×τ÷⟜⇡20          # Scale
+≡(⊃⊢(⊃+-⊃(√˜-0.5˙×|ⁿ2/3÷2⌵)⊣) # Heart
+  ⇌×⊓⌞>< ×1.1+0.1)
+⊏⊙Black_Red # Color</code></div></body></html>

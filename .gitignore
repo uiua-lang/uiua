@@ -2,8 +2,6 @@
 .idea
 .DS_Store
 /target
-/docs
-/site/blog/*.html
 site/dist
 /uiua-modules
 
@@ -24,6 +22,7 @@ uiua.tmLanguage.json
 !/examples/*
 !/site/**/*.ua
 !/site/assets/**
+!/docs/assets/**
 
 # symlink created by `nix build`
 result

@@ -179,3 +179,7 @@ incremental = true
 
 [patch.crates-io]
 calamine = {git = "https://github.com/prophittcorey/calamine", branch = "fix/zip-3.0"}
+
+[profile.release]
+lto = true
+opt-level = 'z'

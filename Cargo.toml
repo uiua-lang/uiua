@@ -160,3 +160,6 @@ members = ["site", "tests_ffi", "pad/editor"]
 
 [profile.dev]
 incremental = true
+
+[profile.release]
+opt-level = 'z'

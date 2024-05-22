@@ -273,3 +273,8 @@ workspace = true
 
 [profile.dev]
 incremental = true
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 'z'

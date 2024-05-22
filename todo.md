@@ -2,6 +2,7 @@
 
 - 0.11
   - `un on join`
+  - `un keep` - Split into deduped and adjacent counts
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

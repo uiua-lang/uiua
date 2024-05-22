@@ -327,6 +327,7 @@ pub fn Editor<'a>(
     // Replace the selected text in the editor with the given string
     let replace_code = move |state: &mut State, inserted: &str| {
         if let Some((start, end)) = get_code_cursor() {
+            let inserted = inserted.replace('\r', "");
             let (start, end) = (start.min(end), start.max(end) as usize);
             // logging::log!("replace start: {start}, end: {end}");
             let code = state.code.clone();

@@ -178,3 +178,7 @@ members = ["site", "tests_ffi", "pad/editor", "parser"]
 
 [profile.dev]
 incremental = true
+
+[profile.release]
+lto = true
+opt-level = 'z'

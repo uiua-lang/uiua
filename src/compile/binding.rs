@@ -209,7 +209,7 @@ impl Compiler {
             });
 
         // Compile the body
-        self.current_binding = Some(CurrentBinding {
+        self.current_bindings.push(CurrentBinding {
             name: name.clone(),
             signature: binding.signature.as_ref().map(|s| s.value),
             referenced: false,
@@ -220,7 +220,7 @@ impl Compiler {
             && (binding_code_words.next()).is_some_and(|w| matches!(&w.value, Word::Func(_)));
         let instrs_start = self.asm.instrs.len();
         let instrs = self.compile_words(binding.words, !is_single_func);
-        let self_referenced = self.current_binding.take().unwrap().referenced;
+        let self_referenced = self.current_bindings.pop().unwrap().referenced;
         let mut instrs = instrs?;
 
         if self_referenced {

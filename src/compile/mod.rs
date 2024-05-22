@@ -42,8 +42,8 @@ pub struct Compiler {
     pub(crate) code_meta: CodeMeta,
     /// Functions which are under construction
     new_functions: Vec<EcoVec<Instr>>,
-    /// The name of the current binding
-    current_binding: Option<CurrentBinding>,
+    /// The name of the current bindings
+    current_bindings: Vec<CurrentBinding>,
     /// The index of the next global binding
     next_global: usize,
     /// The current scope
@@ -90,7 +90,7 @@ impl Default for Compiler {
             asm: Assembly::default(),
             code_meta: CodeMeta::default(),
             new_functions: Vec::new(),
-            current_binding: None,
+            current_bindings: Vec::new(),
             next_global: 0,
             scope: Scope::default(),
             higher_scopes: Vec::new(),
@@ -1302,7 +1302,7 @@ code:
     }
     fn validate_array_loop_sig(&mut self, instrs: &[Instr], span: &CodeSpan) -> Option<Signature> {
         let inner_sig = instrs_signature(instrs);
-        if self.current_binding.is_none() {
+        if self.current_bindings.is_empty() {
             return inner_sig.ok();
         }
         let Err(e) = &inner_sig else {
@@ -1494,7 +1494,7 @@ code:
         }
     }
     fn ident(&mut self, ident: Ident, span: CodeSpan, call: bool, skip_local: bool) -> UiuaResult {
-        if let Some(curr) = (self.current_binding.as_mut()).filter(|curr| curr.name == ident) {
+        if let Some(curr) = (self.current_bindings.last_mut()).filter(|curr| curr.name == ident) {
             // Name is a recursive call
             let Some(sig) = curr.signature else {
                 return Err(self.fatal_error(

@@ -29,6 +29,7 @@ wasm-bindgen-futures = "0.4.42"
 [dependencies.web-sys]
 features = [
   "CssStyleDeclaration",
+  "DomRect",
   "Storage",
   "HtmlAudioElement",
   "HtmlBrElement",

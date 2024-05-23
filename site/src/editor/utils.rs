@@ -102,15 +102,15 @@ impl State {
         }
     }
     fn set_code_element(&mut self, code: &str) {
-        logging::log!("set code: {code:?}");
+        // logging::log!("set code: {code:?}");
+        self.set_overlay.set(code.into());
         let area = element::<HtmlTextAreaElement>(&self.code_id);
         area.set_value(code);
-        area.style().set_property("height", "auto").unwrap();
-        let scroll_height = area.scroll_height();
-        area.style()
-            .set_property("height", &format!("{}px", scroll_height))
-            .unwrap();
-        self.set_overlay.set(code.into());
+
+        // area.style().set_property("height", "auto").unwrap();
+        // area.style()
+        //     .set_property("height", &format!("{}px", area.scroll_height()))
+        //     .unwrap();
     }
     pub fn set_cursor(&self, to: (u32, u32)) {
         set_code_cursor(&self.code_id, to.0, to.1);
@@ -302,7 +302,7 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
 fn set_code_cursor(id: &str, start: u32, end: u32) {
     let area = element::<HtmlTextAreaElement>(id);
     area.set_selection_range(start, end).unwrap();
-    area.focus().unwrap();
+    // area.focus().unwrap();
 }
 
 #[derive(Debug)]

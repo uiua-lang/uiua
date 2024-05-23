@@ -86,6 +86,7 @@ pub fn Editor<'a>(
     let glyph_doc_id = move || format!("glyphdoc{id}");
 
     let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
+    let overlay_element = move || -> HtmlDivElement { element(&overlay_id()) };
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
     // Track line count
@@ -396,10 +397,30 @@ pub fn Editor<'a>(
     window_event_listener(keyup, move |event| {
         let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();
         update_ctrl(event);
+        let key = event.key();
+        // logging::log!("release: {key:?}");
+
+        if key == "Control" && !on_mac() || key == "Meta" && on_mac() {
+            overlay_element()
+                .style()
+                .set_property("pointer-events", "none")
+                .unwrap();
+        }
     });
     window_event_listener(keydown, move |event| {
         let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();
         update_ctrl(event);
+        let key = event.key();
+        let key = key.as_str();
+        // logging::log!("press: {key:?}");
+
+        if key == "Control" && !on_mac() || key == "Meta" && on_mac() {
+            overlay_element()
+                .style()
+                .set_property("pointer-events", "all")
+                .unwrap();
+        }
+
         let focused = event
             .target()
             .and_then(|t| t.dyn_into::<HtmlTextAreaElement>().ok())
@@ -426,9 +447,7 @@ pub fn Editor<'a>(
                 0
             }
         }
-        let key = event.key();
-        let key = key.as_str();
-        // logging::log!("key: {key:?}");
+
         match key {
             "Enter" => {
                 if os_ctrl(event) || event.shift_key() {
@@ -1101,6 +1120,9 @@ pub fn Editor<'a>(
         event.prevent_default();
         event.stop_propagation();
         let files = event.data_transfer().unwrap().files().unwrap();
+        if files.length() == 0 {
+            return;
+        }
         let file = files.get(0).unwrap();
         let file_name = file.name();
         let reader = FileReader::new().unwrap();
@@ -1381,28 +1403,8 @@ pub fn Editor<'a>(
                             { move || glyph_doc.get() }
                             <div class="glyph-doc-ctrl-click">"Shift+click for more info (Ctrl/⌘+click for new tab)"</div>
                         </div>
-                        <div id="code-right-side">
-                            <button
-                                class="editor-right-button"
-                                data-title=copy_link_title
-                                on:click=copy_link>
-                                "🔗"
-                            </button>
-                            <button
-                                id="glyphs-toggle-button"
-                                class="editor-right-button"
-                                data-title=show_glyphs_title
-                                on:click=toggle_show_glyphs>{show_glyphs_text}
-                            </button>
-                            <button
-                                class="editor-right-button"
-                                data-title=toggle_settings_title
-                                on:click=toggle_settings_open>
-                                "⚙️"
-                            </button>
-                            <div id="example-tracker">{example_text}</div>
-                        </div>
-                        <div class="code sized-code">
+                        <div class="code sized-code"
+                            style={format!("height: {}em;", code_height_em + 1.25 / 2.0)}>
                             <div class="line-numbers">
                                 { line_numbers }
                             </div>
@@ -1428,6 +1430,27 @@ pub fn Editor<'a>(
                                     { move || gen_code_view(&overlay.get()) }
                                 </div>
                             </div>
+                        </div>
+                        <div id="code-right-side">
+                            <button
+                                class="editor-right-button"
+                                data-title=copy_link_title
+                                on:click=copy_link>
+                                "🔗"
+                            </button>
+                            <button
+                                id="glyphs-toggle-button"
+                                class="editor-right-button"
+                                data-title=show_glyphs_title
+                                on:click=toggle_show_glyphs>{show_glyphs_text}
+                            </button>
+                            <button
+                                class="editor-right-button"
+                                data-title=toggle_settings_title
+                                on:click=toggle_settings_open>
+                                "⚙️"
+                            </button>
+                            <div id="example-tracker">{example_text}</div>
                         </div>
                     </div>
                     <div class="output-frame">

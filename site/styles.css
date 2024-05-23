@@ -483,6 +483,7 @@ input[type=number] {
     font-size: inherit;
     position: absolute;
     line-height: 1.25em;
+    text-wrap: none;
 }
 
 .code-entry::selection {
@@ -537,6 +538,7 @@ input[type=number] {
     pointer-events: none;
     margin-top: 1.9em;
     margin-left: -2em;
+    z-index: 2;
     text-decoration: none;
     white-space: pre-wrap;
     overflow: visible;

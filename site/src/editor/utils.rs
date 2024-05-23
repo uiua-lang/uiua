@@ -34,6 +34,7 @@ use crate::{
 #[derive(Clone)]
 pub struct State {
     pub code_id: String,
+    pub set_overlay: WriteSignal<String>,
     pub set_line_count: WriteSignal<usize>,
     pub set_copied_link: WriteSignal<bool>,
     pub past: Vec<Record>,
@@ -112,6 +113,7 @@ impl State {
         area.style()
             .set_property("height", &format!("{}px", scroll_height))
             .unwrap();
+        self.set_overlay.set(code.into());
     }
     pub fn set_cursor(&self, to: (u32, u32)) {
         set_code_cursor(&self.code_id, to.0, to.1);
@@ -291,16 +293,6 @@ pub fn line_col(s: &str, pos: usize) -> (usize, usize) {
         }
     }
     (line, col)
-}
-
-fn children_of(node: &Node) -> impl Iterator<Item = Node> {
-    let mut curr = node.first_child();
-    iter::from_fn(move || {
-        let node = curr.take()?;
-        curr = node.next_sibling();
-        Some(node)
-    })
-    .filter(|node| node.dyn_ref::<Comment>().is_none())
 }
 
 pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {

@@ -473,8 +473,11 @@ input[type=number] {
     border: none;
     margin-bottom: 0;
     padding-bottom: 0;
+    margin-left: 0;
+    padding-left: 0;
     width: 100%;
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: transparent;
+    color: transparent;
     resize: none;
     font-family: "Code Font", monospace;
     font-size: inherit;

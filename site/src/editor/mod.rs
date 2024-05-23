@@ -85,7 +85,6 @@ pub fn Editor<'a>(
     let overlay_id = move || format!("overlay{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
 
-    let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
     // Track line count
@@ -115,10 +114,12 @@ pub fn Editor<'a>(
         )
     };
     let get_code = move || get_code(&code_id());
+    let (overlay, set_overlay) = create_signal(String::new());
 
     // Initialize the state
     let state = State {
         code_id: code_id(),
+        set_overlay,
         set_line_count,
         set_copied_link,
         past: Default::default(),
@@ -1420,7 +1421,9 @@ pub fn Editor<'a>(
                                 /////////////////////////
                                 <div
                                     id={overlay_id}
-                                    class="code-overlay"/>
+                                    class="code-overlay">
+                                    { move || gen_code_view(&overlay.get()) }
+                                </div>
                             </div>
                         </div>
                     </div>

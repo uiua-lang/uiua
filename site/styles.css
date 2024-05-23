@@ -427,6 +427,12 @@ input[type=number] {
     -moz-appearance: textfield;
 }
 
+.code-block {
+    display: block;
+    white-space: pre-wrap;
+    padding: 0.8em;
+}
+
 #settings>*>*>input,
 #settings>*>*>select {
     border-radius: 0.5em;
@@ -442,7 +448,7 @@ input[type=number] {
     position: relative;
 }
 
-.code {
+.code-outer {
     text-align: left;
     border-radius: 0.5em;
     width: 100%;
@@ -457,12 +463,6 @@ input[type=number] {
     gap: 0.1em;
 }
 
-.code-block {
-    display: block;
-    white-space: pre-wrap;
-    padding: 0.8em;
-}
-
 .code-and-overlay {
     position: relative;
     width: 100%;
@@ -475,20 +475,20 @@ input[type=number] {
     padding-bottom: 0;
     margin-left: 0;
     padding-left: 0;
-    width: 100%;
     background-color: transparent;
+    /* background-color: #0002; */
     color: transparent;
     resize: none;
     font-family: "Code Font", monospace;
     font-size: inherit;
     position: absolute;
     line-height: 1.25em;
-    text-wrap: none;
+    overflow-wrap: normal;
+    white-space: pre;
 }
 
 .code-entry::selection {
     color: transparent;
-    background-color: #0008;
 }
 
 .code-overlay {
@@ -508,12 +508,20 @@ input[type=number] {
 }
 
 @media (prefers-color-scheme: dark) {
+    .code-entry::selection {
+        background-color: #fff6;
+    }
+
     .line-numbers {
         color: #3f4b5d;
     }
 }
 
 @media (prefers-color-scheme: light) {
+    .code-entry::selection {
+        background-color: #0008;
+    }
+
     .line-numbers {
         color: #bcc9ca;
     }

@@ -1,6 +1,6 @@
 mod utils;
 
-use std::{cell::Cell, iter::repeat, path::PathBuf, time::Duration};
+use std::{cell::Cell, iter::repeat, mem::take, path::PathBuf, time::Duration};
 
 use base64::engine::{general_purpose::STANDARD, Engine};
 
@@ -16,7 +16,7 @@ use uiua::{
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
     DragEvent, Event, FileReader, HtmlDivElement, HtmlInputElement, HtmlSelectElement,
-    HtmlTextAreaElement, MouseEvent,
+    HtmlTextAreaElement, MouseEvent, ResizeObserver, ResizeObserverEntry,
 };
 
 use crate::{
@@ -82,10 +82,12 @@ pub fn Editor<'a>(
     let code_height_em = code_max_lines as f32 * 1.25;
 
     let code_id = move || format!("code{id}");
+    let code_outer_id = move || format!("code-outer{id}");
     let overlay_id = move || format!("overlay{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
 
     let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
+    let code_outer_element = move || -> HtmlDivElement { element(&code_outer_id()) };
     let overlay_element = move || -> HtmlDivElement { element(&overlay_id()) };
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
@@ -101,7 +103,7 @@ pub fn Editor<'a>(
     let (token_count, set_token_count) = create_signal(0);
 
     // let code_text = move || code_text(&code_id());
-    let get_code_cursor = move || get_code_cursor_impl(&code_id());
+    let get_code_cursor = move || get_code_cursor(&code_id());
     let (copied_link, set_copied_link) = create_signal(false);
     let (settings_open, set_settings_open) = create_signal(false);
     let update_token_count = move |code: &str| {
@@ -121,13 +123,15 @@ pub fn Editor<'a>(
     // Initialize the state
     let state = State {
         code_id: code_id(),
+        code_outer_id: code_outer_id(),
         set_overlay,
         set_line_count,
         set_copied_link,
-        past: Default::default(),
-        future: Default::default(),
+        past: Vec::new(),
+        future: Vec::new(),
         challenge,
-        loading_module: Default::default(),
+        loading_module: false,
+        min_height: format!("{code_height_em}em"),
         curr: {
             let code = initial_code.get_untracked().unwrap();
             let len = code.chars().count() as u32;
@@ -137,6 +141,7 @@ pub fn Editor<'a>(
                 after: (len, len),
             }
         },
+        resize_observer_closure: Closure::new(move |_: Vec<ResizeObserverEntry>| {}).into(),
     };
     let (get_state, state) = create_signal(state);
 
@@ -290,7 +295,7 @@ pub fn Editor<'a>(
             move || {
                 state.update(|st| {
                     let output = st.run_code(&input);
-                    if st.loading_module.take() {
+                    if take(&mut st.loading_module) {
                         set_timeout(
                             move || {
                                 state.update(|state| {
@@ -1097,6 +1102,29 @@ pub fn Editor<'a>(
         Duration::from_millis(0),
     );
 
+    // Update minimum textarea height when code div is resized
+    set_timeout(
+        move || {
+            state.update(|st| {
+                st.resize_observer_closure =
+                    Closure::new(move |entries: Vec<ResizeObserverEntry>| {
+                        for entry in entries {
+                            let height = entry.content_rect().height();
+                            state.update(|state| {
+                                state.min_height = format!("{height}px");
+                                state.update_size();
+                            });
+                        }
+                    })
+                    .into();
+                let function = (*st.resize_observer_closure).as_ref().unchecked_ref();
+                let observer = ResizeObserver::new(function).unwrap();
+                observer.observe(&code_outer_element());
+            });
+        },
+        Duration::from_millis(0),
+    );
+
     let (drag_message, set_drag_message) = create_signal("");
 
     // Get file drop events
@@ -1403,7 +1431,9 @@ pub fn Editor<'a>(
                             { move || glyph_doc.get() }
                             <div class="glyph-doc-ctrl-click">"Shift+click for more info (Ctrl/⌘+click for new tab)"</div>
                         </div>
-                        <div class="code sized-code"
+                        <div
+                            id=code_outer_id
+                            class="code-outer sized-code"
                             style={format!("height: {}em;", code_height_em + 1.25 / 2.0)}>
                             <div class="line-numbers">
                                 { line_numbers }
@@ -1414,18 +1444,17 @@ pub fn Editor<'a>(
                                 // The text entry area //
                                 /////////////////////////
                                 <textarea
-                                    id={code_id}
+                                    id=code_id
                                     class="code-entry"
                                     autocorrect="false"
                                     autocapitalize="off"
                                     spellcheck="false"
-                                    style={format!("height: {code_height_em}em;")}
                                     on:paste=code_paste
                                     value=initial_code_str>
                                 </textarea>
                                 /////////////////////////
                                 <div
-                                    id={overlay_id}
+                                    id=overlay_id
                                     class="code-overlay">
                                     { move || gen_code_view(&overlay.get()) }
                                 </div>

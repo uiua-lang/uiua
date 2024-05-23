@@ -49,5 +49,7 @@ features = [
   "DataTransfer",
   "File",
   "FileList",
+  "ResizeObserver",
+  "ResizeObserverEntry",
 ]
 version = "0.3.69"

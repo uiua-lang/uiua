@@ -1,6 +1,7 @@
 use std::{
     cell::Cell,
     mem::{replace, take},
+    rc::Rc,
     str::FromStr,
     time::Duration,
 };
@@ -17,8 +18,11 @@ use uiua::{
     Report, ReportFragment, ReportKind, SpanKind, SysBackend, Uiua, UiuaError, UiuaResult, Value,
 };
 use unicode_segmentation::UnicodeSegmentation;
-use wasm_bindgen::JsCast;
-use web_sys::{Event, HtmlStyleElement, HtmlTextAreaElement, KeyboardEvent, MouseEvent};
+use wasm_bindgen::{closure::Closure, JsCast};
+use web_sys::{
+    DomRect, Event, HtmlDivElement, HtmlSpanElement, HtmlStyleElement, HtmlTextAreaElement,
+    KeyboardEvent, MouseEvent, ResizeObserverEntry,
+};
 
 use crate::{
     backend::{OutputItem, WebBackend},
@@ -31,6 +35,7 @@ use crate::{
 #[derive(Clone)]
 pub struct State {
     pub code_id: String,
+    pub code_outer_id: String,
     pub set_overlay: WriteSignal<String>,
     pub set_line_count: WriteSignal<usize>,
     pub set_copied_link: WriteSignal<bool>,
@@ -38,7 +43,9 @@ pub struct State {
     pub future: Vec<Record>,
     pub curr: Record,
     pub challenge: Option<ChallengeDef>,
-    pub loading_module: Cell<bool>,
+    pub loading_module: bool,
+    pub min_height: String,
+    pub resize_observer_closure: Rc<Closure<dyn Fn(Vec<ResizeObserverEntry>)>>,
 }
 
 /// A record of a code change
@@ -61,7 +68,7 @@ impl State {
     /// Set the code and cursor
     pub fn set_code(&mut self, code: &str, cursor: Cursor) {
         // logging::log!("set_code({:?}, {:?})", code, cursor);
-        let maybe_before = get_code_cursor_impl(&self.code_id);
+        let maybe_before = get_code_cursor(&self.code_id);
         let after = match cursor {
             Cursor::Set(start, end) => (start, end),
             Cursor::Keep => maybe_before.unwrap_or_else(|| {
@@ -106,14 +113,57 @@ impl State {
         self.set_overlay.set(code.into());
         let area = element::<HtmlTextAreaElement>(&self.code_id);
         area.set_value(code);
-
-        // area.style().set_property("height", "auto").unwrap();
-        // area.style()
-        //     .set_property("height", &format!("{}px", area.scroll_height()))
-        //     .unwrap();
+        self.update_size();
+    }
+    pub fn update_size(&self) {
+        let area = element::<HtmlTextAreaElement>(&self.code_id);
+        let code = get_code(&self.code_id);
+        let rect = &virtual_rect(&area, &code);
+        let width = rect.width();
+        let height = rect.height() + 10.0;
+        let new_height = format!("max({height}px,{})", self.min_height);
+        let new_width = format!("max({width}px,100%)");
+        area.style().set_property("width", "auto").unwrap();
+        area.style().set_property("height", "auto").unwrap();
+        area.style().set_property("width", &new_width).unwrap();
+        area.style().set_property("height", &new_height).unwrap();
     }
     pub fn set_cursor(&self, to: (u32, u32)) {
         set_code_cursor(&self.code_id, to.0, to.1);
+
+        let area = element::<HtmlTextAreaElement>(&self.code_id);
+        let outer = element::<HtmlDivElement>(&self.code_outer_id);
+
+        let Some(cursor_position) = area.selection_end().unwrap() else {
+            return;
+        };
+        let code = get_code(&self.code_id);
+        let vert_text = code
+            .chars()
+            .take(cursor_position as usize)
+            .collect::<String>();
+        let relative_y = virtual_rect(&area, &vert_text).height();
+        let (line, col) = line_col(&code, cursor_position as usize);
+        let horiz_text = code
+            .lines()
+            .nth(line - 1)
+            .unwrap_or("")
+            .chars()
+            .take(col - 1)
+            .collect::<String>();
+        let relative_x = virtual_rect(&area, &horiz_text).width();
+        let area_rect = area.get_bounding_client_rect();
+        let outer_rect = outer.get_bounding_client_rect();
+        let x = area_rect.left() + relative_x;
+        let y = area_rect.top() + relative_y;
+        if x > outer_rect.right() {
+            outer.set_scroll_left(outer.scroll_width());
+        } else if x < outer_rect.left() {
+            outer.set_scroll_left(0);
+        }
+        if y > outer_rect.bottom() {
+            outer.set_scroll_top(outer.scroll_height());
+        }
     }
     fn set_changed(&self) {
         self.set_copied_link.set(false);
@@ -146,133 +196,31 @@ impl State {
     }
 }
 
+fn virtual_rect(area: &HtmlTextAreaElement, text: &str) -> DomRect {
+    let temp_span = document()
+        .create_element("span")
+        .unwrap()
+        .unchecked_into::<HtmlSpanElement>();
+    temp_span
+        .style()
+        .set_property("visibility", "hidden")
+        .unwrap();
+    temp_span
+        .style()
+        .set_property("white-space", "pre-wrap")
+        .unwrap();
+    let area_style = &window().get_computed_style(area).unwrap().unwrap();
+    let area_font = area_style.get_property_value("font").unwrap();
+    temp_span.style().set_property("font", &area_font).unwrap();
+    temp_span.set_inner_text(text);
+    document().body().unwrap().append_child(&temp_span).unwrap();
+    let rect = temp_span.get_bounding_client_rect();
+    document().body().unwrap().remove_child(&temp_span).unwrap();
+    rect
+}
+
 pub fn get_code(id: &str) -> String {
     element::<HtmlTextAreaElement>(id).value()
-}
-
-fn get_local_var<T>(name: &str, default: impl FnOnce() -> T) -> T
-where
-    T: FromStr,
-    T::Err: std::fmt::Display,
-{
-    window()
-        .local_storage()
-        .unwrap()
-        .unwrap()
-        .get_item(name)
-        .ok()
-        .flatten()
-        .and_then(|s| {
-            s.parse()
-                .map_err(|e| logging::log!("Error parsing local var {name:?} = {s:?}: {e}"))
-                .ok()
-        })
-        .unwrap_or_else(default)
-}
-
-fn set_local_var<T>(name: &str, value: T)
-where
-    T: ToString,
-{
-    window()
-        .local_storage()
-        .unwrap()
-        .unwrap()
-        .set_item(name, &value.to_string())
-        .unwrap();
-}
-
-pub fn get_execution_limit() -> f64 {
-    get_local_var("execution-limit", || 2.0)
-}
-pub fn set_execution_limit(limit: f64) {
-    set_local_var("execution-limit", limit);
-}
-
-pub fn get_ast_time() -> f64 {
-    get_local_var("&ast-time", || 30.0)
-}
-pub fn set_ast_time(time: f64) {
-    set_local_var("&ast-time", time);
-}
-
-pub fn get_right_to_left() -> bool {
-    get_local_var("right-to-left", || false)
-}
-pub fn set_right_to_left(rtl: bool) {
-    set_local_var("right-to-left", rtl);
-}
-
-pub fn get_top_at_top() -> bool {
-    get_local_var("top-at-top", || false)
-}
-pub fn set_top_at_top(top_at_top: bool) {
-    set_local_var("top-at-top", top_at_top);
-}
-
-pub fn get_font_name() -> String {
-    get_local_var("font-name", || "Uiua386".into())
-}
-pub fn set_font_name(name: &str) {
-    set_local_var("font-name", name);
-    update_style();
-}
-
-pub fn get_font_size() -> String {
-    get_local_var("font-size", || "1em".into())
-}
-pub fn set_font_size(size: &str) {
-    set_local_var("font-size", size);
-    update_style();
-}
-
-pub fn get_autorun() -> bool {
-    get_local_var("autorun", || true)
-}
-pub fn set_autorun(autorun: bool) {
-    set_local_var("autorun", autorun);
-}
-
-pub fn get_autoplay() -> bool {
-    get_local_var("autoplay", || true)
-}
-pub fn set_autoplay(autoplay: bool) {
-    set_local_var("autoplay", autoplay)
-}
-
-pub fn get_show_experimental() -> bool {
-    get_local_var("show-experimental", || false)
-}
-pub fn set_show_experimental(show_experimental: bool) {
-    set_local_var("show-experimental", show_experimental);
-    update_style();
-}
-
-fn update_style() {
-    let font_name = get_font_name();
-    let font_size = get_font_size();
-    let show_experimental = if get_show_experimental() {
-        "block"
-    } else {
-        "none"
-    };
-    // Remove the old style
-    let head = &document().head().unwrap();
-    if let Some(item) = head.get_elements_by_tag_name("style").item(0) {
-        head.remove_child(&item).unwrap();
-    }
-    // Add the new style
-    let new_style = document()
-        .create_element("style")
-        .unwrap()
-        .dyn_into::<HtmlStyleElement>()
-        .unwrap();
-    new_style.set_inner_text(&format!(
-        "@font-face {{ font-family: 'Code Font'; src: url('/{font_name}.ttf') format('truetype'); }}\n\
-        .sized-code {{ font-size: {font_size}; }}\n\
-        .experimental-glyph-button {{ display: {show_experimental}; }}",
-    ));
-    document().head().unwrap().append_child(&new_style).unwrap();
 }
 
 pub fn line_col(s: &str, pos: usize) -> (usize, usize) {
@@ -292,7 +240,7 @@ pub fn line_col(s: &str, pos: usize) -> (usize, usize) {
     (line, col)
 }
 
-pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
+pub fn get_code_cursor(id: &str) -> Option<(u32, u32)> {
     let area = element::<HtmlTextAreaElement>(id);
     let start = area.selection_start().unwrap()?;
     let end = area.selection_end().unwrap()?;
@@ -680,7 +628,7 @@ fn challenge_code(input: &str, test: &str, flip: bool) -> String {
 
 impl State {
     /// Run code and return the output
-    pub fn run_code(&self, code: &str) -> Vec<OutputItem> {
+    pub fn run_code(&mut self, code: &str) -> Vec<OutputItem> {
         if let Some(chal) = &self.challenge {
             let mut example = run_code_single(&challenge_code(
                 &chal.intended_answer,
@@ -740,10 +688,10 @@ impl State {
             output
         } else {
             let (output, error) = run_code_single(code);
-            self.loading_module.set(false);
+            self.loading_module = false;
             if let Some(error) = error {
                 if error.to_string().contains("Waiting for module") {
-                    self.loading_module.set(true);
+                    self.loading_module = true;
                 }
             }
             output
@@ -1061,4 +1009,129 @@ pub fn url_encode_code(code: &str) -> String {
         uiua::VERSION.replace('.', "_"),
         URL_SAFE.encode(code)
     )
+}
+
+fn get_local_var<T>(name: &str, default: impl FnOnce() -> T) -> T
+where
+    T: FromStr,
+    T::Err: std::fmt::Display,
+{
+    window()
+        .local_storage()
+        .unwrap()
+        .unwrap()
+        .get_item(name)
+        .ok()
+        .flatten()
+        .and_then(|s| {
+            s.parse()
+                .map_err(|e| logging::log!("Error parsing local var {name:?} = {s:?}: {e}"))
+                .ok()
+        })
+        .unwrap_or_else(default)
+}
+
+fn set_local_var<T>(name: &str, value: T)
+where
+    T: ToString,
+{
+    window()
+        .local_storage()
+        .unwrap()
+        .unwrap()
+        .set_item(name, &value.to_string())
+        .unwrap();
+}
+
+pub fn get_execution_limit() -> f64 {
+    get_local_var("execution-limit", || 2.0)
+}
+pub fn set_execution_limit(limit: f64) {
+    set_local_var("execution-limit", limit);
+}
+
+pub fn get_ast_time() -> f64 {
+    get_local_var("&ast-time", || 30.0)
+}
+pub fn set_ast_time(time: f64) {
+    set_local_var("&ast-time", time);
+}
+
+pub fn get_right_to_left() -> bool {
+    get_local_var("right-to-left", || false)
+}
+pub fn set_right_to_left(rtl: bool) {
+    set_local_var("right-to-left", rtl);
+}
+
+pub fn get_top_at_top() -> bool {
+    get_local_var("top-at-top", || false)
+}
+pub fn set_top_at_top(top_at_top: bool) {
+    set_local_var("top-at-top", top_at_top);
+}
+
+pub fn get_font_name() -> String {
+    get_local_var("font-name", || "Uiua386".into())
+}
+pub fn set_font_name(name: &str) {
+    set_local_var("font-name", name);
+    update_style();
+}
+
+pub fn get_font_size() -> String {
+    get_local_var("font-size", || "1em".into())
+}
+pub fn set_font_size(size: &str) {
+    set_local_var("font-size", size);
+    update_style();
+}
+
+pub fn get_autorun() -> bool {
+    get_local_var("autorun", || true)
+}
+pub fn set_autorun(autorun: bool) {
+    set_local_var("autorun", autorun);
+}
+
+pub fn get_autoplay() -> bool {
+    get_local_var("autoplay", || true)
+}
+pub fn set_autoplay(autoplay: bool) {
+    set_local_var("autoplay", autoplay)
+}
+
+pub fn get_show_experimental() -> bool {
+    get_local_var("show-experimental", || false)
+}
+pub fn set_show_experimental(show_experimental: bool) {
+    set_local_var("show-experimental", show_experimental);
+    update_style();
+}
+
+fn update_style() {
+    let font_name = get_font_name();
+    let font_size = get_font_size();
+    let show_experimental = if get_show_experimental() {
+        "block"
+    } else {
+        "none"
+    };
+    // Remove the old style
+    let head = &document().head().unwrap();
+    if let Some(item) = head.get_elements_by_tag_name("style").item(0) {
+        head.remove_child(&item).unwrap();
+    }
+    // Add the new style
+    let new_style = document()
+        .create_element("style")
+        .unwrap()
+        .dyn_into::<HtmlStyleElement>()
+        .unwrap();
+    new_style.set_inner_text(&format!(
+        "@font-face {{ font-family: 'Code Font'; src: url('/{font_name}.ttf') format('truetype'); }}\n\
+        .sized-code {{ font-size: {font_size}; }}\n\
+        .experimental-glyph-button {{ display: {show_experimental}; }}",
+    ));
+    document().head().unwrap().append_child(&new_style).unwrap();
 }

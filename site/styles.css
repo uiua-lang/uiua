@@ -485,6 +485,7 @@ input[type=number] {
     line-height: 1.25em;
     overflow-wrap: normal;
     white-space: pre;
+    overflow: hidden;
 }
 
 .code-entry::selection {

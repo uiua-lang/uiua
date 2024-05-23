@@ -21,14 +21,14 @@ use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{
     DomRect, Event, HtmlDivElement, HtmlSpanElement, HtmlStyleElement, HtmlTextAreaElement,
-    KeyboardEvent, MouseEvent, ResizeObserverEntry,
+    KeyboardEvent, MouseEvent, ResizeObserver, ResizeObserverEntry,
 };
 
 use crate::{
     backend::{OutputItem, WebBackend},
     binding_class,
     editor::Editor,
-    element, prim_class, sig_class,
+    element, get_element, prim_class, sig_class,
 };
 
 /// Handles setting the code in the editor, setting the cursor, and managing the history
@@ -45,6 +45,7 @@ pub struct State {
     pub challenge: Option<ChallengeDef>,
     pub loading_module: bool,
     pub min_height: String,
+    pub resize_observer: Option<Rc<ResizeObserver>>,
     pub resize_observer_closure: Rc<Closure<dyn Fn(Vec<ResizeObserverEntry>)>>,
 }
 
@@ -116,7 +117,9 @@ impl State {
         self.update_size();
     }
     pub fn update_size(&self) {
-        let area = element::<HtmlTextAreaElement>(&self.code_id);
+        let Some(area) = get_element::<HtmlTextAreaElement>(&self.code_id) else {
+            return;
+        };
         let code = get_code(&self.code_id);
         let rect = &virtual_rect(&area, &code);
         let width = rect.width();
@@ -192,6 +195,14 @@ impl State {
             self.set_cursor(next.after);
             self.past.push(replace(&mut self.curr, next));
             self.set_changed();
+        }
+    }
+}
+
+impl Drop for State {
+    fn drop(&mut self) {
+        if let Some(Ok(ro)) = self.resize_observer.take().map(Rc::try_unwrap) {
+            ro.disconnect();
         }
     }
 }

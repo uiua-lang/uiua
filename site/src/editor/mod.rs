@@ -23,7 +23,7 @@ use crate::{
     backend::{drop_file, OutputItem},
     element,
     examples::EXAMPLES,
-    prim_class, Prim,
+    get_element, prim_class, Prim,
 };
 
 use utils::*;
@@ -88,7 +88,6 @@ pub fn Editor<'a>(
 
     let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
     let code_outer_element = move || -> HtmlDivElement { element(&code_outer_id()) };
-    let overlay_element = move || -> HtmlDivElement { element(&overlay_id()) };
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
     // Track line count
@@ -141,6 +140,7 @@ pub fn Editor<'a>(
                 after: (len, len),
             }
         },
+        resize_observer: None,
         resize_observer_closure: Closure::new(move |_: Vec<ResizeObserverEntry>| {}).into(),
     };
     let (get_state, state) = create_signal(state);
@@ -406,10 +406,12 @@ pub fn Editor<'a>(
         // logging::log!("release: {key:?}");
 
         if key == "Control" && !on_mac() || key == "Meta" && on_mac() {
-            overlay_element()
-                .style()
-                .set_property("pointer-events", "none")
-                .unwrap();
+            if let Some(overlay_element) = get_element::<HtmlDivElement>(&overlay_id()) {
+                overlay_element
+                    .style()
+                    .set_property("pointer-events", "none")
+                    .unwrap();
+            }
         }
     });
     window_event_listener(keydown, move |event| {
@@ -420,10 +422,12 @@ pub fn Editor<'a>(
         // logging::log!("press: {key:?}");
 
         if key == "Control" && !on_mac() || key == "Meta" && on_mac() {
-            overlay_element()
-                .style()
-                .set_property("pointer-events", "all")
-                .unwrap();
+            if let Some(overlay_element) = get_element::<HtmlDivElement>(&overlay_id()) {
+                overlay_element
+                    .style()
+                    .set_property("pointer-events", "all")
+                    .unwrap();
+            }
         }
 
         let focused = event
@@ -1120,6 +1124,7 @@ pub fn Editor<'a>(
                 let function = (*st.resize_observer_closure).as_ref().unchecked_ref();
                 let observer = ResizeObserver::new(function).unwrap();
                 observer.observe(&code_outer_element());
+                st.resize_observer = Some(observer.into());
             });
         },
         Duration::from_millis(0),

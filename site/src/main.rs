@@ -461,10 +461,14 @@ fn Const<'a>(con: &'a ConstantDef) -> impl IntoView {
     }
 }
 
+#[track_caller]
+#[allow(clippy::manual_map)]
 fn get_element<T: JsCast>(id: &str) -> Option<T> {
-    document()
-        .get_element_by_id(id)
-        .map(|elem| elem.dyn_into().unwrap())
+    if let Some(elem) = document().get_element_by_id(id) {
+        Some(elem.dyn_into().unwrap())
+    } else {
+        None
+    }
 }
 
 #[track_caller]

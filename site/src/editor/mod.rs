@@ -15,7 +15,8 @@ use uiua::{
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
-    DragEvent, Event, FileReader, HtmlDivElement, HtmlInputElement, HtmlSelectElement, MouseEvent,
+    DragEvent, Event, FileReader, HtmlDivElement, HtmlInputElement, HtmlSelectElement,
+    HtmlTextAreaElement, MouseEvent,
 };
 
 use crate::{
@@ -81,17 +82,17 @@ pub fn Editor<'a>(
     let code_height_em = code_max_lines as f32 * 1.25;
 
     let code_id = move || format!("code{id}");
+    let overlay_id = move || format!("overlay{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
 
-    let code_element = move || -> HtmlDivElement { element(&code_id()) };
+    let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
     // Track line count
     let (line_count, set_line_count) = create_signal(1);
 
-    let (initial_code, set_initial_code) = create_signal(Some(
-        examples.first().cloned().unwrap_or_else(|| example.into()),
-    ));
+    let initial_code_str = examples.first().cloned().unwrap_or_else(|| example.into());
+    let (initial_code, set_initial_code) = create_signal(Some(initial_code_str.clone()));
 
     let (example, set_example) = create_signal(0);
     let (diag_output, set_diag_output) = create_signal(View::default());
@@ -113,19 +114,17 @@ pub fn Editor<'a>(
                 .count(),
         )
     };
-    let (get_code, set_code) = create_signal("Loading...".to_string());
+    let get_code = move || get_code(&code_id());
 
     // Initialize the state
     let state = State {
         code_id: code_id(),
         set_line_count,
         set_copied_link,
-        set_code,
         past: Default::default(),
         future: Default::default(),
         challenge,
         loading_module: Default::default(),
-        code: String::new(),
         curr: {
             let code = initial_code.get_untracked().unwrap();
             let len = code.chars().count() as u32;
@@ -137,15 +136,10 @@ pub fn Editor<'a>(
         },
     };
     let (get_state, state) = create_signal(state);
-    let state_code = move || {
-        let mut code = String::new();
-        state.update(|state| code.clone_from(&state.code));
-        code
-    };
 
     // Get the code with output comments cleaned up
     let clean_code = move || {
-        let code = state_code();
+        let code = get_code();
         let mut cleaned = String::new();
         let mut in_output_comment = false;
         for line in code.lines() {
@@ -170,7 +164,7 @@ pub fn Editor<'a>(
     // Run the code
     let run = move |format: bool, set_cursor: bool| {
         // Get code
-        let mut code_text = state_code();
+        let mut code_text = get_code();
         let mut cursor = if set_cursor {
             Cursor::Keep
         } else {
@@ -330,7 +324,7 @@ pub fn Editor<'a>(
             let inserted = inserted.replace('\r', "");
             let (start, end) = (start.min(end), start.max(end) as usize);
             // logging::log!("replace start: {start}, end: {end}");
-            let code = state.code.clone();
+            let code = get_code();
             // logging::log!("code: {code:?}");
             // logging::log!("insert: {inserted:?}");
             let new: String = code
@@ -351,7 +345,7 @@ pub fn Editor<'a>(
             return;
         }
         let (start, end) = (start.min(end), start.max(end) as usize);
-        let code = state.code.clone();
+        let code = get_code();
         let new: String = code
             .chars()
             .take(start as usize)
@@ -364,7 +358,7 @@ pub fn Editor<'a>(
     let surround_code = move |state: &mut State, open: char, close: char| {
         let (start, end) = get_code_cursor().unwrap();
         let (start, end) = (start.min(end), start.max(end));
-        let code = state.code.clone();
+        let code = get_code();
         let mut chars = code.chars();
         let mut new_code = String::new();
         new_code.extend(chars.by_ref().take(start as usize));
@@ -375,31 +369,10 @@ pub fn Editor<'a>(
         state.set_code(&new_code, Cursor::Set(start + 1, end + 1));
     };
 
-    // Update the code when the textarea is changed
-    let code_input = move |event: Event| {
-        let event = event.dyn_into::<web_sys::InputEvent>().unwrap();
-        // to prevent double input of yet-to-be-composed input events
-        if event.is_composing() {
-            return;
-        }
-        let parent = code_element();
-        let child: HtmlDivElement = event.target().unwrap().dyn_into().unwrap();
-        if !parent.contains(Some(&child)) {
-            return;
-        }
-        if let Some((start, _)) = get_code_cursor() {
-            state.update(|state| {
-                let code = state.code.clone();
-                update_token_count(&code);
-                state.set_code(&code, Cursor::Set(start, start));
-            });
-        }
-    };
-
     // Insert an # Experimental! comment at the top of the code
     let insert_experimental = move || {
         state.update(|state| {
-            let code = state.code.clone();
+            let code = get_code();
             if code.starts_with("# Experimental!") {
                 return;
             }
@@ -427,7 +400,7 @@ pub fn Editor<'a>(
         update_ctrl(event);
         let focused = event
             .target()
-            .and_then(|t| t.dyn_into::<HtmlDivElement>().ok())
+            .and_then(|t| t.dyn_into::<HtmlTextAreaElement>().ok())
             .is_some_and(|t| t.id() == code_id());
         if !focused {
             return;
@@ -461,24 +434,23 @@ pub fn Editor<'a>(
                 } else {
                     let (start, _) = get_code_cursor().unwrap();
                     state.update(|state| {
+                        let code = get_code();
                         let left_char = if start > 0 {
-                            state.code.chars().nth(start as usize - 1)
+                            code.chars().nth(start as usize - 1)
                         } else {
                             None
                         };
-                        let right_char = state.code.chars().nth(start as usize);
-                        let (start_line, _) = line_col(&state.code, start as usize);
-                        let curr_line = state.code.lines().nth(start_line - 1).unwrap_or_default();
+                        let right_char = code.chars().nth(start as usize);
+                        let (start_line, _) = line_col(&code, start as usize);
+                        let curr_line = code.lines().nth(start_line - 1).unwrap_or_default();
                         let curr_line_indent =
                             curr_line.chars().take_while(|c| c.is_whitespace()).count();
-                        let line_start = state
-                            .code
+                        let line_start = code
                             .lines()
                             .take(start_line - 1)
                             .map(|line| line.chars().count() + 1)
                             .sum::<usize>();
-                        let line_before_left: String = state
-                            .code
+                        let line_before_left: String = code
                             .chars()
                             .take(start.saturating_sub(1) as usize)
                             .skip(line_start)
@@ -509,7 +481,7 @@ pub fn Editor<'a>(
                             let mut removal_count = 1;
                             if os_ctrl(event) {
                                 removal_count = 0;
-                                let code = state.code.clone();
+                                let code = get_code();
                                 let chars: Vec<_> = code.chars().take(start as usize).collect();
                                 let last_char = *chars.last().unwrap();
                                 let class = char_class(last_char);
@@ -537,10 +509,10 @@ pub fn Editor<'a>(
                 state.update(|state| {
                     let (start, end) = get_code_cursor().unwrap();
                     let (start, end) = (start.min(end), start.max(end));
-                    let (start_line, _) = line_col(&state.code, start as usize);
-                    let (end_line, _) = line_col(&state.code, end as usize);
-                    let new_code: String = state
-                        .code
+                    let code = get_code();
+                    let (start_line, _) = line_col(&code, start as usize);
+                    let (end_line, _) = line_col(&code, end as usize);
+                    let new_code: String = code
                         .lines()
                         .enumerate()
                         .filter_map(|(i, line)| {
@@ -565,7 +537,8 @@ pub fn Editor<'a>(
                         let mut removal_count = 1;
                         if os_ctrl(event) {
                             removal_count = 0;
-                            let chars: Vec<_> = state.code.chars().skip(end as usize).collect();
+                            let code = get_code();
+                            let chars: Vec<_> = code.chars().skip(end as usize).collect();
                             let first_char = *chars.first().unwrap();
                             let class = char_class(first_char);
                             let mut encountered_space = false;
@@ -592,7 +565,7 @@ pub fn Editor<'a>(
             // Select all
             "a" if os_ctrl(event) => {
                 state.update(|state| {
-                    let code = state.code.clone();
+                    let code = get_code();
                     state.set_code(&code, Cursor::Set(0, code.chars().count() as u32))
                 });
             }
@@ -600,7 +573,7 @@ pub fn Editor<'a>(
             "c" if os_ctrl(event) => {
                 let (start, end) = get_code_cursor().unwrap();
                 let (start, end) = (start.min(end), start.max(end));
-                let code = state_code();
+                let code = get_code();
                 let text: String = code
                     .chars()
                     .skip(start as usize)
@@ -612,9 +585,9 @@ pub fn Editor<'a>(
             "x" if os_ctrl(event) => {
                 let (start, end) = get_code_cursor().unwrap();
                 let (start, end) = (start.min(end), start.max(end));
+                let code = get_code();
                 state.update(|state| {
-                    let text: String = state
-                        .code
+                    let text: String = code
                         .chars()
                         .skip(start as usize)
                         .take((end - start) as usize)
@@ -632,7 +605,7 @@ pub fn Editor<'a>(
             // Toggle line comment
             "/" | "4" if os_ctrl(event) => {
                 state.update(|state| {
-                    let code = state.code.clone();
+                    let code = get_code();
                     let (start, end) = get_code_cursor().unwrap();
                     let (start, end) = (start.min(end), start.max(end));
                     let (start_line, _) = line_col(&code, start as usize);
@@ -670,7 +643,7 @@ pub fn Editor<'a>(
             "\"" => {
                 let (start, end) = get_code_cursor().unwrap();
                 state.update(|state| {
-                    let code = state.code.clone();
+                    let code = get_code();
                     let can_couple = code
                         .chars()
                         .nth(start as usize)
@@ -697,14 +670,14 @@ pub fn Editor<'a>(
                     _ => unreachable!(),
                 };
                 let (start, end) = get_code_cursor().unwrap();
+                let code = get_code();
                 state.update(|state| {
-                    let can_couple = state
-                        .code
+                    let can_couple = code
                         .chars()
                         .nth(start as usize)
                         .map_or(true, |c| c.is_whitespace() || "(){}[]".contains(c));
                     let at_behind =
-                        state.code.chars().nth((start as usize).saturating_sub(1)) == Some('@');
+                        code.chars().nth((start as usize).saturating_sub(1)) == Some('@');
                     if (start != end || can_couple) && !at_behind {
                         surround_code(state, open, close);
                     } else {
@@ -715,9 +688,10 @@ pub fn Editor<'a>(
             // Handle close delimiters
             ")" | "]" | "}" => {
                 let (start, end) = get_code_cursor().unwrap();
+                let code = get_code();
                 let close = key.chars().next().unwrap();
                 state.update(|state| {
-                    if start == end && state.code.chars().nth(start as usize) == Some(close) {
+                    if start == end && code.chars().nth(start as usize) == Some(close) {
                         state.set_cursor((start + 1, start + 1));
                     } else {
                         replace_code(state, key);
@@ -728,7 +702,7 @@ pub fn Editor<'a>(
             key @ ("ArrowUp" | "ArrowDown") if event.alt_key() => {
                 let (_, end) = get_code_cursor().unwrap();
                 state.update(|state| {
-                    let code = state.code.clone();
+                    let code = get_code();
                     let (line, col) = line_col(&code, end as usize);
                     let line_index = line - 1;
                     let up = key == "ArrowUp";
@@ -766,7 +740,7 @@ pub fn Editor<'a>(
         if handled {
             event.prevent_default();
             event.stop_propagation();
-            update_token_count(&state_code());
+            update_token_count(&get_code());
         }
     });
 
@@ -1142,7 +1116,8 @@ pub fn Editor<'a>(
             drop_file(path.clone(), bytes.to_vec());
             set_drag_message.set("");
             state.update(|state| {
-                if state.code.trim().is_empty() {
+                let code = get_code();
+                if code.trim().is_empty() {
                     let function = if path.extension().is_some_and(|ext| ext == "ua") {
                         "~"
                     } else if path
@@ -1193,7 +1168,7 @@ pub fn Editor<'a>(
                 if let Some((start, end)) = get_code_cursor().filter(|(start, end)| start != end) {
                     let st = start.min(end);
                     let en = start.max(end);
-                    let code: String = state_code()
+                    let code: String = get_code()
                         .chars()
                         .skip(st as usize)
                         .take((en - st) as usize)
@@ -1427,27 +1402,26 @@ pub fn Editor<'a>(
                             <div class="line-numbers">
                                 { line_numbers }
                             </div>
-                            /////////////////////////
-                            // The text entry area //
-                            /////////////////////////
                             <div
-                                id={code_id}
-                                contenteditable="true"
-                                autocorrect="false"
-                                autocapitalize="off"
-                                spellcheck="false"
-                                class="code-entry"
-                                style={format!("height: {code_height_em}em;")}
-                                on:input=code_input
-                                on:paste=code_paste>
-                                {
-                                    move || {
-                                        println!("update code view");
-                                        gen_code_view(&get_code.get())
-                                    }
-                                }
+                                class="code-and-overlay">
+                                /////////////////////////
+                                // The text entry area //
+                                /////////////////////////
+                                <textarea
+                                    id={code_id}
+                                    class="code-entry"
+                                    autocorrect="false"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                    style={format!("height: {code_height_em}em;")}
+                                    on:paste=code_paste
+                                    value=initial_code_str>
+                                </textarea>
+                                /////////////////////////
+                                <div
+                                    id={overlay_id}
+                                    class="code-overlay"/>
                             </div>
-                            /////////////////////////
                         </div>
                     </div>
                     <div class="output-frame">

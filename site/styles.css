@@ -463,12 +463,29 @@ input[type=number] {
     padding: 0.8em;
 }
 
+.code-and-overlay {
+    position: relative;
+    width: 100%;
+}
+
 .code-entry {
     outline: none;
     border: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
     width: 100%;
-    display: inline-block;
-    white-space: pre;
+    background-color: rgba(0, 0, 0, 0.1);
+    resize: none;
+    font-family: "Code Font", monospace;
+    font-size: inherit;
+    position: absolute;
+    line-height: 1.25em;
+}
+
+.code-overlay {
+    position: absolute;
+    width: 100%;
+    pointer-events: none;
 }
 
 .code-line {

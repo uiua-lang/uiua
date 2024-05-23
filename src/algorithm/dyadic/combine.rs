@@ -280,7 +280,7 @@ impl<T: ArrayValue> Array<T> {
                     }
                 };
                 let rot_len = self.data.len();
-                other.data.extend(self.data);
+                other.data.extend_from_cowslice(self.data);
                 other.data.as_mut_slice().rotate_right(rot_len);
                 other.shape = target_shape;
                 other.shape[0] += 1;
@@ -331,11 +331,11 @@ impl<T: ArrayValue> Array<T> {
                     }
 
                     if self.data.len() >= other.data.len() {
-                        self.data.extend(other.data);
+                        self.data.extend_from_cowslice(other.data);
                         self.shape[0] += other.shape[0];
                     } else {
                         let rot_len = self.data.len();
-                        other.data.extend(self.data);
+                        other.data.extend_from_cowslice(self.data);
                         other.data.as_mut_slice().rotate_right(rot_len);
                         other.shape[0] += self.shape[0];
                         other.meta = self.meta;
@@ -389,7 +389,7 @@ impl<T: ArrayValue> Array<T> {
                 take(&mut self.shape)
             }
         };
-        self.data.extend(other.data);
+        self.data.extend_from_cowslice(other.data);
         self.shape = target_shape;
         self.shape[0] += 1;
         self.validate_shape();
@@ -636,7 +636,7 @@ impl<T: ArrayValue> Array<T> {
                 }
             }
         }
-        self.data.extend(other.data);
+        self.data.extend_from_cowslice(other.data);
         self.shape.insert(0, 2);
         self.validate_shape();
         self.take_label();

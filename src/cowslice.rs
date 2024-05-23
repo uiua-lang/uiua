@@ -150,6 +150,21 @@ impl<T: Clone> CowSlice<T> {
             res
         }
     }
+    fn modify_end<F, R>(&mut self, f: F) -> R
+    where
+        F: FnOnce(&mut EcoVec<T>) -> R,
+    {
+        if self.data.is_unique() && self.end == self.data.len() {
+            let res = f(&mut self.data);
+            self.end = self.data.len();
+            res
+        } else {
+            let mut vec = EcoVec::from(&**self);
+            let res = f(&mut vec);
+            *self = vec.into();
+            res
+        }
+    }
     /// Clear the buffer
     pub fn clear(&mut self) {
         if self.is_unique() {
@@ -198,23 +213,23 @@ impl<T: Clone> CowSlice<T> {
         })
     }
     pub fn extend_from_array<const N: usize>(&mut self, array: [T; N]) {
-        self.modify(|data| unsafe { data.extend_from_trusted(array) })
+        self.modify_end(|data| unsafe { data.extend_from_trusted(array) })
     }
     pub fn extend_from_vec(&mut self, vec: Vec<T>) {
-        self.modify(|data| unsafe { data.extend_from_trusted(vec) })
+        self.modify_end(|data| unsafe { data.extend_from_trusted(vec) })
     }
     pub fn extend_from_ecovec(&mut self, vec: EcoVec<T>) {
-        self.modify(|data| unsafe { data.extend_from_trusted(vec) })
+        self.modify_end(|data| unsafe { data.extend_from_trusted(vec) })
     }
     pub fn extend_from_cowslice(&mut self, slice: CowSlice<T>) {
-        self.modify(|data| unsafe { data.extend_from_trusted(slice.data) })
+        self.modify_end(|data| unsafe { data.extend_from_trusted(slice) })
     }
     pub unsafe fn extend_from_trusted<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = T>,
         I::IntoIter: ExactSizeIterator,
     {
-        self.modify(|data| data.extend_from_trusted(iter))
+        self.modify_end(|data| data.extend_from_trusted(iter))
     }
 }
 
@@ -396,12 +411,18 @@ impl<T: Clone> Iterator for CowSliceIntoIter<T> {
         if self.start >= self.end {
             None
         } else {
-            let item = self.data[self.start].clone();
+            let item = unsafe { self.data.get_unchecked(self.start) }.clone();
             self.start += 1;
             Some(item)
         }
     }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.end - self.start;
+        (len, Some(len))
+    }
 }
+
+impl<T: Clone> ExactSizeIterator for CowSliceIntoIter<T> {}
 
 impl<'a, T> IntoIterator for &'a CowSlice<T> {
     type Item = &'a T;
@@ -429,7 +450,7 @@ impl<T: Clone> FromIterator<T> for CowSlice<T> {
 
 impl<T: Clone> Extend<T> for CowSlice<T> {
     fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
-        self.modify(|vec| vec.extend(iter))
+        self.modify_end(|vec| vec.extend(iter))
     }
 }
 

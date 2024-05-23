@@ -1,6 +1,5 @@
 use std::{
     cell::Cell,
-    iter,
     mem::{replace, take},
     str::FromStr,
     time::Duration,
@@ -19,9 +18,7 @@ use uiua::{
 };
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;
-use web_sys::{
-    Comment, Event, HtmlStyleElement, HtmlTextAreaElement, KeyboardEvent, MouseEvent, Node,
-};
+use web_sys::{Event, HtmlStyleElement, HtmlTextAreaElement, KeyboardEvent, MouseEvent};
 
 use crate::{
     backend::{OutputItem, WebBackend},
@@ -303,9 +300,9 @@ pub fn get_code_cursor_impl(id: &str) -> Option<(u32, u32)> {
 }
 
 fn set_code_cursor(id: &str, start: u32, end: u32) {
-    // logging::log!("set_code_cursor({}, {})", start, end);
     let area = element::<HtmlTextAreaElement>(id);
     area.set_selection_range(start, end).unwrap();
+    area.focus().unwrap();
 }
 
 #[derive(Debug)]

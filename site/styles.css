@@ -485,6 +485,11 @@ input[type=number] {
     line-height: 1.25em;
 }
 
+.code-entry::selection {
+    color: transparent;
+    background-color: #0008;
+}
+
 .code-overlay {
     position: absolute;
     width: 100%;

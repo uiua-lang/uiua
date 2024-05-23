@@ -1207,19 +1207,35 @@ impl Value {
                     }
                     acc
                 });
-                let data_len: usize = shape.iter().product();
-                let mut data = eco_vec![0.0; data_len];
-                let data_slice = data.make_mut();
-                for (key, count) in counts {
-                    let mut i = 0;
-                    let mut row_len = 1;
-                    for (d, &n) in shape.iter().zip(key).rev() {
-                        i += n * row_len;
-                        row_len *= d;
+                if counts.values().all(|&n| n < 256) {
+                    let data_len = validate_size::<u8>(shape.iter().copied(), env)?;
+                    let mut data = eco_vec![0u8; data_len];
+                    let data_slice = data.make_mut();
+                    for (key, count) in counts {
+                        let mut i = 0;
+                        let mut row_len = 1;
+                        for (d, &n) in shape.iter().zip(key).rev() {
+                            i += n * row_len;
+                            row_len *= d;
+                        }
+                        data_slice[i] = count as u8;
                     }
-                    data_slice[i] = count as f64;
+                    Array::new(shape, data).into()
+                } else {
+                    let data_len = validate_size::<f64>(shape.iter().copied(), env)?;
+                    let mut data = eco_vec![0.0; data_len];
+                    let data_slice = data.make_mut();
+                    for (key, count) in counts {
+                        let mut i = 0;
+                        let mut row_len = 1;
+                        for (d, &n) in shape.iter().zip(key).rev() {
+                            i += n * row_len;
+                            row_len *= d;
+                        }
+                        data_slice[i] = count as f64;
+                    }
+                    Array::new(shape, data).into()
                 }
-                Array::new(shape, data).into()
             }
             shape => return Err(env.error(format!("Cannot unwhere rank-{} array", shape.len()))),
         })

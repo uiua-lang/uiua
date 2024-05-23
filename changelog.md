@@ -21,6 +21,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add experimental **swizzles**, which allow for more flexible stack reordering
   - Swizzles are written with a `λ` followed by a list of lowercase letters
   - The `λ` formats from `'` when it is in front of the letters
+- [`keep ▽`](https://uiua.org/docs/keep) now works with [`un °`](https://uiua.org/docs/un)
+  - It splits array into counts and an adjacent deduplication
 - Add the [`json`](https://uiua.org/docs/json) function, which encodes and decodes JSON data
 - Add the [`xlsx`](https://uiua.org/docs/xlsx) function, which encodes and decodes XLSX data
 - [`bits ⋯`](https://uiua.org/docs/bits) can now take negative numbers

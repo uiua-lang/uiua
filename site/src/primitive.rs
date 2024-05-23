@@ -270,6 +270,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Rotate], Required, "", "°(↻1) [1 2 3 4]") }
             { inverse_row([Join], No, "", "°⊂ [1 2 3 4]") }
             { inverse_row([Join], Required, "Pattern match", "°(⊂1_2) [1 2 3 4]") }
+            { inverse_row([Keep], No, "", "°▽ [1 1 1 2 1 1 3 3]") }
             { inverse_row([Select], No, "", "°⊏ \"hello\"") }
             { inverse_row([Scan], No, view!("Only works with "<Prims prims=[Add, Mul, Eq, Ne]/>), "°\\+ [1 3 6 10 15]") }
             { inverse_row([Reduce, Mul], No, "Prime factors", "°/× 60") }

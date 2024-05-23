@@ -1184,6 +1184,12 @@ primitive!(
     /// The fill value may be a list, in which case it will be repeated.
     /// ex: ⬚[1 2 0]▽ [0] ⇡10
     ///
+    /// [un][keep] splits an array into a counts list and an array with adjacent similar rows deduplicated.
+    /// ex: °▽ "mississippi"
+    ///
+    /// [under][keep] allows you to modify part of an array according to a mask.
+    /// ex: ⍜▽(+1) =@s. "mississippi"
+    ///
     /// [keep]'s glyph is `▽` because its main use is to filter, and `▽` kind of looks like a coffee filter.
     (2, Keep, DyadicArray, ("keep", '▽')),
     /// Find the occurences of one array in another
@@ -2443,6 +2449,7 @@ impl_primitive!(
     (1, UnBox),
     (1(2), UnJoin),
     (2(2), UnJoinPattern),
+    (1(2), UnKeep),
     (1, UnJson),
     (1, UnCsv),
     (1, UnXlsx),

@@ -458,6 +458,15 @@ impl Value {
             }
         })
     }
+    pub(crate) fn unkeep(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        self.generic_into(
+            |a| a.unkeep(env).map(|(a, b)| (a, b.into())),
+            |a| a.unkeep(env).map(|(a, b)| (a, b.into())),
+            |a| a.unkeep(env).map(|(a, b)| (a, b.into())),
+            |a| a.unkeep(env).map(|(a, b)| (a, b.into())),
+            |a| a.unkeep(env).map(|(a, b)| (a, b.into())),
+        )
+    }
     pub(crate) fn undo_keep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_nats(
             env,
@@ -574,6 +583,38 @@ impl<T: ArrayValue> Array<T> {
         }
         self.validate_shape();
         Ok(self)
+    }
+    fn unkeep(mut self, env: &Uiua) -> UiuaResult<(Value, Self)> {
+        self.take_map_keys();
+        if self.rank() == 0 {
+            return Err(env.error("Cannot unkeep scalar array"));
+        }
+        let row_len = self.row_len();
+        let row_count = self.row_count();
+        let data = self.data.as_mut_slice();
+        let mut counts = EcoVec::new();
+        let mut dest = 0;
+        let mut rep = 0;
+        for r in 1..row_count {
+            let rep_slice = &data[rep * row_len..(rep + 1) * row_len];
+            let row_slice = &data[r * row_len..(r + 1) * row_len];
+            if ArrayCmpSlice(rep_slice) != ArrayCmpSlice(row_slice) {
+                counts.push((r - rep) as f64);
+                dest += 1;
+                for i in 0..row_len {
+                    data[dest * row_len + i] = data[r * row_len + i].clone();
+                }
+                rep = r;
+            }
+        }
+        if rep < row_count {
+            counts.push((row_count - rep) as f64);
+            dest += 1;
+        }
+        self.data.truncate(dest * row_len);
+        self.shape[0] = dest;
+        self.validate_shape();
+        Ok((counts.into(), self))
     }
     fn undo_keep(self, counts: &[usize], into: Self, env: &Uiua) -> UiuaResult<Self> {
         let counts = pad_keep_counts(counts, into.row_count(), env)?;

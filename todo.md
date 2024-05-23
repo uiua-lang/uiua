@@ -3,6 +3,7 @@
 - 0.11
   - `un keep` - Split into deduped and adjacent counts
   - Deduplicate fill signature errors
+  - Optimization when modifying the end of an array's data
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

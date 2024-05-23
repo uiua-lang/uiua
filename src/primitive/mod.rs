@@ -168,6 +168,8 @@ impl fmt::Display for ImplPrimitive {
             UnUtf => write!(f, "{Un}{Utf}"),
             UnParse => write!(f, "{Un}{Parse}"),
             UnFix => write!(f, "{Un}{Fix}"),
+            UnJoin | UnJoinPattern => write!(f, "{Un}{Join}"),
+            UnKeep => write!(f, "{Un}{Keep}"),
             UnScan => write!(f, "{Un}{Scan}"),
             UnTrace => write!(f, "{Un}{Trace}"),
             UnStack => write!(f, "{Un}{Stack}"),
@@ -193,7 +195,6 @@ impl fmt::Display for ImplPrimitive {
             UndoRerank => write!(f, "{Under}{Rerank}"),
             UndoReshape => write!(f, "{Un}{Reshape}"),
             UndoJoin => write!(f, "{Under}{Join}"),
-            UnJoin | UnJoinPattern => write!(f, "{Un}{Join}"),
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
             LastMinIndex => write!(f, "{First}{Reverse}{Rise}"),
@@ -911,6 +912,12 @@ impl ImplPrimitive {
                 let (first, rest) = val.unjoin(env)?;
                 env.push(rest);
                 env.push(first);
+            }
+            ImplPrimitive::UnKeep => {
+                let val = env.pop(1)?;
+                let (counts, dedup) = val.unkeep(env)?;
+                env.push(dedup);
+                env.push(counts);
             }
             ImplPrimitive::UnJoinPattern => {
                 let shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;

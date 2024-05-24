@@ -36,6 +36,8 @@ This version is not yet released. If you are reading this on the website, then t
   - Each additional argument increases the number of arguments passed to [`reduce /`](https://uiua.org/docs/reduce) by 1
   - Additional arguments are passed to the function on every iteration
 - Add the [`&exit`](https://uiua.org/docs/&exit) system function, which exits the program with a status code
+- Add the [`&memcpy`](https://uiua.org/docs/&memcpy) system function, which copies the data from [`&ffi`](https://uiua.org/docs/&ffi) pointers to an array
+- Add the [`&memfree`](https://uiua.org/docs/&memfree) system function, which frees memory allocated by [`&ffi`](https://uiua.org/docs/&ffi) functions
 - Add [`&tlsc`](https://uiua.org/docs/&tlsc) and [`&tlsl`](https://uiua.org/docs/&tlsl) system functions, which allow making TLS connections
   - These are currently experimental, but they will likely replace [`&httpsw`](https://uiua.org/docs/&httpsw)
 - [`&rs`](https://uiua.org/docs/&rs) will now attempt to read additional bytes to resolve a UTF-8 character

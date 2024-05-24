@@ -1187,6 +1187,16 @@ mod enabled {
             ty => return Err(format!("Unsupported FFI read type {ty}")),
         })
     }
+
+    pub(crate) fn ffi_free(ptr: *const ()) {
+        if ptr.is_null() {
+            return;
+        }
+        let ptr = ptr as *mut ();
+        unsafe {
+            let _ = Box::from_raw(ptr);
+        }
+    }
 }
 
 #[test]

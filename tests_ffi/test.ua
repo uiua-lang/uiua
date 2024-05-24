@@ -32,4 +32,4 @@ TwoPeoplePtrs ← $"{_*; _*}" .Person
 TwoInts ← "{const int*; const int*}"
 ⍤⟜≍: {1 2} Lib {TwoInts "two_ints_new" "const int*" "const int*"} {1 2}
 
-⍤⟜≍: [1 2 3] &ffic "int"⊙3 ? Lib {"int*" "array_ptr" "const int:1" "int"} {[1 2 3]}
+⍤⟜≍: [1 2 3] ⊃&memfree(&memcpy "int"⊙3) Lib {"int*" "array_ptr" "const int:1" "int"} {[1 2 3]}

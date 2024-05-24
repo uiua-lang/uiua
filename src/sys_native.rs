@@ -822,13 +822,18 @@ impl SysBackend for NativeSys {
             .do_ffi(file, return_ty, name, arg_tys, arg_values)
     }
     #[cfg(feature = "ffi")]
-    fn ffi_copy(
+    fn mem_copy(
         &self,
         ty: crate::FfiType,
         ptr: *const (),
         len: usize,
     ) -> Result<crate::Value, String> {
         crate::ffi_copy(ty, ptr, len)
+    }
+    #[cfg(feature = "ffi")]
+    fn mem_free(&self, ptr: *const ()) -> Result<(), String> {
+        crate::ffi_free(ptr);
+        Ok(())
     }
     fn load_git_module(&self, url: &str, branch: Option<&str>) -> Result<PathBuf, String> {
         if let Some(path) = NATIVE_SYS.git_paths.get(url) {

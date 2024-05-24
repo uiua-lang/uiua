@@ -632,8 +632,21 @@ sys_op! {
     /// ex! # Experimental!
     ///   : Lib ← &ffi ⊂□"example.dll"
     ///   : GetInts ← Lib {"int*" "get_ints" "int"}
-    ///   : &ffic "int":3 GetInts 3
-    (3, FfiCopy, Misc, "&ffic", "foreign function interface - copy", Mutating),
+    ///   : &memcpy "int":3 GetInts 3
+    ///
+    /// Importantly, [&memcpy] does *not* free the memory allocated by the foreign function.
+    /// Use [&memfree] to free the memory.
+    /// ex! # Experimental!
+    ///   : Lib ← &ffi ⊂□"example.dll"
+    ///   : GetInts ← Lib {"int*" "get_ints" "int"}
+    ///   : ⊃&memfree(&memcpy "int":3) GetInts 3
+    (3, MemCopy, Misc, "&memcpy", "foreign function interface - copy", Mutating),
+    /// Free a pointer
+    ///
+    /// This is useful for freeing memory allocated by a foreign function.
+    /// Expects a pointer.
+    /// See [&memcpy] for an example.
+    (1(0), MemFree, Misc, "&memfree", "free memory", Mutating),
 }
 
 /// A handle to an IO stream
@@ -963,8 +976,12 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("FFI is not supported in this environment".into())
     }
     /// Copy the data from a pointer into an array
-    fn ffi_copy(&self, ty: FfiType, ptr: *const (), len: usize) -> Result<Value, String> {
-        Err("FFI read is not supported in this environment".into())
+    fn mem_copy(&self, ty: FfiType, ptr: *const (), len: usize) -> Result<Value, String> {
+        Err("Pointer copying is not supported in this environment".into())
+    }
+    /// Free a pointer
+    fn mem_free(&self, ptr: *const ()) -> Result<(), String> {
+        Err("Pointer freeing is not supported in this environment".into())
     }
     /// Load a git repo as a module
     ///
@@ -1820,24 +1837,33 @@ impl SysOp {
                     .map_err(|e| env.error(e))?;
                 env.push(result);
             }
-            SysOp::FfiCopy => {
+            SysOp::MemCopy => {
                 let ty = env
                     .pop(1)?
-                    .as_string(env, "FFI copy type must be a string")?;
+                    .as_string(env, "Pointer copy type must be a string")?;
                 let ty = ty.parse::<FfiType>().map_err(|e| env.error(e))?;
                 let ptr = env
                     .pop(2)?
                     .meta()
                     .pointer
                     .map(|i| i as *const ())
-                    .ok_or_else(|| env.error("FFI copy pointer must be a pointer value"))?;
+                    .ok_or_else(|| env.error("Copied pointer must be a pointer value"))?;
                 let len = env
                     .pop(3)?
-                    .as_nat(env, "FFI copy length must be a non-negative integer")?;
+                    .as_nat(env, "Copied length must be a non-negative integer")?;
                 let value = (env.rt.backend)
-                    .ffi_copy(ty, ptr, len)
+                    .mem_copy(ty, ptr, len)
                     .map_err(|e| env.error(e))?;
                 env.push(value);
+            }
+            SysOp::MemFree => {
+                let ptr = env
+                    .pop(1)?
+                    .meta()
+                    .pointer
+                    .map(|i| i as *const ())
+                    .ok_or_else(|| env.error("Freed pointer must be a pointer value"))?;
+                (env.rt.backend).mem_free(ptr).map_err(|e| env.error(e))?;
             }
         }
         Ok(())

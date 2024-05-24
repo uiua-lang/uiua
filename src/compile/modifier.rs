@@ -241,7 +241,7 @@ impl Compiler {
 
                     let mut code = String::new();
                     (|| -> UiuaResult {
-                        self.prepare_env()?;
+                        self.prepare_env(mac.function.slice(), &modified.modifier.span)?;
                         let env = &mut self.macro_env;
 
                         // Run the macro function
@@ -1060,8 +1060,9 @@ impl Compiler {
         let start = comp.asm.instrs.len();
         let len = instrs.len();
         comp.asm.instrs.extend(instrs);
-        comp.asm.top_slices.push(FuncSlice { start, len });
-        comp.prepare_env()?;
+        let slice = FuncSlice { start, len };
+        comp.asm.top_slices.push(slice);
+        comp.prepare_env(slice, span)?;
         let values = match comp.macro_env.run_asm(&comp.asm) {
             Ok(_) => comp.macro_env.take_stack(),
             Err(e) => {
@@ -1087,17 +1088,40 @@ impl Compiler {
         Ok(())
     }
     /// Prepare the macro environment to run some expanded code.
-    pub(super) fn prepare_env(&mut self) -> UiuaResult {
-        let top_slices = take(&mut self.macro_env.asm.top_slices);
+    pub(super) fn prepare_env(&mut self, for_instrs: FuncSlice, span: &CodeSpan) -> UiuaResult {
+        let mut top_slices = take(&mut self.macro_env.asm.top_slices);
         let mut bindings = take(&mut self.macro_env.asm.bindings);
+        top_slices.extend_from_slice(&self.asm.top_slices[top_slices.len()..]);
         bindings.extend_from_slice(&self.asm.bindings[bindings.len()..]);
         self.macro_env.asm = self.asm.clone();
         self.macro_env.asm.bindings = bindings;
-        if let Some(last_slice) = top_slices.last() {
-            (self.macro_env.asm.top_slices).retain(|slice| slice.start > last_slice.start);
+        self.macro_env.asm.top_slices = top_slices;
+        let for_instrs = self.macro_env.asm.instrs(for_instrs);
+        if instrs_contain_unbound_constants(for_instrs, &self.macro_env.asm) {
+            for slice in &self.macro_env.asm.top_slices {
+                let instrs = self.macro_env.asm.instrs(*slice);
+                if !instrs_are_pure(instrs, &self.macro_env.asm, Purity::Impure) {
+                    return Err(self.fatal_error(
+                        span.clone(),
+                        "Compile-time code contains a runtime-bound \
+                        constant which may rely on code that affects the \
+                        environment",
+                    ));
+                }
+            }
+            #[cfg(feature = "native_sys")]
+            let enabled = crate::sys_native::set_output_enabled(false);
+            let res = self.macro_env.run_top_slices();
+            #[cfg(feature = "native_sys")]
+            crate::sys_native::set_output_enabled(enabled);
+            for slice in &mut self.macro_env.asm.top_slices {
+                *slice = FuncSlice::default();
+            }
+            self.asm.bindings = self.macro_env.asm.bindings.clone();
+            res
+        } else {
+            Ok(())
         }
-        // self.macro_env.no_io(Uiua::run_top_slices)?;
-        Ok(())
     }
     /// Run a function in a temporary scope with the given names.
     /// Newly created bindings will be added to the current scope after the function is run.
@@ -1122,4 +1146,26 @@ impl Compiler {
         self.scope = scope;
         res
     }
+}
+
+fn instrs_contain_unbound_constants(instrs: &[Instr], asm: &Assembly) -> bool {
+    use Instr::*;
+    for instr in instrs {
+        match instr {
+            CallGlobal { index, .. }
+                if asm.bindings.get(*index).map_or(true, |binding| {
+                    matches!(binding.kind, BindingKind::Const(None))
+                }) =>
+            {
+                return true
+            }
+            PushFunc(func) => {
+                if instrs_contain_unbound_constants(func.instrs(asm), asm) {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
 }

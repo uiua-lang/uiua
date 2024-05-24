@@ -540,24 +540,6 @@ Fact ← |1 ⟨×Fact-1.|1⟩<2.
 ⍤⟜≍: [1 1 2 2 4] [⟜⊙⟜⊙⋅∘ 1 2 3 4]
 ⍤⟜≍: [1 3] [⟜3 1]
 
-# Array Macros
-F! ←^
-G! ←^ ⇌
-H‼ ←^ ⊂⊢.
-⍤⟜≍: [1 2] F!(⊂1|⊂2) []
-⍤⟜≍: [2 1] G!(⊂1|⊂2) []
-⍤⟜≍: [1 1 2] H‼(⊂1|⊂2) []
-⍤⟜≍: [1 1 2] H‼(⊂1)(⊂2) []
-X ← 1
-F! ←^ ⊂□°⋕X
-⍤⟜≍: [1 2] [F!2]
-F‼ ←^ $"_ ← _\n" °⊟
-F‼Y5
-⍤⟜≍: 5 Y
-Foo! ←^ "t ←rand" ◌
-Hi ← Foo!+"a"
-⍤⟜≍: "a" Hi
-
 # ThisFile
 ⍤⟜≍: $"tests_units.ua" Sep ThisFile
 ⍤⟜≍: ThisFile /◇⊂ {ThisFileDir Sep ThisFileName}

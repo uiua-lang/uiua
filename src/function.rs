@@ -12,6 +12,7 @@ use serde::*;
 use serde_tuple::*;
 
 use crate::{
+    check::instrs_signature,
     lex::CodeSpan,
     primitive::{ImplPrimitive, Primitive},
     value::Value,
@@ -304,7 +305,7 @@ pub enum Purity {
 
 /// Whether some instructions are pure
 pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly, min_purity: Purity) -> bool {
-    for instr in instrs {
+    'instrs: for (i, instr) in instrs.iter().enumerate() {
         match instr {
             Instr::CallGlobal { index, .. } => {
                 if let Some(binding) = asm.bindings.get(*index) {
@@ -319,7 +320,18 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly, min_purity: Puri
                     }
                 }
             }
-            Instr::BindGlobal { .. } => return false,
+            Instr::BindGlobal { .. } => {
+                let prev = &instrs[..i];
+                for j in (0..i).rev() {
+                    let frag = &prev[j..i];
+                    if instrs_signature(frag).is_ok_and(|sig| sig == (0, 1))
+                        && instrs_are_pure(frag, asm, min_purity)
+                    {
+                        continue 'instrs;
+                    }
+                }
+                return false;
+            }
             Instr::Prim(prim, _) => {
                 if prim.purity() < min_purity {
                     return false;

@@ -614,6 +614,8 @@ sys_op! {
     ///   : Add ← Lib {VecII "vec2_add" VecII VecII}
     ///   : Add {[1 2] [3 4]} # [4 6]
     ///
+    /// If a foreign function returns or has an out-parameter that is a pointer type, a special array is returned representing the pointer. This array is not useful as a normal array, but it can be passed back as an [&ffi] argument, read from with [&memcpy], or freed with [&memfree].
+    ///
     /// Coverage of types that are supported for binding is currently best-effort.
     /// If you encounter a type that you need support for, please [open an issue](https://github.com/uiua-lang/uiua/issues/new).
     (2, Ffi, Misc, "&ffi", "foreign function interface", Mutating),
@@ -622,6 +624,7 @@ sys_op! {
     /// This is useful for complex [&ffi] calls that are meant to return arrays.
     /// Expects a string indicating the type, a pointer, and a length.
     ///
+    /// The returned array will always be rank-`1`.
     /// The type of the array depends on the given type.
     /// Types are specified in the same way as in [&ffi].
     /// `"char"` will create a character array.

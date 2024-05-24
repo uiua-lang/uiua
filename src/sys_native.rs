@@ -821,6 +821,15 @@ impl SysBackend for NativeSys {
             .ffi
             .do_ffi(file, return_ty, name, arg_tys, arg_values)
     }
+    #[cfg(feature = "ffi")]
+    fn ffi_copy(
+        &self,
+        ty: crate::FfiType,
+        ptr: *const (),
+        len: usize,
+    ) -> Result<crate::Value, String> {
+        crate::ffi_copy(ty, ptr, len)
+    }
     fn load_git_module(&self, url: &str, branch: Option<&str>) -> Result<PathBuf, String> {
         if let Some(path) = NATIVE_SYS.git_paths.get(url) {
             if path.is_err() || path.as_ref().unwrap().exists() {

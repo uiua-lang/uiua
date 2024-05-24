@@ -260,7 +260,7 @@ pub fn MainPage() -> impl IntoView {
                 </div>
                 <div>
                     <Hd id="ffi">"FFI"</Hd>
-                    <p>"Uiua has experimental support for calling functions from shared libraries through "<Prim prim=Sys(SysOp::FFI)/>"."</p>
+                    <p>"Uiua has experimental support for calling functions from shared libraries through "<Prim prim=Sys(SysOp::Ffi)/>"."</p>
                 </div>
             </div>
             <div>

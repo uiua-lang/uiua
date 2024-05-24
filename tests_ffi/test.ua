@@ -31,3 +31,5 @@ TwoPeoplePtrs ← $"{_*; _*}" .Person
 ⍤⟜≍ {{"a" 1} {"b" 2}} Lib {TwoPeoplePtrs "two_people_new_ptr" .$"const _*"Person} {{"a" 1} {"b" 2}}
 TwoInts ← "{const int*; const int*}"
 ⍤⟜≍: {1 2} Lib {TwoInts "two_ints_new" "const int*" "const int*"} {1 2}
+
+⍤⟜≍: [1 2 3] &ffic "int"⊙3 ? Lib {"int*" "array_ptr" "const int:1" "int"} {[1 2 3]}

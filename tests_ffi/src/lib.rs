@@ -194,6 +194,12 @@ pub unsafe extern "C" fn two_ints_new(a: *const c_int, b: *const c_int) -> TwoIn
     TwoInts { a, b }
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn array_ptr(arr: *const c_int, len: c_int) -> *const c_int {
+    let copied = std::slice::from_raw_parts(arr, len as usize).to_vec();
+    copied.leak().as_ptr()
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

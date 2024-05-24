@@ -362,6 +362,15 @@ mod enabled {
                 };
             }
 
+            macro_rules! ret_ptr {
+                ($ty:ty) => {{
+                    let ptr = unsafe { cif.call::<*const $ty>(fptr, &bindings.args) };
+                    let mut val = Value::default();
+                    val.meta_mut().pointer = Some(ptr as usize);
+                    results.push(val);
+                }};
+            }
+
             match &return_ty {
                 FfiType::Void => unsafe { cif.call::<()>(fptr, &bindings.args) },
                 FfiType::Char => call!(c_schar),
@@ -390,6 +399,17 @@ mod enabled {
                         // Clean up the pointer's memory
                         drop(Vec::from_raw_parts(ptr as *mut u8, size, size));
                     },
+                    FfiType::Void => ret_ptr!(()),
+                    FfiType::Short => ret_ptr!(c_short),
+                    FfiType::UShort => ret_ptr!(c_ushort),
+                    FfiType::Int => ret_ptr!(c_int),
+                    FfiType::UInt => ret_ptr!(c_uint),
+                    FfiType::Long => ret_ptr!(c_long),
+                    FfiType::ULong => ret_ptr!(c_ulong),
+                    FfiType::LongLong => ret_ptr!(c_longlong),
+                    FfiType::ULongLong => ret_ptr!(c_ulonglong),
+                    FfiType::Float => ret_ptr!(c_float),
+                    FfiType::Double => ret_ptr!(c_double),
                     _ => {
                         return Err(format!(
                             "Invalid or unsupported FFI return type {return_ty}"
@@ -1134,6 +1154,38 @@ mod enabled {
                 Type::structure(types)
             }
         }
+    }
+
+    pub(crate) fn ffi_copy(ty: FfiType, ptr: *const (), len: usize) -> Result<Value, String> {
+        fn ptr_iter<T>(ptr: *const T, len: usize) -> impl ExactSizeIterator<Item = T> {
+            (0..len).map(move |i| unsafe { ptr.add(i).read() })
+        }
+        macro_rules! as_f64 {
+            ($ty:ty) => {
+                ptr_iter(ptr as *const $ty, len).map(|i| i as f64).collect()
+            };
+        }
+        Ok(match ty {
+            FfiType::Char => unsafe {
+                let slice = slice::from_raw_parts(ptr as *const c_char, len);
+                let s = CStr::from_ptr(slice.as_ptr())
+                    .to_str()
+                    .map_err(|e| e.to_string())?;
+                Value::from(s)
+            },
+            FfiType::UChar => ptr_iter(ptr as *const c_uchar, len).collect(),
+            FfiType::Short => as_f64!(c_short),
+            FfiType::UShort => as_f64!(c_ushort),
+            FfiType::Int => as_f64!(c_int),
+            FfiType::UInt => as_f64!(c_uint),
+            FfiType::Long => as_f64!(c_long),
+            FfiType::ULong => as_f64!(c_ulong),
+            FfiType::LongLong => as_f64!(c_longlong),
+            FfiType::ULongLong => as_f64!(c_ulonglong),
+            FfiType::Float => as_f64!(c_float),
+            FfiType::Double => as_f64!(c_double),
+            ty => return Err(format!("Unsupported FFI read type {ty}")),
+        })
     }
 }
 

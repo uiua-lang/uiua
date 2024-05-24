@@ -8,6 +8,7 @@ site/dist
 *.wav
 *.png
 *.txt
+*.db
 !*/assets/*
 
 *.ua

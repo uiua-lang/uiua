@@ -616,7 +616,24 @@ sys_op! {
     ///
     /// Coverage of types that are supported for binding is currently best-effort.
     /// If you encounter a type that you need support for, please [open an issue](https://github.com/uiua-lang/uiua/issues/new).
-    (2, FFI, Misc, "&ffi", "foreign function interface", Mutating),
+    (2, Ffi, Misc, "&ffi", "foreign function interface", Mutating),
+    /// Copy data from a pointer into an array
+    ///
+    /// This is useful for complex [&ffi] calls that are meant to return arrays.
+    /// Expects a string indicating the type, a pointer, and a length.
+    ///
+    /// The type of the array depends on the given type.
+    /// Types are specified in the same way as in [&ffi].
+    /// `"char"` will create a character array.
+    /// `"unsigned char"` will create a number array with efficient byte storage.
+    /// All other number types will create a normal number array.
+    ///
+    /// For example, if we have a C function `int* get_ints(int len)` in a shared library `example.dll`, we can call it and copy the result like this:
+    /// ex! # Experimental!
+    ///   : Lib ← &ffi ⊂□"example.dll"
+    ///   : GetInts ← Lib {"int*" "get_ints" "int"}
+    ///   : &ffic "int":3 GetInts 3
+    (3, FfiCopy, Misc, "&ffic", "foreign function interface - copy", Mutating),
 }
 
 /// A handle to an IO stream
@@ -944,6 +961,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         args: &[Value],
     ) -> Result<Value, String> {
         Err("FFI is not supported in this environment".into())
+    }
+    /// Copy the data from a pointer into an array
+    fn ffi_copy(&self, ty: FfiType, ptr: *const (), len: usize) -> Result<Value, String> {
+        Err("FFI read is not supported in this environment".into())
     }
     /// Load a git repo as a module
     ///
@@ -1757,7 +1778,7 @@ impl SysOp {
                     .change_directory(&path)
                     .map_err(|e| env.error(e))?;
             }
-            SysOp::FFI => {
+            SysOp::Ffi => {
                 let sig_def = env.pop(1)?;
                 let sig_def = match sig_def {
                     Value::Box(arr) => arr,
@@ -1798,6 +1819,25 @@ impl SysOp {
                     .ffi(&file_name, result_ty, &name, &arg_tys, &args)
                     .map_err(|e| env.error(e))?;
                 env.push(result);
+            }
+            SysOp::FfiCopy => {
+                let ty = env
+                    .pop(1)?
+                    .as_string(env, "FFI copy type must be a string")?;
+                let ty = ty.parse::<FfiType>().map_err(|e| env.error(e))?;
+                let ptr = env
+                    .pop(2)?
+                    .meta()
+                    .pointer
+                    .map(|i| i as *const ())
+                    .ok_or_else(|| env.error("FFI copy pointer must be a pointer value"))?;
+                let len = env
+                    .pop(3)?
+                    .as_nat(env, "FFI copy length must be a non-negative integer")?;
+                let value = (env.rt.backend)
+                    .ffi_copy(ty, ptr, len)
+                    .map_err(|e| env.error(e))?;
+                env.push(value);
             }
         }
         Ok(())

@@ -151,6 +151,7 @@ pub enum SysOpClass {
     Images,
     Gifs,
     Tcp,
+    Ffi,
     Misc,
 }
 
@@ -618,7 +619,7 @@ sys_op! {
     ///
     /// Coverage of types that are supported for binding is currently best-effort.
     /// If you encounter a type that you need support for, please [open an issue](https://github.com/uiua-lang/uiua/issues/new).
-    (2, Ffi, Misc, "&ffi", "foreign function interface", Mutating),
+    (2, Ffi, Ffi, "&ffi", "foreign function interface", Mutating),
     /// Copy data from a pointer into an array
     ///
     /// This is useful for complex [&ffi] calls that are meant to return arrays.
@@ -643,13 +644,13 @@ sys_op! {
     ///   : Lib ← &ffi ⊂□"example.dll"
     ///   : GetInts ← Lib {"int*" "get_ints" "int"}
     ///   : ⊃&memfree(&memcpy "int":3) GetInts 3
-    (3, MemCopy, Misc, "&memcpy", "foreign function interface - copy", Mutating),
+    (3, MemCopy, Ffi, "&memcpy", "foreign function interface - copy", Mutating),
     /// Free a pointer
     ///
     /// This is useful for freeing memory allocated by a foreign function.
     /// Expects a pointer.
     /// See [&memcpy] for an example.
-    (1(0), MemFree, Misc, "&memfree", "free memory", Mutating),
+    (1(0), MemFree, Ffi, "&memfree", "free memory", Mutating),
 }
 
 /// A handle to an IO stream

@@ -414,6 +414,7 @@ impl Allowed {
                 ("thread", &[PrimClass::Thread]),
                 ("map", &[PrimClass::Map]),
                 ("encoding encode", &[PrimClass::Encoding]),
+                ("ffi", &[PrimClass::Sys(SysOpClass::Ffi)]),
                 ("misc", &[PrimClass::Sys(SysOpClass::Misc)]),
             ] {
                 if pattern.split_whitespace().any(|pat| pat.starts_with(part)) {
@@ -544,6 +545,7 @@ impl Allowed {
                         SysOpClass::Images => ("System - Images".into_view(), "Work with static images"),
                         SysOpClass::Gifs => ("System - GIFs".into_view(), "Work with animated GIFs"),
                         SysOpClass::Tcp => ("System - TCP".into_view(), "Work with TCP sockets"),
+                        SysOpClass::Ffi => ("System - FFI".into_view(), "Foreign function interface"),
                         SysOpClass::Misc => ("System - Misc".into_view(), ""),
                     }
                 }

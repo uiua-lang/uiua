@@ -3,6 +3,7 @@
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
+    mem::size_of,
     ptr,
 };
 
@@ -129,7 +130,7 @@ fn repeat_impl(f: Function, n: f64, env: &mut Uiua) -> UiuaResult {
         let n = n as usize;
         if sig.outputs > sig.args {
             let delta = sig.outputs - sig.args;
-            if validate_size_impl::<Value>([n, delta]).is_err() {
+            if validate_size_impl(size_of::<Value>(), [n, delta]).is_err() {
                 return Err(env.error(format!(
                     "{} would create too many values on the stack",
                     Primitive::Repeat.format()

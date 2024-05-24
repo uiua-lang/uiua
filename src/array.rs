@@ -177,8 +177,13 @@ where
 #[track_caller]
 #[inline(always)]
 fn validate_shape<T>(shape: &[usize], data: &[T]) {
+    let elems = if shape.contains(&0) {
+        0
+    } else {
+        shape.iter().product()
+    };
     debug_assert_eq!(
-        shape.iter().product::<usize>(),
+        elems,
         data.len(),
         "shape {shape:?} does not match data length {}",
         data.len()

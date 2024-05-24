@@ -24,7 +24,7 @@ use crate::{
     Shape, Uiua, UiuaResult,
 };
 
-use super::{shape_prefixes_match, ArrayCmpSlice, FillContext};
+use super::{shape_prefixes_match, validate_size, ArrayCmpSlice, FillContext};
 
 impl Value {
     pub(crate) fn bin_coerce_to_boxes<T, C: FillContext, E: ToString>(
@@ -423,7 +423,7 @@ impl Value {
                 .copied()
                 .collect()
         };
-        if new_shape.iter().product::<usize>() != self.element_count() {
+        if validate_size::<u8>(new_shape.iter().copied(), env)? != self.element_count() {
             return Ok(());
         }
         *self.shape_mut() = new_shape;

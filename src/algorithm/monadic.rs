@@ -544,7 +544,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let forward = amnt.is_positive();
         // Early return if any dimension is 0, because there are no elements
-        if self.shape[depth..].iter().any(|&d| d == 0) {
+        if self.shape[depth..].iter().any(|&d| d == 0) || depth > 0 && self.shape[depth - 1] == 0 {
             if forward {
                 self.shape[depth..].rotate_left(trans_count);
             } else {

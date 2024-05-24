@@ -63,8 +63,11 @@ pub enum SizeError {
     TooLarge(usize),
 }
 
-pub fn validate_size<T>(sizes: impl IntoIterator<Item = usize>, env: &Uiua) -> UiuaResult<usize> {
-    validate_size_impl::<T>(sizes).map_err(|e| match e {
+pub fn validate_size<T>(
+    sizes: impl IntoIterator<Item = usize> + Clone,
+    env: &Uiua,
+) -> UiuaResult<usize> {
+    validate_size_impl(size_of::<T>(), sizes).map_err(|e| match e {
         SizeError::Overflow => env.error("Array size calculation overflowed"),
         SizeError::TooLarge(size) => {
             env.error(format!("Array of {size} elements would be too large"))
@@ -72,9 +75,13 @@ pub fn validate_size<T>(sizes: impl IntoIterator<Item = usize>, env: &Uiua) -> U
     })
 }
 
-pub(crate) fn validate_size_impl<T>(
-    sizes: impl IntoIterator<Item = usize>,
+pub(crate) fn validate_size_impl(
+    size: usize,
+    sizes: impl IntoIterator<Item = usize> + Clone,
 ) -> Result<usize, SizeError> {
+    if sizes.clone().into_iter().any(|s| s == 0) {
+        return Ok(0);
+    }
     let (elements, mut overflowed) =
         sizes
             .into_iter()
@@ -83,7 +90,7 @@ pub(crate) fn validate_size_impl<T>(
                 let (new_acc, new_ovf) = acc.overflowing_mul(s);
                 (new_acc, ovf || new_ovf)
             });
-    let elem_size = size_of::<T>() as u64;
+    let elem_size = size as u64;
     let (size, ovf) = elements.overflowing_mul(elem_size);
     overflowed |= ovf;
     if overflowed {

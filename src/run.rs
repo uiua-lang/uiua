@@ -779,10 +779,19 @@ code:
     /// Call and truncate the stack to before the args were pushed if the call fails
     pub(crate) fn call_clean_stack(&mut self, f: Function) -> UiuaResult {
         let sig = f.signature();
+        let temp_sigs = instrs_temp_signatures(f.instrs(self))
+            .unwrap_or([Signature::new(0, 0); TempStack::CARDINALITY]);
         let bottom = self.stack_height().saturating_sub(sig.args);
+        let mut temp_bottoms: [usize; TempStack::CARDINALITY] = [0; TempStack::CARDINALITY];
+        for (i, stack) in self.rt.temp_stacks.iter().enumerate() {
+            temp_bottoms[i] = stack.len().saturating_sub(temp_sigs[i].args);
+        }
         let res = self.call(f);
         if res.is_err() {
             self.truncate_stack(bottom);
+            for (stack, bottom) in self.rt.temp_stacks.iter_mut().zip(temp_bottoms) {
+                stack.truncate(bottom);
+            }
         }
         res
     }

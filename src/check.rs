@@ -1,6 +1,13 @@
 //! Signature checker implementation
 
-use std::{borrow::Cow, cmp::Ordering, fmt};
+use std::{
+    borrow::Cow,
+    cell::RefCell,
+    cmp::Ordering,
+    collections::HashMap,
+    fmt,
+    hash::{DefaultHasher, Hash, Hasher},
+};
 
 use enum_iterator::Sequence;
 
@@ -37,8 +44,22 @@ pub(crate) fn instrs_temp_signatures(
 pub(crate) fn instrs_all_signatures(
     instrs: &[Instr],
 ) -> Result<(Signature, [Signature; TempStack::CARDINALITY]), SigCheckError> {
-    let env = VirtualEnv::from_instrs(instrs)?;
-    Ok((env.sig(), env.temp_signatures()))
+    type AllSigsCache = HashMap<u64, (Signature, [Signature; TempStack::CARDINALITY])>;
+    thread_local! {
+        static CACHE: RefCell<AllSigsCache> = RefCell::new(AllSigsCache::new());
+    }
+    let mut hasher = DefaultHasher::new();
+    instrs.hash(&mut hasher);
+    let hash = hasher.finish();
+    CACHE.with(|cache| {
+        if let Some(sigs) = cache.borrow().get(&hash) {
+            return Ok(*sigs);
+        }
+        let env = VirtualEnv::from_instrs(instrs)?;
+        let sigs = (env.sig(), env.temp_signatures());
+        cache.borrow_mut().insert(hash, sigs);
+        Ok(sigs)
+    })
 }
 
 pub(crate) fn instrs_signature_no_temp(instrs: &[Instr]) -> Option<Signature> {

@@ -183,7 +183,7 @@ where
 {
     match (a.shape(), b.shape()) {
         ([], []) => c[0] = f.call(a.data()[0].clone(), b.data()[0].clone(), env)?,
-        ([0, ..], _) | (_, [.., 0]) => {}
+        (ash, bsh) if ash.contains(&0) || bsh.contains(&0) => {}
         (ash, bsh) if ash == bsh => {
             for ((a, b), c) in a.data().iter().zip(b.data()).zip(c) {
                 *c = f.call(a.clone(), b.clone(), env)?;

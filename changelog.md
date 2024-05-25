@@ -18,9 +18,13 @@ This version is not yet released. If you are reading this on the website, then t
   - This makes it harder to accidentally use a fill value without meaning to
   - This does not affect [`un °`](https://uiua.org/docs/un)[`pop ◌`](https://uiua.org/docs/pop)
   - This can be circumvented with [`fill ⬚`](https://uiua.org/docs/fill)[`un °`](https://uiua.org/docs/un)[`pop ◌`](https://uiua.org/docs/pop)
-- Add experimental **swizzles**, which allow for more flexible stack reordering
+- Add experimental **stack swizzles**, which allow for more flexible stack reordering
   - Swizzles are written with a `λ` followed by a list of lowercase letters
   - The `λ` formats from `'` when it is in front of the letters
+- Add experimental **array swizzles**, which allow extracting rows from an array in a concise way
+  - Swizzles are written with a `⊣` followed by a list of letters
+  - Lowercase letters start from the first row, uppercase letters start from the last row
+  - The `⊣` formats from `''` when it is in front of the letters
 - [`keep ▽`](https://uiua.org/docs/keep) now works with [`un °`](https://uiua.org/docs/un)
   - It splits array into counts and an adjacent deduplication
 - Add the [`json`](https://uiua.org/docs/json) function, which encodes and decodes JSON data

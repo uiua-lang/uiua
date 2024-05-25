@@ -8,8 +8,8 @@ use regex::Regex;
 use crate::{
     check::{instrs_signature, instrs_signature_no_temp},
     primitive::{ImplPrimitive, Primitive},
-    BindingKind, Compiler, Function, FunctionId, Instr, Signature, Span, SysOp, TempStack, Uiua,
-    UiuaResult, Value,
+    Assembly, BindingKind, Compiler, Function, FunctionId, Instr, Signature, Span, SysOp,
+    TempStack, Uiua, UiuaResult, Value,
 };
 
 pub(crate) const DEBUG: bool = false;
@@ -537,6 +537,8 @@ pub(crate) fn under_instrs(
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
+                    let befores = resolve_uns(befores, comp)?;
+                    let afters = resolve_uns(afters, comp)?;
                     if DEBUG {
                         println!("undered {:?} to {:?} {:?}", instrs, befores, afters);
                     }
@@ -553,6 +555,51 @@ pub(crate) fn under_instrs(
     // println!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
 
     None
+}
+
+fn resolve_uns(instrs: EcoVec<Instr>, comp: &mut Compiler) -> Option<EcoVec<Instr>> {
+    fn contains_un(instrs: &[Instr], asm: &Assembly) -> bool {
+        instrs.iter().any(|instr| match instr {
+            Instr::PushFunc(f) => contains_un(f.instrs(asm), asm),
+            Instr::Prim(Primitive::Un, _) => true,
+            _ => false,
+        })
+    }
+    if !contains_un(&instrs, &comp.asm) {
+        return Some(instrs);
+    }
+    fn resolve_uns(instrs: EcoVec<Instr>, comp: &mut Compiler) -> Option<EcoVec<Instr>> {
+        let mut resolved = EcoVec::new();
+        for instr in instrs {
+            match instr {
+                Instr::Prim(Primitive::Un, _) => {
+                    let prev = resolved.pop()?;
+                    let Instr::PushFunc(f) = prev else {
+                        return None;
+                    };
+                    let instrs = f.instrs(comp).to_vec();
+                    let inverse = invert_instrs(&instrs, comp)?;
+                    resolved.extend(inverse);
+                }
+                Instr::PushFunc(f) => {
+                    let instrs = f.instrs(comp);
+                    if !contains_un(instrs, &comp.asm) {
+                        resolved.push(Instr::PushFunc(f));
+                        continue;
+                    }
+                    let instrs = EcoVec::from(instrs);
+                    let id = f.id.clone();
+                    let resolved_f = resolve_uns(instrs, comp)?;
+                    let sig = instrs_signature(&resolved_f).ok()?;
+                    let func = comp.make_function(id, sig, resolved_f);
+                    resolved.push(Instr::PushFunc(func));
+                }
+                instr => resolved.push(instr.clone()),
+            }
+        }
+        Some(resolved)
+    }
+    resolve_uns(instrs, comp)
 }
 
 trait InvertPattern: fmt::Debug + Sync {

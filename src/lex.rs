@@ -828,7 +828,7 @@ impl<'a> Lexer<'a> {
                     let indices = self.stack_swizzle_indices().unwrap_or_default();
                     self.end(StackSwizzle(crate::StackSwizzle { indices }), start)
                 }
-                "ξ" => {
+                "⊣" => {
                     let indices = self.array_swizzle_indices().unwrap_or_default();
                     self.end(ArraySwizzle(crate::ArraySwizzle { indices }), start)
                 }

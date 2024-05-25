@@ -301,7 +301,7 @@ pub struct ArraySwizzle {
 
 impl fmt::Display for ArraySwizzle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "ξ")?;
+        write!(f, "⊣")?;
         for &i in &self.indices {
             let c = if i < 0 {
                 (b'A' - 1 + i.unsigned_abs()) as char

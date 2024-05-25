@@ -489,6 +489,7 @@ input[type=number] {
 
 .code-entry::selection {
     color: transparent;
+    background-color: #0078d7;
 }
 
 .code-overlay {
@@ -508,20 +509,12 @@ input[type=number] {
 }
 
 @media (prefers-color-scheme: dark) {
-    .code-entry::selection {
-        background-color: #fff6;
-    }
-
     .line-numbers {
         color: #3f4b5d;
     }
 }
 
 @media (prefers-color-scheme: light) {
-    .code-entry::selection {
-        background-color: #0008;
-    }
-
     .line-numbers {
         color: #bcc9ca;
     }

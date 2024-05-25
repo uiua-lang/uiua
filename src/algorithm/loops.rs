@@ -455,7 +455,6 @@ fn multi_partition_indices(markers: Array<isize>) -> Vec<(isize, Vec<usize>)> {
     let mut groups: Vec<(isize, Vec<Vec<usize>>)> = Vec::new();
     let mut curr = vec![0; markers.rank()];
     for &marker in &markers.data {
-        println!("curr: {curr:?}");
         if marker >= 1 {
             let mut adjacent_groups = Vec::new();
             // Find adjacent groups with the same value

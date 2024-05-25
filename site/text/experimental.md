@@ -14,9 +14,9 @@ Using experimental features requires an `# Experimental!` comment to be placed a
 - [`&tlsc`]()
 - [`&tlsl`]()
 
-## Swizzles
+## Stack Swizzles
 
-Swizzles allow you to reorder the stack in a concise way.
+Stack swizzles allow you to reorder the stack in a concise way.
 They are written with a `λ` followed by some lowercase letters.
 The `λ` will format from `'` if followed by letters.
 
@@ -25,6 +25,19 @@ The `λ` will format from `'` if followed by letters.
 [λcba 1 2 3 4 5]
 [λbbbbba 1 2]
 [λccaabb 1 2 3]
+```
+
+## Array Swizzles
+
+Array swizzles allow you to extract rows from and array in a concise way.
+They are written with a `⊣` followed by some letters.
+The `⊣` will format from `''` if followed by letters.
+Lowercase letter start from the first row, uppercase letters start from the last row.
+
+```uiua
+# Experimental!
+[⊣aA] [1 2 3 4 5]
+[⊣acb] [1 2 3]
 ```
 
 ## Labels

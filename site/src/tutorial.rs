@@ -1607,11 +1607,22 @@ F!!!+×⊂ [1 2 3][4 5 6]"/>
         <Editor example="Def‼ ←^ $\"_\\n_\" ⊃(/$\"_ ← _\"|/$\"Also_ ← _\")\nDef‼(X|5)\n+ X AlsoX"/>
         <p>"This is a simple example, but this concept can be used to create very powerful meta-programming tools."</p>
 
+        <Hd id="compile-time-vs-run-time">"Compile Time vs Run Time"</Hd>
+        <p>"The body of an array macro is always evaluated at compile time. One consequence of this is that bindings whose values cannot be known at compile time cannot be used in an array macro."</p>
+        <p>"For example, because the value "<code>"5"</code>" is always the same, it is always known at compile time, and we can use a name that binds "<code>"5"</code>" in an array macro."</p>
+        <Editor example="x ← 5\nF! ←^ $\"_ _\":x ⊢\nF!¯"/>
+        <p>"However, if we use a value that cannot be known at compile time, like the result of the "<Prim prim=Rand/>" function, we will get an error."</p>
+        <Editor example="x ← ⚂\nF! ←^ $\"_ _\":x ⊢\nF!¯"/> // Should fail
+        <p>"There are two ways to work around this. The first is to simply put the code that generates the value in the macro itself."</p>
+        <Editor example="F! ←^ $\"_ ⚂\" ⊢\nF!¯"/>
+        <p>"The second is to use the "<Prim prim=Comptime/>" modifier, which forces its function to be evaluated at compile time."</p>
+        <Editor example="x ← comptime(⚂)\nF! ←^ $\"_ _\":x ⊢\nF!¯"/>
+
         <Hd id="which-to-use">"What kind of macro should I use?"</Hd>
         <p>"Which kind of macro you use depends on what kind of code you are writing."</p>
         <p>"Array macros are much more powerful than stack macros, but they can be more complicated to write."</p>
         <p>"Additionally, stack macros are "<a href="https://en.wikipedia.org/wiki/hygienic_macro">"hygienic"</a>". When a stack macro refers to names of things, bindings you have definined in the surrounding code will not interfere; you will never accidentally use the wrong binding. Array macros make no such guarantees."</p>
-        <p>"If you conteptually just want to define your own modifier, a stack macro is probably the simplest way to go."</p>
+        <p>"If you conceptually just want to define your own modifier, a stack macro is probably the simplest way to go."</p>
         <p>"If you want the full power (and all the complexity) of compile-time meta-programming, you'll need to use an array macro."</p>
 
         <Hd id="challenges">"Challenges"</Hd>

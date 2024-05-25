@@ -899,10 +899,17 @@ pub fn Editor<'a>(
     for (glyph, title, class, surround, doc) in [
         (
             "λ",
-            "(') swizzle",
+            "(') stack swizzle",
             "experimental-glyph-button",
             None,
-            "docs/experimental#swizzles",
+            "docs/experimental#stack-swizzles",
+        ),
+        (
+            "⊣",
+            "('') array swizzle",
+            "experimental-glyph-button",
+            None,
+            "docs/experimental#array-swizzles",
         ),
         (
             "_",

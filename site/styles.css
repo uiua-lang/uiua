@@ -464,7 +464,6 @@ input[type=number] {
 }
 
 .code-and-overlay {
-    position: relative;
     width: 100%;
 }
 
@@ -547,7 +546,7 @@ input[type=number] {
     pointer-events: none;
     margin-top: 1.9em;
     margin-left: -2em;
-    z-index: 2;
+    z-index: 1;
     text-decoration: none;
     white-space: pre-wrap;
     overflow: visible;

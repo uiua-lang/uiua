@@ -1438,7 +1438,7 @@ pub fn Editor<'a>(
                         </div>
                         <div
                             id=code_outer_id
-                            class="code-outer sized-code"
+                            class="code code-outer sized-code"
                             style={format!("height: {}em;", code_height_em + 1.25 / 2.0)}>
                             <div class="line-numbers">
                                 { line_numbers }

@@ -1555,6 +1555,7 @@ pub fn Editor<'a>(
 }
 
 pub const EDITOR_SHORTCUTS: &str = " shift Enter   - Run + Format
+  hold ctrl/⌘  - Show hovered glyph's name
 ctrl/⌘ Click   - Open glyph docs
 ctrl/⌘ /       - Toggle line comment
 ctrl/⌘ 4       - Toggle multiline string

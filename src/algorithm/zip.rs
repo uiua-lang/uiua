@@ -1070,11 +1070,10 @@ fn inventoryn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         .map(|mut v| {
             all_scalar = all_scalar && v.rank() == 0;
             if v.row_count() == 1 {
-                if v.rank() == 0 {
-                    v.unbox();
-                } else {
+                if v.rank() > 0 {
                     v.undo_fix();
                 }
+                v.unbox();
                 Err(v)
             } else {
                 let proxy = is_empty.then(|| v.proxy_row(env));

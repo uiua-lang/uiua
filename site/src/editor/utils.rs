@@ -130,7 +130,7 @@ impl State {
         let code = get_code(&self.code_id);
         let rect = &virtual_rect(&area, &code);
         let width = rect.width();
-        let height = rect.height() + 10.0;
+        let height = area.scroll_height().min(rect.height() as i32);
         let new_height = format!("max({height}px,{})", self.min_height);
         let new_width = format!("max({width}px,100%)");
         area.style().set_property("width", "auto").unwrap();

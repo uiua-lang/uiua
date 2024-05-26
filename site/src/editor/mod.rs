@@ -599,18 +599,6 @@ pub fn Editor<'a>(
                     state.set_code(&code, Cursor::Set(0, code.chars().count() as u32))
                 });
             }
-            // Copy
-            "c" if os_ctrl(event) => {
-                let (start, end) = get_code_cursor().unwrap();
-                let (start, end) = (start.min(end), start.max(end));
-                let code = get_code();
-                let text: String = code
-                    .chars()
-                    .skip(start as usize)
-                    .take((end - start) as usize)
-                    .collect();
-                _ = window().navigator().clipboard().unwrap().write_text(&text);
-            }
             // Cut
             "x" if os_ctrl(event) => {
                 let (start, end) = get_code_cursor().unwrap();
@@ -622,7 +610,9 @@ pub fn Editor<'a>(
                         .skip(start as usize)
                         .take((end - start) as usize)
                         .collect();
-                    _ = window().navigator().clipboard().unwrap().write_text(&text);
+                    if let Some(clip) = window().navigator().clipboard() {
+                        _ = clip.write_text(&text);
+                    }
                     remove_code(state, start, end);
                 });
             }

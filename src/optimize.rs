@@ -115,6 +115,24 @@ pub(crate) fn optimize_instrs_mut(
             instrs.pop();
             instrs.push(Instr::TouchStack { count, span });
         }
+        (
+            [.., Instr::PushTemp {
+                stack: a_stack,
+                count: a_count,
+                ..
+            }, Instr::TouchStack { count, span }],
+            Instr::PopTemp {
+                stack: b_stack,
+                count: b_count,
+                ..
+            },
+        ) if maximal && *a_stack == b_stack && *a_count == b_count => {
+            let span = *span;
+            let count = *a_count + *count;
+            instrs.pop();
+            instrs.pop();
+            instrs.push(Instr::TouchStack { count, span });
+        }
         // Tranposes
         ([.., Instr::Prim(Transpose, span)], Instr::Prim(Transpose, _)) => {
             let span = *span;

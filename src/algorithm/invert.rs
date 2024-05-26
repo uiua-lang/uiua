@@ -870,15 +870,8 @@ fn invert_select_pattern<'a>(
     _: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
     Some(match input {
-        [Instr::Push(val), sel @ Instr::Prim(Primitive::Select, _), Instr::Unpack {
-            count,
-            span: unpack_span,
-            unbox,
-        }, input @ ..] => {
+        [Instr::Push(val), sel @ Instr::Prim(Primitive::Select, _), input @ ..] => {
             let indices = val.as_nats(&IgnoreError, "").ok()?;
-            if indices.len() != *count {
-                return None;
-            }
             let unique_indices: HashSet<usize> = indices.iter().copied().collect();
             if unique_indices.len() != indices.len() {
                 return None;
@@ -888,23 +881,12 @@ fn invert_select_pattern<'a>(
                 inverse_indices[j] = i;
             }
             let instrs = eco_vec![
-                Instr::BeginArray,
-                Instr::TouchStack {
-                    count: *count,
-                    span: *unpack_span,
-                },
-                Instr::EndArray {
-                    boxed: *unbox,
-                    span: *unpack_span,
-                },
                 Instr::Push(inverse_indices.into_iter().collect()),
-                sel.clone(),
+                sel.clone()
             ];
             (input, instrs)
         }
-        [Instr::Prim(Primitive::Select, span), input @ ..]
-            if !matches!(input, [Instr::Unpack { .. }, ..]) =>
-        {
+        [Instr::Prim(Primitive::Select, span), input @ ..] => {
             let instrs = eco_vec![
                 Instr::CopyToTemp {
                     stack: TempStack::Inline,
@@ -1861,11 +1843,15 @@ fn invert_unpack_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::Unpack { span, unbox, .. }, input @ ..] = input else {
+    let [Instr::Unpack { count, span, unbox }, input @ ..] = input else {
         return None;
     };
     let mut instrs = invert_instrs(input, comp)?;
     instrs.insert(0, Instr::BeginArray);
+    instrs.push(Instr::TouchStack {
+        count: *count,
+        span: *span,
+    });
     instrs.push(Instr::EndArray {
         span: *span,
         boxed: *unbox,

@@ -485,6 +485,11 @@ pub fn Pad() -> impl IntoView {
         <br/>
         <br/>
         <br/>
+        {
+            window().location().host().unwrap().ends_with("uiua.org").then_some(||
+                view!("Try the "<a href="https://uiua.dev/pad">"new pad"</a>"!")
+            )
+        }
         <p>"You can load files into the pad by dragging and dropping them into the window."</p>
         <p>"Replace "<code>"pad"</code>" in links with "<code>"embed"</code>" or "<code>"embedpad"</code>" to embed the editor."</p>
         <p>"Keyboard shortcuts:"</p>

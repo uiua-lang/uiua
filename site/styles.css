@@ -475,8 +475,9 @@ input[type=number] {
     padding-bottom: 0;
     margin-left: 0;
     padding-left: 0;
-    background-color: transparent;
     /* background-color: #0002; */
+    /* color: #0008; */
+    background-color: transparent;
     color: transparent;
     resize: none;
     font-family: "Code Font", monospace;
@@ -497,6 +498,7 @@ input[type=number] {
     position: absolute;
     width: 100%;
     pointer-events: none;
+    white-space: pre;
 }
 
 .code-line {

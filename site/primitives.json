@@ -406,8 +406,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
-    "description": "Duplicate a function's last argument before calling it",
-    "experimental": true
+    "description": "Duplicate a function's last argument before calling it"
   },
   "ceiling": {
     "glyph": "⌈",

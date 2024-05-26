@@ -6,11 +6,12 @@ Using experimental features requires an `# Experimental!` comment to be placed a
 
 ## Experimental Functions/Modifiers
 
-- [`by`]()
 - [`coordinate`]()
 - [`repr`]()
 - [`stringify`]()
 - [`&ffi`]()
+- [`&memcpy`]()
+- [`&memfree`]()
 - [`&tlsc`]()
 - [`&tlsl`]()
 

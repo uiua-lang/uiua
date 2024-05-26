@@ -779,6 +779,12 @@ pub fn Editor<'a>(
         (code_element().style())
             .set_property("color", "rgba(0,0,0,0.5)")
             .unwrap();
+        set_timeout(
+            move || {
+                set_overlay.set(get_code());
+            },
+            Duration::from_millis(0),
+        );
     };
     window_event_listener(ev::compositionstart, update_composition);
     window_event_listener(ev::compositionupdate, update_composition);
@@ -786,6 +792,7 @@ pub fn Editor<'a>(
         (code_element().style())
             .set_property("color", "transparent")
             .unwrap();
+        set_overlay.set(get_code());
     });
 
     // Handle paste evens

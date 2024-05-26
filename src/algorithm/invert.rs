@@ -1848,10 +1848,12 @@ fn invert_unpack_pattern<'a>(
     };
     let mut instrs = invert_instrs(input, comp)?;
     instrs.insert(0, Instr::BeginArray);
-    instrs.push(Instr::TouchStack {
-        count: *count,
-        span: *span,
-    });
+    if *count > 0 {
+        instrs.push(Instr::TouchStack {
+            count: *count,
+            span: *span,
+        });
+    }
     instrs.push(Instr::EndArray {
         span: *span,
         boxed: *unbox,

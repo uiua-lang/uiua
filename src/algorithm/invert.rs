@@ -1,6 +1,11 @@
 //! Algorithms for invert and under
 
-use std::{cell::RefCell, cmp::Ordering, collections::HashMap, fmt};
+use std::{
+    cell::RefCell,
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    fmt,
+};
 
 use ecow::{eco_vec, EcoString, EcoVec};
 use regex::Regex;
@@ -11,6 +16,8 @@ use crate::{
     Assembly, BindingKind, Compiler, Function, FunctionId, Instr, Signature, Span, SysOp,
     TempStack, Uiua, UiuaResult, Value,
 };
+
+use super::IgnoreError;
 
 pub(crate) const DEBUG: bool = false;
 
@@ -181,7 +188,8 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(invert_split_pattern, "split"),
         &InvertPatternFn(invert_rows_pattern, "rows"),
         &InvertPatternFn(invert_dup_pattern, "dup"),
-        &InvertPatternFn(invert_swizzle_pattern, "swizzle"),
+        &InvertPatternFn(invert_stack_swizzle_pattern, "stack swizzle"),
+        &InvertPatternFn(invert_select_pattern, "select"),
         &(Val, InvertPatternFn(invert_repeat_pattern, "repeat")),
         &(Val, ([Rotate], [Neg, Rotate])),
         &pat!(Sqrt, (Dup, Mul)),
@@ -197,10 +205,6 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &(Val, pat!((Flip, Log), (Flip, 1, Flip, Div, Pow))),
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
-        &pat!(
-            Select,
-            (CopyToInline(1), Deduplicate, PopInline(1), Classify)
-        ),
         &(Val, pat!(Min, (Over, Ge, 1, MatchPattern))),
         &(Val, pat!(Max, (Over, Le, 1, MatchPattern))),
         &InvertPatternFn(invert_temp_pattern, "temp"),
@@ -850,7 +854,7 @@ fn under_dup_pattern<'a>(
     Some((input, (befores, afters)))
 }
 
-fn invert_swizzle_pattern<'a>(
+fn invert_stack_swizzle_pattern<'a>(
     input: &'a [Instr],
     _: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
@@ -859,6 +863,66 @@ fn invert_swizzle_pattern<'a>(
     };
     let instrs = eco_vec![Instr::StackSwizzle(swizzle.inverse()?, *span)];
     Some((input, instrs))
+}
+
+fn invert_select_pattern<'a>(
+    input: &'a [Instr],
+    _: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    Some(match input {
+        [Instr::Push(val), sel @ Instr::Prim(Primitive::Select, _), Instr::Unpack {
+            count,
+            span: unpack_span,
+            unbox,
+        }, input @ ..] => {
+            let indices = val.as_nats(&IgnoreError, "").ok()?;
+            if indices.len() != *count {
+                return None;
+            }
+            let unique_indices: HashSet<usize> = indices.iter().copied().collect();
+            if unique_indices.len() != indices.len() {
+                return None;
+            }
+            let mut inverse_indices = vec![0; indices.len()];
+            for (i, &j) in indices.iter().enumerate() {
+                inverse_indices[j] = i;
+            }
+            let instrs = eco_vec![
+                Instr::BeginArray,
+                Instr::TouchStack {
+                    count: *count,
+                    span: *unpack_span,
+                },
+                Instr::EndArray {
+                    boxed: *unbox,
+                    span: *unpack_span,
+                },
+                Instr::Push(inverse_indices.into_iter().collect()),
+                sel.clone(),
+            ];
+            (input, instrs)
+        }
+        [Instr::Prim(Primitive::Select, span), input @ ..]
+            if !matches!(input, [Instr::Unpack { .. }, ..]) =>
+        {
+            let instrs = eco_vec![
+                Instr::CopyToTemp {
+                    stack: TempStack::Inline,
+                    count: 1,
+                    span: *span,
+                },
+                Instr::Prim(Primitive::Deduplicate, *span),
+                Instr::PopTemp {
+                    stack: TempStack::Inline,
+                    count: 1,
+                    span: *span,
+                },
+                Instr::Prim(Primitive::Classify, *span),
+            ];
+            (input, instrs)
+        }
+        _ => return None,
+    })
 }
 
 fn invert_push_pattern<'a>(

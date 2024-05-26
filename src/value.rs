@@ -11,7 +11,7 @@ use ecow::{EcoString, EcoVec};
 use serde::*;
 
 use crate::{
-    algorithm::{map::MapKeys, pervade::*, FillContext},
+    algorithm::{map::MapKeys, pervade::*, ErrorContext, FillContext},
     array::*,
     cowslice::CowSlice,
     grid_fmt::GridFmt,
@@ -631,8 +631,12 @@ impl Value {
     /// Attempt to convert the array to a list of integers
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_ints(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<isize>> {
-        self.as_number_list(env, requirement, |f| f.fract() == 0.0, |f| f as isize)
+    pub fn as_ints<C: ErrorContext>(
+        &self,
+        ctx: &C,
+        requirement: &'static str,
+    ) -> Result<Vec<isize>, C::Error> {
+        self.as_number_list(ctx, requirement, |f| f.fract() == 0.0, |f| f as isize)
     }
     pub(crate) fn as_ints_or_infs(
         &self,
@@ -828,9 +832,13 @@ impl Value {
     /// Attempt to convert the array to a list of natural numbers
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_nats(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<usize>> {
+    pub fn as_nats<C: ErrorContext>(
+        &self,
+        ctx: &C,
+        requirement: &'static str,
+    ) -> Result<Vec<usize>, C::Error> {
         self.as_number_list(
-            env,
+            ctx,
             requirement,
             |f| f.fract() == 0.0 && f >= 0.0,
             |f| f as usize,
@@ -879,24 +887,27 @@ impl Value {
             },
         )
     }
-    pub(crate) fn as_number_list<T>(
+    pub(crate) fn as_number_list<T, C>(
         &self,
-        env: &Uiua,
+        ctx: &C,
         requirement: &'static str,
         test: fn(f64) -> bool,
         convert: fn(f64) -> T,
-    ) -> UiuaResult<Vec<T>> {
+    ) -> Result<Vec<T>, C::Error>
+    where
+        C: ErrorContext,
+    {
         Ok(match self {
             Value::Num(nums) => {
                 if nums.rank() > 1 {
                     return Err(
-                        env.error(format!("{requirement}, but its rank is {}", nums.rank()))
+                        ctx.error(format!("{requirement}, but its rank is {}", nums.rank()))
                     );
                 }
                 let mut result = Vec::with_capacity(nums.row_count());
                 for &num in nums.data() {
                     if !test(num) {
-                        return Err(env.error(requirement));
+                        return Err(ctx.error(requirement));
                     }
                     result.push(convert(num));
                 }
@@ -905,21 +916,21 @@ impl Value {
             Value::Byte(bytes) => {
                 if bytes.rank() > 1 {
                     return Err(
-                        env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
+                        ctx.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
                 let mut result = Vec::with_capacity(bytes.row_count());
                 for &byte in bytes.data() {
                     let num = byte as f64;
                     if !test(num) {
-                        return Err(env.error(requirement));
+                        return Err(ctx.error(requirement));
                     }
                     result.push(convert(num));
                 }
                 result
             }
             value => {
-                return Err(env.error(format!(
+                return Err(ctx.error(format!(
                     "{requirement}, but it is {}",
                     value.type_name_plural()
                 )))

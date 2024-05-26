@@ -136,8 +136,20 @@ impl ErrorContext for () {
     }
 }
 
+pub struct IgnoreError;
+impl ErrorContext for IgnoreError {
+    type Error = ();
+    fn error(&self, _: impl ToString) -> Self::Error {}
+}
+
 pub trait FillError: fmt::Debug {
     fn is_fill(&self) -> bool;
+}
+
+impl FillError for () {
+    fn is_fill(&self) -> bool {
+        false
+    }
 }
 
 impl FillError for UiuaError {

@@ -878,7 +878,7 @@ fn invert_select_pattern<'a>(
             }
             let mut inverse_indices = vec![0; indices.len()];
             for (i, &j) in indices.iter().enumerate() {
-                inverse_indices[j] = i;
+                *inverse_indices.get_mut(j)? = i;
             }
             let instrs = eco_vec![
                 Instr::Push(inverse_indices.into_iter().collect()),

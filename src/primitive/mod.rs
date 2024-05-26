@@ -367,7 +367,6 @@ impl Primitive {
         matches!(
             self,
             Coordinate
-                | By
                 | Sys(Ffi | MemCopy | MemFree | TlsListen | TlsConnect)
                 | (Repr | Stringify | Quote | Sig)
         )

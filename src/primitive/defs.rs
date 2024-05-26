@@ -1626,16 +1626,12 @@ primitive!(
     /// While this works, it may take a moment to process in your mind how the stack is changing.
     /// [by] expresses the common pattern of performing an operation but preserving the last argument so that it can be used again.
     /// With [by], the filtering function above can be written more simply.
-    /// ex: # Experimental!
-    ///   : F ← ▽⊸<
+    /// ex: F ← ▽⊸<
     ///   : F 10 [1 27 8 3 14 9]
     /// Here are some more examples of [by] in action.
-    /// ex: # Experimental!
-    ///   : ⊂⊸↙ 2 [1 2 3 4 5]
+    /// ex: ⊂⊸↙ 2 [1 2 3 4 5]
     ///   : ⊜□⊸≠ @  "Hey there buddy"
     ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
-    ///
-    /// [by] is currently `# Experimental!` because it's not clear if it's useful enough to keep.
     ([1], By, Stack, ("by", '⊸')),
     /// Call a function on two sets of values
     ///

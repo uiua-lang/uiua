@@ -86,7 +86,7 @@ pub fn Editor<'a>(
     let overlay_id = move || format!("overlay{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
 
-    let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
+    // let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
     let code_outer_element = move || -> HtmlDivElement { element(&code_outer_id()) };
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
@@ -776,23 +776,24 @@ pub fn Editor<'a>(
 
     // Handle composition events
     let update_composition = move |_| {
-        (code_element().style())
-            .set_property("color", "rgba(0,0,0,0.5)")
-            .unwrap();
+        // (code_element().style())
+        //     .set_property("color", "rgba(0,0,0,0.5)")
+        //     .unwrap();
         set_timeout(
-            move || {
-                set_overlay.set(get_code());
-            },
+            move || get_state.get().refresh_code(),
             Duration::from_millis(0),
         );
     };
     window_event_listener(ev::compositionstart, update_composition);
     window_event_listener(ev::compositionupdate, update_composition);
     window_event_listener(ev::compositionend, move |_| {
-        (code_element().style())
-            .set_property("color", "transparent")
-            .unwrap();
-        set_overlay.set(get_code());
+        // (code_element().style())
+        //     .set_property("color", "transparent")
+        //     .unwrap();
+        set_timeout(
+            move || get_state.get().refresh_code(),
+            Duration::from_millis(0),
+        );
     });
 
     // Handle paste evens

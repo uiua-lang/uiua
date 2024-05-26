@@ -109,12 +109,19 @@ impl State {
             self.set_line_count();
         }
     }
-    fn set_code_element(&mut self, code: &str) {
+    fn set_code_element(&self, code: &str) {
         // logging::log!("set code: {code:?}");
+        if let Some(cursor) = get_code_cursor(&self.code_id) {
+            self.set_cursor(cursor);
+        }
         self.set_overlay.set(code.into());
         let area = element::<HtmlTextAreaElement>(&self.code_id);
         area.set_value(code);
         self.update_size();
+    }
+    pub fn refresh_code(&self) {
+        let code = get_code(&self.code_id);
+        self.set_code_element(&code);
     }
     pub fn update_size(&self) {
         let Some(area) = get_element::<HtmlTextAreaElement>(&self.code_id) else {

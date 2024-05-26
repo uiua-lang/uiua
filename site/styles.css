@@ -465,6 +465,7 @@ input[type=number] {
 
 .code-and-overlay {
     width: 100%;
+    position: relative;
 }
 
 .code-entry {

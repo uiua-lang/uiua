@@ -86,7 +86,7 @@ pub fn Editor<'a>(
     let overlay_id = move || format!("overlay{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
 
-    // let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
+    let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
     let code_outer_element = move || -> HtmlDivElement { element(&code_outer_id()) };
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
@@ -342,7 +342,8 @@ pub fn Editor<'a>(
                 .chain(code.chars().skip(end))
                 .collect();
             let offset = inserted.chars().count() as u32;
-            state.set_code(&new, Cursor::Set(start + offset, start + offset))
+            state.set_code(&new, Cursor::Set(start + offset, start + offset));
+            _ = code_element().focus();
         };
     };
 
@@ -360,6 +361,7 @@ pub fn Editor<'a>(
             .chain(code.chars().skip(end))
             .collect();
         state.set_code(&new, Cursor::Set(start, start));
+        _ = code_element().focus();
     };
 
     // Surround the selected text with delimiters
@@ -375,6 +377,7 @@ pub fn Editor<'a>(
         new_code.push(close);
         new_code.extend(chars);
         state.set_code(&new_code, Cursor::Set(start + 1, end + 1));
+        _ = code_element().focus();
     };
 
     // Insert an # Experimental! comment at the top of the code

@@ -22,7 +22,7 @@ use instant::Duration;
 use thread_local::ThreadLocal;
 
 use crate::{
-    algorithm::{self, invert},
+    algorithm::{self, invert, validate_size_impl},
     array::Array,
     boxed::Boxed,
     check::instrs_temp_signatures,
@@ -528,34 +528,9 @@ code:
                     self.rt.array_stack.push(self.rt.stack.len());
                     Ok(())
                 }
-                &Instr::EndArray { span, boxed } => self.with_span(span, |env| {
-                    let start = env.rt.array_stack.pop().unwrap();
-                    let values = env.rt.stack.drain(start..).rev();
-                    let values: Vec<Value> = if boxed {
-                        values.map(Boxed).map(Value::from).collect()
-                    } else {
-                        values.collect()
-                    };
-                    let val = if values.is_empty() && boxed {
-                        Array::<Boxed>::default().into()
-                    } else {
-                        let elems: usize = values.iter().map(Value::element_count).sum();
-                        let elem_size = values.first().map_or(size_of::<f64>(), Value::elem_size);
-                        let max_mega = if cfg!(target_arch = "wasm32") {
-                            256
-                        } else {
-                            2048
-                        };
-                        if elems * elem_size > max_mega * 1024usize.pow(2) {
-                            return Err(
-                                env.error(format!("Array of {elems} elements would be too large",))
-                            );
-                        }
-                        Value::from_row_values(values, env)?
-                    };
-                    env.push(val);
-                    Ok(())
-                }),
+                &Instr::EndArray { span, boxed } => {
+                    self.with_span(span, |env| env.end_array(boxed, None))
+                }
                 &Instr::Call(span) => self
                     .pop_function()
                     .and_then(|f| self.call_with_span(f, span)),
@@ -966,6 +941,32 @@ code:
         for bottom in &mut self.rt.array_stack {
             *bottom = (*bottom).min(self.rt.stack.len().saturating_sub(n));
         }
+        Ok(())
+    }
+    pub(crate) fn end_array(&mut self, boxed: bool, initial_value: Option<Value>) -> UiuaResult {
+        let start = self.rt.array_stack.pop().unwrap();
+        let values = self.rt.stack.drain(start..).rev();
+        let values: Vec<Value> = if boxed {
+            values.map(Boxed).map(Value::from).collect()
+        } else {
+            values.collect()
+        };
+        let mut val = if values.is_empty() && boxed {
+            Array::<Boxed>::default().into()
+        } else {
+            let elems: usize = values.iter().map(Value::element_count).sum();
+            let elem_size = values.first().map_or(size_of::<f64>(), Value::elem_size);
+            validate_size_impl(elem_size, [elems]).map_err(|e| self.error(e))?;
+            Value::from_row_values(values, self)?
+        };
+        if let Some(init) = initial_value {
+            if val.shape() == [0] {
+                val = init;
+            } else {
+                val = init.join(val, self)?;
+            }
+        }
+        self.push(val);
         Ok(())
     }
     /// Push a value onto the stack

@@ -58,21 +58,28 @@ fn max_shape(a: &[usize], b: &[usize]) -> Shape {
     new_shape
 }
 
+#[derive(Debug)]
 pub enum SizeError {
     Overflow,
     TooLarge(usize),
 }
 
+impl fmt::Display for SizeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            SizeError::Overflow => write!(f, "Array size calculation overflowed"),
+            SizeError::TooLarge(size) => write!(f, "Array of {size} elements would be too large"),
+        }
+    }
+}
+
+impl std::error::Error for SizeError {}
+
 pub fn validate_size<T>(
     sizes: impl IntoIterator<Item = usize> + Clone,
     env: &Uiua,
 ) -> UiuaResult<usize> {
-    validate_size_impl(size_of::<T>(), sizes).map_err(|e| match e {
-        SizeError::Overflow => env.error("Array size calculation overflowed"),
-        SizeError::TooLarge(size) => {
-            env.error(format!("Array of {size} elements would be too large"))
-        }
-    })
+    validate_size_impl(size_of::<T>(), sizes).map_err(|e| env.error(e))
 }
 
 pub(crate) fn validate_size_impl(

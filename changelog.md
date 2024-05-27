@@ -65,10 +65,12 @@ This version is not yet released. If you are reading this on the website, then t
   - `types`
   - `shapes`
 ### Interpreter
-- Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`length ⧻`](https://uiua.org/docs/length), [`first ⊢`](https://uiua.org/docs/first), and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
-- Optimize iterating modifiers with a top-level [`fork ⊃`](https://uiua.org/docs/fork) or [`bracket ⊓`](https://uiua.org/docs/bracket)
-- Optimize [`≡`](https://uiua.org/docs/rows)[`⋅`](https://uiua.org/docs/gap)`constant` and [`∵`](https://uiua.org/docs/each)[`⋅`](https://uiua.org/docs/gap)`constant` patterns
-  - The speed improvement is on the order of 70x
+- Lots of optimizations
+  - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`length ⧻`](https://uiua.org/docs/length), [`first ⊢`](https://uiua.org/docs/first), and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
+  - Optimize iterating modifiers with a top-level [`fork ⊃`](https://uiua.org/docs/fork) or [`bracket ⊓`](https://uiua.org/docs/bracket)
+  - Optimize [`≡`](https://uiua.org/docs/rows)[`⋅`](https://uiua.org/docs/gap)`constant` and [`∵`](https://uiua.org/docs/each)[`⋅`](https://uiua.org/docs/gap)`constant` patterns
+    - The speed improvement is on the order of 70x
+  - Optimize the pattern `[⍥⚂…`
 - Optimize [`length ⧻`](https://uiua.org/docs/length) [`deduplicate ◴`](https://uiua.org/docs/deduplicate)
 - Add the `--io` flag to the `uiua fmt` command, which formats code from stdin to stdout
 - Lots of bug fixes

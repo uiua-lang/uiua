@@ -211,6 +211,7 @@ impl fmt::Display for ImplPrimitive {
             UnBothTrace => write!(f, "{Un}{Both}{Trace}"),
             CountUnique => write!(f, "{Len}{Deduplicate}"),
             MatchPattern => write!(f, "pattern match"),
+            EndRandArray => write!(f, "[{Repeat}{Rand}"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -1008,6 +1009,13 @@ impl ImplPrimitive {
             ImplPrimitive::Adjacent => reduce::adjacent(env)?,
             ImplPrimitive::CountUnique => env.monadic_ref(Value::count_unique)?,
             ImplPrimitive::MatchPattern => invert::match_pattern(env)?,
+            ImplPrimitive::EndRandArray => {
+                let n = env
+                    .pop(1)?
+                    .as_nat(env, "Repetition count must be a natural number")?;
+                let arr: Array<f64> = (0..n).map(|_| random()).collect();
+                env.end_array(false, Some(arr.into()))?;
+            }
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(depth, env)?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
         }

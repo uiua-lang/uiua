@@ -1,8 +1,8 @@
 # Uiua Todo
 
 - 0.11
-  - Optimize `[repeat rand ..`
   - Deduplicate fill signature errors
+  - `un on` for all "left-invertible" functions
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

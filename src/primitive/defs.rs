@@ -2483,4 +2483,5 @@ impl_primitive!(
     (2, Adjacent),
     (2(2), BothTrace, Impure),
     (1, CountUnique),
+    (1, EndRandArray),
 );

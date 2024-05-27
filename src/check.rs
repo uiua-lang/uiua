@@ -271,6 +271,12 @@ impl<'a> VirtualEnv<'a> {
                 items.reverse();
                 self.stack.push(BasicValue::Arr(items));
             }
+            Instr::ImplPrim(ImplPrimitive::EndRandArray, _) => {
+                let bottom = (self.array_stack.pop()).ok_or("EndRandArray without BeginArray")?;
+                self.stack.drain(bottom.min(self.stack.len())..);
+                self.set_min_height();
+                self.stack.push(BasicValue::Other);
+            }
             Instr::Call(_) | Instr::CallRecursive(_) => {
                 let sig = self.pop_func()?.signature();
                 self.handle_sig(sig)?

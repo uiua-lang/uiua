@@ -642,9 +642,7 @@ fn invert_un_pattern<'a>(
     let [Instr::PushFunc(f), Instr::Prim(Primitive::Un, _), input @ ..] = input else {
         return None;
     };
-    let f_instrs = EcoVec::from(f.instrs(comp));
-    let double_inv = invert_instrs(&invert_instrs(&f_instrs, comp)?, comp)?;
-    Some((input, double_inv))
+    Some((input, EcoVec::from(f.instrs(comp))))
 }
 
 fn under_un_pattern<'a>(

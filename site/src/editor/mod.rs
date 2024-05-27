@@ -754,6 +754,13 @@ pub fn Editor<'a>(
             }
             // Intercept forward/back keyboard navigation
             "ArrowLeft" | "ArrowRight" if event.alt_key() => {}
+            // Chrome 😠
+            "Unidentified" => {
+                set_timeout(
+                    move || get_state.get().refresh_code(),
+                    Duration::from_millis(0),
+                );
+            }
             // Normal key input
             key if key.chars().count() == 1 && !os_ctrl(event) && !event.alt_key() => {
                 state.update(|state| replace_code(state, key));
@@ -769,9 +776,6 @@ pub fn Editor<'a>(
 
     // Handle composition events
     let update_composition = move |_| {
-        // (code_element().style())
-        //     .set_property("color", "rgba(0,0,0,0.5)")
-        //     .unwrap();
         set_timeout(
             move || get_state.get().refresh_code(),
             Duration::from_millis(0),
@@ -779,15 +783,7 @@ pub fn Editor<'a>(
     };
     window_event_listener(ev::compositionstart, update_composition);
     window_event_listener(ev::compositionupdate, update_composition);
-    window_event_listener(ev::compositionend, move |_| {
-        // (code_element().style())
-        //     .set_property("color", "transparent")
-        //     .unwrap();
-        set_timeout(
-            move || get_state.get().refresh_code(),
-            Duration::from_millis(0),
-        );
-    });
+    window_event_listener(ev::compositionend, update_composition);
 
     // Handle paste evens
     let code_paste = move |event: Event| {

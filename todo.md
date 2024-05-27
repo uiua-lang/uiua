@@ -2,8 +2,10 @@
 
 - 0.11
   - Deduplicate fill signature errors
-  - `un on` for all "left-invertible" functions
+  - Enforce `setinv` signature correctness
+  - Relax `try` signature requirements
 - 0.12
+  - `un on` for all "left-invertible" functions
   - Dyadic functions with box first arguments
   - Dynamic modules
 - Media window

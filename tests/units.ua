@@ -485,6 +485,7 @@ $$ _ line
 # Try
 {"cat" "sand"} "dog" {"cat" "cats" "and" "sand" "dog"}
 ⍤⟜≍: {{"cat" "sand"} {"dog"} {""}} {⊙(∩▽⟜:≡°□⍚⍣(1°.⊙⊃↙↘⟜⧻|0⊙∘):¤)}
+⍤⟜≍: [2 2] [⍣√⋅. 4 2]
 
 # Pattern matching
 ⍤⟜≍: 2 °[1⊙3] [1 2 3]

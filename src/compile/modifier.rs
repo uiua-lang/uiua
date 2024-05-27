@@ -1,6 +1,6 @@
 //! Compiler code for modifiers
 
-use std::slice;
+use std::{cmp::Ordering, slice};
 
 use crate::format::format_words;
 
@@ -710,6 +710,63 @@ impl Compiler {
                         Instr::Prim(Primitive::SetInverse, spandex),
                     ],
                     normal_sig
+                )
+            }
+            Try => {
+                let mut operands = modified.code_operands().cloned();
+                let tried = operands.next().unwrap();
+                let handler = operands.next().unwrap();
+                let tried_span = tried.span.clone();
+                let handler_span = handler.span.clone();
+                let (mut try_instrs, mut try_sig) = self.compile_operand_word(tried)?;
+                let (handler_instrs, handler_sig) = self.compile_operand_word(handler)?;
+                let span = self.add_span(modified.modifier.span.clone());
+
+                match handler_sig.outputs.cmp(&try_sig.outputs) {
+                    Ordering::Equal => {}
+                    Ordering::Greater => {
+                        try_sig.args += handler_sig.outputs - try_sig.outputs;
+                        try_sig.outputs = handler_sig.outputs;
+                        try_instrs.insert(
+                            0,
+                            Instr::TouchStack {
+                                count: try_sig.args,
+                                span,
+                            },
+                        );
+                    }
+                    Ordering::Less => self.add_error(
+                        handler_span.clone(),
+                        format!(
+                            "Tried function and handler function \
+                            must have the same number of outputs, \
+                            but their signatures are {try_sig} and \
+                            {handler_sig} respectively."
+                        ),
+                    ),
+                }
+
+                if handler_sig.args > try_sig.args + 1 {
+                    self.add_error(
+                        handler_span.clone(),
+                        format!(
+                            "Handler function must have at most \
+                            one more argument than the tried function, \
+                            but their signatures are {handler_sig} and \
+                            {try_sig} respectively."
+                        ),
+                    );
+                }
+
+                let tried_func = self.make_function(tried_span, try_sig, try_instrs);
+                let handler_func = self.make_function(handler_span, handler_sig, handler_instrs);
+                finish!(
+                    [
+                        Instr::PushFunc(handler_func),
+                        Instr::PushFunc(tried_func),
+                        Instr::Prim(Primitive::Try, span),
+                    ],
+                    try_sig
                 )
             }
             Both => {

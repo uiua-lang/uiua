@@ -40,6 +40,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`reduce /`](https://uiua.org/docs/reduce) can now take a function with more than 2 arguments
   - Each additional argument increases the number of arguments passed to [`reduce /`](https://uiua.org/docs/reduce) by 1
   - Additional arguments are passed to the function on every iteration
+- [`try ⍣`](https://uiua.org/docs/try) signature checking is now more permissive
 - Add the [`&exit`](https://uiua.org/docs/&exit) system function, which exits the program with a status code
 - Add the [`&memcpy`](https://uiua.org/docs/&memcpy) system function, which copies the data from [`&ffi`](https://uiua.org/docs/&ffi) pointers to an array
 - Add the [`&memfree`](https://uiua.org/docs/&memfree) system function, which frees memory allocated by [`&ffi`](https://uiua.org/docs/&ffi) functions
@@ -71,7 +72,8 @@ This version is not yet released. If you are reading this on the website, then t
   - Optimize [`≡`](https://uiua.org/docs/rows)[`⋅`](https://uiua.org/docs/gap)`constant` and [`∵`](https://uiua.org/docs/each)[`⋅`](https://uiua.org/docs/gap)`constant` patterns
     - The speed improvement is on the order of 70x
   - Optimize the pattern `[⍥⚂…`
-- Optimize [`length ⧻`](https://uiua.org/docs/length) [`deduplicate ◴`](https://uiua.org/docs/deduplicate)
+  - Optimize [`length ⧻`](https://uiua.org/docs/length) [`deduplicate ◴`](https://uiua.org/docs/deduplicate)
+- [`setinv`](https://uiua.org/docs/setinv) now emits a warning if the functions do not have opposite signatures
 - Add the `--io` flag to the `uiua fmt` command, which formats code from stdin to stdout
 - Lots of bug fixes
 ### Website

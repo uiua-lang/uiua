@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - Relax `try` signature requirements
 - 0.12
   - `un on` for all "left-invertible" functions
   - Dyadic functions with box first arguments

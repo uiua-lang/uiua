@@ -397,7 +397,7 @@ impl Spanner {
                     }
                     if sw.closed {
                         let end = word.span.just_end(self.inputs());
-                        if end.as_str(self.inputs(), |s| s == ")") {
+                        if end.as_str(self.inputs(), |s| s == if sw.angled { "⟩" } else { ")" }) {
                             spans.push(end.sp(SpanKind::Delimiter));
                         }
                     }

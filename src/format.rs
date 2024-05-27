@@ -1184,7 +1184,7 @@ impl<'a> Formatter<'a> {
             }
             self.format_words(line, true, depth, true);
         }
-        if prevent_compact {
+        if prevent_compact && allow_compact {
             self.output.push('\n');
         }
         if !compact {

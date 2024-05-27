@@ -264,7 +264,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
                     if DEBUG {
                         println!("inverted {:?} to {:?}", instrs, inverted);
                     }
-                    return Some(inverted);
+                    return resolve_uns(inverted, comp);
                 }
                 curr_instrs = input;
                 continue 'find_pattern;

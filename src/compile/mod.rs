@@ -2002,7 +2002,8 @@ code:
     fn pre_eval_instrs(&mut self, instrs: EcoVec<Instr>) -> (EcoVec<Instr>, Vec<UiuaError>) {
         let mut errors = Vec::new();
         let instrs = optimize_instrs(instrs, true, &self.asm);
-        if self.pre_eval_mode == PreEvalMode::Lazy
+        if self.in_inverse
+            || self.pre_eval_mode == PreEvalMode::Lazy
             || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
             || instrs.iter().any(|instr| matches!(instr, Instr::NoInline))
         {

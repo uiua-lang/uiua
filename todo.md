@@ -3,12 +3,14 @@
 - 0.11
   - Deduplicate fill signature errors
   - `un on` for all "left-invertible" functions
+- 0.12
+  - Dyadic functions with box first arguments
+  - Dynamic modules
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Writing good code tutorial
-- Dynamic modules (maybe 0.12)
 - Multimedia
   - Plots
   - Sound input

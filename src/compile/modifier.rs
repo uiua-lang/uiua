@@ -750,9 +750,28 @@ impl Compiler {
 
                 // Get-fill function
                 let in_inverse = replace(&mut self.in_inverse, false);
-                let res = self.word(operands.next().unwrap(), false);
+                let fill_word = operands.next().unwrap();
+                let fill_span = fill_word.span.clone();
+                let fill = self.compile_operand_word(fill_word);
                 self.in_inverse = in_inverse;
-                res?;
+                let (fill_instrs, fill_sig) = fill?;
+                if fill_sig.outputs > 1 && !self.scope.fill_sig_error {
+                    self.scope.fill_sig_error = true;
+                    self.add_error(
+                        fill_span,
+                        format!(
+                            "{} function can have at most 1 output, but its signature is {}",
+                            Primitive::Fill.format(),
+                            fill_sig
+                        ),
+                    );
+                }
+                let fill_func = self.make_function(
+                    FunctionId::Anonymous(modified.modifier.span.clone()),
+                    fill_sig,
+                    fill_instrs,
+                );
+                self.push_instr(Instr::PushFunc(fill_func));
 
                 let span = self.add_span(modified.modifier.span.clone());
                 self.push_instr(Instr::Prim(Primitive::Fill, span));

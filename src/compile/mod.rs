@@ -165,6 +165,8 @@ pub(crate) struct Scope {
     experimental: bool,
     /// Whether an error has been emitted for experimental features
     experimental_error: bool,
+    /// Whether an error has been emitted for fill function signatures
+    fill_sig_error: bool,
     /// The stack height between top-level statements
     stack_height: Result<usize, Sp<SigCheckError>>,
 }
@@ -188,6 +190,7 @@ impl Default for Scope {
             names: IndexMap::new(),
             experimental: false,
             experimental_error: false,
+            fill_sig_error: false,
             stack_height: Ok(0),
         }
     }

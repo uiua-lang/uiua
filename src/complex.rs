@@ -110,7 +110,11 @@ impl Complex {
         let power = power.into();
         if power.im == 0.0 {
             if self.im == 0.0 {
-                return Self::new(self.re.powf(power.re), 0.0);
+                return if self.re >= 0.0 {
+                    Self::new(self.re.powf(power.re), 0.0)
+                } else {
+                    Self::new(0.0, self.re.abs().powf(power.re))
+                };
             }
             if power.re == 0.0 {
                 return Self::ONE;
@@ -146,6 +150,13 @@ impl Complex {
     }
     /// Calculate the square root of a complex number
     pub fn sqrt(self) -> Self {
+        if self.im == 0.0 {
+            return if self.re >= 0.0 {
+                Self::new(self.re.sqrt(), 0.0)
+            } else {
+                Self::new(0.0, self.re.abs().sqrt())
+            };
+        }
         let (r, theta) = self.to_polar();
         Self::from_polar(r.sqrt(), theta / 2.0)
     }

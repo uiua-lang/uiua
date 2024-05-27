@@ -615,7 +615,12 @@ code:
         Ok(())
     }
     #[must_use]
-    pub(crate) fn make_function<I>(&mut self, id: FunctionId, sig: Signature, instrs: I) -> Function
+    pub(crate) fn make_function<I>(
+        &mut self,
+        id: impl Into<FunctionId>,
+        sig: Signature,
+        instrs: I,
+    ) -> Function
     where
         I: IntoIterator<Item = Instr> + fmt::Debug,
         I::IntoIter: ExactSizeIterator,
@@ -623,6 +628,7 @@ code:
         let (instrs, errors) = self.pre_eval_instrs(instrs.into_iter().collect());
         self.errors.extend(errors);
         let len = instrs.len();
+        let id = id.into();
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
         }

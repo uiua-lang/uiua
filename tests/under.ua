@@ -213,17 +213,17 @@
 
 ⍤⟜≍: @l ⍜⊛(⊢⍖°⊚) "Hello World!"
 
-F ← setund(setinv"normal""inverse"|"do"|"undo")
-⍤⟜≍: "normal" F
-⍤⟜≍: "inverse" °F
-⍤⟜≍: {"undo""do"} {⍜F∘}
-G ← setinvsetund("normal"|"do"|"undo")"inverse"
-⍤⟜≍: "normal" G
-⍤⟜≍: "inverse" °G
-⍤⟜≍: {"undo""do"} {⍜G∘}
-H ← setinv(setund(+|⟜+|-)|setund(-|⟜-|+))
+F ← setund(setinv⋅"normal"⋅"inverse"|⋅"do"|⊂"undo")
+⍤⟜≍: "normal" F 0
+⍤⟜≍: "inverse" °F 0
+⍤⟜≍: {"undodo"} {⍜F∘} 0
+G ← setinvsetund(⋅"normal"|⋅"do"|⊂"undo")⋅"inverse"
+⍤⟜≍: "normal" G 0
+⍤⟜≍: "inverse" °G 0
+⍤⟜≍: {"undodo"} {⍜G∘} 0
+H ← setinv(setund(+|⟜+|-)|setund(⟜(-1)|⟜(-1)|+1◌))
 ⍤⟜≍: 2 ⍜H∘ 1 2
-⍤⟜≍: 2 ⍜°H∘ 1 2
+⍤⟜≍: 5 ⍜°H∘ 5
 H ← ▽setinv(=⇡3)∘
 ⍤⟜≍: [2] H 1 1_2_3
 ⍤⟜≍: [1 ¯2 3] ⍜H¯ 1 1_2_3

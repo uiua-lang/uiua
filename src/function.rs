@@ -866,6 +866,12 @@ impl From<Primitive> for FunctionId {
     }
 }
 
+impl From<CodeSpan> for FunctionId {
+    fn from(span: CodeSpan) -> Self {
+        Self::Anonymous(span)
+    }
+}
+
 impl fmt::Display for FunctionId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

@@ -1,6 +1,9 @@
 # Uiua Todo
 
 - 0.11
+  - Choose a better array swizzle glyph
+  - Fix LSP signatures on function packs
+  - Release it!
 - 0.12
   - `un on` for all "left-invertible" functions
   - Dyadic functions with box first arguments

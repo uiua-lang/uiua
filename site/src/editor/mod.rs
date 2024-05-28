@@ -795,6 +795,14 @@ pub fn Editor<'a>(
         state.update(|state| replace_code(state, &text));
     };
 
+    // Handle change events
+    let code_input = move |_| {
+        set_timeout(
+            move || get_state.get().refresh_code(),
+            Duration::from_millis(0),
+        );
+    };
+
     // Go to the next example
     let next_example = {
         let examples = examples.clone();
@@ -1453,6 +1461,7 @@ pub fn Editor<'a>(
                                     autocapitalize="off"
                                     spellcheck="false"
                                     on:paste=code_paste
+                                    on:input=code_input
                                     value=initial_code_str>
                                 </textarea>
                                 /////////////////////////

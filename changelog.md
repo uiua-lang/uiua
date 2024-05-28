@@ -67,6 +67,8 @@ This version is not yet released. If you are reading this on the website, then t
   - `bind λ`
   - `types`
   - `shapes`
+- Remove several backward compatibile glyphs from the lexer
+  - This frees up some glyphs that can now be used as function names
 ### Interpreter
 - Lots of optimizations
   - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`length ⧻`](https://uiua.org/docs/length), [`first ⊢`](https://uiua.org/docs/first), and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)

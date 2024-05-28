@@ -783,15 +783,6 @@ impl<'a> Lexer<'a> {
             };
             match c {
                 // Backwards compatibility
-                "❥" | "⇉" => self.end(Primitive::Fork, start),
-                "→" => self.end(Primitive::Dip, start),
-                "∷" => self.end(Primitive::Both, start),
-                "·" => self.end(Primitive::Identity, start),
-                "⍛" => self.end(Primitive::Fill, start),
-                "⌂" => self.end(Primitive::Rise, start),
-                "↰" => self.end(Primitive::Spawn, start),
-                "↲" => self.end(Primitive::Wait, start),
-                "≅" => self.end(Primitive::Match, start),
                 "∶" => self.end(Primitive::Flip, start),
                 "⍘" => self.end(Primitive::Un, start),
                 "⊝" => self.end(Primitive::Deduplicate, start),

@@ -14,6 +14,7 @@ mod tutorial;
 mod uiuisms;
 
 use base64::engine::{general_purpose::URL_SAFE, Engine};
+use instant::Duration;
 use leptos::*;
 use leptos_meta::*;
 use leptos_query::provide_query_client;
@@ -23,7 +24,7 @@ use uiua::{
     ConstantDef, PrimClass, Primitive, Signature, SysOp,
 };
 use wasm_bindgen::JsCast;
-use web_sys::HtmlAudioElement;
+use web_sys::{Element, HtmlAudioElement};
 
 use crate::{blog::*, docs::*, editor::*, other::*, tour::*, tutorial::Tutorial, uiuisms::*};
 
@@ -141,6 +142,27 @@ pub fn Site() -> impl IntoView {
 
     view! {
         <Router>
+            {
+                move || {
+                    let location = use_location();
+                    create_effect(move |_| {
+                        let hash = location.hash.get();
+                        logging::log!("{:?}", hash);
+                        if !hash.is_empty() {
+                            set_timeout(
+                                move || {
+
+                                    let id = hash.trim_start_matches('#');
+                                    if let Some(elem) = get_element::<Element>(id) {
+                                        elem.scroll_into_view();
+                                    }
+                                },
+                                Duration::from_millis(0),
+                            )
+                        }
+                    });
+                }
+            }
             <Routes>
                 <Route path="embedpad" view=EmbedPad/>
                 <Route path="embed" view=Embed/>

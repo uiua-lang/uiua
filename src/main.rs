@@ -100,7 +100,6 @@ fn run() -> UiuaResult {
                             break;
                         }
                         code.push_str(&buffer);
-                        code.push('\n');
                     }
                     let formatted = format_str(&code, &config)?;
                     print!("{}", formatted.output);

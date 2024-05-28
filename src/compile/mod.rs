@@ -1328,15 +1328,19 @@ code:
                         signature {after_sig}, which may result in a variable \
                         number of values being pulled into the array."
                     );
-                    if after_sig.args > body_sig.args {
-                    } else {
-                        let replacement: String =
-                            repeat('⊙').take(body_sig.args - 1).chain(['∘']).collect();
-                        message.push_str(&format!(
-                            " To fix this, insert `{replacement}` to the left of the loop."
-                        ));
+                    let after_args_required_by_before =
+                        before_sig.outputs.saturating_sub(before_sig.args);
+                    if after_sig.args != after_args_required_by_before {
+                        if after_sig.args > body_sig.args {
+                        } else {
+                            let replacement: String =
+                                repeat('⊙').take(body_sig.args - 1).chain(['∘']).collect();
+                            message.push_str(&format!(
+                                " To fix this, insert `{replacement}` to the left of the loop."
+                            ));
+                        }
+                        self.emit_diagnostic(message, DiagnosticKind::Warning, span.clone())
                     }
-                    self.emit_diagnostic(message, DiagnosticKind::Warning, span.clone())
                 }
             }
             SigCheckErrorKind::LoopOverreach => self.emit_diagnostic(

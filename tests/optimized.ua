@@ -58,5 +58,16 @@
 ⍤⟜≍: [0_0 0_0 0_0] ∵⋅0 ↯3_2 0
 ⍤⟜≍: [0_0 0_0 0_0] ≡≡⋅0 ↯3_2 0
 
-⍤⟜≍: [6 12 18 24] /+⊞× [1 2 3] [1 2 3 4]
-⍤⟜≍: [6_3 6_6 6_9] /+⊞⊟ .[1 2 3]
+# Reduce table
+Test‼ ← (
+  ⍤⟜≍: /^!∘⊞^! ⊃⊙∘(/^!⊞^!) [1 2 3] [1 2 3 4]
+  ⍤⟜≍: /^!∘⊞^! ⊃⊙∘(/^!⊞^!) [1 2 3] [1.1 2 3 4]
+  ^,^,^,^,^,^,
+)
+Test‼++ Test‼+- Test‼+× Test‼+÷ Test‼+= Test‼+≠ Test‼+< Test‼+≤ Test‼+> Test‼+≥ Test‼+↧ Test‼+↥
+Test‼×+ Test‼×- Test‼×× Test‼×÷ Test‼×= Test‼×≠ Test‼×< Test‼×≤ Test‼×> Test‼×≥ Test‼×↧ Test‼×↥
+Test‼↧+ Test‼↧- Test‼↧× Test‼↧÷ Test‼↧= Test‼↧≠ Test‼↧< Test‼↧≤ Test‼↧> Test‼↧≥ Test‼↧↧ Test‼↧↥
+Test‼↥+ Test‼↥- Test‼↥× Test‼↥÷ Test‼↥= Test‼↥≠ Test‼↥< Test‼↥≤ Test‼↥> Test‼↥≥ Test‼↥↧ Test‼↥↥
+Test‼(+¯)+
+Test‼∠(+∿)
+Test‼+(□+)

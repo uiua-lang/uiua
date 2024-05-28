@@ -24,7 +24,8 @@ This version is not yet released. If you are reading this on the website, then t
   - The `λ` formats from `'` when it is in front of the letters
 - Add experimental **array swizzles**, which allow extracting rows from an array in a concise way
   - Swizzles are written with a `⋊` followed by a list of letters
-  - Lowercase letters start from the first row, uppercase letters start from the last row
+  - Letters up to `m` start from the first row, Letters back from `z` start from the last row
+  - Capital letters `un` `box` the corresponding value
   - The `⋊` formats from `''` when it is in front of the letters
 - [`keep ▽`](https://uiua.org/docs/keep) now works with [`un °`](https://uiua.org/docs/un)
   - It splits array into counts and an adjacent deduplication

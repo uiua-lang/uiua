@@ -1802,14 +1802,14 @@ code:
         }
         Ok(())
     }
-    fn stack_swizzle(&mut self, sw: StackSwizzle, span: CodeSpan, call: bool) {
+    fn stack_swizzle(&mut self, swiz: StackSwizzle, span: CodeSpan, call: bool) {
         self.experimental_error(&span, || {
             "Swizzles are experimental. To use them, add \
             `# Experimental!` to the top of the file."
         });
-        let sig = sw.signature();
+        let sig = swiz.signature();
         let spandex = self.add_span(span.clone());
-        let equivalent = match sw.indices.as_slice() {
+        let equivalent = match swiz.indices.as_slice() {
             [0] => Some(Primitive::Identity),
             [1, 0] => Some(Primitive::Flip),
             [0, 0] => Some(Primitive::Dup),
@@ -1828,14 +1828,14 @@ code:
             );
             Instr::Prim(prim, spandex)
         } else {
-            Instr::StackSwizzle(sw, spandex)
+            Instr::StackSwizzle(swiz, spandex)
         };
         if !call {
             instr = Instr::PushFunc(self.make_function(FunctionId::Anonymous(span), sig, [instr]));
         }
         self.push_instr(instr);
     }
-    fn array_swizzle(&mut self, sw: ArraySwizzle, span: CodeSpan, call: bool) -> UiuaResult {
+    fn array_swizzle(&mut self, swiz: ArraySwizzle, span: CodeSpan, call: bool) -> UiuaResult {
         if !self.scope.experimental {
             self.add_error(
                 span.clone(),
@@ -1843,18 +1843,56 @@ code:
                 `# Experimental!` to the top of the file.",
             );
         }
-        let sig = sw.signature();
-        let arr = Array::from_iter(sw.indices.iter().map(|&i| i as f64));
+        let sig = swiz.signature();
+        let arr = Array::from_iter(swiz.indices.iter().map(|&i| i as f64));
         let spandex = self.add_span(span.clone());
-        let mut instrs = vec![
-            Instr::push(arr),
-            Instr::Prim(Primitive::Select, spandex),
-            Instr::Unpack {
+        let mut instrs = vec![Instr::push(arr), Instr::Prim(Primitive::Select, spandex)];
+        if swiz.unbox.iter().all(|&b| b) {
+            instrs.push(Instr::Unpack {
+                count: sig.outputs,
+                span: spandex,
+                unbox: true,
+            })
+        } else {
+            instrs.push(Instr::Unpack {
                 count: sig.outputs,
                 span: spandex,
                 unbox: false,
-            },
-        ];
+            });
+            if !swiz.unbox.iter().all(|&b| !b) {
+                let mut boxed_indices: Vec<usize> = (swiz.unbox.iter().enumerate())
+                    .filter_map(|(i, b)| b.then_some(i))
+                    .collect();
+                let mut curr_index = boxed_indices.pop().unwrap();
+                if curr_index != 0 {
+                    instrs.push(Instr::PushTemp {
+                        stack: TempStack::Inline,
+                        count: curr_index,
+                        span: spandex,
+                    });
+                }
+                instrs.push(Instr::ImplPrim(ImplPrimitive::UnBox, spandex));
+                for i in boxed_indices.into_iter().rev() {
+                    let diff = curr_index - i;
+                    instrs.extend([
+                        Instr::PopTemp {
+                            stack: TempStack::Inline,
+                            count: diff,
+                            span: spandex,
+                        },
+                        Instr::ImplPrim(ImplPrimitive::UnBox, spandex),
+                    ]);
+                    curr_index = i;
+                }
+                if curr_index != 0 {
+                    instrs.push(Instr::PopTemp {
+                        stack: TempStack::Inline,
+                        count: curr_index,
+                        span: spandex,
+                    });
+                }
+            }
+        }
         if !call {
             instrs = vec![Instr::PushFunc(self.make_function(
                 FunctionId::Anonymous(span),

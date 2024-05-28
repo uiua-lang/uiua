@@ -811,26 +811,26 @@ impl<'a> Lexer<'a> {
                 "|" => self.end(Bar, start),
                 ";" => self.end(Semicolon, start),
                 "'" if self.next_char_exact("'") => {
-                    if let Some(indices) = self.array_swizzle_indices() {
-                        self.end(ArraySwizzle(crate::ArraySwizzle { indices }), start)
+                    if let Some(swiz) = self.array_swizzle() {
+                        self.end(ArraySwizzle(swiz), start)
                     } else {
                         self.end(Quote2, start)
                     }
                 }
                 "'" => {
-                    if let Some(indices) = self.stack_swizzle_indices() {
-                        self.end(StackSwizzle(crate::StackSwizzle { indices }), start)
+                    if let Some(swiz) = self.stack_swizzle() {
+                        self.end(StackSwizzle(swiz), start)
                     } else {
                         self.end(Quote, start)
                     }
                 }
                 "λ" => {
-                    let indices = self.stack_swizzle_indices().unwrap_or_default();
-                    self.end(StackSwizzle(crate::StackSwizzle { indices }), start)
+                    let swiz = self.stack_swizzle().unwrap_or_default();
+                    self.end(StackSwizzle(swiz), start)
                 }
                 "⋊" => {
-                    let indices = self.array_swizzle_indices().unwrap_or_default();
-                    self.end(ArraySwizzle(crate::ArraySwizzle { indices }), start)
+                    let swiz = self.array_swizzle().unwrap_or_default();
+                    self.end(ArraySwizzle(swiz), start)
                 }
                 "~" => self.end(Tilde, start),
                 "`" => {
@@ -1272,7 +1272,7 @@ impl<'a> Lexer<'a> {
             c.into()
         }))
     }
-    fn stack_swizzle_indices(&mut self) -> Option<EcoVec<u8>> {
+    fn stack_swizzle(&mut self) -> Option<StackSwizzle> {
         let mut indices = EcoVec::new();
         while let Some(c) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_lowercase())) {
             for c in c.chars() {
@@ -1282,24 +1282,28 @@ impl<'a> Lexer<'a> {
         if indices.is_empty() {
             None
         } else {
-            Some(indices)
+            Some(StackSwizzle { indices })
         }
     }
-    fn array_swizzle_indices(&mut self) -> Option<EcoVec<i8>> {
+    fn array_swizzle(&mut self) -> Option<ArraySwizzle> {
         let mut indices = EcoVec::new();
+        let mut unbox = EcoVec::new();
         while let Some(c) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_alphabetic())) {
             for c in c.chars() {
-                if c.is_lowercase() {
-                    indices.push((c as u8 - b'a') as i8);
+                let is_upper = c.is_ascii_uppercase();
+                let c = c.to_ascii_lowercase();
+                if c <= 'm' {
+                    indices.push(c as i8 - b'a' as i8);
                 } else {
-                    indices.push(-1 - (c as u8 - b'A') as i8);
+                    indices.push(c as i8 - b'z' as i8 - 1);
                 }
+                unbox.push(is_upper);
             }
         }
         if indices.is_empty() {
             None
         } else {
-            Some(indices)
+            Some(ArraySwizzle { indices, unbox })
         }
     }
     fn parse_string_contents(

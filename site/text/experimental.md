@@ -33,12 +33,19 @@ The `λ` will format from `'` if followed by letters.
 Array swizzles allow you to extract rows from and array in a concise way.
 They are written with a `⋊` followed by some letters.
 The `⋊` will format from `''` if followed by letters.
-Lowercase letter start from the first row, uppercase letters start from the last row.
+Letters up to `m` start from the first row, Letters back from `z` start from the last row.
 
 ```uiua
 # Experimental!
-[⋊aA] [1 2 3 4 5]
+[⋊az] [1 2 3 4 5]
 [⋊acb] [1 2 3]
+```
+
+Capital letters `un` `box` the corresponding value.
+
+```uiua
+# Experimental!
+⋊CbBa {1 2_3 "hi!"}
 ```
 
 ## Labels

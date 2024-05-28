@@ -284,7 +284,7 @@ impl<'a> fmt::Display for FmtInstrs<'a> {
 }
 
 /// A swizzle for the stack
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
 pub struct StackSwizzle {
     /// The indices of the stack elements
     pub indices: EcoVec<u8>,
@@ -327,22 +327,27 @@ impl StackSwizzle {
 }
 
 /// A swizzle for an array
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize)]
 pub struct ArraySwizzle {
     /// The indices of the array elements
     pub indices: EcoVec<i8>,
+    /// The (un)box mask
+    pub unbox: EcoVec<bool>,
 }
 
 impl fmt::Display for ArraySwizzle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "⋊")?;
-        for &i in &self.indices {
-            let c = if i < 0 {
-                (b'A' - 1 + i.unsigned_abs()) as char
+        for (&i, &b) in self.indices.iter().zip(&self.unbox) {
+            let mut c = if i < 0 {
+                b'z' + 1 - i.unsigned_abs()
             } else {
-                (b'a' + i.unsigned_abs()) as char
+                b'a' + i.unsigned_abs()
             };
-            write!(f, "{c}")?;
+            if b {
+                c = c.to_ascii_uppercase();
+            }
+            write!(f, "{}", c as char)?;
         }
         Ok(())
     }

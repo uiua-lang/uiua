@@ -7,7 +7,7 @@ use crate::{
     function::Function,
     random,
     value::Value,
-    Array, ArrayValue, ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult,
+    Array, ArrayValue, Complex, ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult,
 };
 
 use super::{loops::flip, multi_output, validate_size};
@@ -338,7 +338,6 @@ macro_rules! table_math {
 }
 
 table_math!(table_nums, f64, num_num);
-
 table_math!(table_coms, crate::Complex, com_x);
 
 fn fast_table_list<A: ArrayValue, B: ArrayValue, C: ArrayValue + Default>(
@@ -395,4 +394,323 @@ fn fast_table_list_join_or_couple<T: ArrayValue + Default>(
     new_shape.extend_from_slice(&b.shape);
     new_shape.push(2);
     Ok(Array::new(new_shape, new_data))
+}
+
+pub fn reduce_table(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop_function()?;
+    let g = env.pop_function()?;
+    let xs = env.pop(1)?;
+    let ys = env.pop(2)?;
+    if xs.rank() == 1 && ys.rank() == 1 {
+        let prims = f
+            .as_flipped_primitive(&env.asm)
+            .zip(g.as_flipped_primitive(&env.asm));
+        match (prims, xs, ys) {
+            (Some(((fp, f_flip), (gp, g_flip))), Value::Num(xs), Value::Num(ys)) => {
+                if let Err((xs, ys)) = reduce_table_nums(fp, gp, f_flip, g_flip, xs, ys, env)? {
+                    return generic_reduce_table(f, g, Value::Num(xs), Value::Num(ys), env);
+                }
+            }
+            (Some(((fp, f_flip), (gp, g_flip))), Value::Complex(xs), Value::Complex(ys)) => {
+                if let Err((xs, ys)) = reduce_coms(fp, gp, f_flip, g_flip, xs, ys, env)? {
+                    return generic_reduce_table(f, g, Value::Complex(xs), Value::Complex(ys), env);
+                }
+            }
+            (Some(((fp, f_flip), (gp, g_flip))), Value::Byte(xs), Value::Num(ys)) => {
+                let xs = xs.convert();
+                if let Err((xs, ys)) = reduce_table_nums(fp, gp, f_flip, g_flip, xs, ys, env)? {
+                    return generic_reduce_table(f, g, Value::Num(xs), Value::Num(ys), env);
+                }
+            }
+            (Some(((fp, f_flip), (gp, g_flip))), Value::Num(xs), Value::Byte(ys)) => {
+                let ys = ys.convert();
+                if let Err((xs, ys)) = reduce_table_nums(fp, gp, f_flip, g_flip, xs, ys, env)? {
+                    return generic_reduce_table(f, g, Value::Num(xs), Value::Num(ys), env);
+                }
+            }
+            (Some(((fp, false), (gp, false))), Value::Byte(xs), Value::Byte(ys)) => {
+                if let Err((xs, ys)) = reduce_table_bytes(fp, gp, xs, ys, env) {
+                    return generic_reduce_table(f, g, Value::Byte(xs), Value::Byte(ys), env);
+                }
+            }
+            (_, xs, ys) => generic_reduce_table(f, g, xs, ys, env)?,
+        }
+    } else {
+        generic_reduce_table(f, g, xs, ys, env)?;
+    }
+    Ok(())
+}
+
+fn reduce_table_bytes(
+    fp: Primitive,
+    gp: Primitive,
+    xs: Array<u8>,
+    ys: Array<u8>,
+    env: &mut Uiua,
+) -> Result<(), (Array<u8>, Array<u8>)> {
+    macro_rules! all_gs {
+        ($xs:expr, $ys:expr, $ff:expr, $identity:expr, $fill:expr, $arith:ident, $cmp:ident) => {{
+            let fill = $fill.map(Into::into);
+            match gp {
+                Primitive::Add => env.push(frtl($xs, $ys, $ff, add::$arith, $identity, fill)),
+                Primitive::Sub => env.push(frtl($xs, $ys, $ff, sub::$arith, $identity, fill)),
+                Primitive::Mul => env.push(frtl($xs, $ys, $ff, mul::$arith, $identity, fill)),
+                Primitive::Div => env.push(frtl($xs, $ys, $ff, div::$arith, $identity, fill)),
+                Primitive::Mod => env.push(frtl($xs, $ys, $ff, modulus::$arith, $identity, fill)),
+                Primitive::Eq => env.push(frtl($xs, $ys, $ff, to(is_eq::$cmp), $identity, fill)),
+                Primitive::Ne => env.push(frtl($xs, $ys, $ff, to(is_ne::$cmp), $identity, fill)),
+                Primitive::Lt => env.push(frtl($xs, $ys, $ff, to(is_lt::$cmp), $identity, fill)),
+                Primitive::Gt => env.push(frtl($xs, $ys, $ff, to(is_gt::$cmp), $identity, fill)),
+                Primitive::Le => env.push(frtl($xs, $ys, $ff, to(is_le::$cmp), $identity, fill)),
+                Primitive::Ge => env.push(frtl($xs, $ys, $ff, to(is_ge::$cmp), $identity, fill)),
+                Primitive::Min => env.push(frtl($xs, $ys, $ff, min::$arith, $identity, fill)),
+                Primitive::Max => env.push(frtl($xs, $ys, $ff, max::$arith, $identity, fill)),
+                Primitive::Couple | Primitive::Join => {
+                    env.push(frtljc($xs, $ys, $ff, $identity, fill))
+                }
+                _ => return Err((xs, ys)),
+            }
+        }};
+    }
+    let fill = env.num_scalar_fill().ok();
+    match fp {
+        Primitive::Add => {
+            all_gs!(xs, ys, to_left(add::num_num), 0.0, fill, byte_byte, generic)
+        }
+        Primitive::Mul => {
+            all_gs!(xs, ys, to_left(mul::num_num), 1.0, fill, byte_byte, generic)
+        }
+        Primitive::Min => {
+            let byte_fill = env.byte_scalar_fill().ok();
+            if xs.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
+                all_gs!(
+                    xs.convert(),
+                    ys.convert(),
+                    min::num_num,
+                    f64::INFINITY,
+                    fill,
+                    num_num,
+                    num_num
+                )
+            } else {
+                all_gs!(
+                    xs,
+                    ys,
+                    to_left(min::num_num),
+                    f64::INFINITY,
+                    byte_fill,
+                    byte_byte,
+                    generic
+                )
+            }
+        }
+        Primitive::Max => {
+            let byte_fill = env.byte_scalar_fill().ok();
+            if xs.row_count() == 0 || fill.is_some() && byte_fill.is_none() {
+                all_gs!(
+                    xs.convert(),
+                    ys.convert(),
+                    max::num_num,
+                    f64::NEG_INFINITY,
+                    fill,
+                    num_num,
+                    num_num
+                )
+            } else {
+                all_gs!(
+                    xs,
+                    ys,
+                    to_left(max::num_num),
+                    f64::NEG_INFINITY,
+                    byte_fill,
+                    byte_byte,
+                    generic
+                )
+            }
+        }
+        _ => return Err((xs, ys)),
+    }
+    Ok(())
+}
+
+fn generic_reduce_table(
+    f: Function,
+    g: Function,
+    xs: Value,
+    ys: Value,
+    env: &mut Uiua,
+) -> UiuaResult {
+    let mut xs = xs.into_rows();
+    let mut acc = xs
+        .next()
+        .ok_or_else(|| env.error("Cannot reduce empty array"))?;
+    let mut g_rows = Value::builder(ys.row_count());
+    for y in ys.rows() {
+        env.push(y);
+        env.push(acc.clone());
+        env.call(g.clone())?;
+        g_rows.add_row(env.pop("reduced function result")?, env)?;
+    }
+    acc = g_rows.finish();
+    for x in xs {
+        g_rows = Value::builder(ys.row_count());
+        for y in ys.rows() {
+            env.push(y);
+            env.push(x.clone());
+            env.call(g.clone())?;
+            g_rows.add_row(env.pop("reduced function result")?, env)?;
+        }
+        env.push(g_rows.finish());
+        env.push(acc);
+        env.call(f.clone())?;
+        acc = env.pop("reduced function result")?;
+    }
+    env.push(acc);
+    Ok(())
+}
+
+fn to<T, U>(f: impl Fn(T, T) -> U) -> impl Fn(T, T) -> T
+where
+    U: Into<T>,
+{
+    move |a, b| f(a, b).into()
+}
+
+fn to_left<T, U>(f: impl Fn(T, T) -> T) -> impl Fn(T, U) -> T
+where
+    U: Into<T>,
+{
+    move |a, b| f(a, b.into())
+}
+
+macro_rules! reduce_table_math {
+    ($fname:ident, $ty:ty, $f:ident, $fill:ident) => {
+        #[allow(clippy::result_large_err)]
+        fn $fname(
+            f_prim: Primitive,
+            g_prim: Primitive,
+            f_flipped: bool,
+            g_flipped: bool,
+            xs: Array<$ty>,
+            ys: Array<$ty>,
+            env: &mut Uiua,
+        ) -> UiuaResult<Result<(), (Array<$ty>, Array<$ty>)>> {
+            if f_flipped || g_flipped {
+                return Ok(Err((xs, ys)));
+            }
+            let fill = env.$fill().ok();
+            macro_rules! all_gs {
+                ($ff:expr, $identity:expr) => {
+                    match g_prim {
+                        Primitive::Add => {
+                            env.push(frtl(xs, ys, $ff, add::$f, $identity.into(), fill))
+                        }
+                        Primitive::Sub => {
+                            env.push(frtl(xs, ys, $ff, sub::$f, $identity.into(), fill))
+                        }
+                        Primitive::Mul => {
+                            env.push(frtl(xs, ys, $ff, mul::$f, $identity.into(), fill))
+                        }
+                        Primitive::Div => {
+                            env.push(frtl(xs, ys, $ff, div::$f, $identity.into(), fill))
+                        }
+                        Primitive::Mod => {
+                            env.push(frtl(xs, ys, $ff, modulus::$f, $identity.into(), fill))
+                        }
+                        Primitive::Eq => {
+                            env.push(frtl(xs, ys, $ff, to(is_eq::$f), $identity.into(), fill))
+                        }
+                        Primitive::Ne => {
+                            env.push(frtl(xs, ys, $ff, to(is_ne::$f), $identity.into(), fill))
+                        }
+                        Primitive::Lt => {
+                            env.push(frtl(xs, ys, $ff, to(is_lt::$f), $identity.into(), fill))
+                        }
+                        Primitive::Gt => {
+                            env.push(frtl(xs, ys, $ff, to(is_gt::$f), $identity.into(), fill))
+                        }
+                        Primitive::Le => {
+                            env.push(frtl(xs, ys, $ff, to(is_le::$f), $identity.into(), fill))
+                        }
+                        Primitive::Ge => {
+                            env.push(frtl(xs, ys, $ff, to(is_ge::$f), $identity.into(), fill))
+                        }
+                        Primitive::Min => {
+                            env.push(frtl(xs, ys, $ff, min::$f, $identity.into(), fill))
+                        }
+                        Primitive::Max => {
+                            env.push(frtl(xs, ys, $ff, max::$f, $identity.into(), fill))
+                        }
+                        Primitive::Couple | Primitive::Join => {
+                            env.push(frtljc(xs, ys, $ff, $identity.into(), fill))
+                        }
+                        _ => return Ok(Err((xs, ys))),
+                    }
+                };
+            }
+            match f_prim {
+                Primitive::Add => all_gs!(add::$f, 0.0),
+                Primitive::Mul => all_gs!(mul::$f, 1.0),
+                Primitive::Min => all_gs!(min::$f, f64::INFINITY),
+                Primitive::Max => all_gs!(max::$f, f64::NEG_INFINITY),
+                _ => return Ok(Err((xs, ys))),
+            }
+            Ok(Ok(()))
+        }
+    };
+}
+
+reduce_table_math!(reduce_table_nums, f64, num_num, num_scalar_fill);
+reduce_table_math!(reduce_coms, Complex, com_x, complex_scalar_fill);
+
+/// Fast reduce table list
+fn frtl<T, G, F>(
+    a: Array<T>,
+    b: Array<T>,
+    f: impl Fn(F, G) -> F,
+    g: impl Fn(T, T) -> G,
+    identity: F,
+    default: Option<F>,
+) -> Array<F>
+where
+    T: ArrayValue + Copy,
+    G: ArrayValue,
+    F: ArrayValue + Copy,
+{
+    let mut acc = eco_vec![default.unwrap_or(identity); b.shape().elements()];
+    let acc_slice = acc.make_mut();
+    for a in a.data {
+        for (&b, c) in b.data.iter().zip(&mut *acc_slice) {
+            *c = f(*c, g(a, b));
+        }
+    }
+    Array::new(b.shape, acc)
+}
+
+/// Fast reduce table list join or couple
+fn frtljc<T, F>(
+    a: Array<T>,
+    b: Array<T>,
+    f: impl Fn(F, T) -> F,
+    identity: F,
+    default: Option<F>,
+) -> Array<F>
+where
+    T: ArrayValue + Copy,
+    F: ArrayValue + Copy,
+{
+    let mut acc = eco_vec![default.unwrap_or(identity); b.shape().elements() * 2];
+    let acc_slice = acc.make_mut();
+    for a in a.data {
+        let mut i = 0;
+        for b in b.data.iter().cloned() {
+            acc_slice[i] = f(acc_slice[i], a);
+            i += 1;
+            acc_slice[i] = f(acc_slice[i], b);
+            i += 1;
+        }
+    }
+    let mut new_shape = b.shape.clone();
+    new_shape.push(2);
+    Array::new(new_shape, acc)
 }

@@ -212,6 +212,16 @@ pub(crate) fn optimize_instrs_mut(
                 instrs.push(instr);
             }
         }
+        // Reduce table
+        (
+            [.., Instr::PushFunc(g), Instr::Prim(Table, _), Instr::PushFunc(f)],
+            Instr::Prim(Reduce, span),
+        ) if g.signature() == (2, 1) && f.signature() == (2, 1) => {
+            let f = instrs.pop().unwrap();
+            instrs.pop();
+            instrs.push(f);
+            instrs.push(Instr::ImplPrim(ImplPrimitive::ReduceTable, span));
+        }
         // Pop constant
         ([.., Instr::Push(_)], Instr::Prim(Pop, _)) => {
             instrs.pop();

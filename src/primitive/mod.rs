@@ -206,6 +206,7 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand => write!(f, "{Gap}{Rand}"),
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
+            ReduceTable => write!(f, "{Reduce}(…){Content}"),
             Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
             BothTrace => write!(f, "{Both}{Trace}"),
             UnBothTrace => write!(f, "{Un}{Both}{Trace}"),
@@ -997,6 +998,7 @@ impl ImplPrimitive {
             ImplPrimitive::SortUp => env.monadic_mut_env(Value::sort_up)?,
             ImplPrimitive::SortDown => env.monadic_mut_env(Value::sort_down)?,
             ImplPrimitive::ReduceContent => reduce::reduce_content(env)?,
+            ImplPrimitive::ReduceTable => table::reduce_table(env)?,
             ImplPrimitive::ReplaceRand => {
                 env.pop(1)?;
                 env.push(random());

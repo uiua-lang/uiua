@@ -157,6 +157,11 @@ impl GridFmt for Value {
                 }
             }
             let mut only_row = Vec::new();
+            if let Some(label) = &b.meta().label {
+                only_row.extend(label.chars());
+                only_row.push(':');
+                only_row.push(' ');
+            }
             only_row.push('{');
             for (i, line) in item_lines.into_iter().enumerate() {
                 if i > 0 {

@@ -225,7 +225,7 @@ fn virtual_rect(area: &HtmlTextAreaElement, text: &str) -> DomRect {
         .unwrap();
     temp_span
         .style()
-        .set_property("white-space", "pre-wrap")
+        .set_property("white-space", "pre")
         .unwrap();
     let area_style = &window().get_computed_style(area).unwrap().unwrap();
     let area_font = area_style.get_property_value("font").unwrap();

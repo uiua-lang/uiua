@@ -798,7 +798,12 @@ pub fn Editor<'a>(
     // Handle change events
     let code_input = move |_| {
         set_timeout(
-            move || get_state.get().refresh_code(),
+            move || {
+                state.update(|state| {
+                    state.refresh_code();
+                    state.track_change();
+                })
+            },
             Duration::from_millis(0),
         );
     };

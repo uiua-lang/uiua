@@ -109,6 +109,24 @@ impl State {
             self.set_line_count();
         }
     }
+    pub fn track_change(&mut self) {
+        let Some(cursor) = get_code_cursor(&self.code_id) else {
+            return;
+        };
+        let code = get_code(&self.code_id);
+        let before = self.past.last().map(|r| r.after).unwrap_or(cursor);
+        let new_curr = Record {
+            code: code.clone(),
+            before,
+            after: cursor,
+        };
+        let prev = replace(&mut self.curr, new_curr);
+        if prev.code != code {
+            self.past.push(prev);
+            self.future.clear();
+            self.set_changed();
+        }
+    }
     fn set_code_element(&self, code: &str) {
         // logging::log!("set code: {code:?}");
         if let Some(cursor) = get_code_cursor(&self.code_id) {

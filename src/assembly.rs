@@ -619,7 +619,7 @@ enum InstrRep {
     Switch(usize, Signature, usize, bool),
     Format(EcoVec<EcoString>, usize),
     MatchFormatPattern(EcoVec<EcoString>, usize),
-    StackSwizzle(EcoVec<u8>, usize),
+    StackSwizzle(EcoVec<u8>, Vec<usize>, usize),
     Label(EcoString, usize),
     Dynamic(DynamicFunction),
     Unpack(usize, usize, bool),
@@ -662,7 +662,15 @@ impl From<Instr> for InstrRep {
             } => Self::Switch(count, sig, span, under_cond),
             Instr::Format { parts, span } => Self::Format(parts, span),
             Instr::MatchFormatPattern { parts, span } => Self::MatchFormatPattern(parts, span),
-            Instr::StackSwizzle(swizzle, span) => Self::StackSwizzle(swizzle.indices, span),
+            Instr::StackSwizzle(swizzle, span) => {
+                let fix_indices: Vec<usize> = swizzle
+                    .fix
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, f)| f.then_some(i))
+                    .collect();
+                Self::StackSwizzle(swizzle.indices, fix_indices, span)
+            }
             Instr::Label { label, span } => Self::Label(label, span),
             Instr::Dynamic(func) => Self::Dynamic(func),
             Instr::Unpack { count, span, unbox } => Self::Unpack(count, span, unbox),
@@ -701,8 +709,13 @@ impl From<InstrRep> for Instr {
             },
             InstrRep::Format(parts, span) => Self::Format { parts, span },
             InstrRep::MatchFormatPattern(parts, span) => Self::MatchFormatPattern { parts, span },
-            InstrRep::StackSwizzle(indices, span) => {
-                Self::StackSwizzle(StackSwizzle { indices }, span)
+            InstrRep::StackSwizzle(indices, fix_indices, span) => {
+                let mut fix = eco_vec![false; indices.len()];
+                let slice = fix.make_mut();
+                for i in fix_indices {
+                    slice[i] = true;
+                }
+                Self::StackSwizzle(StackSwizzle { indices, fix }, span)
             }
             InstrRep::Label(label, span) => Self::Label { label, span },
             InstrRep::Dynamic(func) => Self::Dynamic(func),

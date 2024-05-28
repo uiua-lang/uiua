@@ -288,13 +288,19 @@ impl<'a> fmt::Display for FmtInstrs<'a> {
 pub struct StackSwizzle {
     /// The indices of the stack elements
     pub indices: EcoVec<u8>,
+    /// The fix mask
+    pub fix: EcoVec<bool>,
 }
 
 impl fmt::Display for StackSwizzle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "λ")?;
-        for &i in &self.indices {
-            write!(f, "{}", (b'a' + i) as char)?;
+        for (&i, &fix) in self.indices.iter().zip(&self.fix) {
+            let mut c = b'a' + i;
+            if fix {
+                c = c.to_ascii_uppercase();
+            }
+            write!(f, "{}", c as char)?;
         }
         Ok(())
     }
@@ -322,7 +328,10 @@ impl StackSwizzle {
         for (i, &j) in self.indices.iter().enumerate() {
             slice[j as usize] = i as u8;
         }
-        Some(Self { indices })
+        Some(Self {
+            indices,
+            fix: self.fix.clone(),
+        })
     }
 }
 

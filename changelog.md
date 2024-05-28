@@ -20,7 +20,8 @@ This version is not yet released. If you are reading this on the website, then t
   - This can be circumvented with [`fill ⬚`](https://uiua.org/docs/fill)[`un °`](https://uiua.org/docs/un)[`pop ◌`](https://uiua.org/docs/pop)
 - Stabilize [`by ⊸`](https://uiua.org/docs/by)!
 - Add experimental **stack swizzles**, which allow for more flexible stack reordering
-  - Swizzles are written with a `λ` followed by a list of lowercase letters
+  - Swizzles are written with a `λ` followed by a list of letters
+  - Capital letters [`fix`](https://uiua.org/docs/fix) the corresponding value
   - The `λ` formats from `'` when it is in front of the letters
 - Add experimental **array swizzles**, which allow extracting rows from an array in a concise way
   - Swizzles are written with a `⋊` followed by a list of letters

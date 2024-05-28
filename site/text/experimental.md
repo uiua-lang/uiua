@@ -18,7 +18,7 @@ Using experimental features requires an `# Experimental!` comment to be placed a
 ## Stack Swizzles
 
 Stack swizzles allow you to reorder the stack in a concise way.
-They are written with a `λ` followed by some lowercase letters.
+They are written with a `λ` followed by some letters.
 The `λ` will format from `'` if followed by letters.
 
 ```uiua
@@ -26,6 +26,13 @@ The `λ` will format from `'` if followed by letters.
 [λcba 1 2 3 4 5]
 [λbbbbba 1 2]
 [λccaabb 1 2 3]
+```
+
+Captial letters [`fix`]() the corresponding value.
+
+```uiua
+# Experimental!
+{λaCb 1_2_3 4_5_6 7_8_9}
 ```
 
 ## Array Swizzles

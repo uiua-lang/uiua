@@ -569,7 +569,7 @@ code:
                 }
                 Instr::StackSwizzle(swizzle, span) => {
                     let swizzle = swizzle.clone();
-                    self.with_span(*span, |env| env.swizzle(&swizzle))
+                    self.with_span(*span, |env| env.stack_swizzle(&swizzle))
                 }
                 Instr::Label { label, span } => {
                     let label = if label.is_empty() {
@@ -1554,13 +1554,16 @@ code:
                 .channel
         })
     }
-    fn swizzle(&mut self, swizzle: &StackSwizzle) -> UiuaResult {
+    fn stack_swizzle(&mut self, swizzle: &StackSwizzle) -> UiuaResult {
         let args = swizzle.args();
         self.touch_array_stack(args)?;
         let end = self.rt.stack.len();
         let start = end - args;
-        for &i in swizzle.indices.iter().rev() {
-            let val = self.rt.stack[end - 1 - i as usize].clone();
+        for (&i, &fix) in swizzle.indices.iter().zip(&swizzle.fix).rev() {
+            let mut val = self.rt.stack[end - 1 - i as usize].clone();
+            if fix {
+                val.fix();
+            }
             self.rt.stack.push(val);
         }
         self.rt.stack.drain(start..start + args);

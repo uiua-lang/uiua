@@ -1274,15 +1274,19 @@ impl<'a> Lexer<'a> {
     }
     fn stack_swizzle(&mut self) -> Option<StackSwizzle> {
         let mut indices = EcoVec::new();
-        while let Some(c) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_lowercase())) {
+        let mut fix = EcoVec::new();
+        while let Some(c) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_alphabetic())) {
             for c in c.chars() {
+                let is_upper = c.is_ascii_uppercase();
+                let c = c.to_ascii_lowercase();
                 indices.push(c as u8 - b'a');
+                fix.push(is_upper);
             }
         }
         if indices.is_empty() {
             None
         } else {
-            Some(StackSwizzle { indices })
+            Some(StackSwizzle { indices, fix })
         }
     }
     fn array_swizzle(&mut self) -> Option<ArraySwizzle> {

@@ -64,10 +64,10 @@ Test‼ ← (
   ⍤⟜≍: /^!∘⊞^! ⊃⊙∘(/^!⊞^!) [1 2 3] [1.1 2 3 4]
   ^,^,^,^,^,^,
 )
-Test‼++ Test‼+- Test‼+× Test‼+÷ Test‼+= Test‼+≠ Test‼+≤ Test‼+> Test‼+↧ Test‼+↥ Test‼+⊟ Test‼+⊂
-Test‼×+ Test‼×- Test‼×× Test‼×÷ Test‼×= Test‼×≠ Test‼×≤ Test‼×> Test‼×↧ Test‼×↥ Test‼×⊟ Test‼×⊂
-Test‼↧+ Test‼↧- Test‼↧× Test‼↧÷ Test‼↧= Test‼↧≠ Test‼↧≤ Test‼↧> Test‼↧↧ Test‼↧↥ Test‼↧⊟ Test‼↧⊂
-Test‼↥+ Test‼↥- Test‼↥× Test‼↥÷ Test‼↥= Test‼↥≠ Test‼↥≤ Test‼↥> Test‼↥↧ Test‼↥↥ Test‼↥⊟ Test‼↥⊂
+Test‼++ Test‼+- Test‼+× Test‼+÷ Test‼+= Test‼+≤ Test‼+> Test‼+↧ Test‼+↥ Test‼+ℂ Test‼+⊟ Test‼+⊂
+Test‼×+ Test‼×- Test‼×× Test‼×÷ Test‼×= Test‼×≤ Test‼×> Test‼×↧ Test‼×↥ Test‼×ℂ Test‼×⊟ Test‼×⊂
+Test‼↧+ Test‼↧- Test‼↧× Test‼↧÷ Test‼↧= Test‼↧≤ Test‼↧> Test‼↧↧ Test‼↧↥ Test‼↧ℂ Test‼↧⊟ Test‼↧⊂
+Test‼↥+ Test‼↥- Test‼↥× Test‼↥÷ Test‼↥= Test‼↥≤ Test‼↥> Test‼↥↧ Test‼↥↥ Test‼↥ℂ Test‼↥⊟ Test‼↥⊂
 Test‼(+¯)+
 Test‼∠(+∿)
 Test‼+(□+)

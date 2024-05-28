@@ -71,6 +71,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This frees up some glyphs that can now be used as function names
 ### Interpreter
 - Lots of optimizations
+  - Optimize the pattern `/F⊞F` to use much less memory and be an order of magnitude faster in some cases
   - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`length ⧻`](https://uiua.org/docs/length), [`first ⊢`](https://uiua.org/docs/first), and [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)
   - Optimize iterating modifiers with a top-level [`fork ⊃`](https://uiua.org/docs/fork) or [`bracket ⊓`](https://uiua.org/docs/bracket)
   - Optimize [`≡`](https://uiua.org/docs/rows)[`⋅`](https://uiua.org/docs/gap)`constant` and [`∵`](https://uiua.org/docs/each)[`⋅`](https://uiua.org/docs/gap)`constant` patterns

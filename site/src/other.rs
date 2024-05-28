@@ -254,6 +254,14 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prim prim=Scan/></th> <td>"✔"</td>  <td>"✔"</td> <td></td> <td></td> <td></td></tr>
         </table>
 
+        <h3 id="reduce-table"><Prim prim=Reduce/>" "<Prim prim=Table/></h3>
+        <p>"The pattern "<Prims prims=[Reduce]/><code>"F"</code><Prims prims=[Table]/><code>"G"</code>" is optimized to use much less memory and run much faster than the naive implementation. This only occurs when both functions have signature "<code>"|2.1"</code>". Rather than creating the entire table and then reducing it, each reduced row is generated as it is needed."</p>
+        <p>"On top of this, particular combinations of "<code>"F"</code>" and "<code>"G"</code>" are optimized to eliminate all interpreter overhead. All combinations of the following functions are optimized:"</p>
+        <table class="bordered-table cell-centered-table">
+            <tr><th><Prim prim=Reduce/></th><td><Prims prims=[Add, Mul, Min, Max]/></td></tr>
+            <tr><th><Prim prim=Table/></th><td><Prims prims=[Add, Sub, Mul, Div, Mod, Atan, Eq, Ne, Lt, Le, Gt, Ge, Min, Max, Complex, Join, Couple]/></td></tr>
+        </table>
+
         <Hd id="complexity">"Complexity"</Hd>
         <p>"Some combinations of functions are special-cased in the interpreter to run in less time complexity or in fewer operations than is implied by each function individually."</p>
         <p>"This table shows how various combinations of functions are optimized:"</p>

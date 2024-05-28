@@ -449,25 +449,32 @@ fn reduce_table_bytes(
     env: &mut Uiua,
 ) -> Result<(), (Array<u8>, Array<u8>)> {
     macro_rules! all_gs {
-        ($xs:expr, $ys:expr, $ff:expr, $identity:expr, $fill:expr, $arith:ident, $cmp:ident) => {{
+        ($xs:expr, $ys:expr, $ff:expr, $ff_complex:expr, $iden:expr, $fill:expr, $arith:ident, $cmp:ident) => {{
             let fill = $fill.map(Into::into);
             match gp {
-                Primitive::Add => env.push(frtl($xs, $ys, $ff, add::$arith, $identity, fill)),
-                Primitive::Sub => env.push(frtl($xs, $ys, $ff, sub::$arith, $identity, fill)),
-                Primitive::Mul => env.push(frtl($xs, $ys, $ff, mul::$arith, $identity, fill)),
-                Primitive::Div => env.push(frtl($xs, $ys, $ff, div::$arith, $identity, fill)),
-                Primitive::Mod => env.push(frtl($xs, $ys, $ff, modulus::$arith, $identity, fill)),
-                Primitive::Eq => env.push(frtl($xs, $ys, $ff, to(is_eq::$cmp), $identity, fill)),
-                Primitive::Ne => env.push(frtl($xs, $ys, $ff, to(is_ne::$cmp), $identity, fill)),
-                Primitive::Lt => env.push(frtl($xs, $ys, $ff, to(is_lt::$cmp), $identity, fill)),
-                Primitive::Gt => env.push(frtl($xs, $ys, $ff, to(is_gt::$cmp), $identity, fill)),
-                Primitive::Le => env.push(frtl($xs, $ys, $ff, to(is_le::$cmp), $identity, fill)),
-                Primitive::Ge => env.push(frtl($xs, $ys, $ff, to(is_ge::$cmp), $identity, fill)),
-                Primitive::Min => env.push(frtl($xs, $ys, $ff, min::$arith, $identity, fill)),
-                Primitive::Max => env.push(frtl($xs, $ys, $ff, max::$arith, $identity, fill)),
-                Primitive::Couple | Primitive::Join => {
-                    env.push(frtljc($xs, $ys, $ff, $identity, fill))
-                }
+                Primitive::Add => env.push(frtl($xs, $ys, $ff, add::$arith, $iden, fill)),
+                Primitive::Sub => env.push(frtl($xs, $ys, $ff, sub::$arith, $iden, fill)),
+                Primitive::Mul => env.push(frtl($xs, $ys, $ff, mul::$arith, $iden, fill)),
+                Primitive::Div => env.push(frtl($xs, $ys, $ff, div::$arith, $iden, fill)),
+                Primitive::Mod => env.push(frtl($xs, $ys, $ff, modulus::$arith, $iden, fill)),
+                Primitive::Atan => env.push(frtl($xs, $ys, $ff, atan2::$arith, $iden, fill)),
+                Primitive::Eq => env.push(frtl($xs, $ys, $ff, to(is_eq::$cmp), $iden, fill)),
+                Primitive::Ne => env.push(frtl($xs, $ys, $ff, to(is_ne::$cmp), $iden, fill)),
+                Primitive::Lt => env.push(frtl($xs, $ys, $ff, to(is_lt::$cmp), $iden, fill)),
+                Primitive::Gt => env.push(frtl($xs, $ys, $ff, to(is_gt::$cmp), $iden, fill)),
+                Primitive::Le => env.push(frtl($xs, $ys, $ff, to(is_le::$cmp), $iden, fill)),
+                Primitive::Ge => env.push(frtl($xs, $ys, $ff, to(is_ge::$cmp), $iden, fill)),
+                Primitive::Min => env.push(frtl($xs, $ys, $ff, min::$arith, $iden, fill)),
+                Primitive::Max => env.push(frtl($xs, $ys, $ff, max::$arith, $iden, fill)),
+                Primitive::Complex => env.push(frtl(
+                    $xs,
+                    $ys,
+                    $ff_complex,
+                    complex::$arith,
+                    $iden.into(),
+                    env.complex_scalar_fill().ok(),
+                )),
+                Primitive::Couple | Primitive::Join => env.push(frtljc($xs, $ys, $ff, $iden, fill)),
                 _ => return Err((xs, ys)),
             }
         }};
@@ -475,10 +482,28 @@ fn reduce_table_bytes(
     let fill = env.num_scalar_fill().ok();
     match fp {
         Primitive::Add => {
-            all_gs!(xs, ys, to_left(add::num_num), 0.0, fill, byte_byte, generic)
+            all_gs!(
+                xs,
+                ys,
+                to_left(add::num_num),
+                add::com_x,
+                0.0,
+                fill,
+                byte_byte,
+                generic
+            )
         }
         Primitive::Mul => {
-            all_gs!(xs, ys, to_left(mul::num_num), 1.0, fill, byte_byte, generic)
+            all_gs!(
+                xs,
+                ys,
+                to_left(mul::num_num),
+                mul::com_x,
+                1.0,
+                fill,
+                byte_byte,
+                generic
+            )
         }
         Primitive::Min => {
             let byte_fill = env.byte_scalar_fill().ok();
@@ -487,6 +512,7 @@ fn reduce_table_bytes(
                     xs.convert(),
                     ys.convert(),
                     min::num_num,
+                    min::com_x,
                     f64::INFINITY,
                     fill,
                     num_num,
@@ -497,6 +523,7 @@ fn reduce_table_bytes(
                     xs,
                     ys,
                     to_left(min::num_num),
+                    min::com_x,
                     f64::INFINITY,
                     byte_fill,
                     byte_byte,
@@ -511,6 +538,7 @@ fn reduce_table_bytes(
                     xs.convert(),
                     ys.convert(),
                     max::num_num,
+                    max::com_x,
                     f64::NEG_INFINITY,
                     fill,
                     num_num,
@@ -521,6 +549,7 @@ fn reduce_table_bytes(
                     xs,
                     ys,
                     to_left(max::num_num),
+                    max::com_x,
                     f64::NEG_INFINITY,
                     byte_fill,
                     byte_byte,
@@ -600,59 +629,58 @@ macro_rules! reduce_table_math {
             }
             let fill = env.$fill().ok();
             macro_rules! all_gs {
-                ($ff:expr, $identity:expr) => {
+                ($ff:expr, $ff_complex:expr, $iden:expr) => {
                     match g_prim {
-                        Primitive::Add => {
-                            env.push(frtl(xs, ys, $ff, add::$f, $identity.into(), fill))
-                        }
-                        Primitive::Sub => {
-                            env.push(frtl(xs, ys, $ff, sub::$f, $identity.into(), fill))
-                        }
-                        Primitive::Mul => {
-                            env.push(frtl(xs, ys, $ff, mul::$f, $identity.into(), fill))
-                        }
-                        Primitive::Div => {
-                            env.push(frtl(xs, ys, $ff, div::$f, $identity.into(), fill))
-                        }
+                        Primitive::Add => env.push(frtl(xs, ys, $ff, add::$f, $iden.into(), fill)),
+                        Primitive::Sub => env.push(frtl(xs, ys, $ff, sub::$f, $iden.into(), fill)),
+                        Primitive::Mul => env.push(frtl(xs, ys, $ff, mul::$f, $iden.into(), fill)),
+                        Primitive::Div => env.push(frtl(xs, ys, $ff, div::$f, $iden.into(), fill)),
                         Primitive::Mod => {
-                            env.push(frtl(xs, ys, $ff, modulus::$f, $identity.into(), fill))
+                            env.push(frtl(xs, ys, $ff, modulus::$f, $iden.into(), fill))
+                        }
+                        Primitive::Atan => {
+                            env.push(frtl(xs, ys, $ff, atan2::$f, $iden.into(), fill))
                         }
                         Primitive::Eq => {
-                            env.push(frtl(xs, ys, $ff, to(is_eq::$f), $identity.into(), fill))
+                            env.push(frtl(xs, ys, $ff, to(is_eq::$f), $iden.into(), fill))
                         }
                         Primitive::Ne => {
-                            env.push(frtl(xs, ys, $ff, to(is_ne::$f), $identity.into(), fill))
+                            env.push(frtl(xs, ys, $ff, to(is_ne::$f), $iden.into(), fill))
                         }
                         Primitive::Lt => {
-                            env.push(frtl(xs, ys, $ff, to(is_lt::$f), $identity.into(), fill))
+                            env.push(frtl(xs, ys, $ff, to(is_lt::$f), $iden.into(), fill))
                         }
                         Primitive::Gt => {
-                            env.push(frtl(xs, ys, $ff, to(is_gt::$f), $identity.into(), fill))
+                            env.push(frtl(xs, ys, $ff, to(is_gt::$f), $iden.into(), fill))
                         }
                         Primitive::Le => {
-                            env.push(frtl(xs, ys, $ff, to(is_le::$f), $identity.into(), fill))
+                            env.push(frtl(xs, ys, $ff, to(is_le::$f), $iden.into(), fill))
                         }
                         Primitive::Ge => {
-                            env.push(frtl(xs, ys, $ff, to(is_ge::$f), $identity.into(), fill))
+                            env.push(frtl(xs, ys, $ff, to(is_ge::$f), $iden.into(), fill))
                         }
-                        Primitive::Min => {
-                            env.push(frtl(xs, ys, $ff, min::$f, $identity.into(), fill))
-                        }
-                        Primitive::Max => {
-                            env.push(frtl(xs, ys, $ff, max::$f, $identity.into(), fill))
-                        }
+                        Primitive::Min => env.push(frtl(xs, ys, $ff, min::$f, $iden.into(), fill)),
+                        Primitive::Max => env.push(frtl(xs, ys, $ff, max::$f, $iden.into(), fill)),
+                        Primitive::Complex => env.push(frtl(
+                            xs,
+                            ys,
+                            $ff_complex,
+                            complex::$f,
+                            $iden.into(),
+                            env.complex_scalar_fill().ok(),
+                        )),
                         Primitive::Couple | Primitive::Join => {
-                            env.push(frtljc(xs, ys, $ff, $identity.into(), fill))
+                            env.push(frtljc(xs, ys, $ff, $iden.into(), fill))
                         }
                         _ => return Ok(Err((xs, ys))),
                     }
                 };
             }
             match f_prim {
-                Primitive::Add => all_gs!(add::$f, 0.0),
-                Primitive::Mul => all_gs!(mul::$f, 1.0),
-                Primitive::Min => all_gs!(min::$f, f64::INFINITY),
-                Primitive::Max => all_gs!(max::$f, f64::NEG_INFINITY),
+                Primitive::Add => all_gs!(add::$f, add::com_x, 0.0),
+                Primitive::Mul => all_gs!(mul::$f, mul::com_x, 1.0),
+                Primitive::Min => all_gs!(min::$f, min::com_x, f64::INFINITY),
+                Primitive::Max => all_gs!(max::$f, max::com_x, f64::NEG_INFINITY),
                 _ => return Ok(Err((xs, ys))),
             }
             Ok(Ok(()))

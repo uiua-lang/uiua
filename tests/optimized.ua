@@ -64,10 +64,31 @@ Test‼ ← (
   ⍤⟜≍: /^!∘⊞^! ⊃⊙∘(/^!⊞^!) [1 2 3] [1.1 2 3 4]
   ^,^,^,^,^,^,
 )
-Test‼++ Test‼+- Test‼+× Test‼+÷ Test‼+= Test‼+≠ Test‼+< Test‼+≤ Test‼+> Test‼+≥ Test‼+↧ Test‼+↥
-Test‼×+ Test‼×- Test‼×× Test‼×÷ Test‼×= Test‼×≠ Test‼×< Test‼×≤ Test‼×> Test‼×≥ Test‼×↧ Test‼×↥
-Test‼↧+ Test‼↧- Test‼↧× Test‼↧÷ Test‼↧= Test‼↧≠ Test‼↧< Test‼↧≤ Test‼↧> Test‼↧≥ Test‼↧↧ Test‼↧↥
-Test‼↥+ Test‼↥- Test‼↥× Test‼↥÷ Test‼↥= Test‼↥≠ Test‼↥< Test‼↥≤ Test‼↥> Test‼↥≥ Test‼↥↧ Test‼↥↥
+Test‼++ Test‼+- Test‼+× Test‼+÷ Test‼+= Test‼+≠ Test‼+≤ Test‼+> Test‼+↧ Test‼+↥ Test‼+⊟ Test‼+⊂
+Test‼×+ Test‼×- Test‼×× Test‼×÷ Test‼×= Test‼×≠ Test‼×≤ Test‼×> Test‼×↧ Test‼×↥ Test‼×⊟ Test‼×⊂
+Test‼↧+ Test‼↧- Test‼↧× Test‼↧÷ Test‼↧= Test‼↧≠ Test‼↧≤ Test‼↧> Test‼↧↧ Test‼↧↥ Test‼↧⊟ Test‼↧⊂
+Test‼↥+ Test‼↥- Test‼↥× Test‼↥÷ Test‼↥= Test‼↥≠ Test‼↥≤ Test‼↥> Test‼↥↧ Test‼↥↥ Test‼↥⊟ Test‼↥⊂
 Test‼(+¯)+
 Test‼∠(+∿)
 Test‼+(□+)
+
+Test‼ ← (
+  ⍤⟜≍: /^!∘⊞^! ⊃⊙∘(/^!⊞^!) [1 2 3] [1_2 3_4]
+  ⍤⟜≍: /^!∘⊞^! ⊃⊙∘(/^!⊞^!) [1 2 3] [1.1 2 3 4]
+  ^,^,^,^,^,^,
+)
+Test‼++ Test‼+- Test‼+× Test‼+÷ Test‼+= Test‼+≠ Test‼+≤ Test‼+> Test‼+↧ Test‼+↥ Test‼+⊂
+Test‼↧+ Test‼↧- Test‼↧× Test‼↧÷ Test‼↧= Test‼↧≠ Test‼↧≤ Test‼↧> Test‼↧↧ Test‼↧↥ Test‼↧⊂
+Test‼(+¯)+
+Test‼∠(+∿)
+Test‼+(□+)
+
+F ← ⬚10(/+⊞+)
+⍤⟜≍: [15 17 19] F [1 2] [1 2 3]
+⍤⟜≍: [10 10 10] F [] [1 2 3]
+⍤⟜≍: [] F [1 2] []
+
+F ← ⬚10(/+∘⊞(×¯))
+⍤⟜≍: [7 4 1] F [1 2] [1 2 3]
+⍤⟜≍: [10 10 10] F [] [1 2 3]
+⍤⟜≍: [] F [1 2] []

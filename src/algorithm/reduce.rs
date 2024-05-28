@@ -388,7 +388,7 @@ where
             let row_count = arr.row_count();
             if row_count == 0 {
                 arr.shape.remove(0);
-                let data = cowslice![identity; row_len];
+                let data = cowslice![default.unwrap_or(identity); row_len];
                 return Array::new(arr.shape, data);
             }
             let sliced = arr.data.as_mut_slice();

@@ -1256,7 +1256,7 @@ code:
                 }
             }
             Word::Func(func) => self.func(func, word.span, call)?,
-            Word::Switch(sw) => self.switch(sw, word.span, call)?,
+            Word::Pack(pack) => self.switch(pack, word.span, call)?,
             Word::Primitive(p) => self.primitive(p, word.span, call)?,
             Word::SemicolonPop => {
                 self.emit_diagnostic(
@@ -1675,7 +1675,7 @@ code:
         );
         Ok((func.id, sig, instrs))
     }
-    fn switch(&mut self, sw: Switch, span: CodeSpan, call: bool) -> UiuaResult {
+    fn switch(&mut self, sw: FunctionPack, span: CodeSpan, call: bool) -> UiuaResult {
         let count = sw.branches.len();
         if !call {
             self.new_functions.push(EcoVec::new());
@@ -2240,7 +2240,7 @@ fn collect_placeholder(words: &[Sp<Word>]) -> Vec<Sp<PlaceholderOp>> {
                 ops.extend(collect_placeholder(line));
             }),
             Word::Modified(m) => ops.extend(collect_placeholder(&m.operands)),
-            Word::Switch(sw) => sw.branches.iter().for_each(|branch| {
+            Word::Pack(pack) => pack.branches.iter().for_each(|branch| {
                 (branch.value.lines.iter()).for_each(|line| ops.extend(collect_placeholder(line)))
             }),
             _ => {}
@@ -2277,7 +2277,7 @@ fn recurse_words(words: &mut Vec<Sp<Word>>, f: &mut dyn FnMut(&mut Sp<Word>)) {
                 recurse_words(line, f);
             }),
             Word::Modified(m) => recurse_words(&mut m.operands, f),
-            Word::Switch(sw) => sw.branches.iter_mut().for_each(|branch| {
+            Word::Pack(pack) => pack.branches.iter_mut().for_each(|branch| {
                 (branch.value.lines.iter_mut()).for_each(|line| recurse_words(line, f))
             }),
             _ => {}

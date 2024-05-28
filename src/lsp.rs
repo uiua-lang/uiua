@@ -369,8 +369,8 @@ impl Spanner {
                         }
                     }
                 }
-                Word::Switch(sw) => {
-                    let kind = if let Some(inline) = sw
+                Word::Pack(pack) => {
+                    let kind = if let Some(inline) = pack
                         .branches
                         .first()
                         .and_then(|br| self.code_meta.function_sigs.get(&br.span))
@@ -380,7 +380,7 @@ impl Spanner {
                         SpanKind::Delimiter
                     };
                     spans.push(word.span.just_start(self.inputs()).sp(kind));
-                    for (i, branch) in sw.branches.iter().enumerate() {
+                    for (i, branch) in pack.branches.iter().enumerate() {
                         let start_span = branch.span.just_start(self.inputs());
                         if i > 0 && start_span.as_str(self.inputs(), |s| s == "|") {
                             let kind = if let Some(SigDecl {
@@ -400,9 +400,11 @@ impl Spanner {
                         }
                         spans.extend(branch.value.lines.iter().flat_map(|w| self.words_spans(w)));
                     }
-                    if sw.closed {
+                    if pack.closed {
                         let end = word.span.just_end(self.inputs());
-                        if end.as_str(self.inputs(), |s| s == if sw.angled { "⟩" } else { ")" }) {
+                        if end.as_str(self.inputs(), |s| {
+                            s == if pack.angled { "⟩" } else { ")" }
+                        }) {
                             spans.push(end.sp(SpanKind::Delimiter));
                         }
                     }

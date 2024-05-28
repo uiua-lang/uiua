@@ -110,7 +110,7 @@ pub enum Word {
     Undertied(Vec<Sp<Word>>),
     Array(Arr),
     Func(Func),
-    Switch(Switch),
+    Pack(FunctionPack),
     Primitive(Primitive),
     SemicolonPop,
     Modified(Box<Modified>),
@@ -154,7 +154,7 @@ impl PartialEq for Word {
                 .iter()
                 .flatten()
                 .map(|w| &w.value)),
-            (Self::Switch(a), Self::Switch(b)) => (a.branches.iter())
+            (Self::Pack(a), Self::Pack(b)) => (a.branches.iter())
                 .flat_map(|br| &br.value.lines)
                 .flatten()
                 .map(|w| &w.value)
@@ -230,7 +230,7 @@ impl fmt::Debug for Word {
             Word::Strand(items) => write!(f, "strand({items:?})"),
             Word::Undertied(items) => write!(f, "undertie({items:?})"),
             Word::Func(func) => func.fmt(f),
-            Word::Switch(sw) => sw.fmt(f),
+            Word::Pack(pack) => pack.fmt(f),
             Word::Primitive(prim) => prim.fmt(f),
             Word::SemicolonPop => write!(f, ";"),
             Word::Modified(modified) => modified.fmt(f),
@@ -397,10 +397,10 @@ impl fmt::Debug for Func {
     }
 }
 
-/// A switch function
+/// A function pack
 #[derive(Debug, Clone)]
-pub struct Switch {
-    /// The branches of the switch
+pub struct FunctionPack {
+    /// The branches of the pack
     pub branches: Vec<Sp<Func>>,
     /// Whether a closing parenthesis was found
     pub closed: bool,

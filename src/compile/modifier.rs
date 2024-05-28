@@ -13,7 +13,7 @@ impl Compiler {
         operand: Sp<Word>,
     ) -> UiuaResult<Option<Modified>> {
         let Sp {
-            value: Word::Switch(sw @ Switch { angled: false, .. }),
+            value: Word::Pack(pack @ FunctionPack { angled: false, .. }),
             span,
         } = operand
         else {
@@ -21,7 +21,7 @@ impl Compiler {
         };
         match &modifier.value {
             Modifier::Primitive(Primitive::Dip) => {
-                let mut branches = sw.branches.into_iter().rev();
+                let mut branches = pack.branches.into_iter().rev();
                 let mut new = Modified {
                     modifier: modifier.clone(),
                     operands: vec![branches.next().unwrap().map(Word::Func)],
@@ -45,7 +45,7 @@ impl Compiler {
             Modifier::Primitive(
                 Primitive::Fork | Primitive::Bracket | Primitive::Try | Primitive::Fill,
             ) => {
-                let mut branches = sw.branches.into_iter().rev();
+                let mut branches = pack.branches.into_iter().rev();
                 let mut new = Modified {
                     modifier: modifier.clone(),
                     operands: {
@@ -70,7 +70,7 @@ impl Compiler {
                 Ok(Some(new))
             }
             m if m.args() >= 2 => {
-                if sw.branches.len() != m.args() {
+                if pack.branches.len() != m.args() {
                     return Err(self.fatal_error(
                         modifier.span.clone().merge(span),
                         format!(
@@ -78,13 +78,17 @@ impl Compiler {
                                     function pack has {} functions",
                             m,
                             m.args(),
-                            sw.branches.len()
+                            pack.branches.len()
                         ),
                     ));
                 }
                 let new = Modified {
                     modifier: modifier.clone(),
-                    operands: sw.branches.into_iter().map(|w| w.map(Word::Func)).collect(),
+                    operands: pack
+                        .branches
+                        .into_iter()
+                        .map(|w| w.map(Word::Func))
+                        .collect(),
                 };
                 Ok(Some(new))
             }
@@ -208,9 +212,11 @@ impl Compiler {
                     if operands.len() == 1 {
                         let operand = operands.remove(0);
                         operands = match operand.value {
-                            Word::Switch(sw) => {
-                                sw.branches.into_iter().map(|b| b.map(Word::Func)).collect()
-                            }
+                            Word::Pack(pack) => pack
+                                .branches
+                                .into_iter()
+                                .map(|b| b.map(Word::Func))
+                                .collect(),
                             word => vec![operand.span.sp(word)],
                         };
                     }

@@ -770,8 +770,8 @@ impl<'i> Parser<'i> {
             }
             if let Some(arg) = self.try_func().or_else(|| self.try_undertied()) {
                 // Parse switch function syntax
-                if let Word::Switch(sw) = &arg.value {
-                    if i == 0 && !sw.angled && sw.branches.len() >= modifier.args() {
+                if let Word::Pack(pack) = &arg.value {
+                    if i == 0 && !pack.angled && pack.branches.len() >= modifier.args() {
                         args.push(arg);
                         break;
                     }
@@ -816,12 +816,12 @@ impl<'i> Parser<'i> {
             Modifier::Primitive(Primitive::Bracket) => {
                 let mut operands = Vec::new();
                 if let Some(Sp {
-                    value: Word::Switch(sw),
+                    value: Word::Pack(pack),
                     ..
                 }) = args.first()
                 {
                     operands.extend(
-                        sw.branches
+                        pack.branches
                             .iter()
                             .map(|branch| Word::Func(branch.value.clone())),
                     );
@@ -946,10 +946,10 @@ impl<'i> Parser<'i> {
             span.sp(Word::SemicolonPop)
         } else if let Some(sc) = self.next_token_map(Token::as_semantic_comment) {
             sc.map(Word::SemanticComment)
-        } else if let Some(sw) = self.next_token_map(Token::as_stack_swizzle) {
-            sw.cloned().map(Word::StackSwizzle)
-        } else if let Some(sw) = self.next_token_map(Token::as_array_swizzle) {
-            sw.cloned().map(Word::ArraySwizzle)
+        } else if let Some(pack) = self.next_token_map(Token::as_stack_swizzle) {
+            pack.cloned().map(Word::StackSwizzle)
+        } else if let Some(pack) = self.next_token_map(Token::as_array_swizzle) {
+            pack.cloned().map(Word::ArraySwizzle)
         } else {
             return None;
         })
@@ -1054,7 +1054,7 @@ impl<'i> Parser<'i> {
                     closed: true,
                 });
                 branches.insert(0, first);
-                outer_span.sp(Word::Switch(Switch {
+                outer_span.sp(Word::Pack(FunctionPack {
                     branches,
                     closed: end.value,
                     angled: false,
@@ -1097,7 +1097,7 @@ impl<'i> Parser<'i> {
                 closed: true,
             });
             branches.insert(0, first);
-            outer_span.sp(Word::Switch(Switch {
+            outer_span.sp(Word::Pack(FunctionPack {
                 branches,
                 closed: end.value,
                 angled: true,
@@ -1228,8 +1228,8 @@ fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
             arr.lines = unsplit_words_impl(arr.lines, true);
             Word::Array(arr)
         }
-        Word::Switch(mut sw) => {
-            sw.branches = sw
+        Word::Pack(mut pack) => {
+            pack.branches = pack
                 .branches
                 .into_iter()
                 .map(|mut br| {
@@ -1237,7 +1237,7 @@ fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
                     br
                 })
                 .collect();
-            Word::Switch(sw)
+            Word::Pack(pack)
         }
         Word::Modified(mut m) => {
             m.operands = m.operands.into_iter().map(unsplit_word).collect();
@@ -1268,8 +1268,8 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
                 .collect();
             Word::Array(arr)
         }
-        Word::Switch(mut sw) => {
-            sw.branches = sw
+        Word::Pack(mut pack) => {
+            pack.branches = pack
                 .branches
                 .into_iter()
                 .map(|mut br| {
@@ -1277,7 +1277,7 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
                     br
                 })
                 .collect();
-            Word::Switch(sw)
+            Word::Pack(pack)
         }
         Word::Modified(mut m) => {
             m.operands = m.operands.into_iter().map(split_word).collect();
@@ -1339,8 +1339,8 @@ pub(crate) fn count_placeholders(words: &[Sp<Word>]) -> usize {
                 }
             }
             Word::Modified(m) => count += count_placeholders(&m.operands),
-            Word::Switch(sw) => {
-                for branch in &sw.branches {
+            Word::Pack(pack) => {
+                for branch in &pack.branches {
                     for line in &branch.value.lines {
                         count += count_placeholders(line);
                     }

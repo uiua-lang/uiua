@@ -901,7 +901,7 @@ impl<'a> Formatter<'a> {
                     (func.lines.iter().flatten()).filter(|word| word.value.is_code());
                 if code_words.clone().count() == 1 {
                     let word = code_words.next().unwrap();
-                    if let Word::Switch(_) = &word.value {
+                    if let Word::Pack(_) = &word.value {
                         if word.span.as_str(self.inputs, |s| s.starts_with('(')) {
                             self.format_word(word, depth, true);
                             return;
@@ -922,10 +922,10 @@ impl<'a> Formatter<'a> {
                 self.format_multiline_words(&func.lines, false, true, depth + 1);
                 self.output.push(')');
             }
-            Word::Switch(sw) => {
-                let use_angle = angle_switch || sw.angled;
+            Word::Pack(pack) => {
+                let use_angle = angle_switch || pack.angled;
                 self.output.push(if use_angle { '⟨' } else { '(' });
-                let any_multiline = sw.branches.iter().any(|br| {
+                let any_multiline = pack.branches.iter().any(|br| {
                     br.value.lines.len() > 1
                         || br
                             .value
@@ -934,7 +934,7 @@ impl<'a> Formatter<'a> {
                             .flatten()
                             .any(|word| word_is_multiline(&word.value))
                 });
-                for (i, br) in sw.branches.iter().enumerate() {
+                for (i, br) in pack.branches.iter().enumerate() {
                     let add_leading_newline = i == 0
                         && any_multiline
                         && !(br.value.lines.first()).is_some_and(|line| line.is_empty());
@@ -1251,7 +1251,7 @@ fn word_is_multiline(word: &Word) -> bool {
                 || (func.lines.iter())
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }
-        Word::Switch(sw) => sw.branches.iter().any(|br| {
+        Word::Pack(pack) => pack.branches.iter().any(|br| {
             br.value.lines.len() > 1
                 || (br.value.lines.iter())
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))

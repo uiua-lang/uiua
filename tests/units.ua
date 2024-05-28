@@ -548,6 +548,11 @@ Fact ← |1 ⟨×Fact-1.|1⟩<2.
 ⍤⟜≍: [1 1 2 2 4] [⟜⊙⟜⊙⋅∘ 1 2 3 4]
 ⍤⟜≍: [1 3] [⟜3 1]
 
+# By
+⍤⟜≍: [0 5] [⊸0] 5
+⍤⟜≍: [8 5] [⊸+] 3 5
+⍤⟜≍: [6 3] [⊸(++)] 1 2 3
+
 # ThisFile
 ⍤⟜≍: $"tests_units.ua" Sep ThisFile
 ⍤⟜≍: ThisFile /◇⊂ {ThisFileDir Sep ThisFileName}

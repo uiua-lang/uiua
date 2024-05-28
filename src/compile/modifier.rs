@@ -490,6 +490,8 @@ impl Compiler {
                                     },
                                 );
                             }
+                        } else {
+                            instrs.insert(0, Instr::TouchStack { count: 1, span })
                         }
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }

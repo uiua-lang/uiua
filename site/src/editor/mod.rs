@@ -905,7 +905,7 @@ pub fn Editor<'a>(
             "docs/experimental#stack-swizzles",
         ),
         (
-            "⊣",
+            "⋊",
             "('') array swizzle",
             "experimental-glyph-button",
             None,

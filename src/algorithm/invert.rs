@@ -13,8 +13,8 @@ use regex::Regex;
 use crate::{
     check::{instrs_signature, instrs_signature_no_temp},
     primitive::{ImplPrimitive, Primitive},
-    Assembly, BindingKind, Compiler, Function, FunctionId, Instr, Signature, Span, SysOp,
-    TempStack, Uiua, UiuaResult, Value,
+    Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionId, Instr, Signature, Span,
+    SysOp, TempStack, Uiua, UiuaResult, Value,
 };
 
 use super::IgnoreError;
@@ -243,7 +243,7 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         return Some(EcoVec::new());
     }
     if DEBUG {
-        println!("inverting {:?}", instrs);
+        println!("inverting {:?}", FmtInstrs(instrs, &comp.asm));
     }
 
     let mut inverted = EcoVec::new();
@@ -253,16 +253,21 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
             if let Some((input, mut inv)) = pattern.invert_extract(curr_instrs, comp) {
                 if DEBUG {
                     println!(
-                        "matched pattern {:?} on {:?} to {inv:?}",
+                        "matched pattern {:?} on {:?} to {:?}",
                         pattern,
-                        &curr_instrs[..curr_instrs.len() - input.len()],
+                        FmtInstrs(&curr_instrs[..curr_instrs.len() - input.len()], &comp.asm),
+                        FmtInstrs(&inv, &comp.asm)
                     );
                 }
                 inv.extend(inverted);
                 inverted = inv;
                 if input.is_empty() {
                     if DEBUG {
-                        println!("inverted {:?} to {:?}", instrs, inverted);
+                        println!(
+                            "inverted {:?} to {:?}",
+                            FmtInstrs(instrs, &comp.asm),
+                            FmtInstrs(&inverted, &comp.asm)
+                        );
                     }
                     return resolve_uns(inverted, comp);
                 }
@@ -271,6 +276,14 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
             }
         }
         break;
+    }
+
+    if DEBUG {
+        println!(
+            "inverting {:?} failed with remaining {:?}",
+            FmtInstrs(instrs, &comp.asm),
+            FmtInstrs(curr_instrs, &comp.asm)
+        );
     }
 
     None
@@ -574,13 +587,14 @@ fn resolve_uns(instrs: EcoVec<Instr>, comp: &mut Compiler) -> Option<EcoVec<Inst
     }
     fn resolve_uns(instrs: EcoVec<Instr>, comp: &mut Compiler) -> Option<EcoVec<Instr>> {
         let mut resolved = EcoVec::new();
-        for instr in instrs {
+        let mut instrs = instrs.into_iter().peekable();
+        while let Some(instr) = instrs.next() {
             match instr {
-                Instr::Prim(Primitive::Un, _) => {
-                    let prev = resolved.pop()?;
-                    let Instr::PushFunc(f) = prev else {
-                        return None;
-                    };
+                Instr::PushFunc(f)
+                    if (instrs.peek())
+                        .is_some_and(|instr| matches!(instr, Instr::Prim(Primitive::Un, _))) =>
+                {
+                    instrs.next();
                     let instrs = f.instrs(comp).to_vec();
                     let inverse = invert_instrs(&instrs, comp)?;
                     resolved.extend(inverse);

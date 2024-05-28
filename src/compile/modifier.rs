@@ -611,7 +611,7 @@ impl Compiler {
                 self.add_span(span.clone());
                 if let Some(inverted) = invert_instrs(&instrs, self) {
                     let sig = self.sig_of(&inverted, &span)?;
-                    finish!(inverted, sig)
+                    finish!(inverted, sig);
                 } else {
                     return Err(self.fatal_error(span, "No inverse found"));
                 }

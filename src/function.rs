@@ -249,6 +249,40 @@ impl Instr {
     }
 }
 
+pub(crate) struct FmtInstrs<'a>(pub &'a [Instr], pub &'a Assembly);
+impl<'a> fmt::Debug for FmtInstrs<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "(")?;
+        for (i, instr) in self.0.iter().enumerate() {
+            if i > 0 {
+                write!(f, " ")?;
+            }
+            match instr {
+                Instr::PushFunc(func) => {
+                    FmtInstrs(func.instrs(self.1), self.1).fmt(f)?;
+                }
+                instr => instr.fmt(f)?,
+            }
+        }
+        write!(f, ")")?;
+        Ok(())
+    }
+}
+impl<'a> fmt::Display for FmtInstrs<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (i, instr) in self.0.iter().enumerate() {
+            if i > 0 {
+                write!(f, " ")?;
+            }
+            match instr {
+                Instr::PushFunc(func) => FmtInstrs(func.instrs(self.1), self.1).fmt(f),
+                instr => instr.fmt(f),
+            }?
+        }
+        Ok(())
+    }
+}
+
 /// A swizzle for the stack
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct StackSwizzle {

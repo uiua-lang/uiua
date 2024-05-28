@@ -1641,7 +1641,7 @@ mod tests {
     #[cfg(test)]
     #[test]
     fn gen_grammar_file() {
-        fn gen_group(prims: impl Iterator<Item = Primitive> + Clone) -> String {
+        fn gen_group(prims: impl Iterator<Item = Primitive> + Clone, additional: &str) -> String {
             let glyphs = prims
                 .clone()
                 .flat_map(|p| {
@@ -1689,31 +1689,46 @@ mod tests {
             literal_names.sort_by_key(|s| s.len());
             literal_names.reverse();
             let literal_names = literal_names.join("");
-            format!(r#"[{glyphs}]|(?<![a-zA-Z$])({format_names}{literal_names})(?![a-zA-Z])"#)
+            format!(
+                r#"[{glyphs}]|(?<![a-zA-Z$])({format_names}{literal_names})(?![a-zA-Z]){additional}"#
+            )
         }
 
         let stack_functions = gen_group(
             Primitive::non_deprecated()
                 .filter(|p| p.class() == PrimClass::Stack && p.modifier_args().is_none())
                 .chain(Some(Primitive::Identity)),
+            "",
         );
-        let noadic_functions = gen_group(Primitive::non_deprecated().filter(|p| {
-            ![PrimClass::Stack, PrimClass::Constant].contains(&p.class())
-                && p.modifier_args().is_none()
-                && p.args() == Some(0)
-        }));
-        let monadic_functions = gen_group(Primitive::non_deprecated().filter(|p| {
-            ![PrimClass::Stack, PrimClass::Planet].contains(&p.class())
-                && p.modifier_args().is_none()
-                && p.args() == Some(1)
-        }));
-        let dyadic_functions = gen_group(Primitive::non_deprecated().filter(|p| {
-            p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(2)
-        }));
-        let monadic_modifiers =
-            gen_group(Primitive::non_deprecated().filter(|p| matches!(p.modifier_args(), Some(1))));
+        let noadic_functions = gen_group(
+            Primitive::non_deprecated().filter(|p| {
+                ![PrimClass::Stack, PrimClass::Constant].contains(&p.class())
+                    && p.modifier_args().is_none()
+                    && p.args() == Some(0)
+            }),
+            "",
+        );
+        let monadic_functions = gen_group(
+            Primitive::non_deprecated().filter(|p| {
+                ![PrimClass::Stack, PrimClass::Planet].contains(&p.class())
+                    && p.modifier_args().is_none()
+                    && p.args() == Some(1)
+            }),
+            "|⋊[a-zA-Z]*",
+        );
+        let dyadic_functions = gen_group(
+            Primitive::non_deprecated().filter(|p| {
+                p.class() != PrimClass::Stack && p.modifier_args().is_none() && p.args() == Some(2)
+            }),
+            "",
+        );
+        let monadic_modifiers = gen_group(
+            Primitive::non_deprecated().filter(|p| matches!(p.modifier_args(), Some(1))),
+            "",
+        );
         let dyadic_modifiers: String = gen_group(
             Primitive::non_deprecated().filter(|p| matches!(p.modifier_args(), Some(n) if n >= 2)),
+            "",
         );
 
         let text = format!(

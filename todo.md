@@ -2,7 +2,6 @@
 
 - 0.11
   - Fix element id links on site
-  - Add arrays swizzles to lang ext grammar
   - Release it!
 - 0.12
   - `un on` for all "left-invertible" functions

@@ -370,11 +370,16 @@ impl Spanner {
                     }
                 }
                 Word::Switch(sw) => {
-                    if word.span.as_str(self.inputs(), |s| s.starts_with('?')) {
-                        spans.push(word.span.clone().sp(SpanKind::Delimiter));
-                        continue;
-                    }
-                    spans.push(word.span.just_start(self.inputs()).sp(SpanKind::Delimiter));
+                    let kind = if let Some(inline) = sw
+                        .branches
+                        .first()
+                        .and_then(|br| self.code_meta.function_sigs.get(&br.span))
+                    {
+                        SpanKind::FuncDelim(inline.sig)
+                    } else {
+                        SpanKind::Delimiter
+                    };
+                    spans.push(word.span.just_start(self.inputs()).sp(kind));
                     for (i, branch) in sw.branches.iter().enumerate() {
                         let start_span = branch.span.just_start(self.inputs());
                         if i > 0 && start_span.as_str(self.inputs(), |s| s == "|") {

@@ -1,8 +1,8 @@
 # Uiua Todo
 
 - 0.11
-  - Choose a better array swizzle glyph
-  - Fix LSP signatures on function packs
+  - Fix element id links on site
+  - Add arrays swizzles to lang ext grammar
   - Release it!
 - 0.12
   - `un on` for all "left-invertible" functions

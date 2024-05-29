@@ -752,14 +752,14 @@ pub fn gen_code_view(code: &str) -> View {
                         }
                         SpanKind::StackSwizzle(sw) => {
                             let class = format!("code-span code-hover {}", color_class);
-                            let title = format!("swizzle {}", sw.signature());
+                            let title = format!("stack swizzle {}", sw.signature());
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
                         SpanKind::ArraySwizzle(sw) => {
                             let class = format!("code-span code-hover {}", color_class);
-                            let title = format!("swizzle {}", sw.signature());
+                            let title = format!("array swizzle {}", sw.signature());
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )

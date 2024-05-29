@@ -10,6 +10,7 @@
   - `◹ triangle` modifier
   - Array bar notation
   - Show array shape on hover
+  - Error classes
   - Plots
 - Media window
 - Trace images/audio in pad

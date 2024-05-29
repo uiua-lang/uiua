@@ -487,22 +487,26 @@ impl Value {
         )
     }
     pub(crate) fn undo_keep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let counts = self.as_nats(
+        self.into_nats_with_other(
+            kept,
             env,
             "Keep amount must be a natural number \
             or list of natural numbers",
-        )?;
-        if self.rank() == 0 {
-            return Err(env.error("Cannot invert scalar keep"));
-        }
-        kept.generic_bin_into(
-            into,
-            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
-            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
-            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
-            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
-            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
-            |a, b| env.error(format!("Cannot unkeep {a} array with {b} array")),
+            false,
+            |counts, shape, kept| {
+                if shape.len() == 0 {
+                    return Err(env.error("Cannot invert scalar keep"));
+                }
+                kept.generic_bin_into(
+                    into,
+                    |a, b| a.undo_keep(counts, b, env).map(Into::into),
+                    |a, b| a.undo_keep(counts, b, env).map(Into::into),
+                    |a, b| a.undo_keep(counts, b, env).map(Into::into),
+                    |a, b| a.undo_keep(counts, b, env).map(Into::into),
+                    |a, b| a.undo_keep(counts, b, env).map(Into::into),
+                    |a, b| env.error(format!("Cannot unkeep {a} array with {b} array")),
+                )
+            },
         )
     }
 }

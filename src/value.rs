@@ -881,6 +881,24 @@ impl Value {
             with,
         )
     }
+    pub(crate) fn into_nats_with_other<C: ErrorContext>(
+        self,
+        other: Self,
+        ctx: &C,
+        requirement: &'static str,
+        allow_non_list: bool,
+        with: impl FnOnce(&[usize], &Shape, Value) -> Result<Value, C::Error> + Clone,
+    ) -> Result<Value, C::Error> {
+        self.into_number_list_with_other(
+            other,
+            ctx,
+            requirement,
+            allow_non_list,
+            |f| f.fract() == 0.0 && f >= 0.0,
+            |f| f as usize,
+            with,
+        )
+    }
     /// Attempt to convert the array to a list of bytes
     ///
     /// The `requirement` parameter is used in error messages.
@@ -1021,6 +1039,82 @@ impl Value {
             Value::Box(mut arr) => {
                 for Boxed(b) in &mut arr.data {
                     *b = take(b).into_number_list_with(
+                        ctx,
+                        requirement,
+                        allow_non_list,
+                        test,
+                        convert,
+                        with.clone(),
+                    )?;
+                }
+                Ok(Value::Box(arr))
+            }
+            value => Err(ctx.error(format!(
+                "{requirement}, but it is {}",
+                value.type_name_plural()
+            ))),
+        }
+    }
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn into_number_list_with_other<N, C>(
+        self,
+        other: Self,
+        ctx: &C,
+        requirement: &'static str,
+        allow_non_list: bool,
+        test: fn(f64) -> bool,
+        convert: fn(f64) -> N,
+        with: impl FnOnce(&[N], &Shape, Value) -> Result<Value, C::Error> + Clone,
+    ) -> Result<Value, C::Error>
+    where
+        C: ErrorContext,
+    {
+        match self {
+            Value::Num(nums) => {
+                if nums.rank() > 1 && !allow_non_list {
+                    return Err(
+                        ctx.error(format!("{requirement}, but its rank is {}", nums.rank()))
+                    );
+                }
+                let mut result = Vec::with_capacity(nums.row_count());
+                for &num in nums.data() {
+                    if !test(num) {
+                        return Err(ctx.error(requirement));
+                    }
+                    result.push(convert(num));
+                }
+                with(&result, &nums.shape, other)
+            }
+            Value::Byte(bytes) => {
+                if bytes.rank() > 1 && !allow_non_list {
+                    return Err(
+                        ctx.error(format!("{requirement}, but its rank is {}", bytes.rank()))
+                    );
+                }
+                let mut result = Vec::with_capacity(bytes.row_count());
+                for &byte in bytes.data() {
+                    let num = byte as f64;
+                    if !test(num) {
+                        return Err(ctx.error(requirement));
+                    }
+                    result.push(convert(num));
+                }
+                with(&result, &bytes.shape, other)
+            }
+            Value::Box(mut arr) => {
+                if !arr.shape.starts_with(other.shape()) {
+                    return Err(ctx.error(format!(
+                        "Shapes {} and {} are not compatible",
+                        arr.shape,
+                        other.shape()
+                    )));
+                }
+                let other_row_shape = Shape::from(&arr.shape[other.rank()..]);
+                for (Boxed(bx), other) in (arr.data.as_mut_slice().iter_mut())
+                    .zip(other.into_row_shaped_slices(other_row_shape.clone()))
+                {
+                    *bx = take(bx).into_number_list_with_other(
+                        other.unboxed(),
                         ctx,
                         requirement,
                         allow_non_list,

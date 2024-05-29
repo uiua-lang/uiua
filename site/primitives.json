@@ -157,7 +157,8 @@
     "args": 2,
     "outputs": 1,
     "class": "Tcp",
-    "description": "Make an HTTP(S) request"
+    "description": "Make an HTTP(S) request",
+    "deprecated": true
   },
   "&imd": {
     "args": 1,
@@ -316,8 +317,7 @@
     "args": 1,
     "outputs": 1,
     "class": "Tcp",
-    "description": "Create a TCP socket with TLS support",
-    "experimental": true
+    "description": "Create a TCP socket with TLS support"
   },
   "&tlsl": {
     "args": 1,

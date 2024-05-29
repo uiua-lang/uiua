@@ -2,7 +2,7 @@
 
 Uiua is not yet stable.
 
-## 0.11.0 - 2024-??-??
+## 0.11.0 - 2024-06-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - **Breaking Change** - [`un °`](https://uiua.org/docs/un) [`fix ¤`](https://uiua.org/docs/fix) now does pattern matching

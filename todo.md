@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - Make new pad hoverable without holding ctrl
   - Write release blog post
   - Release it!
 - 0.12
@@ -11,13 +10,13 @@
   - `◹ triangle` modifier
   - Array bar notation
   - Show array shape on hover
+  - Plots
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Writing good code tutorial
 - Multimedia
-  - Plots
   - Sound input
   - Webcam input
 - System APIs

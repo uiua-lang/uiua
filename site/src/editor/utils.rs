@@ -150,7 +150,7 @@ impl State {
         let width = rect.width();
         let height = area.scroll_height().min(rect.height() as i32);
         let new_height = format!("max({height}px,{})", self.min_height);
-        let new_width = format!("max({width}px,100%)");
+        let new_width = format!("max(calc({width}px + 1em),100%)");
         area.style().set_property("width", "auto").unwrap();
         area.style().set_property("height", "auto").unwrap();
         area.style().set_property("width", &new_width).unwrap();

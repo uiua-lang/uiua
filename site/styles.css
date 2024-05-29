@@ -471,10 +471,8 @@ input[type=number] {
 .code-entry {
     outline: none;
     border: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-    margin-left: 0;
-    padding-left: 0;
+    padding: 0.15em 0 0 0;
+    margin: 0 0 0 0;
     /* background-color: #0002; */
     /* color: #0008; */
     background-color: transparent;

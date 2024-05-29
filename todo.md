@@ -1,12 +1,13 @@
 # Uiua Todo
 
 - 0.11
-  - Fix element id links on site
+  - Write release blog post
   - Release it!
 - 0.12
   - `un on` for all "left-invertible" functions
   - Dyadic functions with box first arguments
   - Dynamic modules
+  - `◹ triangle` modifier
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

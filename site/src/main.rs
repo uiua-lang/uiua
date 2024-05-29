@@ -142,27 +142,7 @@ pub fn Site() -> impl IntoView {
 
     view! {
         <Router>
-            {
-                move || {
-                    let location = use_location();
-                    create_effect(move |_| {
-                        let hash = location.hash.get();
-                        logging::log!("{:?}", hash);
-                        if !hash.is_empty() {
-                            set_timeout(
-                                move || {
-
-                                    let id = hash.trim_start_matches('#');
-                                    if let Some(elem) = get_element::<Element>(id) {
-                                        elem.scroll_into_view();
-                                    }
-                                },
-                                Duration::from_millis(0),
-                            )
-                        }
-                    });
-                }
-            }
+            <ScrollToHash/>
             <Routes>
                 <Route path="embedpad" view=EmbedPad/>
                 <Route path="embed" view=Embed/>
@@ -708,4 +688,26 @@ fn gen_primitives_json() {
     }
     let json = serde_json::to_string_pretty(&prims).unwrap();
     fs::write("primitives.json", json).unwrap();
+}
+
+#[component]
+fn ScrollToHash() -> impl IntoView {
+    move || {
+        let location = use_location();
+        create_effect(move |_| {
+            let hash = location.hash.get();
+            logging::log!("{:?}", hash);
+            if !hash.is_empty() {
+                set_timeout(
+                    move || {
+                        let id = hash.trim_start_matches('#');
+                        if let Some(elem) = get_element::<Element>(id) {
+                            elem.scroll_into_view();
+                        }
+                    },
+                    Duration::from_millis(0),
+                )
+            }
+        });
+    }
 }

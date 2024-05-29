@@ -532,7 +532,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "IteratingModifier",
-    "description": "Apply a function to each element of an array or arrays."
+    "description": "Apply a function to each element of an array or arrays"
   },
   "equals": {
     "ascii": "=",

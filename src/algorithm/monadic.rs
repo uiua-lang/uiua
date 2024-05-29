@@ -3,10 +3,11 @@
 use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
+    convert::identity,
     f64::consts::{PI, TAU},
-    iter::repeat,
+    iter::{self, repeat},
     mem::size_of,
-    ptr,
+    ptr, slice,
 };
 
 use ecow::{eco_vec, EcoVec};
@@ -1080,10 +1081,26 @@ impl Value {
     }
     /// Get the `first` index `where` the value is nonzero
     pub fn first_where(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        self.first_where_impl(env, identity, identity)
+    }
+    /// Get the last index `where` the value is nonzero
+    pub fn last_where(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        self.first_where_impl(env, Iterator::rev, Iterator::rev)
+    }
+    fn first_where_impl<'a, B, N>(
+        &'a self,
+        env: &Uiua,
+        byte_iter: impl Fn(iter::Enumerate<slice::Iter<'a, u8>>) -> B,
+        num_iter: impl Fn(iter::Enumerate<slice::Iter<'a, f64>>) -> N,
+    ) -> UiuaResult<Array<f64>>
+    where
+        B: Iterator<Item = (usize, &'a u8)>,
+        N: Iterator<Item = (usize, &'a f64)>,
+    {
         if self.rank() <= 1 {
             match self {
                 Value::Num(nums) => {
-                    for (i, n) in nums.data.iter().enumerate() {
+                    for (i, n) in num_iter(nums.data.iter().enumerate()) {
                         if n.fract() != 0.0 || *n < 0.0 {
                             return Err(env.error("Argument to where must be an array of naturals"));
                         }
@@ -1096,7 +1113,7 @@ impl Value {
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
                 Value::Byte(bytes) => {
-                    for (i, n) in bytes.data.iter().enumerate() {
+                    for (i, n) in byte_iter(bytes.data.iter().enumerate()) {
                         if *n != 0 {
                             return Ok(Array::scalar(i as f64));
                         }
@@ -1113,7 +1130,7 @@ impl Value {
         } else {
             match self {
                 Value::Num(nums) => {
-                    for (i, n) in nums.data.iter().enumerate() {
+                    for (i, n) in num_iter(nums.data.iter().enumerate()) {
                         if n.fract() != 0.0 || *n < 0.0 {
                             return Err(env.error("Argument to where must be an array of naturals"));
                         }
@@ -1132,7 +1149,7 @@ impl Value {
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
                 Value::Byte(bytes) => {
-                    for (i, n) in bytes.data.iter().enumerate() {
+                    for (i, n) in byte_iter(bytes.data.iter().enumerate()) {
                         if *n != 0 {
                             let mut i = i;
                             let mut res = Vec::with_capacity(bytes.rank());

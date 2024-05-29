@@ -1379,7 +1379,7 @@ primitive!(
     /// ex: ⊕□\+=@    . "Everyday man's on the block"
     ///   : ⊕□\+↻¯1=@ . "Everyday man's on the block"
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
-    /// Apply a function to each element of an array or arrays.
+    /// Apply a function to each element of an array or arrays
     ///
     /// This is the element-wise version of [rows].
     /// **This is often not what you want.** Prefer using pervasive functions or [table] when possible.

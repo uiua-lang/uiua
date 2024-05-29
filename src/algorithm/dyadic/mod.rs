@@ -450,29 +450,32 @@ impl Value {
 
 impl Value {
     /// Use this value as counts to `keep` another
-    pub fn keep(&self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
-        let counts = self.as_nats(
+    pub fn keep(self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.into_nats_with(
             env,
             "Keep amount must be a natural number \
             or list of natural numbers",
-        )?;
-        Ok(if self.rank() == 0 {
-            match kept {
-                Value::Num(a) => a.scalar_keep(counts[0]).into(),
-                Value::Byte(a) => a.scalar_keep(counts[0]).into(),
-                Value::Complex(a) => a.scalar_keep(counts[0]).into(),
-                Value::Char(a) => a.scalar_keep(counts[0]).into(),
-                Value::Box(a) => a.scalar_keep(counts[0]).into(),
-            }
-        } else {
-            match kept {
-                Value::Num(a) => a.list_keep(&counts, env)?.into(),
-                Value::Byte(a) => a.list_keep(&counts, env)?.into(),
-                Value::Complex(a) => a.list_keep(&counts, env)?.into(),
-                Value::Char(a) => a.list_keep(&counts, env)?.into(),
-                Value::Box(a) => a.list_keep(&counts, env)?.into(),
-            }
-        })
+            false,
+            |counts, shape| {
+                Ok(if shape.len() == 0 {
+                    match kept {
+                        Value::Num(a) => a.scalar_keep(counts[0]).into(),
+                        Value::Byte(a) => a.scalar_keep(counts[0]).into(),
+                        Value::Complex(a) => a.scalar_keep(counts[0]).into(),
+                        Value::Char(a) => a.scalar_keep(counts[0]).into(),
+                        Value::Box(a) => a.scalar_keep(counts[0]).into(),
+                    }
+                } else {
+                    match kept {
+                        Value::Num(a) => a.list_keep(counts, env)?.into(),
+                        Value::Byte(a) => a.list_keep(counts, env)?.into(),
+                        Value::Complex(a) => a.list_keep(counts, env)?.into(),
+                        Value::Char(a) => a.list_keep(counts, env)?.into(),
+                        Value::Box(a) => a.list_keep(counts, env)?.into(),
+                    }
+                })
+            },
+        )
     }
     pub(crate) fn unkeep(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         self.generic_into(

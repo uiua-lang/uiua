@@ -643,6 +643,22 @@ impl Value {
     ) -> Result<Vec<isize>, C::Error> {
         self.as_number_list(ctx, requirement, |f| f.fract() == 0.0, |f| f as isize)
     }
+    pub(crate) fn into_ints_with<C: ErrorContext>(
+        self,
+        ctx: &C,
+        requirement: &'static str,
+        allow_non_list: bool,
+        with: impl FnOnce(&[isize], &Shape) -> Result<Value, C::Error> + Clone,
+    ) -> Result<Value, C::Error> {
+        self.into_number_list_with(
+            ctx,
+            requirement,
+            allow_non_list,
+            |f| f.fract() == 0.0,
+            |f| f as isize,
+            with,
+        )
+    }
     pub(crate) fn as_ints_or_infs(
         &self,
         env: &Uiua,
@@ -849,6 +865,22 @@ impl Value {
             |f| f as usize,
         )
     }
+    pub(crate) fn into_nats_with<C: ErrorContext>(
+        self,
+        ctx: &C,
+        requirement: &'static str,
+        allow_non_list: bool,
+        with: impl FnOnce(&[usize], &Shape) -> Result<Value, C::Error> + Clone,
+    ) -> Result<Value, C::Error> {
+        self.into_number_list_with(
+            ctx,
+            requirement,
+            allow_non_list,
+            |f| f.fract() == 0.0 && f >= 0.0,
+            |f| f as usize,
+            with,
+        )
+    }
     /// Attempt to convert the array to a list of bytes
     ///
     /// The `requirement` parameter is used in error messages.
@@ -941,6 +973,69 @@ impl Value {
                 )))
             }
         })
+    }
+    pub(crate) fn into_number_list_with<N, C>(
+        self,
+        ctx: &C,
+        requirement: &'static str,
+        allow_non_list: bool,
+        test: fn(f64) -> bool,
+        convert: fn(f64) -> N,
+        with: impl FnOnce(&[N], &Shape) -> Result<Value, C::Error> + Clone,
+    ) -> Result<Value, C::Error>
+    where
+        C: ErrorContext,
+    {
+        match self {
+            Value::Num(nums) => {
+                if nums.rank() > 1 && !allow_non_list {
+                    return Err(
+                        ctx.error(format!("{requirement}, but its rank is {}", nums.rank()))
+                    );
+                }
+                let mut result = Vec::with_capacity(nums.row_count());
+                for &num in nums.data() {
+                    if !test(num) {
+                        return Err(ctx.error(requirement));
+                    }
+                    result.push(convert(num));
+                }
+                with(&result, &nums.shape)
+            }
+            Value::Byte(bytes) => {
+                if bytes.rank() > 1 && !allow_non_list {
+                    return Err(
+                        ctx.error(format!("{requirement}, but its rank is {}", bytes.rank()))
+                    );
+                }
+                let mut result = Vec::with_capacity(bytes.row_count());
+                for &byte in bytes.data() {
+                    let num = byte as f64;
+                    if !test(num) {
+                        return Err(ctx.error(requirement));
+                    }
+                    result.push(convert(num));
+                }
+                with(&result, &bytes.shape)
+            }
+            Value::Box(mut arr) => {
+                for Boxed(b) in &mut arr.data {
+                    *b = take(b).into_number_list_with(
+                        ctx,
+                        requirement,
+                        allow_non_list,
+                        test,
+                        convert,
+                        with.clone(),
+                    )?;
+                }
+                Ok(Value::Box(arr))
+            }
+            value => Err(ctx.error(format!(
+                "{requirement}, but it is {}",
+                value.type_name_plural()
+            ))),
+        }
     }
     pub(crate) fn as_integer_array(
         &self,

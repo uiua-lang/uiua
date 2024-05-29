@@ -79,18 +79,24 @@ impl Value {
     }
     /// Use this array as an index to pick from another
     pub fn pick(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
-        let (index_shape, index_data) = self.as_shaped_indices(env)?;
-        Ok(match from {
-            Value::Num(a) => Value::Num(a.pick(index_shape, &index_data, env)?),
-            Value::Byte(a) => op_bytes_retry_fill(
-                a,
-                |a| a.pick(index_shape, &index_data, env).map(Into::into),
-                |a| a.pick(index_shape, &index_data, env).map(Into::into),
-            )?,
-            Value::Complex(a) => Value::Complex(a.pick(index_shape, &index_data, env)?),
-            Value::Char(a) => Value::Char(a.pick(index_shape, &index_data, env)?),
-            Value::Box(a) => Value::Box(a.pick(index_shape, &index_data, env)?),
-        })
+        self.into_ints_with(
+            env,
+            "Index must be an array of integers",
+            true,
+            |index_data, index_shape| {
+                Ok(match from {
+                    Value::Num(a) => Value::Num(a.pick(index_shape, index_data, env)?),
+                    Value::Byte(a) => op_bytes_retry_fill(
+                        a,
+                        |a| a.pick(index_shape, index_data, env).map(Into::into),
+                        |a| a.pick(index_shape, index_data, env).map(Into::into),
+                    )?,
+                    Value::Complex(a) => Value::Complex(a.pick(index_shape, index_data, env)?),
+                    Value::Char(a) => Value::Char(a.pick(index_shape, index_data, env)?),
+                    Value::Box(a) => Value::Box(a.pick(index_shape, index_data, env)?),
+                })
+            },
+        )
     }
     pub(crate) fn undo_pick(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let (idx_shape, index_data) = index.as_shaped_indices(env)?;
@@ -757,19 +763,25 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// Use this value to `select` from another
-    pub fn select(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let (indices_shape, indices_data) = self.as_shaped_indices(env)?;
-        Ok(match from {
-            Value::Num(a) => a.select(indices_shape, &indices_data, env)?.into(),
-            Value::Byte(a) => op_bytes_ref_retry_fill(
-                a,
-                |a| Ok(a.select(indices_shape, &indices_data, env)?.into()),
-                |a| Ok(a.select(indices_shape, &indices_data, env)?.into()),
-            )?,
-            Value::Complex(a) => a.select(indices_shape, &indices_data, env)?.into(),
-            Value::Char(a) => a.select(indices_shape, &indices_data, env)?.into(),
-            Value::Box(a) => a.select(indices_shape, &indices_data, env)?.into(),
-        })
+    pub fn select(self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
+        self.into_ints_with(
+            env,
+            "Index must be an array of integers",
+            true,
+            |indices_data, indices_shape| {
+                Ok(match from {
+                    Value::Num(a) => a.select(indices_shape, indices_data, env)?.into(),
+                    Value::Byte(a) => op_bytes_ref_retry_fill(
+                        a,
+                        |a| Ok(a.select(indices_shape, indices_data, env)?.into()),
+                        |a| Ok(a.select(indices_shape, indices_data, env)?.into()),
+                    )?,
+                    Value::Complex(a) => a.select(indices_shape, indices_data, env)?.into(),
+                    Value::Char(a) => a.select(indices_shape, indices_data, env)?.into(),
+                    Value::Box(a) => a.select(indices_shape, indices_data, env)?.into(),
+                })
+            },
+        )
     }
     pub(crate) fn undo_select(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let (idx_shape, ind) = index.as_shaped_indices(env)?;

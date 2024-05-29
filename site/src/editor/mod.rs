@@ -139,7 +139,7 @@ pub fn Editor<'a>(
     let (get_state, state) = create_signal(state);
     let state_code = move || {
         let mut code = String::new();
-        state.update(|state| code = state.code.clone());
+        state.update(|state| code.clone_from(&state.code));
         code
     };
 

@@ -255,10 +255,7 @@ impl Uiua {
         Arc::get_mut(&mut self.rt.backend).and_then(|b| b.any_mut().downcast_mut())
     }
     /// Take the system backend
-    pub fn take_backend<T: SysBackend>(&mut self) -> Option<T>
-    where
-        T: Default,
-    {
+    pub fn take_backend<T: SysBackend + Default>(&mut self) -> Option<T> {
         self.downcast_backend_mut::<T>().map(take)
     }
     /// Take the assembly

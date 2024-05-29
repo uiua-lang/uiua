@@ -305,10 +305,7 @@ impl Compiler {
         self.macro_env.downcast_backend_mut()
     }
     /// Take the system backend
-    pub fn take_backend<T: SysBackend>(&mut self) -> Option<T>
-    where
-        T: Default,
-    {
+    pub fn take_backend<T: SysBackend + Default>(&mut self) -> Option<T> {
         self.macro_env.take_backend()
     }
     /// Compile a Uiua file from a file at a path
@@ -731,7 +728,7 @@ code:
             // Normal import
             self.resolve_import_path(Path::new(path_str))
         };
-        if self.imports.get(&path).is_none() {
+        if !self.imports.contains_key(&path) {
             let bytes = self
                 .backend()
                 .file_read_all(&path)

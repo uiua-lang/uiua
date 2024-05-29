@@ -449,7 +449,7 @@ fn reduce_table_bytes(
     env: &mut Uiua,
 ) -> Result<(), (Array<u8>, Array<u8>)> {
     macro_rules! all_gs {
-        ($xs:expr, $ys:expr, $ff:expr, $ff_complex:expr, $iden:expr, $fill:expr, $arith:ident, $cmp:ident) => {{
+        ($xs:expr, $ys:expr, $ff:expr, $ff_complex:expr, $iden:expr, $ciden:expr, $fill:expr, $arith:ident, $cmp:ident) => {{
             let fill = $fill.map(Into::into);
             match gp {
                 Primitive::Add => env.push(frtl($xs, $ys, $ff, add::$arith, $iden, fill)),
@@ -471,7 +471,7 @@ fn reduce_table_bytes(
                     $ys,
                     $ff_complex,
                     complex::$arith,
-                    $iden.into(),
+                    Complex::new($iden, $ciden),
                     env.complex_scalar_fill().ok(),
                 )),
                 Primitive::Couple | Primitive::Join => env.push(frtljc($xs, $ys, $ff, $iden, fill)),
@@ -488,6 +488,7 @@ fn reduce_table_bytes(
                 to_left(add::num_num),
                 add::com_x,
                 0.0,
+                0.0,
                 fill,
                 byte_byte,
                 generic
@@ -500,6 +501,7 @@ fn reduce_table_bytes(
                 to_left(mul::num_num),
                 mul::com_x,
                 1.0,
+                0.0,
                 fill,
                 byte_byte,
                 generic
@@ -514,6 +516,7 @@ fn reduce_table_bytes(
                     min::num_num,
                     min::com_x,
                     f64::INFINITY,
+                    f64::INFINITY,
                     fill,
                     num_num,
                     num_num
@@ -524,6 +527,7 @@ fn reduce_table_bytes(
                     ys,
                     to_left(min::num_num),
                     min::com_x,
+                    f64::INFINITY,
                     f64::INFINITY,
                     byte_fill,
                     byte_byte,
@@ -540,6 +544,7 @@ fn reduce_table_bytes(
                     max::num_num,
                     max::com_x,
                     f64::NEG_INFINITY,
+                    f64::NEG_INFINITY,
                     fill,
                     num_num,
                     num_num
@@ -550,6 +555,7 @@ fn reduce_table_bytes(
                     ys,
                     to_left(max::num_num),
                     max::com_x,
+                    f64::NEG_INFINITY,
                     f64::NEG_INFINITY,
                     byte_fill,
                     byte_byte,
@@ -629,7 +635,7 @@ macro_rules! reduce_table_math {
             }
             let fill = env.$fill().ok();
             macro_rules! all_gs {
-                ($ff:expr, $ff_complex:expr, $iden:expr) => {
+                ($ff:expr, $ff_complex:expr, $iden:expr, $ciden:expr) => {
                     match g_prim {
                         Primitive::Add => env.push(frtl(xs, ys, $ff, add::$f, $iden.into(), fill)),
                         Primitive::Sub => env.push(frtl(xs, ys, $ff, sub::$f, $iden.into(), fill)),
@@ -666,7 +672,7 @@ macro_rules! reduce_table_math {
                             ys,
                             $ff_complex,
                             complex::$f,
-                            $iden.into(),
+                            Complex::new($iden, $ciden),
                             env.complex_scalar_fill().ok(),
                         )),
                         Primitive::Couple | Primitive::Join => {
@@ -677,10 +683,12 @@ macro_rules! reduce_table_math {
                 };
             }
             match f_prim {
-                Primitive::Add => all_gs!(add::$f, add::com_x, 0.0),
-                Primitive::Mul => all_gs!(mul::$f, mul::com_x, 1.0),
-                Primitive::Min => all_gs!(min::$f, min::com_x, f64::INFINITY),
-                Primitive::Max => all_gs!(max::$f, max::com_x, f64::NEG_INFINITY),
+                Primitive::Add => all_gs!(add::$f, add::com_x, 0.0, 0.0),
+                Primitive::Mul => all_gs!(mul::$f, mul::com_x, 1.0, 0.0),
+                Primitive::Min => all_gs!(min::$f, min::com_x, f64::INFINITY, f64::INFINITY),
+                Primitive::Max => {
+                    all_gs!(max::$f, max::com_x, f64::NEG_INFINITY, f64::NEG_INFINITY)
+                }
                 _ => return Ok(Err((xs, ys))),
             }
             Ok(Ok(()))

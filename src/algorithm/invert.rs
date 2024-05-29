@@ -175,6 +175,8 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(invert_dump_pattern, "dump"),
         &InvertPatternFn(invert_setinv_pattern, "setinv"),
         &InvertPatternFn(invert_setund_setinv_pattern, "setund_setinv"),
+        &(Val, pat!(Complex, (crate::Complex::I, Mul, Sub))),
+        &(Val, pat!(Atan, (Flip, UnAtan, Div, Mul))),
         &InvertPatternFn(invert_trivial_pattern, "trivial"),
         &InvertPatternFn(invert_array_pattern, "array"),
         &InvertPatternFn(invert_unpack_pattern, "unpack"),
@@ -433,6 +435,23 @@ pub(crate) fn under_instrs(
         &stash1!(Sign, (Abs, Mul)),
         // Pop
         &pat!(Pop, (PushToUnder(1)), (PopUnder(1))),
+        // Coupling left inverses
+        &(
+            Val,
+            pat!(
+                Complex,
+                (CopyToUnder(1), Complex),
+                (PopUnder(1), crate::Complex::I, Mul, Sub)
+            ),
+        ),
+        &(
+            Val,
+            pat!(
+                Atan,
+                (CopyToUnder(1), Atan),
+                (UnAtan, Div, PopUnder(1), Mul)
+            ),
+        ),
         // Array restructuring
         &maybe_val!(stash2!(Take, UndoTake)),
         &maybe_val!(stash2!(Drop, UndoDrop)),
@@ -2590,6 +2609,12 @@ impl AsInstr for PopInline {
 }
 
 impl AsInstr for i32 {
+    fn as_instr(&self, _: usize) -> Instr {
+        Instr::push(Value::from(*self))
+    }
+}
+
+impl AsInstr for crate::Complex {
     fn as_instr(&self, _: usize) -> Instr {
         Instr::push(Value::from(*self))
     }

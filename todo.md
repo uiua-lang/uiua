@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - Change `under (complex val)`, `under (couple val)`, and `under (atan val)` to not pattern match
   - Make new pad hoverable without holding ctrl
   - Write release blog post
   - Release it!

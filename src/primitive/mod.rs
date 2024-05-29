@@ -357,6 +357,7 @@ impl Primitive {
                 Un.format(),
                 Sys(SysOp::ImEncode).format()
             ),
+            Sys(SysOp::HttpsWrite) => format!("use {} instead", Sys(SysOp::TlsConnect).format()),
             Deal => format!("use {Select}{Rise}[{Pop}{Repeat}{Gen}]{Len}{Over} instead"),
             _ => return None,
         })
@@ -369,7 +370,7 @@ impl Primitive {
         matches!(
             self,
             Coordinate
-                | Sys(Ffi | MemCopy | MemFree | TlsListen | TlsConnect)
+                | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Repr | Stringify | Quote | Sig)
         )
     }

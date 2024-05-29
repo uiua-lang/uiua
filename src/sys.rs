@@ -497,9 +497,13 @@ sys_op! {
     (0(0)[1], AudioStream, Audio, "&ast", "audio - stream", Mutating),
     /// Create a TCP listener and bind it to an address
     ///
+    /// Use [&tcpa] on the returned handle to accept connections.
+    ///
     /// See also: [&tlsl]
     (1, TcpListen, Tcp, "&tcpl", "tcp - listen", Mutating),
     /// Create a TLS listener and bind it to an address
+    ///
+    /// Use [&tcpa] on the returned handle to accept connections.
     ///
     /// See also: [&tcpl]
     (1, TlsListen, Tcp, "&tlsl", "tls - listen", Mutating),
@@ -511,14 +515,19 @@ sys_op! {
     /// Create a TCP socket and connect it to an address
     ///
     /// Returns a stream handle
+    /// You can make a request with [&w] and read the response with [&rs], [&rb], or [&ru].
     /// [under][&tcpc] calls [&cl] automatically.
+    /// ex: "GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n"
+    ///   : ⍜(&tlsc "example.com:443"|&rs∞⊸&w:)
     ///
     /// See also: [&tlsc]
     (1, TcpConnect, Tcp, "&tcpc", "tcp - connect", Mutating),
     /// Create a TCP socket with TLS support
     ///
     /// Returns a stream handle
+    /// You can make a request with [&w] and read the response with [&rs], [&rb], or [&ru].
     /// [under][&tlsc] calls [&cl] automatically.
+    /// ex:
     ///
     /// See also: [&tcpc]
     (1, TlsConnect, Tcp, "&tlsc", "tls - connect", Mutating),

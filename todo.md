@@ -1,6 +1,8 @@
 # Uiua Todo
 
 - 0.11
+  - Change `under (complex val)`, `under (couple val)`, and `under (atan val)` to not pattern match
+  - Make new pad hoverable without holding ctrl
   - Write release blog post
   - Release it!
 - 0.12
@@ -8,6 +10,8 @@
   - Dyadic functions with box first arguments
   - Dynamic modules
   - `◹ triangle` modifier
+  - Array bar notation
+  - Show array shape on hover
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

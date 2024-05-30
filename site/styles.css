@@ -528,9 +528,9 @@ input[type=number] {
     text-decoration: none;
 }
 
-.code-hover:hover::after {
-    content: attr(data-title);
-    position: absolute;
+.code-hover {
+    display: none;
+    position: fixed;
     font-family: "Code Font", monospace;
     font-size: 0.7em;
     color: #eee;
@@ -538,8 +538,6 @@ input[type=number] {
     padding: 0.2em;
     border-radius: 0.2em;
     pointer-events: none;
-    margin-top: 1.9em;
-    margin-left: -2em;
     z-index: 1;
     text-decoration: none;
     white-space: pre-wrap;

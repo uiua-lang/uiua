@@ -85,6 +85,7 @@ pub fn Editor<'a>(
     let code_outer_id = move || format!("code-outer{id}");
     let overlay_id = move || format!("overlay{id}");
     let glyph_doc_id = move || format!("glyphdoc{id}");
+    let hover_id = move || format!("hover{id}");
 
     let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
     let code_outer_element = move || -> HtmlDivElement { element(&code_outer_id()) };
@@ -808,6 +809,53 @@ pub fn Editor<'a>(
         );
     };
 
+    // Handle mouse events
+    let code_mouse_move = move |event: MouseEvent| {
+        let (mouse_x, mouse_y) = (event.client_x(), event.client_y());
+        let overlay: HtmlDivElement = element(&overlay_id());
+        let children = overlay.children();
+        let mut subchildren = (0..children.length())
+            .map(|i| children.item(i).unwrap())
+            .flat_map(|child| {
+                let children = child.children();
+                (0..children.length()).map(move |i| children.item(i).unwrap())
+            });
+        let hover_elem: HtmlDivElement = element(&hover_id());
+        let Some((data_title, rect)) = subchildren
+            .find(|child| {
+                let rect = child.get_bounding_client_rect();
+                rect.left() <= mouse_x as f64
+                    && mouse_x as f64 <= rect.right()
+                    && rect.top() <= mouse_y as f64
+                    && mouse_y as f64 <= rect.bottom()
+            })
+            .and_then(|child| {
+                child
+                    .get_attribute("data-title")
+                    .map(|title| (title, child.get_bounding_client_rect()))
+            })
+        else {
+            hover_elem.style().set_property("display", "none").unwrap();
+            return;
+        };
+        // Set hover elem pos to mouse pos
+        let style = hover_elem.style();
+        let left = rect.left();
+        let top = rect.bottom();
+        _ = style.set_property("left", &format!("{left}px"));
+        _ = style.set_property("top", &format!("{top}px"));
+        // Set hover elem text to hovered data-title
+        hover_elem.set_inner_text(&data_title);
+        // Show hover elem
+        hover_elem.style().set_property("display", "block").unwrap();
+    };
+
+    // Handle mouse leave events
+    let code_mouse_leave = move |_| {
+        let hover_elem: HtmlDivElement = element(&hover_id());
+        hover_elem.style().set_property("display", "none").unwrap();
+    };
+
     // Go to the next example
     let next_example = {
         let examples = examples.clone();
@@ -1467,6 +1515,8 @@ pub fn Editor<'a>(
                                     spellcheck="false"
                                     on:paste=code_paste
                                     on:input=code_input
+                                    on:mousemove=code_mouse_move
+                                    on:mouseleave=code_mouse_leave
                                     value=initial_code_str>
                                 </textarea>
                                 /////////////////////////
@@ -1499,6 +1549,7 @@ pub fn Editor<'a>(
                             <div id="example-tracker">{example_text}</div>
                         </div>
                     </div>
+                    <div id=hover_id class="code-hover"/>
                     <div class="output-frame">
                         <div class="output-lines">
                             <div class="output-diagnostics">

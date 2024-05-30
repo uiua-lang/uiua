@@ -471,8 +471,7 @@ pub fn gen_code_view(code: &str) -> View {
                             if let Some(ascii) = prim.ascii() {
                                 title = format!("({}) {}", ascii, title);
                             }
-                            let class =
-                                format!("code-span code-hover code-underline {}", color_class);
+                            let class = format!("code-span code-underline {}", color_class);
                             let onmouseover = move |event: web_sys::MouseEvent| update_ctrl(&event);
                             let onclick = move |event: web_sys::MouseEvent| {
                                 if os_ctrl(&event) {
@@ -493,10 +492,10 @@ pub fn gen_code_view(code: &str) -> View {
                             frag_views.push(view)
                         }
                         SpanKind::String => {
-                            let class = format!("code-span code-hover {}", color_class);
+                            let class = format!("code-span {}", color_class);
                             if text == "@ " {
                                 let space_class =
-                                    format!("code-span code-hover space-character {}", color_class);
+                                    format!("code-span space-character {}", color_class);
                                 frag_views.push(
                                     view!(
                                         <span class=class data-title="space character">@</span>
@@ -516,29 +515,29 @@ pub fn gen_code_view(code: &str) -> View {
                             }
                         }
                         SpanKind::Signature => {
-                            let class = format!("code-span code-hover {}", color_class);
+                            let class = format!("code-span {}", color_class);
                             let title = format!("{kind:?}").to_lowercase();
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
                         SpanKind::Placeholder(op) => {
-                            let class = format!("code-span code-hover {}", color_class);
+                            let class = format!("code-span {}", color_class);
                             let title = format!("placeholder {}", op.name());
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
                         SpanKind::StackSwizzle(sw) => {
-                            let class = format!("code-span code-hover {}", color_class);
-                            let title = format!("stack swizzle {}", sw.signature());
+                            let class = format!("code-span {}", color_class);
+                            let title = format!("swizzle {}", sw.signature());
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
                         SpanKind::ArraySwizzle(sw) => {
-                            let class = format!("code-span code-hover {}", color_class);
-                            let title = format!("array swizzle {}", sw.signature());
+                            let class = format!("code-span {}", color_class);
+                            let title = format!("swizzle {}", sw.signature());
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
@@ -567,12 +566,12 @@ pub fn gen_code_view(code: &str) -> View {
                                 components[0], components[1], components[2]
                             );
                             frag_views.push(
-                                view!(<span class="code-span code-hover" style=style data-title="label">{text}</span>)
+                                view!(<span class="code-span" style=style data-title="label">{text}</span>)
                                     .into_view(),
                             )
                         }
                         SpanKind::FuncDelim(sig) => {
-                            let class = format!("code-span code-hover {}", color_class);
+                            let class = format!("code-span {}", color_class);
                             let title = sig.to_string();
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
@@ -621,11 +620,8 @@ pub fn gen_code_view(code: &str) -> View {
                                     _ => {}
                                 }
                             }
-                            let class = format!(
-                                "code-span code-hover {} {}",
-                                binding_class(&text, &docs),
-                                private
-                            );
+                            let class =
+                                format!("code-span {} {}", binding_class(&text, &docs), private);
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )

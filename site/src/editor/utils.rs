@@ -2,7 +2,6 @@ use std::{
     borrow::Cow,
     cell::Cell,
     mem::{replace, take},
-    rc::Rc,
     str::FromStr,
     time::Duration,
 };
@@ -19,17 +18,17 @@ use uiua::{
     Report, ReportFragment, ReportKind, SpanKind, SysBackend, Uiua, UiuaError, UiuaResult, Value,
 };
 use unicode_segmentation::UnicodeSegmentation;
-use wasm_bindgen::{closure::Closure, JsCast};
+use wasm_bindgen::JsCast;
 use web_sys::{
     DomRect, Event, HtmlDivElement, HtmlSpanElement, HtmlStyleElement, HtmlTextAreaElement,
-    KeyboardEvent, MouseEvent, ResizeObserver, ResizeObserverEntry,
+    KeyboardEvent, MouseEvent,
 };
 
 use crate::{
     backend::{OutputItem, WebBackend},
     binding_class,
     editor::Editor,
-    element, get_element, prim_class, sig_class,
+    element, prim_class, sig_class,
 };
 
 /// Handles setting the code in the editor, setting the cursor, and managing the history
@@ -46,8 +45,6 @@ pub struct State {
     pub challenge: Option<ChallengeDef>,
     pub loading_module: bool,
     pub min_height: String,
-    pub resize_observer: Option<Rc<ResizeObserver>>,
-    pub resize_observer_closure: Rc<Closure<dyn Fn(Vec<ResizeObserverEntry>)>>,
 }
 
 /// A record of a code change
@@ -135,43 +132,33 @@ impl State {
         }
         self.set_overlay.set(code.into());
         let area = element::<HtmlTextAreaElement>(&self.code_id);
+        let outer = element::<HtmlDivElement>(&self.code_outer_id);
+
+        let height = format!("{}em", code.split('\n').count().max(1) as f32 * 1.25 + 0.75);
+        outer.style().set_property("min-height", &height).unwrap();
+
+        let rect = &virtual_rect(&area, code);
+        let width = rect.width();
+        let new_width = format!("max(calc({width}px + 1em),100%)");
+        area.style().set_property("width", "auto").unwrap();
+        area.style().set_property("width", &new_width).unwrap();
+
         area.set_value(code);
-        self.update_size();
     }
     pub fn refresh_code(&self) {
         let code = get_code(&self.code_id);
         self.set_code_element(&code);
     }
-    pub fn update_size(&self) {
-        let Some(area) = get_element::<HtmlTextAreaElement>(&self.code_id) else {
-            return;
-        };
-        let code = get_code(&self.code_id);
-        let rect = &virtual_rect(&area, &code);
-        let width = rect.width();
-        let height = rect.height().min(area.scroll_height() as f64);
-        let new_height = format!("max({height}px,{})", self.min_height);
-        let new_width = format!("max(calc({width}px + 1em),100%)");
-        area.style().set_property("width", "auto").unwrap();
-        area.style().set_property("height", "auto").unwrap();
-        area.style().set_property("width", &new_width).unwrap();
-        area.style().set_property("height", &new_height).unwrap();
-    }
     pub fn set_cursor(&self, to: (u32, u32)) {
-        set_code_cursor(&self.code_id, to.0, to.1);
-
         let area = element::<HtmlTextAreaElement>(&self.code_id);
+        area.set_selection_range(to.0, to.1).unwrap();
+
         let outer = element::<HtmlDivElement>(&self.code_outer_id);
 
         let Some(cursor_position) = area.selection_end().unwrap() else {
             return;
         };
         let code = get_code(&self.code_id);
-        let vert_text = code
-            .chars()
-            .take(cursor_position as usize)
-            .collect::<String>();
-        let relative_y = virtual_rect(&area, &vert_text).height();
         let (line, col) = line_col(&code, cursor_position as usize);
         let horiz_text = code
             .lines()
@@ -184,14 +171,10 @@ impl State {
         let area_rect = virtual_rect(&area, &code);
         let outer_rect = outer.get_bounding_client_rect();
         let x = area_rect.left() + relative_x;
-        let y = area_rect.top() + relative_y;
         if x > outer_rect.right() {
             outer.set_scroll_left(outer.scroll_width());
         } else if x < outer_rect.left() {
             outer.set_scroll_left(0);
-        }
-        if y > outer_rect.bottom() {
-            outer.set_scroll_top(outer.scroll_height());
         }
     }
     fn set_changed(&self) {
@@ -225,23 +208,13 @@ impl State {
     }
 }
 
-impl Drop for State {
-    fn drop(&mut self) {
-        if let Some(Ok(ro)) = self.resize_observer.take().map(Rc::try_unwrap) {
-            ro.disconnect();
-        }
-    }
-}
-
 fn virtual_rect(area: &HtmlTextAreaElement, text: &str) -> DomRect {
-    let temp_span =
-        (document().create_element("span").unwrap()).unchecked_into::<HtmlSpanElement>();
-    (temp_span.style())
-        .set_property("visibility", "hidden")
-        .unwrap();
-    (temp_span.style())
-        .set_property("white-space", "pre")
-        .unwrap();
+    let temp_span = (document().create_element("span"))
+        .unwrap()
+        .unchecked_into::<HtmlSpanElement>();
+    let style = temp_span.style();
+    style.set_property("visibility", "hidden").unwrap();
+    style.set_property("white-space", "pre").unwrap();
     let area_style = &window().get_computed_style(area).unwrap().unwrap();
     let area_font = area_style.get_property_value("font").unwrap();
     temp_span.style().set_property("font", &area_font).unwrap();
@@ -282,12 +255,6 @@ pub fn get_code_cursor(id: &str) -> Option<(u32, u32)> {
     let start = area.selection_start().unwrap()?;
     let end = area.selection_end().unwrap()?;
     Some((start, end))
-}
-
-fn set_code_cursor(id: &str, start: u32, end: u32) {
-    let area = element::<HtmlTextAreaElement>(id);
-    area.set_selection_range(start, end).unwrap();
-    // area.focus().unwrap();
 }
 
 #[derive(Debug)]

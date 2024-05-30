@@ -484,6 +484,7 @@ input[type=number] {
     overflow-wrap: normal;
     white-space: pre;
     overflow: hidden;
+    height: 100%;
 }
 
 .code-entry::selection {

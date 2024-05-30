@@ -16,7 +16,7 @@ use uiua::{
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
     DragEvent, Event, FileReader, HtmlDivElement, HtmlInputElement, HtmlSelectElement,
-    HtmlTextAreaElement, MouseEvent, ResizeObserver, ResizeObserverEntry,
+    HtmlTextAreaElement, MouseEvent,
 };
 
 use crate::{
@@ -88,6 +88,7 @@ pub fn Editor<'a>(
     let hover_id = move || format!("hover{id}");
 
     let code_element = move || -> HtmlTextAreaElement { element(&code_id()) };
+    #[allow(unused)]
     let code_outer_element = move || -> HtmlDivElement { element(&code_outer_id()) };
     let glyph_doc_element = move || -> HtmlDivElement { element(&glyph_doc_id()) };
 
@@ -141,8 +142,6 @@ pub fn Editor<'a>(
                 after: (len, len),
             }
         },
-        resize_observer: None,
-        resize_observer_closure: Closure::new(move |_: Vec<ResizeObserverEntry>| {}).into(),
     };
     let (get_state, state) = create_signal(state);
 
@@ -1161,30 +1160,6 @@ pub fn Editor<'a>(
             } else {
                 run(false, false);
             }
-        },
-        Duration::from_millis(0),
-    );
-
-    // Update minimum textarea height when code div is resized
-    set_timeout(
-        move || {
-            state.update(|st| {
-                st.resize_observer_closure =
-                    Closure::new(move |entries: Vec<ResizeObserverEntry>| {
-                        for entry in entries {
-                            let height = entry.content_rect().height();
-                            state.update(|state| {
-                                state.min_height = format!("{height}px");
-                                state.update_size();
-                            });
-                        }
-                    })
-                    .into();
-                let function = (*st.resize_observer_closure).as_ref().unchecked_ref();
-                let observer = ResizeObserver::new(function).unwrap();
-                observer.observe(&code_outer_element());
-                st.resize_observer = Some(observer.into());
-            });
         },
         Duration::from_millis(0),
     );

@@ -1094,8 +1094,6 @@ mod server {
             // Get ident
             let pos = params.text_document_position.position;
             let is_newline = params.ch == "\n";
-            let is_underscore = params.ch == "_";
-            let mut is_undertie = false;
             let line = if is_newline { pos.line - 1 } else { pos.line };
             let Some(line_str) = doc.input.lines().nth(line as usize) else {
                 return Ok(None);
@@ -1114,22 +1112,16 @@ mod server {
             let mut start = col - ident.chars().count() as u32;
             let mut formatted = String::new();
             if ident.is_empty() {
-                if is_underscore && before.ends_with('_') {
-                    formatted.push('‿');
-                    start -= 1;
-                    is_undertie = true;
-                } else {
-                    let mut ascii_prims: Vec<_> = Primitive::non_deprecated()
-                        .filter_map(|p| p.ascii().map(|a| (p, a.to_string())))
-                        .collect();
-                    ascii_prims.sort_by_key(|(_, a)| a.len());
-                    ascii_prims.reverse();
-                    for (prim, ascii) in ascii_prims {
-                        if before.ends_with(&ascii) {
-                            formatted.push_str(&prim.to_string());
-                            start -= ascii.chars().count() as u32;
-                            break;
-                        }
+                let mut ascii_prims: Vec<_> = Primitive::non_deprecated()
+                    .filter_map(|p| p.ascii().map(|a| (p, a.to_string())))
+                    .collect();
+                ascii_prims.sort_by_key(|(_, a)| a.len());
+                ascii_prims.reverse();
+                for (prim, ascii) in ascii_prims {
+                    if before.ends_with(&ascii) {
+                        formatted.push_str(&prim.to_string());
+                        start -= ascii.chars().count() as u32;
+                        break;
                     }
                 }
             } else if let Some(prims) = Primitive::from_format_name_multi(&ident) {
@@ -1145,7 +1137,7 @@ mod server {
             let mut end = pos;
             if params.ch.chars().all(|c| c.is_whitespace()) {
                 formatted.push_str(&params.ch);
-            } else if !is_undertie {
+            } else {
                 end.character -= 1;
             }
             let start = Position {

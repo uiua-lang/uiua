@@ -3,8 +3,8 @@
 - 0.11
   - Release it!
 - 0.12
-  - Dyadic functions with box first arguments
-  - `◹ triangle` modifier
+  - Tree extension
+  - `◹` modifier
   - Array bar notation
   - Show array shape on hover
   - Error classes

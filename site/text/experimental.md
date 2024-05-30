@@ -74,20 +74,3 @@ Labeled values put in an array will lose their labels unless they are [`box`]()e
 ```
 
 Labels cannot be inspected by code.
-
-## Function Strands
-
-Function strands allow you to combine two terms without parentheses. 
-They are written with a `‿` between the terms. 
-The `‿` will format from `__`.
-
-Function strands bind less tightly than modifiers, so the first term can never be a modifier.
-
-```uiua
-# Experimental!
-≡⊢‿⇌ [1_2_3 4_5_6 7_8_9]
-```
-```uiua
-# Experimental!
-↯⟜⇡‿/+ 2_3
-```

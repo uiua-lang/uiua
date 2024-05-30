@@ -675,18 +675,14 @@ impl<'i> Parser<'i> {
             .or_else(|| self.try_undertied())
     }
     fn try_undertied(&mut self) -> Option<Sp<Word>> {
-        self.try_strand_impl(
-            &[Undertie, DoubleUnderscore.into()],
-            Word::Undertied,
-            Self::try_strand,
-        )
+        self.try_strand_impl(Undertie, Word::Undertied, Self::try_strand)
     }
     fn try_strand(&mut self) -> Option<Sp<Word>> {
-        self.try_strand_impl(&[Underscore.into()], Word::Strand, Self::try_modified)
+        self.try_strand_impl(Underscore.into(), Word::Strand, Self::try_modified)
     }
     fn try_strand_impl(
         &mut self,
-        tokens: &[Token],
+        token: Token,
         make: fn(Vec<Sp<Word>>) -> Word,
         inner: fn(&mut Self) -> Option<Sp<Word>>,
     ) -> Option<Sp<Word>> {
@@ -696,7 +692,7 @@ impl<'i> Parser<'i> {
         }
         // Collect items
         let mut items = Vec::new();
-        while (tokens.iter()).any(|tok| self.try_exact(tok.clone()).is_some()) {
+        while self.try_exact(token.clone()).is_some() {
             let item = match inner(self) {
                 Some(mut item) => {
                     if let Word::Spaces = item.value {

@@ -1226,6 +1226,11 @@ code:
                     "Function strands are experimental. To use them, add \
                     `# Experimental!` to the top of the file."
                 });
+                self.emit_diagnostic(
+                    "Function strands are deprecated and will be removed in the future.",
+                    DiagnosticKind::Warning,
+                    word.span.clone(),
+                );
                 let instrs = self.compile_words(words, true)?;
                 if call {
                     self.push_all_instrs(instrs);

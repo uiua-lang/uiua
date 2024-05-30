@@ -18,6 +18,7 @@
         src = craneLib.cleanCargoSource (craneLib.path ./.);
          buildInputs = nixpkgs.lib.optionals pkgs.stdenv.isDarwin [
            pkgs.iconv
+           pkgs.darwin.apple_sdk.frameworks.AppKit
            pkgs.darwin.apple_sdk.frameworks.CoreServices
            pkgs.darwin.apple_sdk.frameworks.Foundation
         ];

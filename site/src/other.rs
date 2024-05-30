@@ -445,7 +445,7 @@ pub fn Combinators() -> impl IntoView {
                 <th title="Symbol">"Sym."</th>
                 <th>"Bird"</th>
                 <th>"Code"</th>
-                <th>"Example"</th>
+                <th style="width: 100%">"Example"</th>
                 <th>"Diagram"</th>
             </tr>
             { combinators }

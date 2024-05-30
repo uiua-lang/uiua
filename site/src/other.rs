@@ -350,8 +350,8 @@ pub fn Combinators() -> impl IntoView {
             ("⊟⟜+", 2, "N", "Eastern Nicator"),
         ),
         (
-            view!(<Prim prim=Over/>).into_view(),
-            ("⊟+,", 2, "ν", "Western Nicator"),
+            view!(<Prim prim=By/>).into_view(),
+            ("⊟⊸+", 2, "ν", "Western Nicator"),
         ),
         (
             view!(<Prim prim=Dip/>).into_view(),

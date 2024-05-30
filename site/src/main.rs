@@ -700,7 +700,6 @@ fn ScrollToHash() -> impl IntoView {
         let location = use_location();
         create_effect(move |_| {
             let hash = location.hash.get();
-            logging::log!("{:?}", hash);
             if !hash.is_empty() {
                 set_timeout(
                     move || {

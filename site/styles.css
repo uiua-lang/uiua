@@ -471,7 +471,7 @@ input[type=number] {
 .code-entry {
     outline: none;
     border: none;
-    padding: 0.15em 0 0 0;
+    padding: 0.15em 0 0.15em 0;
     margin: 0 0 0 0;
     /* background-color: #0002; */
     /* color: #0008; */
@@ -480,7 +480,6 @@ input[type=number] {
     resize: none;
     font-family: "Code Font", monospace;
     font-size: inherit;
-    position: absolute;
     line-height: 1.25em;
     overflow-wrap: normal;
     white-space: pre;

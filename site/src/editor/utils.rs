@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     cell::Cell,
     mem::{replace, take},
     rc::Rc,
@@ -148,7 +149,7 @@ impl State {
         let code = get_code(&self.code_id);
         let rect = &virtual_rect(&area, &code);
         let width = rect.width();
-        let height = area.scroll_height().min(rect.height() as i32);
+        let height = rect.height().min(area.scroll_height() as f64);
         let new_height = format!("max({height}px,{})", self.min_height);
         let new_width = format!("max(calc({width}px + 1em),100%)");
         area.style().set_property("width", "auto").unwrap();
@@ -180,7 +181,7 @@ impl State {
             .take(col - 1)
             .collect::<String>();
         let relative_x = virtual_rect(&area, &horiz_text).width();
-        let area_rect = area.get_bounding_client_rect();
+        let area_rect = virtual_rect(&area, &code);
         let outer_rect = outer.get_bounding_client_rect();
         let x = area_rect.left() + relative_x;
         let y = area_rect.top() + relative_y;
@@ -233,22 +234,22 @@ impl Drop for State {
 }
 
 fn virtual_rect(area: &HtmlTextAreaElement, text: &str) -> DomRect {
-    let temp_span = document()
-        .create_element("span")
-        .unwrap()
-        .unchecked_into::<HtmlSpanElement>();
-    temp_span
-        .style()
+    let temp_span =
+        (document().create_element("span").unwrap()).unchecked_into::<HtmlSpanElement>();
+    (temp_span.style())
         .set_property("visibility", "hidden")
         .unwrap();
-    temp_span
-        .style()
+    (temp_span.style())
         .set_property("white-space", "pre")
         .unwrap();
     let area_style = &window().get_computed_style(area).unwrap().unwrap();
     let area_font = area_style.get_property_value("font").unwrap();
     temp_span.style().set_property("font", &area_font).unwrap();
-    temp_span.set_inner_text(text);
+    let mut text = Cow::Borrowed(text);
+    if text.ends_with('\n') {
+        text.to_mut().push(' ');
+    }
+    temp_span.set_inner_text(&text);
     document().body().unwrap().append_child(&temp_span).unwrap();
     let rect = temp_span.get_bounding_client_rect();
     document().body().unwrap().remove_child(&temp_span).unwrap();
@@ -530,14 +531,14 @@ pub fn gen_code_view(code: &str) -> View {
                         }
                         SpanKind::StackSwizzle(sw) => {
                             let class = format!("code-span {}", color_class);
-                            let title = format!("swizzle {}", sw.signature());
+                            let title = format!("stack swizzle {}", sw.signature());
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
                         SpanKind::ArraySwizzle(sw) => {
                             let class = format!("code-span {}", color_class);
-                            let title = format!("swizzle {}", sw.signature());
+                            let title = format!("array swizzle {}", sw.signature());
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )

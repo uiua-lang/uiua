@@ -946,13 +946,6 @@ pub fn Editor<'a>(
             Some(('⟨', '⟩')),
             "tutorial/controlflow#switch",
         ),
-        (
-            "‿",
-            "function strand",
-            "strand-span experimental-glyph-button",
-            None,
-            "docs/experimental#function-strands",
-        ),
         ("¯", "(`) negative", "number-literal", None, ""),
         (
             "@",

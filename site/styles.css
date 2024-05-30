@@ -842,6 +842,18 @@ input[type=number] {
     color: #f576d8;
 }
 
+.variadic-function {
+    background-image: linear-gradient(170deg,
+            #ed5e6a 34%,
+            #95d16a 34%,
+            #95d16a 45%,
+            #54b0fc 45%,
+            #54b0fc 56%,
+            #8078f1 56%,
+            #8078f1 67%,
+            #f576d8 67%);
+}
+
 .monadic-modifier {
     color: #f0c36f;
 }

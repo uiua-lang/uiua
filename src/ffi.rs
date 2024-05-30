@@ -400,6 +400,7 @@ mod enabled {
                         drop(Vec::from_raw_parts(ptr as *mut u8, size, size));
                     },
                     FfiType::Void => ret_ptr!(()),
+                    FfiType::UChar => ret_ptr!(c_uchar),
                     FfiType::Short => ret_ptr!(c_short),
                     FfiType::UShort => ret_ptr!(c_ushort),
                     FfiType::Int => ret_ptr!(c_int),
@@ -420,6 +421,7 @@ mod enabled {
                     len_index, inner, ..
                 } => match &**inner {
                     FfiType::Char => ret_list!(c_char, len_index),
+                    FfiType::UChar => ret_list!(c_uchar, len_index),
                     FfiType::Short => ret_list!(c_short, len_index),
                     FfiType::UShort => ret_list!(c_ushort, len_index),
                     FfiType::Int => ret_list!(c_int, len_index),
@@ -472,12 +474,12 @@ mod enabled {
 
             // Get out parameters
             macro_rules! out_param_scalar {
-                ($ty:ty, $i:expr) => {
-                    results.push((*bindings.get::<$ty>($i) as f64).into())
+                ($ty:ty, $i:expr, $numty:ty ) => {
+                    results.push((*bindings.get::<$ty>($i) as $numty).into())
                 };
             }
             macro_rules! out_param_list {
-                ($c_ty:ty, $len_index:expr, $i:expr) => {
+                ($c_ty:ty, $len_index:expr, $i:expr, $numty:ty $(,$numty2:ty)?) => {
                     unsafe {
                         let len = *bindings.get::<c_int>(*$len_index) as usize;
                         let (ptr, vec) = bindings.get_list_mut::<$c_ty>($i);
@@ -485,8 +487,11 @@ mod enabled {
                         let slice = slice::from_raw_parts(ptr, len);
                         // Copy the slice into a new array
                         results.push(
-                            Array::new(len, slice.iter().map(|&i| i as f64).collect::<EcoVec<_>>())
-                                .into(),
+                            Array::new(
+                                len,
+                                slice.iter().map(|&i| i as $numty $(as $numty2)?).collect::<EcoVec<_>>(),
+                            )
+                            .into(),
                         );
                         // Forget the vector
                         forget(take(vec));
@@ -511,16 +516,17 @@ mod enabled {
                                 let s = CStr::from_ptr(ptr).to_str().map_err(|e| e.to_string())?;
                                 results.push(Value::from(s))
                             },
-                            FfiType::Short => out_param_scalar!(c_short, i),
-                            FfiType::UShort => out_param_scalar!(c_ushort, i),
-                            FfiType::Int => out_param_scalar!(c_int, i),
-                            FfiType::UInt => out_param_scalar!(c_uint, i),
-                            FfiType::Long => out_param_scalar!(c_long, i),
-                            FfiType::ULong => out_param_scalar!(c_ulong, i),
-                            FfiType::LongLong => out_param_scalar!(c_longlong, i),
-                            FfiType::ULongLong => out_param_scalar!(c_ulonglong, i),
-                            FfiType::Float => out_param_scalar!(c_float, i),
-                            FfiType::Double => out_param_scalar!(c_double, i),
+                            FfiType::UChar => out_param_scalar!(c_uchar, i, u8),
+                            FfiType::Short => out_param_scalar!(c_short, i, f64),
+                            FfiType::UShort => out_param_scalar!(c_ushort, i, f64),
+                            FfiType::Int => out_param_scalar!(c_int, i, f64),
+                            FfiType::UInt => out_param_scalar!(c_uint, i, f64),
+                            FfiType::Long => out_param_scalar!(c_long, i, f64),
+                            FfiType::ULong => out_param_scalar!(c_ulong, i, f64),
+                            FfiType::LongLong => out_param_scalar!(c_longlong, i, f64),
+                            FfiType::ULongLong => out_param_scalar!(c_ulonglong, i, f64),
+                            FfiType::Float => out_param_scalar!(c_float, i, f64),
+                            FfiType::Double => out_param_scalar!(c_double, i, f64),
                             FfiType::Struct { fields } => {
                                 let repr = bindings.get_repr(i);
                                 results.push(bindings.struct_repr_to_value(repr, fields)?);
@@ -570,17 +576,18 @@ mod enabled {
                         inner,
                         len_index,
                     } => match &**inner {
-                        FfiType::Char => out_param_list!(c_char, len_index, i),
-                        FfiType::Short => out_param_list!(c_short, len_index, i),
-                        FfiType::UShort => out_param_list!(c_ushort, len_index, i),
-                        FfiType::Int => out_param_list!(c_int, len_index, i),
-                        FfiType::UInt => out_param_list!(c_uint, len_index, i),
-                        FfiType::Long => out_param_list!(c_long, len_index, i),
-                        FfiType::ULong => out_param_list!(c_ulong, len_index, i),
-                        FfiType::LongLong => out_param_list!(c_longlong, len_index, i),
-                        FfiType::ULongLong => out_param_list!(c_ulonglong, len_index, i),
-                        FfiType::Float => out_param_list!(c_float, len_index, i),
-                        FfiType::Double => out_param_list!(c_double, len_index, i),
+                        FfiType::Char => out_param_list!(c_char, len_index, i, u8, char),
+                        FfiType::UChar => out_param_list!(c_uchar, len_index, i, u8),
+                        FfiType::Short => out_param_list!(c_short, len_index, i, f64),
+                        FfiType::UShort => out_param_list!(c_ushort, len_index, i, f64),
+                        FfiType::Int => out_param_list!(c_int, len_index, i, f64),
+                        FfiType::UInt => out_param_list!(c_uint, len_index, i, f64),
+                        FfiType::Long => out_param_list!(c_long, len_index, i, f64),
+                        FfiType::ULong => out_param_list!(c_ulong, len_index, i, f64),
+                        FfiType::LongLong => out_param_list!(c_longlong, len_index, i, f64),
+                        FfiType::ULongLong => out_param_list!(c_ulonglong, len_index, i, f64),
+                        FfiType::Float => out_param_list!(c_float, len_index, i, f64),
+                        FfiType::Double => out_param_list!(c_double, len_index, i, f64),
                         FfiType::Struct { fields } => {
                             let len = *bindings.get::<c_int>(*len_index) as usize;
                             let repr = bindings.get_repr(i);

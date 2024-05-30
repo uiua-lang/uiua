@@ -18,7 +18,7 @@ use crate::{
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
     value::Value,
-    Boxed, Primitive, Shape, Uiua, UiuaResult,
+    Boxed, Complex, Primitive, Shape, Uiua, UiuaResult,
 };
 
 use super::{op_bytes_retry_fill, validate_size, ArrayCmpSlice, FillContext};
@@ -1750,11 +1750,41 @@ impl Value {
         const MAX_SINGLE_LINE_LEN: usize = 40;
         let mut s = match self.rank() {
             0 => match self {
-                Value::Num(arr) => arr.data[0].to_string(),
-                Value::Byte(arr) => arr.data[0].to_string(),
+                Value::Num(arr) => {
+                    let n = arr.data[0];
+                    let bool_lit = arr.meta().flags.contains(ArrayFlags::BOOLEAN_LITERAL);
+                    if n == 0.0 && bool_lit {
+                        "False".into()
+                    } else if n == 1.0 && bool_lit {
+                        "True".into()
+                    } else if n == PI / 2.0 {
+                        "η".into()
+                    } else if n == PI {
+                        "π".into()
+                    } else if n == TAU {
+                        "τ".into()
+                    } else {
+                        n.to_string()
+                    }
+                }
+                Value::Byte(arr) => {
+                    let b = arr.data[0];
+                    let bool_lit = arr.meta().flags.contains(ArrayFlags::BOOLEAN_LITERAL);
+                    if b == 0 && bool_lit {
+                        "False".into()
+                    } else if b == 1 && bool_lit {
+                        "True".into()
+                    } else {
+                        b.to_string()
+                    }
+                }
                 Value::Complex(arr) => {
                     let c = arr.data[0];
-                    format!("ℂ{} {}", c.im, c.re)
+                    if c == Complex::I {
+                        "i".into()
+                    } else {
+                        format!("ℂ{} {}", c.im, c.re)
+                    }
                 }
                 Value::Char(arr) => {
                     let c = arr.data[0];

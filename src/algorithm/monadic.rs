@@ -1744,6 +1744,24 @@ impl Value {
     }
 }
 
+fn f64_repr(n: f64) -> String {
+    let abs = n.abs();
+    let pos = if abs == PI / 2.0 {
+        "η".into()
+    } else if abs == PI {
+        "π".into()
+    } else if abs == TAU {
+        "τ".into()
+    } else {
+        abs.to_string()
+    };
+    if n < 0.0 {
+        format!("¯{}", pos)
+    } else {
+        pos
+    }
+}
+
 impl Value {
     /// Get the `repr` of a value
     pub fn representation(&self) -> String {
@@ -1757,14 +1775,8 @@ impl Value {
                         "False".into()
                     } else if n == 1.0 && bool_lit {
                         "True".into()
-                    } else if n == PI / 2.0 {
-                        "η".into()
-                    } else if n == PI {
-                        "π".into()
-                    } else if n == TAU {
-                        "τ".into()
                     } else {
-                        n.to_string()
+                        f64_repr(n)
                     }
                 }
                 Value::Byte(arr) => {
@@ -1782,8 +1794,10 @@ impl Value {
                     let c = arr.data[0];
                     if c == Complex::I {
                         "i".into()
+                    } else if c == -Complex::I {
+                        "¯i".into()
                     } else {
-                        format!("ℂ{} {}", c.im, c.re)
+                        format!("ℂ{} {}", f64_repr(c.im), f64_repr(c.re))
                     }
                 }
                 Value::Char(arr) => {

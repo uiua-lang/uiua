@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.11
-  - Write release blog post
   - Release it!
 - 0.12
   - Dyadic functions with box first arguments

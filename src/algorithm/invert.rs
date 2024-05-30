@@ -1513,7 +1513,9 @@ fn under_push_temp_pattern<'a>(
                     *end_count = (*end_count).min(inner_befores_sig.outputs);
                 }
                 let outers_sig = instrs_signature(input).ok()?;
-                if (both || outers_sig.args <= outers_sig.outputs) && inner_afters_sig.outputs > 0 {
+                if (both && inner_befores_sig.args > 1 || outers_sig.args <= outers_sig.outputs)
+                    && inner_afters_sig.outputs > 0
+                {
                     afters.insert(0, start_instr);
                     afters.push(end_instr);
                 }

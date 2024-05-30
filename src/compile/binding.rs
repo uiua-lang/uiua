@@ -177,25 +177,6 @@ impl Compiler {
 
         let mut make_fn: Rc<dyn Fn(_, _, &mut Compiler) -> _> = Rc::new(
             |instrs: EcoVec<Instr>, sig: Signature, comp: &mut Compiler| {
-                // Diagnostic for function that doesn't consume its arguments
-                if let Some((Instr::Prim(Primitive::Dup, span), rest)) = instrs.split_first() {
-                    if let Span::Code(dup_span) = comp.get_span(*span) {
-                        if let Ok(rest_sig) = instrs_signature(rest) {
-                            if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs {
-                                comp.emit_diagnostic(
-                                    format!(
-                                        "Functions should consume their arguments. \
-                                        Try removing this {}.",
-                                        Primitive::Dup.format()
-                                    ),
-                                    DiagnosticKind::Style,
-                                    dup_span,
-                                );
-                            }
-                        }
-                    }
-                }
-
                 comp.make_function(FunctionId::Named(name.clone()), sig, instrs)
             },
         );

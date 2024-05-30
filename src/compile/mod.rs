@@ -1688,39 +1688,53 @@ code:
         if !call {
             self.new_functions.push(EcoVec::new());
         }
-        let mut branches = sw.branches.into_iter();
-        // Compile first branch
-        let first_branch = branches.next().expect("switch cannot have no branches");
-        let f = self.compile_func(first_branch.value, first_branch.span)?;
-        let mut sig = f.signature();
-        let mut branch_funcs = vec![f];
-        // Compile remaining branches
-        for branch in branches {
+        // Compile branches
+        let mut functions = Vec::with_capacity(count);
+        for branch in sw.branches {
             let f = self.compile_func(branch.value, branch.span.clone())?;
-            let f_sig = f.signature();
-            if f_sig.is_compatible_with(sig) {
-                sig = sig.max_with(f_sig);
-            } else if f_sig.outputs == sig.outputs {
-                sig.args = sig.args.max(f_sig.args)
-            } else {
-                self.add_error(
-                    branch.span,
-                    format!(
-                        "Switch branch's signature {f_sig} is \
-                        incompatible with previous branches {sig}",
-                    ),
-                );
-            }
-            branch_funcs.push(f);
+            functions.push((f, branch.span));
         }
+        // Find branches with flexible signatures
+        let flex_indices: Vec<usize> = (functions.iter().enumerate())
+            .filter(|(_, (f, _))| {
+                let instrs = f.instrs(&self.asm);
+                matches!(instrs, [.., Instr::Prim(Primitive::Assert, _)])
+            })
+            .map(|(i, _)| i)
+            .collect();
+        let sig = if flex_indices.is_empty() || flex_indices.len() == count {
+            let mut functions = functions.iter();
+            let (f, _) = functions.next().expect("Switch function with no branches");
+            let mut sig = f.signature();
+            // Compile remaining branches
+            for (f, span) in functions {
+                let f_sig = f.signature();
+                if f_sig.is_compatible_with(sig) {
+                    sig = sig.max_with(f_sig);
+                } else if f_sig.outputs == sig.outputs {
+                    sig.args = sig.args.max(f_sig.args)
+                } else {
+                    self.add_error(
+                        span.clone(),
+                        format!(
+                            "Switch branch's signature {f_sig} is \
+                            incompatible with previous branches {sig}",
+                        ),
+                    );
+                }
+            }
+            sig
+        } else {
+            todo!()
+        };
 
         // Maybe use `repeat` diagnostic
-        if branch_funcs.len() == 2
+        if functions.len() == 2
             && matches!(
-                branch_funcs[0].instrs(&self.asm),
+                functions[0].0.instrs(&self.asm),
                 [] | [Instr::Prim(Primitive::Identity, _)]
             )
-            && branch_funcs[1].signature().args == branch_funcs[1].signature().outputs
+            && functions[1].0.signature().args == functions[1].0.signature().outputs
         {
             self.emit_diagnostic(
                 format!(
@@ -1732,7 +1746,7 @@ code:
             );
         }
 
-        self.push_all_instrs(branch_funcs.into_iter().map(Instr::PushFunc));
+        self.push_all_instrs(functions.into_iter().map(|(f, _)| f).map(Instr::PushFunc));
 
         let span_idx = self.add_span(span.clone());
         self.push_instr(Instr::Switch {

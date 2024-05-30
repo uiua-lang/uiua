@@ -79,3 +79,54 @@ You can now provide [`infinity ∞`](https://uiua.org/docs/infinity) as one or m
 ``` uiua
 ↙1_∞_2 . ↯2_3_4⇡24
 ```
+
+# Swizzles
+
+Swizzles are a new experimental feature that allow concise manipulation of the stack and extraction from arrays.
+
+Stack swizzles are written with a `λ` followed by some letters. The stack will be rearranged accordingly. `λ` formats from `'` when followed by letters.
+
+```uiua
+# Experimental!
+[λccab 1 2 3]
+```
+
+Capital letters will [`fix ¤`](https://uiua.org/docs/fix) the corresponding array. This is useful with complex [`rows ≡`](https://uiua.org/docs/rows) operations.
+
+```uiua
+# Experimental!
+≡(⊂⊂) ? λaBC 1_2 3_4 5_6
+```
+
+*Array* swizzles are written with a `⋊` followed by some letters. Rows from the array that correspond to the letters will be put on the stack. `⋊` formats from `''` when followed by letters.
+
+```uiua
+# Experimental!
+⋊beef [1 2 3 4 5 6]
+```
+
+Capital letters will [`un °`](https://uiua.org/docs/un) [`box ◻`](https://uiua.org/docs/box) the corresponding row.
+
+```uiua
+# Experimental!
+⋊aCB {"Dave" 31 [38 22 5]}
+```
+
+Swizzles are experimental and may change in future versions as their place in the language is explored.
+
+# The New Pad
+
+Much of the code for the [Uiua website pad](https://uiua.org/pad) has been rewritten. This new pad uses less custom behavior and should work better in more browsers.
+
+If you are reading this on the Uiua website, then all the examples above use this new pad!
+
+# 💗
+
+Thank you as always to everyone who uses Uiua and helps with its development! Your enthusiasm for the language gives me life.
+
+A *special* thanks to all of [Uiua's sponsors](https://github.com/sponsors/uiua-lang) for their continued support 🥰
+
+Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.11.0---2024-05-??).
+
+You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the language, ask questions, or get help.
+

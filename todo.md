@@ -4,13 +4,16 @@
   - Write release blog post
   - Release it!
 - 0.12
-  - `un on` for all "left-invertible" functions
   - Dyadic functions with box first arguments
-  - Dynamic modules
   - `◹ triangle` modifier
   - Array bar notation
   - Show array shape on hover
   - Error classes
+  - Refactor inversion to make left-inverses well-defined
+    - `un on` for all "left-invertible" functions
+  - Unicode literals
+  - `# Track caller!`
+  - Dynamic modules
   - Plots
 - Media window
 - Trace images/audio in pad

@@ -98,23 +98,10 @@ impl Value {
     }
     /// Turn a map array into its keys and values
     pub fn unmap(mut self, env: &Uiua) -> UiuaResult<(Value, Value)> {
-        // if !self.is_map() && self.row_count() == 0 {
-        //     self.shape_mut().make_row();
-        // }
-        let mut keys = self
+        let keys = self
             .take_map_keys()
             .ok_or_else(|| env.error("Value is not a map"))?;
-        let mut fix_count = 0;
-        while keys.unfix() {
-            fix_count += 1;
-        }
-        let mut key_pairs: Vec<_> = keys.keys.into_rows().zip(keys.indices).collect();
-        key_pairs.sort_unstable_by_key(|(_, i)| *i);
-        let mut keys = remove_empty_rows(key_pairs.into_iter().map(|(k, _)| k));
-        for _ in 0..fix_count {
-            keys.fix();
-        }
-        Ok((keys, self))
+        Ok((keys.normalized(), self))
     }
     /// Get a value from a map array
     pub fn get(&self, key: &Value, env: &Uiua) -> UiuaResult<Value> {
@@ -520,6 +507,19 @@ impl MapKeys {
             }
         }
         do_remove!(Num, Complex, Char, Box)
+    }
+    pub(crate) fn normalized(mut self) -> Value {
+        let mut fix_count = 0;
+        while self.unfix() {
+            fix_count += 1;
+        }
+        let mut key_pairs: Vec<_> = self.keys.into_rows().zip(&self.indices).collect();
+        key_pairs.sort_unstable_by_key(|(_, i)| *i);
+        let mut keys = remove_empty_rows(key_pairs.into_iter().map(|(k, _)| k));
+        for _ in 0..fix_count {
+            keys.fix();
+        }
+        keys
     }
     pub(crate) fn fix(&mut self) {
         self.keys.fix();

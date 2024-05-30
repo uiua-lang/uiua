@@ -19,6 +19,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This does not affect [`un °`](https://uiua.org/docs/un)[`pop ◌`](https://uiua.org/docs/pop)
   - This can be circumvented with [`fill ⬚`](https://uiua.org/docs/fill)[`un °`](https://uiua.org/docs/un)[`pop ◌`](https://uiua.org/docs/pop)
 - Stabilize [`by ⊸`](https://uiua.org/docs/by)!
+- Stabilize [`repr`](https://uiua.org/docs/repr)
 - Add experimental **stack swizzles**, which allow for more flexible stack reordering
   - Swizzles are written with a `λ` followed by a list of letters
   - Capital letters [`fix`](https://uiua.org/docs/fix) the corresponding value
@@ -47,7 +48,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`&memcpy`](https://uiua.org/docs/&memcpy) system function, which copies the data from [`&ffi`](https://uiua.org/docs/&ffi) pointers to an array
 - Add the [`&memfree`](https://uiua.org/docs/&memfree) system function, which frees memory allocated by [`&ffi`](https://uiua.org/docs/&ffi) functions
 - Add [`&tlsc`](https://uiua.org/docs/&tlsc) and [`&tlsl`](https://uiua.org/docs/&tlsl) system functions, which allow making TLS connections
-  - These are currently experimental, but they will likely replace [`&httpsw`](https://uiua.org/docs/&httpsw)
+  - [`&tlsc`](https://uiua.org/docs/&tlsc) replaces [`&httpsw`](https://uiua.org/docs/&httpsw), which is now deprecated
+  - [`&tlsl`](https://uiua.org/docs/&tlsl) is currently experimental and mostly untested
 - [`&rs`](https://uiua.org/docs/&rs) will now attempt to read additional bytes to resolve a UTF-8 character
 - Signatures can now be specified in stack array notation immediately after a `[` or `{`
 - Change how long decimal numbers are formatted

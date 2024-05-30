@@ -126,10 +126,6 @@ impl Value {
             val => return Err(env.error(format!("Cannot unparse {} array", val.type_name()))),
         })
     }
-    /// Convert value into a string that can be understood by the interpreter
-    pub fn representation(&self) -> Self {
-        dbg_value(self, 0, true).into()
-    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -1745,5 +1741,79 @@ impl Value {
             values.map(keys, env)?;
             Ok(values)
         }
+    }
+}
+
+impl Value {
+    /// Get the `repr` of a value
+    pub fn representation(&self) -> String {
+        const MAX_SINGLE_LINE_LEN: usize = 40;
+        let mut s = match self.rank() {
+            0 => match self {
+                Value::Num(arr) => arr.data[0].to_string(),
+                Value::Byte(arr) => arr.data[0].to_string(),
+                Value::Complex(arr) => {
+                    let c = arr.data[0];
+                    format!("ℂ{} {}", c.im, c.re)
+                }
+                Value::Char(arr) => {
+                    let c = arr.data[0];
+                    match c {
+                        ' ' => "@\\s".into(),
+                        c => c.grid_string(false),
+                    }
+                }
+                Value::Box(arr) => format!("□{}", arr.data[0].0.representation()),
+            },
+            1 => match self {
+                Value::Char(arr) => format!("{:?}", arr.data.iter().collect::<String>()),
+                Value::Box(arr) => {
+                    let mut s = '{'.to_string();
+                    for (i, v) in arr.data.iter().enumerate() {
+                        if i > 0 {
+                            s.push(' ');
+                        }
+                        s.push_str(&v.0.representation());
+                    }
+                    s.push('}');
+                    s
+                }
+                value => {
+                    let mut s = '['.to_string();
+                    for (i, v) in value.rows().enumerate() {
+                        if i > 0 {
+                            s.push(' ');
+                        }
+                        s.push_str(&v.representation());
+                    }
+                    s.push(']');
+                    s
+                }
+            },
+            _ => {
+                let mut s = '['.to_string();
+                let rows: Vec<String> = self.rows().map(|v| v.representation()).collect();
+                let max_row_len = rows.iter().map(String::len).max().unwrap_or(0);
+                for (i, row) in rows.iter().enumerate() {
+                    if i > 0 {
+                        if max_row_len > MAX_SINGLE_LINE_LEN {
+                            s.push_str("\n  ");
+                        } else {
+                            s.push(' ');
+                        }
+                    }
+                    s.push_str(row);
+                }
+                s.push(']');
+                s
+            }
+        };
+        if let Some(map_keys) = self.map_keys() {
+            s = format!("map {} {}", map_keys.clone().normalized(), s);
+        }
+        if let Some(label) = &self.meta().label {
+            s = format!("${label} {s}");
+        }
+        s
     }
 }

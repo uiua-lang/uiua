@@ -2355,18 +2355,23 @@ primitive!(
     (1, Xlsx, Encoding, "xlsx"),
     /// Convert a value to its code representation
     ///
-    /// ex: # Experimental!
-    ///   : repr π
+    /// ex: repr π
     /// Use [&p][repr] to produce a representation that can be pasted directly into the
     /// interpreter.
-    /// ex: # Experimental!
-    ///   : &p repr ↯2_2_2 0
-    /// ex: # Experimental!
-    ///   : &p repr {"Uiua" @A [1 2 3] □4}
+    /// ex: &p repr ↯2_2_2 0
+    /// ex: &p repr {"Uiua" @A [1 2 3] □4}
+    ///
+    /// [repr] can be used in array macros to make the macro generate code that produces the same array.
+    /// ex! F! ←^ ⧻°□⊢
+    ///   : F!+
+    /// ex: F! ←^ repr ⧻°□⊢
+    ///   : F!+
+    ///   : F!≡(¬×)
+    ///   : F!repr
+    ///   : F!(.....)
     ///
     /// Append commas to whitespace for a more traditional notation:
-    /// ex: # Experimental!
-    ///   : -5↯2_2_3⇡12
+    /// ex: -5↯2_2_3⇡12
     ///   : ⍜⊜□⍚(⊂@,)∊," \n" repr # add commas
     ///   : &p ⍜▽∵⋅@-=@¯.         # replace negate glyphs with minus signs
     (1, Repr, Misc, "repr"),

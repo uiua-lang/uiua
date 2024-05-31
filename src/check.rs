@@ -272,6 +272,7 @@ impl<'a> VirtualEnv<'a> {
                 self.stack.push(BasicValue::Arr(items));
             }
             Instr::ImplPrim(ImplPrimitive::EndRandArray, _) => {
+                let _len = self.pop()?;
                 let bottom = (self.array_stack.pop()).ok_or("EndRandArray without BeginArray")?;
                 self.stack.drain(bottom.min(self.stack.len())..);
                 self.set_min_height();

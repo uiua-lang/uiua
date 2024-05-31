@@ -477,7 +477,7 @@ impl SysBackend for NativeSys {
     fn show_gif(&self, gif_bytes: Vec<u8>) -> Result<(), String> {
         (move || -> std::io::Result<()> {
             let temp_path = std::env::temp_dir().join("show.gif");
-            fs::write("show.gif", gif_bytes)?;
+            fs::write(&temp_path, gif_bytes)?;
             let commands = open::commands(&temp_path);
             if let Some(mut command) = commands.into_iter().next() {
                 if let Some(mut child) = NATIVE_SYS

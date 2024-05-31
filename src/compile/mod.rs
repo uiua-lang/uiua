@@ -1690,27 +1690,66 @@ code:
         }
         // Compile branches
         let mut functions = Vec::with_capacity(count);
-        for branch in sw.branches {
+        let mut rigid_indices = Vec::new();
+        let mut flex_indices = Vec::new();
+        for (i, branch) in sw.branches.into_iter().enumerate() {
             let f = self.compile_func(branch.value, branch.span.clone())?;
+            let instrs = f.instrs(&self.asm);
+            let is_flex = instrs
+                .iter()
+                .rposition(|instr| matches!(instr, Instr::Prim(Primitive::Assert, _)))
+                .is_some_and(|end| {
+                    (0..end).rev().any(|start| {
+                        let sub = &instrs[start..end];
+                        match sub {
+                            [Instr::Push(val), Instr::Prim(Primitive::Dup, _)]
+                            | [Instr::Push(val), Instr::Push(..)]
+                                if val != &Value::from(1) =>
+                            {
+                                return true
+                            }
+                            [Instr::Format { .. }, Instr::Prim(Primitive::Dup, _)] => return true,
+                            _ => (),
+                        }
+                        if !(instrs_are_pure(sub, &self.asm, Purity::Pure)
+                            && instrs_signature(sub).is_ok_and(|sig| sig == (0, 2)))
+                        {
+                            return false;
+                        }
+                        let mut comp = self.clone();
+                        let func = comp.make_function(
+                            FunctionId::Anonymous(branch.span.clone()),
+                            Signature::new(0, 2),
+                            sub.iter().cloned(),
+                        );
+                        comp.macro_env.asm = comp.asm.clone();
+                        comp.macro_env
+                            .call(func)
+                            .and_then(|_| {
+                                let _message = comp.macro_env.pop(1)?;
+                                let flag = comp.macro_env.pop(2)?;
+                                Ok(flag != Value::from(1))
+                            })
+                            .unwrap_or(false)
+                    })
+                });
             functions.push((f, branch.span));
+            if is_flex {
+                flex_indices.push(i);
+            } else {
+                rigid_indices.push(i);
+            }
         }
-        // Find branches with flexible signatures
-        let flex_indices: Vec<usize> = (functions.iter().enumerate())
-            .filter(|(_, (f, _))| {
-                let instrs = f.instrs(&self.asm);
-                matches!(instrs, [.., Instr::Prim(Primitive::Assert, _)])
-            })
-            .map(|(i, _)| i)
-            .collect();
-        let sig = if flex_indices.is_empty() || flex_indices.len() == count {
-            let mut functions = functions.iter();
-            let (f, _) = functions.next().expect("Switch function with no branches");
-            let mut sig = f.signature();
+        let mut rigid_funcs = rigid_indices.into_iter().map(|i| &functions[i]);
+        let mut sig = None;
+        if let Some((f, _)) = rigid_funcs.next() {
+            sig = Some(f.signature());
+            let sig = sig.as_mut().unwrap();
             // Compile remaining branches
-            for (f, span) in functions {
+            for (f, span) in rigid_funcs {
                 let f_sig = f.signature();
-                if f_sig.is_compatible_with(sig) {
-                    sig = sig.max_with(f_sig);
+                if f_sig.is_compatible_with(*sig) {
+                    *sig = sig.max_with(f_sig);
                 } else if f_sig.outputs == sig.outputs {
                     sig.args = sig.args.max(f_sig.args)
                 } else {
@@ -1723,10 +1762,13 @@ code:
                     );
                 }
             }
-            sig
-        } else {
-            todo!()
-        };
+        }
+        let mut flex_funcs = flex_indices.into_iter().map(|i| &functions[i]);
+        let mut sig = sig.unwrap_or_else(|| flex_funcs.next().unwrap().0.signature());
+        for (f, _) in flex_funcs {
+            let f_sig = f.signature();
+            sig.args = sig.args.max(f_sig.args);
+        }
 
         // Maybe use `repeat` diagnostic
         if functions.len() == 2

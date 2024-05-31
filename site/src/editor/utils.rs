@@ -149,9 +149,13 @@ impl State {
         let code = get_code(&self.code_id);
         self.set_code_element(&code);
     }
-    pub fn set_cursor(&self, to: (u32, u32)) {
+    pub fn set_cursor(&self, (start, end): (u32, u32)) {
+        // logging::log!("set_cursor({start}, {end})");
         let area = element::<HtmlTextAreaElement>(&self.code_id);
-        area.set_selection_range(to.0, to.1).unwrap();
+        let content = area.value();
+        let start = char_offset_to_utf16_offset(&content, start);
+        let end = char_offset_to_utf16_offset(&content, end);
+        area.set_selection_range(start, end).unwrap();
 
         let outer = element::<HtmlDivElement>(&self.code_outer_id);
 
@@ -252,9 +256,34 @@ pub fn line_col(s: &str, pos: usize) -> (usize, usize) {
 
 pub fn get_code_cursor(id: &str) -> Option<(u32, u32)> {
     let area = element::<HtmlTextAreaElement>(id);
+    let content = area.value();
     let start = area.selection_start().unwrap()?;
     let end = area.selection_end().unwrap()?;
+    let start = utf16_offset_to_char_offset(&content, start);
+    let end = utf16_offset_to_char_offset(&content, end);
+    // logging::log!("get_code_cursor -> {start}, {end}");
     Some((start, end))
+}
+
+fn utf16_offset_to_char_offset(s: &str, utf16_offset: u32) -> u32 {
+    let mut char_offset = 0;
+    let mut utf16_index = 0;
+    for c in s.chars() {
+        if utf16_index == utf16_offset {
+            break;
+        }
+        utf16_index += c.len_utf16() as u32;
+        char_offset += 1;
+    }
+    char_offset
+}
+
+fn char_offset_to_utf16_offset(s: &str, char_offset: u32) -> u32 {
+    let mut utf16_offset = 0;
+    for c in s.chars().take(char_offset as usize) {
+        utf16_offset += c.len_utf16() as u32;
+    }
+    utf16_offset
 }
 
 #[derive(Debug)]

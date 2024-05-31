@@ -219,10 +219,10 @@ constant!(
     ),
     /// The Uiua logo
     #[cfg(feature = "image")]
-    ("Logo", image_bytes_to_array(include_bytes!("../../site/assets/uiua-logo-512.png")).unwrap()),
+    ("Logo", image_bytes_to_array(include_bytes!("../../site/assets/uiua-logo-512.png"), true).unwrap()),
     /// Ethically sourced Lena picture
     #[cfg(feature = "image")]
-    ("Lena", image_bytes_to_array(include_bytes!("../../site/assets/lena.jpg")).unwrap()),
+    ("Lena", image_bytes_to_array(include_bytes!("../../site/assets/lena.jpg"), false).unwrap()),
     ///
     (
         "⍼",

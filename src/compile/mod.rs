@@ -217,8 +217,15 @@ pub enum PreEvalMode {
     Lsp,
 }
 
+const MAX_PRE_EVAL_ELEMS: usize = 1000;
+
 impl PreEvalMode {
     fn matches_instrs(&self, instrs: &[Instr], asm: &Assembly) -> bool {
+        if instrs.iter().any(
+            |instr| matches!(instr, Instr::Push(val) if val.element_count() > MAX_PRE_EVAL_ELEMS),
+        ) {
+            return false;
+        }
         match self {
             PreEvalMode::Normal => {
                 instrs_are_pure(instrs, asm, Purity::Pure) && instrs_are_limit_bounded(instrs, asm)
@@ -2144,7 +2151,7 @@ code:
             match env.run_asm(asm) {
                 Ok(()) => {
                     let stack = env.take_stack();
-                    let res = if stack.iter().any(|v| v.element_count() > 1000) {
+                    let res = if stack.iter().any(|v| v.element_count() > MAX_PRE_EVAL_ELEMS) {
                         None
                     } else {
                         Some(stack)

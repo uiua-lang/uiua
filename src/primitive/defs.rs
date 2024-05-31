@@ -129,8 +129,8 @@ constant!(
     ("False", Array::json_bool(false)),
     /// A NULL pointer for use in FFI
     ("NULL", Value::null()),
-    /// An uninitialed pointer for use in FFI
-    ("Uninit", 0),
+    /// The hexadecimal digits
+    ("HexDigits", "0123456789abcdef"),
     /// The days of the week
     (
         "Days",
@@ -213,6 +213,17 @@ constant!(
             ['♟', '♜', '♞', '♝', '♛', '♚', '♙', '♖', '♘', '♗', '♕', '♔']
         )
     ),
+    /// The phases of the moon
+    ("Moon", Array::from_iter(['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'])),
+    /// Skin color modifiers for emoji
+    (
+        "Skin",
+        Array::from_iter(['🏻', '🏼', '🏽', '🏾', '🏿'])
+    ),
+    /// People emoji
+    ("People", Array::from_iter(['👨', '👩', '👦', '👧'])),
+    /// Emoji hair components
+    ("Hair", Array::from_iter(['🦰', '🦱', '🦲', '🦳'])),
     /// The Uiua logo
     #[cfg(feature = "image")]
     ("Logo", image_bytes_to_array(include_bytes!("../../site/assets/uiua-logo-512.png"), true).unwrap()),

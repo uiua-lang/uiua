@@ -22,16 +22,16 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`repr`](https://uiua.org/docs/repr)
 - Add experimental **stack swizzles**, which allow for more flexible stack reordering
   - Swizzles are written with a `λ` followed by a list of letters
-  - Capital letters [`fix`](https://uiua.org/docs/fix) the corresponding value
+  - Capital letters [`fix ¤`](https://uiua.org/docs/fix) the corresponding value
   - The `λ` formats from `'` when it is in front of the letters
 - Add experimental **array swizzles**, which allow extracting rows from an array in a concise way
   - Swizzles are written with a `⋊` followed by a list of letters
   - Letters up to `m` start from the first row, Letters back from `z` start from the last row
-  - Capital letters `un` `box` the corresponding value
+  - Capital letters [`un °`](https://uiua.org/docs/un) [`box □`](https://uiua.org/docs/box) the corresponding value
   - The `⋊` formats from `''` when it is in front of the letters
 - [`keep ▽`](https://uiua.org/docs/keep) now works with [`un °`](https://uiua.org/docs/un)
-  - It splits array into counts and an adjacent deduplication
-- Add the [`json`](https://uiua.org/docs/json) function, which encodes and decodes JSON data
+  - It splits an array into counts and an adjacent deduplication
+- Add the [`json`](https://uiua.org/docs/json) function, which encodes and decodes JSON strings
 - Add the [`xlsx`](https://uiua.org/docs/xlsx) function, which encodes and decodes XLSX data
 - [`bits ⋯`](https://uiua.org/docs/bits) can now take negative numbers
 - [`un °`](https://uiua.org/docs/un) [`bits ⋯`](https://uiua.org/docs/bits) can now take non-booleans
@@ -45,8 +45,8 @@ This version is not yet released. If you are reading this on the website, then t
   - Additional arguments are passed to the function on every iteration
 - [`try ⍣`](https://uiua.org/docs/try) signature checking is now more permissive
 - Add the [`&exit`](https://uiua.org/docs/&exit) system function, which exits the program with a status code
-- Add the [`&memcpy`](https://uiua.org/docs/&memcpy) system function, which copies the data from [`&ffi`](https://uiua.org/docs/&ffi) pointers to an array
-- Add the [`&memfree`](https://uiua.org/docs/&memfree) system function, which frees memory allocated by [`&ffi`](https://uiua.org/docs/&ffi) functions
+- Add the experimental [`&memcpy`](https://uiua.org/docs/&memcpy) system function, which copies the data from [`&ffi`](https://uiua.org/docs/&ffi) pointers to an array
+- Add the experimental [`&memfree`](https://uiua.org/docs/&memfree) system function, which frees memory allocated by [`&ffi`](https://uiua.org/docs/&ffi) functions
 - Add [`&tlsc`](https://uiua.org/docs/&tlsc) and [`&tlsl`](https://uiua.org/docs/&tlsl) system functions, which allow making TLS connections
   - [`&tlsc`](https://uiua.org/docs/&tlsc) replaces [`&httpsw`](https://uiua.org/docs/&httpsw), which is now deprecated
   - [`&tlsl`](https://uiua.org/docs/&tlsl) is currently experimental and mostly untested
@@ -84,11 +84,13 @@ This version is not yet released. If you are reading this on the website, then t
   - Optimize [`length ⧻`](https://uiua.org/docs/length) [`deduplicate ◴`](https://uiua.org/docs/deduplicate)
 - [`setinv`](https://uiua.org/docs/setinv) now emits a warning if the functions do not have opposite signatures
 - Add the `--io` flag to the `uiua fmt` command, which formats code from stdin to stdout
-- Lots of bug fixes
+- Lots of bug and crash fixes
 ### Website
 - Add a [Documenting Code](https://uiua.org/tutorial/documentation) tutorial
 - Add a [Files and Streams](https://uiua.org/tutorial/filesandstreams) tutorial
 - Add an [Experimental Features](https://uiua.org/docs/experimental) page
+- Rewrite the pad code to use a `<textarea>` rather than a `contenteditable` `<div>`
+  - This should make it work better in more browsers, especially on mobile
 - You can now ctrl+click on a glyph in the editor to open its documentation
 
 ## 0.10.3 - 2024-04-09

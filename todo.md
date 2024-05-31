@@ -19,6 +19,7 @@
   - Dynamic modules
   - `base` function
   - `chunks` function?
+  - `pull` function?
   - Plots
 - Media window
 - Trace images/audio in pad

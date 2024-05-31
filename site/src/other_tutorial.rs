@@ -176,7 +176,6 @@ pub fn Documentation() -> impl IntoView {
         <Editor example="# Do the thing\n# ? x y\nFoo ← ≡↻⇡⧻⟜¤"/> // Should fail
         <p>"The "<code>"?"</code>" is similar to the "<Prim prim=Primitive::Stack/>" function because the arguments indicate the intended state of the stack before the function is called."</p>
         <p>"If you also want to give names to a function's outputs, you can list them in front of the "<code>"?"</code>". This lets you read the comment signature right-to-left, the same way as normal Uiua code."</p>
-        <p>"In this case, the leading "<code>"?"</code>" is optional."</p>
         <Editor example="# Quotient Remainder ? Divisor Dividend\nDivRem ← ⌊⊃÷◿\nDivRem 3 7"/>
     }
 }

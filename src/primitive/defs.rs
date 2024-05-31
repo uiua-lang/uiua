@@ -1175,7 +1175,7 @@ primitive!(
     /// ex: ◫¯1_2 ↯4_4⇡16
     ///
     /// Usually, [windows] "materialzes" the windows. This means that the windows are copied into a new array. While this is very general, it can be slow and wasteful if you end up immediately reducing the windows.
-    /// For this reason, the pattern `rows``reduce``F``windows` is optimized for scalar window sizes to fall the function between adjacent rows of the array.
+    /// For this reason, the pattern `rows``reduce``F``windows` is optimized for scalar window sizes to [reduce] windows as they are generated.
     /// ex: ≡/+◫ 5 [1 8 2 9 3 0 2 4 4 5 1] # Fast!
     (2, Windows, DyadicArray, ("windows", '◫')),
     /// Discard or copy some rows of an array

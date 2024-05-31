@@ -631,6 +631,8 @@ sys_op! {
     (2, Ffi, Ffi, "&ffi", "foreign function interface", Mutating),
     /// Copy data from a pointer into an array
     ///
+    /// *Warning ⚠️: [&memcpy] can lead to undefined behavior if used incorrectly.*
+    ///
     /// This is useful for complex [&ffi] calls that are meant to return arrays.
     /// Expects a string indicating the type, a pointer, and a length.
     ///
@@ -655,6 +657,8 @@ sys_op! {
     ///   : ⊃&memfree(&memcpy "int":3) GetInts 3
     (3, MemCopy, Ffi, "&memcpy", "foreign function interface - copy", Mutating),
     /// Free a pointer
+    ///
+    /// *Warning ⚠️: [&memfree] can lead to undefined behavior if used incorrectly.*
     ///
     /// This is useful for freeing memory allocated by a foreign function.
     /// Expects a pointer.

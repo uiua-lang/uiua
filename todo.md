@@ -3,14 +3,18 @@
 - 0.11
   - Release it!
 - 0.12
-  - Tree extension
-  - `◹` modifier
-  - Array bar notation
+  - `keep` enhancements
+    - Cycle counts
+    - Real scalar counts
+    - Depth optimization
   - Show array shape on hover
+  - Unicode literals
+  - `◹` modifier
+  - Tree extension
+  - Array bar notation
   - Error classes
   - Refactor inversion to make left-inverses well-defined
-    - `un on` for all "left-invertible" functions
-  - Unicode literals
+    - `un on` for all left-invertible functions
   - `# Track caller!`
   - Dynamic modules
   - `base` function

@@ -214,16 +214,18 @@ constant!(
         )
     ),
     /// The phases of the moon
-    ("Moon", Array::from_iter(['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'])),
+    ("Moon", "🌑🌒🌓🌔🌕🌖🌗🌘"),
     /// Skin color modifiers for emoji
     (
         "Skin",
         Array::from_iter(['🏻', '🏼', '🏽', '🏾', '🏿'])
     ),
     /// People emoji
-    ("People", Array::from_iter(['👨', '👩', '👦', '👧'])),
+    ("People", "👨👩👦👧"),
     /// Emoji hair components
-    ("Hair", Array::from_iter(['🦰', '🦱', '🦲', '🦳'])),
+    ("Hair", "🦰🦱🦲🦳"),
+    /// Emoji Fitzpatrick modifiers
+    ("Fitz", "🏻🏼🏽🏾🏿"),
     /// The Uiua logo
     #[cfg(feature = "image")]
     ("Logo", image_bytes_to_array(include_bytes!("../../site/assets/uiua-logo-512.png"), true).unwrap()),

@@ -461,6 +461,7 @@ input[type=number] {
     overflow-y: auto;
     display: flex;
     gap: 0.1em;
+    overflow-y: hidden;
 }
 
 .code-and-overlay {

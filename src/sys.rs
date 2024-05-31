@@ -2299,20 +2299,42 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
     decoder.set_color_output(gif::ColorOutput::RGBA);
     let mut decoder = decoder.read_info(bytes)?;
     let first_frame = decoder.read_next_frame()?.unwrap();
-    let width = first_frame.width;
-    let height = first_frame.height;
+    let gif_width = first_frame.width as usize;
+    let gif_height = first_frame.height as usize;
     let mut data: crate::cowslice::CowSlice<f64> = Default::default();
     let mut frame_count = 1;
     let mut delay_sum = first_frame.delay as f64 / 100.0;
-    data.extend(first_frame.buffer.iter().map(|&b| b as f64 / 255.0));
+    // Init frame data with the first frame
+    let mut frame_data = first_frame.buffer.to_vec();
+    data.extend(frame_data.iter().map(|b| *b as f64 / 255.0));
+    // Loop through the rest of the frames
     while let Some(frame) = decoder.read_next_frame()? {
-        data.extend(frame.buffer.iter().map(|&b| b as f64 / 255.0));
+        let frame_width = frame.width as usize;
+        let frame_height = frame.height as usize;
+        // Some frames may have different dimensions than the GIF
+        if frame_width == gif_width && frame_height == gif_height {
+            frame_data.copy_from_slice(&frame.buffer);
+        } else {
+            // Copy the frame into the correct position in the GIF
+            let frame_left = frame.left as usize;
+            let frame_top = frame.top as usize;
+            for dy in 0..frame_height {
+                let y = frame_top + dy;
+                for dx in 0..frame_width {
+                    let x = frame_left + dx;
+                    let outer_i = (y * gif_width + x) * 4;
+                    let inner_i = (dy * frame_width + dx) * 4;
+                    frame_data[outer_i..][..4].copy_from_slice(&frame.buffer[inner_i..][..4]);
+                }
+            }
+        }
+        data.extend(frame_data.iter().map(|b| *b as f64 / 255.0));
         frame_count += 1;
         delay_sum += frame.delay as f64 / 100.0;
     }
     let avg_delay = delay_sum / frame_count as f64;
     let frame_rate = 1.0 / avg_delay;
-    let shape = crate::Shape::from_iter([frame_count, height as usize, width as usize, 4]);
+    let shape = crate::Shape::from_iter([frame_count, gif_height, gif_width, 4]);
     let mut num = Value::Num(Array::new(shape, data));
     num.compress();
     Ok((frame_rate, num))

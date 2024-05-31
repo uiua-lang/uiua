@@ -62,7 +62,7 @@ This version is not yet released. If you are reading this on the website, then t
   - `ThisFileDir` - The directory of the current source file
   - `WorkingDir` - The compile-time working directory
 - Deprecate function strands
-  - They ended up making cose less readable
+  - They ended up making code less readable
 - Remove previously deprecated primitives:
   - `this ↬`
   - `recur ↫`

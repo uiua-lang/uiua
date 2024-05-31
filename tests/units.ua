@@ -534,9 +534,11 @@ Fact ← |1 ⟨×Fact-1.|1⟩<2.
 ⍤⟜≍: "[1,2,3]" json [1 2 3]
 ⍤⟜≍: "[\"some\",\"words\"]" json {"some" "words"}
 ⍤⟜≍: "{\"buddy\":[3,4,5],\"hey\":1,\"there\":2}" json map {"hey" "there" "buddy"} {1 2 [3 4 5]}
+⍤⟜≍: "[true,false]" json [True False]
 ⍤⟜≍: [4 5 6] °json "[4,5,6]"
 ⍤⟜≍: {"what's" "the" "plan"} °json $ ["what's","the","plan"]
 ⍤⟜≍: ⇌map {"foo" "baz"} {"bar" 1_2_3} °json $ {"foo": "bar", "baz": [1, 2, 3]}
+⍤⟜≍: [True False] °json "[true,false]"
 
 # Csv
 ⍤⟜≍ ⟜⍜csv∘ [{"hi" "there"} {"my" "friend"}]
@@ -575,6 +577,7 @@ repr[{[[1 2][2 3]][3 4]}{[[1 2][2 3]]□{[[1 2][2 3]]□□[3 4]}}]
 ⍤⟜≍: {"@⊗" "@\\s" "@\\0" "@'" "@\\\\" "@😀" "@\\x13" "@\\u{99999}" "\"你好\""}
 ⍤⟜≍: "\"n\\n\\\\n \\t \\\" ' \"" repr "n\n\\n \t \" ' "
 ⍤⟜≍: "{¯i ¯π}" repr {¯i ¯π}
+⍤⟜≍: "[True False]" repr [True False]
 
 # Experimental!
 ⍤⟜≍: "$x 5" repr $x 5

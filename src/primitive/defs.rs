@@ -124,9 +124,9 @@ constant!(
     /// The number of processors available
     ("NumProcs", num_cpus::get() as f64),
     /// A boolean `true` value for use in `json`
-    ("True", true),
+    ("True", Array::json_bool(true)),
     /// A boolean `false` value for use in `json`
-    ("False", false),
+    ("False", Array::json_bool(false)),
     /// A NULL pointer for use in FFI
     ("NULL", Value::null()),
     /// An uninitialed pointer for use in FFI

@@ -14,7 +14,7 @@ use crate::{
     array::{Array, ArrayValue},
     boxed::Boxed,
     value::Value,
-    ArrayFlags, Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
+    Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
 };
 
 type Grid<T = char> = Vec<Vec<T>>;
@@ -24,7 +24,6 @@ type Metagrid = Grid<Grid>;
 pub struct GridFmtParams {
     pub boxed: bool,
     pub label: bool,
-    pub bool_lit: bool,
 }
 
 pub trait GridFmt {
@@ -50,13 +49,6 @@ fn boxed_scalar(boxed: bool) -> impl Iterator<Item = char> {
 impl GridFmt for u8 {
     fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         let boxed = boxed_scalar(params.boxed);
-        if params.bool_lit {
-            if *self == 0 {
-                return vec![boxed.chain("False".chars()).collect()];
-            } else if *self == 1 {
-                return vec![boxed.chain("True".chars()).collect()];
-            }
-        }
         vec![boxed.chain(self.to_string().chars()).collect()]
     }
 }
@@ -67,11 +59,7 @@ impl GridFmt for f64 {
         let positive = f.abs();
         let is_neg = f < 0.0;
         let minus = if is_neg { "¯" } else { "" };
-        let s = if params.bool_lit && *self == 0.0 {
-            "False".into()
-        } else if params.bool_lit && *self == 1.0 {
-            "True".into()
-        } else if (positive - PI).abs() < f64::EPSILON {
+        let s = if (positive - PI).abs() < f64::EPSILON {
             format!("{minus}π")
         } else if (positive - TAU).abs() < f64::EPSILON {
             format!("{minus}τ")
@@ -159,7 +147,7 @@ impl GridFmt for Complex {
 }
 
 impl GridFmt for Value {
-    fn fmt_grid(&self, mut params: GridFmtParams) -> Grid {
+    fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         'box_list: {
             let Value::Box(b) = self else {
                 break 'box_list;
@@ -195,7 +183,6 @@ impl GridFmt for Value {
             only_row.push('}');
             return vec![only_row];
         }
-        params.bool_lit = self.meta().flags.contains(ArrayFlags::BOOLEAN_LITERAL);
         match self {
             Value::Num(n) => n.fmt_grid(params),
             Value::Byte(b) => b.fmt_grid(params),
@@ -260,8 +247,7 @@ impl GridFmt for Boxed {
 }
 
 impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
-    fn fmt_grid(&self, mut params: GridFmtParams) -> Grid {
-        params.bool_lit = self.meta().flags.contains(ArrayFlags::BOOLEAN_LITERAL);
+    fn fmt_grid(&self, params: GridFmtParams) -> Grid {
         let mut metagrid: Option<Metagrid> = None;
         let mut grid = if let Some(pointer) = self.meta().pointer.filter(|p| p.raw) {
             vec![boxed_scalar(params.boxed)

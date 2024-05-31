@@ -557,6 +557,14 @@ impl<T: Clone> Array<T> {
     }
 }
 
+impl Array<u8> {
+    pub(crate) fn json_bool(b: bool) -> Self {
+        let mut arr = Self::from(b);
+        arr.meta_mut().flags |= ArrayFlags::BOOLEAN_LITERAL;
+        arr
+    }
+}
+
 impl Array<Boxed> {
     /// Attempt to unbox a scalar box array
     pub fn into_unboxed(self) -> Result<Value, Self> {
@@ -680,7 +688,7 @@ impl From<Vec<bool>> for Array<u8> {
 impl From<bool> for Array<u8> {
     fn from(data: bool) -> Self {
         let mut arr = Self::new(Shape::scalar(), cowslice![u8::from(data)]);
-        arr.meta_mut().flags |= ArrayFlags::BOOLEAN | ArrayFlags::BOOLEAN_LITERAL;
+        arr.meta_mut().flags |= ArrayFlags::BOOLEAN;
         arr
     }
 }

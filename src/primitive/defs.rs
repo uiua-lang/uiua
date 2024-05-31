@@ -217,6 +217,10 @@ constant!(
             ['♟', '♜', '♞', '♝', '♛', '♚', '♙', '♖', '♘', '♗', '♕', '♔']
         )
     ),
+    /// The Uiua logo
+    ("Logo", image_bytes_to_array(include_bytes!("../../site/assets/uiua-logo-512.png")).unwrap()),
+    /// Ethically sourced Lena picture
+    ("Lena", image_bytes_to_array(include_bytes!("../../site/assets/lena.jpg")).unwrap()),
     ///
     (
         "⍼",

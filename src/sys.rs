@@ -1455,19 +1455,7 @@ impl SysOp {
                     };
                     let format = image::guess_format(&bytes)
                         .map_err(|e| env.error(format!("Failed to read image: {e}")))?;
-                    let image = image::load_from_memory(&bytes)
-                        .map_err(|e| env.error(format!("Failed to read image: {}", e)))?
-                        .into_rgba8();
-                    let shape =
-                        crate::Shape::from([image.height() as usize, image.width() as usize, 4]);
-                    let array = Array::<f64>::new(
-                        shape,
-                        image
-                            .into_raw()
-                            .into_iter()
-                            .map(|b| b as f64 / 255.0)
-                            .collect::<crate::cowslice::CowSlice<_>>(),
-                    );
+                    let array = image_bytes_to_array(&bytes).map_err(|e| env.error(e))?;
                     env.push(array);
                     env.push(match format {
                         image::ImageFormat::Jpeg => "jpeg".into(),
@@ -1955,6 +1943,23 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
 #[cfg(feature = "image")]
 pub fn value_to_image_bytes(value: &Value, format: ImageOutputFormat) -> Result<Vec<u8>, String> {
     image_to_bytes(&value_to_image(value)?, format)
+}
+
+#[doc(hidden)]
+#[cfg(feature = "image")]
+pub fn image_bytes_to_array(bytes: &[u8]) -> Result<Array<f64>, String> {
+    let image = image::load_from_memory(bytes)
+        .map_err(|e| format!("Failed to read image: {}", e))?
+        .into_rgba8();
+    let shape = crate::Shape::from([image.height() as usize, image.width() as usize, 4]);
+    Ok(Array::new(
+        shape,
+        image
+            .into_raw()
+            .into_iter()
+            .map(|b| b as f64 / 255.0)
+            .collect::<crate::cowslice::CowSlice<_>>(),
+    ))
 }
 
 #[doc(hidden)]

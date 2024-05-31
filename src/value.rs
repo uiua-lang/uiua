@@ -50,7 +50,7 @@ impl<T: ExactSizeIterator + DoubleEndedIterator> ExactDoubleIterator for T {}
 impl Value {
     pub(crate) fn null() -> Self {
         let mut arr = Array::<u8>::default();
-        arr.meta_mut().pointer = Some(0);
+        arr.meta_mut().pointer = Some(MetaPtr::null());
         Value::from(arr)
     }
     pub(crate) fn builder(capacity: usize) -> ValueBuilder {
@@ -1770,8 +1770,15 @@ cmp_impls!(is_lt, is_le, is_gt, is_ge);
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
-        if let Some((a, b)) = self.meta().pointer.zip(other.meta().pointer) {
-            return a == b;
+        if let Some(a) = self.meta().pointer {
+            if a.raw {
+                return other.meta().pointer.is_some_and(|b| a == b);
+            }
+        }
+        if let Some(b) = other.meta().pointer {
+            if b.raw {
+                return false;
+            }
         }
         match (self, other) {
             (Value::Num(a), Value::Num(b)) => a == b,

@@ -13,7 +13,7 @@
   - Unicode literals
   - `# Track caller!`
   - Dynamic modules
-  - Encode/decode
+  - `base` function
   - `chunks` function?
   - Plots
 - Media window

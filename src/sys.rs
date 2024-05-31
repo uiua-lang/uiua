@@ -1847,7 +1847,7 @@ impl SysOp {
                     .pop(2)?
                     .meta()
                     .pointer
-                    .map(|i| i as *const ())
+                    .map(|p| p.get())
                     .ok_or_else(|| env.error("Copied pointer must be a pointer value"))?;
                 let len = env
                     .pop(3)?
@@ -1862,7 +1862,7 @@ impl SysOp {
                     .pop(1)?
                     .meta()
                     .pointer
-                    .map(|i| i as *const ())
+                    .map(|p| p.get())
                     .ok_or_else(|| env.error("Freed pointer must be a pointer value"))?;
                 (env.rt.backend).mem_free(ptr).map_err(|e| env.error(e))?;
             }

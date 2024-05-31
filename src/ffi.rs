@@ -231,7 +231,7 @@ mod enabled {
     use libffi::middle::*;
 
     use super::*;
-    use crate::{Array, Boxed, Value};
+    use crate::{Array, Boxed, MetaPtr, Value};
 
     macro_rules! dbgln {
         ($($arg:tt)*) => {
@@ -366,7 +366,7 @@ mod enabled {
                 ($ty:ty) => {{
                     let ptr = unsafe { cif.call::<*const $ty>(fptr, &bindings.args) };
                     let mut val = Value::default();
-                    val.meta_mut().pointer = Some(ptr as usize);
+                    val.meta_mut().pointer = Some(MetaPtr::new(ptr, true));
                     results.push(val);
                 }};
             }
@@ -476,7 +476,13 @@ mod enabled {
             macro_rules! out_param_scalar {
                 ($ty:ty, $i:expr, $numty:ty ) => {
                     match bindings.get_maybe_null::<$ty>($i) {
-                        Some(&val) => results.push((val as $numty).into()),
+                        Some((&val, ptr)) => {
+                            let mut val = Value::from(val as $numty);
+                            if let Some(ptr) = ptr {
+                                val.meta_mut().pointer = Some(MetaPtr::new(ptr, false));
+                            }
+                            results.push(val)
+                        }
                         None => results.push(Value::null()),
                     }
                 };
@@ -542,7 +548,7 @@ mod enabled {
                                     dbgln!("    inner ptr to char: {ptr:p}");
                                     results.push(if ptr.is_null() {
                                         let mut val = Value::default();
-                                        val.meta_mut().pointer = Some(0);
+                                        val.meta_mut().pointer = Some(MetaPtr::new(ptr, true));
                                         val
                                     } else {
                                         let s = CStr::from_ptr(ptr)
@@ -557,13 +563,13 @@ mod enabled {
                                     let ptr = *ptr;
                                     dbgln!("    inner ptr to void: {ptr:p}");
                                     let mut val = Value::from(ptr as usize);
-                                    val.meta_mut().pointer = Some(ptr as usize);
+                                    val.meta_mut().pointer = Some(MetaPtr::new(ptr, true));
                                     results.push(val);
                                 },
                                 _ => {
                                     let ptr = *bindings.get::<*mut ()>(i);
                                     let mut val = Value::from(ptr as usize);
-                                    val.meta_mut().pointer = Some(ptr as usize);
+                                    val.meta_mut().pointer = Some(MetaPtr::new(ptr, true));
                                     results.push(val);
                                 }
                             },
@@ -718,7 +724,8 @@ mod enabled {
         fn push_list<T: Any + 'static>(&mut self, mut arg: Box<[T]>) -> *mut T {
             let ptr = &mut arg[0] as *mut T;
             dbgln!("      create *mut {}: {ptr:p}", type_name::<T>());
-            self.arg_data.push(Box::new((ptr, arg)));
+            let storage = (ptr, arg);
+            self.arg_data.push(Box::new(storage));
             self.args.push(Arg::new(
                 &(self.arg_data.last_mut().unwrap())
                     .downcast_mut::<ListStorage<T>>()
@@ -733,7 +740,7 @@ mod enabled {
             ptr
         }
         fn get<T: Any>(&self, index: usize) -> &T {
-            self.try_get(index).unwrap_or_else(|| {
+            self.try_get(index).map(|(t, _)| t).unwrap_or_else(|| {
                 panic!(
                     "Value wasn't expected type {}, {}, or {}",
                     type_name::<T>(),
@@ -742,7 +749,7 @@ mod enabled {
                 )
             })
         }
-        fn get_maybe_null<T: Any>(&self, index: usize) -> Option<&T> {
+        fn get_maybe_null<T: Any>(&self, index: usize) -> Option<(&T, Option<*mut T>)> {
             self.try_get(index)
                 .map(Some)
                 .or_else(|| {
@@ -761,23 +768,23 @@ mod enabled {
                     )
                 })
         }
-        fn try_get<T: Any>(&self, index: usize) -> Option<&T> {
+        fn try_get<T: Any>(&self, index: usize) -> Option<(&T, Option<*mut T>)> {
             let any = &self.arg_data[index];
             any.downcast_ref::<T>()
                 .map(|t| {
                     dbgln!("  exact type");
-                    t
+                    (t, None)
                 })
                 .or_else(|| {
                     any.downcast_ref::<(*mut T, Box<T>)>().map(|(p, _)| {
                         dbgln!("  ptr type");
-                        unsafe { &**p }
+                        (unsafe { &**p }, Some(*p))
                     })
                 })
                 .or_else(|| {
                     any.downcast_ref::<ListStorage<T>>().map(|(_, b)| {
                         dbgln!("  list type");
-                        &b[0]
+                        (&b[0], Some(&b[0] as *const T as *mut T))
                     })
                 })
         }
@@ -878,7 +885,7 @@ mod enabled {
                         self.push_repr_ptr(repr)
                     }
                     (_, arg) if arg.meta().pointer.is_some() => {
-                        let ptr = arg.meta().pointer.unwrap() as *mut ();
+                        let ptr = arg.meta().pointer.unwrap().get_mut();
                         self.push_raw_ptr(ptr);
                         ptr
                     }
@@ -887,8 +894,31 @@ mod enabled {
                         self.no_arg();
                         self.alloc_and_push_ptr_to(ptr)
                     }
+                    (FfiType::UChar, Value::Char(arr)) => list!(arr, c_char),
+                    (FfiType::Char, Value::Num(arr)) => list!(arr, c_char),
+                    (FfiType::UChar, Value::Num(arr)) => list!(arr, c_uchar),
+                    (FfiType::Short, Value::Num(arr)) => list!(arr, c_short),
+                    (FfiType::UShort, Value::Num(arr)) => list!(arr, c_ushort),
                     (FfiType::Int, Value::Num(arr)) => list!(arr, c_int),
+                    (FfiType::UInt, Value::Num(arr)) => list!(arr, c_uint),
+                    (FfiType::Long, Value::Num(arr)) => list!(arr, c_long),
+                    (FfiType::ULong, Value::Num(arr)) => list!(arr, c_ulong),
+                    (FfiType::LongLong, Value::Num(arr)) => list!(arr, c_longlong),
+                    (FfiType::ULongLong, Value::Num(arr)) => list!(arr, c_ulonglong),
+                    (FfiType::Float, Value::Num(arr)) => list!(arr, c_float),
+                    (FfiType::Double, Value::Num(arr)) => list!(arr, c_double),
+                    (FfiType::Char, Value::Byte(arr)) => list!(arr, c_char),
+                    (FfiType::UChar, Value::Byte(arr)) => list!(arr, c_uchar),
+                    (FfiType::Short, Value::Byte(arr)) => list!(arr, c_short),
+                    (FfiType::UShort, Value::Byte(arr)) => list!(arr, c_ushort),
                     (FfiType::Int, Value::Byte(arr)) => list!(arr, c_int),
+                    (FfiType::UInt, Value::Byte(arr)) => list!(arr, c_uint),
+                    (FfiType::Long, Value::Byte(arr)) => list!(arr, c_long),
+                    (FfiType::ULong, Value::Byte(arr)) => list!(arr, c_ulong),
+                    (FfiType::LongLong, Value::Byte(arr)) => list!(arr, c_longlong),
+                    (FfiType::ULongLong, Value::Byte(arr)) => list!(arr, c_ulonglong),
+                    (FfiType::Float, Value::Byte(arr)) => list!(arr, c_float),
+                    (FfiType::Double, Value::Byte(arr)) => list!(arr, c_double),
                     (inner, val) => {
                         let ptr = self.bind(i, inner, val)?;
                         dbgln!("    inner ptr to {inner}: {ptr:p}");
@@ -900,32 +930,30 @@ mod enabled {
                     }
                 },
                 (FfiType::List { inner, .. }, val) => match (&**inner, val) {
-                    (FfiType::Char | FfiType::UChar, Value::Char(arr)) => {
-                        list!(arr, c_char)
-                    }
-                    (FfiType::Short | FfiType::UShort, Value::Num(arr)) => {
-                        list!(arr, c_short)
-                    }
-                    (FfiType::Int | FfiType::UInt, Value::Num(arr)) => list!(arr, c_int),
-                    (FfiType::Long | FfiType::ULong, Value::Num(arr)) => list!(arr, c_long),
-                    (FfiType::LongLong | FfiType::ULongLong, Value::Num(arr)) => {
-                        list!(arr, c_longlong)
-                    }
+                    (FfiType::Char, Value::Char(arr)) => list!(arr, c_char),
+                    (FfiType::UChar, Value::Char(arr)) => list!(arr, c_uchar),
+                    (FfiType::Char, Value::Num(arr)) => list!(arr, c_char),
+                    (FfiType::UChar, Value::Num(arr)) => list!(arr, c_uchar),
+                    (FfiType::Short, Value::Num(arr)) => list!(arr, c_short),
+                    (FfiType::UShort, Value::Num(arr)) => list!(arr, c_ushort),
+                    (FfiType::Int, Value::Num(arr)) => list!(arr, c_int),
+                    (FfiType::UInt, Value::Num(arr)) => list!(arr, c_uint),
+                    (FfiType::Long, Value::Num(arr)) => list!(arr, c_long),
+                    (FfiType::ULong, Value::Num(arr)) => list!(arr, c_ulong),
+                    (FfiType::LongLong, Value::Num(arr)) => list!(arr, c_longlong),
+                    (FfiType::ULongLong, Value::Num(arr)) => list!(arr, c_ulonglong),
                     (FfiType::Float, Value::Num(arr)) => list!(arr, c_float),
                     (FfiType::Double, Value::Num(arr)) => list!(arr, c_double),
-                    (FfiType::Char | FfiType::UChar, Value::Byte(arr)) => {
-                        list!(arr, c_char)
-                    }
-                    (FfiType::Short | FfiType::UShort, Value::Byte(arr)) => {
-                        list!(arr, c_short)
-                    }
-                    (FfiType::Int | FfiType::UInt, Value::Byte(arr)) => list!(arr, c_int),
-                    (FfiType::Long | FfiType::ULong, Value::Byte(arr)) => {
-                        list!(arr, c_long)
-                    }
-                    (FfiType::LongLong | FfiType::ULongLong, Value::Byte(arr)) => {
-                        list!(arr, c_longlong)
-                    }
+                    (FfiType::Char, Value::Byte(arr)) => list!(arr, c_char),
+                    (FfiType::UChar, Value::Byte(arr)) => list!(arr, c_uchar),
+                    (FfiType::Short, Value::Byte(arr)) => list!(arr, c_short),
+                    (FfiType::UShort, Value::Byte(arr)) => list!(arr, c_ushort),
+                    (FfiType::Int, Value::Byte(arr)) => list!(arr, c_int),
+                    (FfiType::UInt, Value::Byte(arr)) => list!(arr, c_uint),
+                    (FfiType::Long, Value::Byte(arr)) => list!(arr, c_long),
+                    (FfiType::ULong, Value::Byte(arr)) => list!(arr, c_ulong),
+                    (FfiType::LongLong, Value::Byte(arr)) => list!(arr, c_longlong),
+                    (FfiType::ULongLong, Value::Byte(arr)) => list!(arr, c_ulonglong),
                     (FfiType::Float, Value::Byte(arr)) => list!(arr, c_float),
                     (FfiType::Double, Value::Byte(arr)) => list!(arr, c_double),
                     (FfiType::Struct { fields }, val) => {
@@ -1040,7 +1068,7 @@ mod enabled {
                     // Pointers
                     (FfiType::Ptr { inner, .. }, value) => {
                         if let Some(ptr_u) = value.meta().pointer {
-                            repr[range].copy_from_slice(&ptr_u.to_ne_bytes());
+                            repr[range].copy_from_slice(&ptr_u.ptr.to_ne_bytes());
                         } else {
                             match (&**inner, value) {
                                 (FfiType::Char, Value::Char(arr)) => {
@@ -1130,7 +1158,7 @@ mod enabled {
                                 .into_rows()
                                 .next()
                                 .unwrap();
-                            row.meta_mut().pointer = Some(ptr as usize);
+                            row.meta_mut().pointer = Some(MetaPtr::new(ptr, false));
                             rows.push(row);
                         }
                     },

@@ -561,6 +561,11 @@ Fact ← |1 ⟨×Fact-1.|1⟩<2.
 ◌&fras /◇⊂ {WorkingDir Sep ThisFile}
 ◌&fras /◇⊂ {WorkingDir Sep ThisFileDir Sep ThisFileName}
 
+# Pointer equality
+⍤⟜≍: 1 ≍ NULL NULL
+⍤⟜≍: 0 ≍ NULL []
+⍤⟜≍: 0 ≍ [] NULL
+
 # Repr
 repr[{[[1 2][2 3]][3 4]}{[[1 2][2 3]]□{[[1 2][2 3]]□□[3 4]}}]
 "[{[[1 2] [2 3]] [3 4]}\n  {[[1 2] [2 3]] □{[[1 2] [2 3]] □□[3 4]}}]"

@@ -263,9 +263,9 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
     fn fmt_grid(&self, mut params: GridFmtParams) -> Grid {
         params.bool_lit = self.meta().flags.contains(ArrayFlags::BOOLEAN_LITERAL);
         let mut metagrid: Option<Metagrid> = None;
-        let mut grid = if let Some(pointer) = self.meta().pointer {
+        let mut grid = if let Some(pointer) = self.meta().pointer.filter(|p| p.raw) {
             vec![boxed_scalar(params.boxed)
-                .chain(format!("0x{:x}", pointer).chars())
+                .chain(format!("0x{:x}", pointer.ptr).chars())
                 .collect()]
         } else if self.shape.is_empty() && !self.is_map() {
             // Scalar
@@ -405,6 +405,13 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         grid[0].push(' ');
                     }
                 }
+            }
+        }
+
+        // Add pointer
+        if let Some(pointer) = self.meta().pointer.filter(|p| !p.raw) {
+            if grid.len() == 1 {
+                grid[0].extend(format!("(0x{:x})", pointer.ptr).chars());
             }
         }
 

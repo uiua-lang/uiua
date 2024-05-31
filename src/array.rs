@@ -48,11 +48,50 @@ pub struct ArrayMeta {
     pub map_keys: Option<MapKeys>,
     /// The pointer value for FFI
     #[serde(skip)]
-    pub pointer: Option<usize>,
+    pub pointer: Option<MetaPtr>,
     /// The kind of system handle
     #[serde(skip)]
     pub handle_kind: Option<HandleKind>,
 }
+
+/// Array pointer metadata
+#[derive(Debug, Clone, Copy)]
+pub struct MetaPtr {
+    /// The pointer value
+    pub ptr: usize,
+    /// Whether the pointer should prevent the array's value from being shown
+    pub raw: bool,
+}
+
+impl MetaPtr {
+    /// Get a null metadata pointer
+    pub const fn null() -> Self {
+        Self { ptr: 0, raw: true }
+    }
+    /// Create a new metadata pointer
+    pub fn new<T: ?Sized>(ptr: *const T, raw: bool) -> Self {
+        Self {
+            ptr: ptr as *const () as usize,
+            raw,
+        }
+    }
+    /// Get the pointer as a raw pointer
+    pub fn get<T>(&self) -> *const T {
+        self.ptr as *const T
+    }
+    /// Get the pointer as a raw pointer
+    pub fn get_mut<T>(&self) -> *mut T {
+        self.ptr as *mut T
+    }
+}
+
+impl PartialEq for MetaPtr {
+    fn eq(&self, other: &Self) -> bool {
+        self.ptr == other.ptr
+    }
+}
+
+impl Eq for MetaPtr {}
 
 bitflags! {
     /// Flags for an array

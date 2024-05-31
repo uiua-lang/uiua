@@ -3677,7 +3677,7 @@ checksum = "ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9"
 
 [[package]]
 name = "uiua"
-version = "0.11.0-dev.1"
+version = "0.11.0-pre.1"
 dependencies = [
  "arboard",
  "bitflags 2.5.0",

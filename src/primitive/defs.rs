@@ -128,11 +128,7 @@ constant!(
     /// A boolean `false` value for use in `json`
     ("False", false),
     /// A NULL pointer for use in FFI
-    ("NULL", {
-        let mut arr = Array::<u8>::default();
-        arr.meta_mut().pointer = Some(0);
-        Value::from(arr)
-    }),
+    ("NULL", Value::null()),
     /// An uninitialed pointer for use in FFI
     ("Uninit", 0),
     /// The days of the week

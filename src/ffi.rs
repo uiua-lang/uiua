@@ -5,6 +5,9 @@ use std::{
     str::FromStr,
 };
 
+#[allow(dead_code)]
+pub(crate) const DEBUG: bool = false;
+
 /// Types for FFI
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(missing_docs)]
@@ -212,9 +215,6 @@ fn struct_fields_size_align(fields: &[FfiType]) -> (usize, usize) {
     // println!("size_align of struct {fields:?}: {size}, {align}");
     (size, align)
 }
-
-#[allow(dead_code)]
-pub(crate) const DEBUG: bool = false;
 
 #[cfg(feature = "ffi")]
 pub(crate) use enabled::*;
@@ -475,7 +475,10 @@ mod enabled {
             // Get out parameters
             macro_rules! out_param_scalar {
                 ($ty:ty, $i:expr, $numty:ty ) => {
-                    results.push((*bindings.get::<$ty>($i) as $numty).into())
+                    match bindings.get_maybe_null::<$ty>($i) {
+                        Some(&val) => results.push((val as $numty).into()),
+                        None => results.push(Value::null()),
+                    }
                 };
             }
             macro_rules! out_param_list {
@@ -730,6 +733,35 @@ mod enabled {
             ptr
         }
         fn get<T: Any>(&self, index: usize) -> &T {
+            self.try_get(index).unwrap_or_else(|| {
+                panic!(
+                    "Value wasn't expected type {}, {}, or {}",
+                    type_name::<T>(),
+                    type_name::<(*mut T, Box<T>)>(),
+                    type_name::<ListStorage<T>>()
+                )
+            })
+        }
+        fn get_maybe_null<T: Any>(&self, index: usize) -> Option<&T> {
+            self.try_get(index)
+                .map(Some)
+                .or_else(|| {
+                    self.arg_data[index]
+                        .downcast_ref::<*mut ()>()
+                        .is_some()
+                        .then_some(None)
+                })
+                .unwrap_or_else(|| {
+                    panic!(
+                        "Value wasn't expected type {}, {}, {}, or {}",
+                        type_name::<T>(),
+                        type_name::<(*mut T, Box<T>)>(),
+                        type_name::<ListStorage<T>>(),
+                        type_name::<*mut ()>()
+                    )
+                })
+        }
+        fn try_get<T: Any>(&self, index: usize) -> Option<&T> {
             let any = &self.arg_data[index];
             any.downcast_ref::<T>()
                 .map(|t| {
@@ -747,14 +779,6 @@ mod enabled {
                         dbgln!("  list type");
                         &b[0]
                     })
-                })
-                .unwrap_or_else(|| {
-                    panic!(
-                        "Value wasn't expected type {}, {}, or {}",
-                        type_name::<T>(),
-                        type_name::<(*mut T, Box<T>)>(),
-                        type_name::<ListStorage<T>>()
-                    )
                 })
         }
         fn get_list_mut<T: 'static>(&mut self, index: usize) -> (*mut T, &mut Box<[T]>) {

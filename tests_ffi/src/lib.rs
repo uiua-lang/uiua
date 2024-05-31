@@ -200,6 +200,26 @@ pub unsafe extern "C" fn array_ptr(arr: *const c_int, len: c_int) -> *const c_in
     copied.leak().as_ptr()
 }
 
+#[no_mangle]
+pub unsafe fn dummy_md5(m: *const c_uchar, len: c_int, out: *mut c_uchar) -> *const c_uchar {
+    if len == 0 {
+        return std::ptr::null();
+    }
+    let len = len as isize;
+    if out.is_null() {
+        let new_out = vec![0; 16].leak().as_mut_ptr();
+        for i in 0..len.min(16) {
+            *new_out.offset(i) = *m.offset(i);
+        }
+        new_out
+    } else {
+        for i in 0..len.min(16) {
+            *out.offset(i) = *m.offset(i);
+        }
+        out
+    }
+}
+
 #[test]
 fn ffi_test() {
     use std::{path::Path, process::Command};

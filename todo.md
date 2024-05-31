@@ -13,6 +13,8 @@
   - Unicode literals
   - `# Track caller!`
   - Dynamic modules
+  - Encode/decode
+  - `chunks` function?
   - Plots
 - Media window
 - Trace images/audio in pad

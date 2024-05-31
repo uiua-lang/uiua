@@ -33,3 +33,8 @@ TwoInts ← "{const int*; const int*}"
 ⍤⟜≍: {1 2} Lib {TwoInts "two_ints_new" "const int*" "const int*"} {1 2}
 
 ⍤⟜≍: [1 2 3] ⊃&memfree(&memcpy "int"⊙3) Lib {"int*" "array_ptr" "const int:1" "int"} {[1 2 3]}
+
+MDF ← Lib {"const unsigned char*" "dummy_md5" "const unsigned char:1" "unsigned long" "const unsigned char*"}
+⍤⟜≍: "hello" &memcpy "char":5 MDF {"hello" NULL}
+MDF ← Lib {"const unsigned char*" "dummy_md5" "const unsigned char:1" "unsigned long" "unsigned char*"}
+⍤⟜≍: {"hello" NULL} ⍜(°□⊢|&memcpy "char":5) MDF {"hello" NULL}

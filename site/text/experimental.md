@@ -35,7 +35,7 @@ Captial letters [`fix`]() the corresponding value.
 
 ## Array Swizzles
 
-Array swizzles allow you to extract rows from and array in a concise way.
+Array swizzles allow you to extract rows from an array in a concise way.
 They are written with a `⋊` followed by some letters.
 The `⋊` will format from `''` if followed by letters.
 Letters up to `m` start from the first row, Letters back from `z` start from the last row.

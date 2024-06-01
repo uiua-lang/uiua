@@ -216,16 +216,11 @@ constant!(
     /// The phases of the moon
     ("Moon", "🌑🌒🌓🌔🌕🌖🌗🌘"),
     /// Skin color modifiers for emoji
-    (
-        "Skin",
-        Array::from_iter(['🏻', '🏼', '🏽', '🏾', '🏿'])
-    ),
+    ("Skin","🏻🏼🏽🏾🏿"),
     /// People emoji
     ("People", "👨👩👦👧"),
     /// Emoji hair components
     ("Hair", "🦰🦱🦲🦳"),
-    /// Emoji Fitzpatrick modifiers
-    ("Fitz", "🏻🏼🏽🏾🏿"),
     /// The Uiua logo
     #[cfg(feature = "image")]
     ("Logo", image_bytes_to_array(include_bytes!("../../site/assets/uiua-logo-512.png"), true).unwrap()),

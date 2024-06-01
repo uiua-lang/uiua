@@ -57,7 +57,8 @@
   <div id="top">
     <div id="header">
       <div id="header-left">
-        <h1><a id="header-uiua" href="/"></a><img src="/assets/uiua-logo.png" style="height: 1em" alt="Uiua" /></a> Uiua
+        <h1><a id="header-uiua" href="/"></a><img id="logo-image" src="/assets/uiua-logo.png" style="height: 1em"
+            alt="Uiua" /></a> Uiua
         </h1>
         <p id="subtitle">A stack-based array programming language</p>
       </div>
@@ -97,5 +98,11 @@
     </div>
   </div>
 </body>
+
+<script type="text/javascript">
+  if (new Date().getMonth() === 5) {
+    document.getElementById("logo-image").src = "/assets/uiua-logo-pride.png";
+  }
+</script>
 
 </html>

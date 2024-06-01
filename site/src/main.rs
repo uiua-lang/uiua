@@ -15,6 +15,7 @@ mod uiuisms;
 
 use base64::engine::{general_purpose::URL_SAFE, Engine};
 use instant::Duration;
+use js_sys::Date;
 use leptos::*;
 use leptos_meta::*;
 use leptos_query::provide_query_client;
@@ -140,6 +141,11 @@ pub fn Site() -> impl IntoView {
         .set_item("visits", &visits.to_string())
         .unwrap();
 
+    let mut logo_src = "/assets/uiua-logo.png";
+    if Date::new_0().get_month() == 5 {
+        logo_src = "/assets/uiua-logo-pride.png";
+    }
+
     view! {
         <Router>
             <ScrollToHash/>
@@ -151,7 +157,7 @@ pub fn Site() -> impl IntoView {
                         <div id="top">
                             <div id="header">
                                 <div id="header-left">
-                                    <h1><A id="header-uiua" href="/"><img src="/assets/uiua-logo.png" style="height: 1em" alt="Uiua logo" />" Uiua"</A></h1>
+                                    <h1><A id="header-uiua" href="/"><img src=logo_src style="height: 1em" alt="Uiua logo" />" Uiua"</A></h1>
                                     <p id="subtitle">{ subtitle.clone() }</p>
                                 </div>
                                 <div id="nav">

@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.11
-  - Change how media constants are retrieved
+  - Merge `new-pad` into `main`
   - Release it!
 - 0.12
   - `keep` enhancements
@@ -22,6 +22,7 @@
   - `base` function
   - `chunks` function?
   - `pull` function?
+  - `A*` modifier?
   - Plots
 - Media window
 - Trace images/audio in pad

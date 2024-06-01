@@ -502,8 +502,8 @@ impl<T: ArrayValue> Array<T> {
                     if abs_taking > arr.row_count() {
                         match T::get_scalar_fill(env) {
                             Ok(fill) => {
-                                let row_len: usize = sub_index
-                                    .iter()
+                                let row_len: usize = (sub_index.iter())
+                                    .chain(repeat(&Err(true)))
                                     .zip(&self.shape[1..])
                                     .map(|(&i, &s)| i.map_or(s, isize::unsigned_abs))
                                     .product();
@@ -536,8 +536,8 @@ impl<T: ArrayValue> Array<T> {
                     if abs_taking > arr.row_count() {
                         match T::get_scalar_fill(env) {
                             Ok(fill) => {
-                                let row_len: usize = sub_index
-                                    .iter()
+                                let row_len: usize = (sub_index.iter())
+                                    .chain(repeat(&Err(true)))
                                     .zip(&self.shape[1..])
                                     .map(|(&i, &s)| i.map_or(s, |i| i.unsigned_abs()))
                                     .product();

@@ -1,5 +1,6 @@
 [build]
 dist = "../docs"
+no_sri = true
 public_url = "/"
 
 [watch]

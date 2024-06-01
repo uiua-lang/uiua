@@ -2232,6 +2232,10 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
 #[cfg(feature = "gif")]
 pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, String> {
     use std::collections::{HashMap, HashSet};
+
+    use gif::{DisposalMethod, Frame};
+    use image::Rgba;
+
     if value.row_count() == 0 {
         return Err("Cannot convert empty array into GIF".into());
     }
@@ -2239,7 +2243,7 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
     let mut width = 0;
     let mut height = 0;
     for row in value.rows() {
-        let image = value_to_image(&row)?.into_rgb8();
+        let image = value_to_image(&row)?.into_rgba8();
         width = image.width();
         height = image.height();
         frames.push(image);
@@ -2253,33 +2257,40 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
             height
         ));
     }
-    let mut reduction = 1;
     let mut bytes = std::io::Cursor::new(Vec::new());
-    let mut all_colors = HashSet::new();
+    let mut opaque_colors = HashSet::new();
     for frame in &frames {
-        for pixel in frame.pixels() {
-            all_colors.insert(pixel.0);
+        for &Rgba([r, g, b, a]) in frame.pixels() {
+            if a > 0 {
+                opaque_colors.insert([r, g, b]);
+            }
         }
     }
-    let mut used_colors = HashSet::new();
-    let used_colors = 'colors: loop {
-        used_colors.clear();
-        let adder = reduction - 1;
-        for color in &all_colors {
-            used_colors.insert(color.map(|p| p.saturating_add(adder) / reduction));
-            if used_colors.len() > 256 {
+    let mut reduced_colors = HashSet::new();
+    let mut color_reduction = HashMap::new();
+    let mut reduction = 1u8;
+    'colors: loop {
+        reduced_colors.clear();
+        color_reduction.clear();
+        for color in &opaque_colors {
+            let reduced = color.map(|p| p / reduction * reduction);
+            reduced_colors.insert(reduced);
+            color_reduction.insert(*color, reduced);
+            if reduced_colors.len() > 255 {
                 reduction += 1;
                 continue 'colors;
             }
         }
-        break used_colors;
-    };
-    let mut palette = Vec::with_capacity(used_colors.len() * 3);
-    let mut color_map: HashMap<[u8; 3], usize> = HashMap::new();
-    for color in used_colors {
-        color_map.insert(color, palette.len() / 3);
+        break;
+    }
+    let mut palette = Vec::with_capacity(reduced_colors.len() * 3);
+    let mut color_map: HashMap<[u8; 3], u8> = HashMap::new();
+    for color in reduced_colors {
+        color_map.insert(color, (palette.len() / 3) as u8);
         palette.extend(color);
     }
+    let transparent_index = color_map.len() as u8;
+    palette.extend([0; 3]);
     let mut encoder = gif::Encoder::new(&mut bytes, width as u16, height as u16, &palette)
         .map_err(|e| e.to_string())?;
     const MIN_FRAME_RATE: f64 = 1.0 / 60.0;
@@ -2288,7 +2299,34 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
         .set_repeat(gif::Repeat::Infinite)
         .map_err(|e| e.to_string())?;
     for image in frames {
-        let mut frame = gif::Frame::from_rgb(width as u16, height as u16, image.as_raw());
+        let mut has_transparent = false;
+        let indices: Vec<u8> = image
+            .as_raw()
+            .chunks_exact(4)
+            .map(|chunk| {
+                if chunk[3] == 0 {
+                    has_transparent = true;
+                    return transparent_index;
+                }
+                let color = [chunk[0], chunk[1], chunk[2]];
+                let reduced = color_reduction[&color];
+                color_map[&reduced]
+            })
+            .collect();
+        let dispose = if has_transparent {
+            DisposalMethod::Previous
+        } else {
+            DisposalMethod::Any
+        };
+        let mut frame = Frame {
+            dispose,
+            ..Frame::from_indexed_pixels(
+                width as u16,
+                height as u16,
+                indices,
+                Some(transparent_index),
+            )
+        };
         frame.delay = delay;
         encoder.write_frame(&frame).map_err(|e| e.to_string())?;
     }

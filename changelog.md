@@ -51,6 +51,7 @@ This version is not yet released. If you are reading this on the website, then t
   - [`&tlsc`](https://uiua.org/docs/&tlsc) replaces [`&httpsw`](https://uiua.org/docs/&httpsw), which is now deprecated
   - [`&tlsl`](https://uiua.org/docs/&tlsl) is currently experimental and mostly untested
 - [`&rs`](https://uiua.org/docs/&rs) will now attempt to read additional bytes to resolve a UTF-8 character
+- [`&gife`] and [`&gifs`] now support binary transparency
 - Signatures can now be specified in stack array notation immediately after a `[` or `{`
 - Change how long decimal numbers are formatted
   - Sequences of repeated digits are now replaced with `…`

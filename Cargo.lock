@@ -3685,6 +3685,7 @@ dependencies = [
  "calamine",
  "clap",
  "color-backtrace",
+ "color_quant",
  "colored",
  "crossbeam-channel",
  "csv",

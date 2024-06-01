@@ -2233,6 +2233,7 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
 pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, String> {
     use std::collections::{HashMap, HashSet};
 
+    use color_quant::NeuQuant;
     use gif::{DisposalMethod, Frame};
     use image::Rgba;
 
@@ -2268,20 +2269,25 @@ pub fn value_to_gif_bytes(value: &Value, frame_rate: f64) -> Result<Vec<u8>, Str
     }
     let mut reduced_colors = HashSet::new();
     let mut color_reduction = HashMap::new();
-    let mut reduction = 1u8;
-    'colors: loop {
-        reduced_colors.clear();
-        color_reduction.clear();
-        for color in &opaque_colors {
-            let reduced = color.map(|p| p / reduction * reduction);
-            reduced_colors.insert(reduced);
-            color_reduction.insert(*color, reduced);
-            if reduced_colors.len() > 255 {
-                reduction += 1;
-                continue 'colors;
-            }
+    if opaque_colors.len() <= 255 {
+        for color in opaque_colors {
+            reduced_colors.insert(color);
+            color_reduction.insert(color, color);
         }
-        break;
+    } else {
+        let opaque_data: Vec<u8> = opaque_colors
+            .iter()
+            .flat_map(|c| c.iter().copied().chain([128]))
+            .collect();
+        let nq = NeuQuant::new(10, 255, &opaque_data);
+        let map = nq.color_map_rgb();
+        for color in opaque_colors {
+            let index = nq.index_of(&[color[0], color[1], color[2], 128]);
+            let start = index * 3;
+            let reduced = [map[start], map[start + 1], map[start + 2]];
+            reduced_colors.insert(reduced);
+            color_reduction.insert(color, reduced);
+        }
     }
     let mut palette = Vec::with_capacity(reduced_colors.len() * 3);
     let mut color_map: HashMap<[u8; 3], u8> = HashMap::new();

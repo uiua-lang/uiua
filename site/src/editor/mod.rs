@@ -1477,13 +1477,7 @@ pub fn Editor<'a>(
                             <div class="line-numbers">
                                 { line_numbers }
                             </div>
-                            <div
-                                class="code-and-overlay">
-                                <div
-                                    id=overlay_id
-                                    class="code-overlay">
-                                    { move || gen_code_view(&overlay.get()) }
-                                </div>
+                            <div class="code-and-overlay">
                                 /////////////////////////
                                 // The text entry area //
                                 /////////////////////////
@@ -1493,6 +1487,7 @@ pub fn Editor<'a>(
                                     autocorrect="false"
                                     autocapitalize="off"
                                     spellcheck="false"
+                                    translate="no"
                                     on:paste=code_paste
                                     on:input=code_input
                                     on:mousemove=code_mouse_move
@@ -1500,6 +1495,11 @@ pub fn Editor<'a>(
                                     value=initial_code_str>
                                 </textarea>
                                 /////////////////////////
+                                <div
+                                    id=overlay_id
+                                    class="code-overlay">
+                                    { move || gen_code_view(&overlay.get()) }
+                                </div>
                             </div>
                         </div>
                         <div id="code-right-side">

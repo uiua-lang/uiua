@@ -470,10 +470,12 @@ input[type=number] {
 }
 
 .code-entry {
+    margin: 0.1em 0 0 0;
+    padding: 0;
+    position: absolute;
     outline: none;
     border: none;
-    padding: 0.15em 0 0.15em 0;
-    margin: 0 0 0 0;
+    box-sizing: border-box;
     /* background-color: #0002; */
     /* color: #0008; */
     background-color: transparent;
@@ -494,6 +496,8 @@ input[type=number] {
 }
 
 .code-overlay {
+    margin: 0;
+    padding: 0;
     position: absolute;
     width: 100%;
     pointer-events: none;

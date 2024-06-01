@@ -1,12 +1,14 @@
 # Uiua Todo
 
 - 0.11
+  - Change how media constants are retrieved
   - Release it!
 - 0.12
   - `keep` enhancements
     - Cycle counts
     - Real scalar counts
     - Depth optimization
+  - `rows` function pack
   - Show array shape on hover
   - Unicode literals
   - `◹` modifier

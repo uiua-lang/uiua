@@ -1818,11 +1818,12 @@ code:
         });
         let sig = swiz.signature();
         let spandex = self.add_span(span.clone());
-        let equivalent = match swiz.indices.as_slice() {
-            [0] => Some(Primitive::Identity),
-            [1, 0] => Some(Primitive::Flip),
-            [0, 0] => Some(Primitive::Dup),
-            [1, 0, 1] => Some(Primitive::Over),
+        let equivalent = match (swiz.indices.as_slice(), swiz.fix.as_slice()) {
+            ([0], [false]) => Some(Primitive::Identity),
+            ([0], [true]) => Some(Primitive::Fix),
+            ([1, 0], [false, false]) => Some(Primitive::Flip),
+            ([0, 0], [false, false]) => Some(Primitive::Dup),
+            ([1, 0, 1], [false, false, false]) => Some(Primitive::Over),
             _ => None,
         };
         let mut instr = if let Some(prim) = equivalent {

@@ -167,6 +167,8 @@ uiuisms!(
     "↘1♭≡⊂ π [1 2 3 4]",
     /// Get the cycling windows of an array
     "◫⊙⊂⊃⊙∘(↙-1) 3 ⇡7",
+    /// Get all permutations of size N
+    "◴≡⍖⋯⇡ⁿ:2 3",
     /// Split an array at an index
     "⊃↙↘ 3 [1 2 3 4 5]",
     /// Insert a value into an array at an index

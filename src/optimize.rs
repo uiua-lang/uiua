@@ -181,14 +181,19 @@ pub(crate) fn optimize_instrs_mut(
         }
         // Adjacent
         ([.., Instr::Prim(Windows, _), Instr::PushFunc(f)], instr @ Instr::Prim(Rows, _)) => {
-            if let [inner @ Instr::PushFunc(_), Instr::Prim(Reduce, span)] = f.instrs(asm) {
-                let inner = inner.clone();
-                instrs.pop();
-                instrs.pop();
-                instrs.push(inner);
-                instrs.push(Instr::ImplPrim(ImplPrimitive::Adjacent, *span));
-            } else {
-                instrs.push(instr);
+            match f.instrs(asm) {
+                [inner @ Instr::PushFunc(reduced_f), Instr::Prim(Reduce, span)]
+                    if reduced_f.signature() == (2, 1) =>
+                {
+                    let inner = inner.clone();
+                    instrs.pop();
+                    instrs.pop();
+                    instrs.push(inner);
+                    instrs.push(Instr::ImplPrim(ImplPrimitive::Adjacent, *span));
+                }
+                _ => {
+                    instrs.push(instr);
+                }
             }
         }
         // Reduce depth

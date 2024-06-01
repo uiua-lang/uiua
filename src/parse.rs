@@ -174,6 +174,7 @@ pub fn parse(
                     DiagnosticKind::Style => STYLE_MAX_WIDTH,
                     DiagnosticKind::Advice => ADVICE_MAX_WIDTH,
                     DiagnosticKind::Warning => WARNING_MAX_WIDTH,
+                    DiagnosticKind::Info => unreachable!(),
                 };
                 diagnostics.push(Diagnostic::new(
                     format!(

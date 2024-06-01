@@ -587,7 +587,7 @@ input[type=number] {
 }
 
 .output-report {
-    font-size: 0.9em;
+    font-size: 0.89em;
 }
 
 .output-error {
@@ -604,6 +604,10 @@ input[type=number] {
 
 .output-style {
     color: #0a0;
+}
+
+.output-info {
+    color: #1cf;
 }
 
 .output-faint {

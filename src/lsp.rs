@@ -1603,9 +1603,9 @@ mod server {
             for diag in &doc.diagnostics {
                 let sev = match diag.kind {
                     crate::DiagnosticKind::Warning => DiagnosticSeverity::WARNING,
-                    crate::DiagnosticKind::Advice | crate::DiagnosticKind::Style => {
-                        DiagnosticSeverity::INFORMATION
-                    }
+                    crate::DiagnosticKind::Advice
+                    | crate::DiagnosticKind::Style
+                    | crate::DiagnosticKind::Info => DiagnosticSeverity::INFORMATION,
                 };
                 diagnostics.push(Diagnostic {
                     severity: Some(sev),

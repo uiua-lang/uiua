@@ -1115,12 +1115,6 @@ fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
 }
 
 pub fn report_view(report: &Report) -> impl IntoView {
-    let class = match report.kind {
-        ReportKind::Error => "output-report output-error",
-        ReportKind::Diagnostic(DiagnosticKind::Warning) => "output-report output-warning",
-        ReportKind::Diagnostic(DiagnosticKind::Advice) => "output-report output-advice",
-        ReportKind::Diagnostic(DiagnosticKind::Style) => "output-report output-style",
-    };
     let mut newline_indices = Vec::new();
     for (i, frag) in report.fragments.iter().enumerate() {
         if matches!(frag, ReportFragment::Newline) {
@@ -1155,7 +1149,18 @@ pub fn report_view(report: &Report) -> impl IntoView {
             ReportFragment::Fainter(s) => {
                 view!(<span class="output-report output-fainter">{s}</span>).into_view()
             }
-            ReportFragment::Colored(s) => view!(<span class=class>{s}</span>).into_view(),
+            ReportFragment::Colored(s, kind) => {
+                let class = match kind {
+                    ReportKind::Error => "output-report output-error",
+                    ReportKind::Diagnostic(DiagnosticKind::Warning) => {
+                        "output-report output-warning"
+                    }
+                    ReportKind::Diagnostic(DiagnosticKind::Advice) => "output-report output-advice",
+                    ReportKind::Diagnostic(DiagnosticKind::Style) => "output-report output-style",
+                    ReportKind::Diagnostic(DiagnosticKind::Info) => "output-report output-info",
+                };
+                view!(<span class=class>{s}</span>).into_view()
+            }
             ReportFragment::Newline => view!(<br/>).into_view(),
         });
     }

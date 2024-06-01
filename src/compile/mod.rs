@@ -465,11 +465,13 @@ code:
         }
 
         let mut prev_comment = None;
+        let mut item_errored = false;
         for item in items {
             if let Err(e) = self.item(item, in_test, &mut prev_comment) {
-                if self.errors.is_empty() {
+                if !item_errored {
                     self.errors.push(e);
                 }
+                item_errored = true;
             }
         }
         Ok(())

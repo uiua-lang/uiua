@@ -224,7 +224,15 @@ impl Compiler {
                         let mut comp = self.clone();
                         let mut sig_data: EcoVec<u8> = EcoVec::with_capacity(operands.len() * 2);
                         for op in &operands {
-                            let (_, sig) = comp.compile_operand_word(op.clone())?;
+                            let (_, sig) = comp.compile_operand_word(op.clone()).map_err(|e| {
+                                let message = format!(
+                                    "This error occurred while compiling a macro operand. \
+                                    This was attempted because the macro function's \
+                                    signature is {}.",
+                                    Signature::new(2, 1)
+                                );
+                                e.with_info([(message, None)], self.asm.inputs.clone())
+                            })?;
                             sig_data.extend_from_slice(&[sig.args as u8, sig.outputs as u8]);
                         }
                         Some(Array::<u8>::new([operands.len(), 2], sig_data))

@@ -41,6 +41,15 @@ pub enum UiuaError {
     Panic(String),
     /// Multiple errors
     Multi(Vec<Self>),
+    /// An error with attached info
+    WithInfo {
+        /// The error itself
+        error: Box<Self>,
+        /// The info
+        infos: Vec<(String, Option<Span>)>,
+        /// The inputs of the program
+        inputs: Box<Inputs>,
+    },
 }
 
 /// Uiua's result type
@@ -89,15 +98,43 @@ impl fmt::Display for UiuaError {
                 }
                 Ok(())
             }
+            UiuaError::WithInfo { error, .. } => write!(f, "{error}"),
         }
     }
 }
 
 impl UiuaError {
+    /// Attach some info to the error
+    pub fn with_info(
+        self,
+        info: impl IntoIterator<Item = (String, Option<Span>)>,
+        inputs: Inputs,
+    ) -> Self {
+        match self {
+            UiuaError::WithInfo {
+                error,
+                mut infos,
+                inputs,
+            } => {
+                infos.extend(info);
+                UiuaError::WithInfo {
+                    error,
+                    infos,
+                    inputs,
+                }
+            }
+            error => UiuaError::WithInfo {
+                error: Box::new(error),
+                infos: info.into_iter().collect(),
+                inputs: Box::new(inputs),
+            },
+        }
+    }
     pub(crate) fn inner(&self) -> &Self {
         match self {
             UiuaError::Traced { error, .. } => error.inner(),
             UiuaError::Fill(error) => error.inner(),
+            UiuaError::WithInfo { error, .. } => error.inner(),
             error => error,
         }
     }
@@ -112,14 +149,14 @@ impl UiuaError {
     pub fn value(self) -> Value {
         match self {
             UiuaError::Throw(value, ..) => *value,
-            UiuaError::Traced { error, .. } => error.value(),
+            UiuaError::Traced { error, .. } | UiuaError::WithInfo { error, .. } => error.value(),
             error => error.message().into(),
         }
     }
     /// Check if the error is fill-related
     pub fn is_fill(&self) -> bool {
         match self {
-            UiuaError::Traced { error, .. } => error.is_fill(),
+            UiuaError::Traced { error, .. } | UiuaError::WithInfo { error, .. } => error.is_fill(),
             UiuaError::Fill(_) => true,
             _ => false,
         }
@@ -127,7 +164,9 @@ impl UiuaError {
     /// Check if the error is a pattern match failure
     pub fn is_pattern_match(&self) -> bool {
         match self {
-            UiuaError::Traced { error, .. } => error.is_pattern_match(),
+            UiuaError::Traced { error, .. } | UiuaError::WithInfo { error, .. } => {
+                error.is_pattern_match()
+            }
             UiuaError::PatternMatch(..) => true,
             _ => false,
         }
@@ -248,10 +287,38 @@ impl UiuaError {
                     fragments.extend(error.report().fragments);
                 }
                 Report {
-                    kind,
                     fragments,
                     color: true,
                 }
+            }
+            UiuaError::WithInfo {
+                error,
+                infos,
+                inputs,
+            } => {
+                let mut report = error.report();
+                for (info, span) in infos {
+                    if let Some(span) = span {
+                        report.fragments.extend(
+                            Report::new_multi(
+                                DiagnosticKind::Info.into(),
+                                inputs,
+                                [(info, span.clone())],
+                            )
+                            .fragments,
+                        );
+                    } else {
+                        report.fragments.push(ReportFragment::Newline);
+                        report.fragments.push(ReportFragment::Colored(
+                            "Info".into(),
+                            DiagnosticKind::Info.into(),
+                        ));
+                        report.fragments.push(ReportFragment::Plain(": ".into()));
+                        report.fragments.push(ReportFragment::Plain(info.into()));
+                    }
+                }
+
+                report
             }
         }
     }
@@ -293,6 +360,8 @@ impl Ord for Diagnostic {
 /// Kinds of non-error diagnostics
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum DiagnosticKind {
+    /// Informational message
+    Info,
     /// Bad code style
     Style,
     /// Something that should be fixed for performance reasons
@@ -341,6 +410,12 @@ pub enum ReportKind {
     Diagnostic(DiagnosticKind),
 }
 
+impl From<DiagnosticKind> for ReportKind {
+    fn from(kind: DiagnosticKind) -> Self {
+        ReportKind::Diagnostic(kind)
+    }
+}
+
 impl ReportKind {
     /// Get the string that prefixes the formatted report
     pub fn str(&self) -> &'static str {
@@ -349,6 +424,7 @@ impl ReportKind {
             ReportKind::Diagnostic(DiagnosticKind::Warning) => "Warning",
             ReportKind::Diagnostic(DiagnosticKind::Advice) => "Advice",
             ReportKind::Diagnostic(DiagnosticKind::Style) => "Style",
+            ReportKind::Diagnostic(DiagnosticKind::Info) => "Info",
         }
     }
 }
@@ -359,7 +435,7 @@ pub enum ReportFragment {
     /// Just plain text
     Plain(String),
     /// Text colored according to the report kind
-    Colored(String),
+    Colored(String, ReportKind),
     /// Faint text
     Faint(String),
     /// Even fainter text
@@ -371,8 +447,6 @@ pub enum ReportFragment {
 /// A rich-text error/diagnostic report
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Report {
-    /// What kind of report this is
-    pub kind: ReportKind,
     /// The rich-text fragments of the report
     pub fragments: Vec<ReportFragment>,
     /// Whether to color the report with ANSI escape codes when converting it to a string
@@ -401,7 +475,7 @@ impl Report {
     pub fn new(kind: ReportKind, message: impl Into<String>) -> Self {
         let message = message.into();
         let mut fragments = vec![
-            ReportFragment::Colored(kind.str().into()),
+            ReportFragment::Colored(kind.str().into(), kind),
             ReportFragment::Plain(": ".into()),
         ];
         if message.lines().count() > 1 {
@@ -409,7 +483,6 @@ impl Report {
         }
         fragments.push(ReportFragment::Plain(message));
         Self {
-            kind,
             fragments,
             color: true,
         }
@@ -425,7 +498,7 @@ impl Report {
             if i > 0 {
                 fragments.push(ReportFragment::Newline);
             }
-            fragments.push(ReportFragment::Colored(kind.str().into()));
+            fragments.push(ReportFragment::Colored(kind.str().into(), kind));
             fragments.push(ReportFragment::Plain(": ".into()));
             let message = message.to_string();
             for (i, line) in message.lines().enumerate() {
@@ -470,7 +543,7 @@ impl Report {
                     .collect();
                 let post_color: String = line.chars().skip(end_char_pos as usize).collect();
                 fragments.push(ReportFragment::Faint(pre_color));
-                fragments.push(ReportFragment::Colored(color));
+                fragments.push(ReportFragment::Colored(color, kind));
                 fragments.push(ReportFragment::Faint(post_color));
                 fragments.push(ReportFragment::Newline);
                 fragments.push(ReportFragment::Plain(
@@ -479,11 +552,11 @@ impl Report {
                 fragments.push(ReportFragment::Plain(" ".repeat(start_char_pos as usize)));
                 fragments.push(ReportFragment::Colored(
                     "─".repeat(end_char_pos.saturating_sub(start_char_pos).max(1) as usize),
+                    kind,
                 ));
             }
         }
         Self {
-            kind,
             fragments,
             color: true,
         }
@@ -497,9 +570,9 @@ impl fmt::Display for Report {
                 ReportFragment::Plain(s)
                 | ReportFragment::Faint(s)
                 | ReportFragment::Fainter(s) => write!(f, "{s}")?,
-                ReportFragment::Colored(s) => {
+                ReportFragment::Colored(s, kind) => {
                     if self.color {
-                        let s = s.color(match self.kind {
+                        let s = s.color(match kind {
                             ReportKind::Error => Color::Red,
                             ReportKind::Diagnostic(DiagnosticKind::Warning) => Color::Yellow,
                             ReportKind::Diagnostic(DiagnosticKind::Style) => Color::Green,
@@ -508,6 +581,7 @@ impl fmt::Display for Report {
                                 g: 150,
                                 b: 255,
                             },
+                            ReportKind::Diagnostic(DiagnosticKind::Info) => Color::Cyan,
                         });
                         write!(f, "{s}")?
                     } else {

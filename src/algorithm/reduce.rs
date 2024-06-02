@@ -150,7 +150,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
             })
         }
         (_, xs) if f.signature() == (2, 1) => {
-            if env.value_fill().is_none() {
+            if depth == 0 && env.value_fill().is_none() {
                 if xs.row_count() == 0 {
                     let val = reduce_identity(f.instrs(env), xs).ok_or_else(|| {
                         env.error(format!(
@@ -501,9 +501,24 @@ fn generic_reduce_inner(
             Primitive::Reduce.format(),
         ))),
         2 => {
-            let mut rows = env.pop(1)?.into_rows();
+            let xs = env.pop(1)?;
             if depth == 0 {
-                let mut acc = (env.value_fill().cloned())
+                let value_fill = env.value_fill();
+                if value_fill.is_none() {
+                    if xs.row_count() == 0 {
+                        return reduce_identity(f.instrs(env), xs).ok_or_else(|| {
+                            env.error(format!(
+                                "Cannot {} empty array. Function has no identity value.",
+                                Primitive::Reduce.format()
+                            ))
+                        });
+                    }
+                    if xs.row_count() == 1 {
+                        return Ok(reduce_one(f.instrs(env), xs));
+                    }
+                }
+                let mut rows = xs.into_rows();
+                let mut acc = (value_fill.cloned())
                     .or_else(|| rows.next())
                     .ok_or_else(|| {
                         env.error(format!("Cannot {} empty array", Primitive::Reduce.format()))
@@ -520,8 +535,8 @@ fn generic_reduce_inner(
                 })
             } else {
                 env.without_fill(|env| {
-                    let mut new_rows = Vec::with_capacity(rows.len());
-                    for row in rows {
+                    let mut new_rows = Vec::with_capacity(xs.row_count());
+                    for row in xs.into_rows() {
                         env.push(row);
                         let val = generic_reduce_inner(f.clone(), depth - 1, process, env)?;
                         new_rows.push(val);

@@ -365,6 +365,12 @@
     "class": "Misc",
     "description": "Throw an error if a condition is not met"
   },
+  "astar": {
+    "outputs": 2,
+    "modifier_args": 3,
+    "class": "OtherModifier",
+    "description": "Find shortest paths in a graph"
+  },
   "atangent": {
     "glyph": "∠",
     "args": 2,

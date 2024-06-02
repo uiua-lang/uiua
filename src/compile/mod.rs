@@ -1909,9 +1909,13 @@ code:
             );
         }
         let sig = swiz.signature();
-        let arr = Array::from_iter(swiz.indices.iter().map(|&i| i as f64));
+        let mut instrs = Vec::new();
+        let normal_ordered = (swiz.indices.iter().enumerate()).all(|(i, &idx)| i == idx as usize);
         let spandex = self.add_span(span.clone());
-        let mut instrs = vec![Instr::push(arr), Instr::Prim(Primitive::Select, spandex)];
+        if !normal_ordered {
+            let arr = Array::from_iter(swiz.indices.iter().map(|&i| i as f64));
+            instrs.extend([Instr::push(arr), Instr::Prim(Primitive::Select, spandex)]);
+        }
         if swiz.unbox.iter().all(|&b| b) {
             instrs.push(Instr::Unpack {
                 count: sig.outputs,

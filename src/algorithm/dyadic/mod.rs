@@ -259,6 +259,7 @@ impl<T: ArrayValue> Array<T> {
             .filter_map(|(i, &s)| if s < 0 { Some(i) } else { None })
             .collect();
         let shape: Shape = axes.iter().map(|&s| s.unsigned_abs()).collect();
+        validate_size::<T>(shape.iter().copied(), env)?;
         let target_len: usize = shape.iter().product();
         if self.data.len() < target_len {
             match env.scalar_fill::<T>() {

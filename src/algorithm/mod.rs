@@ -787,16 +787,25 @@ fn astar_impl(
     let nei_sig = neighbors.signature();
     let heu_sig = heuristic.signature();
     let isg_sig = is_goal.signature();
-    for (name, sig, req_out) in &[
-        ("neighbors", nei_sig, 2),
-        ("heuristic", heu_sig, 1),
-        ("goal", isg_sig, 1),
+    for (name, f, req_out) in &[
+        ("neighbors", &neighbors, [1, 2].as_slice()),
+        ("heuristic", &heuristic, &[1]),
+        ("goal", &is_goal, &[1]),
     ] {
-        if sig.outputs != *req_out {
-            return Err(env.error(format!(
-                "A* {name} function must return {req_out} outputs \
-                but its signature is {sig}",
-            )));
+        let sig = f.signature();
+        if !req_out.contains(&sig.outputs) {
+            let count = if req_out.len() == 1 {
+                "1"
+            } else {
+                "either 1 or 2"
+            };
+            return Err(env.error_maybe_span(
+                f.id.span(),
+                format!(
+                    "A* {name} function must return {count} outputs \
+                    but its signature is {sig}",
+                ),
+            ));
         }
     }
     let arg_count = nei_sig.args.max(heu_sig.args).max(isg_sig.args) - 1;
@@ -824,25 +833,38 @@ fn astar_impl(
                         env.push(n.clone());
                     }
                     env.call(neighbors.clone())?;
-                    let nodes = env.pop("neighbors nodes")?;
-                    let costs = env
-                        .pop("neighbors costs")?
-                        .as_nums(&env, "Costs must be a list of numbers")?;
-                    if costs.len() != nodes.row_count() {
-                        return Err(env.error(format!(
-                            "Number of nodes {} does not match number of costs {}",
-                            nodes.row_count(),
-                            costs.len(),
-                        )));
-                    }
-                    let mut icosts = Vec::with_capacity(costs.len());
-                    for cost in costs {
-                        if cost < 0.0 {
-                            return Err(env.error("Negative costs are not allowed in A*"));
+                    let (nodes, costs) = if nei_sig.outputs == 2 {
+                        let nodes = env.pop("neighbors nodes")?;
+                        let costs = env
+                            .pop("neighbors costs")?
+                            .as_nums(&env, "Costs must be a list of numbers")?;
+                        if costs.len() != nodes.row_count() {
+                            return Err(env.error_maybe_span(
+                                neighbors.id.span(),
+                                format!(
+                                    "Number of nodes {} does not match number of costs {}",
+                                    nodes.row_count(),
+                                    costs.len(),
+                                ),
+                            ));
                         }
-                        icosts.push((cost * COST_MUL).round() as u64);
-                    }
-                    Ok(nodes.into_rows().zip(icosts).collect::<Vec<_>>())
+                        let mut icosts = Vec::with_capacity(costs.len());
+                        for cost in costs {
+                            if cost < 0.0 {
+                                return Err(env.error_maybe_span(
+                                    neighbors.id.span(),
+                                    "Negative costs are not allowed in A*",
+                                ));
+                            }
+                            icosts.push((cost * COST_MUL).round() as u64);
+                        }
+                        (nodes, icosts)
+                    } else {
+                        let nodes = env.pop("neighbors nodes")?;
+                        let costs = vec![COST_MUL as u64; nodes.row_count()];
+                        (nodes, costs)
+                    };
+                    Ok(nodes.into_rows().zip(costs).collect::<Vec<_>>())
                 })();
                 match res {
                     Ok(res) => res,
@@ -866,7 +888,10 @@ fn astar_impl(
                         .pop("heuristic")?
                         .as_num(&env, "Heuristic must be a number")?;
                     if h < 0.0 {
-                        return Err(env.error("Negative heuristic values are not allowed in A*"));
+                        return Err(env.error_maybe_span(
+                            heuristic.id.span(),
+                            "Negative heuristic values are not allowed in A*",
+                        ));
                     }
                     Ok((h * COST_MUL).round() as u64)
                 })();
@@ -903,7 +928,8 @@ fn astar_impl(
             },
         )
     };
-    if let Some(msg) = Rc::try_unwrap(error).ok().and_then(|e| e.into_inner()) {
+    drop(do_error);
+    if let Some(msg) = Rc::try_unwrap(error).unwrap().into_inner() {
         return Err(env.error(msg.clone()));
     }
     if let Some((solution, cost)) = path {

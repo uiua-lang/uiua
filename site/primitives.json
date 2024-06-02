@@ -369,7 +369,8 @@
     "outputs": 2,
     "modifier_args": 3,
     "class": "OtherModifier",
-    "description": "Find shortest paths in a graph"
+    "description": "Find shortest paths in a graph",
+    "experimental": true
   },
   "atangent": {
     "glyph": "∠",

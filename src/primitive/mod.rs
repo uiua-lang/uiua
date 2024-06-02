@@ -370,7 +370,10 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            Coordinate | Sys(Ffi | MemCopy | MemFree | TlsListen) | (Stringify | Quote | Sig)
+            Coordinate
+                | Astar
+                | Sys(Ffi | MemCopy | MemFree | TlsListen)
+                | (Stringify | Quote | Sig)
         )
     }
     /// Check if this primitive is deprecated

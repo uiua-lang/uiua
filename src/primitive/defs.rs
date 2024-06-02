@@ -2314,9 +2314,9 @@ primitive!(
     ///
     /// Expects 3 functions and at least 1 value.
     /// The value is the starting node.
-    /// The first function should return 2 arrays of equal [length].
-    /// - The first array is the list of nodes that can be reached from the current node.
-    /// - The second array is the cost of reaching each node.
+    /// The first function should return 1 or 2 arrays of equal [length].
+    /// - An array of the neighboring nodes must always be returned.
+    /// - An array of costs may be returned above the nodes array on the stack. If ommitted, all costs are assumed to be 1.
     /// The second function should return a heuristic cost to reach the goal node.
     /// The third function should return whether or not the goal node has been reached.
     ///
@@ -2330,12 +2330,22 @@ primitive!(
     /// The neighbors function returns the 4 cardinal directions with all costs of 1.
     /// The heuristic function `⌵``/``ℂ``-` calculates the euclidean distance between two points.
     /// The goal function simply checks if the current node [match]es the goal node.
-    /// ex: Neis ← [∩¯,,⇌.⇡2]
+    /// ex: # Experimental!
+    ///   : Neis ← [∩¯,,⇌.⇡2]
     ///   : °□⊢ astar(
     ///   :   ⟜≡⋅1 +Neis¤
     ///   : | ⌵/ℂ-
     ///   : | ≍
     ///   : )0_0 3_5
+    /// If we omit the cost array from the neighbors function and simply use `1` as the heuristic, the algorithm becomes Dijkstra's algorithm.
+    /// ex: # Experimental!
+    ///   : Neis ← [∩¯,,⇌.⇡2]
+    ///   : °□⊢ astar(+Neis¤)1≍ 0_0 3_5
+    /// In the examples above, we use `un``box``first` to get only the first path. [first][astar] is optimized to not do extra work.
+    /// If we want *all* shortest paths, we can omit [first].
+    /// ex: # Experimental!
+    ///   : Neis ← [∩¯,,⇌.⇡2]
+    ///   : astar(+Neis¤)1≍ 0_0 1_2
     ///
     /// [astar] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
     ((2)[3], Astar, OtherModifier, "astar"),

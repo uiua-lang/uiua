@@ -29,8 +29,8 @@ use crate::{
     function::*,
     lex::Span,
     value::Value,
-    Assembly, BindingKind, Compiler, Complex, Ident, Inputs, IntoSysBackend, LocalName, Primitive,
-    SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult, VERSION,
+    Assembly, BindingKind, CodeSpan, Compiler, Complex, Ident, Inputs, IntoSysBackend, LocalName,
+    Primitive, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult, VERSION,
 };
 
 /// The Uiua interpreter
@@ -872,6 +872,17 @@ code:
             span.into().sp(message.to_string()),
             self.inputs().clone().into(),
         )
+    }
+    pub(crate) fn error_maybe_span(
+        &self,
+        span: Option<&CodeSpan>,
+        message: impl ToString,
+    ) -> UiuaError {
+        if let Some(span) = span {
+            self.error_with_span(span.clone(), message)
+        } else {
+            self.error(message)
+        }
     }
     pub(crate) fn pattern_match_error(&self) -> UiuaError {
         UiuaError::PatternMatch(self.span(), self.inputs().clone().into())

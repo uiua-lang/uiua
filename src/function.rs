@@ -893,6 +893,17 @@ pub enum FunctionId {
     Unnamed,
 }
 
+impl FunctionId {
+    /// Get the span of the function id, if it has one
+    pub fn span(&self) -> Option<&CodeSpan> {
+        match self {
+            FunctionId::Anonymous(span) => Some(span),
+            FunctionId::Macro(span) => Some(span),
+            _ => None,
+        }
+    }
+}
+
 impl PartialEq<&str> for FunctionId {
     fn eq(&self, other: &&str) -> bool {
         match self {

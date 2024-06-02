@@ -712,8 +712,8 @@ primitive!(
     ///
     /// ex: ⊢1_2_3
     /// ex: ⊢[1_2 3_4 5_6]
+    /// ex: ⊢1
     /// ex! ⊢[]
-    /// ex! ⊢1
     ///
     /// [first][reverse] is optimized in the interpreter to be O(1).
     /// ex: ⊢⇌ [1 8 4 9 2 3]

@@ -378,7 +378,7 @@ impl<T: ArrayValue> Array<T> {
     /// Get the first row of the array
     pub fn first(mut self, env: &Uiua) -> UiuaResult<Self> {
         match &*self.shape {
-            [] => Err(env.error("Cannot take first of a scalar")),
+            [] => Ok(self),
             [0, rest @ ..] => match env.scalar_fill() {
                 Ok(fill) => {
                     self.data.extend(repeat(fill).take(self.row_len()));
@@ -402,7 +402,7 @@ impl<T: ArrayValue> Array<T> {
     /// Get the last row of the array
     pub fn last(mut self, env: &Uiua) -> UiuaResult<Self> {
         match &*self.shape {
-            [] => Err(env.error("Cannot take last of a scalar")),
+            [] => Ok(self),
             [0, rest @ ..] => match env.scalar_fill() {
                 Ok(fill) => {
                     self.data.extend(repeat(fill).take(self.row_len()));

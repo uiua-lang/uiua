@@ -4,14 +4,11 @@
   - Merge `new-pad` into `main`
   - Release it!
 - 0.12
-  - `keep` enhancements
-    - Cycle counts
-    - Real scalar counts
-    - Depth optimization
   - `rows` function pack
+  - Improve `un join` chained with other functions
+  - `◹` modifier
   - Show array shape on hover
   - Unicode literals
-  - `◹` modifier
   - Tree extension
   - Array bar notation
   - Error classes

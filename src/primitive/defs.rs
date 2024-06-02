@@ -2310,6 +2310,30 @@ primitive!(
     /// At the moment, this is only useful for debugging.
     /// While theoretically, it could be used in a macro to choose a branch of a switch function appropriate for the function, this is not yet possible because of the way that macros and signature checking work.
     (0(2)[1], Sig, OtherModifier, "signature"),
+    /// Find shortest paths in a graph
+    ///
+    /// Expects 3 functions and at least 1 value.
+    /// The value is the starting node.
+    /// The first function should return 2 arrays of equal [length].
+    /// - The first array is the list of nodes that can be reached from the current node.
+    /// - The second array is the cost of reaching each node.
+    /// The second function should return a heuristic cost to reach the target node.
+    /// The third function should return whether or not the target node has been reached.
+    ///
+    /// When called, [astar] will pop any additional arguments it's functions need from the stack.
+    /// On each iteration, the current node will be passed to each function, along with any of the additional arguments that the function needs.
+    ///
+    /// If a path is found, a box array of all shortest paths is returned, as well as the cost.
+    /// If no path is found, an error is thrown.
+    /// ex: Neis ← [∩¯,,⇌.⇡2]
+    ///   : °□⊢ astar(
+    ///   :   ⟜≡⋅1 +Neis¤
+    ///   : | ⌵/ℂ-
+    ///   : | ≍
+    ///   : )0_0 3_5
+    ///
+    /// [astar] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
+    ((2)[3], Astar, OtherModifier, "astar"),
     /// Encode an array into a JSON string
     ///
     /// ex: json [1 2 3]
@@ -2500,4 +2524,5 @@ impl_primitive!(
     (2(2), BothTrace, Impure),
     (1, CountUnique),
     (1, EndRandArray, Impure),
+    (1(2)[3], AstarFirst),
 );

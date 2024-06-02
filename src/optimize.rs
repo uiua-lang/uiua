@@ -241,6 +241,12 @@ pub(crate) fn optimize_instrs_mut(
             instrs.pop();
             instrs.push(Instr::ImplPrim(EndRandArray, span));
         }
+        // Astar first
+        ([.., Instr::Prim(Astar, span)], Instr::Prim(First, _)) => {
+            let span = *span;
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(AstarFirst, span));
+        }
         (_, instr) => instrs.push(instr),
     }
 }

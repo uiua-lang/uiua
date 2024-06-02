@@ -733,3 +733,182 @@ fn fixed_rows(
         per_meta,
     })
 }
+
+#[cfg(not(feature = "pathfinding"))]
+pub fn astar(env: &mut Uiua) -> UiuaResult {
+    Err(env.error("A* pathfinding is not available in this environment"))
+}
+
+#[cfg(not(feature = "pathfinding"))]
+pub fn astar_first(env: &mut Uiua) -> UiuaResult {
+    Err(env.error("A* pathfinding is not available in this environment"))
+}
+
+#[cfg(feature = "pathfinding")]
+pub fn astar(env: &mut Uiua) -> UiuaResult {
+    use ecow::EcoVec;
+
+    use crate::Boxed;
+
+    let (solution, cost) = astar_impl(env)?;
+    let mut paths = EcoVec::new();
+    for path in solution {
+        paths.push(Boxed(Value::from_row_values(path, env)?));
+    }
+    env.push(cost);
+    env.push(paths);
+    Ok(())
+}
+
+#[cfg(feature = "pathfinding")]
+pub fn astar_first(env: &mut Uiua) -> UiuaResult {
+    use crate::Boxed;
+
+    let (solution, cost) = astar_impl(env)?;
+    if let Some(path) = solution.into_iter().next() {
+        env.push(cost);
+        env.push(Boxed(Value::from_row_values(path, env)?));
+        Ok(())
+    } else {
+        Err(env.error("No path found"))
+    }
+}
+
+#[cfg(feature = "pathfinding")]
+fn astar_impl(
+    env: &mut Uiua,
+) -> UiuaResult<(pathfinding::directed::astar::AstarSolution<Value>, f64)> {
+    use std::{cell::RefCell, rc::Rc};
+
+    let start = env.pop("start")?;
+    let neighbors = env.pop_function()?;
+    let heuristic = env.pop_function()?;
+    let is_goal = env.pop_function()?;
+    let nei_sig = neighbors.signature();
+    let heu_sig = heuristic.signature();
+    let isg_sig = is_goal.signature();
+    for (name, sig, req_out) in &[
+        ("neighbors", nei_sig, 2),
+        ("heuristic", heu_sig, 1),
+        ("goal", isg_sig, 1),
+    ] {
+        if sig.args < 1 {
+            return Err(env.error(format!(
+                "A* {name} function must take at least 1 argument \
+                but its signature is {sig}",
+            )));
+        }
+        if sig.outputs != *req_out {
+            return Err(env.error(format!(
+                "A* {name} function must return {req_out} outputs \
+                but its signature is {sig}",
+            )));
+        }
+    }
+    let arg_count = nei_sig.args.max(heu_sig.args).max(isg_sig.args) - 1;
+    let mut args = Vec::with_capacity(arg_count);
+    for i in 0..arg_count {
+        args.push(env.pop(i + 1)?);
+    }
+    const COST_MUL: f64 = 1e6;
+    let error: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
+    let error_clone = error.clone();
+    let do_error = move |msg| {
+        *error_clone.borrow_mut() = Some(msg);
+    };
+    let path = {
+        let env = Rc::new(RefCell::new(&mut *env));
+        pathfinding::directed::astar::astar_bag(
+            &start,
+            |n| {
+                let res = (|| {
+                    let mut env = env.borrow_mut();
+                    for arg in args.iter().take(nei_sig.args - 1).rev() {
+                        env.push(arg.clone());
+                    }
+                    env.push(n.clone());
+                    env.call(neighbors.clone())?;
+                    let nodes = env.pop("neighbors nodes")?;
+                    let costs = env
+                        .pop("neighbors costs")?
+                        .as_nums(&env, "Costs must be a list of numbers")?;
+                    if costs.len() != nodes.row_count() {
+                        return Err(env.error(format!(
+                            "Number of nodes {} does not match number of costs {}",
+                            nodes.row_count(),
+                            costs.len(),
+                        )));
+                    }
+                    let mut icosts = Vec::with_capacity(costs.len());
+                    for cost in costs {
+                        if cost < 0.0 {
+                            return Err(env.error("Negative costs are not allowed in A*"));
+                        }
+                        icosts.push((cost * COST_MUL).round() as u64);
+                    }
+                    Ok(nodes.into_rows().zip(icosts).collect::<Vec<_>>())
+                })();
+                match res {
+                    Ok(res) => res,
+                    Err(e) => {
+                        do_error(e.message());
+                        Vec::new()
+                    }
+                }
+            },
+            |n| {
+                let res = (|| {
+                    let mut env = env.borrow_mut();
+                    for arg in args.iter().take(heu_sig.args - 1).rev() {
+                        env.push(arg.clone());
+                    }
+                    env.push(n.clone());
+                    env.call(heuristic.clone())?;
+                    let h = env
+                        .pop("heuristic")?
+                        .as_num(&env, "Heuristic must be a number")?;
+                    if h < 0.0 {
+                        return Err(env.error("Negative heuristic values are not allowed in A*"));
+                    }
+                    Ok((h * COST_MUL).round() as u64)
+                })();
+                match res {
+                    Ok(res) => res,
+                    Err(e) => {
+                        do_error(e.message());
+                        0
+                    }
+                }
+            },
+            |n| {
+                let res = (|| -> UiuaResult<bool> {
+                    let mut env = env.borrow_mut();
+                    for arg in args.iter().take(isg_sig.args - 1).rev() {
+                        env.push(arg.clone());
+                    }
+                    env.push(n.clone());
+                    env.call(is_goal.clone())?;
+                    let is_goal = env
+                        .pop("is_goal")?
+                        .as_bool(&env, "A& goal function must return a boolean")?;
+                    Ok(is_goal)
+                })();
+                match res {
+                    Ok(res) => res,
+                    Err(e) => {
+                        do_error(e.message());
+                        false
+                    }
+                }
+            },
+        )
+    };
+    if let Some(msg) = Rc::try_unwrap(error).ok().and_then(|e| e.into_inner()) {
+        return Err(env.error(msg.clone()));
+    }
+    if let Some((solution, cost)) = path {
+        Ok((solution, cost as f64 / COST_MUL))
+    } else {
+        Err(env.error("No path found"))
+    }
+}

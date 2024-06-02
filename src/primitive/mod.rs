@@ -213,6 +213,7 @@ impl fmt::Display for ImplPrimitive {
             CountUnique => write!(f, "{Len}{Deduplicate}"),
             MatchPattern => write!(f, "pattern match"),
             EndRandArray => write!(f, "[{Repeat}{Rand}"),
+            AstarFirst => write!(f, "{First}{Astar}"),
             &ReduceDepth(n) => {
                 for _ in 0..n {
                     write!(f, "{Rows}")?;
@@ -797,6 +798,7 @@ impl Primitive {
             Primitive::Xlsx => {
                 env.monadic_ref_env(|value, env| value.to_xlsx(env).map(EcoVec::from))?
             }
+            Primitive::Astar => algorithm::astar(env)?,
             Primitive::Stringify
             | Primitive::Quote
             | Primitive::Sig
@@ -1017,6 +1019,7 @@ impl ImplPrimitive {
                 let arr: Array<f64> = (0..n).map(|_| random()).collect();
                 env.end_array(false, Some(arr.into()))?;
             }
+            ImplPrimitive::AstarFirst => algorithm::astar_first(env)?,
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(depth, env)?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
         }

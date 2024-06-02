@@ -608,45 +608,43 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// Get the `rise` of the value
-    pub fn rise(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
-        self.generic_ref_env(
+    pub fn rise(&self) -> Array<f64> {
+        self.generic_ref(
             Array::rise,
             Array::rise,
             Array::rise,
             Array::rise,
             Array::rise,
-            env,
         )
     }
     /// Get the `fall` of the value
-    pub fn fall(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
-        self.generic_ref_env(
+    pub fn fall(&self) -> Array<f64> {
+        self.generic_ref(
             Array::fall,
             Array::fall,
             Array::fall,
             Array::fall,
             Array::fall,
-            env,
         )
     }
     /// Sort the value ascending
-    pub fn sort_up(&mut self, env: &Uiua) -> UiuaResult {
+    pub fn sort_up(&mut self) {
         self.generic_mut_shallow(
-            |a| a.sort_up(env),
-            |a| a.sort_up(env),
-            |a| a.sort_up(env),
-            |a| a.sort_up(env),
-            |a| a.sort_up(env),
+            Array::sort_up,
+            Array::sort_up,
+            Array::sort_up,
+            Array::sort_up,
+            Array::sort_up,
         )
     }
     /// Sort the value descending
-    pub fn sort_down(&mut self, env: &Uiua) -> UiuaResult {
+    pub fn sort_down(&mut self) {
         self.generic_mut_shallow(
-            |a| a.sort_down(env),
-            |a| a.sort_down(env),
-            |a| a.sort_down(env),
-            |a| a.sort_down(env),
-            |a| a.sort_down(env),
+            Array::sort_down,
+            Array::sort_down,
+            Array::sort_down,
+            Array::sort_down,
+            Array::sort_down,
         )
     }
     /// `classify` the rows of the value
@@ -719,82 +717,78 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     /// Get the `rise` of the array
-    pub fn rise(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
+    pub fn rise(&self) -> Array<f64> {
         if self.rank() == 0 {
-            return Err(env.error("Cannot rise a scalar"));
+            return Array::scalar(0.0);
         }
         if self.element_count() == 0 {
-            return Ok(Vec::new());
+            return Array::default();
         }
-        let mut indices = (0..self.row_count()).collect::<Vec<_>>();
-        indices.par_sort_by(|&a, &b| {
-            self.row_slice(a)
+        let mut indices = (0..self.row_count())
+            .map(|i| i as f64)
+            .collect::<EcoVec<_>>();
+        indices.make_mut().par_sort_by(|&a, &b| {
+            self.row_slice(a as usize)
                 .iter()
-                .zip(self.row_slice(b))
+                .zip(self.row_slice(b as usize))
                 .map(|(a, b)| a.array_cmp(b))
                 .find(|x| x != &Ordering::Equal)
                 .unwrap_or(Ordering::Equal)
         });
-        Ok(indices)
+        indices.into()
     }
     /// Get the `fall` of the array
-    pub fn fall(&self, env: &Uiua) -> UiuaResult<Vec<usize>> {
+    pub fn fall(&self) -> Array<f64> {
         if self.rank() == 0 {
-            return Err(env.error("Cannot fall a scalar"));
+            return Array::scalar(0.0);
         }
         if self.element_count() == 0 {
-            return Ok(Vec::new());
+            return Array::default();
         }
-        let mut indices = (0..self.row_count()).collect::<Vec<_>>();
-        indices.par_sort_by(|&a, &b| {
-            self.row_slice(a)
+        let mut indices = (0..self.row_count())
+            .map(|i| i as f64)
+            .collect::<EcoVec<_>>();
+        indices.make_mut().par_sort_by(|&a, &b| {
+            self.row_slice(a as usize)
                 .iter()
-                .zip(self.row_slice(b))
+                .zip(self.row_slice(b as usize))
                 .map(|(a, b)| b.array_cmp(a))
                 .find(|x| x != &Ordering::Equal)
                 .unwrap_or(Ordering::Equal)
         });
-        Ok(indices)
+        indices.into()
     }
     /// Sort an array ascending
-    pub fn sort_up(&mut self, env: &Uiua) -> UiuaResult {
-        if self.rank() == 0 {
-            return Err(env.error("Cannot rise a scalar"));
-        }
-        if self.element_count() == 0 {
-            return Ok(());
+    pub fn sort_up(&mut self) {
+        if self.rank() == 0 || self.element_count() == 0 {
+            return;
         }
         if self.rank() == 1 {
             self.data.as_mut_slice().par_sort_by(|a, b| a.array_cmp(b));
         } else {
-            let rise = self.rise(env)?;
+            let rise = self.rise();
             let mut new_data = EcoVec::with_capacity(self.data.len());
-            for i in rise {
-                new_data.extend_from_slice(self.row_slice(i));
+            for &i in &rise.data {
+                new_data.extend_from_slice(self.row_slice(i as usize));
             }
             self.data = new_data.into();
         }
-        Ok(())
     }
     /// Sort an array descending
-    pub fn sort_down(&mut self, env: &Uiua) -> UiuaResult {
-        if self.rank() == 0 {
-            return Err(env.error("Cannot fall a scalar"));
-        }
-        if self.element_count() == 0 {
-            return Ok(());
+    pub fn sort_down(&mut self) {
+        if self.rank() == 0 || self.element_count() == 0 {
+            return;
         }
         if self.rank() == 1 {
             self.data.as_mut_slice().par_sort_by(|a, b| b.array_cmp(a));
         } else {
-            let fall = self.fall(env)?;
+            let fall = self.fall();
             let mut new_data = EcoVec::with_capacity(self.data.len());
-            for i in fall {
-                new_data.extend_from_slice(self.row_slice(i));
+            for &i in &fall.data {
+                new_data.extend_from_slice(self.row_slice(i as usize));
             }
             self.data = new_data.into();
         }
-        Ok(())
     }
     /// `classify` the rows of the array
     pub fn classify(&self) -> Vec<usize> {
@@ -1319,7 +1313,7 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     pub(crate) fn first_min_index(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() == 0 {
-            return Err(env.error("Cannot get min index of a scalar"));
+            return Ok(0.0);
         }
         if self.row_count() == 0 {
             return env
@@ -1337,7 +1331,7 @@ impl<T: ArrayValue> Array<T> {
     }
     pub(crate) fn first_max_index(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() == 0 {
-            return Err(env.error("Cannot get max index of a scalar"));
+            return Ok(0.0);
         }
         if self.row_count() == 0 {
             return env
@@ -1355,7 +1349,7 @@ impl<T: ArrayValue> Array<T> {
     }
     pub(crate) fn last_min_index(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() == 0 {
-            return Err(env.error("Cannot get min index of a scalar"));
+            return Ok(0.0);
         }
         if self.row_count() == 0 {
             return env
@@ -1373,7 +1367,7 @@ impl<T: ArrayValue> Array<T> {
     }
     pub(crate) fn last_max_index(&self, env: &Uiua) -> UiuaResult<f64> {
         if self.rank() == 0 {
-            return Err(env.error("Cannot get max index of a scalar"));
+            return Ok(0.0);
         }
         if self.row_count() == 0 {
             return env

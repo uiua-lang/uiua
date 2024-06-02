@@ -1066,12 +1066,9 @@ code:
                 // Check item sigs
                 let has_functions = op_instrs.iter().any(|(_, sig)| sig.args > 0);
                 if has_functions {
-                    return Err(self.fatal_error(
-                        word.span.clone(),
-                        "Functions are not allowed in strands. \n\
-                        You can use the ‿ character (which formats from __) \
-                        to make a function strand.",
-                    ));
+                    return Err(
+                        self.fatal_error(word.span.clone(), "Functions are not allowed in strands")
+                    );
                 }
                 self.code_meta.strands.insert(word.span.clone(), just_spans);
                 // Flatten instrs

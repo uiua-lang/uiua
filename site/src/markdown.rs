@@ -48,7 +48,7 @@ pub fn markdown_html(text: &str) -> String {
         .replace("``", "` `")
         .replace("<code block delim>", "```");
     let root = parse_document(&arena, &text, &ComrakOptions::default());
-    let body = format!("<body>{}</body>", node_html(root));
+    let body = format!(r#"<body><div id=top>{}</div></body>"#, node_html(root));
     let head = r#"
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">

@@ -71,7 +71,7 @@ fn BlogPage(name: String) -> impl IntoView {
         <A href="/blog">"Back to Blog Home"</A>
         <br/>
         <br/>
-        <p>"This post is available in lightweight "<a href={format!("/blog/{name}-text.md")}>"markdown"</a>" and "<a href={format!("/blog/{name}-html.html")}>"html"</a>" formats."</p>
+        <p>"This post is available in lightweight "<a href={format!("https://github.com/uiua-lang/uiua/blob/main/site/blog/{name}-text.md")}>"markdown"</a>" and "<a href={format!("/blog/{name}-html.html")}>"html"</a>" formats."</p>
         <br/>
         <Markdown src={format!("/blog/{name}-text.md")}/>
         <br/>

@@ -11,6 +11,7 @@ site/dist
 *.txt
 *.db
 !*/assets/*
+!src/primitive/assets/*
 
 *.ua
 *.uasm

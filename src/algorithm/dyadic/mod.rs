@@ -62,8 +62,8 @@ impl Value {
     }
 }
 
-impl<T: Clone + std::fmt::Debug> Array<T> {
-    pub(crate) fn depth_slices<U: Clone + std::fmt::Debug, C: FillContext>(
+impl<T: Clone + std::fmt::Debug + Send + Sync> Array<T> {
+    pub(crate) fn depth_slices<U: Clone + std::fmt::Debug + Send + Sync, C: FillContext>(
         &mut self,
         other: &Array<U>,
         mut a_depth: usize,
@@ -110,18 +110,33 @@ impl<T: Clone + std::fmt::Debug> Array<T> {
                 )));
             }
         }
+
         match a_depth.cmp(&b_depth) {
             Ordering::Equal => {}
             Ordering::Less => {
-                for b_dim in b.shape[..b_depth - a_depth].iter().rev() {
-                    a.reshape_scalar(Ok(*b_dim as isize));
+                for &b_dim in b.shape[..b_depth - a_depth].iter().rev() {
+                    let mut new_a_data = EcoVec::with_capacity(a.element_count() * b_dim);
+                    for row in a.row_slices() {
+                        for _ in 0..b_dim {
+                            new_a_data.extend_from_slice(row);
+                        }
+                    }
+                    a.data = new_a_data.into();
+                    a.shape.insert(0, b_dim);
                     a_depth += 1;
                 }
             }
             Ordering::Greater => {
-                for a_dim in a.shape[..a_depth - b_depth].iter().rev() {
+                for &a_dim in a.shape[..a_depth - b_depth].iter().rev() {
+                    let mut new_b_data = EcoVec::with_capacity(b.element_count() * a_dim);
+                    for row in b.row_slices() {
+                        for _ in 0..a_dim {
+                            new_b_data.extend_from_slice(row);
+                        }
+                    }
                     local_b = b.clone();
-                    local_b.reshape_scalar(Ok(*a_dim as isize));
+                    local_b.data = new_b_data.into();
+                    local_b.shape.insert(0, a_dim);
                     b = &local_b;
                     b_depth += 1;
                 }

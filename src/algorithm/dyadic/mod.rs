@@ -720,15 +720,12 @@ fn pad_keep_counts<'a>(counts: &'a [f64], len: usize, env: &Uiua) -> UiuaResult<
                 match fill.rank() {
                     0 => {
                         let fill = fill.data[0];
-                        let mut new_amount = amount.to_vec();
-                        new_amount.extend(repeat(fill).take(len - amount.len()));
-                        amount = new_amount.into();
+                        let amount = amount.to_mut();
+                        amount.extend(repeat(fill).take(len - amount.len()));
                     }
                     1 => {
-                        let mut new_amount = amount.to_vec();
-                        new_amount
-                            .extend((fill.data.iter().copied().cycle()).take(len - amount.len()));
-                        amount = new_amount.into();
+                        let amount = amount.to_mut();
+                        amount.extend((fill.data.iter().copied().cycle()).take(len - amount.len()));
                     }
                     _ => {
                         return Err(env.error(format!(
@@ -739,33 +736,25 @@ fn pad_keep_counts<'a>(counts: &'a [f64], len: usize, env: &Uiua) -> UiuaResult<
                     }
                 }
             }
-            Err(e) => {
+            Err(e) if counts.is_empty() => {
                 return Err(env.error(format!(
                     "Cannot keep array with shape {} with array of shape {}{e}",
                     len,
                     FormatShape(&[amount.len()])
                 )))
             }
+            Err(_) => {
+                let amount = amount.to_mut();
+                for i in 0..len - amount.len() {
+                    amount.push(amount[i % amount.len()]);
+                }
+            }
         },
         Ordering::Greater => {
-            return Err(env.error(match env.num_array_fill() {
-                Ok(_) => {
-                    format!(
-                        "Cannot keep array with shape {} with array of shape {}. \
-                        A fill value is available, but keep can only been filled \
-                        if there are fewer counts than rows.",
-                        len,
-                        FormatShape(&[amount.len()])
-                    )
-                }
-                Err(e) => {
-                    format!(
-                        "Cannot keep array with shape {} with array of shape {}{e}",
-                        len,
-                        FormatShape(&[amount.len()])
-                    )
-                }
-            }))
+            let Cow::Borrowed(amount) = &mut amount else {
+                unreachable!()
+            };
+            *amount = &amount[..len];
         }
     }
     Ok(amount)

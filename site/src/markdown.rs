@@ -52,7 +52,7 @@ pub fn markdown_html(text: &str) -> String {
     let head = r#"
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="/styles.css">
+        <link rel="stylesheet" href="https://uiua.org/styles.css">
     "#;
     format!("<!DOCTYPE html><html><head>{}</head>{}</html>", head, body)
 }
@@ -137,6 +137,10 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
 
 #[cfg(test)]
 fn node_html<'a>(node: &'a AstNode<'a>) -> String {
+    use uiua::{Compiler, SafeSys, Uiua, UiuaError, Value};
+
+    use crate::prim_class;
+
     let children: String = node.children().map(node_html).collect();
     match &node.data.borrow().value {
         NodeValue::Text(text) => {
@@ -168,9 +172,29 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
             let text = leaf_text(node).unwrap_or_default();
             let name = text.rsplit_once(' ').map(|(name, _)| name).unwrap_or(&text);
             if let Some(prim) = Primitive::from_name(name) {
-                format!("{:?}", prim)
+                let symbol_class = format!("prim-glyph {}", prim_class(prim));
+                let symbol = prim.to_string();
+                let name = if symbol != prim.name() {
+                    format!(" {}", prim.name())
+                } else {
+                    "".to_string()
+                };
+                format!(
+                    r#"<a 
+                        href="https://uiua.org/docs/{}" 
+                        data-title={:?}
+                        class="prim_code_a"
+                        style="text-decoration: none;">
+                        <code><span class={symbol_class:?}>{symbol}</span>{name}</code>
+                    </a>"#,
+                    prim.name(),
+                    prim.doc().short_text()
+                )
             } else {
-                format!("<a href={:?} title={}>{}</a>", link.url, link.title, text)
+                format!(
+                    "<a href={:?} data-title={}>{}</a>",
+                    link.url, link.title, text
+                )
             }
         }
         NodeValue::Emph => format!("<em>{}</em>", children),
@@ -178,7 +202,52 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
         NodeValue::Strikethrough => format!("<del>{}</del>", children),
         NodeValue::LineBreak => "<br/>".into(),
         NodeValue::CodeBlock(block) => {
-            format!("<code class=\"code-block\">{}</code>", block.literal)
+            let mut lines: Vec<String> = block.literal.lines().map(Into::into).collect();
+            let max_len = lines
+                .iter()
+                .map(|s| {
+                    s.chars()
+                        .position(|c| c == '#')
+                        .map(|i| i + 1)
+                        .unwrap_or_else(|| s.chars().count() + 2)
+                })
+                .max()
+                .unwrap_or(0);
+            let mut comp = Compiler::with_backend(SafeSys::new());
+            let mut env = Uiua::default();
+            for line in &mut lines {
+                let line_len = line.chars().count();
+                if line_len < max_len {
+                    line.push_str(&" ".repeat(max_len - line_len));
+                }
+                match comp.load_str(line).and_then(|comp| env.run_compiler(comp)) {
+                    Ok(_) => {
+                        let values = env.take_stack();
+                        if !values.is_empty() {
+                            let formatted: Vec<String> = values.iter().map(Value::show).collect();
+                            if formatted.iter().any(|s| s.contains('\n')) {
+                                line.push('\n');
+                                for formatted in formatted {
+                                    for fline in formatted.lines() {
+                                        line.push_str(&format!("\n# {fline}"));
+                                    }
+                                }
+                            } else {
+                                line.push('#');
+                                for formatted in formatted.into_iter().rev() {
+                                    line.push(' ');
+                                    line.push_str(&formatted);
+                                }
+                            }
+                        }
+                    }
+                    Err(UiuaError::Parse(..)) => break,
+                    Err(e) if e.to_string().contains("git modules") => break,
+                    Err(e) => line.push_str(&format!("# {e}")),
+                }
+            }
+            let text = lines.join("\n");
+            format!("<code class=\"code-block\">{text}</code>")
         }
         NodeValue::ThematicBreak => "<hr/>".into(),
         _ => children,

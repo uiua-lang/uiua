@@ -2,6 +2,8 @@
 
 2024-04-04
 
+---
+
 Uiua 0.10.0 is now available!
 
 You can find the full changelog [here](https://uiua.org/docs/changelog#0.10.0---2024-04-04).

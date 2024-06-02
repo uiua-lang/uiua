@@ -319,9 +319,10 @@ impl Uiua {
         let backup = compiler.clone();
         self.rt.backend = compiler.backend();
         let res = self.run_asm(compiler.finish());
-        let asm = self.take_asm();
+        let mut asm = self.take_asm();
         match res {
             Ok(()) => {
+                asm.top_slices.clear();
                 *compiler.assembly_mut() = asm;
                 Ok(())
             }

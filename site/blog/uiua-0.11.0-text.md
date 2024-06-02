@@ -1,18 +1,20 @@
 # Announcing Uiua 0.11.0
 
-2024-06-??
+2024-06-02
+
+---
 
 Uiua 0.11.0 is now available!
 
-You can find the full changelog [here](https://uiua.org/docs/changelog#0.11.0---2024-05-??).
+You can find the full changelog [here](https://uiua.org/docs/changelog#0.11.0---2024-06-02).
 
-Uiua is a general purpose, stack-based, array programming language with a focus on tacit code.
+Uiua is a general purpose, stack-based, array-oriented programming language with a focus on tacit code.
 
 While this release does not have any major new features, it extends the functionality of many primitives, optimizes many common patterns, and fixes a number of bugs.
 
 Here are some of the highlights:
 
-# Multi-argument [`reduce /`](https://uiua.org/docs/reduce)
+## Multi-argument [`reduce /`](https://uiua.org/docs/reduce)
 
 [`reduce /`](https://uiua.org/docs/reduce) takes a dyadic function and applies it "between" all rows of an array.
 
@@ -32,7 +34,7 @@ This is particularly useful when used with [`content `](https://uiua.org/docs/co
 /◇(⊂⊂) @, {"cat" "dog" "bird" "fish"}
 ```
 
-# [`json`](https://uiua.org/docs/json) and [`xlsx`](https://uiua.org/docs/xlsx)
+## [`json`](https://uiua.org/docs/json) and [`xlsx`](https://uiua.org/docs/xlsx)
 
 The [`json`](https://uiua.org/docs/json) and [`xlsx`](https://uiua.org/docs/xlsx) functions allow the encoding and decoding of JSON and XLSX data respectively.
 
@@ -56,7 +58,7 @@ json map {"name" "age"} {"Dan" 31}
 
 `xlsx` is similar, but is works with binary data rather than strings.
 
-# [`take ↙`](https://uiua.org/docs/take)/[`drop ↘`](https://uiua.org/docs/drop) [`infinity ∞`](https://uiua.org/docs/infinity)
+## [`take ↙`](https://uiua.org/docs/take)/[`drop ↘`](https://uiua.org/docs/drop) [`infinity ∞`](https://uiua.org/docs/infinity)
 
 [`take ↙`](https://uiua.org/docs/take) and [`drop ↘`](https://uiua.org/docs/drop) isolate part of an array.
 
@@ -80,7 +82,7 @@ You can now provide [`infinity ∞`](https://uiua.org/docs/infinity) as one or m
 ↙1_∞_2 . ↯2_3_4⇡24
 ```
 
-# Swizzles
+## Swizzles
 
 Swizzles are a new experimental feature that allow concise manipulation of the stack and extraction from arrays.
 
@@ -114,19 +116,19 @@ Capital letters will [`un °`](https://uiua.org/docs/un) [`box ◻`](https://uiu
 
 Swizzles are experimental and may change in future versions as their place in the language is explored.
 
-# The New Pad
+## The New Pad
 
 Much of the code for the [Uiua website pad](https://uiua.org/pad) has been rewritten. This new pad uses less custom behavior and should work better in more browsers.
 
-If you are reading this on the Uiua website, then all the examples above use this new pad!
+If you are reading this on the Uiua website (with full editor features), then all the examples above use this new pad!
 
-# 💗
+## 💗
 
 Thank you as always to everyone who uses Uiua and helps with its development! Your enthusiasm for the language gives me life.
 
 A *special* thanks to all of [Uiua's sponsors](https://github.com/sponsors/uiua-lang) for their continued support 🥰
 
-Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.11.0---2024-05-??).
+Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.11.0---2024-06-02).
 
 You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the language, ask questions, or get help.
 

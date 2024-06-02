@@ -2,6 +2,8 @@
 
 2024-01-19
 
+---
+
 The [Uiua pad](https://uiua.org/pad) page prominently displays the words "Uiua is not yet stable". And so it has been asked: when will Uiua be stable? What features will it have? Is there a roadmap?
 
 This post is to organize and present my thoughts on the future of Uiua.

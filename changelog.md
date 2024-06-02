@@ -1,9 +1,10 @@
 # Uiua Changelog
 
 Uiua is not yet stable.
+<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
-## 0.11.0 - 2024-06-??
-This version is not yet released. If you are reading this on the website, then these changes are live here.
+## 0.11.0 - 2024-06-02
+You can find the release announcement [here](https://uiua.org/blog/uiua-0.11.0).
 ### Language
 - **Breaking Change** - [`un °`](https://uiua.org/docs/un) [`fix ¤`](https://uiua.org/docs/fix) now does pattern matching
   - [`under ⍜`](https://uiua.org/docs/under) [`fix ¤`](https://uiua.org/docs/fix) retains the old behavior

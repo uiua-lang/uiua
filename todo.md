@@ -1,8 +1,5 @@
 # Uiua Todo
 
-- 0.11
-  - Merge `new-pad` into `main`
-  - Release it!
 - 0.12
   - `rows` function pack
   - Improve `un join` chained with other functions

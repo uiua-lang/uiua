@@ -75,7 +75,7 @@ impl GridFmt for f64 {
             format!("{minus}{positive}")
         } else {
             let mut pos_formatted = positive.to_string();
-            if pos_formatted.len() >= 18 {
+            if pos_formatted.len() >= 17 {
                 let mut consecutive_start = 0;
                 let mut consecutive_len = 0;
                 let mut hit_decimal = false;

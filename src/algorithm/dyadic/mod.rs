@@ -451,19 +451,21 @@ impl Value {
 impl Value {
     /// Use this value as counts to `keep` another
     pub fn keep(self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.into_nats_with(
+        self.into_nums_with(
             env,
-            "Keep amount must be a natural number \
+            "Keep amount must be a positive real number \
             or list of natural numbers",
             false,
             |counts, shape| {
                 Ok(if shape.len() == 0 {
                     match kept {
-                        Value::Num(a) => a.scalar_keep(counts[0]).into(),
-                        Value::Byte(a) => a.scalar_keep(counts[0]).into(),
-                        Value::Complex(a) => a.scalar_keep(counts[0]).into(),
-                        Value::Char(a) => a.scalar_keep(counts[0]).into(),
-                        Value::Box(a) => a.scalar_keep(counts[0]).into(),
+                        Value::Num(a) => a.scalar_real_keep(counts[0], env)?.into(),
+                        Value::Byte(a) => {
+                            a.convert::<f64>().scalar_real_keep(counts[0], env)?.into()
+                        }
+                        Value::Complex(a) => a.scalar_real_keep(counts[0], env)?.into(),
+                        Value::Char(a) => a.scalar_real_keep(counts[0], env)?.into(),
+                        Value::Box(a) => a.scalar_real_keep(counts[0], env)?.into(),
                     }
                 } else {
                     match kept {
@@ -487,7 +489,7 @@ impl Value {
         )
     }
     pub(crate) fn undo_keep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.into_nats_with_other(
+        self.into_nums_with_other(
             kept,
             env,
             "Keep amount must be a natural number \
@@ -513,7 +515,7 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     /// `keep` this array by replicating it as the rows of a new array
-    pub fn scalar_keep(mut self, count: usize) -> Self {
+    pub fn scalar_integer_keep(mut self, count: usize) -> Self {
         // Scalar kept
         if self.rank() == 0 {
             self.shape.push(count);
@@ -548,16 +550,46 @@ impl<T: ArrayValue> Array<T> {
         self.validate_shape();
         self
     }
+    /// `keep` this array with a real-valued scalar
+    pub fn scalar_real_keep(mut self, count: f64, env: &Uiua) -> UiuaResult<Self> {
+        if count < 0.0 {
+            return Err(env.error("Keep amount cannot be negative"));
+        }
+        if count.fract() == 0.0 {
+            return Ok(self.scalar_integer_keep(count as usize));
+        }
+        let new_row_count = (count * self.row_count() as f64).round() as usize;
+        let row_len = self.row_len();
+        let mut new_data = EcoVec::with_capacity(new_row_count * row_len);
+        let delta = 1.0 / count;
+        for k in 0..new_row_count {
+            let t = k as f64 * delta;
+            let fract = t.fract();
+            let src_row = if fract <= f64::EPSILON || fract >= 1.0 - f64::EPSILON {
+                t.round() as usize
+            } else {
+                t.floor() as usize
+            };
+            new_data.extend_from_slice(&self.data[src_row * row_len..][..row_len]);
+        }
+        self.shape[0] = new_row_count;
+        self.data = new_data.into();
+        self.validate_shape();
+        Ok(self)
+    }
     /// `keep` this array with some counts
-    pub fn list_keep(mut self, counts: &[usize], env: &Uiua) -> UiuaResult<Self> {
+    pub fn list_keep(mut self, counts: &[f64], env: &Uiua) -> UiuaResult<Self> {
+        if counts.iter().any(|&n| n < 0.0 || n.fract() != 0.0) {
+            return Err(env.error("Keep amount must be a list of natural numbers"));
+        }
         self.take_map_keys();
         let counts = pad_keep_counts(counts, self.row_count(), env)?;
         if self.rank() == 0 {
             if counts.len() != 1 {
                 return Err(env.error("Scalar array can only be kept with a single number"));
             }
-            let mut new_data = EcoVec::with_capacity(counts[0]);
-            for _ in 0..counts[0] {
+            let mut new_data = EcoVec::with_capacity(counts[0] as usize);
+            for _ in 0..counts[0] as usize {
                 new_data.push(self.data[0].clone());
             }
             self = new_data.into();
@@ -565,7 +597,7 @@ impl<T: ArrayValue> Array<T> {
             let mut all_bools = true;
             let mut true_count = 0;
             for &n in counts.iter() {
-                match n {
+                match n as usize {
                     0 => {}
                     1 => true_count += 1,
                     _ => {
@@ -580,7 +612,7 @@ impl<T: ArrayValue> Array<T> {
                 let mut new_data = CowSlice::with_capacity(new_flat_len);
                 if row_len > 0 {
                     for (b, r) in counts.iter().zip(self.data.chunks_exact(row_len)) {
-                        if *b == 1 {
+                        if *b == 1.0 {
                             new_data.extend_from_slice(r);
                         }
                     }
@@ -592,13 +624,14 @@ impl<T: ArrayValue> Array<T> {
                 let mut new_len = 0;
                 if row_len > 0 {
                     for (n, r) in counts.iter().zip(self.data.chunks_exact(row_len)) {
-                        new_len += *n;
-                        for _ in 0..*n {
+                        let n = *n as usize;
+                        new_len += n;
+                        for _ in 0..n {
                             new_data.extend_from_slice(r);
                         }
                     }
                 } else {
-                    new_len = counts.iter().sum();
+                    new_len = counts.iter().sum::<f64>() as usize;
                 }
                 self.data = new_data;
                 self.shape[0] = new_len;
@@ -639,15 +672,15 @@ impl<T: ArrayValue> Array<T> {
         self.validate_shape();
         Ok((counts.into(), self))
     }
-    fn undo_keep(self, counts: &[usize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+    fn undo_keep(self, counts: &[f64], into: Self, env: &Uiua) -> UiuaResult<Self> {
         let counts = pad_keep_counts(counts, into.row_count(), env)?;
-        if counts.iter().any(|&n| n > 1) {
+        if counts.iter().any(|&n| n > 1.0) {
             return Err(env.error("Cannot invert keep with non-boolean counts"));
         }
         let mut new_rows: Vec<_> = Vec::with_capacity(counts.len());
         let mut transformed = self.into_rows();
         for (count, into_row) in counts.iter().zip(into.into_rows()) {
-            if *count == 0 {
+            if *count == 0.0 {
                 new_rows.push(into_row);
             } else {
                 let new_row = transformed.next().ok_or_else(|| {
@@ -671,11 +704,7 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
-fn pad_keep_counts<'a>(
-    counts: &'a [usize],
-    len: usize,
-    env: &Uiua,
-) -> UiuaResult<Cow<'a, [usize]>> {
+fn pad_keep_counts<'a>(counts: &'a [f64], len: usize, env: &Uiua) -> UiuaResult<Cow<'a, [f64]>> {
     let mut amount = Cow::Borrowed(counts);
     match amount.len().cmp(&len) {
         Ordering::Equal => {}
@@ -690,17 +719,15 @@ fn pad_keep_counts<'a>(
                 }
                 match fill.rank() {
                     0 => {
-                        let fill = fill.data[0] as usize;
+                        let fill = fill.data[0];
                         let mut new_amount = amount.to_vec();
                         new_amount.extend(repeat(fill).take(len - amount.len()));
                         amount = new_amount.into();
                     }
                     1 => {
                         let mut new_amount = amount.to_vec();
-                        new_amount.extend(
-                            (fill.data.iter().map(|&n| n as usize).cycle())
-                                .take(len - amount.len()),
-                        );
+                        new_amount
+                            .extend((fill.data.iter().copied().cycle()).take(len - amount.len()));
                         amount = new_amount.into();
                     }
                     _ => {

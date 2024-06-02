@@ -850,6 +850,33 @@ impl Value {
     pub fn as_nums(&self, env: &Uiua, requirement: &'static str) -> UiuaResult<Vec<f64>> {
         self.as_number_list(env, requirement, |_| true, |f| f)
     }
+    pub(crate) fn into_nums_with<C: ErrorContext>(
+        self,
+        ctx: &C,
+        requirement: &'static str,
+        allow_non_list: bool,
+        with: impl FnOnce(&[f64], &Shape) -> Result<Value, C::Error> + Clone,
+    ) -> Result<Value, C::Error> {
+        self.into_number_list_with(ctx, requirement, allow_non_list, |_| true, |f| f, with)
+    }
+    pub(crate) fn into_nums_with_other<C: ErrorContext>(
+        self,
+        other: Self,
+        ctx: &C,
+        requirement: &'static str,
+        allow_non_list: bool,
+        with: impl FnOnce(&[f64], &Shape, Value) -> Result<Value, C::Error> + Clone,
+    ) -> Result<Value, C::Error> {
+        self.into_number_list_with_other(
+            other,
+            ctx,
+            requirement,
+            allow_non_list,
+            |_| true,
+            |f| f,
+            with,
+        )
+    }
     /// Attempt to convert the array to a list of natural numbers
     ///
     /// The `requirement` parameter is used in error messages.
@@ -865,6 +892,7 @@ impl Value {
             |f| f as usize,
         )
     }
+    #[allow(dead_code)]
     pub(crate) fn into_nats_with<C: ErrorContext>(
         self,
         ctx: &C,
@@ -881,6 +909,7 @@ impl Value {
             with,
         )
     }
+    #[allow(dead_code)]
     pub(crate) fn into_nats_with_other<C: ErrorContext>(
         self,
         other: Self,

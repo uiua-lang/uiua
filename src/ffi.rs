@@ -457,6 +457,7 @@ mod enabled {
                         8 => call_ret_struct!(8)?,
                         12 => call_ret_struct!(12)?,
                         16 => call_ret_struct!(16)?,
+                        20 => call_ret_struct!(20)?,
                         24 => call_ret_struct!(24)?,
                         32 => call_ret_struct!(32)?,
                         48 => call_ret_struct!(48)?,

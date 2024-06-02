@@ -2317,14 +2317,19 @@ primitive!(
     /// The first function should return 2 arrays of equal [length].
     /// - The first array is the list of nodes that can be reached from the current node.
     /// - The second array is the cost of reaching each node.
-    /// The second function should return a heuristic cost to reach the target node.
-    /// The third function should return whether or not the target node has been reached.
+    /// The second function should return a heuristic cost to reach the goal node.
+    /// The third function should return whether or not the goal node has been reached.
     ///
     /// When called, [astar] will pop any additional arguments it's functions need from the stack.
     /// On each iteration, the current node will be passed to each function, along with any of the additional arguments that the function needs.
     ///
     /// If a path is found, a box array of all shortest paths is returned, as well as the cost.
     /// If no path is found, an error is thrown.
+    ///
+    /// In this example, we find the shortest path from the 2D point `0_0` to `3_5` in a grid.
+    /// The neighbors function returns the 4 cardinal directions with all costs of 1.
+    /// The heuristic function `⌵``/``ℂ``-` calculates the euclidean distance between two points.
+    /// The goal function simply checks if the current node [match]es the goal node.
     /// ex: Neis ← [∩¯,,⇌.⇡2]
     ///   : °□⊢ astar(
     ///   :   ⟜≡⋅1 +Neis¤

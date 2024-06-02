@@ -792,12 +792,6 @@ fn astar_impl(
         ("heuristic", heu_sig, 1),
         ("goal", isg_sig, 1),
     ] {
-        if sig.args < 1 {
-            return Err(env.error(format!(
-                "A* {name} function must take at least 1 argument \
-                but its signature is {sig}",
-            )));
-        }
         if sig.outputs != *req_out {
             return Err(env.error(format!(
                 "A* {name} function must return {req_out} outputs \
@@ -823,10 +817,12 @@ fn astar_impl(
             |n| {
                 let res = (|| {
                     let mut env = env.borrow_mut();
-                    for arg in args.iter().take(nei_sig.args - 1).rev() {
+                    for arg in args.iter().take(nei_sig.args.saturating_sub(1)).rev() {
                         env.push(arg.clone());
                     }
-                    env.push(n.clone());
+                    if nei_sig.args > 0 {
+                        env.push(n.clone());
+                    }
                     env.call(neighbors.clone())?;
                     let nodes = env.pop("neighbors nodes")?;
                     let costs = env
@@ -859,10 +855,12 @@ fn astar_impl(
             |n| {
                 let res = (|| {
                     let mut env = env.borrow_mut();
-                    for arg in args.iter().take(heu_sig.args - 1).rev() {
+                    for arg in args.iter().take(heu_sig.args.saturating_sub(1)).rev() {
                         env.push(arg.clone());
                     }
-                    env.push(n.clone());
+                    if heu_sig.args > 0 {
+                        env.push(n.clone());
+                    }
                     env.call(heuristic.clone())?;
                     let h = env
                         .pop("heuristic")?
@@ -883,10 +881,12 @@ fn astar_impl(
             |n| {
                 let res = (|| -> UiuaResult<bool> {
                     let mut env = env.borrow_mut();
-                    for arg in args.iter().take(isg_sig.args - 1).rev() {
+                    for arg in args.iter().take(isg_sig.args.saturating_sub(1)).rev() {
                         env.push(arg.clone());
                     }
-                    env.push(n.clone());
+                    if isg_sig.args > 0 {
+                        env.push(n.clone());
+                    }
                     env.call(is_goal.clone())?;
                     let is_goal = env
                         .pop("is_goal")?

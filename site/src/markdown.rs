@@ -10,7 +10,7 @@ use crate::{backend::fetch, editor::Editor, Hd, NotFound, Prim, ScrollToHash};
 #[component]
 #[allow(unused_braces)]
 pub fn Markdown<S: Into<String>>(src: S) -> impl IntoView {
-    view!(<Fetch src={src.into()} f=markdown/>)
+    view!(<Fetch src={src.into()} f=markdown_view/>)
 }
 
 #[component]
@@ -30,7 +30,7 @@ pub fn Fetch<S: Into<String>, F: Fn(&str) -> View + 'static>(src: S, f: F) -> im
     }}
 }
 
-pub fn markdown(text: &str) -> View {
+pub fn markdown_view(text: &str) -> View {
     let arena = Arena::new();
     let text = text
         .replace("```", "<code block delim>")
@@ -38,6 +38,23 @@ pub fn markdown(text: &str) -> View {
         .replace("<code block delim>", "```");
     let root = parse_document(&arena, &text, &ComrakOptions::default());
     node_view(root)
+}
+
+#[cfg(test)]
+pub fn markdown_html(text: &str) -> String {
+    let arena = Arena::new();
+    let text = text
+        .replace("```", "<code block delim>")
+        .replace("``", "` `")
+        .replace("<code block delim>", "```");
+    let root = parse_document(&arena, &text, &ComrakOptions::default());
+    let body = format!("<body>{}</body>", node_html(root));
+    let head = r#"
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="/styles.css">
+    "#;
+    format!("<!DOCTYPE html><html><head>{}</head>{}</html>", head, body)
 }
 
 fn node_view<'a>(node: &'a AstNode<'a>) -> View {
@@ -115,6 +132,56 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         }
         NodeValue::ThematicBreak => view!(<hr/>).into_view(),
         _ => children.into_view(),
+    }
+}
+
+#[cfg(test)]
+fn node_html<'a>(node: &'a AstNode<'a>) -> String {
+    let children: String = node.children().map(node_html).collect();
+    match &node.data.borrow().value {
+        NodeValue::Text(text) => {
+            if let Some(text) = text
+                .strip_prefix('[')
+                .and_then(|text| text.strip_suffix(']'))
+            {
+                if let Some(prim) = Primitive::from_name(text) {
+                    return format!("{:?}", prim);
+                }
+            }
+            text.clone()
+        }
+        NodeValue::Heading(heading) => {
+            let id = all_text(node).to_lowercase().replace(' ', "-");
+            format!(
+                "<h{} id={:?}>{}</h{}>",
+                heading.level, id, children, heading.level
+            )
+        }
+        NodeValue::List(list) => match list.list_type {
+            ListType::Bullet => format!("<ul>{}</ul>", children),
+            ListType::Ordered => format!("<ol>{}</ol>", children),
+        },
+        NodeValue::Item(_) => format!("<li>{}</li>", children),
+        NodeValue::Paragraph => format!("<p>{}</p>", children),
+        NodeValue::Code(code) => format!("<code>{}</code>", code.literal),
+        NodeValue::Link(link) => {
+            let text = leaf_text(node).unwrap_or_default();
+            let name = text.rsplit_once(' ').map(|(name, _)| name).unwrap_or(&text);
+            if let Some(prim) = Primitive::from_name(name) {
+                format!("{:?}", prim)
+            } else {
+                format!("<a href={:?} title={}>{}</a>", link.url, link.title, text)
+            }
+        }
+        NodeValue::Emph => format!("<em>{}</em>", children),
+        NodeValue::Strong => format!("<strong>{}</strong>", children),
+        NodeValue::Strikethrough => format!("<del>{}</del>", children),
+        NodeValue::LineBreak => "<br/>".into(),
+        NodeValue::CodeBlock(block) => {
+            format!("<code class=\"code-block\">{}</code>", block.literal)
+        }
+        NodeValue::ThematicBreak => "<hr/>".into(),
+        _ => children,
     }
 }
 

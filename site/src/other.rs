@@ -3,7 +3,7 @@ use leptos_meta::*;
 use leptos_router::*;
 use uiua::{Primitive, CONSTANTS};
 
-use crate::{editor::Editor, markdown::markdown, Const, Hd, Prim, Prims};
+use crate::{editor::Editor, markdown::markdown_view, Const, Hd, Prim, Prims};
 
 #[component]
 pub fn Design() -> impl IntoView {
@@ -296,7 +296,7 @@ pub fn Optimizations() -> impl IntoView {
 pub fn Changelog() -> impl IntoView {
     view! {
         <Title text="Changelog - Uiua Docs"/>
-        { markdown(include_str!("../../changelog.md")) }
+        { markdown_view(include_str!("../../changelog.md")) }
     }
 }
 

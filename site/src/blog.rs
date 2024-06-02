@@ -71,15 +71,34 @@ fn BlogPage(name: String) -> impl IntoView {
         <A href="/blog">"Back to Blog Home"</A>
         <br/>
         <br/>
-        <p>
-            "Click "
-            <a href={format!("https://github.com/uiua-lang/uiua/blob/main/site/blog/{name}-text.md")}>here</a>
-            " for a lightweight markdown version of this page."
-        </p>
+        <p>"This post is available in lightweight "<a href={format!("/blog/{name}-text.md")}>"markdown"</a>" and "<a href={format!("/blog/{name}-html.html")}>"html"</a>" formats."</p>
         <br/>
         <Markdown src={format!("/blog/{name}-text.md")}/>
         <br/>
         <br/>
         <A href="/blog">"Back to Blog Home"</A>
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn gen_blog_html() {
+    use std::fs;
+
+    let list = include_str!("../blog/list.txt");
+    for line in list
+        .lines()
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+    {
+        let (path, _) = line.split_once(": ").unwrap_or_default();
+        let md_path = format!("blog/{}-text.md", path);
+        let mut markdown =
+            fs::read_to_string(&md_path).unwrap_or_else(|e| panic!("{md_path}: {e}"));
+        let extra = format!("You can read this post with full editor features [here](https://uiua.org/blog/{path}).");
+        let insertion_pos = markdown.bytes().position(|b| b == b'\n').unwrap_or(0);
+        markdown.insert_str(insertion_pos, &format!("\n{}\n\n", extra));
+        let html = markdown_html(&markdown);
+        let html_path = format!("blog/{}-html.html", path);
+        fs::write(html_path, html).unwrap();
     }
 }

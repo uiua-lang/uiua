@@ -7,6 +7,7 @@
   ✅&runi {"git" "rebase" "main"}
 )
 &cd "site"
+✅&runi {"cargo" "test" "-p" "site" "gen_blog_html"}
 ✅&runi {"trunk" "build" "--release"}
 ✅&runi {"git" "add" "--all"}
 ✅&runi {"git" "commit" "--amend" "--no-edit"}

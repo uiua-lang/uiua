@@ -1771,29 +1771,29 @@ macro_rules! value_bin_impl {
             #[allow(unreachable_patterns, unused_mut, clippy::wrong_self_convention)]
             pub(crate) fn $name(self, other: Self, a_depth: usize, b_depth: usize, env: &Uiua) -> UiuaResult<Self> {
                 self.keep_metas(other, |a, b| { Ok(match (a, b) {
-                    $($((Value::$ip(mut a), Value::$ip(b)) $(if {
+                    $($((Value::$ip(mut a), Value::$ip(mut b)) $(if {
                         let f = |$meta: &ArrayMeta| $pred;
                         f(a.meta()) && f(b.meta())
                     })* => {
                         let mut val: Value = if val_retry!($ip, env) {
-                            let mut a_clone = a.clone();
-                            if let Err(e) = bin_pervade_mut(&mut a_clone, b.clone(), a_depth, b_depth, env, $name::$f2) {
+                            let mut b_clone = b.clone();
+                            if let Err(e) = bin_pervade_mut(a.clone(), &mut b_clone, a_depth, b_depth, env, $name::$f2) {
                                 if e.is_fill() {
                                     $(
-                                        let mut a = a.convert();
-                                        let b = b.convert();
-                                        bin_pervade_mut(&mut a, b, a_depth, b_depth, env, $name::$retry2)?;
-                                        a.reset_meta_flags();
-                                        return Ok(a.into());
+                                        let a = a.convert();
+                                        let mut b = b.convert();
+                                        bin_pervade_mut(a, &mut b, a_depth, b_depth, env, $name::$retry2)?;
+                                        b.reset_meta_flags();
+                                        return Ok(b.into());
                                     )*
                                 }
                                 return Err(e);
                             } else {
-                                a_clone.into()
+                                b_clone.into()
                             }
                         } else {
-                            bin_pervade_mut(&mut a, b, a_depth, b_depth, env, $name::$f2)?;
-                            a.into()
+                            bin_pervade_mut(a, &mut b, a_depth, b_depth, env, $name::$f2)?;
+                            b.into()
                         };
                         $(if $reset_meta {
                             val.reset_meta_flags();

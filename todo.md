@@ -2,7 +2,6 @@
 
 - 0.12
   - Optimize fixed pervasives
-  - Change `triangle` behavior
   - Refactor inversion to make left-inverses well-defined
     - `un on` for all left-invertible functions
     - Improve `un join` chained with other functions

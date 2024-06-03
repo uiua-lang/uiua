@@ -13,9 +13,8 @@ use ecow::eco_vec;
 use crate::{array::*, Uiua, UiuaError, UiuaResult};
 use crate::{Complex, Shape};
 
-use super::fill_array_shapes;
+use super::{fill_array_shapes, FillContext};
 
-#[allow(clippy::len_without_is_empty)]
 pub trait Arrayish {
     type Value: ArrayValue;
     fn shape(&self) -> &[usize];
@@ -157,6 +156,81 @@ where
     F: PervasiveFn<A, B, Output = C> + Clone,
     F::Error: Into<UiuaError>,
 {
+    // Fast fixed cases
+    if a_depth == 0 && b_depth == 0 && env.scalar_fill::<C>().is_err() {
+        // A is fixed
+        if a.row_count() == 1 && b.row_count() != 1 {
+            let fix_count = a.shape.iter().take_while(|&&d| d == 1).count();
+            if b.rank() > fix_count {
+                if (a.shape().iter())
+                    .zip(b.shape())
+                    .skip(fix_count)
+                    .any(|(a, b)| a != b)
+                {
+                    return Err(env.error(format!(
+                        "Shapes {} and {} do not match",
+                        a.shape(),
+                        b.shape()
+                    )));
+                }
+                let mut data = eco_vec![C::default(); b.flat_len()];
+                let a_row_shape = &a.shape()[fix_count..];
+                let b_row_shape = &b.shape()[fix_count..];
+                let b_row_len = b_row_shape.iter().product();
+                if b_row_len > 0 {
+                    for (b, c) in (b.data.chunks_exact(b_row_len))
+                        .zip(data.make_mut().chunks_exact_mut(b_row_len))
+                    {
+                        bin_pervade_recursive(
+                            &(a_row_shape, a.data.as_slice()),
+                            &(b_row_shape, b),
+                            c,
+                            env,
+                            f.clone(),
+                        )
+                        .map_err(Into::into)?;
+                    }
+                }
+                return Ok(Array::new(b.shape, data));
+            }
+        }
+        // B is fixed
+        if a.row_count() != 1 && b.row_count() == 1 {
+            let fix_count = b.shape.iter().take_while(|&&d| d == 1).count();
+            if a.rank() > fix_count {
+                if (a.shape().iter())
+                    .zip(b.shape())
+                    .skip(fix_count)
+                    .any(|(a, b)| a != b)
+                {
+                    return Err(env.error(format!(
+                        "Shapes {} and {} do not match",
+                        a.shape(),
+                        b.shape()
+                    )));
+                }
+                let mut data = eco_vec![C::default(); a.flat_len()];
+                let a_row_shape = &a.shape()[fix_count..];
+                let b_row_shape = &b.shape()[fix_count..];
+                let a_row_len = a_row_shape.iter().product();
+                if a_row_len > 0 {
+                    for (a, c) in (a.data.chunks_exact(a_row_len))
+                        .zip(data.make_mut().chunks_exact_mut(a_row_len))
+                    {
+                        bin_pervade_recursive(
+                            &(a_row_shape, a),
+                            &(b_row_shape, b.data.as_slice()),
+                            c,
+                            env,
+                            f.clone(),
+                        )
+                        .map_err(Into::into)?;
+                    }
+                }
+                return Ok(Array::new(a.shape, data));
+            }
+        }
+    }
     // Account for depths
     reshape_depths(&mut a, &mut b, a_depth, b_depth);
     // Fill
@@ -217,8 +291,8 @@ where
 }
 
 pub fn bin_pervade_mut<T>(
-    a: &mut Array<T>,
-    mut b: Array<T>,
+    mut a: Array<T>,
+    b: &mut Array<T>,
     a_depth: usize,
     b_depth: usize,
     env: &Uiua,
@@ -227,38 +301,70 @@ pub fn bin_pervade_mut<T>(
 where
     T: ArrayValue + Copy,
 {
+    // Fast case if A is fixed
+    if a.row_count() == 1 && b.row_count() != 1 && env.scalar_fill::<T>().is_err() {
+        let fix_count = a.shape.iter().take_while(|&&d| d == 1).count();
+        if b.rank() > fix_count {
+            if (a.shape().iter())
+                .zip(b.shape())
+                .skip(fix_count)
+                .any(|(a, b)| a != b)
+            {
+                return Err(env.error(format!(
+                    "Shapes {} and {} do not match",
+                    a.shape(),
+                    b.shape()
+                )));
+            }
+            let a_row_shape = &a.shape()[fix_count..];
+            let b_row_shape = b.shape()[fix_count..].to_vec();
+            let b_row_len = b_row_shape.iter().product();
+            if b_row_len > 0 {
+                for b in b.data.as_mut_slice().chunks_exact_mut(b_row_len) {
+                    bin_pervade_recursive_mut_right(
+                        a.data.as_slice(),
+                        a_row_shape,
+                        b,
+                        &b_row_shape,
+                        f,
+                    );
+                }
+            }
+            return Ok(());
+        }
+    }
     // Account for depths
-    reshape_depths(a, &mut b, a_depth, b_depth);
+    reshape_depths(&mut a, b, a_depth, b_depth);
     // Fill
-    fill_array_shapes(a, &mut b, a_depth, b_depth, env)?;
+    fill_array_shapes(&mut a, b, a_depth, b_depth, env)?;
     // Pervade
     let ash = a.shape.dims();
     let bsh = b.shape.dims();
     // Try to avoid copying when possible
     if ash == bsh {
         if a.data.is_copy_of(&b.data) {
-            drop(b);
-            let a_data = a.data.as_mut_slice();
-            for a in a_data {
-                *a = f(*a, *a);
-            }
-        } else if b.data.is_unique() {
-            let a_data = a.data.as_slice();
+            drop(a);
             let b_data = b.data.as_mut_slice();
-            for (a, b) in a_data.iter().zip(b_data) {
-                *b = f(*a, *b);
+            for b in b_data {
+                *b = f(*b, *b);
             }
-            *a = b;
-        } else {
+        } else if a.data.is_unique() {
             let a_data = a.data.as_mut_slice();
             let b_data = b.data.as_slice();
             for (a, b) in a_data.iter_mut().zip(b_data) {
                 *a = f(*a, *b);
             }
+            *b = a;
+        } else {
+            let a_data = a.data.as_slice();
+            let b_data = b.data.as_mut_slice();
+            for (a, b) in a_data.iter().zip(b_data) {
+                *b = f(*a, *b);
+            }
         }
     } else if ash.contains(&0) || bsh.contains(&0) {
-        if ash.len() < bsh.len() {
-            *a = b;
+        if ash.len() > bsh.len() {
+            *b = a;
         }
     } else {
         match ash.len().cmp(&bsh.len()) {
@@ -266,12 +372,12 @@ where
                 let a_data = a.data.as_mut_slice();
                 let b_data = b.data.as_slice();
                 bin_pervade_recursive_mut_left(a_data, ash, b_data, bsh, f);
+                *b = a;
             }
             Ordering::Less => {
                 let a_data = a.data.as_slice();
                 let b_data = b.data.as_mut_slice();
                 bin_pervade_recursive_mut_right(a_data, ash, b_data, bsh, f);
-                *a = b;
             }
             Ordering::Equal => {
                 let a_data = a.data.as_mut_slice();
@@ -331,9 +437,7 @@ fn bin_pervade_recursive_mut_left<T>(
     T: Copy,
 {
     match (a_shape, b_shape) {
-        ([], _) => {
-            panic!("should never call `bin_pervade_recursive_mut_left` with scalar left")
-        }
+        ([], _) => a_data[0] = f(a_data[0], b_data[0]),
         (_, []) => {
             let b_scalar = b_data[0];
             for a in a_data {
@@ -363,9 +467,7 @@ fn bin_pervade_recursive_mut_right<T>(
     T: Copy,
 {
     match (a_shape, b_shape) {
-        (_, []) => {
-            panic!("should never call `bin_pervade_recursive_mut_right` with scalar right")
-        }
+        (_, []) => b_data[0] = f(a_data[0], b_data[0]),
         ([], _) => {
             let a_scalar = a_data[0];
             for b in b_data {

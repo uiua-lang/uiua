@@ -12,6 +12,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the experimental [`astar`](https://uiua.org/docs/astar) modifier, which performs the A* pathfinding algorithm
 - [`keep ▽`](https://uiua.org/docs/keep) will now cycle counts if the counts array is shorter than the counted array
 - [`keep ▽`](https://uiua.org/docs/keep) now works with non-integer scalar counts to scale an array
+- [`join ⊂`](https://uiua.org/docs/join) will rank differences greater than 1 can now extend the smaller array
 
 ## 0.11.0 - 2024-06-02
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.11.0).

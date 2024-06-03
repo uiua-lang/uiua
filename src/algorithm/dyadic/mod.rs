@@ -222,21 +222,10 @@ impl<T: Clone> Array<T> {
         self.take_map_keys();
         match count {
             Ok(count) => {
-                if count == 0 {
-                    self.data.clear();
-                    self.shape.insert(0, 0);
-                    return;
-                }
-                self.data
-                    .reserve((count.unsigned_abs() - 1) * self.data.len());
-                let row = self.data.to_vec();
-                for _ in 1..count.unsigned_abs() {
-                    self.data.extend_from_slice(&row);
-                }
                 if count < 0 {
                     self.reverse();
                 }
-                self.shape.insert(0, count.unsigned_abs());
+                self.reshape_scalar_integer(count.unsigned_abs());
             }
             Err(rev) => {
                 if rev {
@@ -244,6 +233,19 @@ impl<T: Clone> Array<T> {
                 }
             }
         }
+    }
+    pub(crate) fn reshape_scalar_integer(&mut self, count: usize) {
+        if count == 0 {
+            self.data.clear();
+            self.shape.insert(0, 0);
+            return;
+        }
+        self.data.reserve((count - 1) * self.data.len());
+        let row = self.data.to_vec();
+        for _ in 1..count {
+            self.data.extend_from_slice(&row);
+        }
+        self.shape.insert(0, count);
     }
 }
 
@@ -459,21 +461,21 @@ impl Value {
             |counts, shape| {
                 Ok(if shape.len() == 0 {
                     match kept {
-                        Value::Num(a) => a.scalar_real_keep(counts[0], env)?.into(),
+                        Value::Num(a) => a.keep_scalar_real(counts[0], env)?.into(),
                         Value::Byte(a) => {
-                            a.convert::<f64>().scalar_real_keep(counts[0], env)?.into()
+                            a.convert::<f64>().keep_scalar_real(counts[0], env)?.into()
                         }
-                        Value::Complex(a) => a.scalar_real_keep(counts[0], env)?.into(),
-                        Value::Char(a) => a.scalar_real_keep(counts[0], env)?.into(),
-                        Value::Box(a) => a.scalar_real_keep(counts[0], env)?.into(),
+                        Value::Complex(a) => a.keep_scalar_real(counts[0], env)?.into(),
+                        Value::Char(a) => a.keep_scalar_real(counts[0], env)?.into(),
+                        Value::Box(a) => a.keep_scalar_real(counts[0], env)?.into(),
                     }
                 } else {
                     match kept {
-                        Value::Num(a) => a.list_keep(counts, env)?.into(),
-                        Value::Byte(a) => a.list_keep(counts, env)?.into(),
-                        Value::Complex(a) => a.list_keep(counts, env)?.into(),
-                        Value::Char(a) => a.list_keep(counts, env)?.into(),
-                        Value::Box(a) => a.list_keep(counts, env)?.into(),
+                        Value::Num(a) => a.keep_list(counts, env)?.into(),
+                        Value::Byte(a) => a.keep_list(counts, env)?.into(),
+                        Value::Complex(a) => a.keep_list(counts, env)?.into(),
+                        Value::Char(a) => a.keep_list(counts, env)?.into(),
+                        Value::Box(a) => a.keep_list(counts, env)?.into(),
                     }
                 })
             },
@@ -513,9 +515,9 @@ impl Value {
     }
 }
 
-impl<T: ArrayValue> Array<T> {
+impl<T: Clone + Send + Sync> Array<T> {
     /// `keep` this array by replicating it as the rows of a new array
-    pub fn scalar_integer_keep(mut self, count: usize) -> Self {
+    pub fn keep_scalar_integer(mut self, count: usize) -> Self {
         // Scalar kept
         if self.rank() == 0 {
             self.shape.push(count);
@@ -528,35 +530,40 @@ impl<T: ArrayValue> Array<T> {
             self.validate_shape();
             return self;
         }
-        // Keep nothing
-        if count == 0 {
-            self.data = CowSlice::new();
-            self.shape[0] = 0;
-            return self;
-        }
-        // Keep 1 is a no-op
-        if count == 1 {
-            return self;
-        }
-        // Keep ≥2 is a repeat
-        let mut new_data = EcoVec::with_capacity(count * self.data.len());
-        for row in self.row_slices() {
-            for _ in 0..count {
-                new_data.extend_from_slice(row);
+        match count {
+            // Keep nothing
+            0 => {
+                self.data = CowSlice::new();
+                self.shape[0] = 0;
+                self
+            }
+            // Keep 1 is a no-op
+            1 => self,
+            // Keep ≥2 is a repeat
+            _ => {
+                let mut new_data = EcoVec::with_capacity(count * self.data.len());
+                for row in self.row_slices() {
+                    for _ in 0..count {
+                        new_data.extend_from_slice(row);
+                    }
+                }
+                self.shape[0] *= count;
+                self.data = new_data.into();
+                self.validate_shape();
+                self
             }
         }
-        self.shape[0] *= count;
-        self.data = new_data.into();
-        self.validate_shape();
-        self
     }
+}
+
+impl<T: ArrayValue> Array<T> {
     /// `keep` this array with a real-valued scalar
-    pub fn scalar_real_keep(mut self, count: f64, env: &Uiua) -> UiuaResult<Self> {
+    pub fn keep_scalar_real(mut self, count: f64, env: &Uiua) -> UiuaResult<Self> {
         if count < 0.0 {
             return Err(env.error("Keep amount cannot be negative"));
         }
         if count.fract() == 0.0 {
-            return Ok(self.scalar_integer_keep(count as usize));
+            return Ok(self.keep_scalar_integer(count as usize));
         }
         let new_row_count = (count * self.row_count() as f64).round() as usize;
         let row_len = self.row_len();
@@ -578,7 +585,7 @@ impl<T: ArrayValue> Array<T> {
         Ok(self)
     }
     /// `keep` this array with some counts
-    pub fn list_keep(mut self, counts: &[f64], env: &Uiua) -> UiuaResult<Self> {
+    pub fn keep_list(mut self, counts: &[f64], env: &Uiua) -> UiuaResult<Self> {
         if counts.iter().any(|&n| n < 0.0 || n.fract() != 0.0) {
             return Err(env.error("Keep amount must be a list of natural numbers"));
         }

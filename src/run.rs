@@ -972,7 +972,7 @@ code:
             if val.shape() == [0] {
                 val = init;
             } else {
-                val = init.join(val, self)?;
+                val = init.join(val, false, self)?;
             }
         }
         self.push(val);

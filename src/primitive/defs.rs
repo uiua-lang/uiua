@@ -987,6 +987,11 @@ primitive!(
     /// ex: ⊂ 1_2 [3_4 5_6]
     /// ex: ⊂ [1_2 3_4] 5_6
     ///
+    /// If the arrays have a rank difference of 2 or more, then the array with the smaller rank will be repeated as rows to match the rank of the other.
+    /// This still requires the shape of the smaller array to be a suffix of the shape of the larger array.
+    /// ex: ⊂ 0 [1_2 3_4]
+    /// ex: ⊂ 1_2 [[3_4 5_6] [7_8 9_10]]
+    ///
     /// By default, arrays that do not have equal [shape] suffixes cannot be joined.
     /// ex! ⊂ [1_2 3_4] [5_6_7 8_9_10]
     /// Use [fill] to make their shapes compatible.

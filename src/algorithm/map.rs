@@ -175,7 +175,7 @@ impl Value {
                 },
             )?;
         } else {
-            self.append(value, env)?;
+            self.append(value, false, env)?;
         }
         self.meta_mut().map_keys = Some(keys);
         Ok(())

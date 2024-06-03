@@ -545,7 +545,7 @@ impl Primitive {
             Primitive::Atan => env.dyadic_oo_00_env(Value::atan2)?,
             Primitive::Complex => env.dyadic_oo_00_env(Value::complex)?,
             Primitive::Match => env.dyadic_rr(|a, b| a == b)?,
-            Primitive::Join => env.dyadic_oo_env(Value::join)?,
+            Primitive::Join => env.dyadic_oo_env(|a, b, env| a.join(b, true, env))?,
             Primitive::Transpose => env.monadic_mut(Value::transpose)?,
             Primitive::Keep => env.dyadic_oo_env(Value::keep)?,
             Primitive::Take => env.dyadic_oo_env(Value::take)?,
@@ -1059,7 +1059,7 @@ fn regex(env: &mut Uiua) -> UiuaResult {
                         .or_else(|| env.value_fill().cloned().map(Value::boxed_if_not))
                 })
                 .collect();
-            matches.append(row.into(), env)?;
+            matches.append(row.into(), false, env)?;
         }
 
         env.push(matches);

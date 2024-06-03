@@ -469,7 +469,7 @@ pub fn reduce_content(env: &mut Uiua) -> UiuaResult {
             acc.shape_mut().insert(0, 1);
         }
         for row in rows {
-            acc = acc.join(row, env)?;
+            acc = acc.join(row, true, env)?;
         }
         env.push(acc);
         return Ok(());

@@ -718,9 +718,9 @@ impl<T: ArrayValue> Array<T> {
             &[untaking] => {
                 let into = into.drop(&[Ok(untaking)], env)?;
                 if untaking >= 0 {
-                    from.join(into, env)
+                    from.join(into, true, env)
                 } else {
-                    into.join(from, env)
+                    into.join(from, true, env)
                 }?
             }
             &[untaking, ref sub_index @ ..] => {

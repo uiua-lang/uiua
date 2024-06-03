@@ -2096,7 +2096,7 @@ impl ValueBuilder {
     }
     pub fn add_row<C: FillContext>(&mut self, mut row: Value, ctx: &C) -> Result<(), C::Error> {
         if let Some(value) = &mut self.value {
-            value.append(row, ctx)?;
+            value.append(row, false, ctx)?;
         } else {
             row.reserve_min(self.capacity);
             row.shape_mut().insert(0, 1);

@@ -7,7 +7,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - Add *tree extension*, which allows some functions that take indices, offsets, or masks to recursively on tree of those values
   - This is useful for working with boxed arrays
-  - Currently implemented for [`keep ▽](https://uiua.org/docs/keep), [`select ⊏`](https://uiua.org/docs/select), and [`pick ⊡`](https://uiua.org/docs/pick)
+  - Currently implemented for [`keep ▽`](https://uiua.org/docs/keep), [`select ⊏`](https://uiua.org/docs/select), and [`pick ⊡`](https://uiua.org/docs/pick)
 - Add the experimental [`triangle ◹`](https://uiua.org/docs/triangle) modifier, which calls a function on shrinking suffixes of an array's rows
 - Add the experimental [`astar`](https://uiua.org/docs/astar) modifier, which performs the A* pathfinding algorithm
 - [`keep ▽`](https://uiua.org/docs/keep) will now cycle counts if the counts array is shorter than the counted array

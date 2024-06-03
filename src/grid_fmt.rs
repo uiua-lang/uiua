@@ -59,11 +59,11 @@ impl GridFmt for f64 {
         let positive = f.abs();
         let is_neg = f < 0.0;
         let minus = if is_neg { "¯" } else { "" };
-        let s = if (positive - PI).abs() < f64::EPSILON {
+        let s = if (positive - PI).abs() <= f64::EPSILON {
             format!("{minus}π")
-        } else if (positive - TAU).abs() < f64::EPSILON {
+        } else if (positive - TAU).abs() <= f64::EPSILON {
             format!("{minus}τ")
-        } else if (positive - PI / 2.0).abs() < f64::EPSILON {
+        } else if (positive - PI / 2.0).abs() <= f64::EPSILON {
             format!("{minus}η")
         } else if positive == INFINITY {
             format!("{minus}∞")
@@ -73,6 +73,23 @@ impl GridFmt for f64 {
             return vec![vec!['W']];
         } else if positive.fract() == 0.0 || positive.is_nan() {
             format!("{minus}{positive}")
+        } else if let Some((num, denom)) =
+            [1u8, 2, 3, 4, 5, 6, 8, 9, 12].iter().find_map(|&denom| {
+                let num = (positive * denom as f64) / TAU;
+                if (num - num.round()).abs() <= f64::EPSILON {
+                    Some((num.round() as u8, denom))
+                } else {
+                    None
+                }
+            })
+        {
+            if denom == 1 {
+                format!("{minus}{num}τ")
+            } else if num == 1 {
+                format!("{minus}τ/{denom}")
+            } else {
+                format!("{minus}{num}τ/{denom}")
+            }
         } else {
             let mut pos_formatted = positive.to_string();
             if pos_formatted.len() >= 17 {

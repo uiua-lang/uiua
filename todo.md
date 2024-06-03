@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - `rows` function pack
   - Improve `un join` chained with other functions
   - Show array shape on hover
   - Unicode literals
@@ -15,6 +14,7 @@
   - `base` function
   - `chunks` function?
   - `pull` function?
+  - Channels
   - Plots
 - Media window
 - Trace images/audio in pad

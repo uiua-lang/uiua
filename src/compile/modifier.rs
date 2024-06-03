@@ -7,7 +7,7 @@ use crate::format::format_words;
 use super::*;
 
 impl Compiler {
-    fn desugar_operand(
+    fn desugar_function_pack(
         &self,
         modifier: &Sp<Modifier>,
         operand: Sp<Word>,
@@ -40,6 +40,29 @@ impl Compiler {
                         }))],
                     };
                 }
+                Ok(Some(new))
+            }
+            Modifier::Primitive(Primitive::Rows) => {
+                let mut branches = pack.branches.into_iter();
+                let mut new = Modified {
+                    modifier: modifier.clone(),
+                    operands: vec![branches.next().unwrap().map(Word::Func)],
+                };
+                for branch in branches {
+                    let mut lines = branch.value.lines;
+                    (lines.first_mut().unwrap())
+                        .insert(0, span.clone().sp(Word::Modified(Box::new(new))));
+                    new = Modified {
+                        modifier: modifier.clone(),
+                        operands: vec![branch.span.clone().sp(Word::Func(Func {
+                            id: FunctionId::Anonymous(branch.span.clone()),
+                            signature: None,
+                            lines,
+                            closed: true,
+                        }))],
+                    };
+                }
+                dbg!(&new);
                 Ok(Some(new))
             }
             Modifier::Primitive(
@@ -117,7 +140,7 @@ impl Compiler {
         // De-sugar function pack
         if op_count == 1 {
             let operand = modified.code_operands().next().unwrap().clone();
-            if let Some(new) = self.desugar_operand(&modified.modifier, operand)? {
+            if let Some(new) = self.desugar_function_pack(&modified.modifier, operand)? {
                 return self.modified(new, call);
             }
         }
@@ -350,7 +373,7 @@ impl Compiler {
                 {
                     let mut m = (**m).clone();
                     for op in m.operands.iter_mut().filter(|w| w.value.is_code()) {
-                        if let Some(new) = self.desugar_operand(&m.modifier, op.clone())? {
+                        if let Some(new) = self.desugar_function_pack(&m.modifier, op.clone())? {
                             op.value = Word::Modified(new.into());
                         }
                         op.value = Word::Modified(

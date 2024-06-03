@@ -50,6 +50,9 @@ impl Compiler {
                 };
                 for branch in branches {
                     let mut lines = branch.value.lines;
+                    if lines.is_empty() {
+                        lines.push(Vec::new());
+                    }
                     (lines.first_mut().unwrap())
                         .insert(0, span.clone().sp(Word::Modified(Box::new(new))));
                     new = Modified {

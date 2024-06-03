@@ -517,7 +517,8 @@ impl Value {
 
 impl<T: Clone + Send + Sync> Array<T> {
     /// `keep` this array by replicating it as the rows of a new array
-    pub fn keep_scalar_integer(mut self, count: usize) -> Self {
+    pub fn keep_scalar_integer(mut self, count: usize, env: &Uiua) -> UiuaResult<Self> {
+        let elem_count = validate_size::<T>([count, self.data.len()], env)?;
         // Scalar kept
         if self.rank() == 0 {
             self.shape.push(count);
@@ -528,9 +529,9 @@ impl<T: Clone + Send + Sync> Array<T> {
                     .extend_from_trusted((0..count).map(|_| value.clone()))
             };
             self.validate_shape();
-            return self;
+            return Ok(self);
         }
-        match count {
+        Ok(match count {
             // Keep nothing
             0 => {
                 self.data = CowSlice::new();
@@ -541,7 +542,7 @@ impl<T: Clone + Send + Sync> Array<T> {
             1 => self,
             // Keep ≥2 is a repeat
             _ => {
-                let mut new_data = EcoVec::with_capacity(count * self.data.len());
+                let mut new_data = EcoVec::with_capacity(elem_count);
                 for row in self.row_slices() {
                     for _ in 0..count {
                         new_data.extend_from_slice(row);
@@ -552,7 +553,7 @@ impl<T: Clone + Send + Sync> Array<T> {
                 self.validate_shape();
                 self
             }
-        }
+        })
     }
 }
 
@@ -563,9 +564,10 @@ impl<T: ArrayValue> Array<T> {
             return Err(env.error("Keep amount cannot be negative"));
         }
         if count.fract() == 0.0 {
-            return Ok(self.keep_scalar_integer(count as usize));
+            return self.keep_scalar_integer(count as usize, env);
         }
-        let new_row_count = (count * self.row_count() as f64).round() as usize;
+        let new_row_count =
+            validate_size::<T>([(count * self.row_count() as f64).round() as usize], env)?;
         let row_len = self.row_len();
         let mut new_data = EcoVec::with_capacity(new_row_count * row_len);
         let delta = 1.0 / count;

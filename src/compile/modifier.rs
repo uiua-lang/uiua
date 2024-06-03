@@ -42,7 +42,7 @@ impl Compiler {
                 }
                 Ok(Some(new))
             }
-            Modifier::Primitive(Primitive::Rows) => {
+            Modifier::Primitive(Primitive::Rows | Primitive::Inventory) => {
                 let mut branches = pack.branches.into_iter();
                 let mut new = Modified {
                     modifier: modifier.clone(),

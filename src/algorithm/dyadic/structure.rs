@@ -317,9 +317,6 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Use this value to `take` from another
     pub fn take(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
-        if from.rank() == 0 {
-            return Err(env.error("Cannot take from scalar"));
-        }
         let index = self.as_ints_or_infs(env, "Index must be a list of integers or infinity")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.take(&index, env)?),
@@ -417,6 +414,9 @@ impl<T: ArrayValue> Array<T> {
     /// `take` from this array
     pub fn take(mut self, index: &[Result<isize, bool>], env: &Uiua) -> UiuaResult<Self> {
         let map_keys = self.take_map_keys();
+        if self.rank() == 0 {
+            self.shape.push(1);
+        }
         let row_count = self.row_count();
         let mut arr = match index {
             [] => self,
@@ -606,10 +606,10 @@ impl<T: ArrayValue> Array<T> {
     }
     /// `drop` from this array
     pub fn drop(mut self, index: &[Result<isize, bool>], env: &Uiua) -> UiuaResult<Self> {
-        if self.rank() == 0 {
-            return Err(env.error("Cannot drop from scalar"));
-        }
         let map_keys = self.take_map_keys();
+        if self.rank() == 0 {
+            self.shape.push(1);
+        }
         let row_count = self.row_count();
         let mut arr = match index {
             [] => self,
@@ -688,11 +688,14 @@ impl<T: ArrayValue> Array<T> {
         name: &str,
         past: &str,
         index: &[isize],
-        into: Self,
+        mut into: Self,
         env: &Uiua,
     ) -> UiuaResult<Self> {
         if self.map_keys().is_some() {
             return Err(env.error("Cannot undo take from map array"));
+        }
+        if into.rank() == 0 {
+            into.shape.push(1);
         }
         let from = self;
         match from.rank().cmp(&into.rank()) {
@@ -751,9 +754,12 @@ impl<T: ArrayValue> Array<T> {
             }
         })
     }
-    fn undo_drop(self, index: &[isize], into: Self, env: &Uiua) -> UiuaResult<Self> {
+    fn undo_drop(self, index: &[isize], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
         if self.map_keys().is_some() {
             return Err(env.error("Cannot undo drop from map array"));
+        }
+        if into.rank() == 0 {
+            into.shape.push(1);
         }
         let index: Vec<isize> = index
             .iter()

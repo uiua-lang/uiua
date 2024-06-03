@@ -62,7 +62,6 @@ impl Compiler {
                         }))],
                     };
                 }
-                dbg!(&new);
                 Ok(Some(new))
             }
             Modifier::Primitive(

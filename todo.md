@@ -1,21 +1,21 @@
 # Uiua Todo
 
 - 0.12
-  - Improve `un join` chained with other functions
-  - Show array shape on hover
-  - Unicode literals
-  - Tree extension
-  - Array bar notation
-  - Error classes
   - Refactor inversion to make left-inverses well-defined
     - `un on` for all left-invertible functions
+    - Improve `un join` chained with other functions
+  - Array bar notation
+  - Tree extension
+  - Show array shape on hover
+  - Unicode literals
+  - Error classes
   - `# Track caller!`
-  - Dynamic modules
   - `base` function
   - `chunks` function?
   - `pull` function?
   - Channels
   - Plots
+  - Dynamic modules
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

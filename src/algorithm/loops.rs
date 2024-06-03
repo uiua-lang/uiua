@@ -16,7 +16,7 @@ use crate::{
     Boxed, FormatShape, Function, ImplPrimitive, Primitive, Shape, Signature, Uiua, UiuaResult,
 };
 
-use super::{multi_output, validate_size_impl};
+use super::{multi_output, validate_size_impl, zip::rows};
 
 pub fn flip<A, B, C>(f: impl Fn(A, B) -> C + Copy) -> impl Fn(B, A) -> C + Copy {
     move |b, a| f(a, b)
@@ -965,5 +965,78 @@ where
             )))
         }
     }
+    Ok(())
+}
+
+pub fn triangle(env: &mut Uiua) -> UiuaResult {
+    let val = env.pop(1)?;
+    if val.rank() <= 1 {
+        env.push(val);
+        return rows(env);
+    }
+    let f = env.pop_function()?;
+    let sig = f.signature();
+    let outputs = sig.outputs;
+    let second_dim = val.shape()[1];
+    let mut rows = val
+        .into_rows()
+        .take(second_dim)
+        .enumerate()
+        .map(|(r, mut row)| {
+            row.drop_n(r);
+            row
+        });
+    match sig.args {
+        1 => {
+            if let Some(Primitive::First) = f.as_primitive(&env.asm) {
+                let value = Value::from_row_values_infallible(rows.map(|row| row.row(0)));
+                env.push(value);
+                return Ok(());
+            }
+            let mut new_values = multi_output(outputs, Vec::new());
+            for row in rows {
+                env.push(row);
+                env.call(f.clone())?;
+                for i in 0..outputs {
+                    new_values[i].push(env.pop("triangle's function result")?);
+                }
+            }
+            for values in new_values.into_iter().rev() {
+                env.push(Value::from_row_values(values, env)?);
+            }
+        }
+        2 => {
+            if outputs != 1 {
+                return Err(env.error(format!(
+                    "{} with a 2-argument function must have 1 output, \
+                    but its signature is {sig}",
+                    Primitive::Triangle.format()
+                )));
+            }
+            let mut acc = (rows.next())
+                .or_else(|| env.value_fill().cloned())
+                .ok_or_else(|| {
+                    env.error(format!(
+                        "Cannot {} reduce an empty array",
+                        Primitive::Triangle.format()
+                    ))
+                })?;
+            for row in rows {
+                env.push(row);
+                env.push(acc);
+                env.call(f.clone())?;
+                acc = env.pop("triangle's function result")?;
+            }
+            env.push(acc);
+        }
+        _ => {
+            return Err(env.error(format!(
+                "{}'s function must take 1 or 2 arguments, \
+                but it's signature is {sig}",
+                Primitive::Triangle.format()
+            )))
+        }
+    }
+
     Ok(())
 }

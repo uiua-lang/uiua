@@ -3,7 +3,6 @@
 - 0.12
   - `rows` function pack
   - Improve `un join` chained with other functions
-  - `◹` modifier
   - Show array shape on hover
   - Unicode literals
   - Tree extension
@@ -16,7 +15,6 @@
   - `base` function
   - `chunks` function?
   - `pull` function?
-  - `A*` modifier?
   - Plots
 - Media window
 - Trace images/audio in pad

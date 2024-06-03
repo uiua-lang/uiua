@@ -402,6 +402,15 @@ impl Value {
             },
         )
     }
+    pub(crate) fn drop_n(&mut self, n: usize) {
+        match self {
+            Value::Num(a) => a.drop_n(n),
+            Value::Byte(a) => a.drop_n(n),
+            Value::Complex(a) => a.drop_n(n),
+            Value::Char(a) => a.drop_n(n),
+            Value::Box(a) => a.drop_n(n),
+        }
+    }
 }
 
 impl<T: ArrayValue> Array<T> {
@@ -758,6 +767,12 @@ impl<T: ArrayValue> Array<T> {
             })
             .collect();
         self.undo_take_impl("drop", "dropped", &index, into, env)
+    }
+    pub(crate) fn drop_n(&mut self, n: usize) {
+        let row_len = self.row_len();
+        let start = n * row_len;
+        self.data = self.data.slice(start..);
+        self.shape[0] -= n;
     }
 }
 

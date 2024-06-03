@@ -1554,6 +1554,29 @@ primitive!(
     ///
     /// [partition] is closely related to [group].
     (2[1], Partition, AggregatingModifier, ("partition", '⊜')),
+    /// Apply a function to each shrinking row of an array
+    ///
+    /// Similar to [rows], [triangle] calls its function on each row of an array.
+    /// However, [triangle] will call its function on a descreasing-size suffix of each row.
+    /// We can see an example of what this means with [triangle][box].
+    /// ex: # Experimental!
+    ///   : ◹□ . ↯4_4⇡16
+    /// Notice that the elements included correspond to the upper-right [triangle] of the input array.
+    ///
+    /// Non-square arrays will have extra rows either be truncated or longer.
+    /// ex: # Experimental!
+    ///   : ◹□ . ↯3_4⇡12
+    /// ex: # Experimental!
+    ///   : ◹□ . ↯5_3⇡15
+    /// You can use [triangle][first] to get the diagonal of an array.
+    /// ex: # Experimental!
+    ///   : ◹⊢ . ↯3_4⇡12
+    /// Like [group] and [partition], [triangle] has a reducting version if its function takes 2 arguments.
+    /// This calls the function *between* each decreasing-size row suffix.
+    /// You can use `triangle``join``table``couple``duplicate` to get all unique combinations of 2 rows from an array.
+    /// ex: # Experimental!
+    ///   : ◹⊂⊞⊟. . ⇡3
+    (1[1], Triangle, AggregatingModifier, ("triangle", '◹')),
     /// Unbox the arguments to a function before calling it
     ///
     /// ex:  ⊂ □[1 2 3] □[4 5 6]
@@ -2320,16 +2343,16 @@ primitive!(
     /// The second function should return a heuristic cost to reach the goal node.
     /// The third function should return whether or not the goal node has been reached.
     ///
-    /// When called, [astar] will pop any additional arguments it's functions need from the stack.
-    /// On each iteration, the current node will be passed to each function, along with any of the additional arguments that the function needs.
+    /// When called, [astar] will pop any additional arguments its functions need from the stack.
+    /// On each iteration, the current node will be passed to each function, along with any of the additional arguments that each function needs.
     ///
-    /// If a path is found, a box array of all shortest paths is returned, as well as the cost.
+    /// If a path is found, a list of [box]ed arrays of all shortest paths is returned, as well as the cost.
     /// If no path is found, an error is thrown.
     ///
     /// In this example, we find the shortest path from the 2D point `0_0` to `3_5` in a grid.
     /// The neighbors function returns the 4 cardinal directions with all costs of 1.
-    /// The heuristic function `⌵``/``ℂ``-` calculates the euclidean distance between two points.
-    /// The goal function simply checks if the current node [match]es the goal node.
+    /// The heuristic function `absolute value``reduce``complex``subtract` calculates the euclidean distance between two points.
+    /// The goal function simply checks if the current node [match]es the given goal node.
     /// ex: # Experimental!
     ///   : Neis ← [∩¯,,⇌.⇡2]
     ///   : °□⊢ astar(

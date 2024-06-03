@@ -370,8 +370,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            Coordinate
-                | Astar
+            (Coordinate | Astar | Triangle)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )
@@ -596,6 +595,7 @@ impl Primitive {
             Primitive::Do => loops::do_(env)?,
             Primitive::Group => loops::group(env)?,
             Primitive::Partition => loops::partition(env)?,
+            Primitive::Triangle => loops::triangle(env)?,
             Primitive::Reshape => {
                 let shape = env.pop(1)?;
                 let mut array = env.pop(2)?;

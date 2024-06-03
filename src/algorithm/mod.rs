@@ -834,10 +834,10 @@ fn astar_impl(
                     }
                     env.call(neighbors.clone())?;
                     let (nodes, costs) = if nei_sig.outputs == 2 {
-                        let nodes = env.pop("neighbors nodes")?;
                         let costs = env
                             .pop("neighbors costs")?
                             .as_nums(&env, "Costs must be a list of numbers")?;
+                        let nodes = env.pop("neighbors nodes")?;
                         if costs.len() != nodes.row_count() {
                             return Err(env.error_maybe_span(
                                 neighbors.id.span(),

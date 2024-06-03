@@ -2355,11 +2355,13 @@ primitive!(
     /// The goal function simply checks if the current node [match]es the given goal node.
     /// ex: # Experimental!
     ///   : Neis ← [∩¯,,⇌.⇡2]
+    ///   : Neis # Side-adjacent neighbors offsets
+    ///   :
     ///   : °□⊢ astar(
-    ///   :   ⟜≡⋅1 +Neis¤
-    ///   : | ⌵/ℂ-
-    ///   : | ≍
-    ///   : )0_0 3_5
+    ///   :   ≡⋅1. +Neis¤ # Costs and neighbors
+    ///   : | ⌵/ℂ-        # Heuristic
+    ///   : | ≍           # Check if goal
+    ///   : )0_0 3_5      # Start and goal
     /// If we omit the cost array from the neighbors function and simply use `1` as the heuristic, the algorithm becomes Dijkstra's algorithm.
     /// ex: # Experimental!
     ///   : Neis ← [∩¯,,⇌.⇡2]
@@ -2369,6 +2371,12 @@ primitive!(
     /// ex: # Experimental!
     ///   : Neis ← [∩¯,,⇌.⇡2]
     ///   : astar(+Neis¤)1≍ 0_0 1_2
+    /// If pathing on a grid like the examples above, we can use [un][where] to visualize the path that was taken!
+    /// ex: # Experimental!
+    ///   : Neis ← [∩¯,,⇌.⇡2]
+    ///   : °□⊢ astar(+Neis¤|⌵/ℂ-|≍) 3_4 13_20
+    ///   : °⊚
+    ///   : ▽⟜≡▽8 # Upscale
     ///
     /// [astar] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
     ((2)[3], Astar, OtherModifier, "astar"),

@@ -595,7 +595,7 @@ impl Primitive {
             Primitive::Do => loops::do_(env)?,
             Primitive::Group => loops::group(env)?,
             Primitive::Partition => loops::partition(env)?,
-            Primitive::Triangle => loops::triangle(env)?,
+            Primitive::Triangle => table::triangle(env)?,
             Primitive::Reshape => {
                 let shape = env.pop(1)?;
                 let mut array = env.pop(2)?;

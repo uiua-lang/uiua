@@ -1576,11 +1576,12 @@ primitive!(
     /// You can use [triangle][first] to get the diagonal of an array.
     /// ex: # Experimental!
     ///   : ◹⊢ . ↯3_4⇡12
-    /// Like [group] and [partition], [triangle] has a reducting version if its function takes 2 arguments.
-    /// This calls the function *between* each decreasing-size row suffix.
-    /// You can use `triangle``join``table``couple``duplicate` to get all unique combinations of 2 rows from an array.
+    /// If [triangle]'s function takes more than one argument, then it functions similarly to [table], except some of the combinations are skipped.
+    /// For example, we can use [triangle][couple] to get all unique combinations of rows from two arrays.
+    /// Notice the difference from [table].
     /// ex: # Experimental!
-    ///   : ◹⊂⊞⊟. . ⇡3
+    ///   : ☇1⊞⊟ ⇡3⇡3
+    ///   : ◹⊟ ⇡3⇡3
     (1[1], Triangle, AggregatingModifier, ("triangle", '◹')),
     /// Unbox the arguments to a function before calling it
     ///

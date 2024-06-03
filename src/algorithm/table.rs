@@ -750,3 +750,173 @@ where
     new_shape.push(2);
     Array::new(new_shape, acc)
 }
+
+pub fn triangle(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop_function()?;
+    match f.signature().args {
+        0 => env.call(f),
+        1 => triangle1(f, env),
+        2 => triangle2(f, env),
+        3 => triangle3(f, env),
+        _ => Err(env.error(format!(
+            "{} of more that 3 arrays is not supported",
+            Primitive::Triangle
+        ))),
+    }
+}
+
+fn triangle1(f: Function, env: &mut Uiua) -> UiuaResult {
+    let xs = env.pop(1)?;
+    let outputs = f.signature().outputs;
+    match &**xs.shape() {
+        [] => {
+            env.push(xs);
+            env.call(f)
+        }
+        [_] => {
+            if let Some(Primitive::First) = f.as_primitive(&env.asm) {
+                env.push(xs);
+                return Ok(());
+            }
+            let rows = (0..xs.row_count()).map(|r| {
+                let mut row = xs.clone();
+                row.drop_n(r);
+                row
+            });
+            let outputs = f.signature().outputs;
+            let mut new_values = multi_output(outputs, Vec::new());
+            env.without_fill(|env| -> UiuaResult {
+                for row in rows {
+                    env.push(row);
+                    env.call(f.clone())?;
+                    for i in 0..outputs {
+                        new_values[i].push(env.pop("triangle's function result")?);
+                    }
+                }
+                Ok(())
+            })?;
+            for values in new_values.into_iter().rev() {
+                env.push(Value::from_row_values(values, env)?);
+            }
+            Ok(())
+        }
+        &[_, second_dim, ..] => {
+            let rows = xs
+                .into_rows()
+                .take(second_dim)
+                .enumerate()
+                .map(|(r, mut row)| {
+                    row.drop_n(r);
+                    row
+                });
+            if let Some(Primitive::First) = f.as_primitive(&env.asm) {
+                let value = Value::from_row_values_infallible(rows.map(|row| row.row(0)));
+                env.push(value);
+                return Ok(());
+            }
+            let mut new_values = multi_output(outputs, Vec::new());
+            env.without_fill(|env| -> UiuaResult {
+                for row in rows {
+                    env.push(row);
+                    env.call(f.clone())?;
+                    for i in 0..outputs {
+                        new_values[i].push(env.pop("triangle's function result")?);
+                    }
+                }
+                Ok(())
+            })?;
+            for values in new_values.into_iter().rev() {
+                env.push(Value::from_row_values(values, env)?);
+            }
+            Ok(())
+        }
+    }
+}
+
+fn triangle2(f: Function, env: &mut Uiua) -> UiuaResult {
+    let xs = env.pop(1)?;
+    let mut ys = env.pop(2)?;
+    let outputs = f.signature().outputs;
+    let new_values = env.without_fill(|env| -> UiuaResult<_> {
+        match f.as_primitive(&env.asm) {
+            Some(Primitive::Join) => {
+                let mut new_rows = Vec::new();
+                for x in xs.into_rows().take(ys.row_count()) {
+                    for y in ys.rows() {
+                        let row = x.clone().join(y, true, env)?;
+                        new_rows.push(row);
+                    }
+                    ys.drop_n(1);
+                }
+                env.push(Value::from_row_values(new_rows, env)?);
+                return Ok(None);
+            }
+            Some(Primitive::Couple) => {
+                let mut new_rows = Vec::new();
+                for x in xs.into_rows().take(ys.row_count()) {
+                    for y in ys.rows() {
+                        let row = x.clone().couple(y, env)?;
+                        new_rows.push(row);
+                    }
+                    ys.drop_n(1);
+                }
+                env.push(Value::from_row_values(new_rows, env)?);
+                return Ok(None);
+            }
+            _ => {}
+        }
+        let mut new_values = multi_output(outputs, Vec::new());
+        for x in xs.into_rows().take(ys.row_count()) {
+            for y in ys.rows() {
+                env.push(y);
+                env.push(x.clone());
+                env.call(f.clone())?;
+                for i in 0..outputs {
+                    new_values[i].push(env.pop("triangle's function result")?);
+                }
+            }
+            ys.drop_n(1);
+        }
+        Ok(Some(new_values))
+    })?;
+    if let Some(new_values) = new_values {
+        for values in new_values.into_iter().rev() {
+            env.push(Value::from_row_values(values, env)?);
+        }
+    }
+    Ok(())
+}
+
+fn triangle3(f: Function, env: &mut Uiua) -> UiuaResult {
+    let sig = f.signature();
+    let xs = env.pop(1)?;
+    let mut ys = env.pop(2)?;
+    let mut zs = env.pop(3)?;
+    let outputs = sig.outputs;
+    let mut new_values = multi_output(
+        outputs,
+        Vec::with_capacity(xs.row_count() * ys.row_count() * zs.row_count() / 2),
+    );
+    env.without_fill(|env| -> UiuaResult {
+        for x in xs.into_rows() {
+            for y in ys.rows() {
+                for z in zs.rows() {
+                    env.push(z);
+                    env.push(y.clone());
+                    env.push(x.clone());
+                    env.call(f.clone())?;
+                    for i in 0..outputs {
+                        new_values[i].push(env.pop("triangle's function result")?);
+                    }
+                }
+                zs.drop_n(1);
+            }
+            ys.drop_n(1);
+        }
+        Ok(())
+    })?;
+    for values in new_values.into_iter().rev() {
+        env.push(Value::from_row_values(values, env)?);
+    }
+    Ok(())
+}

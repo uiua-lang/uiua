@@ -349,7 +349,7 @@ impl<'a> VirtualEnv<'a> {
                     let sig = self.pop_func()?.signature();
                     self.handle_sig(sig)?
                 }
-                Table => {
+                Table | Triangle => {
                     let sig = self.pop_func()?.signature();
                     self.handle_sig(sig)?;
                 }

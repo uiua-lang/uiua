@@ -215,17 +215,16 @@ where
 
 #[track_caller]
 #[inline(always)]
-fn validate_shape<T>(shape: &[usize], data: &[T]) {
+pub(crate) fn validate_shape(shape: &[usize], len: usize) {
     let elems = if shape.contains(&0) {
         0
     } else {
         shape.iter().product()
     };
     debug_assert_eq!(
-        elems,
-        data.len(),
+        elems, len,
         "shape {shape:?} does not match data length {}",
-        data.len()
+        len
     );
 }
 
@@ -238,7 +237,7 @@ impl<T> Array<T> {
     pub fn new(shape: impl Into<Shape>, data: impl Into<CowSlice<T>>) -> Self {
         let shape = shape.into();
         let data = data.into();
-        validate_shape(&shape, &data);
+        validate_shape(&shape, data.len());
         Self {
             shape,
             data,
@@ -249,7 +248,7 @@ impl<T> Array<T> {
     #[inline(always)]
     /// Debug-only function to validate that the shape matches the data length
     pub(crate) fn validate_shape(&self) {
-        validate_shape(&self.shape, &self.data);
+        validate_shape(&self.shape, self.data.len());
     }
     /// Get the number of rows in the array
     pub fn row_count(&self) -> usize {

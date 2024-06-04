@@ -743,7 +743,7 @@ impl Compiler {
                     self.make_function(inverse_span.into(), inverse_sig, inverse_instrs);
                 let spandex = self.add_span(modified.modifier.span.clone());
                 finish!(
-                    [
+                    eco_vec![
                         Instr::PushFunc(inverse_func),
                         Instr::PushFunc(normal_func),
                         Instr::Prim(Primitive::SetInverse, spandex),
@@ -801,7 +801,7 @@ impl Compiler {
                 let handler_func =
                     self.make_function(handler_span.into(), handler_sig, handler_instrs);
                 finish!(
-                    [
+                    eco_vec![
                         Instr::PushFunc(handler_func),
                         Instr::PushFunc(tried_func),
                         Instr::Prim(Primitive::Try, span),
@@ -814,7 +814,7 @@ impl Compiler {
                 let (mut instrs, sig) = self.compile_operand_word(operand)?;
                 if let [Instr::Prim(Trace, span)] = instrs.as_slice() {
                     finish!(
-                        [Instr::ImplPrim(ImplPrimitive::TraceN(2, false), *span)],
+                        eco_vec![Instr::ImplPrim(ImplPrimitive::TraceN(2, false), *span)],
                         Signature::new(2, 2)
                     )
                 } else {
@@ -1009,7 +1009,7 @@ impl Compiler {
                 let operand = modified.code_operands().next().unwrap();
                 let s = format_word(operand, &self.asm.inputs);
                 let instr = Instr::Push(s.into());
-                finish!([instr], Signature::new(0, 1));
+                finish!(eco_vec![instr], Signature::new(0, 1));
             }
             Quote => {
                 let operand = modified.code_operands().next().unwrap().clone();
@@ -1052,7 +1052,7 @@ impl Compiler {
             Sig => {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let (_, sig) = self.compile_operand_word(operand)?;
-                let instrs = [
+                let instrs = eco_vec![
                     Instr::Push(sig.outputs.into()),
                     Instr::Push(sig.args.into()),
                 ];

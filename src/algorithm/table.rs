@@ -192,13 +192,13 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
                 env.push(fast_table_list(xs, ys, flip(modulus::byte_byte), env)?)
             }
             Primitive::Mod => env.push(fast_table_list(xs, ys, modulus::byte_byte, env)?),
-            Primitive::Atan if flipped => env.push(fast_table_list::<f64, f64, _>(
+            Primitive::Atan if flipped => env.push(fast_table_list::<f64, _>(
                 xs.convert(),
                 ys.convert(),
                 flip(atan2::num_num),
                 env,
             )?),
-            Primitive::Atan => env.push(fast_table_list::<f64, f64, _>(
+            Primitive::Atan => env.push(fast_table_list::<f64, _>(
                 xs.convert(),
                 ys.convert(),
                 atan2::num_num,
@@ -340,14 +340,14 @@ macro_rules! table_math {
 table_math!(table_nums, f64, num_num);
 table_math!(table_coms, crate::Complex, com_x);
 
-fn fast_table_list<A: ArrayValue, B: ArrayValue, C: ArrayValue + Default>(
-    a: Array<A>,
-    b: Array<B>,
-    f: impl Fn(A, B) -> C,
+fn fast_table_list<T: ArrayValue, U: ArrayValue + Default>(
+    a: Array<T>,
+    b: Array<T>,
+    f: impl Fn(T, T) -> U,
     env: &Uiua,
-) -> UiuaResult<Array<C>> {
-    let elem_count = validate_size::<C>([a.data.len(), b.data.len()], env)?;
-    let mut new_data = eco_vec![C::default(); elem_count];
+) -> UiuaResult<Array<U>> {
+    let elem_count = validate_size::<U>([a.data.len(), b.data.len()], env)?;
+    let mut new_data = eco_vec![U::default(); elem_count];
     let data_slice = new_data.make_mut();
     let mut i = 0;
     for x in a.data {

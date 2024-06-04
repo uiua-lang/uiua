@@ -390,13 +390,8 @@ impl Value {
         unsafe { self.repr_mut() }.arr.undo_fix();
     }
     pub(crate) fn validate_shape(&self) {
-        self.generic_ref(
-            Array::validate_shape,
-            Array::validate_shape,
-            Array::validate_shape,
-            Array::validate_shape,
-            Array::validate_shape,
-        )
+        let repr = unsafe { self.repr() };
+        validate_shape(&repr.arr.shape, repr.arr.data.len());
     }
     /// Get the row at the given index
     #[track_caller]

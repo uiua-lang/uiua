@@ -920,7 +920,7 @@ code:
         let instrs = self.new_functions.last_mut().unwrap();
         optimize_instrs_mut(instrs, instr, false, &self.asm);
     }
-    fn push_all_instrs(&mut self, instrs: impl IntoIterator<Item = Instr>) {
+    fn push_all_instrs(&mut self, instrs: EcoVec<Instr>) {
         for instr in instrs {
             self.push_instr(instr);
         }
@@ -1522,7 +1522,7 @@ code:
             (self.code_meta.global_references).insert(span.clone().sp(ident), curr.global_index);
             let instr = Instr::Recur(self.add_span(span.clone()));
             if call {
-                self.push_all_instrs([Instr::PushSig(sig), instr, Instr::PopSig]);
+                self.push_all_instrs(eco_vec![Instr::PushSig(sig), instr, Instr::PopSig]);
             } else {
                 let f = self.make_function(FunctionId::Anonymous(span), sig, eco_vec![instr]);
                 self.push_instr(Instr::PushFunc(f));
@@ -1577,7 +1577,7 @@ code:
                 if call {
                     // Inline instructions
                     self.push_instr(Instr::PushSig(f.signature()));
-                    let instrs = f.instrs(&self.asm).to_vec();
+                    let instrs = EcoVec::from(f.instrs(&self.asm));
                     self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
@@ -1790,7 +1790,13 @@ code:
             );
         }
 
-        self.push_all_instrs(functions.into_iter().map(|(f, _)| f).map(Instr::PushFunc));
+        self.push_all_instrs(
+            functions
+                .into_iter()
+                .map(|(f, _)| f)
+                .map(Instr::PushFunc)
+                .collect(),
+        );
 
         let span_idx = self.add_span(span.clone());
         self.push_instr(Instr::Switch {

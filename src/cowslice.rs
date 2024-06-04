@@ -48,8 +48,13 @@ impl<T> CowSlice<T> {
             end: 0,
         }
     }
+    #[inline]
     pub fn as_slice(&self) -> &[T] {
         &self.data[self.start..self.end]
+    }
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.end - self.start
     }
     #[inline]
     pub fn is_unique(&mut self) -> bool {

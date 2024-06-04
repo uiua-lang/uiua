@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.12
-  - Optimize `rows un join` and `rows un couple`
+  - Optimize `rows un join`
   - Macro args doc comments
   - Refactor inversion to make left-inverses well-defined
     - `un on` for all left-invertible functions

@@ -2,6 +2,8 @@
 
 use std::{cmp::Ordering, mem::take};
 
+use ecow::EcoVec;
+
 use crate::{
     algorithm::{max_shape, op2_bytes_retry_fill, validate_size_impl, FillContext},
     cowslice::cowslice,
@@ -622,12 +624,25 @@ impl Value {
     }
     /// Uncouple the value into two values
     pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        self.uncouple_depth(0, env)
+    }
+    pub(crate) fn uncouple_depth(self, depth: usize, env: &Uiua) -> UiuaResult<(Self, Self)> {
         match self {
-            Value::Num(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
-            Value::Byte(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
-            Value::Complex(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
-            Value::Char(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
-            Value::Box(a) => a.uncouple(env).map(|(a, b)| (a.into(), b.into())),
+            Value::Num(a) => a
+                .uncouple_depth(depth, env)
+                .map(|(a, b)| (a.into(), b.into())),
+            Value::Byte(a) => a
+                .uncouple_depth(depth, env)
+                .map(|(a, b)| (a.into(), b.into())),
+            Value::Complex(a) => a
+                .uncouple_depth(depth, env)
+                .map(|(a, b)| (a.into(), b.into())),
+            Value::Char(a) => a
+                .uncouple_depth(depth, env)
+                .map(|(a, b)| (a.into(), b.into())),
+            Value::Box(a) => a
+                .uncouple_depth(depth, env)
+                .map(|(a, b)| (a.into(), b.into())),
         }
     }
 }
@@ -673,17 +688,53 @@ impl<T: ArrayValue> Array<T> {
     }
     /// Uncouple the array into two arrays
     pub fn uncouple(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
-        if self.row_count() != 2 {
+        self.uncouple_depth(0, env)
+    }
+    pub(crate) fn uncouple_depth(self, mut depth: usize, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        depth = depth.min(self.rank());
+        if depth == self.rank() {
+            return Err(env.error("Cannot uncouple scalar"));
+        }
+        let rows_at_depth = self.shape[depth];
+        if rows_at_depth != 2 {
             return Err(env.error(format!(
                 "Cannot uncouple array with {} row{}",
-                self.row_count(),
-                if self.row_count() == 1 { "" } else { "s" }
+                rows_at_depth,
+                if rows_at_depth == 1 { "" } else { "s" }
             )));
         }
-        let mut rows = self.into_rows();
-        let first = rows.next().unwrap();
-        let second = rows.next().unwrap();
-        Ok((first, second))
+        Ok(if depth == 0 {
+            let mut rows = self.into_rows();
+            let first = rows.next().unwrap();
+            let second = rows.next().unwrap();
+            (first, second)
+        } else {
+            let stride: usize = self.shape[depth..].iter().skip(1).product();
+            let mut shape = self.shape.clone();
+            shape.remove(depth);
+            if stride == 0 {
+                let arr = Array::new(shape.clone(), EcoVec::new());
+                return Ok((arr.clone(), arr));
+            }
+            let new_a_data: EcoVec<T> = self
+                .data
+                .chunks_exact(stride)
+                .step_by(2)
+                .flatten()
+                .cloned()
+                .collect();
+            let new_b_data: EcoVec<T> = self
+                .data
+                .chunks_exact(stride)
+                .skip(1)
+                .step_by(2)
+                .flatten()
+                .cloned()
+                .collect();
+            let a = Array::new(shape.clone(), new_a_data);
+            let b = Array::new(shape, new_b_data);
+            (a, b)
+        })
     }
 }
 

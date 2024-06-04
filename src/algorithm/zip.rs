@@ -19,12 +19,20 @@ use super::{
 };
 
 type ValueUnFn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
+type ValueUn2Fn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<(Value, Value)>>;
 type ValueBinFn = Box<dyn Fn(Value, Value, usize, usize, &mut Uiua) -> UiuaResult<Value>>;
 
 fn spanned_mon_fn(
     span: usize,
     f: impl Fn(Value, usize, &Uiua) -> UiuaResult<Value> + 'static,
 ) -> ValueUnFn {
+    Box::new(move |v, d, env| env.with_span(span, |env| f(v, d, env)))
+}
+
+fn spanned_mon2_fn(
+    span: usize,
+    f: impl Fn(Value, usize, &Uiua) -> UiuaResult<(Value, Value)> + 'static,
+) -> ValueUn2Fn {
     Box::new(move |v, d, env| env.with_span(span, |env| f(v, d, env)))
 }
 
@@ -80,6 +88,14 @@ fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> 
     })
 }
 
+fn impl_prim_mon2_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUn2Fn> {
+    use ImplPrimitive::*;
+    Some(match prim {
+        UnCouple => spanned_mon2_fn(span, |v, d, env| v.uncouple_depth(d, env)),
+        _ => return None,
+    })
+}
+
 fn f_mon_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUnFn, usize)> {
     use Primitive::*;
     Some(match f.instrs(&env.asm) {
@@ -103,6 +119,21 @@ fn f_mon_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUnFn, usize)> {
                 }),
                 0,
             )
+        }
+        _ => return None,
+    })
+}
+
+fn f_mon2_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUn2Fn, usize)> {
+    use Primitive::*;
+    Some(match f.instrs(&env.asm) {
+        &[Instr::ImplPrim(prim, span)] => {
+            let f = impl_prim_mon2_fast_fn(prim, span)?;
+            (f, 0)
+        }
+        [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
+            let (f, d) = f_mon2_fast_fn(f, env)?;
+            (f, d + 1)
         }
         _ => return None,
     })
@@ -478,6 +509,15 @@ pub fn rows1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
         if !maybe_through_boxes {
             let val = f(xs, d + 1, env)?;
             env.push(val);
+            return Ok(());
+        }
+    }
+    if let Some((f, d)) = f_mon2_fast_fn(&f, env) {
+        let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
+        if !maybe_through_boxes {
+            let (xs, ys) = f(xs, d + 1, env)?;
+            env.push(ys);
+            env.push(xs);
             return Ok(());
         }
     }

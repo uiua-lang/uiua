@@ -399,6 +399,7 @@ impl Value {
             },
         )
     }
+    #[track_caller]
     pub(crate) fn drop_n(&mut self, n: usize) {
         match self {
             Value::Num(a) => a.drop_n(n),

@@ -834,8 +834,15 @@ fn triangle1(f: Function, env: &mut Uiua) -> UiuaResult {
 }
 
 fn triangle2(f: Function, env: &mut Uiua) -> UiuaResult {
-    let xs = env.pop(1)?;
+    let mut xs = env.pop(1)?;
     let mut ys = env.pop(2)?;
+    let both_scalar = xs.rank() == 0 && ys.rank() == 0;
+    if xs.rank() == 0 {
+        xs.fix();
+    }
+    if ys.rank() == 0 {
+        ys.fix();
+    }
     let outputs = f.signature().outputs;
     let new_values = env.without_fill(|env| -> UiuaResult<_> {
         match f.as_primitive(&env.asm) {
@@ -848,7 +855,11 @@ fn triangle2(f: Function, env: &mut Uiua) -> UiuaResult {
                     }
                     ys.drop_n(1);
                 }
-                env.push(Value::from_row_values(new_rows, env)?);
+                let mut val = Value::from_row_values(new_rows, env)?;
+                if both_scalar {
+                    val.shape_mut().remove(0);
+                }
+                env.push(val);
                 return Ok(None);
             }
             Some(Primitive::Couple) => {
@@ -860,7 +871,11 @@ fn triangle2(f: Function, env: &mut Uiua) -> UiuaResult {
                     }
                     ys.drop_n(1);
                 }
-                env.push(Value::from_row_values(new_rows, env)?);
+                let mut val = Value::from_row_values(new_rows, env)?;
+                if both_scalar {
+                    val.shape_mut().remove(0);
+                }
+                env.push(val);
                 return Ok(None);
             }
             _ => {}
@@ -881,7 +896,11 @@ fn triangle2(f: Function, env: &mut Uiua) -> UiuaResult {
     })?;
     if let Some(new_values) = new_values {
         for values in new_values.into_iter().rev() {
-            env.push(Value::from_row_values(values, env)?);
+            let mut val = Value::from_row_values(values, env)?;
+            if both_scalar {
+                val.shape_mut().remove(0);
+            }
+            env.push(val);
         }
     }
     Ok(())

@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Optimize `rows un join`
   - Macro args doc comments
   - Fix pad cursor jumping with end-of-line comments
   - Array bar notation

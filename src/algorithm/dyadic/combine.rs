@@ -205,12 +205,30 @@ impl Value {
         }
     }
     pub(crate) fn unjoin(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        self.unjoin_depth(0, env)
+    }
+    pub(crate) fn unjoin_depth(self, depth: usize, env: &Uiua) -> UiuaResult<(Self, Self)> {
         self.generic_into(
-            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
-            |arr| arr.unjoin(env).map(|(a, b)| (a.into(), b.into())),
+            |arr| {
+                arr.unjoin_depth(depth, env)
+                    .map(|(a, b)| (a.into(), b.into()))
+            },
+            |arr| {
+                arr.unjoin_depth(depth, env)
+                    .map(|(a, b)| (a.into(), b.into()))
+            },
+            |arr| {
+                arr.unjoin_depth(depth, env)
+                    .map(|(a, b)| (a.into(), b.into()))
+            },
+            |arr| {
+                arr.unjoin_depth(depth, env)
+                    .map(|(a, b)| (a.into(), b.into()))
+            },
+            |arr| {
+                arr.unjoin_depth(depth, env)
+                    .map(|(a, b)| (a.into(), b.into()))
+            },
         )
     }
     pub(crate) fn unjoin_shape(self, shape: &[usize], env: &Uiua) -> UiuaResult<(Self, Self)> {
@@ -489,18 +507,49 @@ impl<T: ArrayValue> Array<T> {
             }
         }
     }
-    pub(crate) fn unjoin(mut self, env: &Uiua) -> UiuaResult<(Self, Self)> {
-        if self.rank() == 0 {
-            return Err(env.error("Cannot unjoin a scalar"));
+    pub(crate) fn unjoin_depth(mut self, mut depth: usize, env: &Uiua) -> UiuaResult<(Self, Self)> {
+        depth = depth.min(self.rank());
+        if depth == self.rank() {
+            return Err(env.error("Cannot unjoin scalar"));
         }
-        if self.row_count() < 1 {
+        let rows_at_depth = self.shape[depth];
+        if rows_at_depth == 0 {
             return Err(env.error("Cannot unjoin an empty array"));
         }
-        let first = self.row(0);
-        self.data = self.data.slice(self.row_len()..);
-        self.shape[0] -= 1;
-        self.validate_shape();
-        Ok((first, self))
+        Ok(if depth == 0 {
+            let first = self.row(0);
+            self.data = self.data.slice(self.row_len()..);
+            self.shape[0] -= 1;
+            self.validate_shape();
+            (first, self)
+        } else {
+            let n: usize = self.shape[..depth].iter().product();
+            let row_len: usize = self.shape[depth..].iter().product();
+            let stride: usize = self.shape[depth..].iter().skip(1).product();
+            let mut remaining_shape = self.shape.clone();
+            let mut removed_shape = self.shape.clone();
+            remaining_shape[depth] -= 1;
+            removed_shape.remove(depth);
+            let removed_data: EcoVec<T> = (0..n)
+                .flat_map(|i| {
+                    let start = i * row_len;
+                    let end = start + stride;
+                    self.data.slice(start..end)
+                })
+                .collect();
+            let remaining_data = (0..n)
+                .flat_map(|i| {
+                    let start = i * row_len + stride;
+                    let end = start + row_len - stride;
+                    self.data.slice(start..end)
+                })
+                .collect();
+            let removed = Array::new(removed_shape, removed_data);
+            self.data = remaining_data;
+            self.shape = remaining_shape;
+            self.validate_shape();
+            (removed, self)
+        })
     }
     pub(crate) fn unjoin_shape(mut self, shape: &[usize], env: &Uiua) -> UiuaResult<(Self, Self)> {
         if self.rank() == 0 {

@@ -12,6 +12,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`keep ▽`](https://uiua.org/docs/keep) will now cycle counts if the counts array is shorter than the counted array
 - [`keep ▽`](https://uiua.org/docs/keep) now works with non-integer scalar counts to scale an array
 - [`join ⊂`](https://uiua.org/docs/join) will rank differences greater than 1 can now extend the smaller array
+- [`un °`](https://uiua.org/docs/un) [`join ⊂`](https://uiua.org/docs/join) is now easier to combine with other inverses
 - Add the experimental [`astar`](https://uiua.org/docs/astar) modifier, which performs the A* pathfinding algorithm
 - Adjacent [`trace ⸮`](https://uiua.org/docs/trace)s now function as a single [`trace ⸮`](https://uiua.org/docs/trace) of more values
 - N+1 adjacent [`stack ?`](https://uiua.org/docs/stack)s now format to N [`trace ⸮`](https://uiua.org/docs/trace)s

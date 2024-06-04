@@ -4,10 +4,16 @@
   - `rows` function pack
   - Improve `un join` chained with other functions
   - `◹` modifier
+  - Reduce codegen in pervasives
+  - Optimize `rows un join` and `rows un couple`
+  - Refactor inversion to make left-inverses well-defined
+    - `un on` for all left-invertible functions
+    - Improve `un join` chained with other functions
+  - Fix pad cursor jumping with end-on-line comments
+  - Array bar notation
+  - Tree extension
   - Show array shape on hover
   - Unicode literals
-  - Tree extension
-  - Array bar notation
   - Error classes
   - Refactor inversion to make left-inverses well-defined
     - `un on` for all left-invertible functions

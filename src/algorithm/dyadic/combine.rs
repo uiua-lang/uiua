@@ -568,7 +568,7 @@ impl<T: ArrayValue> Array<T> {
                         self.row_count()
                     )));
                 }
-                if self.shape[1..] != *rest {
+                if !self.shape[1..].iter().zip(rest).all(|(&a, &b)| a == b) {
                     return Err(env.error(format!(
                         "Cannot unjoin array with shape {} from array with shape {}",
                         FormatShape(shape),

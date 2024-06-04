@@ -1923,6 +1923,8 @@ primitive!(
     ///   : F [1]
     ///   : F "hi"
     ([2], Try, Misc, ("try", '⍣')),
+    /// Call a pattern matching case
+    ([2], Case, Misc, "case"),
     /// Throw an error if a condition is not met
     ///
     /// Expects a message and a test value.

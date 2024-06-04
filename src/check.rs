@@ -458,6 +458,12 @@ impl<'a> VirtualEnv<'a> {
                     let _handler_sig = self.pop_func()?.signature();
                     self.handle_sig(f_sig)?;
                 }
+                Case => {
+                    let f_sig = self.pop_func()?.signature();
+                    let g_sig = self.pop_func()?.signature();
+                    self.handle_sig(g_sig)?;
+                    self.handle_sig(f_sig)?;
+                }
                 Fill => {
                     let fill_sig = self.pop_func()?.signature();
                     if fill_sig.outputs > 0 {

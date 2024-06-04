@@ -382,7 +382,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            (Coordinate | Astar | Triangle)
+            (Coordinate | Astar | Triangle | Case)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )
@@ -669,6 +669,7 @@ impl Primitive {
                 })?;
             }
             Primitive::Try => algorithm::try_(env)?,
+            Primitive::Case => algorithm::case(env)?,
             Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;

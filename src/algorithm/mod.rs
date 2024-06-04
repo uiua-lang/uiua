@@ -552,17 +552,29 @@ pub fn try_(env: &mut Uiua) -> UiuaResult {
         }
     }
     let backup = env.clone_stack_top(f_sig.args.min(handler_sig.args))?;
-    if let Err(e) = env.call_clean_stack(f) {
-        if handler_sig.args > f_sig.args {
-            (env.rt.backend).save_error_color(e.message(), e.report().to_string());
-            env.push(e.value());
+    if let Err(err) = env.call_clean_stack(f) {
+        match err {
+            UiuaError::Case(e, n) if n > 0 => return Err(UiuaError::Case(e, n - 1)),
+            err => {
+                if handler_sig.args > f_sig.args {
+                    (env.rt.backend).save_error_color(err.message(), err.report().to_string());
+                    env.push(err.value());
+                }
+                for val in backup {
+                    env.push(val);
+                }
+                env.call(handler)?;
+            }
         }
-        for val in backup {
-            env.push(val);
-        }
-        env.call(handler)?;
     }
     Ok(())
+}
+
+pub fn case(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop_function()?;
+    let g = env.pop_function()?;
+    env.call(g)?;
+    env.call(f).map_err(|e| UiuaError::Case(e.into(), 1))
 }
 
 /// If a function fails on a byte array because no fill byte is defined,

@@ -37,6 +37,8 @@ pub enum UiuaError {
     Fill(Box<Self>),
     /// A pattern match failed
     PatternMatch(Span, Box<Inputs>),
+    /// An error that can return through multiple `try`s
+    Case(Box<Self>, usize),
     /// The interpreter panicked
     Panic(String),
     /// Multiple errors
@@ -91,6 +93,7 @@ impl fmt::Display for UiuaError {
             UiuaError::Timeout(..) => write!(f, "Maximum execution time exceeded"),
             UiuaError::Fill(error) => error.fmt(f),
             UiuaError::PatternMatch(span, _) => write!(f, "{span}: Pattern match failed"),
+            UiuaError::Case(error, _) => write!(f, "{error}"),
             UiuaError::Panic(message) => message.fmt(f),
             UiuaError::Multi(errors) => {
                 for error in errors {
@@ -135,6 +138,7 @@ impl UiuaError {
             UiuaError::Traced { error, .. } => error.inner(),
             UiuaError::Fill(error) => error.inner(),
             UiuaError::WithInfo { error, .. } => error.inner(),
+            UiuaError::Case(error, _) => error.inner(),
             error => error,
         }
     }
@@ -149,25 +153,19 @@ impl UiuaError {
     pub fn value(self) -> Value {
         match self {
             UiuaError::Throw(value, ..) => *value,
-            UiuaError::Traced { error, .. } | UiuaError::WithInfo { error, .. } => error.value(),
+            UiuaError::Traced { error, .. }
+            | UiuaError::WithInfo { error, .. }
+            | UiuaError::Case(error, _) => error.value(),
             error => error.message().into(),
         }
     }
     /// Check if the error is fill-related
     pub fn is_fill(&self) -> bool {
         match self {
-            UiuaError::Traced { error, .. } | UiuaError::WithInfo { error, .. } => error.is_fill(),
+            UiuaError::Traced { error, .. }
+            | UiuaError::WithInfo { error, .. }
+            | UiuaError::Case(error, _) => error.is_fill(),
             UiuaError::Fill(_) => true,
-            _ => false,
-        }
-    }
-    /// Check if the error is a pattern match failure
-    pub fn is_pattern_match(&self) -> bool {
-        match self {
-            UiuaError::Traced { error, .. } | UiuaError::WithInfo { error, .. } => {
-                error.is_pattern_match()
-            }
-            UiuaError::PatternMatch(..) => true,
             _ => false,
         }
     }
@@ -276,6 +274,7 @@ impl UiuaError {
             UiuaError::PatternMatch(span, inputs) => {
                 Report::new_multi(kind, inputs, [("Pattern match failed", span.clone())])
             }
+            UiuaError::Case(error, _) => error.report(),
             UiuaError::Panic(message) => Report::new(kind, message),
             UiuaError::Load(..) | UiuaError::Format(..) => Report::new(kind, self.to_string()),
             UiuaError::Multi(errors) => {

@@ -171,7 +171,6 @@ impl fmt::Display for ImplPrimitive {
             UnJoin | UnJoinPattern => write!(f, "{Un}{Join}"),
             UnKeep => write!(f, "{Un}{Keep}"),
             UnScan => write!(f, "{Un}{Scan}"),
-            UnTrace => write!(f, "{Un}{Trace}"),
             UnStack => write!(f, "{Un}{Stack}"),
             UnDump => write!(f, "{Un}{Dump}"),
             UnBox => write!(f, "{Un}{Box}"),
@@ -208,8 +207,6 @@ impl fmt::Display for ImplPrimitive {
             ReduceContent => write!(f, "{Reduce}{Content}"),
             ReduceTable => write!(f, "{Reduce}(…){Content}"),
             Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
-            BothTrace => write!(f, "{Both}{Trace}"),
-            UnBothTrace => write!(f, "{Un}{Both}{Trace}"),
             CountUnique => write!(f, "{Len}{Deduplicate}"),
             MatchPattern => write!(f, "pattern match"),
             EndRandArray => write!(f, "[{Repeat}{Rand}"),
@@ -232,6 +229,21 @@ impl fmt::Display for ImplPrimitive {
                     write!(f, "{Transpose}")?;
                 }
                 if n < -1 {
+                    write!(f, ")")?;
+                }
+                Ok(())
+            }
+            &TraceN(n, inverse) => {
+                if inverse {
+                    write!(f, "{Un}")?;
+                }
+                if inverse && n > 1 {
+                    write!(f, "(")?;
+                }
+                for _ in 0..n {
+                    write!(f, "{Trace}")?;
+                }
+                if inverse && n > 1 {
                     write!(f, ")")?;
                 }
                 Ok(())
@@ -952,9 +964,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
             ImplPrimitive::UndoFix => env.monadic_mut(Value::undo_fix)?,
             ImplPrimitive::UnScan => reduce::unscan(env)?,
-            ImplPrimitive::UnTrace => trace(env, true)?,
-            ImplPrimitive::BothTrace => both_trace(env, false)?,
-            ImplPrimitive::UnBothTrace => both_trace(env, true)?,
+            ImplPrimitive::TraceN(n, inverse) => trace_n(env, *n, *inverse)?,
             ImplPrimitive::UnStack => stack(env, true)?,
             ImplPrimitive::UnDump => dump(env, true)?,
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
@@ -1098,32 +1108,34 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
     Ok(())
 }
 
-fn both_trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
-    let a = env.pop(1)?;
-    let b = env.pop(2)?;
-    let span: String = if inverse {
-        format!(
-            "{}{}{} {}",
-            Primitive::Un,
-            Primitive::Both,
-            Primitive::Trace,
-            env.span()
-        )
-    } else {
-        format!("{}{} {}", Primitive::Both, Primitive::Trace, env.span())
-    };
+fn trace_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
+    let mut items = Vec::new();
+    for i in 0..n {
+        items.push(env.pop(i + 1)?);
+    }
+    let span = format!("{} {}", ImplPrimitive::TraceN(n, inverse), env.span());
     let max_line_len = span.chars().count() + 2;
-    let mut item_lines =
-        format_trace_item_lines(b.show().lines().map(Into::into).collect(), max_line_len);
-    item_lines.extend(format_trace_item_lines(
-        a.show().lines().map(Into::into).collect(),
-        max_line_len,
-    ));
-    env.push(b);
-    env.push(a);
+    let boundaries = stack_boundaries(env);
+    let item_lines: Vec<Vec<String>> = items
+        .iter()
+        .map(Value::show)
+        .map(|s| s.lines().map(Into::into).collect::<Vec<String>>())
+        .map(|lines| format_trace_item_lines(lines, max_line_len))
+        .enumerate()
+        .flat_map(|(i, lines)| {
+            if let Some((_, id)) = boundaries.iter().find(|(height, _)| i == *height) {
+                vec![vec![format!("│╴╴╴{id}╶╶╶\n")], lines]
+            } else {
+                vec![lines]
+            }
+        })
+        .collect();
+    for item in items {
+        env.push(item);
+    }
     env.rt.backend.print_str_trace(&format!("┌╴{span}\n"));
-    for line in item_lines {
-        env.rt.backend.print_str_trace(&line);
+    for line in item_lines.iter().flatten() {
+        env.rt.backend.print_str_trace(line);
     }
     env.rt.backend.print_str_trace("└");
     for _ in 0..max_line_len - 1 {

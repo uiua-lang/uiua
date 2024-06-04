@@ -247,6 +247,26 @@ pub(crate) fn optimize_instrs_mut(
             instrs.pop();
             instrs.push(Instr::ImplPrim(AstarFirst, span));
         }
+        // TraceN
+        ([.., Instr::Prim(Trace, span)], Instr::Prim(Trace, _)) => {
+            let span = *span;
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(TraceN(2, false), span));
+        }
+        ([.., Instr::ImplPrim(TraceN(n, false), _)], Instr::Prim(Trace, _)) => {
+            *n += 1;
+            if *n == 0 {
+                instrs.pop();
+            }
+        }
+        ([.., Instr::ImplPrim(TraceN(a, inv_a), _)], Instr::ImplPrim(TraceN(b, inv_b), _))
+            if *inv_a == inv_b =>
+        {
+            *a += b;
+            if *a == 0 {
+                instrs.pop();
+            }
+        }
         (_, instr) => instrs.push(instr),
     }
 }

@@ -809,7 +809,7 @@ impl Compiler {
                 let (mut instrs, sig) = self.compile_operand_word(operand)?;
                 if let [Instr::Prim(Trace, span)] = instrs.as_slice() {
                     finish!(
-                        [Instr::ImplPrim(ImplPrimitive::BothTrace, *span)],
+                        [Instr::ImplPrim(ImplPrimitive::TraceN(2, false), *span)],
                         Signature::new(2, 2)
                     )
                 } else {

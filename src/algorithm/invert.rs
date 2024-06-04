@@ -96,7 +96,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Parse => Instr::ImplPrim(UnParse, span),
         Fix => Instr::ImplPrim(UnFix, span),
         Map => Instr::ImplPrim(UnMap, span),
-        Trace => Instr::ImplPrim(UnTrace, span),
+        Trace => Instr::ImplPrim(TraceN(1, true), span),
         Stack => Instr::ImplPrim(UnStack, span),
         Join => Instr::ImplPrim(UnJoin, span),
         Keep => Instr::ImplPrim(UnKeep, span),
@@ -131,7 +131,6 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         UnParse => Instr::Prim(Parse, span),
         UnFix => Instr::Prim(Fix, span),
         UnMap => Instr::Prim(Map, span),
-        UnTrace => Instr::Prim(Trace, span),
         UnStack => Instr::Prim(Stack, span),
         UnJoin => Instr::Prim(Join, span),
         UnKeep => Instr::Prim(Keep, span),
@@ -139,8 +138,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         UnJson => Instr::Prim(Json, span),
         UnCsv => Instr::Prim(Csv, span),
         UnXlsx => Instr::Prim(Xlsx, span),
-        BothTrace => Instr::ImplPrim(UnBothTrace, span),
-        UnBothTrace => Instr::ImplPrim(BothTrace, span),
+        TraceN(n, inverse) => Instr::ImplPrim(TraceN(n, !inverse), span),
         _ => return None,
     })
 }
@@ -542,7 +540,7 @@ pub(crate) fn under_instrs(
         &maybe_val!(store1copy!(Sys(SysOp::TlsListen), Sys(SysOp::Close))),
         &maybe_val!(stash1!(Sys(SysOp::FReadAllStr), Sys(SysOp::FWriteAll))),
         &maybe_val!(stash1!(Sys(SysOp::FReadAllBytes), Sys(SysOp::FWriteAll))),
-        &pat!(BothTrace, (BothTrace), (UnTrace)),
+        // &pat!(BothTrace, (BothTrace), (UnTrace)),
         // Patterns that need to be last
         &UnderPatternFn(under_flip_pattern, "flip"),
         &UnderPatternFn(under_push_temp_pattern, "push temp"),

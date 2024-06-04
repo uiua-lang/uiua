@@ -2481,6 +2481,7 @@ macro_rules! impl_primitive {
             $($variant,)*
             TransposeN(i32),
             ReduceDepth(usize),
+            TraceN(usize, bool),
         }
 
         impl ImplPrimitive {
@@ -2489,11 +2490,13 @@ macro_rules! impl_primitive {
                     $(ImplPrimitive::$variant => $args,)*
                     ImplPrimitive::TransposeN(_) => 1,
                     ImplPrimitive::ReduceDepth(_) => 1,
+                    ImplPrimitive::TraceN(n, _) => *n,
                 }
             }
             pub fn outputs(&self) -> usize {
                 match self {
                     $($(ImplPrimitive::$variant => $outputs,)?)*
+                    ImplPrimitive::TraceN(n, _) => *n,
                     _ => 1
                 }
             }
@@ -2507,6 +2510,7 @@ macro_rules! impl_primitive {
             pub fn purity(&self) -> Purity {
                 match self {
                     $($(ImplPrimitive::$variant => {Purity::$purity},)*)*
+                    ImplPrimitive::TraceN(_, _) => Purity::Impure,
                     _ => Purity::Pure
                 }
             }
@@ -2528,8 +2532,6 @@ impl_primitive!(
     (1, UnFix),
     (1[1], UnScan),
     (1(2), UnMap),
-    (1, UnTrace, Impure),
-    (2(2), UnBothTrace, Impure),
     (0(0), UnStack, Impure),
     (0[1], UnDump, Impure),
     (1, Primes),
@@ -2573,7 +2575,6 @@ impl_primitive!(
     (1, ReplaceRand, Impure),
     (2, ReplaceRand2, Impure),
     (2, Adjacent),
-    (2(2), BothTrace, Impure),
     (1, CountUnique),
     (1, EndRandArray, Impure),
     (1(2)[3], AstarFirst),

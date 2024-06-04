@@ -350,7 +350,7 @@ impl MapKeys {
             loop {
                 let cell_key =
                     &mut key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
-                if cell_key[0].is_any_empty_cell() {
+                if cell_key.is_empty() || cell_key[0].is_any_empty_cell() {
                     cell_key.clone_from_slice(&key.data);
                     indices[key_index] = index;
                     break;
@@ -381,7 +381,11 @@ impl MapKeys {
             loop {
                 let cell_key =
                     &mut key_data[key_index * key_row_len..(key_index + 1) * key_row_len];
-                let present = !(cell_key[0].is_any_empty_cell() || cell_key[0].is_any_tombstone());
+                let present = if cell_key.is_empty() {
+                    *len == 1
+                } else {
+                    !(cell_key[0].is_any_empty_cell() || cell_key[0].is_any_tombstone())
+                };
                 if !present || ArrayCmpSlice(cell_key) == ArrayCmpSlice(&key.data) {
                     if !present {
                         *len += 1;

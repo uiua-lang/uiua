@@ -89,15 +89,11 @@ pub(crate) fn validate_size_impl(
     if sizes.clone().into_iter().any(|s| s == 0) {
         return Ok(0);
     }
-    let (elements, mut overflowed) =
-        sizes
-            .into_iter()
-            .map(|s| s as u64)
-            .fold((1u64, false), |(acc, ovf), s| {
-                let (new_acc, new_ovf) = acc.overflowing_mul(s);
-                (new_acc, ovf || new_ovf)
-            });
-    let elem_size = size as u64;
+    let (elements, mut overflowed) = sizes.into_iter().fold((1usize, false), |(acc, ovf), s| {
+        let (new_acc, new_ovf) = acc.overflowing_mul(s);
+        (new_acc, ovf || new_ovf)
+    });
+    let elem_size = size;
     let (size, ovf) = elements.overflowing_mul(elem_size);
     overflowed |= ovf;
     if overflowed {
@@ -108,10 +104,10 @@ pub(crate) fn validate_size_impl(
     } else {
         4096
     };
-    if size > max_mega * 1024u64.pow(2) {
-        return Err(SizeError::TooLarge(elements as usize));
+    if size > max_mega * 1024usize.pow(2) {
+        return Err(SizeError::TooLarge(elements));
     }
-    Ok(elements as usize)
+    Ok(elements)
 }
 
 pub trait ErrorContext {

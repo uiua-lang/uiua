@@ -98,6 +98,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Map => Instr::ImplPrim(UnMap, span),
         Trace => Instr::ImplPrim(TraceN(1, true), span),
         Stack => Instr::ImplPrim(UnStack, span),
+        Join => Instr::ImplPrim(UnJoin, span),
         Keep => Instr::ImplPrim(UnKeep, span),
         Sys(SysOp::GifDecode) => Instr::Prim(Sys(SysOp::GifEncode), span),
         Sys(SysOp::GifEncode) => Instr::Prim(Sys(SysOp::GifDecode), span),
@@ -180,7 +181,6 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(invert_reduce_mul_pattern, "reduce_mul"),
         &InvertPatternFn(invert_primes_pattern, "primes"),
         &InvertPatternFn(invert_format_pattern, "format"),
-        &InvertPatternFn(invert_join_pattern, "join"),
         &InvertPatternFn(invert_join_val_pattern, "join_val"),
         &InvertPatternFn(invert_insert_pattern, "insert"),
         &InvertPatternFn(invert_split_pattern, "split"),
@@ -991,34 +991,6 @@ fn invert_format_pattern<'a>(
         ),
         _ => return None,
     })
-}
-
-fn invert_join_pattern<'a>(
-    input: &'a [Instr],
-    comp: &mut Compiler,
-) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::Prim(Primitive::Join, span), input @ ..] = input else {
-        return None;
-    };
-    let mut inverse = invert_instrs(input, comp)?;
-    let nothing_after = inverse.is_empty();
-    inverse.insert(0, Instr::ImplPrim(ImplPrimitive::UnJoin, *span));
-    if !nothing_after {
-        inverse.insert(
-            1,
-            Instr::PushTemp {
-                stack: TempStack::Inline,
-                count: 1,
-                span: *span,
-            },
-        );
-        inverse.push(Instr::PopTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            span: *span,
-        });
-    }
-    Some((&[], inverse))
 }
 
 fn invert_join_val_pattern<'a>(

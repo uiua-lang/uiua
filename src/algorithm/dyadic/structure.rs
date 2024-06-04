@@ -774,6 +774,7 @@ impl<T: ArrayValue> Array<T> {
             .collect();
         self.undo_take_impl("drop", "dropped", &index, into, env)
     }
+    #[track_caller]
     pub(crate) fn drop_n(&mut self, n: usize) {
         let row_len = self.row_len();
         let start = n * row_len;

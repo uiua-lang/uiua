@@ -1582,6 +1582,19 @@ primitive!(
     /// ex: # Experimental!
     ///   : ☇1⊞⊟ ⇡3⇡3
     ///   : ◹⊟ ⇡3⇡3
+    /// We can also see the pattern by rearranging the combinations with [group].
+    /// ex: # Experimental!
+    ///   : ◹⊂.⇡4
+    ///   : ⊕□≡°⊟ .
+    ///   : ⬚0⊕∘≡°⊟ :
+    /// [triangle] also works with 3-argument functions (but currently no more).
+    /// ex: # Experimental!
+    ///   : ◹(⊂⊂)..⇡3
+    /// It follows the same pattern that we can see with [group].
+    /// ex: # Experimental!
+    ///   : ◹(⊂⊂)..⇡3
+    ///   : ⊕(□⊕□≡°⊟)≡°⊂ .
+    ///   : ⬚0⊕(⬚0⊕∘≡°⊟)≡°⊂ :
     (1[1], Triangle, AggregatingModifier, ("triangle", '◹')),
     /// Unbox the arguments to a function before calling it
     ///

@@ -890,17 +890,20 @@ fn triangle2(f: Function, env: &mut Uiua) -> UiuaResult {
 fn triangle3(f: Function, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     let xs = env.pop(1)?;
-    let mut ys = env.pop(2)?;
-    let mut zs = env.pop(3)?;
+    let ys = env.pop(2)?;
+    let zs = env.pop(3)?;
     let outputs = sig.outputs;
     let mut new_values = multi_output(
         outputs,
         Vec::with_capacity(xs.row_count() * ys.row_count() * zs.row_count() / 2),
     );
     env.without_fill(|env| -> UiuaResult {
-        for x in xs.into_rows() {
-            for y in ys.rows() {
-                for z in zs.rows() {
+        for (i, x) in xs.into_rows().take(ys.row_count()).enumerate() {
+            for (j, y) in ys.rows().take(zs.row_count()).enumerate() {
+                for (k, z) in zs.rows().enumerate() {
+                    if i + j > k {
+                        continue;
+                    }
                     env.push(z);
                     env.push(y.clone());
                     env.push(x.clone());
@@ -909,9 +912,7 @@ fn triangle3(f: Function, env: &mut Uiua) -> UiuaResult {
                         new_values[i].push(env.pop("triangle's function result")?);
                     }
                 }
-                zs.drop_n(1);
             }
-            ys.drop_n(1);
         }
         Ok(())
     })?;

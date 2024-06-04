@@ -173,8 +173,6 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(invert_dump_pattern, "dump"),
         &InvertPatternFn(invert_setinv_pattern, "setinv"),
         &InvertPatternFn(invert_setund_setinv_pattern, "setund_setinv"),
-        &(Val, pat!(Complex, (crate::Complex::I, Mul, Sub))),
-        &(Val, pat!(Atan, (Flip, UnAtan, Div, Mul))),
         &InvertPatternFn(invert_trivial_pattern, "trivial"),
         &InvertPatternFn(invert_array_pattern, "array"),
         &InvertPatternFn(invert_unpack_pattern, "unpack"),
@@ -190,38 +188,36 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(invert_dup_pattern, "dup"),
         &InvertPatternFn(invert_stack_swizzle_pattern, "stack swizzle"),
         &InvertPatternFn(invert_select_pattern, "select"),
-        &(Val, InvertPatternFn(invert_repeat_pattern, "repeat")),
-        &(Val, ([Rotate], [Neg, Rotate])),
         &pat!(Sqrt, (Dup, Mul)),
-        &(Val, IgnoreMany(Flip), ([Add], [Sub])),
-        &(Val, ([Sub], [Add])),
-        &(Val, ([Flip, Sub], [Flip, Sub])),
-        &(Val, IgnoreMany(Flip), ([Mul], [Div])),
-        &(Val, ([Div], [Mul])),
-        &(Val, ([Flip, Div], [Flip, Div])),
-        &(Val, pat!(Pow, (1, Flip, Div, Pow))),
-        &(Val, ([Flip, Pow], [Log])),
-        &(Val, ([Log], [Flip, Pow])),
-        &(Val, pat!((Flip, Log), (Flip, 1, Flip, Div, Pow))),
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
         &(Val, pat!(Min, (Over, Ge, 1, MatchPattern))),
         &(Val, pat!(Max, (Over, Le, 1, MatchPattern))),
+        &InvertPatternFn(invert_left_pattern, "left"),
         &InvertPatternFn(invert_temp_pattern, "temp"),
         &InvertPatternFn(invert_push_pattern, "push"),
     ]
 };
 
-static PSEUDO_INVERT_PATTERNS: &[&dyn InvertPattern] = {
+static LEFT_INVERT_PATTERNS: &[&dyn InvertPattern] = {
     use ImplPrimitive::*;
     use Primitive::*;
     &[
-        &([Add], [Sub]),
+        &pat!(Complex, (crate::Complex::I, Mul, Sub)),
+        &pat!(Atan, (Flip, UnAtan, Div, Mul)),
+        &InvertPatternFn(invert_repeat_pattern, "repeat"),
+        &(IgnoreMany(Flip), ([Add], [Sub])),
         &([Sub], [Add]),
-        &([Mul], [Div]),
+        &([Flip, Sub], [Flip, Sub]),
+        &(IgnoreMany(Flip), ([Mul], [Div])),
         &([Div], [Mul]),
+        &([Flip, Div], [Flip, Div]),
         &([Rotate], [Neg, Rotate]),
         &([Neg, Rotate], [Rotate]),
+        &pat!(Pow, (1, Flip, Div, Pow)),
+        &([Flip, Pow], [Log]),
+        &([Log], [Flip, Pow]),
+        &pat!((Flip, Log), (Flip, 1, Flip, Div, Pow)),
         &([Min], [Min]),
         &([Max], [Max]),
         &pat!(
@@ -730,6 +726,20 @@ fn invert_trivial_pattern<'a>(
         }
         [Comment(_) | PushSig(_) | PopSig, input @ ..] => return Some((input, EcoVec::new())),
         _ => {}
+    }
+    None
+}
+
+fn invert_left_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let (input, mut instrs) = Val.invert_extract(input, comp)?;
+    for pattern in LEFT_INVERT_PATTERNS {
+        if let Some((input, inv)) = pattern.invert_extract(input, comp) {
+            instrs.extend(inv);
+            return Some((input, instrs));
+        }
     }
     None
 }
@@ -1327,7 +1337,7 @@ fn invert_temp_pattern<'a>(
             if before_sig.args == 0 && before_sig.outputs != 0 {
                 continue;
             }
-            for pat in PSEUDO_INVERT_PATTERNS {
+            for pat in LEFT_INVERT_PATTERNS {
                 if let Some((after, pseudo_inv)) = pat.invert_extract(after, comp) {
                     if let Some(after_inv) = invert_instrs(after, comp) {
                         let mut instrs = eco_vec![start_instr.clone()];

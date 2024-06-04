@@ -3,9 +3,7 @@
 - 0.12
   - Optimize `rows un join`
   - Macro args doc comments
-  - Refactor inversion to make left-inverses well-defined
-    - `un on` for all left-invertible functions
-    - Improve `un join` chained with other functions
+  - Improve `un join` chained with other functions
   - Fix pad cursor jumping with end-of-line comments
   - Array bar notation
   - Tree extension?

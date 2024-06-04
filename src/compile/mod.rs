@@ -1309,7 +1309,7 @@ code:
     }
     fn validate_array_loop_sig(&mut self, instrs: &[Instr], span: &CodeSpan) -> Option<Signature> {
         let inner_sig = instrs_signature(instrs);
-        if self.current_bindings.is_empty() {
+        if self.current_bindings.is_empty() && self.scope.kind != ScopeKind::Temp {
             return inner_sig.ok();
         }
         let Err(e) = &inner_sig else {
@@ -1336,15 +1336,26 @@ code:
                         signature {after_sig}, which may result in a variable \
                         number of values being pulled into the array."
                     );
-                    let after_args_required_by_before =
-                        before_sig.outputs.saturating_sub(before_sig.args);
-                    if after_sig.args != after_args_required_by_before {
+                    let max_after_args_required_by_before = before_sig
+                        .outputs
+                        .saturating_sub(before_sig.args)
+                        .max(before_sig.args);
+                    if after_sig.args > max_after_args_required_by_before {
                         if after_sig.args > body_sig.args {
+                            let replacement: String = repeat('⊙')
+                                .take(after_sig.args - body_sig.args)
+                                .chain(['∘'])
+                                .collect();
+                            message.push_str(&format!(
+                                " To fix this, insert `{replacement}` on the \
+                                right side of the array."
+                            ));
                         } else {
                             let replacement: String =
                                 repeat('⊙').take(body_sig.args - 1).chain(['∘']).collect();
                             message.push_str(&format!(
-                                " To fix this, insert `{replacement}` to the left of the loop."
+                                " To fix this, insert `{replacement}` to the \
+                                left of the loop."
                             ));
                         }
                         self.emit_diagnostic(message, DiagnosticKind::Warning, span.clone())

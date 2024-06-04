@@ -6,6 +6,7 @@
   - Refactor inversion to make left-inverses well-defined
     - `un on` for all left-invertible functions
     - Improve `un join` chained with other functions
+  - Fix pad cursor jumping with end-on-line comments
   - Array bar notation
   - Tree extension
   - Show array shape on hover

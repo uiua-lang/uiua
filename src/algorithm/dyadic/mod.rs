@@ -581,7 +581,11 @@ impl<T: ArrayValue> Array<T> {
             };
             new_data.extend_from_slice(&self.data[src_row * row_len..][..row_len]);
         }
-        self.shape[0] = new_row_count;
+        if self.shape.is_empty() {
+            self.shape.push(new_row_count);
+        } else {
+            self.shape[0] = new_row_count;
+        }
         self.data = new_data.into();
         self.validate_shape();
         Ok(self)

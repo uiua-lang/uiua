@@ -1,8 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Reduce other codegen
-  - `keep` negative scalar
   - Optimize `rows un join` and `rows un couple`
   - Macro args doc comments
   - Refactor inversion to make left-inverses well-defined

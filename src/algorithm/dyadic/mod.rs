@@ -560,17 +560,17 @@ impl<T: Clone + Send + Sync> Array<T> {
 impl<T: ArrayValue> Array<T> {
     /// `keep` this array with a real-valued scalar
     pub fn keep_scalar_real(mut self, count: f64, env: &Uiua) -> UiuaResult<Self> {
-        if count < 0.0 {
-            return Err(env.error("Keep amount cannot be negative"));
+        let abs_count = count.abs();
+        if abs_count.fract() == 0.0 && count >= 0.0 {
+            return self.keep_scalar_integer(abs_count as usize, env);
         }
-        if count.fract() == 0.0 {
-            return self.keep_scalar_integer(count as usize, env);
-        }
-        let new_row_count =
-            validate_size::<T>([(count * self.row_count() as f64).round() as usize], env)?;
+        let new_row_count = validate_size::<T>(
+            [(abs_count * self.row_count() as f64).round() as usize],
+            env,
+        )?;
         let row_len = self.row_len();
         let mut new_data = EcoVec::with_capacity(new_row_count * row_len);
-        let delta = 1.0 / count;
+        let delta = 1.0 / abs_count;
         for k in 0..new_row_count {
             let t = k as f64 * delta;
             let fract = t.fract();
@@ -580,6 +580,9 @@ impl<T: ArrayValue> Array<T> {
                 t.floor() as usize
             };
             new_data.extend_from_slice(&self.data[src_row * row_len..][..row_len]);
+        }
+        if count < 0.0 {
+            new_data.make_mut().reverse();
         }
         if self.shape.is_empty() {
             self.shape.push(new_row_count);

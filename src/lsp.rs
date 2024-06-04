@@ -507,8 +507,7 @@ mod server {
     }
 
     impl LspDoc {
-        fn new(path: impl AsRef<Path>, input: String) -> Self {
-            let path = path.as_ref();
+        fn new(path: &Path, input: String) -> Self {
             let path = path
                 .to_string_lossy()
                 .strip_prefix("\\\\?\\")
@@ -661,13 +660,13 @@ mod server {
             let path = uri_path(&params.text_document.uri);
             self.docs.insert(
                 params.text_document.uri,
-                LspDoc::new(path, params.text_document.text),
+                LspDoc::new(&path, params.text_document.text),
             );
         }
 
         async fn did_change(&self, params: DidChangeTextDocumentParams) {
             let path = uri_path(&params.text_document.uri);
-            let doc = LspDoc::new(path, params.content_changes[0].text.clone());
+            let doc = LspDoc::new(&path, params.content_changes[0].text.clone());
             self.docs.insert(params.text_document.uri, doc);
         }
 

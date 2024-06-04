@@ -152,7 +152,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
         (_, xs) if f.signature() == (2, 1) => {
             if depth == 0 && env.value_fill().is_none() {
                 if xs.row_count() == 0 {
-                    let val = reduce_identity(f.instrs(env), xs).ok_or_else(|| {
+                    let val = reduce_identity(f.instrs(&env.asm), xs).ok_or_else(|| {
                         env.error(format!(
                             "Cannot {} empty array. Function has no identity value.",
                             Primitive::Reduce.format()
@@ -162,7 +162,7 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
                     return Ok(());
                 }
                 if xs.row_count() == 1 {
-                    let val = reduce_one(f.instrs(env), xs);
+                    let val = reduce_one(f.instrs(&env.asm), xs);
                     env.push(val);
                     return Ok(());
                 }
@@ -505,7 +505,7 @@ fn generic_reduce_inner(
                 let value_fill = env.value_fill();
                 if value_fill.is_none() {
                     if xs.row_count() == 0 {
-                        return reduce_identity(f.instrs(env), xs).ok_or_else(|| {
+                        return reduce_identity(f.instrs(&env.asm), xs).ok_or_else(|| {
                             env.error(format!(
                                 "Cannot {} empty array. Function has no identity value.",
                                 Primitive::Reduce.format()
@@ -513,7 +513,7 @@ fn generic_reduce_inner(
                         });
                     }
                     if xs.row_count() == 1 {
-                        return Ok(reduce_one(f.instrs(env), xs));
+                        return Ok(reduce_one(f.instrs(&env.asm), xs));
                     }
                 }
                 let mut rows = xs.into_rows();

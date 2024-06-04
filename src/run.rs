@@ -752,7 +752,7 @@ code:
     /// Call and truncate the stack to before the args were pushed if the call fails
     pub(crate) fn call_clean_stack(&mut self, f: Function) -> UiuaResult {
         let sig = f.signature();
-        let temp_sigs = instrs_temp_signatures(f.instrs(self))
+        let temp_sigs = instrs_temp_signatures(f.instrs(&self.asm))
             .unwrap_or([Signature::new(0, 0); TempStack::CARDINALITY]);
         let bottom = self.stack_height().saturating_sub(sig.args);
         let mut temp_bottoms: [usize; TempStack::CARDINALITY] = [0; TempStack::CARDINALITY];
@@ -771,7 +771,7 @@ code:
     /// Call and maintaint the stack delta if the call fails
     pub(crate) fn call_maintain_sig(&mut self, f: Function) -> UiuaResult {
         let sig = f.signature();
-        let temp_sigs = instrs_temp_signatures(f.instrs(self))
+        let temp_sigs = instrs_temp_signatures(f.instrs(&self.asm))
             .unwrap_or([Signature::new(0, 0); TempStack::CARDINALITY]);
         let target_height = (self.stack_height() + sig.outputs).saturating_sub(sig.args);
         let mut temp_target_heights: [usize; TempStack::CARDINALITY] = [0; TempStack::CARDINALITY];
@@ -854,9 +854,9 @@ code:
         self.asm.spans[span].clone()
     }
     /// Register a span
-    pub fn add_span(&mut self, span: impl Into<Span>) -> usize {
+    pub fn add_span(&mut self, span: Span) -> usize {
         let idx = self.asm.spans.len();
-        self.asm.spans.push(span.into());
+        self.asm.spans.push(span);
         idx
     }
     /// Construct an error with the current span
@@ -867,11 +867,8 @@ code:
         )
     }
     /// Construct an error with a custom span
-    pub fn error_with_span(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
-        UiuaError::Run(
-            span.into().sp(message.to_string()),
-            self.inputs().clone().into(),
-        )
+    pub fn error_with_span(&self, span: Span, message: impl ToString) -> UiuaError {
+        UiuaError::Run(span.sp(message.to_string()), self.inputs().clone().into())
     }
     pub(crate) fn error_maybe_span(
         &self,
@@ -879,7 +876,7 @@ code:
         message: impl ToString,
     ) -> UiuaError {
         if let Some(span) = span {
-            self.error_with_span(span.clone(), message)
+            self.error_with_span(span.clone().into(), message)
         } else {
             self.error(message)
         }
@@ -982,8 +979,8 @@ code:
     pub fn push<V: Into<Value>>(&mut self, val: V) {
         self.rt.stack.push(val.into());
     }
-    pub(crate) fn push_temp(&mut self, temp: TempStack, val: impl Into<Value>) {
-        self.rt.temp_stacks[temp as usize].push(val.into());
+    pub(crate) fn push_temp(&mut self, temp: TempStack, val: Value) {
+        self.rt.temp_stacks[temp as usize].push(val);
     }
     /// Push a function onto the function stack
     pub fn push_func(&mut self, f: Function) {

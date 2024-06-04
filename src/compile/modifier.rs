@@ -219,7 +219,7 @@ impl Compiler {
                     })?;
                     // Add
                     let sig = self.sig_of(&instrs, &modified.modifier.span)?;
-                    let func = self.make_function(r.name.value.clone(), sig, instrs);
+                    let func = self.make_function(r.name.value.clone().into(), sig, instrs);
                     self.push_instr(Instr::PushFunc(func));
                     if call {
                         let span = self.add_span(modified.modifier.span);
@@ -403,7 +403,7 @@ impl Compiler {
             self.primitive(prim, modified.modifier.span.clone(), true)?;
             let instrs = self.new_functions.pop().unwrap();
             let sig = self.sig_of(&instrs, &modified.modifier.span)?;
-            let func = self.make_function(modified.modifier.span, sig, instrs);
+            let func = self.make_function(modified.modifier.span.into(), sig, instrs);
             self.push_instr(Instr::PushFunc(func));
         }
         Ok(())
@@ -431,7 +431,7 @@ impl Compiler {
                     let func = self.make_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
                         $sig,
-                        $instrs.to_vec(),
+                        EcoVec::from($instrs),
                     );
                     self.push_instr(Instr::PushFunc(func));
                 }
@@ -541,7 +541,8 @@ impl Compiler {
                     self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = self.make_function(modified.modifier.span.clone(), sig, instrs);
+                    let func =
+                        self.make_function(modified.modifier.span.clone().into(), sig, instrs);
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
@@ -559,7 +560,7 @@ impl Compiler {
                 let (a_instrs, a_sig) = self.compile_operand_word(first_op)?;
                 let (b_instrs, b_sig) = self.compile_operand_word(operands.next().unwrap())?;
                 let span = self.add_span(modified.modifier.span.clone());
-                let mut instrs = Vec::new();
+                let mut instrs = EcoVec::new();
                 if a_sig.args > 0 {
                     instrs.push(Instr::CopyToTemp {
                         stack: TempStack::Inline,
@@ -602,7 +603,8 @@ impl Compiler {
                     self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
-                    let func = self.make_function(modified.modifier.span.clone(), sig, instrs);
+                    let func =
+                        self.make_function(modified.modifier.span.clone().into(), sig, instrs);
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
@@ -611,7 +613,7 @@ impl Compiler {
                 let (a_instrs, a_sig) = self.compile_operand_word(operands.next().unwrap())?;
                 let (b_instrs, b_sig) = self.compile_operand_word(operands.next().unwrap())?;
                 let span = self.add_span(modified.modifier.span.clone());
-                let mut instrs = vec![Instr::PushTemp {
+                let mut instrs = eco_vec![Instr::PushTemp {
                     stack: TempStack::Inline,
                     count: a_sig.args,
                     span,
@@ -703,7 +705,8 @@ impl Compiler {
                         self.push_all_instrs(instrs);
                     } else {
                         let sig = self.sig_of(&instrs, &modified.modifier.span)?;
-                        let func = self.make_function(modified.modifier.span.clone(), sig, instrs);
+                        let func =
+                            self.make_function(modified.modifier.span.clone().into(), sig, instrs);
                         self.push_instr(Instr::PushFunc(func));
                     }
                 } else {
@@ -735,8 +738,9 @@ impl Compiler {
                         modified.modifier.span.clone(),
                     );
                 }
-                let normal_func = self.make_function(normal_span, normal_sig, normal_instrs);
-                let inverse_func = self.make_function(inverse_span, inverse_sig, inverse_instrs);
+                let normal_func = self.make_function(normal_span.into(), normal_sig, normal_instrs);
+                let inverse_func =
+                    self.make_function(inverse_span.into(), inverse_sig, inverse_instrs);
                 let spandex = self.add_span(modified.modifier.span.clone());
                 finish!(
                     [
@@ -793,8 +797,9 @@ impl Compiler {
                     );
                 }
 
-                let tried_func = self.make_function(tried_span, try_sig, try_instrs);
-                let handler_func = self.make_function(handler_span, handler_sig, handler_instrs);
+                let tried_func = self.make_function(tried_span.into(), try_sig, try_instrs);
+                let handler_func =
+                    self.make_function(handler_span.into(), handler_sig, handler_instrs);
                 finish!(
                     [
                         Instr::PushFunc(handler_func),
@@ -836,7 +841,8 @@ impl Compiler {
                         self.push_all_instrs(instrs);
                         self.push_instr(Instr::PopSig);
                     } else {
-                        let func = self.make_function(modified.modifier.span.clone(), sig, instrs);
+                        let func =
+                            self.make_function(modified.modifier.span.clone().into(), sig, instrs);
                         self.push_instr(Instr::PushFunc(func));
                     }
                 }
@@ -871,8 +877,11 @@ impl Compiler {
                         ),
                     );
                 }
-                let fill_func =
-                    self.make_function(modified.modifier.span.clone(), fill_sig, fill_instrs);
+                let fill_func = self.make_function(
+                    modified.modifier.span.clone().into(),
+                    fill_sig,
+                    fill_instrs,
+                );
                 self.push_instr(Instr::PushFunc(fill_func));
 
                 let span = self.add_span(modified.modifier.span.clone());
@@ -880,7 +889,8 @@ impl Compiler {
                 if !call {
                     let instrs = self.new_functions.pop().unwrap();
                     let sig = self.sig_of(&instrs, &modified.modifier.span)?;
-                    let func = self.make_function(modified.modifier.span.clone(), sig, instrs);
+                    let func =
+                        self.make_function(modified.modifier.span.clone().into(), sig, instrs);
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
@@ -902,7 +912,8 @@ impl Compiler {
                 }
                 let operand = m.code_operands().next().unwrap().clone();
                 let (content_instrs, sig) = self.compile_operand_word(operand)?;
-                let content_func = self.make_function(m.modifier.span.clone(), sig, content_instrs);
+                let content_func =
+                    self.make_function(m.modifier.span.clone().into(), sig, content_instrs);
                 let span = self.add_span(modified.modifier.span.clone());
                 let instrs = eco_vec![
                     Instr::PushFunc(content_func),
@@ -1187,7 +1198,7 @@ impl Compiler {
                 ),
             ));
         }
-        let instrs = optimize_instrs(instrs, true, &comp);
+        let instrs = optimize_instrs(instrs, true, &comp.asm);
         if let Some(index) = instrs_unbound_index(&instrs, &comp.asm) {
             let name = comp.scope.names.iter().find_map(|(ident, local)| {
                 if local.index == index {

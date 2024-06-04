@@ -8,14 +8,13 @@ pub(crate) fn optimize_instrs_mut(
     instrs: &mut EcoVec<Instr>,
     mut new: Instr,
     maximal: bool,
-    asm: impl AsRef<Assembly>,
+    asm: &Assembly,
 ) {
     use ImplPrimitive::*;
     use Primitive::*;
     if let Instr::Push(val) = &mut new {
         val.compress();
     }
-    let asm = asm.as_ref();
     match (instrs.make_mut(), new) {
         // First Rise = FirstMinIndex
         ([.., Instr::Prim(Rise, _)], Instr::Prim(First, span)) => {
@@ -271,11 +270,7 @@ pub(crate) fn optimize_instrs_mut(
     }
 }
 
-pub(crate) fn optimize_instrs<I>(
-    instrs: I,
-    maximal: bool,
-    asm: impl AsRef<Assembly>,
-) -> EcoVec<Instr>
+pub(crate) fn optimize_instrs<I>(instrs: I, maximal: bool, asm: &Assembly) -> EcoVec<Instr>
 where
     I: IntoIterator<Item = Instr> + fmt::Debug,
     I::IntoIter: ExactSizeIterator,
@@ -287,7 +282,7 @@ where
         if instr.is_compile_only() {
             continue;
         }
-        optimize_instrs_mut(&mut new, instr, maximal, asm.as_ref());
+        optimize_instrs_mut(&mut new, instr, maximal, asm);
     }
     // println!("to       {:?}", new);
     new

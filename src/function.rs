@@ -789,12 +789,12 @@ impl Function {
         self.slice
     }
     /// Get the function's instructions
-    pub fn instrs<'a>(&self, env: &'a impl AsRef<Assembly>) -> &'a [Instr] {
-        env.as_ref().instrs(self.slice)
+    pub fn instrs<'a>(&self, asm: &'a Assembly) -> &'a [Instr] {
+        asm.instrs(self.slice)
     }
     /// Get a mutable slice of the function's instructions
-    pub fn instrs_mut<'a>(&self, env: &'a mut impl AsMut<Assembly>) -> &'a mut [Instr] {
-        env.as_mut().instrs_mut(self.slice)
+    pub fn instrs_mut<'a>(&self, asm: &'a mut Assembly) -> &'a mut [Instr] {
+        asm.instrs_mut(self.slice)
     }
     /// Try to get a lone primitive from this function
     pub fn as_primitive(&self, asm: &Assembly) -> Option<Primitive> {

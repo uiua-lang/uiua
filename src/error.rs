@@ -378,14 +378,9 @@ impl fmt::Display for Diagnostic {
 
 impl Diagnostic {
     /// Create a new diagnostic
-    pub fn new(
-        message: impl Into<String>,
-        span: CodeSpan,
-        kind: DiagnosticKind,
-        inputs: Inputs,
-    ) -> Self {
+    pub fn new(message: String, span: CodeSpan, kind: DiagnosticKind, inputs: Inputs) -> Self {
         Self {
-            message: message.into(),
+            message,
             span,
             kind,
             inputs,

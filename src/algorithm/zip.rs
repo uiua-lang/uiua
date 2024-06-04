@@ -76,7 +76,7 @@ fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> 
 
 fn f_mon_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUnFn, usize)> {
     use Primitive::*;
-    Some(match f.instrs(env) {
+    Some(match f.instrs(&env.asm) {
         &[Instr::Prim(prim, span)] => {
             let f = prim_mon_fast_fn(prim, span)?;
             (f, 0)
@@ -194,7 +194,7 @@ pub(crate) fn f_dy_fast_fn(instrs: &[Instr], env: &Uiua) -> Option<(ValueBinFn, 
             return Some((f, 0, 0));
         }
         [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
-            return nest_dy_fast(f_dy_fast_fn(f.instrs(env), env)?, 1, 1)
+            return nest_dy_fast(f_dy_fast_fn(f.instrs(&env.asm), env)?, 1, 1)
         }
         [Instr::Prim(Flip, _), rest @ ..] => {
             let (f, a, b) = f_dy_fast_fn(rest, env)?;
@@ -276,7 +276,7 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
 
 fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
     fill_value_shapes(&mut xs, &mut ys, true, env)?;
-    if let Some((f, ..)) = f_dy_fast_fn(f.instrs(env), env) {
+    if let Some((f, ..)) = f_dy_fast_fn(f.instrs(&env.asm), env) {
         let xrank = xs.rank();
         let yrank = ys.rank();
         let val = f(xs, ys, xrank, yrank, env)?;
@@ -577,7 +577,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
                     )));
                 }
             }
-            if let Some((f, a, b)) = f_dy_fast_fn(f.instrs(env), env) {
+            if let Some((f, a, b)) = f_dy_fast_fn(f.instrs(&env.asm), env) {
                 let val = f(xs, ys, a + 1, b + 1, env)?;
                 env.push(val);
                 return Ok(());

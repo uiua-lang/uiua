@@ -237,8 +237,7 @@ impl<'i> Parser<'i> {
             None
         }
     }
-    fn try_exact(&mut self, token: impl Into<Token>) -> Option<CodeSpan> {
-        let token = token.into();
+    fn try_exact(&mut self, token: Token) -> Option<CodeSpan> {
         self.next_token_map(|t| (t == &token).then_some(()))
             .map(|t| t.span)
     }
@@ -309,9 +308,9 @@ impl<'i> Parser<'i> {
             if !lines.is_empty() {
                 Item::Words(lines)
             } else if parse_scopes {
-                let start = self.try_exact(TripleMinus)?;
+                let start = self.try_exact(TripleMinus.into())?;
                 let items = self.items(false);
-                let span = if let Some(end) = self.try_exact(TripleMinus) {
+                let span = if let Some(end) = self.try_exact(TripleMinus.into()) {
                     start.merge(end)
                 } else {
                     self.errors.push(self.expected([TripleMinus]));
@@ -340,25 +339,27 @@ impl<'i> Parser<'i> {
         let name = self.try_ident()?;
         // Left arrow
         let arrow_span = self.try_spaces().map(|w| w.span);
-        let (glyph_span, public) =
-            if let Some(span) = self.try_exact(Equal).or_else(|| self.try_exact(LeftArrow)) {
-                (span, true)
-            } else if let Some(span) = self
-                .try_exact(EqualTilde)
-                .or_else(|| self.try_exact(LeftArrowTilde))
-                .or_else(|| self.try_exact(LeftStrokeArrow))
-            {
-                (span, false)
-            } else {
-                self.index = start;
-                return None;
-            };
+        let (glyph_span, public) = if let Some(span) = self
+            .try_exact(Equal.into())
+            .or_else(|| self.try_exact(LeftArrow))
+        {
+            (span, true)
+        } else if let Some(span) = self
+            .try_exact(EqualTilde.into())
+            .or_else(|| self.try_exact(LeftArrowTilde))
+            .or_else(|| self.try_exact(LeftStrokeArrow))
+        {
+            (span, false)
+        } else {
+            self.index = start;
+            return None;
+        };
         let mut arrow_span = if let Some(arrow_span) = arrow_span {
             arrow_span.merge(glyph_span)
         } else {
             glyph_span
         };
-        let array_macro = if let Some(span) = self.try_exact(Caret) {
+        let array_macro = if let Some(span) = self.try_exact(Caret.into()) {
             arrow_span = arrow_span.merge(span);
             true
         } else {
@@ -375,7 +376,7 @@ impl<'i> Parser<'i> {
         let name = self.try_ident();
         self.try_spaces();
         // Tilde
-        let Some(tilde_span) = self.try_exact(Tilde) else {
+        let Some(tilde_span) = self.try_exact(Tilde.into()) else {
             self.index = start;
             return None;
         };
@@ -397,7 +398,7 @@ impl<'i> Parser<'i> {
             .any(|bad_name| &*name.value == *bad_name)
         {
             self.diagnostics.push(Diagnostic::new(
-                "Maybe don't",
+                "Maybe don't".into(),
                 name.span.clone(),
                 DiagnosticKind::Advice,
                 self.inputs.clone(),
@@ -512,7 +513,7 @@ impl<'i> Parser<'i> {
         let mut name = self.try_ident()?;
         let start_span = name.span.clone();
         let mut path = Vec::new();
-        while let Some(tilde_span) = self.try_exact(Tilde) {
+        while let Some(tilde_span) = self.try_exact(Tilde.into()) {
             let comp = RefComponent {
                 module: name,
                 tilde_span,
@@ -546,7 +547,7 @@ impl<'i> Parser<'i> {
         })))
     }
     fn try_signature(&mut self, initial_token: AsciiToken) -> Option<Sp<Signature>> {
-        let start = self.try_exact(initial_token)?;
+        let start = self.try_exact(initial_token.into())?;
         let (args, outs) = self.sig_inner();
         let mut end = self.prev_span();
         if let Some(sp) = self.try_spaces() {
@@ -734,8 +735,11 @@ impl<'i> Parser<'i> {
         let (modifier, mod_span) = if let Some(prim) = Primitive::all()
             .filter(|prim| prim.is_modifier())
             .find_map(|prim| {
-                self.try_exact(prim)
-                    .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)))
+                self.try_exact(prim.into())
+                    .or_else(|| {
+                        prim.ascii()
+                            .and_then(|simple| self.try_exact(simple.into()))
+                    })
                     .map(|span| span.sp(prim))
             }) {
             (Modifier::Primitive(prim.value), prim.span)
@@ -755,11 +759,11 @@ impl<'i> Parser<'i> {
         for i in 0..modifier.args() {
             loop {
                 args.extend(self.try_spaces());
-                if let Some(span) = self.try_exact(Quote) {
+                if let Some(span) = self.try_exact(Quote.into()) {
                     self.errors.push(span.sp(ParseError::SplitInModifier));
                     continue;
                 }
-                if let Some(span) = self.try_exact(Quote2) {
+                if let Some(span) = self.try_exact(Quote2.into()) {
                     self.errors.push(span.sp(ParseError::UnsplitInModifier));
                     continue;
                 }
@@ -890,12 +894,12 @@ impl<'i> Parser<'i> {
             }
             let span = start.merge(end);
             span.sp(Word::MultilineFormatString(lines))
-        } else if let Some(start) = self.try_exact(OpenBracket) {
+        } else if let Some(start) = self.try_exact(OpenBracket.into()) {
             while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
             let signature = self.try_signature(Bar);
             while self.try_exact(Newline).is_some() {}
             let items = self.multiline_words(false);
-            let end = self.expect_close(CloseBracket);
+            let end = self.expect_close(CloseBracket.into());
             let span = start.merge(end.span);
             let arr = Arr {
                 signature,
@@ -918,12 +922,12 @@ impl<'i> Parser<'i> {
                 ));
             }
             span.sp(Word::Array(arr))
-        } else if let Some(start) = self.try_exact(OpenCurly) {
+        } else if let Some(start) = self.try_exact(OpenCurly.into()) {
             while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
             let signature = self.try_signature(Bar);
             while self.try_exact(Newline).is_some() {}
             let items = self.multiline_words(false);
-            let end = self.expect_close(CloseCurly);
+            let end = self.expect_close(CloseCurly.into());
             let span = start.merge(end.span);
             span.sp(Word::Array(Arr {
                 signature,
@@ -935,11 +939,11 @@ impl<'i> Parser<'i> {
             spaces
         } else if let Some(word) = self.try_func() {
             word
-        } else if let Some(span) = self.try_exact(Quote) {
+        } else if let Some(span) = self.try_exact(Quote.into()) {
             span.sp(Word::BreakLine)
-        } else if let Some(span) = self.try_exact(Quote2) {
+        } else if let Some(span) = self.try_exact(Quote2.into()) {
             span.sp(Word::UnbreakLine)
-        } else if let Some(span) = self.try_exact(Semicolon) {
+        } else if let Some(span) = self.try_exact(Semicolon.into()) {
             span.sp(Word::SemicolonPop)
         } else if let Some(sc) = self.next_token_map(Token::as_semantic_comment) {
             sc.map(Word::SemanticComment)
@@ -993,9 +997,10 @@ impl<'i> Parser<'i> {
     }
     fn try_prim(&mut self) -> Option<Sp<Primitive>> {
         for prim in Primitive::all() {
-            let op_span = self
-                .try_exact(prim)
-                .or_else(|| prim.ascii().and_then(|simple| self.try_exact(simple)));
+            let op_span = self.try_exact(prim.into()).or_else(|| {
+                prim.ascii()
+                    .and_then(|simple| self.try_exact(simple.into()))
+            });
             if let Some(span) = op_span {
                 return Some(span.sp(prim));
             }
@@ -1003,12 +1008,12 @@ impl<'i> Parser<'i> {
         None
     }
     fn try_func(&mut self) -> Option<Sp<Word>> {
-        Some(if let Some(start) = self.try_exact(OpenParen) {
+        Some(if let Some(start) = self.try_exact(OpenParen.into()) {
             // Match initial function contents
             let first = self.func_contents();
             // Try to match switch function branches
             let mut branches = Vec::new();
-            while let Some(start) = self.try_exact(Bar) {
+            while let Some(start) = self.try_exact(Bar.into()) {
                 let (signature, lines, span) = self.func_contents();
                 let span = if let Some(span) = span {
                     start.merge(span)
@@ -1023,7 +1028,7 @@ impl<'i> Parser<'i> {
                     closed: true,
                 }))
             }
-            let end = self.expect_close(CloseParen);
+            let end = self.expect_close(CloseParen.into());
             if let Some(last) = branches.last_mut() {
                 last.span.merge_with(end.span.clone());
             }
@@ -1060,7 +1065,7 @@ impl<'i> Parser<'i> {
         } else if let Some(start) = self.try_exact(OpenAngle) {
             let first = self.func_contents();
             let mut branches = Vec::new();
-            while let Some(start) = self.try_exact(Bar) {
+            while let Some(start) = self.try_exact(Bar.into()) {
                 let (signature, lines, span) = self.func_contents();
                 let span = if let Some(span) = span {
                     start.merge(span)
@@ -1147,8 +1152,7 @@ impl<'i> Parser<'i> {
     fn try_spaces(&mut self) -> Option<Sp<Word>> {
         self.try_exact(Spaces).map(|span| span.sp(Word::Spaces))
     }
-    fn expect_close(&mut self, token: impl Into<Token>) -> Sp<bool> {
-        let token = token.into();
+    fn expect_close(&mut self, token: Token) -> Sp<bool> {
         if let Some(span) = self.try_exact(token.clone()) {
             span.sp(true)
         } else {
@@ -1159,7 +1163,7 @@ impl<'i> Parser<'i> {
     }
 }
 
-pub(crate) fn split_words(words: impl IntoIterator<Item = Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
+pub(crate) fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
     let mut lines = vec![Vec::new()];
     for word in words {
         if matches!(word.value, Word::BreakLine) {
@@ -1172,13 +1176,10 @@ pub(crate) fn split_words(words: impl IntoIterator<Item = Sp<Word>>) -> Vec<Vec<
     lines
 }
 
-pub(crate) fn unsplit_words(lines: impl IntoIterator<Item = Vec<Sp<Word>>>) -> Vec<Vec<Sp<Word>>> {
+pub(crate) fn unsplit_words(lines: Vec<Vec<Sp<Word>>>) -> Vec<Vec<Sp<Word>>> {
     unsplit_words_impl(lines, false)
 }
-fn unsplit_words_impl(
-    lines: impl IntoIterator<Item = Vec<Sp<Word>>>,
-    in_array: bool,
-) -> Vec<Vec<Sp<Word>>> {
+fn unsplit_words_impl(lines: Vec<Vec<Sp<Word>>>, in_array: bool) -> Vec<Vec<Sp<Word>>> {
     let mut lines = lines
         .into_iter()
         .map(|line| line.into_iter().map(unsplit_word).collect::<Vec<_>>());

@@ -578,7 +578,7 @@ impl<'a> Formatter<'a> {
             }
             Item::Words(lines) => {
                 self.prev_import_function = None;
-                let lines = unsplit_words(lines.iter().cloned().flat_map(split_words));
+                let lines = unsplit_words(lines.iter().cloned().flat_map(split_words).collect());
                 self.format_multiline_words(&lines, false, false, 0);
             }
             Item::Binding(binding) => {

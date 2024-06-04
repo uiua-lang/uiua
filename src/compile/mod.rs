@@ -530,7 +530,7 @@ code:
             RunMode::Test => in_test,
             RunMode::All => true,
         };
-        lines = unsplit_words(lines.into_iter().flat_map(split_words));
+        lines = unsplit_words(lines.into_iter().flat_map(split_words).collect());
         for line in lines {
             if line.is_empty() || !can_run && !words_should_run_anyway(&line) {
                 continue;
@@ -621,20 +621,15 @@ code:
         Ok(())
     }
     #[must_use]
-    pub(crate) fn make_function<I>(
+    pub(crate) fn make_function(
         &mut self,
-        id: impl Into<FunctionId>,
+        id: FunctionId,
         sig: Signature,
-        instrs: I,
-    ) -> Function
-    where
-        I: IntoIterator<Item = Instr> + fmt::Debug,
-        I::IntoIter: ExactSizeIterator,
-    {
-        let (instrs, errors) = self.pre_eval_instrs(instrs.into_iter().collect());
+        instrs: EcoVec<Instr>,
+    ) -> Function {
+        let (instrs, errors) = self.pre_eval_instrs(instrs);
         self.errors.extend(errors);
         let len = instrs.len();
-        let id = id.into();
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
         }
@@ -792,11 +787,7 @@ code:
             pathdiff::diff_paths(&target, base).unwrap_or(target)
         }
     }
-    fn compile_words(
-        &mut self,
-        words: impl IntoIterator<Item = Sp<Word>>,
-        call: bool,
-    ) -> UiuaResult<EcoVec<Instr>> {
+    fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<EcoVec<Instr>> {
         let words = unsplit_words(split_words(words))
             .into_iter()
             .flatten()
@@ -808,13 +799,13 @@ code:
     }
     fn compile_operand_word(&mut self, word: Sp<Word>) -> UiuaResult<(EcoVec<Instr>, Signature)> {
         let span = word.span.clone();
-        let mut instrs = self.compile_words([word], true)?;
+        let mut instrs = self.compile_words(vec![word], true)?;
         let mut sig = None;
         // Extract function instrs if possible
         if let [Instr::PushFunc(f)] = instrs.as_slice() {
             sig = Some(f.signature());
             let slice = f.slice;
-            instrs = f.instrs(self).into();
+            instrs = f.instrs(&self.asm).into();
             if slice.start + slice.len >= self.asm.instrs.len() - 1 {
                 self.asm.instrs.truncate(slice.start);
                 if matches!(self.asm.instrs.last(), Some(Instr::Comment(com)) if com.starts_with('('))
@@ -942,7 +933,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        vec![instr],
+                        eco_vec![instr],
                     ));
                 }
                 self.push_instr(instr);
@@ -958,7 +949,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        [instr],
+                        eco_vec![instr],
                     ));
                 }
                 self.push_instr(instr);
@@ -969,7 +960,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        [instr],
+                        eco_vec![instr],
                     ));
                 }
                 self.push_instr(instr);
@@ -987,7 +978,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        [instr],
+                        eco_vec![instr],
                     ));
                 }
                 self.push_instr(instr);
@@ -1001,7 +992,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         signature,
-                        [instr],
+                        eco_vec![instr],
                     ));
                 }
                 self.push_instr(instr);
@@ -1031,7 +1022,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         signature,
-                        [instr],
+                        eco_vec![instr],
                     ));
                 }
                 self.push_instr(instr);
@@ -1292,7 +1283,7 @@ code:
                         let f = self.make_function(
                             FunctionId::Anonymous(word.span.clone()),
                             Signature::new(0, 0),
-                            vec![Instr::NoInline],
+                            eco_vec![Instr::NoInline],
                         );
                         instr = Instr::PushFunc(f);
                     }
@@ -1533,7 +1524,7 @@ code:
             if call {
                 self.push_all_instrs([Instr::PushSig(sig), instr, Instr::PopSig]);
             } else {
-                let f = self.make_function(FunctionId::Anonymous(span), sig, [instr]);
+                let f = self.make_function(FunctionId::Anonymous(span), sig, eco_vec![instr]);
                 self.push_instr(Instr::PushFunc(f));
             }
         } else if let Some(local) = self.find_name(&ident, skip_local) {
@@ -1552,7 +1543,7 @@ code:
                 let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
-                    vec![instr],
+                    eco_vec![instr],
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
@@ -1569,7 +1560,7 @@ code:
                 let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
-                    vec![Instr::push(val)],
+                    eco_vec![Instr::push(val)],
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
@@ -1578,15 +1569,15 @@ code:
                 let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
-                    vec![Instr::CallGlobal { index, call }],
+                    eco_vec![Instr::CallGlobal { index, call }],
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
-            BindingKind::Func(f) if self.inlinable(f.instrs(self)) => {
+            BindingKind::Func(f) if self.inlinable(f.instrs(&self.asm)) => {
                 if call {
                     // Inline instructions
                     self.push_instr(Instr::PushSig(f.signature()));
-                    let instrs = f.instrs(self).to_vec();
+                    let instrs = f.instrs(&self.asm).to_vec();
                     self.push_all_instrs(instrs);
                     self.push_instr(Instr::PopSig);
                 } else {
@@ -1642,8 +1633,8 @@ code:
         &mut self,
         func: Func,
         span: CodeSpan,
-    ) -> UiuaResult<(FunctionId, Signature, Vec<Instr>)> {
-        let mut instrs = Vec::new();
+    ) -> UiuaResult<(FunctionId, Signature, EcoVec<Instr>)> {
+        let mut instrs = EcoVec::new();
         for line in func.lines {
             instrs.extend(self.compile_words(line, true)?);
         }
@@ -1731,7 +1722,7 @@ code:
                         let func = comp.make_function(
                             FunctionId::Anonymous(branch.span.clone()),
                             Signature::new(0, 2),
-                            sub.iter().cloned(),
+                            sub.into(),
                         );
                         comp.macro_env.asm = comp.asm.clone();
                         comp.macro_env
@@ -1870,7 +1861,7 @@ code:
         if call {
             self.push_instr(Instr::Prim(prim, span_i));
         } else {
-            let instrs = [Instr::Prim(prim, span_i)];
+            let instrs = eco_vec![Instr::Prim(prim, span_i)];
             let sig = self.sig_of(&instrs, &span)?;
             let func = self.make_function(FunctionId::Primitive(prim), sig, instrs);
             self.push_instr(Instr::PushFunc(func));
@@ -1907,7 +1898,11 @@ code:
             Instr::StackSwizzle(swiz, spandex)
         };
         if !call {
-            instr = Instr::PushFunc(self.make_function(FunctionId::Anonymous(span), sig, [instr]));
+            instr = Instr::PushFunc(self.make_function(
+                FunctionId::Anonymous(span),
+                sig,
+                eco_vec![instr],
+            ));
         }
         self.push_instr(instr);
     }
@@ -1920,7 +1915,7 @@ code:
             );
         }
         let sig = swiz.signature();
-        let mut instrs = Vec::new();
+        let mut instrs = EcoVec::new();
         let normal_ordered = (swiz.indices.iter().enumerate()).all(|(i, &idx)| i == idx as usize);
         let spandex = self.add_span(span.clone());
         if normal_ordered {
@@ -1977,7 +1972,7 @@ code:
             }
         }
         if !call {
-            instrs = vec![Instr::PushFunc(self.make_function(
+            instrs = eco_vec![Instr::PushFunc(self.make_function(
                 FunctionId::Anonymous(span),
                 sig,
                 instrs,
@@ -1996,7 +1991,7 @@ code:
             match instr {
                 Instr::Prim(Trace | Dump | Stack | Assert, _) => return false,
                 Instr::ImplPrim(UnDump | UnStack | TraceN(..), _) => return false,
-                Instr::PushFunc(f) if !self.inlinable(f.instrs(self)) => return false,
+                Instr::PushFunc(f) if !self.inlinable(f.instrs(&self.asm)) => return false,
                 Instr::NoInline => return false,
                 _ => {}
             }
@@ -2089,7 +2084,7 @@ code:
         self.make_function(
             FunctionId::Unnamed,
             signature,
-            vec![Instr::Dynamic(DynamicFunction { index, signature })],
+            eco_vec![Instr::Dynamic(DynamicFunction { index, signature })],
         )
     }
     /// Bind a function in the current scope

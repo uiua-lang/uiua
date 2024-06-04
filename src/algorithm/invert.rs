@@ -612,12 +612,12 @@ fn resolve_uns(instrs: EcoVec<Instr>, comp: &mut Compiler) -> Option<EcoVec<Inst
                         .is_some_and(|instr| matches!(instr, Instr::Prim(Primitive::Un, _))) =>
                 {
                     instrs.next();
-                    let instrs = f.instrs(comp).to_vec();
+                    let instrs = f.instrs(&comp.asm).to_vec();
                     let inverse = invert_instrs(&instrs, comp)?;
                     resolved.extend(inverse);
                 }
                 Instr::PushFunc(f) => {
-                    let instrs = f.instrs(comp);
+                    let instrs = f.instrs(&comp.asm);
                     if !contains_un(instrs, &comp.asm) {
                         resolved.push(Instr::PushFunc(f));
                         continue;
@@ -661,7 +661,7 @@ fn invert_call_pattern<'a>(
     let [Instr::PushFunc(f), Instr::Call(_), input @ ..] = input else {
         return None;
     };
-    let instrs = f.instrs(comp).to_vec();
+    let instrs = f.instrs(&comp.asm).to_vec();
     let inverse = invert_instrs(&instrs, comp)?;
     Some((input, inverse))
 }
@@ -673,7 +673,7 @@ fn invert_un_pattern<'a>(
     let [Instr::PushFunc(f), Instr::Prim(Primitive::Un, _), input @ ..] = input else {
         return None;
     };
-    Some((input, EcoVec::from(f.instrs(comp))))
+    Some((input, EcoVec::from(f.instrs(&comp.asm))))
 }
 
 fn under_un_pattern<'a>(
@@ -684,7 +684,7 @@ fn under_un_pattern<'a>(
     let [Instr::PushFunc(f), Instr::Prim(Primitive::Un, _), input @ ..] = input else {
         return None;
     };
-    let instrs = EcoVec::from(f.instrs(comp));
+    let instrs = EcoVec::from(f.instrs(&comp.asm));
     let befores = invert_instrs(&instrs, comp)?;
     if let [Instr::PushFunc(_), Instr::PushFunc(_), Instr::Prim(Primitive::SetInverse, _)] =
         befores.as_slice()
@@ -704,7 +704,7 @@ fn under_call_pattern<'a>(
     let [Instr::PushFunc(f), Instr::Call(_), input @ ..] = input else {
         return None;
     };
-    let instrs = f.instrs(comp).to_vec();
+    let instrs = f.instrs(&comp.asm).to_vec();
     let (befores, afters) = under_instrs(&instrs, g_sig, comp)?;
     Some((input, (befores, afters)))
 }
@@ -1079,11 +1079,11 @@ fn invert_setund_setinv_pattern<'a>(
         return None;
     };
     let [Instr::PushFunc(inv), Instr::PushFunc(_), Instr::Prim(Primitive::SetInverse, _)] =
-        normal.instrs(comp)
+        normal.instrs(&comp.asm)
     else {
         return None;
     };
-    Some((input, inv.instrs(comp).into()))
+    Some((input, inv.instrs(&comp.asm).into()))
 }
 
 fn invert_dump_pattern<'a>(
@@ -1170,7 +1170,13 @@ fn under_setinv_pattern<'a>(
     else {
         return None;
     };
-    Some((input, (normal.instrs(comp).into(), inv.instrs(comp).into())))
+    Some((
+        input,
+        (
+            normal.instrs(&comp.asm).into(),
+            inv.instrs(&comp.asm).into(),
+        ),
+    ))
 }
 
 fn under_setund_pattern<'a>(
@@ -1187,8 +1193,8 @@ fn under_setund_pattern<'a>(
         return None;
     }
     let to_save = before.signature().outputs - normal.signature().outputs;
-    let mut befores = EcoVec::from(before.instrs(comp));
-    let mut afters = EcoVec::from(after.instrs(comp));
+    let mut befores = EcoVec::from(before.instrs(&comp.asm));
+    let mut afters = EcoVec::from(after.instrs(&comp.asm));
     if to_save > 0 {
         befores.push(Instr::PushTemp {
             stack: TempStack::Under,
@@ -1218,13 +1224,16 @@ fn under_setinv_setund_pattern<'a>(
         return None;
     };
     let [Instr::PushFunc(after), Instr::PushFunc(before), Instr::PushFunc(_), Instr::Prim(Primitive::SetUnder, _)] =
-        normal.instrs(comp)
+        normal.instrs(&comp.asm)
     else {
         return None;
     };
     Some((
         input,
-        (before.instrs(comp).into(), after.instrs(comp).into()),
+        (
+            before.instrs(&comp.asm).into(),
+            after.instrs(&comp.asm).into(),
+        ),
     ))
 }
 
@@ -1583,7 +1592,7 @@ fn under_each_pattern<'a>(
     else {
         return None;
     };
-    let instrs = f.instrs(comp).to_vec();
+    let instrs = f.instrs(&comp.asm).to_vec();
     let (f_before, f_after) = under_instrs(&instrs, g_sig, comp)?;
     let befores = eco_vec![
         Instr::PushFunc(make_fn(f_before, span, comp)?),
@@ -1603,7 +1612,7 @@ fn invert_rows_pattern<'a>(
     let [Instr::PushFunc(f), instr @ Instr::Prim(Primitive::Rows, span), input @ ..] = input else {
         return None;
     };
-    let instrs = f.instrs(comp).to_vec();
+    let instrs = f.instrs(&comp.asm).to_vec();
     let inverse = invert_instrs(&instrs, comp)?;
     let f = make_fn(inverse, *span, comp)?;
     Some((input, eco_vec![Instr::PushFunc(f), instr.clone()]))
@@ -1618,7 +1627,7 @@ fn under_rows_pattern<'a>(
     else {
         return None;
     };
-    let instrs = f.instrs(comp).to_vec();
+    let instrs = f.instrs(&comp.asm).to_vec();
     let (f_before, f_after) = under_instrs(&instrs, g_sig, comp)?;
     let befores = eco_vec![
         Instr::PushFunc(make_fn(f_before, span, comp)?),
@@ -1668,7 +1677,7 @@ fn under_fill_pattern<'a>(
     if f.signature() != (0, 1) {
         return None;
     }
-    let g_instrs = g.instrs(comp).to_vec();
+    let g_instrs = g.instrs(&comp.asm).to_vec();
     let (g_before, g_after) = under_instrs(&g_instrs, g_sig, comp)?;
     let g_before = make_fn(g_before, span, comp)?;
     let g_after = make_fn(g_after, span, comp)?;
@@ -1715,7 +1724,7 @@ fn under_switch_pattern<'a>(
     let mut undo_sig: Option<Signature> = None;
     for f in &funcs {
         // Calc under f
-        let f_instrs = f.instrs(comp).to_vec();
+        let f_instrs = f.instrs(&comp.asm).to_vec();
         let (before, after) = under_instrs(&f_instrs, g_sig, comp)?;
         f_befores.push(make_fn(before, *span, comp)?);
         let f_after = make_fn(after, *span, comp)?;
@@ -1771,7 +1780,7 @@ macro_rules! partition_group {
             else {
                 return None;
             };
-            let instrs = f.instrs(comp).to_vec();
+            let instrs = f.instrs(&comp.asm).to_vec();
             let (f_before, f_after) = under_instrs(&instrs, g_sig, comp)?;
             let befores = eco_vec![
                 Instr::CopyToTemp {
@@ -1989,7 +1998,7 @@ fn invert_scan_pattern<'a>(
         Some((Primitive::Eq, false)) => eco_vec![Instr::Prim(Primitive::Eq, *span)],
         Some((Primitive::Ne, false)) => eco_vec![Instr::Prim(Primitive::Ne, *span)],
         _ => {
-            let instrs = f.instrs(comp).to_vec();
+            let instrs = f.instrs(&comp.asm).to_vec();
             invert_instrs(&instrs, comp)?
         }
     };
@@ -2011,7 +2020,7 @@ fn invert_repeat_pattern<'a>(
     else {
         return None;
     };
-    let instrs = f.instrs(comp).to_vec();
+    let instrs = f.instrs(&comp.asm).to_vec();
     let inverse = invert_instrs(&instrs, comp)?;
     let inverse = make_fn(inverse, *span, comp)?;
     Some((input, eco_vec![Instr::PushFunc(inverse), repeat.clone()]))
@@ -2024,7 +2033,7 @@ fn under_repeat_pattern<'a>(
 ) -> Option<(&'a [Instr], Under)> {
     Some(match input {
         [Instr::PushFunc(f), repeat @ Instr::Prim(Primitive::Repeat, span), input @ ..] => {
-            let instrs = f.instrs(comp).to_vec();
+            let instrs = f.instrs(&comp.asm).to_vec();
             let (befores, afters) = under_instrs(&instrs, g_sig, comp)?;
             let befores = eco_vec![
                 Instr::CopyToTemp {
@@ -2048,7 +2057,7 @@ fn under_repeat_pattern<'a>(
         }
         [push @ Instr::Push(_), Instr::PushFunc(f), repeat @ Instr::Prim(Primitive::Repeat, span), input @ ..] =>
         {
-            let instrs = f.instrs(comp).to_vec();
+            let instrs = f.instrs(&comp.asm).to_vec();
             let (befores, afters) = under_instrs(&instrs, g_sig, comp)?;
             let befores = eco_vec![
                 push.clone(),
@@ -2075,7 +2084,7 @@ fn under_fold_pattern<'a>(
         return None;
     };
     let span = *span;
-    let inner = f.instrs(comp).to_vec();
+    let inner = f.instrs(&comp.asm).to_vec();
     let (inner_befores, inner_afters) = under_instrs(&inner, g_sig, comp)?;
     let inner_befores_sig = instrs_signature(&inner_befores).ok()?;
     let inner_afters_sig = instrs_signature(&inner_afters).ok()?;

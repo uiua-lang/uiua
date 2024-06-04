@@ -229,7 +229,7 @@ impl Compiler {
             make_fn = Rc::new(move |instrs, sig, comp: &mut Compiler| {
                 let mut f = make(instrs, sig, comp);
                 f.recursive = true;
-                let instrs = vec![Instr::PushFunc(f), Instr::CallRecursive(spandex)];
+                let instrs = eco_vec![Instr::PushFunc(f), Instr::CallRecursive(spandex)];
                 comp.make_function(FunctionId::Named(name.clone()), sig, instrs)
             });
         }
@@ -272,7 +272,7 @@ impl Compiler {
                 if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
                     sig = f.signature();
-                    let func = make_fn(f.instrs(self).into(), f.signature(), self);
+                    let func = make_fn(f.instrs(&self.asm).into(), f.signature(), self);
                     self.compile_bind_function(&name, local, func, spandex, comment.as_deref())?;
                 } else if sig == (0, 1) && !is_setinv && !is_setund {
                     if let &[Instr::Prim(Primitive::Tag, span)] = instrs.as_slice() {

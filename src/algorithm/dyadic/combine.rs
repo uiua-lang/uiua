@@ -3,7 +3,7 @@
 use std::{cmp::Ordering, mem::take};
 
 use crate::{
-    algorithm::{max_shape, op2_bytes_retry_fill, FillContext},
+    algorithm::{max_shape, op2_bytes_retry_fill, validate_size_impl, FillContext},
     cowslice::cowslice,
     Array, ArrayValue, FormatShape, Primitive, Uiua, UiuaResult, Value,
 };
@@ -684,6 +684,11 @@ impl Value {
         let (min, max) = row_values.size_hint();
         let to_reserve = max.unwrap_or(min);
         if let Some(row) = row_values.next() {
+            validate_size_impl(
+                row.elem_size(),
+                [to_reserve, value.shape().iter().product::<usize>()],
+            )
+            .map_err(|e| ctx.error(e))?;
             let total_elements = to_reserve * value.shape().iter().product::<usize>();
             value.reserve_min(total_elements);
             value.couple_impl(row, ctx)?;

@@ -40,6 +40,7 @@ impl<T> CowSlice<T> {
     pub fn new() -> Self {
         Self::default()
     }
+    #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             data: EcoVec::with_capacity(capacity),
@@ -135,6 +136,7 @@ impl<T: Clone> CowSlice<T> {
             }
         })
     }
+    #[track_caller]
     fn modify<F, R>(&mut self, f: F) -> R
     where
         F: FnOnce(&mut EcoVec<T>) -> R,
@@ -150,6 +152,7 @@ impl<T: Clone> CowSlice<T> {
             res
         }
     }
+    #[track_caller]
     fn modify_end<F, R>(&mut self, f: F) -> R
     where
         F: FnOnce(&mut EcoVec<T>) -> R,
@@ -212,18 +215,23 @@ impl<T: Clone> CowSlice<T> {
             data.truncate(data.len() - (end - start));
         })
     }
+    #[track_caller]
     pub fn extend_from_array<const N: usize>(&mut self, array: [T; N]) {
         self.modify_end(|data| unsafe { data.extend_from_trusted(array) })
     }
+    #[track_caller]
     pub fn extend_from_vec(&mut self, vec: Vec<T>) {
         self.modify_end(|data| unsafe { data.extend_from_trusted(vec) })
     }
+    #[track_caller]
     pub fn extend_from_ecovec(&mut self, vec: EcoVec<T>) {
         self.modify_end(|data| unsafe { data.extend_from_trusted(vec) })
     }
+    #[track_caller]
     pub fn extend_from_cowslice(&mut self, slice: CowSlice<T>) {
         self.modify_end(|data| unsafe { data.extend_from_trusted(slice) })
     }
+    #[track_caller]
     pub unsafe fn extend_from_trusted<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = T>,

@@ -2,13 +2,16 @@
 
 - 0.12
   - Reduce codegen in pervasives
+  - Reduce other codegen
+  - `keep` negative scalar
   - Optimize `rows un join` and `rows un couple`
+  - Macro args doc comments
   - Refactor inversion to make left-inverses well-defined
     - `un on` for all left-invertible functions
     - Improve `un join` chained with other functions
-  - Fix pad cursor jumping with end-on-line comments
+  - Fix pad cursor jumping with end-of-line comments
   - Array bar notation
-  - Tree extension
+  - Tree extension?
   - Show array shape on hover
   - Unicode literals
   - Error classes

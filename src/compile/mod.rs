@@ -2312,7 +2312,7 @@ fn collect_placeholder(words: &[Sp<Word>]) -> Vec<Sp<PlaceholderOp>> {
             Word::Array(arr) => arr.lines.iter().for_each(|line| {
                 ops.extend(collect_placeholder(line));
             }),
-            Word::Func(func) => func.lines.iter().for_each(|line| {
+            Word::Func(func) => func.lines.iter().rev().for_each(|line| {
                 ops.extend(collect_placeholder(line));
             }),
             Word::Modified(m) => ops.extend(collect_placeholder(&m.operands)),

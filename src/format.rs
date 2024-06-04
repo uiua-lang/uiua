@@ -1230,7 +1230,7 @@ impl<'a> Formatter<'a> {
     }
 }
 
-fn word_is_multiline(word: &Word) -> bool {
+pub(crate) fn word_is_multiline(word: &Word) -> bool {
     match word {
         Word::Number(..) => false,
         Word::Char(_) => false,

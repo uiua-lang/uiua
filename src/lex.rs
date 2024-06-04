@@ -860,6 +860,19 @@ impl<'a> Lexer<'a> {
                 "←" if self.next_char_exact("~") => self.end(LeftArrowTilde, start),
                 "←" => self.end(LeftArrow, start),
                 "↚" => self.end(LeftStrokeArrow, start),
+                // Stack and trace
+                "?" => {
+                    let mut n = 0;
+                    let mut start = start;
+                    while self.next_char_exact("?") {
+                        self.end(Primitive::Trace, start);
+                        start = self.loc;
+                        n += 1;
+                    }
+                    if n == 0 {
+                        self.end(Primitive::Stack, start);
+                    }
+                }
                 // Comments
                 "#" => {
                     let mut n = 0;
@@ -1071,6 +1084,7 @@ impl<'a> Lexer<'a> {
                     if c.chars().count() == 1 {
                         let c = c.chars().next().unwrap();
                         if let Some(prim) = Primitive::from_glyph(c) {
+                            // Formatted glyphs
                             self.end(Glyph(prim), start);
                             continue;
                         }

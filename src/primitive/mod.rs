@@ -1113,6 +1113,7 @@ fn trace_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
     for i in 0..n {
         items.push(env.pop(i + 1)?);
     }
+    items.reverse();
     let span = format!("{} {}", ImplPrimitive::TraceN(n, inverse), env.span());
     let max_line_len = span.chars().count() + 2;
     let boundaries = stack_boundaries(env);

@@ -14,6 +14,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`join ⊂`](https://uiua.org/docs/join) will rank differences greater than 1 can now extend the smaller array
 - Add the experimental [`astar`](https://uiua.org/docs/astar) modifier, which performs the A* pathfinding algorithm
 - Adjacent [`trace ⸮`](https://uiua.org/docs/trace)s now function as a single [`trace ⸮`](https://uiua.org/docs/trace) of more values
+- N+1 adjacent [`stack ?`](https://uiua.org/docs/stack)s now format to N [`trace ⸮`](https://uiua.org/docs/trace)s
 ### Interpreter
 - Some optimizations
 

@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.12
+  - Reduce codegen in pervasives
   - Refactor inversion to make left-inverses well-defined
     - `un on` for all left-invertible functions
     - Improve `un join` chained with other functions

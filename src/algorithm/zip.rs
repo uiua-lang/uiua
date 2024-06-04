@@ -1,16 +1,22 @@
 //! Algorithms for zipping modifiers
 
-use std::{boxed, iter::repeat, mem::swap, slice};
+use std::{
+    boxed,
+    cmp::Ordering,
+    iter::{self, repeat},
+    mem::swap,
+};
 
 use ecow::{eco_vec, EcoVec};
 
 use crate::{
-    algorithm::pervade::bin_pervade_generic, cowslice::CowSlice, function::Function, random,
-    value::Value, Array, ArrayValue, Boxed, Complex, ImplPrimitive, Instr, PersistentMeta,
-    Primitive, Shape, Uiua, UiuaResult,
+    cowslice::CowSlice, function::Function, random, value::Value, Array, ArrayValue, Boxed,
+    Complex, ImplPrimitive, Instr, PersistentMeta, Primitive, Shape, Uiua, UiuaResult,
 };
 
-use super::{fill_value_shapes, fixed_rows, multi_output, FillContext, FixedRowsData, MultiOutput};
+use super::{
+    fill_value_shapes, fixed_rows, max_shape, multi_output, FillContext, FixedRowsData, MultiOutput,
+};
 
 type ValueUnFn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
 type ValueBinFn = Box<dyn Fn(Value, Value, usize, usize, &mut Uiua) -> UiuaResult<Value>>;
@@ -282,12 +288,28 @@ fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
         let val = f(xs, ys, xrank, yrank, env)?;
         env.push(val);
     } else {
+        let same_shape_depth = xs
+            .shape()
+            .iter()
+            .zip(ys.shape())
+            .take_while(|(a, b)| a == b)
+            .count();
+        if same_shape_depth == 0 && !(xs.rank() == 0 || ys.rank() == 0) {
+            return Err(env.error(format!(
+                "Cannot {} arrays with different shapes {} and {}",
+                Primitive::Each.format(),
+                xs.shape(),
+                ys.shape()
+            )));
+        }
         let outputs = f.signature().outputs;
         let mut xs_shape = xs.shape().to_vec();
         let mut ys_shape = ys.shape().to_vec();
         let is_empty = outputs > 0 && (xs.row_count() == 0 || ys.row_count() == 0);
         let per_meta = xs.take_per_meta().xor(ys.take_per_meta());
-        let (new_shape, new_values) = env.without_fill(|env| {
+        let new_shape = max_shape(&xs_shape, &ys_shape);
+        let mut new_values = multi_output(outputs, Vec::with_capacity(xs.row_count()));
+        env.without_fill(|env| -> UiuaResult {
             if is_empty {
                 if let Some(r) = xs_shape.first_mut() {
                     *r = 1;
@@ -295,51 +317,63 @@ fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
                 if let Some(r) = ys_shape.first_mut() {
                     *r = 1;
                 }
-                bin_pervade_generic(
-                    &xs_shape,
-                    slice::from_ref(&xs.proxy_scalar(env)),
-                    &ys_shape,
-                    slice::from_ref(&ys.proxy_scalar(env)),
-                    env,
-                    |x, y, env| {
-                        env.push(y);
-                        env.push(x);
-                        if env.call_maintain_sig(f.clone()).is_ok() {
-                            (0..outputs)
-                                .map(|_| env.pop("each's function result"))
-                                .collect::<Result<MultiOutput<_>, _>>()
-                        } else {
-                            Ok(multi_output(outputs, Value::default()))
-                        }
-                    },
-                )
+                env.push(ys.proxy_scalar(env));
+                env.push(xs.proxy_scalar(env));
+                env.call_maintain_sig(f.clone())?;
+                for i in 0..outputs {
+                    new_values[i].push(env.pop("each's function result")?);
+                }
             } else {
-                let xs_values: Vec<_> = xs.into_elements().collect();
-                let ys_values: Vec<_> = ys.into_elements().collect();
-                bin_pervade_generic(
-                    &xs_shape,
-                    xs_values,
-                    &ys_shape,
-                    ys_values,
-                    env,
-                    |x, y, env| {
-                        env.push(y);
-                        env.push(x);
-                        env.call(f.clone())?;
-                        (0..outputs)
-                            .map(|_| env.pop("each's function result"))
-                            .collect::<Result<MultiOutput<_>, _>>()
-                    },
-                )
+                let xs_row_shape =
+                    Shape::from(&xs_shape[(same_shape_depth + 1).min(xs_shape.len())..]);
+                let ys_row_shape =
+                    Shape::from(&ys_shape[(same_shape_depth + 1).min(ys_shape.len())..]);
+                match xs.rank().cmp(&ys.rank()) {
+                    Ordering::Equal => {
+                        for (x, y) in xs
+                            .into_row_shaped_slices(xs_row_shape)
+                            .zip(ys.into_row_shaped_slices(ys_row_shape))
+                        {
+                            env.push(y);
+                            env.push(x);
+                            env.call(f.clone())?;
+                            for i in 0..outputs {
+                                new_values[i].push(env.pop("each's function result")?);
+                            }
+                        }
+                    }
+                    Ordering::Less => {
+                        for (x, y) in
+                            iter::repeat_with(|| xs.row_shaped_slices(xs_row_shape.clone()))
+                                .flatten()
+                                .zip(ys.into_row_shaped_slices(ys_row_shape))
+                        {
+                            env.push(y);
+                            env.push(x);
+                            env.call(f.clone())?;
+                            for i in 0..outputs {
+                                new_values[i].push(env.pop("each's function result")?);
+                            }
+                        }
+                    }
+                    Ordering::Greater => {
+                        for (x, y) in xs.into_row_shaped_slices(xs_row_shape).zip(
+                            iter::repeat_with(|| ys.row_shaped_slices(ys_row_shape.clone()))
+                                .flatten(),
+                        ) {
+                            env.push(y);
+                            env.push(x);
+                            env.call(f.clone())?;
+                            for i in 0..outputs {
+                                new_values[i].push(env.pop("each's function result")?);
+                            }
+                        }
+                    }
+                }
             }
+            Ok(())
         })?;
-        let mut transposed = multi_output(outputs, Vec::with_capacity(new_values.len()));
-        for values in new_values {
-            for (i, value) in values.into_iter().enumerate() {
-                transposed[i].push(value);
-            }
-        }
-        for new_values in transposed {
+        for new_values in new_values {
             let mut new_shape = new_shape.clone();
             let mut eached = Value::from_row_values(new_values, env)?;
             if is_empty {

@@ -419,7 +419,10 @@ impl<T: ArrayValue> Array<T> {
         })
     }
     /// Get an iterator over the row arrays of the array that have the given shape
-    pub fn into_row_shaped_slices(self, row_shape: Shape) -> impl DoubleEndedIterator<Item = Self> {
+    pub fn into_row_shaped_slices(
+        self,
+        row_shape: Shape,
+    ) -> impl DoubleEndedIterator<Item = Self> + Clone {
         let row_len = row_shape.elements();
         let zero_count = if row_len == 0 { self.row_count() } else { 0 };
         let row_sh = row_shape.clone();

@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Reduce codegen in pervasives
   - Reduce other codegen
   - `keep` negative scalar
   - Optimize `rows un join` and `rows un couple`

@@ -989,7 +989,7 @@ impl Value {
                     );
                 }
                 let mut result = Vec::with_capacity(nums.row_count());
-                for &num in nums.data() {
+                for &num in &nums.data {
                     if !test(num) {
                         return Err(ctx.error(requirement));
                     }
@@ -1004,7 +1004,7 @@ impl Value {
                     );
                 }
                 let mut result = Vec::with_capacity(bytes.row_count());
-                for &byte in bytes.data() {
+                for &byte in &bytes.data {
                     let num = byte as f64;
                     if !test(num) {
                         return Err(ctx.error(requirement));
@@ -1041,7 +1041,7 @@ impl Value {
                     );
                 }
                 let mut result = Vec::with_capacity(nums.row_count());
-                for &num in nums.data() {
+                for &num in &nums.data {
                     if !test(num) {
                         return Err(ctx.error(requirement));
                     }
@@ -1056,7 +1056,7 @@ impl Value {
                     );
                 }
                 let mut result = Vec::with_capacity(bytes.row_count());
-                for &byte in bytes.data() {
+                for &byte in &bytes.data {
                     let num = byte as f64;
                     if !test(num) {
                         return Err(ctx.error(requirement));
@@ -1106,7 +1106,7 @@ impl Value {
                     );
                 }
                 let mut result = Vec::with_capacity(nums.row_count());
-                for &num in nums.data() {
+                for &num in &nums.data {
                     if !test(num) {
                         return Err(ctx.error(requirement));
                     }
@@ -1121,7 +1121,7 @@ impl Value {
                     );
                 }
                 let mut result = Vec::with_capacity(bytes.row_count());
-                for &byte in bytes.data() {
+                for &byte in &bytes.data {
                     let num = byte as f64;
                     if !test(num) {
                         return Err(ctx.error(requirement));
@@ -1202,7 +1202,7 @@ impl Value {
                     );
                 }
                 let mut result = EcoVec::with_capacity(nums.element_count());
-                for &num in nums.data() {
+                for &num in &nums.data {
                     if !test_num(num) {
                         return Err(env.error(requirement));
                     }
@@ -1217,7 +1217,7 @@ impl Value {
                     );
                 }
                 let mut result = EcoVec::with_capacity(bytes.element_count());
-                for &byte in bytes.data() {
+                for &byte in &bytes.data {
                     let num = byte as f64;
                     if !test_num(num) {
                         return Err(env.error(requirement));
@@ -1248,7 +1248,7 @@ impl Value {
                         env.error(format!("{requirement}, but its rank is {}", chars.rank()))
                     );
                 }
-                return Ok(chars.data().iter().collect());
+                return Ok(chars.data.iter().collect());
             }
             Value::Box(boxes) => {
                 if let Some(bx) = boxes.as_scalar() {
@@ -1620,14 +1620,14 @@ macro_rules! value_un_impl {
                         array.into()
                     },)*)*
                     $($(Self::$make_new(array) => {
-                        let mut new = EcoVec::with_capacity(array.flat_len());
+                        let mut new = EcoVec::with_capacity(array.element_count());
                         for val in array.data {
                             new.push($name::$f2(val));
                         }
                         (array.shape, new).into()
                     },)*)*
                     Value::Box(mut array) => {
-                        let mut new_data = EcoVec::with_capacity(array.flat_len());
+                        let mut new_data = EcoVec::with_capacity(array.element_count());
                         for b in array.data {
                             new_data.push(Boxed(b.0.$name(env)?));
                         }
@@ -1701,7 +1701,7 @@ impl Value {
                 let mut rows = Vec::new();
                 for row in chars.row_shaped_slices(Shape::from(*chars.shape.last().unwrap())) {
                     rows.push(Array::<char>::from_iter(
-                        row.data().iter().flat_map(|c| c.to_uppercase()),
+                        row.data.iter().flat_map(|c| c.to_uppercase()),
                     ));
                 }
                 let mut arr = Array::from_row_arrays(rows, env)?;
@@ -1732,8 +1732,8 @@ impl Value {
             Value::Char(chars) if chars.rank() > 1 && env.char_scalar_fill().is_ok() => {
                 let mut rows = Vec::new();
                 for row in chars.row_shaped_slices(Shape::from(*chars.shape.last().unwrap())) {
-                    let mut new_data = EcoVec::with_capacity(row.data().len());
-                    for c in row.data() {
+                    let mut new_data = EcoVec::with_capacity(row.data.len());
+                    for c in row.data {
                         if c.is_uppercase() {
                             new_data.extend(c.to_lowercase());
                         } else {

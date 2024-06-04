@@ -24,7 +24,7 @@ use crate::{
     Shape, Uiua, UiuaResult,
 };
 
-use super::{shape_prefixes_match, validate_size, ArrayCmpSlice, FillContext};
+use super::{pervade::ArrayRef, shape_prefixes_match, validate_size, ArrayCmpSlice, FillContext};
 
 impl Value {
     pub(crate) fn bin_coerce_to_boxes<T, C: FillContext, E: ToString>(
@@ -1568,8 +1568,8 @@ impl Array<f64> {
             let mut i = 0;
             for b_row in b.row_slices() {
                 _ = bin_pervade_recursive(
-                    &(&*a_row_shape, a_row),
-                    &(&*b_row_shape, b_row),
+                    ArrayRef::new(&a_row_shape, a_row),
+                    ArrayRef::new(&b_row_shape, b_row),
                     &mut prod_row,
                     env,
                     InfalliblePervasiveFn::new(pervade::mul::num_num),

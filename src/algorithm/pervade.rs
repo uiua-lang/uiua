@@ -15,61 +15,34 @@ use crate::{Complex, Shape};
 
 use super::{fill_array_shapes, FillContext};
 
-pub trait Arrayish {
-    type Value: ArrayValue;
-    fn shape(&self) -> &[usize];
-    fn data(&self) -> &[Self::Value];
-    fn flat_len(&self) -> usize {
-        self.data().len()
+pub(crate) struct ArrayRef<'a, T> {
+    shape: &'a [usize],
+    data: &'a [T],
+}
+
+impl<'a, T> Clone for ArrayRef<'a, T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<'a, T> Copy for ArrayRef<'a, T> {}
+
+impl<'a, T> ArrayRef<'a, T> {
+    pub fn new(shape: &'a [usize], data: &'a [T]) -> Self {
+        Self { shape, data }
     }
     fn row_len(&self) -> usize {
-        self.shape().iter().skip(1).product()
+        self.shape.iter().skip(1).product()
     }
-    fn rows(&self) -> ChunksExact<Self::Value> {
-        self.data().chunks_exact(self.row_len().max(1))
-    }
-}
-
-impl<'a, T> Arrayish for &'a T
-where
-    T: Arrayish,
-{
-    type Value = T::Value;
-    fn shape(&self) -> &[usize] {
-        T::shape(self)
-    }
-    fn data(&self) -> &[Self::Value] {
-        T::data(self)
+    fn rows(&self) -> ChunksExact<T> {
+        self.data.chunks_exact(self.row_len().max(1))
     }
 }
 
-impl<T: ArrayValue> Arrayish for Array<T> {
-    type Value = T;
-    fn shape(&self) -> &[usize] {
-        &self.shape
-    }
-    fn data(&self) -> &[Self::Value] {
-        &self.data
-    }
-}
-
-impl<T: ArrayValue> Arrayish for (&[usize], &[T]) {
-    type Value = T;
-    fn shape(&self) -> &[usize] {
-        self.0
-    }
-    fn data(&self) -> &[Self::Value] {
-        self.1
-    }
-}
-
-impl<T: ArrayValue> Arrayish for (&[usize], &mut [T]) {
-    type Value = T;
-    fn shape(&self) -> &[usize] {
-        self.0
-    }
-    fn data(&self) -> &[Self::Value] {
-        self.1
+impl<'a, T> From<&'a Array<T>> for ArrayRef<'a, T> {
+    fn from(a: &'a Array<T>) -> Self {
+        Self::new(a.shape(), a.data.as_slice())
     }
 }
 
@@ -173,7 +146,7 @@ where
                         b.shape()
                     )));
                 }
-                let mut data = eco_vec![C::default(); b.flat_len()];
+                let mut data = eco_vec![C::default(); b.element_count()];
                 let a_row_shape = &a.shape()[fix_count..];
                 let b_row_shape = &b.shape()[fix_count..];
                 let b_row_len = b_row_shape.iter().product();
@@ -182,8 +155,8 @@ where
                         .zip(data.make_mut().chunks_exact_mut(b_row_len))
                     {
                         bin_pervade_recursive(
-                            &(a_row_shape, a.data.as_slice()),
-                            &(b_row_shape, b),
+                            ArrayRef::new(a_row_shape, &a.data),
+                            ArrayRef::new(b_row_shape, b),
                             c,
                             env,
                             f.clone(),
@@ -209,7 +182,7 @@ where
                         b.shape()
                     )));
                 }
-                let mut data = eco_vec![C::default(); a.flat_len()];
+                let mut data = eco_vec![C::default(); a.element_count()];
                 let a_row_shape = &a.shape()[fix_count..];
                 let b_row_shape = &b.shape()[fix_count..];
                 let a_row_len = a_row_shape.iter().product();
@@ -218,8 +191,8 @@ where
                         .zip(data.make_mut().chunks_exact_mut(a_row_len))
                     {
                         bin_pervade_recursive(
-                            &(a_row_shape, a),
-                            &(b_row_shape, b.data.as_slice()),
+                            ArrayRef::new(a_row_shape, a),
+                            ArrayRef::new(b_row_shape, &b.data),
                             c,
                             env,
                             f.clone(),
@@ -238,39 +211,39 @@ where
     // Pervade
     let shape = a.shape().max(b.shape()).clone();
     let mut data = eco_vec![C::default(); shape.elements()];
-    bin_pervade_recursive(&a, &b, data.make_mut(), env, f).map_err(Into::into)?;
+    bin_pervade_recursive((&a).into(), (&b).into(), data.make_mut(), env, f).map_err(Into::into)?;
     Ok(Array::new(shape, data))
 }
 
 pub fn bin_pervade_recursive<A, B, C, F>(
-    a: &A,
-    b: &B,
+    a: ArrayRef<A>,
+    b: ArrayRef<B>,
     c: &mut [C],
     env: &Uiua,
     f: F,
 ) -> Result<(), F::Error>
 where
-    A: Arrayish,
-    B: Arrayish,
+    A: ArrayValue,
+    B: ArrayValue,
     C: ArrayValue,
-    F: PervasiveFn<A::Value, B::Value, Output = C> + Clone,
+    F: PervasiveFn<A, B, Output = C> + Clone,
 {
-    match (a.shape(), b.shape()) {
-        ([], []) => c[0] = f.call(a.data()[0].clone(), b.data()[0].clone(), env)?,
+    match (a.shape, b.shape) {
+        ([], []) => c[0] = f.call(a.data[0].clone(), b.data[0].clone(), env)?,
         (ash, bsh) if ash.contains(&0) || bsh.contains(&0) => {}
         (ash, bsh) if ash == bsh => {
-            for ((a, b), c) in a.data().iter().zip(b.data()).zip(c) {
+            for ((a, b), c) in a.data.iter().zip(b.data).zip(c) {
                 *c = f.call(a.clone(), b.clone(), env)?;
             }
         }
         ([], bsh) => {
             for (brow, crow) in b.rows().zip(c.chunks_exact_mut(b.row_len())) {
-                bin_pervade_recursive(a, &(&bsh[1..], brow), crow, env, f.clone())?;
+                bin_pervade_recursive(a, ArrayRef::new(&bsh[1..], brow), crow, env, f.clone())?;
             }
         }
         (ash, []) => {
             for (arow, crow) in a.rows().zip(c.chunks_exact_mut(a.row_len())) {
-                bin_pervade_recursive(&(&ash[1..], arow), b, crow, env, f.clone())?;
+                bin_pervade_recursive(ArrayRef::new(&ash[1..], arow), b, crow, env, f.clone())?;
             }
         }
         (ash, bsh) => {
@@ -278,8 +251,8 @@ where
                 (a.rows().zip(b.rows())).zip(c.chunks_exact_mut(a.row_len().max(b.row_len())))
             {
                 bin_pervade_recursive(
-                    &(&ash[1..], arow),
-                    &(&bsh[1..], brow),
+                    ArrayRef::new(&ash[1..], arow),
+                    ArrayRef::new(&bsh[1..], brow),
                     crow,
                     env,
                     f.clone(),

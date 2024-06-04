@@ -11,7 +11,7 @@ use leptos::{
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
-    is_ident_char, lex, Primitive, SysOp, Token,
+    is_ident_char, lex, seed_random, Primitive, SysOp, Token,
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
@@ -187,6 +187,8 @@ pub fn Editor<'a>(
         update_token_count(&code_text);
 
         // Format code
+        let seed = instant::now().to_bits();
+        seed_random(seed);
         let input = if format {
             if let Ok(formatted) = format_str(
                 &code_text,
@@ -294,11 +296,13 @@ pub fn Editor<'a>(
         set_timeout(
             move || {
                 state.update(|st| {
+                    seed_random(seed);
                     let output = st.run_code(&input);
                     if take(&mut st.loading_module) {
                         set_timeout(
                             move || {
                                 state.update(|state| {
+                                    seed_random(seed);
                                     let output = state.run_code(&input);
                                     let (diags, items): (Vec<_>, Vec<_>) =
                                         output.into_iter().partition(OutputItem::is_report);

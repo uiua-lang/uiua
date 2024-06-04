@@ -1077,12 +1077,18 @@ fn regex(env: &mut Uiua) -> UiuaResult {
     })
 }
 
+thread_local! {
+    static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
+}
+
 /// Generate a random number, equivalent to [`Primitive::Rand`]
 pub fn random() -> f64 {
-    thread_local! {
-        static RNG: RefCell<SmallRng> = RefCell::new(SmallRng::from_entropy());
-    }
     RNG.with(|rng| rng.borrow_mut().gen::<f64>())
+}
+
+/// Seed the random number generator
+pub fn seed_random(seed: u64) {
+    RNG.with(|rng| *rng.borrow_mut() = SmallRng::seed_from_u64(seed));
 }
 
 fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {

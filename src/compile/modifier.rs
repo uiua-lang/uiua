@@ -207,7 +207,7 @@ impl Compiler {
                 if let Some(mut mac) = self.stack_macros.get(&local.index).cloned() {
                     // Stack macros
                     // Expand
-                    self.expand_macro(
+                    self.expand_stack_macro(
                         r.name.value.clone(),
                         &mut mac.words,
                         modified.operands,
@@ -1054,7 +1054,7 @@ impl Compiler {
         Ok(true)
     }
     /// Expand a stack macro
-    fn expand_macro(
+    fn expand_stack_macro(
         &mut self,
         name: Ident,
         macro_words: &mut Vec<Sp<Word>>,

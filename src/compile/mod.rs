@@ -1912,7 +1912,10 @@ code:
         let mut instrs = Vec::new();
         let normal_ordered = (swiz.indices.iter().enumerate()).all(|(i, &idx)| i == idx as usize);
         let spandex = self.add_span(span.clone());
-        if !normal_ordered {
+        if normal_ordered {
+            let val = Value::from(swiz.indices.len());
+            instrs.extend([Instr::push(val), Instr::Prim(Primitive::Take, spandex)]);
+        } else {
             let arr = Array::from_iter(swiz.indices.iter().map(|&i| i as f64));
             instrs.extend([Instr::push(arr), Instr::Prim(Primitive::Select, spandex)]);
         }

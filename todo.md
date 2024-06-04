@@ -3,7 +3,6 @@
 - 0.12
   - Optimize `rows un join`
   - Macro args doc comments
-  - Improve `un join` chained with other functions
   - Fix pad cursor jumping with end-of-line comments
   - Array bar notation
   - Tree extension?

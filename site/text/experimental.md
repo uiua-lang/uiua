@@ -8,6 +8,9 @@ Using experimental features requires an `# Experimental!` comment to be placed a
 
 - [`coordinate`]()
 - [`stringify`]()
+- [`astar`]()
+- [`case`]()
+- [`triangle`]()
 - [`&ffi`]()
 - [`&memcpy`]()
 - [`&memfree`]()

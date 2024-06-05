@@ -942,6 +942,12 @@ impl<T: ArrayValue> Array<T> {
                 self.shape()
             )));
         }
+
+        // Do filled windows if there is a fill value
+        if let Ok(fill) = env.scalar_fill::<T>() {
+            return Ok(self.filled_windows(isize_spec, fill));
+        }
+
         let mut size_spec = Vec::with_capacity(isize_spec.len());
         for (d, s) in self.shape.iter().zip(isize_spec) {
             size_spec.push(if *s >= 0 { *s } else { *d as isize + 1 + *s });
@@ -976,7 +982,7 @@ impl<T: ArrayValue> Array<T> {
         let mut k = 0;
         'windows: loop {
             // Reset curr
-            for i in curr.iter_mut() {
+            for i in &mut curr {
                 *i = 0;
             }
             // Copy the window at the current corner
@@ -1011,6 +1017,91 @@ impl<T: ArrayValue> Array<T> {
                 }
             }
             break Ok(Array::new(new_shape, dst));
+        }
+    }
+    fn filled_windows(&self, isize_spec: &[isize], fill: T) -> Self {
+        let mut true_size = Vec::with_capacity(isize_spec.len().max(self.shape.len()));
+        for (d, s) in self.shape.iter().zip(isize_spec) {
+            true_size.push(if *s >= 0 { *s } else { *d as isize + 1 + *s } as usize);
+        }
+        // if true_size.len() < self.shape.len() {
+        //     true_size.extend(&self.shape[true_size.len()..]);
+        // }
+        let new_shape: Shape = (self.shape.iter())
+            .take(true_size.len())
+            .chain(&true_size)
+            .chain(self.shape.iter().skip(true_size.len()))
+            .copied()
+            .collect();
+        // println!("true_size: {true_size:?}");
+        let mut dst = EcoVec::from_elem(fill.clone(), new_shape.iter().product());
+        let dst_slice = dst.make_mut();
+        let mut index = vec![0usize; true_size.len()];
+        let mut tracking_curr = vec![0usize; true_size.len()];
+        let mut offset_curr = vec![0isize; true_size.len()];
+        let mut adders = Vec::new();
+        for true_size in &true_size {
+            adders.push((*true_size % 2 == 0) as usize);
+        }
+        let mut k = 0;
+        let item_len: usize = self.shape.iter().skip(true_size.len()).product();
+        'windows: loop {
+            // println!("index: {index:?}");
+            // Reset tracking_curr and offset_curr
+            for c in &mut tracking_curr {
+                *c = 0;
+            }
+            for ((o, i), t) in offset_curr.iter_mut().zip(&index).zip(&true_size) {
+                *o = *i as isize - *t as isize / 2;
+            }
+            // Copy the window at the current index
+            'items: loop {
+                // Update offset_curr
+                let mut out_of_bounds = false;
+                for (o, s) in offset_curr.iter_mut().zip(&self.shape) {
+                    if *o < 0 || *o >= *s as isize {
+                        out_of_bounds = true;
+                        break;
+                    }
+                }
+                // println!("{offset_curr:?} ({out_of_bounds})");
+                // Set the element
+                if !out_of_bounds {
+                    let mut src_index = 0;
+                    let mut stride = item_len;
+                    for (o, s) in offset_curr.iter().zip(&self.shape).rev() {
+                        src_index += *o as usize * stride;
+                        stride *= *s;
+                    }
+                    for i in 0..item_len {
+                        let elem = self.data[src_index + i].clone();
+                        dst_slice[k + i] = elem;
+                    }
+                }
+                k += item_len;
+                // Go to the next item
+                for i in (0..tracking_curr.len()).rev() {
+                    if tracking_curr[i] == true_size[i] + adders[i] - 1 {
+                        tracking_curr[i] = 0;
+                        offset_curr[i] = index[i] as isize - true_size[i] as isize / 2;
+                    } else {
+                        tracking_curr[i] += 1;
+                        offset_curr[i] += 1;
+                        continue 'items;
+                    }
+                }
+                break;
+            }
+            // Go to the next index
+            for i in (0..index.len()).rev() {
+                if index[i] == self.shape[i] - 1 {
+                    index[i] = 0;
+                } else {
+                    index[i] += 1;
+                    continue 'windows;
+                }
+            }
+            break Array::new(new_shape, dst);
         }
     }
 }

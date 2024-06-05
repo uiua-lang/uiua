@@ -12,6 +12,8 @@
   - Tree extension?
   - Show array shape on hover
   - Unicode literals
+  - `fft` function
+  - `fill windows`
   - Error classes
   - `# Track caller!`
   - `base` function

@@ -897,8 +897,9 @@ pub fn report_view(report: &Report) -> impl IntoView {
     if newline_indices.len() > 20 {
         snip_range = Some(newline_indices[12]..newline_indices[newline_indices.len() - 8]);
     }
-    let mut frags = Vec::new();
+    let mut frag_lines = vec![(Vec::new(), false)];
     for (i, frag) in report.fragments.iter().enumerate() {
+        let (frags, wrap) = frag_lines.last_mut().unwrap();
         if let Some(range) = &snip_range {
             if range.contains(&i) {
                 if range.start == i {
@@ -922,6 +923,9 @@ pub fn report_view(report: &Report) -> impl IntoView {
                 view!(<span class="output-report output-fainter">{s}</span>).into_view()
             }
             ReportFragment::Colored(s, kind) => {
+                if frags.is_empty() {
+                    *wrap = true;
+                }
                 let class = match kind {
                     ReportKind::Error => "output-report output-error",
                     ReportKind::Diagnostic(DiagnosticKind::Warning) => {
@@ -933,8 +937,20 @@ pub fn report_view(report: &Report) -> impl IntoView {
                 };
                 view!(<span class=class>{s}</span>).into_view()
             }
-            ReportFragment::Newline => view!(<br/>).into_view(),
+            ReportFragment::Newline => {
+                frag_lines.push((Vec::new(), false));
+                continue;
+            }
         });
+    }
+    let mut frags = Vec::new();
+    for (line, wrap) in frag_lines {
+        let class = if wrap {
+            "output-line output-wrap-line"
+        } else {
+            "output-line"
+        };
+        frags.push(view!(<div class=class>{line}</div>).into_view());
     }
     view! {
         <div style="font-family: inherit">{frags}</div>

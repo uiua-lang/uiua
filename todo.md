@@ -1,6 +1,10 @@
 # Uiua Todo
 
 - 0.12
+  - Optimizations
+    - `first where find` -> implement with `coordinate`
+    - `first rev where`
+  - Fix signature alignment in LSP
   - Stack-source locality tutorial
   - Macro args doc comments
   - Fix pad cursor jumping with end-of-line comments

@@ -618,6 +618,16 @@ input[type=number] {
     animation: fadeAnimation 2s infinite;
 }
 
+.output-line {
+    font-family: "Code Font", monospace;
+    font-size: inherit;
+    white-space: pre;
+}
+
+.output-wrap-line {
+    white-space: pre-wrap;
+}
+
 .output-report {
     font-size: 0.89em;
 }

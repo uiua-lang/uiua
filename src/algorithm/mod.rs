@@ -748,6 +748,46 @@ fn fixed_rows(
     })
 }
 
+#[cfg(not(feature = "fft"))]
+pub fn fft(env: &mut Uiua) -> UiuaResult {
+    Err(env.error("FFT is not available in this environment"))
+}
+
+#[cfg(feature = "fft")]
+pub fn fft(env: &mut Uiua) -> UiuaResult {
+    use std::mem::transmute;
+
+    use rustfft::{num_complex::Complex64, FftPlanner};
+
+    use crate::Complex;
+
+    let mut arr: Array<Complex> = match env.pop(1)? {
+        Value::Num(arr) => arr.convert(),
+        Value::Byte(arr) => arr.convert(),
+        Value::Complex(arr) => arr,
+        val => {
+            return Err(env.error(format!("Cannot perform FFT on a {} array", val.type_name())));
+        }
+    };
+    if arr.rank() == 0 {
+        env.push(0);
+        return Ok(());
+    }
+    let list_row_len: usize = arr.shape[arr.rank() - 1..].iter().product();
+    if list_row_len == 0 {
+        env.push(arr);
+        return Ok(());
+    }
+    let mut planner = FftPlanner::new();
+    for row in arr.data.as_mut_slice().chunks_exact_mut(list_row_len) {
+        let fft = planner.plan_fft_forward(row.len());
+        let slice: &mut [Complex64] = unsafe { transmute::<&mut [Complex], &mut [Complex64]>(row) };
+        fft.process(slice);
+    }
+    env.push(arr);
+    Ok(())
+}
+
 #[cfg(not(feature = "pathfinding"))]
 pub fn astar(env: &mut Uiua) -> UiuaResult {
     Err(env.error("A* pathfinding is not available in this environment"))

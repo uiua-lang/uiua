@@ -9,6 +9,7 @@ Using experimental features requires an `# Experimental!` comment to be placed a
 - [`coordinate`]()
 - [`stringify`]()
 - [`astar`]()
+- [`fft`]()
 - [`case`]()
 - [`triangle`]()
 - [`&ffi`]()

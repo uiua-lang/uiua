@@ -2403,6 +2403,23 @@ primitive!(
     /// At the moment, this is only useful for debugging.
     /// While theoretically, it could be used in a macro to choose a branch of a switch function appropriate for the function, this is not yet possible because of the way that macros and signature checking work.
     (0(2)[1], Sig, OtherModifier, "signature"),
+    /// Run the Fast Fourier Transform on an array
+    ///
+    /// The Fast Fourier Transform (FFT) is an optmized algorithm for computing the Discrete Fourier Transform (DFT). The DFT is a transformation that converts a signal from the time domain to the frequency domain.
+    ///
+    /// The input array must be either real or complex.
+    /// The result will always be complex.
+    /// Multi-dimensional arrays are supported. Each rank-1 row is treated as a separate array.
+    ///
+    /// In this example, we generate some data that is the sum of some [sine] waves.
+    /// We then run [fft] on it and create a plot of the resulting frequency bins.
+    /// ex: # Experimental!
+    ///   : ÷⟜⇡200             # 200 numbers between 0 and 1
+    ///   : /+∿⊞×[100 200 400] # Add some frequencies
+    ///   : ⌵ fft              # Run the FFT
+    ///   : ↘⌊÷2⧻.             # Drop the top half
+    ///   : ⬚0≡▽:1 ×0.5        # Render
+    (1, Fft, Misc, "fft"),
     /// Find shortest paths in a graph
     ///
     /// Expects 3 functions and at least 1 value.
@@ -2449,7 +2466,7 @@ primitive!(
     ///   : ▽⟜≡▽8 # Upscale
     ///
     /// [astar] is designed to be maximally flexible, so it can be used with graphs or grids or any other structure.
-    ((2)[3], Astar, OtherModifier, "astar"),
+    ((2)[3], Astar, Misc, "astar"),
     /// Encode an array into a JSON string
     ///
     /// ex: json [1 2 3]

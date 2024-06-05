@@ -7,6 +7,7 @@ use serde::*;
 /// Uiua's complex number type
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
 #[serde(from = "(f64, f64)", into = "(f64, f64)")]
+#[repr(C)]
 pub struct Complex {
     /// The real part
     pub re: f64,

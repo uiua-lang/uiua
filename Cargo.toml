@@ -81,6 +81,7 @@ json5 = {version = "0.4.1", optional = true}
 libffi = {version = "3", optional = true}
 libloading = {version = "0.8.3", optional = true}
 pathfinding = {version = "4.9.1", optional = true}
+rustfft = {version = "6.2.0", optional = true}
 rustls-pemfile = {version = "2.1.2", optional = true}
 simple_excel_writer = {version = "0.2.0", optional = true}
 
@@ -95,6 +96,7 @@ batteries = [
   "xlsx",
   "json5",
   "pathfinding",
+  "fft",
 ]
 binary = [
   "ctrlc",
@@ -123,6 +125,7 @@ default = [
   "batteries",
 ]
 ffi = ["libffi", "libloading"]
+fft = ["rustfft"]
 gif = ["dep:gif", "image", "color_quant"]
 invoke = ["open"]
 lsp = ["tower-lsp", "tokio", "native_sys"]

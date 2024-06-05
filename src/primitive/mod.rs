@@ -383,7 +383,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            (Coordinate | Astar | Triangle | Case)
+            (Coordinate | Astar | Fft | Triangle | Case)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )
@@ -816,6 +816,7 @@ impl Primitive {
                 env.monadic_ref_env(|value, env| value.to_xlsx(env).map(EcoVec::from))?
             }
             Primitive::Astar => algorithm::astar(env)?,
+            Primitive::Fft => algorithm::fft(env)?,
             Primitive::Stringify
             | Primitive::Quote
             | Primitive::Sig

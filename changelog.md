@@ -20,6 +20,7 @@ This version is not yet released. If you are reading this on the website, then t
 - N+1 adjacent [`stack ?`](https://uiua.org/docs/stack)s now format to N [`trace ⸮`](https://uiua.org/docs/trace)s
 ### Interpreter
 - Some optimizations
+- Array shapes now show on hover in the LSP
 
 ## 0.11.0 - 2024-06-02
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.11.0).

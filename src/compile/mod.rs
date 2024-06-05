@@ -1128,7 +1128,9 @@ code:
                         .filter(|w| w.value.is_code())
                         .map(|w| w.span.clone())
                         .collect();
-                    self.code_meta.arrays.insert(word.span.clone(), just_spans);
+                    self.code_meta
+                        .array_inner_spans
+                        .insert(word.span.clone(), just_spans);
                 }
 
                 if !call {
@@ -1191,6 +1193,9 @@ code:
                     };
                     match res {
                         Ok(val) => {
+                            self.code_meta
+                                .array_shapes
+                                .insert(word.span.clone(), val.shape().clone());
                             instrs.pop();
                             self.push_instr(Instr::push(val));
                             return Ok(());

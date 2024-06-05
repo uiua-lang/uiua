@@ -14,7 +14,7 @@ use crate::{
     lex::{CodeSpan, Sp},
     parse::parse,
     ArraySwizzle, Assembly, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc,
-    Inputs, PreEvalMode, Primitive, Purity, SafeSys, Signature, StackSwizzle, SysBackend,
+    Inputs, PreEvalMode, Primitive, Purity, SafeSys, Shape, Signature, StackSwizzle, SysBackend,
     UiuaError, Value, CONSTANTS,
 };
 
@@ -120,8 +120,10 @@ pub struct CodeMeta {
     pub top_level_values: HashMap<CodeSpan, Vec<Value>>,
     /// A map of strand spans
     pub strands: BTreeMap<CodeSpan, Vec<CodeSpan>>,
-    /// A map of array spans
-    pub arrays: BTreeMap<CodeSpan, Vec<CodeSpan>>,
+    /// A map of inner array spans
+    pub array_inner_spans: BTreeMap<CodeSpan, Vec<CodeSpan>>,
+    /// A map of array shapes
+    pub array_shapes: BTreeMap<CodeSpan, Shape>,
 }
 
 /// Data for the signature of a function
@@ -730,6 +732,14 @@ mod server {
                     }
                 }
             }
+            // Hovering an array
+            let mut array_shape: Option<Sp<&Shape>> = None;
+            for (span, arr_meta) in &doc.code_meta.array_shapes {
+                if span.contains_line_col(line, col) {
+                    array_shape = Some(span.clone().sp(arr_meta));
+                    break;
+                }
+            }
 
             Ok(Some(if let Some((prim, range)) = prim_range {
                 Hover {
@@ -833,6 +843,14 @@ mod server {
                         value: format!("array swizzle `{}`", sw.value.signature()),
                     }),
                     range: Some(uiua_span_to_lsp(&sw.span)),
+                }
+            } else if let Some(shape) = array_shape {
+                Hover {
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value: format!("`{}`", shape.value),
+                    }),
+                    range: Some(uiua_span_to_lsp(&shape.span)),
                 }
             } else {
                 return Ok(None);
@@ -1373,7 +1391,7 @@ mod server {
             }
 
             // Convert to strand syntax
-            for (span, parts) in &doc.code_meta.arrays {
+            for (span, parts) in &doc.code_meta.array_inner_spans {
                 if !span.contains_line_col(line, col) || span.src != path {
                     continue;
                 }

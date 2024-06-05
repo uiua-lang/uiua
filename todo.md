@@ -1,9 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Optimizations
-    - `first where find` -> implement with `coordinate`
-    - `first rev where`
   - Fix signature alignment in LSP
   - Stack-source locality tutorial
   - Macro args doc comments
@@ -12,7 +9,6 @@
   - Tree extension?
   - Show array shape on hover
   - Unicode literals
-  - `fft` function
   - `fill windows`
   - Error classes
   - `# Track caller!`

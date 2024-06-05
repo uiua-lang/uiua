@@ -38,6 +38,16 @@ pub(crate) fn optimize_instrs_mut(
             instrs.pop();
             instrs.push(Instr::ImplPrim(LastMaxIndex, span))
         }
+        // First/last where
+        ([.., Instr::Prim(Where, _)], Instr::Prim(First, span)) => {
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(FirstWhere, span))
+        }
+        ([.., Instr::Prim(Where, _), Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
+            instrs.pop();
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(LastWhere, span))
+        }
         // First Reverse = last
         ([.., Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
             instrs.pop();

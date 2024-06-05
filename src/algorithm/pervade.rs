@@ -1,13 +1,17 @@
 //! Algorithms for pervasive array operations
 
 use std::{
-    cmp::Ordering, convert::Infallible, fmt::Display, marker::PhantomData, slice::ChunksExact,
+    cmp::{self, Ordering},
+    convert::Infallible,
+    fmt::Display,
+    marker::PhantomData,
+    slice::{self, ChunksExact},
 };
 
 use ecow::eco_vec;
 
-use crate::Complex;
 use crate::{array::*, Uiua, UiuaError, UiuaResult};
+use crate::{Complex, Shape};
 
 use super::{fill_array_shapes, FillContext};
 
@@ -1128,4 +1132,186 @@ pub mod min {
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the min of {a} and {b}"))
     }
+}
+
+pub trait PervasiveInput: IntoIterator + Sized {
+    type OwnedItem: Clone;
+    fn len(&self) -> usize;
+    fn only(&self) -> Self::OwnedItem;
+    fn item(item: <Self as IntoIterator>::Item) -> Self::OwnedItem;
+    fn as_slice(&self) -> &[Self::OwnedItem];
+    fn into_only(self) -> Self::OwnedItem {
+        Self::item(self.into_iter().next().unwrap())
+    }
+}
+
+impl<T: Clone> PervasiveInput for Vec<T> {
+    type OwnedItem = T;
+    fn len(&self) -> usize {
+        Vec::len(self)
+    }
+    fn only(&self) -> T {
+        self.first().unwrap().clone()
+    }
+    fn item(item: <Self as IntoIterator>::Item) -> T {
+        item
+    }
+    fn as_slice(&self) -> &[T] {
+        self.as_slice()
+    }
+}
+
+impl<'a, T: Clone> PervasiveInput for &'a [T] {
+    type OwnedItem = T;
+    fn len(&self) -> usize {
+        <[T]>::len(self)
+    }
+    fn only(&self) -> T {
+        self.first().unwrap().clone()
+    }
+    fn item(item: <Self as IntoIterator>::Item) -> T {
+        item.clone()
+    }
+    fn as_slice(&self) -> &[T] {
+        self
+    }
+}
+
+impl<T: Clone> PervasiveInput for Option<T> {
+    type OwnedItem = T;
+    fn len(&self) -> usize {
+        self.is_some() as usize
+    }
+    fn only(&self) -> T {
+        self.as_ref().unwrap().clone()
+    }
+    fn item(item: <Self as IntoIterator>::Item) -> T {
+        item
+    }
+    fn as_slice(&self) -> &[T] {
+        slice::from_ref(self.as_ref().unwrap())
+    }
+}
+
+pub fn bin_pervade_generic<A: PervasiveInput, B: PervasiveInput, C: Default>(
+    a_shape: &[usize],
+    a: A,
+    b_shape: &[usize],
+    b: B,
+    env: &mut Uiua,
+    f: impl FnMut(A::OwnedItem, B::OwnedItem, &mut Uiua) -> UiuaResult<C> + Copy,
+) -> UiuaResult<(Shape, Vec<C>)> {
+    let c_shape = Shape::from(cmp::max(a_shape, b_shape));
+    let c_len: usize = c_shape.iter().product();
+    let mut c: Vec<C> = Vec::with_capacity(c_len);
+    for _ in 0..c_len {
+        c.push(C::default());
+    }
+    bin_pervade_recursive_generic(a_shape, a, b_shape, b, &mut c, env, f)?;
+    Ok((c_shape, c))
+}
+
+#[allow(unused_mut)] // for a rust-analyzer false-positive
+fn bin_pervade_recursive_generic<A: PervasiveInput, B: PervasiveInput, C>(
+    a_shape: &[usize],
+    a: A,
+    b_shape: &[usize],
+    b: B,
+    c: &mut [C],
+    env: &mut Uiua,
+    mut f: impl FnMut(A::OwnedItem, B::OwnedItem, &mut Uiua) -> UiuaResult<C> + Copy,
+) -> UiuaResult {
+    if a_shape == b_shape {
+        for ((a, b), mut c) in a.into_iter().zip(b).zip(c) {
+            *c = f(A::item(a), B::item(b), env)?;
+        }
+        return Ok(());
+    }
+    match (a_shape.is_empty(), b_shape.is_empty()) {
+        (true, true) => c[0] = f(a.into_only(), b.into_only(), env)?,
+        (false, true) => {
+            for (a, mut c) in a.into_iter().zip(c) {
+                *c = f(A::item(a), b.only(), env)?;
+            }
+        }
+        (true, false) => {
+            for (b, mut c) in b.into_iter().zip(c) {
+                *c = f(a.only(), B::item(b), env)?;
+            }
+        }
+        (false, false) => {
+            let a_cells = a_shape[0];
+            let b_cells = b_shape[0];
+            if a_cells != b_cells {
+                return Err(env.error(format!(
+                    "Shapes {} and {} do not match",
+                    FormatShape(a_shape),
+                    FormatShape(b_shape)
+                )));
+            }
+            let a_chunk_size = a.len() / a_cells;
+            let b_chunk_size = b.len() / b_cells;
+            match (a_shape.len() == 1, b_shape.len() == 1) {
+                (true, true) => {
+                    for ((a, b), mut c) in a.into_iter().zip(b).zip(c) {
+                        *c = f(A::item(a), B::item(b), env)?;
+                    }
+                }
+                (true, false) => {
+                    for ((a, b), c) in a
+                        .into_iter()
+                        .zip(b.as_slice().chunks_exact(b_chunk_size))
+                        .zip(c.chunks_exact_mut(b_chunk_size))
+                    {
+                        bin_pervade_recursive_generic(
+                            &a_shape[1..],
+                            Some(A::item(a)),
+                            &b_shape[1..],
+                            b,
+                            c,
+                            env,
+                            f,
+                        )?;
+                    }
+                }
+                (false, true) => {
+                    for ((a, b), c) in a
+                        .as_slice()
+                        .chunks_exact(a_chunk_size)
+                        .zip(b.into_iter())
+                        .zip(c.chunks_exact_mut(a_chunk_size))
+                    {
+                        bin_pervade_recursive_generic(
+                            &a_shape[1..],
+                            a,
+                            &b_shape[1..],
+                            Some(B::item(b)),
+                            c,
+                            env,
+                            f,
+                        )?;
+                    }
+                }
+                (false, false) => {
+                    for ((a, b), c) in a
+                        .as_slice()
+                        .chunks_exact(a_chunk_size)
+                        .zip(b.as_slice().chunks_exact(b_chunk_size))
+                        .zip(c.chunks_exact_mut(cmp::max(a_chunk_size, b_chunk_size)))
+                    {
+                        bin_pervade_recursive_generic(
+                            &a_shape[1..],
+                            a,
+                            &b_shape[1..],
+                            b,
+                            c,
+                            env,
+                            f,
+                        )?;
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }

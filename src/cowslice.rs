@@ -117,7 +117,7 @@ impl<T: Clone> CowSlice<T> {
     pub fn into_slices(
         self,
         size: usize,
-    ) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator + Clone {
+    ) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator {
         let count = if size == 0 {
             0
         } else {

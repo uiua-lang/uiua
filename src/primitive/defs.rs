@@ -1972,7 +1972,7 @@ primitive!(
     ///   : | 0
     ///   : )
     ///   : F [1 2 3 4]
-    /// An there we go. Task failed successfully!
+    /// And there we go. Task failed successfully!
     ([1], Case, Misc, "case"),
     /// Throw an error if a condition is not met
     ///

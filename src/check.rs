@@ -335,6 +335,18 @@ impl<'a> VirtualEnv<'a> {
             Instr::Dynamic(f) => self.handle_sig(f.signature)?,
             Instr::Unpack { count, .. } => self.handle_args_outputs(1, *count)?,
             Instr::TouchStack { count, .. } => self.handle_args_outputs(*count, *count)?,
+            Instr::Prim(Astar, _) | Instr::ImplPrim(ImplPrimitive::AstarFirst, _) => {
+                let _start = self.pop()?;
+                let neighbors = self.pop_func()?.signature();
+                let heuristic = self.pop_func()?.signature();
+                let is_goal = self.pop_func()?.signature();
+                let args = neighbors
+                    .args
+                    .max(heuristic.args)
+                    .max(is_goal.args)
+                    .saturating_sub(1);
+                self.handle_args_outputs(args, 2)?;
+            }
             Instr::Prim(prim, _) => match prim {
                 Reduce => {
                     let sig = self.pop_func()?.signature();
@@ -537,18 +549,6 @@ impl<'a> VirtualEnv<'a> {
                 }
                 Dump => {
                     self.pop_func()?;
-                }
-                Astar => {
-                    let _start = self.pop()?;
-                    let neighbors = self.pop_func()?.signature();
-                    let heuristic = self.pop_func()?.signature();
-                    let is_goal = self.pop_func()?.signature();
-                    let args = neighbors
-                        .args
-                        .max(heuristic.args)
-                        .max(is_goal.args)
-                        .saturating_sub(1);
-                    self.handle_args_outputs(args, 2)?;
                 }
                 prim => {
                     let args = prim

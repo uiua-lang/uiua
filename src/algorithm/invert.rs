@@ -110,6 +110,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Json => Instr::ImplPrim(UnJson, span),
         Csv => Instr::ImplPrim(UnCsv, span),
         Xlsx => Instr::ImplPrim(UnXlsx, span),
+        Fft => Instr::ImplPrim(UnFft, span),
         _ => return None,
     })
 }
@@ -137,6 +138,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         UnJson => Instr::Prim(Json, span),
         UnCsv => Instr::Prim(Csv, span),
         UnXlsx => Instr::Prim(Xlsx, span),
+        UnFft => Instr::Prim(Fft, span),
         TraceN(n, inverse) => Instr::ImplPrim(TraceN(n, !inverse), span),
         _ => return None,
     })

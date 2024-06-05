@@ -753,8 +753,26 @@ pub fn fft(env: &mut Uiua) -> UiuaResult {
     Err(env.error("FFT is not available in this environment"))
 }
 
+#[cfg(not(feature = "fft"))]
+pub fn unfft(env: &mut Uiua) -> UiuaResult {
+    Err(env.error("FFT is not available in this environment"))
+}
+
 #[cfg(feature = "fft")]
 pub fn fft(env: &mut Uiua) -> UiuaResult {
+    fft_impl(env, rustfft::FftPlanner::plan_fft_forward)
+}
+
+#[cfg(feature = "fft")]
+pub fn unfft(env: &mut Uiua) -> UiuaResult {
+    fft_impl(env, rustfft::FftPlanner::plan_fft_inverse)
+}
+
+#[cfg(feature = "fft")]
+fn fft_impl(
+    env: &mut Uiua,
+    plan: fn(&mut rustfft::FftPlanner<f64>, usize) -> std::sync::Arc<dyn rustfft::Fft<f64>>,
+) -> UiuaResult {
     use std::mem::transmute;
 
     use rustfft::{num_complex::Complex64, FftPlanner};
@@ -780,7 +798,7 @@ pub fn fft(env: &mut Uiua) -> UiuaResult {
     }
     let mut planner = FftPlanner::new();
     for row in arr.data.as_mut_slice().chunks_exact_mut(list_row_len) {
-        let fft = planner.plan_fft_forward(row.len());
+        let fft = plan(&mut planner, row.len());
         let slice: &mut [Complex64] = unsafe { transmute::<&mut [Complex], &mut [Complex64]>(row) };
         fft.process(slice);
     }

@@ -177,6 +177,7 @@ impl fmt::Display for ImplPrimitive {
             UnJson => write!(f, "{Un}{Json}"),
             UnCsv => write!(f, "{Un}{Csv}"),
             UnXlsx => write!(f, "{Un}{Xlsx}"),
+            UnFft => write!(f, "{Un}{Fft}"),
             UndoTake => write!(f, "{Under}{Take}"),
             UndoDrop => write!(f, "{Under}{Drop}"),
             UndoSelect => write!(f, "{Under}{Select}"),
@@ -990,6 +991,7 @@ impl ImplPrimitive {
                 let val = Value::from_xlsx(&xlsx, env)?;
                 env.push(val);
             }
+            ImplPrimitive::UnFft => algorithm::unfft(env)?,
             ImplPrimitive::UndoInsert => {
                 let key = env.pop(1)?;
                 let _value = env.pop(2)?;

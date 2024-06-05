@@ -2419,6 +2419,15 @@ primitive!(
     ///   : ⌵ fft              # Run the FFT
     ///   : ↘⌊÷2⧻.             # Drop the top half
     ///   : ⬚0≡▽:1 ×0.5        # Render
+    ///
+    /// You can use [un][fft] to calculate the inverse FFT.
+    /// In this example, we generate a list of `1`s representing frequency bins and run `un``fft` on it to get time-domain data. We can listen to the result as audio.
+    /// ex: # Experimental!
+    ///   : [220 277 330 440] # Frequencies
+    ///   : ÷⧻⟜(
+    ///   :   ⬚0↙ &asr °⊚ # Put 1 in buffer for each frequency
+    ///   :   ◌°ℂ °fft    # Run inverse FFT and get the real part
+    ///   : )
     (1, Fft, Misc, "fft"),
     /// Find shortest paths in a graph
     ///
@@ -2623,6 +2632,7 @@ impl_primitive!(
     (1, UnJson),
     (1, UnCsv),
     (1, UnXlsx),
+    (1, UnFft),
     (2(0), MatchPattern),
     // Unders
     (1, UndoFix),

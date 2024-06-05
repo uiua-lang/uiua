@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.12
+  - Stack-source locality tutorial
   - Macro args doc comments
   - Fix pad cursor jumping with end-of-line comments
   - Array bar notation
@@ -19,7 +20,6 @@
 - Trace images/audio in pad
 - Blog posts -> RSS
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
-- Writing good code tutorial
 - Multimedia
   - Sound input
   - Webcam input

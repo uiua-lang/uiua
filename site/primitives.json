@@ -415,6 +415,13 @@
     "class": "Stack",
     "description": "Duplicate a function's last argument before calling it"
   },
+  "case": {
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Misc",
+    "description": "Call a pattern matching case",
+    "experimental": true
+  },
   "ceiling": {
     "glyph": "⌈",
     "args": 1,

@@ -88,28 +88,6 @@ where
     }
 }
 
-fn reshape_depths<A, B>(a: &mut Array<A>, b: &mut Array<B>, mut a_depth: usize, mut b_depth: usize)
-where
-    A: ArrayValue,
-    B: ArrayValue,
-{
-    a_depth = a_depth.min(a.rank());
-    b_depth = b_depth.min(b.rank());
-    match a_depth.cmp(&b_depth) {
-        Ordering::Equal => {}
-        Ordering::Less => {
-            for b_dim in b.shape[..b_depth - a_depth].iter().rev() {
-                a.reshape_scalar(Ok(*b_dim as isize));
-            }
-        }
-        Ordering::Greater => {
-            for a_dim in a.shape[..a_depth - b_depth].iter().rev() {
-                b.reshape_scalar(Ok(*a_dim as isize));
-            }
-        }
-    }
-}
-
 pub fn bin_pervade<A, B, C, F>(
     mut a: Array<A>,
     mut b: Array<B>,
@@ -200,8 +178,6 @@ where
             }
         }
     }
-    // Account for depths
-    reshape_depths(&mut a, &mut b, a_depth, b_depth);
     // Fill
     fill_array_shapes(&mut a, &mut b, a_depth, b_depth, env)?;
     // Pervade
@@ -302,8 +278,6 @@ where
             return Ok(());
         }
     }
-    // Account for depths
-    reshape_depths(&mut a, b, a_depth, b_depth);
     // Fill
     fill_array_shapes(&mut a, b, a_depth, b_depth, env)?;
     // Pervade

@@ -228,24 +228,35 @@ fn fill_value_shape<C>(
     target: &Shape,
     expand_fixed: bool,
     ctx: &C,
-) -> Result<(), C::Error>
+) -> Result<(), &'static str>
 where
     C: FillContext,
 {
+    #[derive(Debug)]
+    struct StaticFillError(&'static str);
+    impl FillError for StaticFillError {
+        fn is_fill(&self) -> bool {
+            true
+        }
+    }
+
     match val {
         Value::Num(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
         Value::Byte(arr) => {
             *val = op_bytes_retry_fill(
                 arr.clone(),
-                |mut arr| {
-                    fill_array_shape(&mut arr, target, expand_fixed, ctx)?;
+                |mut arr| -> Result<Value, StaticFillError> {
+                    fill_array_shape(&mut arr, target, expand_fixed, ctx)
+                        .map_err(StaticFillError)?;
                     Ok(arr.into())
                 },
-                |mut arr| {
-                    fill_array_shape(&mut arr, target, expand_fixed, ctx)?;
+                |mut arr| -> Result<Value, StaticFillError> {
+                    fill_array_shape(&mut arr, target, expand_fixed, ctx)
+                        .map_err(StaticFillError)?;
                     Ok(arr.into())
                 },
-            )?;
+            )
+            .map_err(|StaticFillError(e)| e)?;
             Ok(())
         }
         Value::Complex(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
@@ -259,7 +270,7 @@ fn fill_array_shape<T, C>(
     target: &Shape,
     expand_fixed: bool,
     ctx: &C,
-) -> Result<(), C::Error>
+) -> Result<(), &'static str>
 where
     T: ArrayValue,
     C: FillContext,
@@ -293,7 +304,7 @@ where
     }
     // Fill in missing rows
     let target_row_count = target.first().copied().unwrap_or(1);
-    let mut fill_error = None;
+    let mut res = Ok(());
     match arr.row_count().cmp(&target_row_count) {
         Ordering::Less => match ctx.scalar_fill() {
             Ok(fill) => {
@@ -301,10 +312,10 @@ where
                 target_shape[0] = target_row_count;
                 arr.fill_to_shape(&target_shape, fill);
             }
-            Err(e) => fill_error = Some(e),
+            Err(e) => res = Err(e),
         },
         Ordering::Greater => {}
-        Ordering::Equal => fill_error = Some(""),
+        Ordering::Equal => res = Err(""),
     }
     if shape_prefixes_match(&arr.shape, target) {
         return Ok(());
@@ -316,9 +327,9 @@ where
                 let mut target_shape = arr.shape.clone();
                 target_shape.insert(0, target_row_count);
                 arr.fill_to_shape(&target_shape, fill);
-                fill_error = None;
+                res = Ok(());
             }
-            Err(e) => fill_error = Some(e),
+            Err(e) => res = Err(e),
         },
         Ordering::Greater => {}
         Ordering::Equal => {
@@ -327,25 +338,17 @@ where
                 match ctx.scalar_fill() {
                     Ok(fill) => {
                         arr.fill_to_shape(&target_shape, fill);
-                        fill_error = None;
+                        res = Ok(());
                     }
-                    Err(e) => fill_error = Some(e),
+                    Err(e) => res = Err(e),
                 }
             }
         }
     }
-    if !shape_prefixes_match(&arr.shape, target) && fill_error.is_none() {
-        fill_error = Some("");
+    if !shape_prefixes_match(&arr.shape, target) && res.is_ok() {
+        res = Err("");
     }
-    if let Some(e) = fill_error {
-        return Err(C::fill_error(ctx.error(format!(
-            "Shapes {} and {} do not match{e}",
-            arr.shape(),
-            target,
-        ))));
-    }
-
-    Ok(())
+    res
 }
 
 pub(crate) fn fill_value_shapes<C>(
@@ -365,7 +368,11 @@ where
     {
         Ok(())
     } else if let Some(e) = a_err.or(b_err) {
-        Err(e)
+        Err(C::fill_error(ctx.error(format!(
+            "Shapes {} and {} do not match{e}",
+            a.shape(),
+            b.shape(),
+        ))))
     } else {
         Err(C::fill_error(ctx.error(format!(
             "Shapes {} and {} do not match",
@@ -391,18 +398,23 @@ where
     let b_depth = b_depth.min(b.rank());
     match (a_depth, b_depth) {
         (0, 0) => {
+            if shape_prefixes_match(&a.shape, &b.shape) {
+                return Ok(());
+            }
+            let a_shape = a.shape().clone();
+            let b_shape = b.shape().clone();
             let a_err = fill_array_shape(a, b.shape(), true, ctx).err();
-            let b_err = fill_array_shape(b, a.shape(), true, ctx).err();
+            let b_err = fill_array_shape(b, &a_shape, true, ctx).err();
             if shape_prefixes_match(&a.shape, &b.shape) {
                 Ok(())
+            } else if let Some(e) = a_err.or(b_err) {
+                Err(C::fill_error(ctx.error(format!(
+                    "Shapes {a_shape} and {b_shape} do not match{e}"
+                ))))
             } else {
-                Err(a_err.or(b_err).unwrap_or_else(|| {
-                    C::fill_error(ctx.error(format!(
-                        "Shapes {} and {} do not match",
-                        a.shape(),
-                        b.shape(),
-                    )))
-                }))
+                Err(C::fill_error(ctx.error(format!(
+                    "Shapes {a_shape} and {b_shape} do not match"
+                ))))
             }
         }
         (_, _) => {

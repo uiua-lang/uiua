@@ -1924,7 +1924,56 @@ primitive!(
     ///   : F "hi"
     ([2], Try, Misc, ("try", '⍣')),
     /// Call a pattern matching case
-    ([2], Case, Misc, "case"),
+    ///
+    /// [case] is calls its function and prevents errors from escaping a single [try].
+    /// Its primary use is in pattern matching.
+    /// Consider this function:
+    /// ex: F ← ⍣(
+    ///   :   ⊏3 °(⊂1)
+    ///   : | ⊏1 °(⊂2)
+    ///   : | 0
+    ///   : )
+    /// `F` attempts to [un]`(`[join]`1)` from the input array. Failing that, it attempts to [un]`(`[join]`2)`. In either `un``join` case, we subsequently [select] from the array. If both pattern matches fail, it returns `0` as a default.
+    /// ex: F ← ⍣(
+    ///   :   ⊏3 °(⊂1)
+    ///   : | ⊏1 °(⊂2)
+    ///   : | 0
+    ///   : )
+    ///   : F [1 2 3 4 5]
+    ///   : F [2 3 4 5]
+    ///   : F [5 2 3]
+    /// However, there is a problem with this code.
+    /// Pattern matching in a [try] works by throwing an error and passing the inputs to the next handler. However, if an error is thrown in a branch *after a successful pattern match*, the next branch will still be tried anyway.
+    /// This could lead to some unexpected behavior.
+    /// ex: F ← ⍣(
+    ///   :   ⊏3 °(⊂1)
+    ///   : | ⊏1 °(⊂2)
+    ///   : | 0
+    ///   : )
+    ///   : F [1 5 8]
+    /// In the example above, we successfully `un``(``join``1)`. However, the code after that pattern match fails. [select] errors because the index `3` is out of bounds of our array `[5 8]`. Instead of failing the whole function, the next branch is tried. It fails too, so we end up with `0`.
+    /// This could be especially problematic if the next branches have side-effects.
+    /// ex: F ← ⍣(
+    ///   :   ⊏3 &p"Matched 1!" °(⊂1)
+    ///   : | ⊏1 &p"Matched 2!" °(⊂2)
+    ///   : | 0  &p"Matched nothing!"
+    ///   : )
+    ///   : F [1 2 3 4]
+    /// This prints 2 messages, even though the whole function should have failed.
+    /// Code that doesn't fail when it should can lead to bugs that are hard to track down.
+    /// We want our errors to be loud!
+    ///
+    /// This is where [case] comes in. [case] has one special thing it does that makes it useful: errors returned from [case]'s first function can escape a single [try].
+    /// We can then arrange our [try] pattern matching with a [case] for each branch. The code in each branch that comes after the pattern match is wrapped in a [case].
+    /// ex! # Experimental!
+    ///   : F ← ⍣(
+    ///   :   case(⊏3) °(⊂1)
+    ///   : | case(⊏1) °(⊂2)
+    ///   : | 0
+    ///   : )
+    ///   : F [1 2 3 4]
+    /// An there we go. Task failed successfully!
+    ([1], Case, Misc, "case"),
     /// Throw an error if a condition is not met
     ///
     /// Expects a message and a test value.

@@ -38,7 +38,7 @@ pub enum UiuaError {
     /// A pattern match failed
     PatternMatch(Span, Box<Inputs>),
     /// An error that can return through multiple `try`s
-    Case(Box<Self>, usize),
+    Case(Box<Self>),
     /// The interpreter panicked
     Panic(String),
     /// Multiple errors
@@ -93,7 +93,7 @@ impl fmt::Display for UiuaError {
             UiuaError::Timeout(..) => write!(f, "Maximum execution time exceeded"),
             UiuaError::Fill(error) => error.fmt(f),
             UiuaError::PatternMatch(span, _) => write!(f, "{span}: Pattern match failed"),
-            UiuaError::Case(error, _) => write!(f, "{error}"),
+            UiuaError::Case(error) => write!(f, "{error}"),
             UiuaError::Panic(message) => message.fmt(f),
             UiuaError::Multi(errors) => {
                 for error in errors {
@@ -138,8 +138,28 @@ impl UiuaError {
             UiuaError::Traced { error, .. } => error.inner(),
             UiuaError::Fill(error) => error.inner(),
             UiuaError::WithInfo { error, .. } => error.inner(),
-            UiuaError::Case(error, _) => error.inner(),
+            UiuaError::Case(error) => error.inner(),
             error => error,
+        }
+    }
+    pub(crate) fn handle_case(self) -> Result<Self, Self> {
+        match self {
+            UiuaError::Case(error) => Err(*error),
+            UiuaError::Traced { error, trace } => Ok(UiuaError::Traced {
+                error: error.handle_case()?.into(),
+                trace,
+            }),
+            UiuaError::WithInfo {
+                error,
+                infos,
+                inputs,
+            } => Ok(UiuaError::WithInfo {
+                error: error.handle_case()?.into(),
+                infos,
+                inputs,
+            }),
+            UiuaError::Fill(error) => Ok(UiuaError::Fill(Box::new(error.handle_case()?))),
+            error => Ok(error),
         }
     }
     /// Get the message of the error
@@ -155,7 +175,7 @@ impl UiuaError {
             UiuaError::Throw(value, ..) => *value,
             UiuaError::Traced { error, .. }
             | UiuaError::WithInfo { error, .. }
-            | UiuaError::Case(error, _) => error.value(),
+            | UiuaError::Case(error) => error.value(),
             error => error.message().into(),
         }
     }
@@ -164,7 +184,7 @@ impl UiuaError {
         match self {
             UiuaError::Traced { error, .. }
             | UiuaError::WithInfo { error, .. }
-            | UiuaError::Case(error, _) => error.is_fill(),
+            | UiuaError::Case(error) => error.is_fill(),
             UiuaError::Fill(_) => true,
             _ => false,
         }
@@ -274,7 +294,7 @@ impl UiuaError {
             UiuaError::PatternMatch(span, inputs) => {
                 Report::new_multi(kind, inputs, [("Pattern match failed", span.clone())])
             }
-            UiuaError::Case(error, _) => error.report(),
+            UiuaError::Case(error) => error.report(),
             UiuaError::Panic(message) => Report::new(kind, message),
             UiuaError::Load(..) | UiuaError::Format(..) => Report::new(kind, self.to_string()),
             UiuaError::Multi(errors) => {

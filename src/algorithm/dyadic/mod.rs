@@ -1028,12 +1028,17 @@ impl<T: ArrayValue> Array<T> {
         //     true_size.extend(&self.shape[true_size.len()..]);
         // }
         let new_shape: Shape = (self.shape.iter())
-            .take(true_size.len())
-            .chain(&true_size)
-            .chain(self.shape.iter().skip(true_size.len()))
-            .copied()
+            .zip(&true_size)
+            .map(|(&s, &t)| s + (t % 2 == 0) as usize)
+            .chain(
+                true_size
+                    .iter()
+                    .chain(self.shape.iter().skip(true_size.len()))
+                    .copied(),
+            )
             .collect();
-        // println!("true_size: {true_size:?}");
+        println!("new_shape: {new_shape:?}");
+        println!("true_size: {true_size:?}");
         let mut dst = EcoVec::from_elem(fill.clone(), new_shape.iter().product());
         let dst_slice = dst.make_mut();
         let mut index = vec![0usize; true_size.len()];
@@ -1046,7 +1051,7 @@ impl<T: ArrayValue> Array<T> {
         let mut k = 0;
         let item_len: usize = self.shape.iter().skip(true_size.len()).product();
         'windows: loop {
-            // println!("index: {index:?}");
+            println!("index: {index:?}");
             // Reset tracking_curr and offset_curr
             for c in &mut tracking_curr {
                 *c = 0;
@@ -1064,7 +1069,7 @@ impl<T: ArrayValue> Array<T> {
                         break;
                     }
                 }
-                // println!("{offset_curr:?} ({out_of_bounds})");
+                println!("{offset_curr:?} ({out_of_bounds})");
                 // Set the element
                 if !out_of_bounds {
                     let mut src_index = 0;
@@ -1081,7 +1086,7 @@ impl<T: ArrayValue> Array<T> {
                 k += item_len;
                 // Go to the next item
                 for i in (0..tracking_curr.len()).rev() {
-                    if tracking_curr[i] == true_size[i] + adders[i] - 1 {
+                    if tracking_curr[i] == true_size[i] - 1 {
                         tracking_curr[i] = 0;
                         offset_curr[i] = index[i] as isize - true_size[i] as isize / 2;
                     } else {
@@ -1094,7 +1099,7 @@ impl<T: ArrayValue> Array<T> {
             }
             // Go to the next index
             for i in (0..index.len()).rev() {
-                if index[i] == self.shape[i] - 1 {
+                if index[i] == self.shape[i] - 1 + adders[i] {
                     index[i] = 0;
                 } else {
                     index[i] += 1;

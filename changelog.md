@@ -22,6 +22,10 @@ This version is not yet released. If you are reading this on the website, then t
 - Some optimizations
 - Array shapes now show on hover in the LSP
 
+## 0.11.1 - 2024-06-06
+### Interpreter
+- Some bug and crash fixes
+
 ## 0.11.0 - 2024-06-02
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.11.0).
 ### Language

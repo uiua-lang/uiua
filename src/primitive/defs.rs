@@ -2643,6 +2643,7 @@ impl_primitive!(
     (3, UndoKeep),
     (3, UndoRerank),
     (2, UndoReshape),
+    (2, UndoWhere),
     (3(2), UndoJoin),
     (1[1], UndoPartition1),
     (3, UndpPartition2),

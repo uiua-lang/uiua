@@ -526,6 +526,12 @@ pub(crate) fn under_instrs(
             (Dup, Classify, PushToUnder(1), Deduplicate),
             (PopUnder(1), Select),
         ),
+        // Where
+        &pat!(
+            Where,
+            (Dup, Shape, PushToUnder(1), Where),
+            (PopUnder(1), UndoWhere)
+        ),
         // System stuff
         &pat!(Now, (Now, PushToUnder(1)), (PopUnder(1), Now, Flip, Sub)),
         &maybe_val!(store1copy!(Sys(SysOp::FOpen), Sys(SysOp::Close))),

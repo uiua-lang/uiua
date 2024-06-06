@@ -1163,6 +1163,9 @@ impl Value {
     }
     /// `un` `where`
     pub fn unwhere(&self, env: &Uiua) -> UiuaResult<Self> {
+        self.unwhere_impl(&[], env)
+    }
+    fn unwhere_impl(&self, min_size: &[usize], env: &Uiua) -> UiuaResult<Self> {
         const INDICES_ERROR: &str = "Argument to ° un ⊚ where must be an array of naturals";
         Ok(match self.shape().dims() {
             [] | [_] => {
@@ -1171,7 +1174,10 @@ impl Value {
                     .iter()
                     .zip(indices.iter().skip(1))
                     .all(|(&a, &b)| a <= b);
-                let size = indices.iter().max().map(|&i| i + 1).unwrap_or(0);
+                let mut size = indices.iter().max().map(|&i| i + 1).unwrap_or(0);
+                if let Some(&min) = min_size.first() {
+                    size = size.max(min);
+                }
                 let mut data = eco_vec![0.0; size];
                 let data_slice = data.make_mut();
                 if is_sorted {
@@ -1208,12 +1214,15 @@ impl Value {
                 for _ in 0..*trailing {
                     init.push(0);
                 }
-                let shape = counts.keys().fold(init, |mut acc, row| {
+                let mut shape = counts.keys().fold(init, |mut acc, row| {
                     for (a, r) in acc.iter_mut().zip(row.iter()) {
                         *a = (*a).max(*r + 1);
                     }
                     acc
                 });
+                for (s, &m) in shape.iter_mut().zip(min_size) {
+                    *s = (*s).max(m);
+                }
                 if counts.values().all(|&n| n < 256) {
                     let data_len = validate_size::<u8>(shape.iter().copied(), env)?;
                     let mut data = eco_vec![0u8; data_len];
@@ -1246,6 +1255,9 @@ impl Value {
             }
             shape => return Err(env.error(format!("Cannot unwhere rank-{} array", shape.len()))),
         })
+    }
+    pub(crate) fn undo_where(&self, shape: &[usize], env: &Uiua) -> UiuaResult<Self> {
+        self.unwhere_impl(shape, env)
     }
 }
 

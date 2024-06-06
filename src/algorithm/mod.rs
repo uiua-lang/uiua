@@ -67,7 +67,7 @@ pub enum SizeError {
 impl fmt::Display for SizeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            SizeError::Overflow => write!(f, "Array size calculation overflowed"),
+            SizeError::Overflow => write!(f, "Resulting array would be too large"),
             SizeError::TooLarge(size) => write!(f, "Array of {size} elements would be too large"),
         }
     }

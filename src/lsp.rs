@@ -1070,7 +1070,8 @@ mod server {
             } else {
                 return Ok(None);
             };
-            match format_str(&doc.input, &FormatConfig::find().unwrap_or_default()) {
+            self.debug("Formatting document...").await;
+            let res = match format_str(&doc.input, &FormatConfig::find().unwrap_or_default()) {
                 Ok(formatted) => {
                     let range = Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));
                     Ok(Some(vec![TextEdit {
@@ -1083,7 +1084,9 @@ mod server {
                     error.message = e.to_string().into();
                     Err(error)
                 }
-            }
+            };
+            self.debug("...document formatted").await;
+            res
         }
 
         async fn on_type_formatting(

@@ -1037,8 +1037,8 @@ impl<T: ArrayValue> Array<T> {
                     .copied(),
             )
             .collect();
-        println!("new_shape: {new_shape:?}");
-        println!("true_size: {true_size:?}");
+        // println!("new_shape: {new_shape:?}");
+        // println!("true_size: {true_size:?}");
         let mut dst = EcoVec::from_elem(fill.clone(), new_shape.iter().product());
         let dst_slice = dst.make_mut();
         let mut index = vec![0usize; true_size.len()];
@@ -1051,7 +1051,7 @@ impl<T: ArrayValue> Array<T> {
         let mut k = 0;
         let item_len: usize = self.shape.iter().skip(true_size.len()).product();
         'windows: loop {
-            println!("index: {index:?}");
+            // println!("index: {index:?}");
             // Reset tracking_curr and offset_curr
             for c in &mut tracking_curr {
                 *c = 0;
@@ -1069,7 +1069,7 @@ impl<T: ArrayValue> Array<T> {
                         break;
                     }
                 }
-                println!("{offset_curr:?} ({out_of_bounds})");
+                // println!("{offset_curr:?} ({out_of_bounds})");
                 // Set the element
                 if !out_of_bounds {
                     let mut src_index = 0;

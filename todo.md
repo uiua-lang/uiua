@@ -2,6 +2,7 @@
 
 - 0.12
   - Fix signature alignment in LSP
+  - Rewrite .uasm format
   - Stack-source locality tutorial
   - Macro args doc comments
   - Fix pad cursor jumping with end-of-line comments

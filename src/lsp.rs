@@ -575,7 +575,7 @@ mod server {
     const TRIADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("triadic_modifier");
     const MODULE_STT: SemanticTokenType = SemanticTokenType::new("module");
 
-    const SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 13] = [
+    const UIUA_SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 13] = [
         SemanticTokenType::COMMENT,
         UIUA_NUMBER_STT,
         UIUA_STRING_STT,
@@ -589,6 +589,23 @@ mod server {
         DYADIC_MODIFIER_STT,
         TRIADIC_MODIFIER_STT,
         MODULE_STT,
+    ];
+
+    const NO_STT: SemanticTokenType = SemanticTokenType::new("none");
+    const GENERIC_SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 13] = [
+        SemanticTokenType::COMMENT,
+        SemanticTokenType::NUMBER,
+        SemanticTokenType::STRING,
+        NO_STT,
+        SemanticTokenType::PROPERTY,
+        SemanticTokenType::CLASS,
+        SemanticTokenType::METHOD,
+        NO_STT,
+        NO_STT,
+        SemanticTokenType::TYPE,
+        SemanticTokenType::KEYWORD,
+        NO_STT,
+        SemanticTokenType::NAMESPACE,
     ];
 
     #[tower_lsp::async_trait]
@@ -627,7 +644,10 @@ mod server {
                             SemanticTokensOptions {
                                 work_done_progress_options: WorkDoneProgressOptions::default(),
                                 legend: SemanticTokensLegend {
-                                    token_types: SEMANTIC_TOKEN_TYPES.to_vec(),
+                                    token_types: UIUA_SEMANTIC_TOKEN_TYPES
+                                        .into_iter()
+                                        .chain(GENERIC_SEMANTIC_TOKEN_TYPES)
+                                        .collect(),
                                     token_modifiers: vec![],
                                 },
                                 range: Some(false),
@@ -1174,6 +1194,22 @@ mod server {
             let Some(doc) = self.docs.get(&params.text_document.uri) else {
                 return Ok(None);
             };
+
+            let config = self
+                .client
+                .configuration(vec![ConfigurationItem {
+                    scope_uri: Some(params.text_document.uri.clone()),
+                    section: Some("uiua.semanticHighlighting.customTokenTypes".into()),
+                }])
+                .await
+                .unwrap_or_default();
+            let custom_highlighting = if let [serde_json::Value::Bool(enabled)] = config.as_slice()
+            {
+                *enabled
+            } else {
+                true
+            };
+
             let mut tokens = Vec::new();
             let mut prev_line = 0;
             let mut prev_char = 0;
@@ -1224,10 +1260,13 @@ mod server {
                     SpanKind::ArraySwizzle(_) => MONADIC_FUNCTION_STT,
                     _ => continue,
                 };
-                let token_type = SEMANTIC_TOKEN_TYPES
+                let mut token_type = UIUA_SEMANTIC_TOKEN_TYPES
                     .iter()
                     .position(|t| t == &token_type)
                     .unwrap() as u32;
+                if !custom_highlighting {
+                    token_type += UIUA_SEMANTIC_TOKEN_TYPES.len() as u32;
+                }
                 let span = &sp.span;
                 let start = uiua_loc_to_lsp(span.start);
                 let delta_start = if start.line == prev_line {

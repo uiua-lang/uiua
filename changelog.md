@@ -21,6 +21,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - Some optimizations
 - Array shapes now show on hover in the LSP
+- Allow Uiua-specific tokens types to be disabled in the LSP
 
 ## 0.11.1 - 2024-06-06
 ### Interpreter

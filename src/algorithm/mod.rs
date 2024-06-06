@@ -800,8 +800,10 @@ fn fft_impl(
     let scaling_factor = 1.0 / (list_row_len as f64).sqrt();
     for row in arr.data.as_mut_slice().chunks_exact_mut(list_row_len) {
         let fft = plan(&mut planner, row.len());
+        // SAFETY: Uiua's `Complex` and `num_complex::Complex64` have the same memory layout
         let slice: &mut [Complex64] = unsafe { transmute::<&mut [Complex], &mut [Complex64]>(row) };
         fft.process(slice);
+        row.rotate_left(1);
         for c in row {
             *c = *c * scaling_factor;
         }

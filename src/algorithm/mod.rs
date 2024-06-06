@@ -803,7 +803,6 @@ fn fft_impl(
         // SAFETY: Uiua's `Complex` and `num_complex::Complex64` have the same memory layout
         let slice: &mut [Complex64] = unsafe { transmute::<&mut [Complex], &mut [Complex64]>(row) };
         fft.process(slice);
-        row.rotate_left(1);
         for c in row {
             *c = *c * scaling_factor;
         }

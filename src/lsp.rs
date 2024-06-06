@@ -1727,7 +1727,11 @@ mod server {
                 let sig = decl.sig.to_string();
                 let mut position = uiua_loc_to_lsp(span.start);
                 if decl.inline {
-                    position.character += 1;
+                    if span.as_str(&doc.asm.inputs, |s| s.starts_with(['(', '〈', '|'])) {
+                        position.character += 1;
+                    } else if span.before_str(&doc.asm.inputs, |s| s.ends_with(' ')) {
+                        position.character = position.character.saturating_sub(1);
+                    }
                 }
                 hints.push(InlayHint {
                     text_edits: Some(vec![TextEdit {

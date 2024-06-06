@@ -1008,7 +1008,7 @@ impl<'i> Parser<'i> {
         None
     }
     fn try_func(&mut self) -> Option<Sp<Word>> {
-        Some(if let Some(start) = self.try_exact(OpenParen.into()) {
+        Some(if let Some(mut start) = self.try_exact(OpenParen.into()) {
             // Match initial function contents
             let first = self.func_contents();
             // Try to match switch function branches
@@ -1032,7 +1032,7 @@ impl<'i> Parser<'i> {
             if let Some(last) = branches.last_mut() {
                 last.span.merge_with(end.span.clone());
             }
-            let (first_sig, first_lines, first_span) = first;
+            let (first_sig, first_lines, first_func_span) = first;
             let outer_span = start.clone().merge(end.span);
             if branches.is_empty() {
                 let id = FunctionId::Anonymous(outer_span.clone());
@@ -1043,10 +1043,19 @@ impl<'i> Parser<'i> {
                     closed: end.value,
                 }))
             } else {
-                let first_span = if let Some(span) = first_span {
-                    start.merge(span)
-                } else {
+                let first_span = if first_lines.len() > 1 {
+                    let code_words = first_lines
+                        .iter()
+                        .flatten()
+                        .filter(|word| word.value.is_code());
+                    if let Some(first_word) = code_words.clone().next() {
+                        let last_word = code_words.last().unwrap();
+                        start.start = first_word.span.start;
+                        start.end = last_word.span.end;
+                    }
                     start
+                } else {
+                    first_func_span.unwrap_or(start)
                 };
                 let first_id = FunctionId::Anonymous(first_span.clone());
                 let first = first_span.sp(Func {

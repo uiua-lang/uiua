@@ -346,6 +346,10 @@ impl CodeSpan {
     pub fn as_str<T>(&self, inputs: &Inputs, f: impl FnOnce(&str) -> T) -> T {
         inputs.get_with(&self.src, |input| f(&input[self.byte_range()]))
     }
+    /// Get the text before the span from the inputs
+    pub fn before_str<T>(&self, inputs: &Inputs, f: impl FnOnce(&str) -> T) -> T {
+        inputs.get_with(&self.src, |input| f(&input[..self.start.byte_pos as usize]))
+    }
     /// Get the text of the span from the inputs
     pub fn try_as_str<T>(&self, inputs: &Inputs, f: impl FnOnce(&str) -> T) -> Option<T> {
         inputs.try_get_with(&self.src, |input| f(&input[self.byte_range()]))

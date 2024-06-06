@@ -368,7 +368,7 @@
   "astar": {
     "outputs": 2,
     "modifier_args": 3,
-    "class": "OtherModifier",
+    "class": "Misc",
     "description": "Find shortest paths in a graph",
     "experimental": true
   },
@@ -569,6 +569,13 @@
     "outputs": 1,
     "class": "MonadicArray",
     "description": "Get the indices into an array if it were sorted descending"
+  },
+  "fft": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Run the Fast Fourier Transform on an array",
+    "experimental": true
   },
   "fill": {
     "glyph": "⬚",

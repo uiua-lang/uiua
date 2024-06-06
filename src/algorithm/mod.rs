@@ -797,10 +797,14 @@ fn fft_impl(
         return Ok(());
     }
     let mut planner = FftPlanner::new();
+    let scaling_factor = 1.0 / (list_row_len as f64).sqrt();
     for row in arr.data.as_mut_slice().chunks_exact_mut(list_row_len) {
         let fft = plan(&mut planner, row.len());
         let slice: &mut [Complex64] = unsafe { transmute::<&mut [Complex], &mut [Complex64]>(row) };
         fft.process(slice);
+        for c in row {
+            *c = *c * scaling_factor;
+        }
     }
     env.push(arr);
     Ok(())

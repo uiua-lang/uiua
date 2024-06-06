@@ -73,22 +73,24 @@ impl GridFmt for f64 {
             return vec![vec!['W']];
         } else if positive.fract() == 0.0 || positive.is_nan() {
             format!("{minus}{positive}")
-        } else if let Some((num, denom)) =
+        } else if let Some((num, denom, approx)) =
             [1u8, 2, 3, 4, 5, 6, 8, 9, 12].iter().find_map(|&denom| {
                 let num = (positive * denom as f64) / TAU;
-                if (num - num.round()).abs() <= f64::EPSILON {
-                    Some((num.round() as u8, denom))
+                let rounded = num.round();
+                if (num - rounded).abs() <= f64::EPSILON && rounded != 0.0 {
+                    Some((num.round() as u8, denom, num != rounded))
                 } else {
                     None
                 }
             })
         {
+            let prefix = if approx { "~" } else { "" };
             if denom == 1 {
-                format!("{minus}{num}τ")
+                format!("{prefix}{minus}{num}τ")
             } else if num == 1 {
-                format!("{minus}τ/{denom}")
+                format!("{prefix}{minus}τ/{denom}")
             } else {
-                format!("{minus}{num}τ/{denom}")
+                format!("{prefix}{minus}{num}τ/{denom}")
             }
         } else {
             let mut pos_formatted = positive.to_string();

@@ -59,17 +59,11 @@ fn max_shape(a: &[usize], b: &[usize]) -> Shape {
 }
 
 #[derive(Debug)]
-pub enum SizeError {
-    Overflow,
-    TooLarge(usize),
-}
+pub struct SizeError(f64);
 
 impl fmt::Display for SizeError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            SizeError::Overflow => write!(f, "Resulting array would be too large"),
-            SizeError::TooLarge(size) => write!(f, "Array of {size} elements would be too large"),
-        }
+        write!(f, "Array of {} elements would be too large", self.0)
     }
 }
 
@@ -83,31 +77,26 @@ pub fn validate_size<T>(
 }
 
 pub(crate) fn validate_size_impl(
-    size: usize,
-    sizes: impl IntoIterator<Item = usize> + Clone,
+    elem_size: usize,
+    sizes: impl IntoIterator<Item = usize>,
 ) -> Result<usize, SizeError> {
-    if sizes.clone().into_iter().any(|s| s == 0) {
-        return Ok(0);
+    let mut elements = 1.0;
+    for size in sizes {
+        if size == 0 {
+            return Ok(0);
+        }
+        elements *= size as f64;
     }
-    let (elements, mut overflowed) = sizes.into_iter().fold((1usize, false), |(acc, ovf), s| {
-        let (new_acc, new_ovf) = acc.overflowing_mul(s);
-        (new_acc, ovf || new_ovf)
-    });
-    let elem_size = size;
-    let (size, ovf) = elements.overflowing_mul(elem_size);
-    overflowed |= ovf;
-    if overflowed {
-        return Err(SizeError::Overflow);
-    }
+    let size = elements * elem_size as f64;
     let max_mega = if cfg!(target_arch = "wasm32") {
         256
     } else {
         4096
     };
-    if size > max_mega * 1024usize.pow(2) {
-        return Err(SizeError::TooLarge(elements));
+    if size > (max_mega * 1024usize.pow(2)) as f64 {
+        return Err(SizeError(elements));
     }
-    Ok(elements)
+    Ok(elements as usize)
 }
 
 pub trait ErrorContext {

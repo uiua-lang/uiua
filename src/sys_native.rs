@@ -952,7 +952,7 @@ impl SysBackend for NativeSys {
         Ok(s)
     }
     #[cfg(feature = "webcam")]
-    fn webcam_capture(&self, index: usize) -> Result<image::RgbImage, String> {
+    fn webcam_capture(&self, index: usize) -> Result<crate::WebcamImage, String> {
         let cam_channels = &NATIVE_SYS.cam_channels;
         if !cam_channels.contains_key(&index) {
             let ch = WebcamChannel::new(index)?;

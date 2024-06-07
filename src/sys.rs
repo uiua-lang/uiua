@@ -752,6 +752,11 @@ impl fmt::Display for HandleKind {
     }
 }
 
+#[cfg(feature = "image")]
+pub(crate) type WebcamImage = image::RgbImage;
+#[cfg(not(feature = "image"))]
+pub(crate) type WebcamImage = ();
+
 /// Trait for defining a system backend
 #[allow(unused_variables)]
 pub trait SysBackend: Any + Send + Sync + 'static {
@@ -991,7 +996,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("Making HTTPS requests is not supported in this environment".into())
     }
     /// Capture an image from the webcam
-    fn webcam_capture(&self, index: usize) -> Result<image::RgbImage, String> {
+    fn webcam_capture(&self, index: usize) -> Result<WebcamImage, String> {
         Err("Capturing from webcam is not supported in this environment".into())
     }
     /// Call a foreign function interface

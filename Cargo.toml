@@ -98,7 +98,6 @@ batteries = [
   "json5",
   "pathfinding",
   "fft",
-  "webcam",
 ]
 binary = [
   "ctrlc",
@@ -124,6 +123,7 @@ default = [
   "native_sys",
   "raw_mode",
   "clipboard",
+  "webcam",
   "batteries",
 ]
 ffi = ["libffi", "libloading"]

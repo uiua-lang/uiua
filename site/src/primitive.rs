@@ -272,6 +272,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Join], Required, "Pattern match", "°(⊂1_2) [1 2 3 4]") }
             { inverse_row([Keep], No, "", "°▽ [1 1 1 2 1 1 3 3]") }
             { inverse_row([Select], No, "", "°⊏ \"hello\"") }
+            { inverse_row([Pick], No, "", "°⊡ [1_2_3 4_5_6]") }
             { inverse_row([Scan], No, view!("Only works with "<Prims prims=[Add, Mul, Eq, Ne]/>), "°\\+ [1 3 6 10 15]") }
             { inverse_row([Reduce, Mul], No, "Prime factors", "°/× 60") }
             { inverse_row([Repeat], No, "Inner function must be invertible", "°⍥(×2)5 1024") }
@@ -335,8 +336,8 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Drop], Optional, "", "⍜↘(×10) 2 [1 2 3 4 5]") }
             { inverse_row([Keep], Optional, "", "⍜▽(×10) ◿2. [1 2 3 4 5]") }
             { inverse_row([Rotate], Optional, "", "⍜(↻2|⊂π) [1 2 3 4 5]") }
-            { inverse_row([Pick], Optional, "Duplicate indices must have the same value", "⍜(⊡1_1|×10) [1_2_3 4_5_6]") }
             { inverse_row([Select], Optional, "Duplicate indices must have the same value", "⍜(⊏1_4|×10) [1 2 3 4 5]") }
+            { inverse_row([Pick], Optional, "Duplicate indices must have the same value", "⍜(⊡1_1|×10) [1_2_3 4_5_6]") }
             { inverse_row([Join], No, view!(<Prim prim=Len/>" may not change"), "⍜⊂\\+ 1_2_3 4_5_6") }
             { inverse_row([Dip], No, "Inner function must be invertible", "⍜⊙⊂× 10 2 3") }
             { inverse_row([Both], No, "Inner function must be invertible", "⍜∩⊡: 1 [1 2 3] 2 [4 5 6]") }

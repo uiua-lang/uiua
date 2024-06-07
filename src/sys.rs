@@ -1827,7 +1827,10 @@ impl SysOp {
                 let image = (env.rt.backend)
                     .webcam_capture(index)
                     .map_err(|e| env.error(e))?;
+                #[cfg(feature = "image")]
                 env.push(rgb_image_to_array(image));
+                #[cfg(not(feature = "image"))]
+                return Err(env.error("Webcam capture is not supported in this environment"));
             }
             SysOp::Ffi => {
                 let sig_def = env.pop(1)?;

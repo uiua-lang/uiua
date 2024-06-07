@@ -22,6 +22,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the experimental [`astar`](https://uiua.org/docs/astar) modifier, which performs the A* pathfinding algorithm
 - Adjacent [`trace ⸮`](https://uiua.org/docs/trace)s now function as a single [`trace ⸮`](https://uiua.org/docs/trace) of more values
 - N+1 adjacent [`stack ?`](https://uiua.org/docs/stack)s now format to N [`trace ⸮`](https://uiua.org/docs/trace)s
+- Add the [`&camcap`](https://uiua.org/docs/&camcap) system function, which captures a frame from a camera
 ### Interpreter
 - Some optimizations
 - Array shapes now show on hover in the LSP

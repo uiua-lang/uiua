@@ -30,7 +30,8 @@ use crate::{
     lex::Span,
     value::Value,
     Assembly, BindingKind, CodeSpan, Compiler, Complex, Ident, Inputs, IntoSysBackend, LocalName,
-    Primitive, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaResult, VERSION,
+    Primitive, SafeSys, SysBackend, SysOp, TraceFrame, UiuaError, UiuaErrorKind, UiuaResult,
+    VERSION,
 };
 
 /// The Uiua interpreter
@@ -392,28 +393,19 @@ code:
         }
     }
     fn trace_error(&self, mut error: UiuaError, frame: StackFrame) -> UiuaError {
-        let mut frames = Vec::new();
         for (span, prim) in &frame.spans {
             if let Some(prim) = prim {
-                frames.push(TraceFrame {
+                error.trace.push(TraceFrame {
                     id: FunctionId::Primitive(*prim),
                     span: self.asm.spans[*span].clone(),
                 });
             }
         }
-        frames.push(TraceFrame {
+        error.trace.push(TraceFrame {
             id: frame.id.clone(),
             span: self.asm.spans[frame.call_span].clone(),
         });
-        if let UiuaError::Traced { trace, .. } = &mut error {
-            trace.extend(frames);
-            error
-        } else {
-            UiuaError::Traced {
-                error: error.into(),
-                trace: frames,
-            }
-        }
+        error
     }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
         let slice = frame.slice;
@@ -694,10 +686,9 @@ code:
     pub fn respect_execution_limit(&self) -> UiuaResult {
         if let Some(limit) = self.rt.execution_limit {
             if instant::now() - self.rt.execution_start > limit {
-                return Err(UiuaError::Timeout(
-                    self.span(),
-                    self.inputs().clone().into(),
-                ));
+                return Err(
+                    UiuaErrorKind::Timeout(self.span(), self.inputs().clone().into()).into(),
+                );
             }
         }
         Ok(())
@@ -861,14 +852,15 @@ code:
     }
     /// Construct an error with the current span
     pub fn error(&self, message: impl ToString) -> UiuaError {
-        UiuaError::Run(
+        UiuaErrorKind::Run(
             self.span().clone().sp(message.to_string()),
             self.inputs().clone().into(),
         )
+        .into()
     }
     /// Construct an error with a custom span
     pub fn error_with_span(&self, span: Span, message: impl ToString) -> UiuaError {
-        UiuaError::Run(span.sp(message.to_string()), self.inputs().clone().into())
+        UiuaErrorKind::Run(span.sp(message.to_string()), self.inputs().clone().into()).into()
     }
     pub(crate) fn error_maybe_span(
         &self,
@@ -882,7 +874,11 @@ code:
         }
     }
     pub(crate) fn pattern_match_error(&self) -> UiuaError {
-        UiuaError::PatternMatch(self.span(), self.inputs().clone().into())
+        UiuaErrorKind::Run(
+            self.span().sp("Pattern match failed".into()),
+            self.inputs().clone().into(),
+        )
+        .into()
     }
     /// Pop a value from the stack
     pub fn pop(&mut self, arg: impl StackArg) -> UiuaResult<Value> {

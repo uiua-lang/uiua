@@ -1773,7 +1773,7 @@ macro_rules! value_bin_impl {
                         let mut val: Value = if val_retry!($ip, env) {
                             let mut b_clone = b.clone();
                             if let Err(e) = bin_pervade_mut(a.clone(), &mut b_clone, a_depth, b_depth, env, $name::$f2) {
-                                if e.is_fill() {
+                                if e.is_fill {
                                     $(
                                         let a = a.convert();
                                         let mut b = b.convert();
@@ -1801,7 +1801,7 @@ macro_rules! value_bin_impl {
                             match res {
                                 Ok(arr) => arr.into(),
                                 #[allow(unreachable_code, unused_variables)]
-                                Err(e) if e.is_fill() => {
+                                Err(e) if e.is_fill => {
                                     $(return bin_pervade(a.convert::<f64>(), b.convert::<f64>(), a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$retry)).map(Into::into);)?
                                     return Err(e);
                                 }

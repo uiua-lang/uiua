@@ -35,7 +35,7 @@ use crate::{
     lex::AsciiToken,
     sys::*,
     value::*,
-    FunctionId, Signature, Uiua, UiuaError, UiuaResult,
+    FunctionId, Signature, Uiua, UiuaErrorKind, UiuaResult,
 };
 
 /// Categories of primitives
@@ -672,16 +672,23 @@ impl Primitive {
                 })?;
             }
             Primitive::Try => algorithm::try_(env)?,
-            Primitive::Case => algorithm::case(env)?,
+            Primitive::Case => {
+                let f = env.pop_function()?;
+                env.call(f).map_err(|mut e| {
+                    e.is_case = true;
+                    e
+                })?;
+            }
             Primitive::Assert => {
                 let msg = env.pop(1)?;
                 let cond = env.pop(2)?;
                 if !cond.as_nat(env, "").is_ok_and(|n| n == 1) {
-                    return Err(UiuaError::Throw(
+                    return Err(UiuaErrorKind::Throw(
                         msg.into(),
                         env.span().clone(),
-                        env.inputs().clone().into(),
-                    ));
+                        env.asm.inputs.clone().into(),
+                    )
+                    .into());
                 }
             }
             Primitive::Rand => env.push(random()),
@@ -1590,7 +1597,8 @@ mod tests {
                         continue;
                     }
                     println!("{prim} example:\n{}", ex.input);
-                    match Uiua::with_safe_sys().run_str(&ex.input) {
+                    let mut env = Uiua::with_safe_sys();
+                    match env.run_str(&ex.input) {
                         Ok(mut comp) => {
                             if let Some(diag) = comp.take_diagnostics().into_iter().next() {
                                 if !ex.should_error {

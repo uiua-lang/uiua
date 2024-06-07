@@ -2,7 +2,7 @@
 
 use std::{cmp::Ordering, slice};
 
-use crate::format::format_words;
+use crate::{format::format_words, UiuaErrorKind};
 
 use super::*;
 
@@ -256,7 +256,7 @@ impl Compiler {
                                     signature is {}.",
                                     Signature::new(2, 1)
                                 );
-                                e.with_info([(message, None)], self.asm.inputs.clone())
+                                e.with_info([(message, None)])
                             })?;
                             sig_data.extend_from_slice(&[sig.args as u8, sig.outputs as u8]);
                         }
@@ -1148,9 +1148,9 @@ impl Compiler {
             &mut self.asm.inputs,
         );
         if !errors.is_empty() {
-            return Err(
-                UiuaError::Parse(errors, self.asm.inputs.clone().into()).trace_macro(span.clone())
-            );
+            return Err(UiuaErrorKind::Parse(errors, self.asm.inputs.clone().into())
+                .error()
+                .trace_macro(span.clone()));
         }
 
         // Compile the generated items

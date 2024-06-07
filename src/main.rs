@@ -21,8 +21,8 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lsp::BindingDocsKind,
-    Assembly, Compiler, NativeSys, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaResult,
-    Value,
+    Assembly, Compiler, NativeSys, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaErrorKind,
+    UiuaResult, Value,
 };
 
 fn main() {
@@ -468,7 +468,8 @@ fn watch(
             let formatted = if let (Some(config), true) = (&config, format) {
                 format_file(&path, config).map(|f| f.output)
             } else {
-                fs::read_to_string(&path).map_err(|e| UiuaError::Load(path.clone(), e.into()))
+                fs::read_to_string(&path)
+                    .map_err(|e| UiuaErrorKind::Load(path.clone(), e.into()).into())
             };
             match formatted {
                 Ok(input) => {
@@ -512,12 +513,15 @@ fn watch(
                     );
                     return Ok(());
                 }
-                Err(UiuaError::Format(..)) => sleep(Duration::from_millis((i as u64 + 1) * 10)),
                 Err(e) => {
-                    clear_watching();
-                    println!("{}", e.report());
-                    print_watching();
-                    return Ok(());
+                    if let UiuaErrorKind::Format(..) = e.kind {
+                        sleep(Duration::from_millis((i as u64 + 1) * 10))
+                    } else {
+                        clear_watching();
+                        println!("{}", e.report());
+                        print_watching();
+                        return Ok(());
+                    }
                 }
             }
         }
@@ -843,7 +847,7 @@ fn print_stack(stack: &[Value], color: bool) {
 
 fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, config: FormatConfig) {
     let mut line_reader = DefaultEditor::new().expect("Failed to read from Stdin");
-    let mut repl = || -> Result<bool, UiuaError> {
+    let mut repl = || -> UiuaResult<bool> {
         let mut code = match line_reader.readline("» ") {
             Ok(code) => code,
             Err(ReadlineError::Eof | ReadlineError::Interrupted) => return Ok(false),

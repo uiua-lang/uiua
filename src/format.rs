@@ -19,7 +19,7 @@ use crate::{
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{parse, split_words, trim_spaces, unsplit_words},
     Compiler, FunctionId, Ident, InputSrc, Inputs, PreEvalMode, RunMode, SafeSys, Signature, Uiua,
-    UiuaError, UiuaResult, Value,
+    UiuaErrorKind, UiuaResult, Value,
 };
 
 trait ConfigValue: Sized {
@@ -343,6 +343,8 @@ pub struct FormatOutput {
     pub output: String,
     /// A map from the original code spans to the formatted code spans
     pub glyph_map: Vec<(CodeSpan, (Loc, Loc))>,
+    /// The inputs that were formatted
+    pub inputs: Inputs,
 }
 
 impl FormatOutput {
@@ -399,7 +401,7 @@ fn format_impl(input: &str, src: InputSrc, config: &FormatConfig) -> UiuaResult<
     let mut inputs = Inputs::default();
     let (items, errors, _) = parse(input, src.clone(), &mut inputs);
     if errors.is_empty() {
-        Ok(Formatter {
+        let (output, glyph_map) = Formatter {
             src,
             config,
             inputs: &inputs,
@@ -409,9 +411,14 @@ fn format_impl(input: &str, src: InputSrc, config: &FormatConfig) -> UiuaResult<
             prev_import_function: None,
             output_comments: None,
         }
-        .format_top_items(&items))
+        .format_top_items(&items);
+        Ok(FormatOutput {
+            output,
+            glyph_map,
+            inputs,
+        })
     } else {
-        Err(UiuaError::Parse(errors, inputs.into()))
+        Err(UiuaErrorKind::Parse(errors, inputs.into()).into())
     }
 }
 
@@ -421,7 +428,7 @@ fn format_impl(input: &str, src: InputSrc, config: &FormatConfig) -> UiuaResult<
 pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult<FormatOutput> {
     let path = path.as_ref();
     let input =
-        fs::read_to_string(path).map_err(|e| UiuaError::Load(path.to_path_buf(), e.into()))?;
+        fs::read_to_string(path).map_err(|e| UiuaErrorKind::Load(path.to_path_buf(), e.into()))?;
     let formatted = format(&input, path, config)?;
     if formatted.output == input {
         return Ok(formatted);
@@ -430,7 +437,7 @@ pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult
     let should_write = !is_no_format_set;
     if should_write {
         fs::write(path, &formatted.output)
-            .map_err(|e| UiuaError::Format(path.to_path_buf(), e.into()))?;
+            .map_err(|e| UiuaErrorKind::Format(path.to_path_buf(), e.into()))?;
     }
     Ok(formatted)
 }
@@ -470,14 +477,16 @@ struct Formatter<'a> {
     config: &'a FormatConfig,
     inputs: &'a Inputs,
     output: String,
-    glyph_map: Vec<(CodeSpan, (Loc, Loc))>,
+    glyph_map: GlyphMap,
     end_of_line_comments: Vec<(usize, String)>,
     prev_import_function: Option<Ident>,
     output_comments: Option<HashMap<usize, Vec<Vec<Value>>>>,
 }
 
+type GlyphMap = Vec<(CodeSpan, (Loc, Loc))>;
+
 impl<'a> Formatter<'a> {
-    fn format_top_items(mut self, items: &[Item]) -> FormatOutput {
+    fn format_top_items(mut self, items: &[Item]) -> (String, GlyphMap) {
         self.format_items(items);
         let mut output = self.output;
         while output.ends_with('\n') {
@@ -486,10 +495,7 @@ impl<'a> Formatter<'a> {
         if self.config.trailing_newline && !output.trim().is_empty() {
             output.push('\n');
         }
-        FormatOutput {
-            output,
-            glyph_map: self.glyph_map,
-        }
+        (output, self.glyph_map)
     }
     fn format_items(&mut self, items: &[Item]) {
         for item in items {

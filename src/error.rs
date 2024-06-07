@@ -1,4 +1,4 @@
-use std::{convert::Infallible, error::Error, fmt, io, path::PathBuf, sync::Arc};
+use std::{convert::Infallible, error::Error, fmt, io, mem::take, path::PathBuf, sync::Arc};
 
 use colored::*;
 
@@ -10,10 +10,27 @@ use crate::{
     CodeSpan, InputSrc, Inputs,
 };
 
-/// An error produced when running a Uiua program
+/// An error produced when running/compiling/formatting a Uiua program
 #[derive(Debug, Clone)]
 #[must_use]
-pub enum UiuaError {
+pub struct UiuaError {
+    /// The kind of error
+    pub kind: UiuaErrorKind,
+    /// A stack trace of the error
+    pub trace: Vec<TraceFrame>,
+    /// Whether the error is fill-related
+    pub is_fill: bool,
+    /// Whether the error can escape a single `try`
+    pub is_case: bool,
+    /// Bundled errors
+    pub multi: Vec<Self>,
+    /// Additional info about the error
+    pub infos: Vec<(String, Option<Span>)>,
+}
+
+/// The kind of an error produced when running/compiling/formatting a Uiua program
+#[derive(Debug, Clone)]
+pub enum UiuaErrorKind {
     /// An error occurred while loading a file
     Load(PathBuf, Arc<io::Error>),
     /// An error occurred while formatting a file
@@ -22,36 +39,32 @@ pub enum UiuaError {
     Parse(Vec<Sp<ParseError>>, Box<Inputs>),
     /// An error occurred while compiling or executing a program
     Run(Sp<String, Span>, Box<Inputs>),
-    /// An error with a trace attached
-    Traced {
-        /// The error itself
-        error: Box<Self>,
-        /// The stack trace
-        trace: Vec<TraceFrame>,
-    },
     /// An error thrown by `assert`
     Throw(Box<Value>, Span, Box<Inputs>),
     /// Maximum execution time exceeded
     Timeout(Span, Box<Inputs>),
-    /// A wrapper marking this error as being fill-related
-    Fill(Box<Self>),
-    /// A pattern match failed
-    PatternMatch(Span, Box<Inputs>),
-    /// An error that can return through multiple `try`s
-    Case(Box<Self>),
-    /// The interpreter panicked
-    Panic(String),
-    /// Multiple errors
-    Multi(Vec<Self>),
-    /// An error with attached info
-    WithInfo {
-        /// The error itself
-        error: Box<Self>,
-        /// The info
-        infos: Vec<(String, Option<Span>)>,
-        /// The inputs of the program
-        inputs: Box<Inputs>,
-    },
+    /// The compiler panicked
+    CompilerPanic(String),
+}
+
+impl UiuaErrorKind {
+    /// Turn the error kind into an error
+    pub fn error(self) -> UiuaError {
+        self.into()
+    }
+}
+
+impl From<UiuaErrorKind> for UiuaError {
+    fn from(kind: UiuaErrorKind) -> Self {
+        Self {
+            kind,
+            trace: Vec::new(),
+            is_fill: false,
+            is_case: false,
+            multi: Vec::new(),
+            infos: Vec::new(),
+        }
+    }
 }
 
 /// Uiua's result type
@@ -68,130 +81,59 @@ pub struct TraceFrame {
 
 impl fmt::Display for UiuaError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            UiuaError::Load(path, e) => {
+        match &self.kind {
+            UiuaErrorKind::Load(path, e) => {
                 write!(f, "failed to load {}: {e}", path.to_string_lossy())
             }
-            UiuaError::Format(path, e) => {
+            UiuaErrorKind::Format(path, e) => {
                 write!(f, "failed to format {}: {e}", path.to_string_lossy())
             }
-            UiuaError::Parse(errors, _) => {
+            UiuaErrorKind::Parse(errors, _) => {
                 for error in errors {
                     writeln!(f, "{error}")?;
                 }
                 Ok(())
             }
-            UiuaError::Run(error, _) => write!(f, "{error}"),
-            UiuaError::Traced { error, trace } => {
-                write!(f, "{error}")?;
-                for line in format_trace(trace) {
-                    writeln!(f, "{line}")?;
-                }
-                Ok(())
-            }
-            UiuaError::Throw(value, span, _) => write!(f, "{span}: {value}"),
-            UiuaError::Timeout(..) => write!(f, "Maximum execution time exceeded"),
-            UiuaError::Fill(error) => error.fmt(f),
-            UiuaError::PatternMatch(span, _) => write!(f, "{span}: Pattern match failed"),
-            UiuaError::Case(error) => write!(f, "{error}"),
-            UiuaError::Panic(message) => message.fmt(f),
-            UiuaError::Multi(errors) => {
-                for error in errors {
-                    writeln!(f, "{error}")?;
-                }
-                Ok(())
-            }
-            UiuaError::WithInfo { error, .. } => write!(f, "{error}"),
+            UiuaErrorKind::Run(error, _) => write!(f, "{error}"),
+            UiuaErrorKind::Throw(value, span, _) => write!(f, "{span}: {value}"),
+            UiuaErrorKind::Timeout(..) => write!(f, "Maximum execution time exceeded"),
+            UiuaErrorKind::CompilerPanic(message) => message.fmt(f),
         }
     }
 }
 
 impl UiuaError {
     /// Attach some info to the error
-    pub fn with_info(
-        self,
-        info: impl IntoIterator<Item = (String, Option<Span>)>,
-        inputs: Inputs,
-    ) -> Self {
-        match self {
-            UiuaError::WithInfo {
-                error,
-                mut infos,
-                inputs,
-            } => {
-                infos.extend(info);
-                UiuaError::WithInfo {
-                    error,
-                    infos,
-                    inputs,
-                }
-            }
-            error => UiuaError::WithInfo {
-                error: Box::new(error),
-                infos: info.into_iter().collect(),
-                inputs: Box::new(inputs),
-            },
-        }
-    }
-    pub(crate) fn inner(&self) -> &Self {
-        match self {
-            UiuaError::Traced { error, .. } => error.inner(),
-            UiuaError::Fill(error) => error.inner(),
-            UiuaError::WithInfo { error, .. } => error.inner(),
-            UiuaError::Case(error) => error.inner(),
-            error => error,
-        }
-    }
-    pub(crate) fn handle_case(self) -> Result<Self, Self> {
-        match self {
-            UiuaError::Case(error) => Err(*error),
-            UiuaError::Traced { error, trace } => Ok(UiuaError::Traced {
-                error: error.handle_case()?.into(),
-                trace,
-            }),
-            UiuaError::WithInfo {
-                error,
-                infos,
-                inputs,
-            } => Ok(UiuaError::WithInfo {
-                error: error.handle_case()?.into(),
-                infos,
-                inputs,
-            }),
-            UiuaError::Fill(error) => Ok(UiuaError::Fill(Box::new(error.handle_case()?))),
-            error => Ok(error),
-        }
-    }
-    /// Get the message of the error
-    pub fn message(&self) -> String {
-        match self {
-            UiuaError::Traced { error, .. } => error.message(),
-            error => error.to_string(),
-        }
+    pub fn with_info(mut self, info: impl IntoIterator<Item = (String, Option<Span>)>) -> Self {
+        self.infos.extend(info);
+        self
     }
     /// Get the value of the error if it was thrown by `assert`
     pub fn value(self) -> Value {
-        match self {
-            UiuaError::Throw(value, ..) => *value,
-            UiuaError::Traced { error, .. }
-            | UiuaError::WithInfo { error, .. }
-            | UiuaError::Case(error) => error.value(),
-            error => error.message().into(),
+        match self.kind {
+            UiuaErrorKind::Throw(value, ..) => *value,
+            _ => self.to_string().into(),
         }
     }
-    /// Check if the error is fill-related
-    pub fn is_fill(&self) -> bool {
-        match self {
-            UiuaError::Traced { error, .. }
-            | UiuaError::WithInfo { error, .. }
-            | UiuaError::Case(error) => error.is_fill(),
-            UiuaError::Fill(_) => true,
-            _ => false,
-        }
+    /// Turn the error into a multi-error
+    pub fn into_multi(mut self) -> Vec<Self> {
+        let mut multi = take(&mut self.multi);
+        multi.push(self);
+        multi
+    }
+    /// Create an error from multiple errors
+    pub fn from_multi(multi: impl IntoIterator<Item = Self>) -> Self {
+        let mut iter = multi.into_iter();
+        let mut error = iter
+            .next()
+            .unwrap_or_else(|| UiuaErrorKind::CompilerPanic("Unknown error".into()).error());
+        error.multi.extend(iter);
+        error
     }
     /// Mark the error as fill-related
-    pub(crate) fn fill(self) -> Self {
-        UiuaError::Fill(Box::new(self))
+    pub(crate) fn fill(mut self) -> Self {
+        self.is_fill = true;
+        self
     }
     /// Add a span to the trace of the error
     pub fn trace(mut self, span: CodeSpan) -> Self {
@@ -199,30 +141,16 @@ impl UiuaError {
             id: FunctionId::Anonymous(span.clone()),
             span: Span::Code(span),
         };
-        if let UiuaError::Traced { trace, .. } = &mut self {
-            trace.push(frame);
-            self
-        } else {
-            UiuaError::Traced {
-                error: Box::new(self),
-                trace: vec![frame],
-            }
-        }
+        self.trace.push(frame);
+        self
     }
     pub(crate) fn trace_macro(mut self, span: CodeSpan) -> Self {
         let frame = TraceFrame {
             id: FunctionId::Macro(span.clone()),
             span: Span::Code(span),
         };
-        if let UiuaError::Traced { trace, .. } = &mut self {
-            trace.push(frame);
-            self
-        } else {
-            UiuaError::Traced {
-                error: Box::new(self),
-                trace: vec![frame],
-            }
-        }
+        self.trace.push(frame);
+        self
     }
 }
 
@@ -270,76 +198,56 @@ impl UiuaError {
     /// Get a rich-text report for the error
     pub fn report(&self) -> Report {
         let kind = ReportKind::Error;
-        match self {
-            UiuaError::Parse(errors, inputs) => Report::new_multi(
+        let mut report = match &self.kind {
+            UiuaErrorKind::Parse(errors, inputs) => Report::new_multi(
                 kind,
                 inputs,
                 errors
                     .iter()
                     .map(|error| (error.value.to_string(), error.span.clone().into())),
             ),
-            UiuaError::Run(error, inputs) => {
+            UiuaErrorKind::Run(error, inputs) => {
                 Report::new_multi(kind, inputs, [(&error.value, error.span.clone())])
             }
-            UiuaError::Traced { error, trace } => error.report().trace(trace),
-            UiuaError::Throw(message, span, inputs) => {
+            UiuaErrorKind::Throw(message, span, inputs) => {
                 Report::new_multi(kind, inputs, [(&message, span.clone())])
             }
-            UiuaError::Timeout(span, inputs) => Report::new_multi(
+            UiuaErrorKind::Timeout(span, inputs) => Report::new_multi(
                 kind,
                 inputs,
                 [("Maximum execution time exceeded", span.clone())],
             ),
-            UiuaError::Fill(error) => error.report(),
-            UiuaError::PatternMatch(span, inputs) => {
-                Report::new_multi(kind, inputs, [("Pattern match failed", span.clone())])
+            UiuaErrorKind::CompilerPanic(message) => Report::new(kind, message),
+            UiuaErrorKind::Load(..) | UiuaErrorKind::Format(..) => {
+                Report::new(kind, self.to_string())
             }
-            UiuaError::Case(error) => error.report(),
-            UiuaError::Panic(message) => Report::new(kind, message),
-            UiuaError::Load(..) | UiuaError::Format(..) => Report::new(kind, self.to_string()),
-            UiuaError::Multi(errors) => {
-                let mut fragments = Vec::new();
-                for (i, error) in errors.iter().enumerate() {
-                    if i > 0 {
-                        fragments.push(ReportFragment::Newline);
-                    }
-                    fragments.extend(error.report().fragments);
-                }
-                Report {
-                    fragments,
-                    color: true,
-                }
-            }
-            UiuaError::WithInfo {
-                error,
-                infos,
-                inputs,
-            } => {
-                let mut report = error.report();
-                for (info, span) in infos {
-                    if let Some(span) = span {
-                        report.fragments.extend(
-                            Report::new_multi(
-                                DiagnosticKind::Info.into(),
-                                inputs,
-                                [(info, span.clone())],
-                            )
-                            .fragments,
-                        );
-                    } else {
-                        report.fragments.push(ReportFragment::Newline);
-                        report.fragments.push(ReportFragment::Colored(
-                            "Info".into(),
-                            DiagnosticKind::Info.into(),
-                        ));
-                        report.fragments.push(ReportFragment::Plain(": ".into()));
-                        report.fragments.push(ReportFragment::Plain(info.into()));
-                    }
-                }
-
-                report
+        };
+        report = report.trace(&self.trace);
+        let default_inputs = Inputs::default();
+        let inputs = match &self.kind {
+            UiuaErrorKind::Parse(_, inputs)
+            | UiuaErrorKind::Run(_, inputs)
+            | UiuaErrorKind::Throw(_, _, inputs)
+            | UiuaErrorKind::Timeout(_, inputs) => inputs,
+            _ => &default_inputs,
+        };
+        for (info, span) in &self.infos {
+            if let Some(span) = span {
+                report.fragments.extend(
+                    Report::new_multi(DiagnosticKind::Info.into(), inputs, [(info, span.clone())])
+                        .fragments,
+                );
+            } else {
+                report.fragments.push(ReportFragment::Newline);
+                report.fragments.push(ReportFragment::Colored(
+                    "Info".into(),
+                    DiagnosticKind::Info.into(),
+                ));
+                report.fragments.push(ReportFragment::Plain(": ".into()));
+                report.fragments.push(ReportFragment::Plain(info.into()));
             }
         }
+        report
     }
 }
 

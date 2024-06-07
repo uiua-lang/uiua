@@ -32,7 +32,7 @@ use crate::{
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, DocComment, Ident,
     ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment,
-    SysBackend, Uiua, UiuaError, UiuaResult, Value, CONSTANTS, EXAMPLE_UA, VERSION,
+    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS, EXAMPLE_UA, VERSION,
 };
 
 /// The Uiua compiler
@@ -319,7 +319,7 @@ impl Compiler {
     pub fn load_file<P: AsRef<Path>>(&mut self, path: P) -> UiuaResult<&mut Self> {
         let path = path.as_ref();
         let input: EcoString = fs::read_to_string(path)
-            .map_err(|e| UiuaError::Load(path.into(), e.into()))?
+            .map_err(|e| UiuaErrorKind::Load(path.into(), e.into()))?
             .into();
         // _ = crate::lsp::spans(&input);
         self.asm.inputs.files.insert(path.into(), input.clone());
@@ -371,7 +371,7 @@ impl Compiler {
             self.diagnostics.extend(diagnostics);
         }
         if !errors.is_empty() {
-            return Err(UiuaError::Parse(errors, self.asm.inputs.clone().into()));
+            return Err(UiuaErrorKind::Parse(errors, self.asm.inputs.clone().into()).into());
         }
         if let InputSrc::File(path) = &src {
             self.current_imports.push(path.to_path_buf());
@@ -407,7 +407,7 @@ impl Compiler {
         match self.errors.len() {
             0 => Ok(self),
             1 => Err(self.errors.pop().unwrap()),
-            _ => Err(UiuaError::Multi(take(&mut self.errors))),
+            _ => Err(UiuaError::from_multi(take(&mut self.errors))),
         }
     }
     fn catching_crash<T>(
@@ -417,7 +417,7 @@ impl Compiler {
     ) -> UiuaResult<T> {
         match catch_unwind(AssertUnwindSafe(|| f(self))) {
             Ok(res) => Ok(res),
-            Err(_) => Err(UiuaError::Panic(format!(
+            Err(_) => Err(UiuaErrorKind::CompilerPanic(format!(
                 "\
 The compiler has crashed!
 Hooray! You found a bug!
@@ -428,7 +428,8 @@ Uiua version {VERSION}
 
 code:
 {input}"
-            ))),
+            ))
+            .into()),
         }
     }
     pub(crate) fn items(&mut self, items: Vec<Item>, in_test: bool) -> UiuaResult {
@@ -1100,7 +1101,7 @@ code:
                             self.push_instr(Instr::push(val));
                             return Ok(());
                         }
-                        Err(e) if e.is_fill() => {}
+                        Err(e) if e.is_fill => {}
                         Err(e) => return Err(e),
                     }
                 }
@@ -1200,7 +1201,7 @@ code:
                             self.push_instr(Instr::push(val));
                             return Ok(());
                         }
-                        Err(e) if e.is_fill() => {}
+                        Err(e) if e.is_fill => {}
                         Err(e) => return Err(e),
                     }
                 }
@@ -2035,10 +2036,11 @@ code:
             .insert(Diagnostic::new(message.into(), span, kind, inputs));
     }
     fn add_error(&mut self, span: impl Into<Span>, message: impl ToString) {
-        let e = UiuaError::Run(
+        let e = UiuaErrorKind::Run(
             span.into().sp(message.to_string()),
             self.asm.inputs.clone().into(),
-        );
+        )
+        .into();
         self.errors.push(e);
     }
     fn experimental_error<S>(&mut self, span: &CodeSpan, message: impl FnOnce() -> S)
@@ -2051,10 +2053,11 @@ code:
         }
     }
     fn fatal_error(&self, span: impl Into<Span>, message: impl ToString) -> UiuaError {
-        UiuaError::Run(
+        UiuaErrorKind::Run(
             span.into().sp(message.to_string()),
             self.asm.inputs.clone().into(),
         )
+        .into()
     }
     fn validate_local(&mut self, name: &str, local: LocalName, span: &CodeSpan) {
         if local.public {
@@ -2164,8 +2167,7 @@ code:
                             success = true;
                         }
                         Ok(None) => {}
-                        Err(e) if e.is_fill() => {}
-                        Err(e) if e.message().contains("No locals to get") => {}
+                        Err(e) if e.is_fill => {}
                         Err(e) => errors.push(e),
                     }
                     if !success {
@@ -2237,7 +2239,7 @@ code:
                     cache.borrow_mut().insert(instrs, res.clone());
                     Ok(res)
                 }
-                Err(e) if matches!(e.inner(), UiuaError::Timeout(..)) => {
+                Err(e) if matches!(e.kind, UiuaErrorKind::Timeout(..)) => {
                     cache.borrow_mut().insert(instrs, None);
                     Ok(None)
                 }

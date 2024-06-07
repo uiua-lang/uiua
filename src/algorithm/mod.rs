@@ -14,7 +14,7 @@ use tinyvec::TinyVec;
 
 use crate::{
     Array, ArrayValue, CodeSpan, ExactDoubleIterator, Function, Inputs, PersistentMeta, Shape,
-    Signature, Span, TempStack, Uiua, UiuaError, UiuaResult, Value,
+    Signature, Span, TempStack, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
 };
 
 mod dyadic;
@@ -114,10 +114,11 @@ impl ErrorContext for Uiua {
 impl ErrorContext for (&CodeSpan, &Inputs) {
     type Error = UiuaError;
     fn error(&self, msg: impl ToString) -> Self::Error {
-        UiuaError::Run(
+        UiuaErrorKind::Run(
             Span::Code(self.0.clone()).sp(msg.to_string()),
             self.1.clone().into(),
         )
+        .into()
     }
 }
 
@@ -146,7 +147,7 @@ impl FillError for () {
 
 impl FillError for UiuaError {
     fn is_fill(&self) -> bool {
-        UiuaError::is_fill(self)
+        self.is_fill
     }
 }
 
@@ -204,7 +205,7 @@ impl FillContext for (&CodeSpan, &Inputs) {
         error.fill()
     }
     fn is_fill_error(error: &Self::Error) -> bool {
-        error.is_fill()
+        error.is_fill
     }
 }
 
@@ -554,9 +555,12 @@ pub fn try_(env: &mut Uiua) -> UiuaResult {
     }
     let backup = env.clone_stack_top(f_sig.args.min(handler_sig.args))?;
     if let Err(mut err) = env.call_clean_stack(f) {
-        err = err.handle_case()?;
+        if err.is_case {
+            err.is_case = false;
+            return Err(err);
+        }
         if handler_sig.args > f_sig.args {
-            (env.rt.backend).save_error_color(err.message(), err.report().to_string());
+            (env.rt.backend).save_error_color(err.to_string(), err.report().to_string());
             env.push(err.value());
         }
         for val in backup {
@@ -565,11 +569,6 @@ pub fn try_(env: &mut Uiua) -> UiuaResult {
         env.call(handler)?;
     }
     Ok(())
-}
-
-pub fn case(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
-    env.call(f).map_err(|e| UiuaError::Case(e.into()))
 }
 
 /// If a function fails on a byte array because no fill byte is defined,
@@ -935,7 +934,7 @@ fn astar_impl(
                 match res {
                     Ok(res) => res,
                     Err(e) => {
-                        do_error(e.message());
+                        do_error(e.to_string());
                         Vec::new()
                     }
                 }
@@ -964,7 +963,7 @@ fn astar_impl(
                 match res {
                     Ok(res) => res,
                     Err(e) => {
-                        do_error(e.message());
+                        do_error(e.to_string());
                         0
                     }
                 }
@@ -987,7 +986,7 @@ fn astar_impl(
                 match res {
                     Ok(res) => res,
                     Err(e) => {
-                        do_error(e.message());
+                        do_error(e.to_string());
                         false
                     }
                 }

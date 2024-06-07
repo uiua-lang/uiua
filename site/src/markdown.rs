@@ -137,7 +137,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
 
 #[cfg(test)]
 fn node_html<'a>(node: &'a AstNode<'a>) -> String {
-    use uiua::{Compiler, SafeSys, Uiua, UiuaError, Value};
+    use uiua::{Compiler, SafeSys, Uiua, UiuaErrorKind, Value};
 
     use crate::prim_class;
 
@@ -241,7 +241,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                             }
                         }
                     }
-                    Err(UiuaError::Parse(..)) => break,
+                    Err(e) if matches!(e.kind, UiuaErrorKind::Parse(..)) => break,
                     Err(e) if e.to_string().contains("git modules") => break,
                     Err(e) => line.push_str(&format!("# {e}")),
                 }

@@ -227,7 +227,7 @@ mod tests {
             let mut comp = Compiler::new();
             if let Err(e) = comp
                 .load_str_src(&code, &path)
-                .and_then(|comp| env.run_asm(&comp.finish()))
+                .and_then(|comp| env.run_asm(&comp.asm))
             {
                 panic!("Test failed in {}:\n{}", path.display(), e.report());
             }

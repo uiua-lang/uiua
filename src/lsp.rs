@@ -155,8 +155,7 @@ impl Spanner {
         compiler.pre_eval_mode(PreEvalMode::Lsp);
         let errors = match compiler.load_str_src(input, src.clone()) {
             Ok(_) => Vec::new(),
-            Err(UiuaError::Multi(errors)) => errors,
-            Err(e) => vec![e],
+            Err(e) => e.into_multi(),
         };
         let diagnostics = compiler.take_diagnostics().into_iter().collect();
         Self {
@@ -495,7 +494,7 @@ mod server {
         is_ident_char,
         lex::{lex, Loc},
         primitive::{PrimClass, PrimDocFragment},
-        AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span, Token,
+        AsciiToken, Assembly, BindingInfo, NativeSys, PrimDocLine, Span, Token, UiuaErrorKind,
     };
 
     pub struct LspDoc {
@@ -1611,27 +1610,18 @@ mod server {
                     }),
                 ));
             };
-            for mut err in &doc.errors {
-                let mut trace = None;
-                match err {
-                    UiuaError::Fill(e) => err = &**e,
-                    UiuaError::Traced { error, trace: tr } => {
-                        err = &**error;
-                        trace = Some(tr);
-                    }
-                    _ => (),
-                }
-                match err {
-                    UiuaError::Run(message, _) => {
+            for err in &doc.errors {
+                match &err.kind {
+                    UiuaErrorKind::Run(message, _) => {
                         let span = match &message.span {
                             Span::Code(span) => span,
                             Span::Builtin => {
-                                if let Some(span) = trace.into_iter().flatten().find_map(|frame| {
-                                    match &frame.span {
+                                if let Some(span) =
+                                    err.trace.iter().find_map(|frame| match &frame.span {
                                         Span::Code(span) => Some(span),
                                         _ => None,
-                                    }
-                                }) {
+                                    })
+                                {
                                     span
                                 } else {
                                     continue;
@@ -1645,7 +1635,7 @@ mod server {
                             ..Default::default()
                         });
                     }
-                    UiuaError::Parse(errors, _) => {
+                    UiuaErrorKind::Parse(errors, _) => {
                         for err in errors {
                             diagnostics.push(Diagnostic {
                                 severity: Some(DiagnosticSeverity::ERROR),
@@ -1655,6 +1645,15 @@ mod server {
                             });
                         }
                     }
+                    UiuaErrorKind::Throw(value, span, _) => diagnostics.push(Diagnostic {
+                        severity: Some(DiagnosticSeverity::ERROR),
+                        range: uiua_span_to_lsp(match span {
+                            Span::Code(span) => span,
+                            Span::Builtin => continue,
+                        }),
+                        message: value.format(),
+                        ..Default::default()
+                    }),
                     _ => {}
                 }
             }

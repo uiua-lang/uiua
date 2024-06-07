@@ -536,7 +536,6 @@ pub(crate) fn under_instrs(
         &pat!(Now, (Now, PushToUnder(1)), (PopUnder(1), Now, Flip, Sub)),
         &maybe_val!(store1copy!(Sys(SysOp::FOpen), Sys(SysOp::Close))),
         &maybe_val!(store1copy!(Sys(SysOp::FCreate), Sys(SysOp::Close))),
-        &maybe_val!(store1copy!(Sys(SysOp::RunStream), Sys(SysOp::Close))),
         &maybe_val!(store1copy!(Sys(SysOp::TcpConnect), Sys(SysOp::Close))),
         &maybe_val!(store1copy!(Sys(SysOp::TlsConnect), Sys(SysOp::Close))),
         &maybe_val!(store1copy!(Sys(SysOp::TcpAccept), Sys(SysOp::Close))),
@@ -544,6 +543,16 @@ pub(crate) fn under_instrs(
         &maybe_val!(store1copy!(Sys(SysOp::TlsListen), Sys(SysOp::Close))),
         &maybe_val!(stash1!(Sys(SysOp::FReadAllStr), Sys(SysOp::FWriteAll))),
         &maybe_val!(stash1!(Sys(SysOp::FReadAllBytes), Sys(SysOp::FWriteAll))),
+        &maybe_val!(pat!(
+            Sys(SysOp::RunStream),
+            (Sys(SysOp::RunStream), CopyToUnder(3)),
+            (
+                PopUnder(3),
+                Sys(SysOp::Close),
+                Sys(SysOp::Close),
+                Sys(SysOp::Close)
+            )
+        )),
         // &pat!(BothTrace, (BothTrace), (UnTrace)),
         // Patterns that need to be last
         &UnderPatternFn(under_flip_pattern, "flip"),

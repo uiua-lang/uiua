@@ -5,9 +5,12 @@ use std::{
     io::{stderr, stdin, stdout, BufReader, Read, Write},
     net::*,
     path::{Path, PathBuf},
-    process::{Child, Command, Stdio},
+    process::{Child, ChildStderr, ChildStdin, ChildStdout, Command, Stdio},
     slice,
-    sync::atomic::{self, AtomicBool, AtomicU64},
+    sync::{
+        atomic::{self, AtomicBool, AtomicU64},
+        Arc,
+    },
     thread::sleep,
     time::Duration,
 };
@@ -24,7 +27,9 @@ struct GlobalNativeSys {
     output_enabled: AtomicBool,
     next_handle: AtomicU64,
     files: DashMap<Handle, BufReader<File>>,
-    child_procs: DashMap<Handle, Child>,
+    child_stdins: DashMap<Handle, ChildStream<ChildStdin>>,
+    child_stdouts: DashMap<Handle, ChildStream<ChildStdout>>,
+    child_stderrs: DashMap<Handle, ChildStream<ChildStderr>>,
     tcp_listeners: DashMap<Handle, TcpListener>,
     tls_listeners: DashMap<Handle, TlsListener>,
     tcp_sockets: DashMap<Handle, TcpStream>,
@@ -44,9 +49,24 @@ struct GlobalNativeSys {
 
 enum SysStream<'a> {
     File(dashmap::mapref::one::RefMut<'a, Handle, BufReader<File>>),
-    Child(dashmap::mapref::one::RefMut<'a, Handle, Child>),
+    ChildStdin(dashmap::mapref::one::RefMut<'a, Handle, ChildStream<ChildStdin>>),
+    ChildStdout(dashmap::mapref::one::RefMut<'a, Handle, ChildStream<ChildStdout>>),
+    ChildStderr(dashmap::mapref::one::RefMut<'a, Handle, ChildStream<ChildStderr>>),
     TcpSocket(dashmap::mapref::one::Ref<'a, Handle, TcpStream>),
     TlsSocket(dashmap::mapref::one::Ref<'a, Handle, TlsSocket>),
+}
+
+struct ChildStream<T> {
+    stream: T,
+    child: Arc<Child>,
+}
+
+impl<T> Drop for ChildStream<T> {
+    fn drop(&mut self) {
+        if let Some(child) = Arc::get_mut(&mut self.child) {
+            _ = child.kill();
+        }
+    }
 }
 
 struct TlsSocket {
@@ -112,7 +132,9 @@ impl Default for GlobalNativeSys {
             output_enabled: AtomicBool::new(true),
             next_handle: Handle::FIRST_UNRESERVED.0.into(),
             files: DashMap::new(),
-            child_procs: DashMap::new(),
+            child_stdins: DashMap::new(),
+            child_stdouts: DashMap::new(),
+            child_stderrs: DashMap::new(),
             tcp_listeners: DashMap::new(),
             tls_listeners: DashMap::new(),
             tcp_sockets: DashMap::new(),
@@ -137,7 +159,9 @@ impl GlobalNativeSys {
         for _ in 0..u64::MAX {
             let handle = Handle(self.next_handle.fetch_add(1, atomic::Ordering::Relaxed));
             if !self.files.contains_key(&handle)
-                && !self.child_procs.contains_key(&handle)
+                && !self.child_stdins.contains_key(&handle)
+                && !self.child_stdouts.contains_key(&handle)
+                && !self.child_stderrs.contains_key(&handle)
                 && !self.tcp_listeners.contains_key(&handle)
                 && !self.tcp_sockets.contains_key(&handle)
                 && !self.tls_sockets.contains_key(&handle)
@@ -150,8 +174,12 @@ impl GlobalNativeSys {
     fn get_stream(&self, handle: Handle) -> Result<SysStream, String> {
         Ok(if let Some(file) = self.files.get_mut(&handle) {
             SysStream::File(file)
-        } else if let Some(child) = self.child_procs.get_mut(&handle) {
-            SysStream::Child(child)
+        } else if let Some(child) = self.child_stdins.get_mut(&handle) {
+            SysStream::ChildStdin(child)
+        } else if let Some(child) = self.child_stdouts.get_mut(&handle) {
+            SysStream::ChildStdout(child)
+        } else if let Some(child) = self.child_stderrs.get_mut(&handle) {
+            SysStream::ChildStderr(child)
         } else if let Some(socket) = self.tcp_sockets.get(&handle) {
             SysStream::TcpSocket(socket)
         } else if let Some(tls_socket) = self.tls_sockets.get(&handle) {
@@ -351,11 +379,16 @@ impl SysBackend for NativeSys {
                 buf.truncate(n);
                 buf
             }
-            SysStream::Child(mut child) => {
+            SysStream::ChildStdin(_) => return Err("Cannot read from child stdin".into()),
+            SysStream::ChildStdout(mut child) => {
                 let mut buf = vec![0; len];
-                let n = (child.stdout.as_mut().unwrap())
-                    .read(&mut buf)
-                    .map_err(|e| e.to_string())?;
+                let n = child.stream.read(&mut buf).map_err(|e| e.to_string())?;
+                buf.truncate(n);
+                buf
+            }
+            SysStream::ChildStderr(mut child) => {
+                let mut buf = vec![0; len];
+                let n = child.stream.read(&mut buf).map_err(|e| e.to_string())?;
                 buf.truncate(n);
                 buf
             }
@@ -380,9 +413,19 @@ impl SysBackend for NativeSys {
                 file.read_to_end(&mut buf).map_err(|e| e.to_string())?;
                 buf
             }
-            SysStream::Child(mut child) => {
+            SysStream::ChildStdin(_) => return Err("Cannot read from child stdin".into()),
+            SysStream::ChildStdout(mut child) => {
                 let mut buf = Vec::new();
-                (child.stdout.as_mut().unwrap())
+                child
+                    .stream
+                    .read_to_end(&mut buf)
+                    .map_err(|e| e.to_string())?;
+                buf
+            }
+            SysStream::ChildStderr(mut child) => {
+                let mut buf = Vec::new();
+                child
+                    .stream
                     .read_to_end(&mut buf)
                     .map_err(|e| e.to_string())?;
                 buf
@@ -413,9 +456,11 @@ impl SysBackend for NativeSys {
         }
         match NATIVE_SYS.get_stream(handle)? {
             SysStream::File(mut file) => file.get_mut().write_all(conts).map_err(|e| e.to_string()),
-            SysStream::Child(mut child) => (child.stdin.as_mut().unwrap())
-                .write_all(conts)
-                .map_err(|e| e.to_string()),
+            SysStream::ChildStdin(mut child) => {
+                child.stream.write_all(conts).map_err(|e| e.to_string())
+            }
+            SysStream::ChildStdout(_) => Err("Cannot write to child stdout".into()),
+            SysStream::ChildStderr(_) => Err("Cannot write to child stderr".into()),
             SysStream::TcpSocket(socket) => {
                 (&mut &*socket).write_all(conts).map_err(|e| e.to_string())
             }
@@ -697,8 +742,10 @@ impl SysBackend for NativeSys {
             .map_err(|e| e.to_string())
     }
     fn close(&self, handle: Handle) -> Result<(), String> {
-        if let Some((_, mut child)) = NATIVE_SYS.child_procs.remove(&handle) {
-            child.kill().map_err(|e| e.to_string())?;
+        if NATIVE_SYS.child_stdins.remove(&handle).is_some()
+            || NATIVE_SYS.child_stdouts.remove(&handle).is_some()
+            || NATIVE_SYS.child_stderrs.remove(&handle).is_some()
+        {
             Ok(())
         } else if let Some((_, mut file)) = NATIVE_SYS.files.remove(&handle) {
             file.get_mut().flush().map_err(|e| e.to_string())
@@ -714,7 +761,7 @@ impl SysBackend for NativeSys {
             NATIVE_SYS.hostnames.remove(&handle);
             Ok(())
         } else {
-            Err("Invalid stream handle".to_string())
+            Ok(())
         }
     }
     #[cfg(feature = "invoke")]
@@ -745,17 +792,43 @@ impl SysBackend for NativeSys {
             String::from_utf8_lossy(&output.stderr).into(),
         ))
     }
-    fn run_command_stream(&self, command: &str, args: &[&str]) -> Result<Handle, String> {
-        let handle = NATIVE_SYS.new_handle();
-        let child = Command::new(command)
+    fn run_command_stream(&self, command: &str, args: &[&str]) -> Result<[Handle; 3], String> {
+        let mut child = Command::new(command)
             .args(args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::inherit())
+            .stderr(Stdio::piped())
             .spawn()
             .map_err(|e| e.to_string())?;
-        NATIVE_SYS.child_procs.insert(handle, child);
-        Ok(handle)
+        let stdin = child.stdin.take().unwrap();
+        let stdout = child.stdout.take().unwrap();
+        let stderr = child.stderr.take().unwrap();
+        let child = Arc::new(child);
+        let stdin_handle = NATIVE_SYS.new_handle();
+        NATIVE_SYS.child_stdins.insert(
+            stdin_handle,
+            ChildStream {
+                stream: stdin,
+                child: child.clone(),
+            },
+        );
+        let stdout_handle = NATIVE_SYS.new_handle();
+        NATIVE_SYS.child_stdouts.insert(
+            stdout_handle,
+            ChildStream {
+                stream: stdout,
+                child: child.clone(),
+            },
+        );
+        let stderr_handle = NATIVE_SYS.new_handle();
+        NATIVE_SYS.child_stderrs.insert(
+            stderr_handle,
+            ChildStream {
+                stream: stderr,
+                child,
+            },
+        );
+        Ok([stdin_handle, stdout_handle, stderr_handle])
     }
     fn change_directory(&self, path: &str) -> Result<(), String> {
         env::set_current_dir(path).map_err(|e| e.to_string())

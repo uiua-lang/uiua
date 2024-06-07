@@ -214,13 +214,12 @@ sys_op! {
     /// Run a command with streaming IO
     ///
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
-    /// Returns a stream handle.
-    /// Writing to the handle with [&w] will send the input to the command's stdin.
-    /// Reading from the handle with [&rs], [&rb], or [&ru] will read from the command's stdout.
-    /// Stderr will be inherited.
-    /// Using [&cl] on the handle will kill the child process.
-    /// [under][&runs] calls [&cl] automatically.
-    (1, RunStream, Command, "&runs", "run command stream", Mutating),
+    /// Returns 2 stream handles.
+    /// The first can be written to with [&w] to send input to the command's stdin.
+    /// The second and third can be read from with [&rs], [&rb], or [&ru] to read from the command's stdout and stderr.
+    /// Using [&cl] on *all 3* handles will kill the child process.
+    /// [under][&runs] calls [&cl] on all 3 streams automatically.
+    (1(3), RunStream, Command, "&runs", "run command stream", Mutating),
     /// Change the current directory
     (1(0), ChangeDirectory, Filesystem, "&cd", "change directory", Mutating),
     /// Get the contents of the clipboard
@@ -727,7 +726,9 @@ pub enum HandleKind {
     TlsListener(SocketAddr),
     TcpSocket(SocketAddr),
     TlsSocket(SocketAddr),
-    ChildProcess(String),
+    ChildStdin(String),
+    ChildStdout(String),
+    ChildStderr(String),
 }
 
 impl fmt::Display for HandleKind {
@@ -738,7 +739,9 @@ impl fmt::Display for HandleKind {
             Self::TlsListener(addr) => write!(f, "tls listener {}", addr),
             Self::TcpSocket(addr) => write!(f, "tcp socket {}", addr),
             Self::TlsSocket(addr) => write!(f, "tls socket {}", addr),
-            Self::ChildProcess(com) => write!(f, "child {com}"),
+            Self::ChildStdin(com) => write!(f, "stdin {com}"),
+            Self::ChildStdout(com) => write!(f, "stdout {com}"),
+            Self::ChildStderr(com) => write!(f, "stderr {com}"),
         }
     }
 }
@@ -970,7 +973,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
         Err("Running capturing commands is not supported in this environment".into())
     }
     /// Run a command and return an IO stream handle
-    fn run_command_stream(&self, command: &str, args: &[&str]) -> Result<Handle, String> {
+    fn run_command_stream(&self, command: &str, args: &[&str]) -> Result<[Handle; 3], String> {
         Err("Running streamed commands is not supported in this environment".into())
     }
     /// Change the current directory
@@ -1788,11 +1791,20 @@ impl SysOp {
             SysOp::RunStream => {
                 let (command, args) = value_to_command(&env.pop(1)?, env)?;
                 let args: Vec<_> = args.iter().map(|s| s.as_str()).collect();
-                let handle = (env.rt.backend)
+                let handles = (env.rt.backend)
                     .run_command_stream(&command, &args)
-                    .map_err(|e| env.error(e))?
-                    .value(HandleKind::ChildProcess(command));
-                env.push(handle);
+                    .map_err(|e| env.error(e))?;
+                for (handle, kind) in handles
+                    .into_iter()
+                    .zip([
+                        HandleKind::ChildStdin,
+                        HandleKind::ChildStdout,
+                        HandleKind::ChildStderr,
+                    ])
+                    .rev()
+                {
+                    env.push(handle.value(kind(command.clone())));
+                }
             }
             SysOp::ChangeDirectory => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;

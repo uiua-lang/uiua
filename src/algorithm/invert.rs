@@ -546,12 +546,7 @@ pub(crate) fn under_instrs(
         &maybe_val!(pat!(
             Sys(SysOp::RunStream),
             (Sys(SysOp::RunStream), CopyToUnder(3)),
-            (
-                PopUnder(3),
-                Sys(SysOp::Close),
-                Sys(SysOp::Close),
-                Sys(SysOp::Close)
-            )
+            (PopUnder(3), TryClose, TryClose, TryClose)
         )),
         // &pat!(BothTrace, (BothTrace), (UnTrace)),
         // Patterns that need to be last

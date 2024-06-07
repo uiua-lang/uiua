@@ -187,6 +187,7 @@ impl fmt::Display for ImplPrimitive {
             UndoRemove => write!(f, "{Under}{Remove}"),
             UndoPartition1 | UndpPartition2 => write!(f, "{Under}{Partition}"),
             UndoGroup1 | UndoGroup2 => write!(f, "{Under}{Group}"),
+            TryClose => write!(f, "{}", Sys(SysOp::Close)),
             Asin => write!(f, "{Un}{Sin}"),
             Last => write!(f, "{First}{Reverse}"),
             UndoFix => write!(f, "{Under}{Fix}"),
@@ -937,6 +938,7 @@ impl ImplPrimitive {
             ImplPrimitive::UndpPartition2 => loops::undo_partition_part2(env)?,
             ImplPrimitive::UndoGroup1 => loops::undo_group_part1(env)?,
             ImplPrimitive::UndoGroup2 => loops::undo_group_part2(env)?,
+            ImplPrimitive::TryClose => _ = SysOp::Close.run(env),
             ImplPrimitive::UndoJoin => {
                 let a_shape = env.pop(1)?;
                 let b_shape = env.pop(2)?;

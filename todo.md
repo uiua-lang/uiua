@@ -1,18 +1,16 @@
 # Uiua Todo
 
 - 0.12
-  - Rewrite .uasm format
   - Stack-source locality tutorial
+  - Axis swizzles?
+  - Rewrite .uasm format
   - Macro args doc comments
   - Fix pad cursor jumping with end-of-line comments
-  - Array bar notation
   - Unicode literals
-  - Error classes
   - `# Track caller!`
-  - `base` function
+  - `base` function?
   - `chunks` function?
-  - `pull` function?
-  - Channels
+  - Channels?
   - Plots
   - Dynamic modules
 - Media window

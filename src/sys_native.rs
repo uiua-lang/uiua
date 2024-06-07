@@ -761,7 +761,7 @@ impl SysBackend for NativeSys {
             NATIVE_SYS.hostnames.remove(&handle);
             Ok(())
         } else {
-            Ok(())
+            Err("Invalid stream handle".to_string())
         }
     }
     #[cfg(feature = "invoke")]

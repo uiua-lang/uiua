@@ -2651,6 +2651,7 @@ impl_primitive!(
     (3, UndoGroup2),
     (4, UndoInsert),
     (3, UndoRemove),
+    (1(0), TryClose),
     // Optimizations
     (1, Last),
     (1, FirstMinIndex),

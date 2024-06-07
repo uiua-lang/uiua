@@ -1438,7 +1438,7 @@ code:
     pub(crate) fn wait(&mut self, id: Value) -> UiuaResult {
         let ids = id.as_natural_array(self, "Thread id must be an array of natural numbers")?;
         if ids.shape.is_empty() {
-            let handle = ids.data.into_iter().next().unwrap();
+            let handle = ids.data[0];
             #[cfg(not(target_arch = "wasm32"))]
             let thread_stack = self
                 .rt

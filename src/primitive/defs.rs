@@ -2044,14 +2044,14 @@ primitive!(
     ///   : wait≡spawn/+.
     ///
     /// For spawn threads in a thread pool, use [pool].
-    ([1], Spawn, Thread, "spawn"),
+    ([1], Spawn, Thread, "spawn", Impure),
     /// Spawn a thread in a thread pool
     ///
     /// Has the same functionality as [spawn], but uses a thread pool instead of spawning a new thread.
     /// While [spawn]'s function will be called immediately, [pool]'s function will be called when a thread in the pool is available.
     /// The thread pool has as many threads as the machine has processors.
     /// If all threads in the pool are busy, then [pool] will block until a thread is available.
-    ([1], Pool, Thread, "pool"),
+    ([1], Pool, Thread, "pool", Impure),
     /// Wait for a thread to finish and push its results to the stack
     ///
     /// The argument must be a thread id returned by [spawn] or [pool].
@@ -2065,13 +2065,13 @@ primitive!(
     /// [wait] is pervasive and will call [each] implicitly.
     /// ex: ↯3_3⇡9
     ///   : wait≡spawn/+.
-    (1, Wait, Thread, "wait"),
+    (1, Wait, Thread, "wait", Mutating),
     /// Send a value to a thread
     ///
     /// Expects a thread id returned by [spawn] or [pool] and a value to send.
     /// The thread id `0` corresponds to the parent thread.
     /// The sent-to thread can receive the value with [recv] or [tryrecv].
-    (2(0), Send, Thread, "send"),
+    (2(0), Send, Thread, "send", Impure),
     /// Receive a value from a thread
     ///
     /// Expects a thread id returned by [spawn] or [pool].

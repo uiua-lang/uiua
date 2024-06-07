@@ -797,14 +797,12 @@ impl<'a> Formatter<'a> {
                 let curr_line_pos = if self.output.ends_with('\n') {
                     0
                 } else {
-                    self.output
-                        .split('\n')
-                        .last()
-                        .unwrap_or_default()
-                        .chars()
-                        .count()
+                    (self.output.split('\n').last().unwrap_or_default().chars()).count()
                 };
-                for (i, line) in s.lines().enumerate() {
+                for (i, mut line) in s.split('\n').enumerate() {
+                    if line.ends_with('\r') {
+                        line = &line[..line.len() - 1];
+                    }
                     if i > 0 {
                         self.output.push('\n');
                         for _ in 0..curr_line_pos {
@@ -825,12 +823,7 @@ impl<'a> Formatter<'a> {
                 let curr_line_pos = if self.output.ends_with('\n') {
                     0
                 } else {
-                    self.output
-                        .split('\n')
-                        .last()
-                        .unwrap_or_default()
-                        .chars()
-                        .count()
+                    (self.output.split('\n').last().unwrap_or_default().chars()).count()
                 };
                 for (i, line) in lines.iter().enumerate() {
                     if i > 0 {

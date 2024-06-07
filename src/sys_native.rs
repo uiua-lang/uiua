@@ -34,6 +34,8 @@ struct GlobalNativeSys {
     tls_listeners: DashMap<Handle, TlsListener>,
     tcp_sockets: DashMap<Handle, TcpStream>,
     tls_sockets: DashMap<Handle, TlsSocket>,
+    #[cfg(feature = "webcam")]
+    cam_channels: DashMap<usize, WebcamChannel>,
     hostnames: DashMap<Handle, String>,
     git_paths: DashMap<String, Result<PathBuf, String>>,
     #[cfg(feature = "audio")]
@@ -66,6 +68,72 @@ impl<T> Drop for ChildStream<T> {
         if let Some(child) = Arc::get_mut(&mut self.child) {
             _ = child.kill();
         }
+    }
+}
+
+#[cfg(feature = "webcam")]
+struct WebcamChannel {
+    send: std::sync::mpsc::Sender<()>,
+    recv: std::sync::mpsc::Receiver<Result<image::RgbImage, String>>,
+}
+
+unsafe impl Send for WebcamChannel {}
+unsafe impl Sync for WebcamChannel {}
+
+#[cfg(feature = "webcam")]
+impl WebcamChannel {
+    fn new(index: usize) -> Result<Self, String> {
+        use nokhwa::{
+            pixel_format::RgbFormat,
+            utils::{CameraIndex, RequestedFormat, RequestedFormatType},
+            Camera,
+        };
+        let (req_send, req_recv) = std::sync::mpsc::channel();
+        let (image_send, image_recv) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let mut camera = match Camera::new(
+                CameraIndex::Index(index as u32),
+                RequestedFormat::new::<RgbFormat>(RequestedFormatType::AbsoluteHighestResolution),
+            ) {
+                Ok(camera) => camera,
+                Err(e) => {
+                    _ = image_send.send(Err(e.to_string()));
+                    return;
+                }
+            };
+            if let Err(e) = camera.open_stream() {
+                _ = image_send.send(Err(e.to_string()));
+                return;
+            }
+            let mut recv_tries = 0;
+            let sleep = || std::thread::sleep(std::time::Duration::from_millis(10));
+            loop {
+                if req_recv.try_recv().is_err() {
+                    recv_tries += 1;
+                    if recv_tries > 100 {
+                        _ = camera.stop_stream();
+                        break;
+                    } else {
+                        sleep();
+                        continue;
+                    }
+                }
+                recv_tries = 0;
+                let res = camera
+                    .frame()
+                    .and_then(|buffer| buffer.decode_image::<RgbFormat>())
+                    .map_err(|e| e.to_string());
+                if image_send.send(res).is_err() {
+                    _ = camera.stop_stream();
+                    break;
+                }
+                sleep();
+            }
+        });
+        Ok(Self {
+            send: req_send,
+            recv: image_recv,
+        })
     }
 }
 
@@ -139,6 +207,8 @@ impl Default for GlobalNativeSys {
             tls_listeners: DashMap::new(),
             tcp_sockets: DashMap::new(),
             tls_sockets: DashMap::new(),
+            #[cfg(feature = "webcam")]
+            cam_channels: DashMap::new(),
             hostnames: DashMap::new(),
             git_paths: DashMap::new(),
             #[cfg(feature = "audio")]
@@ -880,6 +950,35 @@ impl SysBackend for NativeSys {
         })?;
 
         Ok(s)
+    }
+    #[cfg(feature = "webcam")]
+    fn webcam_capture(&self, index: usize) -> Result<image::RgbImage, String> {
+        let cam_channels = &NATIVE_SYS.cam_channels;
+        if !cam_channels.contains_key(&index) {
+            let ch = WebcamChannel::new(index)?;
+            cam_channels.insert(index, ch);
+        }
+        let ch = cam_channels.get_mut(&index).unwrap();
+        if ch.send.send(()).is_ok() {
+            if let Ok(res) = ch.recv.recv() {
+                res
+            } else {
+                Err("Failed to interact with webcam".into())
+            }
+        } else {
+            let ch = WebcamChannel::new(index)?;
+            cam_channels.insert(index, ch);
+            let ch = cam_channels.get_mut(&index).unwrap();
+            if ch.send.send(()).is_ok() {
+                if let Ok(res) = ch.recv.recv() {
+                    res
+                } else {
+                    Err("Failed to interact with webcam".into())
+                }
+            } else {
+                Err("Failed to interact with webcam".into())
+            }
+        }
     }
     #[cfg(feature = "ffi")]
     fn ffi(

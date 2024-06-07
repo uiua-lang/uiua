@@ -559,6 +559,12 @@ sys_op! {
     /// - The HTTP version
     /// - The `Host` header (if not defined)
     (2, HttpsWrite, Tcp, "&httpsw", "https - Make an HTTP(S) request", Mutating),
+    /// Capture an image from a webcam
+    ///
+    /// Takes the index of the webcam to capture from.
+    ///
+    /// Returnes a rank-3 numeric array representing the image.
+    (1, WebcamCapture, Misc, "&camcap", "webcam - capture", Mutating),
     /// Call a foreign function interface
     ///
     /// *Warning ⚠️: Using FFI is deeply unsafe. Calling a function incorrectly is undefined behavior.*
@@ -983,6 +989,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Make an HTTPS request on a TCP socket
     fn https_get(&self, request: &str, handle: Handle) -> Result<String, String> {
         Err("Making HTTPS requests is not supported in this environment".into())
+    }
+    /// Capture an image from the webcam
+    fn webcam_capture(&self, index: usize) -> Result<image::RgbImage, String> {
+        Err("Capturing from webcam is not supported in this environment".into())
     }
     /// Call a foreign function interface
     fn ffi(
@@ -1812,6 +1822,13 @@ impl SysOp {
                     .change_directory(&path)
                     .map_err(|e| env.error(e))?;
             }
+            SysOp::WebcamCapture => {
+                let index = env.pop(1)?.as_nat(env, "Webcam index must be an integer")?;
+                let image = (env.rt.backend)
+                    .webcam_capture(index)
+                    .map_err(|e| env.error(e))?;
+                env.push(rgb_image_to_array(image));
+            }
             SysOp::Ffi => {
                 let sig_def = env.pop(1)?;
                 let sig_def = match sig_def {
@@ -1963,26 +1980,36 @@ pub fn value_to_image_bytes(value: &Value, format: ImageOutputFormat) -> Result<
 
 #[doc(hidden)]
 #[cfg(feature = "image")]
+pub fn rgb_image_to_array(image: image::RgbImage) -> Array<f64> {
+    let shape = crate::Shape::from([image.height() as usize, image.width() as usize, 3]);
+    Array::new(
+        shape,
+        (image.into_raw().into_iter())
+            .map(|b| b as f64 / 255.0)
+            .collect::<crate::cowslice::CowSlice<_>>(),
+    )
+}
+
+#[doc(hidden)]
+#[cfg(feature = "image")]
 pub fn image_bytes_to_array(bytes: &[u8], alpha: bool) -> Result<Array<f64>, String> {
-    let (raw, shape) = if alpha {
+    Ok(if alpha {
         let image = image::load_from_memory(bytes)
             .map_err(|e| format!("Failed to read image: {}", e))?
             .into_rgba8();
         let shape = crate::Shape::from([image.height() as usize, image.width() as usize, 4]);
-        (image.into_raw(), shape)
+        Array::new(
+            shape,
+            (image.into_raw().into_iter())
+                .map(|b| b as f64 / 255.0)
+                .collect::<crate::cowslice::CowSlice<_>>(),
+        )
     } else {
         let image = image::load_from_memory(bytes)
             .map_err(|e| format!("Failed to read image: {}", e))?
             .into_rgb8();
-        let shape = crate::Shape::from([image.height() as usize, image.width() as usize, 3]);
-        (image.into_raw(), shape)
-    };
-    Ok(Array::new(
-        shape,
-        raw.into_iter()
-            .map(|b| b as f64 / 255.0)
-            .collect::<crate::cowslice::CowSlice<_>>(),
-    ))
+        rgb_image_to_array(image)
+    })
 }
 
 #[doc(hidden)]

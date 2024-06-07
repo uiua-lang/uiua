@@ -80,6 +80,7 @@ image = {version = "0.24.9", optional = true, default-features = false, features
 json5 = {version = "0.4.1", optional = true}
 libffi = {version = "3", optional = true}
 libloading = {version = "0.8.3", optional = true}
+nokhwa = {version = "0.10.4", optional = true, features = ["input-native"]}
 pathfinding = {version = "4.9.1", optional = true}
 rustfft = {version = "6.2.0", optional = true}
 rustls-pemfile = {version = "2.1.2", optional = true}
@@ -97,6 +98,7 @@ batteries = [
   "json5",
   "pathfinding",
   "fft",
+  "webcam",
 ]
 binary = [
   "ctrlc",
@@ -135,6 +137,7 @@ raw_mode = ["rawrrr", "native_sys"]
 stand = ["native_sys"]
 terminal_image = ["viuer", "image"]
 tls = ["httparse", "rustls", "webpki-roots", "rustls-pemfile"]
+webcam = ["image", "nokhwa"]
 xlsx = ["calamine", "simple_excel_writer"]
 
 [[bin]]

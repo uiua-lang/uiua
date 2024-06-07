@@ -595,10 +595,10 @@ mod server {
     const GENERIC_SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 13] = [
         SemanticTokenType::COMMENT,
         SemanticTokenType::NUMBER,
-        SemanticTokenType::STRING,
+        SemanticTokenType::new("lifetime"),
         NO_STT,
         SemanticTokenType::PROPERTY,
-        SemanticTokenType::CLASS,
+        SemanticTokenType::STRING,
         SemanticTokenType::METHOD,
         NO_STT,
         NO_STT,

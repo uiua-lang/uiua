@@ -195,6 +195,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &([Dup, Mul], [Sqrt]),
         &(Val, pat!(Min, (Over, Ge, 1, MatchPattern))),
         &(Val, pat!(Max, (Over, Le, 1, MatchPattern))),
+        &pat!(Pick, (Dup, Shape, Range)),
         &InvertPatternFn(invert_left_pattern, "left"),
         &InvertPatternFn(invert_temp_pattern, "temp"),
         &InvertPatternFn(invert_push_pattern, "push"),
@@ -939,18 +940,9 @@ fn invert_select_pattern<'a>(
         }
         [Instr::Prim(Primitive::Select, span), input @ ..] => {
             let instrs = eco_vec![
-                Instr::CopyToTemp {
-                    stack: TempStack::Inline,
-                    count: 1,
-                    span: *span,
-                },
-                Instr::Prim(Primitive::Deduplicate, *span),
-                Instr::PopTemp {
-                    stack: TempStack::Inline,
-                    count: 1,
-                    span: *span,
-                },
-                Instr::Prim(Primitive::Classify, *span),
+                Instr::Prim(Primitive::Dup, *span),
+                Instr::Prim(Primitive::Len, *span),
+                Instr::Prim(Primitive::Range, *span),
             ];
             (input, instrs)
         }

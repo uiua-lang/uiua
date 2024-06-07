@@ -7,6 +7,8 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - **Breaking Change** - [`&runs`](https://uiua.org/docs/&runs) now returns 3 handles rather than 1
   - This gives more precise control over stdin, stdout, and stderr
+- **Breaking Change** - [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`duplicate .`](https://uiua.org/docs/duplicate)
+- [`un °`](https://uiua.org/docs/un) [`pick ⊡`](https://uiua.org/docs/pick) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
 - Add *tree extension*, which allows some functions that take indices, offsets, or masks to recursively on tree of those values
   - This is useful for working with boxed arrays
   - Currently implemented for [`keep ▽`](https://uiua.org/docs/keep), [`select ⊏`](https://uiua.org/docs/select), and [`pick ⊡`](https://uiua.org/docs/pick)
@@ -174,7 +176,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - [`inventory ⍚`](https://uiua.org/docs/inventory) can now take 3 or more arrays
 - [`repeat ⍥`](https://uiua.org/docs/repeat) can now take non-scalar repetition counts
   - This repeats the function a different number of times for each row of the inputs
-- [`select ⊏`](https://uiua.org/docs/select) can now be used with [`un °`](https://uiua.org/docs/un) to separate into [`classify ⊛`](https://uiua.org/docs/classify) and [`deduplicate ◴`](https://uiua.org/docs/deduplicate)
+- [`select ⊏`](https://uiua.org/docs/select) can now be used with [`un °`](https://uiua.org/docs/un) to separate into [`classify ⊛`](https://uiua.org/docs/classify) and [`deduplicate ◴`](https://uiua.org/docs/deduplicate) (changed in 0.12.0)
 - Characters can now be [`multiply ×`](https://uiua.org/docs/multiply)d or [`divide ÷`](https://uiua.org/docs/divide)d by numbers to possibly toggle their case
 - Add the [`csv`](https://uiua.org/docs/csv) function, which encodes and decodes CSV data
 - Add the [`&clget`](https://uiua.org/docs/&clget) and [`&clset`](https://uiua.org/docs/&clset) system functions, which allow copying and pasting text to and from the system clipboard

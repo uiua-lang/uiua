@@ -77,7 +77,9 @@ struct WebcamChannel {
     recv: std::sync::mpsc::Receiver<Result<image::RgbImage, String>>,
 }
 
+#[cfg(feature = "webcam")]
 unsafe impl Send for WebcamChannel {}
+#[cfg(feature = "webcam")]
 unsafe impl Sync for WebcamChannel {}
 
 #[cfg(feature = "webcam")]

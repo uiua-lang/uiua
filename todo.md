@@ -19,7 +19,6 @@
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Multimedia
   - Sound input
-  - Webcam input
 - System APIs
   - UDP Sockets
 - Documentation

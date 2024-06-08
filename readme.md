@@ -30,11 +30,9 @@ This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.75) to be ins
   ```
 
   The following optional features are available but not enabled by default (enabled by passing `--features <feature>`):
-  - `audio`: Enables audio system functions
+  - `audio`: Enables audio system functions (may require `libasound2-dev libudev-dev pkg-config` on Linux)
+  - `webcam`: Enables webcam system functions (may require `libjpeg-dev` on Linux)
 
-  If you want audio on Linux, you may need to install some dependencies first:
-  ```
-  apt install libasound2-dev libudev-dev libjpeg-dev pkg-config 
   ```
 - If you want the most recent development version of Uiua, you can install from the git repository.
   ```

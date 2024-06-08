@@ -144,6 +144,11 @@ pub fn Install() -> impl IntoView {
                 <p>"On Linux, this may require installing some dependencies:"</p>
                 <code class="code-block">"apt install libasound2-dev libudev-dev pkg-config"</code>
             </li>
+            <li>
+                <p><code>"webcam"</code>" - Enables webcam system functions."</p>
+                <p>"On Linux, this may require installing some dependencies:"</p>
+                <code class="code-block">"apt install libjpeg-dev"</code>
+            </li>
         </ul>
         <p>"If you want the most recent development version of Uiua, you can install from the git repository."</p>
         <code class="code-block">"cargo install --git https://github.com/uiua-lang/uiua uiua"</code>

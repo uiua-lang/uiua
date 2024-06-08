@@ -612,14 +612,13 @@ impl<T: ArrayValue> Array<T> {
         } else {
             let mut all_bools = true;
             let mut true_count = 0;
+            let mut sum: f64 = 0.0;
             for &n in counts.iter() {
+                sum += n;
                 match n as usize {
                     0 => {}
                     1 => true_count += 1,
-                    _ => {
-                        all_bools = false;
-                        break;
-                    }
+                    _ => all_bools = false,
                 }
             }
             let row_len = self.row_len();
@@ -636,7 +635,8 @@ impl<T: ArrayValue> Array<T> {
                 self.data = new_data;
                 self.shape[0] = true_count;
             } else {
-                let mut new_data = CowSlice::new();
+                let elem_count = validate_size::<T>([sum as usize, row_len], env)?;
+                let mut new_data = CowSlice::with_capacity(elem_count);
                 let mut new_len = 0;
                 if row_len > 0 {
                     for (n, r) in counts.iter().zip(self.data.chunks_exact(row_len)) {

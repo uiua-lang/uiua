@@ -68,6 +68,13 @@ impl<T> CowSlice<T> {
 }
 
 impl<T: Clone> CowSlice<T> {
+    pub fn from_elem(elem: T, len: usize) -> Self {
+        Self {
+            data: EcoVec::from_elem(elem, len),
+            start: 0,
+            end: len,
+        }
+    }
     pub fn truncate(&mut self, len: usize) {
         if self.is_unique() {
             self.data.truncate(self.start + len);

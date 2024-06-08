@@ -3,7 +3,6 @@ use std::{
     cmp::Ordering,
     fmt,
     hash::{Hash, Hasher},
-    iter::repeat,
     mem::{size_of, take},
 };
 
@@ -226,40 +225,43 @@ impl Value {
         match self {
             Self::Num(_) => Array::new(
                 shape,
-                repeat(env.num_scalar_fill().unwrap_or_else(|_| f64::proxy()))
-                    .take(elem_count)
-                    .collect::<CowSlice<_>>(),
+                CowSlice::from_elem(
+                    env.num_scalar_fill().unwrap_or_else(|_| f64::proxy()),
+                    elem_count,
+                ),
             )
             .into(),
             Self::Byte(_) => Array::new(
                 shape,
-                repeat(env.byte_scalar_fill().unwrap_or_else(|_| u8::proxy()))
-                    .take(elem_count)
-                    .collect::<CowSlice<_>>(),
+                CowSlice::from_elem(
+                    env.byte_scalar_fill().unwrap_or_else(|_| u8::proxy()),
+                    elem_count,
+                ),
             )
             .into(),
             Self::Complex(_) => Array::new(
                 shape,
-                repeat(
+                CowSlice::from_elem(
                     env.complex_scalar_fill()
                         .unwrap_or_else(|_| Complex::proxy()),
-                )
-                .take(elem_count)
-                .collect::<CowSlice<_>>(),
+                    elem_count,
+                ),
             )
             .into(),
             Self::Char(_) => Array::new(
                 shape,
-                repeat(env.char_scalar_fill().unwrap_or_else(|_| char::proxy()))
-                    .take(elem_count)
-                    .collect::<CowSlice<_>>(),
+                CowSlice::from_elem(
+                    env.char_scalar_fill().unwrap_or_else(|_| char::proxy()),
+                    elem_count,
+                ),
             )
             .into(),
             Self::Box(_) => Array::new(
                 shape,
-                repeat(env.box_scalar_fill().unwrap_or_else(|_| Boxed::proxy()))
-                    .take(elem_count)
-                    .collect::<CowSlice<_>>(),
+                CowSlice::from_elem(
+                    env.box_scalar_fill().unwrap_or_else(|_| Boxed::proxy()),
+                    elem_count,
+                ),
             )
             .into(),
         }

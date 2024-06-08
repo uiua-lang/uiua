@@ -218,12 +218,18 @@ pub enum PreEvalMode {
 }
 
 const MAX_PRE_EVAL_ELEMS: usize = 1000;
+const MAX_PRE_EVAL_RANK: usize = 4;
 
 impl PreEvalMode {
     fn matches_instrs(&self, instrs: &[Instr], asm: &Assembly) -> bool {
-        if instrs.iter().any(
-            |instr| matches!(instr, Instr::Push(val) if val.element_count() > MAX_PRE_EVAL_ELEMS),
-        ) {
+        if instrs.iter().any(|instr| {
+            matches!(
+                instr,
+                Instr::Push(val)
+                    if val.element_count() > MAX_PRE_EVAL_ELEMS
+                    || val.rank() > MAX_PRE_EVAL_RANK
+            )
+        }) {
             return false;
         }
         match self {
@@ -2231,7 +2237,9 @@ code:
             match env.run_asm(asm) {
                 Ok(()) => {
                     let stack = env.take_stack();
-                    let res = if stack.iter().any(|v| v.element_count() > MAX_PRE_EVAL_ELEMS) {
+                    let res = if stack.iter().any(|v| {
+                        v.element_count() > MAX_PRE_EVAL_ELEMS || v.rank() > MAX_PRE_EVAL_RANK
+                    }) {
                         None
                     } else {
                         Some(stack)

@@ -139,6 +139,8 @@ uiuisms!(
     "≠. [1_1 2_2]",
     /// Create a 0xN matrix
     "↯0⊚ 2",
+    /// Replace all NaNs in an array with a value
+    "↧⊸↥ 0 [1 2 NaN 4 NaN]",
     /// Check if character is numeric [0-9]
     r#"×⊓≥≤@0,@9 "hi-5!""#,
     /// Check if character is letter [a-zA-Z]

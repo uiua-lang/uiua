@@ -1,8 +1,8 @@
 # Uiua Todo
 
 - 0.12
+  - Pervasive switch functions and `repeat`
   - Optimize `indexof` allocation
-  - Stack visualization output comments
   - Stack-source locality tutorial
   - Axis swizzles?
   - Rewrite .uasm format
@@ -13,6 +13,7 @@
   - `base` function?
   - `chunks` function?
   - Channels?
+  - Stack visualization output comments?
   - Plots
   - Dynamic modules
 - Media window

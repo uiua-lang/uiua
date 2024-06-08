@@ -389,6 +389,7 @@ impl Value {
     pub fn undo_fix(&mut self) {
         unsafe { self.repr_mut() }.arr.undo_fix();
     }
+    #[track_caller]
     pub(crate) fn validate_shape(&self) {
         let repr = unsafe { self.repr() };
         validate_shape(&repr.arr.shape, repr.arr.data.len());

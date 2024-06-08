@@ -1,6 +1,8 @@
 # Uiua Todo
 
 - 0.12
+  - Optimize `indexof` allocation
+  - Stack visualization output comments
   - Stack-source locality tutorial
   - Axis swizzles?
   - Rewrite .uasm format

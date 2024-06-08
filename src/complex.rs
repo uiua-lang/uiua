@@ -110,16 +110,7 @@ impl Complex {
     pub fn powc(self, power: impl Into<Self>) -> Self {
         let power = power.into();
         if power.im == 0.0 {
-            if self.im == 0.0 {
-                return if self.re >= 0.0 {
-                    Self::new(self.re.powf(power.re), 0.0)
-                } else {
-                    Self::new(0.0, self.re.abs().powf(power.re))
-                };
-            }
-            if power.re == 0.0 {
-                return Self::ONE;
-            }
+            return self.powf(power.re);
         }
         let (r, theta) = self.to_polar();
         ((r.ln() + Self::I * theta) * power).exp()
@@ -129,8 +120,8 @@ impl Complex {
         if power == 0.0 {
             return Self::ONE;
         }
-        if power.fract() == 0.0 {
-            return Self::new(self.re.powf(power), self.im.powf(power));
+        if power.fract() == 0.0 && self.im == 0.0 {
+            return self.re.powf(power).into();
         }
         let (r, theta) = self.to_polar();
         Self::from_polar(r.powf(power), theta * power)

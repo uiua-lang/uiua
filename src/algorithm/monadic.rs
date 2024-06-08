@@ -912,8 +912,8 @@ impl Value {
     /// Decode the `bits` of the value
     pub fn unbits(&self, env: &Uiua) -> UiuaResult<Value> {
         match self {
-            Value::Byte(n) => n.inverse_bits(env),
-            Value::Num(n) => n.inverse_bits(env),
+            Value::Byte(n) => n.un_bits(env),
+            Value::Num(n) => n.un_bits(env),
             _ => Err(env.error("Argument to inverse_bits must be an array of integers")),
         }
     }
@@ -997,7 +997,7 @@ where
     Array<T>: Into<Value>,
 {
     /// Decode the `bits` of the array
-    pub fn inverse_bits(&self, env: &Uiua) -> UiuaResult<Value> {
+    pub fn un_bits(&self, env: &Uiua) -> UiuaResult<Value> {
         for &n in &self.data {
             if !n.is_int() {
                 return Err(env.error(format!(

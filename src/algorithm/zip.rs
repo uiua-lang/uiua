@@ -267,7 +267,6 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
         }
     }
     let outputs = f.signature().outputs;
-    let is_scalar = xs.rank() == 0;
     let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
     let new_shape = xs.shape().clone();
     let is_empty = outputs > 0 && xs.row_count() == 0;
@@ -293,13 +292,12 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
     for new_values in new_values.into_iter().rev() {
         let mut new_shape = new_shape.clone();
         let mut eached = Value::from_row_values(new_values, env)?;
-        if is_scalar {
-            eached.undo_fix();
-        } else if is_empty {
+        if is_empty {
             eached.pop_row();
         }
-        new_shape.extend_from_slice(&eached.shape().row());
+        new_shape.extend_from_slice(eached.shape().row_slice());
         *eached.shape_mut() = new_shape;
+        eached.validate_shape();
         eached.set_per_meta(per_meta.clone());
         env.push(eached);
     }

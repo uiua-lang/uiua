@@ -59,6 +59,10 @@ impl Shape {
         shape.make_row();
         shape
     }
+    /// Get the row shape slice
+    pub fn row_slice(&self) -> &[usize] {
+        &self.dims[self.len().min(1)..]
+    }
     /// Get the number of elements
     pub fn elements(&self) -> usize {
         self.iter().product()

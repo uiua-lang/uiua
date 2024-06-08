@@ -37,6 +37,12 @@
     "class": "Audio",
     "description": "Synthesize and stream audio"
   },
+  "&camcap": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Capture an image from a webcam"
+  },
   "&cd": {
     "args": 1,
     "outputs": 0,
@@ -249,7 +255,7 @@
   },
   "&runs": {
     "args": 1,
-    "outputs": 1,
+    "outputs": 3,
     "class": "Command",
     "description": "Run a command with streaming IO"
   },

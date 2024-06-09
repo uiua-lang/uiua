@@ -69,11 +69,18 @@ impl fmt::Display for SizeError {
 
 impl std::error::Error for SizeError {}
 
-pub fn validate_size<T>(
-    sizes: impl IntoIterator<Item = usize> + Clone,
-    env: &Uiua,
-) -> UiuaResult<usize> {
-    validate_size_impl(size_of::<T>(), sizes).map_err(|e| env.error(e))
+pub fn validate_size<T>(sizes: impl IntoIterator<Item = usize>, env: &Uiua) -> UiuaResult<usize> {
+    validate_size_ctx::<T, _>(sizes, env)
+}
+
+pub fn validate_size_ctx<T, C>(
+    sizes: impl IntoIterator<Item = usize>,
+    ctx: &C,
+) -> Result<usize, C::Error>
+where
+    C: ErrorContext,
+{
+    validate_size_impl(size_of::<T>(), sizes).map_err(|e| ctx.error(e))
 }
 
 pub(crate) fn validate_size_impl(
@@ -280,11 +287,13 @@ where
             arr.shape.drain(..fixes);
             if target.len() >= fixes {
                 for &dim in target.iter().take(fixes).rev() {
-                    arr.reshape_scalar_integer(dim);
+                    arr.reshape_scalar_integer(dim, ctx)
+                        .map_err(|_| "Array of would be too large")?;
                 }
             } else if arr.shape() == target {
                 for &dim in target.iter().cycle().take(fixes) {
-                    arr.reshape_scalar_integer(dim);
+                    arr.reshape_scalar_integer(dim, ctx)
+                        .map_err(|_| "Array of would be too large")?;
                 }
             }
         }

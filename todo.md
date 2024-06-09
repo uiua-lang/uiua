@@ -2,7 +2,6 @@
 
 - 0.12
   - Pervasive switch functions and `repeat`
-  - Optimize `indexof` allocation
   - Stack-source locality tutorial
   - Axis swizzles?
   - Rewrite .uasm format

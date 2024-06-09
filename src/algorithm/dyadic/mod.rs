@@ -24,7 +24,10 @@ use crate::{
     Shape, Uiua, UiuaResult,
 };
 
-use super::{pervade::ArrayRef, shape_prefixes_match, validate_size, ArrayCmpSlice, FillContext};
+use super::{
+    pervade::ArrayRef, shape_prefixes_match, validate_size, validate_size_ctx, ArrayCmpSlice,
+    ErrorContext, FillContext,
+};
 
 impl Value {
     pub(crate) fn bin_coerce_to_boxes<T, C: FillContext, E: ToString>(
@@ -171,11 +174,11 @@ impl Value {
         if shape.rank() == 0 {
             let n = target_shape[0];
             match self {
-                Value::Num(a) => a.reshape_scalar(n),
-                Value::Byte(a) => a.reshape_scalar(n),
-                Value::Complex(a) => a.reshape_scalar(n),
-                Value::Char(a) => a.reshape_scalar(n),
-                Value::Box(a) => a.reshape_scalar(n),
+                Value::Num(a) => a.reshape_scalar(n, env),
+                Value::Byte(a) => a.reshape_scalar(n, env),
+                Value::Complex(a) => a.reshape_scalar(n, env),
+                Value::Char(a) => a.reshape_scalar(n, env),
+                Value::Box(a) => a.reshape_scalar(n, env),
             }
         } else {
             match self {
@@ -193,9 +196,8 @@ impl Value {
                 Value::Complex(a) => a.reshape(&target_shape, env),
                 Value::Char(a) => a.reshape(&target_shape, env),
                 Value::Box(a) => a.reshape(&target_shape, env),
-            }?
+            }
         }
-        Ok(())
     }
     pub(crate) fn undo_reshape(&mut self, old_shape: &Self, env: &Uiua) -> UiuaResult {
         if old_shape.as_nat(env, "").is_ok() {
@@ -218,34 +220,41 @@ impl Value {
 
 impl<T: Clone> Array<T> {
     /// `reshape` this array by replicating it as the rows of a new array
-    pub fn reshape_scalar(&mut self, count: Result<isize, bool>) {
+    pub fn reshape_scalar(&mut self, count: Result<isize, bool>, env: &Uiua) -> UiuaResult {
         self.take_map_keys();
         match count {
             Ok(count) => {
                 if count < 0 {
                     self.reverse();
                 }
-                self.reshape_scalar_integer(count.unsigned_abs());
+                self.reshape_scalar_integer(count.unsigned_abs(), env)
             }
             Err(rev) => {
                 if rev {
                     self.reverse()
                 }
+                Ok(())
             }
         }
     }
-    pub(crate) fn reshape_scalar_integer(&mut self, count: usize) {
+    pub(crate) fn reshape_scalar_integer<C: ErrorContext>(
+        &mut self,
+        count: usize,
+        ctx: &C,
+    ) -> Result<(), C::Error> {
         if count == 0 {
             self.data.clear();
             self.shape.insert(0, 0);
-            return;
+            return Ok(());
         }
-        self.data.reserve((count - 1) * self.data.len());
+        let elem_count = validate_size_ctx::<T, _>([count - 1, self.data.len()], ctx)?;
+        self.data.reserve(elem_count);
         let row = self.data.to_vec();
         for _ in 1..count {
             self.data.extend_from_slice(&row);
         }
         self.shape.insert(0, count);
+        Ok(())
     }
 }
 

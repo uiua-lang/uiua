@@ -1432,10 +1432,16 @@ impl Array<f64> {
             }
             max = max.max(n as usize);
         }
+        if max.overflowing_mul(max).1 {
+            return Err(env.error(format!(
+                "Cannot get primes of {} because it is too large",
+                max
+            )));
+        }
         validate_size::<usize>([max, 2], env)?;
 
         // Sieve of Eratosthenes
-        let mut spf = vec![0; max + 1];
+        let mut spf = vec![1; max + 1];
         for i in 2..=max {
             spf[i] = i;
         }

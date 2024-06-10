@@ -1143,7 +1143,11 @@ impl<'a> Formatter<'a> {
             .is_some_and(|word| {
                 matches!(
                     word.value,
-                    Word::Comment(_) | Word::OutputComment { .. } | Word::MultilineFormatString(_)
+                    Word::Comment(_)
+                        | Word::OutputComment { .. }
+                        | Word::SemanticComment(_)
+                        | Word::MultilineString(_)
+                        | Word::MultilineFormatString(_)
                 )
             });
         if lines.len() == 1
@@ -1267,7 +1271,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::Comment(_) => true,
         Word::Spaces => false,
         Word::BreakLine | Word::UnbreakLine => false,
-        Word::SemanticComment(_) => false,
+        Word::SemanticComment(_) => true,
         Word::OutputComment { .. } => true,
     }
 }

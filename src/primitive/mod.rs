@@ -1789,6 +1789,9 @@ mod tests {
 			"include": "#comments"
 		}},
 		{{
+			"include": "#strings-multiline-format"
+		}},
+		{{
 			"include": "#strings-multiline"
 		}},
 		{{
@@ -1866,12 +1869,13 @@ mod tests {
 		"strings-multiline": {{
 			"name": "constant.character.escape",
 			"begin": "\\$ ",
+			"end": "$"
+		}},
+		"strings-multiline-format": {{
+			"name": "constant.character.escape",
+			"begin": "\\$\\$ ",
 			"end": "$",
 			"patterns": [
-				{{
-					"name": "string.quoted",
-					"match": "\\\\[\\\\\"0nrt_]"
-				}},
 				{{
 					"name": "constant.numeric",
 					"match": "(?<!\\\\)_"

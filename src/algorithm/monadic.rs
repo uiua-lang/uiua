@@ -1409,7 +1409,8 @@ impl Value {
 
 impl Array<f64> {
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
-        let mut primes: Vec<Vec<u64>> = Vec::new();
+        let mut max = 0;
+        // Validate nums and calc max
         for &n in &self.data {
             if n <= 0.0 {
                 return Err(env.error(format!(
@@ -1423,36 +1424,58 @@ impl Array<f64> {
                     n.grid_string(true)
                 )));
             }
-            let mut m = n as u64;
+            if n > usize::MAX as f64 {
+                return Err(env.error(format!(
+                    "Cannot get primes of {} because it is too large",
+                    n.grid_string(true)
+                )));
+            }
+            max = max.max(n as usize);
+        }
+        validate_size::<usize>([max, 2], env)?;
+
+        // Sieve of Eratosthenes
+        let mut spf = vec![0; max + 1];
+        for i in 2..=max {
+            spf[i] = i;
+        }
+        for i in 2..=max {
+            if spf[i] == i {
+                for j in (i * i..=max).step_by(i) {
+                    if spf[j] == j {
+                        spf[j] = i;
+                    }
+                }
+            }
+        }
+
+        // Factorize
+        let mut lengths: Vec<usize> = Vec::with_capacity(self.data.len());
+        let mut factors: Vec<usize> = Vec::with_capacity(self.data.len());
+        for &n in &self.data {
+            let mut m = n as usize;
             if m == 1 {
-                primes.push(Vec::new());
+                lengths.push(0);
                 continue;
             }
-            let mut factors = Vec::new();
-            let mut i = 2;
-            while i * i <= m {
-                while m % i == 0 {
-                    factors.push(i);
-                    m /= i;
-                }
-                i += 1;
+            let mut len = 0;
+            while m != 1 {
+                factors.push(spf[m]);
+                m /= spf[m];
+                len += 1;
             }
-            if m > 1 {
-                factors.push(m);
-            }
-            primes.push(factors);
+            lengths.push(len);
         }
-        let longest = primes.iter().map(Vec::len).max().unwrap_or(0);
-        for factors in &mut primes {
-            while factors.len() < longest {
-                factors.insert(0, 1);
-            }
-        }
+
+        // Pad and create array
+        let longest = lengths.iter().max().copied().unwrap_or(0);
         let mut data = eco_vec![1.0; self.data.len() * longest];
         let data_slice = data.make_mut();
-        for (i, factors) in primes.into_iter().enumerate() {
-            for (j, factor) in factors.into_iter().enumerate() {
-                data_slice[i + self.data.len() * j] = factor as f64;
+        let mut k = 0;
+        for (i, len) in lengths.into_iter().enumerate() {
+            for j in (longest - len)..longest {
+                data_slice[j * self.data.len() + i] = factors[k] as f64;
+                k += 1;
             }
         }
         let mut shape = self.shape.clone();

@@ -183,11 +183,8 @@ impl Compiler {
                         if let Ok(rest_sig) = instrs_signature(rest) {
                             if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs {
                                 comp.emit_diagnostic(
-                                    format!(
-                                        "Functions should consume their arguments. \
-                                        Try removing this {}.",
-                                        Primitive::Dup.format()
-                                    ),
+                                    "Functions should consume their arguments. \
+                                    Try removing this.",
                                     DiagnosticKind::Style,
                                     dup_span,
                                 );

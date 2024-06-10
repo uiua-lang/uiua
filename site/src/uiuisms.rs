@@ -192,11 +192,11 @@ uiuisms!(
     /// Remove all instances of an element from a list
     "▽≠, 4 [1 4 2 0 5 4 3]",
     /// Remove first instance of an element from an array
-    "⍜↻(↘1)⊗⊙. 4 [1 4 2 0 5 4 3]",
+    "⍜↻(↘1)⊸⊗ 4 [1 4 2 0 5 4 3]",
     /// Remove the nth element from an array
     "⍜↻(↘1) 4 [1 4 2 0 5 4 3]",
     /// Remove all instances of a row from an array
-    "▽¬≡≍⊸¤ 2_0 [1_4 2_0 5_3 2_0]",
+    "▽¬≡≍,¤",
     /// Filter by a fixed predicate
     "▽ =0◿3 . ⇡10",
     /// Find the most common row in an array
@@ -266,7 +266,7 @@ uiuisms!(
     /// Corner element of an array
     "⊢♭ [1_2_3_4 5_6_7_8 9_10_11_12]",
     /// Test if positive integers are prime
-    "=⊡¯1°/×. [2 3 4 5 6 7 8 9 10]",
+    "=⊢⇌°/×. [2 3 4 5 6 7 8 9 10]",
     /// Inverse modulo m, returns m if it does not exist
     "⊗1◿:×⇡, 3 7",
     /// Multiplicative order modulo m

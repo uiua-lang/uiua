@@ -1667,7 +1667,6 @@ fn EndOfTutorialList() -> impl IntoView {
             <li><A href="/docs#other-tutorials">"Other tutorials about more specific topics"</A></li>
             <li><A href="/docs#other-docs">"Other language topics"</A></li>
             <li>"The online "<A href="/pad">"pad"</A>" for writing longer code"</li>
-            <li><A href="/docs/isms">"Uiuisms"</A>", a currated list of common operations"</li>
         </ul>
     }
 }

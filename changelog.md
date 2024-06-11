@@ -27,6 +27,11 @@ This version is not yet released. If you are reading this on the website, then t
 - Some optimizations
 - Array shapes now show on hover in the LSP
 - Allow Uiua-specific tokens types to be disabled in the LSP
+### Website
+- Remove the Uiuisms page
+  - It provided a "definitive" implementation of many algorithms where the best implementation is subjective and/or context-dependent
+  - It is not how I want people to approach learning Uiua
+  - It is not something I am interested in maintaining
 
 ## 0.11.1 - 2024-06-06
 ### Interpreter

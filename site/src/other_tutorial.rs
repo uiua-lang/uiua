@@ -4,7 +4,7 @@ use leptos_meta::Title;
 use leptos_router::*;
 use uiua::{Primitive, SysOp};
 
-use crate::{title_markdown, Challenge, Editor, Hd, Prim};
+use crate::{title_markdown, Challenge, Editor, Hd, Prim, Prims};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum OtherTutorialPage {
@@ -119,6 +119,12 @@ pub fn ImagesAndGifs() -> impl IntoView {
         <Editor example="< ⊞⊙∘ -0.4 : ×0.2∿×τ . ÷⟜⇡100\n[⍉.⇌.]\n△. # Not a valid image shape\n⍉:\n△. # Valid image shape"/>
         <p>"Of course, images need not be sqaure."</p>
         <Editor example="⊞< :+1/2÷3∿×τ: ∩(÷100⇡) 100 300"/>
+        <p>"The "<code>"Logo"</code>" constant is a quick way to get the Uiua logo as an image."</p>
+        <Editor example="Logo"/>
+        <p>"The "<Prim prim=Keep/>" function can be used to scale an image vertically. "<Prims prims=[Rows, Keep]/>" scales it horizontally. Non-integer scales are allowed."</p>
+        <Editor example="▽ 0.5 Logo"/>
+        <Editor example="≡▽ 2 Logo"/>
+        <Editor example="▽⟜≡▽ 0.7 Logo"/>
 
         <Hd id="gifs">"GIFs"</Hd>
         <p>"To create a GIF, simply create an array where every row is an image."</p>

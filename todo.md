@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Remove Uiuisms page
   - Improve pad git import error messages
   - Pervasive switch functions and `repeat`
   - Stack-source locality tutorial

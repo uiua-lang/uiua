@@ -319,7 +319,6 @@ pub fn MainPage() -> impl IntoView {
             <p>"For a quick overview of how the language works, see the "<A href="/tour">"Language Tour"</A>"."</p>
             <p>"For a full tutorial, see the "<A href="/docs#tutorial">"Tutorial"</A>"."</p>
             <p>"For a reference of all the built-in functions, the documentation has a "<A href="/docs#functions">"full list"</A>"."</p>
-            <p>"For a curated list of Uiua functions for solving common problems, see "<A href="/isms">"Uiuisms"</A>"."</p>
         </div>
     }
 }

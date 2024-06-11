@@ -415,19 +415,38 @@ pub fn Combinators() -> impl IntoView {
                     </span></sup>
                 }
             });
-            let symbol = if let Some(sym) = symbol.strip_suffix(|c: char| c.is_ascii_digit()) {
+            let symbol_view = if let Some(sym) = symbol.strip_suffix(|c: char| c.is_ascii_digit()) {
                 let sub = symbol.chars().rev().take_while(char::is_ascii_digit).collect::<String>();
                 view!({ sym }<sub>{ sub }</sub>).into_view()
             } else {
                 symbol.into_view()
             };
+            let onclick = {
+                let diagram = diagram.clone();
+                move |_| {
+                    window().open_with_url_and_target(&diagram, "_blank").unwrap();
+                }
+            };
             view! {
                 <tr>
-                    <td>{ symbol }{ note }</td>
+                    <td>{ symbol_view }{ note }</td>
                     <td>{ bird }</td>
                     <td>{ code }</td>
                     <td><Editor example={&ex} nonprogressive=true/></td>
-                    <td><object data={diagram} type="image/svg+xml" aria-label={bird} class="combinator-diagram"/></td>
+                    <td><div style="position: relative">
+                        <object
+                            data={diagram}
+                            type="image/svg+xml"
+                            aria-label={bird}
+                            class="combinator-diagram"/>
+                        <button
+                            class="editor-right-button"
+                            style="position: absolute; top: 0; right: 0;"
+                            data-title="Open SVG"
+                            on:click=onclick>
+                            "🔗"
+                        </button>
+                    </div></td>
                 </tr>
             }
         })

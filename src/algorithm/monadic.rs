@@ -1432,12 +1432,22 @@ impl Array<f64> {
             }
             max = max.max(n as usize);
         }
-        if max.overflowing_mul(max).1 {
-            return Err(env.error(format!(
-                "Cannot get primes of {} because it is too large",
-                max
-            )));
+
+        if self.element_count() == 1 {
+            let mut n = self.data[0] as usize;
+            let mut primes = EcoVec::new();
+            for d in 2..=self.data[0].sqrt().ceil() as usize {
+                while n % d == 0 {
+                    primes.push(d as f64);
+                    n /= d;
+                }
+            }
+            if n > 1 {
+                primes.push(n as f64);
+            }
+            return Ok(primes.into());
         }
+
         validate_size::<usize>([max, 2], env)?;
 
         // Sieve of Eratosthenes
@@ -1447,9 +1457,12 @@ impl Array<f64> {
         }
         for i in 2..=max {
             if spf[i] == i {
-                for j in (i * i..=max).step_by(i) {
-                    if spf[j] == j {
-                        spf[j] = i;
+                let (ii, overflow) = i.overflowing_mul(i);
+                if !overflow && ii <= max {
+                    for j in (ii..=max).step_by(i) {
+                        if spf[j] == j {
+                            spf[j] = i;
+                        }
                     }
                 }
             }

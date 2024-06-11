@@ -369,9 +369,21 @@ impl SysBackend for WebBackend {
         if !url.ends_with(".ua") {
             url = format!("{url}/main/lib.ua");
         }
-        logging::log!("url: {url}");
-        let res = try_fetch_sync(&url);
-        logging::log!("res: {res:?}");
+        thread_local! {
+        static CACHE: RefCell<HashMap<String, Result<String, String>>> = Default::default();
+        }
+        let res = CACHE.with(|cache| {
+            let mut cache = cache.borrow_mut();
+            if let Some(res) = cache.get(&url) {
+                Some(res.clone())
+            } else {
+                logging::log!("url: {url}");
+                let res = try_fetch_sync(&url)?;
+                logging::log!("res: {res:?}");
+                cache.insert(url.clone(), res.clone());
+                Some(res)
+            }
+        });
         match res {
             Some(Ok(text)) => {
                 let contents = text.as_bytes().to_vec();

@@ -1499,6 +1499,18 @@ impl Value {
     ) -> UiuaResult<Self> {
         self.keep_labels(other, |a, b| a.keep_map_keys(b, f))
     }
+    fn match_scalar_fill(&mut self, env: &Uiua) {
+        if let Value::Byte(arr) = self {
+            if env.num_scalar_fill().is_ok() && env.byte_scalar_fill().is_err() {
+                let shape = take(&mut arr.shape);
+                let meta = take(&mut arr.meta);
+                let data: EcoVec<f64> = take(&mut arr.data).into_iter().map(|b| b as f64).collect();
+                let mut array = Array::new(shape, data);
+                array.meta = meta;
+                *self = array.into();
+            }
+        }
+    }
 }
 
 macro_rules! value_from {
@@ -1751,68 +1763,30 @@ impl Value {
     }
 }
 
-macro_rules! val_retry {
-    (Byte, $env:expr) => {
-        $env.num_scalar_fill().is_ok()
-    };
-    ($variant:ident, $env:expr) => {
-        false
-    };
-}
-
 macro_rules! value_bin_impl {
     ($name:ident, $(
-        $(($na:ident, $nb:ident, $f1:ident $(, $retry:ident)? ))*
-        $([$(|$meta:ident| $pred:expr,)* $ip:ident, $f2:ident $(, $retry2:ident)? $(, $reset_meta:literal)?])*
+        $(($na:ident, $nb:ident, $f1:ident))*
+        $([$(|$meta:ident| $pred:expr,)* $ip:ident, $f2:ident $(, $reset_meta:literal)?])*
     ),* ) => {
         impl Value {
             #[allow(unreachable_patterns, unused_mut, clippy::wrong_self_convention)]
-            pub(crate) fn $name(self, other: Self, a_depth: usize, b_depth: usize, env: &Uiua) -> UiuaResult<Self> {
+            pub(crate) fn $name(mut self, mut other: Self, a_depth: usize, b_depth: usize, env: &Uiua) -> UiuaResult<Self> {
+                self.match_scalar_fill(env);
+                other.match_scalar_fill(env);
                 self.keep_metas(other, |a, b| { Ok(match (a, b) {
                     $($((Value::$ip(mut a), Value::$ip(mut b)) $(if {
                         let f = |$meta: &ArrayMeta| $pred;
                         f(a.meta()) && f(b.meta())
                     })* => {
-                        let mut val: Value = if val_retry!($ip, env) {
-                            let mut b_clone = b.clone();
-                            if let Err(e) = bin_pervade_mut(a.clone(), &mut b_clone, a_depth, b_depth, env, $name::$f2) {
-                                if e.is_fill {
-                                    $(
-                                        let a = a.convert();
-                                        let mut b = b.convert();
-                                        bin_pervade_mut(a, &mut b, a_depth, b_depth, env, $name::$retry2)?;
-                                        b.reset_meta_flags();
-                                        return Ok(b.into());
-                                    )*
-                                }
-                                return Err(e);
-                            } else {
-                                b_clone.into()
-                            }
-                        } else {
-                            bin_pervade_mut(a, &mut b, a_depth, b_depth, env, $name::$f2)?;
-                            b.into()
-                        };
+                        bin_pervade_mut(a, &mut b, a_depth, b_depth, env, $name::$f2)?;
+                        let mut val: Value = b.into();
                         $(if $reset_meta {
                             val.reset_meta_flags();
                         })*
                         val
                     },)*)*
                     $($((Value::$na(a), Value::$nb(b)) => {
-                        let mut val: Value = if val_retry!($na, env) || val_retry!($nb, env) {
-                            let res = bin_pervade(a.clone(), b.clone(), a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$f1));
-                            match res {
-                                Ok(arr) => arr.into(),
-                                #[allow(unreachable_code, unused_variables)]
-                                Err(e) if e.is_fill => {
-                                    $(return bin_pervade(a.convert::<f64>(), b.convert::<f64>(), a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$retry)).map(Into::into);)?
-                                    return Err(e);
-                                }
-                                Err(e) => return Err(e),
-                            }
-                        } else {
-                            bin_pervade(a, b, a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$f1))?.into()
-                        };
+                        let mut val: Value = bin_pervade(a, b, a_depth, b_depth, env, InfalliblePervasiveFn::new($name::$f1))?.into();
                         val.reset_meta_flags();
                         val
                     },)*)*
@@ -1858,9 +1832,9 @@ macro_rules! value_bin_math_impl {
             $name,
             $($($tt)*)?
             [Num, num_num],
-            (Byte, Byte, byte_byte, num_num),
-            (Byte, Num, byte_num, num_num),
-            (Num, Byte, num_byte, num_num),
+            (Byte, Byte, byte_byte),
+            (Byte, Num, byte_num),
+            (Num, Byte, num_byte),
             [Complex, com_x],
             (Complex, Num, com_x),
             (Num, Complex, x_com),
@@ -1876,13 +1850,7 @@ value_bin_math_impl!(
     (Char, Num, char_num),
     (Byte, Char, byte_char),
     (Char, Byte, char_byte),
-    [
-        |meta| meta.flags.is_boolean(),
-        Byte,
-        bool_bool,
-        num_num,
-        true
-    ],
+    [|meta| meta.flags.is_boolean(), Byte, bool_bool, true],
 );
 value_bin_math_impl!(
     sub,
@@ -1896,7 +1864,7 @@ value_bin_math_impl!(
     (Char, Num, char_num),
     (Byte, Char, byte_char),
     (Char, Byte, char_byte),
-    [|meta| meta.flags.is_boolean(), Byte, bool_bool, num_num],
+    [|meta| meta.flags.is_boolean(), Byte, bool_bool],
 );
 value_bin_math_impl!(div, (Num, Char, num_char), (Byte, Char, byte_char),);
 value_bin_math_impl!(modulus, (Complex, Complex, com_com));
@@ -1906,20 +1874,20 @@ value_bin_math_impl!(atan2);
 value_bin_math_impl!(
     min,
     [Char, char_char],
-    [|meta| meta.flags.is_boolean(), Byte, bool_bool, num_num],
+    [|meta| meta.flags.is_boolean(), Byte, bool_bool],
 );
 value_bin_math_impl!(
     max,
     [Char, char_char],
-    [|meta| meta.flags.is_boolean(), Byte, bool_bool, num_num],
+    [|meta| meta.flags.is_boolean(), Byte, bool_bool],
 );
 
 value_bin_impl!(
     complex,
     (Num, Num, num_num),
-    (Byte, Byte, byte_byte, num_num),
-    (Byte, Num, byte_num, num_num),
-    (Num, Byte, num_byte, num_num),
+    (Byte, Byte, byte_byte),
+    (Byte, Num, byte_num),
+    (Num, Byte, num_byte),
     [Complex, com_x],
     (Complex, Num, com_x),
     (Num, Complex, x_com),
@@ -1936,10 +1904,10 @@ macro_rules! eq_impls {
                 [Num, same_type],
                 (Complex, Complex, com_x),
                 (Box, Box, generic),
-                (Byte, Byte, same_type, num_num),
+                (Byte, Byte, same_type),
                 (Char, Char, generic),
-                (Num, Byte, num_byte, num_num),
-                (Byte, Num, byte_num, num_num),
+                (Num, Byte, num_byte),
+                (Byte, Num, byte_num),
                 (Complex, Num, com_x),
                 (Num, Complex, x_com),
                 (Complex, Byte, com_x),
@@ -1963,10 +1931,10 @@ macro_rules! cmp_impls {
                 [Num, same_type],
                 [Complex, com_x],
                 (Box, Box, generic),
-                (Byte, Byte, same_type, num_num),
+                (Byte, Byte, same_type),
                 (Char, Char, generic),
-                (Num, Byte, num_byte, num_num),
-                (Byte, Num, byte_num, num_num),
+                (Num, Byte, num_byte),
+                (Byte, Num, byte_num),
                 (Complex, Num, com_x),
                 (Num, Complex, x_com),
                 (Complex, Byte, com_x),

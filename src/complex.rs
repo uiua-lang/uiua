@@ -323,10 +323,7 @@ impl Div<Complex> for f64 {
 impl Rem for Complex {
     type Output = Self;
     fn rem(self, rhs: Self) -> Self::Output {
-        Self {
-            re: self.re.rem_euclid(rhs.re),
-            im: self.im.rem_euclid(rhs.im),
-        }
+        self - (self / rhs).floor() * rhs
     }
 }
 

@@ -2186,7 +2186,7 @@ primitive!(
     /// ex: ↧5 ∞
     /// ex: ↥5 ∞
     (0, Infinity, Constant, ("infinity", '∞')),
-    /// Create a hashmap from lists of keys and values
+    /// Create a hashmap from a list of keys and list values
     ///
     /// A hashmap is a normal array that is used as a mapping from keys to values.
     /// The related map functions [insert], [has], and [get], all treat the array as an actual hashmap, so they have O(1) amortized time complexity.
@@ -2200,10 +2200,10 @@ primitive!(
     /// Use [insert] to insert additional key-value pairs.
     /// ex: map 1_2 3_4
     ///   : insert 5 6
-    /// An empty array can be used as an empty map, even if it was not created with [map].
+    /// An empty array can be used as an empty map, event if it was not created with [map].
     /// ex: has 5 []
     ///   : insert 1 2 []
-    /// You can use [un][map] to get the keys and values back.
+    /// You can use [un][map] to get the keys list and values list back.
     /// ex: []
     ///   : insert 1 2_3
     ///   : insert 4 5_6

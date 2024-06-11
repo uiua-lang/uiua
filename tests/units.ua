@@ -447,9 +447,7 @@ X ← |0
 G ↚ +1
 F ← G
 
-
 # Constant vs Noadic function
-
 F ← ⚂
 G ← (⚂)
 

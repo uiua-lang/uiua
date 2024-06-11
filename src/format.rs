@@ -1178,7 +1178,7 @@ impl<'a> Formatter<'a> {
             self.config.multiline_indent * depth
         };
         for (i, line) in lines.iter().enumerate() {
-            if i > 0 || prevent_compact || (!compact && allow_leading_space) {
+            if i > 0 || (prevent_compact && depth > 0) || (!compact && allow_leading_space) {
                 self.output.push('\n');
                 if !line.is_empty() {
                     for _ in 0..indent {
@@ -1188,10 +1188,11 @@ impl<'a> Formatter<'a> {
             }
             self.format_words(line, true, depth, true);
         }
-        if !compact && !lines.iter().last().is_some_and(|line| line.is_empty()) {
-            self.output.push('\n');
-        }
+
         if !compact {
+            if depth > 0 && !lines.iter().last().is_some_and(|line| line.is_empty()) {
+                self.output.push('\n');
+            }
             for _ in 0..self.config.multiline_indent * depth.saturating_sub(1) {
                 self.output.push(' ');
             }

@@ -1,7 +1,9 @@
 # Uiua Todo
 
 - 0.12
-  - Improve pad git import error messages
+  - by inverses
+  - `setinv` on and by inverses
+  - Document on and by inverses
   - Pervasive switch functions and `repeat`
   - Stack-source locality tutorial
   - Axis swizzles?

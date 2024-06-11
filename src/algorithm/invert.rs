@@ -196,13 +196,13 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &(Val, pat!(Min, (Over, Ge, 1, MatchPattern))),
         &(Val, pat!(Max, (Over, Le, 1, MatchPattern))),
         &pat!(Pick, (Dup, Shape, Range)),
-        &InvertPatternFn(invert_left_pattern, "left"),
+        &InvertPatternFn(invert_on_inv_pattern, "on inverse"),
         &InvertPatternFn(invert_temp_pattern, "temp"),
         &InvertPatternFn(invert_push_pattern, "push"),
     ]
 };
 
-static LEFT_INVERT_PATTERNS: &[&dyn InvertPattern] = {
+static ON_INVERT_PATTERNS: &[&dyn InvertPattern] = {
     use ImplPrimitive::*;
     use Primitive::*;
     &[
@@ -432,7 +432,7 @@ pub(crate) fn under_instrs(
         &stash1!(Sign, (Abs, Mul)),
         // Pop
         &pat!(Pop, (PushToUnder(1)), (PopUnder(1))),
-        // Coupling left inverses
+        // Coupling on-inverses
         &(
             Val,
             pat!(
@@ -743,12 +743,12 @@ fn invert_trivial_pattern<'a>(
     None
 }
 
-fn invert_left_pattern<'a>(
+fn invert_on_inv_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
     let (input, mut instrs) = Val.invert_extract(input, comp)?;
-    for pattern in LEFT_INVERT_PATTERNS {
+    for pattern in ON_INVERT_PATTERNS {
         if let Some((input, inv)) = pattern.invert_extract(input, comp) {
             instrs.extend(inv);
             return Some((input, instrs));
@@ -1368,7 +1368,7 @@ fn invert_temp_pattern<'a>(
             if before_sig.args == 0 && before_sig.outputs != 0 {
                 continue;
             }
-            for pat in LEFT_INVERT_PATTERNS {
+            for pat in ON_INVERT_PATTERNS {
                 if let Some((after, pseudo_inv)) = pat.invert_extract(after, comp) {
                     if let Some(after_inv) = invert_instrs(after, comp) {
                         let mut instrs = eco_vec![start_instr.clone()];

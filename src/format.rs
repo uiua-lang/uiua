@@ -1135,9 +1135,7 @@ impl<'a> Formatter<'a> {
         if lines.is_empty() {
             return;
         }
-        let prevent_compact = lines
-            .iter()
-            .flatten()
+        let prevent_compact = (lines.iter().flatten())
             .filter(|word| !matches!(word.value, Word::Spaces))
             .last()
             .is_some_and(|word| {
@@ -1180,7 +1178,7 @@ impl<'a> Formatter<'a> {
             self.config.multiline_indent * depth
         };
         for (i, line) in lines.iter().enumerate() {
-            if i > 0 || (!compact && allow_leading_space) {
+            if i > 0 || prevent_compact || (!compact && allow_leading_space) {
                 self.output.push('\n');
                 if !line.is_empty() {
                     for _ in 0..indent {
@@ -1190,7 +1188,7 @@ impl<'a> Formatter<'a> {
             }
             self.format_words(line, true, depth, true);
         }
-        if prevent_compact && allow_compact {
+        if !compact && !lines.iter().last().is_some_and(|line| line.is_empty()) {
             self.output.push('\n');
         }
         if !compact {

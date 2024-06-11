@@ -427,7 +427,7 @@ pub fn Combinators() -> impl IntoView {
                     <td>{ bird }</td>
                     <td>{ code }</td>
                     <td><Editor example={&ex} nonprogressive=true/></td>
-                    <td><img src={diagram} alt={bird} class="combinator-diagram"/></td>
+                    <td><object data={diagram} type="image/svg+xml" aria-label={bird} class="combinator-diagram"/></td>
                 </tr>
             }
         })

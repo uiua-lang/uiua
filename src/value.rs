@@ -1934,7 +1934,7 @@ macro_rules! eq_impls {
                 $name,
                 // Value comparable
                 [Num, same_type],
-                [Complex, same_type],
+                (Complex, Complex, com_x),
                 (Box, Box, generic),
                 (Byte, Byte, same_type, num_num),
                 (Char, Char, generic),

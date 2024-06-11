@@ -689,6 +689,10 @@ fn TutorialTypes() -> impl IntoView {
         <p><Prim prim=Sqrt/>" only returns a complex number if it is called on a complex number. Beware of floating-point errors."</p>
         <Editor example="√  ¯4\n√ℂ0¯4"/>
         <p>"See "<Prim prim=Complex/>"'s docs for more details."</p>
+        <p>"Comparing complex numbers for equality returns a normal number."</p>
+        <Editor example="= i ℂ0 1\n= i ℂ1 1"/>
+        <p>"Comparing complex numbers for order returns a component-wise comparison."</p>
+        <Editor example="< i ℂ¯1 1\n≥ i ℂ1 1"/>
 
         <Hd id="characters">"Characters"</Hd>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>

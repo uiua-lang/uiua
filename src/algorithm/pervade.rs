@@ -711,10 +711,10 @@ macro_rules! eq_impl {
             pub fn x_com(a: impl Into<Complex>, b: Complex) -> u8 {
                 (b.array_cmp(&a.into()) $eq $ordering) as u8
             }
-                        pub fn byte_num(a: u8, b: f64) -> u8 {
+            pub fn byte_num(a: u8, b: f64) -> u8 {
                 (b.array_cmp(&f64::from(a)) $eq $ordering) as u8
             }
-                        pub fn num_byte(a: f64, b: u8) -> u8 {
+            pub fn num_byte(a: f64, b: u8) -> u8 {
                 (f64::from(b).array_cmp(&a) $eq $ordering) as u8
             }
             pub fn generic<T: Ord>(a: T, b: T) -> u8 {
@@ -757,10 +757,10 @@ macro_rules! cmp_impl {
                     (b.im.array_cmp(&a.im) $eq $ordering) as u8 as f64
                 )
             }
-                        pub fn byte_num(a: u8, b: f64) -> u8 {
+            pub fn byte_num(a: u8, b: f64) -> u8 {
                 (b.array_cmp(&f64::from(a)) $eq $ordering) as u8
             }
-                        pub fn num_byte(a: f64, b: u8) -> u8 {
+            pub fn num_byte(a: f64, b: u8) -> u8 {
                 (f64::from(b).array_cmp(&a) $eq $ordering) as u8
             }
             pub fn generic<T: Ord>(a: T, b: T) -> u8 {

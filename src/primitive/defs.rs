@@ -2200,7 +2200,7 @@ primitive!(
     /// Use [insert] to insert additional key-value pairs.
     /// ex: map 1_2 3_4
     ///   : insert 5 6
-    /// An empty array can be used as an empty map, event if it was not created with [map].
+    /// An empty array can be used as an empty map, even if it was not created with [map].
     /// ex: has 5 []
     ///   : insert 1 2 []
     /// You can use [un][map] to get the keys and values back.

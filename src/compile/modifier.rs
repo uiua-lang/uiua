@@ -537,9 +537,9 @@ impl Compiler {
                     _ => unreachable!(),
                 };
                 if call {
-                    self.push_instr(Instr::PushSig(sig));
+                    // self.push_instr(Instr::PushSig(sig));
                     self.push_all_instrs(instrs);
-                    self.push_instr(Instr::PopSig);
+                    // self.push_instr(Instr::PopSig);
                 } else {
                     let func =
                         self.make_function(modified.modifier.span.clone().into(), sig, instrs);

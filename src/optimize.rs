@@ -2,7 +2,7 @@ use std::fmt;
 
 use ecow::EcoVec;
 
-use crate::{Assembly, ImplPrimitive, Instr, Primitive};
+use crate::{check::instrs_all_signatures, Assembly, ImplPrimitive, Instr, Primitive};
 
 pub(crate) fn optimize_instrs_mut(
     instrs: &mut EcoVec<Instr>,
@@ -275,6 +275,19 @@ pub(crate) fn optimize_instrs_mut(
             if *a == 0 {
                 instrs.pop();
             }
+        }
+        // Redundant identity
+        (ins, Instr::Prim(Identity, span)) if !ins.is_empty() => {
+            for i in (0..ins.len()).rev() {
+                let Ok((sig, temp_sigs)) = instrs_all_signatures(&ins[i..]) else {
+                    continue;
+                };
+                if temp_sigs.iter().all(|&sig| sig == (0, 0)) && sig.outputs >= 1 {
+                    println!("{:?}", &ins[i..]);
+                    return;
+                }
+            }
+            instrs.push(Instr::Prim(Identity, span));
         }
         (_, instr) => instrs.push(instr),
     }

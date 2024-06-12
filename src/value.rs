@@ -266,6 +266,31 @@ impl Value {
             .into(),
         }
     }
+    pub(crate) fn fill_scalar(&self, env: &Uiua) -> Result<Self, &'static str> {
+        match self {
+            Self::Num(_) | Self::Byte(_) => env.num_scalar_fill().map(Into::into),
+            Self::Complex(_) => env.complex_scalar_fill().map(Into::into),
+            Self::Char(_) => env.char_scalar_fill().map(Into::into),
+            Self::Box(_) => env.box_scalar_fill().map(Into::into),
+        }
+    }
+    pub(crate) fn fill_row(&self, env: &Uiua) -> Result<Self, &'static str> {
+        if self.rank() == 0 {
+            return self.fill_scalar(env);
+        }
+        let shape: Shape = self.shape()[1..].into();
+        let elem_count = shape.iter().product();
+        match self {
+            Value::Num(_) | Self::Byte(_) => (env.num_scalar_fill())
+                .map(|fill| Array::new(shape, CowSlice::from_elem(fill, elem_count)).into()),
+            Self::Complex(_) => (env.complex_scalar_fill())
+                .map(|fill| Array::new(shape, CowSlice::from_elem(fill, elem_count)).into()),
+            Self::Char(_) => (env.char_scalar_fill())
+                .map(|fill| Array::new(shape, CowSlice::from_elem(fill, elem_count)).into()),
+            Self::Box(_) => (env.box_scalar_fill())
+                .map(|fill| Array::new(shape, CowSlice::from_elem(fill, elem_count)).into()),
+        }
+    }
     pub(crate) fn first_dim_zero(&self) -> Self {
         match self {
             Self::Num(array) => array.first_dim_zero().into(),

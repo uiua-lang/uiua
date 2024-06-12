@@ -375,7 +375,7 @@ impl Primitive {
                 Sys(SysOp::ImEncode).format()
             ),
             Sys(SysOp::HttpsWrite) => format!("use {} instead", Sys(SysOp::TlsConnect).format()),
-            Deal => format!("use {Select}{Rise}[{Pop}{Repeat}{Gen}]{Len}{Over} instead"),
+            Deal => format!("use {Select}{Rise}{By}{Rows}{Gap}{Rand} instead"),
             _ => return None,
         })
     }

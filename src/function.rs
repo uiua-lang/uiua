@@ -822,6 +822,9 @@ impl Function {
     ) -> Option<(ImplPrimitive, bool)> {
         instrs_as_flipped_impl_primitive(self.instrs(asm), asm)
     }
+    pub(crate) fn hash(&self) -> u64 {
+        self.hash
+    }
 }
 
 pub(crate) fn instrs_as_flipped_primitive(

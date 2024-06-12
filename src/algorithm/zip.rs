@@ -1,6 +1,6 @@
 //! Algorithms for zipping modifiers
 
-use std::{boxed, iter::repeat, mem::swap, slice};
+use std::{cell::RefCell, collections::HashMap, iter::repeat, mem::swap, rc::Rc, slice};
 
 use ecow::{eco_vec, EcoVec};
 
@@ -12,25 +12,29 @@ use crate::{
 
 use super::{fill_value_shapes, fixed_rows, multi_output, FillContext, FixedRowsData, MultiOutput};
 
-type ValueUnFn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
-type ValueUn2Fn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<(Value, Value)>>;
-type ValueBinFn = Box<dyn Fn(Value, Value, usize, usize, &mut Uiua) -> UiuaResult<Value>>;
+type ValueMonFn = Rc<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
+type ValueMon2Fn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<(Value, Value)>>;
+type ValueDyFn = Box<dyn Fn(Value, Value, usize, usize, &mut Uiua) -> UiuaResult<Value>>;
+
+fn mon_fn(f: impl Fn(Value, usize, &mut Uiua) -> UiuaResult<Value> + 'static) -> ValueMonFn {
+    Rc::new(move |v, d, env| f(v, d, env))
+}
 
 fn spanned_mon_fn(
     span: usize,
     f: impl Fn(Value, usize, &Uiua) -> UiuaResult<Value> + 'static,
-) -> ValueUnFn {
-    Box::new(move |v, d, env| env.with_span(span, |env| f(v, d, env)))
+) -> ValueMonFn {
+    mon_fn(move |v, d, env| env.with_span(span, |env| f(v, d, env)))
 }
 
 fn spanned_mon2_fn(
     span: usize,
     f: impl Fn(Value, usize, &Uiua) -> UiuaResult<(Value, Value)> + 'static,
-) -> ValueUn2Fn {
+) -> ValueMon2Fn {
     Box::new(move |v, d, env| env.with_span(span, |env| f(v, d, env)))
 }
 
-fn prim_mon_fast_fn(prim: Primitive, span: usize) -> Option<ValueUnFn> {
+fn prim_mon_fast_fn(prim: Primitive, span: usize) -> Option<ValueMonFn> {
     use Primitive::*;
     Some(match prim {
         Not => spanned_mon_fn(span, |v, _, env| Value::not(v, env)),
@@ -62,7 +66,7 @@ fn prim_mon_fast_fn(prim: Primitive, span: usize) -> Option<ValueUnFn> {
     })
 }
 
-fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> {
+fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMonFn> {
     use ImplPrimitive::*;
     Some(match prim {
         TransposeN(n) => spanned_mon_fn(span, move |mut v, d, _| {
@@ -90,7 +94,15 @@ fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> 
     })
 }
 
-fn impl_prim_mon2_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUn2Fn> {
+fn prim_mon2_fast_fn(prim: Primitive, span: usize) -> Option<ValueMon2Fn> {
+    use Primitive::*;
+    Some(match prim {
+        Dup => spanned_mon2_fn(span, |v, _, _| Ok((v.clone(), v))),
+        _ => return None,
+    })
+}
+
+fn impl_prim_mon2_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMon2Fn> {
     use ImplPrimitive::*;
     Some(match prim {
         UnCouple => spanned_mon2_fn(span, |v, d, env| v.uncouple_depth(d, env)),
@@ -99,9 +111,23 @@ fn impl_prim_mon2_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUn2Fn
     })
 }
 
-fn f_mon_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUnFn, usize)> {
+fn f_mon_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueMonFn, usize)> {
+    thread_local! {
+        static CACHE: RefCell<HashMap<u64, Option<(ValueMonFn, usize)>>>
+            = RefCell::new(HashMap::new());
+    }
+    CACHE.with(|cache| {
+        if !cache.borrow().contains_key(&f.hash()) {
+            let f_and_depth = f_mon_fast_fn_impl(f.instrs(&env.asm), false, env);
+            cache.borrow_mut().insert(f.hash(), f_and_depth);
+        }
+        cache.borrow()[&f.hash()].clone()
+    })
+}
+
+fn f_mon_fast_fn_impl(instrs: &[Instr], deep: bool, env: &Uiua) -> Option<(ValueMonFn, usize)> {
     use Primitive::*;
-    Some(match f.instrs(&env.asm) {
+    Some(match instrs {
         &[Instr::Prim(prim, span)] => {
             let f = prim_mon_fast_fn(prim, span)?;
             (f, 0)
@@ -117,19 +143,51 @@ fn f_mon_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUnFn, usize)> {
         [Instr::Prim(Pop, _), Instr::Push(repl)] => {
             let replacement = repl.clone();
             (
-                boxed::Box::new(move |val, depth, _| {
-                    Ok(val.replace_depth(replacement.clone(), depth))
-                }),
+                Rc::new(move |val, depth, _| Ok(val.replace_depth(replacement.clone(), depth))),
                 0,
             )
+        }
+        instrs if !deep => {
+            let mut start = 0;
+            let mut depth = 0;
+            let mut func: Option<ValueMonFn> = None;
+            'outer: loop {
+                for len in [1, 2] {
+                    let end = start + len;
+                    if end > instrs.len() {
+                        break 'outer;
+                    }
+                    let instrs = &instrs[start..end];
+                    let Some((f, d)) = f_mon_fast_fn_impl(instrs, true, env) else {
+                        continue;
+                    };
+                    depth += d;
+                    func = func.map(|func| {
+                        mon_fn(
+                            move |val: Value, depth: usize, env: &mut Uiua| -> UiuaResult<Value> {
+                                f(func(val, depth, env)?, depth, env)
+                            },
+                        )
+                    });
+                    start = end;
+                    continue 'outer;
+                }
+                return None;
+            }
+            let func = func?;
+            (func, depth)
         }
         _ => return None,
     })
 }
 
-fn f_mon2_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUn2Fn, usize)> {
+fn f_mon2_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueMon2Fn, usize)> {
     use Primitive::*;
     Some(match f.instrs(&env.asm) {
+        &[Instr::Prim(prim, span)] => {
+            let f = prim_mon2_fast_fn(prim, span)?;
+            (f, 0)
+        }
         &[Instr::ImplPrim(prim, span)] => {
             let f = impl_prim_mon2_fast_fn(prim, span)?;
             (f, 0)
@@ -182,11 +240,11 @@ impl<T: Clone> Array<T> {
 fn spanned_dy_fn(
     span: usize,
     f: impl Fn(Value, Value, usize, usize, &Uiua) -> UiuaResult<Value> + 'static,
-) -> ValueBinFn {
+) -> ValueDyFn {
     Box::new(move |a, b, ad, bd, env| env.with_span(span, |env| f(a, b, ad, bd, env)))
 }
 
-fn prim_dy_fast_fn(prim: Primitive, span: usize) -> Option<ValueBinFn> {
+fn prim_dy_fast_fn(prim: Primitive, span: usize) -> Option<ValueDyFn> {
     use std::boxed::Box;
     use Primitive::*;
     Some(match prim {
@@ -214,7 +272,7 @@ fn prim_dy_fast_fn(prim: Primitive, span: usize) -> Option<ValueBinFn> {
     })
 }
 
-pub(crate) fn f_dy_fast_fn(instrs: &[Instr], env: &Uiua) -> Option<(ValueBinFn, usize, usize)> {
+pub(crate) fn f_dy_fast_fn(instrs: &[Instr], env: &Uiua) -> Option<(ValueDyFn, usize, usize)> {
     use std::boxed::Box;
     use Primitive::*;
 

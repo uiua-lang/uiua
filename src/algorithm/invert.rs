@@ -1359,7 +1359,7 @@ fn invert_temp_pattern<'a>(
     if let Some((input, start_instr @ Instr::CopyToTemp { span, .. }, inner, end_instr, count)) =
         try_copy_temp_wrap(input)
     {
-        // Pseudo-inverse
+        // On-inverse
         for mid in 0..inner.len() {
             let (before, after) = inner.split_at(mid);
             let Ok(before_sig) = instrs_signature(before) else {

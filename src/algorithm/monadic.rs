@@ -778,27 +778,29 @@ impl<T: ArrayValue> Array<T> {
             return;
         }
         let chunk_len: usize = self.shape[depth..].iter().product();
-        if chunk_len == 0 {
+        let subrow_len: usize = self.shape[depth + 1..].iter().product();
+        if chunk_len == 0 || subrow_len == 0 {
             return;
         }
         let is_list = self.rank() == depth + 1;
         let mut new_chunk = Vec::with_capacity(chunk_len);
+        let mut indices = Vec::with_capacity(chunk_len / subrow_len);
         for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
             if is_list {
                 chunk.par_sort_by(T::array_cmp);
             } else {
-                let mut indices: Vec<usize> = (0..chunk.len() / chunk_len).collect();
+                indices.extend(0..chunk.len() / subrow_len);
                 indices.par_sort_by(|&a, &b| {
-                    chunk[a * chunk_len..(a + 1) * chunk_len]
+                    chunk[a * subrow_len..(a + 1) * subrow_len]
                         .iter()
-                        .zip(&chunk[b * chunk_len..(b + 1) * chunk_len])
+                        .zip(&chunk[b * subrow_len..(b + 1) * subrow_len])
                         .map(|(a, b)| a.array_cmp(b))
                         .find(|x| x != &Ordering::Equal)
                         .unwrap_or(Ordering::Equal)
                 });
                 new_chunk.clear();
-                for i in indices {
-                    new_chunk.extend_from_slice(&chunk[i * chunk_len..(i + 1) * chunk_len]);
+                for i in indices.drain(..) {
+                    new_chunk.extend_from_slice(&chunk[i * subrow_len..(i + 1) * subrow_len]);
                 }
                 chunk.clone_from_slice(&new_chunk);
             }
@@ -810,27 +812,29 @@ impl<T: ArrayValue> Array<T> {
             return;
         }
         let chunk_len: usize = self.shape[depth..].iter().product();
-        if chunk_len == 0 {
+        let subrow_len: usize = self.shape[depth + 1..].iter().product();
+        if chunk_len == 0 || subrow_len == 0 {
             return;
         }
         let is_list = self.rank() == depth + 1;
         let mut new_chunk = Vec::with_capacity(chunk_len);
+        let mut indices = Vec::with_capacity(chunk_len / subrow_len);
         for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
             if is_list {
                 chunk.par_sort_by(|a, b| b.array_cmp(a));
             } else {
-                let mut indices: Vec<usize> = (0..chunk.len() / chunk_len).collect();
+                indices.extend(0..chunk.len() / subrow_len);
                 indices.par_sort_by(|&a, &b| {
-                    chunk[a * chunk_len..(a + 1) * chunk_len]
+                    chunk[a * subrow_len..(a + 1) * subrow_len]
                         .iter()
-                        .zip(&chunk[b * chunk_len..(b + 1) * chunk_len])
+                        .zip(&chunk[b * subrow_len..(b + 1) * subrow_len])
                         .map(|(a, b)| b.array_cmp(a))
                         .find(|x| x != &Ordering::Equal)
                         .unwrap_or(Ordering::Equal)
                 });
                 new_chunk.clear();
-                for i in indices {
-                    new_chunk.extend_from_slice(&chunk[i * chunk_len..(i + 1) * chunk_len]);
+                for i in indices.drain(..) {
+                    new_chunk.extend_from_slice(&chunk[i * subrow_len..(i + 1) * subrow_len]);
                 }
                 chunk.clone_from_slice(&new_chunk);
             }

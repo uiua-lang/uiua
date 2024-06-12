@@ -688,7 +688,7 @@ pub fn Editor<'a>(
                 });
             }
             // Handle open delimiters
-            "(" | "[" | "{" if !event.meta_key() => {
+            "(" | "[" | "{" if !os_ctrl(event) => {
                 // Surround the selected text with delimiters
                 let (open, close) = match key {
                     "\"" => ('"', '"'),

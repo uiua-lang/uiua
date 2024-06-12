@@ -1619,10 +1619,7 @@ code:
             BindingKind::Func(f) if self.inlinable(f.instrs(&self.asm)) => {
                 if call {
                     // Inline instructions
-                    self.push_instr(Instr::PushSig(f.signature()));
-                    let instrs = EcoVec::from(f.instrs(&self.asm));
-                    self.push_all_instrs(instrs);
-                    self.push_instr(Instr::PopSig);
+                    self.push_all_instrs(EcoVec::from(f.instrs(&self.asm)));
                 } else {
                     self.push_instr(Instr::PushFunc(f));
                 }

@@ -599,9 +599,7 @@ impl Compiler {
                 instrs.extend(a_instrs);
                 let sig = Signature::new(a_sig.args.max(b_sig.args), a_sig.outputs + b_sig.outputs);
                 if call {
-                    self.push_instr(Instr::PushSig(sig));
                     self.push_all_instrs(instrs);
-                    self.push_instr(Instr::PopSig);
                 } else {
                     let func =
                         self.make_function(modified.modifier.span.clone().into(), sig, instrs);
@@ -627,9 +625,7 @@ impl Compiler {
                 instrs.extend(a_instrs);
                 let sig = Signature::new(a_sig.args + b_sig.args, a_sig.outputs + b_sig.outputs);
                 if call {
-                    self.push_instr(Instr::PushSig(sig));
                     self.push_all_instrs(instrs);
-                    self.push_instr(Instr::PopSig);
                 } else {
                     let func = self.make_function(
                         FunctionId::Anonymous(modified.modifier.span.clone()),
@@ -682,25 +678,9 @@ impl Compiler {
                 }
 
                 if let Some((f_before, f_after)) = under_instrs(&f_instrs, g_sig, self) {
-                    let before_sig = self.sig_of(&f_before, &f_span)?;
-                    let after_sig = self.sig_of(&f_after, &f_span)?;
-                    let mut instrs = if call {
-                        eco_vec![Instr::PushSig(before_sig)]
-                    } else {
-                        EcoVec::new()
-                    };
-                    instrs.extend(f_before);
-                    if call {
-                        instrs.push(Instr::PopSig);
-                    }
+                    let mut instrs = f_before;
                     instrs.extend(g_instrs);
-                    if call {
-                        instrs.push(Instr::PushSig(after_sig));
-                    }
                     instrs.extend(f_after);
-                    if call {
-                        instrs.push(Instr::PopSig);
-                    }
                     if call {
                         self.push_all_instrs(instrs);
                     } else {
@@ -837,9 +817,7 @@ impl Compiler {
                     }
                     let sig = Signature::new(sig.args * 2, sig.outputs * 2);
                     if call {
-                        self.push_instr(Instr::PushSig(sig));
                         self.push_all_instrs(instrs);
-                        self.push_instr(Instr::PopSig);
                     } else {
                         let func =
                             self.make_function(modified.modifier.span.clone().into(), sig, instrs);

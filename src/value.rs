@@ -274,6 +274,7 @@ impl Value {
             Self::Box(_) => env.box_scalar_fill().map(Into::into),
         }
     }
+    #[allow(dead_code)]
     pub(crate) fn fill_row(&self, env: &Uiua) -> Result<Self, &'static str> {
         if self.rank() == 0 {
             return self.fill_scalar(env);

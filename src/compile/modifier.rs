@@ -8,7 +8,7 @@ use super::*;
 
 impl Compiler {
     fn desugar_function_pack(
-        &self,
+        &mut self,
         modifier: &Sp<Modifier>,
         operand: Sp<Word>,
     ) -> UiuaResult<Option<Modified>> {
@@ -21,6 +21,15 @@ impl Compiler {
         };
         match &modifier.value {
             Modifier::Primitive(Primitive::Dip) => {
+                self.emit_diagnostic(
+                    format!(
+                        "{} function packs are deprecated and \
+                    will be removed in the future",
+                        Primitive::Dip.format()
+                    ),
+                    DiagnosticKind::Warning,
+                    span.clone(),
+                );
                 let mut branches = pack.branches.into_iter().rev();
                 let mut new = Modified {
                     modifier: modifier.clone(),

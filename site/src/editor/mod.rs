@@ -286,7 +286,7 @@ pub fn Editor<'a>(
                 }
             }
             OutputItem::Svg(s) => view!(<div><img
-                    class="output-image" 
+                    class="output-image"
                     src={format!("data:image/svg+xml;utf8, {}", urlencoding::encode(&s))}/>
                 </div>)
             .into_view(),
@@ -688,7 +688,7 @@ pub fn Editor<'a>(
                 });
             }
             // Handle open delimiters
-            "(" | "[" | "{" => {
+            "(" | "[" | "{" if !event.meta_key() => {
                 // Surround the selected text with delimiters
                 let (open, close) = match key {
                     "\"" => ('"', '"'),
@@ -714,7 +714,7 @@ pub fn Editor<'a>(
                 });
             }
             // Handle close delimiters
-            ")" | "]" | "}" => {
+            ")" | "]" | "}" if !event.meta_key() => {
                 let (start, end) = get_code_cursor().unwrap();
                 let code = get_code();
                 let close = key.chars().next().unwrap();

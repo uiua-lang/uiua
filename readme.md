@@ -33,7 +33,6 @@ This requires [Rust](https://www.rust-lang.org/tools/install) (>=1.75) to be ins
   - `audio`: Enables audio system functions (may require `libasound2-dev libudev-dev pkg-config` on Linux)
   - `webcam`: Enables webcam system functions (may require `libjpeg-dev` on Linux)
 
-  ```
 - If you want the most recent development version of Uiua, you can install from the git repository.
   ```
   cargo install --git https://github.com/uiua-lang/uiua uiua

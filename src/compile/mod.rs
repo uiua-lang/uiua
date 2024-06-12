@@ -1310,12 +1310,43 @@ code:
         }
         Ok(())
     }
+    /// Emit a warning if a loop inside an array could
+    /// potentially pull in a variable number of values
     fn validate_array_loop_sig(&mut self, instrs: &[Instr], span: &CodeSpan) -> Option<Signature> {
         let inner_sig = instrs_signature(instrs);
         if self.current_bindings.is_empty() && self.scope.kind != ScopeKind::Temp {
             return inner_sig.ok();
         }
         let Err(e) = &inner_sig else {
+            // Case where repeat's function has a balanced signature
+            // This is fine in other contexts, so an error is not returned
+            // from the signature check, but it is not okay in an array.
+            if let Some(i) = instrs
+                .iter()
+                .position(|instr| matches!(instr, Instr::Prim(Primitive::Repeat, _)))
+                .filter(|&i| i > 0)
+            {
+                if let Instr::PushFunc(f) = &instrs[i - 1] {
+                    let body_sig = f.signature();
+                    let before_sig = instrs_signature(&instrs[..i - 1]).ok()?;
+                    let after_sig = instrs_signature(&instrs[i + 1..]).ok()?;
+                    if body_sig.args == body_sig.outputs
+                        && before_sig.args < body_sig.args
+                        && after_sig.args.saturating_sub(body_sig.outputs) < body_sig.args
+                    {
+                        let replacement: String =
+                            repeat('⊙').take(body_sig.args).chain(['∘']).collect();
+                        let message = format!(
+                            "This array contains a loop with an equal number \
+                            of arguments and outputs. This may result in a \
+                            variable number of values being pulled into the \
+                            array. To fix this, insert `{replacement}` on the \
+                            right side of the array.",
+                        );
+                        self.emit_diagnostic(message, DiagnosticKind::Warning, span.clone());
+                    }
+                }
+            }
             return inner_sig.ok();
         };
         let before_sig = (0..instrs.len())
@@ -1326,8 +1357,8 @@ code:
             .find_map(|i| instrs_signature(&instrs[i..]).ok())
             .unwrap();
         match e.kind {
-            SigCheckErrorKind::LoopExcess { sig: body_sig, inf } => {
-                let positive_body_sig = body_sig.outputs > body_sig.args;
+            SigCheckErrorKind::LoopVariable { sig: body_sig, inf } => {
+                let positive_body_sig = body_sig.outputs >= body_sig.args;
                 let balanced_after_args = body_sig.args.saturating_sub(before_sig.outputs);
                 if body_sig.args > 0
                     && (positive_body_sig && after_sig.args != balanced_after_args && !inf)

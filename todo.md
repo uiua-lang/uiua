@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Fix `{⍥∘}` not giving a warning
   - by inverses
   - `setinv` on and by inverses
   - Document on and by inverses

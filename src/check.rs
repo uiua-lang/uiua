@@ -91,7 +91,7 @@ pub enum SigCheckErrorKind {
     Incorrect,
     Ambiguous,
     LoopOverreach,
-    LoopExcess { sig: Signature, inf: bool },
+    LoopVariable { sig: Signature, inf: bool },
 }
 
 impl SigCheckError {
@@ -107,9 +107,9 @@ impl SigCheckError {
             ..self
         }
     }
-    pub fn loop_excess(self, sig: Signature, inf: bool) -> Self {
+    pub fn loop_variable(self, sig: Signature, inf: bool) -> Self {
         Self {
-            kind: SigCheckErrorKind::LoopExcess { sig, inf },
+            kind: SigCheckErrorKind::LoopVariable { sig, inf },
             ..self
         }
     }
@@ -405,7 +405,7 @@ impl<'a> VirtualEnv<'a> {
                                     return Err(SigCheckError::from(format!(
                                         "repeat with infinity and a function with signature {sig}"
                                     ))
-                                    .loop_excess(sig, true));
+                                    .loop_variable(sig, true));
                                 }
                                 _ => self.handle_sig(sig)?,
                             }
@@ -427,7 +427,7 @@ impl<'a> VirtualEnv<'a> {
                                 return Err(SigCheckError::from(format!(
                                     "repeat with no number and a function with signature {sig}"
                                 ))
-                                .loop_excess(sig, false));
+                                .loop_variable(sig, false));
                             }
                             Ordering::Less => self.handle_sig(sig)?,
                         }
@@ -450,7 +450,7 @@ impl<'a> VirtualEnv<'a> {
                         return Err(SigCheckError::from(format!(
                             "do with a function with signature {comp_sig}"
                         ))
-                        .loop_excess(comp_sig, false));
+                        .loop_variable(comp_sig, false));
                     }
                     self.handle_args_outputs(
                         comp_sig.args,

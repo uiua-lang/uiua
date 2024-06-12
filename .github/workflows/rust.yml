@@ -25,7 +25,7 @@ jobs:
     - name: Install WASM target
       run: rustup target add wasm32-unknown-unknown
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --verbose --features "audio,webcam"
     - name: Run interpreter tests
       run: cargo test --lib
     - name: Check feature combinations

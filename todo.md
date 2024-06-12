@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - by inverses
   - `setinv` on and by inverses
   - Document on and by inverses
   - Pervasive switch functions and `repeat`

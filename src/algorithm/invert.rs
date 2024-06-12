@@ -11,7 +11,7 @@ use ecow::{eco_vec, EcoString, EcoVec};
 use regex::Regex;
 
 use crate::{
-    check::{instrs_signature, instrs_signature_no_temp},
+    check::{instrs_clean_signature, instrs_signature, instrs_signature_no_temp},
     primitive::{ImplPrimitive, Primitive},
     Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionId, Instr, Signature, Span,
     SysOp, TempStack, Uiua, UiuaResult, Value,
@@ -1349,7 +1349,41 @@ fn invert_temp_pattern<'a>(
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
     // Push temp
-    if let Some((input, instr, inner, end_instr, _)) = try_push_temp_wrap(input) {
+    if let Some((input, instr, inner, end_instr, depth)) = try_push_temp_wrap(input) {
+        // By-inverse
+        if let [Instr::Prim(Primitive::Dup, dup_span)] = inner {
+            for len in 1..=input.len() {
+                for mid in 0..len {
+                    let before = &input[..mid];
+                    if instrs_clean_signature(before).map_or(true, |sig| sig != (0, 0)) {
+                        continue;
+                    };
+                    let instrs = &input[mid..len];
+                    let Some(sig) = instrs_clean_signature(instrs) else {
+                        continue;
+                    };
+                    if sig.args != depth + 1 {
+                        continue;
+                    }
+                    for pat in ON_INVERT_PATTERNS {
+                        if let Some((after, on_inv)) = pat.invert_extract(instrs, comp) {
+                            if after.is_empty() {
+                                let mut instrs = eco_vec![
+                                    instr.clone(),
+                                    Instr::Prim(Primitive::Dup, *dup_span),
+                                    end_instr.clone(),
+                                    Instr::Prim(Primitive::Flip, *dup_span),
+                                ];
+                                instrs.extend(on_inv);
+                                instrs.extend_from_slice(before);
+                                return Some((&input[len..], instrs));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Normal inverse
         let mut instrs = invert_instrs(inner, comp)?;
         instrs.insert(0, instr.clone());
         instrs.push(end_instr.clone());
@@ -1369,7 +1403,7 @@ fn invert_temp_pattern<'a>(
                 continue;
             }
             for pat in ON_INVERT_PATTERNS {
-                if let Some((after, pseudo_inv)) = pat.invert_extract(after, comp) {
+                if let Some((after, on_inv)) = pat.invert_extract(after, comp) {
                     if let Some(after_inv) = invert_instrs(after, comp) {
                         let mut instrs = eco_vec![start_instr.clone()];
 
@@ -1385,7 +1419,7 @@ fn invert_temp_pattern<'a>(
 
                         instrs.extend_from_slice(before);
 
-                        instrs.extend(pseudo_inv);
+                        instrs.extend(on_inv);
 
                         instrs.push(end_instr.clone());
                         return Some((input, instrs));

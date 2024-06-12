@@ -34,6 +34,16 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, SigCheckEr
     Ok(env.sig())
 }
 
+/// The the signature of some instructions, but only
+/// if the temp stack signatures are `|0.0`
+pub(crate) fn instrs_clean_signature(instrs: &[Instr]) -> Option<Signature> {
+    let (sig, temps) = instrs_all_signatures(instrs).ok()?;
+    if temps.iter().any(|&sig| sig != (0, 0)) {
+        return None;
+    }
+    Some(sig)
+}
+
 pub(crate) fn instrs_temp_signatures(
     instrs: &[Instr],
 ) -> Result<[Signature; TempStack::CARDINALITY], SigCheckError> {

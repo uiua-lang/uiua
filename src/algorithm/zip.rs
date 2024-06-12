@@ -78,6 +78,14 @@ fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueUnFn> 
             }
             Ok(Array::new(shape, data).into())
         }),
+        SortUp => spanned_mon_fn(span, |mut v, d, _| {
+            v.sort_up_depth(d);
+            Ok(v)
+        }),
+        SortDown => spanned_mon_fn(span, |mut v, d, _| {
+            v.sort_down_depth(d);
+            Ok(v)
+        }),
         _ => return None,
     })
 }

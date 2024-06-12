@@ -629,22 +629,28 @@ impl Value {
     }
     /// Sort the value ascending
     pub fn sort_up(&mut self) {
+        self.sort_up_depth(0);
+    }
+    pub(crate) fn sort_up_depth(&mut self, depth: usize) {
         self.generic_mut_shallow(
-            Array::sort_up,
-            Array::sort_up,
-            Array::sort_up,
-            Array::sort_up,
-            Array::sort_up,
+            |a| a.sort_up_depth(depth),
+            |a| a.sort_up_depth(depth),
+            |a| a.sort_up_depth(depth),
+            |a| a.sort_up_depth(depth),
+            |a| a.sort_up_depth(depth),
         )
     }
     /// Sort the value descending
     pub fn sort_down(&mut self) {
+        self.sort_down_depth(0);
+    }
+    pub(crate) fn sort_down_depth(&mut self, depth: usize) {
         self.generic_mut_shallow(
-            Array::sort_down,
-            Array::sort_down,
-            Array::sort_down,
-            Array::sort_down,
-            Array::sort_down,
+            |a| a.sort_down_depth(depth),
+            |a| a.sort_down_depth(depth),
+            |a| a.sort_down_depth(depth),
+            |a| a.sort_down_depth(depth),
+            |a| a.sort_down_depth(depth),
         )
     }
     /// `classify` the rows of the value
@@ -760,34 +766,74 @@ impl<T: ArrayValue> Array<T> {
     }
     /// Sort an array ascending
     pub fn sort_up(&mut self) {
-        if self.rank() == 0 || self.element_count() == 0 {
-            return;
-        }
-        if self.rank() == 1 {
-            self.data.as_mut_slice().par_sort_by(|a, b| a.array_cmp(b));
-        } else {
-            let rise = self.rise();
-            let mut new_data = EcoVec::with_capacity(self.data.len());
-            for &i in &rise.data {
-                new_data.extend_from_slice(self.row_slice(i as usize));
-            }
-            self.data = new_data.into();
-        }
+        self.sort_up_depth(0);
     }
     /// Sort an array descending
     pub fn sort_down(&mut self) {
-        if self.rank() == 0 || self.element_count() == 0 {
+        self.sort_down_depth(0);
+    }
+    pub(crate) fn sort_up_depth(&mut self, depth: usize) {
+        let depth = depth.min(self.rank());
+        if self.rank() == depth || self.element_count() == 0 {
             return;
         }
-        if self.rank() == 1 {
-            self.data.as_mut_slice().par_sort_by(|a, b| b.array_cmp(a));
-        } else {
-            let fall = self.fall();
-            let mut new_data = EcoVec::with_capacity(self.data.len());
-            for &i in &fall.data {
-                new_data.extend_from_slice(self.row_slice(i as usize));
+        let chunk_len: usize = self.shape[depth..].iter().product();
+        if chunk_len == 0 {
+            return;
+        }
+        let is_list = self.rank() == depth + 1;
+        let mut new_chunk = Vec::with_capacity(chunk_len);
+        for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
+            if is_list {
+                chunk.par_sort_by(T::array_cmp);
+            } else {
+                let mut indices: Vec<usize> = (0..chunk.len() / chunk_len).collect();
+                indices.par_sort_by(|&a, &b| {
+                    chunk[a * chunk_len..(a + 1) * chunk_len]
+                        .iter()
+                        .zip(&chunk[b * chunk_len..(b + 1) * chunk_len])
+                        .map(|(a, b)| a.array_cmp(b))
+                        .find(|x| x != &Ordering::Equal)
+                        .unwrap_or(Ordering::Equal)
+                });
+                new_chunk.clear();
+                for i in indices {
+                    new_chunk.extend_from_slice(&chunk[i * chunk_len..(i + 1) * chunk_len]);
+                }
+                chunk.clone_from_slice(&new_chunk);
             }
-            self.data = new_data.into();
+        }
+    }
+    pub(crate) fn sort_down_depth(&mut self, depth: usize) {
+        let depth = depth.min(self.rank());
+        if self.rank() == depth || self.element_count() == 0 {
+            return;
+        }
+        let chunk_len: usize = self.shape[depth..].iter().product();
+        if chunk_len == 0 {
+            return;
+        }
+        let is_list = self.rank() == depth + 1;
+        let mut new_chunk = Vec::with_capacity(chunk_len);
+        for chunk in self.data.as_mut_slice().chunks_exact_mut(chunk_len) {
+            if is_list {
+                chunk.par_sort_by(|a, b| b.array_cmp(a));
+            } else {
+                let mut indices: Vec<usize> = (0..chunk.len() / chunk_len).collect();
+                indices.par_sort_by(|&a, &b| {
+                    chunk[a * chunk_len..(a + 1) * chunk_len]
+                        .iter()
+                        .zip(&chunk[b * chunk_len..(b + 1) * chunk_len])
+                        .map(|(a, b)| b.array_cmp(a))
+                        .find(|x| x != &Ordering::Equal)
+                        .unwrap_or(Ordering::Equal)
+                });
+                new_chunk.clear();
+                for i in indices {
+                    new_chunk.extend_from_slice(&chunk[i * chunk_len..(i + 1) * chunk_len]);
+                }
+                chunk.clone_from_slice(&new_chunk);
+            }
         }
     }
     /// `classify` the rows of the array

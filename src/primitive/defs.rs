@@ -1685,11 +1685,11 @@ primitive!(
     ///   : [⫯+ 2 5]
     ///   : [⫯- 2 5]
     ///
-    /// [with] can be used to copy a value from deep in the stack, or to move it.
+    /// [but] can be used to copy a value from deep in the stack, or to move it.
     /// ex: # Experimental!
     ///   : [⫯⊙⊙⊙∘ 1 2 3 4]
     ///   : [⫯⊙⊙⊙◌ 1 2 3 4]
-    ([1], With, Stack, ("with", '⫯')),
+    ([1], But, Stack, ("but", '⫯')),
     /// Call a function on two sets of values
     ///
     /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.

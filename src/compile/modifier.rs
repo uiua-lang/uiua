@@ -447,7 +447,7 @@ impl Compiler {
             }};
         }
         match prim {
-            Dip | Gap | On | By | With => {
+            Dip | Gap | On | By | But => {
                 // Compile operands
                 let (mut instrs, sig) = self.compile_operand_word(modified.operands[0].clone())?;
                 // Dip (|1 …) . diagnostic
@@ -488,7 +488,7 @@ impl Compiler {
                         instrs.insert(0, Instr::Prim(Pop, span));
                         Signature::new(sig.args + 1, sig.outputs)
                     }
-                    prim if prim == On || prim == With && sig.args <= 1 => {
+                    prim if prim == On || prim == But && sig.args <= 1 => {
                         instrs.insert(
                             0,
                             if sig.args == 0 {
@@ -543,7 +543,7 @@ impl Compiler {
                         }
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
-                    With => {
+                    But => {
                         let mut i = 0;
                         if sig.args > 1 {
                             instrs.insert(

@@ -20,7 +20,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the experimental [`fft`](https://uiua.org/docs/fft) function, which performs the Fast Fourier transform
   - The inverse FFT is also supported via [`un °`](https://uiua.org/docs/un)
 - Add the experimental [`astar`](https://uiua.org/docs/astar) modifier, which performs the A* pathfinding algorithm
-- Add the experimental [`with ⫯`](https://uiua.org/docs/with) modifier, which is a complement to [`on ⟜`](https://uiua.org/docs/on) and [`by ⊸`](https://uiua.org/docs/by)
+- Add the experimental [`but ⫯`](https://uiua.org/docs/but) modifier, which is a complement to [`on ⟜`](https://uiua.org/docs/on) and [`by ⊸`](https://uiua.org/docs/by)
 - Adjacent [`trace ⸮`](https://uiua.org/docs/trace)s now function as a single [`trace ⸮`](https://uiua.org/docs/trace) of more values
 - N+1 adjacent [`stack ?`](https://uiua.org/docs/stack)s now format to N [`trace ⸮`](https://uiua.org/docs/trace)s
 - Add the [`&camcap`](https://uiua.org/docs/&camcap) system function, which captures a frame from a camera

@@ -1679,6 +1679,17 @@ primitive!(
     ///   : ⊜□⊸≠ @  "Hey there buddy"
     ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
     ([1], By, Stack, ("by", '⊸')),
+    /// Call a function but keep its last argument on the top of the stack
+    ///
+    /// ex: # Experimental!
+    ///   : [⫯+ 2 5]
+    ///   : [⫯- 2 5]
+    ///
+    /// [with] can be used to copy a value from deep in the stack, or to move it.
+    /// ex: # Experimental!
+    ///   : [⫯⊙⊙⊙∘ 1 2 3 4]
+    ///   : [⫯⊙⊙⊙◌ 1 2 3 4]
+    ([1], With, Stack, ("with", '⫯')),
     /// Call a function on two sets of values
     ///
     /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.

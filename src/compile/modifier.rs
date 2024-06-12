@@ -447,7 +447,7 @@ impl Compiler {
             }};
         }
         match prim {
-            Dip | Gap | On | By => {
+            Dip | Gap | On | By | With => {
                 // Compile operands
                 let (mut instrs, sig) = self.compile_operand_word(modified.operands[0].clone())?;
                 // Dip (|1 …) . diagnostic
@@ -488,7 +488,7 @@ impl Compiler {
                         instrs.insert(0, Instr::Prim(Pop, span));
                         Signature::new(sig.args + 1, sig.outputs)
                     }
-                    On => {
+                    prim if prim == On || prim == With && sig.args <= 1 => {
                         instrs.insert(
                             0,
                             if sig.args == 0 {
@@ -543,12 +543,53 @@ impl Compiler {
                         }
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
+                    With => {
+                        let mut i = 0;
+                        if sig.args > 1 {
+                            instrs.insert(
+                                i,
+                                Instr::PushTemp {
+                                    stack: TempStack::Inline,
+                                    count: sig.args - 1,
+                                    span,
+                                },
+                            );
+                            i += 1;
+                        }
+                        instrs.insert(i, Instr::Prim(Dup, span));
+                        i += 1;
+                        if sig.args > 1 {
+                            instrs.insert(
+                                i,
+                                Instr::PopTemp {
+                                    stack: TempStack::Inline,
+                                    count: sig.args - 1,
+                                    span,
+                                },
+                            );
+                        }
+                        if sig.outputs > 2 {
+                            instrs.push(Instr::PushTemp {
+                                stack: TempStack::Inline,
+                                count: sig.outputs - 2,
+                                span,
+                            });
+                            for _ in 0..sig.outputs - 2 {
+                                instrs.push(Instr::Prim(Flip, span));
+                                instrs.push(Instr::PopTemp {
+                                    stack: TempStack::Inline,
+                                    count: 1,
+                                    span,
+                                });
+                            }
+                        }
+                        instrs.push(Instr::Prim(Flip, span));
+                        Signature::new(sig.args.max(1), sig.outputs + 1)
+                    }
                     _ => unreachable!(),
                 };
                 if call {
-                    // self.push_instr(Instr::PushSig(sig));
                     self.push_all_instrs(instrs);
-                    // self.push_instr(Instr::PopSig);
                 } else {
                     let func =
                         self.make_function(modified.modifier.span.clone().into(), sig, instrs);

@@ -10,11 +10,15 @@ use crate::{
     Array, ArrayValue, Complex, ImplPrimitive, Instr, Primitive, Shape, Uiua, UiuaResult,
 };
 
-use super::{loops::flip, multi_output, validate_size};
+use super::{loops::flip, multi_output, reduce::reduce_impl, validate_size};
 
 pub fn table(env: &mut Uiua) -> UiuaResult {
-    crate::profile_function!();
     let f = env.pop_function()?;
+    table_impl(f, env)
+}
+
+fn table_impl(f: Function, env: &mut Uiua) -> UiuaResult {
+    crate::profile_function!();
     let sig = f.signature();
     match sig.args {
         0 => env.call(f),
@@ -575,6 +579,13 @@ fn generic_reduce_table(
     ys: Value,
     env: &mut Uiua,
 ) -> UiuaResult {
+    if env.value_fill().is_some() {
+        env.push(ys);
+        env.push(xs);
+        table_impl(g, env)?;
+        return reduce_impl(f, 0, env);
+    }
+
     let mut xs = xs.into_rows();
     let mut acc = xs
         .next()

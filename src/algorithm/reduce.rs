@@ -17,6 +17,10 @@ use super::{fixed_rows, FixedRowsData};
 pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
+    reduce_impl(f, depth, env)
+}
+
+pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResult {
     let xs = env.pop(1)?;
     match (f.as_flipped_primitive(&env.asm), xs) {
         (Some((Primitive::Join, false)), mut xs)

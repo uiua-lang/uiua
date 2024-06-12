@@ -4,7 +4,7 @@ Command ← {"cargo" "c" "--lib" "--no-default-features"}
 Features ← (
   {"audio" "tls"}
   ⊂⟨
-    {"gif,image,terminal_image" "lsp,raw_mode"}
+    {"gif,image,terminal_image,webcam" "lsp,raw_mode"}
   | {"audio_encode" "gif" "image" "terminal_image" "lsp" "native_sys" "raw_mode"}
   ⟩ ∊□"all" &args
 )

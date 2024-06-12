@@ -1829,11 +1829,11 @@ impl SysOp {
             }
             SysOp::WebcamCapture => {
                 let index = env.pop(1)?.as_nat(env, "Webcam index must be an integer")?;
-                let image = (env.rt.backend)
+                let _image = (env.rt.backend)
                     .webcam_capture(index)
                     .map_err(|e| env.error(e))?;
                 #[cfg(feature = "image")]
-                env.push(rgb_image_to_array(image));
+                env.push(rgb_image_to_array(_image));
                 #[cfg(not(feature = "image"))]
                 return Err(env.error("Webcam capture is not supported in this environment"));
             }

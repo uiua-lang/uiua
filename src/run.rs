@@ -862,6 +862,7 @@ code:
     pub fn error_with_span(&self, span: Span, message: impl ToString) -> UiuaError {
         UiuaErrorKind::Run(span.sp(message.to_string()), self.inputs().clone().into()).into()
     }
+    #[allow(dead_code)]
     pub(crate) fn error_maybe_span(
         &self,
         span: Option<&CodeSpan>,

@@ -541,9 +541,6 @@ impl MapKeys {
             false
         }
     }
-    pub fn into_value(self) -> Value {
-        remove_empty_rows(self.keys.into_rows())
-    }
     fn present_indices(&self) -> Vec<usize> {
         let mut present_indices: Vec<_> = (self.keys.rows().enumerate())
             .filter(|(_, k)| !k.is_any_empty_cell() && !k.is_any_tombstone())

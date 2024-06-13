@@ -904,7 +904,7 @@ impl<T: ArrayValue> Array<T> {
         }
         let map_keys_unique = self
             .take_map_keys()
-            .map(|keys| (keys.into_value(), self.unique()));
+            .map(|keys| (keys.normalized(), self.unique()));
         let mut deduped = CowSlice::new();
         let mut seen = HashSet::new();
         let mut new_len = 0;

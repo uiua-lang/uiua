@@ -9,7 +9,6 @@ use std::{
 
 use crate::{editor::get_ast_time, weewuh};
 use leptos::*;
-use leptos_query::{create_query, QueryOptions};
 use uiua::{Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
@@ -32,7 +31,6 @@ struct VirtualStream {
 
 thread_local! {
     static GLOBAL_FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = Default::default();
-    static REQ: RefCell<Option<FetchReq>> = Default::default();
 }
 
 pub fn drop_file(path: PathBuf, contents: Vec<u8>) {
@@ -370,20 +368,24 @@ impl SysBackend for WebBackend {
             url = format!("{url}/main/lib.ua");
         }
         thread_local! {
-        static CACHE: RefCell<HashMap<String, Result<String, String>>> = Default::default();
+            static CACHE: RefCell<HashMap<String, Result<String, String>>> = Default::default();
         }
         let res = CACHE.with(|cache| {
-            let mut cache = cache.borrow_mut();
-            if let Some(res) = cache.get(&url) {
+            if let Some(res) = cache.borrow().get(&url) {
+                logging::log!("Using cached module for {url:?}");
                 Some(res.clone())
             } else {
-                logging::log!("url: {url}");
-                let res = try_fetch_sync(&url)?;
-                logging::log!("res: {res:?}");
-                cache.insert(url.clone(), res.clone());
-                Some(res)
+                logging::log!("Fetching url: {url}");
+                spawn_local(async move {
+                    let res = fetch(&url).await;
+                    CACHE.with(|cache| {
+                        cache.borrow_mut().insert(url.clone(), res.clone());
+                    });
+                });
+                None
             }
         });
+
         match res {
             Some(Ok(text)) => {
                 let contents = text.as_bytes().to_vec();
@@ -394,41 +396,6 @@ impl SysBackend for WebBackend {
             None => Err("Waiting for module, try running to check...".into()),
         }
     }
-}
-
-struct FetchReq {
-    url: String,
-    query: Box<dyn Fn() -> Option<Result<String, String>>>,
-    tries: u32,
-}
-
-pub fn try_fetch_sync(url: &str) -> Option<Result<String, String>> {
-    REQ.with(|req| {
-        let mut req = req.borrow_mut();
-        let url = url.to_string();
-        if let Some(req) = req.as_mut().filter(|req| req.url == url) {
-            req.tries += 1;
-            if req.tries > 20 {
-                return Some(Err("Failed to fetch".into()));
-            }
-            (req.query)()
-        } else {
-            *req = Some(FetchReq {
-                url: url.clone(),
-                query: {
-                    let query_res = create_query(fetch_string, QueryOptions::default())
-                        .use_query(move || url.clone());
-                    Box::new(move || query_res.data.try_get().flatten())
-                },
-                tries: 0,
-            });
-            None
-        }
-    })
-}
-
-async fn fetch_string(s: String) -> Result<String, String> {
-    fetch(&s).await
 }
 
 pub async fn fetch(url: &str) -> Result<String, String> {

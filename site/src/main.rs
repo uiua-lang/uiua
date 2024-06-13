@@ -18,7 +18,6 @@ use instant::Duration;
 use js_sys::Date;
 use leptos::*;
 use leptos_meta::*;
-use leptos_query::provide_query_client;
 use leptos_router::*;
 use uiua::{
     lsp::{BindingDocs, BindingDocsKind},
@@ -45,7 +44,6 @@ pub fn main() {
 pub fn Site() -> impl IntoView {
     use Primitive::*;
     provide_meta_context();
-    provide_query_client();
 
     // Choose a subtitle
     let subtitles_common = [

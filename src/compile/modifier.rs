@@ -568,13 +568,13 @@ impl Compiler {
                                 },
                             );
                         }
-                        if sig.args > 2 {
+                        if sig.outputs >= 2 {
                             instrs.push(Instr::PushTemp {
                                 stack: TempStack::Inline,
-                                count: sig.args - 2,
+                                count: sig.outputs - 1,
                                 span,
                             });
-                            for _ in 0..sig.args - 2 {
+                            for _ in 0..sig.outputs - 1 {
                                 instrs.push(Instr::Prim(Flip, span));
                                 instrs.push(Instr::PopTemp {
                                     stack: TempStack::Inline,

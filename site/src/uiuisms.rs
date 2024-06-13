@@ -20,5 +20,6 @@ pub fn Uiuisms() -> impl IntoView {
             <li>"It is not how I want people to approach learning Uiua"</li>
             <li>"It is not something I am interested in maintaining"</li>
         </ul>
+        <p>"Community member "<strong>"TankorSmash"</strong>" has created a "<a href="https://tankorsmash.unison-services.cloud/s/uiuisms-service/">"new version"</a>"."</p>
     }
 }

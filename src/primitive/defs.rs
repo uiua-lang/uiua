@@ -1353,7 +1353,7 @@ primitive!(
     /// If the function takes more than 2 arguments, additional arguments above the array on the stack will be passed to the function on every iteration. This is useful for things like interspersing one array between the rows of another.
     /// ex: /(⊂⊂) 0_1 [2 3 4 5]
     /// ex: /◇(⊂⊂) @, {"cat" "bird" "dog"}
-    (1(1)[1], Reduce, AggregatingModifier, ("reduce", '/')),
+    ([1], Reduce, AggregatingModifier, ("reduce", '/')),
     /// Apply a function to aggregate arrays
     ///
     /// Expects as many arguments as its function takes.
@@ -1453,7 +1453,7 @@ primitive!(
     /// If you want to fix one of the arrays so that it is present in every call of the function, you can simply add a dimension to it, though you may need to collapse it later.
     /// Here, we add a dimension to the second array to [fix] it, then collapse with `reduce``join`.
     /// ex: /⊂ ⊞(⊂⊂) ⊙¤ 1_2 3_4 5_6
-    (2[1], Table, IteratingModifier, ("table", '⊞')),
+    ([1], Table, IteratingModifier, ("table", '⊞')),
     /// Apply a function to each unboxed item of an array and re-box the results
     ///
     /// For box arrays, this is roughly equivalent to `each``under``un``box`.
@@ -1595,7 +1595,7 @@ primitive!(
     ///   : ◹(⊂⊂)..⇡3
     ///   : ⊕(□⊕□≡°⊟)≡°⊂ .
     ///   : ⬚0⊕(⬚0⊕∘≡°⊟)≡°⊂ :
-    (1[1], Triangle, AggregatingModifier, ("triangle", '◹')),
+    ([1], Triangle, AggregatingModifier, ("triangle", '◹')),
     /// Unbox the arguments to a function before calling it
     ///
     /// ex:  ⊂ □[1 2 3] □[4 5 6]

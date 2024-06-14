@@ -1804,6 +1804,9 @@ mod tests {
         {{
             "include": "#characters"
         }},
+        {{
+            "include": "#labels"
+        }},
 		{{
 			"include": "#numbers"
 		}},
@@ -1886,6 +1889,10 @@ mod tests {
         "characters": {{
             "name": "constant.character.escape",
             "match": "@(\\\\(x[0-9A-Fa-f]{{2}}|u[0-9A-Fa-f]{{4}}|.)|.)"
+        }},
+        "labels": {{
+            "name": "label.uiua",
+            "match": "\\$[a-zA-Z]*"
         }},
 		"numbers": {{
 			"name": "constant.numeric.uiua",

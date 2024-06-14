@@ -962,7 +962,6 @@
   },
   "reduce": {
     "glyph": "/",
-    "args": 1,
     "outputs": 1,
     "modifier_args": 1,
     "class": "AggregatingModifier",
@@ -1141,7 +1140,6 @@
   },
   "table": {
     "glyph": "⊞",
-    "args": 2,
     "outputs": 1,
     "modifier_args": 1,
     "class": "IteratingModifier",
@@ -1183,7 +1181,6 @@
   },
   "triangle": {
     "glyph": "◹",
-    "args": 1,
     "outputs": 1,
     "modifier_args": 1,
     "class": "AggregatingModifier",

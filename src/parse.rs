@@ -877,13 +877,12 @@ impl<'i> Parser<'i> {
             frags.map(Word::FormatString)
         } else if let Some(line) = self.next_token_map(Token::as_multiline_string) {
             let mut span = line.span.clone();
-            let mut s = line.value;
+            let mut lines = vec![line];
             while let Some(line) = self.next_token_map(Token::as_multiline_string) {
-                span = span.merge(line.span);
-                s.push('\n');
-                s.push_str(&line.value);
+                span = span.merge(line.span.clone());
+                lines.push(line);
             }
-            span.sp(Word::MultilineString(s))
+            span.sp(Word::MultilineString(lines))
         } else if let Some(line) = self.next_token_map(Token::as_multiline_format_string) {
             let start = line.span.clone();
             let mut end = start.clone();

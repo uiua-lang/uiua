@@ -961,7 +961,25 @@ code:
                 }
                 self.push_instr(instr);
             }
-            Word::String(s) | Word::MultilineString(s) => {
+            Word::String(s) => {
+                let mut instr = Instr::push(s);
+                if !call {
+                    instr = Instr::PushFunc(self.make_function(
+                        FunctionId::Anonymous(word.span.clone()),
+                        Signature::new(0, 1),
+                        eco_vec![instr],
+                    ));
+                }
+                self.push_instr(instr);
+            }
+            Word::MultilineString(lines) => {
+                let mut s = EcoVec::new();
+                for (i, line) in lines.into_iter().enumerate() {
+                    if i > 0 {
+                        s.push('\n');
+                    }
+                    s.extend(line.value.chars());
+                }
                 let mut instr = Instr::push(s);
                 if !call {
                     instr = Instr::PushFunc(self.make_function(

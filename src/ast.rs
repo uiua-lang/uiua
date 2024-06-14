@@ -97,7 +97,7 @@ pub enum Word {
     Number(String, f64),
     Char(String),
     String(String),
-    MultilineString(String),
+    MultilineString(Vec<Sp<String>>),
     FormatString(Vec<String>),
     MultilineFormatString(Vec<Sp<Vec<String>>>),
     Label(String),

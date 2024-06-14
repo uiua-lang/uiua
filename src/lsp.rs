@@ -308,11 +308,13 @@ impl Spanner {
                     }
                     spans.push(word.span.clone().sp(SpanKind::Number))
                 }
-                Word::Char(_)
-                | Word::String(_)
-                | Word::MultilineString(_)
-                | Word::FormatString(_) => spans.push(word.span.clone().sp(SpanKind::String)),
+                Word::Char(_) | Word::String(_) | Word::FormatString(_) => {
+                    spans.push(word.span.clone().sp(SpanKind::String))
+                }
                 Word::Label(_) => spans.push(word.span.clone().sp(SpanKind::Label)),
+                Word::MultilineString(lines) => {
+                    spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
+                }
                 Word::MultilineFormatString(lines) => {
                     spans.extend((lines.iter()).map(|line| line.span.clone().sp(SpanKind::String)))
                 }
@@ -1276,13 +1278,15 @@ mod server {
                 } else {
                     start.character
                 };
-                tokens.push(SemanticToken {
+                let length = span.end.char_pos - span.start.char_pos;
+                let token = SemanticToken {
                     delta_line: start.line - prev_line,
                     delta_start,
-                    length: (span.end.char_pos - span.start.char_pos),
+                    length,
                     token_type,
                     token_modifiers_bitset: 0,
-                });
+                };
+                tokens.push(token);
                 prev_line = start.line;
                 prev_char = start.character;
             }

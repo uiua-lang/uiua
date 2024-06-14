@@ -793,13 +793,14 @@ impl<'a> Formatter<'a> {
             Word::Char(_) | Word::String(_) | Word::Label(_) | Word::FormatString(_) => self
                 .output
                 .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
-            Word::MultilineString(s) => {
+            Word::MultilineString(lines) => {
                 let curr_line_pos = if self.output.ends_with('\n') {
                     0
                 } else {
                     (self.output.split('\n').last().unwrap_or_default().chars()).count()
                 };
-                for (i, mut line) in s.split('\n').enumerate() {
+                for (i, line) in lines.iter().enumerate() {
+                    let mut line = line.value.as_str();
                     if line.ends_with('\r') {
                         line = &line[..line.len() - 1];
                     }

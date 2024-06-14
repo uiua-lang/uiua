@@ -556,6 +556,7 @@ pub fn try_(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     let handler = env.pop_function()?;
     let f_sig = f.signature();
+    env.touch_array_stack(f_sig.args)?;
     let handler_sig = handler.signature();
     if env.stack_height() < f_sig.args {
         for i in 0..f_sig.args {

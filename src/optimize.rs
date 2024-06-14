@@ -289,7 +289,7 @@ where
     let instrs = instrs.into_iter();
     let mut new = EcoVec::with_capacity(instrs.len());
     for instr in instrs {
-        if instr.is_compile_only() {
+        if maximal && instr.is_compile_only() {
             continue;
         }
         optimize_instrs_mut(&mut new, instr, maximal, asm);

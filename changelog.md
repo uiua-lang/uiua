@@ -21,6 +21,8 @@ This version is not yet released. If you are reading this on the website, then t
   - The inverse FFT is also supported via [`un °`](https://uiua.org/docs/un)
 - Add the experimental [`astar`](https://uiua.org/docs/astar) modifier, which performs the A* pathfinding algorithm
 - Add the experimental [`but ⫯`](https://uiua.org/docs/but) modifier, which is a complement to [`on ⟜`](https://uiua.org/docs/on) and [`by ⊸`](https://uiua.org/docs/by)
+- Deprecate [`coordinate ⟔`](https://uiua.org/docs/coordinate) as it is seldom needed and easy to implement with other functions
+  - It can be mostly replaced with `⊢⊚⌕`
 - Adjacent [`trace ⸮`](https://uiua.org/docs/trace)s now function as a single [`trace ⸮`](https://uiua.org/docs/trace) of more values
 - N+1 adjacent [`stack ?`](https://uiua.org/docs/stack)s now format to N [`trace ⸮`](https://uiua.org/docs/trace)s
 - Add the [`&camcap`](https://uiua.org/docs/&camcap) system function, which captures a frame from a camera

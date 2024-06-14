@@ -359,6 +359,12 @@ impl Primitive {
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         use Primitive::*;
         Some(match self {
+            Coordinate => format!(
+                "use {} {} {} instead",
+                First.format(),
+                Where.format(),
+                Find.format(),
+            ),
             Sys(SysOp::GifDecode) => format!(
                 "use {} {} instead",
                 Un.format(),

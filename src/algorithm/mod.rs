@@ -900,6 +900,7 @@ fn astar_impl(
             |n| {
                 let res = (|| {
                     let mut env = env.borrow_mut();
+                    env.respect_execution_limit()?;
                     for arg in args.iter().take(nei_sig.args.saturating_sub(1)).rev() {
                         env.push(arg.clone());
                     }
@@ -951,6 +952,7 @@ fn astar_impl(
             |n| {
                 let res = (|| {
                     let mut env = env.borrow_mut();
+                    env.respect_execution_limit()?;
                     for arg in args.iter().take(heu_sig.args.saturating_sub(1)).rev() {
                         env.push(arg.clone());
                     }
@@ -980,6 +982,7 @@ fn astar_impl(
             |n| {
                 let res = (|| -> UiuaResult<bool> {
                     let mut env = env.borrow_mut();
+                    env.respect_execution_limit()?;
                     for arg in args.iter().take(isg_sig.args.saturating_sub(1)).rev() {
                         env.push(arg.clone());
                     }

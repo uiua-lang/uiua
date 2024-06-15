@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.12
+  - Don't generate inlay hints if not necessary
   - `setinv` on and by inverses
   - Document on and by inverses
   - Pervasive switch functions and `repeat`

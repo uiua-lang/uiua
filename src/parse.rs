@@ -26,6 +26,7 @@ pub enum ParseError {
     SplitInModifier,
     UnsplitInModifier,
     LineTooLong(usize),
+    RecursionLimit,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -100,6 +101,7 @@ impl fmt::Display for ParseError {
                 "Split line into multiple lines (heuristic: {}/{}) 😏",
                 width, ERROR_MAX_WIDTH
             ),
+            ParseError::RecursionLimit => write!(f, "Parsing recursion limit reached"),
         }
     }
 }
@@ -197,6 +199,7 @@ pub fn parse(
             errors,
             diagnostics,
             next_output_comment: 0,
+            depth: 0,
         };
         let items = parser.items(true);
         if parser.errors.is_empty() && parser.index < parser.tokens.len() {
@@ -207,7 +210,15 @@ pub fn parse(
                     .map(ParseError::Unexpected),
             );
         }
-        (items, parser.errors, parser.diagnostics)
+        let mut errors = parser.errors;
+        if let Some(error) = errors
+            .iter()
+            .find(|e| matches!(e.value, ParseError::RecursionLimit))
+        {
+            let error = error.clone();
+            errors = vec![error];
+        }
+        (items, errors, parser.diagnostics)
     }
     parse(input, inputs, tokens, lex_errors, src)
 }
@@ -220,6 +231,7 @@ struct Parser<'i> {
     next_output_comment: usize,
     errors: Vec<Sp<ParseError>>,
     diagnostics: Vec<Diagnostic>,
+    depth: usize,
 }
 
 type FunctionContents = (Option<Sp<Signature>>, Vec<Vec<Sp<Word>>>, Option<CodeSpan>);
@@ -732,6 +744,11 @@ impl<'i> Parser<'i> {
         Some(span.sp(make(items)))
     }
     fn try_modified(&mut self) -> Option<Sp<Word>> {
+        if self.depth > 50 {
+            self.errors
+                .push(self.prev_span().sp(ParseError::RecursionLimit));
+            return None;
+        }
         let (modifier, mod_span) = if let Some(prim) = Primitive::all()
             .filter(|prim| prim.is_modifier())
             .find_map(|prim| {
@@ -756,6 +773,7 @@ impl<'i> Parser<'i> {
         };
         let mut args = Vec::new();
         self.try_spaces();
+        self.depth += 1;
         for i in 0..modifier.args() {
             loop {
                 args.extend(self.try_spaces());
@@ -782,6 +800,7 @@ impl<'i> Parser<'i> {
                 break;
             }
         }
+        self.depth -= 1;
 
         let span = if let Some(last) = args.last() {
             mod_span.clone().merge(last.span.clone())

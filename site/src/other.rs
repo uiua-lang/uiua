@@ -3,7 +3,11 @@ use leptos_meta::*;
 use leptos_router::*;
 use uiua::{Primitive, CONSTANTS};
 
-use crate::{editor::Editor, markdown::markdown_view, Const, Hd, Prim, Prims};
+use crate::{
+    editor::Editor,
+    markdown::{markdown_view, Markdown},
+    Const, Hd, Prim, Prims,
+};
 
 #[component]
 pub fn Design() -> impl IntoView {
@@ -476,5 +480,24 @@ pub fn Combinators() -> impl IntoView {
         </table>
         <p>"This page is inspired by the "<a href="https://mlochbaum.github.io/BQN/doc/birds.html">"similar page"</a>" on the BQN website. The diagrams are also inspired by "<a href="https://mlochbaum.github.io/BQN/doc/tacit.html#combinators">"BQN's combinator diagrams"</a>"."</p>
         <p>"I referenced "<a href="https://combinatorylogic.com/table.html">"these"</a>" "<a href="https://www.angelfire.com/tx4/cus/combinator/birds.html">"lists"</a>" of combinators when making this page."</p>
+    }
+}
+
+#[component]
+pub fn Experimental() -> impl IntoView {
+    view! {
+        <Title text="Experimental Features - Uiua Docs"/>
+        <h1>"Experimental Features"</h1>
+        <p>"Uiua has a number of features that are considered experimental. They are available in the interpreter for testing, but may be removed or changed in the future."</p>
+        <p>"Using experimental features requires an "<code>"# Experimental!"</code>" comment to be placed at the top of a Uiua source file."</p>
+
+        <h2 id="functions-modifiers">"Experimental Functions and Modifiers"</h2>
+        <ul>{
+            Primitive::non_deprecated().filter(Primitive::is_experimental).map(|prim| {
+                view! { <li><Prim prim=prim/></li> }
+            }).collect::<Vec<_>>()
+        }</ul>
+
+        <Markdown src="/text/experimental.md"/>
     }
 }

@@ -1,22 +1,3 @@
-# Experimental Features
-
-Uiua has a number of features that are considered experimental. They are available in the interpreter for testing, but may be removed or changed in the future.
-
-Using experimental features requires an `# Experimental!` comment to be placed at the top of a Uiua source file.
-
-## Experimental Functions/Modifiers
-
-- [`coordinate`]()
-- [`stringify`]()
-- [`astar`]()
-- [`fft`]()
-- [`case`]()
-- [`triangle`]()
-- [`&ffi`]()
-- [`&memcpy`]()
-- [`&memfree`]()
-- [`&tlsl`]()
-
 ## Stack Swizzles
 
 Stack swizzles allow you to reorder the stack in a concise way.

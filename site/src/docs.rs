@@ -89,9 +89,7 @@ pub fn Docs() -> impl IntoView {
             DocsPage::FormatConfig => {
                 title_markdown("Formatter Configuration", "/text/format_config.md", ()).into_view()
             }
-            DocsPage::Experimental => {
-                title_markdown("Experimental Features", "/text/experimental.md", ()).into_view()
-            }
+            DocsPage::Experimental => Experimental().into_view(),
         };
 
         view! {

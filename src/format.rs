@@ -930,11 +930,7 @@ impl<'a> Formatter<'a> {
                 self.output.push(if use_angle { '⟨' } else { '(' });
                 let any_multiline = pack.branches.iter().any(|br| {
                     br.value.lines.len() > 1
-                        || br
-                            .value
-                            .lines
-                            .iter()
-                            .flatten()
+                        || (br.value.lines.iter().flatten())
                             .any(|word| word_is_multiline(&word.value))
                 });
                 for (i, br) in pack.branches.iter().enumerate() {
@@ -973,7 +969,7 @@ impl<'a> Formatter<'a> {
                     self.format_multiline_words(&br.value.lines, false, false, depth + 1);
                     if any_multiline
                         && br.value.lines.last().is_some_and(|line| !line.is_empty())
-                        && !self.output.ends_with('\n')
+                        && !self.output.trim_end_matches(' ').ends_with('\n')
                     {
                         self.output.push('\n');
                         for _ in 0..self.config.multiline_indent * depth {

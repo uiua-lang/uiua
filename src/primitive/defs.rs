@@ -2440,6 +2440,8 @@ primitive!(
     /// - An array of the neighboring nodes must always be returned.
     /// - An array of costs may be returned above the nodes array on the stack. If ommitted, all costs are assumed to be 1.
     /// The second function should return a heuristic cost to reach the goal node.
+    /// - The heuristic may return a value [less or equal] the actual cost
+    /// - It must *never* overestimate the cost, or the algorithm may not find the shortest path
     /// The third function should return whether or not the goal node has been reached.
     ///
     /// When called, [astar] will pop any additional arguments its functions need from the stack.

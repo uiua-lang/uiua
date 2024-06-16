@@ -145,12 +145,13 @@ fn f_mon2_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueUn2Fn, usize)> {
 impl Value {
     fn replace_depth(&self, mut replacement: Value, depth: usize) -> Value {
         let depth = self.rank().min(depth);
+        let prefix = &self.shape()[..depth];
         replacement.generic_mut_shallow(
-            |arr| arr.repeat_shape(Shape::from(&self.shape()[..depth])),
-            |arr| arr.repeat_shape(Shape::from(&self.shape()[..depth])),
-            |arr| arr.repeat_shape(Shape::from(&self.shape()[..depth])),
-            |arr| arr.repeat_shape(Shape::from(&self.shape()[..depth])),
-            |arr| arr.repeat_shape(Shape::from(&self.shape()[..depth])),
+            |arr| arr.repeat_shape(Shape::from(prefix)),
+            |arr| arr.repeat_shape(Shape::from(prefix)),
+            |arr| arr.repeat_shape(Shape::from(prefix)),
+            |arr| arr.repeat_shape(Shape::from(prefix)),
+            |arr| arr.repeat_shape(Shape::from(prefix)),
         );
         replacement
     }

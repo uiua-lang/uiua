@@ -1,22 +1,23 @@
 # Uiua Todo
 
 - 0.12
-  - `setinv` on and by inverses
-  - Document on and by inverses
-  - Pervasive switch functions and `repeat`
+  - Pervasive `repeat`
+  - `# Track caller!`
   - Stack-source locality tutorial
   - Axis swizzles?
   - Rewrite .uasm format
   - Macro args doc comments
   - Fix pad cursor jumping with end-of-line comments
   - Unicode literals
-  - `# Track caller!`
-  - `base` function?
-  - `chunks` function?
-  - Channels?
-  - Stack visualization output comments?
   - Plots
-  - Dynamic modules
+  - Possible
+    - Dynamic modules
+    - `setinv` on and by inverses
+    - Document on and by inverses
+    - `base` function?
+    - `chunks` function?
+    - Channels?
+    - Stack visualization output comments?
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

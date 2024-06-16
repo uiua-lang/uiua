@@ -453,15 +453,16 @@ pub fn switch(
     } else {
         None
     };
-    let selector = selector.as_natural_array(env, "Switch index must be an array of naturals")?;
-    if let Some(i) = selector.data.iter().find(|&&i| i >= count) {
-        return Err(env.error(format!(
-            "Switch index {i} is out of bounds for switch of size {count}"
-        )));
-    }
     // Switch
     if selector.rank() == 0 {
         // Scalar
+        let selector =
+            selector.as_natural_array(env, "Switch index must be an array of naturals")?;
+        if let Some(i) = selector.data.iter().find(|&&i| i >= count) {
+            return Err(env.error(format!(
+                "Switch index {i} is out of bounds for switch of size {count}"
+            )));
+        }
         let i = selector.data[0];
         // Get function
         let Some(f) = env
@@ -492,26 +493,21 @@ pub fn switch(
     } else {
         // Array
         // Collect arguments
-        let mut args_rows: Vec<_> = Vec::with_capacity(sig.args);
+        let mut args = Vec::with_capacity(sig.args + 1);
+        let new_shape = selector.shape().clone();
+        args.push(selector);
         for i in 0..sig.args {
             let arg = env.pop(i + 1)?;
-            if !arg.shape().starts_with(selector.shape()) {
-                return Err(env.error(format!(
-                    "The selector's shape {} is not compatible \
-                    with the argument {}'s shape {}",
-                    selector.shape(),
-                    i + 1,
-                    arg.shape(),
-                )));
-            }
-            let row_shape = Shape::from(&arg.shape()[selector.rank()..]);
-            args_rows.push(arg.into_row_shaped_slices(row_shape));
+            args.push(arg);
         }
-        args_rows.reverse();
+        args[1..].reverse();
+        let FixedRowsData {
+            mut rows,
+            row_count,
+            ..
+        } = fixed_rows("switch", sig.outputs, args, env)?;
         // Collect functions
-        let functions: Vec<(Function, usize)> = env
-            .rt
-            .function_stack
+        let functions: Vec<(Function, usize)> = (env.rt.function_stack)
             .drain(env.rt.function_stack.len() - count..)
             .map(|f| {
                 let args = if f.signature().outputs < sig.outputs {
@@ -522,27 +518,64 @@ pub fn switch(
                 (f, args)
             })
             .collect();
-        let mut outputs = multi_output(sig.outputs, Vec::new());
+
         // Switch with each selector element
-        for elem in selector.data {
-            let (f, args) = &functions[elem];
-            for (i, arg) in args_rows.iter_mut().rev().enumerate().rev() {
-                let arg = arg.next().unwrap();
-                if i < *args {
-                    env.push(arg);
+        let mut outputs = multi_output(sig.outputs, Vec::new());
+        let mut rows_to_sel = Vec::with_capacity(sig.args);
+        for _ in 0..row_count {
+            let selector = match &mut rows[0] {
+                Ok(selector) => selector.next().unwrap(),
+                Err(selector) => selector.clone(),
+            }
+            .as_natural_array(env, "Switch index must be an array of naturals")?;
+            if let Some(i) = selector.data.iter().find(|&&i| i >= count) {
+                return Err(env.error(format!(
+                    "Switch index {i} is out of bounds for switch of size {count}"
+                )));
+            }
+            // println!("selector: {} {:?}", selector.shape, selector.data);
+            rows_to_sel.clear();
+            for row in rows[1..].iter_mut() {
+                let row = match row {
+                    Ok(row) => row.next().unwrap(),
+                    Err(row) => row.clone(),
+                };
+                // println!("row: {:?}", row);
+                if selector.rank() > row.rank() {
+                    rows_to_sel.push(Err(row));
+                } else {
+                    let row_shape = row.shape()[selector.rank()..].into();
+                    rows_to_sel.push(Ok(row.into_row_shaped_slices(row_shape)));
                 }
             }
-            env.call(f.clone())?;
-            for i in 0..sig.outputs {
-                outputs[i].push(env.pop("switch output")?);
+            for sel_row_slice in selector.row_slices() {
+                for &elem in sel_row_slice {
+                    // println!("  elem: {}", elem);
+                    let (f, arg_count) = &functions[elem];
+                    for (i, row) in rows_to_sel.iter_mut().rev().enumerate().rev() {
+                        let row = match row {
+                            Ok(row) => row.next().unwrap(),
+                            Err(row) => row.clone(),
+                        };
+                        // println!("  row: {:?}", row);
+                        if i < *arg_count {
+                            env.push(row);
+                        }
+                    }
+                    env.call(f.clone())?;
+                    for i in 0..sig.outputs {
+                        outputs[i].push(env.pop("switch output")?);
+                    }
+                }
             }
         }
         // Collect output
         for output in outputs.into_iter().rev() {
             let mut new_value = Value::from_row_values(output, env)?;
-            let mut new_shape = selector.shape.clone();
+            let mut new_shape = new_shape.clone();
             new_shape.extend_from_slice(&new_value.shape()[1..]);
             *new_value.shape_mut() = new_shape;
+            new_value.validate_shape();
             env.push(new_value);
         }
     }

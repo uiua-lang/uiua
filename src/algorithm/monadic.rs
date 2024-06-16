@@ -213,6 +213,22 @@ impl Value {
             Err(data) => Array::new(shape, data).into(),
         })
     }
+    pub(crate) fn unshape(&self, env: &Uiua) -> UiuaResult<Self> {
+        let ishape = self.as_ints(
+            env,
+            "Shape should be a single integer or a list of integers",
+        )?;
+        let shape = Shape::from_iter(ishape.iter().map(|n| n.unsigned_abs()));
+        let elems: usize = validate_size::<f64>(shape.iter().copied(), env)?;
+        let data = EcoVec::from_iter((0..elems).map(|i| i as f64));
+        let mut arr = Array::new(shape, data);
+        for (i, s) in ishape.into_iter().enumerate() {
+            if s < 0 {
+                arr.reverse_depth(i);
+            }
+        }
+        Ok(arr.into())
+    }
 }
 
 fn range(shape: &[isize], env: &Uiua) -> UiuaResult<Result<CowSlice<f64>, CowSlice<u8>>> {

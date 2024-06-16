@@ -168,6 +168,7 @@ impl fmt::Display for ImplPrimitive {
             UnUtf => write!(f, "{Un}{Utf}"),
             UnParse => write!(f, "{Un}{Parse}"),
             UnFix => write!(f, "{Un}{Fix}"),
+            UnShape => write!(f, "{Un}{Shape}"),
             UnJoin | UnJoinPattern => write!(f, "{Un}{Join}"),
             UnKeep => write!(f, "{Un}{Keep}"),
             UnScan => write!(f, "{Un}{Scan}"),
@@ -989,6 +990,7 @@ impl ImplPrimitive {
             }
             ImplPrimitive::UnParse => env.monadic_ref_env(Value::unparse)?,
             ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
+            ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
             ImplPrimitive::UndoFix => env.monadic_mut(Value::undo_fix)?,
             ImplPrimitive::UnScan => reduce::unscan(env)?,
             ImplPrimitive::TraceN(n, inverse) => trace_n(env, *n, *inverse)?,

@@ -190,6 +190,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(invert_dup_pattern, "dup"),
         &InvertPatternFn(invert_stack_swizzle_pattern, "stack swizzle"),
         &InvertPatternFn(invert_select_pattern, "select"),
+        &InvertPatternFn(invert_shape_pattern, "shape"),
         &pat!(Sqrt, (Dup, Mul)),
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
@@ -914,6 +915,25 @@ fn invert_stack_swizzle_pattern<'a>(
         return None;
     };
     let instrs = eco_vec![Instr::StackSwizzle(swizzle.inverse()?, *span)];
+    Some((input, instrs))
+}
+
+fn invert_shape_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::Prim(Primitive::Shape, span), input @ ..] = input else {
+        return None;
+    };
+    let mul = make_fn(eco_vec![Instr::Prim(Primitive::Mul, *span)], *span, comp)?;
+    let instrs = eco_vec![
+        Instr::Prim(Primitive::Dup, *span),
+        Instr::PushFunc(mul),
+        Instr::Prim(Primitive::Reduce, *span),
+        Instr::Prim(Primitive::Range, *span),
+        Instr::Prim(Primitive::Flip, *span),
+        Instr::Prim(Primitive::Reshape, *span),
+    ];
     Some((input, instrs))
 }
 

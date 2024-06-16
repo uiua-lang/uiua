@@ -17,6 +17,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`keep ▽`](https://uiua.org/docs/keep) now works with non-integer scalar counts to scale an array
 - [`join ⊂`](https://uiua.org/docs/join) will rank differences greater than 1 can now extend the smaller array
 - [`un °`](https://uiua.org/docs/un) [`join ⊂`](https://uiua.org/docs/join) is now easier to combine with other inverses
+- [`un °`](https://uiua.org/docs/un) [`shape △`](https://uiua.org/docs/shape) now generates an array with the given shape and incrementing elements
 - Add the experimental [`fft`](https://uiua.org/docs/fft) function, which performs the Fast Fourier transform
   - The inverse FFT is also supported via [`un °`](https://uiua.org/docs/un)
 - Add the experimental [`astar`](https://uiua.org/docs/astar) modifier, which performs the A* pathfinding algorithm

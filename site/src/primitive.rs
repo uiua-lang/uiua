@@ -260,6 +260,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row_impl(view!(<code>"{…}"</code>), No, "", "°{:} {1 2_3}") }
             { inverse_row([Box], No, "No-op on non-scalars and non-boxes", "°□ □[1 2 3]") }
             { inverse_row([Reverse], No, "", "°⇌ [1 2 3 4]") }
+            { inverse_row([Shape], No, "", "°△ [2 2 4]") }
             { inverse_row([Transpose], No, "", "°⍉ ↯2_3_2⇡12") }
             { inverse_row([Bits], No, "", "°⋯ [1 0 1]") }
             { inverse_row([Where], No, "", "°⊚ [1 4]") }

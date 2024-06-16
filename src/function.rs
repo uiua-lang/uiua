@@ -247,7 +247,7 @@ impl Instr {
         matches!(self, Self::PushSig(_) | Self::PopSig)
     }
     pub(crate) fn is_code(&self) -> bool {
-        !matches!(self, Self::NoInline)
+        !matches!(self, Self::NoInline | Self::TrackCaller)
     }
 }
 

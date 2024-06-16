@@ -1594,7 +1594,11 @@ code:
             self.global_index(local.index, span, call);
         } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
             // Name is a built-in constant
-            let instr = Instr::push(constant.value.resolve(self.scope.file_path.as_deref()));
+            let instr = Instr::push(
+                constant
+                    .value
+                    .resolve(self.scope.file_path.as_deref(), &*self.backend()),
+            );
             self.code_meta
                 .constant_references
                 .insert(span.clone().sp(ident));

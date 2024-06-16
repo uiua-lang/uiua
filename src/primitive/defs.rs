@@ -20,6 +20,8 @@ pub struct ConstantDef {
 pub enum ConstantValue {
     /// A static value that is always the same
     Static(Value),
+    /// The music constant
+    Music,
     /// The path of the current source file relative to the current working directory
     ThisFile,
     /// The name of the current source file
@@ -32,9 +34,17 @@ pub enum ConstantValue {
 
 impl ConstantValue {
     /// Resolve the constant to a value
-    pub(crate) fn resolve(&self, current_file_path: Option<&Path>) -> Value {
+    pub(crate) fn resolve(
+        &self,
+        current_file_path: Option<&Path>,
+        backend: &dyn SysBackend,
+    ) -> Value {
         match self {
             ConstantValue::Static(val) => val.clone(),
+            ConstantValue::Music => {
+                static MUSIC: OnceLock<Value> = OnceLock::new();
+                MUSIC.get_or_init(|| music_constant(backend)).clone()
+            }
             ConstantValue::ThisFile => {
                 current_file_path.map_or_else(|| "".into(), |p| p.display().to_string().into())
             }
@@ -227,6 +237,8 @@ constant!(
     /// Ethically sourced Lena picture
     #[cfg(feature = "image")]
     ("Lena", image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
+    /// Sample music data
+    ("Music", ConstantValue::Music),
     ///
     (
         "⍼",
@@ -236,6 +248,70 @@ No purpose apparent, no function defined,
 Yet it captivates minds, with its pleasant design."
     ),
 );
+
+fn music_constant(backend: &dyn SysBackend) -> Value {
+    const TEMPO: f64 = 128.0;
+    const BEAT: f64 = 60.0 / TEMPO;
+    const C4: f64 = 261.63;
+    const B3: f64 = 246.94;
+    const G3: f64 = 196.00;
+    const E3: f64 = 164.81;
+    const C2: f64 = 65.41;
+    const D2: f64 = 73.42;
+    const E2: f64 = 82.41;
+    const G2: f64 = 98.00;
+    #[rustfmt::skip]
+    let down = [
+        C4, C4, C4, C4, B3, B3, B3, B3, G3, G3, G3, G3, E3, E3, E3, E3,
+        C4, C4, B3, B3, G3, G3, E3, E3, C4, C4, B3, B3, G3, G3, E3, E3,
+        C4, C4, C4, C4, B3, B3, B3, B3, G3, G3, G3, G3, E3, E3, E3, E3,
+        C4, B3, G3, E3, C4, B3, G3, E3, C4, B3, G3, E3, C4, B3, G3, E3,
+    ];
+    #[rustfmt::skip]
+    let up = [
+        E3, G3, B3, C4, E3, G3, B3, C4, E3, G3, B3, C4, E3, G3, B3, C4,
+        E3, E3, E3, E3, G3, G3, G3, G3, B3, B3, B3, B3, C4, C4, C4, C4,
+        E3, E3, G3, G3, B3, B3, C4, C4, E3, E3, G3, G3, B3, B3, C4, C4,
+        E3, E3, E3, E3, G3, G3, G3, G3, B3, B3, B3, B3, C4, C4, C4, C4,
+    ];
+    let mut melody = Vec::with_capacity(down.len() * 2 + up.len() * 2);
+    melody.extend(down);
+    // melody.extend(down);
+    melody.extend(up);
+    // melody.extend(up);
+    let harmony = [C2, D2, E2, G2];
+    let mut hat_mask = Vec::new();
+    let mut hat_bits: u64 = 0xbeef_babe;
+    for _ in 0..32 {
+        hat_mask.push((hat_bits & 1) as f64);
+        hat_bits >>= 1;
+    }
+    let mut rng = SmallRng::seed_from_u64(0);
+    let sr = backend.audio_sample_rate();
+    (0..(BEAT * 2.0 * 16.0 * sr as f64) as usize)
+        .map(|s| {
+            let secs = s as f64 / sr as f64;
+            let beat = secs / BEAT;
+
+            let m = melody[(4.0 * beat) as usize % melody.len()];
+            let h = harmony[(beat / 4.0) as usize % harmony.len()];
+
+            let m = (1.0 - (m * secs % 1.0) * 2.0) / 3.0; // Saw wave
+            let h = if (h * secs % 1.0) < 0.5 { 1.0 } else { -1.0 } / 3.0; // Square wave
+            let kick = ((secs % BEAT).powf(0.4) * 40.0 * TAU).sin();
+            let hat = 0.3
+                * rng.gen_range(-1.0..=1.0)
+                * hat_mask[(4.0 * beat) as usize % 32]
+                * (0.0..=0.1).contains(&(secs % (BEAT / 4.0) / (BEAT / 4.0))) as u8 as f64;
+            let snare = 0.5
+                * rng.gen_range(-1.0..=1.0)
+                * ((0.5..=0.6).contains(&(secs % (2.0 * BEAT) / (2.0 * BEAT))) as u8 as f64);
+
+            0.5 * (m + h + kick + hat + snare)
+        })
+        .collect::<EcoVec<_>>()
+        .into()
+}
 
 macro_rules! primitive {
     ($(

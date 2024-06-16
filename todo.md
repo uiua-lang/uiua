@@ -4,7 +4,6 @@
   - Stack-source locality tutorial
   - Axis swizzles?
   - Rewrite .uasm format
-  - Macro args doc comments
   - Fix pad cursor jumping with end-of-line comments
   - Unicode literals
   - Plots

@@ -48,6 +48,15 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     } else {
         // Array
         let sig = f.signature();
+        if sig.args != sig.outputs {
+            return Err(env.error(format!(
+                "{} with a non-scalar repetition count \
+                must use a function with the same number \
+                of arguments and outputs, but its signature \
+                is {sig}",
+                Primitive::Repeat.format()
+            )));
+        }
         // Collect arguments
         let mut args = Vec::with_capacity(sig.args + 1);
         let new_shape = n.shape().clone();

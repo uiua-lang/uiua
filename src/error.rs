@@ -152,6 +152,13 @@ impl UiuaError {
         self.trace.push(frame);
         self
     }
+    pub(crate) fn track_caller(&mut self, new_span: impl Into<Span>) {
+        self.trace.clear();
+        match &mut self.kind {
+            UiuaErrorKind::Run(message, _) => message.span = new_span.into(),
+            _ => {}
+        }
+    }
 }
 
 fn format_trace(trace: &[TraceFrame]) -> Vec<String> {

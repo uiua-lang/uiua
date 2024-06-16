@@ -1319,6 +1319,18 @@ code:
                     }
                     self.push_instr(instr);
                 }
+                SemanticComment::TrackCaller => {
+                    let mut instr = Instr::TrackCaller;
+                    if !call {
+                        let f = self.make_function(
+                            FunctionId::Anonymous(word.span.clone()),
+                            Signature::new(0, 0),
+                            eco_vec![Instr::TrackCaller],
+                        );
+                        instr = Instr::PushFunc(f);
+                    }
+                    self.push_instr(instr);
+                }
                 SemanticComment::Boo => {
                     self.add_error(word.span.clone(), "The compiler is scared!")
                 }
@@ -2060,7 +2072,7 @@ code:
                 Instr::Prim(Trace | Dump | Stack | Assert, _) => return false,
                 Instr::ImplPrim(UnDump | UnStack | TraceN(..), _) => return false,
                 Instr::PushFunc(f) if !self.inlinable(f.instrs(&self.asm)) => return false,
-                Instr::NoInline => return false,
+                Instr::NoInline | Instr::TrackCaller => return false,
                 _ => {}
             }
         }
@@ -2193,7 +2205,9 @@ code:
         if self.in_inverse
             || self.pre_eval_mode == PreEvalMode::Lazy
             || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
-            || instrs.iter().any(|instr| matches!(instr, Instr::NoInline))
+            || instrs
+                .iter()
+                .any(|instr| matches!(instr, Instr::NoInline | Instr::TrackCaller))
         {
             return (instrs, errors);
         }

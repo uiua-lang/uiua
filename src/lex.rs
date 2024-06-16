@@ -685,6 +685,8 @@ pub enum SemanticComment {
     Experimental,
     /// Prevent the containing function from being inlined
     NoInline,
+    /// Prevent stack traces from going deeper
+    TrackCaller,
     #[doc(hidden)]
     Boo,
 }
@@ -694,6 +696,7 @@ impl fmt::Display for SemanticComment {
         match self {
             SemanticComment::Experimental => write!(f, "# Experimental!"),
             SemanticComment::NoInline => write!(f, "# No inline!"),
+            SemanticComment::TrackCaller => write!(f, "# Track caller!"),
             SemanticComment::Boo => write!(f, "# Boo!"),
         }
     }

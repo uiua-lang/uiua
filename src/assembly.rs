@@ -637,6 +637,7 @@ enum InstrRep {
     PopSig,
     SetOutputComment(usize, usize),
     NoInline,
+    TrackCaller,
     #[serde(untagged)]
     Push(Value),
     #[serde(untagged)]
@@ -688,6 +689,7 @@ impl From<Instr> for InstrRep {
             Instr::PopSig => Self::PopSig,
             Instr::SetOutputComment { i, n } => Self::SetOutputComment(i, n),
             Instr::NoInline => Self::NoInline,
+            Instr::TrackCaller => Self::TrackCaller,
         }
     }
 }
@@ -734,6 +736,7 @@ impl From<InstrRep> for Instr {
             InstrRep::PopSig => Self::PopSig,
             InstrRep::SetOutputComment(i, n) => Self::SetOutputComment { i, n },
             InstrRep::NoInline => Self::NoInline,
+            InstrRep::TrackCaller => Self::TrackCaller,
         }
     }
 }

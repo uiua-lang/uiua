@@ -392,25 +392,11 @@ code:
             ))),
         }
     }
-    fn trace_error(&self, mut error: UiuaError, frame: StackFrame) -> UiuaError {
-        for (span, prim) in &frame.spans {
-            if let Some(prim) = prim {
-                error.trace.push(TraceFrame {
-                    id: FunctionId::Primitive(*prim),
-                    span: self.asm.spans[*span].clone(),
-                });
-            }
-        }
-        error.trace.push(TraceFrame {
-            id: frame.id.clone(),
-            span: self.asm.spans[frame.call_span].clone(),
-        });
-        error
-    }
     fn exec(&mut self, frame: StackFrame) -> UiuaResult {
         let slice = frame.slice;
         self.rt.call_stack.push(frame);
         let mut formatted_instr = String::new();
+        let mut track_caller = false;
         for i in slice.start..slice.end() {
             let instr = &self.asm.instrs[i];
 
@@ -659,6 +645,10 @@ code:
                     Ok(())
                 }
                 Instr::NoInline => Ok(()),
+                Instr::TrackCaller => {
+                    track_caller = true;
+                    Ok(())
+                }
             };
             if self.rt.time_instrs {
                 let end_time = instant::now();
@@ -671,10 +661,16 @@ code:
                 );
                 self.rt.last_time = instant::now();
             }
-            if let Err(err) = res {
+            if let Err(mut err) = res {
                 // Trace errors
                 let frame = self.rt.call_stack.pop().unwrap();
-                return Err(self.trace_error(err, frame));
+                let span = self.asm.spans[frame.call_span].clone();
+                if track_caller {
+                    err.track_caller(span);
+                } else {
+                    err.trace.push(TraceFrame { id: frame.id, span });
+                }
+                return Err(err);
             }
             self.rt.call_stack.last_mut().unwrap().pc += 1;
             self.respect_execution_limit()?;

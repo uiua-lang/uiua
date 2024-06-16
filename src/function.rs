@@ -114,6 +114,7 @@ pub enum Instr {
     PushSig(Signature),
     PopSig,
     NoInline,
+    TrackCaller,
 }
 
 /// A type of temporary stacks
@@ -231,6 +232,7 @@ impl Hash for Instr {
             Instr::PopSig => 26.hash(state),
             Instr::NoInline => 27.hash(state),
             Instr::StackSwizzle(swizzle, _) => (31, swizzle).hash(state),
+            Instr::TrackCaller => 32.hash(state),
         }
     }
 }
@@ -539,6 +541,7 @@ impl fmt::Display for Instr {
             Instr::PushSig(sig) => write!(f, "{sig}"),
             Instr::PopSig => write!(f, "-|"),
             Instr::NoInline => write!(f, "<no inline>"),
+            Instr::TrackCaller => write!(f, "<track caller>"),
         }
     }
 }

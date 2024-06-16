@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - `# Track caller!`
   - Stack-source locality tutorial
   - Axis swizzles?
   - Rewrite .uasm format

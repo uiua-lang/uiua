@@ -10,6 +10,7 @@ use std::{
 use ecow::{eco_vec, EcoVec};
 
 use crate::{
+    algorithm::{fixed_rows, FixedRowsData},
     array::{Array, ArrayValue},
     cowslice::CowSlice,
     value::Value,
@@ -26,58 +27,95 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let n = env.pop("repetition count")?;
-    let n = match n {
-        Value::Num(n) => n,
-        Value::Byte(n) => n.convert(),
-        val => {
-            return Err(env.error(format!(
-                "Repetitions must be a scalar or list of \
-                natural numbers or infinity, \
-                but it is {}",
-                val.type_name_plural()
-            )))
-        }
-    };
+    fn rep_count(value: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
+        Ok(match value {
+            Value::Num(n) => n,
+            Value::Byte(n) => n.convert(),
+            val => {
+                return Err(env.error(format!(
+                    "Repetitions must be a scalar or list of \
+                    natural numbers or infinity, \
+                    but it is {}",
+                    val.type_name_plural()
+                )))
+            }
+        })
+    }
     if n.rank() == 0 {
         // Scalar repeat
+        let n = rep_count(n, env)?;
         repeat_impl(f, n.data[0], env)
     } else {
-        // Non-scalar repeat
+        // Array
         let sig = f.signature();
         // Collect arguments
-        let mut args_rows: Vec<_> = Vec::with_capacity(sig.args);
+        let mut args = Vec::with_capacity(sig.args + 1);
+        let new_shape = n.shape().clone();
+        args.push(n);
         for i in 0..sig.args {
             let arg = env.pop(i + 1)?;
-            if !arg.shape().starts_with(n.shape()) {
-                return Err(env.error(format!(
-                    "The repetitions' shape {} is not compatible \
-                    with the argument {}'s shape {}",
-                    n.shape(),
-                    i + 1,
-                    arg.shape(),
-                )));
-            }
-            let row_shape = Shape::from(&arg.shape()[n.rank()..]);
-            args_rows.push(arg.into_row_shaped_slices(row_shape));
+            args.push(arg);
         }
-        args_rows.reverse();
-        let mut outputs = multi_output(sig.outputs, Vec::with_capacity(n.data.len()));
-        // Repeate with each repetition count
-        for n in n.data {
-            for arg in args_rows.iter_mut().rev() {
-                env.push(arg.next().unwrap());
+        args[1..].reverse();
+        let FixedRowsData {
+            mut rows,
+            row_count,
+            ..
+        } = fixed_rows(Primitive::Repeat.format(), sig.outputs, args, env)?;
+
+        // Switch with each selector element
+        let mut outputs = multi_output(sig.outputs, Vec::new());
+        let mut rows_to_sel = Vec::with_capacity(sig.args);
+        for _ in 0..row_count {
+            let n = rep_count(
+                match &mut rows[0] {
+                    Ok(n) => n.next().unwrap(),
+                    Err(n) => n.clone(),
+                },
+                env,
+            )?;
+            // println!("ns: {} {:?}", n.shape, n.data);
+            rows_to_sel.clear();
+            for row in rows[1..].iter_mut() {
+                let row = match row {
+                    Ok(row) => row.next().unwrap(),
+                    Err(row) => row.clone(),
+                };
+                // println!("row: {:?}", row);
+                if n.rank() > row.rank() {
+                    rows_to_sel.push(Err(row));
+                } else {
+                    let row_shape = row.shape()[n.rank()..].into();
+                    rows_to_sel.push(Ok(row.into_row_shaped_slices(row_shape)));
+                }
             }
-            repeat_impl(f.clone(), n, env)?;
-            for i in 0..sig.outputs {
-                outputs[i].push(env.pop("repeat's output")?);
+            for sel_row_slice in n.row_slices() {
+                for &elem in sel_row_slice {
+                    // println!("  elem: {}", elem);
+                    for row in &mut rows_to_sel {
+                        let row = match row {
+                            Ok(row) => row.next().unwrap(),
+                            Err(row) => row.clone(),
+                        };
+                        // println!("  row: {:?}", row);
+                        env.push(row);
+                    }
+                    repeat_impl(f.clone(), elem, env)?;
+                    for i in 0..sig.outputs {
+                        let res = env.pop("repeat output")?;
+                        // println!("    res: {:?}", res);
+                        outputs[i].push(res);
+                    }
+                }
             }
         }
-        // Collect outputs
+        // Collect output
         for output in outputs.into_iter().rev() {
             let mut new_value = Value::from_row_values(output, env)?;
-            let mut new_shape = n.shape.clone();
+            let mut new_shape = new_shape.clone();
             new_shape.extend_from_slice(&new_value.shape()[1..]);
             *new_value.shape_mut() = new_shape;
+            new_value.validate_shape();
             env.push(new_value);
         }
         Ok(())

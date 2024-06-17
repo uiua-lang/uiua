@@ -1182,12 +1182,24 @@ impl Compiler {
         }
 
         // Compile the generated items
-        for item in items {
+        let item_count = items.len();
+        for (i, item) in items.into_iter().enumerate() {
             match item {
                 Item::Words(words) => {
+                    let call = call || i != item_count - 1;
+                    if !call {
+                        self.new_functions.push(EcoVec::new());
+                    }
                     for line in words {
-                        self.words(line, call)
+                        self.words(line, true)
                             .map_err(|e| e.trace_macro(span.clone()))?;
+                    }
+                    if !call {
+                        let instrs = self.new_functions.pop().unwrap();
+                        let sig = self.sig_of(&instrs, span)?;
+                        let id = FunctionId::Anonymous(span.clone());
+                        let func = self.make_function(id, sig, instrs);
+                        self.push_instr(Instr::PushFunc(func));
                     }
                 }
                 Item::Binding(binding) => self

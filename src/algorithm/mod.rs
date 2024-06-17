@@ -922,7 +922,7 @@ fn astar_impl(
         args.push(env.pop(i + 1)?);
     }
     const COST_MUL: f64 = 1e6;
-    let error: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
+    let error: Rc<RefCell<Option<UiuaError>>> = Rc::new(RefCell::new(None));
     let error_clone = error.clone();
     let do_error = move |msg| {
         *error_clone.borrow_mut() = Some(msg);
@@ -978,7 +978,7 @@ fn astar_impl(
                 match res {
                     Ok(res) => res,
                     Err(e) => {
-                        do_error(e.to_string());
+                        do_error(e);
                         Vec::new()
                     }
                 }
@@ -1008,7 +1008,7 @@ fn astar_impl(
                 match res {
                     Ok(res) => res,
                     Err(e) => {
-                        do_error(e.to_string());
+                        do_error(e);
                         0
                     }
                 }
@@ -1032,16 +1032,16 @@ fn astar_impl(
                 match res {
                     Ok(res) => res,
                     Err(e) => {
-                        do_error(e.to_string());
-                        false
+                        do_error(e);
+                        true
                     }
                 }
             },
         )
     };
     drop(do_error);
-    if let Some(msg) = Rc::try_unwrap(error).unwrap().into_inner() {
-        return Err(env.error(msg.clone()));
+    if let Some(err) = Rc::try_unwrap(error).unwrap().into_inner() {
+        return Err(err);
     }
     if let Some((solution, cost)) = path {
         Ok((solution, cost as f64 / COST_MUL))

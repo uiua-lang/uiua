@@ -225,6 +225,7 @@ static ON_INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &pat!((Flip, Log), (Flip, 1, Flip, Div, Pow)),
         &([Min], [Min]),
         &([Max], [Max]),
+        &([Orient], [UndoOrient]),
         &pat!(
             Join,
             (
@@ -535,6 +536,12 @@ pub(crate) fn under_instrs(
             (Dup, Shape, PushToUnder(1), Where),
             (PopUnder(1), UndoWhere)
         ),
+        // Orient
+        &maybe_val!(pat!(
+            Orient,
+            (CopyToUnder(1), Orient),
+            (PopUnder(1), UndoOrient)
+        )),
         // System stuff
         &pat!(Now, (Now, PushToUnder(1)), (PopUnder(1), Now, Flip, Sub)),
         &maybe_val!(store1copy!(Sys(SysOp::FOpen), Sys(SysOp::Close))),

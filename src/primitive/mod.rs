@@ -184,6 +184,7 @@ impl fmt::Display for ImplPrimitive {
             UndoSelect => write!(f, "{Under}{Select}"),
             UndoPick => write!(f, "{Under}{Pick}"),
             UndoWhere => write!(f, "{Under}{Where}"),
+            UndoOrient => write!(f, "{Under}{Orient}"),
             UndoInsert => write!(f, "{Under}{Insert}"),
             UndoRemove => write!(f, "{Under}{Remove}"),
             UndoPartition1 | UndpPartition2 => write!(f, "{Under}{Partition}"),
@@ -919,6 +920,12 @@ impl ImplPrimitive {
                 let indices = env.pop(2)?;
                 let mask = indices.undo_where(&shape, env)?;
                 env.push(mask);
+            }
+            ImplPrimitive::UndoOrient => {
+                let indices = env.pop(1)?;
+                let mut array = env.pop(2)?;
+                indices.undo_orient(&mut array, env)?;
+                env.push(array);
             }
             ImplPrimitive::UndoRerank => {
                 let rank = env.pop(1)?;

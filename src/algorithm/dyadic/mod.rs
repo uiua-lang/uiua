@@ -1728,7 +1728,11 @@ impl Value {
                 return Err(env.error("Orient indices must be unique"));
             }
         }
-        let mut orientation: Vec<usize> = (0..target.rank()).collect();
+        target.orient_impl(&undices);
+        Ok(())
+    }
+    fn orient_impl(&mut self, undices: &[usize]) {
+        let mut orientation: Vec<usize> = (0..self.rank()).collect();
         let mut depth_rotations: Vec<(usize, i32)> = Vec::new();
         for (i, &u) in undices.iter().enumerate() {
             let j = orientation.iter().position(|&o| o == u).unwrap();
@@ -1743,8 +1747,43 @@ impl Value {
             depth_rotations.push((i, -1));
         }
         for (depth, amnt) in depth_rotations {
-            target.transpose_depth(depth, amnt);
+            self.transpose_depth(depth, amnt);
         }
+    }
+    pub(crate) fn undo_orient(&self, target: &mut Self, env: &Uiua) -> UiuaResult {
+        let indices = self.as_ints(env, "Unorient indices must be integers")?;
+        let mut undices = Vec::with_capacity(indices.len());
+        for i in indices {
+            let u = i.unsigned_abs();
+            if u >= target.rank() {
+                return Err(env.error(format!(
+                    "Cannot unorient axis {i} in array of rank {}",
+                    target.rank()
+                )));
+            }
+            if i >= 0 {
+                undices.push(u);
+            } else {
+                undices.push(target.rank() - u);
+            }
+        }
+        if undices.len() > target.rank() {
+            return Err(env.error(format!(
+                "Cannot unorient array of rank {} with {} indices",
+                target.rank(),
+                undices.len()
+            )));
+        }
+        for i in 0..target.rank() {
+            if !undices.contains(&i) {
+                undices.push(i);
+            }
+        }
+        let mut inverted_undices = undices.clone();
+        for (i, u) in undices.into_iter().enumerate() {
+            inverted_undices[u] = i;
+        }
+        target.orient_impl(&inverted_undices);
         Ok(())
     }
 }

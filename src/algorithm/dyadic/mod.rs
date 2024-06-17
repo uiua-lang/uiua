@@ -462,33 +462,28 @@ impl Value {
 impl Value {
     /// Use this value as counts to `keep` another
     pub fn keep(self, kept: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.into_nums_with(
+        let counts = self.as_nums(
             env,
             "Keep amount must be a positive real number \
             or list of natural numbers",
-            false,
-            |counts, shape| {
-                Ok(if shape.len() == 0 {
-                    match kept {
-                        Value::Num(a) => a.keep_scalar_real(counts[0], env)?.into(),
-                        Value::Byte(a) => {
-                            a.convert::<f64>().keep_scalar_real(counts[0], env)?.into()
-                        }
-                        Value::Complex(a) => a.keep_scalar_real(counts[0], env)?.into(),
-                        Value::Char(a) => a.keep_scalar_real(counts[0], env)?.into(),
-                        Value::Box(a) => a.keep_scalar_real(counts[0], env)?.into(),
-                    }
-                } else {
-                    match kept {
-                        Value::Num(a) => a.keep_list(counts, env)?.into(),
-                        Value::Byte(a) => a.keep_list(counts, env)?.into(),
-                        Value::Complex(a) => a.keep_list(counts, env)?.into(),
-                        Value::Char(a) => a.keep_list(counts, env)?.into(),
-                        Value::Box(a) => a.keep_list(counts, env)?.into(),
-                    }
-                })
-            },
-        )
+        )?;
+        Ok(if self.rank() == 0 {
+            match kept {
+                Value::Num(a) => a.keep_scalar_real(counts[0], env)?.into(),
+                Value::Byte(a) => a.convert::<f64>().keep_scalar_real(counts[0], env)?.into(),
+                Value::Complex(a) => a.keep_scalar_real(counts[0], env)?.into(),
+                Value::Char(a) => a.keep_scalar_real(counts[0], env)?.into(),
+                Value::Box(a) => a.keep_scalar_real(counts[0], env)?.into(),
+            }
+        } else {
+            match kept {
+                Value::Num(a) => a.keep_list(&counts, env)?.into(),
+                Value::Byte(a) => a.keep_list(&counts, env)?.into(),
+                Value::Complex(a) => a.keep_list(&counts, env)?.into(),
+                Value::Char(a) => a.keep_list(&counts, env)?.into(),
+                Value::Box(a) => a.keep_list(&counts, env)?.into(),
+            }
+        })
     }
     pub(crate) fn unkeep(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         self.generic_into(
@@ -500,26 +495,22 @@ impl Value {
         )
     }
     pub(crate) fn undo_keep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.into_nums_with_other(
-            kept,
+        let counts = self.as_nums(
             env,
-            "Keep amount must be a natural number \
+            "Keep amount must be a positive real number \
             or list of natural numbers",
-            false,
-            |counts, shape, kept| {
-                if shape.len() == 0 {
-                    return Err(env.error("Cannot invert scalar keep"));
-                }
-                kept.generic_bin_into(
-                    into,
-                    |a, b| a.undo_keep(counts, b, env).map(Into::into),
-                    |a, b| a.undo_keep(counts, b, env).map(Into::into),
-                    |a, b| a.undo_keep(counts, b, env).map(Into::into),
-                    |a, b| a.undo_keep(counts, b, env).map(Into::into),
-                    |a, b| a.undo_keep(counts, b, env).map(Into::into),
-                    |a, b| env.error(format!("Cannot unkeep {a} array with {b} array")),
-                )
-            },
+        )?;
+        if self.rank() == 0 {
+            return Err(env.error("Cannot invert scalar keep"));
+        }
+        kept.generic_bin_into(
+            into,
+            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+            |a, b| env.error(format!("Cannot unkeep {a} array with {b} array")),
         )
     }
 }

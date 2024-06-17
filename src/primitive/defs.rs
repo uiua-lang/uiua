@@ -870,26 +870,26 @@ primitive!(
     /// Get the indices into an array if it were sorted ascending
     ///
     /// The [rise] of an array is the list of indices that would sort the array ascending if used with [select].
-    /// ex: ⍏6_2_7_0_¯1_5
+    /// ex: ⍏ 6_2_7_0_¯1_5
     /// Using the [rise] as a selector in [select] yields the sorted array.
-    /// ex: ⊏⍏.6_2_7_0_¯1_5
-    ///
+    /// ex: ⊏⍏. 6_2_7_0_¯1_5
+    /// ex: ⊏⊸⍏ 6_2_7_0_¯1_5
     /// If we transform the array before [rise]ing, we can sort by a key.
     /// Here, we sort the array ascending by the [absolute value] of its elements.
-    /// ex: ⊏⍏⌵.6_2_7_0_¯1_5
+    /// ex: ⊏⍏⌵. 6_2_7_0_¯1_5
     ///
     /// [first][rise] and [first][reverse][rise] are optimized in the interpreter to be O(n).
     (1, Rise, MonadicArray, ("rise", '⍏')),
     /// Get the indices into an array if it were sorted descending
     ///
     /// The [fall] of an array is the list of indices that would sort the array descending if used with [select].
-    /// ex: ⍖6_2_7_0_¯1_5
+    /// ex: ⍖ 6_2_7_0_¯1_5
     /// Using the [fall] as a selector in [select] yields the sorted array.
-    /// ex: ⊏⍖.6_2_7_0_¯1_5
-    ///
+    /// ex: ⊏⍖. 6_2_7_0_¯1_5
+    /// ex: ⊏⊸⍖ 6_2_7_0_¯1_5
     /// If we transform the array before [fall]ing, we can sort by a key.
     /// Here, we sort the array descending by the [absolute value] of its elements.
-    /// ex: ⊏⍖⌵.6_2_7_0_¯1_5
+    /// ex: ⊏⍖⌵. 6_2_7_0_¯1_5
     ///
     /// [first][fall] and [first][reverse][fall] are optimized in the interpreter to be O(n).
     (1, Fall, MonadicArray, ("fall", '⍖')),

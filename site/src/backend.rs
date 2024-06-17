@@ -307,19 +307,24 @@ impl SysBackend for WebBackend {
     }
     fn stream_audio(&self, mut f: uiua::AudioStreamFn) -> Result<(), String> {
         let mut samples = Vec::new();
-        let mut t = 0.0;
         const SAMPLE_RATE: u32 = 44100;
         const SAMPLES_PER_FRAME: usize = 10000;
         let mut times = Vec::with_capacity(SAMPLES_PER_FRAME);
         let ast_time = get_ast_time();
-        while t <= ast_time {
+        let mut i = 0;
+        while (i as f64 / SAMPLE_RATE as f64) < ast_time {
             times.clear();
             for _ in 0..SAMPLES_PER_FRAME {
-                times.push(t);
-                t += 1.0 / SAMPLE_RATE as f64;
+                times.push(i as f64 / SAMPLE_RATE as f64);
+                i += 1;
             }
             match f(&times) {
-                Ok(s) => samples.extend(s),
+                Ok(s) => {
+                    if s.len() > SAMPLES_PER_FRAME {
+                        i += s.len() - SAMPLES_PER_FRAME;
+                    }
+                    samples.extend(s);
+                }
                 Err(err) => return Err(format!("{err}")),
             }
         }

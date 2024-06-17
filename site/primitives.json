@@ -877,6 +877,13 @@
     "class": "Stack",
     "description": "Call a function but keep its first argument on the top of the stack"
   },
+  "orient": {
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Change the order of the axes of an array",
+    "experimental": true
+  },
   "over": {
     "glyph": ",",
     "args": 2,

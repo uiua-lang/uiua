@@ -393,7 +393,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            But | (Coordinate | Astar | Fft | Triangle | Case)
+            But | (Orient | Coordinate | Astar | Fft | Triangle | Case)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )
@@ -574,6 +574,10 @@ impl Primitive {
             Primitive::Take => env.dyadic_oo_env(Value::take)?,
             Primitive::Drop => env.dyadic_oo_env(Value::drop)?,
             Primitive::Rotate => env.dyadic_ro_env(Value::rotate)?,
+            Primitive::Orient => env.dyadic_ro_env(|a, mut b, env| {
+                a.orient(&mut b, env)?;
+                Ok(b)
+            })?,
             Primitive::Couple => env.dyadic_oo_env(Value::couple)?,
             Primitive::Rise => env.monadic_ref(Value::rise)?,
             Primitive::Fall => env.monadic_ref(Value::fall)?,

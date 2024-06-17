@@ -1696,3 +1696,55 @@ impl Array<f64> {
         Ok(Array::new(result_shape, result_data))
     }
 }
+
+impl Value {
+    /// `orient` a value by this value
+    pub fn orient(&self, target: &mut Self, env: &Uiua) -> UiuaResult {
+        let indices = self.as_ints(env, "Orient indices must be integers")?;
+        let mut undices = Vec::with_capacity(indices.len());
+        for i in indices {
+            let u = i.unsigned_abs();
+            if u >= target.rank() {
+                return Err(env.error(format!(
+                    "Cannot orient axis {i} in array of rank {}",
+                    target.rank()
+                )));
+            }
+            if i >= 0 {
+                undices.push(u);
+            } else {
+                undices.push(target.rank() - u);
+            }
+        }
+        if undices.len() > target.rank() {
+            return Err(env.error(format!(
+                "Cannot orient array of rank {} with {} indices",
+                target.rank(),
+                undices.len()
+            )));
+        }
+        for (i, u) in undices.iter().enumerate() {
+            if undices[i + 1..].iter().any(|u2| u == u2) {
+                return Err(env.error("Orient indices must be unique"));
+            }
+        }
+        let mut orientation: Vec<usize> = (0..target.rank()).collect();
+        let mut depth_rotations: Vec<(usize, i32)> = Vec::new();
+        for (i, &u) in undices.iter().enumerate() {
+            let j = orientation.iter().position(|&o| o == u).unwrap();
+            if i == j {
+                continue;
+            }
+            if j != undices.len() - 1 {
+                orientation[j..].rotate_left(1);
+                depth_rotations.push((j, 1));
+            }
+            orientation[i..].rotate_right(1);
+            depth_rotations.push((i, -1));
+        }
+        for (depth, amnt) in depth_rotations {
+            target.transpose_depth(depth, amnt);
+        }
+        Ok(())
+    }
+}

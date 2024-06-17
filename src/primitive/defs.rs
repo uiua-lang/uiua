@@ -762,6 +762,9 @@ primitive!(
     /// ex: △1_2_3
     /// ex: △[1_2 3_4 5_6]
     ///
+    /// [un][shape] creates an array of incrementing elements with the given shape.
+    /// ex: °△ 2_3_4
+    ///
     /// It is a triangle`△` because a triangle is a shape.
     (1, Shape, MonadicArray, ("shape", '△')),
     /// Make an array of all natural numbers less than a number
@@ -1236,6 +1239,22 @@ primitive!(
     /// ex: ↻1 □[1 2 3 4]
     /// ex: ≡↻1 {1_2_3 4_5_6}
     (2, Rotate, DyadicArray, ("rotate", '↻')),
+    /// Change the order of the axes of an array
+    ///
+    /// The first argument is a list of unique axis indices.
+    /// The corresponding axes of the array will be moved to the front of the array's shape.
+    /// Positive indices start from the leading axis. Negative indices start from the trailing axis.
+    /// ex: # Experimental!
+    ///   : °△ 2_3_4
+    ///   : orient 1 .
+    /// ex: # Experimental!
+    ///   : △ orient 2_1 °△ 2_3_4_5
+    /// [orient]`¯1` is equivalent to [un][transpose].
+    /// ex: # Experimental!
+    ///   : °△ 2_3_4
+    ///   : ∩△ ⊃°⍉(orient¯1)
+    /// Currently, all uses of [orient] can be written with sequences of [transpose] and [rows].
+    (2, Orient, DyadicArray, "orient"),
     /// The n-wise windows of an array
     ///
     /// ex: ◫2 .⇡4

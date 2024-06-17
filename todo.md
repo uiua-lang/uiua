@@ -1,8 +1,8 @@
 # Uiua Todo
 
 - 0.12
+  - `orient` function
   - Stack-source locality tutorial
-  - Axis swizzles?
   - Rewrite .uasm format
   - Fix pad cursor jumping with end-of-line comments
   - Unicode literals

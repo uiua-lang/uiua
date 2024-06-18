@@ -4,6 +4,7 @@ use std::{cell::Cell, iter::repeat, mem::take, path::PathBuf, time::Duration};
 
 use base64::engine::{general_purpose::STANDARD, Engine};
 
+use ev::mousemove;
 use leptos::{
     ev::{keydown, keyup},
     *,
@@ -407,20 +408,24 @@ pub fn Editor<'a>(
     };
 
     // Handle key events
+    window_event_listener(mousemove, move |event| {
+        if let Some(overlay_element) = get_element::<HtmlDivElement>(&overlay_id()) {
+            let pointer_events = if event.ctrl_key() && !on_mac() || event.meta_key() && on_mac() {
+                "all"
+            } else {
+                "none"
+            };
+            overlay_element
+                .style()
+                .set_property("pointer-events", pointer_events)
+                .unwrap();
+        }
+    });
     window_event_listener(keyup, move |event| {
         let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();
         update_ctrl(event);
-        let key = event.key();
+        // let key = event.key();
         // logging::log!("release: {key:?}");
-
-        if key == "Control" && !on_mac() || key == "Meta" && on_mac() {
-            if let Some(overlay_element) = get_element::<HtmlDivElement>(&overlay_id()) {
-                overlay_element
-                    .style()
-                    .set_property("pointer-events", "none")
-                    .unwrap();
-            }
-        }
     });
     window_event_listener(keydown, move |event| {
         let event = event.dyn_ref::<web_sys::KeyboardEvent>().unwrap();

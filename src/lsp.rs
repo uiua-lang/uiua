@@ -480,10 +480,12 @@ pub use server::run_language_server;
 mod server {
     use std::{
         env::current_dir,
+        panic::AssertUnwindSafe,
         path::{Path, PathBuf},
     };
 
     use dashmap::DashMap;
+    use futures::{Future, FutureExt};
     use tower_lsp::{
         jsonrpc::{Error, Result},
         lsp_types::{
@@ -1070,28 +1072,32 @@ mod server {
             &self,
             params: DocumentFormattingParams,
         ) -> Result<Option<Vec<TextEdit>>> {
-            let doc = if let Some(doc) = self.docs.get(&params.text_document.uri) {
-                doc
-            } else {
-                return Ok(None);
-            };
-            self.debug("Formatting document...").await;
-            let res = match format_str(&doc.input, &FormatConfig::find().unwrap_or_default()) {
-                Ok(formatted) => {
-                    let range = Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));
-                    Ok(Some(vec![TextEdit {
-                        range,
-                        new_text: formatted.output,
-                    }]))
-                }
-                Err(e) => {
-                    let mut error = Error::parse_error();
-                    error.message = e.to_string().into();
-                    Err(error)
-                }
-            };
-            self.debug("...document formatted").await;
-            res
+            self.catch_panic(async {
+                let doc = if let Some(doc) = self.docs.get(&params.text_document.uri) {
+                    doc
+                } else {
+                    return Ok(None);
+                };
+                self.debug("Formatting document...").await;
+                let res = match format_str(&doc.input, &FormatConfig::find().unwrap_or_default()) {
+                    Ok(formatted) => {
+                        let range =
+                            Range::new(Position::new(0, 0), Position::new(u32::MAX, u32::MAX));
+                        Ok(Some(vec![TextEdit {
+                            range,
+                            new_text: formatted.output,
+                        }]))
+                    }
+                    Err(e) => {
+                        let mut error = Error::parse_error();
+                        error.message = e.to_string().into();
+                        Err(error)
+                    }
+                };
+                self.debug("...document formatted").await;
+                res
+            })
+            .await
         }
 
         async fn on_type_formatting(
@@ -1199,105 +1205,108 @@ mod server {
             &self,
             params: SemanticTokensParams,
         ) -> Result<Option<SemanticTokensResult>> {
-            let Some(doc) = self.docs.get(&params.text_document.uri) else {
-                return Ok(None);
-            };
+            self.catch_panic(async {
+                let Some(doc) = self.docs.get(&params.text_document.uri) else {
+                    return Ok(None);
+                };
 
-            let config = self
-                .client
-                .configuration(vec![ConfigurationItem {
-                    scope_uri: Some(params.text_document.uri.clone()),
-                    section: Some("uiua.semanticHighlighting.customTokenTypes".into()),
-                }])
-                .await
-                .unwrap_or_default();
-            let custom_highlighting = if let [serde_json::Value::Bool(enabled)] = config.as_slice()
-            {
-                *enabled
-            } else {
-                true
-            };
+                let config = self
+                    .client
+                    .configuration(vec![ConfigurationItem {
+                        scope_uri: Some(params.text_document.uri.clone()),
+                        section: Some("uiua.semanticHighlighting.customTokenTypes".into()),
+                    }])
+                    .await
+                    .unwrap_or_default();
+                let custom_highlighting =
+                    if let [serde_json::Value::Bool(enabled)] = config.as_slice() {
+                        *enabled
+                    } else {
+                        true
+                    };
 
-            let mut tokens = Vec::new();
-            let mut prev_line = 0;
-            let mut prev_char = 0;
-            for sp in &doc.spans {
-                let token_type = match &sp.value {
-                    SpanKind::String => UIUA_STRING_STT,
-                    SpanKind::Number => UIUA_NUMBER_STT,
-                    SpanKind::Comment => SemanticTokenType::COMMENT,
-                    SpanKind::Primitive(p) => match p.class() {
-                        PrimClass::Stack | PrimClass::Planet if p.modifier_args().is_none() => {
-                            STACK_FUNCTION_STT
-                        }
-                        _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,
-                        _ if p.modifier_args() == Some(2) => DYADIC_MODIFIER_STT,
-                        _ if p.modifier_args() == Some(3) => TRIADIC_MODIFIER_STT,
-                        _ if p.args() == Some(0) => NOADIC_FUNCTION_STT,
-                        _ if p.args() == Some(1) => MONADIC_FUNCTION_STT,
-                        _ if p.args() == Some(2) => DYADIC_FUNCTION_STT,
-                        _ if p.args() == Some(3) => TRIADIC_FUNCTION_STT,
-                        _ if p.args() == Some(4) => TETRADIC_FUNCTION_STT,
-                        _ => continue,
-                    },
-                    SpanKind::Ident(Some(docs)) => match docs.kind {
-                        BindingDocsKind::Constant(_) => continue,
-                        BindingDocsKind::Function { sig, .. } => match sig.args {
-                            0 => NOADIC_FUNCTION_STT,
+                let mut tokens = Vec::new();
+                let mut prev_line = 0;
+                let mut prev_char = 0;
+                for sp in &doc.spans {
+                    let token_type = match &sp.value {
+                        SpanKind::String => UIUA_STRING_STT,
+                        SpanKind::Number => UIUA_NUMBER_STT,
+                        SpanKind::Comment => SemanticTokenType::COMMENT,
+                        SpanKind::Primitive(p) => match p.class() {
+                            PrimClass::Stack | PrimClass::Planet if p.modifier_args().is_none() => {
+                                STACK_FUNCTION_STT
+                            }
+                            _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,
+                            _ if p.modifier_args() == Some(2) => DYADIC_MODIFIER_STT,
+                            _ if p.modifier_args() == Some(3) => TRIADIC_MODIFIER_STT,
+                            _ if p.args() == Some(0) => NOADIC_FUNCTION_STT,
+                            _ if p.args() == Some(1) => MONADIC_FUNCTION_STT,
+                            _ if p.args() == Some(2) => DYADIC_FUNCTION_STT,
+                            _ if p.args() == Some(3) => TRIADIC_FUNCTION_STT,
+                            _ if p.args() == Some(4) => TETRADIC_FUNCTION_STT,
+                            _ => continue,
+                        },
+                        SpanKind::Ident(Some(docs)) => match docs.kind {
+                            BindingDocsKind::Constant(_) => continue,
+                            BindingDocsKind::Function { sig, .. } => match sig.args {
+                                0 => NOADIC_FUNCTION_STT,
+                                1 => MONADIC_FUNCTION_STT,
+                                2 => DYADIC_FUNCTION_STT,
+                                3 => TRIADIC_FUNCTION_STT,
+                                4 => TETRADIC_FUNCTION_STT,
+                                _ => continue,
+                            },
+                            BindingDocsKind::Modifier(margs) => match margs {
+                                1 => MONADIC_MODIFIER_STT,
+                                2 => DYADIC_MODIFIER_STT,
+                                3 => TRIADIC_MODIFIER_STT,
+                                _ => continue,
+                            },
+                            BindingDocsKind::Module => MODULE_STT,
+                        },
+                        SpanKind::StackSwizzle(sw) => match sw.signature().args {
                             1 => MONADIC_FUNCTION_STT,
                             2 => DYADIC_FUNCTION_STT,
                             3 => TRIADIC_FUNCTION_STT,
                             4 => TETRADIC_FUNCTION_STT,
                             _ => continue,
                         },
-                        BindingDocsKind::Modifier(margs) => match margs {
-                            1 => MONADIC_MODIFIER_STT,
-                            2 => DYADIC_MODIFIER_STT,
-                            3 => TRIADIC_MODIFIER_STT,
-                            _ => continue,
-                        },
-                        BindingDocsKind::Module => MODULE_STT,
-                    },
-                    SpanKind::StackSwizzle(sw) => match sw.signature().args {
-                        1 => MONADIC_FUNCTION_STT,
-                        2 => DYADIC_FUNCTION_STT,
-                        3 => TRIADIC_FUNCTION_STT,
-                        4 => TETRADIC_FUNCTION_STT,
+                        SpanKind::ArraySwizzle(_) => MONADIC_FUNCTION_STT,
                         _ => continue,
-                    },
-                    SpanKind::ArraySwizzle(_) => MONADIC_FUNCTION_STT,
-                    _ => continue,
-                };
-                let mut token_type = UIUA_SEMANTIC_TOKEN_TYPES
-                    .iter()
-                    .position(|t| t == &token_type)
-                    .unwrap() as u32;
-                if !custom_highlighting {
-                    token_type += UIUA_SEMANTIC_TOKEN_TYPES.len() as u32;
+                    };
+                    let mut token_type = UIUA_SEMANTIC_TOKEN_TYPES
+                        .iter()
+                        .position(|t| t == &token_type)
+                        .unwrap() as u32;
+                    if !custom_highlighting {
+                        token_type += UIUA_SEMANTIC_TOKEN_TYPES.len() as u32;
+                    }
+                    let span = &sp.span;
+                    let start = uiua_loc_to_lsp(span.start);
+                    let delta_start = if start.line == prev_line {
+                        start.character - prev_char
+                    } else {
+                        start.character
+                    };
+                    let length = span.end.char_pos - span.start.char_pos;
+                    let token = SemanticToken {
+                        delta_line: start.line - prev_line,
+                        delta_start,
+                        length,
+                        token_type,
+                        token_modifiers_bitset: 0,
+                    };
+                    tokens.push(token);
+                    prev_line = start.line;
+                    prev_char = start.character;
                 }
-                let span = &sp.span;
-                let start = uiua_loc_to_lsp(span.start);
-                let delta_start = if start.line == prev_line {
-                    start.character - prev_char
-                } else {
-                    start.character
-                };
-                let length = span.end.char_pos - span.start.char_pos;
-                let token = SemanticToken {
-                    delta_line: start.line - prev_line,
-                    delta_start,
-                    length,
-                    token_type,
-                    token_modifiers_bitset: 0,
-                };
-                tokens.push(token);
-                prev_line = start.line;
-                prev_char = start.character;
-            }
-            Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
-                result_id: None,
-                data: tokens,
-            })))
+                Ok(Some(SemanticTokensResult::Tokens(SemanticTokens {
+                    result_id: None,
+                    data: tokens,
+                })))
+            })
+            .await
         }
 
         async fn code_action(
@@ -1693,153 +1702,156 @@ mod server {
         }
 
         async fn inlay_hint(&self, params: InlayHintParams) -> Result<Option<Vec<InlayHint>>> {
-            let Some(doc) = self.docs.get(&params.text_document.uri) else {
-                return Ok(None);
-            };
-            let config = self
-                .client
-                .configuration(
-                    [
-                        "bindingSignatureHints",
-                        "inlineSignatureHints",
-                        "inlineHintMinLength",
-                        "values",
-                    ]
-                    .iter()
-                    .map(|s| ConfigurationItem {
-                        scope_uri: Some(params.text_document.uri.clone()),
-                        section: Some(format!("uiua.inlayHints.{s}")),
-                    })
-                    .collect(),
-                )
-                .await
-                .unwrap_or_default();
-            let (binding_sigs, inline_sigs, min_length, show_values) = if let [serde_json::Value::Bool(
-                binding_sigs,
-            ), serde_json::Value::Bool(
-                inline_sigs,
-            ), serde_json::Value::Number(
-                min_length,
-            ), serde_json::Value::Bool(
-                show_values,
-            )] = config.as_slice()
-            {
-                (
-                    *binding_sigs,
-                    *inline_sigs,
-                    min_length.as_u64().unwrap_or(1) as usize,
-                    *show_values,
-                )
-            } else {
-                (true, true, 3, true)
-            };
-            let path = uri_path(&params.text_document.uri);
-            // Signature hints
-            let mut hints = Vec::new();
-            for (span, decl) in &doc.code_meta.function_sigs {
-                if span.src != path {
-                    continue;
-                }
-                let is_too_short = || {
-                    let mut tokens =
-                        span.as_str(&doc.asm.inputs, |s| lex(s, (), &mut Inputs::default()).0);
-                    if tokens.first().is_some_and(|t| {
-                        matches!(
-                            t.value,
-                            Token::Simple(AsciiToken::OpenParen | AsciiToken::Bar)
-                        )
-                    }) {
-                        tokens.remove(0);
-                    }
-                    if tokens
-                        .last()
-                        .is_some_and(|t| t.value == Token::Simple(AsciiToken::CloseParen))
-                    {
-                        tokens.pop();
-                    }
-                    let code_tok_count = tokens
-                        .iter()
-                        .filter(|tok| {
-                            !matches!(tok.value, Token::Spaces | Token::Newline | Token::Comment)
-                        })
-                        .count();
-                    code_tok_count < min_length
+            self.catch_panic(async {
+                let Some(doc) = self.docs.get(&params.text_document.uri) else {
+                    return Ok(None);
                 };
-                if decl.explicit
-                    || !decl.inline && decl.sig == (0, 1)
-                    || decl.inline && !inline_sigs
-                    || !decl.inline && !binding_sigs
-                    || is_too_short()
+                let config = self
+                    .client
+                    .configuration(
+                        [
+                            "bindingSignatureHints",
+                            "inlineSignatureHints",
+                            "inlineHintMinLength",
+                            "values",
+                        ]
+                        .iter()
+                        .map(|s| ConfigurationItem {
+                            scope_uri: Some(params.text_document.uri.clone()),
+                            section: Some(format!("uiua.inlayHints.{s}")),
+                        })
+                        .collect(),
+                    )
+                    .await
+                    .unwrap_or_default();
+                let (binding_sigs, inline_sigs, min_length, show_values) = if let [serde_json::Value::Bool(
+                    binding_sigs,
+                ), serde_json::Value::Bool(
+                    inline_sigs,
+                ), serde_json::Value::Number(
+                    min_length,
+                ), serde_json::Value::Bool(
+                    show_values,
+                )] = config.as_slice()
                 {
-                    continue;
-                }
-                let sig = decl.sig.to_string();
-                let mut position = uiua_loc_to_lsp(span.start);
-                if decl.inline {
-                    if span.as_str(&doc.asm.inputs, |s| s.starts_with(['(', '⟨', '|'])) {
-                        position.character += 1;
-                    } else if span.before_str(&doc.asm.inputs, |s| s.ends_with(' ')) {
-                        position.character = position.character.saturating_sub(1);
-                    }
-                }
-                hints.push(InlayHint {
-                    text_edits: Some(vec![TextEdit {
-                        range: Range::new(position, position),
-                        new_text: format!("{sig} "),
-                    }]),
-                    position,
-                    label: InlayHintLabel::String(sig),
-                    kind: None,
-                    tooltip: None,
-                    padding_left: None,
-                    padding_right: Some(true),
-                    data: None,
-                });
-            }
-            // Values
-            if show_values {
-                for (span, values) in &doc.code_meta.top_level_values {
+                    (
+                        *binding_sigs,
+                        *inline_sigs,
+                        min_length.as_u64().unwrap_or(1) as usize,
+                        *show_values,
+                    )
+                } else {
+                    (true, true, 3, true)
+                };
+                let path = uri_path(&params.text_document.uri);
+                // Signature hints
+                let mut hints = Vec::new();
+                for (span, decl) in &doc.code_meta.function_sigs {
                     if span.src != path {
                         continue;
                     }
-                    let mut shown: Vec<String> = values.iter().map(Value::show).collect();
-                    let mut md = "```uiua\n".to_string();
-                    for shown in &shown {
-                        md.push_str(shown);
-                        md.push('\n');
-                    }
-                    md.push_str("\n```");
-                    let tooltip = InlayHintTooltip::MarkupContent(MarkupContent {
-                        kind: MarkupKind::Markdown,
-                        value: md,
-                    });
-                    let label = if shown.iter().any(|s| s.lines().count() > 1) {
-                        let mut shapes = String::new();
-                        for (i, val) in values.iter().rev().enumerate() {
-                            if i > 0 {
-                                shapes.push_str(" | ");
-                            }
-                            shapes.push_str(&val.shape_string());
+                    let is_too_short = || {
+                        let mut tokens =
+                            span.as_str(&doc.asm.inputs, |s| lex(s, (), &mut Inputs::default()).0);
+                        if tokens.first().is_some_and(|t| {
+                            matches!(
+                                t.value,
+                                Token::Simple(AsciiToken::OpenParen | AsciiToken::Bar)
+                            )
+                        }) {
+                            tokens.remove(0);
                         }
-                        InlayHintLabel::String(shapes)
-                    } else {
-                        shown.reverse();
-                        InlayHintLabel::String(shown.join(" "))
+                        if tokens
+                            .last()
+                            .is_some_and(|t| t.value == Token::Simple(AsciiToken::CloseParen))
+                        {
+                            tokens.pop();
+                        }
+                        let code_tok_count = tokens
+                            .iter()
+                            .filter(|tok| {
+                                !matches!(tok.value, Token::Spaces | Token::Newline | Token::Comment)
+                            })
+                            .count();
+                        code_tok_count < min_length
                     };
+                    if decl.explicit
+                        || !decl.inline && decl.sig == (0, 1)
+                        || decl.inline && !inline_sigs
+                        || !decl.inline && !binding_sigs
+                        || is_too_short()
+                    {
+                        continue;
+                    }
+                    let sig = decl.sig.to_string();
+                    let mut position = uiua_loc_to_lsp(span.start);
+                    if decl.inline {
+                        if span.as_str(&doc.asm.inputs, |s| s.starts_with(['(', '⟨', '|'])) {
+                            position.character += 1;
+                        } else if span.before_str(&doc.asm.inputs, |s| s.ends_with(' ')) {
+                            position.character = position.character.saturating_sub(1);
+                        }
+                    }
                     hints.push(InlayHint {
-                        text_edits: None,
-                        position: uiua_loc_to_lsp(span.end),
-                        label,
+                        text_edits: Some(vec![TextEdit {
+                            range: Range::new(position, position),
+                            new_text: format!("{sig} "),
+                        }]),
+                        position,
+                        label: InlayHintLabel::String(sig),
                         kind: None,
-                        tooltip: Some(tooltip),
-                        padding_left: Some(true),
-                        padding_right: None,
+                        tooltip: None,
+                        padding_left: None,
+                        padding_right: Some(true),
                         data: None,
                     });
                 }
-            }
+                // Values
+                if show_values {
+                    for (span, values) in &doc.code_meta.top_level_values {
+                        if span.src != path {
+                            continue;
+                        }
+                        let mut shown: Vec<String> = values.iter().map(Value::show).collect();
+                        let mut md = "```uiua\n".to_string();
+                        for shown in &shown {
+                            md.push_str(shown);
+                            md.push('\n');
+                        }
+                        md.push_str("\n```");
+                        let tooltip = InlayHintTooltip::MarkupContent(MarkupContent {
+                            kind: MarkupKind::Markdown,
+                            value: md,
+                        });
+                        let label = if shown.iter().any(|s| s.lines().count() > 1) {
+                            let mut shapes = String::new();
+                            for (i, val) in values.iter().rev().enumerate() {
+                                if i > 0 {
+                                    shapes.push_str(" | ");
+                                }
+                                shapes.push_str(&val.shape_string());
+                            }
+                            InlayHintLabel::String(shapes)
+                        } else {
+                            shown.reverse();
+                            InlayHintLabel::String(shown.join(" "))
+                        };
+                        hints.push(InlayHint {
+                            text_edits: None,
+                            position: uiua_loc_to_lsp(span.end),
+                            label,
+                            kind: None,
+                            tooltip: Some(tooltip),
+                            padding_left: Some(true),
+                            padding_right: None,
+                            data: None,
+                        });
+                    }
+                }
 
-            Ok(Some(hints))
+                Ok(Some(hints))
+            })
+            .await
         }
 
         async fn references(&self, params: ReferenceParams) -> Result<Option<Vec<Location>>> {
@@ -1922,6 +1934,16 @@ mod server {
             self.client
                 .log_message(MessageType::INFO, message.into())
                 .await;
+        }
+        async fn catch_panic<T>(&self, fut: impl Future<Output = Result<T>>) -> Result<T> {
+            match AssertUnwindSafe(fut).catch_unwind().await {
+                Ok(res) => res,
+                Err(e) => {
+                    let mut error = Error::internal_error();
+                    error.message = format!("LSP panicked: {:?}", e).into();
+                    Err(error)
+                }
+            }
         }
     }
 

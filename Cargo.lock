@@ -4152,6 +4152,7 @@ dependencies = [
  "dashmap",
  "ecow",
  "enum-iterator",
+ "futures",
  "gif",
  "hodaun",
  "hound",

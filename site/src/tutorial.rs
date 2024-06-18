@@ -1196,7 +1196,7 @@ def splitArray(array):
 
 splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p>"In Uiua, it is much simpler, and there are no "<code>"if"</code>"s or "<code>"for"</code>"s to be found:"</p>
-        <Editor example="F ← ∩▽¬,,=0◿2.\nF [1 2 3 7 2 4 5]"/>
+        <Editor example="F ← ∩▽¬,,◿2.\nF [1 2 3 7 2 4 5]"/>
         <p>"That being said, not every problem lends itself to array operations. Uiua has a few methods for handling such cases."</p>
 
         <Hd id="repeat-do">"Looping with "<Prim prim=Repeat/>" and "<Prim prim=Do/></Hd>
@@ -1229,11 +1229,12 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <p>"You can read about more uses of "<Prim prim=Try/>" in its documentation."</p>
 
         <Hd id="switch"><Prim prim=Switch/></Hd>
-        <p>"The "<Prim prim=Switch/>" modifier takes uses a selector to choose one of its functions to call."</p>
-        <Editor example="⨬3 5 0\n⨬3 5 1"/>
+        <p>"The "<Prim prim=Switch/>" modifier uses a selector to choose one of its functions to call."</p>
+        <Editor example="⨬(3)(5) 0\n⨬(3)(5) 1"/>
         <p>"The selector goes above the arguments on the stack."</p>
+        <p>"Here, we "<Prim prim=Add/>" if the selector is "<code>"0"</code>" and "<Prim prim=Sub/>" if the selector is "<code>"1"</code>"."</p>
         <Editor example="⨬+- 0 3 5\n⨬+- 1 3 5"/>
-        <p>"Non-scalar selectors are allowed. They allow the a different function to be evaluated for each row of the input arrays."</p>
+        <p>"Non-scalar selectors are allowed. They allow a different function to be evaluated for each row of the input array(s)."</p>
         <Editor example="⨬+- [1 0 1] [1 2 3] [4 5 6]"/>
         <p><Prim prim=Switch/>" can use a "<A href="/tutorial/advancedstack#function-packs">"function pack"</A>" to select from more functions."</p>
         <Editor example="⨬(+|-|×|÷) [1 2 0 3] [...2] [...5]"/>

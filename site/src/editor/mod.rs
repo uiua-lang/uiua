@@ -1012,13 +1012,6 @@ pub fn Editor<'a>(
             Some(('(', ')')),
             "tutorial/functions#inline-functions",
         ),
-        (
-            "⟨⟩",
-            "switch",
-            "",
-            Some(('⟨', '⟩')),
-            "tutorial/controlflow#switch",
-        ),
         ("¯", "(`) negative", "number-literal", None, ""),
         (
             "@",

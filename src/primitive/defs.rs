@@ -1927,21 +1927,21 @@ primitive!(
     ///
     /// The first function is the loop function, and it is run as long as the condition is true.
     /// The second function is the condition. It's top return value must be a boolean.
-    /// ex: ⍢(×2)(<1000) 1
+    /// ex: ⍢(×2|<1000) 1
     /// Return values from the condition function that are under the condition itself will be passed to the loop function.
     /// Here is an example that evaluates a [Collatz sequence](https://en.wikipedia.org/wiki/Collatz_conjecture).
     /// The next number in the sequence is calculated in the condition function but [join]ed to the sequence in the loop function.
-    /// ex: C ← (+1×3|÷2)=0◿2.
+    /// ex: C ← ⨬(+1×3|÷2)=0◿2.
     ///   : ◌⍢⊂(¬∊,,C⊢.) [7]
     /// If the condition function consumes its only arguments to evaluate the condition, then those arguments will be implicitly copied.
     /// Consider this equivalence:
-    /// ex: ⍢(×3)(<100)  1
-    ///   : ⍢(×3)(<100.) 1
+    /// ex: ⍢(×3|<100)  1
+    ///   : ⍢(×3|<100.) 1
     /// The net stack change of the two functions, minus the condition, must be 0.
-    /// ex! ⍢(×2.)(<1000) 1
+    /// ex! ⍢(×2.|<1000) 1
     /// This means that unlike [repeat], [do] cannot be wrapped in `[]`s to collect items into an array.
     /// Instead, [join] the items to an initial list.
-    /// ex: ◌⍢(⊃(×2)⊂)(<100) 1 []
+    /// ex: ◌⍢(⊃(×2)⊂|<100) 1 []
     ([2], Do, IteratingModifier, ("do", '⍢')),
     /// Set the fill value for a function
     ///
@@ -2411,11 +2411,13 @@ primitive!(
     /// If the key is not found, an error is thrown.
     /// ex! map 1_2 3_4
     ///   : get 5 .
-    /// You can use [try] or [has] to avoid the error.
+    /// You can use [fill], [try], or [has] to avoid the error.
+    /// ex: map 1_2 3_4
+    ///   : ⬚0get 5 .
     /// ex: map 1_2 3_4
     ///   : ⍣get0 5 .
     /// ex: map 1_2 3_4
-    ///   : (⋅⋅0|get) has,, 5 .
+    ///   : ⨬⋅⋅0get has,, 5 .
     /// You can provide a default value with [fill].
     /// ex: map 1_2 3_4
     ///   : ⬚0get 1 .
@@ -2522,7 +2524,7 @@ primitive!(
     ///   : [signature°[⊙⊙⊙∘]]
     ///
     /// At the moment, this is only useful for debugging.
-    /// While theoretically, it could be used in a macro to choose a branch of a switch function appropriate for the function, this is not yet possible because of the way that macros and signature checking work.
+    /// While theoretically, it could be used in a macro to choose a branch of a [switch] appropriate for the function, this is not yet possible because of the way that macros and signature checking work.
     (0(2)[1], Sig, OtherModifier, "signature"),
     /// Run the Fast Fourier Transform on an array
     ///

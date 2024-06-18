@@ -416,6 +416,7 @@ impl Primitive {
             "ga" => return Some(Primitive::Gap),
             "po" => return Some(Primitive::Pop),
             "pi" => return Some(Primitive::Pi),
+            "sw" => return Some(Primitive::Switch),
             "ran" => return Some(Primitive::Range),
             "tra" => return Some(Primitive::Transpose),
             "par" => return Some(Primitive::Partition),

@@ -969,7 +969,7 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="[⊓⊓⊓+¯×. 1 2 3 4 5 6]"/>
 
         <Hd id="function-packs">"Function Packs"</Hd>
-        <p>"All dyadic modifiers allow a special notation with a single set of "<code>"()"</code>"s with a "<code>"|"</code>" in the middle separating the functions. This is called a "<em>"function pack"</em>". It shares syntax with "<A href="/tutorial/controlflow#switch">"switch functions"</A>", which will be discussed in a "<A href="/tutorial/controlflow">"later section"</A>"."</p>
+        <p>"All dyadic modifiers allow a special notation with a single set of "<code>"()"</code>"s with a "<code>"|"</code>" in the middle separating the functions. This is called a "<em>"function pack"</em>"."</p>
         <Editor example="⊓(+|×) 1 2 3 4"/>
         <p>"While all dyadic modifiers can use function packs, "<Prim prim=Fork/>" and "<Prim prim=Bracket/>" allow more than 2 functions to be used. This can sometimes be shorter and/or more readable than chaining the modifier."</p>
         <Editor example="[⊃(+|-|×|÷) 5 8]"/>
@@ -1228,32 +1228,28 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
         <Editor example="⍣⋕{⊙∘} \"5\"\n⍣⋕{⊙∘} \"dog\""/>
         <p>"You can read about more uses of "<Prim prim=Try/>" in its documentation."</p>
 
-        <Hd id="switch">"Switch Functions"</Hd>
-        <p>"A "<A href="/tutorial/advancedstack#function-packs">"function pack"</A>" that is used outside a modifier becomes a "<em>"switch function"</em>". Switch functions take an array of natural numbers called the "<em>"selector"</em>" and call the function at the corresponding index in the pack."</p>
-        <Editor example="(3|5) 0\n(3|5) 1"/>
+        <Hd id="switch"><Prim prim=Switch/></Hd>
+        <p>"The "<Prim prim=Switch/>" modifier takes uses a selector to choose one of its functions to call."</p>
+        <Editor example="⨬3 5 0\n⨬3 5 1"/>
         <p>"The selector goes above the arguments on the stack."</p>
-        <Editor example="(+|-) 0 3 5\n(+|-) 1 3 5"/>
-        <p>"Switch functions are formatted to use "<code>"⟨⟩"</code>"s instead of "<code>"()"</code>"s. This is so they are easier to identify and also so that they can be disambiguated from function packs in modifier arguments."</p>
-        <p>"Try running the examples above to format."</p>
-        <p>"Non-scalar selectors are allowed. They allow the switch function to be evaluated for each row of the input arrays."</p>
-        <Editor example="⟨+|-⟩ [1 0 1] [1 2 3] [4 5 6]"/>
-        <p>"Switch functions can have as many branches as you want, and they can also be nested."</p>
-        <Editor example="⟨+|-|×|÷⟩ [1 2 0 3] [...2] [...5]"/>
-        <Editor example="≡(⟨×10|+1|⟨¯|∘⟩=2.⟩ ◿3.) [2 9 4 0 8 3]"/>
-        <p>"With "<Prim prim=IndexOf/>", switch functions can be used to implement behavior similar to "<code>"switch"</code>" statements in other languages."</p>
-        <Editor example="F ← (\n  ⊗□:{\"foo\" \"bar\" \"baz\"}\n  ⟨+1|×10|÷2|¯⟩\n)\nF \"foo\" 5\nF \"bar\" 5\nF \"baz\" 5\nF \"wow\" 5"/>
-        <p>"Each branch can have a signature specified. For the overall switch function to have a valid signature, all branches must either change the height of the stack by the same amount "<em>"or"</em>" return the same number of outputs."</p>
-        <Editor example="F ← ⟨|2 ×||3.2 ⊃(++)×⟩\n[F 0 2 3 4]\n[F 1 2 3 4]"/>
-        <p>"Signatures in switch functions are a bit messy, so try to avoid them when possible."</p>
+        <Editor example="⨬+- 0 3 5\n⨬+- 1 3 5"/>
+        <p>"Non-scalar selectors are allowed. They allow the a different function to be evaluated for each row of the input arrays."</p>
+        <Editor example="⨬+- [1 0 1] [1 2 3] [4 5 6]"/>
+        <p><Prim prim=Switch/>" can use a "<A href="/tutorial/advancedstack#function-packs">"function pack"</A>" to select from more functions."</p>
+        <Editor example="⨬(+|-|×|÷) [1 2 0 3] [...2] [...5]"/>
+        <Editor example="⨬(×10|+1|⨬¯∘ =2.) ◿3. [2 9 4 0 8 3]"/>
+        <p>"With "<Prim prim=IndexOf/>", "<Prim prim=Switch/>" can be used to implement behavior similar to "<code>"switch"</code>" statements in other languages."</p>
+        <Editor example="F ← (\n  ⊗□:{\"foo\" \"bar\" \"baz\"}\n  ⨬(+1|×10|÷2|¯)\n)\nF \"foo\" 5\nF \"bar\" 5\nF \"baz\" 5\nF \"wow\" 5"/>
+        <p>"Each branch can have a signature specified. For the overall "<Prim prim=Switch/>" to have a valid signature, all branches must either change the height of the stack by the same amount "<em>"or"</em>" return the same number of outputs."</p>
+        <Editor example="F ← ⨬(|2 ×||3.2 ⊃(++)×)\n[F 0 2 3 4]\n[F 1 2 3 4]"/>
+        <p>"Signatures in "<Prim prim=Switch/>" functions are a bit messy, so try to avoid them when possible."</p>
         <p>"Because a second "<code>"|"</code>" immediately after another indicates a signature, branches that do nothing must contain "<Prim prim=Identity/>"."</p>
-        <Editor example="F ← ⟨+5|∘|÷10⟩+∩>5,10.\n[F2 F6 F200]\nF[2 6 200]"/>
-        <p>"To use a switch function as a modifier argument, you must double-nest the "<code>"()"</code>"s. These will get formatted to a single set of "<code>"⟨⟩"</code>"s."</p>
-        <Editor example="[dip((*|+)) 0 1 2 3]"/>
+        <Editor example="F ← ⨬(+5|∘|÷10)+∩>5,10.\n[F2 F6 F200]\nF[2 6 200]"/>
 
         <Hd id="recursion">"Recursion"</Hd>
         <p>"A bound function that refers to its own name is a "<a href="https://en.wikipedia.org/wiki/Recursion_(computer_science)">"recursive function"</a>". A function that calls itself can easily recurse infinitely, so it is important to have a "<em>"base case"</em>" that stops the recursion when a condition is met. Switch functions are great for this."</p>
         <p>"As a simple example, here is a function that calculates the factorial of a number. Note that you should not actually do this, as "<Prims prims=[Reduce, Mul, Add]/><code>"1"</code>" is shorter, faster, and more idiomatic."</p>
-        <Editor example="Fact ← |1 ⟨×Fact-1.|1⟩<2.\nFact 5"/>
+        <Editor example="Fact ← |1 ⨬(×Fact-1.|1)<2.\nFact 5"/>
         <p>"The base case is when the input is "<code>"1"</code>". In this case, the function returns "<code>"1"</code>". Otherwise, it multiplies the input by the result of calling itself with the input decremented by "<code>"1"</code>"."</p>
         <p>"Recursive functions are required to have signatures declared."</p>
         <p>"Recursion is only recommended if a particular problem "<em>"really"</em>" calls for it. Recursion in Uiua can be slow, and there is a limit to how deep you can recur."</p>
@@ -1272,7 +1268,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
             number=1
             prompt="pushes \"small\" if a number is less than 10, \"medium\" if it is less than 100, and \"large\" otherwise"
             example="17"
-            answer=r#"⟨"small"|"medium"|"large"⟩/+≥[10 100]"#
+            answer=r#"⨬("small"|"medium"|"large")/+≥[10 100]"#
             tests={&["3", "50", "2357"]}
             hidden="10"/>
 

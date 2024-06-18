@@ -1285,14 +1285,26 @@ code:
                 }
             }
             Word::Func(func) => self.func(func, word.span, call)?,
-            Word::Pack(pack) => self.switch(
-                pack.branches
-                    .into_iter()
-                    .map(|sp| sp.map(Word::Func))
-                    .collect(),
-                word.span,
-                call,
-            )?,
+            Word::Pack(pack) => {
+                if pack.angled {
+                    self.switch(
+                        pack.branches
+                            .into_iter()
+                            .map(|sp| sp.map(Word::Func))
+                            .collect(),
+                        word.span,
+                        call,
+                    )?
+                } else {
+                    self.add_error(
+                        word.span.clone(),
+                        "Function packs are not allowed without a modifier",
+                    );
+                    if let Some(first) = pack.branches.into_iter().next() {
+                        self.word(first.map(Word::Func), call)?;
+                    }
+                }
+            }
             Word::Primitive(p) => self.primitive(p, word.span, call)?,
             Word::SemicolonPop => {
                 self.emit_diagnostic(

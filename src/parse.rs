@@ -788,7 +788,7 @@ impl<'i> Parser<'i> {
                 break;
             }
             if let Some(arg) = self.try_func().or_else(|| self.try_undertied()) {
-                // Parse switch function syntax
+                // Parse pack syntax
                 if let Word::Pack(pack) = &arg.value {
                     if i == 0 && !pack.angled && pack.branches.len() >= modifier.args() {
                         args.push(arg);
@@ -1029,7 +1029,7 @@ impl<'i> Parser<'i> {
         Some(if let Some(mut start) = self.try_exact(OpenParen.into()) {
             // Match initial function contents
             let first = self.func_contents();
-            // Try to match switch function branches
+            // Try to match pack branches
             let mut branches = Vec::new();
             while let Some(start) = self.try_exact(Bar.into()) {
                 let (signature, lines, span) = self.func_contents();

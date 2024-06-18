@@ -1,7 +1,7 @@
 # Uiua Todo
 
 - 0.12
-  - Switch modifier
+  - Add `by` to tutorial
   - Stack-source locality tutorial
   - Rewrite .uasm format
   - Fix pad cursor jumping with end-of-line comments

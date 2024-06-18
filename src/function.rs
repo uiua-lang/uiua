@@ -57,7 +57,7 @@ pub enum Instr {
     Recur(usize),
     /// Push a function onto the function stack
     PushFunc(Function),
-    /// Execute a switch function
+    /// Execute a switch
     Switch {
         count: usize,
         sig: Signature,

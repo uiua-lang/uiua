@@ -17,6 +17,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`keep ▽`](https://uiua.org/docs/keep) now works with non-integer scalar counts to scale an array
 - [`join ⊂`](https://uiua.org/docs/join) will rank differences greater than 1 can now extend the smaller array
 - [`un °`](https://uiua.org/docs/un) [`join ⊂`](https://uiua.org/docs/join) is now easier to combine with other inverses
+- [`repeat ⍥`](https://uiua.org/docs/repeat) can now repeat a negative number of times, which will repeat the inverse
 - Add the experimental [`triangle ◹`](https://uiua.org/docs/triangle) modifier, which calls a function on shrinking suffixes of an array's rows
 - Add the experimental [`orient`](https://uiua.org/docs/orient) function, which arranges an array's axes in a specified order
 - Add the experimental [`fft`](https://uiua.org/docs/fft) function, which performs the Fast Fourier transform

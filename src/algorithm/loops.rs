@@ -23,9 +23,10 @@ pub fn flip<A, B, C>(f: impl Fn(A, B) -> C + Copy) -> impl Fn(B, A) -> C + Copy 
     move |b, a| f(a, b)
 }
 
-pub fn repeat(env: &mut Uiua) -> UiuaResult {
+pub fn repeat(with_inverse: bool, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
+    let inv = with_inverse.then(|| env.pop_function()).transpose()?;
     let n = env.pop("repetition count")?;
     fn rep_count(value: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
         Ok(match value {
@@ -44,7 +45,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     if n.rank() == 0 {
         // Scalar repeat
         let n = rep_count(n, env)?;
-        repeat_impl(f, n.data[0], env)
+        repeat_impl(f, inv, n.data[0], env)
     } else {
         // Array
         let sig = f.signature();
@@ -109,7 +110,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
                         // println!("  row: {:?}", row);
                         env.push(row);
                     }
-                    repeat_impl(f.clone(), elem, env)?;
+                    repeat_impl(f.clone(), inv.clone(), elem, env)?;
                     for i in 0..sig.outputs {
                         let res = env.pop("repeat output")?;
                         // println!("    res: {:?}", res);
@@ -131,7 +132,7 @@ pub fn repeat(env: &mut Uiua) -> UiuaResult {
     }
 }
 
-fn repeat_impl(f: Function, n: f64, env: &mut Uiua) -> UiuaResult {
+fn repeat_impl(f: Function, inv: Option<Function>, n: f64, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if n.is_infinite() {
         // Converging repeat
@@ -171,10 +172,15 @@ fn repeat_impl(f: Function, n: f64, env: &mut Uiua) -> UiuaResult {
         }
     } else {
         // Normal repeat
-        if n < 0.0 || n.fract() != 0.0 {
-            return Err(env.error("Repetitions must be a natural number or infinity"));
+        if n.fract() != 0.0 {
+            return Err(env.error("Repetitions must be an integer or infinity"));
         }
-        let n = n as usize;
+        let (f, n) = if n >= 0.0 {
+            (f, n as usize)
+        } else {
+            let f = inv.ok_or_else(|| env.error("No inverse found"))?;
+            (f, (-n) as usize)
+        };
         if sig.outputs > sig.args {
             let delta = sig.outputs - sig.args;
             if validate_size_impl(size_of::<Value>(), [n, delta]).is_err() {

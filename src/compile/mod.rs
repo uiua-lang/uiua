@@ -1372,7 +1372,13 @@ code:
             // from the signature check, but it is not okay in an array.
             if let Some(i) = instrs
                 .iter()
-                .position(|instr| matches!(instr, Instr::Prim(Primitive::Repeat, _)))
+                .position(|instr| {
+                    matches!(
+                        instr,
+                        Instr::Prim(Primitive::Repeat, _)
+                            | Instr::ImplPrim(ImplPrimitive::RepeatWithInverse, _)
+                    )
+                })
                 .filter(|&i| i > 0)
             {
                 if let Instr::PushFunc(f) = &instrs[i - 1] {

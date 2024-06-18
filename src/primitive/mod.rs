@@ -254,6 +254,7 @@ impl fmt::Display for ImplPrimitive {
                 }
                 Ok(())
             }
+            RepeatWithInverse => write!(f, "{Repeat}"),
         }
     }
 }
@@ -620,7 +621,7 @@ impl Primitive {
             Primitive::Rows => zip::rows(env)?,
             Primitive::Table => table::table(env)?,
             Primitive::Inventory => zip::inventory(env)?,
-            Primitive::Repeat => loops::repeat(env)?,
+            Primitive::Repeat => loops::repeat(false, env)?,
             Primitive::Do => loops::do_(env)?,
             Primitive::Group => loops::group(env)?,
             Primitive::Partition => loops::partition(env)?,
@@ -1079,6 +1080,7 @@ impl ImplPrimitive {
             ImplPrimitive::AstarFirst => algorithm::astar_first(env)?,
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(depth, env)?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
+            ImplPrimitive::RepeatWithInverse => loops::repeat(true, env)?,
         }
         Ok(())
     }

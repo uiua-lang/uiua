@@ -2100,14 +2100,25 @@ fn invert_repeat_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::PushFunc(f), repeat @ Instr::Prim(Primitive::Repeat, span), input @ ..] = input
-    else {
-        return None;
-    };
-    let instrs = f.instrs(&comp.asm).to_vec();
-    let inverse = invert_instrs(&instrs, comp)?;
-    let inverse = make_fn(inverse, *span, comp)?;
-    Some((input, eco_vec![Instr::PushFunc(inverse), repeat.clone()]))
+    match input {
+        [Instr::PushFunc(f), repeat @ Instr::Prim(Primitive::Repeat, span), input @ ..] => {
+            let instrs = f.instrs(&comp.asm).to_vec();
+            let inverse = invert_instrs(&instrs, comp)?;
+            let inverse = make_fn(inverse, *span, comp)?;
+            Some((input, eco_vec![Instr::PushFunc(inverse), repeat.clone()]))
+        }
+        [Instr::PushFunc(inv), Instr::PushFunc(f), Instr::ImplPrim(ImplPrimitive::RepeatWithInverse, span), input @ ..] => {
+            Some((
+                input,
+                eco_vec![
+                    Instr::PushFunc(f.clone()),
+                    Instr::PushFunc(inv.clone()),
+                    Instr::ImplPrim(ImplPrimitive::RepeatWithInverse, *span),
+                ],
+            ))
+        }
+        _ => None,
+    }
 }
 
 fn under_repeat_pattern<'a>(
@@ -2115,43 +2126,48 @@ fn under_repeat_pattern<'a>(
     g_sig: Signature,
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
+    use ImplPrimitive::*;
+    use Instr::*;
+    use Primitive::*;
     Some(match input {
-        [Instr::PushFunc(f), repeat @ Instr::Prim(Primitive::Repeat, span), input @ ..] => {
+        [PushFunc(f), Prim(Repeat, span), input @ ..]
+        | [PushFunc(_), PushFunc(f), ImplPrim(RepeatWithInverse, span), input @ ..] => {
             let instrs = f.instrs(&comp.asm).to_vec();
             let (befores, afters) = under_instrs(&instrs, g_sig, comp)?;
             let befores = eco_vec![
-                Instr::CopyToTemp {
+                CopyToTemp {
                     stack: TempStack::Under,
                     count: 1,
                     span: *span
                 },
-                Instr::PushFunc(make_fn(befores, *span, comp)?),
-                repeat.clone()
+                PushFunc(make_fn(befores, *span, comp)?),
+                Prim(Repeat, *span)
             ];
             let afters = eco_vec![
-                Instr::PopTemp {
+                PopTemp {
                     stack: TempStack::Under,
                     count: 1,
                     span: *span
                 },
-                Instr::PushFunc(make_fn(afters, *span, comp)?),
-                repeat.clone()
+                PushFunc(make_fn(afters, *span, comp)?),
+                Prim(Repeat, *span)
             ];
             (input, (befores, afters))
         }
-        [push @ Instr::Push(_), Instr::PushFunc(f), repeat @ Instr::Prim(Primitive::Repeat, span), input @ ..] =>
+        [push @ Push(_), PushFunc(f), Prim(Repeat, span), input @ ..]
+        | [push @ Push(_), PushFunc(_), PushFunc(f), ImplPrim(RepeatWithInverse, span), input @ ..] =>
         {
             let instrs = f.instrs(&comp.asm).to_vec();
             let (befores, afters) = under_instrs(&instrs, g_sig, comp)?;
             let befores = eco_vec![
                 push.clone(),
-                Instr::PushFunc(make_fn(befores, *span, comp)?),
-                repeat.clone()
+                PushFunc(make_fn(befores, *span, comp)?),
+                Prim(Repeat, *span)
             ];
             let afters = eco_vec![
                 push.clone(),
-                Instr::PushFunc(make_fn(afters, *span, comp)?),
-                repeat.clone()
+                PushFunc(make_fn(afters, *span, comp)?),
+                Prim(Repeat, *span)
             ];
             (input, (befores, afters))
         }

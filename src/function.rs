@@ -669,6 +669,10 @@ impl Signature {
         let outputs = self.outputs + other.outputs.saturating_sub(self.args);
         Self::new(args, outputs)
     }
+    /// Get the inverse of this signature
+    pub fn inverse(self) -> Self {
+        Self::new(self.outputs, self.args)
+    }
 }
 
 impl PartialEq<(usize, usize)> for Signature {

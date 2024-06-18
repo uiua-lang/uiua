@@ -713,6 +713,38 @@ impl Compiler {
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
+            Repeat => {
+                let operand = modified.code_operands().next().unwrap().clone();
+                let (instrs, sig) = self.compile_operand_word(operand)?;
+                let spandex = self.add_span(modified.modifier.span.clone());
+                let instrs = if let Some((inverse, inv_sig)) = invert_instrs(&instrs, self)
+                    .and_then(|inv| instrs_signature(&inv).ok().map(|sig| (inv, sig)))
+                {
+                    // If an inverse for repeat's function exists we use a special
+                    // implementation that allows for negative repeatition counts
+                    let id = FunctionId::Anonymous(modified.modifier.span.clone());
+                    let func = self.make_function(id, sig, instrs);
+                    let inv_id = FunctionId::Anonymous(modified.modifier.span.clone());
+                    let inv = self.make_function(inv_id, inv_sig, inverse);
+                    eco_vec![
+                        Instr::PushFunc(inv),
+                        Instr::PushFunc(func),
+                        Instr::ImplPrim(ImplPrimitive::RepeatWithInverse, spandex)
+                    ]
+                } else {
+                    let id = FunctionId::Anonymous(modified.modifier.span.clone());
+                    let func = self.make_function(id, sig, instrs);
+                    eco_vec![Instr::PushFunc(func), Instr::Prim(Repeat, spandex)]
+                };
+                if call {
+                    self.push_all_instrs(instrs);
+                } else {
+                    let sig = self.sig_of(&instrs, &modified.modifier.span)?;
+                    let func =
+                        self.make_function(modified.modifier.span.clone().into(), sig, instrs);
+                    self.push_instr(Instr::PushFunc(func));
+                }
+            }
             Un if !self.in_inverse => {
                 let mut operands = modified.code_operands().cloned();
                 let f = operands.next().unwrap();

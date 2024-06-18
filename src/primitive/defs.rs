@@ -1581,6 +1581,8 @@ primitive!(
     /// ex: F ← ⍥(×10)<10.
     ///   : F 5
     ///   : F 12
+    /// [repeat]ing a negative number of times will repeat the function's [un]-inverse.
+    /// ex: ⍥(×2)¯5 1024
     ///
     /// [repeat]'s glyph is a combination of a circle, representing a loop, and the 𝄇 symbol from musical notation.
     ([1], Repeat, IteratingModifier, ("repeat", '⍥')),
@@ -2797,4 +2799,6 @@ impl_primitive!(
     (1, CountUnique),
     (1, EndRandArray, Impure),
     (1(2)[3], AstarFirst),
+    // Implementation details
+    (1[2], RepeatWithInverse),
 );

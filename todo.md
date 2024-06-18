@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Negative repeat
   - Add `by` to tutorial
   - Stack-source locality tutorial
   - Rewrite .uasm format

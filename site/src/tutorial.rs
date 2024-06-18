@@ -1019,8 +1019,8 @@ fn TutorialAdvancedStack() -> impl IntoView {
         <Editor example="+dggdp 1 2 3 4 5"/>
         <p>"In general, planet notation as complex as the mathematical function example above should only be used when it is necessary. For examples like that with 4+ values, it is. However, when working with fewer values, you can get very far with just "<Prim prim=Dup/>" and "<Prim prim=Flip/>". Maybe sprinkle some "<Prim prim=Over/>"s and "<Prim prim=Dip/>"s in there too."</p>
 
-        <Hd id="on"><Prim prim=On/></Hd>
-        <p>"As you write more Uiua code, you'll find that there is a pattern you'll encounter over and over again. It involves calling a function, then calling another function that re-uses an argument to the first function."</p>
+        <Hd id="on-and-by"><Prim prim=On/>" and "<Prim prim=By/></Hd>
+        <p>"As you write more Uiua code, you'll find that there is a kind of pattern you'll encounter over and over again. It involves calling a function, then calling another function that re-uses an argument to the first function."</p>
         <p>"One simple example is getting "<code>"n"</code>" numbers between "<code>"0"</code>" and "<code>"1"</code>". One way you may think to solve this is with "<Prim prim=Dup/>" and "<Prim prim=Flip/>"."</p>
         <Editor example="÷:⇡. 5"/> // Should fail
         <p>"This solution works, but as the style diagnostic suggests, it is not quite idiomatic."</p>

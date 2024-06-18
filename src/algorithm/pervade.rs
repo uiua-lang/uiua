@@ -112,7 +112,7 @@ where
         // A is fixed
         if a.row_count() == 1 && b.row_count() != 1 {
             let fix_count = a.shape.iter().take_while(|&&d| d == 1).count();
-            if b.rank() > fix_count {
+            if b.rank() > fix_count && b.rank() >= a.rank() {
                 if (a.shape().iter())
                     .zip(b.shape())
                     .skip(fix_count)
@@ -148,7 +148,7 @@ where
         // B is fixed
         if a.row_count() != 1 && b.row_count() == 1 {
             let fix_count = b.shape.iter().take_while(|&&d| d == 1).count();
-            if a.rank() > fix_count {
+            if a.rank() > fix_count && a.rank() >= b.rank() {
                 if (a.shape().iter())
                     .zip(b.shape())
                     .skip(fix_count)

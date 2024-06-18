@@ -276,10 +276,10 @@ where
         return Ok(());
     }
     if expand_fixed && arr.row_count() == 1 && ctx.scalar_fill::<T>().is_err() {
-        let fixes = (arr.shape.iter())
-            .take_while(|&&dim| dim == 1)
-            .count()
-            .min(arr.shape.len());
+        let mut fixes = (arr.shape.iter()).take_while(|&&dim| dim == 1).count();
+        if fixes == arr.rank() {
+            fixes = (fixes - 1).max(1)
+        }
         let same_under_fixes = (target.iter().skip(fixes))
             .zip(arr.shape[fixes..].iter())
             .all(|(b, a)| b == a);
@@ -402,7 +402,7 @@ where
             }
             let a_shape = a.shape().clone();
             let b_shape = b.shape().clone();
-            let a_err = fill_array_shape(a, b.shape(), true, ctx).err();
+            let a_err = fill_array_shape(a, &b_shape, true, ctx).err();
             let b_err = fill_array_shape(b, &a_shape, true, ctx).err();
             if shape_prefixes_match(&a.shape, &b.shape) {
                 Ok(())

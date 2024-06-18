@@ -8,16 +8,16 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`&runs`](https://uiua.org/docs/&runs) now returns 3 handles rather than 1
   - This gives more precise control over stdin, stdout, and stderr
 - **Breaking Change** - [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`duplicate .`](https://uiua.org/docs/duplicate)
+- Switch functions have been replaced with a [`switch ⨬`](https://uiua.org/docs/switch) modifier
+  - This makes the language more uniform
+  - Code with existing switch functions in `⟨⟩`s will continue to work and will format to use `⨬` and `()`s
+- [`un °`](https://uiua.org/docs/un) [`shape △`](https://uiua.org/docs/shape) now generates an array with the given shape and incrementing elements
 - [`un °`](https://uiua.org/docs/un) [`pick ⊡`](https://uiua.org/docs/pick) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
-- Add *tree extension*, which allows some functions that take indices, offsets, or masks to recursively on tree of those values
-  - This is useful for working with boxed arrays
-  - Currently implemented for [`keep ▽`](https://uiua.org/docs/keep), [`select ⊏`](https://uiua.org/docs/select), and [`pick ⊡`](https://uiua.org/docs/pick)
-- Add the experimental [`triangle ◹`](https://uiua.org/docs/triangle) modifier, which calls a function on shrinking suffixes of an array's rows
 - [`keep ▽`](https://uiua.org/docs/keep) will now cycle counts if the counts array is shorter than the counted array
 - [`keep ▽`](https://uiua.org/docs/keep) now works with non-integer scalar counts to scale an array
 - [`join ⊂`](https://uiua.org/docs/join) will rank differences greater than 1 can now extend the smaller array
 - [`un °`](https://uiua.org/docs/un) [`join ⊂`](https://uiua.org/docs/join) is now easier to combine with other inverses
-- [`un °`](https://uiua.org/docs/un) [`shape △`](https://uiua.org/docs/shape) now generates an array with the given shape and incrementing elements
+- Add the experimental [`triangle ◹`](https://uiua.org/docs/triangle) modifier, which calls a function on shrinking suffixes of an array's rows
 - Add the experimental [`orient`](https://uiua.org/docs/orient) function, which arranges an array's axes in a specified order
 - Add the experimental [`fft`](https://uiua.org/docs/fft) function, which performs the Fast Fourier transform
   - The inverse FFT is also supported via [`un °`](https://uiua.org/docs/un)
@@ -25,7 +25,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the experimental [`but ⫯`](https://uiua.org/docs/but) modifier, which is a complement to [`on ⟜`](https://uiua.org/docs/on) and [`by ⊸`](https://uiua.org/docs/by)
 - Non-scalar [`switch ⨬`](https://uiua.org/docs/switch) and [`repeat ⍥`](https://uiua.org/docs/repeat) now follow the same distribution and [`fix ¤`](https://uiua.org/docs/fix) rules as [`rows ≡`](https://uiua.org/docs/rows)
 - Add the `# Track caller!` semantic comment, which prevents stack traces from going below the function that contains it
-- Deprecate [`coordinate ⟔`](https://uiua.org/docs/coordinate) as it is seldom needed and easy to implement with other functions
+- Deprecate the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, as it is seldom needed and easy to implement with other functions
   - It can be mostly replaced with `⊢⊚⌕`
 - Adjacent [`trace ⸮`](https://uiua.org/docs/trace)s now function as a single [`trace ⸮`](https://uiua.org/docs/trace) of more values
 - N+1 adjacent [`stack ?`](https://uiua.org/docs/stack)s now format to N [`trace ⸮`](https://uiua.org/docs/trace)s

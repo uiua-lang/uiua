@@ -1285,7 +1285,14 @@ code:
                 }
             }
             Word::Func(func) => self.func(func, word.span, call)?,
-            Word::Pack(pack) => self.switch(pack, word.span, call)?,
+            Word::Pack(pack) => self.switch(
+                pack.branches
+                    .into_iter()
+                    .map(|sp| sp.map(Word::Func))
+                    .collect(),
+                word.span,
+                call,
+            )?,
             Word::Primitive(p) => self.primitive(p, word.span, call)?,
             Word::SemicolonPop => {
                 self.emit_diagnostic(
@@ -1759,8 +1766,8 @@ code:
         );
         Ok((func.id, sig, instrs))
     }
-    fn switch(&mut self, sw: FunctionPack, span: CodeSpan, call: bool) -> UiuaResult {
-        let count = sw.branches.len();
+    fn switch(&mut self, branches: Vec<Sp<Word>>, span: CodeSpan, call: bool) -> UiuaResult {
+        let count = branches.len();
         if !call {
             self.new_functions.push(EcoVec::new());
         }
@@ -1768,9 +1775,9 @@ code:
         let mut functions = Vec::with_capacity(count);
         let mut rigid_indices = Vec::new();
         let mut flex_indices = Vec::new();
-        for (i, branch) in sw.branches.into_iter().enumerate() {
-            let f = self.compile_func(branch.value, branch.span.clone())?;
-            let instrs = f.instrs(&self.asm);
+        for (i, branch) in branches.into_iter().enumerate() {
+            let span = branch.span.clone();
+            let (instrs, sig) = self.compile_operand_word(branch)?;
             let is_flex = instrs
                 .iter()
                 .rposition(|instr| matches!(instr, Instr::Prim(Primitive::Assert, _)))
@@ -1794,7 +1801,7 @@ code:
                         }
                         let mut comp = self.clone();
                         let func = comp.make_function(
-                            FunctionId::Anonymous(branch.span.clone()),
+                            FunctionId::Anonymous(span.clone()),
                             Signature::new(0, 2),
                             sub.into(),
                         );
@@ -1809,7 +1816,7 @@ code:
                             .unwrap_or(false)
                     })
                 });
-            functions.push((f, branch.span));
+            functions.push((instrs, sig, span));
             if is_flex {
                 flex_indices.push(i);
             } else {
@@ -1818,14 +1825,13 @@ code:
         }
         let mut rigid_funcs = rigid_indices.into_iter().map(|i| &functions[i]);
         let mut sig = None;
-        if let Some((f, _)) = rigid_funcs.next() {
-            sig = Some(f.signature());
+        if let Some((_, f_sig, _)) = rigid_funcs.next() {
+            sig = Some(*f_sig);
             let sig = sig.as_mut().unwrap();
             // Compile remaining branches
-            for (f, span) in rigid_funcs {
-                let f_sig = f.signature();
+            for (_, f_sig, span) in rigid_funcs {
                 if f_sig.is_compatible_with(*sig) {
-                    *sig = sig.max_with(f_sig);
+                    *sig = sig.max_with(*f_sig);
                 } else if f_sig.outputs == sig.outputs {
                     sig.args = sig.args.max(f_sig.args)
                 } else {
@@ -1840,37 +1846,35 @@ code:
             }
         }
         let mut flex_funcs = flex_indices.into_iter().map(|i| &functions[i]);
-        let mut sig = sig.unwrap_or_else(|| flex_funcs.next().unwrap().0.signature());
-        for (f, _) in flex_funcs {
-            let f_sig = f.signature();
+        let mut sig = sig.unwrap_or_else(|| flex_funcs.next().unwrap().1);
+        for (_, f_sig, _) in flex_funcs {
             sig.args = sig.args.max(f_sig.args);
         }
 
         // Maybe use `repeat` diagnostic
         if functions.len() == 2
             && matches!(
-                functions[0].0.instrs(&self.asm),
+                functions[0].0.as_slice(),
                 [] | [Instr::Prim(Primitive::Identity, _)]
             )
-            && functions[1].0.signature().args == functions[1].0.signature().outputs
+            && functions[1].1.args == functions[1].1.outputs
         {
             self.emit_diagnostic(
                 format!(
-                    "Prefer {} over this switch function",
+                    "Prefer {} over this {}",
                     Primitive::Repeat.format(),
+                    Primitive::Switch.format()
                 ),
                 DiagnosticKind::Style,
                 span.clone(),
             );
         }
 
-        self.push_all_instrs(
-            functions
-                .into_iter()
-                .map(|(f, _)| f)
-                .map(Instr::PushFunc)
-                .collect(),
-        );
+        for (instrs, sig, span) in functions {
+            let id = FunctionId::Anonymous(span);
+            let function = self.make_function(id, sig, instrs);
+            self.push_instr(Instr::PushFunc(function));
+        }
 
         let span_idx = self.add_span(span.clone());
         self.push_instr(Instr::Switch {

@@ -1146,6 +1146,13 @@
     "class": "DyadicPervasive",
     "description": "Subtract values"
   },
+  "switch": {
+    "glyph": "⨬",
+    "outputs": 1,
+    "modifier_args": 2,
+    "class": "OtherModifier",
+    "description": "Call the function at the given index"
+  },
   "table": {
     "glyph": "⊞",
     "outputs": 1,

@@ -853,7 +853,8 @@ impl Primitive {
             | Primitive::Content
             | Primitive::Both
             | Primitive::Fork
-            | Primitive::Bracket => {
+            | Primitive::Bracket
+            | Primitive::Switch => {
                 return Err(env.error(format!(
                     "{} was not inlined. This is a bug in the interpreter",
                     self.format()

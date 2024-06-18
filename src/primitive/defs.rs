@@ -1993,6 +1993,27 @@ primitive!(
     ///   : c ← (°□⊡2°◌)
     ///   : ⬚{⊙⊙∘}(×b+c×a a) 2 3 4
     ([2], Fill, OtherModifier, ("fill", '⬚')),
+    /// Call the function at the given index
+    ///
+    /// [switch] takes at least 1 argument, an index.
+    /// If the index is `0`, the first function is called.
+    /// If the index is `1`, the second function is called.
+    /// ex: ⨬+- 0 3 5
+    ///   : ⨬+- 1 3 5
+    /// The signatures of the functions do not need to match exactly.
+    /// Excess arguments will be discarded.
+    /// ex: ⨬(×.)+ 0 3 5
+    ///   : ⨬(×.)+ 1 3 5
+    /// A function pack can be used to switch between more than 2 functions.
+    /// ex: ⨬(+|-|×|÷) 0 2 5
+    ///   : ⨬(+|-|×|÷) 1 2 5
+    ///   : ⨬(+|-|×|÷) 2 2 5
+    ///   : ⨬(+|-|×|÷) 3 2 5
+    /// The index does not have to be a scalar.
+    /// ex: ⨬(+|-|×|÷) [0 1 2 3] 2 5
+    /// In this case, [switch] behaves similarly to [rows]. The index will be iterated along with other arguments.
+    /// ex: ⨬(+|-|×|÷) [0 1 2 3] [1 6 10 2] 5
+    ([2], Switch, OtherModifier, ("switch", '⨬')),
     /// Call a function and catch errors
     ///
     /// If the first function errors, the second function is called with the original arguments and the error value.

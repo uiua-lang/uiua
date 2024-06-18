@@ -7,10 +7,10 @@ use crate::{format::format_words, UiuaErrorKind};
 use super::*;
 
 impl Compiler {
-    fn desugar_function_pack(
+    fn desugar_function_pack_inner(
         &mut self,
         modifier: &Sp<Modifier>,
-        operand: Sp<Word>,
+        operand: &Sp<Word>,
     ) -> UiuaResult<Option<Modified>> {
         let Sp {
             value: Word::Pack(pack @ FunctionPack { angled: false, .. }),
@@ -30,7 +30,7 @@ impl Compiler {
                     DiagnosticKind::Warning,
                     span.clone(),
                 );
-                let mut branches = pack.branches.into_iter().rev();
+                let mut branches = pack.branches.iter().cloned().rev();
                 let mut new = Modified {
                     modifier: modifier.clone(),
                     operands: vec![branches.next().unwrap().map(Word::Func)],
@@ -52,7 +52,7 @@ impl Compiler {
                 Ok(Some(new))
             }
             Modifier::Primitive(Primitive::Rows | Primitive::Inventory) => {
-                let mut branches = pack.branches.into_iter();
+                let mut branches = pack.branches.iter().cloned();
                 let mut new = Modified {
                     modifier: modifier.clone(),
                     operands: vec![branches.next().unwrap().map(Word::Func)],
@@ -79,7 +79,7 @@ impl Compiler {
             Modifier::Primitive(
                 Primitive::Fork | Primitive::Bracket | Primitive::Try | Primitive::Fill,
             ) => {
-                let mut branches = pack.branches.into_iter().rev();
+                let mut branches = pack.branches.iter().cloned().rev();
                 let mut new = Modified {
                     modifier: modifier.clone(),
                     operands: {
@@ -103,45 +103,73 @@ impl Compiler {
                 }
                 Ok(Some(new))
             }
-            m if m.args() >= 2 => {
-                if pack.branches.len() != m.args() {
-                    return Err(self.fatal_error(
-                        modifier.span.clone().merge(span),
-                        format!(
-                            "{} requires {} function arguments, but the \
-                                    function pack has {} functions",
-                            m,
-                            m.args(),
-                            pack.branches.len()
-                        ),
-                    ));
+            _ => Ok(None),
+        }
+    }
+    fn desugar_function_pack(
+        &mut self,
+        modifier: &Sp<Modifier>,
+        operand: &Sp<Word>,
+        call: bool,
+    ) -> UiuaResult<bool> {
+        if let Some(modified) = self.desugar_function_pack_inner(modifier, operand)? {
+            self.modified(modified, call)?;
+            Ok(true)
+        } else if let Word::Pack(pack @ FunctionPack { angled: false, .. }) = &operand.value {
+            match &modifier.value {
+                Modifier::Primitive(Primitive::Switch) => {
+                    self.switch(
+                        pack.branches
+                            .iter()
+                            .cloned()
+                            .map(|sp| sp.map(Word::Func))
+                            .collect(),
+                        modifier.span.clone(),
+                        call,
+                    )?;
+                    Ok(true)
                 }
-                let new = Modified {
-                    modifier: modifier.clone(),
-                    operands: pack
-                        .branches
-                        .into_iter()
-                        .map(|w| w.map(Word::Func))
-                        .collect(),
-                };
-                Ok(Some(new))
-            }
-            m => 'blk: {
-                if let Modifier::Ref(name) = m {
-                    if let Ok((_, local)) = self.ref_local(name) {
-                        if self.array_macros.contains_key(&local.index) {
-                            break 'blk Ok(None);
+                m if m.args() >= 2 => {
+                    if pack.branches.len() != m.args() {
+                        return Err(self.fatal_error(
+                            modifier.span.clone().merge(operand.span.clone()),
+                            format!(
+                                "{} requires {} function arguments, but the \
+                                function pack has {} functions",
+                                m,
+                                m.args(),
+                                pack.branches.len()
+                            ),
+                        ));
+                    }
+                    let new = Modified {
+                        modifier: modifier.clone(),
+                        operands: pack
+                            .branches
+                            .iter()
+                            .cloned()
+                            .map(|w| w.map(Word::Func))
+                            .collect(),
+                    };
+                    self.modified(new, call)?;
+                    Ok(true)
+                }
+                m => {
+                    if let Modifier::Ref(name) = m {
+                        if let Ok((_, local)) = self.ref_local(name) {
+                            if self.array_macros.contains_key(&local.index) {
+                                return Ok(false);
+                            }
                         }
                     }
+                    Err(self.fatal_error(
+                        modifier.span.clone().merge(operand.span.clone()),
+                        format!("{m} cannot use a function pack"),
+                    ))
                 }
-                Err(self.fatal_error(
-                    modifier.span.clone().merge(span),
-                    format!(
-                        "{m} cannot use a function pack. If you meant to \
-                            use a switch function, add a layer of parentheses."
-                    ),
-                ))
             }
+        } else {
+            Ok(false)
         }
     }
     #[allow(clippy::collapsible_match)]
@@ -150,9 +178,9 @@ impl Compiler {
 
         // De-sugar function pack
         if op_count == 1 {
-            let operand = modified.code_operands().next().unwrap().clone();
-            if let Some(new) = self.desugar_function_pack(&modified.modifier, operand)? {
-                return self.modified(new, call);
+            let operand = modified.code_operands().next().unwrap();
+            if self.desugar_function_pack(&modified.modifier, operand, call)? {
+                return Ok(());
             }
         }
 
@@ -384,7 +412,7 @@ impl Compiler {
                 {
                     let mut m = (**m).clone();
                     for op in m.operands.iter_mut().filter(|w| w.value.is_code()) {
-                        if let Some(new) = self.desugar_function_pack(&m.modifier, op.clone())? {
+                        if let Some(new) = self.desugar_function_pack_inner(&m.modifier, op)? {
                             op.value = Word::Modified(new.into());
                         }
                         op.value = Word::Modified(
@@ -839,6 +867,11 @@ impl Compiler {
                     try_sig
                 )
             }
+            Switch => self.switch(
+                modified.code_operands().cloned().collect(),
+                modified.modifier.span.clone(),
+                call,
+            )?,
             Both => {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let (mut instrs, sig) = self.compile_operand_word(operand)?;

@@ -6,18 +6,18 @@ Ko ← 150
 Kt ← 5
 
 T ← ×⇡⌈÷,τ0.07
-St ← ○T
-Ct ← ○+ηT
+St ← ∿T
+Ct ← ∿+ηT
 P ← ×⇡⌈÷,τ0.02
-Sp ← ○P
-Cp ← ○+ηP
+Sp ← ∿P
+Cp ← ∿+ηP
 Ox ← +Rt×Ro Ct
 Oy ← ×Ro St
 
-CalcX ← ♭+⊙(¯××Oy○:○+η)⊞×Ox+⊙(××Sp○,○,)×Cp○+η,
-CalcY ← ♭+⊙(××Oy○+η:○+η)⊞×Ox+⊙(¯××Sp○,○+η,)×Cp○,
-CalcOoz ← ♭÷:1++Kt ×⊞×Ox Sp○+η:×Oy○.
-CalcL ← ♭↥0↧1×0.7+¯×○+η:⊙(:+⊙(×⊞×Ct Cp○:)+⊙(¯×St ○.)×⊙(○+η,)+×St○+η,¯×○,).⊞×Ct Sp
+CalcX ← ♭+⊙(¯××Oy ∿:∿+η)⊞×Ox+⊙(××Sp ∿,∿,)×Cp ∿+η,
+CalcY ← ♭+⊙(××Oy ∿+η:∿+η)⊞×Ox+⊙(¯××Sp ∿,∿+η,)×Cp ∿,
+CalcOoz ← ♭÷:1++Kt ×⊞×Ox Sp ∿+η:×Oy ∿.
+CalcL ← ♭↥0↧1×0.7+¯×∿+η:⊙(:+⊙(×⊞×Ct Cp ∿:)+⊙(¯×St ∿.)×⊙(∿+η,)+×St ∿+η,¯×∿,).⊞×Ct Sp
 
 Render ← (
   ⁅+150 ××Ko CalcOoz,CalcX,,

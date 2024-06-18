@@ -387,61 +387,7 @@ impl<'a> VirtualEnv<'a> {
                     let f = self.pop_func()?;
                     let sig = f.signature();
                     let n = self.pop()?;
-                    if let BasicValue::Num(n) = n {
-                        // If n is a known natural number, then the function can have any signature.
-                        if n.fract() == 0.0 && n >= 0.0 {
-                            let n = n as usize;
-                            if n > 0 {
-                                let (args, outputs) = match sig.args.cmp(&sig.outputs) {
-                                    Ordering::Equal => (sig.args, sig.outputs),
-                                    Ordering::Less => {
-                                        (sig.args, n * (sig.outputs - sig.args) + sig.args)
-                                    }
-                                    Ordering::Greater => {
-                                        ((n - 1) * (sig.args - sig.outputs) + sig.args, sig.outputs)
-                                    }
-                                };
-                                self.handle_args_outputs(args, outputs)?;
-                            }
-                        } else if n.is_infinite() {
-                            match sig.args.cmp(&sig.outputs) {
-                                Ordering::Greater => {
-                                    return Err(SigCheckError::from(format!(
-                                        "repeat with infinity and a function with signature {sig}"
-                                    ))
-                                    .loop_overreach());
-                                }
-                                Ordering::Less if self.array_stack.is_empty() => {
-                                    return Err(SigCheckError::from(format!(
-                                        "repeat with infinity and a function with signature {sig}"
-                                    ))
-                                    .loop_variable(sig, true));
-                                }
-                                _ => self.handle_sig(sig)?,
-                            }
-                        } else {
-                            return Err("repeat without a natural number or infinity".into());
-                        }
-                    } else {
-                        // If n is unknown, then what we do depends on the signature
-                        let sig = f.signature();
-                        match sig.args.cmp(&sig.outputs) {
-                            Ordering::Equal => self.handle_sig(sig)?,
-                            Ordering::Greater => {
-                                return Err(SigCheckError::from(format!(
-                                    "repeat with no number and a function with signature {sig}"
-                                ))
-                                .loop_overreach());
-                            }
-                            Ordering::Less if self.array_stack.is_empty() => {
-                                return Err(SigCheckError::from(format!(
-                                    "repeat with no number and a function with signature {sig}"
-                                ))
-                                .loop_variable(sig, false));
-                            }
-                            Ordering::Less => self.handle_sig(sig)?,
-                        }
-                    }
+                    self.repeat(sig, n)?;
                 }
                 Do => {
                     let body = self.pop_func()?;
@@ -638,6 +584,61 @@ impl<'a> VirtualEnv<'a> {
     }
     fn handle_sig(&mut self, sig: Signature) -> Result<(), String> {
         self.handle_args_outputs(sig.args, sig.outputs)
+    }
+    fn repeat(&mut self, sig: Signature, n: BasicValue) -> Result<(), SigCheckError> {
+        if let BasicValue::Num(n) = n {
+            // If n is a known natural number, then the function can have any signature.
+            if n.fract() == 0.0 && n >= 0.0 {
+                let n = n as usize;
+                if n > 0 {
+                    let (args, outputs) = match sig.args.cmp(&sig.outputs) {
+                        Ordering::Equal => (sig.args, sig.outputs),
+                        Ordering::Less => (sig.args, n * (sig.outputs - sig.args) + sig.args),
+                        Ordering::Greater => {
+                            ((n - 1) * (sig.args - sig.outputs) + sig.args, sig.outputs)
+                        }
+                    };
+                    self.handle_args_outputs(args, outputs)?;
+                }
+            } else if n.is_infinite() {
+                match sig.args.cmp(&sig.outputs) {
+                    Ordering::Greater => {
+                        return Err(SigCheckError::from(format!(
+                            "repeat with infinity and a function with signature {sig}"
+                        ))
+                        .loop_overreach());
+                    }
+                    Ordering::Less if self.array_stack.is_empty() => {
+                        return Err(SigCheckError::from(format!(
+                            "repeat with infinity and a function with signature {sig}"
+                        ))
+                        .loop_variable(sig, true));
+                    }
+                    _ => self.handle_sig(sig)?,
+                }
+            } else {
+                return Err("repeat without a natural number or infinity".into());
+            }
+        } else {
+            // If n is unknown, then what we do depends on the signature
+            match sig.args.cmp(&sig.outputs) {
+                Ordering::Equal => self.handle_sig(sig)?,
+                Ordering::Greater => {
+                    return Err(SigCheckError::from(format!(
+                        "repeat with no number and a function with signature {sig}"
+                    ))
+                    .loop_overreach());
+                }
+                Ordering::Less if self.array_stack.is_empty() => {
+                    return Err(SigCheckError::from(format!(
+                        "repeat with no number and a function with signature {sig}"
+                    ))
+                    .loop_variable(sig, false));
+                }
+                Ordering::Less => self.handle_sig(sig)?,
+            }
+        }
+        Ok(())
     }
 }
 

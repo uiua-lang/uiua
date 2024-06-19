@@ -397,6 +397,7 @@ F ← +@A ⊟.
 ⍤⟜≍: ⊂:2_2 ⟜(⊂⊃△type≡F⇡)2
 ⍤⟜≍: ⊂:2_2 ⟜(⊂⊃△type≡F⇡)1
 ⍤⟜≍: ⊂:2_2 ⟜(⊂⊃△type≡F⇡)0
+assonmat: [0 3] shape ≡⍜▽∘ ↯0_3 1 ¤"abc"
 
 # Filled inverses
 ⍤⟜≍: 0 ⬚0°◌

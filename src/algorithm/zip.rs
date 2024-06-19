@@ -604,7 +604,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             let per_meta = xs.take_per_meta();
             env.without_fill(|env| -> UiuaResult {
                 if is_empty {
-                    env.push(ys.proxy_row(env));
+                    env.push(ys);
                     env.push(xs.proxy_row(env));
                     _ = env.call_maintain_sig(f);
                     for i in 0..outputs {
@@ -642,7 +642,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             env.without_fill(|env| -> UiuaResult {
                 if is_empty {
                     env.push(ys.proxy_row(env));
-                    env.push(xs.proxy_row(env));
+                    env.push(xs);
                     _ = env.call_maintain_sig(f);
                     for i in 0..outputs {
                         new_rows[i].push(env.pop("rows's function result")?);
@@ -696,8 +696,16 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             let per_meta = xs.take_per_meta().xor(ys.take_per_meta());
             env.without_fill(|env| -> UiuaResult {
                 if is_empty {
-                    env.push(ys.proxy_row(env));
-                    env.push(xs.proxy_row(env));
+                    env.push(if ys.row_count() == 0 {
+                        ys.proxy_row(env)
+                    } else {
+                        ys
+                    });
+                    env.push(if xs.row_count() == 0 {
+                        xs.proxy_row(env)
+                    } else {
+                        xs
+                    });
                     _ = env.call_maintain_sig(f);
                     for i in 0..outputs {
                         new_rows[i].push(env.pop("rows's function result")?);
@@ -1182,7 +1190,7 @@ fn inventoryn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
                 v.unbox();
                 Err(v)
             } else {
-                let proxy = is_empty.then(|| v.proxy_row(env));
+                let proxy = (is_empty || v.row_count() == 0).then(|| v.proxy_row(env));
                 row_count = row_count.max(v.row_count());
                 all_1 = false;
                 Ok(v.into_rows().map(Value::unboxed).chain(proxy))

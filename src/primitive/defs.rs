@@ -1246,15 +1246,15 @@ primitive!(
     /// Positive indices start from the leading axis. Negative indices start from the trailing axis.
     /// ex: # Experimental!
     ///   : °△ 2_3_4
-    ///   : orient 1 .
+    ///   : ⮌ 1 .
     /// ex: # Experimental!
-    ///   : △ orient 2_1 °△ 2_3_4_5
+    ///   : △ ⮌ 2_1 °△ 2_3_4_5
     /// [orient]`¯1` is equivalent to [un][transpose].
     /// ex: # Experimental!
     ///   : °△ 2_3_4
-    ///   : ∩△ ⊃°⍉(orient¯1)
+    ///   : ∩△ ⊃°⍉(⮌¯1)
     /// Currently, all uses of [orient] can be written with sequences of [transpose] and [rows].
-    (2, Orient, DyadicArray, "orient"),
+    (2, Orient, DyadicArray, ("orient", '⮌')),
     /// The n-wise windows of an array
     ///
     /// ex: ◫2 .⇡4

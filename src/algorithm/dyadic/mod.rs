@@ -1739,7 +1739,7 @@ impl Value {
             if i == j {
                 continue;
             }
-            if j != undices.len() - 1 {
+            if j != orientation.len() - 1 {
                 orientation[j..].rotate_left(1);
                 depth_rotations.push((j, 1));
             }

@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Label inverses
   - Stabilize labels
   - `branch:` and `commit:` specifiers for imports
   - `take` `&fras`/`&frab`

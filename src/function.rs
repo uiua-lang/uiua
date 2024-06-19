@@ -80,6 +80,7 @@ pub enum Instr {
     Label {
         label: EcoString,
         span: usize,
+        remove: bool,
     },
     /// Call a dynamic function
     Dynamic(DynamicFunction),
@@ -224,7 +225,7 @@ impl Hash for Instr {
                 sig,
                 ..
             } => (17, count, under_cond, sig).hash(state),
-            Instr::Label { label, .. } => (18, label).hash(state),
+            Instr::Label { label, remove, .. } => (18, label, remove).hash(state),
             Instr::Dynamic(df) => (19, df).hash(state),
             Instr::Unpack { count, unbox, .. } => (23, count, unbox).hash(state),
             Instr::SetOutputComment { i, n, .. } => (24, i, n).hash(state),

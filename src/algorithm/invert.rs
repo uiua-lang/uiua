@@ -672,27 +672,38 @@ trait UnderPattern: fmt::Debug {
     ) -> Option<(&'a [Instr], Under)>;
 }
 
-fn invert_call_pattern<'a>(
-    input: &'a [Instr],
-    comp: &mut Compiler,
-) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::PushFunc(f), Instr::Call(_), input @ ..] = input else {
-        return None;
+macro_rules! invert_pat {
+    ($name:ident, ($($pat:pat),*), |$input:ident, $comp:ident| $body:expr) => {
+        fn $name<'a>(
+            $input: &'a [Instr],
+            $comp: &mut Compiler,
+        ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+            let [$($pat,)* $input @ ..] = $input else {
+                return None;
+            };
+            Some($body)
+        }
     };
-    let instrs = f.instrs(&comp.asm).to_vec();
-    let inverse = invert_instrs(&instrs, comp)?;
-    Some((input, inverse))
+    ($name:ident,  ($($pat:pat),*), |$input:ident| $body:expr) => {
+        invert_pat!($name, ($($pat),*), |$input, _| $body);
+    };
 }
 
-fn invert_un_pattern<'a>(
-    input: &'a [Instr],
-    comp: &mut Compiler,
-) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::PushFunc(f), Instr::Prim(Primitive::Un, _), input @ ..] = input else {
-        return None;
-    };
-    Some((input, EcoVec::from(f.instrs(&comp.asm))))
-}
+invert_pat!(
+    invert_call_pattern,
+    (Instr::PushFunc(f), Instr::Call(_)),
+    |input, comp| {
+        let instrs = f.instrs(&comp.asm).to_vec();
+        let inverse = invert_instrs(&instrs, comp)?;
+        (input, inverse)
+    }
+);
+
+invert_pat!(
+    invert_un_pattern,
+    (Instr::PushFunc(f), Instr::Prim(Primitive::Un, _)),
+    |input, comp| (input, EcoVec::from(f.instrs(&comp.asm)))
+);
 
 fn under_un_pattern<'a>(
     input: &'a [Instr],
@@ -747,6 +758,20 @@ fn invert_trivial_pattern<'a>(
             }
         }
         [Comment(_) | PushSig(_) | PopSig, input @ ..] => return Some((input, EcoVec::new())),
+        [Label {
+            label,
+            span,
+            remove,
+        }, input @ ..] => {
+            return Some((
+                input,
+                eco_vec![Label {
+                    label: label.clone(),
+                    span: *span,
+                    remove: !*remove
+                }],
+            ))
+        }
         _ => {}
     }
     None

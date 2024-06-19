@@ -998,6 +998,7 @@ code:
                 let mut instr = Instr::Label {
                     label: label.into(),
                     span: self.add_span(word.span.clone()),
+                    remove: false,
                 };
                 if !call {
                     instr = Instr::PushFunc(self.make_function(

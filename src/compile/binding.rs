@@ -276,6 +276,7 @@ impl Compiler {
                         instrs.push(Instr::Label {
                             label: name.clone(),
                             span,
+                            remove: false,
                         })
                     }
                     // Binding is a constant

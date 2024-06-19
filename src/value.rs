@@ -378,6 +378,15 @@ impl Value {
     pub fn take_per_meta(&mut self) -> PersistentMeta {
         unsafe { self.repr_mut() }.arr.take_per_meta()
     }
+    /// Set the label for the value
+    pub fn set_label(&mut self, label: Option<EcoString>) {
+        let repr = unsafe { self.repr_mut() };
+        if label.is_some() {
+            repr.arr.meta_mut().label = label;
+        } else if repr.arr.meta().label.is_some() {
+            repr.arr.meta_mut().label = None;
+        }
+    }
     /// Set the persistent metadata for the value
     pub fn set_per_meta(&mut self, per_meta: PersistentMeta) {
         unsafe { self.repr_mut() }.arr.set_per_meta(per_meta)

@@ -626,7 +626,7 @@ enum InstrRep {
     Format(EcoVec<EcoString>, usize),
     MatchFormatPattern(EcoVec<EcoString>, usize),
     StackSwizzle(EcoVec<u8>, Vec<usize>, usize),
-    Label(EcoString, usize),
+    Label(EcoString, usize, bool),
     Dynamic(DynamicFunction),
     Unpack(usize, usize, bool),
     TouchStack(usize, usize),
@@ -678,7 +678,11 @@ impl From<Instr> for InstrRep {
                     .collect();
                 Self::StackSwizzle(swizzle.indices, fix_indices, span)
             }
-            Instr::Label { label, span } => Self::Label(label, span),
+            Instr::Label {
+                label,
+                span,
+                remove,
+            } => Self::Label(label, span, remove),
             Instr::Dynamic(func) => Self::Dynamic(func),
             Instr::Unpack { count, span, unbox } => Self::Unpack(count, span, unbox),
             Instr::TouchStack { count, span } => Self::TouchStack(count, span),
@@ -725,7 +729,11 @@ impl From<InstrRep> for Instr {
                 }
                 Self::StackSwizzle(StackSwizzle { indices, fix }, span)
             }
-            InstrRep::Label(label, span) => Self::Label { label, span },
+            InstrRep::Label(label, span, remove) => Self::Label {
+                label,
+                span,
+                remove,
+            },
             InstrRep::Dynamic(func) => Self::Dynamic(func),
             InstrRep::Unpack(count, span, unbox) => Self::Unpack { count, span, unbox },
             InstrRep::TouchStack(count, span) => Self::TouchStack { count, span },

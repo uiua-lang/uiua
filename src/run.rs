@@ -547,14 +547,27 @@ code:
                     let swizzle = swizzle.clone();
                     self.with_span(*span, |env| env.stack_swizzle(&swizzle))
                 }
-                Instr::Label { label, span } => {
-                    let label = if label.is_empty() {
-                        None
-                    } else {
-                        Some(label.clone())
-                    };
-                    self.with_span(*span, |env| {
-                        env.monadic_mut(|val| val.meta_mut().label = label)
+                &Instr::Label {
+                    ref label,
+                    span,
+                    remove,
+                } => {
+                    let label = label.clone();
+                    self.with_span(span, |env| {
+                        env.monadic_mut(|val| {
+                            let label = if label.is_empty() {
+                                None
+                            } else if remove {
+                                if val.meta().label.as_ref().map_or(true, |l| l == &label) {
+                                    None
+                                } else {
+                                    Some(label)
+                                }
+                            } else {
+                                Some(label)
+                            };
+                            val.set_label(label);
+                        })
                     })
                 }
                 &Instr::Dynamic(df) => (|| {

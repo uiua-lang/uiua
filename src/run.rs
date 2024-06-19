@@ -771,6 +771,8 @@ code:
     /// Call and maintaint the stack delta if the call fails
     pub(crate) fn call_maintain_sig(&mut self, f: Function) -> UiuaResult {
         let sig = f.signature();
+        let mut args = self.stack()[self.stack().len().saturating_sub(sig.args)..].to_vec();
+        args.reverse();
         let temp_sigs = instrs_temp_signatures(f.instrs(&self.asm))
             .unwrap_or([Signature::new(0, 0); TempStack::CARDINALITY]);
         let target_height = (self.stack_height() + sig.outputs).saturating_sub(sig.args);
@@ -786,7 +788,7 @@ code:
             Ordering::Less => {
                 let diff = target_height - self.stack_height();
                 for _ in 0..diff {
-                    self.push(Value::default());
+                    self.push(args.pop().unwrap_or_default());
                 }
             }
         }
@@ -797,7 +799,7 @@ code:
                 Ordering::Less => {
                     let diff = target_height - self.temp_stack_height(temp);
                     for _ in 0..diff {
-                        self.push_temp(temp, Value::default());
+                        self.push_temp(temp, args.pop().unwrap_or_default());
                     }
                 }
             }

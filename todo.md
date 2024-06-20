@@ -1,10 +1,11 @@
 # Uiua Todo
 
 - 0.12
+  - `flop` modifier
   - Stabilize labels
   - `branch:` and `commit:` specifiers for imports
-  - `take` `&fras`/`&frab`
   - Goto definition/Ctrl+click on git imports to go to the URL
+  - `take` `&fras`/`&frab`
   - Stack-source locality tutorial
   - Rewrite .uasm format
   - Fix pad cursor jumping with end-of-line comments

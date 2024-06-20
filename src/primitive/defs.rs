@@ -1549,12 +1549,12 @@ primitive!(
     /// Here, we add a dimension to the second array to [fix] it, then collapse with `reduce``join`.
     /// ex: /⊂ ⊞(⊂⊂) ⊙¤ 1_2 3_4 5_6
     ([1], Table, IteratingModifier, ("table", '⊞')),
-    /// Apply a function to each unboxed item of an array and re-box the results
+    /// Apply a function to each unboxed row of an array and re-box the results
     ///
-    /// For box arrays, this is roughly equivalent to `each``under``un``box`.
-    /// ex: ∵⍜°□(⊂:@!) {"a" "bc" "def"}
+    /// For box arrays, this is equivalent to `rows``under``un``box`.
+    /// ex: ≡⍜°□(⊂:@!) {"a" "bc" "def"}
     ///   :    ⍚(⊂:@!) {"a" "bc" "def"}
-    /// For non-box array, [inventory] works identically to [rows], except it [box]es each result row.
+    /// For non-box arrays, [inventory] works identically to [rows], except it [box]es each result row.
     /// ex: ≡⇌ [1_2_3 4_5_6]
     ///   : ⍚⇌ [1_2_3 4_5_6]
     /// This can be useful when you expect the function to yield arrays of different [shape]s.

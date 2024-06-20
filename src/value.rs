@@ -1177,6 +1177,22 @@ impl Value {
             val => val,
         }
     }
+    /// Remove a single layer of boxing if the condition is met
+    pub fn unboxed_if(self, unbox: bool) -> Self {
+        if unbox {
+            self.unboxed()
+        } else {
+            self
+        }
+    }
+    /// Box the value if the condition is met
+    pub fn boxed_if(self, do_box: bool) -> Self {
+        if do_box {
+            Boxed(self).into()
+        } else {
+            self
+        }
+    }
     /// Turn the value into a scalar box if it is not one already
     pub fn box_if_not(&mut self) {
         match &mut *self {

@@ -22,7 +22,7 @@ fn table_impl(f: Function, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     match sig.args {
         0 => env.call(f),
-        1 => rows1(f, env.pop(1)?, env),
+        1 => rows1(f, env.pop(1)?, false, env),
         n => {
             let xs = env.pop(1)?;
             let ys = env.pop(2)?;

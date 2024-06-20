@@ -2,7 +2,7 @@
 
 use std::{cell::RefCell, collections::HashMap, iter::repeat, mem::swap, rc::Rc, slice};
 
-use ecow::{eco_vec, EcoVec};
+use ecow::eco_vec;
 
 use crate::{
     algorithm::pervade::bin_pervade_generic, cowslice::CowSlice, function::Function, random,
@@ -517,40 +517,42 @@ fn eachn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub fn rows(env: &mut Uiua) -> UiuaResult {
+pub fn rows(inv: bool, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let sig = f.signature();
     match sig.args {
         0 => env.without_fill(|env| env.call(f)),
-        1 => rows1(f, env.pop(1)?, env),
-        2 => rows2(f, env.pop(1)?, env.pop(2)?, env),
+        1 => rows1(f, env.pop(1)?, inv, env),
+        2 => rows2(f, env.pop(1)?, env.pop(2)?, inv, env),
         n => {
             let mut args = Vec::with_capacity(n);
             for i in 0..n {
                 args.push(env.pop(i + 1)?);
             }
-            rowsn(f, args, env)
+            rowsn(f, args, inv, env)
         }
     }
 }
 
-pub fn rows1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
-    if let Some((f, d)) = f_mon_fast_fn(&f, env) {
-        let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
-        if !maybe_through_boxes {
-            let val = f(xs, d + 1, env)?;
-            env.push(val);
-            return Ok(());
+pub fn rows1(f: Function, mut xs: Value, inv: bool, env: &mut Uiua) -> UiuaResult {
+    if !inv {
+        if let Some((f, d)) = f_mon_fast_fn(&f, env) {
+            let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
+            if !maybe_through_boxes {
+                let val = f(xs, d + 1, env)?;
+                env.push(val);
+                return Ok(());
+            }
         }
-    }
-    if let Some((f, d)) = f_mon2_fast_fn(&f, env) {
-        let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
-        if !maybe_through_boxes {
-            let (xs, ys) = f(xs, d + 1, env)?;
-            env.push(ys);
-            env.push(xs);
-            return Ok(());
+        if let Some((f, d)) = f_mon2_fast_fn(&f, env) {
+            let maybe_through_boxes = matches!(&xs, Value::Box(arr) if arr.rank() <= d + 1);
+            if !maybe_through_boxes {
+                let (xs, ys) = f(xs, d + 1, env)?;
+                env.push(ys);
+                env.push(xs);
+                return Ok(());
+            }
         }
     }
     let outputs = f.signature().outputs;
@@ -566,14 +568,14 @@ pub fn rows1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
             env.push(xs.proxy_row(env));
             _ = env.call_maintain_sig(f);
             for i in 0..outputs {
-                new_rows[i].push(env.pop("rows' function result")?);
+                new_rows[i].push(env.pop("rows' function result")?.boxed_if(inv));
             }
         } else {
             for row in xs.into_rows() {
-                env.push(row);
+                env.push(row.unboxed_if(inv));
                 env.call(f.clone())?;
                 for i in 0..outputs {
-                    new_rows[i].push(env.pop("rows' function result")?);
+                    new_rows[i].push(env.pop("rows' function result")?.boxed_if(inv));
                 }
             }
         }
@@ -593,7 +595,7 @@ pub fn rows1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResult {
+fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -> UiuaResult {
     let outputs = f.signature().outputs;
     let both_scalar = xs.rank() == 0 && ys.rank() == 0;
     match (xs.row_count(), ys.row_count()) {
@@ -604,19 +606,19 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             let per_meta = xs.take_per_meta();
             env.without_fill(|env| -> UiuaResult {
                 if is_empty {
-                    env.push(ys);
+                    env.push(ys.unboxed_if(inv));
                     env.push(xs.proxy_row(env));
                     _ = env.call_maintain_sig(f);
                     for i in 0..outputs {
-                        new_rows[i].push(env.pop("rows's function result")?);
+                        new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                     }
                 } else {
                     for x in xs.into_rows() {
-                        env.push(ys.clone());
-                        env.push(x);
+                        env.push(ys.clone().unboxed_if(inv));
+                        env.push(x.unboxed_if(inv));
                         env.call(f.clone())?;
                         for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?);
+                            new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                         }
                     }
                 }
@@ -642,18 +644,18 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
             env.without_fill(|env| -> UiuaResult {
                 if is_empty {
                     env.push(ys.proxy_row(env));
-                    env.push(xs);
+                    env.push(xs.unboxed_if(inv));
                     _ = env.call_maintain_sig(f);
                     for i in 0..outputs {
-                        new_rows[i].push(env.pop("rows's function result")?);
+                        new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                     }
                 } else {
                     for y in ys.into_rows() {
-                        env.push(y);
+                        env.push(y.unboxed_if(inv));
                         env.push(xs.clone());
                         env.call(f.clone())?;
                         for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?);
+                            new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                         }
                     }
                 }
@@ -708,15 +710,15 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
                     });
                     _ = env.call_maintain_sig(f);
                     for i in 0..outputs {
-                        new_rows[i].push(env.pop("rows's function result")?);
+                        new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                     }
                 } else {
                     for (x, y) in xs.into_rows().zip(ys.into_rows()) {
-                        env.push(y);
-                        env.push(x);
+                        env.push(y.unboxed_if(inv));
+                        env.push(x.unboxed_if(inv));
                         env.call(f.clone())?;
                         for i in 0..outputs {
-                            new_rows[i].push(env.pop("rows's function result")?);
+                            new_rows[i].push(env.pop("rows's function result")?.boxed_if(inv));
                         }
                     }
                 }
@@ -737,7 +739,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
     }
 }
 
-fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
+fn rowsn(f: Function, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult {
     let outputs = f.signature().outputs;
     let FixedRowsData {
         mut rows,
@@ -751,13 +753,13 @@ fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         for _ in 0..row_count {
             for arg in rows.iter_mut().rev() {
                 match arg {
-                    Ok(rows) => env.push(rows.next().unwrap()),
-                    Err(row) => env.push(row.clone()),
+                    Ok(rows) => env.push(rows.next().unwrap().unboxed_if(inv)),
+                    Err(row) => env.push(row.clone().unboxed_if(inv)),
                 }
             }
             env.call(f.clone())?;
             for i in 0..outputs {
-                new_values[i].push(env.pop("rows's function result")?);
+                new_values[i].push(env.pop("rows's function result")?.boxed_if(inv));
             }
         }
         Ok(())
@@ -772,459 +774,6 @@ fn rowsn(f: Function, args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         rowsed.validate_shape();
         rowsed.set_per_meta(per_meta.clone());
         env.push(rowsed);
-    }
-    Ok(())
-}
-
-pub fn inventory(env: &mut Uiua) -> UiuaResult {
-    crate::profile_function!();
-    let f = env.pop_function()?;
-    let sig = f.signature();
-    match sig.args {
-        0 => env.call(f),
-        1 => inventory1(f, env.pop(1)?, env),
-        2 => invertory2(f, env.pop(1)?, env.pop(2)?, env),
-        n => {
-            let mut args = Vec::with_capacity(n);
-            for i in 0..n {
-                args.push(env.pop(i + 1)?);
-            }
-            inventoryn(f, args, env)
-        }
-    }
-}
-
-fn inventory1(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
-    let outputs = f.signature().outputs;
-    let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
-    let shape = env.without_fill(|env| -> UiuaResult<Shape> {
-        Ok(match xs {
-            Value::Box(xs) => {
-                let shape = xs.shape().clone();
-                for Boxed(x) in xs.data.into_iter() {
-                    env.push(x);
-                    env.call(f.clone())?;
-                    for i in 0..outputs {
-                        new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                    }
-                }
-                shape
-            }
-            value => {
-                let shape = value.row_count().into();
-                for val in value.into_rows() {
-                    env.push(val);
-                    env.call(f.clone())?;
-                    for i in 0..outputs {
-                        new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                    }
-                }
-                shape
-            }
-        })
-    })?;
-    for new_values in new_values.into_iter().rev() {
-        let new_arr = Array::new(shape.clone(), new_values.into_iter().collect::<EcoVec<_>>());
-        env.push(new_arr);
-    }
-    Ok(())
-}
-
-fn invertory2(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResult {
-    let outputs = f.signature().outputs;
-    let mut new_values = multi_output(outputs, Vec::with_capacity(xs.element_count()));
-    let both_scalar = xs.rank() == 0 && ys.rank() == 0;
-    fn finish(
-        new_values: MultiOutput<Vec<Boxed>>,
-        new_shape: Shape,
-        both_scalar: bool,
-        env: &mut Uiua,
-    ) {
-        for new_values in new_values.into_iter().rev() {
-            let mut new_arr = Array::new(
-                new_shape.clone(),
-                new_values.into_iter().collect::<EcoVec<_>>(),
-            );
-            if both_scalar {
-                new_arr.undo_fix();
-            }
-            env.push(new_arr);
-        }
-    }
-    match (xs, ys) {
-        // Both box arrays
-        (Value::Box(mut xs), Value::Box(mut ys)) => match (xs.row_count(), ys.row_count()) {
-            (a, b) if a == b && xs.shape() == ys.shape() => {
-                let shape = xs.shape().clone();
-                env.without_fill(|env| -> UiuaResult {
-                    for (Boxed(x), Boxed(y)) in xs.data.into_iter().zip(ys.data) {
-                        env.push(y);
-                        env.push(x);
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                        }
-                    }
-                    Ok(())
-                })?;
-                finish(new_values, shape, both_scalar, env);
-                Ok(())
-            }
-            (_, 1) => {
-                let shape = xs.shape().clone();
-                env.without_fill(|env| -> UiuaResult {
-                    ys.undo_fix();
-                    for Boxed(x) in xs.data.into_iter() {
-                        env.push(ys.clone());
-                        env.push(x);
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                        }
-                    }
-                    Ok(())
-                })?;
-                finish(new_values, shape, both_scalar, env);
-                Ok(())
-            }
-            (1, _) => {
-                let shape = ys.shape().clone();
-                env.without_fill(|env| -> UiuaResult {
-                    xs.undo_fix();
-                    for Boxed(y) in ys.data {
-                        env.push(y);
-                        env.push(xs.clone());
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                        }
-                    }
-                    Ok(())
-                })?;
-                finish(new_values, shape, both_scalar, env);
-                Ok(())
-            }
-            _ => Err(env.error(format!(
-                "Cannot {} box arrays with shapes {} and {}",
-                Primitive::Inventory.format(),
-                xs.shape(),
-                ys.shape()
-            ))),
-        },
-        // Left box array
-        (Value::Box(xs), ys) if xs.rank() > 0 && ys.shape().starts_with(xs.shape()) => {
-            let shape = xs.shape().clone();
-            let ys_row_shape = ys.shape()[xs.rank()..].into();
-            env.without_fill(|env| -> UiuaResult {
-                for (Boxed(x), y) in
-                    (xs.data.into_iter()).zip(ys.into_row_shaped_slices(ys_row_shape))
-                {
-                    env.push(y);
-                    env.push(x);
-                    env.call(f.clone())?;
-                    for i in 0..outputs {
-                        new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                    }
-                }
-                Ok(())
-            })?;
-            finish(new_values, shape, both_scalar, env);
-            Ok(())
-        }
-        (Value::Box(mut xs), mut ys) if xs.rank() <= 1 => match (xs.row_count(), ys.row_count()) {
-            (a, b) if a == b => {
-                let shape = xs.shape().clone();
-                env.without_fill(|env| -> UiuaResult {
-                    for (Boxed(x), y) in xs.data.into_iter().zip(ys.into_rows()) {
-                        env.push(y);
-                        env.push(x);
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                        }
-                    }
-                    Ok(())
-                })?;
-                finish(new_values, shape, both_scalar, env);
-                Ok(())
-            }
-            (_, 1) => {
-                let shape = xs.shape().clone();
-                env.without_fill(|env| -> UiuaResult {
-                    ys.undo_fix();
-                    ys.unbox();
-                    for Boxed(x) in xs.data.into_iter() {
-                        env.push(ys.clone());
-                        env.push(x);
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                        }
-                    }
-                    Ok(())
-                })?;
-                finish(new_values, shape, both_scalar, env);
-                Ok(())
-            }
-            (1, _) => {
-                let shape = ys.shape().clone();
-                env.without_fill(|env| -> UiuaResult {
-                    xs.undo_fix();
-                    for y in ys.into_rows() {
-                        env.push(y);
-                        env.push(xs.clone());
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                        }
-                    }
-                    Ok(())
-                })?;
-                finish(new_values, shape, both_scalar, env);
-                Ok(())
-            }
-            (a, b) => Err(env.error(format!(
-                "Cannot {} box and non-box arrays with different number of rows {a} and {b}",
-                Primitive::Inventory.format()
-            ))),
-        },
-        // Right box array
-        (xs, Value::Box(ys)) if ys.rank() > 0 && xs.shape().starts_with(ys.shape()) => {
-            let shape = ys.shape().clone();
-            let xs_row_shape = xs.shape()[ys.rank()..].into();
-            env.without_fill(|env| -> UiuaResult {
-                for (x, Boxed(y)) in xs.into_row_shaped_slices(xs_row_shape).zip(ys.data) {
-                    env.push(y);
-                    env.push(x);
-                    env.call(f.clone())?;
-                    for i in 0..outputs {
-                        new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                    }
-                }
-                Ok(())
-            })?;
-            finish(new_values, shape, both_scalar, env);
-            Ok(())
-        }
-        (mut xs, Value::Box(mut ys)) if ys.rank() <= 1 => match (xs.row_count(), ys.row_count()) {
-            (a, b) if a == b => {
-                let shape = ys.shape().clone();
-                env.without_fill(|env| -> UiuaResult {
-                    for (x, Boxed(y)) in xs.into_rows().zip(ys.data) {
-                        env.push(y);
-                        env.push(x);
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                        }
-                    }
-                    Ok(())
-                })?;
-                finish(new_values, shape, both_scalar, env);
-                Ok(())
-            }
-            (_, 1) => {
-                let shape = xs.shape().clone();
-                env.without_fill(|env| -> UiuaResult {
-                    ys.undo_fix();
-                    for x in xs.into_rows() {
-                        env.push(ys.clone());
-                        env.push(x);
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                        }
-                    }
-                    Ok(())
-                })?;
-                finish(new_values, shape, both_scalar, env);
-                Ok(())
-            }
-            (1, _) => {
-                let shape = ys.shape().clone();
-                env.without_fill(|env| -> UiuaResult {
-                    xs.undo_fix();
-                    xs.unbox();
-                    for Boxed(y) in ys.data {
-                        env.push(y);
-                        env.push(xs.clone());
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_values[i].push(Boxed(env.pop("inventory's function result")?));
-                        }
-                    }
-                    Ok(())
-                })?;
-                finish(new_values, shape, both_scalar, env);
-                Ok(())
-            }
-            (a, b) => Err(env.error(format!(
-                "Cannot {} box and non-box arrays with different number of rows {a} and {b}",
-                Primitive::Inventory.format()
-            ))),
-        },
-        // Both non-box arrays
-        (mut xs, mut ys) => match (xs.row_count(), ys.row_count()) {
-            (a, b) if a == b => {
-                let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-                env.without_fill(|env| -> UiuaResult {
-                    for (x, y) in xs.into_rows().zip(ys.into_rows()) {
-                        env.push(y);
-                        env.push(x);
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_rows[i].push(Boxed(env.pop("inventory's function result")?));
-                        }
-                    }
-                    Ok(())
-                })?;
-                for new_rows in new_rows.into_iter().rev() {
-                    let mut arr = Array::from_iter(new_rows);
-                    if both_scalar {
-                        arr.undo_fix();
-                    }
-                    env.push(arr);
-                }
-                Ok(())
-            }
-            (_, 1) => {
-                ys.undo_fix();
-                ys.unbox();
-                let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
-                env.without_fill(|env| -> UiuaResult {
-                    for x in xs.into_rows() {
-                        env.push(ys.clone());
-                        env.push(x);
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_rows[i].push(Boxed(env.pop("inventory's function result")?));
-                        }
-                    }
-                    Ok(())
-                })?;
-                for new_rows in new_rows.into_iter().rev() {
-                    let mut arr = Array::from_iter(new_rows);
-                    if both_scalar {
-                        arr.undo_fix();
-                    }
-                    env.push(arr);
-                }
-                Ok(())
-            }
-            (1, _) => {
-                xs.undo_fix();
-                xs.unbox();
-                let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
-                env.without_fill(|env| -> UiuaResult {
-                    for y in ys.into_rows() {
-                        env.push(y);
-                        env.push(xs.clone());
-                        env.call(f.clone())?;
-                        for i in 0..outputs {
-                            new_rows[i].push(Boxed(env.pop("inventory's function result")?));
-                        }
-                    }
-                    Ok(())
-                })?;
-                for new_rows in new_rows.into_iter().rev() {
-                    let mut arr = Array::from_iter(new_rows);
-                    if both_scalar {
-                        arr.undo_fix();
-                    }
-                    env.push(arr);
-                }
-                Ok(())
-            }
-            (a, b) => Err(env.error(format!(
-                "Cannot {} arrays with different number of rows {a} and {b}",
-                Primitive::Inventory.format(),
-            ))),
-        },
-    }
-}
-
-fn inventoryn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
-    for a in 0..args.len() {
-        let a_can_fill = args[a].length_is_fillable(env);
-        for b in a + 1..args.len() {
-            let b_can_fill = args[b].length_is_fillable(env);
-            let mut err = None;
-            if a_can_fill {
-                let b_row_count = args[b].row_count();
-                err = args[a].fill_length_to(b_row_count, env).err();
-            }
-            if err.is_none() && b_can_fill {
-                let a_row_count = args[a].row_count();
-                err = args[b].fill_length_to(a_row_count, env).err();
-            }
-            if err.is_none()
-                && args[a].row_count() != args[b].row_count()
-                && args[a].row_count() != 1
-                && args[b].row_count() != 1
-            {
-                err = Some("");
-            }
-            if let Some(e) = err {
-                return Err(env.error(format!(
-                    "Cannot {} arrays with different number of rows, shapes {} and {}{e}",
-                    Primitive::Inventory.format(),
-                    args[a].shape(),
-                    args[b].shape(),
-                )));
-            }
-        }
-    }
-    let mut row_count = 0;
-    let mut all_scalar = true;
-    let mut all_1 = true;
-    let outputs = f.signature().outputs;
-    let is_empty = outputs > 0 && args.iter().any(|v| v.row_count() == 0);
-    let mut arg_elems: Vec<_> = args
-        .into_iter()
-        .map(|mut v| {
-            all_scalar = all_scalar && v.rank() == 0;
-            if v.row_count() == 1 {
-                if v.rank() > 0 {
-                    v.undo_fix();
-                }
-                v.unbox();
-                Err(v)
-            } else {
-                let proxy = (is_empty || v.row_count() == 0).then(|| v.proxy_row(env));
-                row_count = row_count.max(v.row_count());
-                all_1 = false;
-                Ok(v.into_rows().map(Value::unboxed).chain(proxy))
-            }
-        })
-        .collect();
-    if all_1 {
-        row_count = 1;
-    }
-    let mut new_values = multi_output(outputs, Vec::new());
-    env.without_fill(|env| -> UiuaResult {
-        for _ in 0..row_count + is_empty as usize {
-            for arg in arg_elems.iter_mut().rev() {
-                match arg {
-                    Ok(rows) => env.push(rows.next().unwrap()),
-                    Err(row) => env.push(row.clone()),
-                }
-            }
-            env.call(f.clone())?;
-            for i in 0..outputs {
-                new_values[i].push(Boxed(env.pop("inventory's function result")?));
-            }
-        }
-        Ok(())
-    })?;
-    for new_values in new_values.into_iter().rev() {
-        let mut arr = Array::<Boxed>::from_iter(new_values);
-        if all_scalar {
-            arr.undo_fix();
-        } else if is_empty {
-            arr.pop_row();
-        }
-        arr.validate_shape();
-        env.push(arr);
     }
     Ok(())
 }

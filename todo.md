@@ -2,7 +2,6 @@
 
 - 0.12
   - Stabilize labels
-  - `branch:` and `commit:` specifiers for imports
   - Goto definition/Ctrl+click on git imports to go to the URL
   - `take` `&fras`/`&frab`
   - Stack-source locality tutorial

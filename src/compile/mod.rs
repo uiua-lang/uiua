@@ -30,7 +30,7 @@ use crate::{
     lsp::{CodeMeta, SigDecl},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, parse, split_words, unsplit_words},
-    Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, DocComment, Ident,
+    Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, DocComment, GitTarget, Ident,
     ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment,
     SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS, EXAMPLE_UA, VERSION,
 };
@@ -712,12 +712,22 @@ code:
     /// Import a module
     pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
         // Resolve path
-        let path = if let Some(mut url) = path_str.strip_prefix("git:") {
-            let mut branch = None;
-            if let Some((a, b)) = url.split_once("branch:") {
-                url = a;
-                branch = Some(b.trim());
+        let path = if let Some(mut url) = path_str.trim().strip_prefix("git:") {
+            if url.contains("branch:") && url.contains("commit:") {
+                return Err(self.fatal_error(
+                    span.clone(),
+                    "Cannot specify both branch and commit in git import",
+                ));
             }
+            let target = if let Some((a, b)) = url.split_once("branch:") {
+                url = a;
+                GitTarget::Branch(b.trim().into())
+            } else if let Some((a, b)) = url.split_once("commit:") {
+                url = a;
+                GitTarget::Commit(b.trim().into())
+            } else {
+                GitTarget::Default
+            };
             // Git import
             let mut url = url.trim().trim_end_matches(".git").to_string();
             if ![".com", ".net", ".org", ".io", ".dev"]
@@ -733,7 +743,7 @@ code:
                 url = format!("https://{url}");
             }
             self.backend()
-                .load_git_module(&url, branch)
+                .load_git_module(&url, target)
                 .map_err(|e| self.fatal_error(span.clone(), e))?
         } else {
             // Normal import

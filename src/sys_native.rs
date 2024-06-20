@@ -15,7 +15,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{Handle, SysBackend};
+use crate::{GitTarget, Handle, SysBackend};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
@@ -1009,7 +1009,7 @@ impl SysBackend for NativeSys {
         crate::ffi_free(ptr);
         Ok(())
     }
-    fn load_git_module(&self, url: &str, branch: Option<&str>) -> Result<PathBuf, String> {
+    fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {
         if let Some(path) = NATIVE_SYS.git_paths.get(url) {
             if path.is_err() || path.as_ref().unwrap().exists() {
                 return path.clone();
@@ -1052,7 +1052,7 @@ impl SysBackend for NativeSys {
             if !submodule_path.exists() {
                 let submod_path = submodule_path.to_string_lossy();
                 let mut args = vec!["submodule", "add", "--force"];
-                if let Some(branch) = branch {
+                if let GitTarget::Branch(branch) = &target {
                     args.push("-b");
                     args.push(branch);
                 }
@@ -1070,6 +1070,22 @@ impl SysBackend for NativeSys {
                     let mut err = String::new();
                     stderr.read_to_string(&mut err).map_err(|e| e.to_string())?;
                     return Err(format!("Failed to add submodule: {err}"));
+                }
+                if let GitTarget::Commit(hash) = &target {
+                    std::env::set_current_dir(&*submod_path).map_err(|e| e.to_string())?;
+                    let mut child = Command::new("git")
+                        .args(["checkout", hash])
+                        .stderr(Stdio::piped())
+                        .stdout(Stdio::null())
+                        .spawn()
+                        .map_err(|e| e.to_string())?;
+                    let status = child.wait().map_err(|e| e.to_string())?;
+                    if !status.success() {
+                        let stderr = child.stderr.as_mut().unwrap();
+                        let mut err = String::new();
+                        stderr.read_to_string(&mut err).map_err(|e| e.to_string())?;
+                        return Err(format!("Failed to checkout commit: {err}"));
+                    }
                 }
             }
             Ok(path)

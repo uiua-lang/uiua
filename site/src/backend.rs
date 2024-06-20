@@ -9,7 +9,7 @@ use std::{
 
 use crate::{editor::get_ast_time, weewuh};
 use leptos::*;
-use uiua::{Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA};
+use uiua::{GitTarget, Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
@@ -350,9 +350,15 @@ impl SysBackend for WebBackend {
         while (instant::now() - start) / 1000.0 < seconds {}
         Ok(())
     }
-    fn load_git_module(&self, url: &str, branch: Option<&str>) -> Result<PathBuf, String> {
-        if branch.is_some() {
-            return Err("Git branch specification is not supported in the web backend".into());
+    fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {
+        match target {
+            GitTarget::Default => {}
+            GitTarget::Branch(_) => {
+                return Err("Git branch specification is not supported in the web backend".into())
+            }
+            GitTarget::Commit(_) => {
+                return Err("Git commit specification is not supported in the web backend".into())
+            }
         }
         let mut parts = url.rsplitn(3, '/');
         let repo_name = parts.next().ok_or("Invalid git url")?;

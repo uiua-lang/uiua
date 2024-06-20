@@ -1021,9 +1021,21 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// Load a git repo as a module
     ///
     /// The returned path should be loadable via [`SysBackend::file_read_all`]
-    fn load_git_module(&self, url: &str, branch: Option<&str>) -> Result<PathBuf, String> {
+    fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {
         Err("Loading git modules is not supported in this environment".into())
     }
+}
+
+/// A target for a git repository
+#[derive(Debug, Clone, Default)]
+pub enum GitTarget {
+    /// The latest commit on the default branch
+    #[default]
+    Default,
+    /// The latest commit on a specific branch
+    Branch(String),
+    /// A specific commit
+    Commit(String),
 }
 
 impl fmt::Debug for dyn SysBackend {

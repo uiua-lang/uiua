@@ -477,7 +477,8 @@ impl Compiler {
         match prim {
             Dip | Gap | On | By | But | With => {
                 // Compile operands
-                let (mut instrs, sig) = self.compile_operand_word(modified.operands[0].clone())?;
+                let (mut instrs, mut sig) =
+                    self.compile_operand_word(modified.operands[0].clone())?;
                 // Dip (|1 …) . diagnostic
                 if prim == Dip && sig == (1, 1) {
                     if let Some(Instr::Prim(Dup, dup_span)) =
@@ -497,50 +498,27 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 let sig = match prim {
                     Dip => {
-                        instrs.insert(
-                            0,
-                            Instr::PushTemp {
-                                stack: TempStack::Inline,
-                                count: 1,
-                                span,
-                            },
-                        );
-                        instrs.push(Instr::PopTemp {
-                            stack: TempStack::Inline,
-                            count: 1,
-                            span,
-                        });
+                        instrs.insert(0, Instr::push_inline(span));
+                        instrs.push(Instr::pop_inline(span));
                         Signature::new(sig.args + 1, sig.outputs + 1)
                     }
                     Gap => {
                         instrs.insert(0, Instr::Prim(Pop, span));
                         Signature::new(sig.args + 1, sig.outputs)
                     }
-                    prim if prim == On || prim == But && sig.args <= 1 => {
+                    prim if prim == On || prim == But && sig.args == 0 => {
                         instrs.insert(
                             0,
                             if sig.args == 0 {
-                                Instr::PushTemp {
-                                    stack: TempStack::Inline,
-                                    count: 1,
-                                    span,
-                                }
+                                Instr::push_inline(span)
                             } else {
-                                Instr::CopyToTemp {
-                                    stack: TempStack::Inline,
-                                    count: 1,
-                                    span,
-                                }
+                                Instr::copy_inline(span)
                             },
                         );
-                        instrs.push(Instr::PopTemp {
-                            stack: TempStack::Inline,
-                            count: 1,
-                            span,
-                        });
+                        instrs.push(Instr::pop_inline(span));
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
-                    prim if prim == By || prim == With && sig.args <= 1 => {
+                    prim if prim == By || prim == With && sig.args == 0 => {
                         if sig.args > 0 {
                             let mut i = 0;
                             if sig.args > 1 {
@@ -573,20 +551,23 @@ impl Compiler {
                     }
                     But => {
                         let mut i = 0;
-                        if sig.args > 1 {
-                            instrs.insert(
-                                i,
-                                Instr::PushTemp {
-                                    stack: TempStack::Inline,
-                                    count: sig.args - 1,
-                                    span,
-                                },
-                            );
+                        if sig.args < 2 {
+                            instrs.insert(0, Instr::TouchStack { count: 2, span });
+                            sig.args = 2;
                             i += 1;
                         }
+                        instrs.insert(
+                            i,
+                            Instr::PushTemp {
+                                stack: TempStack::Inline,
+                                count: sig.args - 1,
+                                span,
+                            },
+                        );
+                        i += 1;
                         instrs.insert(i, Instr::Prim(Dup, span));
                         i += 1;
-                        if sig.args > 1 {
+                        if sig.args >= 2 {
                             instrs.insert(
                                 i,
                                 Instr::PopTemp {
@@ -604,38 +585,23 @@ impl Compiler {
                             });
                             for _ in 0..sig.outputs - 1 {
                                 instrs.push(Instr::Prim(Flip, span));
-                                instrs.push(Instr::PopTemp {
-                                    stack: TempStack::Inline,
-                                    count: 1,
-                                    span,
-                                });
+                                instrs.push(Instr::pop_inline(span));
                             }
                         }
                         instrs.push(Instr::Prim(Flip, span));
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
                     With => {
-                        instrs.insert(
-                            0,
-                            Instr::CopyToTemp {
-                                stack: TempStack::Inline,
-                                count: 1,
-                                span,
-                            },
-                        );
-                        instrs.push(Instr::PopTemp {
-                            stack: TempStack::Inline,
-                            count: 1,
-                            span,
-                        });
+                        instrs.insert(0, Instr::copy_inline(span));
+                        if sig.outputs < 2 {
+                            instrs.push(Instr::TouchStack { count: 2, span });
+                            sig.outputs = 2;
+                        }
+                        instrs.push(Instr::pop_inline(span));
                         instrs.push(Instr::Prim(Flip, span));
                         if sig.outputs >= 2 {
                             for _ in 0..sig.outputs - 1 {
-                                instrs.push(Instr::PushTemp {
-                                    stack: TempStack::Inline,
-                                    count: 1,
-                                    span,
-                                });
+                                instrs.push(Instr::push_inline(span));
                                 instrs.push(Instr::Prim(Flip, span));
                             }
                             instrs.push(Instr::PopTemp {
@@ -1141,11 +1107,7 @@ impl Compiler {
                         for _ in 0..sig.args - 1 {
                             prefix.extend([
                                 Instr::ImplPrim(ImplPrimitive::UnBox, span),
-                                Instr::PopTemp {
-                                    stack: TempStack::Inline,
-                                    count: 1,
-                                    span,
-                                },
+                                Instr::pop_inline(span),
                             ]);
                         }
                     }

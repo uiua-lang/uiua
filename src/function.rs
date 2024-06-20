@@ -244,6 +244,27 @@ impl Instr {
         let val = val.into();
         Self::Push(val)
     }
+    pub(crate) fn copy_inline(span: usize) -> Self {
+        Self::CopyToTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            span,
+        }
+    }
+    pub(crate) fn push_inline(span: usize) -> Self {
+        Self::PushTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            span,
+        }
+    }
+    pub(crate) fn pop_inline(span: usize) -> Self {
+        Self::PopTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            span,
+        }
+    }
     pub(crate) fn is_compile_only(&self) -> bool {
         matches!(self, Self::PushSig(_) | Self::PopSig)
     }

@@ -475,7 +475,7 @@ impl Compiler {
             }};
         }
         match prim {
-            Dip | Gap | On | By | But => {
+            Dip | Gap | On | By | But | With => {
                 // Compile operands
                 let (mut instrs, sig) = self.compile_operand_word(modified.operands[0].clone())?;
                 // Dip (|1 …) . diagnostic
@@ -612,6 +612,38 @@ impl Compiler {
                             }
                         }
                         instrs.push(Instr::Prim(Flip, span));
+                        Signature::new(sig.args.max(1), sig.outputs + 1)
+                    }
+                    With => {
+                        instrs.insert(
+                            0,
+                            Instr::CopyToTemp {
+                                stack: TempStack::Inline,
+                                count: 1,
+                                span,
+                            },
+                        );
+                        instrs.push(Instr::PopTemp {
+                            stack: TempStack::Inline,
+                            count: 1,
+                            span,
+                        });
+                        instrs.push(Instr::Prim(Flip, span));
+                        if sig.outputs >= 2 {
+                            for _ in 0..sig.outputs - 1 {
+                                instrs.push(Instr::PushTemp {
+                                    stack: TempStack::Inline,
+                                    count: 1,
+                                    span,
+                                });
+                                instrs.push(Instr::Prim(Flip, span));
+                            }
+                            instrs.push(Instr::PopTemp {
+                                stack: TempStack::Inline,
+                                count: sig.outputs - 1,
+                                span,
+                            });
+                        }
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
                     _ => unreachable!(),

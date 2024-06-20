@@ -1759,6 +1759,26 @@ primitive!(
     ///
     /// [on] is equivalent to [fork][identity], but can often be easier to read.
     ([1], On, Stack, ("on", '⟜')),
+    /// Call a function but keep its last argument on the top of the stack
+    ///
+    /// ex: # Experimental!
+    ///   : [⤙+ 2 5]
+    ///   : [⤙- 2 5]
+    /// [but] can be used to copy a value from deep in the stack, or to move it.
+    /// ex: # Experimental!
+    ///   : [⤙⊙⊙⊙∘ 1 2 3 4]
+    ///   : [⤙⊙⊙⊙◌ 1 2 3 4]
+    ([1], But, Stack, ("but", '⤙')),
+    /// Call a function but keep its first argument under the outputs on the stack
+    ///
+    /// ex: # Experimental!
+    ///   : [⤚+ 2 5]
+    ///   : [⤚- 2 5]
+    /// [with] can be used to copy a value from the top of the stack to a position deeper, or to move it.
+    /// ex: # Experimental!
+    ///   : [⤚⊙⊙⊙∘ 1 2 3 4]
+    ///   : [⤚⋅⊙⊙∘ 1 2 3 4]
+    ([1], With, Stack, ("with", '⤚')),
     /// Duplicate a function's last argument before calling it
     ///
     /// If you want to filter out every element of an array that is not [less than] 10, you can use [keep].
@@ -1776,17 +1796,6 @@ primitive!(
     ///   : ⊜□⊸≠ @  "Hey there buddy"
     ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
     ([1], By, Stack, ("by", '⊸')),
-    /// Call a function but keep its last argument on the top of the stack
-    ///
-    /// ex: # Experimental!
-    ///   : [⫯+ 2 5]
-    ///   : [⫯- 2 5]
-    ///
-    /// [but] can be used to copy a value from deep in the stack, or to move it.
-    /// ex: # Experimental!
-    ///   : [⫯⊙⊙⊙∘ 1 2 3 4]
-    ///   : [⫯⊙⊙⊙◌ 1 2 3 4]
-    ([1], But, Stack, ("but", '⫯')),
     /// Call a function with its arguments reversed
     ///
     /// This is a modifier version of [flip].

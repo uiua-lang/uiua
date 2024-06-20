@@ -592,24 +592,23 @@ impl Compiler {
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
                     With => {
-                        instrs.insert(0, Instr::copy_inline(span));
-                        if sig.outputs < 2 {
-                            instrs.push(Instr::TouchStack { count: 2, span });
-                            sig.outputs = 2;
+                        let mut prefix = EcoVec::new();
+                        if sig.args < 2 {
+                            prefix.push(Instr::TouchStack { count: 2, span });
+                            sig.args = 2;
                         }
-                        instrs.push(Instr::pop_inline(span));
-                        instrs.push(Instr::Prim(Flip, span));
-                        if sig.outputs >= 2 {
-                            for _ in 0..sig.outputs - 1 {
-                                instrs.push(Instr::push_inline(span));
-                                instrs.push(Instr::Prim(Flip, span));
-                            }
-                            instrs.push(Instr::PopTemp {
-                                stack: TempStack::Inline,
-                                count: sig.outputs - 1,
-                                span,
-                            });
+                        prefix.push(Instr::Prim(Dup, span));
+                        for _ in 0..sig.args - 1 {
+                            prefix.push(Instr::push_inline(span));
+                            prefix.push(Instr::Prim(Flip, span));
                         }
+                        prefix.push(Instr::PopTemp {
+                            stack: TempStack::Inline,
+                            count: sig.args - 1,
+                            span,
+                        });
+                        prefix.extend(instrs);
+                        instrs = prefix;
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
                     _ => unreachable!(),

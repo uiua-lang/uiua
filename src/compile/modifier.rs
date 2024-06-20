@@ -540,7 +540,7 @@ impl Compiler {
                         });
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
-                    By => {
+                    prim if prim == By || prim == With && sig.args <= 1 => {
                         if sig.args > 0 {
                             let mut i = 0;
                             if sig.args > 1 {

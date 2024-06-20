@@ -624,6 +624,29 @@ impl Compiler {
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
+            Flop => {
+                let operand = modified.code_operands().next().unwrap().clone();
+                let (mut instrs, sig) = self.compile_operand_word(operand)?;
+                if sig.args != 2 {
+                    self.add_error(
+                        modified.modifier.span.clone(),
+                        format!(
+                            "{}'s function must be dyadic, but its signature is {}",
+                            prim, sig
+                        ),
+                    );
+                }
+                let spandex = self.add_span(modified.modifier.span.clone());
+                instrs.insert(0, Instr::Prim(Flip, spandex));
+                let sig = self.sig_of(&instrs, &modified.modifier.span)?;
+                if call {
+                    self.push_all_instrs(instrs);
+                } else {
+                    let func =
+                        self.make_function(modified.modifier.span.clone().into(), sig, instrs);
+                    self.push_instr(Instr::PushFunc(func));
+                }
+            }
             Fork => {
                 let mut operands = modified.code_operands().cloned();
                 let first_op = operands.next().unwrap();

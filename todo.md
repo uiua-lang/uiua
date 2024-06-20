@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - `flop` modifier
   - Stabilize labels
   - `branch:` and `commit:` specifiers for imports
   - Goto definition/Ctrl+click on git imports to go to the URL

@@ -1796,13 +1796,6 @@ primitive!(
     ///   : ⊜□⊸≠ @  "Hey there buddy"
     ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
     ([1], By, Stack, ("by", '⊸')),
-    /// Call a function with its arguments reversed
-    ///
-    /// This is a modifier version of [flip].
-    /// It is experimental because it is unclear whether this is a desirable direction for the language.
-    /// ex: # Experimental!
-    ///   : ¨⊂ 1 2
-    ([1], Backward, Stack, ("backward", '¨')),
     /// Call a function on two sets of values
     ///
     /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.
@@ -1829,6 +1822,13 @@ primitive!(
     /// ex: G ← ∩(=0◿:) ⟜:
     ///   : G ⇡16 3 5
     (2[1], Both, Planet, ("both", '∩')),
+    /// Call a function with its arguments reversed
+    ///
+    /// This is a modifier version of [flip].
+    /// It is experimental because it is unclear whether this is a desirable direction for the language.
+    /// ex: # Experimental!
+    ///   : ¨⊂ 1 2
+    ([1], Backward, Stack, ("backward", '¨')),
     /// Invert the behavior of a function
     ///
     /// A list of all [un]-compatible functions can be found [below](#uns).

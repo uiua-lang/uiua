@@ -338,6 +338,7 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
     let new_shape = xs.shape().clone();
     let is_empty = outputs > 0 && xs.row_count() == 0;
     let per_meta = xs.take_per_meta();
+    let rebox = matches!(xs, Value::Box(_));
     env.without_fill(|env| -> UiuaResult {
         if is_empty {
             env.push(xs.proxy_scalar(env));
@@ -347,10 +348,10 @@ fn each1(f: Function, mut xs: Value, env: &mut Uiua) -> UiuaResult {
             }
         } else {
             for val in xs.into_elements() {
-                env.push(val);
+                env.push(val.unboxed());
                 env.call(f.clone())?;
                 for i in 0..outputs {
-                    new_values[i].push(env.pop("each's function result")?);
+                    new_values[i].push(env.pop("each's function result")?.boxed_if(rebox));
                 }
             }
         }
@@ -384,6 +385,7 @@ fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
         let mut ys_shape = ys.shape().to_vec();
         let is_empty = outputs > 0 && (xs.row_count() == 0 || ys.row_count() == 0);
         let per_meta = xs.take_per_meta().xor(ys.take_per_meta());
+        let rebox = matches!(xs, Value::Box(_)) || matches!(ys, Value::Box(_));
         let (new_shape, new_values) = env.without_fill(|env| {
             if is_empty {
                 if let Some(r) = xs_shape.first_mut() {
@@ -420,11 +422,11 @@ fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
                     ys_values,
                     env,
                     |x, y, env| {
-                        env.push(y);
-                        env.push(x);
+                        env.push(y.unboxed());
+                        env.push(x.unboxed());
                         env.call(f.clone())?;
                         (0..outputs)
-                            .map(|_| env.pop("each's function result"))
+                            .map(|_| env.pop("each's function result").map(|v| v.boxed_if(rebox)))
                             .collect::<Result<MultiOutput<_>, _>>()
                     },
                 )
@@ -473,6 +475,7 @@ fn eachn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
         .unwrap()
         .clone();
     let per_meta = PersistentMeta::xor_all(args.iter_mut().map(|v| v.take_per_meta()));
+    let rebox = args.iter().any(|v| matches!(v, Value::Box(_)));
     env.without_fill(|env| -> UiuaResult {
         if is_empty {
             for arg in args.into_iter().rev() {
@@ -493,11 +496,11 @@ fn eachn(f: Function, mut args: Vec<Value>, env: &mut Uiua) -> UiuaResult {
                 .collect();
             for _ in 0..elem_count {
                 for arg in arg_elems.iter_mut().rev() {
-                    env.push(arg.next().unwrap());
+                    env.push(arg.next().unwrap().unboxed());
                 }
                 env.call(f.clone())?;
                 for i in 0..outputs {
-                    new_values[i].push(env.pop("each's function result")?);
+                    new_values[i].push(env.pop("each's function result")?.boxed_if(rebox));
                 }
             }
         }

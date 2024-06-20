@@ -624,14 +624,15 @@ impl Compiler {
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
-            Rear => {
+            Backward => {
                 let operand = modified.code_operands().next().unwrap().clone();
                 let (mut instrs, sig) = self.compile_operand_word(operand)?;
                 if sig.args != 2 {
                     self.add_error(
                         modified.modifier.span.clone(),
                         format!(
-                            "{}'s function must be dyadic, but its signature is {}",
+                            "Currently, {}'s function must be dyadic, \
+                            but its signature is {}",
                             prim, sig
                         ),
                     );

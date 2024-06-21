@@ -928,24 +928,18 @@ impl<'a> Formatter<'a> {
                         || (br.value.lines.iter().flatten())
                             .any(|word| word_is_multiline(&word.value))
                 });
+                println!("pack depth {}", depth);
                 for (i, br) in pack.branches.iter().enumerate() {
-                    let add_leading_newline = i == 0
-                        && any_multiline
-                        && !(br.value.lines.first()).is_some_and(|line| line.is_empty());
-                    if add_leading_newline {
-                        self.output.push('\n');
-                        for _ in 0..self.config.multiline_indent * (depth + 1) {
-                            self.output.push(' ');
-                        }
-                    }
-                    if i > 0 {
-                        if any_multiline {
-                            for _ in 0..(self.config.multiline_indent * depth.saturating_sub(1))
-                                .saturating_sub(2)
-                            {
+                    if i == 0 {
+                        let add_leading_newline = any_multiline
+                            && !(br.value.lines.first()).is_some_and(|line| line.is_empty());
+                        if add_leading_newline {
+                            self.output.push('\n');
+                            for _ in 0..dbg!(self.config.multiline_indent * (depth + 1)) {
                                 self.output.push(' ');
                             }
                         }
+                    } else {
                         self.output.push('|');
                         if any_multiline {
                             self.output.push(' ');

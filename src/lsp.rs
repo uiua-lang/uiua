@@ -506,7 +506,6 @@ mod server {
 
     pub struct LspDoc {
         pub input: String,
-        pub items: Vec<Item>,
         pub spans: Vec<Sp<SpanKind>>,
         pub asm: Assembly,
         pub code_meta: CodeMeta,
@@ -531,7 +530,6 @@ mod server {
             let spans = spanner.items_spans(&items);
             Self {
                 input,
-                items,
                 spans,
                 asm: spanner.asm,
                 code_meta: spanner.code_meta,

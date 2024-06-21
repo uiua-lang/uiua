@@ -1768,6 +1768,11 @@ primitive!(
     /// ex: # Experimental!
     ///   : [⤙⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤙⊙⊙⊙◌ 1 2 3 4]
+    /// [but] always takes at least 2 arguments, even if its function takes fewer.
+    /// ex! # Experimental!
+    ///   : [⤙¯ 2]
+    /// ex: # Experimental!
+    ///   : [⤙¯ 2 5]
     ([1], But, Stack, ("but", '⤙')),
     /// Call a function but keep its first argument under the outputs on the stack
     ///
@@ -1778,6 +1783,11 @@ primitive!(
     /// ex: # Experimental!
     ///   : [⤚⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤚⋅⊙⊙∘ 1 2 3 4]
+    /// [with] always takes at least 2 arguments, even if its function takes fewer.
+    /// ex! # Experimental!
+    ///   : [⤚¯ 2]
+    /// ex: # Experimental!
+    ///   : [⤚¯ 2 5]
     ([1], With, Stack, ("with", '⤚')),
     /// Duplicate a function's last argument before calling it
     ///

@@ -739,7 +739,7 @@ pub fn Editor<'a>(
                     let (line, col) = line_col(&code, end as usize);
                     let line_index = line - 1;
                     let up = key == "ArrowUp";
-                    let mut lines: Vec<String> = code.lines().map(Into::into).collect();
+                    let mut lines: Vec<String> = code.split('\n').map(Into::into).collect();
                     if up && line_index > 0 || !up && line_index < lines.len() - 1 {
                         let swap_index = if up { line_index - 1 } else { line_index + 1 };
                         lines.swap(line_index, swap_index);

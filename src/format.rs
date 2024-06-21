@@ -935,7 +935,7 @@ impl<'a> Formatter<'a> {
                             && !(br.value.lines.first()).is_some_and(|line| line.is_empty());
                         if add_leading_newline {
                             self.output.push('\n');
-                            for _ in 0..dbg!(self.config.multiline_indent * (depth + 1)) {
+                            for _ in 0..self.config.multiline_indent * (depth + 1) {
                                 self.output.push(' ');
                             }
                         }

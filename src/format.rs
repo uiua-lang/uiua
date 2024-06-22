@@ -928,7 +928,6 @@ impl<'a> Formatter<'a> {
                         || (br.value.lines.iter().flatten())
                             .any(|word| word_is_multiline(&word.value))
                 });
-                println!("pack depth {}", depth);
                 for (i, br) in pack.branches.iter().enumerate() {
                     if i == 0 {
                         let add_leading_newline = any_multiline

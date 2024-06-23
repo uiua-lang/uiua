@@ -1,14 +1,13 @@
 # Uiua Todo
 
 - 0.12
+  - Non-file modules
   - Stabilize labels
   - Goto definition/Ctrl+click on git imports to go to the URL
-  - `take` `&fras`/`&frab`
   - Stack-source locality tutorial
   - Rewrite .uasm format
   - Fix pad cursor jumping with end-of-line comments
   - Unicode literals
-  - Plots
   - Possible
     - Dynamic modules
     - `setinv` on and by inverses
@@ -17,6 +16,7 @@
     - `chunks` function?
     - Channels?
     - Stack visualization output comments?
+    - Plots?
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

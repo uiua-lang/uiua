@@ -2125,22 +2125,23 @@ fn invert_repeat_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let (input, mut instrs) = Val.invert_extract(input, comp)?;
     match input {
         [Instr::PushFunc(f), repeat @ Instr::Prim(Primitive::Repeat, span), input @ ..] => {
-            let instrs = f.instrs(&comp.asm).to_vec();
-            let inverse = invert_instrs(&instrs, comp)?;
-            let inverse = make_fn(inverse, *span, comp)?;
+            let f_instrs = f.instrs(&comp.asm).to_vec();
+            let inverse = invert_instrs(&f_instrs, comp)?;
+            instrs.extend(inverse);
+            let inverse = make_fn(instrs, *span, comp)?;
             Some((input, eco_vec![Instr::PushFunc(inverse), repeat.clone()]))
         }
-        [Instr::PushFunc(inv), Instr::PushFunc(f), Instr::ImplPrim(ImplPrimitive::RepeatWithInverse, span), input @ ..] => {
-            Some((
-                input,
-                eco_vec![
-                    Instr::PushFunc(f.clone()),
-                    Instr::PushFunc(inv.clone()),
-                    Instr::ImplPrim(ImplPrimitive::RepeatWithInverse, *span),
-                ],
-            ))
+        [Instr::PushFunc(inv), Instr::PushFunc(f), Instr::ImplPrim(ImplPrimitive::RepeatWithInverse, span), input @ ..] =>
+        {
+            instrs.extend([
+                Instr::PushFunc(f.clone()),
+                Instr::PushFunc(inv.clone()),
+                Instr::ImplPrim(ImplPrimitive::RepeatWithInverse, *span),
+            ]);
+            Some((input, instrs))
         }
         _ => None,
     }

@@ -18,6 +18,8 @@ This version is not yet released. If you are reading this on the website, then t
 - [`join ⊂`](https://uiua.org/docs/join) will rank differences greater than 1 can now extend the smaller array
 - [`un °`](https://uiua.org/docs/un) [`join ⊂`](https://uiua.org/docs/join) is now easier to combine with other inverses
 - [`repeat ⍥`](https://uiua.org/docs/repeat) can now repeat a negative number of times, which will repeat the inverse
+- [`un °`](https://uiua.org/docs/un) [`repeat ⍥`](https://uiua.org/docs/repeat) now requires the repetition count to be inside the [`un °`](https://uiua.org/docs/un) function
+  - This makes the inverted signature correct
 - [`inventory ⍚`](https://uiua.org/docs/inventory) no longer does [`each ∵`](https://uiua.org/docs/each)-like behavior
   - This got in the way more than it helped
 - Add the experimental [`triangle ◹`](https://uiua.org/docs/triangle) modifier, which calls a function on shrinking suffixes of an array's rows

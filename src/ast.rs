@@ -19,8 +19,8 @@ pub enum Item {
     Binding(Binding),
     /// An import
     Import(Import),
-    /// A test scope
-    TestScope(Sp<Vec<Item>>),
+    /// A scope
+    Module(Sp<ScopedModule>),
 }
 
 /// A binding
@@ -49,6 +49,15 @@ impl Binding {
             self.arrow_span.clone()
         })
     }
+}
+
+/// A scoped module
+#[derive(Debug, Clone)]
+pub struct ScopedModule {
+    /// The name of the scope
+    pub name: Option<Sp<Ident>>,
+    /// The items
+    pub items: Vec<Item>,
 }
 
 /// An import

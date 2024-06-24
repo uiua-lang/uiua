@@ -575,11 +575,14 @@ impl<'a> Formatter<'a> {
     }
     fn format_item(&mut self, item: &Item) {
         match item {
-            Item::TestScope(items) => {
+            Item::Module(m) => {
                 self.prev_import_function = None;
                 self.output.push_str("---");
+                if let Some(name) = &m.value.name {
+                    self.push(&name.span, &name.value);
+                }
                 self.output.push('\n');
-                self.format_items(&items.value);
+                self.format_items(&m.value.items);
                 self.output.push_str("---");
             }
             Item::Words(lines) => {

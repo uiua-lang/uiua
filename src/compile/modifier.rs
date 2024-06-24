@@ -1290,7 +1290,7 @@ impl Compiler {
                 Item::Import(import) => self
                     .import(import, None)
                     .map_err(|e| e.trace_macro(span.clone()))?,
-                Item::TestScope(_) => {
+                Item::Module(_) => {
                     self.add_error(span.clone(), "Macros may not generate test scopes")
                 }
             };

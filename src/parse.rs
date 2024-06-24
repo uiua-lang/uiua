@@ -321,6 +321,8 @@ impl<'i> Parser<'i> {
                 Item::Words(lines)
             } else if parse_scopes {
                 let start = self.try_exact(TripleMinus.into())?;
+                self.try_spaces();
+                let name = self.try_ident();
                 let items = self.items(false);
                 let span = if let Some(end) = self.try_exact(TripleMinus.into()) {
                     start.merge(end)
@@ -328,7 +330,8 @@ impl<'i> Parser<'i> {
                     self.errors.push(self.expected([TripleMinus]));
                     start
                 };
-                Item::TestScope(span.sp(items))
+                let module = ScopedModule { name, items };
+                Item::Module(span.sp(module))
             } else {
                 return None;
             }

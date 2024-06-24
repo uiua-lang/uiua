@@ -487,7 +487,7 @@ type GlyphMap = Vec<(CodeSpan, (Loc, Loc))>;
 
 impl<'a> Formatter<'a> {
     fn format_top_items(mut self, items: &[Item]) -> (String, GlyphMap) {
-        self.format_items(items);
+        self.format_items(items, 0);
         let mut output = self.output;
         while output.ends_with('\n') {
             output.pop();
@@ -497,10 +497,12 @@ impl<'a> Formatter<'a> {
         }
         (output, self.glyph_map)
     }
-    fn format_items(&mut self, items: &[Item]) {
-        for item in items {
-            self.format_item(item);
-            self.output.push('\n');
+    fn format_items(&mut self, items: &[Item], depth: usize) {
+        for (i, item) in items.iter().enumerate() {
+            if i > 0 || depth > 0 {
+                self.newline(depth);
+            }
+            self.format_item(item, depth);
         }
         // Align end-of-line comments
         if self.config.align_comments && !self.end_of_line_comments.is_empty() {
@@ -573,19 +575,37 @@ impl<'a> Formatter<'a> {
             self.output = new_output;
         }
     }
-    fn format_item(&mut self, item: &Item) {
+    fn newline(&mut self, depth: usize) {
+        self.output.push('\n');
+        self.indent(depth);
+    }
+    fn indent(&mut self, depth: usize) {
+        for _ in 0..self.config.multiline_indent * depth {
+            self.output.push(' ');
+        }
+    }
+    fn format_item(&mut self, item: &Item, depth: usize) {
+        if depth == 0 {
+            dbg!(item);
+        }
         match item {
-            Item::TestScope(items) => {
+            Item::Module(m) => {
                 self.prev_import_function = None;
                 self.output.push_str("---");
-                self.output.push('\n');
-                self.format_items(&items.value);
+                if let Some(name) = &m.value.name {
+                    self.push(&name.span, &name.value);
+                }
+                self.format_items(&m.value.items, depth + 1);
+                if self.output.ends_with('\n') {
+                    self.output.pop();
+                }
+                self.newline(depth);
                 self.output.push_str("---");
             }
             Item::Words(lines) => {
                 self.prev_import_function = None;
                 let lines = unsplit_words(lines.iter().cloned().flat_map(split_words).collect());
-                self.format_multiline_words(&lines, false, false, 0);
+                self.format_multiline_words(&lines, false, false, false, depth);
             }
             Item::Binding(binding) => {
                 match binding.words.first().map(|w| &w.value) {
@@ -624,7 +644,7 @@ impl<'a> Formatter<'a> {
                     .unwrap_or_else(|| binding.arrow_span.clone());
                 let mut lines = unsplit_words(split_words(binding.words.clone()));
                 if lines.len() == 1 {
-                    self.format_words(&lines[0], true, 0);
+                    self.format_words(&lines[0], true, depth);
                 } else {
                     lines.push(Vec::new());
                     self.format_words(
@@ -635,7 +655,7 @@ impl<'a> Formatter<'a> {
                             closed: true,
                         }))],
                         true,
-                        0,
+                        depth,
                     );
                 }
             }
@@ -873,7 +893,13 @@ impl<'a> Formatter<'a> {
                         self.output.pop();
                     }
                 }
-                self.format_multiline_words(&arr.lines, arr.signature.is_none(), true, depth + 1);
+                self.format_multiline_words(
+                    &arr.lines,
+                    arr.signature.is_none(),
+                    true,
+                    true,
+                    depth + 1,
+                );
                 if arr.boxes {
                     self.output.push('}');
                 } else {
@@ -915,7 +941,7 @@ impl<'a> Formatter<'a> {
                         self.output.pop();
                     }
                 }
-                self.format_multiline_words(&func.lines, false, true, depth + 1);
+                self.format_multiline_words(&func.lines, false, true, true, depth + 1);
                 self.output.push(')');
             }
             Word::Pack(pack) => {
@@ -954,7 +980,7 @@ impl<'a> Formatter<'a> {
                             self.output.pop();
                         }
                     }
-                    self.format_multiline_words(&br.value.lines, false, false, depth + 1);
+                    self.format_multiline_words(&br.value.lines, false, false, true, depth + 1);
                     if any_multiline
                         && br.value.lines.last().is_some_and(|line| !line.is_empty())
                         && !self.output.trim_end_matches(' ').ends_with('\n')
@@ -1115,6 +1141,7 @@ impl<'a> Formatter<'a> {
         lines: &[Vec<Sp<Word>>],
         allow_compact: bool,
         allow_leading_space: bool,
+        allow_trailing_newline: bool,
         depth: usize,
     ) {
         if lines.is_empty() {
@@ -1174,7 +1201,7 @@ impl<'a> Formatter<'a> {
             self.format_words(line, true, depth);
         }
 
-        if !compact {
+        if allow_trailing_newline && !compact {
             if depth > 0 && !lines.iter().last().is_some_and(|line| line.is_empty()) {
                 self.output.push('\n');
             }

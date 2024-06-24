@@ -201,7 +201,7 @@ pub fn parse(
             next_output_comment: 0,
             depth: 0,
         };
-        let items = parser.items(true);
+        let items = parser.items(false);
         if parser.errors.is_empty() && parser.index < parser.tokens.len() {
             parser.errors.push(
                 parser
@@ -282,13 +282,13 @@ impl<'i> Parser<'i> {
         ));
         self.errors.push(err);
     }
-    fn items(&mut self, parse_scopes: bool) -> Vec<Item> {
+    fn items(&mut self, in_scope: bool) -> Vec<Item> {
         let mut items = Vec::new();
         while self.try_exact(Newline).is_some() {
             self.try_spaces();
         }
         loop {
-            match self.try_item(parse_scopes) {
+            match self.try_item(in_scope) {
                 Some(item) => items.push(item),
                 None => {
                     if self.try_exact(Newline).is_none() {
@@ -308,7 +308,7 @@ impl<'i> Parser<'i> {
         }
         items
     }
-    fn try_item(&mut self, parse_scopes: bool) -> Option<Item> {
+    fn try_item(&mut self, in_scope: bool) -> Option<Item> {
         self.try_spaces();
         Some(if let Some(binding) = self.try_binding() {
             Item::Binding(binding)
@@ -319,18 +319,24 @@ impl<'i> Parser<'i> {
             // Convert multiline words into multiple items
             if !lines.is_empty() {
                 Item::Words(lines)
-            } else if parse_scopes {
+            } else {
+                let backup = self.index;
                 let start = self.try_exact(TripleMinus.into())?;
-                let items = self.items(false);
+                self.try_spaces();
+                let name = self.try_ident();
+                if in_scope && name.is_none() {
+                    self.index = backup;
+                    return None;
+                }
+                let items = self.items(true);
                 let span = if let Some(end) = self.try_exact(TripleMinus.into()) {
                     start.merge(end)
                 } else {
                     self.errors.push(self.expected([TripleMinus]));
                     start
                 };
-                Item::TestScope(span.sp(items))
-            } else {
-                return None;
+                let module = ScopedModule { name, items };
+                Item::Module(span.sp(module))
             }
         })
     }

@@ -173,7 +173,7 @@ impl Spanner {
         let mut spans = Vec::new();
         for item in items {
             match item {
-                Item::TestScope(items) => spans.extend(self.items_spans(&items.value)),
+                Item::Module(m) => spans.extend(self.items_spans(&m.value.items)),
                 Item::Words(lines) => {
                     for line in lines {
                         spans.extend(self.words_spans(line))

@@ -173,8 +173,8 @@ pub(crate) struct Scope {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ScopeKind {
-    /// A scope at the top level of a file
-    File,
+    /// A scope at the top level of a file or in a named module
+    Module,
     /// A temporary scope, probably for a macro
     Temp,
     /// A test scope between `---`s
@@ -184,7 +184,7 @@ enum ScopeKind {
 impl Default for Scope {
     fn default() -> Self {
         Self {
-            kind: ScopeKind::File,
+            kind: ScopeKind::Module,
             file_path: None,
             comment: None,
             names: IndexMap::new(),
@@ -493,9 +493,16 @@ code:
             (words.iter()).any(|w| matches!(&w.value, Word::SemanticComment(_)))
         }
         let mut lines = match item {
-            Item::TestScope(items) => {
+            Item::Module(module) => {
                 prev_comment.take();
-                self.in_scope(ScopeKind::Test, |env| env.items(items.value, true))?;
+                let is_test =
+                    (module.value.name.as_ref()).map_or(true, |name| name.value == "test");
+                let scope_kind = if is_test {
+                    ScopeKind::Test
+                } else {
+                    ScopeKind::Module
+                };
+                self.in_scope(scope_kind, |env| env.items(module.value.items, true))?;
                 return Ok(());
             }
             Item::Words(lines) => lines,
@@ -770,7 +777,7 @@ code:
                     format!("Cycle detected importing {}", path.to_string_lossy()),
                 ));
             }
-            let import = self.in_scope(ScopeKind::File, |env| {
+            let import = self.in_scope(ScopeKind::Module, |env| {
                 env.load_str_src(&input, &path).map(drop)
             })?;
             self.imports.insert(path.clone(), import);
@@ -1504,8 +1511,8 @@ code:
         }
         let mut hit_file = false;
         for scope in self.higher_scopes.iter().rev() {
-            if scope.kind == ScopeKind::File {
-                if hit_file || self.scope.kind == ScopeKind::File {
+            if scope.kind == ScopeKind::Module {
+                if hit_file || self.scope.kind == ScopeKind::Module {
                     break;
                 }
                 hit_file = true;
@@ -2169,7 +2176,7 @@ code:
                 .or_else(|| {
                     self.higher_scopes
                         .last()
-                        .filter(|_| self.scope.kind != ScopeKind::File)
+                        .filter(|_| self.scope.kind != ScopeKind::Module)
                         .and_then(|scope| scope.names.get(name))
                 })
                 .map_or(true, |l| l.index != local.index)

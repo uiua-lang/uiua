@@ -775,11 +775,6 @@ impl<'a> Lexer<'a> {
     }
     fn run(mut self) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>) {
         use {self::AsciiToken::*, Token::*};
-        // Initial scope delimiters
-        let start = self.loc;
-        if self.next_chars_exact(["-", "-", "-"]) {
-            self.end(TripleMinus, start);
-        }
         // Main loop
         'main: loop {
             let start = self.loc;
@@ -801,6 +796,7 @@ impl<'a> Lexer<'a> {
                 "_" => self.end(Underscore, start),
                 "|" => self.end(Bar, start),
                 ";" => self.end(Semicolon, start),
+                "-" if self.next_chars_exact(["-", "-"]) => self.end(TripleMinus, start),
                 "'" if self.next_char_exact("'") => {
                     if let Some(swiz) = self.array_swizzle() {
                         self.end(ArraySwizzle(swiz), start)
@@ -1070,14 +1066,7 @@ impl<'a> Lexer<'a> {
                     self.end(Number, start)
                 }
                 // Newlines
-                "\n" | "\r\n" => {
-                    self.end(Newline, start);
-                    // Scope delimiters
-                    let start = self.loc;
-                    if self.next_chars_exact(["-", "-", "-"]) {
-                        self.end(TripleMinus, start);
-                    }
-                }
+                "\n" | "\r\n" => self.end(Newline, start),
                 " " | "\t" => {
                     while self.next_char_exact(" ") || self.next_char_exact("\t") {}
                     self.end(Spaces, start)

@@ -504,6 +504,7 @@ pub fn switch(
         let FixedRowsData {
             mut rows,
             row_count,
+            is_empty,
             ..
         } = fixed_rows("switch", sig.outputs, args, env)?;
         // Collect functions
@@ -572,6 +573,9 @@ pub fn switch(
         // Collect output
         for output in outputs.into_iter().rev() {
             let mut new_value = Value::from_row_values(output, env)?;
+            if is_empty {
+                new_value.pop_row();
+            }
             let mut new_shape = new_shape.clone();
             new_shape.extend_from_slice(&new_value.shape()[1..]);
             *new_value.shape_mut() = new_shape;

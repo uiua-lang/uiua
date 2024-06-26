@@ -70,6 +70,7 @@ pub fn repeat(with_inverse: bool, env: &mut Uiua) -> UiuaResult {
         let FixedRowsData {
             mut rows,
             row_count,
+            is_empty,
             ..
         } = fixed_rows(Primitive::Repeat.format(), sig.outputs, args, env)?;
 
@@ -122,6 +123,9 @@ pub fn repeat(with_inverse: bool, env: &mut Uiua) -> UiuaResult {
         // Collect output
         for output in outputs.into_iter().rev() {
             let mut new_value = Value::from_row_values(output, env)?;
+            if is_empty {
+                new_value.pop_row();
+            }
             let mut new_shape = new_shape.clone();
             new_shape.extend_from_slice(&new_value.shape()[1..]);
             *new_value.shape_mut() = new_shape;

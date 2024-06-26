@@ -514,7 +514,7 @@ impl<T: Clone> Array<T> {
         U: Clone + 'static,
     {
         if TypeId::of::<T>() == TypeId::of::<U>() {
-            unsafe { std::mem::transmute(self) }
+            unsafe { std::mem::transmute::<Array<T>, Array<U>>(self) }
         } else {
             self.convert_with(Into::into)
         }

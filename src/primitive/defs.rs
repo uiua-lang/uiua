@@ -106,7 +106,7 @@ constant!(
     /// The imaginary unit
     ("i", crate::Complex::I),
     /// IEEE 754-2008's `NaN`
-    ("NaN", std::f64::NAN),
+    ("NaN", f64::NAN),
     /// The wildcard `NaN` value that equals any other number
     ("W", WILDCARD_NAN),
     /// The maximum integer that can be represented exactly

@@ -1135,7 +1135,9 @@ mod enabled {
                             bytes.copy_from_slice(
                                 &repr[offset..offset + size_of::<*const c_char>()],
                             );
-                            let ptr = unsafe { transmute::<_, *const c_char>(bytes) };
+                            let ptr = unsafe {
+                                transmute::<[u8; size_of::<*const c_char>()], *const c_char>(bytes)
+                            };
                             let c_str = unsafe { CStr::from_ptr(ptr) };
                             let s = c_str.to_str().map_err(|e| e.to_string())?;
                             rows.push(Value::from(s));
@@ -1143,7 +1145,9 @@ mod enabled {
                         FfiType::Struct { fields } => {
                             let mut bytes: [u8; size_of::<*const u8>()] = Default::default();
                             bytes.copy_from_slice(&repr[offset..offset + size_of::<*const u8>()]);
-                            let ptr = unsafe { transmute::<_, *const u8>(bytes) };
+                            let ptr = unsafe {
+                                transmute::<[u8; size_of::<*const u8>()], *const u8>(bytes)
+                            };
                             let (size, _) = struct_fields_size_align(fields);
                             let inner_repr = unsafe { slice::from_raw_parts(ptr, size) };
                             rows.push(self.struct_repr_to_value(inner_repr, fields)?);
@@ -1151,7 +1155,9 @@ mod enabled {
                         inner => {
                             let mut bytes: [u8; size_of::<*const u8>()] = Default::default();
                             bytes.copy_from_slice(&repr[offset..offset + size_of::<*const u8>()]);
-                            let ptr = unsafe { transmute::<_, *const u8>(bytes) };
+                            let ptr = unsafe {
+                                transmute::<[u8; size_of::<*const u8>()], *const u8>(bytes)
+                            };
                             let (size, _) = inner.size_align();
                             let inner_repr = unsafe { slice::from_raw_parts(ptr, size) };
                             let mut row = self

@@ -44,7 +44,6 @@ pub struct State {
     pub curr: Record,
     pub challenge: Option<ChallengeDef>,
     pub loading_module: bool,
-    pub min_height: String,
 }
 
 /// A record of a code change

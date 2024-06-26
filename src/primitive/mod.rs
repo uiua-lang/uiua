@@ -11,10 +11,7 @@ use std::{
     borrow::{BorrowMut, Cow},
     cell::RefCell,
     collections::HashMap,
-    f64::{
-        consts::{PI, TAU},
-        INFINITY,
-    },
+    f64::consts::{PI, TAU},
     fmt,
     sync::{
         atomic::{self, AtomicUsize},
@@ -274,7 +271,7 @@ macro_rules! constant {
 constant!(eta, PI / 2.0);
 constant!(pi, PI);
 constant!(tau, TAU);
-constant!(inf, INFINITY);
+constant!(inf, f64::INFINITY);
 
 /// A wrapper that nicely prints a `Primitive`
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -351,7 +348,7 @@ impl Primitive {
             Eta => Some(PI / 2.0),
             Pi => Some(PI),
             Tau => Some(TAU),
-            Infinity => Some(INFINITY),
+            Infinity => Some(f64::INFINITY),
             _ => None,
         }
     }

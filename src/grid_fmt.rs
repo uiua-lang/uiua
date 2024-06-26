@@ -1,10 +1,7 @@
 //! Pretty printing Uiua arrays
 
 use std::{
-    f64::{
-        consts::{PI, TAU},
-        INFINITY,
-    },
+    f64::consts::{PI, TAU},
     iter::once,
     mem::take,
 };
@@ -65,7 +62,7 @@ impl GridFmt for f64 {
             format!("{minus}τ")
         } else if (positive - PI / 2.0).abs() <= f64::EPSILON {
             format!("{minus}η")
-        } else if positive == INFINITY {
+        } else if positive == f64::INFINITY {
             format!("{minus}∞")
         } else if f.to_bits() == EMPTY_NAN.to_bits() || f.to_bits() == TOMBSTONE_NAN.to_bits() {
             return vec![vec!['⋅']];

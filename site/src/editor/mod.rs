@@ -133,7 +133,6 @@ pub fn Editor<'a>(
         future: Vec::new(),
         challenge,
         loading_module: false,
-        min_height: format!("{code_height_em}em"),
         curr: {
             let code = initial_code.get_untracked().unwrap();
             let len = code.chars().count() as u32;

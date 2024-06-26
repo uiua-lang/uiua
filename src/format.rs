@@ -956,10 +956,7 @@ impl<'a> Formatter<'a> {
                         let add_leading_newline = any_multiline
                             && !(br.value.lines.first()).is_some_and(|line| line.is_empty());
                         if add_leading_newline {
-                            self.output.push('\n');
-                            for _ in 0..self.config.multiline_indent * (depth + 1) {
-                                self.output.push(' ');
-                            }
+                            self.newline(depth + 1);
                         }
                     } else {
                         self.output.push('|');
@@ -982,10 +979,7 @@ impl<'a> Formatter<'a> {
                         && br.value.lines.last().is_some_and(|line| !line.is_empty())
                         && !self.output.trim_end_matches(' ').ends_with('\n')
                     {
-                        self.output.push('\n');
-                        for _ in 0..self.config.multiline_indent * depth {
-                            self.output.push(' ');
-                        }
+                        self.newline(depth);
                     }
                 }
                 self.output.push(')');
@@ -1187,7 +1181,7 @@ impl<'a> Formatter<'a> {
             self.config.multiline_indent * depth
         };
         for (i, line) in lines.iter().enumerate() {
-            if i > 0 || (prevent_compact && depth > 0) || (!compact && allow_leading_space) {
+            if i > 0 || (!compact && allow_leading_space) {
                 self.output.push('\n');
                 if !line.is_empty() {
                     for _ in 0..indent {

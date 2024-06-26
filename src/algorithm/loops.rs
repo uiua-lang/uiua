@@ -93,7 +93,7 @@ pub fn repeat(with_inverse: bool, env: &mut Uiua) -> UiuaResult {
                     Err(row) => row.clone(),
                 };
                 // println!("row: {:?}", row);
-                if n.rank() > row.rank() {
+                if n.rank() > row.rank() || is_empty {
                     rows_to_sel.push(Err(row));
                 } else {
                     let row_shape = row.shape()[n.rank()..].into();

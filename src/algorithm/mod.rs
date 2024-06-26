@@ -542,7 +542,7 @@ pub fn switch(
                     Err(row) => row.clone(),
                 };
                 // println!("row: {:?}", row);
-                if selector.rank() > row.rank() {
+                if selector.rank() > row.rank() || is_empty {
                     rows_to_sel.push(Err(row));
                 } else {
                     let row_shape = row.shape()[selector.rank()..].into();

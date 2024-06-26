@@ -804,8 +804,7 @@ impl Function {
             recursive: false,
         }
     }
-    /// Get how many arguments this function pops off the stack and how many it pushes.
-    /// Returns `None` if either of these values are dynamic.
+    /// Get the [`Signature`] of this function
     pub fn signature(&self) -> Signature {
         self.signature
     }

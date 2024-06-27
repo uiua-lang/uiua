@@ -479,6 +479,7 @@ impl<'i> Parser<'i> {
                 Token::Ident if line.is_some() => {
                     let line = line.as_mut().unwrap();
                     let ident = canonicalize_exclams(&self.input[span.byte_range()]);
+                    let ident = canonicalize_subscripts(&ident);
                     let name = span.clone().sp(ident);
                     line.items.push(name);
                 }
@@ -523,8 +524,9 @@ impl<'i> Parser<'i> {
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         let span = self.try_exact(Token::Ident)?;
-        let s: Ident = canonicalize_exclams(&self.input[span.byte_range()]);
-        Some(span.sp(s))
+        let ident = canonicalize_exclams(&self.input[span.byte_range()]);
+        let ident = canonicalize_subscripts(&ident);
+        Some(span.sp(ident))
     }
     fn try_ref(&mut self) -> Option<Sp<Word>> {
         let mut checkpoint = self.index;
@@ -1351,6 +1353,22 @@ pub fn place_exclams(ident: &str, count: usize) -> Ident {
 pub fn canonicalize_exclams(ident: &str) -> Ident {
     let num_margs = crate::parse::ident_modifier_args(ident);
     place_exclams(ident, num_margs)
+}
+
+pub fn canonicalize_subscripts(ident: &str) -> Ident {
+    // This hasty canonicalization is okay because the stricter
+    // rules about the syntax are handled in the lexer
+    ident
+        .chars()
+        .filter(|c| *c != '_')
+        .map(|c| {
+            if let Some(d) = c.to_digit(10) {
+                crate::lex::SUBSCRIPT_NUMS[d as usize]
+            } else {
+                c
+            }
+        })
+        .collect()
 }
 
 pub(crate) fn count_placeholders(words: &[Sp<Word>]) -> usize {

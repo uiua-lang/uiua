@@ -795,6 +795,8 @@ fn TutorialBindings() -> impl IntoView {
         <p><em>"Warning"</em>": It is not guaranteed that any particular non-alphanumeric character will not be used for a built-in function in the future. Use them at your own risk. Emojis are safe though."</p>
         <p>"Unlike most programming languages, binding names in Uiua "<em>"cannot"</em>" contain numbers or underscores."</p>
         <Editor example="Variable_1 ← 5"/> // Should fail
+        <p>"Bindings "<em>"can"</em>" contain subscript numbers. These will format from "<code>"__"</code>" followed by some digits. Try formatting the example below!"</p>
+        <Editor example="X__1 = 5\nSha__256 = \"TODO\""/>
         <p>"Bindings are case-sensitive."</p>
         <p>"The parser can sometimes mistake all-lowercase binding names for unformatted built-in functions."</p>
         <p>"Here, the parser thinks that "<code>"part"</code>" is "<Prim prim=Partition/>"."</p>

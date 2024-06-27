@@ -142,7 +142,7 @@ pub fn Site() -> impl IntoView {
     let mut logo_src = "/assets/uiua-logo.png";
     if visits % 8 == 0 {
         logo_src = "/assets/uiua-logo-scrambledine.png";
-    } else if Date::new_0().get_month() == 5 {
+    } else if visits % 10 == 0 || Date::new_0().get_month() == 5 {
         logo_src = "/assets/uiua-logo-pride.png";
     }
 

@@ -620,7 +620,7 @@ impl<'a> Formatter<'a> {
                 }
 
                 self.output
-                    .push_str(&crate::parse::canonicalize_exclams(&binding.name.value));
+                    .push_str(&crate::parse::canonicalize_ident(&binding.name.value));
                 self.output
                     .push_str(if binding.public { " ←" } else { " ↚" });
                 if binding.array_macro {

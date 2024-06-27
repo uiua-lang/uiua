@@ -478,8 +478,7 @@ impl<'i> Parser<'i> {
             match token {
                 Token::Ident if line.is_some() => {
                     let line = line.as_mut().unwrap();
-                    let ident = canonicalize_exclams(&self.input[span.byte_range()]);
-                    let ident = canonicalize_subscripts(&ident);
+                    let ident = canonicalize_ident(&self.input[span.byte_range()]);
                     let name = span.clone().sp(ident);
                     line.items.push(name);
                 }
@@ -524,8 +523,7 @@ impl<'i> Parser<'i> {
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
         let span = self.try_exact(Token::Ident)?;
-        let ident = canonicalize_exclams(&self.input[span.byte_range()]);
-        let ident = canonicalize_subscripts(&ident);
+        let ident = canonicalize_ident(&self.input[span.byte_range()]);
         Some(span.sp(ident))
     }
     fn try_ref(&mut self) -> Option<Sp<Word>> {
@@ -1350,12 +1348,13 @@ pub fn place_exclams(ident: &str, count: usize) -> Ident {
 }
 
 /// Rewrite the identifier with the same number of exclamation points using double and single exclamation point characters as needed
-pub fn canonicalize_exclams(ident: &str) -> Ident {
+fn canonicalize_exclams(ident: &str) -> Ident {
     let num_margs = crate::parse::ident_modifier_args(ident);
     place_exclams(ident, num_margs)
 }
 
-pub fn canonicalize_subscripts(ident: &str) -> Ident {
+/// Rewrite the identifier with numerals preceded by `__` replaced with subscript characters
+fn canonicalize_subscripts(ident: &str) -> Ident {
     // This hasty canonicalization is okay because the stricter
     // rules about the syntax are handled in the lexer
     ident
@@ -1369,6 +1368,10 @@ pub fn canonicalize_subscripts(ident: &str) -> Ident {
             }
         })
         .collect()
+}
+
+pub fn canonicalize_ident(ident: &str) -> Ident {
+    canonicalize_subscripts(&canonicalize_exclams(ident))
 }
 
 pub(crate) fn count_placeholders(words: &[Sp<Word>]) -> usize {

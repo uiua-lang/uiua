@@ -11,6 +11,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Switch functions have been replaced with a [`switch ⨬`](https://uiua.org/docs/switch) modifier
   - This makes the language more uniform
   - Code with existing switch functions in `⟨⟩`s will continue to work and will format to use `⨬` and `()`s
+- Identifiers can now contain subscript numbers
+  - They format from `__` followed by some numbers
+  - For example, `X__1` will format to `X₁`
 - [`un °`](https://uiua.org/docs/un) [`shape △`](https://uiua.org/docs/shape) now generates an array with the given shape and incrementing elements
 - [`un °`](https://uiua.org/docs/un) [`pick ⊡`](https://uiua.org/docs/pick) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
 - [`keep ▽`](https://uiua.org/docs/keep) will now cycle counts if the counts array is shorter than the counted array

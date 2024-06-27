@@ -18,6 +18,9 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{ast::PlaceholderOp, ArraySwizzle, Inputs, Primitive, StackSwizzle, WILDCARD_CHAR};
 
+/// Subscript digit characters
+pub const SUBSCRIPT_NUMS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
+
 /// Lex a Uiua source file
 pub fn lex(
     input: &str,
@@ -793,7 +796,7 @@ impl<'a> Lexer<'a> {
                 "]" => self.end(CloseBracket, start),
                 "⟨" => self.end(OpenAngle, start),
                 "⟩" => self.end(CloseAngle, start),
-                "_" => self.end(Underscore, start),
+                "_" if self.peek_char() != Some("_") => self.end(Underscore, start),
                 "|" => self.end(Bar, start),
                 ";" => self.end(Semicolon, start),
                 "-" if self.next_chars_exact(["-", "-"]) => self.end(TripleMinus, start),
@@ -1002,12 +1005,28 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 // Identifiers and unformatted glyphs
-                c if is_custom_glyph(c) || c.chars().all(is_ident_char) || c == "&" => {
+                c if is_custom_glyph(c) || c.chars().all(is_ident_char) || c == "&" || c == "_" => {
                     let mut ident = c.to_string();
                     // Collect characters
                     if !is_custom_glyph(c) {
-                        while let Some(c) = self.next_char_if_all(is_ident_char) {
-                            ident.push_str(c);
+                        // Handle identifiers beginning with __
+                        if c == "_" && self.next_char_exact("_") {
+                            ident.push_str("__");
+                            while let Some(dc) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+                                ident.push_str(dc);
+                            }
+                        }
+                        loop {
+                            if let Some(c) = self.next_char_if_all(is_ident_char) {
+                                ident.push_str(c);
+                            } else if self.next_chars_exact(["_"; 2]) {
+                                ident.push_str("__");
+                                while let Some(dc) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+                                    ident.push_str(dc);
+                                }
+                            } else {
+                                break;
+                            }
                         }
                     }
                     let mut exclam_count = 0;
@@ -1376,7 +1395,7 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
 
 /// Whether a character can be part of a Uiua identifier
 pub fn is_ident_char(c: char) -> bool {
-    c.is_alphabetic() && !"ⁿₙπτηℂλ".contains(c)
+    c.is_alphabetic() && !"ⁿₙπτηℂλ".contains(c) || SUBSCRIPT_NUMS.contains(&c)
 }
 
 /// Whether a string is a custom glyph

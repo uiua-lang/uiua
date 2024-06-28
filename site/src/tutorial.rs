@@ -1683,10 +1683,20 @@ fn TutorialModules() -> impl IntoView {
     view! {
         <Title text="Modules - Uiua Docs"/>
         <h1>"Modules"</h1>
-        <p>"Modules are a way to organize your code in Uiua. Any Uiua file can be used as a module."</p>
+        <p>"Modules are a way to organize your code in Uiua. They can either be defined in a scope, or imported from a file. Any Uiua file can be used as a module."</p>
+        <p>"Modules can be compared to namespaces in other languages."</p>
 
-        <h3 id="web-files">"Files on the Website"</h3>
-        <p>"Using modules involves loading files from the file system."</p>
+        <Hd id="scoped-modules">"Scoped Modules"</Hd>
+        <p>"Scoped modules are defined between a pair of "<code>"---"</code>"s. The first "<code>"---"</code>" should be immediately followed by a name for the module. Module names follow the same rules as other bindings."</p>
+        <p>"Bindings defined inside a scoped module are only visible inside the module."</p>
+        <Editor example="---Mod\nA ← 5\nF ← +1\nG ← F F\n---\nG A"/> // Should fail
+        <p>"Names from inside the module can be referenced by following the module name with a "<code>"~"</code>"."</p>
+        <Editor example="---Mod\nA ← 5\nF ← +1\nG ← F F\n---\nMod~G Mod~A"/>
+        <p>"Names defined above the module can be referenced inside it."</p>
+        <Editor example="B ← 5\n---Mod\nC ← ×2 B\n---\nMod~C"/>
+
+        <Hd id="web-files">"Files on the Website"</Hd>
+        <p>"Using files as modules involves loading files from the file system."</p>
         <p>"This website has a virtual file system. You can write to virtual files with "<Prim prim=Sys(SysOp::FWriteAll)/>". You can also drag and drop files from your computer into the editor to make them available to import."</p>
         <p>"There is also a test module that can always be imported as "<code>"example.ua"</code>". Its contents is:"</p>
         <Editor example=EXAMPLE_UA/>
@@ -1726,9 +1736,9 @@ fn TutorialModules() -> impl IntoView {
         <p>"Modules can be imported from Git repositories. Instead of a path, use a URL prefixed with "<code>"git:"</code>"."</p>
         <p>"The Uiua GitHub organization hosts an example module at "<a href="https://github.com/uiua-lang/example-module">"https://github.com/uiua-lang/example-module"</a>". The protocol specification can be omitted."</p>
         <Editor example="~ \"git: github.com/uiua-lang/example-module\" ~ Upscale\nUpscale 3 [1_2 3_4]"/>
-        <p>"On the site, code is pulled from a "<code>"lib.ua"</code>" file at the root of the repository. Loading other files is not supported."</p>
-        <p>"To use Git modules in the "<A href="/docs/install">"native interpreter"</A>", you must have Git installed. The repository is added as a Git submodule and the "<code>"lib.ua"</code>" file is loaded as the module's contents."</p>
-        <p>"The native interpreter also supports adding an additional "<code>"branch: <branch-name>"</code>" specifier after the URL."</p>
+        <p>"On the site, code is pulled from a "<code>"lib.ua"</code>" file at the root of the repository. Loading other files on the site is not supported."</p>
+        <p>"To use Git modules in the "<A href="/docs/install">"native interpreter"</A>", you must have Git installed. The repository is added as a Git submodule and the "<code>"lib.ua"</code>" file is loaded as the module's contents. Code from other files can be made available by importing them as modules in the "<code>"lib.ua"</code>" file."</p>
+        <p>"The native interpreter also supports adding an additional "<code>"branch: <branch-name>"</code>" or "<code>"commit: <commit-hash>"</code>" specifier after the URL."</p>
         <p>"You can find a curated list of Uiua modules "<a href="https://github.com/uiua-lang/uiua-modules">"here"</a>"."</p>
     }
 }
@@ -1740,20 +1750,20 @@ fn TutorialTesting() -> impl IntoView {
         <Title text="Testing - Uiua Docs"/>
         <h1>"Testing"</h1>
         <Hd id="test-scopes">"Test Scopes"</Hd>
-        <p>"Test scopes are regions of code that are delimited with "<code>"---"</code>"s at the top level of a file. They are meant to be used with "<Prim prim=Assert/>"."</p>
-        <Editor example="Square ← ×.\n---\n⍤.=9 Square 3\n⍤.=225 Square 15\n---"/>
+        <p>"A "<A href="/tutorial/modules#scoped-modules">"scoped module"</A>" with the name "<code>"test"</code>" is special in that is only run when the code is run with "<code>"uiua test"</code>". It is meant to be used with "<Prim prim=Assert/>"."</p>
+        <Editor example="Square ← ×.\n---test\n⍤.=9 Square 3\n⍤.=225 Square 15\n---"/>
         <p><Prim prim=Assert/>" will return an error when its second argument is anything other than "<code>"1"</code>"."</p>
-        <Editor example="Square ← ×.\n---\n⍤.=25 Square 4\n---"/> // Should fail
+        <Editor example="Square ← ×.\n---test\n⍤.=25 Square 4\n---"/> // Should fail
         <p>"The first argument to "<Prim prim=Assert/>" is the value that will be thrown if the assertion fails. In the examples above, we have simply been "<Prim prim=Dup/>"ing the test value. We can throw a message instead."</p>
         <Editor example=r#"Square ← ×.
----
+---test
 ⍤"3² is not 9!" =9 Square 3
 ⍤"4² is not 25!" =25 Square 4
 ---"#/>
         <p>"One nice pattern for writing tests is to put the expected result before the test computation and use "<Prims prims=[Assert, On, Match, Flip]/>"."</p>
         <p>"If the result does not match the expectation, that incorrect result will be thrown."</p>
-        <Editor example="---\n⍤⟜≍: 4 +2 2 # Passes\n---"/>
-        <Editor example="---\n⍤⟜≍: [2 3 5] +1 [1 2 3]\n--- # ↓↓↓↓↓↓↓"/> // Should fail
+        <Editor example="---test\n⍤⟜≍: 4 +2 2 # Passes\n---"/>
+        <Editor example="---test\n⍤⟜≍: [2 3 5] +1 [1 2 3]\n---\n#     ↓↓↓↓↓↓"/> // Should fail
 
         <Hd id="run-modes">"Run Modes"</Hd>
         <p>"Whether tests will run or not depends on how you run the code."</p>

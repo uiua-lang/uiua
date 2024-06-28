@@ -6,8 +6,8 @@ use serde::*;
 
 use crate::{
     is_ident_char, CodeSpan, DynamicFunction, FuncSlice, Function, Ident, ImplPrimitive, InputSrc,
-    Instr, IntoInputSrc, LocalName, Primitive, Signature, Span, StackSwizzle, TempStack, Uiua,
-    UiuaResult, Value,
+    Instr, IntoInputSrc, LocalName, Module, Primitive, Signature, Span, StackSwizzle, TempStack,
+    Uiua, UiuaResult, Value,
 };
 
 /// A compiled Uiua assembly
@@ -325,8 +325,10 @@ pub enum BindingKind {
     Const(Option<Value>),
     /// A function
     Func(Function),
-    /// A module
-    Module(PathBuf),
+    /// An imported module
+    Import(PathBuf),
+    /// A scoped module
+    Module(Module),
     /// A macro
     Macro,
 }
@@ -337,7 +339,8 @@ impl BindingKind {
         match self {
             Self::Const(_) => Some(Signature::new(0, 1)),
             Self::Func(func) => Some(func.signature()),
-            Self::Module { .. } => None,
+            Self::Import { .. } => None,
+            Self::Module(_) => None,
             Self::Macro => None,
         }
     }

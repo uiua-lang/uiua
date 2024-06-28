@@ -412,7 +412,7 @@ impl Compiler {
             };
             self.asm.add_global_at(
                 local,
-                BindingKind::Module(module_path.clone()),
+                BindingKind::Import(module_path.clone()),
                 Some(name.span.clone()),
                 prev_com
                     .or_else(|| imported.comment.clone())

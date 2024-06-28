@@ -54,10 +54,19 @@ impl Binding {
 /// A scoped module
 #[derive(Debug, Clone)]
 pub struct ScopedModule {
-    /// The name of the scope
-    pub name: Option<Sp<Ident>>,
+    /// The module kind
+    pub kind: ModuleKind,
     /// The items
     pub items: Vec<Item>,
+}
+
+/// The kind of a module
+#[derive(Debug, Clone)]
+pub enum ModuleKind {
+    /// A named module
+    Named(Sp<Ident>),
+    /// A test scope
+    Test,
 }
 
 /// An import

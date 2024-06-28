@@ -589,7 +589,7 @@ impl<'a> Formatter<'a> {
             Item::Module(m) => {
                 self.prev_import_function = None;
                 self.output.push_str("---");
-                if let Some(name) = &m.value.name {
+                if let ModuleKind::Named(name) = &m.value.kind {
                     self.push(&name.span, &name.value);
                 }
                 self.format_items(&m.value.items, depth + 1);

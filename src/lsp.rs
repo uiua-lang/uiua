@@ -265,7 +265,7 @@ impl Spanner {
         if comment.is_none() {
             match &binfo.kind {
                 BindingKind::Const(None) => comment = Some("constant".into()),
-                BindingKind::Module { .. } => comment = Some("module".into()),
+                BindingKind::Import(_) => comment = Some("module".into()),
                 BindingKind::Macro => comment = Some("macro".into()),
                 _ => {}
             }
@@ -289,7 +289,7 @@ impl Spanner {
             BindingKind::Macro => {
                 BindingDocsKind::Modifier(binfo.span.as_str(self.inputs(), ident_modifier_args))
             }
-            BindingKind::Module { .. } => BindingDocsKind::Module,
+            BindingKind::Import(_) | BindingKind::Module(_) => BindingDocsKind::Module,
         };
         BindingDocs {
             src_span: binfo.span.clone(),
@@ -894,7 +894,7 @@ mod server {
                     BindingKind::Const(_) => CompletionItemKind::CONSTANT,
                     BindingKind::Func(_) => CompletionItemKind::FUNCTION,
                     BindingKind::Macro => CompletionItemKind::FUNCTION,
-                    BindingKind::Module { .. } => CompletionItemKind::MODULE,
+                    BindingKind::Import(_) | BindingKind::Module(_) => CompletionItemKind::MODULE,
                 };
                 CompletionItem {
                     label: name.clone(),
@@ -932,7 +932,7 @@ mod server {
                     span.end.line as usize == line && span.end.col as usize == col
                 })
             {
-                if let BindingKind::Module(module) = &doc.asm.bindings[*index].kind {
+                if let BindingKind::Import(module) = &doc.asm.bindings[*index].kind {
                     let mut completions = Vec::new();
                     let mut span = span.clone();
                     span.start = span.end;
@@ -1018,7 +1018,7 @@ mod server {
                     continue;
                 };
 
-                if let BindingKind::Module(module) = &binding.kind {
+                if let BindingKind::Import(module) = &binding.kind {
                     for binding in self.bindings_in_file(doc_uri, module) {
                         if !binding.public {
                             continue;

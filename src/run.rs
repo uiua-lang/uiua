@@ -467,7 +467,7 @@ code:
                             self.rt.function_stack.push(f);
                             Ok(())
                         }
-                        BindingKind::Module { .. } => Err(self.error(
+                        BindingKind::Import { .. } | BindingKind::Module(_) => Err(self.error(
                             "Called module global. \
                             This is a bug in the interpreter.",
                         )),

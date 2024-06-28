@@ -323,8 +323,12 @@ impl<'i> Parser<'i> {
                 let backup = self.index;
                 let start = self.try_exact(TripleMinus.into())?;
                 self.try_spaces();
-                let name = self.try_ident();
-                if in_scope && name.is_none() {
+                let kind = match self.try_ident() {
+                    Some(name) if name.value == "test" => ModuleKind::Test,
+                    Some(name) => ModuleKind::Named(name),
+                    None => ModuleKind::Test,
+                };
+                if in_scope && matches!(kind, ModuleKind::Test) {
                     self.index = backup;
                     return None;
                 }
@@ -335,7 +339,7 @@ impl<'i> Parser<'i> {
                     self.errors.push(self.expected([TripleMinus]));
                     start
                 };
-                let module = ScopedModule { name, items };
+                let module = ScopedModule { kind, items };
                 Item::Module(span.sp(module))
             }
         })

@@ -18,6 +18,7 @@ use std::{
 use ecow::{eco_vec, EcoString, EcoVec};
 use indexmap::IndexMap;
 use instant::Duration;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
@@ -55,7 +56,7 @@ pub struct Compiler {
     /// The paths of files currently being imported (used to detect import cycles)
     current_imports: Vec<PathBuf>,
     /// The bindings of imported files
-    imports: HashMap<PathBuf, Import>,
+    imports: HashMap<PathBuf, Module>,
     /// Unexpanded stack macros
     stack_macros: HashMap<usize, StackMacro>,
     /// Unexpanded array macros
@@ -108,14 +109,14 @@ impl Default for Compiler {
     }
 }
 
-/// An imported module
-#[derive(Clone)]
-pub struct Import {
+/// A Uiua module
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Module {
     /// The top level comment
     pub comment: Option<EcoString>,
     /// Map module-local names to global indices
     names: IndexMap<Ident, LocalName>,
-    /// Whether the import uses experimental features
+    /// Whether the module uses experimental features
     experimental: bool,
 }
 
@@ -173,7 +174,9 @@ pub(crate) struct Scope {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ScopeKind {
-    /// A scope at the top level of a file or in a named module
+    /// A scope at the top level of a file
+    File,
+    /// A scope in a named module
     Module,
     /// A temporary scope, probably for a macro
     Temp,
@@ -184,7 +187,7 @@ enum ScopeKind {
 impl Default for Scope {
     fn default() -> Self {
         Self {
-            kind: ScopeKind::Module,
+            kind: ScopeKind::File,
             file_path: None,
             comment: None,
             names: IndexMap::new(),
@@ -197,7 +200,7 @@ impl Default for Scope {
 }
 
 /// The index of a named local in the bindings, and whether it is public
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub(crate) struct LocalName {
     pub index: usize,
     pub public: bool,
@@ -351,7 +354,7 @@ impl Compiler {
         &mut self,
         kind: ScopeKind,
         f: impl FnOnce(&mut Self) -> UiuaResult<T>,
-    ) -> UiuaResult<Import> {
+    ) -> UiuaResult<Module> {
         let experimental = self.scope.experimental;
         self.higher_scopes.push(take(&mut self.scope));
         self.scope.kind = kind;
@@ -359,7 +362,7 @@ impl Compiler {
         let res = f(self);
         let scope = replace(&mut self.scope, self.higher_scopes.pop().unwrap());
         res?;
-        Ok(Import {
+        Ok(Module {
             comment: scope.comment,
             names: scope.names,
             experimental: scope.experimental,
@@ -493,17 +496,9 @@ code:
             (words.iter()).any(|w| matches!(&w.value, Word::SemanticComment(_)))
         }
         let mut lines = match item {
-            Item::Module(module) => {
-                prev_comment.take();
-                let is_test =
-                    (module.value.name.as_ref()).map_or(true, |name| name.value == "test");
-                let scope_kind = if is_test {
-                    ScopeKind::Test
-                } else {
-                    ScopeKind::Module
-                };
-                self.in_scope(scope_kind, |env| env.items(module.value.items, true))?;
-                return Ok(());
+            Item::Module(m) => {
+                let prev_com = prev_comment.take();
+                return self.module(m, prev_com);
             }
             Item::Words(lines) => lines,
             Item::Binding(binding) => {
@@ -777,13 +772,13 @@ code:
                     format!("Cycle detected importing {}", path.to_string_lossy()),
                 ));
             }
-            let import = self.in_scope(ScopeKind::Module, |env| {
+            let import = self.in_scope(ScopeKind::File, |env| {
                 env.load_str_src(&input, &path).map(drop)
             })?;
             self.imports.insert(path.clone(), import);
         }
-        let import = self.imports.get(&path).unwrap();
-        if import.experimental {
+        let module = self.imports.get(&path).unwrap();
+        if module.experimental {
             self.experimental_error(span, || {
                 format!(
                     "Module `{path_str}` is experimental. \
@@ -810,6 +805,37 @@ code:
         } else {
             pathdiff::diff_paths(&target, base).unwrap_or(target)
         }
+    }
+    fn module(&mut self, m: Sp<ScopedModule>, prev_com: Option<EcoString>) -> UiuaResult {
+        let m = m.value;
+        let scope_kind = match m.kind {
+            ModuleKind::Named(_) => ScopeKind::Module,
+            ModuleKind::Test => ScopeKind::Test,
+        };
+        let in_test = matches!(m.kind, ModuleKind::Test);
+        let module = self.in_scope(scope_kind, |env| env.items(m.items, in_test))?;
+        match m.kind {
+            ModuleKind::Named(name) => {
+                let global_index = self.next_global;
+                self.next_global += 1;
+                let local = LocalName {
+                    index: global_index,
+                    public: true,
+                };
+                let comment = prev_com
+                    .or_else(|| module.comment.clone())
+                    .map(|text| DocComment::from(text.as_str()));
+                self.asm.add_global_at(
+                    local,
+                    BindingKind::Module(module),
+                    Some(name.span.clone()),
+                    comment,
+                );
+                self.scope.names.insert(name.value.clone(), local);
+            }
+            ModuleKind::Test => {}
+        }
+        Ok(())
     }
     fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<EcoVec<Instr>> {
         let words = unsplit_words(split_words(words))
@@ -1482,16 +1508,12 @@ code:
     }
     fn ref_local(&self, r: &Ref) -> UiuaResult<(Vec<LocalName>, LocalName)> {
         if let Some((module, path_locals)) = self.ref_path(&r.path, r.in_macro_arg)? {
-            if let Some(local) = self.imports[&module].names.get(&r.name.value).copied() {
+            if let Some(local) = module.names.get(&r.name.value).copied() {
                 Ok((path_locals, local))
             } else {
                 Err(self.fatal_error(
                     r.name.span.clone(),
-                    format!(
-                        "Item `{}` not found in module `{}`",
-                        r.name.value,
-                        module.display()
-                    ),
+                    format!("Item `{}` not found", r.name.value,),
                 ))
             }
         } else if let Some(local) = self.find_name(&r.name.value, r.in_macro_arg) {
@@ -1511,8 +1533,8 @@ code:
         }
         let mut hit_file = false;
         for scope in self.higher_scopes.iter().rev() {
-            if scope.kind == ScopeKind::Module {
-                if hit_file || self.scope.kind == ScopeKind::Module {
+            if scope.kind == ScopeKind::File {
+                if hit_file || self.scope.kind == ScopeKind::File {
                     break;
                 }
                 hit_file = true;
@@ -1527,7 +1549,7 @@ code:
         &self,
         path: &[RefComponent],
         skip_local: bool,
-    ) -> UiuaResult<Option<(PathBuf, Vec<LocalName>)>> {
+    ) -> UiuaResult<Option<(&Module, Vec<LocalName>)>> {
         let Some(first) = path.first() else {
             return Ok(None);
         };
@@ -1543,6 +1565,7 @@ code:
         path_locals.push(module_local);
         let global = &self.asm.bindings[module_local.index].kind;
         let mut module = match global {
+            BindingKind::Import(path) => &self.imports[path],
             BindingKind::Module(module) => module,
             BindingKind::Func(_) => {
                 return Err(self.fatal_error(
@@ -1564,23 +1587,20 @@ code:
             }
         };
         for comp in path.iter().skip(1) {
-            let submod_local = self.imports[module]
+            let submod_local = module
                 .names
                 .get(&comp.module.value)
                 .copied()
                 .ok_or_else(|| {
                     self.fatal_error(
                         comp.module.span.clone(),
-                        format!(
-                            "Module `{}` not found in module `{}`",
-                            comp.module.value,
-                            module.display()
-                        ),
+                        format!("Module `{}` not found", comp.module.value),
                     )
                 })?;
             path_locals.push(submod_local);
             let global = &self.asm.bindings[submod_local.index].kind;
             module = match global {
+                BindingKind::Import(path) => &self.imports[path],
                 BindingKind::Module(module) => module,
                 BindingKind::Func(_) => {
                     return Err(self.fatal_error(
@@ -1603,7 +1623,7 @@ code:
             };
         }
 
-        Ok(Some((module.clone(), path_locals)))
+        Ok(Some((module, path_locals)))
     }
     fn reference(&mut self, r: Ref, call: bool) -> UiuaResult {
         if r.path.is_empty() {
@@ -1708,7 +1728,9 @@ code:
                     self.push_instr(Instr::Call(span));
                 }
             }
-            BindingKind::Module { .. } => self.add_error(span, "Cannot import module item here."),
+            BindingKind::Import { .. } | BindingKind::Module(_) => {
+                self.add_error(span, "Cannot import module item here.")
+            }
             BindingKind::Macro => {
                 // We could error here, but it's easier to handle it higher up
             }

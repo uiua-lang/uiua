@@ -1,7 +1,10 @@
 # Uiua Todo
 
 - 0.12
-  - Non-file modules
+  - Use `'` for modules
+  - Deprecate swizzles
+  - Use `;` for line splitting
+  - Make branch for `but`/`with` stabilization and `,` deprecation
   - Stabilize labels
   - Goto definition/Ctrl+click on git imports to go to the URL
   - Stack-source locality tutorial

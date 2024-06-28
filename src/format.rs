@@ -589,12 +589,18 @@ impl<'a> Formatter<'a> {
             Item::Module(m) => {
                 self.prev_import_function = None;
                 self.output.push_str("---");
-                if let ModuleKind::Named(name) = &m.value.kind {
-                    self.push(&name.span, &name.value);
+                match &m.value.kind {
+                    ModuleKind::Named(name) => self.push(&name.span, &name.value),
+                    ModuleKind::Test => self.output.push_str("test"),
                 }
                 let subdepth = match m.value.kind {
                     ModuleKind::Named(_) => depth + 1,
-                    ModuleKind::Test => depth,
+                    ModuleKind::Test => {
+                        if depth == 0 {
+                            self.newline(depth);
+                        }
+                        depth
+                    }
                 };
                 self.format_items(&m.value.items, subdepth);
                 if self.output.ends_with('\n') {

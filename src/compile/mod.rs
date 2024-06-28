@@ -642,7 +642,7 @@ code:
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
         }
-        let start = self.asm.instrs.len();
+        let start = if len == 0 { 0 } else { self.asm.instrs.len() };
         let mut hasher = DefaultHasher::new();
         instrs.hash(&mut hasher);
         let hash = hasher.finish();

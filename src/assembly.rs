@@ -46,8 +46,20 @@ impl From<&Assembly> for Assembly {
 
 impl Assembly {
     /// Get the instructions of a function slice
+    #[track_caller]
     pub fn instrs(&self, slice: FuncSlice) -> &[Instr] {
-        &self.instrs[slice.start..slice.end()]
+        let end = slice.end();
+        assert!(
+            slice.start <= self.instrs.len(),
+            "Func slice start {} out of bounds",
+            slice.start
+        );
+        assert!(
+            slice.end() <= self.instrs.len(),
+            "Func slice end {} out of bounds",
+            end
+        );
+        &self.instrs[slice.start..end]
     }
     /// Get the mutable instructions of a function slice
     pub fn instrs_mut(&mut self, slice: FuncSlice) -> &mut [Instr] {

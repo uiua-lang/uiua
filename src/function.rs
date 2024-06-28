@@ -817,6 +817,7 @@ impl Function {
         self.slice
     }
     /// Get the function's instructions
+    #[track_caller]
     pub fn instrs<'a>(&self, asm: &'a Assembly) -> &'a [Instr] {
         asm.instrs(self.slice)
     }

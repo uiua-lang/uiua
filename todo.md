@@ -1,10 +1,9 @@
 # Uiua Todo
 
 - 0.12
-  - Use `'` for modules
   - Deprecate swizzles
-  - Make branch for `but`/`with` stabilization and `,` deprecation
   - Stabilize labels
+  - `orient` boxed
   - Goto definition/Ctrl+click on git imports to go to the URL
   - Stack-source locality tutorial
   - Rewrite .uasm format

@@ -832,6 +832,9 @@ code:
                     comment,
                 );
                 self.scope.names.insert(name.value.clone(), local);
+                self.code_meta
+                    .global_references
+                    .insert(name.clone(), local.index);
             }
             ModuleKind::Test => {}
         }

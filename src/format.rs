@@ -592,7 +592,11 @@ impl<'a> Formatter<'a> {
                 if let ModuleKind::Named(name) = &m.value.kind {
                     self.push(&name.span, &name.value);
                 }
-                self.format_items(&m.value.items, depth + 1);
+                let subdepth = match m.value.kind {
+                    ModuleKind::Named(_) => depth + 1,
+                    ModuleKind::Test => depth,
+                };
+                self.format_items(&m.value.items, subdepth);
                 if self.output.ends_with('\n') {
                     self.output.pop();
                 }

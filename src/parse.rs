@@ -967,9 +967,9 @@ impl<'i> Parser<'i> {
             spaces
         } else if let Some(word) = self.try_func() {
             word
-        } else if let Some(span) = self.try_exact(Quote.into()) {
+        } else if let Some(span) = self.try_exact(Semicolon.into()) {
             span.sp(Word::BreakLine)
-        } else if let Some(span) = self.try_exact(Quote2.into()) {
+        } else if let Some(span) = self.try_exact(DoubleSemicolon.into()) {
             span.sp(Word::UnbreakLine)
         } else if let Some(span) = self.try_exact(Semicolon.into()) {
             span.sp(Word::SemicolonPop)

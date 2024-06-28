@@ -622,6 +622,7 @@ pub enum AsciiToken {
     Underscore,
     Bar,
     Semicolon,
+    DoubleSemicolon,
     Star,
     Percent,
     Caret,
@@ -650,6 +651,7 @@ impl fmt::Display for AsciiToken {
             AsciiToken::Underscore => write!(f, "_"),
             AsciiToken::Bar => write!(f, "|"),
             AsciiToken::Semicolon => write!(f, ";"),
+            AsciiToken::DoubleSemicolon => write!(f, ";;"),
             AsciiToken::Star => write!(f, "*"),
             AsciiToken::Percent => write!(f, "%"),
             AsciiToken::Caret => write!(f, "^"),
@@ -798,6 +800,7 @@ impl<'a> Lexer<'a> {
                 "⟩" => self.end(CloseAngle, start),
                 "_" if self.peek_char() != Some("_") => self.end(Underscore, start),
                 "|" => self.end(Bar, start),
+                ";" if self.next_char_exact(";") => self.end(DoubleSemicolon, start),
                 ";" => self.end(Semicolon, start),
                 "-" if self.next_chars_exact(["-", "-"]) => self.end(TripleMinus, start),
                 "'" if self.next_char_exact("'") => {

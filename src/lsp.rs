@@ -9,7 +9,7 @@ use std::{
 
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
-    ast::{Item, Modifier, PlaceholderOp, Ref, RefComponent, Word},
+    ast::{Item, Modifier, ModuleKind, PlaceholderOp, Ref, RefComponent, Word},
     ident_modifier_args, instrs_are_pure,
     lex::{CodeSpan, Sp},
     parse::parse,
@@ -173,7 +173,16 @@ impl Spanner {
         let mut spans = Vec::new();
         for item in items {
             match item {
-                Item::Module(m) => spans.extend(self.items_spans(&m.value.items)),
+                Item::Module(m) => {
+                    match &m.value.kind {
+                        ModuleKind::Named(name) => {
+                            let binding_docs = self.binding_docs(&name.span);
+                            spans.push(name.span.clone().sp(SpanKind::Ident(binding_docs)));
+                        }
+                        ModuleKind::Test => {}
+                    }
+                    spans.extend(self.items_spans(&m.value.items));
+                }
                 Item::Words(lines) => {
                     for line in lines {
                         spans.extend(self.words_spans(line))
@@ -265,9 +274,10 @@ impl Spanner {
         if comment.is_none() {
             match &binfo.kind {
                 BindingKind::Const(None) => comment = Some("constant".into()),
-                BindingKind::Import(_) => comment = Some("module".into()),
+                BindingKind::Import(_) | BindingKind::Module(_) => comment = Some("module".into()),
                 BindingKind::Macro => comment = Some("macro".into()),
-                _ => {}
+                BindingKind::Func(_) => {}
+                BindingKind::Const(_) => {}
             }
         }
         let kind = match &binfo.kind {

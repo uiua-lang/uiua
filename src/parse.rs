@@ -787,11 +787,11 @@ impl<'i> Parser<'i> {
         for i in 0..modifier.args() {
             loop {
                 args.extend(self.try_spaces());
-                if let Some(span) = self.try_exact(Quote.into()) {
+                if let Some(span) = self.try_exact(Semicolon.into()) {
                     self.errors.push(span.sp(ParseError::SplitInModifier));
                     continue;
                 }
-                if let Some(span) = self.try_exact(Quote2.into()) {
+                if let Some(span) = self.try_exact(DoubleSemicolon.into()) {
                     self.errors.push(span.sp(ParseError::UnsplitInModifier));
                     continue;
                 }

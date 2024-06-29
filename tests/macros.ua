@@ -71,3 +71,10 @@ E! ←^ $"_" e ◌
 
 F! ←^ {"+" "1"}◌
 ⍤⟜≍: [2 3 4] ≡F!∘ [1 2 3]
+
+Struct‼ ←^ $"---_\n_---" ⊙(
+  /$"_\n_"⊂□$"New ← {_}"≡⋅@⊙⟜⍚$"_ ← °□⊡_":°⊏⊜□⊸≠@ °$"[_]"
+)°{⊙∘}
+
+Struct‼Person[Name Age][] # Ensure that a word on the same line as binding generation works
+◌◌Person~New "janMakoso" 15

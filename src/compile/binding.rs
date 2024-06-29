@@ -394,6 +394,44 @@ impl Compiler {
         }
         Ok(())
     }
+    pub(super) fn module(
+        &mut self,
+        m: Sp<ScopedModule>,
+        prev_com: Option<EcoString>,
+    ) -> UiuaResult {
+        let m = m.value;
+        let scope_kind = match m.kind {
+            ModuleKind::Named(_) => ScopeKind::Module,
+            ModuleKind::Test => ScopeKind::Test,
+        };
+        let in_test = matches!(m.kind, ModuleKind::Test);
+        let module = self.in_scope(scope_kind, |env| env.items(m.items, in_test))?;
+        match m.kind {
+            ModuleKind::Named(name) => {
+                let global_index = self.next_global;
+                self.next_global += 1;
+                let local = LocalName {
+                    index: global_index,
+                    public: true,
+                };
+                let comment = prev_com
+                    .or_else(|| module.comment.clone())
+                    .map(|text| DocComment::from(text.as_str()));
+                self.asm.add_global_at(
+                    local,
+                    BindingKind::Module(module),
+                    Some(name.span.clone()),
+                    comment,
+                );
+                self.scope.names.insert(name.value.clone(), local);
+                self.code_meta
+                    .global_references
+                    .insert(name.clone(), local.index);
+            }
+            ModuleKind::Test => {}
+        }
+        Ok(())
+    }
     pub(super) fn import(
         &mut self,
         import: crate::ast::Import,

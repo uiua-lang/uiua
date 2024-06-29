@@ -51,13 +51,15 @@ impl Assembly {
         let end = slice.end();
         assert!(
             slice.start <= self.instrs.len(),
-            "Func slice start {} out of bounds",
-            slice.start
+            "Func slice start {} out of bounds of {} instrs",
+            slice.start,
+            self.instrs.len()
         );
         assert!(
             slice.end() <= self.instrs.len(),
-            "Func slice end {} out of bounds",
-            end
+            "Func slice end {} out of bounds of {} instrs",
+            end,
+            self.instrs.len()
         );
         &self.instrs[slice.start..end]
     }

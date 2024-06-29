@@ -557,7 +557,9 @@ code:
             });
             // Compile the words
             let instr_count_before = self.asm.instrs.len();
+            let binding_count_before = self.asm.bindings.len();
             let instrs = self.compile_words(line, true)?;
+            let binding_count_after = self.asm.bindings.len();
             let (mut instrs, pre_eval_errors) = self.pre_eval_instrs(instrs);
             let mut line_eval_errored = false;
             match instrs_signature(&instrs) {
@@ -567,10 +569,12 @@ code:
                         *height = (*height + sig.outputs).saturating_sub(sig.args);
                     }
                     // Try to evaluate at comptime
-                    // This can be done when there are at least as many push instructions
-                    // preceding the current line as there are arguments to the line
+                    // This can be done when:
+                    // - there are at least as many push instructions preceding the current line as there are arguments to the line
+                    // - the words create no bindings
                     if !instrs.is_empty()
                         && instr_count_before >= sig.args
+                        && binding_count_before == binding_count_after
                         && (self.asm.instrs.iter().take(instr_count_before).rev())
                             .take(sig.args)
                             .all(|instr| matches!(instr, Instr::Push(_)))
@@ -642,7 +646,7 @@ code:
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
         }
-        let start = if len == 0 { 0 } else { self.asm.instrs.len() };
+        let start = self.asm.instrs.len();
         let mut hasher = DefaultHasher::new();
         instrs.hash(&mut hasher);
         let hash = hasher.finish();
@@ -805,40 +809,6 @@ code:
         } else {
             pathdiff::diff_paths(&target, base).unwrap_or(target)
         }
-    }
-    fn module(&mut self, m: Sp<ScopedModule>, prev_com: Option<EcoString>) -> UiuaResult {
-        let m = m.value;
-        let scope_kind = match m.kind {
-            ModuleKind::Named(_) => ScopeKind::Module,
-            ModuleKind::Test => ScopeKind::Test,
-        };
-        let in_test = matches!(m.kind, ModuleKind::Test);
-        let module = self.in_scope(scope_kind, |env| env.items(m.items, in_test))?;
-        match m.kind {
-            ModuleKind::Named(name) => {
-                let global_index = self.next_global;
-                self.next_global += 1;
-                let local = LocalName {
-                    index: global_index,
-                    public: true,
-                };
-                let comment = prev_com
-                    .or_else(|| module.comment.clone())
-                    .map(|text| DocComment::from(text.as_str()));
-                self.asm.add_global_at(
-                    local,
-                    BindingKind::Module(module),
-                    Some(name.span.clone()),
-                    comment,
-                );
-                self.scope.names.insert(name.value.clone(), local);
-                self.code_meta
-                    .global_references
-                    .insert(name.clone(), local.index);
-            }
-            ModuleKind::Test => {}
-        }
-        Ok(())
     }
     fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<EcoVec<Instr>> {
         let words = unsplit_words(split_words(words))

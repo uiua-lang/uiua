@@ -19,7 +19,7 @@ use crate::{GitTarget, Handle, SysBackend};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
-/// The defualt native system backend
+/// The default native system backend
 #[derive(Default)]
 pub struct NativeSys;
 

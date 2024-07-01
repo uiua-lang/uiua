@@ -1655,7 +1655,12 @@ impl Value {
                 }) {
                     Value::from_row_values_infallible(rows)
                 } else {
-                    Array::from(rows.into_iter().map(Boxed).collect::<EcoVec<_>>()).into()
+                    Array::from(
+                        rows.into_iter()
+                            .map(Value::boxed_if_not)
+                            .collect::<EcoVec<_>>(),
+                    )
+                    .into()
                 }
             }
             serde_json::Value::Object(map) => {

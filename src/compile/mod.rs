@@ -483,7 +483,6 @@ code:
                 }
                 item_errored = true;
             }
-            println!("after item: {:?}", self.asm.instrs);
         }
         Ok(())
     }

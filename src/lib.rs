@@ -223,6 +223,7 @@ mod tests {
                 .contains("error")
         }) {
             let code = std::fs::read_to_string(&path).unwrap();
+            // Test running
             let mut env = Uiua::with_native_sys();
             let mut comp = Compiler::new();
             if let Err(e) = comp
@@ -241,6 +242,8 @@ mod tests {
             if !env.take_stack().is_empty() {
                 panic!("{} had a non-empty stack", path.display());
             }
+            // Test lsp spans
+            _ = spans(&code);
         }
         _ = std::fs::remove_file("example.ua");
     }

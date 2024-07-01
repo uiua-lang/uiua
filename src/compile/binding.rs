@@ -337,7 +337,10 @@ impl Compiler {
                             );
                         }
                     }
-                    if let Some(Instr::Push(val)) = self.asm.instrs.last() {
+                    if let Some(Instr::Push(val)) = self.asm.instrs.last().filter(|_| {
+                        (self.asm.top_slices.last())
+                            .is_some_and(|slice| slice.end() == self.asm.instrs.len())
+                    }) {
                         let val = val.clone();
                         self.asm.instrs.pop();
                         self.compile_bind_const(
@@ -347,11 +350,10 @@ impl Compiler {
                             spandex,
                             comment.as_deref(),
                         );
-                        if let Some(last_slice) = self.asm.top_slices.last_mut() {
-                            last_slice.len -= 1;
-                            if last_slice.len == 0 {
-                                self.asm.top_slices.pop();
-                            }
+                        let last_slice = self.asm.top_slices.last_mut().unwrap();
+                        last_slice.len -= 1;
+                        if last_slice.len == 0 {
+                            self.asm.top_slices.pop();
                         }
                     } else {
                         self.compile_bind_const(&name, local, None, spandex, comment.as_deref());

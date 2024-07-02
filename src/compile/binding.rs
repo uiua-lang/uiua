@@ -268,8 +268,13 @@ impl Compiler {
                 );
                 if let [Instr::PushFunc(f)] = instrs.as_slice() {
                     // Binding is a single inline function
-                    let mut func = f.clone();
-                    func.id = FunctionId::Named(name.clone());
+                    let func = if self_referenced {
+                        make_fn(f.instrs(&self.asm).into(), f.signature(), self)
+                    } else {
+                        let mut func = f.clone();
+                        func.id = FunctionId::Named(name.clone());
+                        func
+                    };
                     self.compile_bind_function(&name, local, func, spandex, comment.as_deref())?;
                 } else if sig == (0, 1) && !is_setinv && !is_setund {
                     if let &[Instr::Prim(Primitive::Tag, span)] = instrs.as_slice() {

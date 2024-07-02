@@ -623,16 +623,20 @@ impl<T: ArrayValue> Array<T> {
             }
             let row_len = self.row_len();
             if all_bools {
-                let new_flat_len = true_count * row_len;
-                let mut new_data = CowSlice::with_capacity(new_flat_len);
-                if row_len > 0 {
-                    for (b, r) in counts.iter().zip(self.data.chunks_exact(row_len)) {
-                        if *b == 1.0 {
-                            new_data.extend_from_slice(r);
+                let data = self.data.as_mut_slice();
+                let mut dest = 0;
+                for (r, &b) in counts.iter().enumerate() {
+                    if b == 1.0 {
+                        let src_start = r * row_len;
+                        if src_start != dest {
+                            for i in 0..row_len {
+                                data[dest + i] = data[src_start + i].clone();
+                            }
                         }
+                        dest += row_len;
                     }
                 }
-                self.data = new_data;
+                self.data.truncate(dest);
                 self.shape[0] = true_count;
             } else {
                 let elem_count = validate_size::<T>([sum as usize, row_len], env)?;

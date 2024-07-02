@@ -1512,7 +1512,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
 
         <Challenge
             number=1
-            prompt="negates each number in an list that is not a multiple of 3"
+            prompt="negates each number in a list that is not a multiple of 3"
             example="[1 2 3 4 5 6 7 8 9]"
             answer="⍜▽¯ ≠0◿3."
             tests={&["[3 0 1 8]", "[3 6 9 12 15 18 21 25 27]"]}

@@ -415,6 +415,22 @@ impl Compiler {
         let module = self.in_scope(scope_kind, |env| env.items(m.items, in_test))?;
         match m.kind {
             ModuleKind::Named(name) => {
+                // Add imports
+                if let Some(line) = m.imports {
+                    for item in line.items {
+                        if let Some(mut local) = module.names.get(&item.value).copied() {
+                            local.public = false;
+                            (self.code_meta.global_references).insert(item.clone(), local.index);
+                            self.scope.names.insert(item.value, local);
+                        } else {
+                            self.add_error(
+                                item.span.clone(),
+                                format!("{} does not exist in {}", item.value, name.value),
+                            );
+                        }
+                    }
+                }
+                // Add global
                 let global_index = self.next_global;
                 self.next_global += 1;
                 let local = LocalName {
@@ -430,12 +446,18 @@ impl Compiler {
                     Some(name.span.clone()),
                     comment,
                 );
+                // Add local
                 self.scope.names.insert(name.value.clone(), local);
-                self.code_meta
-                    .global_references
-                    .insert(name.clone(), local.index);
+                (self.code_meta.global_references).insert(name.clone(), local.index);
             }
-            ModuleKind::Test => {}
+            ModuleKind::Test => {
+                if let Some(line) = &m.imports {
+                    self.add_error(
+                        line.tilde_span.clone(),
+                        "Items cannot be imported from test modules",
+                    );
+                }
+            }
         }
         Ok(())
     }

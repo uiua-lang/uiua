@@ -58,6 +58,8 @@ pub struct ScopedModule {
     pub kind: ModuleKind,
     /// The items
     pub items: Vec<Item>,
+    /// The imports
+    pub imports: Option<ImportLine>,
 }
 
 /// The kind of a module

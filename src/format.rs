@@ -593,6 +593,16 @@ impl<'a> Formatter<'a> {
                     ModuleKind::Named(name) => self.push(&name.span, &name.value),
                     ModuleKind::Test => self.output.push_str("test"),
                 }
+                if let Some(line) = &m.value.imports {
+                    self.output.push(' ');
+                    self.push(&line.tilde_span, "~");
+                    let mut items = line.items.clone();
+                    items.sort_by_key(|item| item.value.clone());
+                    for item in items {
+                        self.output.push(' ');
+                        self.push(&item.span, &item.value);
+                    }
+                }
                 let subdepth = match m.value.kind {
                     ModuleKind::Named(_) => depth + 1,
                     ModuleKind::Test => {
@@ -711,7 +721,7 @@ impl<'a> Formatter<'a> {
                         self.output.push('\n');
                         if let Some(line) = line {
                             if self.config.indent_item_imports {
-                                for _ in 0..self.config.multiline_indent {
+                                for _ in 0..self.config.multiline_indent * (depth + 1) {
                                     self.output.push(' ');
                                 }
                             }

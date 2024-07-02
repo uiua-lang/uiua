@@ -181,6 +181,13 @@ impl Spanner {
                         }
                         ModuleKind::Test => {}
                     }
+                    if let Some(line) = &m.value.imports {
+                        spans.push(line.tilde_span.clone().sp(SpanKind::Delimiter));
+                        for item in &line.items {
+                            let binding_docs = self.reference_docs(&item.span);
+                            spans.push(item.span.clone().sp(SpanKind::Ident(binding_docs)));
+                        }
+                    }
                     spans.extend(self.items_spans(&m.value.items));
                 }
                 Item::Words(lines) => {

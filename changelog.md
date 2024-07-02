@@ -14,6 +14,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Identifiers can now contain subscript numbers
   - They format from `__` followed by some numbers
   - For example, `X__1` will format to `X₁`
+- Add new [Scoped Modules](https://uiua.org/tutorial/modules#scoped-modules)
+  - These allow you to create a module without creating a file
 - [`un °`](https://uiua.org/docs/un) [`shape △`](https://uiua.org/docs/shape) now generates an array with the given shape and incrementing elements
 - [`un °`](https://uiua.org/docs/un) [`pick ⊡`](https://uiua.org/docs/pick) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
 - [`keep ▽`](https://uiua.org/docs/keep) will now cycle counts if the counts array is shorter than the counted array

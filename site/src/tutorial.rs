@@ -1688,12 +1688,14 @@ fn TutorialModules() -> impl IntoView {
 
         <Hd id="scoped-modules">"Scoped Modules"</Hd>
         <p>"Scoped modules are defined between a pair of "<code>"---"</code>"s. The first "<code>"---"</code>" should be immediately followed by a name for the module. Module names follow the same rules as other bindings."</p>
-        <p>"Bindings defined inside a scoped module are only visible inside the module."</p>
-        <Editor example="---Mod\nA ← 5\nF ← +1\nG ← F F\n---\nG A"/> // Should fail
         <p>"Names from inside the module can be referenced by following the module name with a "<code>"~"</code>"."</p>
-        <Editor example="---Mod\nA ← 5\nF ← +1\nG ← F F\n---\nMod~G Mod~A"/>
+        <Editor example="---Mod\n  A ← 5\n  F ← +1\n  G ← F F\n---\nMod~G Mod~A"/>
+        <p>"Bindings defined inside a scoped module are only visible inside the module."</p>
+        <Editor example="---Mod\n  A ← 5\n  F ← +1\n  G ← F F\n---\nG A"/> // Should fail
+        <p>"Names from inside the module can be "<em>"made"</em>" visible by following the module name with a "<code>"~"</code>" and a list of the names to make visible."</p>
+        <Editor example="---Mod ~ A G\n  A ← 5\n  F ← +1\n  G ← F F\n---\nG A"/>
         <p>"Names defined above the module can be referenced inside it."</p>
-        <Editor example="B ← 5\n---Mod\nC ← ×2 B\n---\nMod~C"/>
+        <Editor example="B ← 5\n---Mod\n  C ← ×2 B\n---\nMod~C"/>
 
         <Hd id="web-files">"Files on the Website"</Hd>
         <p>"Using files as modules involves loading files from the file system."</p>

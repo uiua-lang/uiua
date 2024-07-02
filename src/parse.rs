@@ -320,6 +320,7 @@ impl<'i> Parser<'i> {
             if !lines.is_empty() {
                 Item::Words(lines)
             } else {
+                // Name
                 let backup = self.index;
                 let start = self.try_exact(TripleMinus.into())?;
                 self.try_spaces();
@@ -332,6 +333,28 @@ impl<'i> Parser<'i> {
                     self.index = backup;
                     return None;
                 }
+                // Imports
+                while self.try_exact(Spaces).is_some() {}
+                let imports = if let Some(tilde_span) = self.try_exact(Tilde.into()) {
+                    let mut items = Vec::new();
+                    loop {
+                        if let Some(ident) = self.try_ident() {
+                            items.push(ident);
+                        } else if self.try_spaces().is_some() {
+                            continue;
+                        } else {
+                            break;
+                        }
+                    }
+                    if items.is_empty() {
+                        None
+                    } else {
+                        Some(ImportLine { tilde_span, items })
+                    }
+                } else {
+                    None
+                };
+                // Items
                 let items = self.items(true);
                 let span = if let Some(end) = self.try_exact(TripleMinus.into()) {
                     start.merge(end)
@@ -339,7 +362,11 @@ impl<'i> Parser<'i> {
                     self.errors.push(self.expected([TripleMinus]));
                     start
                 };
-                let module = ScopedModule { kind, items };
+                let module = ScopedModule {
+                    kind,
+                    items,
+                    imports,
+                };
                 Item::Module(span.sp(module))
             }
         })

@@ -8,10 +8,12 @@ use std::{
     iter::{self, repeat},
     mem::size_of,
     ptr, slice,
+    time::Duration,
 };
 
 use ecow::{eco_vec, EcoVec};
 use rayon::prelude::*;
+use time::{Date, Month, OffsetDateTime, Time};
 
 use crate::{
     array::*,
@@ -1978,5 +1980,133 @@ impl Value {
             s = format!("${label} {s}");
         }
         s
+    }
+    /// Get the `datetime` of a value
+    pub fn datetime(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        let mut arr = match self {
+            Value::Num(arr) => arr.clone(),
+            Value::Byte(arr) => arr.convert_ref(),
+            value => return Err(env.error(format!("Cannot get datetime of {}", value.type_name()))),
+        };
+        let mut new_data = eco_vec![0.0; arr.data.len() * 6];
+        let slice = new_data.make_mut();
+        for (i, &n) in arr.data.iter().enumerate() {
+            let dur = Duration::try_from_secs_f64(n.abs())
+                .map_err(|_| env.error(format!("{n} is not a valid time")))?;
+            let dt = if n >= 0.0 {
+                OffsetDateTime::UNIX_EPOCH + dur
+            } else {
+                OffsetDateTime::UNIX_EPOCH - dur
+            };
+            slice[i * 6] = dt.year() as f64;
+            slice[i * 6 + 1] = dt.month() as u8 as f64;
+            slice[i * 6 + 2] = dt.day() as f64;
+            slice[i * 6 + 3] = dt.hour() as f64;
+            slice[i * 6 + 4] = dt.minute() as f64;
+            slice[i * 6 + 5] = dt.second() as f64;
+        }
+        arr.data = new_data.into();
+        arr.shape.push(6);
+        arr.validate_shape();
+        Ok(arr)
+    }
+    pub(crate) fn undatetime(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
+        let mut arr = match self {
+            Value::Num(arr) => arr.clone(),
+            Value::Byte(arr) => arr.convert_ref(),
+            value => {
+                return Err(env.error(format!("Cannot decode datetime from {}", value.type_name())))
+            }
+        };
+        let convert = |chunk: &[f64]| -> UiuaResult<f64> {
+            let mut year = chunk.first().copied().unwrap_or(0.0);
+            let mut month = chunk.get(1).copied().unwrap_or(0.0) - 1.0;
+            let mut day = chunk.get(2).copied().unwrap_or(0.0) - 1.0;
+            let mut hour = chunk.get(3).copied().unwrap_or(0.0);
+            let mut minute = chunk.get(4).copied().unwrap_or(0.0);
+            let mut second = chunk.get(5).copied().unwrap_or(0.0);
+            let mut frac = chunk.get(6).copied().unwrap_or(0.0);
+            frac += second.fract();
+            if frac >= 1.0 {
+                second += frac.floor();
+                frac = 1.0 - frac.fract();
+            } else if frac < 0.0 {
+                second += frac.ceil();
+                frac = -frac.fract();
+            }
+            if second >= 60.0 {
+                minute += (second / 60.0).floor();
+                second %= 60.0;
+            } else if second < 0.0 {
+                minute += (second / 60.0).ceil();
+                second = 60.0 + (second % 60.0);
+            }
+            if minute >= 60.0 {
+                hour += (minute / 60.0).floor();
+                minute %= 60.0;
+            } else if minute < 0.0 {
+                hour += (minute / 60.0).ceil();
+                minute = 60.0 + (minute % 60.0);
+            }
+            if hour >= 24.0 {
+                day += (hour / 24.0).floor();
+                hour %= 24.0;
+            } else if hour < 0.0 {
+                day += (hour / 24.0).ceil();
+                hour = 24.0 + (hour % 24.0);
+            }
+            let day_delta = if day >= 28.0 {
+                let delta = day - 27.0;
+                day -= delta;
+                delta
+            } else if day < 0.0 {
+                let delta = day;
+                day = 0.0;
+                delta
+            } else {
+                day.fract()
+            };
+            if month >= 12.0 {
+                year += (month / 12.0).floor();
+                month %= 12.0;
+            } else if month < 1.0 {
+                year += (month / 12.0).ceil();
+                month = 12.0 - (month % 12.0);
+            }
+            let year = year as i32;
+            let month = month as u8 + 1;
+            let day = day as u8 + 1;
+            let hour = hour as u8;
+            let minute = minute as u8;
+            let second = second as u8;
+            let mut dt = OffsetDateTime::new_utc(
+                Date::from_calendar_date(year, Month::January.nth_next(month - 1), day).map_err(
+                    |e| env.error(format!("Invalid date {year:04}-{month:02}-{day:02}: {e}")),
+                )?,
+                Time::from_hms(hour, minute, second).map_err(|e| {
+                    env.error(format!(
+                        "Invalid time {hour:02}:{minute:02}:{second:02}: {e}"
+                    ))
+                })?,
+            );
+            if day_delta > 0.0 {
+                dt += Duration::from_secs_f64(day_delta * 86400.0);
+            } else if day_delta < 0.0 {
+                dt -= Duration::from_secs_f64(day_delta.abs() * 86400.0);
+            }
+            Ok(dt.unix_timestamp() as f64 + frac)
+        };
+        let &[.., n] = &*arr.shape else {
+            return Err(env.error("Cannot decode datetime from scalar"));
+        };
+        let mut new_data = eco_vec![0.0; arr.data.len() / n];
+        let slice = new_data.make_mut();
+        for (i, chunk) in arr.data.chunks_exact(n).enumerate() {
+            slice[i] = convert(chunk)?;
+        }
+        arr.shape.pop();
+        arr.data = new_data.into();
+        arr.validate_shape();
+        Ok(arr)
     }
 }

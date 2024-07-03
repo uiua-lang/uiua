@@ -338,7 +338,7 @@ impl SysBackend for WebBackend {
         self.play_audio(bytes)
     }
     fn now(&self) -> f64 {
-        *START_TIME.get().unwrap() + instant::now() / 1000.0
+        *START_TIME.get_or_init(|| instant::now() / 1000.0) + instant::now() / 1000.0
     }
     fn set_clipboard(&self, contents: &str) -> Result<(), String> {
         _ = window()

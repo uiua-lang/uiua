@@ -2308,10 +2308,40 @@ primitive!(
     (1, Type, Misc, "type"),
     /// Get the current time in seconds
     ///
+    /// Time is expressed in seconds since the Unix epoch.
     /// ex: now
     /// [under][now] can be used to time a function.
     /// ex: ⍜now(5&sl1)
     (0, Now, Misc, "now", Impure),
+    /// Get the date and time information from a time
+    ///
+    /// You can use [now] to get the current time in seconds since the Unix epoch.
+    /// [datetime] turns a time into an array with 6 numbers:
+    /// - Year
+    /// - Month (1-12)
+    /// - Day (1-31)
+    /// - Hour (0-23)
+    /// - Minute (0-59)
+    /// - Second (0-59)
+    ///
+    /// ex: datetime now
+    /// The time is always in UTC.
+    /// [datetime] is semi-pervasive.
+    /// ex: datetime [1e8 1e9 1e10]
+    /// You can format the time like this:
+    /// ex: datetime now         # Time
+    ///   : ⍚(⬚@0↙¯⊙°⋕) [4....2] # Pad
+    ///   : °[°$"_-_-_ _:_:_"]   # Format
+    ///
+    /// You can use [un][datetime] to convert an array back into a time.
+    /// An array with fewer than 6 numbers will be padded with zeros.
+    /// ex: °datetime [2023 2 28 1 2 3]
+    /// ex: °datetime [2014_4_1 2022_3_31]
+    /// Invalid numbers in the datetime will be normalized.
+    /// ex: ⍜°datetime∘ [2023 2 29]
+    /// ex: ⍜°datetime∘ [1917 5 0]
+    /// ex: ⍜°datetime∘ [1996 12 ¯100]
+    (1, DateTime, Misc, "datetime"),
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`
@@ -2785,6 +2815,7 @@ impl_primitive!(
     (1, UnCsv),
     (1, UnXlsx),
     (1, UnFft),
+    (1, UnDatetime),
     (2(0), MatchPattern),
     // Unders
     (1, UndoFix),

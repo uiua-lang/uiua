@@ -176,6 +176,7 @@ impl fmt::Display for ImplPrimitive {
             UnCsv => write!(f, "{Un}{Csv}"),
             UnXlsx => write!(f, "{Un}{Xlsx}"),
             UnFft => write!(f, "{Un}{Fft}"),
+            UnDatetime => write!(f, "{Un}{DateTime}"),
             UndoTake => write!(f, "{Under}{Take}"),
             UndoDrop => write!(f, "{Under}{Drop}"),
             UndoSelect => write!(f, "{Under}{Select}"),
@@ -787,6 +788,7 @@ impl Primitive {
                 env.try_recv(id)?;
             }
             Primitive::Now => env.push(env.rt.backend.now()),
+            Primitive::DateTime => env.monadic_ref_env(Value::datetime)?,
             Primitive::SetInverse => {
                 let f = env.pop_function()?;
                 let _inv = env.pop_function()?;
@@ -1031,6 +1033,7 @@ impl ImplPrimitive {
                 env.push(val);
             }
             ImplPrimitive::UnFft => algorithm::unfft(env)?,
+            ImplPrimitive::UnDatetime => env.monadic_ref_env(Value::undatetime)?,
             ImplPrimitive::UndoInsert => {
                 let key = env.pop(1)?;
                 let _value = env.pop(2)?;

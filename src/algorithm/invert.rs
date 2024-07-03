@@ -112,6 +112,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Csv => Instr::ImplPrim(UnCsv, span),
         Xlsx => Instr::ImplPrim(UnXlsx, span),
         Fft => Instr::ImplPrim(UnFft, span),
+        DateTime => Instr::ImplPrim(UnDatetime, span),
         _ => return None,
     })
 }
@@ -141,6 +142,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         UnCsv => Instr::Prim(Csv, span),
         UnXlsx => Instr::Prim(Xlsx, span),
         UnFft => Instr::Prim(Fft, span),
+        UnDatetime => Instr::Prim(DateTime, span),
         TraceN(n, inverse) => Instr::ImplPrim(TraceN(n, !inverse), span),
         _ => return None,
     })

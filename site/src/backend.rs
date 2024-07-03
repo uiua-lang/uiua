@@ -7,7 +7,7 @@ use std::{
     sync::Mutex,
 };
 
-use crate::{editor::get_ast_time, weewuh};
+use crate::{editor::get_ast_time, weewuh, START_TIME};
 use leptos::*;
 use uiua::{GitTarget, Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA};
 use wasm_bindgen::prelude::*;
@@ -336,6 +336,9 @@ impl SysBackend for WebBackend {
             SAMPLE_RATE,
         )?;
         self.play_audio(bytes)
+    }
+    fn now(&self) -> f64 {
+        *START_TIME.get().unwrap() + instant::now() / 1000.0
     }
     fn set_clipboard(&self, contents: &str) -> Result<(), String> {
         _ = window()

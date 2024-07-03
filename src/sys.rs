@@ -919,6 +919,12 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn stream_audio(&self, f: AudioStreamFn) -> Result<(), String> {
         Err("Streaming audio not supported in this environment".into())
     }
+    /// The result of the `now` function
+    ///
+    /// Should be in seconds
+    fn now(&self) -> f64 {
+        instant::now() / 1000.0
+    }
     /// Create a TCP listener and bind it to an address
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
         Err("TCP listeners are not supported in this environment".into())

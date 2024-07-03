@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.12
+  - Fix `fill`ed `windows` on list
   - Deprecate swizzles
   - Stabilize labels
   - `orient` boxed

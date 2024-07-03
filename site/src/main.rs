@@ -13,6 +13,8 @@ mod tour;
 mod tutorial;
 mod uiuisms;
 
+use std::sync::OnceLock;
+
 use base64::engine::{general_purpose::URL_SAFE, Engine};
 use instant::Duration;
 use js_sys::Date;
@@ -40,10 +42,13 @@ pub fn main() {
     mount_to_body(|| view!( <Site/>));
 }
 
+static START_TIME: OnceLock<f64> = OnceLock::new();
+
 #[component]
 pub fn Site() -> impl IntoView {
     use Primitive::*;
     provide_meta_context();
+    START_TIME.get_or_init(|| Date::now() / 1000.0);
 
     // Choose a subtitle
     let subtitles_common = [

@@ -2028,32 +2028,43 @@ impl Value {
             let mut second = chunk.get(5).copied().unwrap_or(0.0);
             let mut frac = chunk.get(6).copied().unwrap_or(0.0);
             frac += second.fract();
+            second = second.floor();
+            second += minute.fract() * 60.0;
+            minute = minute.floor();
+            minute += hour.fract() * 60.0;
+            hour = hour.floor();
+            hour += day.fract() * 24.0;
+            day = day.floor();
+            day += month.fract() * 30.0;
+            month = month.floor();
+            month += year.fract() * 12.0;
+            year = year.floor();
             if frac >= 1.0 {
                 second += frac.floor();
                 frac = 1.0 - frac.fract();
             } else if frac < 0.0 {
-                second += frac.ceil();
+                second += frac;
                 frac = -frac.fract();
             }
             if second >= 60.0 {
                 minute += (second / 60.0).floor();
                 second %= 60.0;
             } else if second < 0.0 {
-                minute += (second / 60.0).ceil();
+                minute += second / 60.0;
                 second = 60.0 + (second % 60.0);
             }
             if minute >= 60.0 {
                 hour += (minute / 60.0).floor();
                 minute %= 60.0;
             } else if minute < 0.0 {
-                hour += (minute / 60.0).ceil();
+                hour += minute / 60.0;
                 minute = 60.0 + (minute % 60.0);
             }
             if hour >= 24.0 {
                 day += (hour / 24.0).floor();
                 hour %= 24.0;
             } else if hour < 0.0 {
-                day += (hour / 24.0).ceil();
+                day += hour / 24.0;
                 hour = 24.0 + (hour % 24.0);
             }
             let day_delta = if day >= 28.0 {
@@ -2070,9 +2081,9 @@ impl Value {
             if month >= 12.0 {
                 year += (month / 12.0).floor();
                 month %= 12.0;
-            } else if month < 1.0 {
-                year += (month / 12.0).ceil();
-                month = 12.0 - (month % 12.0);
+            } else if month < 0.0 {
+                year += month / 12.0;
+                month = 12.0 + (month % 12.0);
             }
             let year = year as i32;
             let month = month as u8 + 1;

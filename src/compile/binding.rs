@@ -234,28 +234,6 @@ impl Compiler {
         // Resolve signature
         match instrs_signature(&instrs) {
             Ok(mut sig) => {
-                // Validate signature
-                if let Some(declared_sig) = &binding.signature {
-                    let sig_to_check = if let [Instr::PushFunc(f)] = instrs.as_slice() {
-                        // If this is a function wrapped in parens, check the signature of the
-                        // function rather than the signature of the binding's words
-                        f.signature()
-                    } else if instrs.is_empty() {
-                        Signature::new(0, 1)
-                    } else {
-                        sig
-                    };
-                    if declared_sig.value != sig_to_check {
-                        self.add_error(
-                            declared_sig.span.clone(),
-                            format!(
-                                "Function signature mismatch: declared {} but inferred {}",
-                                declared_sig.value, sig_to_check
-                            ),
-                        );
-                    }
-                }
-
                 #[rustfmt::skip]
                 let is_setinv = matches!(
                     instrs.as_slice(),
@@ -275,6 +253,7 @@ impl Compiler {
                         func.id = FunctionId::Named(name.clone());
                         func
                     };
+                    sig = f.signature();
                     self.compile_bind_function(&name, local, func, spandex, comment.as_deref())?;
                 } else if sig == (0, 1) && !is_setinv && !is_setund {
                     if let &[Instr::Prim(Primitive::Tag, span)] = instrs.as_slice() {
@@ -327,8 +306,8 @@ impl Compiler {
                         Ok(height) => {
                             if *height > 0 {
                                 sig = Signature::new(0, 1);
+                                *height -= 1;
                             }
-                            *height = height.saturating_sub(1);
                         }
                         Err(sp) => {
                             let sp = sp.clone();
@@ -374,6 +353,19 @@ impl Compiler {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);
                     self.compile_bind_function(&name, local, func, spandex, comment.as_deref())?;
+                }
+
+                // Validate signature
+                if let Some(declared_sig) = &binding.signature {
+                    if declared_sig.value != sig {
+                        self.add_error(
+                            declared_sig.span.clone(),
+                            format!(
+                                "Function signature mismatch: declared {} but inferred {}",
+                                declared_sig.value, sig
+                            ),
+                        );
+                    }
                 }
 
                 self.code_meta.function_sigs.insert(

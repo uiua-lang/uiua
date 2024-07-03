@@ -181,18 +181,10 @@ impl Value {
                 Value::Box(a) => a.reshape_scalar(n, env),
             }
         } else {
+            self.match_scalar_fill(env);
             match self {
                 Value::Num(a) => a.reshape(&target_shape, env),
-                Value::Byte(a) => {
-                    if env.num_scalar_fill().is_ok() && env.byte_scalar_fill().is_err() {
-                        let mut arr: Array<f64> = a.convert_ref();
-                        arr.reshape(&target_shape, env)?;
-                        *self = arr.into();
-                        Ok(())
-                    } else {
-                        a.reshape(&target_shape, env)
-                    }
-                }
+                Value::Byte(a) => a.reshape(&target_shape, env),
                 Value::Complex(a) => a.reshape(&target_shape, env),
                 Value::Char(a) => a.reshape(&target_shape, env),
                 Value::Box(a) => a.reshape(&target_shape, env),
@@ -796,11 +788,7 @@ impl Value {
             return Ok(rotated);
         }
         let by_ints = || self.as_integer_array(env, "Rotation amount must be an array of integers");
-        if env.num_scalar_fill().is_ok() {
-            if let Value::Byte(bytes) = &rotated {
-                rotated = bytes.convert_ref::<f64>().into();
-            }
-        }
+        rotated.match_scalar_fill(env);
         match &mut rotated {
             Value::Num(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             Value::Byte(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
@@ -926,6 +914,9 @@ impl Value {
         let size_spec = self.as_ints(env, "Window size must be an integer or list of integers")?;
         Ok(match from {
             Value::Num(a) => a.windows(&size_spec, env)?.into(),
+            Value::Byte(a) if env.number_only_fill() => {
+                a.convert_ref::<f64>().windows(&size_spec, env)?.into()
+            }
             Value::Byte(a) => a.windows(&size_spec, env)?.into(),
             Value::Complex(a) => a.windows(&size_spec, env)?.into(),
             Value::Char(a) => a.windows(&size_spec, env)?.into(),

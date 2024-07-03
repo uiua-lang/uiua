@@ -1332,9 +1332,9 @@ impl Value {
     ) -> UiuaResult<Self> {
         self.keep_labels(other, |a, b| a.keep_map_keys(b, f))
     }
-    fn match_scalar_fill(&mut self, env: &Uiua) {
+    pub(crate) fn match_scalar_fill(&mut self, env: &Uiua) {
         if let Value::Byte(arr) = self {
-            if env.num_scalar_fill().is_ok() && env.byte_scalar_fill().is_err() {
+            if env.number_only_fill() {
                 let shape = take(&mut arr.shape);
                 let meta = take(&mut arr.meta);
                 let data: EcoVec<f64> = take(&mut arr.data).into_iter().map(|b| b as f64).collect();

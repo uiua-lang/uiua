@@ -1174,6 +1174,9 @@ code:
     pub(crate) fn truncate_temp_stack(&mut self, stack: TempStack, size: usize) {
         self.rt.temp_stacks[stack as usize].truncate(size);
     }
+    pub(crate) fn number_only_fill(&self) -> bool {
+        self.num_scalar_fill().is_ok() && self.byte_scalar_fill().is_err()
+    }
     pub(crate) fn num_scalar_fill(&self) -> Result<f64, &'static str> {
         match self.value_fill() {
             Some(Value::Num(n)) if n.rank() == 0 => Ok(n.data[0]),

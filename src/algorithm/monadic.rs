@@ -1988,7 +1988,8 @@ impl Value {
             Value::Byte(arr) => arr.convert_ref(),
             value => return Err(env.error(format!("Cannot get datetime of {}", value.type_name()))),
         };
-        let mut new_data = eco_vec![0.0; arr.data.len() * 6];
+        let size = validate_size::<f64>(arr.shape.iter().copied().chain([6]), env)?;
+        let mut new_data = eco_vec![0.0; size];
         let slice = new_data.make_mut();
         for (i, &n) in arr.data.iter().enumerate() {
             let dur = Duration::try_from_secs_f64(n.abs())
@@ -2096,16 +2097,23 @@ impl Value {
             }
             Ok(dt.unix_timestamp() as f64 + frac)
         };
-        let &[.., n] = &*arr.shape else {
+        let [shape_pre @ .., n] = &*arr.shape else {
             return Err(env.error("Cannot decode datetime from scalar"));
         };
-        let mut new_data = eco_vec![0.0; arr.data.len() / n];
-        let slice = new_data.make_mut();
-        for (i, chunk) in arr.data.chunks_exact(n).enumerate() {
-            slice[i] = convert(chunk)?;
-        }
+        arr.data = if *n == 0 {
+            let size = validate_size::<f64>(shape_pre.iter().copied(), env)?;
+            eco_vec![0.0; size].into()
+        } else {
+            let mut new_data = eco_vec![0.0; arr.data.len() / *n];
+            let slice = new_data.make_mut();
+            if *n > 0 {
+                for (i, chunk) in arr.data.chunks_exact(*n).enumerate() {
+                    slice[i] = convert(chunk)?;
+                }
+            }
+            new_data.into()
+        };
         arr.shape.pop();
-        arr.data = new_data.into();
         arr.validate_shape();
         Ok(arr)
     }

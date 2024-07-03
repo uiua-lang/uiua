@@ -1015,47 +1015,41 @@ impl<T: ArrayValue> Array<T> {
         }
     }
     fn filled_windows(&self, isize_spec: &[isize], fill: T) -> Self {
-        let mut true_size = Vec::with_capacity(isize_spec.len().max(self.shape.len()));
+        let mut true_win_size = Vec::with_capacity(isize_spec.len().max(self.shape.len()));
         for (d, s) in self.shape.iter().zip(isize_spec) {
-            true_size.push(if *s >= 0 { *s } else { *d as isize + 1 + *s } as usize);
+            true_win_size.push(if *s >= 0 { *s } else { *d as isize + 1 + *s } as usize);
         }
-        // if true_size.len() < self.shape.len() {
-        //     true_size.extend(&self.shape[true_size.len()..]);
-        // }
-        let new_shape: Shape = (self.shape.iter())
-            .zip(&true_size)
-            .map(|(&s, &t)| s + (t % 2 == 0) as usize)
+        let new_shape: Shape = (self.shape.iter().zip(&true_win_size))
+            .map(|(&s, &t)| s + t - 1)
             .chain(
-                true_size
-                    .iter()
-                    .chain(self.shape.iter().skip(true_size.len()))
+                (true_win_size.iter())
+                    .chain(self.shape.iter().skip(true_win_size.len()))
                     .copied(),
             )
             .collect();
         // println!("new_shape: {new_shape:?}");
-        // println!("true_size: {true_size:?}");
+        // println!("true_win_size: {true_win_size:?}");
         let mut dst = EcoVec::from_elem(fill.clone(), new_shape.iter().product());
         let dst_slice = dst.make_mut();
-        let mut index = vec![0usize; true_size.len()];
-        let mut tracking_curr = vec![0usize; true_size.len()];
-        let mut offset_curr = vec![0isize; true_size.len()];
-        let mut adders = Vec::new();
-        for true_size in &true_size {
-            adders.push((*true_size % 2 == 0) as usize);
-        }
+        let mut index = vec![0usize; true_win_size.len()];
+        // Tracks the unsigned offset within the current window
+        let mut tracking_curr = vec![0usize; true_win_size.len()];
+        // Tracks the signed offset from the current index within the current window
+        let mut offset_curr = vec![0isize; true_win_size.len()];
         let mut k = 0;
-        let item_len: usize = self.shape.iter().skip(true_size.len()).product();
+        let item_len: usize = self.shape.iter().skip(true_win_size.len()).product();
         'windows: loop {
             // println!("index: {index:?}");
             // Reset tracking_curr and offset_curr
             for c in &mut tracking_curr {
                 *c = 0;
             }
-            for ((o, i), t) in offset_curr.iter_mut().zip(&index).zip(&true_size) {
-                *o = *i as isize - *t as isize / 2;
+            for ((o, i), t) in offset_curr.iter_mut().zip(&index).zip(&true_win_size) {
+                *o = *i as isize - (*t as isize - 1);
             }
             // Copy the window at the current index
             'items: loop {
+                // println!("  offset_curr: {offset_curr:?}, tracking_curr: {tracking_curr:?}");
                 // Update offset_curr
                 let mut out_of_bounds = false;
                 for (o, s) in offset_curr.iter_mut().zip(&self.shape) {
@@ -1064,7 +1058,6 @@ impl<T: ArrayValue> Array<T> {
                         break;
                     }
                 }
-                // println!("{offset_curr:?} ({out_of_bounds})");
                 // Set the element
                 if !out_of_bounds {
                     let mut src_index = 0;
@@ -1081,9 +1074,9 @@ impl<T: ArrayValue> Array<T> {
                 k += item_len;
                 // Go to the next item
                 for i in (0..tracking_curr.len()).rev() {
-                    if tracking_curr[i] == true_size[i] - 1 {
+                    if tracking_curr[i] == true_win_size[i] - 1 {
                         tracking_curr[i] = 0;
-                        offset_curr[i] = index[i] as isize - true_size[i] as isize / 2;
+                        offset_curr[i] = index[i] as isize - (true_win_size[i] as isize - 1);
                     } else {
                         tracking_curr[i] += 1;
                         offset_curr[i] += 1;
@@ -1094,7 +1087,7 @@ impl<T: ArrayValue> Array<T> {
             }
             // Go to the next index
             for i in (0..index.len()).rev() {
-                if index[i] == self.shape[i] - 1 + adders[i] {
+                if index[i] == self.shape[i] + true_win_size[i] - 2 {
                     index[i] = 0;
                 } else {
                     index[i] += 1;

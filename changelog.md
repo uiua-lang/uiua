@@ -14,6 +14,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Identifiers can now contain subscript numbers
   - They format from `__` followed by some numbers
   - For example, `X__1` will format to `X₁`
+- [`windows ◫`](https://uiua.org/docs/windows) can now use a [`fill ⬚`](https://uiua.org/docs/fill) value to pad the array
+  - This is useful for convolutions
 - Add new [Scoped Modules](https://uiua.org/tutorial/modules#scoped-modules)
   - These allow you to create a module without creating a file
 - Add the [`datetime`](https://uiua.org/docs/datetime) function, which splits a time into its date and time components

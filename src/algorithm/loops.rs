@@ -138,6 +138,12 @@ pub fn repeat(with_inverse: bool, env: &mut Uiua) -> UiuaResult {
 
 fn repeat_impl(f: Function, inv: Option<Function>, n: f64, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
+    let (f, n) = if n >= 0.0 {
+        (f, n)
+    } else {
+        let f = inv.ok_or_else(|| env.error("No inverse found"))?;
+        (f, -n)
+    };
     if n.is_infinite() {
         // Converging repeat
         if sig.args == 0 {
@@ -179,12 +185,7 @@ fn repeat_impl(f: Function, inv: Option<Function>, n: f64, env: &mut Uiua) -> Ui
         if n.fract() != 0.0 {
             return Err(env.error("Repetitions must be an integer or infinity"));
         }
-        let (f, n) = if n >= 0.0 {
-            (f, n as usize)
-        } else {
-            let f = inv.ok_or_else(|| env.error("No inverse found"))?;
-            (f, (-n) as usize)
-        };
+        let n = n as usize;
         if sig.outputs > sig.args {
             let delta = sig.outputs - sig.args;
             if validate_size_impl(size_of::<Value>(), [n, delta]).is_err() {

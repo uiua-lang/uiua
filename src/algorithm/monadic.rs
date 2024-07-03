@@ -2021,8 +2021,8 @@ impl Value {
         };
         let convert = |chunk: &[f64]| -> UiuaResult<f64> {
             let mut year = chunk.first().copied().unwrap_or(0.0);
-            let mut month = chunk.get(1).copied().unwrap_or(0.0) - 1.0;
-            let mut day = chunk.get(2).copied().unwrap_or(0.0) - 1.0;
+            let mut month = chunk.get(1).copied().unwrap_or(1.0) - 1.0;
+            let mut day = chunk.get(2).copied().unwrap_or(1.0) - 1.0;
             let mut hour = chunk.get(3).copied().unwrap_or(0.0);
             let mut minute = chunk.get(4).copied().unwrap_or(0.0);
             let mut second = chunk.get(5).copied().unwrap_or(0.0);

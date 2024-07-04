@@ -276,7 +276,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Pick], No, "", "°⊡ [1_2_3 4_5_6]") }
             { inverse_row([Scan], No, view!("Only works with "<Prims prims=[Add, Mul, Eq, Ne]/>), "°\\+ [1 3 6 10 15]") }
             { inverse_row([Reduce, Mul], No, "Prime factors", "°/× 60") }
-            { inverse_row([Repeat], No, "Inner function must be invertible", "°⍥(×2)5 1024") }
+            { inverse_row([Repeat], Required, "Inner function must be invertible", "°(⍥(×2)5) 1024") }
             { inverse_row([Trace], No, "", "°⸮ 5") }
             { inverse_row([Stack], No, "", "°? 5") }
             { inverse_row([Dump], No, "", "°dump△ [2 3 4]") }

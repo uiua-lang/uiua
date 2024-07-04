@@ -7,7 +7,7 @@ use std::{
     env::current_dir,
     fmt, fs,
     hash::{Hash, Hasher},
-    iter::repeat,
+    iter::{once, repeat},
     mem::{replace, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
@@ -1645,7 +1645,7 @@ code:
             let instr = Instr::push(
                 constant
                     .value
-                    .resolve(self.scope.file_path.as_deref(), &*self.backend()),
+                    .resolve(self.scope_file_path(), &*self.backend()),
             );
             self.code_meta
                 .constant_references
@@ -1664,6 +1664,14 @@ code:
             return Err(self.fatal_error(span, format!("Unknown identifier `{ident}`")));
         }
         Ok(())
+    }
+    fn scope_file_path(&self) -> Option<&Path> {
+        for scope in once(&self.scope).chain(self.higher_scopes.iter().rev()) {
+            if let Some(file_path) = &scope.file_path {
+                return Some(file_path);
+            }
+        }
+        None
     }
     fn global_index(&mut self, index: usize, span: CodeSpan, call: bool) {
         let global = self.asm.bindings[index].kind.clone();

@@ -594,7 +594,7 @@ mod server {
     const MONADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("monadic_modifier");
     const DYADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("dyadic_modifier");
     const TRIADIC_MODIFIER_STT: SemanticTokenType = SemanticTokenType::new("triadic_modifier");
-    const MODULE_STT: SemanticTokenType = SemanticTokenType::new("module");
+    const MODULE_STT: SemanticTokenType = SemanticTokenType::new("uiua_module");
 
     const UIUA_SEMANTIC_TOKEN_TYPES: [SemanticTokenType; 13] = [
         SemanticTokenType::COMMENT,

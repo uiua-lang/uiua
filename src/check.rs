@@ -602,8 +602,9 @@ impl<'a> VirtualEnv<'a> {
     fn repeat(&mut self, sig: Signature, n: BasicValue) -> Result<(), SigCheckError> {
         if let BasicValue::Num(n) = n {
             // If n is a known natural number, then the function can have any signature.
-            if n.fract() == 0.0 && n >= 0.0 {
-                let n = n as usize;
+            let sig = if n >= 0.0 { sig } else { sig.inverse() };
+            if n.fract() == 0.0 {
+                let n = n.abs() as usize;
                 if n > 0 {
                     let (args, outputs) = match sig.args.cmp(&sig.outputs) {
                         Ordering::Equal => (sig.args, sig.outputs),
@@ -631,7 +632,7 @@ impl<'a> VirtualEnv<'a> {
                     _ => self.handle_sig(sig)?,
                 }
             } else {
-                return Err("repeat without a natural number or infinity".into());
+                return Err("repeat without an integer or infinity".into());
             }
         } else {
             // If n is unknown, then what we do depends on the signature

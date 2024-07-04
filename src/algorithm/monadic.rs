@@ -23,7 +23,7 @@ use crate::{
     Boxed, Complex, Primitive, Shape, Uiua, UiuaResult,
 };
 
-use super::{op_bytes_retry_fill, validate_size, ArrayCmpSlice, FillContext};
+use super::{validate_size, ArrayCmpSlice, FillContext};
 
 impl Value {
     /// Make the value 1-dimensional
@@ -321,32 +321,22 @@ fn range(shape: &[isize], env: &Uiua) -> UiuaResult<Result<CowSlice<f64>, CowSli
 
 impl Value {
     /// Get the first row of the value
-    pub fn first(self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn first(mut self, env: &Uiua) -> UiuaResult<Self> {
+        self.match_scalar_fill(env);
         self.generic_into(
             |a| a.first(env).map(Into::into),
-            |a| {
-                op_bytes_retry_fill(
-                    a,
-                    |a| a.first(env).map(Into::into),
-                    |a| a.first(env).map(Into::into),
-                )
-            },
+            |a| a.first(env).map(Into::into),
             |a| a.first(env).map(Into::into),
             |a| a.first(env).map(Into::into),
             |a| a.first(env).map(Into::into),
         )
     }
     /// Get the last row of the value
-    pub fn last(self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn last(mut self, env: &Uiua) -> UiuaResult<Self> {
+        self.match_scalar_fill(env);
         self.generic_into(
             |a| a.last(env).map(Into::into),
-            |a| {
-                op_bytes_retry_fill(
-                    a,
-                    |a| a.last(env).map(Into::into),
-                    |a| a.last(env).map(Into::into),
-                )
-            },
+            |a| a.last(env).map(Into::into),
             |a| a.last(env).map(Into::into),
             |a| a.last(env).map(Into::into),
             |a| a.last(env).map(Into::into),

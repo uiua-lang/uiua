@@ -169,6 +169,9 @@ pub trait FillContext: ErrorContext {
     fn array_fill<T: ArrayValue>(&self) -> Result<Array<T>, &'static str>;
     fn fill_error(error: Self::Error) -> Self::Error;
     fn is_fill_error(error: &Self::Error) -> bool;
+    fn number_only_fill(&self) -> bool {
+        self.scalar_fill::<f64>().is_ok() && self.scalar_fill::<u8>().is_err()
+    }
 }
 
 impl FillContext for Uiua {
@@ -229,33 +232,10 @@ fn fill_value_shape<C>(
 where
     C: FillContext,
 {
-    #[derive(Debug)]
-    struct StaticFillError(&'static str);
-    impl FillError for StaticFillError {
-        fn is_fill(&self) -> bool {
-            true
-        }
-    }
-
+    val.match_scalar_fill(ctx);
     match val {
         Value::Num(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
-        Value::Byte(arr) => {
-            *val = op_bytes_retry_fill(
-                arr.clone(),
-                |mut arr| -> Result<Value, StaticFillError> {
-                    fill_array_shape(&mut arr, target, expand_fixed, ctx)
-                        .map_err(StaticFillError)?;
-                    Ok(arr.into())
-                },
-                |mut arr| -> Result<Value, StaticFillError> {
-                    fill_array_shape(&mut arr, target, expand_fixed, ctx)
-                        .map_err(StaticFillError)?;
-                    Ok(arr.into())
-                },
-            )
-            .map_err(|StaticFillError(e)| e)?;
-            Ok(())
-        }
+        Value::Byte(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
         Value::Complex(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
         Value::Char(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
         Value::Box(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
@@ -616,54 +596,6 @@ pub fn try_(env: &mut Uiua) -> UiuaResult {
         env.call(handler)?;
     }
     Ok(())
-}
-
-/// If a function fails on a byte array because no fill byte is defined,
-/// convert the byte array to a number array and try again.
-fn op_bytes_retry_fill<T, E: FillError>(
-    bytes: Array<u8>,
-    on_bytes: impl FnOnce(Array<u8>) -> Result<T, E>,
-    on_nums: impl FnOnce(Array<f64>) -> Result<T, E>,
-) -> Result<T, E> {
-    match on_bytes(bytes.clone()) {
-        Ok(res) => Ok(res),
-        Err(err) if err.is_fill() => on_nums(bytes.convert()),
-        Err(err) => Err(err),
-    }
-}
-
-/// If a function fails on a byte array because no fill byte is defined,
-/// convert the byte array to a number array and try again.
-fn op_bytes_ref_retry_fill<T>(
-    bytes: &Array<u8>,
-    on_bytes: impl FnOnce(&Array<u8>) -> UiuaResult<T>,
-    on_nums: impl FnOnce(&Array<f64>) -> UiuaResult<T>,
-) -> UiuaResult<T> {
-    match on_bytes(bytes) {
-        Ok(res) => Ok(res),
-        Err(err) if err.is_fill() => on_nums(&bytes.clone().convert()),
-        Err(err) => Err(err),
-    }
-}
-
-/// If a function fails on 2 byte arrays because no fill byte is defined,
-/// convert the byte arrays to number arrays and try again.
-fn op2_bytes_retry_fill<T, C: FillContext>(
-    a: Array<u8>,
-    b: Array<u8>,
-    ctx: &C,
-    on_bytes: impl FnOnce(Array<u8>, Array<u8>) -> Result<T, C::Error>,
-    on_nums: impl FnOnce(Array<f64>, Array<f64>) -> Result<T, C::Error>,
-) -> Result<T, C::Error> {
-    if ctx.scalar_fill::<f64>().is_ok() {
-        match on_bytes(a.clone(), b.clone()) {
-            Ok(res) => Ok(res),
-            Err(err) if C::is_fill_error(&err) => on_nums(a.convert(), b.convert()),
-            Err(err) => Err(err),
-        }
-    } else {
-        on_bytes(a, b)
-    }
 }
 
 struct ArrayCmpSlice<'a, T>(&'a [T]);

@@ -5,7 +5,7 @@ use std::{cmp::Ordering, mem::take};
 use ecow::EcoVec;
 
 use crate::{
-    algorithm::{max_shape, op2_bytes_retry_fill, validate_size_impl, FillContext},
+    algorithm::{max_shape, validate_size_impl, FillContext},
     cowslice::cowslice,
     Array, ArrayValue, FormatShape, Primitive, Uiua, UiuaResult, Value,
 };
@@ -100,16 +100,17 @@ impl Value {
     pub fn join_infallible(self, other: Self, allow_ext: bool) -> Self {
         self.join_impl(other, allow_ext, &()).unwrap()
     }
-    fn join_impl<C: FillContext>(self, other: Self, ext: bool, ctx: &C) -> Result<Self, C::Error> {
+    fn join_impl<C: FillContext>(
+        mut self,
+        mut other: Self,
+        ext: bool,
+        ctx: &C,
+    ) -> Result<Self, C::Error> {
+        self.match_scalar_fill(ctx);
+        other.match_scalar_fill(ctx);
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ext, ctx)?.into(),
-            (Value::Byte(a), Value::Byte(b)) => op2_bytes_retry_fill::<_, C>(
-                a,
-                b,
-                ctx,
-                |a, b| Ok(a.join_impl(b, ext, ctx)?.into()),
-                |a, b| Ok(a.join_impl(b, ext, ctx)?.into()),
-            )?,
+            (Value::Byte(a), Value::Byte(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Complex(a), Value::Complex(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Char(a), Value::Char(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Byte(a), Value::Num(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
@@ -128,27 +129,15 @@ impl Value {
     }
     pub(crate) fn append<C: FillContext>(
         &mut self,
-        other: Self,
+        mut other: Self,
         ext: bool,
         ctx: &C,
     ) -> Result<(), C::Error> {
+        self.match_scalar_fill(ctx);
+        other.match_scalar_fill(ctx);
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.append(b, ext, ctx)?,
-            (Value::Byte(a), Value::Byte(b)) => {
-                *self = op2_bytes_retry_fill::<_, C>(
-                    a.clone(),
-                    b,
-                    ctx,
-                    |mut a, b| {
-                        a.append(b, ext, ctx)?;
-                        Ok(a.into())
-                    },
-                    |mut a, b| {
-                        a.append(b, ext, ctx)?;
-                        Ok(a.into())
-                    },
-                )?;
-            }
+            (Value::Byte(a), Value::Byte(b)) => a.append(b, ext, ctx)?,
             (Value::Complex(a), Value::Complex(b)) => a.append(b, ext, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.append(b, ext, ctx)?,
             (Value::Byte(a), Value::Num(b)) => {
@@ -621,26 +610,14 @@ impl Value {
     }
     pub(crate) fn couple_impl<C: FillContext>(
         &mut self,
-        other: Self,
+        mut other: Self,
         ctx: &C,
     ) -> Result<(), C::Error> {
+        self.match_scalar_fill(ctx);
+        other.match_scalar_fill(ctx);
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.couple_impl(b, ctx)?,
-            (Value::Byte(a), Value::Byte(b)) => {
-                *self = op2_bytes_retry_fill::<_, C>(
-                    a.clone(),
-                    b,
-                    ctx,
-                    |mut a, b| {
-                        a.couple_impl(b, ctx)?;
-                        Ok(a.into())
-                    },
-                    |mut a, b| {
-                        a.couple_impl(b, ctx)?;
-                        Ok(a.into())
-                    },
-                )?
-            }
+            (Value::Byte(a), Value::Byte(b)) => a.couple_impl(b, ctx)?,
             (Value::Complex(a), Value::Complex(b)) => a.couple_impl(b, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.couple_impl(b, ctx)?,
             (Value::Box(a), Value::Box(b)) => a.couple_impl(b, ctx)?,

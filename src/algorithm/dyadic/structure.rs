@@ -8,7 +8,6 @@ use std::{
 
 use ecow::EcoVec;
 
-use crate::algorithm::{op_bytes_ref_retry_fill, op_bytes_retry_fill};
 use crate::{
     algorithm::FillContext,
     cowslice::{cowslice, CowSlice},
@@ -78,15 +77,12 @@ impl Value {
         })
     }
     /// Use this array as an index to pick from another
-    pub fn pick(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn pick(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
         let (index_shape, index_data) = self.as_shaped_indices(env)?;
+        from.match_scalar_fill(env);
         Ok(match from {
             Value::Num(a) => Value::Num(a.pick(index_shape, &index_data, env)?),
-            Value::Byte(a) => op_bytes_retry_fill(
-                a,
-                |a| a.pick(index_shape, &index_data, env).map(Into::into),
-                |a| a.pick(index_shape, &index_data, env).map(Into::into),
-            )?,
+            Value::Byte(a) => Value::Byte(a.pick(index_shape, &index_data, env)?),
             Value::Complex(a) => Value::Complex(a.pick(index_shape, &index_data, env)?),
             Value::Char(a) => Value::Char(a.pick(index_shape, &index_data, env)?),
             Value::Box(a) => Value::Box(a.pick(index_shape, &index_data, env)?),
@@ -310,15 +306,12 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// Use this value to `take` from another
-    pub fn take(self, from: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn take(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
         let index = self.as_ints_or_infs(env, "Index must be a list of integers or infinity")?;
+        from.match_scalar_fill(env);
         Ok(match from {
             Value::Num(a) => Value::Num(a.take(&index, env)?),
-            Value::Byte(a) => op_bytes_retry_fill(
-                a,
-                |a| a.take(&index, env).map(Into::into),
-                |a| a.take(&index, env).map(Into::into),
-            )?,
+            Value::Byte(a) => Value::Byte(a.take(&index, env)?),
             Value::Complex(a) => Value::Complex(a.take(&index, env)?),
             Value::Char(a) => Value::Char(a.take(&index, env)?),
             Value::Box(a) => Value::Box(a.take(&index, env)?),
@@ -784,11 +777,11 @@ impl Value {
         let (indices_shape, indices_data) = self.as_shaped_indices(env)?;
         Ok(match from {
             Value::Num(a) => a.select(indices_shape, &indices_data, env)?.into(),
-            Value::Byte(a) => op_bytes_ref_retry_fill(
-                a,
-                |a| Ok(a.select(indices_shape, &indices_data, env)?.into()),
-                |a| Ok(a.select(indices_shape, &indices_data, env)?.into()),
-            )?,
+            Value::Byte(a) if env.number_only_fill() => a
+                .convert_ref::<f64>()
+                .select(indices_shape, &indices_data, env)?
+                .into(),
+            Value::Byte(a) => a.select(indices_shape, &indices_data, env)?.into(),
             Value::Complex(a) => a.select(indices_shape, &indices_data, env)?.into(),
             Value::Char(a) => a.select(indices_shape, &indices_data, env)?.into(),
             Value::Box(a) => a.select(indices_shape, &indices_data, env)?.into(),

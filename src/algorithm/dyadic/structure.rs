@@ -27,7 +27,7 @@ impl<T: Clone> Array<T> {
         self.shape[0] -= 1;
     }
     pub(crate) fn set_row(&mut self, index: usize, row: Self) {
-        let row_len = row.row_len();
+        let row_len = self.row_len();
         let start = index * row_len;
         for (a, b) in self.data.as_mut_slice()[start..]
             .iter_mut()

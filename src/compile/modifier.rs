@@ -742,6 +742,7 @@ impl Compiler {
                 let spandex = self.add_span(modified.modifier.span.clone());
                 let instrs = if let Some((inverse, inv_sig)) = invert_instrs(&instrs, self)
                     .and_then(|inv| instrs_signature(&inv).ok().map(|sig| (inv, sig)))
+                    .filter(|(_, inv_sig)| sig.is_compatible_with(*inv_sig))
                 {
                     // If an inverse for repeat's function exists we use a special
                     // implementation that allows for negative repeatition counts

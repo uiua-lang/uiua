@@ -685,10 +685,12 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
                     )));
                 }
             }
-            if let Some((f, a, b)) = f_dy_fast_fn(f.instrs(&env.asm), env) {
-                let val = f(xs, ys, a + 1, b + 1, env)?;
-                env.push(val);
-                return Ok(());
+            if !inv {
+                if let Some((f, a, b)) = f_dy_fast_fn(f.instrs(&env.asm), env) {
+                    let val = f(xs, ys, a + 1, b + 1, env)?;
+                    env.push(val);
+                    return Ok(());
+                }
             }
             let is_empty = outputs > 0 && (xs.row_count() == 0 || ys.row_count() == 0);
             let mut new_rows = multi_output(

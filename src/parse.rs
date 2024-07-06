@@ -890,19 +890,6 @@ impl<'i> Parser<'i> {
                             .cloned(),
                     );
                 }
-                if operands.len() == 2 && operands[0] == operands[1] {
-                    self.diagnostics.push(Diagnostic::new(
-                        format!(
-                            "{}'s functions are the same, so it \
-                                can be replaced with {}.",
-                            Primitive::Bracket.format(),
-                            Primitive::Both.format(),
-                        ),
-                        span.clone(),
-                        DiagnosticKind::Advice,
-                        self.inputs.clone(),
-                    ));
-                }
             }
             _ => (),
         }

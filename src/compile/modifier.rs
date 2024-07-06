@@ -408,7 +408,9 @@ impl Compiler {
                 }
             }
             if let Word::Modified(m) = &op.value {
-                if let Modifier::Primitive(Primitive::Fork | Primitive::Bracket) = &m.modifier.value
+                if matches!(m.modifier.value, Modifier::Primitive(Primitive::Fork))
+                    || matches!(m.modifier.value, Modifier::Primitive(Primitive::Bracket))
+                        && prim != Primitive::Table
                 {
                     let mut m = (**m).clone();
                     for op in m.operands.iter_mut().filter(|w| w.value.is_code()) {

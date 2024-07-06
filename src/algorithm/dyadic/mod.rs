@@ -328,7 +328,8 @@ fn derive_shape(
                 if dims[1..].iter().any(|&dim| dim.is_err()) {
                     return Err(env.error("Cannot reshape array with multiple infinite dimensions"));
                 }
-                let shape_non_leading_len = dims[1..].iter().flatten().product::<isize>() as usize;
+                let shape_non_leading_len =
+                    dims[1..].iter().flatten().product::<isize>().unsigned_abs();
                 if shape_non_leading_len == 0 {
                     return Err(env.error("Cannot reshape array with any 0 non-leading dimensions"));
                 }

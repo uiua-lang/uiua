@@ -1458,10 +1458,10 @@ primitive!(
     /// Apply a function to aggregate arrays
     ///
     /// Expects as many arguments as its function takes.
-    /// The function must take at least 1 more argument than it returns outputs.
+    /// The function must take at least 1 more argument than it returns.
     /// Arguments that are lower on the stack that will be used as accumulators.
     /// Arguments that are higher on the stack will be iterated over.
-    /// The function will be repeatdely called with the rows of the iterated arrays followed by the accumulators.
+    /// The function will be repeatedly called with the rows of the iterated arrays, followed by the accumulators.
     /// On each iteration, the returned values will be used as the new accumulators.
     ///
     /// For example, [fold] can be used to [reduce] an array with a default value.

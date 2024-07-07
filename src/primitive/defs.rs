@@ -2852,6 +2852,7 @@ impl_primitive!(
     (1, LastMaxIndex),
     (1, FirstWhere),
     (1, LastWhere),
+    (1, LenWhere),
     (1, SortUp),
     (1, SortDown),
     (1[1], ReduceContent),

@@ -717,7 +717,11 @@ impl<T: ArrayValue> Array<T> {
     }
 }
 
-fn pad_keep_counts<'a>(counts: &'a [f64], len: usize, env: &Uiua) -> UiuaResult<Cow<'a, [f64]>> {
+pub(super) fn pad_keep_counts<'a>(
+    counts: &'a [f64],
+    len: usize,
+    env: &Uiua,
+) -> UiuaResult<Cow<'a, [f64]>> {
     let mut amount = Cow::Borrowed(counts);
     match amount.len().cmp(&len) {
         Ordering::Equal => {}

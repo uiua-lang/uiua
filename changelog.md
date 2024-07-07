@@ -45,6 +45,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`&camcap`](https://uiua.org/docs/&camcap) system function, which captures a frame from a camera
 ### Interpreter
 - Some optimizations
+  - Optimize [`len ⧻`](https://uiua.org/docs/len)[`where ⊚`](https://uiua.org/docs/where)
 - Array shapes now show on hover in the LSP
 - Allow Uiua-specific tokens types to be disabled in the LSP
 ### Website

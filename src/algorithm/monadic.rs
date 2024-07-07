@@ -1219,6 +1219,31 @@ impl Value {
             }
         }
     }
+    pub(crate) fn len_where(&self, env: &Uiua) -> UiuaResult<usize> {
+        match self {
+            Value::Num(nums) => {
+                let mut len = 0;
+                for &n in &nums.data {
+                    if n.fract() != 0.0 || n < 0.0 {
+                        return Err(env.error("Argument to where must be an array of naturals"));
+                    }
+                    len += 1;
+                }
+                Ok(len)
+            }
+            Value::Byte(bytes) => {
+                let mut len = 0;
+                for &n in &bytes.data {
+                    len += (n != 0) as usize;
+                }
+                Ok(len)
+            }
+            value => Err(env.error(format!(
+                "Argument to where must be an array of naturals, but it is {}",
+                value.type_name_plural()
+            ))),
+        }
+    }
     /// `un` `where`
     pub fn unwhere(&self, env: &Uiua) -> UiuaResult<Self> {
         self.unwhere_impl(&[], env)

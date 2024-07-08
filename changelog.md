@@ -14,6 +14,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Identifiers can now contain subscript numbers
   - They format from `__` followed by some numbers
   - For example, `X__1` will format to `X₁`
+- Stabilize labels
+  - Tutorial to come
 - [`windows ◫`](https://uiua.org/docs/windows) can now use a [`fill ⬚`](https://uiua.org/docs/fill) value to pad the array
   - This is useful for convolutions
 - Add new [Scoped Modules](https://uiua.org/tutorial/modules#scoped-modules)
@@ -40,6 +42,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the `# Track caller!` semantic comment, which prevents stack traces from going below the function that contains it
 - Deprecate the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, as it is seldom needed and easy to implement with other functions
   - It can be mostly replaced with `⊢⊚⌕`
+- Deprecate experimental stack and array swizzles
+  - They don't fit my vision for the language
 - Adjacent [`trace ⸮`](https://uiua.org/docs/trace)s now function as a single [`trace ⸮`](https://uiua.org/docs/trace) of more values
 - N+1 adjacent [`stack ?`](https://uiua.org/docs/stack)s now format to N [`trace ⸮`](https://uiua.org/docs/trace)s
 - Add the [`&camcap`](https://uiua.org/docs/&camcap) system function, which captures a frame from a camera

@@ -1007,10 +1007,6 @@ code:
                 self.push_instr(instr);
             }
             Word::Label(label) => {
-                self.experimental_error(&word.span, || {
-                    "Labels are experimental. To use them, add \
-                    `# Experimental!` to the top of the file."
-                });
                 let mut instr = Instr::Label {
                     label: label.into(),
                     span: self.add_span(word.span.clone()),

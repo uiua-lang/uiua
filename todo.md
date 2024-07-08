@@ -1,14 +1,15 @@
 # Uiua Todo
 
 - 0.12
-  - Deprecate swizzles
-  - Stabilize labels
   - `orient` boxed
   - Goto definition/Ctrl+click on git imports to go to the URL
   - Stack-source locality tutorial
   - Rewrite .uasm format
   - Fix pad cursor jumping with end-of-line comments
   - Unicode literals
+  - Misc features tutorial
+    - Labels
+    - Line splitting
   - Possible
     - Dynamic modules
     - `setinv` on and by inverses

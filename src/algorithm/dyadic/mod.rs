@@ -1105,6 +1105,99 @@ impl<T: ArrayValue> Array<T> {
 }
 
 impl Value {
+    /// Use this value to `chunks` another
+    pub fn chunks(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
+        let isize_spec = self.as_ints(env, "Chunk size must be an integer or list of integers")?;
+        Ok(match from {
+            Value::Num(a) => a.chunks(&isize_spec, env)?.into(),
+            Value::Byte(a) if env.number_only_fill() => {
+                a.convert_ref::<f64>().chunks(&isize_spec, env)?.into()
+            }
+            Value::Byte(a) => a.chunks(&isize_spec, env)?.into(),
+            Value::Complex(a) => a.chunks(&isize_spec, env)?.into(),
+            Value::Char(a) => a.chunks(&isize_spec, env)?.into(),
+            Value::Box(a) => a.chunks(&isize_spec, env)?.into(),
+        })
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    /// Get `chunks` of this array
+    pub fn chunks(&self, isize_spec: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        if isize_spec.iter().any(|&s| s == 0) {
+            return Err(env.error("Chunk size cannot be zero"));
+        }
+        if isize_spec.len() > self.shape.len() {
+            return Err(env.error(format!(
+                "Chunk size {isize_spec:?} has too many axes for shape {}",
+                self.shape()
+            )));
+        }
+
+        let mut size_spec = Vec::with_capacity(isize_spec.len());
+        for (d, s) in self.shape.iter().zip(isize_spec) {
+            let u = s.unsigned_abs();
+            size_spec.push(if *s >= 0 { u } else { (*d + u - 1) / u });
+        }
+        let row_shape: Shape = self.shape[size_spec.len()..].iter().copied().collect();
+        let row_len = row_shape.elements();
+
+        let mut new_shape = Shape::with_capacity(size_spec.len() + self.shape.len());
+        for (d, s) in self.shape.iter().zip(&size_spec) {
+            new_shape.push(*d / *s);
+        }
+        new_shape.extend(size_spec.iter().copied());
+        new_shape.extend(self.shape.iter().skip(size_spec.len()).copied());
+
+        let mut new_data =
+            EcoVec::with_capacity(validate_size::<T>(new_shape.iter().copied(), env)?);
+        let mut corner = vec![0; self.shape.len()];
+        let mut offset = vec![0; size_spec.len()];
+        println!("size_spec: {size_spec:?}");
+        println!("new_shape: {new_shape:?}");
+        'chunks: loop {
+            // Reset offset
+            for i in &mut offset {
+                *i = 0;
+            }
+            println!("corner: {corner:?}");
+            // Copy the chunk at the current corner
+            'items: loop {
+                println!("  offset: {offset:?}");
+                let mut src_index = 0;
+                let mut stride = row_len;
+                for ((c, i), s) in corner.iter().zip(&offset).zip(&self.shape).rev() {
+                    src_index += (*c + *i) * stride;
+                    stride *= s;
+                }
+                new_data.extend_from_slice(&self.data[src_index..][..row_len]);
+                // Go to the next item
+                for i in (0..offset.len()).rev() {
+                    offset[i] += 1;
+                    if offset[i] == size_spec[i] {
+                        offset[i] = 0;
+                    } else {
+                        continue 'items;
+                    }
+                }
+                break;
+            }
+            // Go to the next corner
+            for i in (0..size_spec.len()).rev() {
+                corner[i] += size_spec[i];
+                if corner[i] == self.shape[i] {
+                    corner[i] = 0;
+                } else {
+                    continue 'chunks;
+                }
+            }
+            break;
+        }
+        Ok(Array::new(new_shape, new_data))
+    }
+}
+
+impl Value {
     /// Try to `find` this value in another
     pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Self> {
         self.generic_bin_ref(

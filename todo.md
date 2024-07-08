@@ -2,7 +2,6 @@
 
 - 0.12
   - `orient` boxed
-  - Goto definition/Ctrl+click on git imports to go to the URL
   - Stack-source locality tutorial
   - Rewrite .uasm format
   - Fix pad cursor jumping with end-of-line comments

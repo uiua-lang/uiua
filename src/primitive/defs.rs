@@ -1279,6 +1279,8 @@ primitive!(
     ///   : ⬚0◫2_3
     ///   : ≡≡□
     (2, Windows, DyadicArray, ("windows", '◫')),
+    /// Get the n-wise chunks of an array
+    (2, Chunks, DyadicArray, "chunks"),
     /// Discard or copy some rows of an array
     ///
     /// Takes two arrays. The first array is the number of copies to keep of each row of the second array.

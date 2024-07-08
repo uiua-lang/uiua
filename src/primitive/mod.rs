@@ -395,7 +395,7 @@ impl Primitive {
         matches!(
             self,
             (But | With | Backward)
-                | (Orient | Coordinate | Astar | Fft | Triangle | Case)
+                | (Chunks | Orient | Coordinate | Astar | Fft | Triangle | Case)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )
@@ -587,6 +587,7 @@ impl Primitive {
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
             Primitive::Select => env.dyadic_or_env(Value::select)?,
             Primitive::Windows => env.dyadic_rr_env(Value::windows)?,
+            Primitive::Chunks => env.dyadic_rr_env(Value::chunks)?,
             Primitive::Where => env.monadic_ref_env(Value::wher)?,
             Primitive::Classify => env.monadic_ref(Value::classify)?,
             Primitive::Deduplicate => env.monadic_mut_env(Value::deduplicate)?,

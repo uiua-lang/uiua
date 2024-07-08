@@ -1228,7 +1228,7 @@ impl Value {
                     if n.fract() != 0.0 || n < 0.0 {
                         return Err(env.error("Argument to where must be an array of naturals"));
                     }
-                    len += 1;
+                    len += n as usize;
                 }
                 Ok(len)
             }

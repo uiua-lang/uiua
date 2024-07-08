@@ -1989,7 +1989,11 @@ impl Value {
             }
         };
         if let Some(map_keys) = self.map_keys() {
-            s = format!("map {} {}", map_keys.clone().normalized(), s);
+            s = format!(
+                "map {} {}",
+                map_keys.clone().normalized().representation(),
+                s
+            );
         }
         if let Some(label) = &self.meta().label {
             s = format!("${label} {s}");

@@ -1996,6 +1996,11 @@ code:
             "Swizzles are experimental. To use them, add \
             `# Experimental!` to the top of the file."
         });
+        self.emit_diagnostic(
+            "Stack swizzles are deprecated and will be removed in the future.",
+            DiagnosticKind::Warning,
+            span.clone(),
+        );
         let sig = swiz.signature();
         let spandex = self.add_span(span.clone());
         let equivalent = match (swiz.indices.as_slice(), swiz.fix.as_slice()) {
@@ -2037,6 +2042,11 @@ code:
                 `# Experimental!` to the top of the file.",
             );
         }
+        self.emit_diagnostic(
+            "Array swizzles are deprecated and will be removed in the future.",
+            DiagnosticKind::Warning,
+            span.clone(),
+        );
         let sig = swiz.signature();
         let mut instrs = EcoVec::new();
         let normal_ordered = (swiz.indices.iter().enumerate()).all(|(i, &idx)| i == idx as usize);

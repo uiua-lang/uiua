@@ -970,20 +970,6 @@ pub fn Editor<'a>(
     // Additional code buttons
     for (glyph, title, class, surround, doc) in [
         (
-            "λ",
-            "(') stack swizzle",
-            "experimental-glyph-button variadic-function text-gradient",
-            None,
-            "docs/experimental#stack-swizzles",
-        ),
-        (
-            "⋊",
-            "('') array swizzle",
-            "experimental-glyph-button monadic-function",
-            None,
-            "docs/experimental#array-swizzles",
-        ),
-        (
             "_",
             "strand",
             "strand-span",

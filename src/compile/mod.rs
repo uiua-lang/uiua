@@ -28,7 +28,7 @@ use crate::{
     function::*,
     ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
-    lsp::{CodeMeta, SigDecl},
+    lsp::{CodeMeta, ImportSrc, SigDecl},
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, DocComment, GitTarget, Ident,
@@ -748,12 +748,19 @@ code:
             if !(url.starts_with("https://") || url.starts_with("http://")) {
                 url = format!("https://{url}");
             }
+            self.code_meta
+                .import_srcs
+                .insert(span.clone(), ImportSrc::Git(url.clone()));
             self.backend()
                 .load_git_module(&url, target)
                 .map_err(|e| self.fatal_error(span.clone(), e))?
         } else {
             // Normal import
-            self.resolve_import_path(Path::new(path_str))
+            let path = self.resolve_import_path(Path::new(path_str));
+            self.code_meta
+                .import_srcs
+                .insert(span.clone(), ImportSrc::File(path.clone()));
+            path
         };
         if !self.imports.contains_key(&path) {
             let bytes = self

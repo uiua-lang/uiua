@@ -4,6 +4,7 @@
 
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
+    path::PathBuf,
     slice,
 };
 
@@ -124,6 +125,8 @@ pub struct CodeMeta {
     pub array_inner_spans: BTreeMap<CodeSpan, Vec<CodeSpan>>,
     /// A map of array shapes
     pub array_shapes: BTreeMap<CodeSpan, Shape>,
+    /// A map of module spans to their source
+    pub import_srcs: HashMap<CodeSpan, ImportSrc>,
 }
 
 /// Data for the signature of a function
@@ -135,6 +138,15 @@ pub struct SigDecl {
     pub explicit: bool,
     /// Whether the function is inline
     pub inline: bool,
+}
+
+/// The source of an imported module
+#[derive(Debug, Clone)]
+pub enum ImportSrc {
+    /// A Git URL
+    Git(String),
+    /// A file path
+    File(PathBuf),
 }
 
 pub(crate) type SigDecls = HashMap<CodeSpan, SigDecl>;
@@ -495,11 +507,7 @@ pub use server::run_language_server;
 
 #[cfg(feature = "lsp")]
 mod server {
-    use std::{
-        env::current_dir,
-        path::{Path, PathBuf},
-        sync::Arc,
-    };
+    use std::{env::current_dir, path::Path, sync::Arc};
 
     use dashmap::DashMap;
     use tower_lsp::{
@@ -719,11 +727,12 @@ mod server {
             else {
                 return Ok(None);
             };
+            let path = uri_path(&params.text_document_position_params.text_document.uri);
             let (line, col) = lsp_pos_to_uiua(params.text_document_position_params.position);
             let mut prim_range = None;
             // Hovering a primitive
             for sp in &doc.spans {
-                if sp.span.contains_line_col(line, col) {
+                if sp.span.contains_line_col(line, col) && sp.span.src == path {
                     match sp.value {
                         SpanKind::Primitive(prim) => {
                             prim_range = Some((prim, uiua_span_to_lsp(&sp.span)));
@@ -737,7 +746,8 @@ mod server {
             if prim_range.is_none() {
                 for span_kind in &doc.spans {
                     if let SpanKind::Ident(Some(docs)) = &span_kind.value {
-                        if span_kind.span.contains_line_col(line, col) {
+                        if span_kind.span.contains_line_col(line, col) && span_kind.span.src == path
+                        {
                             binding_docs = Some(span_kind.span.clone().sp(docs));
                             break;
                         }
@@ -748,7 +758,7 @@ mod server {
             let mut inline_function_sig: Option<Sp<Signature>> = None;
             if prim_range.is_none() && binding_docs.is_none() {
                 for (span, inline) in &doc.code_meta.function_sigs {
-                    if !inline.explicit && span.contains_line_col(line, col) {
+                    if !inline.explicit && span.contains_line_col(line, col) && span.src == path {
                         inline_function_sig = Some(span.clone().sp(inline.sig));
                     }
                 }
@@ -757,7 +767,7 @@ mod server {
             let mut stack_swizzle: Option<Sp<&StackSwizzle>> = None;
             for span_kind in &doc.spans {
                 if let SpanKind::StackSwizzle(s) = &span_kind.value {
-                    if span_kind.span.contains_line_col(line, col) {
+                    if span_kind.span.contains_line_col(line, col) && span_kind.span.src == path {
                         stack_swizzle = Some(span_kind.span.clone().sp(s));
                         break;
                     }
@@ -767,7 +777,7 @@ mod server {
             let mut array_swizzle: Option<Sp<&ArraySwizzle>> = None;
             for span_kind in &doc.spans {
                 if let SpanKind::ArraySwizzle(s) = &span_kind.value {
-                    if span_kind.span.contains_line_col(line, col) {
+                    if span_kind.span.contains_line_col(line, col) && span_kind.span.src == path {
                         array_swizzle = Some(span_kind.span.clone().sp(s));
                         break;
                     }
@@ -776,9 +786,26 @@ mod server {
             // Hovering an array
             let mut array_shape: Option<Sp<&Shape>> = None;
             for (span, arr_meta) in &doc.code_meta.array_shapes {
-                if span.contains_line_col(line, col) {
+                if span.contains_line_col(line, col) && span.src == path {
                     array_shape = Some(span.clone().sp(arr_meta));
                     break;
+                }
+            }
+            // Hovering a git import
+            for (span, src) in &doc.code_meta.import_srcs {
+                if span.contains_line_col(line, col) && span.src == path {
+                    match src {
+                        ImportSrc::Git(url) => {
+                            return Ok(Some(Hover {
+                                contents: HoverContents::Markup(MarkupContent {
+                                    kind: MarkupKind::Markdown,
+                                    value: format!("[View Git repository]({url})"),
+                                }),
+                                range: Some(uiua_span_to_lsp(span)),
+                            }))
+                        }
+                        ImportSrc::File(_) => {}
+                    };
                 }
             }
 
@@ -1574,6 +1601,7 @@ mod server {
             let position = params.text_document_position_params.position;
             let (line, col) = lsp_pos_to_uiua(position);
             let path = uri_path(&params.text_document_position_params.text_document.uri);
+            // Check global references
             for (name, idx) in &doc.code_meta.global_references {
                 if name.span.contains_line_col(line, col) && name.span.src == path {
                     let binding = &doc.asm.bindings[*idx];
@@ -1587,6 +1615,20 @@ mod server {
                         uri,
                         range: uiua_span_to_lsp(&binding.span),
                     })));
+                }
+            }
+            // Check import sources
+            for (span, src) in &doc.code_meta.import_srcs {
+                if span.contains_line_col(line, col) && span.src == path {
+                    match src {
+                        ImportSrc::File(path) => {
+                            return Ok(Some(GotoDefinitionResponse::Scalar(Location {
+                                uri: path_to_uri(path)?,
+                                range: Range::new(Position::new(0, 0), Position::new(0, 0)),
+                            })))
+                        }
+                        ImportSrc::Git(_) => {}
+                    };
                 }
             }
             Ok(None)

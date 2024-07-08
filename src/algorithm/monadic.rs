@@ -170,6 +170,7 @@ impl<T: ArrayValue> Array<T> {
         match self.shape.unfix() {
             Some(1) => Ok(()),
             Some(d) => Err(env.error(format!("Cannot unfix array with length {d}"))),
+            None if self.shape.contains(&0) => Err(env.error("Cannot unfix empty array")),
             None => Err(env.error("Cannot unfix scalar")),
         }
     }

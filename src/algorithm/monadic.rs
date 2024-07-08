@@ -1235,7 +1235,7 @@ impl Value {
             Value::Byte(bytes) => {
                 let mut len = 0;
                 for &n in &bytes.data {
-                    len += (n != 0) as usize;
+                    len += n as usize;
                 }
                 Ok(len)
             }

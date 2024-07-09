@@ -1,9 +1,9 @@
 # Uiua Todo
 
 - 0.12
+  - `≡F◫`
   - Document depth optimizations
-  - `orient` boxed
-  - Stack-source locality tutorial
+  - Writing longer code tutorial
   - Rewrite .uasm format
   - Fix pad cursor jumping with end-of-line comments
   - Unicode literals
@@ -11,6 +11,7 @@
     - Labels
     - Line splitting
   - Possible
+    - `orient` boxed
     - Dynamic modules
     - `setinv` on and by inverses
     - Document on and by inverses
@@ -38,7 +39,6 @@ Feel free to make PRs to the list itself as well.
 - Better complex `⌈`/`⌊`/`⁅`/`◿`, `<`/`>`/`≤`/`≥`, `↥`/`↧`
 - Pad link from Gist
 - Additional optimizations
-  - `≡F◫`
   - `/F◫`
   - `/F⇌`
   - `⍜⇌/F`

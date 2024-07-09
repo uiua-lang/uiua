@@ -32,7 +32,7 @@ pub enum ParseError {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expectation {
     Term,
-    ArgOutCount,
+    Placeholder,
     ItemName,
     Token(Token),
 }
@@ -47,7 +47,7 @@ impl fmt::Display for Expectation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Expectation::Term => write!(f, "term"),
-            Expectation::ArgOutCount => write!(f, "argument/output count"),
+            Expectation::Placeholder => write!(f, "placeholder"),
             Expectation::ItemName => write!(f, "item name"),
             Expectation::Token(Simple(s)) => write!(f, "`{s}`"),
             Expectation::Token(tok) => write!(f, "{:?}", tok),
@@ -637,7 +637,7 @@ impl<'i> Parser<'i> {
                 (a, 1)
             }
         } else {
-            self.errors.push(self.expected([Expectation::ArgOutCount]));
+            self.errors.push(self.expected([Expectation::Placeholder]));
             (1usize, 1usize)
         }
     }

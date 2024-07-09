@@ -65,9 +65,9 @@ impl GridFmt for f64 {
         } else if positive == f64::INFINITY {
             format!("{minus}∞")
         } else if f.to_bits() == EMPTY_NAN.to_bits() || f.to_bits() == TOMBSTONE_NAN.to_bits() {
-            return vec![vec!['⋅']];
+            "⋅".into()
         } else if f.to_bits() == WILDCARD_NAN.to_bits() {
-            return vec![vec!['W']];
+            "W".into()
         } else if positive.fract() == 0.0 || positive.is_nan() {
             format!("{minus}{positive}")
         } else if let Some((num, denom, approx)) =

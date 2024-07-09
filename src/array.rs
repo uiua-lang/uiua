@@ -778,7 +778,13 @@ impl ArrayValue for f64 {
         env.num_array_fill()
     }
     fn array_hash<H: Hasher>(&self, hasher: &mut H) {
-        let v = if self.is_nan() {
+        let v = if self.to_bits() == EMPTY_NAN.to_bits() {
+            EMPTY_NAN
+        } else if self.to_bits() == TOMBSTONE_NAN.to_bits() {
+            TOMBSTONE_NAN
+        } else if self.to_bits() == WILDCARD_NAN.to_bits() {
+            WILDCARD_NAN
+        } else if self.is_nan() {
             f64::NAN
         } else if *self == 0.0 && self.is_sign_negative() {
             0.0

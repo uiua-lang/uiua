@@ -1282,7 +1282,7 @@ primitive!(
     /// Get the n-wise chunks of an array
     ///
     /// Similar to [windows], [chunks] splits an array into subarrays of equal size.
-    /// However, [chunks] does return overlapping subarrays.
+    /// However, [chunks] does *not* return overlapping subarrays.
     /// ex: # Experimental!
     ///   : chunks 3 [1 2 3 4 5 6]
     /// ex: # Experimental!

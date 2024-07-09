@@ -54,11 +54,10 @@ impl Value {
         if depth == 0 {
             return Boxed(self).into();
         }
+        let new_shape: Shape = self.shape()[..depth].into();
         let row_shape: Shape = self.shape()[depth..].into();
-        self.into_row_shaped_slices(row_shape)
-            .map(Boxed)
-            .collect::<Array<_>>()
-            .into()
+        let data: EcoVec<Boxed> = self.into_row_shaped_slices(row_shape).map(Boxed).collect();
+        Array::new(new_shape, data).into()
     }
     /// Attempt to parse the value into a number
     pub fn parse_num(&self, env: &Uiua) -> UiuaResult<Self> {

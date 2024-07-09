@@ -49,6 +49,17 @@ impl Value {
             }
         }
     }
+    pub(crate) fn box_depth(self, depth: usize) -> Self {
+        let depth = depth.min(self.rank());
+        if depth == 0 {
+            return Boxed(self).into();
+        }
+        let row_shape: Shape = self.shape()[depth..].into();
+        self.into_row_shaped_slices(row_shape)
+            .map(Boxed)
+            .collect::<Array<_>>()
+            .into()
+    }
     /// Attempt to parse the value into a number
     pub fn parse_num(&self, env: &Uiua) -> UiuaResult<Self> {
         Ok(match (self, self.shape().dims()) {

@@ -601,7 +601,7 @@ impl Primitive {
             // Primitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
-                env.push(Boxed(val));
+                env.push(val.box_depth(0));
             }
             Primitive::Repr => env.monadic_ref(Value::representation)?,
             Primitive::Parse => env.monadic_ref_env(Value::parse_num)?,

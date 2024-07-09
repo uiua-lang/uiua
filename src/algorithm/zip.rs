@@ -62,6 +62,7 @@ fn prim_mon_fast_fn(prim: Primitive, span: usize) -> Option<ValueMonFn> {
             v.fix_depth(d);
             Ok(v)
         }),
+        Box => spanned_mon_fn(span, |v, d, _| Ok(v.box_depth(d))),
         _ => return None,
     })
 }

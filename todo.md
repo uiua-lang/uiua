@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.12
+  - Document depth optimizations
   - `orient` boxed
   - Stack-source locality tutorial
   - Rewrite .uasm format
@@ -14,7 +15,6 @@
     - `setinv` on and by inverses
     - Document on and by inverses
     - `base` function?
-    - `chunks` function?
     - Channels?
     - Stack visualization output comments?
     - Plots?

@@ -1280,6 +1280,23 @@ primitive!(
     ///   : ≡≡□
     (2, Windows, DyadicArray, ("windows", '◫')),
     /// Get the n-wise chunks of an array
+    ///
+    /// Similar to [windows], [chunks] splits an array into subarrays of equal size.
+    /// However, [chunks] does return overlapping subarrays.
+    /// ex: # Experimental!
+    ///   : chunks 3 [1 2 3 4 5 6]
+    /// ex: # Experimental!
+    ///   : ≡≡□ chunks 2_3 . °△ 4_6
+    /// If the chunk size does not evenly divide the shape of the array, the edge chunks will be omitted.
+    /// ex: # Experimental!
+    ///   : chunks 3 [1 2 3 4 5 6 7 8]
+    /// ex: # Experimental!
+    ///   : ≡≡□ chunks 2_2 . °△ 5_5
+    /// If [fill] is used, the edge chunks will be filled with the fill value.
+    /// ex: # Experimental!
+    ///   : ⬚0chunks 3 [1 2 3 4 5 6 7 8]
+    /// ex: # Experimental!
+    ///   : ≡≡□ ⬚0chunks 2_2 . °△ 5_5
     (2, Chunks, DyadicArray, "chunks"),
     /// Discard or copy some rows of an array
     ///

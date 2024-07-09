@@ -1135,19 +1135,29 @@ impl<T: ArrayValue> Array<T> {
         }
 
         let mut size_spec = Vec::with_capacity(isize_spec.len());
-        for (d, s) in self.shape.iter().zip(isize_spec) {
-            let u = s.unsigned_abs();
-            size_spec.push(if *s >= 0 { u } else { (*d + u - 1) / u });
+        let fill = env.scalar_fill::<T>().ok();
+        let mut virtual_shape = self.shape.clone();
+        for (v, &i) in virtual_shape.iter_mut().zip(isize_spec) {
+            let u = i.unsigned_abs();
+            let s = if i >= 0 { u } else { (*v + u - 1) / u };
+            size_spec.push(s);
+            if *v % u != 0 {
+                *v = if fill.is_some() {
+                    (*v / u + 1) * u
+                } else {
+                    (*v / u) * u
+                };
+            }
         }
         let row_shape: Shape = self.shape[size_spec.len()..].iter().copied().collect();
         let row_len = row_shape.elements();
 
-        let mut new_shape = Shape::with_capacity(size_spec.len() + self.shape.len());
-        for (d, s) in self.shape.iter().zip(&size_spec) {
+        let mut new_shape = Shape::with_capacity(size_spec.len() + virtual_shape.len());
+        for (d, s) in virtual_shape.iter().zip(&size_spec) {
             new_shape.push(*d / *s);
         }
         new_shape.extend(size_spec.iter().copied());
-        new_shape.extend(self.shape.iter().skip(size_spec.len()).copied());
+        new_shape.extend(virtual_shape.iter().skip(size_spec.len()).copied());
 
         let mut new_data =
             EcoVec::with_capacity(validate_size::<T>(new_shape.iter().copied(), env)?);
@@ -1163,14 +1173,23 @@ impl<T: ArrayValue> Array<T> {
             println!("corner: {corner:?}");
             // Copy the chunk at the current corner
             'items: loop {
-                println!("  offset: {offset:?}");
                 let mut src_index = 0;
                 let mut stride = row_len;
                 for ((c, i), s) in corner.iter().zip(&offset).zip(&self.shape).rev() {
                     src_index += (*c + *i) * stride;
                     stride *= s;
                 }
-                new_data.extend_from_slice(&self.data[src_index..][..row_len]);
+                if let Some(fill) = &fill {
+                    new_data.extend(
+                        self.data[src_index..]
+                            .iter()
+                            .chain(repeat(fill))
+                            .take(row_len)
+                            .cloned(),
+                    );
+                } else {
+                    new_data.extend_from_slice(&self.data[src_index..][..row_len]);
+                }
                 // Go to the next item
                 for i in (0..offset.len()).rev() {
                     offset[i] += 1;
@@ -1185,7 +1204,7 @@ impl<T: ArrayValue> Array<T> {
             // Go to the next corner
             for i in (0..size_spec.len()).rev() {
                 corner[i] += size_spec[i];
-                if corner[i] == self.shape[i] {
+                if corner[i] == virtual_shape[i] {
                     corner[i] = 0;
                 } else {
                     continue 'chunks;

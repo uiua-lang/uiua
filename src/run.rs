@@ -759,12 +759,14 @@ code:
         for (i, stack) in self.rt.temp_stacks.iter().enumerate() {
             temp_bottoms[i] = stack.len().saturating_sub(temp_sigs[i].args);
         }
+        let array_stack_height = self.rt.array_stack.len();
         let res = self.call(f);
         if res.is_err() {
             self.truncate_stack(bottom);
             for (stack, bottom) in self.rt.temp_stacks.iter_mut().zip(temp_bottoms) {
                 stack.truncate(bottom);
             }
+            self.rt.array_stack.truncate(array_stack_height);
         }
         res
     }

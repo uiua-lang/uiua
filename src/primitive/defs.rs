@@ -1302,7 +1302,7 @@ primitive!(
     ///   : chunks ¯3 [1 2 3 4 5 6]
     /// Negative and positive chunk sizes can be mixed.
     /// ex: # Experimental!
-    ///   : chunks ¯2_2 . °△ 6_6
+    ///   : ≡≡□ chunks ¯2_2 . °△ 6_6
     (2, Chunks, DyadicArray, "chunks"),
     /// Discard or copy some rows of an array
     ///

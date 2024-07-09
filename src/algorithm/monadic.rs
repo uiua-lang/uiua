@@ -5,7 +5,7 @@ use std::{
     collections::{HashMap, HashSet},
     convert::identity,
     f64::consts::{PI, TAU},
-    iter::{self, repeat},
+    iter,
     mem::size_of,
     ptr, slice,
     time::Duration,
@@ -390,7 +390,7 @@ impl<T: ArrayValue> Array<T> {
             [] => Ok(self),
             [0, rest @ ..] => match env.scalar_fill() {
                 Ok(fill) => {
-                    self.data.extend(repeat(fill).take(self.row_len()));
+                    self.data.extend_repeat(&fill, self.row_len());
                     self.shape = rest.into();
                     Ok(self)
                 }
@@ -414,7 +414,7 @@ impl<T: ArrayValue> Array<T> {
             [] => Ok(self),
             [0, rest @ ..] => match env.scalar_fill() {
                 Ok(fill) => {
-                    self.data.extend(repeat(fill).take(self.row_len()));
+                    self.data.extend_repeat(&fill, self.row_len());
                     self.shape = rest.into();
                     Ok(self)
                 }

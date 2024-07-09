@@ -821,7 +821,7 @@ impl<T: ArrayValue> Array<T> {
         let fill = ctx.scalar_fill::<T>()?;
         let more_elems = (len - self.row_count()) * self.row_len();
         self.data.reserve(more_elems);
-        self.data.extend(repeat(fill).take(more_elems));
+        self.data.extend_repeat(&fill, more_elems);
         self.shape[0] = len;
         Ok(())
     }

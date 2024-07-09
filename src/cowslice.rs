@@ -236,6 +236,10 @@ impl<T: Clone> CowSlice<T> {
         self.modify_end(|data| unsafe { data.extend_from_trusted(slice) })
     }
     #[track_caller]
+    pub fn extend_repeat(&mut self, elem: &T, count: usize) {
+        unsafe { self.extend_from_trusted(Repeat { elem, count }) }
+    }
+    #[track_caller]
     pub unsafe fn extend_from_trusted<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = T>,
@@ -244,6 +248,31 @@ impl<T: Clone> CowSlice<T> {
         self.modify_end(|data| data.extend_from_trusted(iter))
     }
 }
+
+/// Exact sized repeating iterator
+pub(crate) struct Repeat<'a, T> {
+    elem: &'a T,
+    count: usize,
+}
+impl<'a, T> Repeat<'a, T> {
+    pub fn new(elem: &'a T, count: usize) -> Self {
+        Self { elem, count }
+    }
+}
+impl<'a, T: Clone> Iterator for Repeat<'a, T> {
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.count == 0 {
+            return None;
+        }
+        self.count -= 1;
+        Some(self.elem.clone())
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.count, Some(self.count))
+    }
+}
+impl<'a, T: Clone> ExactSizeIterator for Repeat<'a, T> {}
 
 #[test]
 fn cow_slice_modify() {

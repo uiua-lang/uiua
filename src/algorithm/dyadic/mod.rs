@@ -19,7 +19,7 @@ use crate::{
     algorithm::pervade::{self, bin_pervade_recursive, InfalliblePervasiveFn},
     array::*,
     boxed::Boxed,
-    cowslice::{cowslice, CowSlice},
+    cowslice::{cowslice, CowSlice, Repeat},
     value::Value,
     Shape, Uiua, UiuaResult,
 };
@@ -268,7 +268,7 @@ impl<T: ArrayValue> Array<T> {
             match env.scalar_fill::<T>() {
                 Ok(fill) => {
                     let start = self.data.len();
-                    self.data.extend(repeat(fill).take(target_len - start));
+                    self.data.extend_repeat(&fill, target_len - start);
                 }
                 Err(e) => {
                     if self.data.is_empty() {
@@ -1106,7 +1106,7 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// Use this value to `chunks` another
-    pub fn chunks(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn chunks(&self, from: Self, env: &Uiua) -> UiuaResult<Self> {
         let isize_spec = self.as_ints(env, "Chunk size must be an integer or list of integers")?;
         Ok(match from {
             Value::Num(a) => a.chunks(&isize_spec, env)?.into(),
@@ -1123,7 +1123,7 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     /// Get `chunks` of this array
-    pub fn chunks(&self, isize_spec: &[isize], env: &Uiua) -> UiuaResult<Self> {
+    pub fn chunks(mut self, isize_spec: &[isize], env: &Uiua) -> UiuaResult<Self> {
         if isize_spec.iter().any(|&s| s == 0) {
             return Err(env.error("Chunk size cannot be zero"));
         }
@@ -1134,8 +1134,8 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
 
-        let mut size_spec = Vec::with_capacity(isize_spec.len());
         let fill = env.scalar_fill::<T>().ok();
+        let mut size_spec = Vec::with_capacity(isize_spec.len());
         let mut virtual_shape = self.shape.clone();
         for (v, &i) in virtual_shape.iter_mut().zip(isize_spec) {
             let u = i.unsigned_abs();
@@ -1159,35 +1159,55 @@ impl<T: ArrayValue> Array<T> {
         new_shape.extend(size_spec.iter().copied());
         new_shape.extend(virtual_shape.iter().skip(size_spec.len()).copied());
 
+        if size_spec.as_slice().len() == 1 {
+            if let Some(fill) = &fill {
+                self.data
+                    .extend_repeat(fill, new_shape.elements() - self.data.len());
+            } else {
+                self.data.truncate(new_shape.elements());
+            }
+            self.shape = new_shape;
+            return Ok(self);
+        }
+
         let mut new_data =
             EcoVec::with_capacity(validate_size::<T>(new_shape.iter().copied(), env)?);
         let mut corner = vec![0; self.shape.len()];
         let mut offset = vec![0; size_spec.len()];
-        println!("size_spec: {size_spec:?}");
-        println!("new_shape: {new_shape:?}");
+        // println!("size_spec: {size_spec:?}");
+        // println!("new_shape: {new_shape:?}");
         'chunks: loop {
             // Reset offset
             for i in &mut offset {
                 *i = 0;
             }
-            println!("corner: {corner:?}");
+            // println!("corner: {corner:?}");
             // Copy the chunk at the current corner
             'items: loop {
+                // println!("offset: {offset:?}");
                 let mut src_index = 0;
                 let mut stride = row_len;
-                for ((c, i), s) in corner.iter().zip(&offset).zip(&self.shape).rev() {
-                    src_index += (*c + *i) * stride;
-                    stride *= s;
-                }
                 if let Some(fill) = &fill {
-                    new_data.extend(
-                        self.data[src_index..]
-                            .iter()
-                            .chain(repeat(fill))
-                            .take(row_len)
-                            .cloned(),
-                    );
+                    let mut oob = false;
+                    for ((&c, &i), &s) in corner.iter().zip(&offset).zip(&self.shape).rev() {
+                        let axis_index = c + i;
+                        if axis_index >= s {
+                            oob = true;
+                            break;
+                        }
+                        src_index += axis_index * stride;
+                        stride *= s;
+                    }
+                    if oob {
+                        unsafe { new_data.extend_from_trusted(Repeat::new(fill, row_len)) };
+                    } else {
+                        new_data.extend_from_slice(&self.data[src_index..][..row_len]);
+                    }
                 } else {
+                    for ((c, i), s) in corner.iter().zip(&offset).zip(&self.shape).rev() {
+                        src_index += (*c + *i) * stride;
+                        stride *= s;
+                    }
                     new_data.extend_from_slice(&self.data[src_index..][..row_len]);
                 }
                 // Go to the next item

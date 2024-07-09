@@ -422,6 +422,7 @@ impl Primitive {
             "tra" => return Some(Primitive::Transpose),
             "par" => return Some(Primitive::Partition),
             "dup" => return Some(Primitive::Dup),
+            "chunk" => return Some(Primitive::Chunks),
             _ => {}
         }
         if let Some(prim) = Primitive::non_deprecated().find(|p| p.name() == name) {
@@ -587,7 +588,7 @@ impl Primitive {
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
             Primitive::Select => env.dyadic_or_env(Value::select)?,
             Primitive::Windows => env.dyadic_rr_env(Value::windows)?,
-            Primitive::Chunks => env.dyadic_rr_env(Value::chunks)?,
+            Primitive::Chunks => env.dyadic_ro_env(Value::chunks)?,
             Primitive::Where => env.monadic_ref_env(Value::wher)?,
             Primitive::Classify => env.monadic_ref(Value::classify)?,
             Primitive::Deduplicate => env.monadic_mut_env(Value::deduplicate)?,

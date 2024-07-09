@@ -32,6 +32,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This makes the inverted signature correct
 - [`inventory ⍚`](https://uiua.org/docs/inventory) no longer does [`each ∵`](https://uiua.org/docs/each)-like behavior
   - This got in the way more than it helped
+- Add the experimental [`chunks`](https://uiua.org/docs/chunks) function, which splits an array into chunks of a given size
 - Add the experimental [`triangle ◹`](https://uiua.org/docs/triangle) modifier, which calls a function on shrinking suffixes of an array's rows
 - Add the experimental [`orient`](https://uiua.org/docs/orient) function, which arranges an array's axes in a specified order
 - Add the experimental [`fft`](https://uiua.org/docs/fft) function, which performs the Fast Fourier transform

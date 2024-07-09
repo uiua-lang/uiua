@@ -510,9 +510,8 @@ impl<T: ArrayValue> Array<T> {
                                     .zip(&self.shape[1..])
                                     .map(|(&i, &s)| i.map_or(s, isize::unsigned_abs))
                                     .product();
-                                arr.data.extend(
-                                    repeat(fill).take((abs_taking - arr.row_count()) * row_len),
-                                );
+                                arr.data
+                                    .extend_repeat(&fill, (abs_taking - arr.row_count()) * row_len);
                             }
                             Err(e) => {
                                 return Err(env
@@ -884,7 +883,7 @@ impl<T: ArrayValue> Array<T> {
                 if ui >= row_count {
                     match env.scalar_fill::<T>() {
                         Ok(fill) => {
-                            selected.extend(repeat(fill).take(row_len));
+                            selected.extend_repeat(&fill, row_len);
                             continue;
                         }
                         Err(e) => {
@@ -903,7 +902,7 @@ impl<T: ArrayValue> Array<T> {
                 if pos_i >= row_count {
                     match env.scalar_fill::<T>() {
                         Ok(fill) => {
-                            selected.extend(repeat(fill).take(row_len));
+                            selected.extend_repeat(&fill, row_len);
                             continue;
                         }
                         Err(e) => {

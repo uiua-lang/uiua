@@ -2466,14 +2466,6 @@ fn collect_placeholder(words: &[Sp<Word>]) -> Vec<Sp<PlaceholderOp>> {
     ops
 }
 
-fn replace_placeholders(words: &mut Vec<Sp<Word>>, next: &mut dyn FnMut() -> Sp<Word>) {
-    recurse_words(words, &mut |word| match &mut word.value {
-        Word::Placeholder(PlaceholderOp::Call) => *word = next(),
-        _ => {}
-    });
-    words.retain(|word| !matches!(word.value, Word::Placeholder(_)))
-}
-
 fn set_in_macro_arg(words: &mut Vec<Sp<Word>>) {
     recurse_words(words, &mut |word| match &mut word.value {
         Word::Ref(r) => r.in_macro_arg = true,

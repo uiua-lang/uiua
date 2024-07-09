@@ -1,7 +1,7 @@
 //! Uiua's abstract syntax tree
 
 use core::mem::discriminant;
-use std::fmt;
+use std::{borrow::Cow, fmt};
 
 use crate::{
     function::{FunctionId, Signature},
@@ -270,24 +270,27 @@ impl fmt::Debug for Word {
 /// A placeholder operation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PlaceholderOp {
-    /// Pop and inline the top expression
+    /// Pop and inline the top operand
     Call,
-    /// Duplicate the top expression
+    /// Duplicate the top operand
     Dup,
-    /// Swap the top two expressions
+    /// Swap the top two operands
     Flip,
-    /// Copy the 2nd-to-top expression to the top
+    /// Copy the 2nd-to-top operand to the top
     Over,
+    /// Inline the nth operand
+    Nth(u8),
 }
 
 impl PlaceholderOp {
     /// Get the name of this placeholder operation
-    pub fn name(&self) -> &'static str {
+    pub fn name(&self) -> Cow<'static, str> {
         match self {
-            PlaceholderOp::Call => "call",
-            PlaceholderOp::Dup => "dup",
-            PlaceholderOp::Flip => "flip",
-            PlaceholderOp::Over => "over",
+            PlaceholderOp::Call => Cow::Borrowed("call"),
+            PlaceholderOp::Dup => Cow::Borrowed("dup"),
+            PlaceholderOp::Flip => Cow::Borrowed("flip"),
+            PlaceholderOp::Over => Cow::Borrowed("over"),
+            PlaceholderOp::Nth(n) => Cow::Owned(format!("nth({n})")),
         }
     }
 }
@@ -299,6 +302,7 @@ impl fmt::Display for PlaceholderOp {
             PlaceholderOp::Dup => write!(f, "^."),
             PlaceholderOp::Flip => write!(f, "^:"),
             PlaceholderOp::Over => write!(f, "^,"),
+            PlaceholderOp::Nth(n) => write!(f, "^{n}"),
         }
     }
 }

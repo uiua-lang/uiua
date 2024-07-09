@@ -855,7 +855,13 @@ impl<'a> Lexer<'a> {
                 "^" if self.next_char_exact(",") => {
                     self.end(Placeholder(PlaceholderOp::Over), start)
                 }
-                "^" => self.end(Caret, start),
+                "^" => {
+                    if let Some(x) = self.next_char_if(|c| c.chars().all(|c| c.is_ascii_digit())) {
+                        self.end(Placeholder(PlaceholderOp::Nth(x.parse().unwrap())), start)
+                    } else {
+                        self.end(Caret, start)
+                    }
+                }
                 "=" if self.next_char_exact("~") => self.end(EqualTilde, start),
                 "=" => self.end(Equal, start),
                 "<" if self.next_char_exact("=") => self.end(LessEqual, start),

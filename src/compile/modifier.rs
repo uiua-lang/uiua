@@ -1194,6 +1194,8 @@ impl Compiler {
         // Initialize the placeholder stack
         let mut ph_stack: Vec<Sp<Word>> =
             operands.into_iter().filter(|w| w.value.is_code()).collect();
+        let initial_stack = ph_stack.clone();
+        let mut ignore_remaining = false;
         let mut replaced = Vec::new();
         // Run the placeholder operations
         for op in ops {
@@ -1223,10 +1225,17 @@ impl Compiler {
                     ph_stack.push(a);
                     ph_stack.push(b);
                 }
+                PlaceholderOp::Nth(_) => {
+                    self.experimental_error(&span, || {
+                        "Indexed placeholders are experimental. To use them, \
+                        add `# Experimental!` to the top of the file."
+                    });
+                    ignore_remaining = true;
+                }
             }
         }
         // Warn if there are operands left
-        if !ph_stack.is_empty() {
+        if !ignore_remaining && !ph_stack.is_empty() {
             let span = (ph_stack.first().unwrap().span.clone())
                 .merge(ph_stack.last().unwrap().span.clone());
             self.emit_diagnostic(
@@ -1240,8 +1249,8 @@ impl Compiler {
             );
         }
         // Replace placeholders in the macro's words
-        let mut operands = replaced.into_iter().rev();
-        replace_placeholders(macro_words, &mut || operands.next().unwrap());
+        replaced.reverse();
+        self.replace_placeholders(macro_words, &initial_stack, &replaced, &mut 0)?;
         // Format and store the expansion for the LSP
         let mut words_to_format = Vec::new();
         for word in &*macro_words {
@@ -1253,6 +1262,37 @@ impl Compiler {
         let formatted = format_words(&words_to_format, &self.asm.inputs);
         (self.code_meta.macro_expansions).insert(span, (name, formatted));
         Ok(())
+    }
+    fn replace_placeholders(
+        &self,
+        words: &mut Vec<Sp<Word>>,
+        initial: &[Sp<Word>],
+        stack: &[Sp<Word>],
+        next: &mut usize,
+    ) -> UiuaResult {
+        let mut error = None;
+        recurse_words(words, &mut |word| match &mut word.value {
+            Word::Placeholder(PlaceholderOp::Call) => {
+                *word = stack[*next].clone();
+                *next += 1;
+            }
+            Word::Placeholder(PlaceholderOp::Nth(n)) => {
+                if let Some(replacement) = initial.get(*n as usize) {
+                    *word = replacement.clone();
+                } else {
+                    error = Some(self.fatal_error(
+                        word.span.clone(),
+                        format!(
+                            "Placeholder index {n} is out of bounds of {} operands",
+                            initial.len()
+                        ),
+                    ))
+                }
+            }
+            _ => {}
+        });
+        words.retain(|word| !matches!(word.value, Word::Placeholder(_)));
+        error.map_or(Ok(()), Err)
     }
     fn quote(&mut self, code: &str, span: &CodeSpan, call: bool) -> UiuaResult {
         let (items, errors, _) = parse(

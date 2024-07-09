@@ -454,7 +454,7 @@ impl<'i> Parser<'i> {
             ));
         }
         // Signature
-        let signature = self.try_signature(Bar);
+        let signature = self.try_signature();
         // Words
         let words = self.try_words().unwrap_or_default();
         self.validate_binding_name(&name);
@@ -595,8 +595,8 @@ impl<'i> Parser<'i> {
             in_macro_arg: false,
         })))
     }
-    fn try_signature(&mut self, initial_token: AsciiToken) -> Option<Sp<Signature>> {
-        let start = self.try_exact(initial_token.into())?;
+    fn try_signature(&mut self) -> Option<Sp<Signature>> {
+        let start = self.try_exact(Bar.into())?;
         let (args, outs) = self.sig_inner();
         let mut end = self.prev_span();
         if let Some(sp) = self.try_spaces() {
@@ -910,8 +910,6 @@ impl<'i> Parser<'i> {
             c.map(Into::into).map(Word::Char)
         } else if let Some(s) = self.next_token_map(Token::as_string) {
             s.map(Into::into).map(Word::String)
-        } else if let Some(sig) = self.try_signature(Caret) {
-            sig.span.sp(Word::Placeholder(PlaceholderOp::Call))
         } else if let Some(op) = self.next_token_map(Token::as_placeholder) {
             op.map(Word::Placeholder)
         } else if let Some(label) = self.next_token_map(Token::as_label) {
@@ -938,7 +936,7 @@ impl<'i> Parser<'i> {
             span.sp(Word::MultilineFormatString(lines))
         } else if let Some(start) = self.try_exact(OpenBracket.into()) {
             while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
-            let signature = self.try_signature(Bar);
+            let signature = self.try_signature();
             while self.try_exact(Newline).is_some() {}
             let items = self.multiline_words(false);
             let end = self.expect_close(CloseBracket.into());
@@ -966,7 +964,7 @@ impl<'i> Parser<'i> {
             span.sp(Word::Array(arr))
         } else if let Some(start) = self.try_exact(OpenCurly.into()) {
             while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
-            let signature = self.try_signature(Bar);
+            let signature = self.try_signature();
             while self.try_exact(Newline).is_some() {}
             let items = self.multiline_words(false);
             let end = self.expect_close(CloseCurly.into());
@@ -1171,7 +1169,7 @@ impl<'i> Parser<'i> {
             }
             break;
         }
-        let signature = self.try_signature(Bar);
+        let signature = self.try_signature();
         loop {
             if self.try_exact(Newline).is_some() {
                 any_newlines = true;

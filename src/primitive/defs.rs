@@ -1297,6 +1297,13 @@ primitive!(
     ///   : ⬚0chunks 3 [1 2 3 4 5 6 7 8]
     /// ex: # Experimental!
     ///   : ≡≡□ ⬚0chunks 2_2 . °△ 5_5
+    /// Negative chunk sizes specify the number of chunks desired.
+    /// ex: # Experimental!
+    ///   : chunks ¯2 [1 2 3 4 5 6]
+    ///   : chunks ¯3 [1 2 3 4 5 6]
+    /// Negative and positive chunk sizes can be mixed.
+    /// ex: # Experimental!
+    ///   : chunks ¯2_2 . °△ 6_6
     (2, Chunks, DyadicArray, "chunks"),
     /// Discard or copy some rows of an array
     ///

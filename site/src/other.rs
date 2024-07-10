@@ -270,6 +270,30 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prim prim=Table/></th><td><Prims prims=[Add, Sub, Mul, Div, Mod, Atan, Eq, Ne, Lt, Le, Gt, Ge, Min, Max, Complex, Join, Couple]/></td></tr>
         </table>
 
+        <Hd id="rows"><Prim prim=Rows/></Hd>
+        <p>"When used inside "<Prim prim=Rows/>", some functions have special-case implementations that operate on the whole array at once. This avoids the interpreter overhead inherent to "<Prim prim=Rows/>"."</p>
+        <p>"In addition to all pervasive functions, the following functions are optimized when used inside "<Prim prim=Rows/>":"</p>
+        <div style="display: flex; gap: 1em">
+            <table class="bordered-table cell-centered-table">
+                <tr><td><Prim prim=Deshape/></td></tr>
+                <tr><td><Prim prim=Reverse/></td></tr>
+                <tr><td><Prim prim=Transpose/></td></tr>
+                <tr><td><Prim prim=Classify/></td></tr>
+                <tr><td><Prim prim=Fix/></td></tr>
+                <tr><td><Prim prim=Box/></td></tr>
+            </table>
+            <table class="bordered-table cell-centered-table">
+                <tr><td><Prims prims=[Gap, Rand] show_names=true/></td></tr>
+                <tr><td><Prim prim=Gap/><code>"constant"</code></td></tr>
+                <tr><td><Prims prims=[Select, Rise, Dup]/>" / "<Prims prims=[Select, By, Rise]/></td></tr>
+                <tr><td><Prims prims=[Select, Fall, Dup]/>" / "<Prims prims=[Select, By, Fall]/></td></tr>
+                <tr><td><Prims prims=[Un, Couple] show_names=true/></td></tr>
+                <tr><td><Prims prims=[Un, Join] show_names=true/></td></tr>
+                <tr><td><Prim prim=Rotate/></td></tr>
+            </table>
+        </div>
+        <p>"This optimization applies not just to "<Prim prim=Rows/>", but also "<Prim prim=Each/>", "<Prims prims=[Rows, Rows]/>", "<Prims prims=[Rows, Rows, Rows]/>", etc."</p>
+
         <Hd id="complexity">"Complexity"</Hd>
         <p>"Some combinations of functions are special-cased in the interpreter to run in less time complexity or in fewer operations than is implied by each function individually."</p>
         <p>"This table shows how various combinations of functions are optimized:"</p>
@@ -282,16 +306,13 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[First, Reverse, Fall]/></th><td>"O(nlogn)"</td><td>"O(n)"</td></tr>
             <tr><th><Prims prims=[First, Where]/></th><td>"O(n)"</td><td>"Stop at first non-zero from front"</td></tr>
             <tr><th><Prims prims=[First, Reverse, Where]/></th><td>"O(n)"</td><td>"Stop at first non-zero from back"</td></tr>
-            <tr><th><Prims prims=[Select, Rise, Dup]/></th><td>"Create intermediate "<Prim prim=Rise/>" array"</td><td>"Just sort"</td></tr>
-            <tr><th><Prims prims=[Select, Fall, Dup]/></th><td>"Create intermediate "<Prim prim=Fall/>" array"</td><td>"Just sort"</td></tr>
+            <tr><th><Prims prims=[Select, Rise, Dup]/>" / "<Prims prims=[Select, By, Rise]/></th><td>"Create intermediate "<Prim prim=Rise/>" array"</td><td>"Just sort"</td></tr>
+            <tr><th><Prims prims=[Select, Fall, Dup]/>" / "<Prims prims=[Select, By, Fall]/></th><td>"Create intermediate "<Prim prim=Fall/>" array"</td><td>"Just sort"</td></tr>
             <tr><th><Prims prims=[Dip, Dip, Dip]/>"…"</th><td><Prim prim=Dip/>" n times"</td><td>"Single "<Prim prim=Dip/>" of n values"</td></tr>
             <tr><th><Prims prims=[Transpose, Transpose, Transpose]/>"…"</th><td><Prim prim=Transpose/>" n times"</td><td>"Single "<Prim prim=Transpose/></td></tr>
-            <tr><th><Prims prims=[Rows, Transpose]/></th><td><Prim prim=Transpose/>" each row"</td><td>"Single "<Prim prim=Transpose/></td></tr>
             <tr><th><Prims prims=[Rows, Reduce]/><code>"F"</code><Prims prims=[Windows]/></th><td>"Make "<Prim prim=Windows/>" then "<Prim prim=Reduce/>" each row"</td><td>"Apply "<code>"F"</code>" to adjacent rows"</td></tr>
             <tr><th><Prims prims=[Len, Where]/></th><td>"Make "<Prim prim=Where/>" then get "<Prim prim=Len/></td><td>"Just count"</td></tr>
             <tr><th><Prims prims=[Rows, Reduce]/><code>"F"</code></th><td><Prim prim=Reduce/>" each row"</td><td><Prim prim=Reduce/>" each column"</td></tr>
-            <tr><th><Prims prims=[Rows, Gap]/><code>"constant"</code></th><td>"Replace each row"</td><td>"Just repeat the constant"</td></tr>
-            <tr><th><Prims prims=[Each, Gap]/><code>"constant"</code></th><td>"Replace each element"</td><td>"Just repeat the constant"</td></tr>
         </table>
 
         <Hd id="other-optimizations">"Other Optimizations"</Hd>

@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - `≡F◫`
   - Writing longer code tutorial
   - Rewrite .uasm format
   - Fix pad cursor jumping with end-of-line comments

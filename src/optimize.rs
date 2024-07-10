@@ -192,9 +192,9 @@ pub(crate) fn optimize_instrs_mut(
             instrs.pop();
             instrs.push(Instr::ImplPrim(ReplaceRand, span));
         }
-        // Adjacent
-        ([.., Instr::Prim(Windows, _), Instr::PushFunc(f)], instr @ Instr::Prim(Rows, _)) => {
+        ([.., Instr::Prim(Windows, _), Instr::PushFunc(f)], instr @ Instr::Prim(Rows, span)) => {
             match f.instrs(asm) {
+                // Adjacent
                 [inner @ Instr::PushFunc(reduced_f), Instr::Prim(Reduce, span)]
                     if reduced_f.signature() == (2, 1) =>
                 {
@@ -203,6 +203,14 @@ pub(crate) fn optimize_instrs_mut(
                     instrs.pop();
                     instrs.push(inner);
                     instrs.push(Instr::ImplPrim(ImplPrimitive::Adjacent, *span));
+                }
+                // Rows Windows
+                _ if f.signature().args == 1 => {
+                    let f = f.clone();
+                    instrs.pop();
+                    instrs.pop();
+                    instrs.push(Instr::PushFunc(f));
+                    instrs.push(Instr::ImplPrim(ImplPrimitive::RowsWindows, span));
                 }
                 _ => {
                     instrs.push(instr);

@@ -781,6 +781,42 @@ fn rowsn(f: Function, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult
     Ok(())
 }
 
+pub fn rows_windows(env: &mut Uiua) -> UiuaResult {
+    let f = env.pop_function()?;
+    if f.signature().args != 1 {
+        return Err(env.error(
+            "rows windows's function does not take 1 arg. This is a bug in the interpreter",
+        ));
+    }
+    let n_arr = env.pop(1)?;
+    let xs = env.pop(2)?;
+    if n_arr.rank() != 0 {
+        let windows = n_arr.windows(&xs, env)?;
+        return rows1(f, windows, false, env);
+    }
+    let n = n_arr.as_int(env, "Window size must be an integer or list of integers")?;
+    let n_abs = n.unsigned_abs();
+    if n_abs == 0 {
+        return Err(env.error("Window size cannot be zero"));
+    }
+    let n = n_abs;
+    if xs.row_count() < n {
+        env.push(xs.first_dim_zero());
+        return Ok(());
+    }
+    if let Some(Primitive::Box) = f.as_primitive(&env.asm) {
+        let win_count = xs.row_count() - (n - 1);
+        let arr = Array::from_iter(
+            (0..win_count).map(|win_start| Boxed(xs.slice_rows(win_start, win_start + n))),
+        );
+        env.push(arr);
+        return Ok(());
+    }
+
+    let windows = n_arr.windows(&xs, env)?;
+    rows1(f, windows, false, env)
+}
+
 impl Value {
     pub(crate) fn length_is_fillable<C>(&self, ctx: &C) -> bool
     where

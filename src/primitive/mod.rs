@@ -211,7 +211,8 @@ impl fmt::Display for ImplPrimitive {
             ReplaceRand2 => write!(f, "{Gap}{Gap}{Rand}"),
             ReduceContent => write!(f, "{Reduce}{Content}"),
             ReduceTable => write!(f, "{Reduce}(…){Content}"),
-            Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}2"),
+            Adjacent => write!(f, "{Rows}{Reduce}(…){Windows}"),
+            RowsWindows => write!(f, "{Rows}(…){Windows}"),
             CountUnique => write!(f, "{Len}{Deduplicate}"),
             MatchPattern => write!(f, "pattern match"),
             EndRandArray => write!(f, "[{Repeat}{Rand}"),
@@ -1075,6 +1076,7 @@ impl ImplPrimitive {
                 env.push(random());
             }
             ImplPrimitive::Adjacent => reduce::adjacent(env)?,
+            ImplPrimitive::RowsWindows => zip::rows_windows(env)?,
             ImplPrimitive::CountUnique => env.monadic_ref(Value::count_unique)?,
             ImplPrimitive::MatchPattern => invert::match_pattern(env)?,
             ImplPrimitive::EndRandArray => {

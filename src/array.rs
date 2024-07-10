@@ -469,6 +469,18 @@ impl<T: ArrayValue> Array<T> {
         let end = start + row_len;
         Self::new(&self.shape[depth + 1..], self.data.slice(start..end))
     }
+    #[track_caller]
+    pub(crate) fn slice_rows(&self, start: usize, end: usize) -> Self {
+        assert!(start <= end);
+        assert!(start < self.row_count());
+        assert!(end <= self.row_count());
+        let row_len = self.row_len();
+        let start = start * row_len;
+        let end = end * row_len;
+        let mut shape = self.shape.clone();
+        shape[0] = end - start;
+        Self::new(shape, self.data.slice(start..end))
+    }
     /// Consume the array and get an iterator over its rows
     pub fn into_rows(self) -> impl ExactSizeIterator<Item = Self> + DoubleEndedIterator {
         (0..self.row_count()).map(move |i| self.row(i))

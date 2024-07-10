@@ -452,6 +452,16 @@ impl Value {
             Value::Box(arr) => arr.depth_row(depth, i).into(),
         }
     }
+    #[track_caller]
+    pub(crate) fn slice_rows(&self, start: usize, end: usize) -> Self {
+        match self {
+            Value::Num(arr) => arr.slice_rows(start, end).into(),
+            Value::Byte(arr) => arr.slice_rows(start, end).into(),
+            Value::Complex(arr) => arr.slice_rows(start, end).into(),
+            Value::Char(arr) => arr.slice_rows(start, end).into(),
+            Value::Box(arr) => arr.slice_rows(start, end).into(),
+        }
+    }
     pub(crate) fn generic_into<T>(
         self,
         n: impl FnOnce(Array<f64>) -> T,

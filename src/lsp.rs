@@ -1518,6 +1518,39 @@ mod server {
                 }));
             }
 
+            // Add experimental
+            if !doc.input.contains("# Experimental!") {
+                for error in &doc.errors {
+                    let UiuaErrorKind::Run(message, _) = &error.kind else {
+                        continue;
+                    };
+                    let Span::Code(span) = &message.span else {
+                        continue;
+                    };
+                    if span.src != path || !message.value.contains("# Experimental!") {
+                        continue;
+                    }
+                    actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+                        title: "Add # Experimental! comment".into(),
+                        kind: Some(CodeActionKind::QUICKFIX),
+                        edit: Some(WorkspaceEdit {
+                            changes: Some(
+                                [(
+                                    params.text_document.uri.clone(),
+                                    vec![TextEdit {
+                                        range: Range::new(Position::new(0, 0), Position::new(0, 0)),
+                                        new_text: "# Experimental!\n".into(),
+                                    }],
+                                )]
+                                .into(),
+                            ),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }));
+                }
+            }
+
             Ok(if actions.is_empty() {
                 None
             } else {

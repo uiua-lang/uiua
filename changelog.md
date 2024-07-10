@@ -52,7 +52,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Some optimizations
   - Optimize [`length ⧻`](https://uiua.org/docs/length)[`where ⊚`](https://uiua.org/docs/where)
   - Optimize [`≡`](https://uiua.org/docs/rows)[`□`](https://uiua.org/docs/box)[`◫`](https://uiua.org/docs/windows)
-- Array shapes now show on hover in the LSP
+- LSP improvements
+  - Show array shapes on hover
+  - Code action to insert `# Experimental!` comment
 - Allow Uiua-specific tokens types to be disabled in the LSP
 ### Website
 - Remove the Uiuisms page

@@ -153,7 +153,7 @@ impl GridFmt for Complex {
             } else {
                 self.im.abs().grid_string(params.label)
             };
-            let sign = if self.im < 0.0 { '¯' } else { '+' };
+            let sign = if self.im < 0.0 { '-' } else { '+' };
             re[0].push(sign);
             re[0].extend(im.chars());
             re[0].push('i');

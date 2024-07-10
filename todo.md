@@ -2,7 +2,6 @@
 
 - 0.12
   - Writing longer code tutorial
-  - Rewrite .uasm format
   - Fix pad cursor jumping with end-of-line comments
   - Unicode literals
   - Misc features tutorial

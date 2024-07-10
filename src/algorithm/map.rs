@@ -13,7 +13,7 @@ use crate::{
     Value,
 };
 
-use super::FillContext;
+use super::{ErrorContext, FillContext};
 
 impl<T: ArrayValue> Array<T> {
     /// Check if the array is a map
@@ -42,10 +42,10 @@ impl<T: ArrayValue> Array<T> {
         kv
     }
     /// Create a map array
-    pub fn map(&mut self, mut keys: Value, env: &Uiua) -> UiuaResult {
+    pub fn map<C: ErrorContext>(&mut self, mut keys: Value, ctx: &C) -> Result<(), C::Error> {
         let values = self;
         if keys.row_count() != values.row_count() {
-            return Err(env.error(format!(
+            return Err(ctx.error(format!(
                 "Map array's keys and values must have the same length, but they have lengths {} and {}",
                 keys.row_count(),
                 values.row_count()
@@ -64,7 +64,7 @@ impl<T: ArrayValue> Array<T> {
             fix_stack: Vec::new(),
         };
         for (i, key) in keys.into_rows().enumerate() {
-            map_keys.insert(key, i, env)?;
+            map_keys.insert(key, i, ctx)?;
         }
         values.meta_mut().map_keys = Some(map_keys);
         Ok(())
@@ -361,7 +361,7 @@ impl MapKeys {
     }
     fn insert<C>(&mut self, key: Value, index: usize, ctx: &C) -> Result<Option<usize>, C::Error>
     where
-        C: FillContext,
+        C: ErrorContext,
     {
         fn insert_impl<K>(
             keys: &mut Array<K>,

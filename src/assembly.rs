@@ -193,8 +193,16 @@ impl Assembly {
         let mut spans = EcoVec::new();
         spans.push(Span::Builtin);
         for line in spans_src.lines().filter(|line| !line.trim().is_empty()) {
-            let span: Span = serde_json::from_str(line).map_err(|e| e.to_string())?;
-            spans.push(span);
+            if line.trim().is_empty() {
+                spans.push(Span::Builtin);
+            } else {
+                let (src_start, end) = line.trim().rsplit_once(' ').ok_or("invalid span")?;
+                let (src, start) = src_start.split_once(' ').ok_or("invalid span")?;
+                let src = serde_json::from_str(src).map_err(|e| e.to_string())?;
+                let start = serde_json::from_str(start).map_err(|e| e.to_string())?;
+                let end = serde_json::from_str(end).map_err(|e| e.to_string())?;
+                spans.push(Span::Code(CodeSpan { src, start, end }));
+            }
         }
 
         let files = DashMap::new();
@@ -283,7 +291,13 @@ impl Assembly {
 
         uasm.push_str("\nSPANS\n");
         for span in self.spans.iter().skip(1) {
-            uasm.push_str(&serde_json::to_string(span).unwrap());
+            if let Span::Code(span) = span {
+                uasm.push_str(&serde_json::to_string(&span.src).unwrap());
+                uasm.push(' ');
+                uasm.push_str(&serde_json::to_string(&span.start).unwrap());
+                uasm.push(' ');
+                uasm.push_str(&serde_json::to_string(&span.end).unwrap());
+            }
             uasm.push('\n');
         }
 

@@ -1031,12 +1031,9 @@ impl<'a> fmt::Display for FormatShape<'a> {
 enum ArrayRep<T: ArrayValueSer> {
     Scalar(T),
     List(T::Collection),
+    Map(Shape, Value, T::Collection),
     Metaless(Shape, T::Collection),
-    Full(
-        Shape,
-        T::Collection,
-        #[serde(with = "meta_ser")] Arc<ArrayMeta>,
-    ),
+    Full(Shape, T::Collection, ArrayMeta),
 }
 
 impl<T: ArrayValueSer> From<ArrayRep<T>> for Array<T> {
@@ -1047,6 +1044,12 @@ impl<T: ArrayValueSer> From<ArrayRep<T>> for Array<T> {
                 let data = T::make_data(data);
                 Self::new(data.len(), data)
             }
+            ArrayRep::Map(shape, keys, data) => {
+                let data = T::make_data(data);
+                let mut arr = Self::new(shape, data);
+                _ = arr.map(keys, &());
+                arr
+            }
             ArrayRep::Metaless(shape, data) => {
                 let data = T::make_data(data);
                 Self::new(shape, data)
@@ -1056,7 +1059,7 @@ impl<T: ArrayValueSer> From<ArrayRep<T>> for Array<T> {
                 Self {
                     shape,
                     data,
-                    meta: Some(meta),
+                    meta: Some(meta.into()),
                 }
             }
         }
@@ -1066,7 +1069,20 @@ impl<T: ArrayValueSer> From<ArrayRep<T>> for Array<T> {
 impl<T: ArrayValueSer> From<Array<T>> for ArrayRep<T> {
     fn from(mut arr: Array<T>) -> Self {
         if let Some(meta) = arr.meta.take().filter(|meta| **meta != DEFAULT_META) {
-            return ArrayRep::Full(arr.shape, T::make_collection(arr.data), meta);
+            let mut meta = Arc::unwrap_or_clone(meta);
+            let map_keys = meta.map_keys.take();
+            if meta == DEFAULT_META {
+                if let Some(map_keys) = map_keys {
+                    let keys = map_keys.normalized();
+                    return ArrayRep::Map(arr.shape, keys, T::make_collection(arr.data));
+                }
+            } else {
+                meta.map_keys = map_keys;
+            }
+            meta.flags &= !ArrayFlags::BOOLEAN;
+            if meta != DEFAULT_META {
+                return ArrayRep::Full(arr.shape, T::make_collection(arr.data), meta);
+            }
         }
         match arr.rank() {
             0 => ArrayRep::Scalar(arr.data[0].clone()),
@@ -1076,7 +1092,7 @@ impl<T: ArrayValueSer> From<Array<T>> for ArrayRep<T> {
     }
 }
 
-trait ArrayValueSer: Clone {
+trait ArrayValueSer: ArrayValue {
     type Collection: Serialize + DeserializeOwned;
     fn make_collection(data: CowSlice<Self>) -> Self::Collection;
     fn make_data(collection: Self::Collection) -> CowSlice<Self>;
@@ -1097,8 +1113,6 @@ macro_rules! array_value_ser {
 }
 
 array_value_ser!(u8);
-array_value_ser!(isize);
-array_value_ser!(usize);
 array_value_ser!(Boxed);
 array_value_ser!(Complex);
 
@@ -1170,15 +1184,5 @@ impl From<F64Rep> for f64 {
             F64Rep::NegInfinity => f64::NEG_INFINITY,
             F64Rep::Num(n) => n,
         }
-    }
-}
-
-mod meta_ser {
-    use super::*;
-    pub fn serialize<S: Serializer>(meta: &Arc<ArrayMeta>, s: S) -> Result<S::Ok, S::Error> {
-        meta.serialize(s)
-    }
-    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Arc<ArrayMeta>, D::Error> {
-        ArrayMeta::deserialize(d).map(Arc::new)
     }
 }

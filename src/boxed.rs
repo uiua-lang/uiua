@@ -16,18 +16,18 @@ pub struct Boxed(pub Value);
 
 #[derive(Serialize, Deserialize)]
 struct BoxedRep {
-    boxed: Value,
+    b: Value,
 }
 
 impl From<Boxed> for BoxedRep {
     fn from(b: Boxed) -> Self {
-        Self { boxed: b.0 }
+        Self { b: b.0 }
     }
 }
 
 impl From<BoxedRep> for Boxed {
     fn from(b: BoxedRep) -> Self {
-        Self(b.boxed)
+        Self(b.b)
     }
 }
 

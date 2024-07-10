@@ -782,6 +782,7 @@ impl<'a> Formatter<'a> {
                 let grid_str = n.grid_string(false);
                 let formatted = if !grid_str.contains('…')
                     && grid_str.chars().count() < s.trim_end_matches('i').chars().count()
+                    && !["tau", "pi", "eta"].iter().any(|name| s.contains(name))
                 {
                     grid_str
                 } else {

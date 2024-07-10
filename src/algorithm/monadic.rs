@@ -181,7 +181,8 @@ impl<T: ArrayValue> Array<T> {
             Some(1) => Ok(()),
             Some(d) => Err(env.error(format!("Cannot unfix array with length {d}"))),
             None if self.shape.contains(&0) => Err(env.error("Cannot unfix empty array")),
-            None => Err(env.error("Cannot unfix scalar")),
+            None if self.shape.is_empty() => Err(env.error("Cannot unfix scalar")),
+            None => Err(env.pattern_match_error()),
         }
     }
     /// Collapse the top two dimensions of the array's shape

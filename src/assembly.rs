@@ -644,6 +644,7 @@ impl<'de> Deserialize<'de> for Instr {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum InstrRep {
+    #[serde(rename = "#")]
     Comment(Ident),
     CallGlobal(usize, bool),
     BindGlobal(usize, usize),

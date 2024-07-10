@@ -1139,7 +1139,13 @@ impl<T: ArrayValue> Array<T> {
         let mut virtual_shape = self.shape.clone();
         for (v, &i) in virtual_shape.iter_mut().zip(isize_spec) {
             let u = i.unsigned_abs();
-            let s = if i >= 0 { u } else { (*v) / u };
+            let s = if i >= 0 {
+                u
+            } else if fill.is_some() {
+                (*v + u - 1) / u
+            } else {
+                *v / u
+            };
             size_spec.push(s);
             if *v % u != 0 {
                 *v = if fill.is_some() {
@@ -1160,7 +1166,7 @@ impl<T: ArrayValue> Array<T> {
         new_shape.extend(virtual_shape.iter().skip(size_spec.len()).copied());
 
         println!("size_spec: {size_spec:?}");
-        println!("new_shape: {new_shape:?}");
+        // println!("new_shape: {new_shape:?}");
 
         if size_spec.as_slice().len() == 1 {
             if let Some(fill) = &fill {

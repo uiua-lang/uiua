@@ -1631,7 +1631,7 @@ mod tests {
                     {
                         continue;
                     }
-                    println!("{prim} example:\n{}", ex.input);
+                    println!("{prim} example:\n{}", ex.input); // Allow println
                     let mut env = Uiua::with_safe_sys();
                     match env.run_str(&ex.input) {
                         Ok(mut comp) => {

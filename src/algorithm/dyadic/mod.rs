@@ -1165,7 +1165,7 @@ impl<T: ArrayValue> Array<T> {
         new_shape.extend(size_spec.iter().copied());
         new_shape.extend(virtual_shape.iter().skip(size_spec.len()).copied());
 
-        println!("size_spec: {size_spec:?}");
+        // println!("size_spec: {size_spec:?}");
         // println!("new_shape: {new_shape:?}");
 
         if size_spec.as_slice().len() == 1 {

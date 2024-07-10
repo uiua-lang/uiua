@@ -419,7 +419,7 @@ fn prim_docs() {
                 {
                     continue;
                 }
-                println!("{prim} example:\n{}", ex.input());
+                eprintln!("{prim} example:\n{}", ex.input());
                 match Uiua::with_backend(WebBackend::default()).run_str(ex.input()) {
                     Ok(mut comp) => {
                         if let Some(diag) = comp.take_diagnostics().into_iter().next() {

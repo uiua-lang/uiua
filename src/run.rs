@@ -666,7 +666,8 @@ code:
             if self.rt.time_instrs {
                 let end_time = instant::now();
                 let padding = self.rt.call_stack.len().saturating_sub(1) * 2;
-                println!(
+                #[rustfmt::skip]
+                println!( // Allow println
                     "  ⏲{:padding$}{:.2}ms - {}",
                     "",
                     end_time - self.rt.last_time,

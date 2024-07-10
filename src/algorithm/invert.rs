@@ -21,6 +21,14 @@ use super::IgnoreError;
 
 pub(crate) const DEBUG: bool = false;
 
+macro_rules! dbgln {
+    ($($arg:tt)*) => {
+        if DEBUG {
+            println!($($arg)*); // Allow println
+        }
+    }
+}
+
 pub(crate) fn match_pattern(env: &mut Uiua) -> UiuaResult {
     let pat = env.pop(1)?;
     let val = env.pop(2)?;
@@ -245,33 +253,27 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
     if instrs.is_empty() {
         return Some(EcoVec::new());
     }
-    if DEBUG {
-        println!("inverting {:?}", FmtInstrs(instrs, &comp.asm));
-    }
+    dbgln!("inverting {:?}", FmtInstrs(instrs, &comp.asm));
 
     let mut inverted = EcoVec::new();
     let mut curr_instrs = instrs;
     'find_pattern: loop {
         for pattern in INVERT_PATTERNS {
             if let Some((input, mut inv)) = pattern.invert_extract(curr_instrs, comp) {
-                if DEBUG {
-                    println!(
-                        "matched pattern {:?} on {:?} to {:?}",
-                        pattern,
-                        FmtInstrs(&curr_instrs[..curr_instrs.len() - input.len()], &comp.asm),
-                        FmtInstrs(&inv, &comp.asm)
-                    );
-                }
+                dbgln!(
+                    "matched pattern {:?} on {:?} to {:?}",
+                    pattern,
+                    FmtInstrs(&curr_instrs[..curr_instrs.len() - input.len()], &comp.asm),
+                    FmtInstrs(&inv, &comp.asm)
+                );
                 inv.extend(inverted);
                 inverted = inv;
                 if input.is_empty() {
-                    if DEBUG {
-                        println!(
-                            "inverted {:?} to {:?}",
-                            FmtInstrs(instrs, &comp.asm),
-                            FmtInstrs(&inverted, &comp.asm)
-                        );
-                    }
+                    dbgln!(
+                        "inverted {:?} to {:?}",
+                        FmtInstrs(instrs, &comp.asm),
+                        FmtInstrs(&inverted, &comp.asm)
+                    );
                     return resolve_uns(inverted, comp);
                 }
                 curr_instrs = input;
@@ -281,13 +283,11 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
         break;
     }
 
-    if DEBUG {
-        println!(
-            "inverting {:?} failed with remaining {:?}",
-            FmtInstrs(instrs, &comp.asm),
-            FmtInstrs(curr_instrs, &comp.asm)
-        );
-    }
+    dbgln!(
+        "inverting {:?} failed with remaining {:?}",
+        FmtInstrs(instrs, &comp.asm),
+        FmtInstrs(curr_instrs, &comp.asm)
+    );
 
     None
 }
@@ -568,9 +568,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // These must come last!
     ];
 
-    if DEBUG {
-        println!("undering {:?}", instrs);
-    }
+    dbgln!("undering {:?}", instrs);
 
     let comp_instrs_backup = comp.asm.instrs.clone();
 
@@ -580,20 +578,18 @@ pub(crate) fn under_instrs(
     'find_pattern: loop {
         for pattern in patterns {
             if let Some((input, (bef, aft))) = pattern.under_extract(curr_instrs, g_sig, comp) {
-                if DEBUG {
-                    println!(
-                        "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
-                        pattern,
-                        &curr_instrs[..curr_instrs.len() - input.len()],
-                    );
-                }
+                dbgln!(
+                    "matched pattern {:?} on {:?} to {bef:?} {aft:?}",
+                    pattern,
+                    &curr_instrs[..curr_instrs.len() - input.len()],
+                );
                 befores.extend(bef);
                 afters = aft.into_iter().chain(afters).collect();
                 if input.is_empty() {
                     let befores = resolve_uns(befores, comp)?;
                     let afters = resolve_uns(afters, comp)?;
                     if DEBUG {
-                        println!("undered {:?} to {:?} {:?}", instrs, befores, afters);
+                        dbgln!("undered {:?} to {:?} {:?}", instrs, befores, afters);
                     }
                     return Some((befores, afters));
                 }
@@ -605,7 +601,7 @@ pub(crate) fn under_instrs(
     }
 
     comp.asm.instrs = comp_instrs_backup;
-    // println!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
+    // dbgln!("under {:?} failed with remaining {:?}", instrs, curr_instrs);
 
     None
 }
@@ -836,10 +832,8 @@ fn invert_dup_pattern<'a>(
     })?;
     let monadic_part = &dyadic_whole[..monadic_i];
     let dyadic_part = &dyadic_whole[monadic_i..];
-    if DEBUG {
-        println!("inverse monadic part: {monadic_part:?}");
-        println!("inverse dyadic part: {dyadic_part:?}");
-    }
+    dbgln!("inverse monadic part: {monadic_part:?}");
+    dbgln!("inverse dyadic part: {dyadic_part:?}");
     let monadic_inv = invert_instrs(monadic_part, comp)?;
     let inverse = match *dyadic_part {
         [Instr::Prim(Primitive::Add, span)] => {
@@ -880,10 +874,8 @@ fn under_dup_pattern<'a>(
         .find(|(_, sig)| sig.args == sig.outputs)?;
     let monadic_part = &dyadic_whole[..monadic_i];
     let dyadic_part = &dyadic_whole[monadic_i..];
-    if DEBUG {
-        println!("under monadic part: {monadic_part:?}");
-        println!("under dyadic part: {dyadic_part:?}");
-    }
+    dbgln!("under monadic part: {monadic_part:?}");
+    dbgln!("under dyadic part: {dyadic_part:?}");
     let (monadic_befores, monadic_afters) = under_instrs(monadic_part, g_sig, comp)?;
 
     let mut befores = eco_vec![Instr::Prim(Primitive::Dup, *dup_span),];
@@ -1220,12 +1212,12 @@ fn under_from_inverse_pattern<'a>(
         for pattern in INVERT_PATTERNS {
             if let Some((inp, after)) = pattern.invert_extract(&input[..end], comp) {
                 let before = EcoVec::from(&input[..input.len() - inp.len()]);
-                if DEBUG {
-                    println!(
-                        "inverted for under ({:?}) {:?} to {:?}",
-                        pattern, before, after
-                    );
-                }
+                dbgln!(
+                    "inverted for under ({:?}) {:?} to {:?}",
+                    pattern,
+                    before,
+                    after
+                );
                 return Some((inp, (before, after)));
             }
         }

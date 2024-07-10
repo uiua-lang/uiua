@@ -374,7 +374,7 @@ impl Compiler {
         let (items, errors, diagnostics) = parse(input, src.clone(), &mut self.asm.inputs);
         if self.print_diagnostics {
             for diagnostic in diagnostics {
-                println!("{}", diagnostic.report());
+                println!("{}", diagnostic.report()); // Allow println
             }
         } else {
             self.diagnostics.extend(diagnostics);

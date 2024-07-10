@@ -236,7 +236,7 @@ mod enabled {
     macro_rules! dbgln {
         ($($arg:tt)*) => {
             if DEBUG {
-                println!($($arg)*);
+                println!($($arg)*); // Allow println
             }
         }
     }

@@ -280,7 +280,7 @@ fn text_code_blocks() {
     for entry in std::fs::read_dir("text").unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        println!("Testing code blocks in {:?}", path.display());
+        eprintln!("Testing code blocks in {:?}", path.display());
         let text = std::fs::read_to_string(path).unwrap();
         let arena = Arena::new();
         let text = text
@@ -304,7 +304,7 @@ fn text_code_blocks() {
         }
 
         for (block, should_fail) in text_code_blocks(root) {
-            println!("Code block:\n{}", block);
+            eprintln!("Code block:\n{}", block);
             let mut env = uiua::Uiua::with_backend(crate::backend::WebBackend::default());
             let res = env.run_str(&block);
             match res {

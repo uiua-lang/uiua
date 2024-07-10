@@ -294,33 +294,33 @@ mod tests {
         }
     }
 
-    #[test]
-    fn no_dbgs() {
-        fn recurse_dirs(dir: &std::path::Path, f: &impl Fn(&std::path::Path)) {
-            for entry in std::fs::read_dir(dir).unwrap() {
-                let entry = entry.unwrap();
-                let path = entry.path();
-                if path.to_string_lossy().contains("target") {
-                    continue;
-                }
-                if path.is_dir() {
-                    recurse_dirs(&path, f);
-                } else {
-                    f(&path);
-                }
+    fn recurse_dirs(dir: &std::path::Path, f: &impl Fn(&std::path::Path)) {
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.to_string_lossy().contains("target") {
+                continue;
+            }
+            if path.is_dir() {
+                recurse_dirs(&path, f);
+            } else {
+                f(&path);
             }
         }
+    }
+
+    #[test]
+    fn no_dbgs() {
         recurse_dirs(std::path::Path::new("."), &|path| {
-            if path.extension().is_some_and(|ext| ext == "rs") {
-                if path.canonicalize().unwrap()
+            if !path.extension().is_some_and(|ext| ext == "rs")
+                || path.canonicalize().unwrap()
                     == std::path::Path::new(file!()).canonicalize().unwrap()
-                {
-                    return;
-                }
-                let contents = std::fs::read_to_string(path).unwrap();
-                if contents.contains("dbg!") {
-                    panic!("File {} contains a dbg! macro", path.display());
-                }
+            {
+                return;
+            }
+            let contents = std::fs::read_to_string(path).unwrap();
+            if contents.contains("dbg!") {
+                panic!("File {} contains a dbg! macro", path.display());
             }
         });
         if crate::algorithm::invert::DEBUG {
@@ -329,5 +329,30 @@ mod tests {
         if crate::ffi::DEBUG {
             panic!("ffi::DEBUG is true");
         }
+    }
+
+    #[test]
+    fn no_printlns() {
+        recurse_dirs(std::path::Path::new("."), &|path| {
+            if !path.extension().is_some_and(|ext| ext == "rs")
+                || path.canonicalize().unwrap()
+                    == std::path::Path::new(file!()).canonicalize().unwrap()
+                || path
+                    .components()
+                    .any(|c| c.as_os_str() == "main.rs" || c.as_os_str() == "profile.rs")
+            {
+                return;
+            }
+            let contents = std::fs::read_to_string(path).unwrap();
+            for line in contents.lines() {
+                if line.contains("println!")
+                    && !(line.trim().starts_with("//")
+                        || line.contains("eprintln!")
+                        || line.contains("// Allow println"))
+                {
+                    panic!("File {} contains a println! macro", path.display());
+                }
+            }
+        });
     }
 }

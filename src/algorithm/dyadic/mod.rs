@@ -1165,8 +1165,8 @@ impl<T: ArrayValue> Array<T> {
         new_shape.extend(size_spec.iter().copied());
         new_shape.extend(virtual_shape.iter().skip(size_spec.len()).copied());
 
-        // println!("size_spec: {size_spec:?}");
-        // println!("new_shape: {new_shape:?}");
+        println!("size_spec: {size_spec:?}");
+        println!("new_shape: {new_shape:?}");
 
         if size_spec.as_slice().len() == 1 {
             if let Some(fill) = &fill {
@@ -1177,6 +1177,10 @@ impl<T: ArrayValue> Array<T> {
             }
             self.shape = new_shape;
             return Ok(self);
+        }
+
+        if new_shape.elements() == 0 {
+            return Ok(Array::new(new_shape, CowSlice::new()));
         }
 
         let mut new_data =

@@ -1820,6 +1820,27 @@ primitive!(
     /// ex: # Experimental!
     ///   : [⤚¯ 2 5]
     ([1], With, Stack, ("with", '⤚')),
+    /// Keep all arguments to a function above the outputs on the stack
+    ///
+    /// ex: # Experimental!
+    ///   : [◠+ 1 2]
+    /// ex: # Experimental!
+    ///   : [◠(++) 1 2 3]
+    ///
+    /// See also: [below]
+    ([1], Above, Stack, ("above", '◠')),
+    /// Keep all arguments to a function below the outputs on the stack
+    ///
+    /// ex: # Experimental!
+    ///   : [◡+ 1 2]
+    /// ex: # Experimental!
+    ///   : [◡(++) 1 2 3]
+    /// This can be used with [gap] and [identity] to copy values from arbitrarily low in the stack.
+    /// ex: # Experimental!
+    ///   : [◡⋅⋅⋅⋅∘ 1 2 3 4 5]
+    ///
+    /// See also: [above]
+    ([1], Below, Stack, ("below", '◡')),
     /// Duplicate a function's last argument before calling it
     ///
     /// If you want to filter out every element of an array that is not [less than] 10, you can use [keep].

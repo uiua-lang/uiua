@@ -395,7 +395,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            (But | With | Backward)
+            (But | With | Backward | Above | Below)
                 | (Chunks | Orient | Coordinate | Astar | Fft | Triangle | Case)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
@@ -857,6 +857,8 @@ impl Primitive {
             | Primitive::With
             | Primitive::By
             | Primitive::Backward
+            | Primitive::Above
+            | Primitive::Below
             | Primitive::Un
             | Primitive::Under
             | Primitive::Content

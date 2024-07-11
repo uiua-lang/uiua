@@ -124,8 +124,10 @@ pub enum Instr {
 )]
 pub enum TempStack {
     /// A stack used to hold values need to undo a function
+    #[serde(rename = "u")]
     Under,
     /// A stack used when inlining some functions
+    #[serde(rename = "i")]
     Inline,
 }
 

@@ -14,6 +14,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Identifiers can now contain subscript numbers
   - They format from `__` followed by some numbers
   - For example, `X__1` will format to `X₁`
+- The `utf` function has been renamed to [`utf₈`](https://uiua.org/docs/utf₈)
 - Stabilize labels
   - Tutorial to come
 - [`windows ◫`](https://uiua.org/docs/windows) can now use a [`fill ⬚`](https://uiua.org/docs/fill) value to pad the array
@@ -721,7 +722,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 ## 0.0.20 - 2023-10-16
 ### Language
 - Add [`regex`](https://uiua.org/docs/regex) function for matching regular expressions
-- Add [`utf`](https://uiua.org/docs/utf) function for UTF-8 encoding and decoding
+- Add [`utf`](https://uiua.org/docs/utf₈) function for UTF-8 encoding and decoding
 - Add [`&invk`](https://uiua.org/docs/&invk) system function for invoking a path to be opened with the system's default program
 - [`fill ⬚`](https://uiua.org/docs/fill) can now be used with [`first ⊢`](https://uiua.org/docs/first)
 - Most functions that expect strings as arguments will now dig arbitrarily deep into boxes

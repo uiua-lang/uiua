@@ -162,7 +162,7 @@ impl fmt::Display for ImplPrimitive {
             UnMap => write!(f, "{Un}{Map}"),
             UnAtan => write!(f, "{Un}{Atan}"),
             UnComplex => write!(f, "{Un}{Complex}"),
-            UnUtf => write!(f, "{Un}{Utf}"),
+            UnUtf => write!(f, "{Un}{Utf8}"),
             UnParse => write!(f, "{Un}{Parse}"),
             UnFix => write!(f, "{Un}{Fix}"),
             UnShape => write!(f, "{Un}{Shape}"),
@@ -423,6 +423,7 @@ impl Primitive {
             "tra" => return Some(Primitive::Transpose),
             "par" => return Some(Primitive::Partition),
             "dup" => return Some(Primitive::Dup),
+            "utf" => return Some(Primitive::Utf8),
             "chunk" => return Some(Primitive::Chunks),
             _ => {}
         }
@@ -606,7 +607,7 @@ impl Primitive {
             }
             Primitive::Repr => env.monadic_ref(Value::representation)?,
             Primitive::Parse => env.monadic_ref_env(Value::parse_num)?,
-            Primitive::Utf => env.monadic_ref_env(Value::utf8)?,
+            Primitive::Utf8 => env.monadic_ref_env(Value::utf8)?,
             Primitive::Range => env.monadic_ref_env(Value::range)?,
             Primitive::Reverse => env.monadic_mut(Value::reverse)?,
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,

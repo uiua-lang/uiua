@@ -266,7 +266,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row([Where], No, "", "°⊚ [1 4]") }
             { inverse_row([Parse], No, "", "°⋕ [8 9 10 11 12]") }
             { inverse_row([Fix], No, "", "°¤ [[1 2 3]]") }
-            { inverse_row([Utf], No, "", "°utf [240 159 145 139 32 72 105 33]") }
+            { inverse_row([Utf8], No, "", "°utf [240 159 145 139 32 72 105 33]") }
             { inverse_row([Csv], No, "", "°csv \"1,2\\n3,4\"") }
             { inverse_row([Rotate], Required, "", "°(↻1) [1 2 3 4]") }
             { inverse_row([Join], No, "", "°⊂ [1 2 3 4]") }

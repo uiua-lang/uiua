@@ -2309,16 +2309,16 @@ primitive!(
     (2, Regex, Misc, "regex"),
     /// Convert a string to UTF-8 bytes
     ///
-    /// ex: utf "hello!"
-    /// ex: utf "❤️"
+    /// ex: utf₈ "hello!"
+    /// ex: utf₈ "❤️"
     /// You can use [un] to convert UTF-8 bytes back to a string.
-    /// ex: °utf [226 156 168 32 119 111 119 33]
+    /// ex: °utf₈ [226 156 168 32 119 111 119 33]
     ///
-    /// [utf] is different from just [add]ing or [subtracting] `@\0`.
+    /// [utf₈] is different from just [add]ing or [subtracting] `@\0`.
     /// Character math can only convert to and from UTF-32.
     /// ex: -@\0 "👩🏽‍👩🏻‍👦🏻‍👧🏽"
-    /// ex: utf "👩🏽‍👩🏻‍👦🏻‍👧🏽"
-    (1, Utf, Encoding, "utf"),
+    /// ex: utf₈ "👩🏽‍👩🏻‍👦🏻‍👧🏽"
+    (1, Utf8, Encoding, "utf₈"),
     /// Generate a unique tag
     ///
     /// Tags are just numbers and are unique across multiple threads, but not across multiple runs.

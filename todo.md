@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.12
+  - Optimize rank-1 `find` and `mask`
   - Writing longer code tutorial
   - Fix pad cursor jumping with end-of-line comments
   - Unicode literals

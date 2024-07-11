@@ -1998,8 +1998,9 @@ primitive!(
     ///   : ⍢(×3|<100.) 1
     /// The net stack change of the two functions, minus the condition, must be 0.
     /// ex! ⍢(×2.|<1000) 1
-    /// This means that unlike [repeat], [do] cannot be wrapped in `[]`s to collect items into an array.
-    /// Instead, [join] the items to an initial list.
+    /// This requirement is relaxed inside an array.
+    /// ex: [⍢(×2.|<1000)] 1
+    /// Alternatively, you can [join] the items to an initial list.
     /// ex: ◌⍢(⊃(×2)⊂|<100) 1 []
     ([2], Do, IteratingModifier, ("do", '⍢')),
     /// Set the fill value for a function

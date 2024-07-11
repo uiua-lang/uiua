@@ -1735,7 +1735,7 @@ code:
         }
 
         if call {
-            let (_, _, instrs) = self.compile_func_instrs(func, span)?;
+            let (_, _, instrs) = self.compile_func_instrs(func, span, false)?;
             self.push_all_instrs(instrs);
         } else {
             let function = self.compile_func(func, span.clone())?;
@@ -1744,7 +1744,8 @@ code:
         Ok(())
     }
     fn compile_func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Function> {
-        let (id, sig, instrs) = self.compile_func_instrs(func, span)?;
+        let (id, sig, instrs) = self.compile_func_instrs(func, span, true)?;
+        let sig = sig.unwrap();
 
         if let [Instr::PushFunc(f), Instr::Call(_)] = instrs.as_slice() {
             return Ok(Function::clone(f));
@@ -1756,7 +1757,8 @@ code:
         &mut self,
         func: Func,
         span: CodeSpan,
-    ) -> UiuaResult<(FunctionId, Signature, EcoVec<Instr>)> {
+        require_valid_sig: bool,
+    ) -> UiuaResult<(FunctionId, Option<Signature>, EcoVec<Instr>)> {
         let mut instrs = EcoVec::new();
         for line in func.lines {
             instrs.extend(self.compile_words(line, true)?);
@@ -1778,12 +1780,12 @@ code:
                         ));
                     }
                 }
-                sig
+                Some(sig)
             }
             Err(e) => {
                 if let Some(declared_sig) = &func.signature {
-                    declared_sig.value
-                } else {
+                    Some(declared_sig.value)
+                } else if require_valid_sig {
                     return Err(self.fatal_error(
                         span,
                         format!(
@@ -1795,17 +1797,21 @@ code:
                             }
                         ),
                     ));
+                } else {
+                    None
                 }
             }
         };
-        self.code_meta.function_sigs.insert(
-            span.clone(),
-            SigDecl {
-                sig,
-                explicit: func.signature.is_some(),
-                inline: true,
-            },
-        );
+        if let Some(sig) = sig {
+            self.code_meta.function_sigs.insert(
+                span.clone(),
+                SigDecl {
+                    sig,
+                    explicit: func.signature.is_some(),
+                    inline: true,
+                },
+            );
+        }
         Ok((func.id, sig, instrs))
     }
     fn switch(&mut self, branches: Vec<Sp<Word>>, span: CodeSpan, call: bool) -> UiuaResult {

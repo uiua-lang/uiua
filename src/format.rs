@@ -639,8 +639,7 @@ impl<'a> Formatter<'a> {
                     _ => self.prev_import_function = None,
                 }
 
-                self.output
-                    .push_str(&crate::parse::canonicalize_ident(&binding.name.value));
+                self.output.push_str(&binding.name.value);
                 self.output
                     .push_str(if binding.public { " ←" } else { " ↚" });
                 if binding.array_macro {
@@ -821,7 +820,8 @@ impl<'a> Formatter<'a> {
                 }
                 self.push(&word.span, &formatted);
             }
-            Word::Char(_) | Word::String(_) | Word::Label(_) | Word::FormatString(_) => self
+            Word::Label(label) => self.push(&word.span, &format!("${label}")),
+            Word::Char(_) | Word::String(_) | Word::FormatString(_) => self
                 .output
                 .push_str(&self.inputs.get(&word.span.src)[word.span.byte_range()]),
             Word::MultilineString(lines) => {

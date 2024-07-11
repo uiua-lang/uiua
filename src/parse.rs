@@ -507,9 +507,8 @@ impl<'i> Parser<'i> {
             let span = token.span;
             let token = token.value;
             match token {
-                Token::Ident if line.is_some() => {
+                Token::Ident(ident) if line.is_some() => {
                     let line = line.as_mut().unwrap();
-                    let ident = canonicalize_ident(&self.input[span.byte_range()]);
                     let name = span.clone().sp(ident);
                     line.items.push(name);
                 }
@@ -553,9 +552,7 @@ impl<'i> Parser<'i> {
         })
     }
     fn try_ident(&mut self) -> Option<Sp<Ident>> {
-        let span = self.try_exact(Token::Ident)?;
-        let ident = canonicalize_ident(&self.input[span.byte_range()]);
-        Some(span.sp(ident))
+        self.next_token_map(Token::as_ident)
     }
     fn try_ref(&mut self) -> Option<Sp<Word>> {
         let mut checkpoint = self.index;
@@ -1347,47 +1344,6 @@ pub fn ident_modifier_args(ident: &str) -> usize {
         count = count.saturating_add(this_count);
     }
     count
-}
-
-/// Rewrite an identifier with the given amount of double and single exclamation points
-pub fn place_exclams(ident: &str, count: usize) -> Ident {
-    let mut new: Ident = ident.trim_end_matches(&['!', '‼']).into();
-    let num_double = count / 2;
-    let trailing_single = count % 2 == 1;
-    for _ in 0..num_double {
-        new.push('‼');
-    }
-    if trailing_single {
-        new.push('!');
-    }
-    new
-}
-
-/// Rewrite the identifier with the same number of exclamation points using double and single exclamation point characters as needed
-fn canonicalize_exclams(ident: &str) -> Ident {
-    let num_margs = crate::parse::ident_modifier_args(ident);
-    place_exclams(ident, num_margs)
-}
-
-/// Rewrite the identifier with numerals preceded by `__` replaced with subscript characters
-fn canonicalize_subscripts(ident: &str) -> Ident {
-    // This hasty canonicalization is okay because the stricter
-    // rules about the syntax are handled in the lexer
-    ident
-        .chars()
-        .filter(|c| *c != '_')
-        .map(|c| {
-            if let Some(d) = c.to_digit(10) {
-                crate::lex::SUBSCRIPT_NUMS[d as usize]
-            } else {
-                c
-            }
-        })
-        .collect()
-}
-
-pub fn canonicalize_ident(ident: &str) -> Ident {
-    canonicalize_subscripts(&canonicalize_exclams(ident))
 }
 
 pub(crate) fn count_placeholders(words: &[Sp<Word>]) -> usize {

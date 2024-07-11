@@ -16,7 +16,9 @@ use serde::*;
 use serde_tuple::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{ast::PlaceholderOp, ArraySwizzle, Inputs, Primitive, StackSwizzle, WILDCARD_CHAR};
+use crate::{
+    ast::PlaceholderOp, ArraySwizzle, Ident, Inputs, Primitive, StackSwizzle, WILDCARD_CHAR,
+};
 
 /// Subscript digit characters
 pub const SUBSCRIPT_NUMS: [char; 10] = ['₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉'];
@@ -470,11 +472,11 @@ pub enum Token {
     Comment,
     SemanticComment(SemanticComment),
     OutputComment(usize),
-    Ident,
+    Ident(Ident),
     Number,
     Char(String),
     Str(String),
-    Label(String),
+    Label(Ident),
     FormatStr(Vec<String>),
     MultilineString(String),
     MultilineFormatStr(Vec<String>),
@@ -493,6 +495,12 @@ pub enum Token {
 }
 
 impl Token {
+    pub(crate) fn as_ident(&self) -> Option<Ident> {
+        match self {
+            Token::Ident(ident) => Some(ident.clone()),
+            _ => None,
+        }
+    }
     pub(crate) fn as_char(&self) -> Option<String> {
         match self {
             Token::Char(char) => Some(char.clone()),
@@ -567,7 +575,7 @@ impl fmt::Display for Token {
             Token::Comment => write!(f, "comment"),
             Token::SemanticComment(sc) => sc.fmt(f),
             Token::OutputComment(_) => write!(f, "output comment"),
-            Token::Ident => write!(f, "identifier"),
+            Token::Ident(_) => write!(f, "identifier"),
             Token::Number => write!(f, "number"),
             Token::Char(c) => {
                 for c in c.chars() {
@@ -991,10 +999,7 @@ impl<'a> Lexer<'a> {
                         continue;
                     }
                     if first_dollar && !self.next_char_exact("\"") {
-                        let mut label = String::new();
-                        while let Some(c) = self.next_char_if(|c| c.chars().all(is_ident_char)) {
-                            label.push_str(c);
-                        }
+                        let label = self.ident("");
                         self.end(Label(label), start);
                         continue;
                     }
@@ -1015,29 +1020,8 @@ impl<'a> Lexer<'a> {
                 }
                 // Identifiers and unformatted glyphs
                 c if is_custom_glyph(c) || c.chars().all(is_ident_char) || c == "&" || c == "_" => {
-                    let mut ident = c.to_string();
-                    // Collect characters
-                    if !is_custom_glyph(c) {
-                        // Handle identifiers beginning with __
-                        if c == "_" && self.next_char_exact("_") {
-                            ident.push_str("__");
-                            while let Some(dc) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                                ident.push_str(dc);
-                            }
-                        }
-                        loop {
-                            if let Some(c) = self.next_char_if_all(is_ident_char) {
-                                ident.push_str(c);
-                            } else if self.next_chars_exact(["_"; 2]) {
-                                ident.push_str("__");
-                                while let Some(dc) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                                    ident.push_str(dc);
-                                }
-                            } else {
-                                break;
-                            }
-                        }
-                    }
+                    // Get ident start
+                    let mut ident = self.ident(c);
                     let mut exclam_count = 0;
                     while let Some((ch, count)) = if self.next_char_exact("!") {
                         Some(('!', 1))
@@ -1081,11 +1065,13 @@ impl<'a> Lexer<'a> {
                         }
                         let rest = &ident[lowercase_end..];
                         if !rest.is_empty() {
-                            self.end(Ident, start);
+                            let ident = canonicalize_ident(&ident);
+                            self.end(Ident(ident), start);
                         }
                     } else {
                         // Lone ident
-                        self.end(Ident, start)
+                        let ident = canonicalize_ident(&ident);
+                        self.end(Ident(ident), start)
                     }
                 }
                 // Numbers
@@ -1174,6 +1160,31 @@ impl<'a> Lexer<'a> {
         }
 
         (processed, self.errors)
+    }
+    fn ident(&mut self, c: &str) -> Ident {
+        let mut ident = c.to_string();
+        if !is_custom_glyph(c) {
+            // Handle identifiers beginning with __
+            if c == "_" && self.next_char_exact("_") {
+                ident.push_str("__");
+                while let Some(dc) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+                    ident.push_str(dc);
+                }
+            }
+            loop {
+                if let Some(c) = self.next_char_if_all(is_ident_char) {
+                    ident.push_str(c);
+                } else if self.next_chars_exact(["_"; 2]) {
+                    ident.push_str("__");
+                    while let Some(dc) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+                        ident.push_str(dc);
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+        canonicalize_ident(&ident)
     }
     fn number(&mut self, init: &str) -> bool {
         // Whole part
@@ -1419,4 +1430,46 @@ pub fn is_custom_glyph(c: &str) -> bool {
             .chars()
             .all(|c| !c.is_ascii() && !is_ident_char(c) && Primitive::from_glyph(c).is_none()),
     }
+}
+
+pub(crate) fn canonicalize_ident(ident: &str) -> Ident {
+    canonicalize_subscripts(&canonicalize_exclams(ident))
+}
+
+/// Rewrite the identifier with the same number of exclamation points
+/// using double and single exclamation point characters as needed
+fn canonicalize_exclams(ident: &str) -> Ident {
+    let num_margs = crate::parse::ident_modifier_args(ident);
+    place_exclams(ident, num_margs)
+}
+
+/// Rewrite an identifier with the given amount of double and single exclamation points
+fn place_exclams(ident: &str, count: usize) -> Ident {
+    let mut new: Ident = ident.trim_end_matches(&['!', '‼']).into();
+    let num_double = count / 2;
+    let trailing_single = count % 2 == 1;
+    for _ in 0..num_double {
+        new.push('‼');
+    }
+    if trailing_single {
+        new.push('!');
+    }
+    new
+}
+
+/// Rewrite the identifier with numerals preceded by `__` replaced with subscript characters
+fn canonicalize_subscripts(ident: &str) -> Ident {
+    // This hasty canonicalization is okay because the stricter
+    // rules about the syntax are handled in the lexer
+    ident
+        .chars()
+        .filter(|c| *c != '_')
+        .map(|c| {
+            if let Some(d) = c.to_digit(10) {
+                crate::lex::SUBSCRIPT_NUMS[d as usize]
+            } else {
+                c
+            }
+        })
+        .collect()
 }

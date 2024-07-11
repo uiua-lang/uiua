@@ -1050,12 +1050,18 @@ impl<'a> Lexer<'a> {
                             self.loc.byte_pos -= 1;
                         }
                         let mut start = start;
-                        for (prim, frag) in prims {
-                            let end = Loc {
-                                col: start.col + frag.chars().count() as u16,
-                                char_pos: start.char_pos + frag.chars().count() as u32,
-                                byte_pos: start.byte_pos + frag.len() as u32,
-                                ..start
+                        let true_end = self.loc;
+                        let prim_count = prims.len();
+                        for (i, (prim, frag)) in prims.into_iter().enumerate() {
+                            let end = if i < prim_count - 1 {
+                                Loc {
+                                    col: start.col + frag.chars().count() as u16,
+                                    char_pos: start.char_pos + frag.chars().count() as u32,
+                                    byte_pos: start.byte_pos + frag.len() as u32,
+                                    ..start
+                                }
+                            } else {
+                                true_end
                             };
                             self.tokens.push_back(Sp {
                                 value: Glyph(prim),

@@ -2483,5 +2483,10 @@ pub fn now() -> f64 {
 }
 
 pub(crate) fn terminal_size() -> Option<(usize, usize)> {
-    terminal_size::terminal_size().map(|(w, h)| (w.0 as usize, h.0 as usize))
+    #[cfg(all(not(target_arch = "wasm32"), feature = "terminal_size"))]
+    {
+        terminal_size::terminal_size().map(|(w, h)| (w.0 as usize, h.0 as usize))
+    }
+    #[cfg(target_arch = "wasm32")]
+    None
 }

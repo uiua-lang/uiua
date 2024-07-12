@@ -482,18 +482,33 @@ impl Compiler {
                 let (mut instrs, mut sig) =
                     self.compile_operand_word(modified.operands[0].clone())?;
                 // Dip (|1 …) . diagnostic
-                if prim == Dip && sig == (1, 1) {
-                    if let Some(Instr::Prim(Dup, dup_span)) =
-                        self.new_functions.last().and_then(|instrs| instrs.last())
-                    {
-                        if let Span::Code(dup_span) = self.get_span(*dup_span) {
-                            let span = modified.modifier.span.clone().merge(dup_span);
-                            self.emit_diagnostic(
-                                "Prefer `⟜(…)` over `⊙(…).` for clarity",
-                                DiagnosticKind::Style,
-                                span,
-                            );
+                if sig.args == 1 {
+                    match prim {
+                        Dip => {
+                            if let Some(Instr::Prim(Dup, dup_span)) =
+                                self.new_functions.last().and_then(|instrs| instrs.last())
+                            {
+                                if let Span::Code(dup_span) = self.get_span(*dup_span) {
+                                    let span = modified.modifier.span.clone().merge(dup_span);
+                                    self.emit_diagnostic(
+                                        "Prefer `⟜(…)` over `⊙(…).` for clarity",
+                                        DiagnosticKind::Style,
+                                        span,
+                                    );
+                                }
+                            }
                         }
+                        Above => self.emit_diagnostic(
+                            "Prefer `⟜` over `◠` for monadic functions",
+                            DiagnosticKind::Style,
+                            modified.modifier.span.clone(),
+                        ),
+                        Below => self.emit_diagnostic(
+                            "Prefer `⊸` over `◡` for monadic functions",
+                            DiagnosticKind::Style,
+                            modified.modifier.span.clone(),
+                        ),
+                        _ => {}
                     }
                 }
 

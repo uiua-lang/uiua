@@ -339,6 +339,15 @@ impl Compiler {
                         if last_slice.len == 0 {
                             self.asm.top_slices.pop();
                         }
+                    } else if sig == (0, 0) {
+                        let func = make_fn(instrs, sig, self);
+                        self.compile_bind_function(
+                            &name,
+                            local,
+                            func,
+                            spandex,
+                            comment.as_deref(),
+                        )?;
                     } else {
                         self.compile_bind_const(&name, local, None, spandex, comment.as_deref());
                         let start = self.asm.instrs.len();

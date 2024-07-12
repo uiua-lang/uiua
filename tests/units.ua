@@ -461,6 +461,9 @@ X ← |0
 G ↚ +1
 F ← G
 
+F ←
+≡F
+
 # Constant vs Noadic function
 F ← ⚂
 G ← (⚂)

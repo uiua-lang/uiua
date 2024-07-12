@@ -1071,7 +1071,7 @@ impl<'a> Lexer<'a> {
                         }
                         let rest = &ident[lowercase_end..];
                         if !rest.is_empty() {
-                            let ident = canonicalize_ident(&ident);
+                            let ident = canonicalize_ident(rest);
                             self.end(Ident(ident), start);
                         }
                     } else {

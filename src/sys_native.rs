@@ -15,7 +15,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{GitTarget, Handle, SysBackend};
+use crate::{terminal_size, GitTarget, Handle, SysBackend};
 use dashmap::DashMap;
 use once_cell::sync::Lazy;
 
@@ -369,7 +369,7 @@ impl SysBackend for NativeSys {
         NATIVE_SYS.colored_errors.insert(message, colored);
     }
     fn term_size(&self) -> Result<(usize, usize), String> {
-        let (w, h) = term_size::dimensions().ok_or("Failed to get terminal size")?;
+        let (w, h) = terminal_size().ok_or("Failed to get terminal size")?;
         Ok((w, h.saturating_sub(1)))
     }
     fn exit(&self, code: i32) -> Result<(), String> {
@@ -563,8 +563,8 @@ impl SysBackend for NativeSys {
     }
     #[cfg(all(feature = "terminal_image", feature = "image"))]
     fn show_image(&self, image: image::DynamicImage) -> Result<(), String> {
-        let (width, height) = if let Some((w, h)) = term_size::dimensions() {
-            let (tw, th) = (w as u32, h.saturating_sub(1) as u32);
+        let (width, height) = if let Some((w, h)) = terminal_size::terminal_size() {
+            let (tw, th) = (w.0 as u32, h.0.saturating_sub(1) as u32);
             let (iw, ih) = (image.width(), image.height() / 2);
             let scaled_to_height = (iw * th / ih.max(1), th);
             let scaled_to_width = (tw, ih * tw / iw.max(1));

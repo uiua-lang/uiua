@@ -3753,16 +3753,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "term_size"
-version = "1.0.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84ee19d8ffb5e7c96486d7751f11835dac12f71b6a6fc1a8c107447e3c9125e8"
-dependencies = [
- "libc",
- "winapi",
-]
-
-[[package]]
 name = "termcolor"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4172,8 +4162,8 @@ dependencies = [
  "serde_tuple",
  "serde_yaml",
  "simple_excel_writer",
- "term_size",
  "terminal-light",
+ "terminal_size",
  "thread_local",
  "time",
  "tinyvec",

@@ -10,6 +10,7 @@ use crate::{
     algorithm::map::{EMPTY_NAN, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
     boxed::Boxed,
+    terminal_size,
     value::Value,
     Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
 };
@@ -419,7 +420,7 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
 
         // Handle really big grid
         if self.rank() > 1 {
-            let max_width = term_size::dimensions().map_or(1000, |(w, _)| w);
+            let max_width = terminal_size().map_or(1000, |(w, _)| w);
             for row in grid.iter_mut() {
                 if row.len() > max_width {
                     let diff = row.len() - max_width;
@@ -542,11 +543,7 @@ fn fmt_array<T: GridFmt + ArrayValue>(
     let row_shape = &shape[1..];
     let cell_size = data.len() / cell_count;
     let row_height: usize = row_shape.iter().rev().skip(1).product();
-    let max_height = if term_size::dimensions().is_some() {
-        100
-    } else {
-        300
-    };
+    let max_height = if terminal_size().is_some() { 100 } else { 300 };
     for (i, cell) in data.chunks(cell_size).enumerate() {
         if i > 0 && rank > 2 {
             for _ in 0..rank - 2 {

@@ -1,10 +1,10 @@
 use std::{
     collections::{HashMap, HashSet},
     iter::once,
+    time::Duration,
 };
 
 use enum_iterator::all;
-use instant::Duration;
 use leptos::{leptos_dom::helpers::location, *};
 use leptos_meta::*;
 use leptos_router::*;

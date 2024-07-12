@@ -8,9 +8,9 @@ use std::{
     fs,
     iter::repeat,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
-use instant::Duration;
 use paste::paste;
 
 use crate::{

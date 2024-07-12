@@ -12,7 +12,7 @@ use leptos::{
 use leptos_router::{use_navigate, BrowserIntegration, History, LocationChange, NavigateOptions};
 use uiua::{
     format::{format_str, FormatConfig},
-    is_ident_char, lex, seed_random, Primitive, SysOp, Token,
+    is_ident_char, lex, now, seed_random, Primitive, SysOp, Token,
 };
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{
@@ -187,7 +187,7 @@ pub fn Editor<'a>(
         update_token_count(&code_text);
 
         // Format code
-        let seed = instant::now().to_bits();
+        let seed = now().to_bits();
         seed_random(seed);
         let input = if format {
             if let Ok(formatted) = format_str(

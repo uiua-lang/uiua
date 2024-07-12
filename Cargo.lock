@@ -1810,18 +1810,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "instant"
-version = "0.1.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a5bbe824c507c5da5956355e86a746d82e0e1464f65d862cc5e71da70e94b2c"
-dependencies = [
- "cfg-if 1.0.0",
- "js-sys",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
 name = "integer-sqrt"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3606,7 +3594,6 @@ dependencies = [
  "getrandom",
  "hound",
  "image",
- "instant",
  "js-sys",
  "leptos",
  "leptos_meta",
@@ -4158,7 +4145,7 @@ dependencies = [
  "httparse",
  "image",
  "indexmap",
- "instant",
+ "js-sys",
  "json5",
  "libffi",
  "libloading",
@@ -4196,6 +4183,8 @@ dependencies = [
  "trash",
  "unicode-segmentation",
  "viuer",
+ "wasm-bindgen",
+ "web-sys",
  "webpki-roots",
 ]
 

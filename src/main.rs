@@ -8,12 +8,11 @@ use std::{
     process::{exit, Child, Command, Stdio},
     sync::mpsc::channel,
     thread::sleep,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use clap::{error::ErrorKind, Parser};
 use colored::*;
-use instant::Instant;
 use notify::{EventKind, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;

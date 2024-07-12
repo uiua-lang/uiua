@@ -9,7 +9,7 @@ use std::{
 
 use crate::{editor::get_ast_time, weewuh, START_TIME};
 use leptos::*;
-use uiua::{GitTarget, Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA};
+use uiua::{now, GitTarget, Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
@@ -338,7 +338,7 @@ impl SysBackend for WebBackend {
         self.play_audio(bytes)
     }
     fn now(&self) -> f64 {
-        *START_TIME.get_or_init(|| instant::now() / 1000.0) + instant::now() / 1000.0
+        *START_TIME.get_or_init(now) + now()
     }
     fn set_clipboard(&self, contents: &str) -> Result<(), String> {
         _ = window()
@@ -349,8 +349,8 @@ impl SysBackend for WebBackend {
         Ok(())
     }
     fn sleep(&self, seconds: f64) -> Result<(), String> {
-        let start = instant::now();
-        while (instant::now() - start) / 1000.0 < seconds {}
+        let start = now();
+        while (now() - start) / 1000.0 < seconds {}
         Ok(())
     }
     fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {

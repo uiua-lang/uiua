@@ -14,11 +14,11 @@ use std::{
         atomic::{self, AtomicBool},
         Arc,
     },
+    time::Duration,
 };
 
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use enum_iterator::{all, Sequence};
-use instant::Duration;
 use thread_local::ThreadLocal;
 
 use crate::{
@@ -270,7 +270,7 @@ impl Uiua {
     }
     /// Limit the execution duration
     pub fn with_execution_limit(mut self, limit: Duration) -> Self {
-        self.rt.execution_limit = Some(limit.as_millis() as f64);
+        self.rt.execution_limit = Some(limit.as_secs_f64());
         self
     }
     /// Set the command line arguments
@@ -337,7 +337,7 @@ impl Uiua {
     pub fn run_asm(&mut self, asm: impl Into<Assembly>) -> UiuaResult {
         fn run_asm(env: &mut Uiua, asm: Assembly) -> UiuaResult {
             env.asm = asm;
-            env.rt.execution_start = instant::now();
+            env.rt.execution_start = env.rt.backend.now();
             let res = env.run_top_slices();
             if res.is_err() {
                 env.rt = Runtime {
@@ -431,16 +431,16 @@ code:
 
             if self.rt.time_instrs {
                 formatted_instr = format!("{instr:?}");
-                self.rt.last_time = instant::now();
+                self.rt.last_time = self.rt.backend.now();
             }
             let res = match instr {
                 Instr::Comment(_) => Ok(()),
                 // Pause execution timer during &sc
                 &Instr::Prim(prim @ Primitive::Sys(SysOp::ScanLine), span) => {
                     self.with_prim_span(span, Some(prim), |env| {
-                        let start = instant::now();
+                        let start = env.rt.backend.now();
                         let res = prim.run(env);
-                        env.rt.execution_start += instant::now() - start;
+                        env.rt.execution_start += env.rt.backend.now() - start;
                         res
                     })
                 }
@@ -664,7 +664,7 @@ code:
                 }
             };
             if self.rt.time_instrs {
-                let end_time = instant::now();
+                let end_time = self.rt.backend.now();
                 let padding = self.rt.call_stack.len().saturating_sub(1) * 2;
                 #[rustfmt::skip]
                 println!( // Allow println
@@ -673,7 +673,7 @@ code:
                     end_time - self.rt.last_time,
                     formatted_instr
                 );
-                self.rt.last_time = instant::now();
+                self.rt.last_time = self.rt.backend.now();
             }
             if let Err(mut err) = res {
                 // Trace errors
@@ -695,7 +695,7 @@ code:
     /// Timeout if an execution limit is set and has been exceeded
     pub fn respect_execution_limit(&self) -> UiuaResult {
         if let Some(limit) = self.rt.execution_limit {
-            if instant::now() - self.rt.execution_start > limit {
+            if self.rt.backend.now() - self.rt.execution_start > limit {
                 return Err(
                     UiuaErrorKind::Timeout(self.span(), self.inputs().clone().into()).into(),
                 );

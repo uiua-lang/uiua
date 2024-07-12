@@ -923,7 +923,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     ///
     /// Should be in seconds
     fn now(&self) -> f64 {
-        instant::now() / 1000.0
+        now()
     }
     /// Create a TCP listener and bind it to an address
     fn tcp_listen(&self, addr: &str) -> Result<Handle, String> {
@@ -2451,4 +2451,33 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
     let mut num = Value::Num(Array::new(shape, data));
     num.compress();
     Ok((frame_rate, num))
+}
+
+/// Get the current time in seconds
+///
+/// This function works on both native and web targets.
+pub fn now() -> f64 {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        std::time::SystemTime::now()
+            .duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .expect("System clock was before 1970.")
+            .as_secs_f64()
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        #[cfg(not(feature = "web"))]
+        {
+            compile_error!("Web target requires the `web` feature")
+        }
+        #[cfg(feature = "web")]
+        {
+            use wasm_bindgen::{prelude::*, JsCast};
+            js_sys::Reflect::get(&js_sys::global(), &JsValue::from_str("performance"))
+                .expect("failed to get performance from global object")
+                .unchecked_into::<web_sys::Performance>()
+                .now()
+                / 1000.0
+        }
+    }
 }

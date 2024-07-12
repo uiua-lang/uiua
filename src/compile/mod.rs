@@ -13,11 +13,11 @@ use std::{
     path::{Path, PathBuf},
     rc::Rc,
     sync::Arc,
+    time::Duration,
 };
 
 use ecow::{eco_vec, EcoString, EcoVec};
 use indexmap::IndexMap;
-use instant::Duration;
 use serde::{Deserialize, Serialize};
 
 use crate::{

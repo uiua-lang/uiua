@@ -13,17 +13,16 @@ mod tour;
 mod tutorial;
 mod uiuisms;
 
-use std::sync::OnceLock;
+use std::{sync::OnceLock, time::Duration};
 
 use base64::engine::{general_purpose::URL_SAFE, Engine};
-use instant::Duration;
 use js_sys::Date;
 use leptos::*;
 use leptos_meta::*;
 use leptos_router::*;
 use uiua::{
     lsp::{BindingDocs, BindingDocsKind},
-    ConstantDef, PrimClass, Primitive, Signature, SysOp,
+    now, ConstantDef, PrimClass, Primitive, Signature, SysOp,
 };
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlAudioElement};
@@ -195,7 +194,7 @@ pub fn Site() -> impl IntoView {
 }
 
 fn weewuh() {
-    let i = (instant::now() / 1000.0 % 1.0 * 100.0) as u32;
+    let i = (now() / 1000.0 % 1.0 * 100.0) as u32;
     let src = match i {
         0 => "/assets/ooh-ee-ooh-ah.mp3",
         1..=4 => "/assets/wee-wah.mp3",

@@ -7,4 +7,6 @@ if (md.includes(`## ${process.argv[2]}`)) {
         .replaceAll("\0VER\0", process.argv[2])
         .trim()
     console.log(notes)
+} else {
+    console.log("You can find the working changelog [here](https://www.uiua.org/docs/changelog).")
 }

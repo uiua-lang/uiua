@@ -54,6 +54,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Some optimizations
   - Optimize [`length ⧻`](https://uiua.org/docs/length)[`where ⊚`](https://uiua.org/docs/where)
   - Optimize [`≡`](https://uiua.org/docs/rows)[`□`](https://uiua.org/docs/box)[`◫`](https://uiua.org/docs/windows)
+  - Small optimizations to rank-1 cases of [`find ⌕`](https://uiua.org/docs/find) and [`mask ⦷`](https://uiua.org/docs/mask)
 - LSP improvements
   - Show array shapes on hover
   - Code action to insert `# Experimental!` comment

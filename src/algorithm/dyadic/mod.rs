@@ -1288,26 +1288,26 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     /// Try to `find` this array in another
-    pub fn find(&self, searched: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
-        let searched_for = self;
-        let mut searched = searched;
+    pub fn find(&self, haystack: &Self, env: &Uiua) -> UiuaResult<Array<u8>> {
+        let needle = self;
+        let mut haystack = haystack;
         let mut local_searched: Self;
-        let any_dim_greater = (searched_for.shape().iter().rev())
-            .zip(searched.shape().iter().rev())
+        let any_dim_greater = (needle.shape().iter().rev())
+            .zip(haystack.shape().iter().rev())
             .any(|(a, b)| a > b);
-        if self.rank() > searched.rank() || any_dim_greater {
+        if self.rank() > haystack.rank() || any_dim_greater {
             // Fill
             match env.scalar_fill() {
                 Ok(fill) => {
-                    let mut target_shape = searched.shape.clone();
-                    target_shape[0] = searched_for.row_count();
-                    local_searched = searched.clone();
+                    let mut target_shape = haystack.shape.clone();
+                    target_shape[0] = needle.row_count();
+                    local_searched = haystack.clone();
                     local_searched.fill_to_shape(&target_shape, fill);
-                    searched = &local_searched;
+                    haystack = &local_searched;
                 }
                 Err(_) => {
-                    let data = cowslice![0; searched.element_count()];
-                    let mut arr = Array::new(searched.shape.clone(), data);
+                    let data = cowslice![0; haystack.element_count()];
+                    let mut arr = Array::new(haystack.shape.clone(), data);
                     arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
                     return Ok(arr);
                 }
@@ -1315,13 +1315,13 @@ impl<T: ArrayValue> Array<T> {
         }
 
         // Pad the shape of the searched-for array
-        let mut searched_for_shape = searched_for.shape.clone();
-        while searched_for_shape.len() < searched.shape.len() {
+        let mut searched_for_shape = needle.shape.clone();
+        while searched_for_shape.len() < haystack.shape.len() {
             searched_for_shape.insert(0, 1);
         }
 
         // Calculate the pre-padded output shape
-        let temp_output_shape: Shape = searched
+        let temp_output_shape: Shape = haystack
             .shape
             .iter()
             .zip(&searched_for_shape)
@@ -1330,70 +1330,102 @@ impl<T: ArrayValue> Array<T> {
 
         let mut data = EcoVec::from_elem(0, temp_output_shape.iter().product());
         let data_slice = data.make_mut();
-        let mut corner = vec![0; searched.shape.len()];
-        let mut curr = vec![0; searched.shape.len()];
-        let mut k = 0;
 
-        if searched.shape.iter().all(|&d| d > 0) {
-            'windows: loop {
-                // Reset curr
-                for i in curr.iter_mut() {
-                    *i = 0;
-                }
-                // Search the window whose top-left is the current corner
-                'items: loop {
-                    // Get index for the current item in the searched array
-                    let mut searched_index = 0;
-                    let mut stride = 1;
-                    for ((c, i), s) in corner.iter().zip(&curr).zip(&searched.shape).rev() {
-                        searched_index += (*c + *i) * stride;
-                        stride *= s;
-                    }
-                    // Get index for the current item in the searched-for array
-                    let mut search_for_index = 0;
-                    let mut stride = 1;
-                    for (i, s) in curr.iter().zip(&searched_for_shape).rev() {
-                        search_for_index += *i * stride;
-                        stride *= s;
-                    }
-                    // Compare the current items in the two arrays
-                    let same = if let Some(searched_for) = searched_for.data.get(search_for_index) {
-                        searched.data[searched_index].array_eq(searched_for)
+        if haystack.rank() == 1 {
+            // Fast path for rank-1 arrays
+            if let Some(first) = needle.data.first() {
+                // The jump is the number of elements to skip forward on a failed partial match
+                let jump = (needle.data.iter())
+                    .skip(1)
+                    .position(|d| d.array_eq(first))
+                    .map_or(needle.data.len(), |i| i + 1);
+                let mut i = 0;
+                while i < haystack.data.len() + 1 - needle.data.len() {
+                    if haystack.data[i].array_eq(first) {
+                        if needle.data[1..]
+                            .iter()
+                            .zip(&haystack.data[i + 1..])
+                            .all(|(a, b)| a.array_eq(b))
+                        {
+                            // All elements match
+                            data_slice[i] = 1;
+                            i += needle.data.len();
+                        } else {
+                            // Partial match
+                            i += jump;
+                        }
                     } else {
-                        false
-                    };
-                    if !same {
-                        data_slice[k] = 0;
+                        // Mismatch
+                        i += 1;
+                    }
+                }
+            }
+        } else {
+            let mut corner = vec![0; haystack.shape.len()];
+            let mut curr = vec![0; haystack.shape.len()];
+            let mut k = 0;
+
+            if haystack.shape.iter().all(|&d| d > 0) {
+                'windows: loop {
+                    // Reset curr
+                    for i in curr.iter_mut() {
+                        *i = 0;
+                    }
+                    // Search the window whose top-left is the current corner
+                    'items: loop {
+                        // Get index for the current item in the haystack
+                        let mut searched_index = 0;
+                        let mut stride = 1;
+                        for ((c, i), s) in corner.iter().zip(&curr).zip(&haystack.shape).rev() {
+                            searched_index += (*c + *i) * stride;
+                            stride *= s;
+                        }
+                        // Get index for the current item in the searched-for array
+                        let mut search_for_index = 0;
+                        let mut stride = 1;
+                        for (i, s) in curr.iter().zip(&searched_for_shape).rev() {
+                            search_for_index += *i * stride;
+                            stride *= s;
+                        }
+                        // Compare the current items in the two arrays
+                        let same = if let Some(searched_for) = needle.data.get(search_for_index) {
+                            haystack.data[searched_index].array_eq(searched_for)
+                        } else {
+                            false
+                        };
+                        if !same {
+                            data_slice[k] = 0;
+                            k += 1;
+                            break;
+                        }
+                        // Go to the next item
+                        for i in (0..curr.len()).rev() {
+                            if curr[i] == searched_for_shape[i] - 1 {
+                                curr[i] = 0;
+                            } else {
+                                curr[i] += 1;
+                                continue 'items;
+                            }
+                        }
+                        data_slice[k] = 1;
                         k += 1;
                         break;
                     }
-                    // Go to the next item
-                    for i in (0..curr.len()).rev() {
-                        if curr[i] == searched_for_shape[i] - 1 {
-                            curr[i] = 0;
+                    // Go to the next corner
+                    for i in (0..corner.len()).rev() {
+                        if corner[i] == haystack.shape[i] - searched_for_shape[i] {
+                            corner[i] = 0;
                         } else {
-                            curr[i] += 1;
-                            continue 'items;
+                            corner[i] += 1;
+                            continue 'windows;
                         }
                     }
-                    data_slice[k] = 1;
-                    k += 1;
                     break;
                 }
-                // Go to the next corner
-                for i in (0..corner.len()).rev() {
-                    if corner[i] == searched.shape[i] - searched_for_shape[i] {
-                        corner[i] = 0;
-                    } else {
-                        corner[i] += 1;
-                        continue 'windows;
-                    }
-                }
-                break;
             }
         }
         let mut arr = Array::new(temp_output_shape, data);
-        arr.fill_to_shape(&searched.shape[..searched_for_shape.len()], 0);
+        arr.fill_to_shape(&haystack.shape[..searched_for_shape.len()], 0);
         arr.validate_shape();
         arr.meta_mut().flags.set(ArrayFlags::BOOLEAN, true);
         Ok(arr)
@@ -1420,42 +1452,65 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut result_data = eco_vec![0.0; haystack.element_count()];
         let res = result_data.make_mut();
-        let needle_data = needle.data.as_slice();
-        let mut needle_shape = needle.shape.clone();
-        while needle_shape.len() < haystack.shape.len() {
-            needle_shape.insert(0, 1);
-        }
-        let needle_elems = needle.element_count();
-        let mut curr = Vec::new();
-        let mut offset = Vec::new();
-        let mut sum = vec![0; needle_shape.len()];
-        let mut match_num = 0u64;
-        for i in 0..res.len() {
-            // Check if the needle matches the haystack at the current index
-            haystack.shape.flat_to_dims(i, &mut curr);
-            let mut matches = true;
-            for j in 0..needle_elems {
-                needle_shape.flat_to_dims(j, &mut offset);
-                for ((c, o), s) in curr.iter().zip(&offset).zip(&mut sum) {
-                    *s = *c + *o;
-                }
-                if (haystack.shape.dims_to_flat(&sum)).map_or(true, |k| {
-                    res[k] > 0.0 || !needle_data[j].array_eq(&haystack.data[k])
-                }) {
-                    matches = false;
-                    break;
+
+        if haystack.rank() == 1 {
+            // Fast path for rank-1 arrays
+            let mut curr = 0;
+            let mut i = 0;
+            while i < haystack.data.len() + 1 - needle.data.len() {
+                if needle
+                    .data
+                    .iter()
+                    .zip(&haystack.data[i..])
+                    .all(|(a, b)| a.array_eq(b))
+                {
+                    curr += 1;
+                    for j in i..i + needle.data.len() {
+                        res[j] = curr as f64;
+                    }
+                    i += needle.data.len();
+                } else {
+                    i += 1;
                 }
             }
-            // Fill matches
-            if matches {
-                match_num += 1;
+        } else {
+            let needle_data = needle.data.as_slice();
+            let mut needle_shape = needle.shape.clone();
+            while needle_shape.len() < haystack.shape.len() {
+                needle_shape.insert(0, 1);
+            }
+            let needle_elems = needle.element_count();
+            let mut curr = Vec::new();
+            let mut offset = Vec::new();
+            let mut sum = vec![0; needle_shape.len()];
+            let mut match_num = 0u64;
+            for i in 0..res.len() {
+                // Check if the needle matches the haystack at the current index
+                haystack.shape.flat_to_dims(i, &mut curr);
+                let mut matches = true;
                 for j in 0..needle_elems {
                     needle_shape.flat_to_dims(j, &mut offset);
                     for ((c, o), s) in curr.iter().zip(&offset).zip(&mut sum) {
                         *s = *c + *o;
                     }
-                    let k = haystack.shape.dims_to_flat(&sum).unwrap();
-                    res[k] = match_num as f64;
+                    if (haystack.shape.dims_to_flat(&sum)).map_or(true, |k| {
+                        res[k] > 0.0 || !needle_data[j].array_eq(&haystack.data[k])
+                    }) {
+                        matches = false;
+                        break;
+                    }
+                }
+                // Fill matches
+                if matches {
+                    match_num += 1;
+                    for j in 0..needle_elems {
+                        needle_shape.flat_to_dims(j, &mut offset);
+                        for ((c, o), s) in curr.iter().zip(&offset).zip(&mut sum) {
+                            *s = *c + *o;
+                        }
+                        let k = haystack.shape.dims_to_flat(&sum).unwrap();
+                        res[k] = match_num as f64;
+                    }
                 }
             }
         }

@@ -202,7 +202,7 @@ where
                     if i > 0 {
                         write!(f, "{}", T::format_sep())?;
                     }
-                    write!(f, "{}", x.grid_string(false))?;
+                    write!(f, "{x}")?;
                 }
                 write!(f, "{}", end)
             }

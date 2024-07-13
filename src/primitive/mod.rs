@@ -1842,6 +1842,9 @@ mod tests {
         {{
             "include": "#labels"
         }},
+        {{
+            "include": "#module_delim"
+        }},
 		{{
 			"include": "#numbers"
 		}},
@@ -1937,6 +1940,9 @@ mod tests {
 			"name": "comment.line",
 			"match": "(_|‿)"
 		}},
+        "module_delim": {{
+            "match": "---"
+        }},
         "stack": {{
             "match": "{stack_functions}"
         }},

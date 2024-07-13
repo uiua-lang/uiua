@@ -208,7 +208,8 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &(Val, pat!(Max, (Over, Le, 1, MatchPattern))),
         &pat!(Pick, (Dup, Shape, Range)),
         &InvertPatternFn(invert_on_inv_pattern, "on inverse"),
-        &InvertPatternFn(invert_temp_pattern, "temp"),
+        &InvertPatternFn(invert_push_temp_pattern, "push temp"),
+        &InvertPatternFn(invert_copy_temp_pattern, "copy temp"),
         &InvertPatternFn(invert_push_pattern, "push"),
     ]
 };
@@ -1371,105 +1372,110 @@ fn temp_wrap_impl(input: &[Instr], f: impl Fn(&Instr) -> Option<usize>) -> Optio
     Some((input, instr, inner, end_instr, max_depth))
 }
 
-fn invert_temp_pattern<'a>(
+fn invert_push_temp_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    // Push temp
-    if let Some((input, instr, inner, end_instr, depth)) = try_push_temp_wrap(input) {
-        // By-inverse
-        if let [Instr::Prim(Primitive::Dup, dup_span)] = inner {
-            for len in 1..=input.len() {
-                for mid in 0..len {
-                    let before = &input[..mid];
-                    if instrs_clean_signature(before).map_or(true, |sig| sig != (0, 0)) {
-                        continue;
-                    };
-                    let instrs = &input[mid..len];
-                    let Some(sig) = instrs_clean_signature(instrs) else {
-                        continue;
-                    };
-                    if sig.args != depth + 1 {
-                        continue;
-                    }
-                    for pat in ON_INVERT_PATTERNS {
-                        if let Some((after, on_inv)) = pat.invert_extract(instrs, comp) {
-                            if after.is_empty() {
-                                let mut instrs = eco_vec![
-                                    instr.clone(),
-                                    Instr::Prim(Primitive::Dup, *dup_span),
-                                    end_instr.clone(),
-                                    Instr::Prim(Primitive::Flip, *dup_span),
-                                ];
-                                instrs.extend(on_inv);
-                                instrs.extend_from_slice(before);
-                                return Some((&input[len..], instrs));
-                            }
+    let (input, instr, inner, end_instr, depth) = try_push_temp_wrap(input)?;
+    // By-inverse
+    if let [Instr::Prim(Primitive::Dup, dup_span)] = inner {
+        for len in 1..=input.len() {
+            for mid in 0..len {
+                let before = &input[..mid];
+                if instrs_clean_signature(before).map_or(true, |sig| sig != (0, 0)) {
+                    continue;
+                };
+                let instrs = &input[mid..len];
+                let Some(sig) = instrs_clean_signature(instrs) else {
+                    continue;
+                };
+                if sig.args != depth + 1 {
+                    continue;
+                }
+                for pat in ON_INVERT_PATTERNS {
+                    if let Some((after, on_inv)) = pat.invert_extract(instrs, comp) {
+                        if after.is_empty() {
+                            let mut instrs = eco_vec![
+                                instr.clone(),
+                                Instr::Prim(Primitive::Dup, *dup_span),
+                                end_instr.clone(),
+                                Instr::Prim(Primitive::Flip, *dup_span),
+                            ];
+                            instrs.extend(on_inv);
+                            instrs.extend_from_slice(before);
+                            return Some((&input[len..], instrs));
                         }
                     }
                 }
             }
         }
-        // Normal inverse
-        let mut instrs = invert_instrs(inner, comp)?;
-        instrs.insert(0, instr.clone());
+    }
+    // Normal inverse
+    let mut instrs = invert_instrs(inner, comp)?;
+    instrs.insert(0, instr.clone());
+    instrs.push(end_instr.clone());
+    Some((input, instrs))
+}
+
+fn invert_copy_temp_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let (input, start_instr @ Instr::CopyToTemp { span, .. }, inner, end_instr, count) =
+        try_copy_temp_wrap(input)?
+    else {
+        return None;
+    };
+    // On-inverse
+    for mid in 0..inner.len() {
+        let (before, after) = inner.split_at(mid);
+        let Ok(before_sig) = instrs_signature(before) else {
+            continue;
+        };
+        if before_sig.args == 0 && before_sig.outputs != 0 {
+            continue;
+        }
+        for pat in ON_INVERT_PATTERNS {
+            if let Some((after, on_inv)) = pat.invert_extract(after, comp) {
+                if let Some(after_inv) = invert_instrs(after, comp) {
+                    let mut instrs = eco_vec![start_instr.clone()];
+
+                    if !after_inv.is_empty() {
+                        instrs.push(Instr::PushTemp {
+                            stack: TempStack::Inline,
+                            count,
+                            span: *span,
+                        });
+                        instrs.extend(after_inv);
+                        instrs.push(end_instr.clone());
+                    }
+
+                    instrs.extend_from_slice(before);
+
+                    instrs.extend(on_inv);
+
+                    instrs.push(end_instr.clone());
+                    return Some((input, instrs));
+                }
+            }
+        }
+    }
+    // Pattern matching
+    if let Some(inverse) = invert_instrs(inner, comp) {
+        let mut instrs = eco_vec![Instr::PushTemp {
+            stack: TempStack::Inline,
+            count,
+            span: *span
+        }];
+        instrs.extend(inverse);
         instrs.push(end_instr.clone());
+        instrs.extend([
+            Instr::Prim(Primitive::Over, *span),
+            Instr::ImplPrim(ImplPrimitive::MatchPattern, *span),
+        ]);
         return Some((input, instrs));
     }
-    // Copy temp
-    if let Some((input, start_instr @ Instr::CopyToTemp { span, .. }, inner, end_instr, count)) =
-        try_copy_temp_wrap(input)
-    {
-        // On-inverse
-        for mid in 0..inner.len() {
-            let (before, after) = inner.split_at(mid);
-            let Ok(before_sig) = instrs_signature(before) else {
-                continue;
-            };
-            if before_sig.args == 0 && before_sig.outputs != 0 {
-                continue;
-            }
-            for pat in ON_INVERT_PATTERNS {
-                if let Some((after, on_inv)) = pat.invert_extract(after, comp) {
-                    if let Some(after_inv) = invert_instrs(after, comp) {
-                        let mut instrs = eco_vec![start_instr.clone()];
 
-                        if !after_inv.is_empty() {
-                            instrs.push(Instr::PushTemp {
-                                stack: TempStack::Inline,
-                                count,
-                                span: *span,
-                            });
-                            instrs.extend(after_inv);
-                            instrs.push(end_instr.clone());
-                        }
-
-                        instrs.extend_from_slice(before);
-
-                        instrs.extend(on_inv);
-
-                        instrs.push(end_instr.clone());
-                        return Some((input, instrs));
-                    }
-                }
-            }
-        }
-        // Pattern matching
-        if let Some(inverse) = invert_instrs(inner, comp) {
-            let mut instrs = eco_vec![Instr::PushTemp {
-                stack: TempStack::Inline,
-                count,
-                span: *span
-            }];
-            instrs.extend(inverse);
-            instrs.push(end_instr.clone());
-            instrs.extend([
-                Instr::Prim(Primitive::Over, *span),
-                Instr::ImplPrim(ImplPrimitive::MatchPattern, *span),
-            ]);
-            return Some((input, instrs));
-        }
-    }
     None
 }
 

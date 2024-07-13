@@ -1801,6 +1801,23 @@ primitive!(
     /// ex: # Experimental!
     ///   : [⤚¯ 2 5]
     ([1], With, Stack, ("with", '⤚')),
+    /// Duplicate a function's last argument before calling it
+    ///
+    /// If you want to filter out every element of an array that is not [less than] 10, you can use [keep].
+    /// ex: ▽<10. [1 27 8 3 14 9]
+    /// However, if you want to make this a function, you have to [dip] below the first arguement to [duplicate] the array.
+    /// ex: F ← ▽<⊙.
+    ///   : F 10 [1 27 8 3 14 9]
+    /// While this works, it may take a moment to process in your mind how the stack is changing.
+    /// [by] expresses the common pattern of performing an operation but preserving the last argument so that it can be used again.
+    /// With [by], the filtering function above can be written more simply.
+    /// ex: F ← ▽⊸<
+    ///   : F 10 [1 27 8 3 14 9]
+    /// Here are some more examples of [by] in action.
+    /// ex: ⊂⊸↙ 2 [1 2 3 4 5]
+    ///   : ⊜□⊸≠ @  "Hey there buddy"
+    ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
+    ([1], By, Stack, ("by", '⊸')),
     /// Keep all arguments to a function above the outputs on the stack
     ///
     /// ex: # Experimental!
@@ -1822,23 +1839,6 @@ primitive!(
     ///
     /// See also: [above]
     ([1], Below, Stack, ("below", '◡')),
-    /// Duplicate a function's last argument before calling it
-    ///
-    /// If you want to filter out every element of an array that is not [less than] 10, you can use [keep].
-    /// ex: ▽<10. [1 27 8 3 14 9]
-    /// However, if you want to make this a function, you have to [dip] below the first arguement to [duplicate] the array.
-    /// ex: F ← ▽<⊙.
-    ///   : F 10 [1 27 8 3 14 9]
-    /// While this works, it may take a moment to process in your mind how the stack is changing.
-    /// [by] expresses the common pattern of performing an operation but preserving the last argument so that it can be used again.
-    /// With [by], the filtering function above can be written more simply.
-    /// ex: F ← ▽⊸<
-    ///   : F 10 [1 27 8 3 14 9]
-    /// Here are some more examples of [by] in action.
-    /// ex: ⊂⊸↙ 2 [1 2 3 4 5]
-    ///   : ⊜□⊸≠ @  "Hey there buddy"
-    ///   : ⊕□⊸◿ 5 [2 9 5 21 10 17 3 35]
-    ([1], By, Stack, ("by", '⊸')),
     /// Call a function on two sets of values
     ///
     /// For monadic functions, [both] calls its function on each of the top 2 values on the stack.

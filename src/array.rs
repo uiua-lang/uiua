@@ -777,7 +777,7 @@ pub trait ArrayValue:
 pub const WILDCARD_NAN: f64 =
     unsafe { std::mem::transmute(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000_0003) };
 /// A character value used as a wildcard that will equal any character
-pub const WILDCARD_CHAR: char = '\u{E000}';
+pub const WILDCARD_CHAR: char = '\u{100000}';
 
 impl ArrayValue for f64 {
     const NAME: &'static str = "number";
@@ -974,7 +974,7 @@ impl ArrayCmp for Complex {
 
 impl ArrayCmp for char {
     fn array_eq(&self, other: &Self) -> bool {
-        *self == WILDCARD_CHAR || *other == WILDCARD_CHAR || *self == *other
+        *self == *other || *self == WILDCARD_CHAR || *other == WILDCARD_CHAR
     }
     fn array_cmp(&self, other: &Self) -> Ordering {
         self.cmp(other)

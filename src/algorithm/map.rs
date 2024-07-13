@@ -693,6 +693,10 @@ pub const EMPTY_NAN: f64 =
 // A NaN value used as a tombstone, not the standard NaN.
 pub const TOMBSTONE_NAN: f64 =
     unsafe { std::mem::transmute(0x7ff8_0000_0000_0000u64 | 0x0000_0000_0000_0002) };
+// A character value used as empty
+pub const EMPTY_CHAR: char = '\u{100001}';
+// A character value used as a tombstone
+pub const TOMBSTONE_CHAR: char = '\u{100002}';
 
 fn hash_start<T: ArrayValue>(arr: &Array<T>, capacity: usize) -> usize {
     let mut hasher = DefaultHasher::new();
@@ -822,16 +826,16 @@ impl MapItem for Complex {
 
 impl MapItem for char {
     fn empty_cell() -> Self {
-        '\0'
+        EMPTY_CHAR
     }
     fn tombstone_cell() -> Self {
-        '\u{1}'
+        TOMBSTONE_CHAR
     }
     fn is_any_empty_cell(&self) -> bool {
-        *self == '\0'
+        *self == EMPTY_CHAR
     }
     fn is_any_tombstone(&self) -> bool {
-        *self == '\u{1}'
+        *self == TOMBSTONE_CHAR
     }
 }
 

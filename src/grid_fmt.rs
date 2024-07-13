@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    algorithm::map::{EMPTY_NAN, TOMBSTONE_NAN},
+    algorithm::map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
     boxed::Boxed,
     terminal_size,
@@ -214,6 +214,7 @@ pub fn format_char_inner(c: char) -> String {
     match c {
         char::MAX => return '_'.to_string(),
         WILDCARD_CHAR => return '�'.to_string(),
+        EMPTY_CHAR | TOMBSTONE_CHAR => return c.to_string(),
         _ => {}
     }
     let formatted = format!("{c:?}");

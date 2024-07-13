@@ -423,7 +423,7 @@ impl Primitive {
             "tra" => return Some(Primitive::Transpose),
             "par" => return Some(Primitive::Partition),
             "dup" => return Some(Primitive::Dup),
-            "utf" => return Some(Primitive::Utf8),
+            "utf" | "utf__8" => return Some(Primitive::Utf8),
             "chunk" => return Some(Primitive::Chunks),
             _ => {}
         }

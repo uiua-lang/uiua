@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Emit LSP spans for module bounds
   - Writing longer code tutorial
   - Fix pad cursor jumping with end-of-line comments
   - Unicode literals

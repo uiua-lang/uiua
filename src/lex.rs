@@ -999,7 +999,7 @@ impl<'a> Lexer<'a> {
                         continue;
                     }
                     if first_dollar && !self.next_char_exact("\"") {
-                        let label = self.ident("");
+                        let label = canonicalize_ident(self.ident(""));
                         self.end(Label(label), start);
                         continue;
                     }
@@ -1021,7 +1021,7 @@ impl<'a> Lexer<'a> {
                 // Identifiers and unformatted glyphs
                 c if is_custom_glyph(c) || c.chars().all(is_ident_char) || c == "&" || c == "_" => {
                     // Get ident start
-                    let mut ident = self.ident(c);
+                    let mut ident = self.ident(c).to_string();
                     let mut exclam_count = 0;
                     while let Some((ch, count)) = if self.next_char_exact("!") {
                         Some(('!', 1))
@@ -1043,14 +1043,14 @@ impl<'a> Lexer<'a> {
                         .char_indices()
                         .find(|(_, c)| c.is_ascii_uppercase())
                         .map_or(ident.len(), |(i, _)| i);
-                    if let Some(prims) = Primitive::from_format_name_multi(&ident[..lowercase_end])
-                    {
+                    let lowercase = &ident[..lowercase_end];
+                    if let Some(prims) = Primitive::from_format_name_multi(lowercase) {
                         if ambiguous_ne {
                             self.loc.char_pos -= 1;
                             self.loc.byte_pos -= 1;
                         }
+                        let first_start = start;
                         let mut start = start;
-                        let true_end = self.loc;
                         let prim_count = prims.len();
                         for (i, (prim, frag)) in prims.into_iter().enumerate() {
                             let end = if i < prim_count - 1 {
@@ -1061,7 +1061,13 @@ impl<'a> Lexer<'a> {
                                     ..start
                                 }
                             } else {
-                                true_end
+                                Loc {
+                                    col: first_start.col + lowercase.chars().count() as u16,
+                                    char_pos: first_start.char_pos
+                                        + lowercase.chars().count() as u32,
+                                    byte_pos: first_start.byte_pos + lowercase.len() as u32,
+                                    ..first_start
+                                }
                             };
                             self.tokens.push_back(Sp {
                                 value: Glyph(prim),
@@ -1167,30 +1173,24 @@ impl<'a> Lexer<'a> {
 
         (processed, self.errors)
     }
-    fn ident(&mut self, c: &str) -> Ident {
-        let mut ident = c.to_string();
+    fn ident(&mut self, c: &str) -> &'a str {
+        let start = self.loc.byte_pos as usize - c.len();
         if !is_custom_glyph(c) {
             // Handle identifiers beginning with __
             if c == "_" && self.next_char_exact("_") {
-                ident.push_str("__");
-                while let Some(dc) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                    ident.push_str(dc);
-                }
+                while self.next_char_if_all(|c| c.is_ascii_digit()).is_some() {}
             }
             loop {
-                if let Some(c) = self.next_char_if_all(is_ident_char) {
-                    ident.push_str(c);
+                if self.next_char_if_all(is_ident_char).is_some() {
                 } else if self.next_chars_exact(["_"; 2]) {
-                    ident.push_str("__");
-                    while let Some(dc) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                        ident.push_str(dc);
-                    }
+                    while self.next_char_if_all(|c| c.is_ascii_digit()).is_some() {}
                 } else {
                     break;
                 }
             }
         }
-        canonicalize_ident(&ident)
+        let end = self.loc.byte_pos as usize;
+        &self.input[start..end]
     }
     fn number(&mut self, init: &str) -> bool {
         // Whole part

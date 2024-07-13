@@ -6,10 +6,10 @@ mod structure;
 use std::{
     borrow::Cow,
     cmp::Ordering,
-    collections::{hash_map::DefaultHasher, HashMap, HashSet},
-    hash::{Hash, Hasher},
+    collections::{HashMap, HashSet},
     iter::{once, repeat},
     mem::take,
+    slice,
 };
 
 use ecow::{eco_vec, EcoVec};
@@ -1626,9 +1626,9 @@ impl Value {
         )
     }
     /// Get the `progressive index of` the rows of this value in another
-    pub fn progressive_index_of(&self, searched_in: &Value, env: &Uiua) -> UiuaResult<Value> {
+    pub fn progressive_index_of(&self, haystack: &Value, env: &Uiua) -> UiuaResult<Value> {
         self.generic_bin_ref(
-            searched_in,
+            haystack,
             |a, b| a.progressive_index_of(b, env).map(Into::into),
             |a, b| a.progressive_index_of(b, env).map(Into::into),
             |a, b| a.progressive_index_of(b, env).map(Into::into),
@@ -1664,8 +1664,7 @@ impl<T: ArrayValue> Array<T> {
                             .unwrap_or(haystack.row_count() as f64),
                     );
                 }
-                let shape: Shape = self.shape.iter().cloned().take(1).collect();
-                Array::new(shape, result_data)
+                Array::new(needle.row_count(), result_data)
             }
             Ordering::Greater => {
                 let mut rows = Vec::with_capacity(needle.row_count());
@@ -1711,17 +1710,15 @@ impl<T: ArrayValue> Array<T> {
                 for (i, of) in haystack.row_slices().enumerate() {
                     members.entry(ArrayCmpSlice(of)).or_insert(i);
                 }
-                for elem in needle.row_slices() {
+                for row in needle.row_slices() {
                     result_data.push(
                         members
-                            .get(&ArrayCmpSlice(elem))
+                            .get(&ArrayCmpSlice(row))
                             .map(|i| *i as f64)
                             .unwrap_or(haystack.row_count() as f64),
                     );
                 }
-                let mut shape: Shape = self.shape.iter().cloned().take(1).collect();
-                shape.push(1);
-                Array::new(shape, result_data)
+                Array::new([needle.row_count(), 1], result_data)
             }
             Ordering::Greater => {
                 let mut rows = Vec::with_capacity(needle.row_count());
@@ -1764,68 +1761,82 @@ impl<T: ArrayValue> Array<T> {
         })
     }
     /// Get the `progressive index of` the rows of this array in another
-    fn progressive_index_of(&self, searched_in: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
-        let searched_for = self;
-        Ok(match searched_for.rank().cmp(&searched_in.rank()) {
+    fn progressive_index_of(&self, haystack: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
+        let needle = self;
+        Ok(match needle.rank().cmp(&haystack.rank()) {
             Ordering::Equal => {
-                let mut used = HashSet::new();
-                let mut result_data = EcoVec::with_capacity(searched_for.row_count());
-                if searched_for.rank() == 1 {
-                    for elem in &searched_for.data {
-                        let mut hasher = DefaultHasher::new();
-                        elem.array_hash(&mut hasher);
-                        let hash = hasher.finish();
-                        result_data.push(
-                            (searched_in.data.iter().enumerate())
-                                .find(|&(i, of)| elem.array_eq(of) && used.insert((hash, i)))
-                                .map(|(i, _)| i)
-                                .unwrap_or(searched_in.row_count())
-                                as f64,
-                        );
+                let mut cache = HashMap::new();
+                let mut result_data = eco_vec![0.0; needle.row_count()];
+                let slice = result_data.make_mut();
+                let default = haystack.row_count();
+                if needle.rank() == 1 {
+                    for (dest, elem) in slice.iter_mut().zip(&needle.data) {
+                        let key = ArrayCmpSlice(slice::from_ref(elem));
+                        *dest = if let Some(i) = cache.get_mut(&key) {
+                            *i += 1;
+                            *i = (haystack.data[*i..].iter())
+                                .position(|of| of.array_eq(elem))
+                                .map(|idx| idx + *i)
+                                .unwrap_or(default);
+                            *i
+                        } else {
+                            let i = (haystack.data.iter())
+                                .position(|of| of.array_eq(elem))
+                                .unwrap_or(default);
+                            cache.insert(key, i);
+                            i
+                        } as f64;
                     }
-                    return Ok(Array::from(result_data));
-                }
-                'elem: for elem in searched_for.rows() {
-                    for (i, of) in searched_in.rows().enumerate() {
-                        let mut hasher = DefaultHasher::new();
-                        elem.hash(&mut hasher);
-                        let hash = hasher.finish();
-                        if elem == of && used.insert((hash, i)) {
-                            result_data.push(i as f64);
-                            continue 'elem;
-                        }
+                } else {
+                    let haystack_row_len = haystack.row_len();
+                    for (dest, row) in slice.iter_mut().zip(needle.row_slices()) {
+                        let key = ArrayCmpSlice(row);
+                        *dest = if let Some(i) = cache.get_mut(&key) {
+                            *i += 1;
+                            *i = haystack.data[*i * haystack_row_len..]
+                                .chunks_exact(haystack_row_len)
+                                .position(|of| ArrayCmpSlice(of) == key)
+                                .map(|idx| idx + *i)
+                                .unwrap_or(default);
+                            *i
+                        } else {
+                            let i = haystack
+                                .data
+                                .chunks_exact(haystack_row_len)
+                                .position(|of| ArrayCmpSlice(of) == key)
+                                .unwrap_or(default);
+                            cache.insert(key, i);
+                            i
+                        } as f64;
                     }
-                    result_data.push(searched_in.row_count() as f64);
                 }
-                let shape: Shape = self.shape.iter().cloned().take(1).collect();
-                Array::new(shape, result_data)
+                Array::new(needle.row_count(), result_data)
             }
             Ordering::Greater => {
-                let mut rows = Vec::with_capacity(searched_for.row_count());
-                for elem in searched_for.rows() {
-                    rows.push(elem.progressive_index_of(searched_in, env)?);
+                let mut rows = Vec::with_capacity(needle.row_count());
+                for elem in needle.rows() {
+                    rows.push(elem.progressive_index_of(haystack, env)?);
                 }
                 Array::from_row_arrays(rows, env)?
             }
             Ordering::Less => {
-                if searched_in.rank() - searched_for.rank() == 1 {
-                    if searched_for.rank() == 0 {
-                        let searched_for = &searched_for.data[0];
+                if haystack.rank() - needle.rank() == 1 {
+                    if needle.rank() == 0 {
+                        let needle = &needle.data[0];
                         Array::from(
-                            (searched_in.data.iter())
-                                .position(|of| searched_for.array_eq(of))
-                                .unwrap_or(searched_in.row_count())
-                                as f64,
+                            (haystack.data.iter())
+                                .position(|of| needle.array_eq(of))
+                                .unwrap_or(haystack.row_count()) as f64,
                         )
                     } else {
-                        ((searched_in.rows().position(|r| r == *searched_for))
-                            .unwrap_or(searched_in.row_count()) as f64)
+                        ((haystack.rows().position(|r| r == *needle))
+                            .unwrap_or(haystack.row_count()) as f64)
                             .into()
                     }
                 } else {
-                    let mut rows = Vec::with_capacity(searched_in.row_count());
-                    for of in searched_in.rows() {
-                        rows.push(searched_for.progressive_index_of(&of, env)?);
+                    let mut rows = Vec::with_capacity(haystack.row_count());
+                    for of in haystack.rows() {
+                        rows.push(needle.progressive_index_of(&of, env)?);
                     }
                     Array::from_row_arrays(rows, env)?
                 }

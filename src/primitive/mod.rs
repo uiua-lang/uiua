@@ -177,6 +177,7 @@ impl fmt::Display for ImplPrimitive {
             UnXlsx => write!(f, "{Un}{Xlsx}"),
             UnFft => write!(f, "{Un}{Fft}"),
             UnDatetime => write!(f, "{Un}{DateTime}"),
+            ProgressiveIndexOf => write!(f, "{Un}{By}{Select}"),
             UndoTake => write!(f, "{Under}{Take}"),
             UndoDrop => write!(f, "{Under}{Drop}"),
             UndoSelect => write!(f, "{Under}{Select}"),
@@ -1056,6 +1057,7 @@ impl ImplPrimitive {
                 map.undo_remove(key, &original, env)?;
                 env.push(map);
             }
+            ImplPrimitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
             // Optimizations
             ImplPrimitive::Last => env.monadic_env(Value::last)?,
             ImplPrimitive::FirstMinIndex => env.monadic_ref_env(Value::first_min_index)?,

@@ -573,7 +573,9 @@ pub fn gen_code_view(code: &str) -> View {
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
-                        SpanKind::Ident(Some(docs)) => {
+                        SpanKind::Ident {
+                            docs: Some(docs), ..
+                        } => {
                             let mut title = String::new();
                             match &docs.kind {
                                 BindingDocsKind::Function { sig, .. } => {

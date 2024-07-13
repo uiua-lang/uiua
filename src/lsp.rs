@@ -29,7 +29,12 @@ pub enum SpanKind {
     Comment,
     OutputComment,
     Strand,
-    Ident(Option<BindingDocs>),
+    Ident {
+        /// The documentation of the identifier
+        docs: Option<BindingDocs>,
+        /// Whether the identifier is the original binding name
+        original: bool,
+    },
     Label,
     Signature,
     Whitespace,
@@ -190,7 +195,10 @@ impl Spanner {
                     match &m.value.kind {
                         ModuleKind::Named(name) => {
                             let binding_docs = self.binding_docs(&name.span);
-                            spans.push(name.span.clone().sp(SpanKind::Ident(binding_docs)));
+                            spans.push(name.span.clone().sp(SpanKind::Ident {
+                                docs: binding_docs,
+                                original: true,
+                            }));
                         }
                         ModuleKind::Test => {}
                     }
@@ -198,7 +206,10 @@ impl Spanner {
                         spans.push(line.tilde_span.clone().sp(SpanKind::Delimiter));
                         for item in &line.items {
                             let binding_docs = self.reference_docs(&item.span);
-                            spans.push(item.span.clone().sp(SpanKind::Ident(binding_docs)));
+                            spans.push(item.span.clone().sp(SpanKind::Ident {
+                                docs: binding_docs,
+                                original: false,
+                            }));
                         }
                     }
                     spans.extend(self.items_spans(&m.value.items));
@@ -215,7 +226,10 @@ impl Spanner {
                     let binding_docs = self
                         .binding_docs(&binding.name.span)
                         .or_else(|| self.reference_docs(&binding.name.span));
-                    spans.push(binding.name.span.clone().sp(SpanKind::Ident(binding_docs)));
+                    spans.push(binding.name.span.clone().sp(SpanKind::Ident {
+                        docs: binding_docs,
+                        original: true,
+                    }));
                     spans.push(binding.arrow_span.clone().sp(SpanKind::Delimiter));
                     if let Some(sig) = &binding.signature {
                         spans.push(sig.span.clone().sp(SpanKind::Signature));
@@ -225,7 +239,10 @@ impl Spanner {
                 Item::Import(import) => {
                     if let Some(name) = &import.name {
                         let binding_docs = self.binding_docs(&name.span);
-                        spans.push(name.span.clone().sp(SpanKind::Ident(binding_docs)));
+                        spans.push(name.span.clone().sp(SpanKind::Ident {
+                            docs: binding_docs,
+                            original: false,
+                        }));
                     }
                     spans.push(import.tilde_span.clone().sp(SpanKind::Delimiter));
                     spans.push(import.path.span.clone().sp(SpanKind::String));
@@ -233,7 +250,10 @@ impl Spanner {
                         spans.push(line.tilde_span.clone().sp(SpanKind::Delimiter));
                         for item in &line.items {
                             let binding_docs = self.reference_docs(&item.span);
-                            spans.push(item.span.clone().sp(SpanKind::Ident(binding_docs)));
+                            spans.push(item.span.clone().sp(SpanKind::Ident {
+                                docs: binding_docs,
+                                original: false,
+                            }));
                         }
                     }
                 }
@@ -490,15 +510,21 @@ impl Spanner {
     }
     fn ref_spans(&self, r: &Ref) -> Vec<Sp<SpanKind>> {
         let mut spans = self.ref_path_spans(&r.path);
-        let name_docs = self.reference_docs(&r.name.span);
-        spans.push(r.name.span.clone().sp(SpanKind::Ident(name_docs)));
+        let docs = self.reference_docs(&r.name.span);
+        spans.push(r.name.span.clone().sp(SpanKind::Ident {
+            docs,
+            original: false,
+        }));
         spans
     }
     fn ref_path_spans(&self, path: &[RefComponent]) -> Vec<Sp<SpanKind>> {
         let mut spans = Vec::new();
         for comp in path {
-            let module_docs = self.reference_docs(&comp.module.span);
-            spans.push(comp.module.span.clone().sp(SpanKind::Ident(module_docs)));
+            let docs = self.reference_docs(&comp.module.span);
+            spans.push(comp.module.span.clone().sp(SpanKind::Ident {
+                docs,
+                original: false,
+            }));
             spans.push(comp.tilde_span.clone().sp(SpanKind::Delimiter));
         }
         spans
@@ -749,7 +775,10 @@ mod server {
             let mut binding_docs: Option<Sp<&BindingDocs>> = None;
             if prim_range.is_none() {
                 for span_kind in &doc.spans {
-                    if let SpanKind::Ident(Some(docs)) = &span_kind.value {
+                    if let SpanKind::Ident {
+                        docs: Some(docs), ..
+                    } = &span_kind.value
+                    {
                         if span_kind.span.contains_line_col(line, col) && span_kind.span.src == path
                         {
                             binding_docs = Some(span_kind.span.clone().sp(docs));
@@ -1000,6 +1029,10 @@ mod server {
             else {
                 return Ok(None);
             };
+            // Don't complete identifiers for new bindings
+            if let SpanKind::Ident { original: true, .. } = &sp.value {
+                return Ok(None);
+            }
 
             let Ok(token) = std::str::from_utf8(&doc.input.as_bytes()[sp.span.byte_range()]) else {
                 return Ok(None);
@@ -1291,7 +1324,9 @@ mod server {
                         _ if p.args() == Some(4) => TETRADIC_FUNCTION_STT,
                         _ => continue,
                     },
-                    SpanKind::Ident(Some(docs)) => match docs.kind {
+                    SpanKind::Ident {
+                        docs: Some(docs), ..
+                    } => match docs.kind {
                         BindingDocsKind::Constant(_) => continue,
                         BindingDocsKind::Function { sig, .. } => match sig.args {
                             0 => NOADIC_FUNCTION_STT,

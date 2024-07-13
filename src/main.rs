@@ -931,7 +931,9 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
                     }
                 }
             },
-            SpanKind::Ident(Some(docs)) => match docs.kind {
+            SpanKind::Ident {
+                docs: Some(docs), ..
+            } => match docs.kind {
                 BindingDocsKind::Function { sig, .. } => match sig.args {
                     0 => Some(noadic),
                     1 => Some(monadic),
@@ -953,7 +955,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
             SpanKind::Comment | SpanKind::OutputComment | SpanKind::Strand => {
                 Some(Color::BrightBlack)
             }
-            SpanKind::Ident(None)
+            SpanKind::Ident { .. }
             | SpanKind::Label
             | SpanKind::Signature
             | SpanKind::Whitespace

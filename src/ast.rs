@@ -54,12 +54,16 @@ impl Binding {
 /// A scoped module
 #[derive(Debug, Clone)]
 pub struct ScopedModule {
+    /// The span of the opening delimiter
+    pub open_span: CodeSpan,
     /// The module kind
     pub kind: ModuleKind,
     /// The items
     pub items: Vec<Item>,
     /// The imports
     pub imports: Option<ImportLine>,
+    /// The span of the closing delimiter
+    pub close_span: Option<CodeSpan>,
 }
 
 /// The kind of a module

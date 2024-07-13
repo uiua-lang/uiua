@@ -322,7 +322,7 @@ impl<'i> Parser<'i> {
             } else {
                 // Name
                 let backup = self.index;
-                let start = self.try_exact(TripleMinus.into())?;
+                let open_span = self.try_exact(TripleMinus.into())?;
                 self.try_spaces();
                 let kind = match self.try_ident() {
                     Some(name) if name.value == "test" => ModuleKind::Test,
@@ -356,16 +356,19 @@ impl<'i> Parser<'i> {
                 };
                 // Items
                 let items = self.items(true);
-                let span = if let Some(end) = self.try_exact(TripleMinus.into()) {
-                    start.merge(end)
+                let close_span = self.try_exact(TripleMinus.into());
+                let span = if let Some(end) = close_span.clone() {
+                    open_span.clone().merge(end)
                 } else {
                     self.errors.push(self.expected([TripleMinus]));
-                    start
+                    open_span.clone()
                 };
                 let module = ScopedModule {
+                    open_span,
                     kind,
                     items,
                     imports,
+                    close_span,
                 };
                 Item::Module(span.sp(module))
             }

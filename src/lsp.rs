@@ -186,6 +186,7 @@ impl Spanner {
         for item in items {
             match item {
                 Item::Module(m) => {
+                    spans.push(m.value.open_span.clone().sp(SpanKind::Delimiter));
                     match &m.value.kind {
                         ModuleKind::Named(name) => {
                             let binding_docs = self.binding_docs(&name.span);
@@ -201,6 +202,9 @@ impl Spanner {
                         }
                     }
                     spans.extend(self.items_spans(&m.value.items));
+                    if let Some(close_span) = &m.value.close_span {
+                        spans.push(close_span.clone().sp(SpanKind::Delimiter));
+                    }
                 }
                 Item::Words(lines) => {
                     for line in lines {

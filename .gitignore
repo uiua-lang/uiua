@@ -19,6 +19,7 @@ site/dist
 profile.yaml
 uiua.tmLanguage.json
 !/tests/*
+!/examples/*
 
 # symlink created by `nix build`
 result

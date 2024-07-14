@@ -15,6 +15,8 @@ use hound::{SampleFormat, WavReader, WavSpec, WavWriter};
 use image::{DynamicImage, ImageOutputFormat};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
+#[cfg(feature = "audio_encode")]
+use rubato::Resampler;
 use serde::*;
 
 use crate::{
@@ -39,6 +41,9 @@ Bar ← \"bar\"";
 pub const EXAMPLE_TXT: &str = "\
 This is a simple text file for 
 use in example Uiua code ✨";
+
+/// Default audio sample rate used by Uiua when device audio sample rate cannot be read
+pub const DEFAULT_AUDIO_SAMPLE_RATE: u32 = 44100;
 
 /// Access the built-in `example.ua` file
 pub fn example_ua<T>(f: impl FnOnce(&mut String) -> T) -> T {
@@ -449,6 +454,8 @@ sys_op! {
     /// The sample rate is [&asr].
     ///
     /// You can decode a byte array into audio with [un][&ae].
+    /// Returns the audio format as a string and an array representing the audio samples.
+    /// The audio will be automatically resampled to the audio sample rate Uiua uses.
     ///
     /// Only the `wav` format is supported.
     ///
@@ -913,7 +920,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     /// Get the audio sample rate
     fn audio_sample_rate(&self) -> u32 {
-        44100
+        DEFAULT_AUDIO_SAMPLE_RATE
     }
     /// Stream audio
     fn stream_audio(&self, f: AudioStreamFn) -> Result<(), String> {
@@ -1598,7 +1605,7 @@ impl SysOp {
                             }
                             arr.data.iter().map(|&x| x as u8).collect()
                         }
-                        _ => return Err(env.error("Audio bytes be a numeric array")),
+                        _ => return Err(env.error("Audio bytes must be a numeric array")),
                     };
                     let array = array_from_wav_bytes(&bytes, env).map_err(|e| env.error(e))?;
                     env.push(array);
@@ -2091,6 +2098,14 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
 }
 
 #[doc(hidden)]
+#[cfg(feature = "audio")]
+pub(crate) fn audio_sample_rate() -> u32 {
+    hodaun::default_output_device()
+        .and_then(|device| hodaun::cpal::traits::DeviceTrait::default_output_config(&device).ok())
+        .map_or(DEFAULT_AUDIO_SAMPLE_RATE, |config| config.sample_rate().0)
+}
+
+#[doc(hidden)]
 pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
     let unrolled: Vec<f32> = match audio {
         Value::Num(nums) => nums.data.iter().map(|&f| f as f32).collect(),
@@ -2255,22 +2270,24 @@ fn array_from_wav_bytes(bytes: &[u8], env: &Uiua) -> UiuaResult<Array<f64>> {
         WavReader::new(std::io::Cursor::new(bytes)).map_err(|e| env.error(e.to_string()))?;
     let spec = reader.spec();
     match (spec.sample_format, spec.bits_per_sample) {
-        (SampleFormat::Int, 16) => {
-            array_from_wav_bytes_impl::<i16>(&mut reader, |i| i as f64 / i16::MAX as f64, env)
-        }
-        (SampleFormat::Int, 32) => {
-            array_from_wav_bytes_impl::<i32>(&mut reader, |i| i as f64 / i32::MAX as f64, env)
-        }
-        (SampleFormat::Float, 32) => {
-            array_from_wav_bytes_impl::<f32>(&mut reader, |f| f as f64, env)
-        }
+        (SampleFormat::Int, 16) => array_from_wav_bytes_impl::<i16>(
+            &mut reader,
+            |i| f64::from(i) / f64::from(i16::MAX),
+            env,
+        ),
+        (SampleFormat::Int, 32) => array_from_wav_bytes_impl::<i32>(
+            &mut reader,
+            |i| f64::from(i) / f64::from(i32::MAX),
+            env,
+        ),
+        (SampleFormat::Float, 32) => array_from_wav_bytes_impl::<f32>(&mut reader, f64::from, env),
         (sample_format, bits_per_sample) => Err(env.error(format!(
-            "Unsupported sample format: {:?} {} bits per sample",
-            sample_format, bits_per_sample
+            "Unsupported sample format: {sample_format:?} {bits_per_sample} bits per sample"
         ))),
     }
 }
 
+// Automatically resamples input to match sample rate used by Uiua
 #[cfg(feature = "audio_encode")]
 fn array_from_wav_bytes_impl<T: hound::Sample>(
     reader: &mut WavReader<std::io::Cursor<&[u8]>>,
@@ -2285,11 +2302,32 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
         channels[curr_channel].push(sample_to_f64(sample));
         curr_channel = (curr_channel + 1) % channel_count;
     }
+
+    #[cfg(feature = "audio")]
+    let audio_sample_rate = audio_sample_rate();
+
+    #[cfg(not(feature = "audio"))]
+    let audio_sample_rate = DEFAULT_AUDIO_SAMPLE_RATE;
+
+    channels = rubato::FastFixedIn::new(
+        f64::from(audio_sample_rate) / f64::from(reader.spec().sample_rate),
+        1.0,
+        rubato::PolynomialDegree::Nearest,
+        reader.len() as usize / channel_count,
+        channel_count,
+    )
+    .unwrap()
+    .process(&channels, None)
+    .unwrap()
+    .into_iter()
+    .map(std::convert::Into::into)
+    .collect();
+
     if channel_count == 1 {
         let channel = channels.pop().unwrap();
         Ok(channel.into())
     } else {
-        Array::from_row_arrays(channels.into_iter().map(|ch| ch.into()), env)
+        Array::from_row_arrays(channels.into_iter().map(std::convert::Into::into), env)
     }
 }
 

@@ -628,12 +628,7 @@ impl SysBackend for NativeSys {
     }
     #[cfg(feature = "audio")]
     fn audio_sample_rate(&self) -> u32 {
-        hodaun::default_output_device()
-            .and_then(|device| {
-                hodaun::cpal::traits::DeviceTrait::default_output_config(&device).ok()
-            })
-            .map(|config| config.sample_rate().0)
-            .unwrap_or(44100)
+        crate::audio_sample_rate()
     }
     #[cfg(feature = "audio")]
     fn stream_audio(&self, f: crate::AudioStreamFn) -> Result<(), String> {

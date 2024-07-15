@@ -297,7 +297,10 @@ impl fmt::Display for CodeSpan {
 
 impl fmt::Debug for Span {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
+        match self {
+            Span::Code(span) => span.fmt(f),
+            Span::Builtin => write!(f, "<builtin>"),
+        }
     }
 }
 
@@ -441,9 +444,9 @@ impl<T: Clone> Sp<&T> {
     }
 }
 
-impl<T: fmt::Debug, S: fmt::Display> fmt::Debug for Sp<T, S> {
+impl<T: fmt::Debug, S: fmt::Debug> fmt::Debug for Sp<T, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: ", self.span)?;
+        write!(f, "{:?}: ", self.span)?;
         self.value.fmt(f)
     }
 }

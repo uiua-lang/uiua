@@ -1756,9 +1756,12 @@ mod server {
             for err in &doc.errors {
                 match &err.kind {
                     UiuaErrorKind::Run(message, _) => {
+                        self.debug(format!("Run error: {message:?}")).await;
+                        self.debug(format!("span: {:?}", message.span.clone().code()))
+                            .await;
                         let span = match &message.span {
-                            Span::Code(span) if span.src == path => span,
-                            Span::Code(_) => continue,
+                            Span::Code(span) => span,
+                            // Span::Code(_) => continue,
                             Span::Builtin => {
                                 if let Some(span) =
                                     err.trace.iter().find_map(|frame| match &frame.span {
@@ -1772,6 +1775,7 @@ mod server {
                                 }
                             }
                         };
+                        self.debug(format!("span: {span:?}")).await;
                         diagnostics.push(Diagnostic {
                             severity: Some(DiagnosticSeverity::ERROR),
                             range: uiua_span_to_lsp(span),

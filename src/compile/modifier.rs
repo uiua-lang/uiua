@@ -1350,6 +1350,7 @@ impl Compiler {
             InputSrc::Macro(span.clone().into()),
             &mut self.asm.inputs,
         );
+        dbg!(&items);
         if !errors.is_empty() {
             return Err(UiuaErrorKind::Parse(errors, self.asm.inputs.clone().into())
                 .error()

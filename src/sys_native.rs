@@ -565,7 +565,7 @@ impl SysBackend for NativeSys {
     fn show_image(&self, image: image::DynamicImage) -> Result<(), String> {
         let (width, height) = if let Some((w, h)) = terminal_size() {
             let (tw, th) = (w as u32, h.saturating_sub(1) as u32);
-            let (iw, ih) = (image.width(), image.height() / 2);
+            let (iw, ih) = (image.width(), (image.height() / 2).max(1));
             let scaled_to_height = (iw * th / ih.max(1), th);
             let scaled_to_width = (tw, ih * tw / iw.max(1));
             let (w, h) = if scaled_to_height.0 <= tw {

@@ -23,7 +23,7 @@ pub fn Fetch<S: Into<String>, F: Fn(&str) -> View + 'static>(src: S, f: F) -> im
     );
     view! {{
         move || match once.get() {
-            Some(text) if text.is_empty() || text.starts_with("<!DOCTYPE html>") => view!(<NotFound/>).into_view(),
+            Some(text) if text.starts_with("<!DOCTYPE html>") => view!(<NotFound/>).into_view(),
             Some(text) => view!(<ScrollToHash/>{f(&text)}).into_view(),
             None => view! {<h3 class="running-text">"Loading..."</h3>}.into_view(),
         }

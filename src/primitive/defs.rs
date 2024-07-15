@@ -2579,7 +2579,7 @@ primitive!(
     ///   : dump△
     ///   : +++∩∩⧻
     /// Errors encountered within [dump]'s function are caught and dumped as strings.
-    /// ex: 1_2_3 4 5_6_7
+    /// ex: 1_2_3 [] 5_6_7
     ///   : dump⊢
     (0(0)[1], Dump, Stack, "dump", Impure),
     /// Convert code into a string instead of compiling it

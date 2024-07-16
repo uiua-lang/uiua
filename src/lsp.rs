@@ -1753,69 +1753,53 @@ mod server {
                 ));
             };
             let path = uri_path(&params.text_document.uri);
+            let range = |err: &UiuaError, span: &Span| -> Option<Range> {
+                let (start, end) = match span {
+                    Span::Code(span) => span.path_locs(&path)?,
+                    Span::Builtin => {
+                        let span = err.trace.iter().find_map(|frame| match &frame.span {
+                            Span::Code(span) => Some(span),
+                            _ => None,
+                        })?;
+                        (span.start, span.end)
+                    }
+                };
+                Some(Range::new(uiua_loc_to_lsp(start), uiua_loc_to_lsp(end)))
+            };
             for err in &doc.errors {
                 match &err.kind {
                     UiuaErrorKind::Run(message, _) => {
-                        self.debug(format!("Run error: {message:?}")).await;
-                        self.debug(format!("span: {:?}", message.span.clone().code()))
-                            .await;
-                        let span = match &message.span {
-                            Span::Code(span) => span,
-                            // Span::Code(_) => continue,
-                            Span::Builtin => {
-                                if let Some(span) =
-                                    err.trace.iter().find_map(|frame| match &frame.span {
-                                        Span::Code(span) => Some(span),
-                                        _ => None,
-                                    })
-                                {
-                                    span
-                                } else {
-                                    continue;
-                                }
-                            }
+                        let Some(range) = range(err, &message.span) else {
+                            continue;
                         };
-                        self.debug(format!("span: {span:?}")).await;
                         diagnostics.push(Diagnostic {
                             severity: Some(DiagnosticSeverity::ERROR),
-                            range: uiua_span_to_lsp(span),
+                            range,
                             message: message.value.clone(),
                             ..Default::default()
                         });
                     }
                     UiuaErrorKind::Parse(errors, _) => {
-                        for err in errors {
-                            if err.span.src != path {
+                        for parse_err in errors {
+                            let Some(range) = range(err, &Span::Code(parse_err.span.clone()))
+                            else {
                                 continue;
-                            }
+                            };
                             diagnostics.push(Diagnostic {
                                 severity: Some(DiagnosticSeverity::ERROR),
-                                range: uiua_span_to_lsp(&err.span),
-                                message: err.value.to_string(),
+                                range,
+                                message: parse_err.value.to_string(),
                                 ..Default::default()
                             });
                         }
                     }
                     UiuaErrorKind::Throw(value, span, _) => {
-                        let span = match span {
-                            Span::Code(span) if span.src == path => span,
-                            Span::Code(_) => continue,
-                            Span::Builtin => {
-                                if let Some(span) =
-                                    err.trace.iter().find_map(|frame| match &frame.span {
-                                        Span::Code(span) => Some(span),
-                                        _ => None,
-                                    })
-                                {
-                                    span
-                                } else {
-                                    continue;
-                                }
-                            }
+                        let Some(range) = range(err, span) else {
+                            continue;
                         };
                         diagnostics.push(Diagnostic {
                             severity: Some(DiagnosticSeverity::ERROR),
-                            range: uiua_span_to_lsp(span),
+                            range,
                             message: value.format(),
                             ..Default::default()
                         })

@@ -270,7 +270,7 @@ pub struct CodeSpan {
 
 impl fmt::Debug for CodeSpan {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self} - {}", self.end)
+        write!(f, "{} - {}", self.start, self.end)
     }
 }
 
@@ -390,6 +390,15 @@ impl CodeSpan {
             start,
             end,
             ..self.clone()
+        }
+    }
+    pub(crate) fn path_locs(&self, path: &Path) -> Option<(Loc, Loc)> {
+        match &self.src {
+            InputSrc::File(file) if file.canonicalize().ok().as_deref() == Some(path) => {
+                Some((self.start, self.end))
+            }
+            InputSrc::Macro(span) => span.path_locs(path),
+            _ => None,
         }
     }
 }
@@ -772,17 +781,25 @@ impl<'a> Lexer<'a> {
         }
         true
     }
+    #[track_caller]
     fn make_span(&self, start: Loc, end: Loc) -> CodeSpan {
+        assert!(end.char_pos >= start.char_pos, "empty span");
+        assert!(end.byte_pos >= start.byte_pos, "empty span");
+        assert!(
+            end.col >= start.col || end.line > start.line,
+            "invalid start/end span"
+        );
         CodeSpan {
             start,
             end,
             src: self.src.clone(),
         }
     }
+    #[track_caller]
     fn end_span(&self, start: Loc) -> CodeSpan {
-        assert!(self.loc.char_pos >= start.char_pos, "empty span");
         self.make_span(start, self.loc)
     }
+    #[track_caller]
     fn end(&mut self, token: impl Into<Token>, start: Loc) {
         self.tokens.push_back(Sp {
             value: token.into(),

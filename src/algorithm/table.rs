@@ -877,7 +877,7 @@ fn triangle2(f: Function, env: &mut Uiua) -> UiuaResult {
                 let mut new_rows = Vec::new();
                 for x in xs.into_rows().take(ys.row_count()) {
                     for y in ys.rows() {
-                        let row = x.clone().couple(y, env)?;
+                        let row = x.clone().couple(y, true, env)?;
                         new_rows.push(row);
                     }
                     ys.drop_n(1);

@@ -596,53 +596,54 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// `couple` the value with another
-    pub fn couple(mut self, other: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.couple_impl(other, env)?;
+    pub fn couple(mut self, other: Self, allow_ext: bool, env: &Uiua) -> UiuaResult<Self> {
+        self.couple_impl(other, allow_ext, env)?;
         Ok(self)
     }
     /// `couple` the value with another
     ///
     /// # Panics
     /// Panics if the values have incompatible shapes
-    pub fn couple_infallible(mut self, other: Self) -> Self {
-        self.couple_impl(other, &()).unwrap();
+    pub fn couple_infallible(mut self, other: Self, allow_ext: bool) -> Self {
+        self.couple_impl(other, allow_ext, &()).unwrap();
         self
     }
     pub(crate) fn couple_impl<C: FillContext>(
         &mut self,
         mut other: Self,
+        allow_ext: bool,
         ctx: &C,
     ) -> Result<(), C::Error> {
         self.match_scalar_fill(ctx);
         other.match_scalar_fill(ctx);
         match (&mut *self, other) {
-            (Value::Num(a), Value::Num(b)) => a.couple_impl(b, ctx)?,
-            (Value::Byte(a), Value::Byte(b)) => a.couple_impl(b, ctx)?,
-            (Value::Complex(a), Value::Complex(b)) => a.couple_impl(b, ctx)?,
-            (Value::Char(a), Value::Char(b)) => a.couple_impl(b, ctx)?,
-            (Value::Box(a), Value::Box(b)) => a.couple_impl(b, ctx)?,
-            (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?,
+            (Value::Num(a), Value::Num(b)) => a.couple_impl(b, allow_ext, ctx)?,
+            (Value::Byte(a), Value::Byte(b)) => a.couple_impl(b, allow_ext, ctx)?,
+            (Value::Complex(a), Value::Complex(b)) => a.couple_impl(b, allow_ext, ctx)?,
+            (Value::Char(a), Value::Char(b)) => a.couple_impl(b, allow_ext, ctx)?,
+            (Value::Box(a), Value::Box(b)) => a.couple_impl(b, allow_ext, ctx)?,
+            (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
             (Value::Byte(a), Value::Num(b)) => {
                 let mut a = a.convert_ref();
-                a.couple_impl(b, ctx)?;
+                a.couple_impl(b, allow_ext, ctx)?;
                 *self = a.into();
             }
-            (Value::Complex(a), Value::Num(b)) => a.couple_impl(b.convert(), ctx)?,
+            (Value::Complex(a), Value::Num(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
             (Value::Num(a), Value::Complex(b)) => {
                 let mut a = a.convert_ref();
-                a.couple_impl(b, ctx)?;
+                a.couple_impl(b, allow_ext, ctx)?;
                 *self = a.into();
             }
-            (Value::Complex(a), Value::Byte(b)) => a.couple_impl(b.convert(), ctx)?,
+            (Value::Complex(a), Value::Byte(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
             (Value::Byte(a), Value::Complex(b)) => {
                 let mut a = a.convert_ref();
-                a.couple_impl(b, ctx)?;
+                a.couple_impl(b, allow_ext, ctx)?;
                 *self = a.into();
             }
             (a, b) => a.bin_coerce_to_boxes_mut(
                 b,
                 ctx,
-                |a, b, ctx| a.couple_impl(b, ctx),
+                |a, b, ctx| a.couple_impl(b, allow_ext, ctx),
                 |a, b| format!("Cannot couple {a} array with {b} array"),
             )?,
         }
@@ -675,19 +676,24 @@ impl Value {
 
 impl<T: ArrayValue> Array<T> {
     /// `couple` the array with another
-    pub fn couple(mut self, other: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.couple_impl(other, env)?;
+    pub fn couple(mut self, other: Self, allow_ext: bool, env: &Uiua) -> UiuaResult<Self> {
+        self.couple_impl(other, allow_ext, env)?;
         Ok(self)
     }
     /// `couple` the array with another
     ///
     /// # Panics
     /// Panics if the arrays have incompatible shapes
-    pub fn couple_infallible(mut self, other: Self) -> Self {
-        self.couple_impl(other, &()).unwrap();
+    pub fn couple_infallible(mut self, other: Self, allow_ext: bool) -> Self {
+        self.couple_impl(other, allow_ext, &()).unwrap();
         self
     }
-    fn couple_impl<C: FillContext>(&mut self, mut other: Self, ctx: &C) -> Result<(), C::Error> {
+    fn couple_impl<C: FillContext>(
+        &mut self,
+        mut other: Self,
+        allow_ext: bool,
+        ctx: &C,
+    ) -> Result<(), C::Error> {
         crate::profile_function!();
         self.combine_meta(other.meta());
         if self.shape != other.shape {
@@ -698,11 +704,28 @@ impl<T: ArrayValue> Array<T> {
                     other.fill_to_shape(&new_shape, fill);
                 }
                 Err(e) => {
-                    return Err(C::fill_error(ctx.error(format!(
-                        "Cannot couple arrays with shapes {} and {}{e}",
-                        self.shape(),
-                        other.shape()
-                    ))));
+                    let err = || {
+                        Err(C::fill_error(ctx.error(format!(
+                            "Cannot couple arrays with shapes {} and {}{e}",
+                            self.shape(),
+                            other.shape()
+                        ))))
+                    };
+                    if allow_ext {
+                        if self.shape.ends_with(&other.shape) {
+                            for &a_dim in self.shape[0..self.rank() - other.rank()].iter().rev() {
+                                other.reshape_scalar_integer(a_dim, ctx)?;
+                            }
+                        } else if other.shape.ends_with(&self.shape) {
+                            for &b_dim in other.shape[0..other.rank() - self.rank()].iter().rev() {
+                                self.reshape_scalar_integer(b_dim, ctx)?;
+                            }
+                        } else {
+                            return err();
+                        }
+                    } else {
+                        return err();
+                    }
                 }
             }
         }
@@ -797,7 +820,7 @@ impl Value {
             .map_err(|e| ctx.error(e))?;
             let total_elements = to_reserve * value.shape().iter().product::<usize>();
             value.reserve_min(total_elements);
-            value.couple_impl(row, ctx)?;
+            value.couple_impl(row, false, ctx)?;
             for row in row_values {
                 value.append(row, false, ctx)?;
             }
@@ -845,7 +868,7 @@ impl<T: ArrayValue> Array<T> {
         if let Some(row) = row_values.next() {
             let total_elements = total_rows * arr.shape().iter().product::<usize>();
             arr.data.reserve_min(total_elements);
-            arr.couple_impl(row, ctx)?;
+            arr.couple_impl(row, false, ctx)?;
             for row in row_values {
                 arr.append(row, false, ctx)?;
             }

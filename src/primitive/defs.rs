@@ -1045,7 +1045,12 @@ primitive!(
     /// ex: °⊟ .[1_2_3 4_5_6]
     /// ex: °⊟ [1_2 3_4]
     ///
-    /// By default, arrays with different shapes cannot be [couple]d.
+    /// If one array's shape is a suffix of the other's, the smaller array will be repeated to match the shape of the larger array.
+    /// ex: ⊟ [1 2 3] 4
+    /// ex: ⊟ [1_2 3_4] 5
+    /// ex: ⊟ [1_2 3_4] 5_6
+    ///
+    /// By default, arrays with different shape suffixes cannot be [couple]d.
     /// ex! ⊟ [1 2 3] [4 5]
     /// Use [fill] to make their shapes match
     /// ex: ⬚∞⊟ [1 2 3] [4 5]
@@ -1071,7 +1076,7 @@ primitive!(
     /// ex: ⊂ 0 [1_2 3_4]
     /// ex: ⊂ 1_2 [[3_4 5_6] [7_8 9_10]]
     ///
-    /// By default, arrays that do not have equal [shape] suffixes cannot be joined.
+    /// By default, arrays that do not have equal [shape] suffixes cannot be [join]ed.
     /// ex! ⊂ [1_2 3_4] [5_6_7 8_9_10]
     /// Use [fill] to make their shapes compatible.
     /// ex: ⬚0⊂ [1_2 3_4] [5_6_7 8_9_10]
@@ -2029,9 +2034,9 @@ primitive!(
     ///
     /// Fill values are temporarily removed for the body of looping modifiers that can use them to fix their row shapes.
     /// These include [reduce], [scan], [rows], [each], [partition], and [group].
-    /// ex! ⬚0≡(⊟1_2) [3 4]
+    /// ex! ⬚0≡(↙3) [3 4]
     /// [un][pop] can be used to retrieve the fill value. This ignores loop nesting and so can be used to "pull" the fill into the loop.
-    /// ex: ⬚0≡(⬚°◌⊟1_2) [3 4]
+    /// ex: ⬚0≡(⬚°◌↙3) [3 4]
     ///
     /// Fill values cannot cross the boundary of a named function call.
     /// ex: ⬚0/⊂ [1 2 3]

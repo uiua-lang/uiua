@@ -585,7 +585,7 @@ impl Primitive {
                 a.orient(&mut b, env)?;
                 Ok(b)
             })?,
-            Primitive::Couple => env.dyadic_oo_env(Value::couple)?,
+            Primitive::Couple => env.dyadic_oo_env(|a, b, env| a.couple(b, true, env))?,
             Primitive::Rise => env.monadic_ref(Value::rise)?,
             Primitive::Fall => env.monadic_ref(Value::fall)?,
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,

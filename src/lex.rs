@@ -392,15 +392,6 @@ impl CodeSpan {
             ..self.clone()
         }
     }
-    pub(crate) fn path_locs(&self, path: &Path) -> Option<(Loc, Loc)> {
-        match &self.src {
-            InputSrc::File(file) if file.canonicalize().ok().as_deref() == Some(path) => {
-                Some((self.start, self.end))
-            }
-            InputSrc::Macro(span) => span.path_locs(path),
-            _ => None,
-        }
-    }
 }
 
 /// A span wrapping a value

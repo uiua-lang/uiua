@@ -1752,10 +1752,21 @@ mod server {
                     }),
                 ));
             };
+
+            fn path_locs(span: &CodeSpan, path: &Path) -> Option<(Loc, Loc)> {
+                match &span.src {
+                    InputSrc::File(file) if file.canonicalize().ok().as_deref() == Some(path) => {
+                        Some((span.start, span.end))
+                    }
+                    InputSrc::Macro(span) => path_locs(span, path),
+                    _ => None,
+                }
+            }
+
             let path = uri_path(&params.text_document.uri);
             let range = |err: &UiuaError, span: &Span| -> Option<Range> {
                 let (start, end) = match span {
-                    Span::Code(span) => span.path_locs(&path)?,
+                    Span::Code(span) => path_locs(span, &path)?,
                     Span::Builtin => {
                         let span = err.trace.iter().find_map(|frame| match &frame.span {
                             Span::Code(span) => Some(span),

@@ -440,7 +440,7 @@ sys_op! {
     ///
     /// The first argument is the format, the second is the audio sample rate, and the third is the audio samples.
     ///
-    /// The sample rate must be a 32-bit positive integer.
+    /// The sample rate must be a positive integer.
     ///
     /// The audio samples must be a rank 1 or 2 numeric array.
     ///
@@ -1623,13 +1623,13 @@ impl SysOp {
                         .as_string(env, "Audio format must be a string")?;
 
                     const SAMPLE_RATE_REQUIREMENT: &str =
-                        "Audio sample rate must be a 32-bit positive integer";
+                        "Audio sample rate must be a positive integer";
                     let sample_rate = AudioSampleRate::try_from(
                         env.pop(2)?.as_nat(env, SAMPLE_RATE_REQUIREMENT)?,
                     )
-                    .map_err(|_| env.error(SAMPLE_RATE_REQUIREMENT))?;
+                    .map_err(|_| env.error("Audio sample rate is too high"))?;
                     if sample_rate == 0 {
-                        return Err(env.error(SAMPLE_RATE_REQUIREMENT));
+                        return Err(env.error(format!("{SAMPLE_RATE_REQUIREMENT}, but it is zero")));
                     }
 
                     let value = env.pop(3)?;

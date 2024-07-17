@@ -941,10 +941,10 @@ impl Compiler {
                     Ordering::Less => self.add_error(
                         handler_span.clone(),
                         format!(
-                            "Tried function and handler function \
-                            must have the same number of outputs, \
-                            but their signatures are {try_sig} and \
-                            {handler_sig} respectively."
+                            "Tried function cannot have more outputs \
+                            than the handler function, but their \
+                            signatures are {try_sig} and {handler_sig} \
+                            respectively."
                         ),
                     ),
                 }

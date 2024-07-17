@@ -2,24 +2,24 @@ name: Rust
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
     - name: sed
       run: sudo sed -i 's/azure\.//' /etc/apt/sources.list
     - name: apt update
       run: sudo apt-get update
+    - name: Check formatting
+      run: cargo fmt --all --check
     - name: Install deps
       run: sudo apt-get install libasound2-dev libudev-dev pkg-config libx11-dev libjpeg-dev
     - name: Install WASM target

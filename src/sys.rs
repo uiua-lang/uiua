@@ -431,14 +431,16 @@ sys_op! {
     (2(0), GifShow, Gifs, "&gifs", "gif - show", Mutating),
     /// Decode audio from a byte array
     ///
-    /// Returns the audio format as a string and an array representing the audio samples.
+    /// Returns the audio format as a string, the audio sample rate, and an array representing the audio samples.
     /// Only the `wav` format is supported.
     ///
     /// See also: [&ae]
-    (1(2), AudioDecode, Audio, "&ad", "audio - decode", Pure),
+    (1(3), AudioDecode, Audio, "&ad", "audio - decode", Pure),
     /// Encode audio into a byte array
     ///
-    /// The first argument is the format, and the second is the audio samples.
+    /// The first argument is the format, the second is the audio sample rate, and the third is the audio samples.
+    ///
+    /// The sample rate must be a positive integer.
     ///
     /// The audio samples must be a rank 1 or 2 numeric array.
     ///
@@ -449,11 +451,12 @@ sys_op! {
     /// The sample rate is [&asr].
     ///
     /// You can decode a byte array into audio with [un][&ae].
+    /// This returns the audio format as a string, the audio sample rate, and an array representing the audio samples.
     ///
     /// Only the `wav` format is supported.
     ///
     /// See also: [&ap]
-    (2, AudioEncode, Audio, "&ae", "audio - encode", Pure),
+    (3, AudioEncode, Audio, "&ae", "audio - encode", Pure),
     /// Play some audio
     ///
     /// The audio must be a rank 1 or 2 numeric array.
@@ -1109,6 +1112,9 @@ impl IntoSysBackend for Arc<dyn SysBackend> {
     }
 }
 
+/// Audio sample rate
+pub type AudioSampleRate = u32;
+
 impl SysOp {
     pub(crate) fn run(&self, env: &mut Uiua) -> UiuaResult {
         match self {
@@ -1598,10 +1604,12 @@ impl SysOp {
                             }
                             arr.data.iter().map(|&x| x as u8).collect()
                         }
-                        _ => return Err(env.error("Audio bytes be a numeric array")),
+                        _ => return Err(env.error("Audio bytes must be a numeric array")),
                     };
-                    let array = array_from_wav_bytes(&bytes, env).map_err(|e| env.error(e))?;
+                    let (array, sample_rate) =
+                        array_from_wav_bytes(&bytes, env).map_err(|e| env.error(e))?;
                     env.push(array);
+                    env.push(sample_rate as usize);
                     env.push("wav");
                 }
                 #[cfg(not(feature = "audio_encode"))]
@@ -1613,13 +1621,26 @@ impl SysOp {
                     let format = env
                         .pop(1)?
                         .as_string(env, "Audio format must be a string")?;
-                    let value = env.pop(2)?;
+
+                    const SAMPLE_RATE_REQUIREMENT: &str =
+                        "Audio sample rate must be a positive integer";
+                    let sample_rate = AudioSampleRate::try_from(
+                        env.pop(2)?.as_nat(env, SAMPLE_RATE_REQUIREMENT)?,
+                    )
+                    .map_err(|_| env.error("Audio sample rate is too high"))?;
+                    if sample_rate == 0 {
+                        return Err(env.error(format!("{SAMPLE_RATE_REQUIREMENT}, but it is zero")));
+                    }
+
+                    let value = env.pop(3)?;
                     let bytes = match format.as_str() {
-                        "wav" => value_to_wav_bytes(&value, env.rt.backend.audio_sample_rate())
-                            .map_err(|e| env.error(e))?,
+                        "wav" => {
+                            value_to_wav_bytes(&value, sample_rate).map_err(|e| env.error(e))?
+                        }
                         format => {
-                            return Err(env
-                                .error(format!("Invalid or unsupported audio format: {}", format)))
+                            return Err(
+                                env.error(format!("Invalid or unsupported audio format: {format}"))
+                            )
                         }
                     };
                     env.push(Array::<u8>::from(bytes.as_slice()));
@@ -2167,7 +2188,11 @@ pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
 
 #[doc(hidden)]
 #[cfg(feature = "audio_encode")]
-pub fn value_to_wav_bytes(audio: &Value, sample_rate: u32) -> Result<Vec<u8>, String> {
+pub fn value_to_wav_bytes(audio: &Value, sample_rate: AudioSampleRate) -> Result<Vec<u8>, String> {
+    if sample_rate == 0 {
+        return Err("Sample rate must not be 0".to_string());
+    }
+
     #[cfg(not(feature = "audio"))]
     {
         value_to_wav_bytes_impl(
@@ -2190,7 +2215,7 @@ fn value_to_wav_bytes_impl<T: hound::Sample + Copy>(
     convert_samples: impl Fn(f64) -> T + Copy,
     bits_per_sample: u16,
     sample_format: SampleFormat,
-    sample_rate: u32,
+    sample_rate: AudioSampleRate,
 ) -> Result<Vec<u8>, String> {
     // We use i16 samples for compatibility with Firefox (if I remember correctly)
     let channels = value_to_audio_channels(audio)?;
@@ -2250,7 +2275,7 @@ pub fn stereo_to_wave_bytes<T: hound::Sample + Copy>(
 }
 
 #[cfg(feature = "audio_encode")]
-fn array_from_wav_bytes(bytes: &[u8], env: &Uiua) -> UiuaResult<Array<f64>> {
+fn array_from_wav_bytes(bytes: &[u8], env: &Uiua) -> UiuaResult<(Array<f64>, AudioSampleRate)> {
     let mut reader: WavReader<std::io::Cursor<&[u8]>> =
         WavReader::new(std::io::Cursor::new(bytes)).map_err(|e| env.error(e.to_string()))?;
     let spec = reader.spec();
@@ -2276,7 +2301,7 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
     reader: &mut WavReader<std::io::Cursor<&[u8]>>,
     sample_to_f64: impl Fn(T) -> f64,
     env: &Uiua,
-) -> UiuaResult<Array<f64>> {
+) -> UiuaResult<(Array<f64>, AudioSampleRate)> {
     let channel_count = reader.spec().channels as usize;
     let mut channels = vec![ecow::EcoVec::new(); channel_count];
     let mut curr_channel = 0;
@@ -2285,11 +2310,14 @@ fn array_from_wav_bytes_impl<T: hound::Sample>(
         channels[curr_channel].push(sample_to_f64(sample));
         curr_channel = (curr_channel + 1) % channel_count;
     }
+
+    let sample_rate = reader.spec().sample_rate;
     if channel_count == 1 {
         let channel = channels.pop().unwrap();
-        Ok(channel.into())
+        Ok((channel.into(), sample_rate))
     } else {
         Array::from_row_arrays(channels.into_iter().map(|ch| ch.into()), env)
+            .map(|arr| (arr, sample_rate))
     }
 }
 

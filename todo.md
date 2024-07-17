@@ -2,7 +2,6 @@
 
 - 0.12
   - Fix `# Track caller` on/in macros
-  - Fix tau formatting bug
   - Writing longer code tutorial
   - Fix pad cursor jumping with end-of-line comments
   - Unicode literals

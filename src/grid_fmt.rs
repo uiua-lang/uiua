@@ -75,8 +75,8 @@ impl GridFmt for f64 {
             [1u8, 2, 3, 4, 5, 6, 8, 9, 12].iter().find_map(|&denom| {
                 let num = (positive * denom as f64) / TAU;
                 let rounded = num.round();
-                if (num - rounded).abs() <= f64::EPSILON && rounded != 0.0 {
-                    Some((num.round() as u8, denom, num != rounded))
+                if rounded <= 100.0 && (num - rounded).abs() <= f64::EPSILON && rounded != 0.0 {
+                    Some((rounded, denom, num != rounded))
                 } else {
                     None
                 }
@@ -85,7 +85,7 @@ impl GridFmt for f64 {
             let prefix = if approx { "~" } else { "" };
             if denom == 1 {
                 format!("{prefix}{minus}{num}τ")
-            } else if num == 1 {
+            } else if num == 1.0 {
                 format!("{prefix}{minus}τ/{denom}")
             } else {
                 format!("{prefix}{minus}{num}τ/{denom}")

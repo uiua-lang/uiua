@@ -453,7 +453,10 @@ sys_op! {
     /// You can decode a byte array into audio with [un][&ae].
     /// This returns the audio format as a string, the audio sample rate, and an array representing the audio samples.
     ///
-    /// Only the `wav` format is supported.
+    /// Currently, only the `wav` format is supported.
+    ///
+    /// This simple example will load an audio file, halve its sample rate, and re-encode it.
+    /// ex: ⍜(°&ae &frab "test.wav")⊙⊓(⌊÷2|▽0.5)
     ///
     /// See also: [&ap]
     (3, AudioEncode, Audio, "&ae", "audio - encode", Pure),

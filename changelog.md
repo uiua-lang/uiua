@@ -8,6 +8,8 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`&runs`](https://uiua.org/docs/&runs) now returns 3 handles rather than 1
   - This gives more precise control over stdin, stdout, and stderr
 - **Breaking Change** - [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`duplicate .`](https://uiua.org/docs/duplicate)
+- **Breaking Change** - [`&ae`](https://uiua.org/docs/&ae) now takes a sample rate argument, and [`un °`](https://uiua.org/docs/un)[`&ae`](https://uiua.org/docs/&ae) now returns the sample rate
+  - This allows you to work with audio that is not at Uiua's default sample rate
 - Switch functions have been replaced with a [`switch ⨬`](https://uiua.org/docs/switch) modifier
   - This makes the language more uniform
   - Code with existing switch functions in `⟨⟩`s will continue to work and will format to use `⨬` and `()`s

@@ -12,9 +12,10 @@ use regex::Regex;
 
 use crate::{
     check::{instrs_clean_signature, instrs_signature, instrs_signature_no_temp},
+    instrs_are_pure,
     primitive::{ImplPrimitive, Primitive},
-    Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionId, Instr, Signature, Span,
-    SysOp, TempStack, Uiua, UiuaResult, Value,
+    Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionId, Instr, Purity, Signature,
+    Span, SysOp, TempStack, Uiua, UiuaResult, Value,
 };
 
 use super::IgnoreError;
@@ -2607,19 +2608,21 @@ impl InvertPattern for Val {
     fn invert_extract<'a>(
         &self,
         input: &'a [Instr],
-        _: &mut Compiler,
+        comp: &mut Compiler,
     ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
         if input.is_empty() {
             return None;
         }
         for len in (1..input.len()).rev() {
             let chunk = &input[..len];
-            if (chunk.iter()).any(|instr| {
-                matches!(
-                    instr,
-                    Instr::PushFunc(_) | Instr::PushTemp { .. } | Instr::PopTemp { .. }
-                )
-            }) {
+            if !instrs_are_pure(chunk, &comp.asm, Purity::Pure)
+                || (chunk.iter()).any(|instr| {
+                    matches!(
+                        instr,
+                        Instr::PushFunc(_) | Instr::PushTemp { .. } | Instr::PopTemp { .. }
+                    )
+                })
+            {
                 continue;
             }
             if let Ok(sig) = instrs_signature(chunk) {

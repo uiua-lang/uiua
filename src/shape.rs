@@ -41,6 +41,13 @@ impl Shape {
     pub fn insert(&mut self, index: usize, dim: usize) {
         self.dims.insert(index, dim);
     }
+    /// Get a mutable reference to the first dimension, setting it if empty
+    pub fn row_count_mut(&mut self) -> &mut usize {
+        if self.is_empty() {
+            self.push(1);
+        }
+        &mut self.dims[0]
+    }
     /// Remove the dimension at the given index
     pub fn remove(&mut self, index: usize) -> usize {
         self.dims.remove(index)

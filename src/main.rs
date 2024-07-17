@@ -20,8 +20,8 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lsp::BindingDocsKind,
-    Assembly, Compiler, NativeSys, PrimClass, RunMode, SpanKind, Uiua, UiuaError, UiuaErrorKind,
-    UiuaResult, Value,
+    Assembly, Compiler, NativeSys, PreEvalMode, PrimClass, RunMode, SpanKind, Uiua, UiuaError,
+    UiuaErrorKind, UiuaResult, Value,
 };
 
 fn main() {
@@ -262,6 +262,7 @@ fn run() -> UiuaResult {
                 formatter_options,
                 #[cfg(feature = "audio")]
                 audio_options,
+                clear,
                 args,
             } => {
                 let config = FormatConfig {
@@ -278,7 +279,7 @@ fn run() -> UiuaResult {
                     compiler.load_file(file)?;
                     rt.run_compiler(&mut compiler)?;
                 }
-                repl(rt, compiler, true, config);
+                repl(rt, compiler, true, clear, config);
             }
             App::Update { main, check } => update(main, check),
             #[cfg(feature = "stand")]
@@ -655,6 +656,8 @@ enum App {
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,
+        #[clap(short = 'c', long, help = "Clear the stack after each line")]
+        clear: bool,
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },
@@ -847,16 +850,41 @@ fn print_stack(stack: &[Value], color: bool) {
     }
 }
 
-fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, config: FormatConfig) {
+fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, clear: bool, config: FormatConfig) {
+    compiler.pre_eval_mode(PreEvalMode::Line);
+    println!(
+        "Uiua {} (end with ctrl+C, type `help` for a list of commands)\n",
+        env!("CARGO_PKG_VERSION")
+    );
     let mut line_reader = DefaultEditor::new().expect("Failed to read from Stdin");
-    let mut repl = || -> UiuaResult<bool> {
-        let mut code = match line_reader.readline("» ") {
-            Ok(code) => code,
-            Err(ReadlineError::Eof | ReadlineError::Interrupted) => return Ok(false),
+    loop {
+        let mut code = match line_reader.readline("  ") {
+            Ok(code) => {
+                match code.trim() {
+                    "help" => {
+                        println!(
+                            "\
+                            clear - Clear the stack \n\
+                            exit  - Exit the repl \n\
+                            help  - Show this message \n\
+                            "
+                        );
+                    }
+                    "clear" | "cls" => {
+                        env.take_stack();
+                        println!();
+                        continue;
+                    }
+                    "exit" => break,
+                    _ => {}
+                }
+                code
+            }
+            Err(ReadlineError::Eof | ReadlineError::Interrupted) => break,
             Err(_) => panic!("Failed to read from Stdin"),
         };
         if code.is_empty() {
-            return Ok(true);
+            continue;
         }
 
         match format_str(&code, &config) {
@@ -866,38 +894,33 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, config: FormatConfig
             }
             Err(e) => {
                 _ = line_reader.add_history_entry(&code);
-                return Err(e);
+                eprintln!("{}", e.report());
+                continue;
             }
         }
 
-        print!("↪ ");
-        let backup = compiler.clone();
+        print!("  ");
+        let backup_comp = compiler.clone();
+        let backup_stack = env.stack().to_vec();
         let res = compiler.load_str(&code).map(drop);
         println!("{}", color_code(&code, &compiler));
-        let res = res.and_then(|()| env.run_asm(compiler.finish()));
+        let res = res.and_then(|()| env.run_compiler(&mut compiler));
 
-        print_stack(&env.take_stack(), color);
-        let mut asm = env.take_asm();
         match res {
             Ok(()) => {
-                asm.remove_top_level();
-                *compiler.assembly_mut() = asm;
-                Ok(true)
+                print_stack(env.stack(), color);
+                if clear {
+                    env.take_stack();
+                }
             }
             Err(e) => {
-                compiler = backup;
-                Err(e)
-            }
-        }
-    };
-
-    println!("Uiua {} (end with ctrl+C)\n", env!("CARGO_PKG_VERSION"));
-    loop {
-        match repl() {
-            Ok(true) => {}
-            Ok(false) => break,
-            Err(e) => {
+                compiler = backup_comp;
+                env.take_stack();
+                for val in backup_stack {
+                    env.push(val);
+                }
                 eprintln!("{}", e.report());
+                print_stack(env.stack(), color);
             }
         }
     }

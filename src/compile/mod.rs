@@ -212,6 +212,8 @@ pub enum PreEvalMode {
     /// The normal mode. Tries to evaluate pure, time-bounded constants and expressions at comptime
     #[default]
     Normal,
+    /// Pre-evaluate each line, but not multiple lines together
+    Line,
     /// Does not evalute pure constants and expressions at comptime, but still evaluates `comptime`
     Lazy,
     /// Evaluate as much as possible at compile time, even impure expressions
@@ -236,7 +238,7 @@ impl PreEvalMode {
             return false;
         }
         match self {
-            PreEvalMode::Normal => {
+            PreEvalMode::Normal | PreEvalMode::Line => {
                 instrs_are_pure(instrs, asm, Purity::Pure) && instrs_are_limit_bounded(instrs, asm)
             }
             PreEvalMode::Lazy => false,
@@ -570,9 +572,11 @@ code:
                     }
                     // Try to evaluate at comptime
                     // This can be done when:
+                    // - the pre-eval mode is not `Line`
                     // - there are at least as many push instructions preceding the current line as there are arguments to the line
                     // - the words create no bindings
-                    if !instrs.is_empty()
+                    if self.pre_eval_mode != PreEvalMode::Line
+                        && !instrs.is_empty()
                         && instr_count_before >= sig.args
                         && binding_count_before == binding_count_after
                         && (self.asm.instrs.iter().take(instr_count_before).rev())

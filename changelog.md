@@ -61,6 +61,10 @@ This version is not yet released. If you are reading this on the website, then t
 - LSP improvements
   - Show array shapes on hover
   - Code action to insert `# Experimental!` comment
+- REPL improvements
+  - The stack is now preserved between REPL lines
+    - Pass the `-c`/`--clear` flag to clear it automatically after each line
+  - Add some commands, which can be listed by typing `help` in the repl
 - Allow Uiua-specific tokens types to be disabled in the LSP
 ### Website
 - Remove the Uiuisms page

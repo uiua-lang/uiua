@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Fix `# Track caller` on/in macros
   - Writing longer code tutorial
   - Fix pad cursor jumping with end-of-line comments
   - Unicode literals

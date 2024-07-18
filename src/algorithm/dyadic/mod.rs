@@ -1455,22 +1455,22 @@ impl<T: ArrayValue> Array<T> {
 
         if haystack.rank() == 1 {
             // Fast path for rank-1 arrays
-            let mut curr = 0;
-            let mut i = 0;
-            while i < haystack.data.len() + 1 - needle.data.len() {
-                if needle
-                    .data
-                    .iter()
-                    .zip(&haystack.data[i..])
-                    .all(|(a, b)| a.array_eq(b))
-                {
-                    curr += 1;
-                    for j in i..i + needle.data.len() {
-                        res[j] = curr as f64;
+            if needle.data.len() > 0 {
+                let mut curr = 0;
+                let mut i = 0;
+                while i < haystack.data.len() + 1 - needle.data.len() {
+                    if (needle.data.iter())
+                        .zip(&haystack.data[i..])
+                        .all(|(a, b)| a.array_eq(b))
+                    {
+                        curr += 1;
+                        for j in i..i + needle.data.len() {
+                            res[j] = curr as f64;
+                        }
+                        i += needle.data.len();
+                    } else {
+                        i += 1;
                     }
-                    i += needle.data.len();
-                } else {
-                    i += 1;
                 }
             }
         } else {

@@ -1649,6 +1649,7 @@ impl<T: ArrayValue> Array<T> {
     /// Get the `index of` the rows of this array in another
     pub fn index_of(&self, haystack: &Array<T>, env: &Uiua) -> UiuaResult<Array<f64>> {
         let needle = self;
+        let default = (env.scalar_fill::<f64>()).unwrap_or(haystack.row_count() as f64);
         Ok(match needle.rank().cmp(&haystack.rank()) {
             Ordering::Equal => {
                 let mut result_data = EcoVec::with_capacity(needle.row_count());
@@ -1661,7 +1662,7 @@ impl<T: ArrayValue> Array<T> {
                         members
                             .get(&ArrayCmpSlice(elem))
                             .map(|i| *i as f64)
-                            .unwrap_or(haystack.row_count() as f64),
+                            .unwrap_or(default),
                     );
                 }
                 Array::new(needle.row_count(), result_data)
@@ -1688,8 +1689,9 @@ impl<T: ArrayValue> Array<T> {
                             r.len() == needle.data.len()
                                 && r.iter().zip(&needle.data).all(|(a, b)| a.array_eq(b))
                         })
-                        .unwrap_or(haystack.row_count()) as f64)
-                        .into()
+                        .map(|i| i as f64)
+                        .unwrap_or(default))
+                    .into()
                 } else {
                     let mut rows = Vec::with_capacity(haystack.row_count());
                     for of in haystack.rows() {

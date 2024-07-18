@@ -1392,6 +1392,10 @@ primitive!(
     /// ex: ⊗ [1_2_3 4_5_6] [3 4 5]
     /// ex: ⊗ 5 [1 2 3]
     ///
+    /// [fill] can be used to set the value of missing items.
+    /// ex:   ⊗ [4 8 2 9 1] [1 2 3 4]
+    ///   : ⬚∞⊗ [4 8 2 9 1] [1 2 3 4]
+    ///
     /// You can use the returned indices with [select] to get the rows that were found.
     /// If you expect one of the searched-for rows to be missing, you can use [fill] to set a default value.
     /// ex: A ← [2 3 5 7 11 13]

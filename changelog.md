@@ -30,6 +30,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`keep ▽`](https://uiua.org/docs/keep) now works with non-integer scalar counts to scale an array
 - [`join ⊂`](https://uiua.org/docs/join) with rank differences greater than 1 can now extend the smaller array
 - [`couple ⊟`](https://uiua.org/docs/couple) with different ranks can now extend the smaller array
+- [`indexof ⊗`](https://uiua.org/docs/indexof) now works with [`fill ⬚`](https://uiua.org/docs/fill) to set the default for when a value is not found
 - [`un °`](https://uiua.org/docs/un) [`join ⊂`](https://uiua.org/docs/join) is now easier to combine with other inverses
 - [`repeat ⍥`](https://uiua.org/docs/repeat) can now repeat a negative number of times, which will repeat the inverse
 - [`un °`](https://uiua.org/docs/un) [`repeat ⍥`](https://uiua.org/docs/repeat) now requires the repetition count to be inside the [`un °`](https://uiua.org/docs/un) function

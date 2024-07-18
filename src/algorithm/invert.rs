@@ -251,6 +251,24 @@ static ON_INVERT_PATTERNS: &[&dyn InvertPattern] = {
     ]
 };
 
+static BY_INVERT_PATTERNS: &[&dyn InvertPattern] = {
+    use Primitive::*;
+    &[
+        &(IgnoreMany(Flip), ([Add], [Flip, Sub])),
+        &([Sub], [Sub]),
+        &([Flip, Sub], [Add]),
+        &(IgnoreMany(Flip), ([Mul], [Flip, Div])),
+        &([Div], [Div]),
+        &([Flip, Div], [Mul]),
+        &([Pow], [Flip, Log]),
+        &pat!((Flip, Pow), (Flip, 1, Flip, Div, Pow)),
+        &pat!(Log, (1, Flip, Div, Pow)),
+        &([Flip, Log], [Pow]),
+        &([Min], [Min]),
+        &([Max], [Max]),
+    ]
+};
+
 /// Invert a sequence of instructions
 pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<EcoVec<Instr>> {
     if instrs.is_empty() {
@@ -1394,16 +1412,15 @@ fn invert_push_temp_pattern<'a>(
                 if sig.args != depth + 1 {
                     continue;
                 }
-                for pat in ON_INVERT_PATTERNS {
-                    if let Some((after, on_inv)) = pat.invert_extract(instrs, comp) {
+                for pat in BY_INVERT_PATTERNS {
+                    if let Some((after, by_inv)) = pat.invert_extract(instrs, comp) {
                         if after.is_empty() {
                             let mut instrs = eco_vec![
                                 instr.clone(),
                                 Instr::Prim(Primitive::Dup, *dup_span),
                                 end_instr.clone(),
-                                Instr::Prim(Primitive::Flip, *dup_span),
                             ];
-                            instrs.extend(on_inv);
+                            instrs.extend(by_inv);
                             instrs.extend_from_slice(before);
                             return Some((&input[len..], instrs));
                         }

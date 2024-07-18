@@ -1411,10 +1411,13 @@ code:
                     let after_sig = instrs_signature(&instrs[i + 1..]).ok()?;
                     if body_sig.args == body_sig.outputs
                         && before_sig.args < body_sig.args
+                        && before_sig.outputs <= body_sig.args
                         && after_sig.args.saturating_sub(body_sig.outputs) < body_sig.args
                     {
-                        let replacement: String =
-                            repeat('⊙').take(body_sig.args).chain(['∘']).collect();
+                        let replacement: String = repeat('⊙')
+                            .take(body_sig.args.saturating_sub(1))
+                            .chain(['∘'])
+                            .collect();
                         let message = format!(
                             "This array contains a loop with an equal number \
                             of arguments and outputs. This may result in a \

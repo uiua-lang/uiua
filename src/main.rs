@@ -863,12 +863,13 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, clear: bool, config:
                 match code.trim() {
                     "help" => {
                         println!(
-                            "\
+                            "\n\
                             clear - Clear the stack \n\
                             exit  - Exit the repl \n\
                             help  - Show this message \n\
                             "
                         );
+                        continue;
                     }
                     "clear" | "cls" => {
                         env.take_stack();

@@ -1349,11 +1349,8 @@ impl<T: ArrayValue> Array<T> {
                         {
                             // All elements match
                             data_slice[i] = 1;
-                            i += needle.data.len();
-                        } else {
-                            // Partial match
-                            i += jump;
                         }
+                        i += jump;
                     } else {
                         // Mismatch
                         i += 1;

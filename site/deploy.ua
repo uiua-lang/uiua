@@ -8,7 +8,7 @@
 )
 &cd "site"
 ✅&runi {"cargo" "test" "-p" "site" "gen_blog_html"}
-✅&runi {"trunk" "build" "--release"}
+✅&runi {"trunk" "build" "--release" "-d" "../docs"}
 ✅&runi {"git" "add" "--all"}
 ✅&runi {"git" "commit" "--amend" "--no-edit"}
 ✅&runi {"git" "push" "-f"}

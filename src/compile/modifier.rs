@@ -283,10 +283,15 @@ impl Compiler {
                         };
                     }
                     let op_sigs = if mac.function.signature().args == 2 {
-                        let mut comp = self.clone();
+                        // If the macro function has 2 arguments, we pass the signatures
+                        // of the operands as well
                         let mut sig_data: EcoVec<u8> = EcoVec::with_capacity(operands.len() * 2);
+                        // Track the length of the instructions and spans so
+                        // they can be discarded after signatures are calculated
+                        let instrs_len = self.asm.instrs.len();
+                        let spans_len = self.asm.spans.len();
                         for op in &operands {
-                            let (_, sig) = comp.compile_operand_word(op.clone()).map_err(|e| {
+                            let (_, sig) = self.compile_operand_word(op.clone()).map_err(|e| {
                                 let message = format!(
                                     "This error occurred while compiling a macro operand. \
                                     This was attempted because the macro function's \
@@ -297,6 +302,9 @@ impl Compiler {
                             })?;
                             sig_data.extend_from_slice(&[sig.args as u8, sig.outputs as u8]);
                         }
+                        // Discard unnecessary instructions and spans
+                        self.asm.instrs.truncate(instrs_len);
+                        self.asm.spans.truncate(spans_len);
                         Some(Array::<u8>::new([operands.len(), 2], sig_data))
                     } else {
                         None

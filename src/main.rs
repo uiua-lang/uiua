@@ -858,7 +858,7 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, clear: bool, config:
     );
     let mut line_reader = DefaultEditor::new().expect("Failed to read from Stdin");
     loop {
-        let mut code = match line_reader.readline("  ") {
+        let mut code = match line_reader.readline("    ") {
             Ok(code) => {
                 match code.trim() {
                     "help" => {
@@ -900,11 +900,10 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, clear: bool, config:
             }
         }
 
-        print!("  ");
         let backup_comp = compiler.clone();
         let backup_stack = env.stack().to_vec();
         let res = compiler.load_str(&code).map(drop);
-        println!("{}", color_code(&code, &compiler));
+        println!("    {}", color_code(&code, &compiler));
         let res = res.and_then(|()| env.run_compiler(&mut compiler));
 
         match res {

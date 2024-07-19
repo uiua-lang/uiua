@@ -833,7 +833,8 @@ impl Function {
             .filter(|(_, flipped)| !flipped)
             .map(|(prim, _)| prim)
     }
-    pub(crate) fn as_impl_primitive(&self, asm: &Assembly) -> Option<ImplPrimitive> {
+    /// Try to get a lone implementation primitive from this function
+    pub fn as_impl_primitive(&self, asm: &Assembly) -> Option<ImplPrimitive> {
         self.as_flipped_impl_primitive(asm)
             .filter(|(_, flipped)| !flipped)
             .map(|(prim, _)| prim)

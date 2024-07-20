@@ -411,14 +411,14 @@ impl<T: ArrayValue> Array<T> {
                 } else {
                     if self.rank() <= other.rank() || self.rank() - other.rank() > 1 {
                         return Err(C::fill_error(ctx.error(format!(
-                            "Cannot add rank {} row to rank {} array{e}",
+                            "Cannot join rank {} array with rank {} array{e}",
                             other.rank(),
                             self.rank()
                         ))));
                     }
                     if &self.shape()[1..] != other.shape() {
                         return Err(C::fill_error(ctx.error(format!(
-                            "Cannot add shape {} row to array with shape {} rows{e}",
+                            "Cannot join arrays of shapes {} and {}{e}",
                             other.shape(),
                             FormatShape(&self.shape()[1..]),
                         ))));

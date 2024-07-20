@@ -939,7 +939,7 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
     for span in spans {
         let color = match span.value {
             SpanKind::Primitive(prim) => match prim.class() {
-                PrimClass::Stack if prim.modifier_args().is_none() => None,
+                PrimClass::Stack | PrimClass::Debug if prim.modifier_args().is_none() => None,
                 PrimClass::Constant => None,
                 _ => {
                     if let Some(margs) = prim.modifier_args() {

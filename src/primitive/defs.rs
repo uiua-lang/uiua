@@ -2215,7 +2215,7 @@ primitive!(
     /// If you would like to pass arguments to [comptime]'s function, make them part of the function
     /// ex! comptime(+) 1 2
     /// ex: comptime(+ 1 2)
-    ([1], Comptime, OtherModifier, "comptime"),
+    ([1], Comptime, Comptime, "comptime"),
     /// Spawn a thread
     ///
     /// Expects a function.
@@ -2555,7 +2555,7 @@ primitive!(
     ///   : +×-×+
     /// ex: 2_3_10 ? 17 ↯3_4⇡12
     ///   : ++
-    (0(0), Stack, Stack, ("stack", '?'), Impure),
+    (0(0), Stack, Debug, ("stack", '?'), Impure),
     /// Debug print the top value on the stack without popping it
     ///
     /// ex: ⸮[1 2 3]
@@ -2567,7 +2567,7 @@ primitive!(
     /// To see them, use [trace].
     /// ex: [1 5 2 9 11 0 7 12 8 3]
     ///   : ▽×⸮≥5:⸮≤10..
-    (1, Trace, Stack, ("trace", '⸮'), Impure),
+    (1, Trace, Debug, ("trace", '⸮'), Impure),
     /// Debug print all the values currently on stack without popping them
     ///
     /// The function is used to preprocess the values before printing.
@@ -2590,7 +2590,7 @@ primitive!(
     /// Errors encountered within [dump]'s function are caught and dumped as strings.
     /// ex: 1_2_3 [] 5_6_7
     ///   : dump⊢
-    (0(0)[1], Dump, Stack, "dump", Impure),
+    (0(0)[1], Dump, Debug, "dump", Impure),
     /// Convert code into a string instead of compiling it
     ///
     /// ex: # Experimental!
@@ -2601,14 +2601,14 @@ primitive!(
     ///   : F!(+ 1 2)
     ///
     /// The opposite of [stringify] is [quote].
-    (0[1], Stringify, OtherModifier, "stringify"),
+    (0[1], Stringify, Comptime, "stringify"),
     /// Convert a string into code at compile time
     ///
     /// ex: # Experimental!
     ///   : quote("+1") 5
     ///
     /// The opposite of [quote] is [stringify].
-    (0[1], Quote, OtherModifier, "quote"),
+    (0[1], Quote, Comptime, "quote"),
     /// Get the signature of a function
     ///
     /// ex: # Experimental!
@@ -2626,7 +2626,7 @@ primitive!(
     ///
     /// At the moment, this is only useful for debugging.
     /// While theoretically, it could be used in a macro to choose a branch of a [switch] appropriate for the function, this is not yet possible because of the way that macros and signature checking work.
-    (0(2)[1], Sig, OtherModifier, "signature"),
+    (0(2)[1], Sig, Comptime, "signature"),
     /// Run the Fast Fourier Transform on an array
     ///
     /// The Fast Fourier Transform (FFT) is an optmized algorithm for computing the Discrete Fourier Transform (DFT). The DFT is a transformation that converts a signal from the time domain to the frequency domain.

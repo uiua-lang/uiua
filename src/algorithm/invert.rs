@@ -84,8 +84,14 @@ pub(crate) fn match_format_pattern(
                 }
                 let captures = re.captures(val.as_ref()).unwrap();
                 let caps: Vec<_> = captures.iter().skip(1).flatten().collect();
-                for cap in caps.into_iter().rev() {
-                    env.push(cap.as_str().chars().rev().collect::<Array<char>>());
+                if reverse {
+                    for cap in caps.into_iter().rev() {
+                        env.push(cap.as_str().chars().rev().collect::<Array<char>>());
+                    }
+                } else {
+                    for cap in caps.into_iter().rev() {
+                        env.push(cap.as_str());
+                    }
                 }
                 Ok(())
             })?;

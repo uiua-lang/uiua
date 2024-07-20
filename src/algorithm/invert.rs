@@ -14,8 +14,8 @@ use crate::{
     check::{instrs_clean_signature, instrs_signature, instrs_signature_no_temp},
     instrs_are_pure,
     primitive::{ImplPrimitive, Primitive},
-    Array, Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionId, Instr, Purity,
-    Signature, Span, SysOp, TempStack, Uiua, UiuaResult, Value,
+    Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionId, Instr, Purity, Signature,
+    Span, SysOp, TempStack, Uiua, UiuaResult, Value,
 };
 
 use super::IgnoreError;
@@ -39,12 +39,8 @@ pub(crate) fn match_pattern(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
-pub(crate) fn match_format_pattern(
-    mut parts: EcoVec<EcoString>,
-    reverse: bool,
-    env: &mut Uiua,
-) -> UiuaResult {
-    let mut val = env
+pub(crate) fn match_format_pattern(parts: EcoVec<EcoString>, env: &mut Uiua) -> UiuaResult {
+    let val = env
         .pop(1)?
         .as_string(env, "Matching a format pattern expects a string")?;
     match parts.as_slice() {
@@ -57,13 +53,6 @@ pub(crate) fn match_format_pattern(
         _ => {
             thread_local! {
                 static CACHE: RefCell<HashMap<EcoVec<EcoString>, Regex>> = RefCell::new(HashMap::new());
-            }
-            if reverse {
-                val = val.chars().rev().collect();
-                parts.make_mut().reverse();
-                for part in parts.make_mut() {
-                    *part = part.chars().rev().collect();
-                }
             }
             CACHE.with(|cache| {
                 let mut cache = cache.borrow_mut();
@@ -84,14 +73,8 @@ pub(crate) fn match_format_pattern(
                 }
                 let captures = re.captures(val.as_ref()).unwrap();
                 let caps: Vec<_> = captures.iter().skip(1).flatten().collect();
-                if reverse {
-                    for cap in caps.into_iter().rev() {
-                        env.push(cap.as_str().chars().rev().collect::<Array<char>>());
-                    }
-                } else {
-                    for cap in caps.into_iter().rev() {
-                        env.push(cap.as_str());
-                    }
+                for cap in caps.into_iter().rev() {
+                    env.push(cap.as_str());
                 }
                 Ok(())
             })?;
@@ -209,9 +192,8 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &InvertPatternFn(invert_trivial_pattern, "trivial"),
         &InvertPatternFn(invert_array_pattern, "array"),
         &InvertPatternFn(invert_unpack_pattern, "unpack"),
-        &InvertPatternFn(invert_reduce_mul_pattern, "reduce_mul"),
-        &InvertPatternFn(invert_reduce_pattern, "reduce"),
         &InvertPatternFn(invert_scan_pattern, "scan"),
+        &InvertPatternFn(invert_reduce_mul_pattern, "reduce_mul"),
         &InvertPatternFn(invert_primes_pattern, "primes"),
         &InvertPatternFn(invert_format_pattern, "format"),
         &InvertPatternFn(invert_insert_pattern, "insert"),
@@ -1050,15 +1032,14 @@ fn invert_format_pattern<'a>(
             input,
             eco_vec![Instr::MatchFormatPattern {
                 parts: parts.clone(),
-                reverse: false,
                 span: *span
             }],
         ),
-        [Instr::MatchFormatPattern { parts, span, .. }, input @ ..] => (
+        [Instr::MatchFormatPattern { parts, span }, input @ ..] => (
             input,
             eco_vec![Instr::Format {
                 parts: parts.clone(),
-                span: *span,
+                span: *span
             }],
         ),
         _ => return None,
@@ -2122,39 +2103,6 @@ fn invert_split_pattern<'a>(
         ) => (input, eco_vec![Instr::Prim(Primitive::Select, *span)]),
         _ => return None,
     };
-    Some((input, instrs))
-}
-
-fn invert_reduce_pattern<'a>(
-    input: &'a [Instr],
-    comp: &mut Compiler,
-) -> Option<(&'a [Instr], EcoVec<Instr>)> {
-    let [Instr::PushFunc(f), Instr::Prim(Primitive::Reduce, span), input @ ..] = input else {
-        return None;
-    };
-    let instrs = f.instrs(&comp.asm).to_vec();
-    let mut inverse = invert_instrs(&instrs, comp)?;
-    let mut is_format = false;
-    for instr in inverse.make_mut() {
-        if let Instr::MatchFormatPattern { reverse, .. } = instr {
-            *reverse = !*reverse;
-            is_format = true;
-        }
-    }
-    let inverse = make_fn(inverse, *span, comp)?;
-    let mut instrs = eco_vec![
-        Instr::PushFunc(inverse),
-        Instr::ImplPrim(ImplPrimitive::UnReduce, *span)
-    ];
-    if is_format {
-        instrs.push(Instr::Prim(Primitive::Reverse, *span));
-        if let Span::Code(span) = comp.get_span(*span) {
-            comp.experimental_error(&span, || {
-                "Inverting format string reduction is experimental. \
-                To use it, add `# Experimental!` to the top of the file."
-            })
-        }
-    }
     Some((input, instrs))
 }
 

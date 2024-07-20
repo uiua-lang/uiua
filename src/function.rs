@@ -72,7 +72,6 @@ pub enum Instr {
     /// Match a format string pattern
     MatchFormatPattern {
         parts: EcoVec<EcoString>,
-        reverse: bool,
         span: usize,
     },
     /// Execute a stack swizzle

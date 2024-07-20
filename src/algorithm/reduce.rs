@@ -8,8 +8,8 @@ use crate::{
     algorithm::{loops::flip, pervade::*},
     check::instrs_signature,
     cowslice::cowslice,
-    Array, ArrayValue, Boxed, Complex, Function, ImplPrimitive, Instr, Primitive, Shape, Signature,
-    Uiua, UiuaResult, Value,
+    Array, ArrayValue, Complex, Function, ImplPrimitive, Instr, Primitive, Shape, Signature, Uiua,
+    UiuaResult, Value,
 };
 
 use super::{fixed_rows, FixedRowsData};
@@ -841,38 +841,6 @@ where
             arr
         }
     }
-}
-
-pub fn unreduce(env: &mut Uiua) -> UiuaResult {
-    let f = env.pop_function()?;
-    let mut xs = env.pop(1)?;
-    if f.signature() != (1, 2) {
-        return Err(env.error(format!(
-            "{}'s function must have signature |2.1, \
-            but its signature is {}",
-            ImplPrimitive::UnReduce,
-            f.signature().inverse()
-        )));
-    }
-    let mut rows = EcoVec::new();
-    loop {
-        env.push(xs.clone());
-        if let Err(mut e) = env.call(f.clone()) {
-            if e.is_case {
-                e.is_case = false;
-                return Err(e);
-            } else {
-                break;
-            }
-        }
-        let head = env.pop("un reduced function result")?;
-        let rest = env.pop("un reduced function result")?;
-        rows.push(Boxed(head));
-        xs = rest;
-    }
-    rows.push(Boxed(xs));
-    env.push(rows);
-    Ok(())
 }
 
 pub fn fold(env: &mut Uiua) -> UiuaResult {

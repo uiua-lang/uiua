@@ -699,7 +699,8 @@ input[type=number] {
 }
 
 .info-button:hover::after,
-.editor-right-button:hover::after {
+.editor-right-button:hover::after,
+.experimental-icon:hover::after {
     content: attr(data-title);
     position: absolute;
     font-family: "Code Font", monospace;
@@ -712,7 +713,8 @@ input[type=number] {
     pointer-events: none;
 }
 
-.editor-right-button:hover::after {
+.editor-right-button:hover::after,
+.experimental-icon:hover::after {
     background-color: #000b;
     width: 8em;
 }
@@ -722,6 +724,15 @@ input[type=number] {
     width: 24em;
     white-space: pre-wrap;
     text-align: left;
+}
+
+.experimental-icon {
+    position: relative;
+}
+
+.experimental-icon:hover::after {
+    left: 100% !important;
+    bottom: 0 !important;
 }
 
 #example-tracker {

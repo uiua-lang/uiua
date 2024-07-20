@@ -466,10 +466,9 @@ impl Allowed {
                 .filter(|p| self.prims.contains(p) && p.class() == class)
                 .map(|p| {
                     let exp = if p.is_experimental() {
-                        view!(<span class="code-hover" data-title="Experimental">"🧪"</span>)
-                            .into_view()
+                        Some(view!(<span class="experimental-icon" data-title="Experimental!">"🧪"</span>))
                     } else {
-                        View::default()
+                        None
                     };
                     let style = if p.is_deprecated() {
                         "text-decoration: line-through;"

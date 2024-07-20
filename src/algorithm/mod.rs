@@ -18,9 +18,10 @@ use crate::{
 };
 
 mod dyadic;
-pub(crate) mod invert;
+pub mod encode;
+pub mod invert;
 pub mod loops;
-pub(crate) mod map;
+pub mod map;
 mod monadic;
 pub mod pervade;
 pub mod reduce;

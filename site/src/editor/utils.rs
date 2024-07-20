@@ -12,10 +12,10 @@ use leptos::*;
 
 use uiua::{
     ast::Item,
-    image_to_bytes,
+    encode::{image_to_bytes, value_to_gif_bytes, value_to_image, value_to_wav_bytes},
     lsp::{spans_with_backend, BindingDocsKind},
-    value_to_gif_bytes, value_to_image, value_to_wav_bytes, Compiler, DiagnosticKind, Inputs,
-    Report, ReportFragment, ReportKind, SpanKind, SysBackend, Uiua, UiuaError, UiuaResult, Value,
+    Compiler, DiagnosticKind, Inputs, Report, ReportFragment, ReportKind, SpanKind, SysBackend,
+    Uiua, UiuaError, UiuaResult, Value,
 };
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;

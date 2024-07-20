@@ -29,6 +29,7 @@ use crate::{
     array::Array,
     boxed::Boxed,
     check::instrs_signature,
+    encode,
     lex::AsciiToken,
     sys::*,
     value::*,
@@ -177,6 +178,9 @@ impl fmt::Display for ImplPrimitive {
             UnXlsx => write!(f, "{Un}{Xlsx}"),
             UnFft => write!(f, "{Un}{Fft}"),
             UnDatetime => write!(f, "{Un}{DateTime}"),
+            ImageDecode => write!(f, "{Un}{ImageEncode}"),
+            GifDecode => write!(f, "{Un}{GifEncode}"),
+            AudioDecode => write!(f, "{Un}{AudioEncode}"),
             ProgressiveIndexOf => write!(f, "{Un}{By}{Select}"),
             UndoTake => write!(f, "{Under}{Take}"),
             UndoDrop => write!(f, "{Under}{Drop}"),
@@ -186,7 +190,7 @@ impl fmt::Display for ImplPrimitive {
             UndoOrient => write!(f, "{Under}{Orient}"),
             UndoInsert => write!(f, "{Under}{Insert}"),
             UndoRemove => write!(f, "{Under}{Remove}"),
-            UndoPartition1 | UndpPartition2 => write!(f, "{Under}{Partition}"),
+            UndoPartition1 | UndoPartition2 => write!(f, "{Under}{Partition}"),
             UndoGroup1 | UndoGroup2 => write!(f, "{Under}{Group}"),
             TryClose => write!(f, "{}", Sys(SysOp::Close)),
             Asin => write!(f, "{Un}{Sin}"),
@@ -369,21 +373,6 @@ impl Primitive {
                 Where.format(),
                 Find.format(),
             ),
-            Sys(SysOp::GifDecode) => format!(
-                "use {} {} instead",
-                Un.format(),
-                Sys(SysOp::GifEncode).format()
-            ),
-            Sys(SysOp::AudioDecode) => format!(
-                "use {} {} instead",
-                Un.format(),
-                Sys(SysOp::AudioEncode).format()
-            ),
-            Sys(SysOp::ImDecode) => format!(
-                "use {} {} instead",
-                Un.format(),
-                Sys(SysOp::ImEncode).format()
-            ),
             Sys(SysOp::HttpsWrite) => format!("use {} instead", Sys(SysOp::TlsConnect).format()),
             Deal => format!("use {Select}{Rise}{By}{Rows}{Gap}{Rand} instead"),
             _ => return None,
@@ -426,6 +415,9 @@ impl Primitive {
             "dup" => return Some(Primitive::Dup),
             "utf" | "utf__8" => return Some(Primitive::Utf8),
             "chunk" => return Some(Primitive::Chunks),
+            "&ime" => return Some(Primitive::ImageEncode),
+            "&gife" => return Some(Primitive::GifEncode),
+            "&ae" => return Some(Primitive::AudioEncode),
             _ => {}
         }
         if let Some(prim) = Primitive::non_deprecated().find(|p| p.name() == name) {
@@ -845,6 +837,9 @@ impl Primitive {
             Primitive::Xlsx => {
                 env.monadic_ref_env(|value, env| value.to_xlsx(env).map(EcoVec::from))?
             }
+            Primitive::ImageEncode => encode::image_encode(env)?,
+            Primitive::GifEncode => encode::gif_encode(env)?,
+            Primitive::AudioEncode => encode::audio_encode(env)?,
             Primitive::Astar => algorithm::astar(env)?,
             Primitive::Fft => algorithm::fft(env)?,
             Primitive::Stringify
@@ -886,24 +881,6 @@ impl ImplPrimitive {
                 env.push(val.clone());
             }
             ImplPrimitive::Asin => env.monadic_env(Value::asin)?,
-            ImplPrimitive::UndoKeep => {
-                let from = env.pop(1)?;
-                let counts = env.pop(2)?;
-                let into = env.pop(3)?;
-                env.push(from.undo_keep(counts, into, env)?);
-            }
-            ImplPrimitive::UndoTake => {
-                let index = env.pop(1)?;
-                let into = env.pop(2)?;
-                let from = env.pop(3)?;
-                env.push(from.undo_take(index, into, env)?);
-            }
-            ImplPrimitive::UndoDrop => {
-                let index = env.pop(1)?;
-                let into = env.pop(2)?;
-                let from = env.pop(3)?;
-                env.push(from.undo_drop(index, into, env)?);
-            }
             ImplPrimitive::UnCouple => {
                 let coupled = env.pop(1)?;
                 let (a, b) = coupled.uncouple(env)?;
@@ -916,6 +893,76 @@ impl ImplPrimitive {
                 env.push(vals);
                 env.push(keys);
             }
+            ImplPrimitive::UnWhere => env.monadic_ref_env(Value::unwhere)?,
+            ImplPrimitive::UnUtf => env.monadic_ref_env(Value::unutf8)?,
+            ImplPrimitive::UnBits => env.monadic_ref_env(Value::unbits)?,
+            ImplPrimitive::UnJoin => {
+                let val = env.pop(1)?;
+                let (first, rest) = val.unjoin(env)?;
+                env.push(rest);
+                env.push(first);
+            }
+            ImplPrimitive::UnKeep => {
+                let val = env.pop(1)?;
+                let (counts, dedup) = val.unkeep(env)?;
+                env.push(dedup);
+                env.push(counts);
+            }
+            ImplPrimitive::UnJoinPattern => {
+                let shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
+                let val = env.pop(2)?;
+                let (first, rest) = val.unjoin_shape(&shape, env)?;
+                env.push(rest);
+                env.push(first);
+            }
+            ImplPrimitive::UnAtan => {
+                let x = env.pop(1)?;
+                let sin = x.clone().sin(env)?;
+                let cos = x.cos(env)?;
+                env.push(cos);
+                env.push(sin);
+            }
+            ImplPrimitive::UnComplex => {
+                let x = env.pop(1)?;
+                let im = x.clone().complex_im(env)?;
+                let re = x.complex_re(env)?;
+                env.push(re);
+                env.push(im);
+            }
+            ImplPrimitive::UnParse => env.monadic_ref_env(Value::unparse)?,
+            ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
+            ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
+            ImplPrimitive::UnScan => reduce::unscan(env)?,
+            ImplPrimitive::TraceN(n, inverse) => trace_n(env, *n, *inverse)?,
+            ImplPrimitive::UnStack => stack(env, true)?,
+            ImplPrimitive::UnDump => dump(env, true)?,
+            ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
+            ImplPrimitive::UnBox => {
+                let val = env.pop(1)?;
+                env.push(val.unboxed());
+            }
+            ImplPrimitive::UnJson => {
+                let json = env.pop(1)?.as_string(env, "JSON expects a string")?;
+                let val = Value::from_json_string(&json, env)?;
+                env.push(val);
+            }
+            ImplPrimitive::UnCsv => {
+                let csv = env.pop(1)?.as_string(env, "CSV expects a string")?;
+                let val = Value::from_csv(&csv, env)?;
+                env.push(val);
+            }
+            ImplPrimitive::UnXlsx => {
+                let xlsx = env.pop(1)?.as_bytes(env, "XLSX expects bytes")?;
+                let val = Value::from_xlsx(&xlsx, env)?;
+                env.push(val);
+            }
+            ImplPrimitive::UnFft => algorithm::unfft(env)?,
+            ImplPrimitive::UnDatetime => env.monadic_ref_env(Value::undatetime)?,
+            ImplPrimitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
+            ImplPrimitive::ImageDecode => encode::image_decode(env)?,
+            ImplPrimitive::GifDecode => encode::gif_decode(env)?,
+            ImplPrimitive::AudioDecode => encode::audio_decode(env)?,
+            // Unders
             ImplPrimitive::UndoPick => {
                 let index = env.pop(1)?;
                 let into = env.pop(2)?;
@@ -963,14 +1010,29 @@ impl ImplPrimitive {
                 let from = env.pop(2)?;
                 env.push(from.undo_last(into, env)?);
             }
-            ImplPrimitive::UnWhere => env.monadic_ref_env(Value::unwhere)?,
-            ImplPrimitive::UnUtf => env.monadic_ref_env(Value::unutf8)?,
-            ImplPrimitive::UnBits => env.monadic_ref_env(Value::unbits)?,
+            ImplPrimitive::UndoKeep => {
+                let from = env.pop(1)?;
+                let counts = env.pop(2)?;
+                let into = env.pop(3)?;
+                env.push(from.undo_keep(counts, into, env)?);
+            }
+            ImplPrimitive::UndoTake => {
+                let index = env.pop(1)?;
+                let into = env.pop(2)?;
+                let from = env.pop(3)?;
+                env.push(from.undo_take(index, into, env)?);
+            }
+            ImplPrimitive::UndoDrop => {
+                let index = env.pop(1)?;
+                let into = env.pop(2)?;
+                let from = env.pop(3)?;
+                env.push(from.undo_drop(index, into, env)?);
+            }
+            ImplPrimitive::UndoFix => env.monadic_mut(Value::undo_fix)?,
             ImplPrimitive::UndoPartition1 => loops::undo_partition_part1(env)?,
-            ImplPrimitive::UndpPartition2 => loops::undo_partition_part2(env)?,
+            ImplPrimitive::UndoPartition2 => loops::undo_partition_part2(env)?,
             ImplPrimitive::UndoGroup1 => loops::undo_group_part1(env)?,
             ImplPrimitive::UndoGroup2 => loops::undo_group_part2(env)?,
-            ImplPrimitive::TryClose => _ = SysOp::Close.run(env),
             ImplPrimitive::UndoJoin => {
                 let a_shape = env.pop(1)?;
                 let b_shape = env.pop(2)?;
@@ -979,69 +1041,7 @@ impl ImplPrimitive {
                 env.push(right);
                 env.push(left);
             }
-            ImplPrimitive::UnJoin => {
-                let val = env.pop(1)?;
-                let (first, rest) = val.unjoin(env)?;
-                env.push(rest);
-                env.push(first);
-            }
-            ImplPrimitive::UnKeep => {
-                let val = env.pop(1)?;
-                let (counts, dedup) = val.unkeep(env)?;
-                env.push(dedup);
-                env.push(counts);
-            }
-            ImplPrimitive::UnJoinPattern => {
-                let shape = (env.pop(1))?.as_nats(env, "Shape must be natural numbers")?;
-                let val = env.pop(2)?;
-                let (first, rest) = val.unjoin_shape(&shape, env)?;
-                env.push(rest);
-                env.push(first);
-            }
-            ImplPrimitive::UnAtan => {
-                let x = env.pop(1)?;
-                let sin = x.clone().sin(env)?;
-                let cos = x.cos(env)?;
-                env.push(cos);
-                env.push(sin);
-            }
-            ImplPrimitive::UnComplex => {
-                let x = env.pop(1)?;
-                let im = x.clone().complex_im(env)?;
-                let re = x.complex_re(env)?;
-                env.push(re);
-                env.push(im);
-            }
-            ImplPrimitive::UnParse => env.monadic_ref_env(Value::unparse)?,
-            ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
-            ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
-            ImplPrimitive::UndoFix => env.monadic_mut(Value::undo_fix)?,
-            ImplPrimitive::UnScan => reduce::unscan(env)?,
-            ImplPrimitive::TraceN(n, inverse) => trace_n(env, *n, *inverse)?,
-            ImplPrimitive::UnStack => stack(env, true)?,
-            ImplPrimitive::UnDump => dump(env, true)?,
-            ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
-            ImplPrimitive::UnBox => {
-                let val = env.pop(1)?;
-                env.push(val.unboxed());
-            }
-            ImplPrimitive::UnJson => {
-                let json = env.pop(1)?.as_string(env, "JSON expects a string")?;
-                let val = Value::from_json_string(&json, env)?;
-                env.push(val);
-            }
-            ImplPrimitive::UnCsv => {
-                let csv = env.pop(1)?.as_string(env, "CSV expects a string")?;
-                let val = Value::from_csv(&csv, env)?;
-                env.push(val);
-            }
-            ImplPrimitive::UnXlsx => {
-                let xlsx = env.pop(1)?.as_bytes(env, "XLSX expects bytes")?;
-                let val = Value::from_xlsx(&xlsx, env)?;
-                env.push(val);
-            }
-            ImplPrimitive::UnFft => algorithm::unfft(env)?,
-            ImplPrimitive::UnDatetime => env.monadic_ref_env(Value::undatetime)?,
+            ImplPrimitive::TryClose => _ = SysOp::Close.run(env),
             ImplPrimitive::UndoInsert => {
                 let key = env.pop(1)?;
                 let _value = env.pop(2)?;
@@ -1057,7 +1057,6 @@ impl ImplPrimitive {
                 map.undo_remove(key, &original, env)?;
                 env.push(map);
             }
-            ImplPrimitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
             // Optimizations
             ImplPrimitive::Last => env.monadic_env(Value::last)?,
             ImplPrimitive::FirstMinIndex => env.monadic_ref_env(Value::first_min_index)?,

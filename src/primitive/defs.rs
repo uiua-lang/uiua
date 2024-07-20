@@ -233,10 +233,10 @@ constant!(
     ("Hair", "🦰🦱🦲🦳"),
     /// The Uiua logo
     #[cfg(feature = "image")]
-    ("Logo", image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), true).unwrap()),
+    ("Logo", crate::encode::image_bytes_to_array(include_bytes!("assets/uiua-logo-512.png"), true).unwrap()),
     /// Ethically sourced Lena picture
     #[cfg(feature = "image")]
-    ("Lena", image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
+    ("Lena", crate::encode::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
     /// Sample music data
     ("Music", ConstantValue::Music),
     ///
@@ -2775,6 +2775,60 @@ primitive!(
     ///   : ⍜⊜□⍚(⊂@,)∊," \n" repr # add commas
     ///   : &p ⍜▽∵⋅@-=@¯.         # replace negate glyphs with minus signs
     (1, Repr, Misc, "repr"),
+    /// Encode an image into a byte array with the specified format
+    ///
+    /// The first argument is the format, and the second is the image.
+    ///
+    /// The image must be a rank 2 or 3 numeric array.
+    /// Axes 0 and 1 contain the rows and columns of the image.
+    /// A rank 2 array is a grayscale image.
+    /// A rank 3 array is an RGB image.
+    /// In a rank 3 image array, the last axis must be length 1, 2, 3, or 4.
+    /// A length 1 last axis is a grayscale image.
+    /// A length 2 last axis is a grayscale image with an alpha channel.
+    /// A length 3 last axis is an RGB image.
+    /// A length 4 last axis is an RGB image with an alpha channel.
+    ///
+    /// You can decode a byte array into an image with [un][imen].
+    ///
+    /// Supported formats are `jpg`, `png`, `bmp`, `gif`, `ico`, and `qoi`.
+    ///
+    /// See also: [&ims]
+    (2, ImageEncode, Encoding, "imen"),
+    /// Encode a gif into a byte array
+    ///
+    /// The first argument is a framerate in seconds.
+    /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
+    /// The rows of the array are the frames of the gif, and their format must conform to that of [imen].
+    ///
+    /// You can decode a byte array into a gif with [un][gifen].
+    ///
+    /// See also: [&gifs]
+    (2, GifEncode, Encoding, "gifen"),
+    /// Encode audio into a byte array
+    ///
+    /// The first argument is the format, the second is the audio sample rate, and the third is the audio samples.
+    ///
+    /// The sample rate must be a positive integer.
+    ///
+    /// The audio samples must be a rank 1 or 2 numeric array.
+    ///
+    /// A rank 1 array is a list of mono audio samples.
+    /// For a rank 2 array, each row is a channel.
+    ///
+    /// The samples must be between -1 and 1.
+    /// The sample rate is [&asr].
+    ///
+    /// You can decode a byte array into audio with [un][auden].
+    /// This returns the audio format as a string, the audio sample rate, and an array representing the audio samples.
+    ///
+    /// Currently, only the `wav` format is supported.
+    ///
+    /// This simple example will load an audio file, halve its sample rate, and re-encode it.
+    /// ex: ⍜(°auden &frab "test.wav")⊙⊓(⌊÷2|▽0.5)
+    ///
+    /// See also: [&ap]
+    (3, AudioEncode, Encoding, "auden"),
 );
 
 macro_rules! impl_primitive {
@@ -2861,6 +2915,9 @@ impl_primitive!(
     (1, UnDatetime),
     (2, ProgressiveIndexOf),
     (2(0), MatchPattern),
+    (1(2), ImageDecode),
+    (1(2), GifDecode),
+    (1(3), AudioDecode),
     // Unders
     (1, UndoFix),
     (3, UndoSelect),
@@ -2876,7 +2933,7 @@ impl_primitive!(
     (2, UndoOrient),
     (3(2), UndoJoin),
     (1[1], UndoPartition1),
-    (3, UndpPartition2),
+    (3, UndoPartition2),
     (1[1], UndoGroup1),
     (3, UndoGroup2),
     (4, UndoInsert),

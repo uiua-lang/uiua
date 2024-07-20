@@ -109,12 +109,9 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Trace => Instr::ImplPrim(TraceN(1, true), span),
         Stack => Instr::ImplPrim(UnStack, span),
         Keep => Instr::ImplPrim(UnKeep, span),
-        Sys(SysOp::GifDecode) => Instr::Prim(Sys(SysOp::GifEncode), span),
-        Sys(SysOp::GifEncode) => Instr::Prim(Sys(SysOp::GifDecode), span),
-        Sys(SysOp::AudioDecode) => Instr::Prim(Sys(SysOp::AudioEncode), span),
-        Sys(SysOp::AudioEncode) => Instr::Prim(Sys(SysOp::AudioDecode), span),
-        Sys(SysOp::ImDecode) => Instr::Prim(Sys(SysOp::ImEncode), span),
-        Sys(SysOp::ImEncode) => Instr::Prim(Sys(SysOp::ImDecode), span),
+        GifEncode => Instr::ImplPrim(GifDecode, span),
+        AudioEncode => Instr::ImplPrim(AudioDecode, span),
+        ImageEncode => Instr::ImplPrim(ImageDecode, span),
         Sys(SysOp::ClipboardSet) => Instr::Prim(Sys(SysOp::ClipboardGet), span),
         Sys(SysOp::ClipboardGet) => Instr::Prim(Sys(SysOp::ClipboardSet), span),
         Json => Instr::ImplPrim(UnJson, span),
@@ -151,6 +148,9 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         UnCsv => Instr::Prim(Csv, span),
         UnXlsx => Instr::Prim(Xlsx, span),
         UnFft => Instr::Prim(Fft, span),
+        ImageDecode => Instr::Prim(ImageEncode, span),
+        GifDecode => Instr::Prim(GifEncode, span),
+        AudioDecode => Instr::Prim(AudioEncode, span),
         UnDatetime => Instr::Prim(DateTime, span),
         TraceN(n, inverse) => Instr::ImplPrim(TraceN(n, !inverse), span),
         _ => return None,
@@ -1948,7 +1948,7 @@ partition_group!(
     under_partition_pattern,
     Partition,
     UndoPartition1,
-    UndpPartition2
+    UndoPartition2
 );
 partition_group!(under_group_pattern, Group, UndoGroup1, UndoGroup2);
 

@@ -1,21 +1,8 @@
 {
-  "&ad": {
-    "args": 1,
-    "outputs": 3,
-    "class": "Audio",
-    "description": "Decode audio from a byte array",
-    "deprecated": true
-  },
-  "&ae": {
-    "args": 3,
-    "outputs": 1,
-    "class": "Audio",
-    "description": "Encode audio into a byte array"
-  },
   "&ap": {
     "args": 1,
     "outputs": 0,
-    "class": "Audio",
+    "class": "Media",
     "description": "Play some audio"
   },
   "&args": {
@@ -27,14 +14,14 @@
   "&asr": {
     "args": 0,
     "outputs": 1,
-    "class": "Audio",
+    "class": "Media",
     "description": "Get the sample rate of the audio output backend"
   },
   "&ast": {
     "args": 0,
     "outputs": 0,
     "modifier_args": 1,
-    "class": "Audio",
+    "class": "Media",
     "description": "Synthesize and stream audio"
   },
   "&camcap": {
@@ -140,23 +127,10 @@
     "class": "Filesystem",
     "description": "Write the entire contents of an array to a file"
   },
-  "&gifd": {
-    "args": 1,
-    "outputs": 2,
-    "class": "Gifs",
-    "description": "Decode a gif from a byte array",
-    "deprecated": true
-  },
-  "&gife": {
-    "args": 2,
-    "outputs": 1,
-    "class": "Gifs",
-    "description": "Encode a gif into a byte array"
-  },
   "&gifs": {
     "args": 2,
     "outputs": 0,
-    "class": "Gifs",
+    "class": "Media",
     "description": "Show a gif"
   },
   "&httpsw": {
@@ -166,23 +140,10 @@
     "description": "Make an HTTP(S) request",
     "deprecated": true
   },
-  "&imd": {
-    "args": 1,
-    "outputs": 2,
-    "class": "Images",
-    "description": "Decode an image from a byte array",
-    "deprecated": true
-  },
-  "&ime": {
-    "args": 2,
-    "outputs": 1,
-    "class": "Images",
-    "description": "Encode an image into a byte array with the specified format"
-  },
   "&ims": {
     "args": 1,
     "outputs": 0,
-    "class": "Images",
+    "class": "Media",
     "description": "Show an image"
   },
   "&invk": {
@@ -392,6 +353,12 @@
     "outputs": 1,
     "class": "DyadicPervasive",
     "description": "Take the arctangent of two numbers"
+  },
+  "auden": {
+    "args": 3,
+    "outputs": 1,
+    "class": "Encoding",
+    "description": "Encode audio into a byte array"
   },
   "backward": {
     "glyph": "¨",
@@ -704,6 +671,12 @@
     "class": "Map",
     "description": "Get the value corresponding to a key in a map array"
   },
+  "gifen": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Encoding",
+    "description": "Encode a gif into a byte array"
+  },
   "greater or equal": {
     "ascii": ">=",
     "glyph": "≥",
@@ -739,6 +712,12 @@
     "outputs": 1,
     "class": "Planet",
     "description": "Do nothing with one value"
+  },
+  "imen": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Encoding",
+    "description": "Encode an image into a byte array with the specified format"
   },
   "indexof": {
     "glyph": "⊗",

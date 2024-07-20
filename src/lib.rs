@@ -172,6 +172,7 @@ mod value;
 
 #[allow(unused_imports)]
 pub use self::{
+    algorithm::encode,
     array::*,
     assembly::*,
     boxed::*,

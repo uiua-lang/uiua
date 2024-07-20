@@ -20,5 +20,5 @@ Step ← (
 ⬚0≡(°⊚)                   # Plot
 ≡(⍜(☇2)≡(/↥/↥) ◫3_3)      # Upscale
 
-&fwa "n-body.gif" &gife 16
+&fwa "n-body.gif" gifen 16
 &p "Wrote gif to n-body.gif"

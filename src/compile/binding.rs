@@ -146,7 +146,7 @@ impl Compiler {
                 comment.map(|text| DocComment::from(text.as_str())),
             );
             let mut words = binding.words.clone();
-            recurse_words(&mut words, &mut |word| match &word.value {
+            recurse_words_mut(&mut words, &mut |word| match &word.value {
                 Word::Ref(r) => {
                     if let Ok((path_locals, local)) = self.ref_local(r) {
                         self.validate_local(&r.name.value, local, &r.name.span);
@@ -412,8 +412,9 @@ impl Compiler {
             ModuleKind::Named(_) => ScopeKind::Module,
             ModuleKind::Test => ScopeKind::Test,
         };
-        let in_test = matches!(m.kind, ModuleKind::Test);
-        let module = self.in_scope(scope_kind, |env| env.items(m.items, in_test))?;
+        let was_in_test = replace(&mut self.in_test, matches!(m.kind, ModuleKind::Test));
+        let module = self.in_scope(scope_kind, |env| env.items(m.items))?;
+        self.in_test = was_in_test;
         match m.kind {
             ModuleKind::Named(name) => {
                 // Add imports

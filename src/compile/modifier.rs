@@ -1329,7 +1329,7 @@ impl Compiler {
         next: &mut usize,
     ) -> UiuaResult {
         let mut error = None;
-        recurse_words(words, &mut |word| match &mut word.value {
+        recurse_words_mut(words, &mut |word| match &mut word.value {
             Word::Placeholder(PlaceholderOp::Call) => {
                 *word = stack[*next].clone();
                 *next += 1;

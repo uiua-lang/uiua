@@ -65,6 +65,8 @@ pub struct Compiler {
     macro_depth: usize,
     /// Whether the compiler is in an inverse
     in_inverse: bool,
+    /// Whether the compiler is in a test
+    in_test: bool,
     /// Accumulated errors
     errors: Vec<UiuaError>,
     /// Primitives that have emitted errors because they are deprecated
@@ -98,6 +100,7 @@ impl Default for Compiler {
             array_macros: HashMap::new(),
             macro_depth: 0,
             in_inverse: false,
+            in_test: false,
             errors: Vec::new(),
             deprecated_prim_errors: HashSet::new(),
             diagnostics: BTreeSet::new(),
@@ -396,7 +399,7 @@ impl Compiler {
             });
         }
 
-        let res = self.catching_crash(input, |env| env.items(items, false));
+        let res = self.catching_crash(input, |env| env.items(items));
 
         if self.print_diagnostics {
             for diagnostic in self.take_diagnostics() {
@@ -443,7 +446,7 @@ code:
             .into()),
         }
     }
-    pub(crate) fn items(&mut self, items: Vec<Item>, in_test: bool) -> UiuaResult {
+    pub(crate) fn items(&mut self, items: Vec<Item>) -> UiuaResult {
         // Set scope comment
         if let Some(Item::Words(lines)) = items.first() {
             let mut started = false;
@@ -479,7 +482,7 @@ code:
         let mut prev_comment = None;
         let mut item_errored = false;
         for item in items {
-            if let Err(e) = self.item(item, in_test, &mut prev_comment) {
+            if let Err(e) = self.item(item, &mut prev_comment) {
                 if !item_errored {
                     self.errors.push(e);
                 }
@@ -488,14 +491,16 @@ code:
         }
         Ok(())
     }
-    fn item(
-        &mut self,
-        item: Item,
-        in_test: bool,
-        prev_comment: &mut Option<EcoString>,
-    ) -> UiuaResult {
+    fn item(&mut self, item: Item, prev_comment: &mut Option<EcoString>) -> UiuaResult {
         fn words_should_run_anyway(words: &[Sp<Word>]) -> bool {
-            (words.iter()).any(|w| matches!(&w.value, Word::SemanticComment(_)))
+            let mut anyway = false;
+            recurse_words(words, &mut |w| {
+                anyway = anyway
+                    || matches!(&w.value, Word::SemanticComment(_))
+                    || matches!(&w.value, Word::Modified(m) 
+                        if matches!(m.modifier.value, Modifier::Ref(_)))
+            });
+            anyway
         }
         let mut lines = match item {
             Item::Module(m) => {
@@ -505,7 +510,7 @@ code:
             Item::Words(lines) => lines,
             Item::Binding(binding) => {
                 let can_run = match self.mode {
-                    RunMode::Normal => !in_test,
+                    RunMode::Normal => !self.in_test,
                     RunMode::All | RunMode::Test => true,
                 };
                 let prev_com = prev_comment.take();
@@ -537,8 +542,8 @@ code:
             }
         }
         let can_run = match self.mode {
-            RunMode::Normal => !in_test,
-            RunMode::Test => in_test,
+            RunMode::Normal => !self.in_test,
+            RunMode::Test => self.in_test,
             RunMode::All => true,
         };
         lines = unsplit_words(lines.into_iter().flat_map(split_words).collect());
@@ -2480,27 +2485,47 @@ fn collect_placeholder(words: &[Sp<Word>]) -> Vec<Sp<PlaceholderOp>> {
 }
 
 fn set_in_macro_arg(words: &mut Vec<Sp<Word>>) {
-    recurse_words(words, &mut |word| match &mut word.value {
+    recurse_words_mut(words, &mut |word| match &mut word.value {
         Word::Ref(r) => r.in_macro_arg = true,
         Word::IncompleteRef { in_macro_arg, .. } => *in_macro_arg = true,
         _ => {}
     });
 }
 
-fn recurse_words(words: &mut Vec<Sp<Word>>, f: &mut dyn FnMut(&mut Sp<Word>)) {
+fn recurse_words(words: &[Sp<Word>], f: &mut dyn FnMut(&Sp<Word>)) {
+    for word in words {
+        f(word);
+        match &word.value {
+            Word::Strand(items) => recurse_words(items, f),
+            Word::Array(arr) => arr.lines.iter().for_each(|line| {
+                recurse_words(line, f);
+            }),
+            Word::Func(func) => func.lines.iter().for_each(|line| {
+                recurse_words(line, f);
+            }),
+            Word::Modified(m) => recurse_words(&m.operands, f),
+            Word::Pack(pack) => pack.branches.iter().for_each(|branch| {
+                (branch.value.lines.iter()).for_each(|line| recurse_words(line, f))
+            }),
+            _ => {}
+        }
+    }
+}
+
+fn recurse_words_mut(words: &mut Vec<Sp<Word>>, f: &mut dyn FnMut(&mut Sp<Word>)) {
     for word in words {
         f(word);
         match &mut word.value {
-            Word::Strand(items) => recurse_words(items, f),
+            Word::Strand(items) => recurse_words_mut(items, f),
             Word::Array(arr) => arr.lines.iter_mut().for_each(|line| {
-                recurse_words(line, f);
+                recurse_words_mut(line, f);
             }),
             Word::Func(func) => func.lines.iter_mut().for_each(|line| {
-                recurse_words(line, f);
+                recurse_words_mut(line, f);
             }),
-            Word::Modified(m) => recurse_words(&mut m.operands, f),
+            Word::Modified(m) => recurse_words_mut(&mut m.operands, f),
             Word::Pack(pack) => pack.branches.iter_mut().for_each(|branch| {
-                (branch.value.lines.iter_mut()).for_each(|line| recurse_words(line, f))
+                (branch.value.lines.iter_mut()).for_each(|line| recurse_words_mut(line, f))
             }),
             _ => {}
         }

@@ -497,7 +497,7 @@ code:
             recurse_words(words, &mut |w| {
                 anyway = anyway
                     || matches!(&w.value, Word::SemanticComment(_))
-                    || matches!(&w.value, Word::Modified(m) 
+                    || matches!(&w.value, Word::Modified(m)
                         if matches!(m.modifier.value, Modifier::Ref(_)))
             });
             anyway

@@ -2180,7 +2180,7 @@ code:
         .into();
         self.errors.push(e);
     }
-    fn experimental_error<S>(&mut self, span: &CodeSpan, message: impl FnOnce() -> S)
+    pub(crate) fn experimental_error<S>(&mut self, span: &CodeSpan, message: impl FnOnce() -> S)
     where
         S: ToString,
     {

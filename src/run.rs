@@ -539,9 +539,15 @@ code:
                         Ok(())
                     })
                 }
-                Instr::MatchFormatPattern { parts, span } => {
+                &Instr::MatchFormatPattern {
+                    ref parts,
+                    reverse,
+                    span,
+                } => {
                     let parts = parts.clone();
-                    self.with_span(*span, |env| invert::match_format_pattern(parts, env))
+                    self.with_span(span, |env| {
+                        invert::match_format_pattern(parts, reverse, env)
+                    })
                 }
                 Instr::StackSwizzle(swizzle, span) => {
                     let swizzle = swizzle.clone();

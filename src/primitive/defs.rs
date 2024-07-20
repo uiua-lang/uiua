@@ -2845,6 +2845,7 @@ impl_primitive!(
     (1, UnParse),
     (1, UnFix),
     (1, UnShape),
+    (1[1], UnReduce),
     (1[1], UnScan),
     (1(2), UnMap),
     (0(0), UnStack, Impure),

@@ -545,7 +545,7 @@ impl Allowed {
                         SysOpClass::Env => ("System - Environment".into_view(), "Query the environment"),
                         SysOpClass::Stream => ("System - Streams".into_view(), "Read from and write to streams"),
                         SysOpClass::Command => ("System - Commands".into_view(), "Execute commands"),
-                        SysOpClass::Media => ("System - Audio".into_view(), "Present media"),
+                        SysOpClass::Media => ("System - Media".into_view(), "Present media"),
                         SysOpClass::Tcp => ("System - TCP".into_view(), "Work with TCP sockets"),
                         SysOpClass::Ffi => ("System - FFI".into_view(), "Foreign function interface"),
                         SysOpClass::Misc => ("System - Misc".into_view(), ""),

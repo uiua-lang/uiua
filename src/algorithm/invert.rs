@@ -14,8 +14,8 @@ use crate::{
     check::{instrs_clean_signature, instrs_signature, instrs_signature_no_temp},
     instrs_are_pure,
     primitive::{ImplPrimitive, Primitive},
-    Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionId, Instr, Purity, Signature,
-    Span, SysOp, TempStack, Uiua, UiuaResult, Value,
+    Array, Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionId, Instr, Purity,
+    Signature, Span, SysOp, TempStack, Uiua, UiuaResult, Value,
 };
 
 use super::IgnoreError;
@@ -205,8 +205,14 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &pat!(Sqrt, (Dup, Mul)),
         &pat!((Dup, Add), (2, Div)),
         &([Dup, Mul], [Sqrt]),
-        &(Val, pat!(Min, (Over, Ge, 1, MatchPattern))),
-        &(Val, pat!(Max, (Over, Le, 1, MatchPattern))),
+        &(
+            Val,
+            pat!(Min, (Over, Ge, Deshape, Deduplicate, [1], MatchPattern)),
+        ),
+        &(
+            Val,
+            pat!(Max, (Over, Le, Deshape, Deduplicate, [1], MatchPattern)),
+        ),
         &pat!(Pick, (Dup, Shape, Range)),
         &InvertPatternFn(invert_on_inv_pattern, "on inverse"),
         &InvertPatternFn(invert_push_temp_pattern, "push temp"),
@@ -2770,6 +2776,12 @@ impl AsInstr for PopInline {
 impl AsInstr for i32 {
     fn as_instr(&self, _: usize) -> Instr {
         Instr::push(Value::from(*self))
+    }
+}
+
+impl<const N: usize> AsInstr for [i32; N] {
+    fn as_instr(&self, _: usize) -> Instr {
+        Instr::push(Array::from_iter(self.iter().map(|&i| i as f64)))
     }
 }
 

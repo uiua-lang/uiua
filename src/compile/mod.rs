@@ -1911,25 +1911,6 @@ code:
             sig.args = sig.args.max(f_sig.args);
         }
 
-        // Maybe use `repeat` diagnostic
-        if functions.len() == 2
-            && matches!(
-                functions[0].0.as_slice(),
-                [] | [Instr::Prim(Primitive::Identity, _)]
-            )
-            && functions[1].1.args == functions[1].1.outputs
-        {
-            self.emit_diagnostic(
-                format!(
-                    "Prefer {} over this {}",
-                    Primitive::Repeat.format(),
-                    Primitive::Switch.format()
-                ),
-                DiagnosticKind::Style,
-                span.clone(),
-            );
-        }
-
         for (instrs, sig, span) in functions {
             let id = FunctionId::Anonymous(span);
             let function = self.make_function(id, sig, instrs);

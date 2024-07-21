@@ -1349,8 +1349,11 @@ impl<T: ArrayValue> Array<T> {
                         {
                             // All elements match
                             data_slice[i] = 1;
+                            i += jump;
+                        } else {
+                            // Mismatch
+                            i += 1;
                         }
-                        i += jump;
                     } else {
                         // Mismatch
                         i += 1;

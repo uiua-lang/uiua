@@ -3,10 +3,11 @@
 - 0.12
   - Writing longer code tutorial
   - Fix pad cursor jumping with end-of-line comments
-  - Unicode literals
   - Misc features tutorial
     - Labels
     - Line splitting
+- 0.13
+  - Unicode literals
   - Possible
     - `orient` boxed
     - Dynamic modules

@@ -29,7 +29,6 @@ pub enum DocsPage {
     Changelog,
     RightToLeft,
     Constants,
-    StackIdioms,
     Combinators,
     Optimizations,
     FormatConfig,
@@ -50,7 +49,6 @@ impl IntoParam for DocsPage {
             "changelog" => Ok(Self::Changelog),
             "rtl" => Ok(Self::RightToLeft),
             "constants" => Ok(Self::Constants),
-            "stack-idioms" => Ok(Self::StackIdioms),
             "combinators" => Ok(Self::Combinators),
             "optimizations" => Ok(Self::Optimizations),
             "format-config" => Ok(Self::FormatConfig),
@@ -83,7 +81,6 @@ pub fn Docs() -> impl IntoView {
             DocsPage::Changelog => Changelog().into_view(),
             DocsPage::RightToLeft => RightToLeft().into_view(),
             DocsPage::Constants => Constants().into_view(),
-            DocsPage::StackIdioms => StackIdioms().into_view(),
             DocsPage::Combinators => Combinators().into_view(),
             DocsPage::Optimizations => Optimizations().into_view(),
             DocsPage::FormatConfig => {
@@ -243,7 +240,6 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             <li><A href="/docs/format-config">"Formatter Configuration"</A>" - how to configure the Uiua formatter"</li>
             <li><A href="/docs/optimizations">"Optimizations"</A>" - a list of optimizations in the interpreter"</li>
             <li><A href="/docs/experimental">"Experimental Features"</A>" - an overview of experimental features"</li>
-            <li><A href="/docs/stack-idioms">"Stack Idioms"</A>" - common ways of manipulating the stack"</li>
         </ul>
 
         <Hd id="other-pages">"Other Pages"</Hd>

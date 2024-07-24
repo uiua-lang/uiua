@@ -1815,7 +1815,10 @@ impl<T: ArrayValue> Array<T> {
                         } as f64;
                     }
                 }
-                Array::new(needle.row_count(), result_data)
+                Array::new(
+                    needle.shape.iter().take(1).copied().collect::<Shape>(),
+                    result_data,
+                )
             }
             Ordering::Greater => {
                 let mut rows = Vec::with_capacity(needle.row_count());

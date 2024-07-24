@@ -625,12 +625,7 @@ code:
                     Ok(())
                 }),
                 &Instr::CopyToTemp { stack, count, span } => self.with_span(span, |env| {
-                    if env.rt.stack.len() < count {
-                        return Err(env.error(format!(
-                            "Stack was empty evaluating argument {}",
-                            count - env.rt.stack.len()
-                        )));
-                    }
+                    env.touch_array_stack(count)?;
                     for i in 0..count {
                         let value = env.rt.stack[env.rt.stack.len() - i - 1].clone();
                         env.rt.temp_stacks[stack as usize].push(value);

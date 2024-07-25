@@ -1,9 +1,9 @@
 # Uiua Todo
 
 - 0.12
-  - Writing longer code tutorial
+  - Make main page examples more idiomatic
   - Fix pad cursor jumping with end-of-line comments
-  - Misc features tutorial
+  - Work into tutorial
     - Labels
     - Line splitting
 - 0.13

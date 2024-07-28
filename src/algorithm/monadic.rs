@@ -49,15 +49,18 @@ impl Value {
             }
         }
     }
-    pub(crate) fn box_depth(self, depth: usize) -> Self {
+    pub(crate) fn box_depth(mut self, depth: usize) -> Self {
         let depth = depth.min(self.rank());
         if depth == 0 {
             return Boxed(self).into();
         }
+        let per_meta = self.take_per_meta();
         let new_shape: Shape = self.shape()[..depth].into();
         let row_shape: Shape = self.shape()[depth..].into();
         let data: EcoVec<Boxed> = self.into_row_shaped_slices(row_shape).map(Boxed).collect();
-        Array::new(new_shape, data).into()
+        let mut arr = Array::new(new_shape, data);
+        arr.set_per_meta(per_meta);
+        arr.into()
     }
     /// Attempt to parse the value into a number
     pub fn parse_num(&self, env: &Uiua) -> UiuaResult<Self> {

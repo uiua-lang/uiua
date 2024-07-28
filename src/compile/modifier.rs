@@ -130,18 +130,6 @@ impl Compiler {
                     Ok(true)
                 }
                 m if m.args() >= 2 => {
-                    if pack.branches.len() != m.args() {
-                        return Err(self.fatal_error(
-                            modifier.span.clone().merge(operand.span.clone()),
-                            format!(
-                                "{} requires {} function arguments, but the \
-                                function pack has {} functions",
-                                m,
-                                m.args(),
-                                pack.branches.len()
-                            ),
-                        ));
-                    }
                     let new = Modified {
                         modifier: modifier.clone(),
                         operands: pack
@@ -203,22 +191,31 @@ impl Compiler {
                 return Ok(());
             }
         } else {
-            // Validate operand count
-            return Err(self.fatal_error(
-                modified.modifier.span.clone(),
-                format!(
-                    "{} requires {} function argument{}, but {} {} provided",
-                    modified.modifier.value,
-                    modified.modifier.value.args(),
-                    if modified.modifier.value.args() == 1 {
-                        ""
-                    } else {
-                        "s"
-                    },
-                    op_count,
-                    if op_count == 1 { "was" } else { "were" }
-                ),
-            ));
+            let strict_args = match &modified.modifier.value {
+                Modifier::Primitive(_) => true,
+                Modifier::Ref(name) => {
+                    let (_, local) = self.ref_local(name)?;
+                    self.stack_macros.contains_key(&local.index)
+                }
+            };
+            if strict_args {
+                // Validate operand count
+                return Err(self.fatal_error(
+                    modified.modifier.span.clone(),
+                    format!(
+                        "{} requires {} function argument{}, but {} {} provided",
+                        modified.modifier.value,
+                        modified.modifier.value.args(),
+                        if modified.modifier.value.args() == 1 {
+                            ""
+                        } else {
+                            "s"
+                        },
+                        op_count,
+                        if op_count == 1 { "was" } else { "were" }
+                    ),
+                ));
+            }
         }
 
         // Handle macros

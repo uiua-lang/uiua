@@ -77,4 +77,7 @@ Struct‼ ←^ $"---_\n_---" ⊙(
 )°{⊙∘}
 
 Struct‼Person[Name Age][] # Ensure that a word on the same line as binding generation works
-◌◌Person~New "janMakoso" 15
+◌◌Person~New "Dave" 15
+
+F‼ ←^
+⍤⟜≍: [1 2 3] [F‼(1|2|3)]

@@ -1997,3 +1997,129 @@ impl Value {
         Ok(())
     }
 }
+
+impl Value {
+    /// `choose` all combinations of `k` rows from a value
+    pub fn choose(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
+        let k = self.as_nat(env, "Choose k must be an integer")?;
+        from.generic_ref(
+            |a| a.choose(k, env).map(Into::into),
+            |a| a.choose(k, env).map(Into::into),
+            |a| a.choose(k, env).map(Into::into),
+            |a| a.choose(k, env).map(Into::into),
+            |a| a.choose(k, env).map(Into::into),
+        )
+    }
+    /// `permute` all combinations of `k` rows from a value
+    pub fn permute(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
+        let k = self.as_nat(env, "Permute k must be an integer")?;
+        from.generic_ref(
+            |a| a.permute(k, env).map(Into::into),
+            |a| a.permute(k, env).map(Into::into),
+            |a| a.permute(k, env).map(Into::into),
+            |a| a.permute(k, env).map(Into::into),
+            |a| a.permute(k, env).map(Into::into),
+        )
+    }
+}
+
+fn factorial(n: usize) -> f64 {
+    if n <= 1 {
+        return 1.0;
+    }
+    (1..=n).map(|i| i as f64).product()
+}
+
+impl<T: ArrayValue> Array<T> {
+    /// `choose` all combinations of `k` rows from this array
+    pub fn choose(&self, k: usize, env: &Uiua) -> UiuaResult<Self> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot choose from scalar array"));
+        }
+        let n = self.row_count();
+        if k > n {
+            return Err(env.error(format!(
+                "Cannot choose combinations of {k} rows \
+                from array of shape {}",
+                self.shape()
+            )));
+        }
+        let mut shape = self.shape.clone();
+        let combinations = factorial(n) / (factorial(k) * factorial(n - k));
+        if combinations > usize::MAX as f64 {
+            return Err(env.error(format!("{combinations} combinations would be too many")));
+        }
+        shape[0] = combinations as usize;
+        shape.insert(1, k);
+        let elem_count = validate_size::<T>(shape.iter().copied(), env)?;
+        let mut data = EcoVec::with_capacity(elem_count);
+        let row_len = self.row_len();
+        let mut indices = vec![0; k];
+        'outer: loop {
+            if (indices.iter())
+                .zip(indices.iter().skip(1))
+                .all(|(a, b)| a > b)
+            {
+                for &i in indices.iter().rev() {
+                    data.extend_from_slice(&self.data[i * row_len..][..row_len]);
+                }
+            }
+            // Increment indices
+            for i in 0..k {
+                indices[i] += 1;
+                if indices[i] == n {
+                    indices[i] = 0;
+                } else {
+                    continue 'outer;
+                }
+            }
+            break;
+        }
+        Ok(Array::new(shape, data))
+    }
+    /// `permute` all combinations of `k` rows from this array
+    pub fn permute(&self, k: usize, env: &Uiua) -> UiuaResult<Self> {
+        if self.rank() == 0 {
+            return Err(env.error("Cannot permute scalar array"));
+        }
+        let n = self.row_count();
+        if k > n {
+            return Err(env.error(format!(
+                "Cannot get permutations of {k} rows \
+                from array of shape {}",
+                self.shape()
+            )));
+        }
+        let mut shape = self.shape.clone();
+        let permutations = factorial(n) / factorial(n - k);
+        if permutations > usize::MAX as f64 {
+            return Err(env.error(format!("{permutations} permutations would be too many")));
+        }
+        shape[0] = permutations as usize;
+        shape.insert(1, k);
+        let elem_count = validate_size::<T>(shape.iter().copied(), env)?;
+        let mut data = EcoVec::with_capacity(elem_count);
+        let row_len = self.row_len();
+        let mut indices = vec![0; k];
+        let mut set = HashSet::with_capacity(k);
+        'outer: loop {
+            set.clear();
+            if indices.iter().all(|&i| set.insert(i)) {
+                for &i in indices.iter().rev() {
+                    data.extend_from_slice(&self.data[i * row_len..][..row_len]);
+                }
+            }
+            // Increment indices
+            for i in 0..k {
+                indices[i] += 1;
+                if indices[i] == n {
+                    indices[i] = 0;
+                } else {
+                    continue 'outer;
+                }
+            }
+            break;
+        }
+        Ok(Array::new(shape, data))
+    }
+}

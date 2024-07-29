@@ -390,6 +390,7 @@ impl Primitive {
         matches!(
             self,
             (But | With | Backward | Above | Below)
+                | (Choose | Permute)
                 | (Chunks | Orient | Coordinate | Astar | Fft | Triangle | Case)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
@@ -597,7 +598,8 @@ impl Primitive {
             Primitive::Mask => env.dyadic_rr_env(Value::mask)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
             Primitive::Coordinate => env.dyadic_rr_env(Value::coordinate)?,
-            // Primitive::ProgressiveIndexOf => env.dyadic_rr_env(Value::progressive_index_of)?,
+            Primitive::Choose => env.dyadic_rr_env(Value::choose)?,
+            Primitive::Permute => env.dyadic_rr_env(Value::permute)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
                 env.push(val.box_depth(0));

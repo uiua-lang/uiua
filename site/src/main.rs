@@ -1,4 +1,4 @@
-#![allow(non_snake_case, clippy::empty_docs)]
+#![allow(non_snake_case, clippy::empty_docs, clippy::mutable_key_type)]
 
 mod backend;
 mod blog;

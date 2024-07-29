@@ -2726,18 +2726,6 @@ impl AsInstr for CopyToUnder {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct PushToInline(usize);
-impl AsInstr for PushToInline {
-    fn as_instr(&self, span: usize) -> Instr {
-        Instr::PushTemp {
-            stack: TempStack::Inline,
-            count: self.0,
-            span,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
 struct CopyToInline(usize);
 impl AsInstr for CopyToInline {
     fn as_instr(&self, span: usize) -> Instr {

@@ -135,7 +135,11 @@ The `uiua` crate has the following noteable feature flags:
 - `raw_mode`: Enables the `&raw` system function
 */
 
-#![allow(clippy::single_match, clippy::needless_range_loop)]
+#![allow(
+    clippy::single_match,
+    clippy::needless_range_loop,
+    clippy::mutable_key_type
+)]
 #![warn(missing_docs)]
 
 mod algorithm;
@@ -268,7 +272,7 @@ mod tests {
                 let mut comp = Compiler::new();
                 let res = comp
                     .load_str_src(section, &path)
-                    .and_then(|comp| env.run_asm(&comp.finish()));
+                    .and_then(|comp| env.run_asm(comp.finish()));
                 if res.is_ok()
                     && comp
                         .take_diagnostics()

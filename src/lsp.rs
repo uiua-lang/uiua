@@ -1311,7 +1311,9 @@ mod server {
                     SpanKind::Number => UIUA_NUMBER_STT,
                     SpanKind::Comment => SemanticTokenType::COMMENT,
                     SpanKind::Primitive(p) => match p.class() {
-                        PrimClass::Stack | PrimClass::Planet if p.modifier_args().is_none() => {
+                        PrimClass::Stack | PrimClass::Debug | PrimClass::Planet
+                            if p.modifier_args().is_none() =>
+                        {
                             STACK_FUNCTION_STT
                         }
                         _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,

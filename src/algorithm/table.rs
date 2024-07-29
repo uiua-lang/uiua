@@ -770,8 +770,8 @@ pub fn triangle(env: &mut Uiua) -> UiuaResult {
         2 => triangle2(f, env),
         3 => triangle3(f, env),
         _ => Err(env.error(format!(
-            "{} of more that 3 arrays is not supported",
-            Primitive::Triangle
+            "{} of more than 3 arrays is not supported",
+            Primitive::Triangle.format()
         ))),
     }
 }

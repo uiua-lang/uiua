@@ -3,6 +3,7 @@
 mod combine;
 mod structure;
 
+use core::f64;
 use std::{
     borrow::Cow,
     cmp::Ordering,
@@ -2046,6 +2047,9 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut shape = self.shape.clone();
         let combinations = factorial(n) / (factorial(k) * factorial(n - k));
+        if combinations.is_nan() {
+            return Err(env.error("Combinatorial explosion"));
+        }
         if combinations > usize::MAX as f64 {
             return Err(env.error(format!("{combinations} combinations would be too many")));
         }
@@ -2092,6 +2096,9 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut shape = self.shape.clone();
         let permutations = factorial(n) / factorial(n - k);
+        if permutations.is_nan() {
+            return Err(env.error("Combinatorial explosion"));
+        }
         if permutations > usize::MAX as f64 {
             return Err(env.error(format!("{permutations} permutations would be too many")));
         }

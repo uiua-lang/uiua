@@ -30,9 +30,27 @@ pub fn lex(
     inputs: &mut Inputs,
 ) -> (Vec<Sp<Token>>, Vec<Sp<LexError>>, InputSrc) {
     let src = inputs.add_src(src, input);
+    // Collect graphemes
+    let mut input_segments: Vec<&str> = input.graphemes(true).collect();
+    // Split combining characters from some base characters
+    let mut i = 0;
+    while i < input_segments.len() {
+        for pre in [" ", "\"", "@"] {
+            if let Some(rest) = input_segments[i].strip_prefix(pre) {
+                input_segments[i] = pre;
+                if !rest.is_empty() {
+                    input_segments.insert(i + 1, rest);
+                    i += 1;
+                }
+                break;
+            }
+        }
+        i += 1;
+    }
+
     let (tokens, errors) = Lexer {
         input,
-        input_segments: input.graphemes(true).collect(),
+        input_segments,
         loc: Loc {
             char_pos: 0,
             byte_pos: 0,

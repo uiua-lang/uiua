@@ -1258,22 +1258,22 @@ impl Value {
             }
         }
     }
-    pub(crate) fn len_where(&self, env: &Uiua) -> UiuaResult<usize> {
+    pub(crate) fn len_where(&self, env: &Uiua) -> UiuaResult<f64> {
         match self {
             Value::Num(nums) => {
-                let mut len = 0;
+                let mut len = 0.0;
                 for &n in &nums.data {
                     if n.fract() != 0.0 || n < 0.0 {
                         return Err(env.error("Argument to where must be an array of naturals"));
                     }
-                    len += n as usize;
+                    len += n;
                 }
                 Ok(len)
             }
             Value::Byte(bytes) => {
-                let mut len = 0;
+                let mut len = 0.0;
                 for &n in &bytes.data {
-                    len += n as usize;
+                    len += n as f64;
                 }
                 Ok(len)
             }

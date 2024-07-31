@@ -633,12 +633,14 @@ code:
                 self.errors.extend(pre_eval_errors);
             }
             let start = self.asm.instrs.len();
-            (self.asm.instrs).extend(instrs);
+            self.asm.instrs.extend(instrs);
             let end = self.asm.instrs.len();
-            self.asm.top_slices.push(FuncSlice {
-                start,
-                len: end - start,
-            });
+            if end != start {
+                self.asm.top_slices.push(FuncSlice {
+                    start,
+                    len: end - start,
+                });
+            }
         }
         Ok(())
     }
@@ -2341,7 +2343,9 @@ code:
             let start = asm.instrs.len();
             let len = instrs.len();
             asm.instrs.extend(instrs.iter().cloned());
-            asm.top_slices.push(FuncSlice { start, len });
+            if len > 0 {
+                asm.top_slices.push(FuncSlice { start, len });
+            }
             let mut env = if self.pre_eval_mode == PreEvalMode::Lsp {
                 #[cfg(feature = "native_sys")]
                 {

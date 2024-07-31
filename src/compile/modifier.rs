@@ -1484,39 +1484,28 @@ impl Compiler {
                 .trace_macro(span.clone()));
         }
 
+        let top_slices_start = self.asm.top_slices.len();
         // Compile the generated items
-        let item_count = items.len();
-        for (i, item) in items.into_iter().enumerate() {
-            match item {
-                Item::Words(words) => {
-                    let call = call || i != item_count - 1;
-                    if !call {
-                        self.new_functions.push(EcoVec::new());
-                    }
-                    for line in words {
-                        self.words(line, true)
-                            .map_err(|e| e.trace_macro(span.clone()))?;
-                    }
-                    if !call {
-                        let instrs = self.new_functions.pop().unwrap();
-                        let sig = self.sig_of(&instrs, span)?;
-                        let id = FunctionId::Anonymous(span.clone());
-                        let func = self.make_function(id, sig, instrs);
-                        self.push_instr(Instr::PushFunc(func));
-                    }
-                }
-                Item::Binding(binding) => self
-                    .binding(binding, None)
-                    .map_err(|e| e.trace_macro(span.clone()))?,
-                Item::Import(import) => self
-                    .import(import, None)
-                    .map_err(|e| e.trace_macro(span.clone()))?,
-                Item::Module(module) => self
-                    .module(module, None)
-                    .map_err(|e| e.trace_macro(span.clone()))?,
-            };
+        self.items(items).map_err(|e| e.trace_macro(span.clone()))?;
+        // Extract generated top-level instructions
+        let mut instrs = EcoVec::new();
+        for slice in (self.asm.top_slices)
+            .split_off(top_slices_start)
+            .into_iter()
+            .rev()
+        {
+            for i in (slice.start..slice.start + slice.len).rev() {
+                instrs.push(self.asm.instrs.remove(i));
+            }
         }
-
+        instrs.make_mut().reverse();
+        if call {
+            self.push_all_instrs(instrs);
+        } else {
+            let sig = self.sig_of(&instrs, span)?;
+            let func = self.make_function(FunctionId::Anonymous(span.clone()), sig, instrs);
+            self.push_instr(Instr::PushFunc(func));
+        }
         Ok(())
     }
     fn do_comptime(
@@ -1560,7 +1549,9 @@ impl Compiler {
         let start = comp.asm.instrs.len();
         let len = instrs.len();
         comp.asm.instrs.extend(instrs);
-        comp.asm.top_slices.push(FuncSlice { start, len });
+        if len > 0 {
+            comp.asm.top_slices.push(FuncSlice { start, len });
+        }
         let values = match comp.macro_env.run_asm(&comp.asm) {
             Ok(_) => comp.macro_env.take_stack(),
             Err(e) => {

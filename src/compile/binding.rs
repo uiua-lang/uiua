@@ -295,10 +295,12 @@ impl Compiler {
                         let start = self.asm.instrs.len();
                         (self.asm.instrs).extend(optimize_instrs(instrs, true, &self.asm));
                         let end = self.asm.instrs.len();
-                        self.asm.top_slices.push(FuncSlice {
-                            start,
-                            len: end - start,
-                        });
+                        if end != start {
+                            self.asm.top_slices.push(FuncSlice {
+                                start,
+                                len: end - start,
+                            });
+                        }
                     }
                 } else if instrs.is_empty() {
                     // Binding binds the value above

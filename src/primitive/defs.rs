@@ -141,6 +141,16 @@ constant!(
     ("NULL", Value::null()),
     /// The hexadecimal digits
     ("HexDigits", "0123456789abcdef"),
+    /// The decimal digits
+    ("Digits", "0123456789"),
+    /// The ascii alphabet
+    ("AsciiLowercase", "abcdefghijklmnopqrstuvwxyz"),
+    /// The uppercase ascii alphabet
+    ("AsciiUppercase", "ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+    /// The ascii letters both upper and lower case
+    ("AsciiLetters", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"),
+    /// Whitespace
+    ("Whitespace", " \t\n\r"),
     /// The days of the week
     (
         "Days",

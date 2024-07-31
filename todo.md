@@ -1,6 +1,9 @@
 # Uiua Todo
 
 - 0.12
+  - Fix fill bug
+  - Allow doc comments from macros
+  - Change how git modules are copied?
   - Make main page examples more idiomatic
   - Fix pad cursor jumping with end-of-line comments
   - Work into tutorial

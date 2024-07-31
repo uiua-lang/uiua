@@ -8,7 +8,7 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`&runs`](https://uiua.org/docs/&runs) now returns 3 handles rather than 1
   - This gives more precise control over stdin, stdout, and stderr
 - **Breaking Change** - [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`duplicate .`](https://uiua.org/docs/duplicate)
-- **Breaking Change** - [`auden`](https://uiua.org/docs/auden) now takes a sample rate argument, and [`un °`](https://uiua.org/docs/un)[`&ae`](https://uiua.org/docs/auden) now returns the sample rate
+- **Breaking Change** - [`auden`](https://uiua.org/docs/auden) now takes a sample rate argument, and [`un °`](https://uiua.org/docs/un)[`imen`](https://uiua.org/docs/auden) now returns the sample rate
   - This allows you to work with audio that is not at Uiua's default sample rate
 - Rename media en/decoding system functions `&ime`, `&gife`, and `&ae` to non-system functions [`imen`](https://uiua.org/docs/imen), [`gifen`](https://uiua.org/docs/gifen), and [`auden`](https://uiua.org/docs/auden)
   - Their implementation is not actually system-dependent
@@ -41,6 +41,8 @@ This version is not yet released. If you are reading this on the website, then t
   - This makes the inverted signature correct
 - [`inventory ⍚`](https://uiua.org/docs/inventory) no longer does [`each ∵`](https://uiua.org/docs/each)-like behavior
   - This got in the way more than it helped
+- Non-scalar [`switch ⨬`](https://uiua.org/docs/switch) and [`repeat ⍥`](https://uiua.org/docs/repeat) now follow the same distribution and [`fix ¤`](https://uiua.org/docs/fix) rules as [`rows ≡`](https://uiua.org/docs/rows)
+- Add the `# Track caller!` semantic comment, which prevents stack traces from going below the function that contains it
 - Add the experimental [`chunks`](https://uiua.org/docs/chunks) function, which splits an array into chunks of a given size
 - Add the experimental [`choose`](https://uiua.org/docs/choose) and [`permute`](https://uiua.org/docs/permute) functions for combinatorics solutions
 - Add the experimental [`triangle ◹`](https://uiua.org/docs/triangle) modifier, which calls a function on shrinking suffixes of an array's rows
@@ -50,8 +52,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the experimental [`astar`](https://uiua.org/docs/astar) modifier, which performs the A* pathfinding algorithm
 - Add the experimental [`but ⤙`](https://uiua.org/docs/but) and [`with ⤚`](https://uiua.org/docs/with) modifiers, which are compliments to [`on ⟜`](https://uiua.org/docs/on) and [`by ⊸`](https://uiua.org/docs/by)
 - Add the experimental [`above ◠`](https://uiua.org/docs/above) and [`below ◡`](https://uiua.org/docs/below) modifiers, which keep all arguments to a function above or below the outputs on the stack
-- Non-scalar [`switch ⨬`](https://uiua.org/docs/switch) and [`repeat ⍥`](https://uiua.org/docs/repeat) now follow the same distribution and [`fix ¤`](https://uiua.org/docs/fix) rules as [`rows ≡`](https://uiua.org/docs/rows)
-- Add the `# Track caller!` semantic comment, which prevents stack traces from going below the function that contains it
+- Add the experimental [`struct`](https://uiua.org/docs/struct) macro, which generates constructor and getter functions given some names
 - Deprecate the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, as it is seldom needed and easy to implement with other functions
   - It can be mostly replaced with `⊢⊚⌕`
 - Deprecate experimental stack and array swizzles

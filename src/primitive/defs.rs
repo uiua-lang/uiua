@@ -2647,6 +2647,36 @@ primitive!(
     /// At the moment, this is only useful for debugging.
     /// While theoretically, it could be used in a macro to choose a branch of a [switch] appropriate for the function, this is not yet possible because of the way that macros and signature checking work.
     (0(2)[1], Sig, Comptime, "signature"),
+    /// Generate a constructor and getters for a struct
+    ///
+    /// The argument must be stack array syntax using either `[]` or `{}`.
+    /// The array must contain only names.
+    /// A `New` function will be generated, as well as a getter for each name.
+    /// The `New` function creates an array of as many items as there are names.
+    /// Because the functions are created in the current scope, [struct] is meant to be used in a module.
+    /// ex: # Experimental!
+    ///   : ---Person
+    ///   :   struct{Name Age}
+    ///   : ---
+    ///   : Person~New "Dan" 31
+    ///   : Person~Name .
+    /// You can use [under] to turn the getters into setters.
+    /// You can simulate "methods" by adding functions to the module.
+    /// ex: # Experimental!
+    ///   : ---Person
+    ///   :   struct{Name Age}
+    ///   :   PassYear ← ⍜Age(+1)
+    ///   : ---
+    ///   : Person~New "Dan" 31
+    ///   : Person~PassYear
+    ///   : ⍜Person~Name⋅"Daniel"
+    /// The created struct objects are just normal arrays that can be used like any other array.
+    /// ex: # Experimental!
+    ///   : ---Color
+    ///   :   struct[r g b a]
+    ///   : ---
+    ///   : ⇌ Color~New 0.1 0.2 0.3 1
+    (0(0)[1], Struct, Misc, "struct"),
     /// Run the Fast Fourier Transform on an array
     ///
     /// The Fast Fourier Transform (FFT) is an optmized algorithm for computing the Discrete Fourier Transform (DFT). The DFT is a transformation that converts a signal from the time domain to the frequency domain.

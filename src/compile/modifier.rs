@@ -1226,6 +1226,129 @@ impl Compiler {
                 ];
                 finish!(instrs, Signature::new(0, 2));
             }
+            Struct => {
+                let operand = modified.code_operands().next().unwrap().clone();
+                if !self.current_bindings.is_empty() {
+                    self.add_error(
+                        modified.modifier.span.clone(),
+                        "struct cannot be used inside a binding",
+                    );
+                }
+                match operand.value {
+                    Word::Array(arr) => {
+                        let mut field_count = 0;
+                        let mut names = Vec::new();
+                        let module_name = if let ScopeKind::Module(name) = &self.scope.kind {
+                            Some(name.clone())
+                        } else {
+                            None
+                        };
+                        // Make getters
+                        for (i, word) in (arr.lines.iter().flatten())
+                            .filter(|word| word.value.is_code())
+                            .enumerate()
+                        {
+                            match &word.value {
+                                Word::Ref(r) if r.path.is_empty() => {
+                                    let name = &r.name.value;
+                                    names.push(name);
+                                    let id = FunctionId::Named(name.clone());
+                                    let span = self.add_span(word.span.clone());
+                                    let mut instrs = eco_vec![
+                                        Instr::push(i),
+                                        Instr::Prim(Primitive::Pick, span),
+                                    ];
+                                    if arr.boxes {
+                                        instrs.push(Instr::ImplPrim(ImplPrimitive::UnBox, span));
+                                        instrs.push(Instr::Label {
+                                            label: name.clone(),
+                                            span,
+                                            remove: true,
+                                        });
+                                    }
+                                    let func = self.make_function(id, Signature::new(1, 1), instrs);
+                                    let local = LocalName {
+                                        index: self.next_global,
+                                        public: true,
+                                    };
+                                    self.next_global += 1;
+                                    let comment = if let Some(module_name) = &module_name {
+                                        format!("Get `{module_name}`'s `{name}`")
+                                    } else {
+                                        format!("Get `{name}`")
+                                    };
+                                    self.compile_bind_function(
+                                        name,
+                                        local,
+                                        func,
+                                        span,
+                                        Some(&comment),
+                                    )?;
+                                    field_count += 1;
+                                    self.code_meta
+                                        .global_references
+                                        .insert(word.span.clone().sp(name.clone()), local.index);
+                                }
+                                _ => {
+                                    self.add_error(
+                                        word.span.clone(),
+                                        "struct's array must contain only names",
+                                    );
+                                    break;
+                                }
+                            }
+                        }
+                        // Make constructor
+                        let span = self.add_span(operand.span.clone());
+                        let mut instrs = eco_vec![Instr::BeginArray];
+                        if arr.boxes {
+                            if names.len() > 1 {
+                                instrs.push(Instr::PushTemp {
+                                    stack: TempStack::Inline,
+                                    count: names.len() - 1,
+                                    span,
+                                });
+                            }
+                            for (i, name) in names.into_iter().rev().enumerate() {
+                                if i > 0 {
+                                    instrs.push(Instr::PopTemp {
+                                        stack: TempStack::Inline,
+                                        count: 1,
+                                        span,
+                                    });
+                                }
+                                instrs.push(Instr::Label {
+                                    label: name.clone(),
+                                    span,
+                                    remove: false,
+                                });
+                            }
+                        } else {
+                            instrs.push(Instr::TouchStack {
+                                count: field_count,
+                                span,
+                            });
+                        }
+                        instrs.push(Instr::EndArray {
+                            boxed: arr.boxes,
+                            span,
+                        });
+                        let name = Ident::from("New");
+                        let id = FunctionId::Named(name.clone());
+                        let func = self.make_function(id, Signature::new(field_count, 1), instrs);
+                        let local = LocalName {
+                            index: self.next_global,
+                            public: true,
+                        };
+                        self.next_global += 1;
+                        let comment = module_name.map(|name| format!("Create a new `{name}`"));
+                        self.compile_bind_function(&name, local, func, span, comment.as_deref())?;
+                    }
+                    _ => {
+                        self.add_error(operand.span, "struct's argument must be stack array syntax")
+                    }
+                }
+            }
             _ => return Ok(false),
         }
         self.handle_primitive_experimental(prim, &modified.modifier.span);

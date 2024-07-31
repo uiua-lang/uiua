@@ -391,6 +391,7 @@ impl Primitive {
             self,
             (But | With | Backward | Above | Below)
                 | (Choose | Permute)
+                | Struct
                 | (Chunks | Orient | Coordinate | Astar | Fft | Triangle | Case)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
@@ -867,7 +868,8 @@ impl Primitive {
             | Primitive::Both
             | Primitive::Fork
             | Primitive::Bracket
-            | Primitive::Switch => {
+            | Primitive::Switch
+            | Primitive::Struct => {
                 return Err(env.error(format!(
                     "{} was not inlined. This is a bug in the interpreter",
                     self.format()

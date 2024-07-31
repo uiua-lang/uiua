@@ -434,6 +434,13 @@
     "class": "MonadicPervasive",
     "description": "Round to the nearest integer towards ∞"
   },
+  "choose": {
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Get all combinations of k rows from an array",
+    "experimental": true
+  },
   "chunks": {
     "args": 2,
     "outputs": 1,
@@ -923,6 +930,13 @@
     "class": "AggregatingModifier",
     "description": "Group sequential sections of an array"
   },
+  "permute": {
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Get all permutations of k rows from an array",
+    "experimental": true
+  },
   "pi": {
     "glyph": "π",
     "args": 0,
@@ -1154,6 +1168,14 @@
     "modifier_args": 1,
     "class": "Comptime",
     "description": "Convert code into a string instead of compiling it",
+    "experimental": true
+  },
+  "struct": {
+    "args": 0,
+    "outputs": 0,
+    "modifier_args": 1,
+    "class": "Misc",
+    "description": "Generate a constructor and getters for a struct",
     "experimental": true
   },
   "subtract": {

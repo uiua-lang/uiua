@@ -175,12 +175,12 @@ pub(crate) struct Scope {
     stack_height: Result<usize, Sp<SigCheckError>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 enum ScopeKind {
     /// A scope at the top level of a file
     File,
     /// A scope in a named module
-    Module,
+    Module(Ident),
     /// A temporary scope, probably for a macro
     Temp,
     /// A test scope between `---`s
@@ -2191,7 +2191,7 @@ code:
                 .or_else(|| {
                     self.higher_scopes
                         .last()
-                        .filter(|_| self.scope.kind != ScopeKind::Module)
+                        .filter(|_| !matches!(self.scope.kind, ScopeKind::Module(_)))
                         .and_then(|scope| scope.names.get(name))
                 })
                 .map_or(true, |l| l.index != local.index)

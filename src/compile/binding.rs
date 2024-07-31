@@ -408,8 +408,8 @@ impl Compiler {
         prev_com: Option<EcoString>,
     ) -> UiuaResult {
         let m = m.value;
-        let scope_kind = match m.kind {
-            ModuleKind::Named(_) => ScopeKind::Module,
+        let scope_kind = match &m.kind {
+            ModuleKind::Named(name) => ScopeKind::Module(name.value.clone()),
             ModuleKind::Test => ScopeKind::Test,
         };
         let was_in_test = replace(&mut self.in_test, matches!(m.kind, ModuleKind::Test));

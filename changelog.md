@@ -10,6 +10,8 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`duplicate .`](https://uiua.org/docs/duplicate)
 - **Breaking Change** - [`auden`](https://uiua.org/docs/auden) now takes a sample rate argument, and [`un °`](https://uiua.org/docs/un)[`imen`](https://uiua.org/docs/auden) now returns the sample rate
   - This allows you to work with audio that is not at Uiua's default sample rate
+- **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill) no longer fills the shapes of inputs to [`rows ≡`](https://uiua.org/docs/rows)
+  - It could leader to some unexpected behavior when trying to fill the shapes of outputs
 - Rename media en/decoding system functions `&ime`, `&gife`, and `&ae` to non-system functions [`imen`](https://uiua.org/docs/imen), [`gifen`](https://uiua.org/docs/gifen), and [`auden`](https://uiua.org/docs/auden)
   - Their implementation is not actually system-dependent
   - Existing `&*e` will format to the new names

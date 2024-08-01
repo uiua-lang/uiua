@@ -1325,7 +1325,7 @@ impl Compiler {
                                     span,
                                 });
                             }
-                            for (i, name) in names.into_iter().rev().enumerate() {
+                            for (i, name) in names.iter().rev().enumerate() {
                                 if i > 0 {
                                     instrs.push(Instr::PopTemp {
                                         stack: TempStack::Inline,
@@ -1334,7 +1334,7 @@ impl Compiler {
                                     });
                                 }
                                 instrs.push(Instr::Label {
-                                    label: name.clone(),
+                                    label: (*name).clone(),
                                     span,
                                     remove: false,
                                 });
@@ -1357,8 +1357,15 @@ impl Compiler {
                             public: true,
                         };
                         self.next_global += 1;
-                        let comment = module_name.map(|name| format!("Create a new `{name}`"));
-                        self.compile_bind_function(name, local, func, span, comment.as_deref())?;
+                        let mut comment = module_name
+                            .map(|name| format!("Create a new `{name}`\n{name} "))
+                            .unwrap_or_default();
+                        comment.push('?');
+                        for name in names {
+                            comment.push(' ');
+                            comment.push_str(name);
+                        }
+                        self.compile_bind_function(name, local, func, span, Some(&comment))?;
                     }
                     _ => {
                         self.add_error(operand.span, "struct's argument must be stack array syntax")

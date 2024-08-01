@@ -9,7 +9,7 @@ impl Compiler {
         // Alias re-bound imports
         if binding.words.iter().filter(|w| w.value.is_code()).count() == 1 {
             if let Some(r) = binding.words.iter().find_map(|w| match &w.value {
-                Word::Ref(r) if !r.path.is_empty() => Some(r),
+                Word::Ref(r) => Some(r),
                 _ => None,
             }) {
                 if let Ok((path_locals, local)) = self.ref_local(r) {

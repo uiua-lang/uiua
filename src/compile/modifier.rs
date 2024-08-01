@@ -1255,6 +1255,7 @@ impl Compiler {
                                     let id = FunctionId::Named(name.clone());
                                     let span = self.add_span(word.span.clone());
                                     let mut instrs = eco_vec![
+                                        Instr::TrackCaller,
                                         Instr::push(i),
                                         Instr::Prim(Primitive::Pick, span),
                                     ];
@@ -1298,6 +1299,7 @@ impl Compiler {
                                 }
                             }
                         }
+
                         // Make field names
                         let span = self.add_span(operand.span.clone());
                         let local = LocalName {
@@ -1315,8 +1317,9 @@ impl Compiler {
                             span,
                             comment.as_deref(),
                         );
+
                         // Make constructor
-                        let mut instrs = eco_vec![Instr::BeginArray];
+                        let mut instrs = eco_vec![Instr::TrackCaller, Instr::BeginArray];
                         if arr.boxes {
                             if names.len() > 1 {
                                 instrs.push(Instr::PushTemp {

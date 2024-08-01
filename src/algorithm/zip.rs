@@ -6,11 +6,11 @@ use ecow::eco_vec;
 
 use crate::{
     algorithm::pervade::bin_pervade_generic, cowslice::CowSlice, function::Function, random,
-    types::push_empty_rows_value, value::Value, Array, ArrayValue, Boxed, Complex, ImplPrimitive,
-    Instr, PersistentMeta, Primitive, Shape, Uiua, UiuaResult,
+    types::push_empty_rows_value, value::Value, Array, Boxed, ImplPrimitive, Instr, PersistentMeta,
+    Primitive, Shape, Uiua, UiuaResult,
 };
 
-use super::{fill_value_shapes, fixed_rows, multi_output, FillContext, FixedRowsData, MultiOutput};
+use super::{fill_value_shapes, fixed_rows, multi_output, FixedRowsData, MultiOutput};
 
 type ValueMonFn = Rc<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<Value>>;
 type ValueMon2Fn = Box<dyn Fn(Value, usize, &mut Uiua) -> UiuaResult<(Value, Value)>>;
@@ -613,7 +613,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
     let outputs = f.signature().outputs;
     let both_scalar = xs.rank() == 0 && ys.rank() == 0;
     match (xs.row_count(), ys.row_count()) {
-        (_, 1) if !ys.length_is_fillable(env) => {
+        (_, 1) => {
             ys.undo_fix();
             let is_empty = outputs > 0 && xs.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(xs.row_count()));
@@ -644,7 +644,7 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
             })?;
             collect_outputs(new_rows, both_scalar, is_empty, per_meta, env)
         }
-        (1, _) if !xs.length_is_fillable(env) => {
+        (1, _) => {
             xs.undo_fix();
             let is_empty = outputs > 0 && ys.row_count() == 0;
             let mut new_rows = multi_output(outputs, Vec::with_capacity(ys.row_count()));
@@ -677,15 +677,10 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
         }
         (a, b) => {
             if a != b {
-                if let Err(e) = xs
-                    .fill_length_to(ys.row_count(), env)
-                    .and_then(|()| ys.fill_length_to(xs.row_count(), env))
-                {
-                    return Err(env.error(format!(
-                        "Cannot {} arrays with different number of rows {a} and {b}{e}",
-                        Primitive::Rows.format(),
-                    )));
-                }
+                return Err(env.error(format!(
+                    "Cannot {} arrays with different number of rows {a} and {b}",
+                    Primitive::Rows.format(),
+                )));
             }
             if !inv {
                 if let Some((f, a, b)) = f_dy_fast_fn(f.instrs(&env.asm), env) {
@@ -810,51 +805,4 @@ pub fn rows_windows(env: &mut Uiua) -> UiuaResult {
 
     let windows = n_arr.windows(&xs, env)?;
     rows1(f, windows, false, env)
-}
-
-impl Value {
-    pub(crate) fn length_is_fillable<C>(&self, ctx: &C) -> bool
-    where
-        C: FillContext,
-    {
-        if self.rank() == 0 {
-            return false;
-        }
-        match self {
-            Value::Num(_) => ctx.scalar_fill::<f64>().is_ok(),
-            Value::Byte(_) => ctx.scalar_fill::<u8>().is_ok(),
-            Value::Complex(_) => ctx.scalar_fill::<Complex>().is_ok(),
-            Value::Char(_) => ctx.scalar_fill::<char>().is_ok(),
-            Value::Box(_) => ctx.scalar_fill::<Boxed>().is_ok(),
-        }
-    }
-    pub(crate) fn fill_length_to<C>(&mut self, len: usize, ctx: &C) -> Result<(), &'static str>
-    where
-        C: FillContext,
-    {
-        match self {
-            Value::Num(arr) => arr.fill_length_to(len, ctx),
-            Value::Byte(arr) => arr.fill_length_to(len, ctx),
-            Value::Complex(arr) => arr.fill_length_to(len, ctx),
-            Value::Char(arr) => arr.fill_length_to(len, ctx),
-            Value::Box(arr) => arr.fill_length_to(len, ctx),
-        }
-    }
-}
-
-impl<T: ArrayValue> Array<T> {
-    pub(crate) fn fill_length_to<C>(&mut self, len: usize, ctx: &C) -> Result<(), &'static str>
-    where
-        C: FillContext,
-    {
-        if self.rank() == 0 || self.row_count() >= len {
-            return Ok(());
-        }
-        let fill = ctx.scalar_fill::<T>()?;
-        let more_elems = (len - self.row_count()) * self.row_len();
-        self.data.reserve(more_elems);
-        self.data.extend_repeat(&fill, more_elems);
-        self.shape[0] = len;
-        Ok(())
-    }
 }

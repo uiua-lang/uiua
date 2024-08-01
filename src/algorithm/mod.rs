@@ -649,32 +649,16 @@ struct FixedRowsData {
 fn fixed_rows(
     prim: impl fmt::Display,
     outputs: usize,
-    mut args: Vec<Value>,
+    args: Vec<Value>,
     env: &Uiua,
 ) -> UiuaResult<FixedRowsData> {
     for a in 0..args.len() {
-        let a_can_fill = args[a].length_is_fillable(env);
+        let a_row_count = args[a].row_count();
         for b in a + 1..args.len() {
-            let b_can_fill = args[b].length_is_fillable(env);
-            let mut err = None;
-            if a_can_fill {
-                let b_row_count = args[b].row_count();
-                err = args[a].fill_length_to(b_row_count, env).err();
-            }
-            if err.is_none() && b_can_fill {
-                let a_row_count = args[a].row_count();
-                err = args[b].fill_length_to(a_row_count, env).err();
-            }
-            if err.is_none()
-                && args[a].row_count() != args[b].row_count()
-                && args[a].row_count() != 1
-                && args[b].row_count() != 1
-            {
-                err = Some("");
-            }
-            if let Some(e) = err {
+            let b_row_count = args[b].row_count();
+            if a_row_count != b_row_count && !(a_row_count == 1 || b_row_count == 1) {
                 return Err(env.error(format!(
-                    "Cannot {prim} arrays with different number of rows, shapes {} and {}{e}",
+                    "Cannot {prim} arrays with different number of rows, shapes {} and {}",
                     args[a].shape(),
                     args[b].shape(),
                 )));

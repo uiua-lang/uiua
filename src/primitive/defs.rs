@@ -2682,6 +2682,8 @@ primitive!(
     ///   :   struct{Username Salt Hashed Email}
     ///   : ---
     ///   : User~Fields
+    ///
+    /// The syntax using `[]` and `{}` was developed by Uiua community member *janMakoso*.
     (0(0)[1], Struct, Misc, "struct"),
     /// Run the Fast Fourier Transform on an array
     ///

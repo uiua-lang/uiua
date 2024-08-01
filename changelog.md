@@ -29,6 +29,9 @@ This version is not yet released. If you are reading this on the website, then t
   - This is useful for convolutions
 - Add new [Scoped Modules](https://uiua.org/tutorial/modules#scoped-modules)
   - These allow you to create a module without creating a file
+- A `Call` or `New` function inside a module can now be called via the module's name
+- A module name used as a macro with `!` now imports all names from the module into the macro's function's scope
+  - This can shorten code when accessing many items from the same module
 - Add the [`datetime`](https://uiua.org/docs/datetime) function, which splits a time into its date and time components
 - [`un °`](https://uiua.org/docs/un) [`shape △`](https://uiua.org/docs/shape) now generates an array with the given shape and incrementing elements
 - [`un °`](https://uiua.org/docs/un) [`pick ⊡`](https://uiua.org/docs/pick) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)

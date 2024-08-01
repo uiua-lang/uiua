@@ -683,12 +683,12 @@ impl Primitive {
                 }
                 env.call(fill)?;
                 let fill_value = env.pop("fill value")?;
-                env.with_fill(fill_value, |env| {
-                    if matches!(f.id, FunctionId::Named(_)) {
-                        env.use_fill();
+                match f.id {
+                    FunctionId::Named(_) => {
+                        env.with_fill(fill_value, |env| env.without_fill(|env| env.call(f)))
                     }
-                    env.call(f)
-                })?;
+                    _ => env.with_fill(fill_value, |env| env.call(f)),
+                }?;
             }
             Primitive::Try => algorithm::try_(env)?,
             Primitive::Case => {

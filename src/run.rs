@@ -10,10 +10,7 @@ use std::{
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
     str::FromStr,
-    sync::{
-        atomic::{self, AtomicBool},
-        Arc,
-    },
+    sync::Arc,
     time::Duration,
 };
 
@@ -58,7 +55,9 @@ pub(crate) struct Runtime {
     /// The stack for tracking recursion points
     recur_stack: Vec<usize>,
     /// The fill stack
-    fill_stack: Vec<Fill>,
+    fill_stack: Vec<Value>,
+    /// The fill boundary stack
+    fill_boundary_stack: Vec<usize>,
     /// A limit on the execution duration in milliseconds
     pub(crate) execution_limit: Option<f64>,
     /// The time at which execution started
@@ -173,21 +172,6 @@ impl FromStr for RunMode {
     }
 }
 
-#[derive(Clone)]
-struct Fill {
-    value: Value,
-    removed: Arc<AtomicBool>,
-}
-
-impl Fill {
-    fn removed(&self) -> bool {
-        self.removed.load(atomic::Ordering::Relaxed)
-    }
-    fn set_removed(&self, removed: bool) {
-        self.removed.store(removed, atomic::Ordering::Relaxed);
-    }
-}
-
 impl Default for Runtime {
     fn default() -> Self {
         Runtime {
@@ -205,6 +189,7 @@ impl Default for Runtime {
             }],
             recur_stack: Vec::new(),
             fill_stack: Vec::new(),
+            fill_boundary_stack: Vec::new(),
             backend: Arc::new(SafeSys::default()),
             time_instrs: false,
             last_time: 0.0,
@@ -1259,12 +1244,14 @@ code:
         }
     }
     pub(crate) fn value_fill(&self) -> Option<&Value> {
-        (self.rt.fill_stack.iter().rev())
-            .find(|fill| !fill.removed())
-            .map(|fill| &fill.value)
+        if (self.rt.fill_boundary_stack.last()).is_some_and(|&i| i >= self.rt.fill_stack.len()) {
+            None
+        } else {
+            self.last_fill()
+        }
     }
     pub(crate) fn last_fill(&self) -> Option<&Value> {
-        self.rt.fill_stack.last().map(|fill| &fill.value)
+        self.rt.fill_stack.last()
     }
     fn fill_error(&self, scalar: bool) -> &'static str {
         if scalar {
@@ -1291,33 +1278,22 @@ code:
             }
         }
     }
-    pub(crate) fn use_fill(&mut self) {
-        if let Some(fill) = self.rt.fill_stack.last_mut() {
-            fill.set_removed(true);
-        }
-    }
     /// Do something with the fill context set
     pub(crate) fn with_fill<T>(
         &mut self,
         value: Value,
         in_ctx: impl FnOnce(&mut Self) -> UiuaResult<T>,
     ) -> UiuaResult<T> {
-        self.rt.fill_stack.push(Fill {
-            value,
-            removed: Arc::new(false.into()),
-        });
+        self.rt.fill_stack.push(value);
         let res = in_ctx(self);
         self.rt.fill_stack.pop();
         res
     }
     /// Do something with the top fill context unset
     pub(crate) fn without_fill<T>(&mut self, in_ctx: impl FnOnce(&mut Self) -> T) -> T {
-        let Some(pos) = (self.rt.fill_stack.iter()).rposition(|fill| !fill.removed()) else {
-            return in_ctx(self);
-        };
-        self.rt.fill_stack[pos].set_removed(true);
+        self.rt.fill_boundary_stack.push(self.rt.fill_stack.len());
         let res = in_ctx(self);
-        self.rt.fill_stack[pos].set_removed(false);
+        self.rt.fill_boundary_stack.pop();
         res
     }
     pub(crate) fn without_fill_but(
@@ -1335,8 +1311,8 @@ code:
                 self.push(Value::default());
             }
         }
-        for fill in fills.iter().rev().cloned() {
-            self.push(fill.value);
+        for value in fills.iter().rev().cloned() {
+            self.push(value);
         }
         let res1 = but(self);
         let res2 = in_ctx(self);
@@ -1397,6 +1373,7 @@ code:
                 temp_stacks: [Vec::new(), Vec::new()],
                 array_stack: Vec::new(),
                 fill_stack: Vec::new(),
+                fill_boundary_stack: Vec::new(),
                 recur_stack: self.rt.recur_stack.clone(),
                 call_stack: Vec::new(),
                 time_instrs: self.rt.time_instrs,

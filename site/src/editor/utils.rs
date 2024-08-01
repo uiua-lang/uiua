@@ -587,16 +587,17 @@ pub fn gen_code_view(code: &str) -> View {
                                 _ => (),
                             }
 
-                            let private =
-                                if docs.is_public || matches!(docs.kind, BindingDocsKind::Module) {
-                                    ""
-                                } else {
-                                    if !title.is_empty() {
-                                        title.push(' ');
-                                    }
-                                    title.push_str("(private) ");
-                                    "private-binding"
-                                };
+                            let private = if docs.is_public
+                                || matches!(docs.kind, BindingDocsKind::Module { .. })
+                            {
+                                ""
+                            } else {
+                                if !title.is_empty() {
+                                    title.push(' ');
+                                }
+                                title.push_str("(private) ");
+                                "private-binding"
+                            };
                             if let Some(comment) = &docs.comment {
                                 if !title.is_empty() {
                                     if comment.text.contains('\n') && comment.sig.is_none() {
@@ -613,7 +614,7 @@ pub fn gen_code_view(code: &str) -> View {
                             } else {
                                 match docs.kind {
                                     BindingDocsKind::Constant(None) => title.push_str("constant"),
-                                    BindingDocsKind::Module => title.push_str("module"),
+                                    BindingDocsKind::Module { .. } => title.push_str("module"),
                                     BindingDocsKind::Modifier(_) => title.push_str("macro"),
                                     _ => {}
                                 }

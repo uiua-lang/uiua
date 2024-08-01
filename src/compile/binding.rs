@@ -14,11 +14,13 @@ impl Compiler {
             }) {
                 if let Ok((path_locals, local)) = self.ref_local(r) {
                     self.validate_local(&r.name.value, local, &r.name.span);
-                    (self.code_meta.global_references).insert(binding.name.clone(), local.index);
+                    (self.code_meta.global_references)
+                        .insert(binding.name.span.clone(), local.index);
                     for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                        (self.code_meta.global_references).insert(comp.module.clone(), local.index);
+                        (self.code_meta.global_references)
+                            .insert(comp.module.span.clone(), local.index);
                     }
-                    (self.code_meta.global_references).insert(r.name.clone(), local.index);
+                    (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
                     self.scope.names.insert(
                         binding.name.value,
                         LocalName {
@@ -150,10 +152,10 @@ impl Compiler {
                 Word::Ref(r) => {
                     if let Ok((path_locals, local)) = self.ref_local(r) {
                         self.validate_local(&r.name.value, local, &r.name.span);
-                        (self.code_meta.global_references).insert(r.name.clone(), local.index);
+                        (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
                         for (local, comp) in path_locals.into_iter().zip(&r.path) {
                             (self.code_meta.global_references)
-                                .insert(comp.module.clone(), local.index);
+                                .insert(comp.module.span.clone(), local.index);
                         }
                     }
                 }
@@ -161,7 +163,7 @@ impl Compiler {
                     if let Ok(Some((_, path_locals))) = self.ref_path(path, *in_macro_arg) {
                         for (local, comp) in path_locals.into_iter().zip(path) {
                             (self.code_meta.global_references)
-                                .insert(comp.module.clone(), local.index);
+                                .insert(comp.module.span.clone(), local.index);
                         }
                     }
                 }
@@ -420,7 +422,8 @@ impl Compiler {
                     for item in line.items {
                         if let Some(mut local) = module.names.get(&item.value).copied() {
                             local.public = false;
-                            (self.code_meta.global_references).insert(item.clone(), local.index);
+                            (self.code_meta.global_references)
+                                .insert(item.span.clone(), local.index);
                             self.scope.names.insert(item.value, local);
                         } else {
                             self.add_error(
@@ -448,7 +451,7 @@ impl Compiler {
                 );
                 // Add local
                 self.scope.names.insert(name.value.clone(), local);
-                (self.code_meta.global_references).insert(name.clone(), local.index);
+                (self.code_meta.global_references).insert(name.span.clone(), local.index);
             }
             ModuleKind::Test => {
                 if let Some(line) = &m.imports {
@@ -496,7 +499,7 @@ impl Compiler {
                 .copied()
             {
                 self.validate_local(&item.value, local, &item.span);
-                (self.code_meta.global_references).insert(item.clone(), local.index);
+                (self.code_meta.global_references).insert(item.span.clone(), local.index);
                 self.scope.names.insert(
                     item.value.clone(),
                     LocalName {

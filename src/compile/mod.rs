@@ -117,7 +117,7 @@ pub struct Module {
     /// The top level comment
     pub comment: Option<EcoString>,
     /// Map module-local names to global indices
-    names: IndexMap<Ident, LocalName>,
+    pub names: IndexMap<Ident, LocalName>,
     /// Whether the module uses experimental features
     experimental: bool,
 }
@@ -203,8 +203,10 @@ impl Default for Scope {
 
 /// The index of a named local in the bindings, and whether it is public
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub(crate) struct LocalName {
+pub struct LocalName {
+    /// The index of the binding in assembly's bindings
     pub index: usize,
+    /// Whether the binding is public
     pub public: bool,
 }
 
@@ -1094,7 +1096,7 @@ code:
                         self.validate_local(&comp.module.value, *local, &comp.module.span);
                         self.code_meta
                             .global_references
-                            .insert(comp.module, local.index);
+                            .insert(comp.module.span, local.index);
                     }
                     self.code_meta
                         .incomplete_refs
@@ -1623,11 +1625,11 @@ code:
             self.validate_local(&r.name.value, local, &r.name.span);
             for (local, comp) in path_locals.into_iter().zip(&r.path) {
                 self.validate_local(&comp.module.value, local, &comp.module.span);
-                (self.code_meta.global_references).insert(comp.module.clone(), local.index);
+                (self.code_meta.global_references).insert(comp.module.span.clone(), local.index);
             }
             self.code_meta
                 .global_references
-                .insert(r.name.clone(), local.index);
+                .insert(r.name.span.clone(), local.index);
             self.global_index(local.index, r.name.span, call);
             Ok(())
         }
@@ -1645,7 +1647,7 @@ code:
                 ));
             };
             curr.referenced = true;
-            (self.code_meta.global_references).insert(span.clone().sp(ident), curr.global_index);
+            (self.code_meta.global_references).insert(span.clone(), curr.global_index);
             let instr = Instr::Recur(self.add_span(span.clone()));
             if call {
                 self.push_all_instrs(eco_vec![Instr::PushSig(sig), instr, Instr::PopSig]);
@@ -1655,7 +1657,7 @@ code:
             }
         } else if let Some(local) = self.find_name(&ident, skip_local) {
             // Name exists in scope
-            (self.code_meta.global_references).insert(span.clone().sp(ident), local.index);
+            (self.code_meta.global_references).insert(span.clone(), local.index);
             self.global_index(local.index, span, call);
         } else if let Some(constant) = CONSTANTS.iter().find(|c| c.name == ident) {
             // Name is a built-in constant
@@ -1726,8 +1728,17 @@ code:
                     self.push_instr(Instr::Call(span));
                 }
             }
-            BindingKind::Import { .. } | BindingKind::Module(_) => {
-                self.add_error(span, "Cannot import module item here.")
+            BindingKind::Import { .. } => self.add_error(span, "Cannot import module item here."),
+            BindingKind::Module(m) => {
+                if let Some(local) = m.names.get("Call").or_else(|| m.names.get("New")) {
+                    self.code_meta.global_references.remove(&span);
+                    self.code_meta
+                        .global_references
+                        .insert(span.clone(), local.index);
+                    self.global_index(local.index, span, call);
+                } else {
+                    self.add_error(span, "Cannot import module item here.");
+                }
             }
             BindingKind::Macro => {
                 // We could error here, but it's easier to handle it higher up

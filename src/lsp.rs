@@ -77,7 +77,10 @@ pub enum BindingDocsKind {
     /// A modifier
     Modifier(usize),
     /// A module
-    Module,
+    Module {
+        /// The signature of the module's `New` function
+        sig: Option<Signature>,
+    },
 }
 
 /// Get spans and their kinds from Uiua code
@@ -113,7 +116,7 @@ pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<Span
 #[derive(Debug, Clone, Default)]
 pub struct CodeMeta {
     /// A map of references to global bindings
-    pub global_references: HashMap<Sp<Ident>, usize>,
+    pub global_references: HashMap<CodeSpan, usize>,
     /// A map of references to shadowable constants
     pub constant_references: HashSet<Sp<Ident>>,
     /// Spans of functions and their signatures and whether they are explicit
@@ -275,11 +278,11 @@ impl Spanner {
 
     fn reference_docs(&self, span: &CodeSpan) -> Option<BindingDocs> {
         // Look in global references
-        for (name, index) in &self.code_meta.global_references {
+        for (name_span, index) in &self.code_meta.global_references {
             let Some(binding) = self.asm.bindings.get(*index) else {
                 continue;
             };
-            if name.span != *span {
+            if name_span != span {
                 continue;
             }
             return Some(self.make_binding_docs(binding));
@@ -342,7 +345,15 @@ impl Spanner {
             BindingKind::Macro => {
                 BindingDocsKind::Modifier(binfo.span.as_str(self.inputs(), ident_modifier_args))
             }
-            BindingKind::Import(_) | BindingKind::Module(_) => BindingDocsKind::Module,
+            BindingKind::Import(_) => BindingDocsKind::Module { sig: None },
+            BindingKind::Module(m) => {
+                let sig = if let Some(local) = m.names.get("Call").or_else(|| m.names.get("New")) {
+                    self.asm.bindings[local.index].kind.signature()
+                } else {
+                    None
+                };
+                BindingDocsKind::Module { sig }
+            }
         };
         BindingDocs {
             src_span: binfo.span.clone(),
@@ -861,7 +872,7 @@ mod server {
                     }
                     _ => {}
                 }
-                if !docs.is_public && !matches!(docs.kind, BindingDocsKind::Module) {
+                if !docs.is_public && !matches!(docs.kind, BindingDocsKind::Module { .. }) {
                     value.push_str(" (private)");
                 }
                 match &docs.kind {
@@ -1344,7 +1355,7 @@ mod server {
                             3 => TRIADIC_MODIFIER_STT,
                             _ => continue,
                         },
-                        BindingDocsKind::Module => MODULE_STT,
+                        BindingDocsKind::Module { .. } => MODULE_STT,
                     },
                     SpanKind::StackSwizzle(sw) => match sw.signature().args {
                         1 => MONADIC_FUNCTION_STT,
@@ -1616,8 +1627,8 @@ mod server {
             }
             // Check for span in binding references
             if binding.is_none() {
-                for (name, index) in &doc.code_meta.global_references {
-                    if name.span.contains_line_col(line, col) && name.span.src == path {
+                for (name_span, index) in &doc.code_meta.global_references {
+                    if name_span.contains_line_col(line, col) && name_span.src == path {
                         binding = Some((&doc.asm.bindings[*index], *index));
                         break;
                     }
@@ -1643,14 +1654,14 @@ mod server {
             for entry in &self.docs {
                 let uri = entry.key();
                 let doc = entry.value();
-                for (name, idx) in &doc.code_meta.global_references {
+                for (name_span, idx) in &doc.code_meta.global_references {
                     if *idx == index {
-                        let uri = match &name.span.src {
+                        let uri = match &name_span.src {
                             InputSrc::Str(_) | InputSrc::Macro(_) => uri.clone(),
                             InputSrc::File(file) => path_to_uri(file)?,
                         };
                         changes.entry(uri).or_default().push(TextEdit {
-                            range: uiua_span_to_lsp(&name.span),
+                            range: uiua_span_to_lsp(name_span),
                             new_text: params.new_name.clone(),
                         });
                     }
@@ -1676,8 +1687,8 @@ mod server {
             let (line, col) = lsp_pos_to_uiua(position);
             let path = uri_path(&params.text_document_position_params.text_document.uri);
             // Check global references
-            for (name, idx) in &doc.code_meta.global_references {
-                if name.span.contains_line_col(line, col) && name.span.src == path {
+            for (name_span, idx) in &doc.code_meta.global_references {
+                if name_span.contains_line_col(line, col) && name_span.src == path {
                     let binding = &doc.asm.bindings[*idx];
                     let uri = match &binding.span.src {
                         InputSrc::Str(_) | InputSrc::Macro(_) => {
@@ -1720,8 +1731,8 @@ mod server {
             let position = params.text_document_position_params.position;
             let (line, col) = lsp_pos_to_uiua(position);
             let path = uri_path(&params.text_document_position_params.text_document.uri);
-            for (name, idx) in &doc.code_meta.global_references {
-                if name.span.contains_line_col(line, col) && name.span.src == path {
+            for (name_span, idx) in &doc.code_meta.global_references {
+                if name_span.contains_line_col(line, col) && name_span.src == path {
                     let binding = &doc.asm.bindings[*idx];
                     let uri = match &binding.span.src {
                         InputSrc::Str(_) | InputSrc::Macro(_) => {
@@ -2010,13 +2021,13 @@ mod server {
                     for entry in &self.docs {
                         let uri = entry.key();
                         let doc = entry.value();
-                        for (name, idx) in &doc.code_meta.global_references {
+                        for (name_span, idx) in &doc.code_meta.global_references {
                             if *idx == i {
-                                let uri = match &name.span.src {
+                                let uri = match &name_span.src {
                                     InputSrc::Str(_) | InputSrc::Macro(_) => uri.clone(),
                                     InputSrc::File(file) => path_to_uri(file)?,
                                 };
-                                let range = uiua_span_to_lsp(&name.span);
+                                let range = uiua_span_to_lsp(name_span);
                                 locations.push(Location { uri, range });
                             }
                         }

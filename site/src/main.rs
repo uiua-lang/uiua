@@ -459,7 +459,7 @@ fn binding_class(name: &str, docs: &BindingDocs) -> &'static str {
                 2 => code_font!("dyadic-modifier"),
                 _ => code_font!("triadic-modifier"),
             },
-            BindingDocsKind::Module => code_font!("module"),
+            BindingDocsKind::Module { .. } => code_font!("module"),
         },
     }
 }

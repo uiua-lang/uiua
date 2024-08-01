@@ -226,9 +226,10 @@ impl Compiler {
                 self.validate_local(&r.name.value, local, &r.name.span);
                 self.code_meta
                     .global_references
-                    .insert(r.name.clone(), local.index);
+                    .insert(r.name.span.clone(), local.index);
                 for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                    (self.code_meta.global_references).insert(comp.module.clone(), local.index);
+                    (self.code_meta.global_references)
+                        .insert(comp.module.span.clone(), local.index);
                 }
                 // Handle recursion depth
                 self.macro_depth += 1;
@@ -1288,7 +1289,7 @@ impl Compiler {
                                     field_count += 1;
                                     self.code_meta
                                         .global_references
-                                        .insert(word.span.clone().sp(name.clone()), local.index);
+                                        .insert(word.span.clone(), local.index);
                                 }
                                 _ => {
                                     self.add_error(

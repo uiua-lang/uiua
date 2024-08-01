@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Fix fill bug
   - Change how git modules are copied?
   - Make main page examples more idiomatic
   - Fix pad cursor jumping with end-of-line comments
@@ -19,6 +18,7 @@
     - Channels?
     - Stack visualization output comments?
     - Plots?
+- Dead code elimination
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

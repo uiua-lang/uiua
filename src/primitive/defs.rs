@@ -2676,6 +2676,12 @@ primitive!(
     ///   :   struct[r g b a]
     ///   : ---
     ///   : ⇌ Color~New 0.1 0.2 0.3 1
+    /// Additionally, a `Fields` constant is created that contains the names of the struct's fields.
+    /// ex: # Experimental!
+    ///   : ---User
+    ///   :   struct{Username Salt Hashed Email}
+    ///   : ---
+    ///   : User~Fields
     (0(0)[1], Struct, Misc, "struct"),
     /// Run the Fast Fourier Transform on an array
     ///

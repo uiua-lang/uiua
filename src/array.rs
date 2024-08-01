@@ -724,6 +724,17 @@ impl FromIterator<String> for Array<Boxed> {
     }
 }
 
+impl<'a> FromIterator<&'a str> for Array<Boxed> {
+    fn from_iter<I: IntoIterator<Item = &'a str>>(iter: I) -> Self {
+        Array::from(
+            iter.into_iter()
+                .map(Value::from)
+                .map(Boxed)
+                .collect::<CowSlice<_>>(),
+        )
+    }
+}
+
 /// A trait for types that can be used as array elements
 #[allow(unused_variables)]
 pub trait ArrayValue:

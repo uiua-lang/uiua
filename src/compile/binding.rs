@@ -175,27 +175,31 @@ impl Compiler {
             return Ok(());
         }
 
-        let mut make_fn: Rc<dyn Fn(_, _, &mut Compiler) -> _> = Rc::new(
-            |instrs: EcoVec<Instr>, sig: Signature, comp: &mut Compiler| {
-                // Diagnostic for function that doesn't consume its arguments
-                if let [Instr::Prim(Primitive::Dup, span), rest @ ..] = instrs.as_slice() {
-                    if let Span::Code(dup_span) = comp.get_span(*span) {
-                        if let Ok(rest_sig) = instrs_signature(rest) {
-                            if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs {
-                                comp.emit_diagnostic(
-                                    "Functions should consume their arguments. \
+        let mut make_fn: Box<dyn FnOnce(_, _, &mut Compiler) -> _> = {
+            let name = name.clone();
+            Box::new(
+                move |instrs: EcoVec<Instr>, sig: Signature, comp: &mut Compiler| {
+                    // Diagnostic for function that doesn't consume its arguments
+                    if let [Instr::Prim(Primitive::Dup, span), rest @ ..] = instrs.as_slice() {
+                        if let Span::Code(dup_span) = comp.get_span(*span) {
+                            if let Ok(rest_sig) = instrs_signature(rest) {
+                                if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs
+                                {
+                                    comp.emit_diagnostic(
+                                        "Functions should consume their arguments. \
                                     Try removing this.",
-                                    DiagnosticKind::Style,
-                                    dup_span,
-                                );
+                                        DiagnosticKind::Style,
+                                        dup_span,
+                                    );
+                                }
                             }
                         }
                     }
-                }
 
-                comp.make_function(FunctionId::Named(name.clone()), sig, instrs)
-            },
-        );
+                    comp.make_function(FunctionId::Named(name), sig, instrs)
+                },
+            )
+        };
         let words_span = (binding.words.first())
             .zip(binding.words.last())
             .map(|(f, l)| f.span.clone().merge(l.span.clone()))
@@ -222,8 +226,8 @@ impl Compiler {
 
         if self_referenced {
             let name = name.clone();
-            let make = make_fn.clone();
-            make_fn = Rc::new(move |instrs, sig, comp: &mut Compiler| {
+            let make = make_fn;
+            make_fn = Box::new(move |instrs, sig, comp: &mut Compiler| {
                 let mut f = make(instrs, sig, comp);
                 f.recursive = true;
                 let instrs = eco_vec![Instr::PushFunc(f), Instr::CallRecursive(spandex)];
@@ -254,7 +258,7 @@ impl Compiler {
                         func
                     };
                     sig = f.signature();
-                    self.compile_bind_function(&name, local, func, spandex, comment.as_deref())?;
+                    self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
                 } else if sig == (0, 1) && !is_setinv && !is_setund {
                     if let &[Instr::Prim(Primitive::Tag, span)] = instrs.as_slice() {
                         instrs.push(Instr::Label {
@@ -278,8 +282,7 @@ impl Compiler {
                     };
 
                     let is_const = val.is_some();
-                    self.compile_bind_const(&name, local, val, spandex, comment.as_deref());
-                    self.scope.names.insert(name.clone(), local);
+                    self.compile_bind_const(name, local, val, spandex, comment.as_deref());
                     if is_const {
                         if !(self.asm.top_slices.last())
                             .is_some_and(|slice| slice.start >= instrs_start)
@@ -330,7 +333,7 @@ impl Compiler {
                         let val = val.clone();
                         self.asm.instrs.pop();
                         self.compile_bind_const(
-                            &name,
+                            name,
                             local,
                             Some(val),
                             spandex,
@@ -343,15 +346,9 @@ impl Compiler {
                         }
                     } else if sig == (0, 0) {
                         let func = make_fn(instrs, sig, self);
-                        self.compile_bind_function(
-                            &name,
-                            local,
-                            func,
-                            spandex,
-                            comment.as_deref(),
-                        )?;
+                        self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
                     } else {
-                        self.compile_bind_const(&name, local, None, spandex, comment.as_deref());
+                        self.compile_bind_const(name, local, None, spandex, comment.as_deref());
                         let start = self.asm.instrs.len();
                         self.asm.instrs.push(Instr::BindGlobal {
                             span: spandex,
@@ -359,11 +356,10 @@ impl Compiler {
                         });
                         self.asm.top_slices.push(FuncSlice { start, len: 1 });
                     }
-                    self.scope.names.insert(name.clone(), local);
                 } else {
                     // Binding is a normal function
                     let func = make_fn(instrs, sig, self);
-                    self.compile_bind_function(&name, local, func, spandex, comment.as_deref())?;
+                    self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
                 }
 
                 // Validate signature
@@ -393,7 +389,7 @@ impl Compiler {
                     // Binding is a normal function
                     instrs.insert(0, Instr::NoInline);
                     let func = make_fn(instrs, sig.value, self);
-                    self.compile_bind_function(&name, local, func, spandex, comment.as_deref())?;
+                    self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
                 } else {
                     self.add_error(
                         binding.name.span.clone(),

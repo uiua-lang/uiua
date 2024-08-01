@@ -11,7 +11,6 @@ use std::{
     mem::{replace, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
-    rc::Rc,
     sync::Arc,
     time::Duration,
 };
@@ -669,7 +668,7 @@ code:
     }
     fn compile_bind_function(
         &mut self,
-        name: &Ident,
+        name: Ident,
         local: LocalName,
         function: Function,
         span: usize,
@@ -694,13 +693,13 @@ code:
             }
             comment
         });
-        self.scope.names.insert(name.clone(), local);
+        self.scope.names.insert(name, local);
         self.asm.bind_function(local, function, span, comment);
         Ok(())
     }
     fn compile_bind_const(
         &mut self,
-        name: &Ident,
+        name: Ident,
         local: LocalName,
         value: Option<Value>,
         span: usize,
@@ -725,6 +724,7 @@ code:
         });
         self.asm
             .add_global_at(local, BindingKind::Const(value), span, comment);
+        self.scope.names.insert(name, local);
     }
     /// Import a module
     pub(crate) fn import_module(&mut self, path_str: &str, span: &CodeSpan) -> UiuaResult<PathBuf> {
@@ -2237,9 +2237,8 @@ code:
             index,
             public: true,
         };
-        self.compile_bind_function(&name, local, function, 0, None)?;
         self.next_global += 1;
-        self.scope.names.insert(name, local);
+        self.compile_bind_function(name.clone(), local, function, 0, None)?;
         Ok(())
     }
     /// Create and bind a function in the current scope

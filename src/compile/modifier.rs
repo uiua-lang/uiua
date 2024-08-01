@@ -1278,7 +1278,7 @@ impl Compiler {
                                         format!("Get `{name}`")
                                     };
                                     self.compile_bind_function(
-                                        name,
+                                        name.clone(),
                                         local,
                                         func,
                                         span,
@@ -1298,8 +1298,24 @@ impl Compiler {
                                 }
                             }
                         }
-                        // Make constructor
+                        // Make field names
                         let span = self.add_span(operand.span.clone());
+                        let local = LocalName {
+                            index: self.next_global,
+                            public: true,
+                        };
+                        self.next_global += 1;
+                        let comment = (module_name.as_ref())
+                            .map(|name| format!("Names of `{name}`'s fields"));
+                        let name = Ident::from("Fields");
+                        self.compile_bind_const(
+                            name,
+                            local,
+                            Some(Array::from_iter(names.iter().map(|s| s.as_str())).into()),
+                            span,
+                            comment.as_deref(),
+                        );
+                        // Make constructor
                         let mut instrs = eco_vec![Instr::BeginArray];
                         if arr.boxes {
                             if names.len() > 1 {
@@ -1342,7 +1358,7 @@ impl Compiler {
                         };
                         self.next_global += 1;
                         let comment = module_name.map(|name| format!("Create a new `{name}`"));
-                        self.compile_bind_function(&name, local, func, span, comment.as_deref())?;
+                        self.compile_bind_function(name, local, func, span, comment.as_deref())?;
                     }
                     _ => {
                         self.add_error(operand.span, "struct's argument must be stack array syntax")

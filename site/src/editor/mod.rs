@@ -642,7 +642,7 @@ pub fn Editor<'a>(
                     let (start, end) = (start.min(end), start.max(end));
                     let (start_line, _) = line_col(&code, start as usize);
                     let (end_line, _) = line_col(&code, end as usize);
-                    let mut lines: Vec<String> = code.lines().map(Into::into).collect();
+                    let mut lines: Vec<String> = code.split('\n').map(Into::into).collect();
                     let range = &mut lines[start_line - 1..end_line];
                     let prefix = if key == "/" { '#' } else { '$' };
                     if range.iter().all(|line| line.trim().starts_with(prefix)) {

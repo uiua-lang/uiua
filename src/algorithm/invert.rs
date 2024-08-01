@@ -783,6 +783,7 @@ fn invert_trivial_pattern<'a>(
             }
         }
         [Comment(_) | PushSig(_) | PopSig, input @ ..] => return Some((input, EcoVec::new())),
+        [TrackCaller, input @ ..] => return Some((input, eco_vec![TrackCaller])),
         [Label {
             label,
             span,

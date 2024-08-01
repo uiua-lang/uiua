@@ -1,9 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Module-scoped inline functions
-  - Change how git modules are copied?
-  - Make main page examples more idiomatic
   - Fix pad cursor jumping with end-of-line comments
   - Work into tutorial
     - Labels

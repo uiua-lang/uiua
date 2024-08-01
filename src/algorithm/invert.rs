@@ -839,9 +839,39 @@ fn invert_dup_pattern<'a>(
     let [Instr::Prim(Primitive::Dup, dup_span), input @ ..] = input else {
         return None;
     };
+
+    // // By inverse optimization
+    // for i in 0..input.len() {
+    //     let lower = &input[..i];
+    //     let Some(lower_sig) = instrs_clean_signature(lower) else {
+    //         continue;
+    //     };
+    //     println!("lower: {lower_sig:?}");
+    //     for j in i..input.len() {
+    //         let upper = &input[i..j];
+    //         let Some(upper_sig) = instrs_clean_signature(upper) else {
+    //             continue;
+    //         };
+    //         println!("  upper: {upper_sig:?}");
+    //         if lower_sig.outputs == upper_sig.args.saturating_sub(1) {
+    //             for pat in BY_INVERT_PATTERNS {
+    //                 if let Some((after, by_inv)) = pat.invert_extract(upper, comp) {
+    //                     if after.is_empty() {
+    //                         let mut instrs = eco_vec![Instr::Prim(Primitive::Dup, *dup_span),];
+    //                         instrs.extend(by_inv);
+    //                         instrs.extend_from_slice(lower);
+    //                         return Some((&input[j..], instrs));
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+
     let Some(dyadic_i) = (0..=input.len())
         .find(|&i| instrs_signature_no_temp(&input[..i]).is_some_and(|sig| sig == (2, 1)))
     else {
+        // Pattern matching
         let sig = instrs_signature(input).ok()?;
         return if sig.args == sig.outputs {
             let inv = eco_vec![
@@ -853,6 +883,7 @@ fn invert_dup_pattern<'a>(
             None
         };
     };
+    // Special cases
     let dyadic_whole = &input[..dyadic_i];
     let input = &input[dyadic_i..];
     let monadic_i = (0..=dyadic_whole.len()).rev().find(|&i| {
@@ -1407,13 +1438,13 @@ fn invert_push_temp_pattern<'a>(
     let (input, instr, inner, end_instr, depth) = try_push_temp_wrap(input)?;
     // By-inverse
     if let [Instr::Prim(Primitive::Dup, dup_span)] = inner {
-        for len in 1..=input.len() {
-            for mid in 0..len {
+        for end in 1..=input.len() {
+            for mid in 0..end {
                 let before = &input[..mid];
                 if instrs_clean_signature(before).map_or(true, |sig| sig != (0, 0)) {
                     continue;
                 };
-                let instrs = &input[mid..len];
+                let instrs = &input[mid..end];
                 let Some(sig) = instrs_clean_signature(instrs) else {
                     continue;
                 };
@@ -1430,7 +1461,7 @@ fn invert_push_temp_pattern<'a>(
                             ];
                             instrs.extend(by_inv);
                             instrs.extend_from_slice(before);
-                            return Some((&input[len..], instrs));
+                            return Some((&input[end..], instrs));
                         }
                     }
                 }

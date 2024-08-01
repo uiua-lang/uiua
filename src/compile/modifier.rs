@@ -1323,11 +1323,13 @@ impl Compiler {
                         let mut instrs = eco_vec![Instr::TrackCaller, Instr::BeginArray];
                         if arr.boxes {
                             if names.len() > 1 {
-                                instrs.push(Instr::PushTemp {
-                                    stack: TempStack::Inline,
-                                    count: names.len() - 1,
-                                    span,
-                                });
+                                for _ in 0..names.len() - 1 {
+                                    instrs.push(Instr::PushTemp {
+                                        stack: TempStack::Inline,
+                                        count: 1,
+                                        span,
+                                    });
+                                }
                             }
                             for (i, name) in names.iter().rev().enumerate() {
                                 if i > 0 {

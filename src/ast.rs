@@ -494,7 +494,7 @@ impl Modifier {
     pub fn args(&self) -> usize {
         match self {
             Modifier::Primitive(prim) => prim.modifier_args().unwrap_or(0),
-            Modifier::Ref(refer) => refer.modifier_args(),
+            Modifier::Ref(r) => r.modifier_args(),
         }
     }
 }

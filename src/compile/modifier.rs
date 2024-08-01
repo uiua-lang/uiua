@@ -384,6 +384,18 @@ impl Compiler {
                             comp.quote(&code, &modified.modifier.span, call)
                         })
                     })?;
+                } else if let Some(m) =
+                    (self.asm.bindings.get(local.index)).and_then(|binfo| match &binfo.kind {
+                        BindingKind::Module(m) => Some(m),
+                        _ => None,
+                    })
+                {
+                    // Module import macro
+                    let names = m.names.clone();
+                    self.in_scope(ScopeKind::AllInModule, move |comp| {
+                        comp.scope.names.extend(names);
+                        comp.words(modified.operands, call)
+                    })?;
                 } else {
                     return Err(self.fatal_error(
                         modified.modifier.span.clone(),

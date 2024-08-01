@@ -180,6 +180,8 @@ enum ScopeKind {
     File,
     /// A scope in a named module
     Module(Ident),
+    /// A scope that includes all bindings in a module
+    AllInModule,
     /// A temporary scope, probably for a macro
     Temp,
     /// A test scope between `---`s
@@ -1500,7 +1502,13 @@ code:
     }
     fn ref_local(&self, r: &Ref) -> UiuaResult<(Vec<LocalName>, LocalName)> {
         if let Some((module, path_locals)) = self.ref_path(&r.path, r.in_macro_arg)? {
-            if let Some(local) = module.names.get(&r.name.value).copied() {
+            if let Some(local) = module.names.get(&r.name.value).copied().or_else(|| {
+                (r.name.value.strip_suffix("!")).and_then(|name| {
+                    module.names.get(name).copied().filter(|local| {
+                        matches!(&self.asm.bindings[local.index].kind, BindingKind::Module(_))
+                    })
+                })
+            }) {
                 Ok((path_locals, local))
             } else {
                 Err(self.fatal_error(
@@ -1535,7 +1543,7 @@ code:
                 return Some(local);
             }
         }
-        None
+        self.find_name(name.strip_suffix("!")?, skip_local)
     }
     fn ref_path(
         &self,

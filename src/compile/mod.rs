@@ -1503,7 +1503,7 @@ code:
     fn ref_local(&self, r: &Ref) -> UiuaResult<(Vec<LocalName>, LocalName)> {
         if let Some((module, path_locals)) = self.ref_path(&r.path, r.in_macro_arg)? {
             if let Some(local) = module.names.get(&r.name.value).copied().or_else(|| {
-                (r.name.value.strip_suffix("!")).and_then(|name| {
+                (r.name.value.strip_suffix('!')).and_then(|name| {
                     module.names.get(name).copied().filter(|local| {
                         matches!(&self.asm.bindings[local.index].kind, BindingKind::Module(_))
                     })
@@ -1543,7 +1543,7 @@ code:
                 return Some(local);
             }
         }
-        self.find_name(name.strip_suffix("!")?, skip_local)
+        self.find_name(name.strip_suffix('!')?, skip_local)
     }
     fn ref_path(
         &self,

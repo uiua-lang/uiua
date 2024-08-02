@@ -342,6 +342,10 @@ impl CodeSpan {
             end: Loc::default(),
         }
     }
+    /// Get the number of characters in the span
+    pub fn char_count(&self) -> u32 {
+        self.end.char_pos - self.start.char_pos
+    }
     /// Merge two spans
     pub fn merge(mut self, end: Self) -> Self {
         self.merge_with(end);

@@ -80,6 +80,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Add some commands, which can be listed by typing `help` in the repl
 - Allow Uiua-specific tokens types to be disabled in the LSP
 ### Website
+- Fix a bug where running pad code that has end-of-line comments via ctrl+Enter would cause the cursor to move every time
 - Remove the Uiuisms page
   - It provided a "definitive" implementation of many algorithms where the best implementation is subjective and/or context-dependent
   - It is not how I want people to approach learning Uiua

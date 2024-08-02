@@ -350,35 +350,65 @@ pub struct FormatOutput {
 impl FormatOutput {
     /// Map a cursor position in unfomatted code to glyph start/end positions in formatted code
     pub fn map_char_pos(&self, pos: u32) -> (u32, u32) {
-        let mut pairs = self.glyph_map.iter().cloned();
-        let Some((mut a_span, (mut a_start, mut a_end))) = pairs.next() else {
-            return (pos, pos);
-        };
-        if pos <= a_span.start.char_pos {
-            return (pos, pos);
-        }
-        if (a_span.start.char_pos + 1..=a_span.end.char_pos).contains(&pos) {
-            return (a_start.char_pos, a_end.char_pos);
-        }
-        for (b_span, (b_start, b_end)) in pairs {
-            if (a_span.end.char_pos + 1..=b_span.start.char_pos).contains(&pos) {
-                return (
-                    a_start.char_pos + (pos - a_span.end.char_pos),
-                    a_end.char_pos + (pos - a_span.end.char_pos),
-                );
+        for (span, (start, end)) in &self.glyph_map {
+            if span.start.char_pos == pos {
+                return (start.char_pos, start.char_pos);
             }
-            if (b_span.start.char_pos + 1..=b_span.end.char_pos).contains(&pos) {
-                return (b_start.char_pos, b_end.char_pos);
+            let same_len = span.char_count() == end.char_pos - start.char_pos;
+            if same_len && span.end.char_pos == pos {
+                return (end.char_pos, end.char_pos);
             }
-            a_span = b_span;
-            a_start = b_start;
-            a_end = b_end;
+            if (span.start.char_pos..=span.end.char_pos).contains(&pos) {
+                return if same_len {
+                    let front = start.char_pos + pos - span.start.char_pos;
+                    let back = end.char_pos + pos - span.end.char_pos;
+                    (front, back)
+                } else {
+                    (start.char_pos, end.char_pos)
+                };
+            }
         }
-        (
-            a_start.char_pos + (pos - a_span.end.char_pos),
-            a_end.char_pos + (pos - a_span.end.char_pos),
-        )
+        for win in self.glyph_map.windows(2) {
+            let (a_span, (_, a_end)) = &win[0];
+            let (b_span, (b_start, _)) = &win[1];
+            if (a_span.end.char_pos..=b_span.start.char_pos).contains(&pos) {
+                let front = a_end.char_pos + pos - a_span.end.char_pos;
+                let back = b_start.char_pos + pos - b_span.start.char_pos;
+                return (front, back);
+            }
+        }
+        (pos, pos)
     }
+}
+
+#[test]
+#[cfg(test)]
+fn map_char_pos() {
+    let input = "\
++1drop1⇡40 # Range 2 to 40
+⊸(♭⊞×.)    # List of products
+▽¬⊸(mem:)  # Keep not in list
+"
+    .replace('\r', "");
+    let output = format_str(&input, &FormatConfig::default()).unwrap();
+    assert_eq!(output.map_char_pos(0), (0, 0));
+    assert_eq!(output.map_char_pos(1), (1, 1));
+    assert_eq!(output.map_char_pos(2), (2, 2));
+    assert_eq!(output.map_char_pos(3), (2, 3));
+    assert_eq!(output.map_char_pos(4), (2, 3));
+    assert_eq!(output.map_char_pos(5), (2, 3));
+    assert_eq!(output.map_char_pos(6), (2, 3));
+    assert_eq!(output.map_char_pos(9), (6, 6)); // Inside `40`
+    assert_eq!(output.map_char_pos(10), (7, 7));
+    assert_eq!(output.map_char_pos(26), (23, 23)); // End of line 1
+    assert_eq!(output.map_char_pos(27), (24, 24)); // Beginning of line 2
+    assert_eq!(output.map_char_pos(28), (25, 25));
+    assert_eq!(output.map_char_pos(29), (26, 26));
+    assert_eq!(output.map_char_pos(30), (27, 27));
+    assert_eq!(output.map_char_pos(31), (28, 28));
+    assert_eq!(output.map_char_pos(32), (29, 29));
+    assert_eq!(output.map_char_pos(33), (30, 30));
+    assert_eq!(output.map_char_pos(34), (31, 31));
 }
 
 /// Format Uiua code
@@ -412,11 +442,21 @@ fn format_impl(input: &str, src: InputSrc, config: &FormatConfig) -> UiuaResult<
             output_comments: None,
         }
         .format_top_items(&items);
-        Ok(FormatOutput {
+        let formatted = FormatOutput {
             output,
             glyph_map,
             inputs,
-        })
+        };
+        // for (span, (start, end)) in &formatted.glyph_map {
+        //     span.as_str(&formatted.inputs, |s| {
+        //         println!(
+        //             "{s:?}: {}-{} -> {}-{}",
+        //             span.start.char_pos, span.end.char_pos, start.char_pos, end.char_pos
+        //         )
+        //     });
+        // }
+        // println!("{:?}", formatted.map_char_pos(24));
+        Ok(formatted)
     } else {
         Err(UiuaErrorKind::Parse(errors, inputs.into()).into())
     }
@@ -553,8 +593,8 @@ impl<'a> Formatter<'a> {
                     }
                     line.push_str(&comment);
                     // Update subsequent mappings
-                    let byte_len_diff = line.len() - start_byte_len;
-                    let char_len_diff = line.chars().count() - start_char_len;
+                    let byte_len_diff = line.len() - start_byte_len - 1;
+                    let char_len_diff = line.chars().count() - start_char_len - 1;
                     for (before, after) in self.glyph_map.iter_mut() {
                         if before.start.line as usize > line_number {
                             after.0.byte_pos += byte_len_diff as u32;
@@ -1226,10 +1266,8 @@ impl<'a> Formatter<'a> {
     fn push(&mut self, span: &CodeSpan, formatted: &str) {
         let start = end_loc(&self.output);
         self.output.push_str(formatted);
-        if &self.inputs.get(&span.src)[span.byte_range()] != formatted {
-            let end = end_loc(&self.output);
-            self.glyph_map.push((span.clone(), (start, end)));
-        }
+        let end = end_loc(&self.output);
+        self.glyph_map.push((span.clone(), (start, end)));
     }
     fn output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {
         let values = self.output_comments.get_or_insert_with(|| {

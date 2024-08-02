@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Fix pad cursor jumping with end-of-line comments
   - Work into tutorial
     - Labels
     - Line splitting

@@ -1338,6 +1338,7 @@ code:
         };
         let mut frame = self.rt.call_stack[i].clone();
         frame.pc = 0;
+        self.respect_execution_limit()?;
         self.call_frame(frame)
     }
     /// Spawn a thread

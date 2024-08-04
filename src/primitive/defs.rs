@@ -1333,6 +1333,10 @@ primitive!(
     /// [un][keep] splits an array into a counts list and an array with adjacent similar rows deduplicated.
     /// ex: °▽ "mississippi"
     ///
+    /// A non-integer scalar count will either remove or duplicate rows at regular intervals.
+    /// ex: ▽ 0.5 ⇡10
+    /// ex: ▽ 1.5 ⇡10
+    ///
     /// [under][keep] allows you to modify part of an array according to a mask.
     /// ex: ⍜▽(+1) =@s. "mississippi"
     ///

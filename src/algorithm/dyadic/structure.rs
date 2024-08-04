@@ -951,7 +951,7 @@ impl<T: ArrayValue> Array<T> {
                 from.shape.insert(0, 1);
                 into = under_select_different_size(&from, indices, &into, env)?;
             }
-        } else if self.shape[1..] == into.shape[1..] {
+        } else if self.shape.iter().skip(1).eq(into.shape.iter().skip(1)) {
             undo_select_same_size(self.row_slices(), indices, &mut into, env)?;
         } else {
             into = under_select_different_size(self, indices, &into, env)?;

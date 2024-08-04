@@ -2,7 +2,7 @@
 
 use std::{cmp::Ordering, slice};
 
-use crate::{check::instrs_clean_signature, format::format_words, UiuaErrorKind};
+use crate::{format::format_words, UiuaErrorKind};
 
 use super::*;
 
@@ -495,7 +495,7 @@ impl Compiler {
             }};
         }
         match prim {
-            Dip | Gap | On | By | But | With | Above | Below => 'blk: {
+            Dip | Gap | On | By | But | With | Above | Below => {
                 // Compile operands
                 let (mut instrs, mut sig) =
                     self.compile_operand_word(modified.operands[0].clone())?;
@@ -554,24 +554,6 @@ impl Compiler {
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
                     prim if prim == By || prim == With && sig.args == 0 => {
-                        if call && sig == (1, 1) {
-                            if let Some(new_func) = self.new_functions.last_mut() {
-                                for i in (0..new_func.len()).rev() {
-                                    let Some(subsig) = instrs_clean_signature(&new_func[i..])
-                                    else {
-                                        continue;
-                                    };
-                                    if subsig == (1, 1) {
-                                        let suffix = EcoVec::from(&new_func[i..]);
-                                        new_func.truncate(i);
-                                        self.push_instr(Instr::Prim(Dup, span));
-                                        self.push_all_instrs(suffix);
-                                        self.push_all_instrs(instrs);
-                                        break 'blk;
-                                    }
-                                }
-                            }
-                        }
                         if sig.args > 0 {
                             let mut i = 0;
                             if sig.args > 1 {

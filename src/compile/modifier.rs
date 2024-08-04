@@ -554,14 +554,14 @@ impl Compiler {
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
                     prim if prim == By || prim == With && sig.args == 0 => {
-                        if call && sig.args == 1 {
+                        if call && sig == (1, 1) {
                             if let Some(new_func) = self.new_functions.last_mut() {
                                 for i in (0..new_func.len()).rev() {
                                     let Some(subsig) = instrs_clean_signature(&new_func[i..])
                                     else {
                                         continue;
                                     };
-                                    if subsig.outputs == sig.args.saturating_sub(1) {
+                                    if subsig == (1, 1) {
                                         let suffix = EcoVec::from(&new_func[i..]);
                                         new_func.truncate(i);
                                         self.push_instr(Instr::Prim(Dup, span));

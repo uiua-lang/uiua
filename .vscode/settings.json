@@ -8,5 +8,13 @@
     "rust-analyzer.check.features": [
         "audio"
     ],
-    "rust-analyzer.showUnlinkedFileNotification": false
+    "rust-analyzer.showUnlinkedFileNotification": false,
+    "cSpell.enableFiletypes": [
+        "!rust",
+        "markdown"
+    ],
+    "cSpell.enabled": true,
+    "cSpell.words": [
+        "Uiua"
+    ]
 }

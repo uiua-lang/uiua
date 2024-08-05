@@ -70,6 +70,7 @@ pub fn Site() -> impl IntoView {
         }
         .into_view(),
         view!("Check out "<a href="https://tacittalk.com/">"Tacit Talk"</a>"!").into_view(),
+        "Abandon nominativity. Embrace relativity.".into_view(),
         view! {
             <div class="long-subtitle">
                 <div style="display: flex; gap: 0.5em;">
@@ -84,41 +85,6 @@ pub fn Site() -> impl IntoView {
         }
         .into_view(),
         "It's got um...I um...arrays".into_view(),
-        view! {
-            <div class="long-subtitle">
-                <div>
-                    <div style="font-style: normal"><Prim prim=Try glyph_only=true/></div>
-                    " Hey bro! Throw me the error!"
-                    <div style="font-style: normal"><Prim prim=Assert glyph_only=true/></div>
-                </div>
-                <div>
-                    <div style="font-style: normal"><Prims prims=[Repeat, Do]/></div>
-                    " Kids! Dinner's ready! Who wants "
-                    <div class="spoiler">"control flow"</div>
-                    "?"
-                </div>
-            </div>
-        }
-        .into_view(),
-        view! {
-                <div style="display: flex; gap: 0.5em;">
-                    "A "<div style="font-style: normal"><Prim prim=Fork/></div>
-                    " is worth a thousand "<div style="font-style: normal"><Prim prim=Dip/></div>"s."
-                </div>
-        }.into_view(),
-        view! {
-            <div class="long-subtitle">
-                <div>
-                    <div style="font-style: normal"><Prim prim=Repeat/></div>
-                    " Sometimes I miss the days when I could break"
-                </div>
-                <div>
-                    <div style="font-style: normal"><Prim prim=Do/></div>
-                    " Oh honey, don't be silly. That's why you have me ❤️"
-                </div>
-            </div>
-        }
-        .into_view(),
     ];
     let local_storage = window().local_storage().unwrap().unwrap();
     let mut visits: usize = (local_storage.get_item("visits").ok().flatten())

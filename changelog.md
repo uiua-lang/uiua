@@ -97,7 +97,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.11.0).
   - [`under ⍜`](https://uiua.org/docs/under) [`fix ¤`](https://uiua.org/docs/fix) retains the old behavior
   - Collapsing the top two dimensions of an array can still be done with [`reduce /`](https://uiua.org/docs/reduce)[`join ⊂`](https://uiua.org/docs/join)
 - **Breaking Change** - [`un °`](https://uiua.org/docs/un) [`on ⟜`](https://uiua.org/docs/on) now does pattern matching in some cases
-  - This makes its bevahior conform to the rule that a function's inverse must have the opposite signature
+  - This makes its behavior conform to the rule that a function's inverse must have the opposite signature
   - Some other cases, such as `°⟜+`, now properly invert the function
 - **Breaking Change** - [`keep ▽`](https://uiua.org/docs/keep) with a scalar counts array now copies each row that many times
   - This matches the behaviors of APL and BQN, and is generally more useful
@@ -162,7 +162,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.11.0).
   - `bind λ`
   - `types`
   - `shapes`
-- Remove several backward compatibile glyphs from the lexer
+- Remove several backward compatible glyphs from the lexer
   - This frees up some glyphs that can now be used as function names
 ### Interpreter
 - Lots of optimizations
@@ -262,7 +262,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - Add `# No inline!` semantic comment, which prevents a function and its callers from being inlined
   - This enables better stack traces on errors
 - Deprecate [`bind`](https://uiua.org/docs/bind)
-  - It undermines the priniciples of the language
+  - It undermines the principles of the language
   - It makes certain optimizations impossible
   - [`fill ⬚`](https://uiua.org/docs/fill) and/or [`map`](https://uiua.org/docs/map) can be used to achieve similar effects
 - Deprecate [`deal`](https://uiua.org/docs/deal)
@@ -363,7 +363,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - A [`fill ⬚`](https://uiua.org/docs/fill) value set outside a looping modifier will now no longer be available inside the loop
   - This should make it easier to scope [`fill ⬚`](https://uiua.org/docs/fill) correctly
 - [`fill ⬚`](https://uiua.org/docs/fill) can now match the lengths of inputs to [`rows ≡`](https://uiua.org/docs/rows)
-- Add recursion via refering to a binding's name within its body
+- Add recursion via referring to a binding's name within its body
   - Deprecate [`this ↬`](https://uiua.org/docs/this) and [`recur ↫`](https://uiua.org/docs/recur), as they are no longer necessary
 - Extend some math functions to work with characters
   - [`sign ±`](https://uiua.org/docs/sign) gets the case of a character
@@ -441,8 +441,8 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - [`fill ⬚`](https://uiua.org/docs/fill) can now be used to specify default accumulators for [`reduce /`](https://uiua.org/docs/reduce), [`group ⊕`](https://uiua.org/docs/group), and [`partition ⊜`](https://uiua.org/docs/partition)
   - **Breaking Change** - Reducing [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) no longer take a required accumulator
   - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill) can no longer be temporarily disabled. Try to scope it to the smallest function.
-- **Breaking Change** - Most non-pervasive monadic functions no longer implicitely unbox their argument
-  - This impliciteness led to some unexpected behavior, particularly when getting the [`length ⧻`](https://uiua.org/docs/length) or [`shape △`](https://uiua.org/docs/shape) of a boxed array
+- **Breaking Change** - Most non-pervasive monadic functions no longer implicitly unbox their argument
+  - This implicitness led to some unexpected behavior, particularly when getting the [`length ⧻`](https://uiua.org/docs/length) or [`shape △`](https://uiua.org/docs/shape) of a boxed array
   - Exceptions are [`reverse ⇌`](https://uiua.org/docs/reverse) and [`transpose ⍉`](https://uiua.org/docs/transpose), which work on box elements without unboxing them
 - Unicode escape sequences that are not 2 or 4 hex digits long can now be specified with `\u{…}`
 - Change [`pop ◌`](https://uiua.org/docs/pop)'s glyph to make it look good in planet notation. Code using `;` will continue to work and will be formatted as `◌`.
@@ -647,7 +647,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - Allow multiple values to be returned from [`each ∵`](https://uiua.org/docs/each), [`rows ≡`](https://uiua.org/docs/rows), `distribute ∺`, `tribute ≐`, [`table ⊞`](https://uiua.org/docs/table), and [`cross ⊠`](https://uiua.org/docs/cross)
 - [`invert ⍘`](https://uiua.org/docs/un) [`atangent ∠`](https://uiua.org/docs/atangent) now produces the sine and cosine of an angle
 - [`&i`](https://uiua.org/docs/&i) now treats paths as relative to the file calling it rather than the current working directory
-- Rank list functions for the rank-generic modifiers can now take any number of arguments. For any number of aguments greater that 0, an empty numeric list will be pushed before the function is called.
+- Rank list functions for the rank-generic modifiers can now take any number of arguments. For any number of augments greater that 0, an empty numeric list will be pushed before the function is called.
 - Add fraction literals with `/`
 - Parsing multiple formattable functions from words is now smarter
 - Remove `bind '`. It made code hard to read. It will continue to parse, but will be formatted as `(…)`
@@ -792,7 +792,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - `\uNNNN` for full Unicode sequences
 ### Interpreter
 - The formatter now aligns consecutive end-of-line comments
-- `NaN`s no longer propogate in [`minimum ⌊`](https://uiua.org/docs/minimum) and [`maximum ⌈`](https://uiua.org/docs/maximum)
+- `NaN`s no longer propagate in [`minimum ⌊`](https://uiua.org/docs/minimum) and [`maximum ⌈`](https://uiua.org/docs/maximum)
 - Fix a bug that prevented [`under ⍜`](https://uiua.org/docs/under) multidimensional [`take ↙`](https://uiua.org/docs/take) and [`drop ↘`](https://uiua.org/docs/drop) from working
 - Fix a bug in how [`fold ∧`](https://uiua.org/docs/fold) ordered multiple accumulators
 - Fix a bug that allowed incorrect signatures to be declared for functions
@@ -815,7 +815,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - Add the `sig` function, which returns the stack signature of a value
 - A negative dimensions in the shape passed to [`reshape ↯`](https://uiua.org/docs/reshape) can now be in *any* position, not just the first or last
 - Functions with ASCII glyphs now also format from their names
-- Add a advice diagnostic about the captialization of binding names
+- Add a advice diagnostic about the capitalization of binding names
 ### Interpreter
 - A few performance improvements, particularly to [`keep ▽`](https://uiua.org/docs/keep), [`fork ⊃`](https://uiua.org/docs/fork), and [`under ⍜`](https://uiua.org/docs/under)
 ### Website

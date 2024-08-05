@@ -41,7 +41,7 @@ pub struct Compiler {
     pub(crate) asm: Assembly,
     pub(crate) code_meta: CodeMeta,
     /// Functions which are under construction
-    new_functions: Vec<EcoVec<Instr>>,
+    new_functions: Vec<NewFunction>,
     /// The name of the current bindings
     current_bindings: Vec<CurrentBinding>,
     /// The index of the next global binding
@@ -109,6 +109,39 @@ impl Default for Compiler {
             macro_env: Uiua::default(),
         }
     }
+}
+
+/// A function that is under construction
+///
+/// Has a list of instructions but also tracks flags
+#[derive(Clone, Default)]
+pub(crate) struct NewFunction {
+    pub instrs: EcoVec<Instr>,
+    pub flags: FunctionFlags,
+}
+
+impl From<EcoVec<Instr>> for NewFunction {
+    fn from(instrs: EcoVec<Instr>) -> Self {
+        Self {
+            instrs,
+            flags: FunctionFlags::default(),
+        }
+    }
+}
+
+impl From<FunctionFlags> for NewFunction {
+    fn from(flags: FunctionFlags) -> Self {
+        Self {
+            flags,
+            instrs: EcoVec::new(),
+        }
+    }
+}
+
+#[derive(Default)]
+struct BindingPrelude {
+    flags: FunctionFlags,
+    comment: Option<EcoString>,
 }
 
 /// A Uiua module
@@ -482,10 +515,10 @@ code:
             }
         }
 
-        let mut prev_comment = None;
+        let mut prelude = BindingPrelude::default();
         let mut item_errored = false;
         for item in items {
-            if let Err(e) = self.item(item, &mut prev_comment) {
+            if let Err(e) = self.item(item, &mut prelude) {
                 if !item_errored {
                     self.errors.push(e);
                 }
@@ -494,7 +527,7 @@ code:
         }
         Ok(())
     }
-    fn item(&mut self, item: Item, prev_comment: &mut Option<EcoString>) -> UiuaResult {
+    fn item(&mut self, item: Item, prelude: &mut BindingPrelude) -> UiuaResult {
         fn words_should_run_anyway(words: &[Sp<Word>]) -> bool {
             let mut anyway = false;
             recurse_words(words, &mut |w| {
@@ -506,42 +539,48 @@ code:
             anyway
         }
         let mut lines = match item {
-            Item::Module(m) => {
-                let prev_com = prev_comment.take();
-                return self.module(m, prev_com);
-            }
+            Item::Module(m) => return self.module(m, take(prelude).comment),
             Item::Words(lines) => lines,
             Item::Binding(binding) => {
                 let can_run = match self.mode {
                     RunMode::Normal => !self.in_test,
                     RunMode::All | RunMode::Test => true,
                 };
-                let prev_com = prev_comment.take();
+                let prelude = take(prelude);
                 if can_run || words_should_run_anyway(&binding.words) {
-                    self.binding(binding, prev_com)?;
+                    self.binding(binding, prelude)?;
                 }
                 return Ok(());
             }
-            Item::Import(import) => return self.import(import, prev_comment.take()),
+            Item::Import(import) => return self.import(import, take(prelude).comment),
         };
 
         // Compile top-level words
 
-        // Get top-level comments
+        // Populate prelude
         for line in &lines {
-            if let [Sp {
-                value: Word::Comment(com),
-                ..
-            }] = line.as_slice()
-            {
-                if let Some(curr_com) = prev_comment {
-                    curr_com.push('\n');
-                    curr_com.push_str(com);
-                } else {
-                    *prev_comment = Some(com.as_str().into());
+            let mut words = line.iter().filter(|w| !matches!(w.value, Word::Spaces));
+            if words.clone().count() == 1 {
+                let word = words.next().unwrap();
+                match &word.value {
+                    Word::Comment(c) => {
+                        if let Some(curr_com) = &mut prelude.comment {
+                            curr_com.push('\n');
+                            curr_com.push_str(c);
+                        } else {
+                            prelude.comment = Some(c.as_str().into());
+                        }
+                    }
+                    Word::SemanticComment(SemanticComment::NoInline) => {
+                        prelude.flags.set_no_inline(true)
+                    }
+                    Word::SemanticComment(SemanticComment::TrackCaller) => {
+                        prelude.flags.set_track_caller(true)
+                    }
+                    _ => *prelude = BindingPrelude::default(),
                 }
             } else {
-                *prev_comment = None;
+                *prelude = BindingPrelude::default();
             }
         }
         let can_run = match self.mode {
@@ -568,11 +607,11 @@ code:
             // Compile the words
             let instr_count_before = self.asm.instrs.len();
             let binding_count_before = self.asm.bindings.len();
-            let instrs = self.compile_words(line, true)?;
+            let new_func = self.compile_words(line, true)?;
             let binding_count_after = self.asm.bindings.len();
-            let (mut instrs, pre_eval_errors) = self.pre_eval_instrs(instrs);
+            let (mut new_func, pre_eval_errors) = self.pre_eval_instrs(new_func);
             let mut line_eval_errored = false;
-            match instrs_signature(&instrs) {
+            match instrs_signature(&new_func.instrs) {
                 Ok(sig) => {
                     // Update scope stack height
                     if let Ok(height) = &mut self.scope.stack_height {
@@ -584,7 +623,7 @@ code:
                     // - there are at least as many push instructions preceding the current line as there are arguments to the line
                     // - the words create no bindings
                     if self.pre_eval_mode != PreEvalMode::Line
-                        && !instrs.is_empty()
+                        && !new_func.instrs.is_empty()
                         && instr_count_before >= sig.args
                         && binding_count_before == binding_count_after
                         && (self.asm.instrs.iter().take(instr_count_before).rev())
@@ -597,7 +636,7 @@ code:
                             &self.asm.instrs
                                 [instr_count_before.saturating_sub(sig.args)..instr_count_before],
                         );
-                        comp_instrs.extend(instrs.iter().cloned());
+                        comp_instrs.extend(new_func.instrs.iter().cloned());
                         match self.comptime_instrs(comp_instrs) {
                             Ok(Some(vals)) => {
                                 // Track top level values
@@ -620,7 +659,7 @@ code:
                                     }
                                 }
                                 // Set instrs
-                                instrs = vals.into_iter().map(Instr::push).collect();
+                                new_func.instrs = vals.into_iter().map(Instr::push).collect();
                             }
                             Ok(None) => {}
                             Err(e) => {
@@ -636,7 +675,7 @@ code:
                 self.errors.extend(pre_eval_errors);
             }
             let start = self.asm.instrs.len();
-            self.asm.instrs.extend(instrs);
+            self.asm.instrs.extend(new_func.instrs);
             let end = self.asm.instrs.len();
             if end != start {
                 self.asm.top_slices.push(FuncSlice {
@@ -652,23 +691,23 @@ code:
         &mut self,
         id: FunctionId,
         sig: Signature,
-        instrs: EcoVec<Instr>,
+        new_func: NewFunction,
     ) -> Function {
-        let (instrs, errors) = self.pre_eval_instrs(instrs);
+        let (new_func, errors) = self.pre_eval_instrs(new_func);
         self.errors.extend(errors);
-        let len = instrs.len();
+        let len = new_func.instrs.len();
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
         }
         let start = if len == 0 { 0 } else { self.asm.instrs.len() };
         let mut hasher = DefaultHasher::new();
-        instrs.hash(&mut hasher);
+        new_func.instrs.hash(&mut hasher);
         let hash = hasher.finish();
-        self.asm.instrs.extend(instrs);
+        self.asm.instrs.extend(new_func.instrs);
         if len > 1 {
             (self.asm.instrs).push(Instr::Comment(format!("{id})").into()));
         }
-        Function::new(id, sig, FuncSlice { start, len }, hash)
+        Function::new(id, sig, FuncSlice { start, len }, hash).with_flags(new_func.flags)
     }
     fn compile_bind_function(
         &mut self,
@@ -832,25 +871,25 @@ code:
             pathdiff::diff_paths(&target, base).unwrap_or(target)
         }
     }
-    fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<EcoVec<Instr>> {
+    fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<NewFunction> {
         let words = unsplit_words(split_words(words))
             .into_iter()
             .flatten()
             .collect();
 
-        self.new_functions.push(EcoVec::new());
+        self.new_functions.push(NewFunction::default());
         self.words(words, call)?;
         Ok(self.new_functions.pop().unwrap())
     }
-    fn compile_operand_word(&mut self, word: Sp<Word>) -> UiuaResult<(EcoVec<Instr>, Signature)> {
+    fn compile_operand_word(&mut self, word: Sp<Word>) -> UiuaResult<(NewFunction, Signature)> {
         let span = word.span.clone();
-        let mut instrs = self.compile_words(vec![word], true)?;
+        let mut new_func = self.compile_words(vec![word], true)?;
         let mut sig = None;
         // Extract function instrs if possible
-        if let [Instr::PushFunc(f)] = instrs.as_slice() {
+        if let [Instr::PushFunc(f)] = new_func.instrs.as_slice() {
             sig = Some(f.signature());
             let slice = f.slice;
-            instrs = f.instrs(&self.asm).into();
+            new_func.instrs = f.instrs(&self.asm).into();
             if slice.start + slice.len >= self.asm.instrs.len() - 1 {
                 self.asm.instrs.truncate(slice.start);
                 if matches!(self.asm.instrs.last(), Some(Instr::Comment(com)) if com.starts_with('('))
@@ -862,10 +901,10 @@ code:
         let sig = if let Some(sig) = sig {
             sig
         } else {
-            self.sig_of(&instrs, &span)?
+            self.sig_of(&new_func.instrs, &span)?
         };
-        let instrs = optimize_instrs(instrs, false, &self.asm);
-        Ok((instrs, sig))
+        new_func.instrs = optimize_instrs(new_func.instrs, false, &self.asm);
+        Ok((new_func, sig))
     }
     fn words(&mut self, mut words: Vec<Sp<Word>>, call: bool) -> UiuaResult {
         words.retain(|word| word.value.is_code());
@@ -941,14 +980,14 @@ code:
                 _ => {}
             }
 
-            let start = self.new_functions.last().unwrap().len();
+            let start = self.new_functions.last().unwrap().instrs.len();
 
             // Compile the word
             self.word(word, call)?;
 
-            let new_functions = self.new_functions.last().unwrap();
-            let sig = if new_functions.len() >= start {
-                instrs_signature(&new_functions[start..]).ok()
+            let new_function = self.new_functions.last().unwrap();
+            let sig = if new_function.instrs.len() >= start {
+                instrs_signature(&new_function.instrs[start..]).ok()
             } else {
                 None
             };
@@ -962,12 +1001,15 @@ code:
     /// Also performs some optimizations if the instruction and the previous
     /// instruction form some known pattern
     fn push_instr(&mut self, instr: Instr) {
-        let instrs = self.new_functions.last_mut().unwrap();
-        optimize_instrs_mut(instrs, instr, false, &self.asm);
+        let new_func = self.new_functions.last_mut().unwrap();
+        optimize_instrs_mut(&mut new_func.instrs, instr, false, &self.asm);
     }
-    fn push_all_instrs(&mut self, instrs: EcoVec<Instr>) {
-        for instr in instrs {
-            self.push_instr(instr);
+    fn push_all_instrs(&mut self, new_func: impl Into<NewFunction>) {
+        let new_func = new_func.into();
+        let curr = self.new_functions.last_mut().unwrap();
+        curr.flags |= new_func.flags;
+        for instr in new_func.instrs {
+            optimize_instrs_mut(&mut curr.instrs, instr, false, &self.asm);
         }
     }
     fn word(&mut self, word: Sp<Word>, call: bool) -> UiuaResult {
@@ -978,7 +1020,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        eco_vec![instr],
+                        eco_vec![instr].into(),
                     ));
                 }
                 self.push_instr(instr);
@@ -994,7 +1036,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        eco_vec![instr],
+                        eco_vec![instr].into(),
                     ));
                 }
                 self.push_instr(instr);
@@ -1005,7 +1047,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        eco_vec![instr],
+                        eco_vec![instr].into(),
                     ));
                 }
                 self.push_instr(instr);
@@ -1023,7 +1065,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        eco_vec![instr],
+                        eco_vec![instr].into(),
                     ));
                 }
                 self.push_instr(instr);
@@ -1038,7 +1080,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         Signature::new(0, 1),
-                        eco_vec![instr],
+                        eco_vec![instr].into(),
                     ));
                 }
                 self.push_instr(instr);
@@ -1052,7 +1094,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         signature,
-                        eco_vec![instr],
+                        eco_vec![instr].into(),
                     ));
                 }
                 self.push_instr(instr);
@@ -1082,7 +1124,7 @@ code:
                     instr = Instr::PushFunc(self.make_function(
                         FunctionId::Anonymous(word.span.clone()),
                         signature,
-                        eco_vec![instr],
+                        eco_vec![instr].into(),
                     ));
                 }
                 self.push_instr(instr);
@@ -1123,14 +1165,18 @@ code:
                 }
                 self.code_meta.strands.insert(word.span.clone(), just_spans);
                 // Flatten instrs
-                let inner: Vec<Instr> = op_instrs
-                    .into_iter()
-                    .flat_map(|(instrs, _)| instrs)
-                    .collect();
+                let (inner, flags): (Vec<Instr>, FunctionFlags) = op_instrs.into_iter().fold(
+                    (Vec::new(), FunctionFlags::default()),
+                    |(mut inner, mut flags), (nf, _)| {
+                        inner.extend(nf.instrs);
+                        flags |= nf.flags;
+                        (inner, flags)
+                    },
+                );
 
                 // Normal strand
                 if !call {
-                    self.new_functions.push(EcoVec::new());
+                    self.new_functions.push(NewFunction::from(flags));
                 }
                 self.push_instr(Instr::BeginArray);
                 // Diagnostic for strand of characters
@@ -1147,7 +1193,7 @@ code:
                 }
 
                 let span_index = self.add_span(word.span.clone());
-                let instrs = self.new_functions.last_mut().unwrap();
+                let new_func = self.new_functions.last_mut().unwrap();
                 // Inline constant arrays
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
                     let values = inner.iter().rev().map(|instr| match instr {
@@ -1156,7 +1202,7 @@ code:
                     });
                     match Value::from_row_values(values, &(&word.span, &self.asm.inputs)) {
                         Ok(val) => {
-                            instrs.pop();
+                            new_func.instrs.pop();
                             self.push_instr(Instr::push(val));
                             return Ok(());
                         }
@@ -1165,15 +1211,15 @@ code:
                     }
                 }
                 // Normal case
-                instrs.extend(inner);
+                new_func.instrs.extend(inner);
                 self.push_instr(Instr::EndArray {
                     span: span_index,
                     boxed: false,
                 });
                 if !call {
-                    let instrs = self.new_functions.pop().unwrap();
-                    let sig = instrs_signature(&instrs).unwrap();
-                    let func = self.make_function(FunctionId::Anonymous(word.span), sig, instrs);
+                    let new_func = self.new_functions.pop().unwrap();
+                    let sig = instrs_signature(&new_func.instrs).unwrap();
+                    let func = self.make_function(FunctionId::Anonymous(word.span), sig, new_func);
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
@@ -1194,13 +1240,16 @@ code:
                 }
 
                 if !call {
-                    self.new_functions.push(EcoVec::new());
+                    self.new_functions.push(NewFunction::default());
                 }
                 self.push_instr(Instr::BeginArray);
                 let mut inner = Vec::new();
+                let mut flags = FunctionFlags::default();
                 let line_count = arr.lines.len();
                 for lines in arr.lines.into_iter().rev() {
-                    inner.extend(self.compile_words(lines, true)?);
+                    let nf = self.compile_words(lines, true)?;
+                    inner.extend(nf.instrs);
+                    flags |= nf.flags;
                 }
                 // Validate inner loop correctness
                 let inner_sig = self.validate_array_loop_sig(&inner, &word.span);
@@ -1231,7 +1280,8 @@ code:
                     );
                 }
                 let span = self.add_span(word.span.clone());
-                let instrs = self.new_functions.last_mut().unwrap();
+                let new_func = self.new_functions.last_mut().unwrap();
+                new_func.flags |= flags;
                 // Inline constant arrays
                 if call && inner.iter().all(|instr| matches!(instr, Instr::Push(_))) {
                     let empty = inner.is_empty();
@@ -1256,7 +1306,7 @@ code:
                             self.code_meta
                                 .array_shapes
                                 .insert(word.span.clone(), val.shape().clone());
-                            instrs.pop();
+                            new_func.instrs.pop();
                             self.push_instr(Instr::push(val));
                             return Ok(());
                         }
@@ -1265,15 +1315,15 @@ code:
                     }
                 }
                 // Normal case
-                instrs.extend(inner);
+                new_func.instrs.extend(inner);
                 self.push_instr(Instr::EndArray {
                     span,
                     boxed: arr.boxes,
                 });
                 if !call {
-                    let instrs = self.new_functions.pop().unwrap();
-                    let sig = instrs_signature(&instrs).unwrap_or(Signature::new(0, 0));
-                    let func = self.make_function(FunctionId::Anonymous(word.span), sig, instrs);
+                    let new_func = self.new_functions.pop().unwrap();
+                    let sig = instrs_signature(&new_func.instrs).unwrap_or(Signature::new(0, 0));
+                    let func = self.make_function(FunctionId::Anonymous(word.span), sig, new_func);
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
@@ -1293,14 +1343,14 @@ code:
                     DiagnosticKind::Warning,
                     word.span.clone(),
                 );
-                let instrs = self.compile_words(words, true)?;
+                let new_func = self.compile_words(words, true)?;
                 if call {
-                    self.push_all_instrs(instrs);
+                    self.push_all_instrs(new_func);
                 } else {
-                    match instrs_signature(&instrs) {
+                    match instrs_signature(&new_func.instrs) {
                         Ok(sig) => {
                             let func =
-                                self.make_function(FunctionId::Anonymous(word.span), sig, instrs);
+                                self.make_function(FunctionId::Anonymous(word.span), sig, new_func);
                             self.push_instr(Instr::PushFunc(func));
                         }
                         Err(e) => {
@@ -1362,28 +1412,14 @@ code:
             Word::SemanticComment(sc) => match sc {
                 SemanticComment::Experimental => self.scope.experimental = true,
                 SemanticComment::NoInline => {
-                    let mut instr = Instr::NoInline;
-                    if !call {
-                        let f = self.make_function(
-                            FunctionId::Anonymous(word.span.clone()),
-                            Signature::new(0, 0),
-                            eco_vec![Instr::NoInline],
-                        );
-                        instr = Instr::PushFunc(f);
+                    if let Some(new_func) = self.new_functions.last_mut() {
+                        new_func.flags.set_no_inline(true);
                     }
-                    self.push_instr(instr);
                 }
                 SemanticComment::TrackCaller => {
-                    let mut instr = Instr::TrackCaller;
-                    if !call {
-                        let f = self.make_function(
-                            FunctionId::Anonymous(word.span.clone()),
-                            Signature::new(0, 0),
-                            eco_vec![Instr::TrackCaller],
-                        );
-                        instr = Instr::PushFunc(f);
+                    if let Some(new_func) = self.new_functions.last_mut() {
+                        new_func.flags.set_track_caller(true);
                     }
-                    self.push_instr(instr);
                 }
                 SemanticComment::Boo => {
                     self.add_error(word.span.clone(), "The compiler is scared!")
@@ -1660,7 +1696,8 @@ code:
             if call {
                 self.push_all_instrs(eco_vec![Instr::PushSig(sig), instr, Instr::PopSig]);
             } else {
-                let f = self.make_function(FunctionId::Anonymous(span), sig, eco_vec![instr]);
+                let f =
+                    self.make_function(FunctionId::Anonymous(span), sig, eco_vec![instr].into());
                 self.push_instr(Instr::PushFunc(f));
             }
         } else if let Some(local) = self.find_name(&ident, skip_local) {
@@ -1683,7 +1720,7 @@ code:
                 let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
-                    eco_vec![instr],
+                    eco_vec![instr].into(),
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
@@ -1708,7 +1745,7 @@ code:
                 let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
-                    eco_vec![Instr::push(val)],
+                    eco_vec![Instr::push(val)].into(),
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
@@ -1717,11 +1754,11 @@ code:
                 let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
-                    eco_vec![Instr::CallGlobal { index, call }],
+                    eco_vec![Instr::CallGlobal { index, call }].into(),
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
-            BindingKind::Func(f) if self.inlinable(f.instrs(&self.asm)) => {
+            BindingKind::Func(f) if self.inlinable(f.instrs(&self.asm), f.flags) => {
                 if call {
                     // Inline instructions
                     self.push_all_instrs(EcoVec::from(f.instrs(&self.asm)));
@@ -1777,28 +1814,30 @@ code:
         Ok(())
     }
     fn compile_func(&mut self, func: Func, span: CodeSpan) -> UiuaResult<Function> {
-        let (id, sig, instrs) = self.compile_func_instrs(func, span, true)?;
+        let (id, sig, new_func) = self.compile_func_instrs(func, span, true)?;
         let sig = sig.unwrap();
 
-        if let [Instr::PushFunc(f), Instr::Call(_)] = instrs.as_slice() {
+        if let [Instr::PushFunc(f), Instr::Call(_)] = new_func.instrs.as_slice() {
             return Ok(Function::clone(f));
         }
 
-        Ok(self.make_function(id, sig, instrs))
+        Ok(self.make_function(id, sig, new_func))
     }
     fn compile_func_instrs(
         &mut self,
         func: Func,
         span: CodeSpan,
         require_valid_sig: bool,
-    ) -> UiuaResult<(FunctionId, Option<Signature>, EcoVec<Instr>)> {
-        let mut instrs = EcoVec::new();
+    ) -> UiuaResult<(FunctionId, Option<Signature>, NewFunction)> {
+        let mut new_func = NewFunction::default();
         for line in func.lines {
-            instrs.extend(self.compile_words(line, true)?);
+            let nf = self.compile_words(line, true)?;
+            new_func.instrs.extend(nf.instrs);
+            new_func.flags |= nf.flags;
         }
 
         // Validate signature
-        let sig = match instrs_signature(&instrs) {
+        let sig = match instrs_signature(&new_func.instrs) {
             Ok(mut sig) => {
                 if let Some(declared_sig) = &func.signature {
                     if declared_sig.value == sig {
@@ -1845,12 +1884,12 @@ code:
                 },
             );
         }
-        Ok((func.id, sig, instrs))
+        Ok((func.id, sig, new_func))
     }
     fn switch(&mut self, branches: Vec<Sp<Word>>, span: CodeSpan, call: bool) -> UiuaResult {
         let count = branches.len();
         if !call {
-            self.new_functions.push(EcoVec::new());
+            self.new_functions.push(NewFunction::default());
         }
         // Compile branches
         let mut functions = Vec::with_capacity(count);
@@ -1858,19 +1897,20 @@ code:
         let mut flex_indices = Vec::new();
         for (i, branch) in branches.into_iter().enumerate() {
             let span = branch.span.clone();
-            let (instrs, sig) = self.compile_operand_word(branch)?;
-            let is_flex = instrs
+            let (new_func, sig) = self.compile_operand_word(branch)?;
+            let is_flex = new_func
+                .instrs
                 .iter()
                 .rposition(|instr| matches!(instr, Instr::Prim(Primitive::Assert, _)))
                 .is_some_and(|end| {
                     (0..end).rev().any(|start| {
-                        let sub = &instrs[start..end];
+                        let sub = &new_func.instrs[start..end];
                         match sub {
                             [Instr::Push(val), Instr::Prim(Primitive::Dup, _)]
                             | [Instr::Push(val), Instr::Push(..)]
                                 if val != &Value::from(1) =>
                             {
-                                return true
+                                return true;
                             }
                             [Instr::Format { .. }, Instr::Prim(Primitive::Dup, _)] => return true,
                             _ => (),
@@ -1884,7 +1924,7 @@ code:
                         let func = comp.make_function(
                             FunctionId::Anonymous(span.clone()),
                             Signature::new(0, 2),
-                            sub.into(),
+                            EcoVec::from(sub).into(),
                         );
                         comp.macro_env.asm = comp.asm.clone();
                         comp.macro_env
@@ -1897,7 +1937,7 @@ code:
                             .unwrap_or(false)
                     })
                 });
-            functions.push((instrs, sig, span));
+            functions.push((new_func, sig, span));
             if is_flex {
                 flex_indices.push(i);
             } else {
@@ -1932,9 +1972,9 @@ code:
             sig.args = sig.args.max(f_sig.args);
         }
 
-        for (instrs, sig, span) in functions {
+        for (new_func, sig, span) in functions {
             let id = FunctionId::Anonymous(span);
-            let function = self.make_function(id, sig, instrs);
+            let function = self.make_function(id, sig, new_func);
             self.push_instr(Instr::PushFunc(function));
         }
 
@@ -1946,8 +1986,8 @@ code:
             under_cond: false,
         });
         if !call {
-            let instrs = self.new_functions.pop().unwrap();
-            let sig = match instrs_signature(&instrs) {
+            let new_func = self.new_functions.pop().unwrap();
+            let sig = match instrs_signature(&new_func.instrs) {
                 Ok(sig) => sig,
                 Err(e) => {
                     return Err(self.fatal_error(
@@ -1963,7 +2003,7 @@ code:
                     ));
                 }
             };
-            let function = self.make_function(FunctionId::Anonymous(span), sig, instrs);
+            let function = self.make_function(FunctionId::Anonymous(span), sig, new_func);
             self.push_instr(Instr::PushFunc(function));
         }
         Ok(())
@@ -2009,7 +2049,7 @@ code:
         } else {
             let instrs = eco_vec![Instr::Prim(prim, span_i)];
             let sig = self.sig_of(&instrs, &span)?;
-            let func = self.make_function(FunctionId::Primitive(prim), sig, instrs);
+            let func = self.make_function(FunctionId::Primitive(prim), sig, instrs.into());
             self.push_instr(Instr::PushFunc(func));
         }
         Ok(())
@@ -2052,7 +2092,7 @@ code:
             instr = Instr::PushFunc(self.make_function(
                 FunctionId::Anonymous(span),
                 sig,
-                eco_vec![instr],
+                eco_vec![instr].into(),
             ));
         }
         self.push_instr(instr);
@@ -2131,15 +2171,18 @@ code:
             instrs = eco_vec![Instr::PushFunc(self.make_function(
                 FunctionId::Anonymous(span),
                 sig,
-                instrs,
+                instrs.into(),
             ))];
         }
         self.push_all_instrs(instrs);
         Ok(())
     }
-    fn inlinable(&self, instrs: &[Instr]) -> bool {
+    fn inlinable(&self, instrs: &[Instr], flags: FunctionFlags) -> bool {
         use ImplPrimitive::*;
         use Primitive::*;
+        if flags.track_caller() || flags.no_inline() {
+            return false;
+        }
         if instrs.len() > 10 {
             return false;
         }
@@ -2147,8 +2190,11 @@ code:
             match instr {
                 Instr::Prim(Trace | Dump | Stack | Assert, _) => return false,
                 Instr::ImplPrim(UnDump | UnStack | TraceN(..), _) => return false,
-                Instr::PushFunc(f) if !self.inlinable(f.instrs(&self.asm)) => return false,
-                Instr::NoInline | Instr::TrackCaller => return false,
+                Instr::PushFunc(f)
+                    if !self.inlinable(f.instrs(&self.asm), FunctionFlags::default()) =>
+                {
+                    return false
+                }
                 _ => {}
             }
         }
@@ -2242,7 +2288,7 @@ code:
         self.make_function(
             FunctionId::Unnamed,
             signature,
-            eco_vec![Instr::Dynamic(DynamicFunction { index, signature })],
+            eco_vec![Instr::Dynamic(DynamicFunction { index, signature })].into(),
         )
     }
     /// Bind a function in the current scope
@@ -2274,23 +2320,25 @@ code:
         self.bind_function(name, function)
     }
     #[must_use]
-    fn pre_eval_instrs(&mut self, instrs: EcoVec<Instr>) -> (EcoVec<Instr>, Vec<UiuaError>) {
+    fn pre_eval_instrs(&mut self, mut new_func: NewFunction) -> (NewFunction, Vec<UiuaError>) {
         let mut errors = Vec::new();
-        let instrs = optimize_instrs(instrs, true, &self.asm);
+        new_func.instrs = optimize_instrs(new_func.instrs, true, &self.asm);
         if self.in_inverse
             || self.pre_eval_mode == PreEvalMode::Lazy
-            || instrs.iter().all(|instr| matches!(instr, Instr::Push(_)))
-            || instrs
+            || new_func
+                .instrs
                 .iter()
-                .any(|instr| matches!(instr, Instr::NoInline | Instr::TrackCaller))
+                .all(|instr| matches!(instr, Instr::Push(_)))
+            || new_func.flags.no_inline()
+            || new_func.flags.track_caller()
         {
-            return (instrs, errors);
+            return (new_func, errors);
         }
         let mut start = 0;
         let mut new_instrs: Option<EcoVec<Instr>> = None;
-        'start: while start < instrs.len() {
-            for end in (start + 1..=instrs.len()).rev() {
-                let section = &instrs[start..end];
+        'start: while start < new_func.instrs.len() {
+            for end in (start + 1..=new_func.instrs.len()).rev() {
+                let section = &new_func.instrs[start..end];
                 if !instrs_can_pre_eval(section, &self.asm) {
                     continue;
                 }
@@ -2307,7 +2355,7 @@ code:
                                 val.validate_shape();
                             }
                             let new_instrs =
-                                new_instrs.get_or_insert_with(|| instrs[..start].into());
+                                new_instrs.get_or_insert_with(|| new_func.instrs[..start].into());
                             new_instrs.extend(values.into_iter().map(Instr::Push));
                             success = true;
                         }
@@ -2325,14 +2373,15 @@ code:
                 }
             }
             if let Some(new_instrs) = &mut new_instrs {
-                new_instrs.push(instrs[start].clone())
+                new_instrs.push(new_func.instrs[start].clone())
             }
             start += 1;
         }
         // if let Some(new_instrs) = &new_instrs {
         //     println!("eval: {new_instrs:?}")
         // }
-        (new_instrs.unwrap_or(instrs), errors)
+        new_func.instrs = new_instrs.unwrap_or(new_func.instrs);
+        (new_func, errors)
     }
     fn comptime_instrs(&mut self, instrs: EcoVec<Instr>) -> UiuaResult<Option<Vec<Value>>> {
         if !self.pre_eval_mode.matches_instrs(&instrs, &self.asm) {

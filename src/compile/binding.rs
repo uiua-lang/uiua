@@ -3,7 +3,7 @@
 use super::*;
 
 impl Compiler {
-    pub(super) fn binding(&mut self, binding: Binding, comment: Option<EcoString>) -> UiuaResult {
+    pub(super) fn binding(&mut self, binding: Binding, prelude: BindingPrelude) -> UiuaResult {
         let public = binding.public;
 
         // Alias re-bound imports
@@ -43,7 +43,7 @@ impl Compiler {
         };
         self.next_global += 1;
 
-        let comment = comment.or_else(|| {
+        let comment = prelude.comment.or_else(|| {
             binding.words.iter().last().and_then(|w| match &w.value {
                 Word::Comment(c) => Some(c.as_str().into()),
                 _ => None,
@@ -69,8 +69,8 @@ impl Compiler {
                     ),
                 );
             }
-            let instrs = self.compile_words(binding.words, true)?;
-            let sig = match instrs_signature(&instrs) {
+            let new_func = self.compile_words(binding.words, true)?;
+            let sig = match instrs_signature(&new_func.instrs) {
                 Ok(s) => s,
                 Err(e) => {
                     if let Some(sig) = binding.signature {
@@ -101,7 +101,7 @@ impl Compiler {
                     ),
                 );
             }
-            let function = self.make_function(FunctionId::Named(name.clone()), sig, instrs);
+            let function = self.make_function(FunctionId::Named(name.clone()), sig, new_func);
             self.scope.names.insert(name.clone(), local);
             (self.asm).add_global_at(
                 local,
@@ -176,20 +176,22 @@ impl Compiler {
             self.stack_macros.insert(local.index, mac);
             return Ok(());
         }
-
+        let flags = prelude.flags;
         let mut make_fn: Box<dyn FnOnce(_, _, &mut Compiler) -> _> = {
             let name = name.clone();
             Box::new(
-                move |instrs: EcoVec<Instr>, sig: Signature, comp: &mut Compiler| {
+                move |mut new_func: NewFunction, sig: Signature, comp: &mut Compiler| {
                     // Diagnostic for function that doesn't consume its arguments
-                    if let [Instr::Prim(Primitive::Dup, span), rest @ ..] = instrs.as_slice() {
+                    if let [Instr::Prim(Primitive::Dup, span), rest @ ..] =
+                        new_func.instrs.as_slice()
+                    {
                         if let Span::Code(dup_span) = comp.get_span(*span) {
                             if let Ok(rest_sig) = instrs_signature(rest) {
                                 if rest_sig.args == sig.args && rest_sig.outputs + 1 == sig.outputs
                                 {
                                     comp.emit_diagnostic(
                                         "Functions should consume their arguments. \
-                                    Try removing this.",
+                                        Try removing this.",
                                         DiagnosticKind::Style,
                                         dup_span,
                                     );
@@ -197,8 +199,8 @@ impl Compiler {
                             }
                         }
                     }
-
-                    comp.make_function(FunctionId::Named(name), sig, instrs)
+                    new_func.flags |= flags;
+                    comp.make_function(FunctionId::Named(name), sig, new_func)
                 },
             )
         };
@@ -222,38 +224,40 @@ impl Compiler {
         let is_single_func = binding_code_words.clone().count() == 1
             && (binding_code_words.next()).is_some_and(|w| matches!(&w.value, Word::Func(_)));
         let instrs_start = self.asm.instrs.len();
-        let instrs = self.compile_words(binding.words, !is_single_func);
+        let new_func = self.compile_words(binding.words, !is_single_func);
         let self_referenced = self.current_bindings.pop().unwrap().referenced;
-        let mut instrs = instrs?;
+        let mut new_func = new_func?;
 
         if self_referenced {
             let name = name.clone();
             let make = make_fn;
-            make_fn = Box::new(move |instrs, sig, comp: &mut Compiler| {
-                let mut f = make(instrs, sig, comp);
-                f.recursive = true;
+            make_fn = Box::new(move |new_func, sig, comp: &mut Compiler| {
+                let mut f = make(new_func, sig, comp);
+                f.flags.set_recursive(true);
+                let flags = f.flags;
                 let instrs = eco_vec![Instr::PushFunc(f), Instr::CallRecursive(spandex)];
-                comp.make_function(FunctionId::Named(name.clone()), sig, instrs)
+                let new_func = NewFunction { instrs, flags };
+                comp.make_function(FunctionId::Named(name.clone()), sig, new_func)
             });
         }
 
         // Resolve signature
-        match instrs_signature(&instrs) {
+        match instrs_signature(&new_func.instrs) {
             Ok(mut sig) => {
                 #[rustfmt::skip]
                 let is_setinv = matches!(
-                    instrs.as_slice(),
+                    new_func.instrs.as_slice(),
                     [Instr::PushFunc(_), Instr::PushFunc(_), Instr::Prim(Primitive::SetInverse, _)]
                 );
                 #[rustfmt::skip]
                 let is_setund = matches!(
-                    instrs.as_slice(),
+                    new_func.instrs.as_slice(),
                     [Instr::PushFunc(_), Instr::PushFunc(_), Instr::PushFunc(_), Instr::Prim(Primitive::SetUnder, _)]
                 );
-                if let [Instr::PushFunc(f)] = instrs.as_slice() {
+                if let [Instr::PushFunc(f)] = new_func.instrs.as_slice() {
                     // Binding is a single inline function
                     let func = if self_referenced {
-                        make_fn(f.instrs(&self.asm).into(), f.signature(), self)
+                        make_fn(f.new_func(&self.asm), f.signature(), self)
                     } else {
                         let mut func = f.clone();
                         func.id = FunctionId::Named(name.clone());
@@ -262,18 +266,18 @@ impl Compiler {
                     sig = f.signature();
                     self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
                 } else if sig == (0, 1) && !is_setinv && !is_setund {
-                    if let &[Instr::Prim(Primitive::Tag, span)] = instrs.as_slice() {
-                        instrs.push(Instr::Label {
+                    if let &[Instr::Prim(Primitive::Tag, span)] = new_func.instrs.as_slice() {
+                        new_func.instrs.push(Instr::Label {
                             label: name.clone(),
                             span,
                             remove: false,
                         })
                     }
                     // Binding is a constant
-                    let val = if let [Instr::Push(v)] = instrs.as_slice() {
+                    let val = if let [Instr::Push(v)] = new_func.instrs.as_slice() {
                         Some(v.clone())
                     } else {
-                        match self.comptime_instrs(instrs.clone()) {
+                        match self.comptime_instrs(new_func.instrs.clone()) {
                             Ok(Some(vals)) => vals.into_iter().next(),
                             Ok(None) => None,
                             Err(e) => {
@@ -293,12 +297,12 @@ impl Compiler {
                         }
                     } else {
                         // Add binding instrs to top slices
-                        instrs.push(Instr::BindGlobal {
+                        new_func.instrs.push(Instr::BindGlobal {
                             span: spandex,
                             index: local.index,
                         });
                         let start = self.asm.instrs.len();
-                        (self.asm.instrs).extend(optimize_instrs(instrs, true, &self.asm));
+                        (self.asm.instrs).extend(optimize_instrs(new_func.instrs, true, &self.asm));
                         let end = self.asm.instrs.len();
                         if end != start {
                             self.asm.top_slices.push(FuncSlice {
@@ -307,7 +311,7 @@ impl Compiler {
                             });
                         }
                     }
-                } else if instrs.is_empty() {
+                } else if new_func.instrs.is_empty() {
                     // Binding binds the value above
                     match &mut self.scope.stack_height {
                         Ok(height) => {
@@ -347,7 +351,7 @@ impl Compiler {
                             self.asm.top_slices.pop();
                         }
                     } else if sig == (0, 0) {
-                        let func = make_fn(instrs, sig, self);
+                        let func = make_fn(new_func, sig, self);
                         self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
                     } else {
                         self.compile_bind_const(name, local, None, spandex, comment.as_deref());
@@ -360,7 +364,7 @@ impl Compiler {
                     }
                 } else {
                     // Binding is a normal function
-                    let func = make_fn(instrs, sig, self);
+                    let func = make_fn(new_func, sig, self);
                     self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
                 }
 
@@ -389,8 +393,8 @@ impl Compiler {
             Err(e) => {
                 if let Some(sig) = binding.signature {
                     // Binding is a normal function
-                    instrs.insert(0, Instr::NoInline);
-                    let func = make_fn(instrs, sig.value, self);
+                    new_func.flags.set_no_inline(true);
+                    let func = make_fn(new_func, sig.value, self);
                     self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
                 } else {
                     self.add_error(

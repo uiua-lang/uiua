@@ -3,7 +3,7 @@ use std::{
     collections::HashSet,
     fmt,
     hash::{Hash, Hasher},
-    ops::{Add, AddAssign},
+    ops::{Add, AddAssign, BitAnd, BitOr, BitOrAssign},
 };
 
 use ecow::{eco_vec, EcoString, EcoVec};
@@ -16,7 +16,7 @@ use crate::{
     lex::CodeSpan,
     primitive::{ImplPrimitive, Primitive},
     value::Value,
-    Assembly, BindingKind, Ident,
+    Assembly, BindingKind, Ident, NewFunction,
 };
 
 /// A Uiua bytecode instruction
@@ -114,8 +114,6 @@ pub enum Instr {
     },
     PushSig(Signature),
     PopSig,
-    NoInline,
-    TrackCaller,
 }
 
 /// A type of temporary stacks
@@ -191,7 +189,6 @@ impl PartialEq for Instr {
             }
             (Self::PushSig(a), Self::PushSig(b)) => a == b,
             (Self::PopSig, Self::PopSig) => true,
-            (Self::NoInline, Self::NoInline) => true,
             (Self::StackSwizzle(a, _), Self::StackSwizzle(b, _)) => a == b,
             _ => false,
         }
@@ -233,9 +230,7 @@ impl Hash for Instr {
             Instr::SetOutputComment { i, n, .. } => (24, i, n).hash(state),
             Instr::PushSig(sig) => (25, sig).hash(state),
             Instr::PopSig => 26.hash(state),
-            Instr::NoInline => 27.hash(state),
             Instr::StackSwizzle(swizzle, _) => (31, swizzle).hash(state),
-            Instr::TrackCaller => 32.hash(state),
         }
     }
 }
@@ -269,9 +264,6 @@ impl Instr {
     }
     pub(crate) fn is_compile_only(&self) -> bool {
         matches!(self, Self::PushSig(_) | Self::PopSig)
-    }
-    pub(crate) fn is_code(&self) -> bool {
-        !matches!(self, Self::NoInline | Self::TrackCaller)
     }
 }
 
@@ -452,7 +444,6 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly, min_purity: Puri
             }
             Instr::Dynamic(_) => return false,
             Instr::SetOutputComment { .. } => return false,
-            Instr::NoInline => return false,
             _ => {}
         }
     }
@@ -480,7 +471,7 @@ pub(crate) fn instrs_are_limit_bounded(instrs: &[Instr], asm: &Assembly) -> bool
             Instr::Prim(Send | Recv, _) => return false,
             Instr::Prim(Sys(op), _) if op.purity() <= Purity::Mutating => return false,
             Instr::PushFunc(f) => {
-                if f.recursive || !instrs_are_limit_bounded(f.instrs(asm), asm) {
+                if f.is_recursive() || !instrs_are_limit_bounded(f.instrs(asm), asm) {
                     return false;
                 }
             }
@@ -564,8 +555,6 @@ impl fmt::Display for Instr {
             Instr::SetOutputComment { i, n, .. } => write!(f, "<set output comment {i}({n})>"),
             Instr::PushSig(sig) => write!(f, "{sig}"),
             Instr::PopSig => write!(f, "-|"),
-            Instr::NoInline => write!(f, "<no inline>"),
-            Instr::TrackCaller => write!(f, "<track caller>"),
         }
     }
 }
@@ -578,7 +567,7 @@ pub struct Function {
     signature: Signature,
     pub(crate) slice: FuncSlice,
     hash: u64,
-    pub(crate) recursive: bool,
+    pub(crate) flags: FunctionFlags,
 }
 
 impl Default for Function {
@@ -588,7 +577,67 @@ impl Default for Function {
             signature: Signature::new(0, 0),
             slice: FuncSlice::default(),
             hash: 0,
-            recursive: false,
+            flags: FunctionFlags::default(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(transparent)]
+pub(crate) struct FunctionFlags(u8);
+
+impl BitOrAssign for FunctionFlags {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl BitOr for FunctionFlags {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl BitAnd for FunctionFlags {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl FunctionFlags {
+    pub const RECURSIVE: Self = Self(1 << 0);
+    pub const NO_INLINE: Self = Self(1 << 1);
+    pub const TRACK_CALLER: Self = Self(1 << 2);
+    pub fn recursive(&self) -> bool {
+        self.0 & Self::RECURSIVE.0 != 0
+    }
+    pub fn no_inline(&self) -> bool {
+        self.0 & Self::NO_INLINE.0 != 0
+    }
+    pub fn track_caller(&self) -> bool {
+        self.0 & Self::TRACK_CALLER.0 != 0
+    }
+    pub fn set_recursive(&mut self, recursive: bool) {
+        if recursive {
+            self.0 |= Self::RECURSIVE.0;
+        } else {
+            self.0 &= !Self::RECURSIVE.0;
+        }
+    }
+    pub fn set_no_inline(&mut self, no_inline: bool) {
+        if no_inline {
+            self.0 |= Self::NO_INLINE.0;
+        } else {
+            self.0 &= !Self::NO_INLINE.0;
+        }
+    }
+    pub fn set_track_caller(&mut self, track_caller: bool) {
+        if track_caller {
+            self.0 |= Self::TRACK_CALLER.0;
+        } else {
+            self.0 &= !Self::TRACK_CALLER.0;
         }
     }
 }
@@ -803,8 +852,12 @@ impl Function {
             slice,
             signature,
             hash,
-            recursive: false,
+            flags: FunctionFlags::default(),
         }
+    }
+    pub(crate) fn with_flags(mut self, flags: FunctionFlags) -> Self {
+        self.flags = flags;
+        self
     }
     /// Get the [`Signature`] of this function
     pub fn signature(&self) -> Signature {
@@ -812,7 +865,7 @@ impl Function {
     }
     /// Whether this function is recursive
     pub fn is_recursive(&self) -> bool {
-        self.recursive
+        self.flags.recursive()
     }
     /// Get the address of function's instructions
     pub fn slice(&self) -> FuncSlice {
@@ -822,6 +875,12 @@ impl Function {
     #[track_caller]
     pub fn instrs<'a>(&self, asm: &'a Assembly) -> &'a [Instr] {
         asm.instrs(self.slice)
+    }
+    pub(crate) fn new_func(&self, asm: &Assembly) -> NewFunction {
+        NewFunction {
+            instrs: self.instrs(asm).into(),
+            flags: self.flags,
+        }
     }
     /// Get a mutable slice of the function's instructions
     pub fn instrs_mut<'a>(&self, asm: &'a mut Assembly) -> &'a mut [Instr] {
@@ -862,23 +921,9 @@ pub(crate) fn instrs_as_flipped_primitive(
 ) -> Option<(Primitive, bool)> {
     use Primitive::*;
     match instrs {
-        [Instr::Prim(Flip, _), Instr::Prim(prim, _), rest @ ..]
-        | [rest @ .., Instr::Prim(Flip, _), Instr::Prim(prim, _)]
-            if rest.iter().all(|i| !i.is_code()) =>
-        {
-            Some((*prim, true))
-        }
-        [Instr::Prim(prim, _), rest @ ..] | [rest @ .., Instr::Prim(prim, _)]
-            if rest.iter().all(|i| !i.is_code()) =>
-        {
-            Some((*prim, false))
-        }
-        [Instr::PushFunc(f), Instr::Call(_), rest @ ..]
-        | [rest @ .., Instr::PushFunc(f), Instr::Call(_)]
-            if rest.iter().all(|i| !i.is_code()) =>
-        {
-            f.as_flipped_primitive(asm.as_ref())
-        }
+        [Instr::Prim(Flip, _), Instr::Prim(prim, _)] => Some((*prim, true)),
+        [Instr::Prim(prim, _)] => Some((*prim, false)),
+        [Instr::PushFunc(f), Instr::Call(_)] => f.as_flipped_primitive(asm.as_ref()),
         _ => None,
     }
 }
@@ -888,23 +933,9 @@ pub(crate) fn instrs_as_flipped_impl_primitive(
 ) -> Option<(ImplPrimitive, bool)> {
     use Primitive::*;
     match instrs {
-        [Instr::ImplPrim(prim, _), Instr::Prim(Flip, _), rest @ ..]
-        | [rest @ .., Instr::ImplPrim(prim, _), Instr::Prim(Flip, _)]
-            if rest.iter().all(|i| !i.is_code()) =>
-        {
-            Some((*prim, true))
-        }
-        [Instr::ImplPrim(prim, _), rest @ ..] | [rest @ .., Instr::ImplPrim(prim, _)]
-            if rest.iter().all(|i| !i.is_code()) =>
-        {
-            Some((*prim, false))
-        }
-        [Instr::PushFunc(f), Instr::Call(_), rest @ ..]
-        | [rest @ .., Instr::PushFunc(f), Instr::Call(_)]
-            if rest.iter().all(|i| !i.is_code()) =>
-        {
-            f.as_flipped_impl_primitive(asm.as_ref())
-        }
+        [Instr::ImplPrim(prim, _), Instr::Prim(Flip, _)] => Some((*prim, true)),
+        [Instr::ImplPrim(prim, _)] => Some((*prim, false)),
+        [Instr::PushFunc(f), Instr::Call(_)] => f.as_flipped_impl_primitive(asm.as_ref()),
         _ => None,
     }
 }

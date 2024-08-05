@@ -556,7 +556,6 @@ impl<'a> VirtualEnv<'a> {
                 panic!("PushSig and PopSig should have been handled higher up")
             }
             Instr::SetOutputComment { .. } => {}
-            Instr::NoInline | Instr::TrackCaller => {}
         }
         // println!("{instr:?} -> {}/{}", self.min_height, self.stack.len());
         Ok(())

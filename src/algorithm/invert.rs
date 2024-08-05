@@ -14,8 +14,8 @@ use crate::{
     check::{instrs_clean_signature, instrs_signature, instrs_signature_no_temp},
     instrs_are_pure,
     primitive::{ImplPrimitive, Primitive},
-    Array, Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionId, Instr, Purity,
-    Signature, Span, SysOp, TempStack, Uiua, UiuaResult, Value,
+    Array, Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionId, Instr, NewFunction,
+    Purity, Signature, Span, SysOp, TempStack, Uiua, UiuaResult, Value,
 };
 
 use super::IgnoreError;
@@ -669,7 +669,11 @@ fn resolve_uns(instrs: EcoVec<Instr>, comp: &mut Compiler) -> Option<EcoVec<Inst
                     let id = f.id.clone();
                     let resolved_f = resolve_uns(instrs, comp)?;
                     let sig = instrs_signature(&resolved_f).ok()?;
-                    let func = comp.make_function(id, sig, resolved_f);
+                    let new_func = NewFunction {
+                        instrs: resolved_f,
+                        flags: f.flags,
+                    };
+                    let func = comp.make_function(id, sig, new_func);
                     resolved.push(Instr::PushFunc(func));
                 }
                 instr => resolved.push(instr.clone()),
@@ -783,7 +787,6 @@ fn invert_trivial_pattern<'a>(
             }
         }
         [Comment(_) | PushSig(_) | PopSig, input @ ..] => return Some((input, EcoVec::new())),
-        [TrackCaller, input @ ..] => return Some((input, eco_vec![TrackCaller])),
         [Label {
             label,
             span,
@@ -1746,7 +1749,7 @@ fn make_fn(instrs: EcoVec<Instr>, span: usize, comp: &mut Compiler) -> Option<Fu
         return None;
     };
     let id = FunctionId::Anonymous(span);
-    Some(comp.make_function(id, sig, instrs))
+    Some(comp.make_function(id, sig, instrs.into()))
 }
 
 fn under_each_pattern<'a>(

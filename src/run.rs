@@ -100,6 +100,7 @@ pub(crate) struct StackFrame {
     pub(crate) slice: FuncSlice,
     pub(crate) id: FunctionId,
     pub(crate) sig: Signature,
+    track_caller: bool,
     /// The span at which the function was called
     call_span: usize,
     /// The program counter for the function
@@ -183,6 +184,7 @@ impl Default for Runtime {
                 slice: FuncSlice::default(),
                 id: FunctionId::Main,
                 sig: Signature::new(0, 0),
+                track_caller: false,
                 call_span: 0,
                 pc: 0,
                 spans: Vec::new(),
@@ -381,7 +383,6 @@ code:
         let slice = frame.slice;
         self.rt.call_stack.push(frame);
         let mut formatted_instr = String::new();
-        let mut track_caller = false;
         for i in slice.start..slice.end() {
             let instr = &self.asm.instrs[i];
 
@@ -637,11 +638,6 @@ code:
                     }
                     Ok(())
                 }
-                Instr::NoInline => Ok(()),
-                Instr::TrackCaller => {
-                    track_caller = true;
-                    Ok(())
-                }
             };
             if self.rt.time_instrs {
                 let end_time = self.rt.backend.now();
@@ -659,7 +655,7 @@ code:
                 // Trace errors
                 let frame = self.rt.call_stack.pop().unwrap();
                 let span = self.asm.spans[frame.call_span].clone();
-                if track_caller {
+                if frame.track_caller {
                     err.track_caller(span);
                 } else {
                     err.trace.push(TraceFrame { id: frame.id, span });
@@ -718,6 +714,7 @@ code:
         let frame = StackFrame {
             slice,
             sig: Signature::new(0, 0),
+            track_caller: false,
             id: FunctionId::Main,
             call_span,
             spans: Vec::new(),
@@ -796,6 +793,7 @@ code:
                 slice: f.slice(),
                 sig: f.signature(),
                 id: f.id,
+                track_caller: f.flags.track_caller(),
                 call_span,
                 spans: Vec::new(),
                 pc: 0,

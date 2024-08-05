@@ -1729,10 +1729,12 @@ fn TutorialModules() -> impl IntoView {
         <p>"This can be mixed and matched with the other import syntax."</p>
         <Editor example="Ex ~ \"example.ua\" ~ Increment Square\n\nEx~Double Square 3\nEx~Mac!×\nIncrement Ex~Bar"/>
 
-        <Hd id="aliasing">"Aliasing Module Items"</Hd>
+        <Hd id="aliasing">"Aliasing Module"</Hd>
         <p>"If you want to be able to refer to an item from a module with a different name, simply make a binding with the new name."</p>
         <Editor example="Ex ~ \"example.ua\"\nSqr ← Ex~Square\nSp ← Ex~Span\n\nSp⟜Sqr 3"/>
         <p>"These bindings will also get indented by the formatter if they immediately follow the import."</p>
+        <p>"You can also re-bind the module itself."</p>
+        <Editor example="Ex ~ \"example.ua\"\nLocalEx ← Ex\nLocalEx~Square 7"/>
 
         <Hd id="visibility">"Visibility"</Hd>
         <p>"All bindings in a module bound with the normal "<code>"←"</code>" arrow are public and can be used by importers of the module."</p>

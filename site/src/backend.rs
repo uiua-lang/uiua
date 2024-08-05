@@ -338,7 +338,7 @@ impl SysBackend for WebBackend {
         self.play_audio(bytes)
     }
     fn now(&self) -> f64 {
-        *START_TIME.get_or_init(now) + now()
+        *START_TIME.get_or_init(|| 0.0) + now()
     }
     fn set_clipboard(&self, contents: &str) -> Result<(), String> {
         _ = window()
@@ -350,7 +350,7 @@ impl SysBackend for WebBackend {
     }
     fn sleep(&self, seconds: f64) -> Result<(), String> {
         let start = now();
-        while (now() - start) / 1000.0 < seconds {}
+        while now() - start < seconds {}
         Ok(())
     }
     fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {

@@ -1491,7 +1491,8 @@ impl SysOp {
                     .as_num(env, "Sleep time must be a number")?
                     .max(0.0);
                 if let Some(limit) = env.rt.execution_limit {
-                    let max = limit - env.rt.execution_start;
+                    let elapsed = env.rt.backend.now() - env.rt.execution_start;
+                    let max = limit - elapsed;
                     seconds = seconds.min(max);
                 }
                 env.rt.backend.sleep(seconds).map_err(|e| env.error(e))?;

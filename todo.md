@@ -1,10 +1,7 @@
 # Uiua Todo
 
 - 0.12
-  - Work into tutorial
-    - Labels
-    - Line splitting
-    - Track caller
+  - Release it!
 - 0.13
   - Unicode literals
   - Possible

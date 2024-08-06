@@ -24,7 +24,7 @@ This version is not yet released. If you are reading this on the website, then t
   - For example, `X__1` will format to `X₁`
 - The `utf` function has been renamed to [`utf₈`](https://uiua.org/docs/utf₈)
 - Stabilize labels
-  - Tutorial to come
+  - You can read about them in the new [Code Tactility Tutorial](https://uiua.org/tutorial/codetactility#labels)
 - [`windows ◫`](https://uiua.org/docs/windows) can now use a [`fill ⬚`](https://uiua.org/docs/fill) value to pad the array
   - This is useful for convolutions
 - Add new [Scoped Modules](https://uiua.org/tutorial/modules#scoped-modules)
@@ -80,6 +80,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Add some commands, which can be listed by typing `help` in the repl
 - Allow Uiua-specific tokens types to be disabled in the LSP
 ### Website
+- Add a new [Code Tactility Tutorial](https://uiua.org/tutorial/codetactility#labels)
 - Fix a bug where running pad code that has end-of-line comments via ctrl+Enter would cause the cursor to move every time
 - Remove the Uiuisms page
   - It provided a "definitive" implementation of many algorithms where the best implementation is subjective and/or context-dependent

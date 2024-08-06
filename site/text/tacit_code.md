@@ -106,7 +106,7 @@ Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)),,
 Quad 1 2 0
 ```
 
-And their we have it, the quadratic formula.
+And there we have it, the quadratic formula.
 
 ```uiua
 Quad ← ÷×2⊙(-⊙(⊟¯. √ℂ0 -⊙(ⁿ2)××4 ⊙:)),,

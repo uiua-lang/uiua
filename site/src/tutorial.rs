@@ -1707,6 +1707,15 @@ fn TutorialModules() -> impl IntoView {
         <p>"Names defined above the module can be referenced inside it."</p>
         <Editor example="B ← 5\n---Mod\n  C ← ×2 B\n---\nMod~C"/>
 
+        <Hd id="modules-as-functions">"Modules as Functions"</Hd>
+        <p>"If a module defines a function called "<code>"Call"</code>" or "<code>"New"</code>", it can be called as a function. This can be useful if your module defines functions that all work on the same kind of data, like methods in some other languages."</p>
+        <Editor example="---Foo\n  New ← {⊓$Bar$Baz}\n  Format ← /$\"_ _\"\n---\nFoo \"Hi!\" 5\nFoo~Format ."/>
+
+        <Hd id="module-import-macros">"Module Import Macros"</Hd>
+        <p>"If the name of a module is referenced as a macro (with a trailing "<code>"!"</code>"), names defined in the module will be available in the macro's scope."</p>
+        <p>"This is useful if you need to refer to a bunch of bindings from a module without having to prefix them with the module name."</p>
+        <Editor example="---Foo\n  New ← {⊓$Bar$Baz}\n  Format ← /$\"_ _\"\n  Incr ← ⍜(⊢⇌|+1)\n---\nFoo!(Format Incr New) \"Oh\" 10"/>
+
         <Hd id="web-files">"Files on the Website"</Hd>
         <p>"Using files as modules involves loading files from the file system."</p>
         <p>"This website has a virtual file system. You can write to virtual files with "<Prim prim=Sys(SysOp::FWriteAll)/>". You can also drag and drop files from your computer into the editor to make them available to import."</p>
@@ -1729,10 +1738,10 @@ fn TutorialModules() -> impl IntoView {
         <p>"This can be mixed and matched with the other import syntax."</p>
         <Editor example="Ex ~ \"example.ua\" ~ Increment Square\n\nEx~Double Square 3\nEx~Mac!×\nIncrement Ex~Bar"/>
 
-        <Hd id="aliasing">"Aliasing Module"</Hd>
+        <Hd id="aliasing">"Aliasing Modules"</Hd>
         <p>"If you want to be able to refer to an item from a module with a different name, simply make a binding with the new name."</p>
         <Editor example="Ex ~ \"example.ua\"\nSqr ← Ex~Square\nSp ← Ex~Span\n\nSp⟜Sqr 3"/>
-        <p>"These bindings will also get indented by the formatter if they immediately follow the import."</p>
+        <p>"These bindings will also get indented by the formatter if they immediately follow the import. Try formatting the above code!"</p>
         <p>"You can also re-bind the module itself."</p>
         <Editor example="Ex ~ \"example.ua\"\nLocalEx ← Ex\nLocalEx~Square 7"/>
 

@@ -137,9 +137,9 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
 
 #[cfg(test)]
 fn node_html<'a>(node: &'a AstNode<'a>) -> String {
-    use uiua::{Compiler, SafeSys, Uiua, UiuaErrorKind, Value};
+    use uiua::{Compiler, SafeSys, Token, Uiua, UiuaErrorKind, Value};
 
-    use crate::prim_class;
+    use crate::{prim_class, prim_html};
 
     let children: String = node.children().map(node_html).collect();
     match &node.data.borrow().value {
@@ -167,7 +167,22 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
         },
         NodeValue::Item(_) => format!("<li>{}</li>", children),
         NodeValue::Paragraph => format!("<p>{}</p>", children),
-        NodeValue::Code(code) => format!("<code>{}</code>", code.literal),
+        NodeValue::Code(code) => {
+            let (tokens, errors, _) = uiua::lex(&code.literal, (), &mut Default::default());
+            if errors.is_empty() {
+                let mut s = "<code>".to_string();
+                for token in tokens {
+                    match token.value {
+                        Token::Glyph(prim) => s.push_str(&prim_html(prim, true, false)),
+                        _ => return format!("<code>{}</code>", code.literal),
+                    }
+                }
+                s.push_str("</code>");
+                s
+            } else {
+                format!("<code>{}</code>", code.literal)
+            }
+        }
         NodeValue::Link(link) => {
             let text = leaf_text(node).unwrap_or_default();
             let name = text.rsplit_once(' ').map(|(name, _)| name).unwrap_or(&text);

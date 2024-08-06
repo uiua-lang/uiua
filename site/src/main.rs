@@ -351,6 +351,53 @@ pub fn Prim(
     }
 }
 
+#[cfg(test)]
+fn prim_html(prim: Primitive, glyph_only: bool, hide_docs: bool) -> String {
+    let symbol_class = format!("prim-glyph {}", prim_class(prim));
+    let symbol = prim.to_string();
+    let name = if !glyph_only && symbol != prim.name() {
+        format!(" {}", prim.name())
+    } else {
+        "".to_string()
+    };
+    let href = format!("/docs/{}", prim.name());
+    let mut title = String::new();
+    if let Some(ascii) = prim.ascii() {
+        title.push_str(&format!("({})", ascii));
+    }
+    if prim.glyph().is_some() && glyph_only {
+        if !title.is_empty() {
+            title.push(' ');
+        }
+        title.push_str(prim.name());
+    }
+    if let Primitive::Sys(op) = prim {
+        title.push_str(op.long_name());
+        title.push(':');
+        title.push('\n');
+    }
+    if !hide_docs {
+        let doc = prim.doc();
+        if glyph_only && !title.is_empty() && !matches!(prim, Primitive::Sys(_)) {
+            title.push_str(": ");
+        }
+        title.push_str(&doc.short_text());
+    }
+    if title.is_empty() {
+        format!(
+            r#"<a href="{href}"class="prim-code-a">
+                <code><span class="{symbol_class}">{symbol}</span>{name}</code>
+            </a>"#,
+        )
+    } else {
+        format!(
+            r#"<a href="{href}" class="prim-code-a">
+                <code class="prim-code" data-title="{title}"><span class="{symbol_class}">{symbol}</span>{name}</code>
+            </a>"#,
+        )
+    }
+}
+
 #[component]
 pub fn Prims<const N: usize>(
     prims: [Primitive; N],

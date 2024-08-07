@@ -1779,6 +1779,11 @@ primitive!(
     /// ex: [⊃⊙⋅∘(++) 3 5 10]
     /// ex: [⊃⋅⊙∘(++) 3 5 10]
     /// ex: [⊃⊙∘(++) 3 5 10]
+    ///
+    /// [dip] can be used with a function pack.
+    /// `dip``(F|G|H|..)` is equivalent to `dip``(F``dip``(G``dip``(H``dip``(..))))`.
+    /// ex: ⊙(+|×) 1 2 3 4
+    /// ex: ⊙(⊂×10|{⊙∘}|⊟) 1 2 3 4 5
     ([1], Dip, Planet, ("dip", '⊙')),
     /// Call a function but keep its first argument on the top of the stack
     ///

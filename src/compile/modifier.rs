@@ -1280,6 +1280,7 @@ impl Compiler {
                 struct Field {
                     name: EcoString,
                     name_span: CodeSpan,
+                    span: usize,
                     global_index: usize,
                     type_num: Option<u8>,
                     init: Option<(EcoVec<Instr>, Signature)>,
@@ -1295,9 +1296,11 @@ impl Compiler {
                 for word in (arr.lines.into_iter().flatten()).filter(|word| word.value.is_code()) {
                     match word.value {
                         Word::Ref(r) if r.path.is_empty() => {
+                            let span = self.add_span(word.span.clone());
                             fields.push(Field {
                                 name: r.name.value,
                                 name_span: word.span,
+                                span,
                                 global_index: 0,
                                 type_num: None,
                                 init: None,
@@ -1314,8 +1317,12 @@ impl Compiler {
                             }
                             let (_, sig, new_func) =
                                 self.compile_func_instrs(func, word.span.clone(), true)?;
-                            let sig = sig.unwrap();
-                            if sig.outputs != 1 {
+                            let mut instrs = new_func.instrs;
+                            let mut sig = sig.unwrap();
+                            if sig == (1, 0) {
+                                instrs.insert(0, Instr::Prim(Primitive::Dup, field.span));
+                                sig = Signature::new(1, 1);
+                            } else if sig.outputs != 1 {
                                 self.add_error(
                                     word.span,
                                     format!(
@@ -1324,7 +1331,7 @@ impl Compiler {
                                     ),
                                 );
                             }
-                            field.init = Some((new_func.instrs, sig));
+                            field.init = Some((instrs, sig));
                         }
                         Word::Number(_, n) if !fields.is_empty() => {
                             let field = fields.last_mut().unwrap();
@@ -1374,8 +1381,8 @@ impl Compiler {
                 for (i, field) in fields.iter_mut().enumerate() {
                     let name = &field.name;
                     let id = FunctionId::Named(name.clone());
-                    let span = self.add_span(field.name_span.clone());
-                    let mut instrs = eco_vec![Instr::push(i), Instr::Prim(Primitive::Pick, span),];
+                    let span = field.span;
+                    let mut instrs = eco_vec![Instr::push(i), Instr::Prim(Primitive::Pick, span)];
                     if arr.boxes {
                         instrs.push(Instr::ImplPrim(ImplPrimitive::UnBox, span));
                         instrs.push(Instr::Label {
@@ -1444,7 +1451,7 @@ impl Compiler {
                                         count: sig.args,
                                         span,
                                     })
-                                };
+                                }
                             } else {
                                 instrs.push(Instr::PushTemp {
                                     stack: TempStack::Inline,

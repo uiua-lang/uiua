@@ -2691,6 +2691,19 @@ primitive!(
     ///   :   struct{Username Salt Hashed Email}
     ///   : ---
     ///   : User~Fields
+    /// If a field name is followed by a function in `()`s, the field will be initialized with that value rather than by the `New` function.
+    /// ex: # Experimental!
+    ///   : ---Foo
+    ///   :   struct{Name Count(0)}
+    ///   : ---
+    ///   : Foo "Uiua"
+    /// If a field name is followed by a number, the constructor will validate that field's [type] against it.
+    /// ex! # Experimental!
+    ///   : ---Foo
+    ///   :   struct{Name 2 Count(0)}
+    ///   : ---
+    ///   : Foo "Uiua"
+    ///   : Foo 5
     ///
     /// The syntax using `[]` and `{}` was developed by Uiua community member *janMakoso*.
     (0(0)[1], Struct, Misc, "struct"),

@@ -1257,170 +1257,255 @@ impl Compiler {
                 ];
                 finish!(instrs, Signature::new(0, 2));
             }
-            Struct => {
-                let operand = modified.code_operands().next().unwrap().clone();
-                if !self.current_bindings.is_empty() {
-                    self.add_error(
-                        modified.modifier.span.clone(),
-                        "struct cannot be used inside a binding",
-                    );
-                }
-                match operand.value {
-                    Word::Array(arr) => {
-                        let mut field_count = 0;
-                        let mut names = Vec::new();
-                        let module_name = if let ScopeKind::Module(name) = &self.scope.kind {
-                            Some(name.clone())
-                        } else {
-                            None
-                        };
-                        // Make getters
-                        for (i, word) in (arr.lines.iter().flatten())
-                            .filter(|word| word.value.is_code())
-                            .enumerate()
-                        {
-                            match &word.value {
-                                Word::Ref(r) if r.path.is_empty() => {
-                                    let name = &r.name.value;
-                                    names.push(name);
-                                    let id = FunctionId::Named(name.clone());
-                                    let span = self.add_span(word.span.clone());
-                                    let mut instrs = eco_vec![
-                                        Instr::push(i),
-                                        Instr::Prim(Primitive::Pick, span),
-                                    ];
-                                    if arr.boxes {
-                                        instrs.push(Instr::ImplPrim(ImplPrimitive::UnBox, span));
-                                        instrs.push(Instr::Label {
-                                            label: name.clone(),
-                                            span,
-                                            remove: true,
-                                        });
-                                    }
-                                    let new_func = NewFunction {
-                                        instrs,
-                                        flags: FunctionFlags::TRACK_CALLER,
-                                    };
-                                    let func =
-                                        self.make_function(id, Signature::new(1, 1), new_func);
-                                    let local = LocalName {
-                                        index: self.next_global,
-                                        public: true,
-                                    };
-                                    self.next_global += 1;
-                                    let comment = if let Some(module_name) = &module_name {
-                                        format!("Get `{module_name}`'s `{name}`")
-                                    } else {
-                                        format!("Get `{name}`")
-                                    };
-                                    self.compile_bind_function(
-                                        name.clone(),
-                                        local,
-                                        func,
-                                        span,
-                                        Some(&comment),
-                                    )?;
-                                    field_count += 1;
-                                    self.code_meta
-                                        .global_references
-                                        .insert(word.span.clone(), local.index);
-                                }
-                                _ => {
-                                    self.add_error(
-                                        word.span.clone(),
-                                        "struct's array must contain only names",
-                                    );
-                                    break;
-                                }
-                            }
-                        }
-
-                        // Make field names
-                        let span = self.add_span(operand.span.clone());
-                        let local = LocalName {
-                            index: self.next_global,
-                            public: true,
-                        };
-                        self.next_global += 1;
-                        let comment = (module_name.as_ref())
-                            .map(|name| format!("Names of `{name}`'s fields"));
-                        let name = Ident::from("Fields");
-                        self.compile_bind_const(
-                            name,
-                            local,
-                            Some(Array::from_iter(names.iter().map(|s| s.as_str())).into()),
-                            span,
-                            comment.as_deref(),
-                        );
-
-                        // Make constructor
-                        let mut instrs = eco_vec![Instr::BeginArray];
-                        if arr.boxes {
-                            if names.len() > 1 {
-                                for _ in 0..names.len() - 1 {
-                                    instrs.push(Instr::PushTemp {
-                                        stack: TempStack::Inline,
-                                        count: 1,
-                                        span,
-                                    });
-                                }
-                            }
-                            for (i, name) in names.iter().rev().enumerate() {
-                                if i > 0 {
-                                    instrs.push(Instr::PopTemp {
-                                        stack: TempStack::Inline,
-                                        count: 1,
-                                        span,
-                                    });
-                                }
-                                instrs.push(Instr::Label {
-                                    label: (*name).clone(),
-                                    span,
-                                    remove: false,
-                                });
-                            }
-                        } else {
-                            instrs.push(Instr::TouchStack {
-                                count: field_count,
-                                span,
-                            });
-                        }
-                        instrs.push(Instr::EndArray {
-                            boxed: arr.boxes,
-                            span,
-                        });
-                        let name = Ident::from("New");
-                        let id = FunctionId::Named(name.clone());
-                        let new_func = NewFunction {
-                            instrs,
-                            flags: FunctionFlags::TRACK_CALLER,
-                        };
-                        let func = self.make_function(id, Signature::new(field_count, 1), new_func);
-                        let local = LocalName {
-                            index: self.next_global,
-                            public: true,
-                        };
-                        self.next_global += 1;
-                        let mut comment = module_name
-                            .map(|name| format!("Create a new `{name}`\n{name} "))
-                            .unwrap_or_default();
-                        comment.push('?');
-                        for name in names {
-                            comment.push(' ');
-                            comment.push_str(name);
-                        }
-                        self.compile_bind_function(name, local, func, span, Some(&comment))?;
-                    }
-                    _ => {
-                        self.add_error(operand.span, "struct's argument must be stack array syntax")
-                    }
-                }
-            }
+            Struct => self.struct_(
+                &modified.modifier.span,
+                modified.code_operands().next().unwrap(),
+            )?,
             _ => return Ok(false),
         }
         self.handle_primitive_experimental(prim, &modified.modifier.span);
         self.handle_primitive_deprecation(prim, &modified.modifier.span);
         Ok(true)
+    }
+    fn struct_(&mut self, modifier_span: &CodeSpan, operand: &Sp<Word>) -> UiuaResult {
+        if !self.current_bindings.is_empty() {
+            self.add_error(
+                modifier_span.clone(),
+                "struct cannot be used inside a binding",
+            );
+        }
+        let operand = operand.clone();
+        match operand.value {
+            Word::Array(arr) => {
+                struct Field {
+                    name: EcoString,
+                    name_span: CodeSpan,
+                    global_index: usize,
+                    type_num: Option<u8>,
+                    init: Option<EcoVec<Instr>>,
+                }
+                let mut fields = Vec::new();
+                let module_name = if let ScopeKind::Module(name) = &self.scope.kind {
+                    Some(name.clone())
+                } else {
+                    None
+                };
+                // Make getters
+                let mut invalid_syntax = false;
+                for word in (arr.lines.into_iter().flatten()).filter(|word| word.value.is_code()) {
+                    match word.value {
+                        Word::Ref(r) if r.path.is_empty() => {
+                            fields.push(Field {
+                                name: r.name.value,
+                                name_span: word.span,
+                                global_index: 0,
+                                type_num: None,
+                                init: None,
+                            });
+                        }
+                        Word::Func(func) if !fields.is_empty() => {
+                            let field = fields.last_mut().unwrap();
+                            if field.init.is_some() {
+                                self.add_error(
+                                    word.span,
+                                    "Cannot have multiple initializers for a struct field",
+                                );
+                                continue;
+                            }
+                            let (_, sig, new_func) =
+                                self.compile_func_instrs(func, word.span.clone(), true)?;
+                            let sig = sig.unwrap();
+                            if sig != (0, 1) {
+                                self.add_error(
+                                    word.span,
+                                    format!(
+                                        "Field initializer must have signature |0, \
+                                        but its signature is {sig}"
+                                    ),
+                                );
+                            }
+                            field.init = Some(new_func.instrs);
+                        }
+                        Word::Number(_, n) if !fields.is_empty() => {
+                            let field = fields.last_mut().unwrap();
+                            if field.type_num.is_some() {
+                                self.add_error(
+                                    word.span,
+                                    "Cannot have multiple types for a struct field",
+                                );
+                                continue;
+                            }
+                            if n.fract() != 0.0 || !(0.0..4.0).contains(&n) {
+                                self.add_error(word.span, format!("Invalid type number {n}"));
+                            } else {
+                                field.type_num = Some(n as u8);
+                            }
+                        }
+                        Word::Primitive(Primitive::Complex) if !fields.is_empty() => {
+                            let field = fields.last_mut().unwrap();
+                            if field.type_num.is_some() {
+                                self.add_error(
+                                    word.span,
+                                    "Cannot have multiple types for a struct field",
+                                );
+                                continue;
+                            }
+                            field.type_num = Some(1);
+                        }
+                        Word::Primitive(Primitive::Box) if !fields.is_empty() => {
+                            let field = fields.last_mut().unwrap();
+                            if field.type_num.is_some() {
+                                self.add_error(
+                                    word.span,
+                                    "Cannot have multiple types for a struct field",
+                                );
+                                continue;
+                            }
+                            field.type_num = Some(3);
+                        }
+                        _ => {
+                            if !invalid_syntax {
+                                self.add_error(word.span.clone(), "invalid struct syntax");
+                                invalid_syntax = true;
+                            }
+                        }
+                    }
+                }
+                for (i, field) in fields.iter_mut().enumerate() {
+                    let name = &field.name;
+                    let id = FunctionId::Named(name.clone());
+                    let span = self.add_span(field.name_span.clone());
+                    let mut instrs = eco_vec![Instr::push(i), Instr::Prim(Primitive::Pick, span),];
+                    if arr.boxes {
+                        instrs.push(Instr::ImplPrim(ImplPrimitive::UnBox, span));
+                        instrs.push(Instr::Label {
+                            label: name.clone(),
+                            span,
+                            remove: true,
+                        });
+                    }
+                    let new_func = NewFunction {
+                        instrs,
+                        flags: FunctionFlags::TRACK_CALLER,
+                    };
+                    let func = self.make_function(id, Signature::new(1, 1), new_func);
+                    let local = LocalName {
+                        index: self.next_global,
+                        public: true,
+                    };
+                    field.global_index = local.index;
+                    self.next_global += 1;
+                    let comment = if let Some(module_name) = &module_name {
+                        format!("Get `{module_name}`'s `{name}`")
+                    } else {
+                        format!("Get `{name}`")
+                    };
+                    self.compile_bind_function(name.clone(), local, func, span, Some(&comment))?;
+                    self.code_meta
+                        .global_references
+                        .insert(field.name_span.clone(), local.index);
+                }
+
+                // Make field names
+                let span = self.add_span(operand.span.clone());
+                let local = LocalName {
+                    index: self.next_global,
+                    public: true,
+                };
+                self.next_global += 1;
+                let comment =
+                    (module_name.as_ref()).map(|name| format!("Names of `{name}`'s fields"));
+                let name = Ident::from("Fields");
+                self.compile_bind_const(
+                    name,
+                    local,
+                    Some(Array::from_iter(fields.iter().map(|f| f.name.as_str())).into()),
+                    span,
+                    comment.as_deref(),
+                );
+
+                // Make constructor
+                let mut instrs = eco_vec![Instr::BeginArray];
+                let constructor_args = fields.iter().filter(|f| f.init.is_none()).count();
+                if arr.boxes
+                    || constructor_args < fields.len()
+                    || fields.iter().any(|f| f.type_num.is_some())
+                {
+                    if fields.len() > 1 || fields.len() > constructor_args {
+                        for _ in 0..fields.len() - 1 {
+                            instrs.push(Instr::PushTemp {
+                                stack: TempStack::Inline,
+                                count: 1,
+                                span,
+                            });
+                        }
+                    }
+                    for (i, field) in fields.iter().rev().enumerate() {
+                        if let Some(init) = &field.init {
+                            instrs.extend_from_slice(init);
+                        }
+                        if i > 0 {
+                            instrs.push(Instr::PopTemp {
+                                stack: TempStack::Inline,
+                                count: 1,
+                                span,
+                            });
+                            if field.init.is_none() {
+                                self.code_meta
+                                    .global_references
+                                    .insert(field.name_span.clone(), field.global_index);
+                            }
+                        }
+                        if let Some(type_num) = field.type_num {
+                            instrs.push(Instr::push(type_num));
+                            instrs.push(Instr::ImplPrim(ImplPrimitive::ValidateType, span));
+                        }
+                        if arr.boxes {
+                            instrs.push(Instr::Label {
+                                label: field.name.clone(),
+                                span,
+                                remove: false,
+                            });
+                        }
+                    }
+                } else {
+                    instrs.push(Instr::TouchStack {
+                        count: fields.len(),
+                        span,
+                    });
+                }
+                instrs.push(Instr::EndArray {
+                    boxed: arr.boxes,
+                    span,
+                });
+                let name = Ident::from("New");
+                let id = FunctionId::Named(name.clone());
+                let new_func = NewFunction {
+                    instrs,
+                    flags: FunctionFlags::TRACK_CALLER,
+                };
+                let func = self.make_function(id, Signature::new(constructor_args, 1), new_func);
+                let local = LocalName {
+                    index: self.next_global,
+                    public: true,
+                };
+                self.next_global += 1;
+                let mut comment = module_name
+                    .map(|name| format!("Create a new `{name}`\n{name} "))
+                    .unwrap_or_default();
+                comment.push('?');
+                for field in fields {
+                    if field.init.is_some() {
+                        continue;
+                    }
+                    comment.push(' ');
+                    comment.push_str(&field.name);
+                }
+                self.compile_bind_function(name, local, func, span, Some(&comment))?;
+            }
+            _ => self.add_error(operand.span, "struct's argument must be stack array syntax"),
+        }
+        Ok(())
     }
     /// Expand a stack macro
     fn expand_stack_macro(

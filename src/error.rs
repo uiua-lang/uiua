@@ -156,6 +156,7 @@ impl UiuaError {
         self.trace.clear();
         match &mut self.kind {
             UiuaErrorKind::Run(message, _) => message.span = new_span.into(),
+            UiuaErrorKind::Throw(_, span, _) => *span = new_span.into(),
             _ => {}
         }
     }

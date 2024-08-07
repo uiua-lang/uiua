@@ -2,7 +2,7 @@
 
 use std::{cmp::Ordering, slice};
 
-use crate::{format::format_words, UiuaErrorKind};
+use crate::{format::format_words, UiuaErrorKind, SUBSCRIPT_NUMS};
 
 use super::*;
 
@@ -1282,7 +1282,7 @@ impl Compiler {
                     name_span: CodeSpan,
                     global_index: usize,
                     type_num: Option<u8>,
-                    init: Option<EcoVec<Instr>>,
+                    init: Option<(EcoVec<Instr>, Signature)>,
                 }
                 let mut fields = Vec::new();
                 let module_name = if let ScopeKind::Module(name) = &self.scope.kind {
@@ -1315,16 +1315,16 @@ impl Compiler {
                             let (_, sig, new_func) =
                                 self.compile_func_instrs(func, word.span.clone(), true)?;
                             let sig = sig.unwrap();
-                            if sig != (0, 1) {
+                            if sig.outputs != 1 {
                                 self.add_error(
                                     word.span,
                                     format!(
-                                        "Field initializer must have signature |0, \
+                                        "Field initializer must have one output, \
                                         but its signature is {sig}"
                                     ),
                                 );
                             }
-                            field.init = Some(new_func.instrs);
+                            field.init = Some((new_func.instrs, sig));
                         }
                         Word::Number(_, n) if !fields.is_empty() => {
                             let field = fields.last_mut().unwrap();
@@ -1426,19 +1426,32 @@ impl Compiler {
 
                 // Make constructor
                 let mut instrs = eco_vec![Instr::BeginArray];
-                let constructor_args = fields.iter().filter(|f| f.init.is_none()).count();
+                let constructor_args: usize = fields
+                    .iter()
+                    .map(|f| f.init.as_ref().map(|(_, sig)| sig.args).unwrap_or(1))
+                    .sum();
                 let has_inits = fields.iter().any(|f| f.init.is_some());
                 if arr.boxes
                     || constructor_args < fields.len()
                     || fields.iter().any(|f| f.type_num.is_some())
                 {
                     if has_inits {
-                        for _ in 0..constructor_args {
-                            instrs.push(Instr::PushTemp {
-                                stack: TempStack::Inline,
-                                count: 1,
-                                span,
-                            });
+                        for field in &fields {
+                            if let Some((_, sig)) = field.init {
+                                if sig.args > 0 {
+                                    instrs.push(Instr::PushTemp {
+                                        stack: TempStack::Inline,
+                                        count: sig.args,
+                                        span,
+                                    })
+                                };
+                            } else {
+                                instrs.push(Instr::PushTemp {
+                                    stack: TempStack::Inline,
+                                    count: 1,
+                                    span,
+                                });
+                            }
                         }
                     } else if fields.len() > 1 {
                         for _ in 0..fields.len() - 1 {
@@ -1450,7 +1463,14 @@ impl Compiler {
                         }
                     }
                     for (i, field) in fields.iter().rev().enumerate() {
-                        if let Some(init) = &field.init {
+                        if let Some((init, sig)) = &field.init {
+                            if sig.args > 0 {
+                                instrs.push(Instr::PopTemp {
+                                    stack: TempStack::Inline,
+                                    count: sig.args,
+                                    span,
+                                });
+                            }
                             instrs.extend_from_slice(init);
                         } else if i > 0 || has_inits {
                             instrs.push(Instr::PopTemp {
@@ -1484,7 +1504,6 @@ impl Compiler {
                     boxed: arr.boxes,
                     span,
                 });
-                println!("{instrs:?}");
                 let name = Ident::from("New");
                 let id = FunctionId::Named(name.clone());
                 let new_func = NewFunction {
@@ -1502,11 +1521,24 @@ impl Compiler {
                     .unwrap_or_default();
                 comment.push('?');
                 for field in fields {
-                    if field.init.is_some() {
-                        continue;
+                    match field.init.as_ref().map(|(_, sig)| sig.args) {
+                        Some(0) => continue,
+                        Some(1) | None => {
+                            comment.push(' ');
+                            comment.push_str(&field.name);
+                        }
+                        Some(n) => {
+                            for i in 0..n {
+                                comment.push(' ');
+                                comment.push_str(&field.name);
+                                let mut i = i + 1;
+                                while i > 0 {
+                                    comment.push(SUBSCRIPT_NUMS[i % 10]);
+                                    i /= 10;
+                                }
+                            }
+                        }
                     }
-                    comment.push(' ');
-                    comment.push_str(&field.name);
                 }
                 self.compile_bind_function(name, local, func, span, Some(&comment))?;
             }

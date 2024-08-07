@@ -1427,11 +1427,20 @@ impl Compiler {
                 // Make constructor
                 let mut instrs = eco_vec![Instr::BeginArray];
                 let constructor_args = fields.iter().filter(|f| f.init.is_none()).count();
+                let has_inits = fields.iter().any(|f| f.init.is_some());
                 if arr.boxes
                     || constructor_args < fields.len()
                     || fields.iter().any(|f| f.type_num.is_some())
                 {
-                    if fields.len() > 1 || fields.len() > constructor_args {
+                    if has_inits {
+                        for _ in 0..constructor_args {
+                            instrs.push(Instr::PushTemp {
+                                stack: TempStack::Inline,
+                                count: 1,
+                                span,
+                            });
+                        }
+                    } else if fields.len() > 1 {
                         for _ in 0..fields.len() - 1 {
                             instrs.push(Instr::PushTemp {
                                 stack: TempStack::Inline,
@@ -1443,18 +1452,15 @@ impl Compiler {
                     for (i, field) in fields.iter().rev().enumerate() {
                         if let Some(init) = &field.init {
                             instrs.extend_from_slice(init);
-                        }
-                        if i > 0 {
+                        } else if i > 0 || has_inits {
                             instrs.push(Instr::PopTemp {
                                 stack: TempStack::Inline,
                                 count: 1,
                                 span,
                             });
-                            if field.init.is_none() {
-                                self.code_meta
-                                    .global_references
-                                    .insert(field.name_span.clone(), field.global_index);
-                            }
+                            self.code_meta
+                                .global_references
+                                .insert(field.name_span.clone(), field.global_index);
                         }
                         if let Some(type_num) = field.type_num {
                             instrs.push(Instr::push(type_num));
@@ -1478,6 +1484,7 @@ impl Compiler {
                     boxed: arr.boxes,
                     span,
                 });
+                println!("{instrs:?}");
                 let name = Ident::from("New");
                 let id = FunctionId::Named(name.clone());
                 let new_func = NewFunction {

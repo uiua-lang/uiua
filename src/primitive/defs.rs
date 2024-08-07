@@ -3028,4 +3028,6 @@ impl_primitive!(
     (1(2)[3], AstarFirst),
     // Implementation details
     (1[2], RepeatWithInverse),
+    (2(1), ValidateType),
+    (2(0), ValidateTypeConsume),
 );

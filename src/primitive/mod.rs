@@ -264,6 +264,8 @@ impl fmt::Display for ImplPrimitive {
                 Ok(())
             }
             RepeatWithInverse => write!(f, "{Repeat}"),
+            ValidateType => write!(f, "{Un}…{Type}{Dup}"),
+            ValidateTypeConsume => write!(f, "{Un}…{Type}"),
         }
     }
 }
@@ -1101,7 +1103,32 @@ impl ImplPrimitive {
             ImplPrimitive::AstarFirst => algorithm::astar_first(env)?,
             &ImplPrimitive::ReduceDepth(depth) => reduce::reduce(depth, env)?,
             &ImplPrimitive::TransposeN(n) => env.monadic_mut(|val| val.transpose_depth(0, n))?,
+            // Implementation details
             ImplPrimitive::RepeatWithInverse => loops::repeat(true, env)?,
+            ImplPrimitive::ValidateType | ImplPrimitive::ValidateTypeConsume => {
+                let type_num = env
+                    .pop(1)?
+                    .as_nat(env, "Type number must be a natural number")?;
+                let val = env.pop(2)?;
+                if val.type_id() as usize != type_num {
+                    let found = if val.element_count() == 1 {
+                        val.type_name()
+                    } else {
+                        val.type_name_plural()
+                    };
+                    let expected = match type_num {
+                        0 => "numbers",
+                        1 => "complex numbers",
+                        2 => "characters",
+                        3 => "boxes",
+                        _ => return Err(env.error(format!("Invalid type number {type_num}"))),
+                    };
+                    return Err(env.error(format!("Expected {expected} but found {found}")));
+                }
+                if let ImplPrimitive::ValidateType = self {
+                    env.push(val);
+                }
+            }
         }
         Ok(())
     }

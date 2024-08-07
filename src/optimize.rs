@@ -280,6 +280,25 @@ pub(crate) fn optimize_instrs_mut(
                 instrs.pop();
             }
         }
+        // Validate type
+        (
+            [.., Instr::Prim(Dup, _), Instr::Prim(Type, _), Instr::Push(val)],
+            Instr::ImplPrim(MatchPattern, span),
+        ) => {
+            let val = val.clone();
+            instrs.pop();
+            instrs.pop();
+            instrs.pop();
+            instrs.push(Instr::Push(val));
+            instrs.push(Instr::ImplPrim(ValidateType, span));
+        }
+        ([.., Instr::Prim(Type, _), Instr::Push(val)], Instr::ImplPrim(MatchPattern, span)) => {
+            let val = val.clone();
+            instrs.pop();
+            instrs.pop();
+            instrs.push(Instr::Push(val));
+            instrs.push(Instr::ImplPrim(ValidateTypeConsume, span));
+        }
         ([.., Instr::ImplPrim(TraceN(a, inv_a), _)], Instr::ImplPrim(TraceN(b, inv_b), _))
             if *inv_a == inv_b =>
         {

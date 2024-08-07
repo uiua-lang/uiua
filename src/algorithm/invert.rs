@@ -770,8 +770,10 @@ fn under_call_pattern<'a>(
         if comp.inlinable(&instrs, f.flags) {
             (befores, afters)
         } else {
-            let before = make_fn(befores, f.flags, span, comp)?;
-            let after = make_fn(afters, f.flags, span, comp)?;
+            let mut before = make_fn(befores, f.flags, span, comp)?;
+            let mut after = make_fn(afters, f.flags, span, comp)?;
+            before.flags |= FunctionFlags::NO_INLINE;
+            after.flags |= FunctionFlags::NO_INLINE;
             (
                 eco_vec![Instr::PushFunc(before), Instr::Call(span)],
                 eco_vec![Instr::PushFunc(after), Instr::Call(span)],

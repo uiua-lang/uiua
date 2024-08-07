@@ -58,6 +58,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the experimental [`but ⤙`](https://uiua.org/docs/but) and [`with ⤚`](https://uiua.org/docs/with) modifiers, which are compliments to [`on ⟜`](https://uiua.org/docs/on) and [`by ⊸`](https://uiua.org/docs/by)
 - Add the experimental [`above ◠`](https://uiua.org/docs/above) and [`below ◡`](https://uiua.org/docs/below) modifiers, which keep all arguments to a function above or below the outputs on the stack
 - Add the experimental [`struct`](https://uiua.org/docs/struct) macro, which generates constructor and getter functions given some names
+- Un-deprecate [`dip ⊙`](https://uiua.org/docs/dip) function packs
 - Deprecate the experimental [`coordinate ⟔`](https://uiua.org/docs/coordinate) function, as it is seldom needed and easy to implement with other functions
   - It can be mostly replaced with `⊢⊚⌕`
 - Deprecate experimental stack and array swizzles

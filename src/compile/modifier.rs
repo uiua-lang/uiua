@@ -21,15 +21,6 @@ impl Compiler {
         };
         match &modifier.value {
             Modifier::Primitive(Primitive::Dip) => {
-                self.emit_diagnostic(
-                    format!(
-                        "{} function packs are deprecated and \
-                    will be removed in the future",
-                        Primitive::Dip.format()
-                    ),
-                    DiagnosticKind::Warning,
-                    span.clone(),
-                );
                 let mut branches = pack.branches.iter().cloned().rev();
                 let mut new = Modified {
                     modifier: modifier.clone(),

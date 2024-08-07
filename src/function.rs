@@ -82,6 +82,13 @@ pub enum Instr {
         span: usize,
         remove: bool,
     },
+    /// Validate a field type
+    ValidateType {
+        index: usize,
+        name: EcoString,
+        type_num: u8,
+        span: usize,
+    },
     /// Call a dynamic function
     Dynamic(DynamicFunction),
     Unpack {
@@ -190,6 +197,20 @@ impl PartialEq for Instr {
             (Self::PushSig(a), Self::PushSig(b)) => a == b,
             (Self::PopSig, Self::PopSig) => true,
             (Self::StackSwizzle(a, _), Self::StackSwizzle(b, _)) => a == b,
+            (
+                Self::ValidateType {
+                    index: ai,
+                    name: a,
+                    type_num: an,
+                    ..
+                },
+                Self::ValidateType {
+                    index: bi,
+                    name: b,
+                    type_num: bn,
+                    ..
+                },
+            ) => ai == bi && a == b && an == bn,
             _ => false,
         }
     }
@@ -230,6 +251,12 @@ impl Hash for Instr {
             Instr::SetOutputComment { i, n, .. } => (24, i, n).hash(state),
             Instr::PushSig(sig) => (25, sig).hash(state),
             Instr::PopSig => 26.hash(state),
+            Instr::ValidateType {
+                index,
+                name,
+                type_num,
+                ..
+            } => (27, index, name, type_num).hash(state),
             Instr::StackSwizzle(swizzle, _) => (31, swizzle).hash(state),
         }
     }
@@ -536,6 +563,9 @@ impl fmt::Display for Instr {
                 write!(f, "\"")
             }
             Instr::Label { label, .. } => write!(f, "${label}"),
+            Instr::ValidateType { name, type_num, .. } => {
+                write!(f, "<validate {name} as {type_num}>")
+            }
             Instr::Dynamic(df) => write!(f, "{df:?}"),
             Instr::Unpack {
                 count,
@@ -582,7 +612,7 @@ impl Default for Function {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(transparent)]
 pub(crate) struct FunctionFlags(u8);
 

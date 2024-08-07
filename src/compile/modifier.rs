@@ -1291,7 +1291,7 @@ impl Compiler {
                 } else {
                     None
                 };
-                // Make getters
+                // Collect fields
                 let mut invalid_syntax = false;
                 for word in (arr.lines.into_iter().flatten()).filter(|word| word.value.is_code()) {
                     match word.value {
@@ -1318,10 +1318,9 @@ impl Compiler {
                             let (_, sig, new_func) =
                                 self.compile_func_instrs(func, word.span.clone(), true)?;
                             let mut instrs = new_func.instrs;
-                            let mut sig = sig.unwrap();
+                            let sig = sig.unwrap();
                             if sig == (1, 0) {
                                 instrs.insert(0, Instr::Prim(Primitive::Dup, field.span));
-                                sig = Signature::new(1, 1);
                             } else if sig.outputs != 1 {
                                 self.add_error(
                                     word.span,
@@ -1370,14 +1369,15 @@ impl Compiler {
                             }
                             field.type_num = Some(3);
                         }
-                        _ => {
-                            if !invalid_syntax {
-                                self.add_error(word.span.clone(), "invalid struct syntax");
-                                invalid_syntax = true;
-                            }
+                        _ if !invalid_syntax => {
+                            self.add_error(word.span.clone(), "invalid struct syntax");
+                            invalid_syntax = true;
                         }
+                        _ => {}
                     }
                 }
+
+                // Make getters
                 for (i, field) in fields.iter_mut().enumerate() {
                     let name = &field.name;
                     let id = FunctionId::Named(name.clone());
@@ -1389,6 +1389,14 @@ impl Compiler {
                             label: name.clone(),
                             span,
                             remove: true,
+                        });
+                    }
+                    if let Some(type_num) = field.type_num {
+                        instrs.push(Instr::ValidateType {
+                            index: i + 1,
+                            name: field.name.clone(),
+                            type_num,
+                            span,
                         });
                     }
                     let new_func = NewFunction {
@@ -1490,8 +1498,12 @@ impl Compiler {
                                 .insert(field.name_span.clone(), field.global_index);
                         }
                         if let Some(type_num) = field.type_num {
-                            instrs.push(Instr::push(type_num));
-                            instrs.push(Instr::ImplPrim(ImplPrimitive::ValidateType, span));
+                            instrs.push(Instr::ValidateType {
+                                index: i + 1,
+                                name: field.name.clone(),
+                                type_num,
+                                span,
+                            });
                         }
                         if arr.boxes {
                             instrs.push(Instr::Label {

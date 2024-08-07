@@ -14,8 +14,8 @@ use crate::{
     check::{instrs_clean_signature, instrs_signature, instrs_signature_no_temp},
     instrs_are_pure,
     primitive::{ImplPrimitive, Primitive},
-    Array, Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionId, Instr, NewFunction,
-    Purity, Signature, Span, SysOp, TempStack, Uiua, UiuaResult, Value,
+    Array, Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionFlags, FunctionId, Instr,
+    NewFunction, Purity, Signature, Span, SysOp, TempStack, Uiua, UiuaResult, Value,
 };
 
 use super::IgnoreError;
@@ -759,12 +759,25 @@ fn under_call_pattern<'a>(
     g_sig: Signature,
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
-    let [Instr::PushFunc(f), Instr::Call(_), input @ ..] = input else {
+    let [Instr::PushFunc(f), Instr::Call(span), input @ ..] = input else {
         return None;
     };
+    let span = *span;
     let instrs = f.instrs(&comp.asm).to_vec();
     let (befores, afters) = under_instrs(&instrs, g_sig, comp)?;
-    Some((input, (befores, afters)))
+    Some((
+        input,
+        if comp.inlinable(&instrs, f.flags) {
+            (befores, afters)
+        } else {
+            let before = make_fn(befores, f.flags, span, comp)?;
+            let after = make_fn(afters, f.flags, span, comp)?;
+            (
+                eco_vec![Instr::PushFunc(before), Instr::Call(span)],
+                eco_vec![Instr::PushFunc(after), Instr::Call(span)],
+            )
+        },
+    ))
 }
 
 fn invert_trivial_pattern<'a>(
@@ -778,7 +791,8 @@ fn invert_trivial_pattern<'a>(
                 return Some((input, eco_vec![inv]));
             }
         }
-        [instr @ (SetOutputComment { .. } | TouchStack { .. }), input @ ..] => {
+        [instr @ (SetOutputComment { .. } | TouchStack { .. } | ValidateType { .. }), input @ ..] =>
+        {
             return Some((input, eco_vec![instr.clone()]));
         }
         [ImplPrim(prim, span), input @ ..] => {
@@ -1743,13 +1757,18 @@ fn temp_pair_counts<'a, 'b>(
     }
 }
 
-fn make_fn(instrs: EcoVec<Instr>, span: usize, comp: &mut Compiler) -> Option<Function> {
+fn make_fn(
+    instrs: EcoVec<Instr>,
+    flags: FunctionFlags,
+    span: usize,
+    comp: &mut Compiler,
+) -> Option<Function> {
     let sig = instrs_signature(&instrs).ok()?;
     let Span::Code(span) = comp.get_span(span) else {
         return None;
     };
     let id = FunctionId::Anonymous(span);
-    Some(comp.make_function(id, sig, instrs.into()))
+    Some(comp.make_function(id, sig, NewFunction { instrs, flags }))
 }
 
 fn under_each_pattern<'a>(
@@ -1764,11 +1783,11 @@ fn under_each_pattern<'a>(
     let instrs = f.instrs(&comp.asm).to_vec();
     let (f_before, f_after) = under_instrs(&instrs, g_sig, comp)?;
     let befores = eco_vec![
-        Instr::PushFunc(make_fn(f_before, span, comp)?),
+        Instr::PushFunc(make_fn(f_before, f.flags, span, comp)?),
         Instr::Prim(Primitive::Each, span),
     ];
     let afters = eco_vec![
-        Instr::PushFunc(make_fn(f_after, span, comp)?),
+        Instr::PushFunc(make_fn(f_after, f.flags, span, comp)?),
         Instr::Prim(Primitive::Each, span),
     ];
     Some((input, (befores, afters)))
@@ -1783,7 +1802,7 @@ fn invert_rows_pattern<'a>(
     };
     let instrs = f.instrs(&comp.asm).to_vec();
     let inverse = invert_instrs(&instrs, comp)?;
-    let f = make_fn(inverse, *span, comp)?;
+    let f = make_fn(inverse, f.flags, *span, comp)?;
     Some((input, eco_vec![Instr::PushFunc(f), instr.clone()]))
 }
 
@@ -1799,10 +1818,10 @@ fn under_rows_pattern<'a>(
     let instrs = f.instrs(&comp.asm).to_vec();
     let (f_before, f_after) = under_instrs(&instrs, g_sig, comp)?;
     let befores = eco_vec![
-        Instr::PushFunc(make_fn(f_before, span, comp)?),
+        Instr::PushFunc(make_fn(f_before, f.flags, span, comp)?),
         Instr::Prim(Primitive::Rows, span),
     ];
-    let after_fn = make_fn(f_after, span, comp)?;
+    let after_fn = make_fn(f_after, f.flags, span, comp)?;
     let after_sig = after_fn.signature();
     let mut afters = eco_vec![
         Instr::PushFunc(after_fn),
@@ -1848,8 +1867,8 @@ fn under_fill_pattern<'a>(
     }
     let g_instrs = g.instrs(&comp.asm).to_vec();
     let (g_before, g_after) = under_instrs(&g_instrs, g_sig, comp)?;
-    let g_before = make_fn(g_before, span, comp)?;
-    let g_after = make_fn(g_after, span, comp)?;
+    let g_before = make_fn(g_before, g.flags, span, comp)?;
+    let g_after = make_fn(g_after, g.flags, span, comp)?;
     let befores = eco_vec![
         Instr::PushFunc(g_before),
         Instr::PushFunc(f.clone()),
@@ -1895,8 +1914,8 @@ fn under_switch_pattern<'a>(
         // Calc under f
         let f_instrs = f.instrs(&comp.asm).to_vec();
         let (before, after) = under_instrs(&f_instrs, g_sig, comp)?;
-        f_befores.push(make_fn(before, *span, comp)?);
-        let f_after = make_fn(after, *span, comp)?;
+        f_befores.push(make_fn(before, f.flags, *span, comp)?);
+        let f_after = make_fn(after, f.flags, *span, comp)?;
         let f_after_sig = f_after.signature();
         f_afters.push(f_after);
         // Aggregate sigs
@@ -1957,11 +1976,11 @@ macro_rules! partition_group {
                     count: 2,
                     span,
                 },
-                Instr::PushFunc(make_fn(f_before, span, comp)?),
+                Instr::PushFunc(make_fn(f_before, f.flags, span, comp)?),
                 Instr::Prim(Primitive::$prim, span),
             ];
             let afters = eco_vec![
-                Instr::PushFunc(make_fn(f_after, span, comp)?),
+                Instr::PushFunc(make_fn(f_after, f.flags, span, comp)?),
                 Instr::ImplPrim(ImplPrimitive::$impl_prim1, span),
                 Instr::PushTemp {
                     stack: TempStack::Inline,
@@ -2171,7 +2190,7 @@ fn invert_scan_pattern<'a>(
             invert_instrs(&instrs, comp)?
         }
     };
-    let inverse = make_fn(inverse, *span, comp)?;
+    let inverse = make_fn(inverse, f.flags, *span, comp)?;
     Some((
         input,
         eco_vec![
@@ -2189,7 +2208,7 @@ fn invert_repeat_pattern<'a>(
         [Instr::PushFunc(f), repeat @ Instr::Prim(Primitive::Repeat, span), input @ ..] => {
             let f_instrs = f.instrs(&comp.asm).to_vec();
             let instrs = invert_instrs(&f_instrs, comp)?;
-            let inverse = make_fn(instrs, *span, comp)?;
+            let inverse = make_fn(instrs, f.flags, *span, comp)?;
             Some((input, eco_vec![Instr::PushFunc(inverse), repeat.clone()]))
         }
         [Instr::PushFunc(inv), Instr::PushFunc(f), Instr::ImplPrim(ImplPrimitive::RepeatWithInverse, span), input @ ..] =>
@@ -2224,7 +2243,7 @@ fn under_repeat_pattern<'a>(
                     count: 1,
                     span: *span
                 },
-                PushFunc(make_fn(befores, *span, comp)?),
+                PushFunc(make_fn(befores, f.flags, *span, comp)?),
                 Prim(Repeat, *span)
             ];
             let afters = eco_vec![
@@ -2233,7 +2252,7 @@ fn under_repeat_pattern<'a>(
                     count: 1,
                     span: *span
                 },
-                PushFunc(make_fn(afters, *span, comp)?),
+                PushFunc(make_fn(afters, f.flags, *span, comp)?),
                 Prim(Repeat, *span)
             ];
             (input, (befores, afters))
@@ -2245,12 +2264,12 @@ fn under_repeat_pattern<'a>(
             let (befores, afters) = under_instrs(&instrs, g_sig, comp)?;
             let befores = eco_vec![
                 push.clone(),
-                PushFunc(make_fn(befores, *span, comp)?),
+                PushFunc(make_fn(befores, f.flags, *span, comp)?),
                 Prim(Repeat, *span)
             ];
             let afters = eco_vec![
                 push.clone(),
-                PushFunc(make_fn(afters, *span, comp)?),
+                PushFunc(make_fn(afters, f.flags, *span, comp)?),
                 Prim(Repeat, *span)
             ];
             (input, (befores, afters))
@@ -2277,8 +2296,8 @@ fn under_fold_pattern<'a>(
     {
         return None;
     }
-    let befores_func = make_fn(inner_befores, span, comp)?;
-    let afters_func = make_fn(inner_afters, span, comp)?;
+    let befores_func = make_fn(inner_befores, f.flags, span, comp)?;
+    let afters_func = make_fn(inner_afters, f.flags, span, comp)?;
     let befores = eco_vec![
         Instr::Prim(Primitive::Dup, span),
         Instr::Prim(Primitive::Len, span),
@@ -2323,7 +2342,12 @@ fn invert_primes_pattern<'a>(
     let [Instr::ImplPrim(ImplPrimitive::Primes, span), input @ ..] = input else {
         return None;
     };
-    let f = make_fn(eco_vec![Instr::Prim(Primitive::Mul, *span)], *span, comp)?;
+    let f = make_fn(
+        eco_vec![Instr::Prim(Primitive::Mul, *span)],
+        FunctionFlags::default(),
+        *span,
+        comp,
+    )?;
     Some((
         input,
         eco_vec![Instr::PushFunc(f), Instr::Prim(Primitive::Reduce, *span)],

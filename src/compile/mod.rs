@@ -114,7 +114,7 @@ impl Default for Compiler {
 /// A function that is under construction
 ///
 /// Has a list of instructions but also tracks flags
-#[derive(Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct NewFunction {
     pub instrs: EcoVec<Instr>,
     pub flags: FunctionFlags,
@@ -889,6 +889,7 @@ code:
         if let [Instr::PushFunc(f)] = new_func.instrs.as_slice() {
             sig = Some(f.signature());
             let slice = f.slice;
+            new_func.flags = f.flags;
             new_func.instrs = f.instrs(&self.asm).into();
             if slice.start + slice.len >= self.asm.instrs.len() - 1 {
                 self.asm.instrs.truncate(slice.start);
@@ -1767,6 +1768,9 @@ code:
                 }
             }
             BindingKind::Func(f) => {
+                if let Some(new_func) = self.new_functions.last_mut() {
+                    new_func.flags |= f.flags;
+                }
                 self.push_instr(Instr::PushFunc(f));
                 if call {
                     let span = self.add_span(span);
@@ -2177,7 +2181,7 @@ code:
         self.push_all_instrs(instrs);
         Ok(())
     }
-    fn inlinable(&self, instrs: &[Instr], flags: FunctionFlags) -> bool {
+    pub(crate) fn inlinable(&self, instrs: &[Instr], flags: FunctionFlags) -> bool {
         use ImplPrimitive::*;
         use Primitive::*;
         if flags.track_caller() || flags.no_inline() {
@@ -2325,15 +2329,13 @@ code:
         new_func.instrs = optimize_instrs(new_func.instrs, true, &self.asm);
         if self.in_inverse
             || self.pre_eval_mode == PreEvalMode::Lazy
-            || new_func
-                .instrs
-                .iter()
-                .all(|instr| matches!(instr, Instr::Push(_)))
+            || (new_func.instrs.iter()).all(|instr| matches!(instr, Instr::Push(_)))
             || new_func.flags.no_inline()
             || new_func.flags.track_caller()
         {
             return (new_func, errors);
         }
+        // println!("pre eval {:?}", new_func);
         let mut start = 0;
         let mut new_instrs: Option<EcoVec<Instr>> = None;
         'start: while start < new_func.instrs.len() {

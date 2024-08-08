@@ -48,7 +48,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This got in the way more than it helped
 - Non-scalar [`switch ⨬`](https://uiua.org/docs/switch) and [`repeat ⍥`](https://uiua.org/docs/repeat) now follow the same distribution and [`fix ¤`](https://uiua.org/docs/fix) rules as [`rows ≡`](https://uiua.org/docs/rows)
 - Add the `# Track caller!` semantic comment, which prevents stack traces from going below the function that contains it
-- Add the experimental [`chunks`](https://uiua.org/docs/chunks) function, which splits an array into chunks of a given size
+- Add the experimental [`chunks ⑄`](https://uiua.org/docs/chunks) function, which splits an array into chunks of a given size
 - Add the experimental [`choose`](https://uiua.org/docs/choose) and [`permute`](https://uiua.org/docs/permute) functions for combinatorics solutions
 - Add the experimental [`triangle ◹`](https://uiua.org/docs/triangle) modifier, which calls a function on shrinking suffixes of an array's rows
 - Add the experimental [`orient`](https://uiua.org/docs/orient) function, which arranges an array's axes in a specified order

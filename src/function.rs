@@ -640,6 +640,7 @@ impl FunctionFlags {
     pub const RECURSIVE: Self = Self(1 << 0);
     pub const NO_INLINE: Self = Self(1 << 1);
     pub const TRACK_CALLER: Self = Self(1 << 2);
+    pub const NO_PRE_EVAL: Self = Self(1 << 3);
     pub fn recursive(&self) -> bool {
         self.0 & Self::RECURSIVE.0 != 0
     }
@@ -649,26 +650,8 @@ impl FunctionFlags {
     pub fn track_caller(&self) -> bool {
         self.0 & Self::TRACK_CALLER.0 != 0
     }
-    pub fn set_recursive(&mut self, recursive: bool) {
-        if recursive {
-            self.0 |= Self::RECURSIVE.0;
-        } else {
-            self.0 &= !Self::RECURSIVE.0;
-        }
-    }
-    pub fn set_no_inline(&mut self, no_inline: bool) {
-        if no_inline {
-            self.0 |= Self::NO_INLINE.0;
-        } else {
-            self.0 &= !Self::NO_INLINE.0;
-        }
-    }
-    pub fn set_track_caller(&mut self, track_caller: bool) {
-        if track_caller {
-            self.0 |= Self::TRACK_CALLER.0;
-        } else {
-            self.0 &= !Self::TRACK_CALLER.0;
-        }
+    pub fn no_pre_eval(&self) -> bool {
+        self.0 & Self::NO_PRE_EVAL.0 != 0
     }
 }
 

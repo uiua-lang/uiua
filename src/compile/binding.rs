@@ -233,7 +233,7 @@ impl Compiler {
             let make = make_fn;
             make_fn = Box::new(move |new_func, sig, comp: &mut Compiler| {
                 let mut f = make(new_func, sig, comp);
-                f.flags.set_recursive(true);
+                f.flags |= FunctionFlags::RECURSIVE;
                 let flags = f.flags;
                 let instrs = eco_vec![Instr::PushFunc(f), Instr::CallRecursive(spandex)];
                 let new_func = NewFunction { instrs, flags };
@@ -393,7 +393,7 @@ impl Compiler {
             Err(e) => {
                 if let Some(sig) = binding.signature {
                     // Binding is a normal function
-                    new_func.flags.set_no_inline(true);
+                    new_func.flags |= FunctionFlags::NO_INLINE;
                     let func = make_fn(new_func, sig.value, self);
                     self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
                 } else {

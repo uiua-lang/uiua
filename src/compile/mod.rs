@@ -572,10 +572,10 @@ code:
                         }
                     }
                     Word::SemanticComment(SemanticComment::NoInline) => {
-                        prelude.flags.set_no_inline(true)
+                        prelude.flags |= FunctionFlags::NO_INLINE;
                     }
                     Word::SemanticComment(SemanticComment::TrackCaller) => {
-                        prelude.flags.set_track_caller(true)
+                        prelude.flags |= FunctionFlags::TRACK_CALLER;
                     }
                     _ => *prelude = BindingPrelude::default(),
                 }
@@ -1414,12 +1414,12 @@ code:
                 SemanticComment::Experimental => self.scope.experimental = true,
                 SemanticComment::NoInline => {
                     if let Some(new_func) = self.new_functions.last_mut() {
-                        new_func.flags.set_no_inline(true);
+                        new_func.flags |= FunctionFlags::NO_INLINE;
                     }
                 }
                 SemanticComment::TrackCaller => {
                     if let Some(new_func) = self.new_functions.last_mut() {
-                        new_func.flags.set_track_caller(true);
+                        new_func.flags |= FunctionFlags::TRACK_CALLER;
                     }
                 }
                 SemanticComment::Boo => {
@@ -1768,6 +1768,11 @@ code:
                 }
             }
             BindingKind::Func(f) => {
+                if let Some(new_func) = self.new_functions.last_mut() {
+                    if f.flags.track_caller() {
+                        new_func.flags |= FunctionFlags::NO_PRE_EVAL;
+                    }
+                }
                 self.push_instr(Instr::PushFunc(f));
                 if call {
                     let span = self.add_span(span);
@@ -2181,7 +2186,7 @@ code:
     pub(crate) fn inlinable(&self, instrs: &[Instr], flags: FunctionFlags) -> bool {
         use ImplPrimitive::*;
         use Primitive::*;
-        if flags.track_caller() || flags.no_inline() {
+        if flags.track_caller() || flags.no_inline() || flags.no_pre_eval() {
             return false;
         }
         if instrs.len() > 10 {
@@ -2329,6 +2334,7 @@ code:
             || (new_func.instrs.iter()).all(|instr| matches!(instr, Instr::Push(_)))
             || new_func.flags.no_inline()
             || new_func.flags.track_caller()
+            || new_func.flags.no_pre_eval()
         {
             return (new_func, errors);
         }

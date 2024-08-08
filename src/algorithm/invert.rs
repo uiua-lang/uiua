@@ -772,8 +772,8 @@ fn under_call_pattern<'a>(
         } else {
             let mut before = make_fn(befores, f.flags, span, comp)?;
             let mut after = make_fn(afters, f.flags, span, comp)?;
-            before.flags |= FunctionFlags::NO_INLINE;
-            after.flags |= FunctionFlags::NO_INLINE;
+            before.flags |= FunctionFlags::NO_PRE_EVAL;
+            after.flags |= FunctionFlags::NO_PRE_EVAL;
             (
                 eco_vec![Instr::PushFunc(before), Instr::Call(span)],
                 eco_vec![Instr::PushFunc(after), Instr::Call(span)],

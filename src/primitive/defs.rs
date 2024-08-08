@@ -1288,27 +1288,27 @@ primitive!(
     ///
     /// [chunks] produces non-overlapping subarrays of equal size.
     /// ex: # Experimental!
-    ///   : chunks 3 [1 2 3 4 5 6]
+    ///   : ⑄ 3 [1 2 3 4 5 6]
     /// ex: # Experimental!
-    ///   : ≡≡□ chunks 2_3 . °△ 4_6
+    ///   : ≡≡□ ⑄ 2_3 . °△ 4_6
     /// If the chunk size does not evenly divide the shape of the array, the edge chunks will be omitted.
     /// ex: # Experimental!
-    ///   : chunks 3 [1 2 3 4 5 6 7 8]
+    ///   : ⑄ 3 [1 2 3 4 5 6 7 8]
     /// ex: # Experimental!
-    ///   : ≡≡□ chunks 2_2 . °△ 5_5
+    ///   : ≡≡□ ⑄ 2_2 . °△ 5_5
     /// If [fill] is used, the edge chunks will be filled with the fill value.
     /// ex: # Experimental!
-    ///   : ⬚0chunks 3 [1 2 3 4 5 6 7 8]
+    ///   : ⬚0⑄ 3 [1 2 3 4 5 6 7 8]
     /// ex: # Experimental!
-    ///   : ≡≡□ ⬚0chunks 2_2 . °△ 5_5
+    ///   : ≡≡□ ⬚0⑄ 2_2 . °△ 5_5
     /// Negative chunk sizes specify the number of chunks desired.
     /// ex: # Experimental!
-    ///   : chunks ¯2 [1 2 3 4 5 6]
-    ///   : chunks ¯3 [1 2 3 4 5 6]
+    ///   : ⑄ ¯2 [1 2 3 4 5 6]
+    ///   : ⑄ ¯3 [1 2 3 4 5 6]
     /// Negative and positive chunk sizes can be mixed.
     /// ex: # Experimental!
-    ///   : ≡≡□ chunks ¯2_2 . °△ 6_6
-    (2, Chunks, DyadicArray, "chunks"),
+    ///   : ≡≡□ ⑄ ¯2_2 . °△ 6_6
+    (2, Chunks, DyadicArray, ("chunks", '⑄')),
     /// Discard or copy some rows of an array
     ///
     /// Takes two arrays. The first array is the number of copies to keep of each row of the second array.

@@ -442,6 +442,7 @@
     "experimental": true
   },
   "chunks": {
+    "glyph": "⑄",
     "args": 2,
     "outputs": 1,
     "class": "DyadicArray",

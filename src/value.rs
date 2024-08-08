@@ -806,7 +806,11 @@ impl Value {
     /// Attempt to convert the array to a single integer
     ///
     /// The `requirement` parameter is used in error messages.
-    pub fn as_int(&self, env: &Uiua, mut requirement: &'static str) -> UiuaResult<isize> {
+    pub fn as_int<C: ErrorContext>(
+        &self,
+        ctx: &C,
+        mut requirement: &'static str,
+    ) -> Result<isize, C::Error> {
         if requirement.is_empty() {
             requirement = "Expected value to be an integer";
         }
@@ -814,31 +818,31 @@ impl Value {
             Value::Num(nums) => {
                 if nums.rank() > 0 {
                     return Err(
-                        env.error(format!("{requirement}, but its rank is {}", nums.rank()))
+                        ctx.error(format!("{requirement}, but its rank is {}", nums.rank()))
                     );
                 }
                 let num = nums.data[0];
                 if num.is_infinite() {
-                    return Err(env.error(format!("{requirement}, but it is infinite")));
+                    return Err(ctx.error(format!("{requirement}, but it is infinite")));
                 }
                 if num.is_nan() {
-                    return Err(env.error(format!("{requirement}, but it is NaN")));
+                    return Err(ctx.error(format!("{requirement}, but it is NaN")));
                 }
                 if num.fract() != 0.0 {
-                    return Err(env.error(format!("{requirement}, but it has a fractional part")));
+                    return Err(ctx.error(format!("{requirement}, but it has a fractional part")));
                 }
                 num as isize
             }
             Value::Byte(bytes) => {
                 if bytes.rank() > 0 {
                     return Err(
-                        env.error(format!("{requirement}, but its rank is {}", bytes.rank()))
+                        ctx.error(format!("{requirement}, but its rank is {}", bytes.rank()))
                     );
                 }
                 bytes.data[0] as isize
             }
             value => {
-                return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))
+                return Err(ctx.error(format!("{requirement}, but it is {}", value.type_name())))
             }
         })
     }

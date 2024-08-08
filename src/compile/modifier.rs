@@ -2,7 +2,7 @@
 
 use std::{cmp::Ordering, slice};
 
-use crate::{format::format_words, UiuaErrorKind, SUBSCRIPT_NUMS};
+use crate::{algorithm::IgnoreError, format::format_words, UiuaErrorKind, SUBSCRIPT_NUMS};
 
 use super::*;
 
@@ -809,29 +809,45 @@ impl Compiler {
                 let (new_func, sig) = self.compile_operand_word(operand)?;
                 let flags = new_func.flags;
                 let spandex = self.add_span(modified.modifier.span.clone());
-                let instrs = if let Some((inverse, inv_sig)) = invert_instrs(&new_func.instrs, self)
-                    .and_then(|inv| instrs_signature(&inv).ok().map(|sig| (inv, sig)))
-                    .filter(|(_, inv_sig)| sig.is_compatible_with(*inv_sig))
-                {
-                    // If an inverse for repeat's function exists we use a special
-                    // implementation that allows for negative repeatition counts
-                    let id = FunctionId::Anonymous(modified.modifier.span.clone());
-                    let func = self.make_function(id, sig, new_func);
-                    let inv_id = FunctionId::Anonymous(modified.modifier.span.clone());
-                    let inv_new_func = NewFunction {
-                        instrs: inverse,
-                        flags,
-                    };
-                    let inv = self.make_function(inv_id, inv_sig, inv_new_func);
-                    eco_vec![
-                        Instr::PushFunc(inv),
-                        Instr::PushFunc(func),
-                        Instr::ImplPrim(ImplPrimitive::RepeatWithInverse, spandex)
-                    ]
-                } else {
-                    let id = FunctionId::Anonymous(modified.modifier.span.clone());
-                    let func = self.make_function(id, sig, new_func);
-                    eco_vec![Instr::PushFunc(func), Instr::Prim(Repeat, spandex)]
+                let instrs = 'instrs: {
+                    if let Some(curr) = self.new_functions.last_mut() {
+                        if let [.., Instr::Push(val)] = curr.instrs.as_slice() {
+                            if let Ok(n) = val.as_int(&IgnoreError, "") {
+                                if n >= 0 && n.unsigned_abs() * new_func.instrs.len() <= 20 {
+                                    curr.instrs.pop();
+                                    break 'instrs repeat(&new_func.instrs)
+                                        .take(n.unsigned_abs())
+                                        .flatten()
+                                        .cloned()
+                                        .collect();
+                                }
+                            }
+                        }
+                    }
+                    if let Some((inverse, inv_sig)) = invert_instrs(&new_func.instrs, self)
+                        .and_then(|inv| instrs_signature(&inv).ok().map(|sig| (inv, sig)))
+                        .filter(|(_, inv_sig)| sig.is_compatible_with(*inv_sig))
+                    {
+                        // If an inverse for repeat's function exists we use a special
+                        // implementation that allows for negative repeatition counts
+                        let id = FunctionId::Anonymous(modified.modifier.span.clone());
+                        let func = self.make_function(id, sig, new_func);
+                        let inv_id = FunctionId::Anonymous(modified.modifier.span.clone());
+                        let inv_new_func = NewFunction {
+                            instrs: inverse,
+                            flags,
+                        };
+                        let inv = self.make_function(inv_id, inv_sig, inv_new_func);
+                        eco_vec![
+                            Instr::PushFunc(inv),
+                            Instr::PushFunc(func),
+                            Instr::ImplPrim(ImplPrimitive::RepeatWithInverse, spandex)
+                        ]
+                    } else {
+                        let id = FunctionId::Anonymous(modified.modifier.span.clone());
+                        let func = self.make_function(id, sig, new_func);
+                        eco_vec![Instr::PushFunc(func), Instr::Prim(Repeat, spandex)]
+                    }
                 };
                 let new_func = NewFunction { instrs, flags };
                 if call {

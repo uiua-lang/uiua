@@ -1768,9 +1768,6 @@ code:
                 }
             }
             BindingKind::Func(f) => {
-                if let Some(new_func) = self.new_functions.last_mut() {
-                    new_func.flags |= f.flags;
-                }
                 self.push_instr(Instr::PushFunc(f));
                 if call {
                     let span = self.add_span(span);

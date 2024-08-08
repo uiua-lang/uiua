@@ -903,16 +903,6 @@ F 10 11"/>
         <Editor example="≡(|2 ↻.) 1_2_3 ↯3_3⇡9"/> // Should fail
         <p>"If the compiler cannot derive the stack signature of a function and you give it one which is "<em>"wrong"</em>", the function will throw an error at runtime."</p>
 
-        <Hd id="proxy">"Proxy Values"</Hd>
-        <p>"Because Uiua is a dynamically typed language, the types and shapes of values returned by functions are not known until runtime. This creates a problem when iterating over arrays. What if the array is empty? The function will never be run, so the proper type and shape of the result cannot be determined. Uiua has a way to get around this "<a href="https://mlochbaum.github.io/BQN/commentary/problems.html#empty-arrays-lose-type-information">"problem"</a>" that some other array languages have."</p>
-        <p>"Some iterating modifiers use what are called "<em>"proxy values"</em>" if the iterated array is empty. The modifier's function is called on these values if the array is empty. This ensures that the result has the correct shape and type, even if the function is never run on the actual values."</p>
-        <p>"The following example would produce inconsistent results if the proxy value was not used."</p>
-        <Editor example="△≡⇌↯3_4⇡12\n△≡⇌↯0_4⇡12 # Would be [0] without proxy"/>
-        <p>"There are some ways to make the proxy value visible."</p>
-        <Editor example="≡(&p.) []"/>
-        <p>"To avoid this case, you can conditionally iterate. This example uses a "<Prim prim=Repeat/>" modifier to conditionally call the function."</p>
-        <Editor example="⍥≡(&p.)±⧻. []"/>
-
         <Hd id="challenges">"Challenges"</Hd>
 
         <Challenge

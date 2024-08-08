@@ -1085,6 +1085,9 @@ impl<'a> Formatter<'a> {
             Word::BreakLine => self.output.push('\''),
             Word::UnbreakLine => self.output.push_str("''"),
             Word::SemanticComment(sc) => {
+                if !self.output.is_empty() && !self.output.ends_with(['\n', ' ']) {
+                    self.output.push(' ');
+                }
                 self.push(&word.span, &sc.to_string());
             }
             Word::OutputComment { i, n } => {

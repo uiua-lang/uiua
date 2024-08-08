@@ -299,6 +299,7 @@ pub fn Optimizations() -> impl IntoView {
         <ul>
             <li><Prim prim=Rows/>", "<Prim prim=Each/>", "<Prim prim=Table/>", "<Prim prim=Group/>", "<Prim prim=Partition/>", and "<Prim prim=Inventory/>" are all optimized when a "<Prim prim=Fork/>" or "<Prim prim=Bracket/>" is at the top level of their function. For example, "<Prims prims=[Table, Fork]/><code>"F"</code><code>"G"</code>" is optimized to "<Prims prims=[Fork, Table]/><code>"F"</code><Prims prims=[Table]/><code>"G"</code>"."</li>
             <li><Prim prim=Group/>" and "<Prim prim=Partition/>" are optimized to be fast with "<Prim prim=Len/>", "<Prim prim=First/>", "<Prims prims=[First, Reverse]/>", "<Prims prims=[Dip, Pop]/>", and "<Prims prims=[Gap, Identity]/>"."</li>
+            <li><Prim prim=Repeat/>" with a simple-enough function and a small constant count will compile to an unrolled loop."</li>
         </ul>
     }
 }

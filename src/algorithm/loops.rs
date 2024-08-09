@@ -1072,7 +1072,14 @@ where
 
     match (sig.args, sig.outputs) {
         (0 | 1, outputs) => {
-            let groups = get_groups(values, indices).into_iter();
+            let mut empty_shape = values.shape().clone();
+            empty_shape[0] = 0;
+            let groups = get_groups(values, indices).into_iter().map(|mut group| {
+                if group.row_count() == 0 {
+                    group.shape_mut().clone_from(&empty_shape);
+                }
+                group
+            });
             let mut rows = multi_output(outputs, Vec::with_capacity(groups.len()));
             env.without_fill(|env| -> UiuaResult {
                 for group in groups {

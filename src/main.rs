@@ -114,6 +114,7 @@ fn run() -> UiuaResult {
                 no_color,
                 formatter_options,
                 time_instrs,
+                limit,
                 mode,
                 #[cfg(feature = "audio")]
                 audio_options,
@@ -135,7 +136,8 @@ fn run() -> UiuaResult {
                 let mut rt = Uiua::with_native_sys()
                     .with_file_path(&path)
                     .with_args(args)
-                    .time_instrs(time_instrs);
+                    .time_instrs(time_instrs)
+                    .maybe_with_execution_limit(limit.map(Duration::from_secs_f64));
                 if path.extension().is_some_and(|ext| ext == "uasm") {
                     let uasm = match fs::read_to_string(&path) {
                         Ok(json) => json,
@@ -588,6 +590,8 @@ enum App {
         formatter_options: FormatterOptions,
         #[clap(long, help = "Emit the duration of each instruction's execution")]
         time_instrs: bool,
+        #[clap(long, short = 'l', help = "Set an execution limit in seconds")]
+        limit: Option<f64>,
         #[clap(long, help = "Run the file in a specific mode")]
         mode: Option<RunMode>,
         #[cfg(feature = "audio")]

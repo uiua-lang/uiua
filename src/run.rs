@@ -260,6 +260,11 @@ impl Uiua {
         self.rt.execution_limit = Some(limit.as_secs_f64());
         self
     }
+    /// Limit the execution duration
+    pub fn maybe_with_execution_limit(mut self, limit: Option<Duration>) -> Self {
+        self.rt.execution_limit = limit.map(|limit| limit.as_secs_f64());
+        self
+    }
     /// Set the command line arguments
     pub fn with_args(mut self, args: Vec<String>) -> Self {
         self.rt.cli_arguments = args;
@@ -288,6 +293,7 @@ impl Uiua {
         compile: impl FnOnce(&mut Compiler) -> UiuaResult<&mut Compiler>,
     ) -> UiuaResult<Compiler> {
         let mut comp = Compiler::with_backend(self.rt.backend.clone());
+        // let comp_limit = comp.
         let asm = compile(&mut comp)?.finish();
         self.run_asm(&asm)?;
         Ok(comp)
@@ -706,7 +712,8 @@ code:
     /// Timeout if an execution limit is set and has been exceeded
     pub fn respect_execution_limit(&self) -> UiuaResult {
         if let Some(limit) = self.rt.execution_limit {
-            if self.rt.backend.now() - self.rt.execution_start > limit {
+            let elapsed = self.rt.backend.now() - self.rt.execution_start;
+            if elapsed > limit {
                 return Err(
                     UiuaErrorKind::Timeout(self.span(), self.inputs().clone().into()).into(),
                 );

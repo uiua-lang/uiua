@@ -2062,6 +2062,7 @@ impl<T: ArrayValue> Array<T> {
         let row_len = self.row_len();
         let mut indices = vec![0; k];
         'outer: loop {
+            env.respect_execution_limit()?;
             if (indices.iter())
                 .zip(indices.iter().skip(1))
                 .all(|(a, b)| a > b)
@@ -2112,6 +2113,7 @@ impl<T: ArrayValue> Array<T> {
         let mut indices = vec![0; k];
         let mut set = HashSet::with_capacity(k);
         'outer: loop {
+            env.respect_execution_limit()?;
             set.clear();
             if indices.iter().all(|&i| set.insert(i)) {
                 for &i in indices.iter().rev() {

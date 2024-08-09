@@ -939,7 +939,8 @@ impl<T: ArrayValue> Array<T> {
         }
         if isize_spec.len() > self.shape.len() {
             return Err(env.error(format!(
-                "Window size {isize_spec:?} has too many axes for shape {}",
+                "Window size {} has too many axes for shape {}",
+                FormatShape(isize_spec),
                 self.shape()
             )));
         }
@@ -1130,7 +1131,8 @@ impl<T: ArrayValue> Array<T> {
         }
         if isize_spec.len() > self.shape.len() {
             return Err(env.error(format!(
-                "Chunk size {isize_spec:?} has too many axes for shape {}",
+                "Chunk size {} has too many axes for shape {}",
+                FormatShape(isize_spec),
                 self.shape()
             )));
         }

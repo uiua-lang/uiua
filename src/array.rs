@@ -1012,15 +1012,15 @@ impl ArrayCmp<u8> for f64 {
 
 /// A formattable shape
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct FormatShape<'a>(pub &'a [usize]);
+pub struct FormatShape<'a, T = usize>(pub &'a [T]);
 
-impl<'a> fmt::Debug for FormatShape<'a> {
+impl<'a, T: fmt::Display> fmt::Debug for FormatShape<'a, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{self}")
     }
 }
 
-impl<'a> fmt::Display for FormatShape<'a> {
+impl<'a, T: fmt::Display> fmt::Display for FormatShape<'a, T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[")?;
         for (i, dim) in self.0.iter().enumerate() {

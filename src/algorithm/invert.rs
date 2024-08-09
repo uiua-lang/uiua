@@ -14,8 +14,9 @@ use crate::{
     check::{instrs_clean_signature, instrs_signature, instrs_signature_no_temp},
     instrs_are_pure,
     primitive::{ImplPrimitive, Primitive},
-    Array, Assembly, BindingKind, Compiler, FmtInstrs, Function, FunctionFlags, FunctionId, Instr,
-    NewFunction, Purity, Signature, Span, SysOp, TempStack, Uiua, UiuaResult, Value,
+    Array, Assembly, BindingKind, Compiler, Complex, FmtInstrs, Function, FunctionFlags,
+    FunctionId, Instr, NewFunction, Purity, Signature, Span, SysOp, TempStack, Uiua, UiuaResult,
+    Value,
 };
 
 use super::IgnoreError;
@@ -178,6 +179,7 @@ macro_rules! pat {
     };
 }
 
+#[rustfmt::skip]
 static INVERT_PATTERNS: &[&dyn InvertPattern] = {
     use ImplPrimitive::*;
     use Primitive::*;
@@ -207,11 +209,23 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &([Dup, Mul], [Sqrt]),
         &(
             Val,
-            pat!(Min, (Over, Ge, Deshape, Deduplicate, [1], MatchPattern)),
+            pat!(
+                Min,
+                (
+                    Over, Lt, Deshape, Deduplicate, Not, 0, 
+                    Complex, [crate::Complex::ONE], MatchPattern
+                )
+            ),
         ),
         &(
             Val,
-            pat!(Max, (Over, Le, Deshape, Deduplicate, [1], MatchPattern)),
+            pat!(
+                Max,
+                (
+                    Over, Gt, Deshape, Deduplicate, Not, 0, 
+                    Complex, [crate::Complex::ONE], MatchPattern
+                )
+            ),
         ),
         &pat!(Pick, (Dup, Shape, Range)),
         &InvertPatternFn(invert_on_inv_pattern, "on inverse"),
@@ -2831,6 +2845,12 @@ impl AsInstr for i32 {
 impl<const N: usize> AsInstr for [i32; N] {
     fn as_instr(&self, _: usize) -> Instr {
         Instr::push(Array::from_iter(self.iter().map(|&i| i as f64)))
+    }
+}
+
+impl<const N: usize> AsInstr for [Complex; N] {
+    fn as_instr(&self, _: usize) -> Instr {
+        Instr::push(Array::from_iter(self.iter().copied()))
     }
 }
 

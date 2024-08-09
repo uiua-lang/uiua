@@ -28,7 +28,7 @@ Here are some of the highlights:
 /(⊂⊂) 0 [1 2 3 4]
 ```
 
-This is particularly useful when used with [`content `](https://uiua.org/docs/content) and [`join ⊂`](https://uiua.org/docs/join) to intersperse a delimiter between a list of strings.
+This is particularly useful when used with [`content ◇`](https://uiua.org/docs/content) and [`join ⊂`](https://uiua.org/docs/join) to intersperse a delimiter between a list of strings.
 
 ```uiua
 /◇(⊂⊂) @, {"cat" "dog" "bird" "fish"}

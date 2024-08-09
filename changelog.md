@@ -2,7 +2,7 @@
 
 Uiua is not yet stable.
 
-# 0.12.0 - 2024-??-??
+# 0.12.0 - 2024-08-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 - **Breaking Change** - [`&runs`](https://uiua.org/docs/&runs) now returns 3 handles rather than 1
@@ -67,11 +67,16 @@ This version is not yet released. If you are reading this on the website, then t
 - N+1 adjacent [`stack ?`](https://uiua.org/docs/stack)s now format to N [`trace ⸮`](https://uiua.org/docs/trace)s
 - Add the [`&camcap`](https://uiua.org/docs/&camcap) system function, which captures a frame from a camera
 ### Interpreter
+- A ton of bug and crash fixes
 - Some optimizations
   - Optimize [`length ⧻`](https://uiua.org/docs/length)[`where ⊚`](https://uiua.org/docs/where)
   - Optimize [`≡`](https://uiua.org/docs/rows)[`□`](https://uiua.org/docs/box)[`◫`](https://uiua.org/docs/windows)
   - Small optimizations to rank-1 cases of [`find ⌕`](https://uiua.org/docs/find) and [`mask ⦷`](https://uiua.org/docs/mask)
   - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`⋅`](https://uiua.org/docs/gap)[`identity ∘`](https://uiua.org/docs/identity) and [`dip ⊙`](https://uiua.org/docs/dip)[`pop ◌`](https://uiua.org/docs/pop)
+- Add some media constants:
+  - `Logo` - the Uiua logo
+  - `Lena` - a good example image for image processing
+  - `Music` - a snippet of musical audio
 - LSP improvements
   - Show array shapes on hover
   - Code action to insert `# Experimental!` comment

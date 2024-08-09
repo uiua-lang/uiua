@@ -1927,6 +1927,8 @@ fn f64_repr(n: f64) -> String {
         "π".into()
     } else if abs == TAU {
         "τ".into()
+    } else if abs.is_infinite() {
+        "∞".into()
     } else {
         abs.to_string()
     };

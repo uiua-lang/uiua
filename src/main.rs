@@ -357,7 +357,7 @@ fn run() -> UiuaResult {
             }
         },
         Err(e)
-            if dbg!(e.kind()) == ErrorKind::InvalidSubcommand
+            if e.kind() == ErrorKind::InvalidSubcommand
                 && env::args()
                     .nth(1)
                     .is_some_and(|path| Path::new(&path).exists()) =>

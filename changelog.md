@@ -63,6 +63,8 @@ This version is not yet released. If you are reading this on the website, then t
   - It can be mostly replaced with `⊢⊚⌕`
 - Deprecate experimental stack and array swizzles
   - They don't fit my vision for the language
+- Deprecate implicit GitHub domain in `"git: ..."` modules
+  - GitHub should not be a default
 - Adjacent [`trace ⸮`](https://uiua.org/docs/trace)s now function as a single [`trace ⸮`](https://uiua.org/docs/trace) of more values
 - N+1 adjacent [`stack ?`](https://uiua.org/docs/stack)s now format to N [`trace ⸮`](https://uiua.org/docs/trace)s
 - Add the [`&camcap`](https://uiua.org/docs/&camcap) system function, which captures a frame from a camera

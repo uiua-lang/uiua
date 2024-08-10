@@ -114,6 +114,71 @@ impl Assembly {
             self.bindings.push(binding);
         }
     }
+    /// Remove dead code from the assembly
+    pub fn remove_dead_code(&mut self) {
+        let mut macro_slices = Vec::new();
+        self.bindings.retain(|binding| {
+            if let BindingKind::ArrayMacro(mut slice) = binding.kind {
+                if slice.start > 0 {
+                    if let Some((Instr::Comment(before), Instr::Comment(after))) = self
+                        .instrs
+                        .get(slice.start - 1)
+                        .zip(self.instrs.get(slice.end()))
+                    {
+                        if before.starts_with('(') && after.ends_with(')') {
+                            slice.start -= 1;
+                            slice.len += 2;
+                        }
+                    }
+                }
+                macro_slices.push(slice);
+                false
+            } else {
+                true
+            }
+        });
+        macro_slices.sort();
+        for slice in macro_slices.into_iter().rev() {
+            self.remove_slice(slice);
+        }
+    }
+    pub(crate) fn remove_slice(&mut self, removed: FuncSlice) {
+        // Remove instrs
+        let after: Vec<_> = self.instrs[removed.end()..].to_vec();
+        self.instrs.truncate(removed.start);
+        self.instrs.extend(after);
+        // Remove top slices
+        for slice in &mut self.top_slices {
+            if slice.start > removed.start {
+                slice.start -= removed.len();
+            }
+        }
+        // Decrement bindings
+        for binding in self.bindings.make_mut() {
+            match &mut binding.kind {
+                BindingKind::Func(func) => {
+                    if func.slice.start > removed.start {
+                        func.slice.start -= removed.len();
+                    }
+                }
+                BindingKind::ArrayMacro(slice) => {
+                    if slice.start > removed.start {
+                        slice.start -= removed.len();
+                        slice.len -= removed.len();
+                    }
+                }
+                _ => (),
+            }
+        }
+        // Decrement instrs
+        for instr in self.instrs.make_mut() {
+            if let Instr::PushFunc(func) = instr {
+                if func.slice.start > removed.start {
+                    func.slice.start -= removed.len();
+                }
+            }
+        }
+    }
     /// Make top-level expressions not run
     pub fn remove_top_level(&mut self) {
         self.top_slices.clear();
@@ -357,8 +422,10 @@ pub enum BindingKind {
     Import(PathBuf),
     /// A scoped module
     Module(Module),
-    /// A macro
-    Macro,
+    /// A stack macro
+    StackMacro,
+    /// An array macro
+    ArrayMacro(FuncSlice),
 }
 
 impl BindingKind {
@@ -369,7 +436,8 @@ impl BindingKind {
             Self::Func(func) => Some(func.signature()),
             Self::Import { .. } => None,
             Self::Module(_) => None,
-            Self::Macro => None,
+            Self::StackMacro => None,
+            Self::ArrayMacro(_) => None,
         }
     }
     /// Check if the global is a once-bound constant

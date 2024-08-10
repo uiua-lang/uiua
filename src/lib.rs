@@ -232,10 +232,10 @@ mod tests {
             // Test running
             let mut env = Uiua::with_native_sys();
             let mut comp = Compiler::new();
-            if let Err(e) = comp
-                .load_str_src(&code, &path)
-                .and_then(|comp| env.run_asm(&comp.asm))
-            {
+            if let Err(e) = comp.load_str_src(&code, &path).and_then(|comp| {
+                comp.asm.remove_dead_code();
+                env.run_asm(&comp.asm)
+            }) {
                 panic!("Test failed in {}:\n{}", path.display(), e.report());
             }
             if let Some(diag) = comp

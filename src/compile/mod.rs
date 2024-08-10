@@ -1623,10 +1623,16 @@ code:
                     format!("`{}` is a constant, not a module", first.module.value),
                 ))
             }
-            BindingKind::Macro => {
+            BindingKind::StackMacro => {
                 return Err(self.fatal_error(
                     first.module.span.clone(),
-                    format!("`{}` is a modifier, not a module", first.module.value),
+                    format!("`{}` is a stack macro, not a module", first.module.value),
+                ))
+            }
+            BindingKind::ArrayMacro(_) => {
+                return Err(self.fatal_error(
+                    first.module.span.clone(),
+                    format!("`{}` is an array macro, not a module", first.module.value),
                 ))
             }
         };
@@ -1658,10 +1664,16 @@ code:
                         format!("`{}` is a constant, not a module", comp.module.value),
                     ))
                 }
-                BindingKind::Macro => {
+                BindingKind::StackMacro => {
                     return Err(self.fatal_error(
                         comp.module.span.clone(),
-                        format!("`{}` is a modifier, not a module", comp.module.value),
+                        format!("`{}` is a stack macro, not a module", comp.module.value),
+                    ))
+                }
+                BindingKind::ArrayMacro(_) => {
+                    return Err(self.fatal_error(
+                        comp.module.span.clone(),
+                        format!("`{}` is an array macro, not a module", comp.module.value),
                     ))
                 }
             };
@@ -1798,7 +1810,7 @@ code:
                     self.add_error(span, "Cannot import module item here.");
                 }
             }
-            BindingKind::Macro => {
+            BindingKind::StackMacro | BindingKind::ArrayMacro(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
         }

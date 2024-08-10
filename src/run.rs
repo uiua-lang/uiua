@@ -463,8 +463,12 @@ code:
                             "Called module global. \
                             This is a bug in the interpreter.",
                         )),
-                        BindingKind::Macro => Err(self.error(
-                            "Called modifier global. \
+                        BindingKind::StackMacro => Err(self.error(
+                            "Called stack macro global. \
+                            This is a bug in the interpreter.",
+                        )),
+                        BindingKind::ArrayMacro(_) => Err(self.error(
+                            "Called array macro global. \
                             This is a bug in the interpreter.",
                         )),
                     }

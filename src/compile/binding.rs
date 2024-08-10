@@ -105,7 +105,7 @@ impl Compiler {
             self.scope.names.insert(name.clone(), local);
             (self.asm).add_global_at(
                 local,
-                BindingKind::Macro,
+                BindingKind::ArrayMacro(function.slice),
                 Some(span.clone()),
                 comment.map(|text| DocComment::from(text.as_str())),
             );
@@ -143,7 +143,7 @@ impl Compiler {
             self.scope.names.insert(name.clone(), local);
             (self.asm).add_global_at(
                 local,
-                BindingKind::Macro,
+                BindingKind::StackMacro,
                 Some(span.clone()),
                 comment.map(|text| DocComment::from(text.as_str())),
             );

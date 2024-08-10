@@ -292,7 +292,44 @@ impl Instr {
     pub(crate) fn is_compile_only(&self) -> bool {
         matches!(self, Self::PushSig(_) | Self::PopSig)
     }
+    #[allow(dead_code)]
+    pub(crate) fn span(&self) -> Option<usize> {
+        self.span_impl().copied()
+    }
 }
+
+macro_rules! instr_span {
+    ($name:ident, $self_ty:ty, $out_ty:ty) => {
+        impl Instr {
+            #[allow(dead_code)]
+            pub(crate) fn $name(self: $self_ty) -> Option<$out_ty> {
+                Some(match self {
+                    Self::BindGlobal { span, .. } => span,
+                    Self::EndArray { span, .. } => span,
+                    Self::Call(span) => span,
+                    Self::Prim(_, span) => span,
+                    Self::ImplPrim(_, span) => span,
+                    Self::CallRecursive(span) => span,
+                    Self::Recur(span) => span,
+                    Self::Switch { span, .. } => span,
+                    Self::Format { span, .. } => span,
+                    Self::MatchFormatPattern { span, .. } => span,
+                    Self::PushTemp { span, .. } => span,
+                    Self::PopTemp { span, .. } => span,
+                    Self::CopyToTemp { span, .. } => span,
+                    Self::Label { span, .. } => span,
+                    Self::ValidateType { span, .. } => span,
+                    Self::Unpack { span, .. } => span,
+                    Self::TouchStack { span, .. } => span,
+                    _ => return None,
+                })
+            }
+        }
+    };
+}
+
+instr_span!(span_impl, &Self, &usize);
+instr_span!(span_mut, &mut Self, &mut usize);
 
 pub(crate) struct FmtInstrs<'a>(pub &'a [Instr], pub &'a Assembly);
 impl<'a> fmt::Debug for FmtInstrs<'a> {

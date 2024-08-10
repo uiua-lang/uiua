@@ -181,10 +181,11 @@ fn run() -> UiuaResult {
                         }
                     }
                 };
-                let assembly = Compiler::with_backend(NativeSys)
+                let mut assembly = Compiler::with_backend(NativeSys)
                     .print_diagnostics(true)
                     .load_file(&path)?
                     .finish();
+                assembly.remove_dead_code();
                 let output = output.unwrap_or_else(|| path.with_extension("uasm"));
                 let uasm = assembly.to_uasm();
                 if let Err(e) = fs::write(output, uasm) {

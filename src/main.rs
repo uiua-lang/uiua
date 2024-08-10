@@ -245,15 +245,17 @@ fn run() -> UiuaResult {
                 args,
                 stdin_file,
             } => {
-                if let Err(e) = watch(
-                    working_file_path().ok().as_deref(),
-                    !no_format,
-                    !no_color,
-                    formatter_options.format_config_source,
+                if let Err(e) = (WatchArgs {
+                    initial_path: working_file_path().ok(),
+                    format: !no_format,
+                    color: !no_color,
+                    format_config_source: formatter_options.format_config_source,
                     clear,
                     args,
                     stdin_file,
-                ) {
+                })
+                .watch()
+                {
                     eprintln!("Error watching file: {e}");
                 }
             }
@@ -372,24 +374,12 @@ fn run() -> UiuaResult {
         }
         Err(e) if e.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
             let res = match working_file_path() {
-                Ok(path) => watch(
-                    Some(&path),
-                    true,
-                    true,
-                    FormatConfigSource::SearchFile,
-                    false,
-                    Vec::new(),
-                    None,
-                ),
-                Err(NoWorkingFile::MultipleFiles) => watch(
-                    None,
-                    true,
-                    true,
-                    FormatConfigSource::SearchFile,
-                    false,
-                    Vec::new(),
-                    None,
-                ),
+                Ok(path) => WatchArgs {
+                    initial_path: Some(path),
+                    ..Default::default()
+                }
+                .watch(),
+                Err(NoWorkingFile::MultipleFiles) => WatchArgs::default().watch(),
                 Err(nwf) => {
                     _ = e.print();
                     eprintln!("\n{nwf}");
@@ -454,151 +444,179 @@ fn working_file_path() -> Result<PathBuf, NoWorkingFile> {
     }
 }
 
-fn watch(
-    initial_path: Option<&Path>,
+struct WatchArgs {
+    initial_path: Option<PathBuf>,
     format: bool,
     color: bool,
     format_config_source: FormatConfigSource,
     clear: bool,
     args: Vec<String>,
     stdin_file: Option<PathBuf>,
-) -> io::Result<()> {
-    let (send, recv) = channel();
-    let mut watcher = notify::recommended_watcher(send).unwrap();
-    watcher
-        .watch(Path::new("."), RecursiveMode::Recursive)
-        .unwrap_or_else(|e| panic!("Failed to watch directory: {e}"));
+}
 
-    println!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
-
-    let config = FormatConfig::from_source(format_config_source, initial_path).ok();
-    #[cfg(feature = "audio")]
-    let audio_time = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0f64.to_bits()));
-    #[cfg(feature = "audio")]
-    let audio_time_clone = audio_time.clone();
-    #[cfg(feature = "audio")]
-    let (audio_time_socket, audio_time_port) = {
-        let socket = std::net::UdpSocket::bind(("127.0.0.1", 0))?;
-        let port = socket.local_addr()?.port();
-        socket.set_nonblocking(true)?;
-        (socket, port)
-    };
-    let run = |path: &Path, stdin_file: Option<&PathBuf>| -> io::Result<()> {
-        if let Some(mut child) = WATCH_CHILD.lock().take() {
-            _ = child.kill();
-            print_watching();
+impl Default for WatchArgs {
+    fn default() -> Self {
+        Self {
+            initial_path: None,
+            format: true,
+            color: true,
+            format_config_source: FormatConfigSource::SearchFile,
+            clear: false,
+            args: Vec::new(),
+            stdin_file: None,
         }
-        const TRIES: u8 = 10;
-        let path = if let Some(path) = std::env::current_dir()
-            .ok()
-            .and_then(|curr| pathdiff::diff_paths(path, curr))
-        {
-            path
-        } else {
-            path.to_path_buf()
-        };
-        for i in 0..TRIES {
-            let formatted = if let (Some(config), true) = (&config, format) {
-                format_file(&path, config).map(|f| f.output)
-            } else {
-                fs::read_to_string(&path)
-                    .map_err(|e| UiuaErrorKind::Load(path.clone(), e.into()).into())
-            };
-            match formatted {
-                Ok(input) => {
-                    if input.is_empty() {
-                        clear_watching();
-                        print_watching();
-                        return Ok(());
-                    }
-                    clear_watching();
-                    #[cfg(feature = "audio")]
-                    let audio_time =
-                        f64::from_bits(audio_time_clone.load(std::sync::atomic::Ordering::Relaxed))
-                            .to_string();
-                    #[cfg(feature = "audio")]
-                    let audio_port = audio_time_port.to_string();
-
-                    let stdin_file = stdin_file.map(fs::File::open).transpose()?;
-
-                    *WATCH_CHILD.lock() = Some(
-                        Command::new(env::current_exe().unwrap())
-                            .arg("run")
-                            .arg(path)
-                            .args((!color).then_some("--no-color"))
-                            .args([
-                                "--no-format",
-                                "--mode",
-                                "all",
-                                #[cfg(feature = "audio")]
-                                "--audio-time",
-                                #[cfg(feature = "audio")]
-                                &audio_time,
-                                #[cfg(feature = "audio")]
-                                "--audio-port",
-                                #[cfg(feature = "audio")]
-                                &audio_port,
-                            ])
-                            .args(&args)
-                            .stdin(stdin_file.map_or_else(Stdio::inherit, Into::into))
-                            .spawn()
-                            .unwrap(),
-                    );
-                    return Ok(());
-                }
-                Err(e) => {
-                    if let UiuaErrorKind::Format(..) = e.kind {
-                        sleep(Duration::from_millis((i as u64 + 1) * 10))
-                    } else {
-                        clear_watching();
-                        println!("{}", e.report());
-                        print_watching();
-                        return Ok(());
-                    }
-                }
-            }
-        }
-        println!("Failed to format file after {TRIES} tries");
-        Ok(())
-    };
-    if let Some(path) = initial_path {
-        run(path, stdin_file.as_ref())?;
     }
-    let mut last_time = Instant::now();
-    loop {
-        sleep(Duration::from_millis(10));
-        if let Some(path) = recv
-            .try_iter()
-            .filter_map(Result::ok)
-            .filter(|event| matches!(event.kind, EventKind::Modify(_)))
-            .flat_map(|event| event.paths)
-            .filter(|path| path.extension().map_or(false, |ext| ext == "ua"))
-            .last()
-        {
-            if last_time.elapsed() > Duration::from_millis(100) {
-                if clear {
-                    if cfg!(target_os = "windows") {
-                        _ = Command::new("cmd").args(["/C", "cls"]).status();
-                    } else {
-                        _ = Command::new("clear").status();
+}
+
+impl WatchArgs {
+    fn watch(self) -> io::Result<()> {
+        let WatchArgs {
+            initial_path,
+            format,
+            color,
+            format_config_source,
+            clear,
+            args,
+            stdin_file,
+        } = self;
+        let (send, recv) = channel();
+        let mut watcher = notify::recommended_watcher(send).unwrap();
+        watcher
+            .watch(Path::new("."), RecursiveMode::Recursive)
+            .unwrap_or_else(|e| panic!("Failed to watch directory: {e}"));
+
+        println!("Watching for changes... (end with ctrl+C, use `uiua help` to see options)");
+
+        let config = FormatConfig::from_source(format_config_source, initial_path.as_deref()).ok();
+        #[cfg(feature = "audio")]
+        let audio_time = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0f64.to_bits()));
+        #[cfg(feature = "audio")]
+        let audio_time_clone = audio_time.clone();
+        #[cfg(feature = "audio")]
+        let (audio_time_socket, audio_time_port) = {
+            let socket = std::net::UdpSocket::bind(("127.0.0.1", 0))?;
+            let port = socket.local_addr()?.port();
+            socket.set_nonblocking(true)?;
+            (socket, port)
+        };
+        let run = |path: &Path, stdin_file: Option<&PathBuf>| -> io::Result<()> {
+            if let Some(mut child) = WATCH_CHILD.lock().take() {
+                _ = child.kill();
+                print_watching();
+            }
+            const TRIES: u8 = 10;
+            let path = if let Some(path) = std::env::current_dir()
+                .ok()
+                .and_then(|curr| pathdiff::diff_paths(path, curr))
+            {
+                path
+            } else {
+                path.to_path_buf()
+            };
+            for i in 0..TRIES {
+                let formatted = if let (Some(config), true) = (&config, format) {
+                    format_file(&path, config).map(|f| f.output)
+                } else {
+                    fs::read_to_string(&path)
+                        .map_err(|e| UiuaErrorKind::Load(path.clone(), e.into()).into())
+                };
+                match formatted {
+                    Ok(input) => {
+                        if input.is_empty() {
+                            clear_watching();
+                            print_watching();
+                            return Ok(());
+                        }
+                        clear_watching();
+                        #[cfg(feature = "audio")]
+                        let audio_time = f64::from_bits(
+                            audio_time_clone.load(std::sync::atomic::Ordering::Relaxed),
+                        )
+                        .to_string();
+                        #[cfg(feature = "audio")]
+                        let audio_port = audio_time_port.to_string();
+
+                        let stdin_file = stdin_file.map(fs::File::open).transpose()?;
+
+                        *WATCH_CHILD.lock() = Some(
+                            Command::new(env::current_exe().unwrap())
+                                .arg("run")
+                                .arg(path)
+                                .args((!color).then_some("--no-color"))
+                                .args([
+                                    "--no-format",
+                                    "--mode",
+                                    "all",
+                                    #[cfg(feature = "audio")]
+                                    "--audio-time",
+                                    #[cfg(feature = "audio")]
+                                    &audio_time,
+                                    #[cfg(feature = "audio")]
+                                    "--audio-port",
+                                    #[cfg(feature = "audio")]
+                                    &audio_port,
+                                ])
+                                .args(&args)
+                                .stdin(stdin_file.map_or_else(Stdio::inherit, Into::into))
+                                .spawn()
+                                .unwrap(),
+                        );
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        if let UiuaErrorKind::Format(..) = e.kind {
+                            sleep(Duration::from_millis((i as u64 + 1) * 10))
+                        } else {
+                            clear_watching();
+                            println!("{}", e.report());
+                            print_watching();
+                            return Ok(());
+                        }
                     }
                 }
-                run(&path, stdin_file.as_ref())?;
-                last_time = Instant::now();
             }
+            println!("Failed to format file after {TRIES} tries");
+            Ok(())
+        };
+        if let Some(path) = initial_path {
+            run(&path, stdin_file.as_ref())?;
         }
-        let mut child = WATCH_CHILD.lock();
-        if let Some(ch) = &mut *child {
-            if ch.try_wait()?.is_some() {
-                print_watching();
-                *child = None;
-            }
-            #[cfg(feature = "audio")]
+        let mut last_time = Instant::now();
+        loop {
+            sleep(Duration::from_millis(10));
+            if let Some(path) = recv
+                .try_iter()
+                .filter_map(Result::ok)
+                .filter(|event| matches!(event.kind, EventKind::Modify(_)))
+                .flat_map(|event| event.paths)
+                .filter(|path| path.extension().map_or(false, |ext| ext == "ua"))
+                .last()
             {
-                let mut buf = [0; 8];
-                if audio_time_socket.recv(&mut buf).is_ok_and(|n| n == 8) {
-                    let time = f64::from_be_bytes(buf);
-                    audio_time.store(time.to_bits(), std::sync::atomic::Ordering::Relaxed);
+                if last_time.elapsed() > Duration::from_millis(100) {
+                    if clear {
+                        if cfg!(target_os = "windows") {
+                            _ = Command::new("cmd").args(["/C", "cls"]).status();
+                        } else {
+                            _ = Command::new("clear").status();
+                        }
+                    }
+                    run(&path, stdin_file.as_ref())?;
+                    last_time = Instant::now();
+                }
+            }
+            let mut child = WATCH_CHILD.lock();
+            if let Some(ch) = &mut *child {
+                if ch.try_wait()?.is_some() {
+                    print_watching();
+                    *child = None;
+                }
+                #[cfg(feature = "audio")]
+                {
+                    let mut buf = [0; 8];
+                    if audio_time_socket.recv(&mut buf).is_ok_and(|n| n == 8) {
+                        let time = f64::from_be_bytes(buf);
+                        audio_time.store(time.to_bits(), std::sync::atomic::Ordering::Relaxed);
+                    }
                 }
             }
         }

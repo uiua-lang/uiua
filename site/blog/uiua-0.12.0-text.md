@@ -14,6 +14,12 @@ This is a pretty big release! In addition to stable features, it contains a lot 
 
 Here are some of the highlights:
 
+## New Tutorials
+
+There are two new tutorials on the site:
+- [Tacit Code](https://uiua.org/tutorial/tacitcode)
+- [Code Tactility](https://uiua.org/tutorial/codetactility)
+
 ## Scoped Modules
 
 Modules can now be declared without needing a new file.

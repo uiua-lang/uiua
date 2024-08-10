@@ -11,7 +11,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use clap::{error::ErrorKind, Parser};
+use clap::{error::ErrorKind, Parser, Subcommand};
 use colored::*;
 use notify::{EventKind, RecursiveMode, Watcher};
 use once_cell::sync::Lazy;
@@ -284,6 +284,37 @@ fn run() -> UiuaResult {
                 repl(rt, compiler, true, clear, config);
             }
             App::Update { main, check } => update(main, check),
+            App::Module { command } => {
+                let paths = match list_modules() {
+                    Ok(paths) => paths,
+                    Err(e) => {
+                        eprintln!("Failed to list modules: {e}");
+                        return Ok(());
+                    }
+                };
+                match command.unwrap_or(ModuleCommand::List) {
+                    ModuleCommand::List => {
+                        if let Some(paths) = paths {
+                            for path in paths {
+                                println!("{}", path.display());
+                            }
+                        }
+                    }
+                    ModuleCommand::Update { module } => {
+                        let modules = if let Some(module) = module {
+                            vec![module]
+                        } else if let Some(paths) = paths {
+                            paths
+                        } else {
+                            eprintln!("No modules to update");
+                            return Ok(());
+                        };
+                        if let Err(e) = update_modules(&modules) {
+                            eprintln!("Failed to update modules: {e}");
+                        }
+                    }
+                }
+            }
             #[cfg(feature = "stand")]
             App::Stand { main, name } => {
                 let main = main.unwrap_or_else(|| "main.ua".into());
@@ -326,7 +357,7 @@ fn run() -> UiuaResult {
             }
         },
         Err(e)
-            if e.kind() == ErrorKind::InvalidSubcommand
+            if dbg!(e.kind()) == ErrorKind::InvalidSubcommand
                 && env::args()
                     .nth(1)
                     .is_some_and(|path| Path::new(&path).exists()) =>
@@ -672,6 +703,11 @@ enum App {
         #[clap(long, help = "Only check for updates")]
         check: bool,
     },
+    #[clap(about = "Manage Git modules. Requires Git")]
+    Module {
+        #[clap(subcommand)]
+        command: Option<ModuleCommand>,
+    },
     #[cfg(feature = "stand")]
     #[clap(about = "Create a standalone executable")]
     Stand {
@@ -679,6 +715,17 @@ enum App {
         main: Option<PathBuf>,
         #[clap(short = 'o', long, help = "The name of the output executable")]
         name: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum ModuleCommand {
+    #[clap(about = "List all modules")]
+    List,
+    #[clap(about = "Update a module or all modules")]
+    Update {
+        #[clap(help = "The module to update")]
+        module: Option<PathBuf>,
     },
 }
 
@@ -1001,4 +1048,43 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
         })
     }
     colored
+}
+
+fn list_modules() -> io::Result<Option<Vec<PathBuf>>> {
+    let Ok(entries) = fs::read_dir("uiua-modules") else {
+        return Ok(None);
+    };
+    let mut paths = Vec::new();
+    for entry in entries {
+        let entry = entry?;
+        let owner_path = entry.path();
+        if !owner_path.is_dir() {
+            continue;
+        }
+        let owner = PathBuf::from(owner_path.file_name().unwrap());
+        for entry in fs::read_dir(owner_path)? {
+            let entry = entry?;
+            let repo_path = entry.path();
+            if !repo_path.is_dir() {
+                continue;
+            }
+            let repo = repo_path.file_name().unwrap();
+            paths.push(owner.join(repo));
+        }
+    }
+    paths.sort();
+    Ok(Some(paths))
+}
+
+fn update_modules(modules: &[PathBuf]) -> io::Result<()> {
+    let canonical: Vec<PathBuf> = modules
+        .iter()
+        .map(|p| Path::new("uiua-modules").join(p).canonicalize())
+        .collect::<io::Result<_>>()?;
+    for (path, canonical) in modules.iter().zip(canonical) {
+        env::set_current_dir(&canonical)?;
+        println!("{} {}", "Updating".bold().bright_green(), path.display());
+        Command::new("git").args(["pull"]).spawn()?.wait()?;
+    }
+    Ok(())
 }

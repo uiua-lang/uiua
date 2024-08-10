@@ -160,6 +160,7 @@ pub fn Install() -> impl IntoView {
         <p>"Use "<code>"uiua <PATH>"</code>" or "<code>"uiua run [PATH]"</code>" to format and run a file without watching it."</p>
         <p>"Use "<code>"uiua fmt [PATH]"</code>" to format a file without running it."</p>
         <p>"Use "<code>"uiua test [PATH]"</code>" to run tests."</p>
+        <p>"Use "<code>"uiua module update"</code>" to update Git modules."</p>
     }
 }
 

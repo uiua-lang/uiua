@@ -318,6 +318,18 @@ impl Spanner {
     fn make_binding_docs(&self, binfo: &BindingInfo) -> BindingDocs {
         let mut comment = binfo.comment.clone();
         if comment.is_none() {
+            let name = binfo.span.as_str(&self.asm.inputs, |s| s.to_string());
+            match name.as_str() {
+                "🦈" | "🏳️‍⚧️" => comment = Some("Trans rights".into()),
+                "🤠" => comment = Some("This town ain't big enough for the ∩ of us".into()),
+                "👽" => comment = Some("Ayy, lmao".into()),
+                "🐈" | "😺" | "😸" | "😹" | "😻" | "😼" | "😽" | "🙀" => {
+                    comment = Some("Meow".into())
+                }
+                _ => {}
+            }
+        }
+        if comment.is_none() {
             match &binfo.kind {
                 BindingKind::Const(None) => comment = Some("constant".into()),
                 BindingKind::Import(_) | BindingKind::Module(_) => comment = Some("module".into()),

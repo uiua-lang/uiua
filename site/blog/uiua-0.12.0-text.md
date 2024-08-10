@@ -122,7 +122,7 @@ You can view to full list of experimental features [here](https://uiua.org/docs/
 
 ### More Stack Modifiers
 
-The [`but ⤙`]() and [`with ⤚`]() modifiers are compliments to [`on ⟜`]() and [`by ⊸`]().
+The [`but ⤙`]() and [`with ⤚`]() modifiers are complements to [`on ⟜`]() and [`by ⊸`]().
 
 [`but ⤙`]() keeps its function's *last* argument on *top* of the stack while [`with ⤚`]() keeps its function's *first* argument *below* the outputs on the stack.
 

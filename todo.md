@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.12
-  - Create release blog post
   - Release it!
 - 0.13
   - Unicode literals

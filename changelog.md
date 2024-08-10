@@ -73,6 +73,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Optimize [`≡`](https://uiua.org/docs/rows)[`□`](https://uiua.org/docs/box)[`◫`](https://uiua.org/docs/windows)
   - Small optimizations to rank-1 cases of [`find ⌕`](https://uiua.org/docs/find) and [`mask ⦷`](https://uiua.org/docs/mask)
   - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`⋅`](https://uiua.org/docs/gap)[`identity ∘`](https://uiua.org/docs/identity) and [`dip ⊙`](https://uiua.org/docs/dip)[`pop ◌`](https://uiua.org/docs/pop)
+- Git modules are now cloned instead of being added as submodules
 - Add some media constants:
   - `Logo` - the Uiua logo
   - `Lena` - a good example image for image processing

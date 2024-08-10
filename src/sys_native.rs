@@ -1,6 +1,6 @@
 use std::{
     any::Any,
-    env,
+    env::{self, set_current_dir},
     fs::{self, File, OpenOptions},
     io::{stderr, stdin, stdout, BufReader, Read, Write},
     net::*,
@@ -1021,45 +1021,32 @@ impl SysBackend for NativeSys {
         if parts.next().map_or(true, |s| s.is_empty()) {
             return Err("Invalid git url".to_string());
         }
-        let parent_path = Path::new("uiua-modules").join(repo_owner);
-        let path = parent_path.join(repo_name).join("lib.ua");
-        // Early return if the module already exists
-        if path.exists() {
-            return Ok(path);
-        }
-        // Create the parent directory if it doesn't exist
-        if !parent_path.exists() {
-            fs::create_dir_all(&parent_path).map_err(|e| e.to_string())?;
-        }
-        // Make sure this folder is a git repository
-        let mut child = Command::new("git")
-            .arg("init")
-            .stderr(Stdio::piped())
-            .stdout(Stdio::null())
-            .spawn()
-            .map_err(|e| e.to_string())?;
-        let status = child.wait().map_err(|e| e.to_string())?;
-        if !status.success() {
-            let stderr = child.stderr.as_mut().unwrap();
-            let mut err = String::new();
-            stderr.read_to_string(&mut err).map_err(|e| e.to_string())?;
-            return Err(format!("Failed to initialize git repository: {err}"));
-        }
 
+        let mut changed_dir = false;
         // Add submodule
-        let submodule_path = parent_path.join(repo_name);
-        let res = (move || {
+        let res = (|| {
+            let parent_path = Path::new("uiua-modules").join(repo_owner);
+            let submodule_path = parent_path.join(repo_name);
+            let lib_path = submodule_path.join("lib.ua");
             if !submodule_path.exists() {
-                let submod_path = submodule_path.to_string_lossy();
-                let mut args = vec!["submodule", "add", "--force"];
-                if let GitTarget::Branch(branch) = &target {
-                    args.push("-b");
-                    args.push(branch);
+                // Ensure the repo exists
+                let repo_exists = Command::new("git")
+                    .args(["ls-remote", "--exit-code", url])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()
+                    .map_err(|e| e.to_string())?
+                    .success();
+                if !repo_exists {
+                    return Err(format!("A git repository does not exist at {url}"));
                 }
-                args.push(url);
-                args.push(&submod_path);
+                // Create the parent directory if it doesn't exist
+                if !parent_path.exists() {
+                    fs::create_dir_all(&parent_path).map_err(|e| e.to_string())?;
+                }
+                // Clone the repo
                 let mut child = Command::new("git")
-                    .args(args)
+                    .args(["clone", url, &submodule_path.to_string_lossy()])
                     .stderr(Stdio::piped())
                     .stdout(Stdio::null())
                     .spawn()
@@ -1069,27 +1056,50 @@ impl SysBackend for NativeSys {
                     let stderr = child.stderr.as_mut().unwrap();
                     let mut err = String::new();
                     stderr.read_to_string(&mut err).map_err(|e| e.to_string())?;
-                    return Err(format!("Failed to add submodule: {err}"));
+                    return Err(format!("Failed to clone git repository `{url}`: {err}"));
                 }
-                if let GitTarget::Commit(hash) = &target {
-                    std::env::set_current_dir(&*submod_path).map_err(|e| e.to_string())?;
-                    let mut child = Command::new("git")
-                        .args(["checkout", hash])
-                        .stderr(Stdio::piped())
-                        .stdout(Stdio::null())
-                        .spawn()
-                        .map_err(|e| e.to_string())?;
-                    let status = child.wait().map_err(|e| e.to_string())?;
-                    if !status.success() {
-                        let stderr = child.stderr.as_mut().unwrap();
-                        let mut err = String::new();
-                        stderr.read_to_string(&mut err).map_err(|e| e.to_string())?;
-                        return Err(format!("Failed to checkout commit: {err}"));
+
+                set_current_dir(&*submodule_path).map_err(|e| e.to_string())?;
+                changed_dir = true;
+                match &target {
+                    GitTarget::Default => {}
+                    GitTarget::Branch(branch) => {
+                        let mut child = Command::new("git")
+                            .args(["checkout", branch])
+                            .stderr(Stdio::piped())
+                            .stdout(Stdio::null())
+                            .spawn()
+                            .map_err(|e| e.to_string())?;
+                        let status = child.wait().map_err(|e| e.to_string())?;
+                        if !status.success() {
+                            let stderr = child.stderr.as_mut().unwrap();
+                            let mut err = String::new();
+                            stderr.read_to_string(&mut err).map_err(|e| e.to_string())?;
+                            return Err(format!("Failed to checkout branch `{branch}`: {err}"));
+                        }
+                    }
+                    GitTarget::Commit(hash) => {
+                        let mut child = Command::new("git")
+                            .args(["checkout", hash])
+                            .stderr(Stdio::piped())
+                            .stdout(Stdio::null())
+                            .spawn()
+                            .map_err(|e| e.to_string())?;
+                        let status = child.wait().map_err(|e| e.to_string())?;
+                        if !status.success() {
+                            let stderr = child.stderr.as_mut().unwrap();
+                            let mut err = String::new();
+                            stderr.read_to_string(&mut err).map_err(|e| e.to_string())?;
+                            return Err(format!("Failed to checkout commit `{hash}`: {err}"));
+                        }
                     }
                 }
             }
-            Ok(path)
+            Ok(lib_path)
         })();
+        if changed_dir {
+            _ = set_current_dir("../../..");
+        }
         NATIVE_SYS.git_paths.insert(url.to_string(), res.clone());
         res
     }

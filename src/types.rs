@@ -3,8 +3,8 @@ use std::{cmp::Ordering, mem::take};
 use enum_iterator::Sequence;
 
 use crate::{
-    cowslice::CowSlice, Array, Assembly, Boxed, Complex, Function, Instr, PersistentMeta,
-    Primitive, Shape, TempStack, Uiua, Value,
+    cowslice::CowSlice, Array, Assembly, Boxed, Complex, Function, ImplPrimitive, Instr,
+    PersistentMeta, Primitive, Shape, TempStack, Uiua, Value,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -12,7 +12,7 @@ enum ScalarType {
     Real,
     Complex,
     Char,
-    Box,
+    Box(Option<Box<Type>>),
 }
 
 impl Value {
@@ -22,7 +22,19 @@ impl Value {
             Value::Byte(_) => ScalarType::Real,
             Value::Complex(_) => ScalarType::Complex,
             Value::Char(_) => ScalarType::Char,
-            Value::Box(_) => ScalarType::Box,
+            Value::Box(arr) => ScalarType::Box(if arr.data.is_empty() {
+                None
+            } else if (arr.data.windows(2)).all(|w| w[0].0.row_ty() == w[1].0.row_ty()) {
+                Some(Box::new(arr.data[0].0.ty()))
+            } else {
+                None
+            }),
+        }
+    }
+    fn ty(&self) -> Type {
+        Type {
+            scalar: self.scalar_ty(),
+            shape: self.shape().clone(),
         }
     }
     fn row_ty(&self) -> Type {
@@ -33,7 +45,7 @@ impl Value {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct Type {
     scalar: ScalarType,
     shape: Shape,
@@ -60,7 +72,7 @@ fn make_val(mut ty: Type) -> Value {
         ScalarType::Real => Array::<u8>::new(ty.shape, CowSlice::default()).into(),
         ScalarType::Complex => Array::<Complex>::new(ty.shape, CowSlice::default()).into(),
         ScalarType::Char => Array::<char>::new(ty.shape, CowSlice::default()).into(),
-        ScalarType::Box => Array::<Boxed>::new(ty.shape, CowSlice::default()).into(),
+        ScalarType::Box(_) => Array::<Boxed>::new(ty.shape, CowSlice::default()).into(),
     }
 }
 
@@ -134,6 +146,7 @@ impl<'a> TypeRt<'a> {
         }
         Ok(())
     }
+    #[allow(clippy::collapsible_match)]
     fn instr(&mut self, instr: &'a Instr, asm: &'a Assembly) -> Result<(), TypeError> {
         use Primitive as P;
         match instr {
@@ -244,12 +257,37 @@ impl<'a> TypeRt<'a> {
                     let val = self.pop()?;
                     self.stack.push(val);
                 }
+                P::Parse => {
+                    let x = self.pop()?;
+                    let mut shape = x.shape;
+                    if !matches!(x.scalar, ScalarType::Box(_)) {
+                        shape.pop();
+                    }
+                    self.stack.push(Type::new(ScalarType::Real, shape));
+                }
                 prim if prim.outputs() == Some(0) => {
                     if let Some(args) = prim.args() {
                         for _ in 0..args {
                             self.pop()?;
                         }
                     }
+                }
+                _ => return Err(TypeError::NotSupported),
+            },
+            Instr::ImplPrim(prim, _) => match prim {
+                ImplPrimitive::UnBox => {
+                    let x = self.pop()?;
+                    if x.shape.len() == 0 {
+                        if let ScalarType::Box(ty) = x.scalar {
+                            self.stack.push(if let Some(ty) = ty {
+                                *ty
+                            } else {
+                                Type::new(ScalarType::Real, [0])
+                            });
+                            return Ok(());
+                        }
+                    }
+                    self.stack.push(x);
                 }
                 _ => return Err(TypeError::NotSupported),
             },

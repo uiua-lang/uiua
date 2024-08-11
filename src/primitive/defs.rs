@@ -2762,15 +2762,15 @@ primitive!(
     ///   : | ⌵/ℂ-        # Heuristic
     ///   : | ≍           # Check if goal
     ///   : )0_0 3_5      # Start and goal
-    /// If we omit the cost array from the neighbors function and simply use `1` as the heuristic, the algorithm becomes Dijkstra's algorithm.
+    /// If we omit the cost array from the neighbors function and simply use `0` as the heuristic, the algorithm becomes Dijkstra's algorithm.
     /// ex: # Experimental!
     ///   : Neis ← [∩¯,,⇌.⇡2]
-    ///   : °□⊢ astar(+Neis¤)1≍ 0_0 3_5
-    /// In the examples above, we use `un``box``first` to get only the first path. [first][astar] is optimized to not do extra work.
+    ///   : °□⊢ astar(+Neis¤)0≍ 0_0 3_5
+    /// In the examples above, we use `un``box``first` to get only the first path. [first][astar] and [pop][astar] are optimized to not do extra work.
     /// If we want *all* shortest paths, we can omit [first].
     /// ex: # Experimental!
     ///   : Neis ← [∩¯,,⇌.⇡2]
-    ///   : astar(+Neis¤)1≍ 0_0 1_2
+    ///   : astar(+Neis¤)0≍ 0_0 1_2
     /// If pathing on a grid like the examples above, we can use [un][where] to visualize the path that was taken!
     /// ex: # Experimental!
     ///   : Neis ← [∩¯,,⇌.⇡2]

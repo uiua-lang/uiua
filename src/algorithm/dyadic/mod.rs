@@ -2058,31 +2058,70 @@ impl<T: ArrayValue> Array<T> {
         shape[0] = combinations as usize;
         shape.insert(1, k);
         let elem_count = validate_size::<T>(shape.iter().copied(), env)?;
-        let mut data = EcoVec::with_capacity(elem_count);
         let row_len = self.row_len();
-        let mut indices = vec![0; k];
-        'outer: loop {
-            env.respect_execution_limit()?;
-            if (indices.iter())
-                .zip(indices.iter().skip(1))
-                .all(|(a, b)| a > b)
-            {
-                for &i in indices.iter().rev() {
-                    data.extend_from_slice(&self.data[i * row_len..][..row_len]);
+        Ok(match (k, n - k) {
+            (1, _) | (_, 0) => Array::new(shape, self.data.clone()),
+            (_, 1) => {
+                let mut data = EcoVec::with_capacity(elem_count);
+                for i in (0..n).rev() {
+                    for (j, row) in self.row_slices().enumerate() {
+                        if i != j {
+                            data.extend_from_slice(row);
+                        }
+                    }
                 }
+                Array::new(shape, data)
             }
-            // Increment indices
-            for i in 0..k {
-                indices[i] += 1;
-                if indices[i] == n {
-                    indices[i] = 0;
-                } else {
-                    continue 'outer;
+            (2, _) => {
+                let mut data = EcoVec::with_capacity(elem_count);
+                for i in 0..n - 1 {
+                    for j in i + 1..n {
+                        data.extend_from_slice(&self.data[i * row_len..][..row_len]);
+                        data.extend_from_slice(&self.data[j * row_len..][..row_len]);
+                    }
                 }
+                Array::new(shape, data)
             }
-            break;
-        }
-        Ok(Array::new(shape, data))
+            (3, _) => {
+                let mut data = EcoVec::with_capacity(elem_count);
+                for i in 0..n - 2 {
+                    for j in i + 1..n - 1 {
+                        for k in j + 1..n {
+                            data.extend_from_slice(&self.data[i * row_len..][..row_len]);
+                            data.extend_from_slice(&self.data[j * row_len..][..row_len]);
+                            data.extend_from_slice(&self.data[k * row_len..][..row_len]);
+                        }
+                    }
+                }
+                Array::new(shape, data)
+            }
+            _ => {
+                let mut data = EcoVec::with_capacity(elem_count);
+                let mut indices = vec![0; k];
+                'outer: loop {
+                    env.respect_execution_limit()?;
+                    if (indices.iter())
+                        .zip(indices.iter().skip(1))
+                        .all(|(a, b)| a > b)
+                    {
+                        for &i in indices.iter().rev() {
+                            data.extend_from_slice(&self.data[i * row_len..][..row_len]);
+                        }
+                    }
+                    // Increment indices
+                    for i in 0..k {
+                        indices[i] += 1;
+                        if indices[i] == n {
+                            indices[i] = 0;
+                        } else {
+                            continue 'outer;
+                        }
+                    }
+                    break;
+                }
+                Array::new(shape, data)
+            }
+        })
     }
     /// `permute` all combinations of `k` rows from this array
     pub fn permute(&self, k: usize, env: &Uiua) -> UiuaResult<Self> {

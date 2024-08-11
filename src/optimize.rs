@@ -268,6 +268,12 @@ pub(crate) fn optimize_instrs_mut(
             instrs.pop();
             instrs.push(Instr::ImplPrim(AstarFirst, span));
         }
+        ([.., Instr::Prim(Astar, span)], Instr::Prim(Pop, pop_span)) => {
+            let span = *span;
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(AstarFirst, span));
+            instrs.push(Instr::Prim(Pop, pop_span));
+        }
         // TraceN
         ([.., Instr::Prim(Trace, span)], Instr::Prim(Trace, _)) => {
             let span = *span;

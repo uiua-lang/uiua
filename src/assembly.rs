@@ -116,7 +116,7 @@ impl Assembly {
     }
     /// Remove dead code from the assembly
     pub fn remove_dead_code(&mut self) {
-        let mut macro_slices = Vec::new();
+        let mut slices = Vec::new();
         self.bindings.retain(|binding| {
             if let BindingKind::ArrayMacro(mut slice) = binding.kind {
                 if slice.start > 0 {
@@ -131,14 +131,14 @@ impl Assembly {
                         }
                     }
                 }
-                macro_slices.push(slice);
+                slices.push(slice);
                 false
             } else {
                 true
             }
         });
-        macro_slices.sort();
-        for slice in macro_slices.into_iter().rev() {
+        slices.sort();
+        for slice in slices.into_iter().rev() {
             self.remove_slice(slice);
         }
     }

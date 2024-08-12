@@ -681,6 +681,7 @@ impl<T: ArrayValue> Array<T> {
         if self.map_keys().is_some() {
             return Err(env.error("Cannot undo take from map array"));
         }
+        let into_rank = into.rank();
         if into.rank() == 0 {
             into.shape.push(1);
         }
@@ -689,16 +690,17 @@ impl<T: ArrayValue> Array<T> {
             Ordering::Less => {
                 if from.shape[..] != into.shape[1..] {
                     return Err(env.error(format!(
-                        "Attempted to undo {name}, but the {past} section's rank was \
-                        modified to be incompatible",
+                        "Attempted to undo {name}, but the {past} section's rank \
+                        decreased from {into_rank} to {}",
+                        from.rank()
                     )));
                 }
             }
             Ordering::Equal => {}
             Ordering::Greater => {
                 return Err(env.error(format!(
-                    "Attempted to undo {name}, but the {past} section's rank was modified from {} to {}",
-                    into.rank(),
+                    "Attempted to undo {name}, but the {past} section's rank \
+                    increased from {into_rank} to {}",
                     from.rank()
                 )));
             }

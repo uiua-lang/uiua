@@ -861,7 +861,7 @@ impl<T: ArrayValue> Array<T> {
         }
     }
     fn undo_select_impl(
-        &self,
+        self,
         indices_shape: &[usize],
         indices: &[isize],
         into: Self,
@@ -930,7 +930,7 @@ impl<T: ArrayValue> Array<T> {
         Ok(Array::new(shape, selected))
     }
     fn undo_select(
-        &self,
+        mut self,
         indices_shape: &[usize],
         indices: &[isize],
         mut into: Self,
@@ -947,9 +947,8 @@ impl<T: ArrayValue> Array<T> {
             if self.shape == into.shape[1.min(into.shape.len())..] {
                 undo_select_same_size(once(self.data.as_slice()), indices, &mut into, env)?;
             } else {
-                let mut from = self.clone();
-                from.shape.insert(0, 1);
-                into = under_select_different_size(&from, indices, &into, env)?;
+                self.shape.insert(0, 1);
+                into = under_select_different_size(self, indices, &into, env)?;
             }
         } else if self.shape.iter().skip(1).eq(into.shape.iter().skip(1)) {
             undo_select_same_size(self.row_slices(), indices, &mut into, env)?;
@@ -1003,7 +1002,7 @@ fn undo_select_same_size<'a, T: ArrayValue>(
 }
 
 fn under_select_different_size<T: ArrayValue>(
-    from: &Array<T>,
+    from: Array<T>,
     indices: &[isize],
     into: &Array<T>,
     env: &Uiua,
@@ -1039,7 +1038,7 @@ fn under_select_different_size<T: ArrayValue>(
     abs_indices.sort_unstable();
     let mut new_rows = Vec::new();
     let mut i = 0;
-    let mut from_rows = from.rows();
+    let mut from_rows = from.into_rows();
     for index in abs_indices {
         while i < index {
             new_rows.push(into.row(i));

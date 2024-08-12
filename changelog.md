@@ -4,6 +4,7 @@ Uiua is not yet stable.
 
 # 0.12.0 - 2024-08-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
+<!-- You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0). -->
 ### Language
 - **Breaking Change** - [`&runs`](https://uiua.org/docs/&runs) now returns 3 handles rather than 1
   - This gives more precise control over stdin, stdout, and stderr
@@ -76,6 +77,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Small optimizations to rank-1 cases of [`find ⌕`](https://uiua.org/docs/find) and [`mask ⦷`](https://uiua.org/docs/mask)
   - Optimize [`group ⊕`](https://uiua.org/docs/group) and [`partition ⊜`](https://uiua.org/docs/partition) with [`⋅`](https://uiua.org/docs/gap)[`identity ∘`](https://uiua.org/docs/identity) and [`dip ⊙`](https://uiua.org/docs/dip)[`pop ◌`](https://uiua.org/docs/pop)
 - Git modules are now cloned instead of being added as submodules
+  - Add the `uiua module` command to list or update cloned modules
 - Add some media constants:
   - `Logo` - the Uiua logo
   - `Lena` - a good example image for image processing

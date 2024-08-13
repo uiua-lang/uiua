@@ -105,7 +105,7 @@ Several primitive functions have new functionality
 ▽ 0_1_2 [1 2 3 4 5 6]
 ```
 
-[`keep ▽`]() also now allows a scalar non-integer to scale an array. This is useful for image audio arrays.
+[`keep ▽`]() also now allows a scalar non-integer to scale an array. This is useful for image and audio arrays.
 
 ```uiua
 ▽ 0.5 [1 2 3 4 5 6]

@@ -1867,6 +1867,7 @@ primitive!(
     ///   : [◠¯ 1 2]
     /// ex: # Experimental!
     ///   : [◠1 2]
+    /// If you do not want this behavior, use [on] instead.
     ///
     /// See also: [below]
     ([1], Above, Stack, ("above", '◠')),
@@ -1884,6 +1885,7 @@ primitive!(
     ///   : [◡¯ 1 2]
     /// ex: # Experimental!
     ///   : [◡1 2]
+    /// If you do not want this behavior, use [by] instead.
     ///
     /// See also: [above]
     ([1], Below, Stack, ("below", '◡')),

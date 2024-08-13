@@ -508,16 +508,6 @@ impl Compiler {
                                 }
                             }
                         }
-                        Above => self.emit_diagnostic(
-                            "Prefer `⟜` over `◠` for monadic functions",
-                            DiagnosticKind::Style,
-                            modified.modifier.span.clone(),
-                        ),
-                        Below => self.emit_diagnostic(
-                            "Prefer `⊸` over `◡` for monadic functions",
-                            DiagnosticKind::Style,
-                            modified.modifier.span.clone(),
-                        ),
                         _ => {}
                     }
                 }
@@ -639,6 +629,10 @@ impl Compiler {
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
                     Above => {
+                        if sig.args < 2 {
+                            sig.args += 1;
+                            sig.outputs += 1;
+                        }
                         instrs.insert(
                             0,
                             Instr::CopyToTemp {
@@ -655,6 +649,10 @@ impl Compiler {
                         Signature::new(sig.args, sig.outputs + sig.args)
                     }
                     Below => {
+                        if sig.args < 2 {
+                            sig.args += 1;
+                            sig.outputs += 1;
+                        }
                         instrs.insert(
                             0,
                             Instr::CopyToTemp {

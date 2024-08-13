@@ -1862,6 +1862,11 @@ primitive!(
     ///   : [◠+ 1 2]
     /// ex: # Experimental!
     ///   : [◠(++) 1 2 3]
+    /// Functions with 0 or 1 arguments will be coerced to have 1 additional argument and output.
+    /// ex: # Experimental!
+    ///   : [◠¯ 1 2]
+    /// ex: # Experimental!
+    ///   : [◠1 2]
     ///
     /// See also: [below]
     ([1], Above, Stack, ("above", '◠')),
@@ -1874,6 +1879,11 @@ primitive!(
     /// This can be used with [gap] and [identity] to copy values from arbitrarily low in the stack.
     /// ex: # Experimental!
     ///   : [◡⋅⋅⋅⋅∘ 1 2 3 4 5]
+    /// Functions with 0 or 1 arguments will be coerced to have 1 additional argument and output.
+    /// ex: # Experimental!
+    ///   : [◡¯ 1 2]
+    /// ex: # Experimental!
+    ///   : [◡1 2]
     ///
     /// See also: [above]
     ([1], Below, Stack, ("below", '◡')),

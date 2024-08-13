@@ -271,7 +271,6 @@ static ON_INVERT_PATTERNS: &[&dyn InvertPattern] = {
 };
 
 static BY_INVERT_PATTERNS: &[&dyn InvertPattern] = {
-    use ImplPrimitive::*;
     use Primitive::*;
     &[
         &(IgnoreMany(Flip), ([Add], [Flip, Sub])),
@@ -286,7 +285,7 @@ static BY_INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &([Flip, Log], [Pow]),
         &([Min], [Min]),
         &([Max], [Max]),
-        &([Select], [ProgressiveIndexOf]),
+        &([Select], [IndexOf]),
     ]
 };
 

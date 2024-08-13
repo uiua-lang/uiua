@@ -1884,7 +1884,18 @@ code:
             }
             Err(e) => {
                 if let Some(declared_sig) = &func.signature {
-                    Some(declared_sig.value)
+                    if e.kind == SigCheckErrorKind::Ambiguous {
+                        Some(declared_sig.value)
+                    } else {
+                        return Err(self.fatal_error(
+                            declared_sig.span.clone(),
+                            format!(
+                                "Cannot infer function signature: {e}. \
+                                An explicit signature can only be used \
+                                with ambiguous functions."
+                            ),
+                        ));
+                    }
                 } else if require_valid_sig {
                     return Err(self.fatal_error(
                         span,

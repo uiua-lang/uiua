@@ -393,9 +393,20 @@ impl Compiler {
             Err(e) => {
                 if let Some(sig) = binding.signature {
                     // Binding is a normal function
-                    new_func.flags |= FunctionFlags::NO_INLINE;
-                    let func = make_fn(new_func, sig.value, self);
-                    self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
+                    if e.kind == SigCheckErrorKind::Ambiguous {
+                        new_func.flags |= FunctionFlags::NO_INLINE;
+                        let func = make_fn(new_func, sig.value, self);
+                        self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
+                    } else {
+                        return Err(self.fatal_error(
+                            sig.span.clone(),
+                            format!(
+                                "Cannot infer function signature: {e}. \
+                                An explicit signature can only be used \
+                                with ambiguous functions."
+                            ),
+                        ));
+                    }
                 } else {
                     self.add_error(
                         binding.name.span.clone(),

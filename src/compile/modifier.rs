@@ -174,7 +174,7 @@ impl Compiler {
                     closed: false,
                 })));
             }
-            op_count = modified.operands.len();
+            op_count = modified.code_operands().count();
         }
         if op_count == modified.modifier.value.args() {
             // Inlining

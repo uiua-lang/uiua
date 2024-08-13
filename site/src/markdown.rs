@@ -120,7 +120,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         NodeValue::Strikethrough => view!(<del>{children}</del>).into_view(),
         NodeValue::LineBreak => view!(<br/>).into_view(),
         NodeValue::CodeBlock(block) => {
-            if (block.info.is_empty() || block.info == "uiua")
+            if (block.info.is_empty() || block.info.starts_with("uiua"))
                 && uiua::parse(&block.literal, (), &mut Default::default())
                     .1
                     .is_empty()

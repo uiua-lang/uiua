@@ -166,7 +166,7 @@ pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResu
                     return Ok(());
                 }
                 if xs.row_count() == 1 {
-                    let val = reduce_one(f.instrs(&env.asm), xs);
+                    let val = reduce_singleton(f.instrs(&env.asm), xs);
                     env.push(val);
                     return Ok(());
                 }
@@ -245,7 +245,7 @@ fn reduce_identity(instrs: &[Instr], mut val: Value) -> Option<Value> {
     })
 }
 
-fn reduce_one(instrs: &[Instr], val: Value) -> Value {
+fn reduce_singleton(instrs: &[Instr], val: Value) -> Value {
     use Primitive::*;
     let instrs = trim_instrs(instrs);
     let row = val.row(0);
@@ -504,7 +504,7 @@ fn generic_reduce_inner(
             Primitive::Reduce.format(),
         ))),
         2 => {
-            let xs = env.pop(1)?;
+            let mut xs = env.pop(1)?;
             if depth == 0 {
                 let value_fill = env.value_fill();
                 if value_fill.is_none() {
@@ -517,7 +517,16 @@ fn generic_reduce_inner(
                         });
                     }
                     if xs.row_count() == 1 {
-                        return Ok(reduce_one(f.instrs(&env.asm), xs));
+                        let row_count = if xs.rank() == 0 {
+                            None
+                        } else {
+                            Some(xs.shape_mut().remove(0))
+                        };
+                        xs = process(xs);
+                        if let Some(row_count) = row_count {
+                            xs.shape_mut().insert(0, row_count);
+                        }
+                        return Ok(reduce_singleton(f.instrs(&env.asm), xs));
                     }
                 }
                 let mut rows = xs.into_rows();

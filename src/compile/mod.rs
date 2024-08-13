@@ -64,6 +64,8 @@ pub struct Compiler {
     macro_depth: usize,
     /// Whether the compiler is in an inverse
     in_inverse: bool,
+    /// Whether the compiler is in a try
+    in_try: bool,
     /// Whether the compiler is in a test
     in_test: bool,
     /// Accumulated errors
@@ -100,6 +102,7 @@ impl Default for Compiler {
             macro_depth: 0,
             in_inverse: false,
             in_test: false,
+            in_try: false,
             errors: Vec::new(),
             deprecated_prim_errors: HashSet::new(),
             diagnostics: BTreeSet::new(),
@@ -2384,7 +2387,7 @@ code:
                             success = true;
                         }
                         Ok(None) => {}
-                        Err(e) if e.is_fill => {}
+                        Err(e) if e.is_fill || self.in_try => {}
                         Err(e) => errors.push(e),
                     }
                     if !success {

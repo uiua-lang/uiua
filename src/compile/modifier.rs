@@ -968,8 +968,9 @@ impl Compiler {
                 let handler = operands.next().unwrap();
                 let tried_span = tried.span.clone();
                 let handler_span = handler.span.clone();
-                let (mut try_new_func, mut try_sig) = self.compile_operand_word(tried)?;
+                let in_try = replace(&mut self.in_try, true);
                 let (handler_new_func, handler_sig) = self.compile_operand_word(handler)?;
+                let (mut try_new_func, mut try_sig) = self.compile_operand_word(tried)?;
                 let span = self.add_span(modified.modifier.span.clone());
 
                 match handler_sig.outputs.cmp(&try_sig.outputs) {
@@ -1009,6 +1010,7 @@ impl Compiler {
                 }
 
                 let tried_func = self.make_function(tried_span.into(), try_sig, try_new_func);
+                self.in_try = in_try;
                 let handler_func =
                     self.make_function(handler_span.into(), handler_sig, handler_new_func);
                 finish!(

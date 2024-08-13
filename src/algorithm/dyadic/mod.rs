@@ -1782,10 +1782,14 @@ impl<T: ArrayValue> Array<T> {
                         let key = ArrayCmpSlice(slice::from_ref(elem));
                         *dest = if let Some(i) = cache.get_mut(&key) {
                             *i += 1;
-                            *i = (haystack.data[*i..].iter())
-                                .position(|of| of.array_eq(elem))
-                                .map(|idx| idx + *i)
-                                .unwrap_or(default);
+                            *i = if *i < haystack.data.len() {
+                                (haystack.data[*i..].iter())
+                                    .position(|of| of.array_eq(elem))
+                                    .map(|idx| idx + *i)
+                                    .unwrap_or(default)
+                            } else {
+                                default
+                            };
                             *i
                         } else {
                             let i = (haystack.data.iter())

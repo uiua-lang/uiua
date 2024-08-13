@@ -1304,7 +1304,22 @@ fn under_from_inverse_pattern<'a>(
     loop {
         for pattern in INVERT_PATTERNS {
             if let Some((inp, after)) = pattern.invert_extract(&input[..end], comp) {
+                let input_pattern_match_count = input[..end]
+                    .iter()
+                    .filter(|instr| {
+                        matches!(instr, Instr::ImplPrim(ImplPrimitive::MatchPattern, _))
+                    })
+                    .count();
                 let before = EcoVec::from(&input[..input.len() - inp.len()]);
+                let after_pattern_match_count = after
+                    .iter()
+                    .filter(|instr| {
+                        matches!(instr, Instr::ImplPrim(ImplPrimitive::MatchPattern, _))
+                    })
+                    .count();
+                if after_pattern_match_count > input_pattern_match_count {
+                    continue;
+                }
                 dbgln!(
                     "inverted for under ({:?}) {:?} to {:?}",
                     pattern,

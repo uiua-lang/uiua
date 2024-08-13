@@ -13,6 +13,9 @@ This version is not yet released. If you are reading this on the website, then t
   - This allows you to work with audio that is not at Uiua's default sample rate
 - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill) no longer fills the shapes of inputs to [`rows ≡`](https://uiua.org/docs/rows)
   - It could leader to some unexpected behavior when trying to fill the shapes of outputs
+- **Breaking Change** - disable pattern matching inverses resulting from [`under ⍜`](https://uiua.org/docs/under)
+  - This is basically never what you want
+  - Pattern matching via [`un °`](https://uiua.org/docs/un) still works as normal
 - Rename media en/decoding system functions `&ime`, `&gife`, and `&ae` to non-system functions [`imen`](https://uiua.org/docs/imen), [`gifen`](https://uiua.org/docs/gifen), and [`auden`](https://uiua.org/docs/auden)
   - Their implementation is not actually system-dependent
   - Existing `&*e` will format to the new names

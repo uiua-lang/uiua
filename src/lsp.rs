@@ -1343,6 +1343,7 @@ mod server {
                         {
                             STACK_FUNCTION_STT
                         }
+                        PrimClass::Constant => UIUA_NUMBER_STT,
                         _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,
                         _ if p.modifier_args() == Some(2) => DYADIC_MODIFIER_STT,
                         _ if p.modifier_args() == Some(3) => TRIADIC_MODIFIER_STT,

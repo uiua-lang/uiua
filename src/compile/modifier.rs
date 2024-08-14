@@ -1,9 +1,5 @@
 //! Compiler code for modifiers
 
-use std::{cmp::Ordering, slice};
-
-use crate::{algorithm::IgnoreError, format::format_words, UiuaErrorKind, SUBSCRIPT_NUMS};
-
 use super::*;
 
 impl Compiler {

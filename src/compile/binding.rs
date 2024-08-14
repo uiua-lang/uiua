@@ -23,10 +23,7 @@ impl Compiler {
                             .insert(comp.module.span.clone(), local.index);
                     }
                     (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
-                    let local = LocalName {
-                        index: local.index,
-                        public,
-                    };
+                    let local = LocalName { public, ..local };
                     self.scope.names.insert(binding.name.value, local);
                     return Ok(());
                 }

@@ -3,6 +3,7 @@ mod modifier;
 
 use std::{
     cell::RefCell,
+    cmp::Ordering,
     collections::{hash_map::DefaultHasher, BTreeSet, HashMap, HashSet},
     env::current_dir,
     fmt, fs,
@@ -11,6 +12,7 @@ use std::{
     mem::{replace, take},
     panic::{catch_unwind, AssertUnwindSafe},
     path::{Path, PathBuf},
+    slice,
     sync::Arc,
     time::Duration,
 };
@@ -20,10 +22,13 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    algorithm::invert::{invert_instrs, under_instrs},
+    algorithm::{
+        invert::{invert_instrs, under_instrs},
+        IgnoreError,
+    },
     ast::*,
     check::{instrs_all_signatures, instrs_signature, SigCheckError, SigCheckErrorKind},
-    format::format_word,
+    format::{format_word, format_words},
     function::*,
     ident_modifier_args,
     lex::{CodeSpan, Sp, Span},
@@ -32,7 +37,8 @@ use crate::{
     parse::{count_placeholders, parse, split_words, unsplit_words},
     Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, DocComment, GitTarget, Ident,
     ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment,
-    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS, EXAMPLE_UA, VERSION,
+    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS, EXAMPLE_UA,
+    SUBSCRIPT_NUMS, VERSION,
 };
 
 /// The Uiua compiler

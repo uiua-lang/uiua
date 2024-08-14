@@ -29,11 +29,11 @@ pub fn Design() -> impl IntoView {
         <p>"Long tacit expressions in most array languages can get very unwieldy. Because binary operations are infix, you have to parse the tree structure in your head before you can start determining the order of operations."</p>
         <p>"For example, in BQN, you can trim matches from the beginning of a string with "<a style="text-decoration: none;" href="https://mlochbaum.github.io/bqncrate/?q=Remove%20cells%20that%20appear%20in%20x%20from%20beginning%20of%20y#"><code>"x(∧`∘∊˜¬⊸/⊢)y"</code></a>". "</p>
         <p>"In contrast, here is their equivalent in Uiua, implemented the same way:"</p>
-        <Editor example="Trim ← ▽¬\\×∊,"/>
+        <Editor example="Trim ← ▽¬\\×⊸∈"/>
         <p>
             "You'll notice that stack basing simplifies the expression in a few ways:"
             <ul>
-                <li>"There is no Uiua code corresponding to the BQN combinators "<code>"∘"</code>" and "<code>"⊸"</code>". Function composition is implicit."</li>
+                <li>"There is no Uiua code corresponding to the BQN combinator "<code>"∘"</code>". Function composition is implicit."</li>
                 <li>"Functions are executed right-to-left instead of in a tree ordering."</li>
                 <li>"The expression does not require "<code>"()"</code>"s. In fact, no Uiua expression requires explicit grouping. "<code>"()"</code>" is used to make inline functions instead."</li>
             </ul>

@@ -1374,6 +1374,21 @@ primitive!(
     (2, Mask, DyadicArray, ("mask", '⦷')),
     /// Check if each row of one array exists in another
     ///
+    /// The second argument is checked for membership in the first argument.
+    /// ex: ∈ [1 2 3] 2
+    /// ex: ∈ [1 2 3] 5
+    /// ex: ∈ [0 3 4 5 1] [1 2 3]
+    /// ex: ∈ [1_2_3 4_5_6] [4 5 6]
+    /// ex: ∈ [3 4 5] [1_2_3 4_5_6]
+    /// ex: ∈ [1_2_3 4_5_6] 2
+    ///
+    /// With the help of [keep], you can use [memberof] to get a set intersection.
+    /// ex: ▽⊸∈ "abracadabra" "that's really cool"
+    ///
+    /// [memberof] is closely related to [indexin].
+    (2, MemberOf, DyadicArray, ("memberof", '∈')),
+    /// Check if each row of one array exists in another
+    ///
     /// ex: ∊ 2 [1 2 3]
     /// ex: ∊ 5 [1 2 3]
     /// ex: ∊ [1 2 3] [0 3 4 5 1]
@@ -2043,7 +2058,7 @@ primitive!(
     /// Here is an example that evaluates a [Collatz sequence](https://en.wikipedia.org/wiki/Collatz_conjecture).
     /// The next number in the sequence is calculated in the condition function but [join]ed to the sequence in the loop function.
     /// ex: C ← ⨬(+1×3|÷2)=0◿2.
-    ///   : ◌⍢⊂(¬∊,,C⊢.) [7]
+    /// : ◌⍢⊂(¬∈:,,C⊢.) [7]
     /// If the condition function consumes its only arguments to evaluate the condition, then those arguments will be implicitly copied.
     /// Consider this equivalence:
     /// ex: ⍢(×3|<100)  1
@@ -2864,8 +2879,8 @@ primitive!(
     ///
     /// Append commas to whitespace for a more traditional notation:
     /// ex: -5↯2_2_3⇡12
-    ///   : ⍜⊜□⍚(⊂@,)∊," \n" repr # add commas
-    ///   : &p ⍜▽∵⋅@-=@¯.         # replace negate glyphs with minus signs
+    ///   : ⍜⊜□⍚(⊂@,)∈" \n". repr # add commas
+    ///   : &p ⍜▽∵⋅@-=@¯.        # replace negate glyphs with minus signs
     (1, Repr, Misc, "repr"),
     /// Encode an image into a byte array with the specified format
     ///

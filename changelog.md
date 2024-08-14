@@ -16,6 +16,10 @@ This version is not yet released. If you are reading this on the website, then t
 - **Breaking Change** - disable pattern matching inverses resulting from [`under ⍜`](https://uiua.org/docs/under)
   - This is basically never what you want
   - Pattern matching via [`un °`](https://uiua.org/docs/un) still works as normal
+- - Deprecate [`member ∊`](https://uiua.org/docs/member) and add [`memberof ∈`](https://uiua.org/docs/memberof)
+  - [`member ∊`](https://uiua.org/docs/member) almost always required flipping the arguments
+  - [`memberof ∈`](https://uiua.org/docs/memberof) is the same, but with the arguments flipped
+  - In the future, [`member ∊`](https://uiua.org/docs/member) will be removed, and [`memberof ∈`](https://uiua.org/docs/memberof)'s glyph will be changed and format to `∊`
 - Rename media en/decoding system functions `&ime`, `&gife`, and `&ae` to non-system functions [`imen`](https://uiua.org/docs/imen), [`gifen`](https://uiua.org/docs/gifen), and [`auden`](https://uiua.org/docs/auden)
   - Their implementation is not actually system-dependent
   - Existing `&*e` will format to the new names

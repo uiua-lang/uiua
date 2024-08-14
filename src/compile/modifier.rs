@@ -413,9 +413,10 @@ impl Compiler {
                 }
             }
             if let Word::Modified(m) = &op.value {
-                if matches!(m.modifier.value, Modifier::Primitive(Primitive::Fork))
+                if (matches!(m.modifier.value, Modifier::Primitive(Primitive::Fork))
                     || matches!(m.modifier.value, Modifier::Primitive(Primitive::Bracket))
-                        && prim != Primitive::Table
+                        && prim != Primitive::Table)
+                    && self.words_look_pure(&m.operands)
                 {
                     let mut m = (**m).clone();
                     for op in m.operands.iter_mut().filter(|w| w.value.is_code()) {
@@ -451,6 +452,33 @@ impl Compiler {
             self.push_instr(Instr::PushFunc(func));
         }
         Ok(())
+    }
+    fn words_look_pure(&self, words: &[Sp<Word>]) -> bool {
+        words.iter().all(|word| match &word.value {
+            Word::Primitive(p) => p.purity() == Purity::Pure,
+            Word::Func(func) => func.lines.iter().all(|line| self.words_look_pure(line)),
+            Word::Pack(pack) => (pack.branches.iter())
+                .all(|branch| (branch.value.lines.iter()).all(|line| self.words_look_pure(line))),
+            Word::Modified(m) => self.words_look_pure(&m.operands),
+            Word::Array(arr) => arr.lines.iter().all(|line| self.words_look_pure(line)),
+            Word::Strand(items) => self.words_look_pure(items),
+            Word::Ref(r) => {
+                if let Ok((_, local)) = self.ref_local(r) {
+                    match &self.asm.bindings[local.index].kind {
+                        BindingKind::Const(_) | BindingKind::Module(_) | BindingKind::Import(_) => {
+                            true
+                        }
+                        BindingKind::Func(f) => {
+                            instrs_are_pure(f.instrs(&self.asm), &self.asm, Purity::Pure)
+                        }
+                        _ => false,
+                    }
+                } else {
+                    true
+                }
+            }
+            _ => true,
+        })
     }
     fn suppress_diagnostics<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
         let diagnostics = take(&mut self.diagnostics);

@@ -1073,10 +1073,12 @@ where
     match (sig.args, sig.outputs) {
         (0 | 1, outputs) => {
             let mut empty_shape = values.shape().clone();
-            empty_shape[0] = 0;
+            let is_scalar = empty_shape.is_empty();
+            *empty_shape.row_count_mut() = 0;
             let groups = get_groups(values, indices).into_iter().map(|mut group| {
                 if group.row_count() == 0 {
                     group.shape_mut().clone_from(&empty_shape);
+                    group.validate_shape();
                 }
                 group
             });
@@ -1096,7 +1098,11 @@ where
                 Ok(())
             })?;
             for rows in rows.into_iter().rev() {
-                env.push(Value::from_row_values(rows, env)?);
+                let mut val = Value::from_row_values(rows, env)?;
+                if is_scalar {
+                    val.undo_fix();
+                }
+                env.push(val);
             }
         }
         (2, 1) => {

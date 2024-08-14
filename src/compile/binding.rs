@@ -7,9 +7,11 @@ impl Compiler {
         let public = binding.public;
 
         // Alias re-bound imports
-        if binding.words.iter().filter(|w| w.value.is_code()).count() == 1 {
+        if ident_modifier_args(&binding.name.value) == 0
+            && binding.words.iter().filter(|w| w.value.is_code()).count() == 1
+        {
             if let Some(r) = binding.words.iter().find_map(|w| match &w.value {
-                Word::Ref(r) => Some(r),
+                Word::Ref(r) if ident_modifier_args(&r.name.value) == 0 => Some(r),
                 _ => None,
             }) {
                 if let Ok((path_locals, local)) = self.ref_local(r) {
@@ -21,13 +23,11 @@ impl Compiler {
                             .insert(comp.module.span.clone(), local.index);
                     }
                     (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
-                    self.scope.names.insert(
-                        binding.name.value,
-                        LocalName {
-                            index: local.index,
-                            public,
-                        },
-                    );
+                    let local = LocalName {
+                        index: local.index,
+                        public,
+                    };
+                    self.scope.names.insert(binding.name.value, local);
                     return Ok(());
                 }
             }

@@ -21,6 +21,14 @@ pub fn reduce(depth: usize, env: &mut Uiua) -> UiuaResult {
 }
 
 pub(crate) fn reduce_impl(f: Function, depth: usize, env: &mut Uiua) -> UiuaResult {
+    if f.signature().args < 2 {
+        return Err(env.error(format!(
+            "{}'s function must have at least 2 arguments, \
+            but its signature is {}",
+            Primitive::Reduce.format(),
+            f.signature()
+        )));
+    }
     let xs = env.pop(1)?;
     match (f.as_flipped_primitive(&env.asm), xs) {
         (Some((Primitive::Join, false)), mut xs)

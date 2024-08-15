@@ -839,6 +839,21 @@ fn invert_on_inv_pattern<'a>(
     input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    if let Some((input, Instr::PushTemp { span, .. }, inner, _, 1)) = try_push_temp_wrap(input) {
+        let (inp_after_val, mut instrs) = Val.invert_extract(inner, comp)?;
+        if !inp_after_val.is_empty() {
+            return None;
+        }
+        let mut temp_input = input.to_vec();
+        temp_input.insert(0, Instr::Prim(Primitive::Flip, *span));
+        for pattern in ON_INVERT_PATTERNS {
+            if let Some((temp_inp, inv)) = pattern.invert_extract(&temp_input, comp) {
+                instrs.extend(inv);
+                return Some((&input[temp_input.len() - 1 - temp_inp.len()..], instrs));
+            }
+        }
+    }
+
     let (input, mut instrs) = Val.invert_extract(input, comp)?;
     for pattern in ON_INVERT_PATTERNS {
         if let Some((input, inv)) = pattern.invert_extract(input, comp) {
@@ -1319,12 +1334,7 @@ fn under_from_inverse_pattern<'a>(
                 if after_pattern_match_count > input_pattern_match_count {
                     continue;
                 }
-                dbgln!(
-                    "inverted for under ({:?}) {:?} to {:?}",
-                    pattern,
-                    before,
-                    after
-                );
+                dbgln!("inverted for under ({pattern:?}) {before:?} to {after:?}");
                 return Some((inp, (before, after)));
             }
         }

@@ -703,7 +703,11 @@ impl<T: ArrayValue> Array<T> {
                         so the keep cannot be inverted",
                     )
                 })?;
-                if new_row.shape != into_row.shape {
+                if new_row.shape == into_row.shape {
+                    new_rows.push(new_row);
+                } else if new_row.shape[1..] == into_row.shape {
+                    new_rows.extend(new_row.into_rows());
+                } else {
                     return Err(env.error(format!(
                         "Kept array's shape was changed from {} to {}, \
                         so the keep cannot be inverted",
@@ -711,7 +715,6 @@ impl<T: ArrayValue> Array<T> {
                         new_row.shape()
                     )));
                 }
-                new_rows.push(new_row);
             }
         }
         Self::from_row_arrays(new_rows, env)

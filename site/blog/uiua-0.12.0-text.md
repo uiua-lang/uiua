@@ -111,6 +111,22 @@ Several primitive functions have new functionality
 ▽ 0.5 [1 2 3 4 5 6]
 ▽ 1.5 [1 2 3 4 5 6]
 ```
+## [`memberof ∈`]()
+
+The [`member ∊`]() is now deprecated. It was almost always used along with [`flip :`]().
+
+It has been replaced with [`memberof ∈`](), which has the exact same functionality, except its arguments are flipped.
+
+```uiua
+F ← ∈"abc"
+F "beefcake"
+```
+
+This makes it work nicely with [`by ⊸`]()!
+
+```uiua
+⊜□¬⊸∈ " ," "To be, or not"
+```
 
 ## Experimental Features
 

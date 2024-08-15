@@ -261,6 +261,8 @@ pub fn Optimizations() -> impl IntoView {
                 <tr><td><Prim prim=Classify/></td></tr>
                 <tr><td><Prim prim=Fix/></td></tr>
                 <tr><td><Prim prim=Box/></td></tr>
+                <tr><td><Prim prim=First/></td></tr>
+                <tr><td><Prims prims=[First, Reverse] show_names=true/></td></tr>
             </table>
             <table class="bordered-table cell-centered-table">
                 <tr><td><Prims prims=[Gap, Rand] show_names=true/></td></tr>

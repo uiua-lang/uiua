@@ -360,25 +360,31 @@ fn range(shape: &[isize], env: &Uiua) -> UiuaResult<Result<CowSlice<f64>, CowSli
 
 impl Value {
     /// Get the first row of the value
-    pub fn first(mut self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn first(self, env: &Uiua) -> UiuaResult<Self> {
+        self.first_depth(0, env)
+    }
+    pub(crate) fn first_depth(mut self, depth: usize, env: &Uiua) -> UiuaResult<Self> {
         self.match_scalar_fill(env);
         self.generic_into(
-            |a| a.first(env).map(Into::into),
-            |a| a.first(env).map(Into::into),
-            |a| a.first(env).map(Into::into),
-            |a| a.first(env).map(Into::into),
-            |a| a.first(env).map(Into::into),
+            |a| a.first_depth(depth, env).map(Into::into),
+            |a| a.first_depth(depth, env).map(Into::into),
+            |a| a.first_depth(depth, env).map(Into::into),
+            |a| a.first_depth(depth, env).map(Into::into),
+            |a| a.first_depth(depth, env).map(Into::into),
         )
     }
     /// Get the last row of the value
-    pub fn last(mut self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn last(self, env: &Uiua) -> UiuaResult<Self> {
+        self.last_depth(0, env)
+    }
+    pub(crate) fn last_depth(mut self, depth: usize, env: &Uiua) -> UiuaResult<Self> {
         self.match_scalar_fill(env);
         self.generic_into(
-            |a| a.last(env).map(Into::into),
-            |a| a.last(env).map(Into::into),
-            |a| a.last(env).map(Into::into),
-            |a| a.last(env).map(Into::into),
-            |a| a.last(env).map(Into::into),
+            |a| a.last_depth(depth, env).map(Into::into),
+            |a| a.last_depth(depth, env).map(Into::into),
+            |a| a.last_depth(depth, env).map(Into::into),
+            |a| a.last_depth(depth, env).map(Into::into),
+            |a| a.last_depth(depth, env).map(Into::into),
         )
     }
     pub(crate) fn undo_first(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
@@ -433,7 +439,10 @@ impl<T: ArrayValue> Array<T> {
                     Ok(self)
                 }
                 Err(e) => Err(env
-                    .error(format!("Cannot take first of an empty array{e}"))
+                    .error(format!(
+                        "Cannot take {} of an empty array{e}",
+                        Primitive::First.format()
+                    ))
                     .fill()),
             },
             _ => {
@@ -442,6 +451,54 @@ impl<T: ArrayValue> Array<T> {
                 self.data.truncate(row_len);
                 self.take_map_keys();
                 self.take_label();
+                Ok(self)
+            }
+        }
+    }
+    pub(crate) fn first_depth(mut self, mut depth: usize, env: &Uiua) -> UiuaResult<Self> {
+        depth = depth.min(self.rank());
+        if depth == 0 {
+            return self.first(env);
+        }
+        match &self.shape[depth..] {
+            [] => Ok(self),
+            [0, rest @ ..] => match env.scalar_fill() {
+                Ok(fill) => {
+                    self.shape = self.shape[..depth].iter().chain(rest).copied().collect();
+                    self.data.extend_repeat(&fill, self.shape.elements());
+                    self.validate_shape();
+                    Ok(self)
+                }
+                Err(e) => Err(env
+                    .error(format!(
+                        "Cannot take {} of an empty array{e}",
+                        Primitive::First.format()
+                    ))
+                    .fill()),
+            },
+            [1, ..] => {
+                self.shape.remove(depth);
+                self.validate_shape();
+                Ok(self)
+            }
+            [n, rest @ ..] => {
+                let row_len: usize = rest.iter().product();
+                let row_count: usize = self.shape[..depth].iter().product();
+                let slice = self.data.as_mut_slice();
+                for i in 1..row_count {
+                    let dest = i * row_len;
+                    let src = i * *n * row_len;
+                    unsafe {
+                        ptr::swap_nonoverlapping(
+                            slice.as_mut_ptr().add(dest),
+                            slice.as_mut_ptr().add(src),
+                            row_len,
+                        )
+                    };
+                }
+                self.shape.remove(depth);
+                self.data.truncate(self.shape.elements());
+                self.validate_shape();
                 Ok(self)
             }
         }
@@ -467,6 +524,50 @@ impl<T: ArrayValue> Array<T> {
                 self.data = self.data[prefix_len..].into();
                 self.take_map_keys();
                 self.take_label();
+                Ok(self)
+            }
+        }
+    }
+    pub(crate) fn last_depth(mut self, mut depth: usize, env: &Uiua) -> UiuaResult<Self> {
+        depth = depth.min(self.rank());
+        if depth == 0 {
+            return self.last(env);
+        }
+        match &self.shape[depth..] {
+            [] => Ok(self),
+            [0, rest @ ..] => match env.scalar_fill() {
+                Ok(fill) => {
+                    self.shape = self.shape[..depth].iter().chain(rest).copied().collect();
+                    self.data.extend_repeat(&fill, self.shape.elements());
+                    Ok(self)
+                }
+                Err(e) => Err(env
+                    .error(format!("Cannot take last of an empty array{e}"))
+                    .fill()),
+            },
+            [1, ..] => {
+                self.shape.remove(depth);
+                self.validate_shape();
+                Ok(self)
+            }
+            [n, rest @ ..] => {
+                let row_len: usize = rest.iter().product();
+                let row_count: usize = self.shape[..depth].iter().product();
+                let slice = self.data.as_mut_slice();
+                for i in 0..row_count {
+                    let dest = i * row_len;
+                    let src = (i + 1) * *n * row_len - row_len;
+                    unsafe {
+                        ptr::swap_nonoverlapping(
+                            slice.as_mut_ptr().add(dest),
+                            slice.as_mut_ptr().add(src),
+                            row_len,
+                        )
+                    };
+                }
+                self.shape.remove(depth);
+                self.data.truncate(self.shape.elements());
+                self.validate_shape();
                 Ok(self)
             }
         }

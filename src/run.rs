@@ -1033,6 +1033,12 @@ code:
         self.rt.function_stack.clear();
         take(&mut self.rt.stack)
     }
+    /// Take all stacks
+    pub fn take_stacks(&mut self) -> (Vec<Value>, [Vec<Value>; TempStack::CARDINALITY]) {
+        let temp_stacks = take(&mut self.rt.temp_stacks);
+        let stack = take(&mut self.rt.stack);
+        (stack, temp_stacks)
+    }
     /// Get a reference to the stack
     pub fn stack(&self) -> &[Value] {
         &self.rt.stack

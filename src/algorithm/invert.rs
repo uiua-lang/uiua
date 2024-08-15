@@ -1437,12 +1437,11 @@ fn try_copy_temp_wrap(input: &[Instr]) -> Option<TempWrap> {
 }
 
 fn temp_wrap_impl(input: &[Instr], f: impl Fn(&Instr) -> Option<usize>) -> Option<TempWrap> {
-    let (instr, input) = input.split_first()?;
-    let count = f(instr)?;
+    let (first_instr, input) = input.split_first()?;
+    let count = f(first_instr)?;
     // Find end
     let mut depth = count;
     let mut max_depth = depth;
-    let mut end = 0;
     for (i, instr) in input.iter().enumerate() {
         match instr {
             Instr::PushTemp {
@@ -1465,17 +1464,16 @@ fn temp_wrap_impl(input: &[Instr], f: impl Fn(&Instr) -> Option<usize>) -> Optio
             } => {
                 depth = depth.saturating_sub(*count);
                 if depth == 0 {
-                    end = i;
-                    break;
+                    let (inner, input) = input.split_at(i);
+                    let end_instr = input.first()?;
+                    let input = &input[1..];
+                    return Some((input, first_instr, inner, end_instr, max_depth));
                 }
             }
             _ => {}
         }
     }
-    let (inner, input) = input.split_at(end);
-    let end_instr = input.first()?;
-    let input = &input[1..];
-    Some((input, instr, inner, end_instr, max_depth))
+    None
 }
 
 fn invert_push_temp_pattern<'a>(
@@ -2050,26 +2048,21 @@ fn try_array_wrap<'a>(
         return None;
     };
     let mut depth = 1;
-    let mut end = 0;
-    let mut end_arr = None;
     for (i, instr) in input.iter().enumerate() {
         match instr {
             Instr::BeginArray => depth += 1,
             Instr::EndArray { span, boxed } => {
                 depth -= 1;
                 if depth == 0 {
-                    end = i;
-                    end_arr = Some((*span, *boxed));
-                    break;
+                    let (inner, input) = input.split_at(i);
+                    let input = &input[1..];
+                    return Some((input, inner, *span, *boxed));
                 }
             }
             _ => {}
         }
     }
-    let (span, boxed) = end_arr?;
-    let (inner, input) = input.split_at(end);
-    let input = &input[1..];
-    Some((input, inner, span, boxed))
+    None
 }
 
 fn invert_array_pattern<'a>(

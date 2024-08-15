@@ -1590,7 +1590,7 @@ primitive!(
     ///
     /// [rows] is one of a few modifiers that uses [proxy values](/tutorial/functions#proxy).
     ([1], Rows, IteratingModifier, ("rows", '≡')),
-    /// Apply a function to each combination of rows of two arrays
+    /// Apply a function to each combination of rows of some arrays
     ///
     /// This is often what you want instead of [each].
     ///

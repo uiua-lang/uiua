@@ -1287,6 +1287,20 @@ a.clean {
             #a20161 67%);
 }
 
+.caution {
+    background-image: linear-gradient(135deg,
+            #000000 30%,
+            #FFF000 30%,
+            #FFF000 40%,
+            #000000 40%,
+            #000000 50%,
+            #FFF000 50%,
+            #FFF000 60%,
+            #000000 60%,
+            #000000 70%,
+            #FFF000 70%);
+}
+
 @media (prefers-color-scheme: light) {
 
     .trans,
@@ -1298,7 +1312,8 @@ a.clean {
     .gay,
     .nb,
     .fluid,
-    .queer {
+    .queer,
+    .caution {
         -webkit-text-stroke: 0.01em #000;
     }
 }
@@ -1310,7 +1325,8 @@ a.clean {
     .ace,
     .aro,
     .aroace,
-    .fluid {
+    .fluid,
+    .caution {
         -webkit-text-stroke: 0.01em #fff8;
     }
 }

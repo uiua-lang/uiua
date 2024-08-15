@@ -1230,7 +1230,7 @@ impl Value {
                 let mut compress = true;
                 let mut boolean = true;
                 for &n in &nums.data {
-                    if n.fract() != 0.0 || n < 0.0 || n > u8::MAX as f64 {
+                    if n.fract() != 0.0 || n.is_sign_negative() || n > u8::MAX as f64 {
                         compress = false;
                         boolean = false;
                         break;

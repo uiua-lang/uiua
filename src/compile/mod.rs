@@ -27,7 +27,7 @@ use crate::{
         IgnoreError,
     },
     ast::*,
-    check::{instrs_all_signatures, instrs_signature, SigCheckError, SigCheckErrorKind},
+    check::{instrs_clean_signature, instrs_signature, SigCheckError, SigCheckErrorKind},
     format::{format_word, format_words},
     function::*,
     ident_modifier_args,
@@ -2388,9 +2388,8 @@ code:
                     continue;
                 }
                 if instrs_are_pure(section, &self.asm, Purity::Pure)
-                    && instrs_all_signatures(section).is_ok_and(|(sig, temps)| {
-                        sig.args == 0 && sig.outputs > 0 && temps.iter().all(|&sig| sig == (0, 0))
-                    })
+                    && instrs_clean_signature(section)
+                        .is_some_and(|sig| sig.args == 0 && sig.outputs > 0)
                 {
                     // println!("section: {section:?}");
                     let mut success = false;

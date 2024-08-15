@@ -1206,7 +1206,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "IteratingModifier",
-    "description": "Apply a function to each combination of rows of two arrays"
+    "description": "Apply a function to each combination of rows of some arrays"
   },
   "tag": {
     "args": 0,

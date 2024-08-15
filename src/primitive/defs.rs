@@ -1385,7 +1385,7 @@ primitive!(
     /// With the help of [keep], you can use [memberof] to get a set intersection.
     /// ex: ▽⊸∈ "abracadabra" "that's really cool"
     ///
-    /// [memberof] is closely related to [indexin].
+    /// [memberof] is closely related to [indexof].
     (2, MemberOf, DyadicArray, ("memberof", '∈')),
     /// Check if each row of one array exists in another
     ///
@@ -1421,7 +1421,7 @@ primitive!(
     ///   : .⊗,A [1 2 3 4 5]
     ///   : ⬚∞⊏:A
     ///
-    /// [indexof] is closely related to [member].
+    /// [indexof] is closely related to [memberof].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
     /// Get all combinations of `k` rows from an array
     ///

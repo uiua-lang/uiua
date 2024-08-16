@@ -1,4 +1,4 @@
-# uiua-0.12.0: 2024-08-?? - Announcing Uiua 0.12.0
+uiua-0.12.0: 2024-08-16 - Announcing Uiua 0.12.0
 uiua-0.11.0: 2024-06-02 - Announcing Uiua 0.11.0
 uiua-0.10.0: 2024-04-04 - Announcing Uiua 0.10.0
 what-will-1-look-like: 2024-01-19 - What will Uiua 1.0 look like?

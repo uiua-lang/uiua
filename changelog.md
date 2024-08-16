@@ -2,9 +2,9 @@
 
 Uiua is not yet stable.
 
-# 0.12.0 - 2024-08-??
-This version is not yet released. If you are reading this on the website, then these changes are live here.
-<!-- You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0). -->
+<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
+# 0.12.0 - 2024-08-16
+You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
 ### Language
 - **Breaking Change** - [`&runs`](https://uiua.org/docs/&runs) now returns 3 handles rather than 1
   - This gives more precise control over stdin, stdout, and stderr

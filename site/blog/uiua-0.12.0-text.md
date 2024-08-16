@@ -1,12 +1,12 @@
 # Announcing Uiua 0.12.0
 
-2024-08-??
+2024-08-16
 
 ---
 
 Uiua 0.12.0 is now available!
 
-You can find the full changelog [here](https://uiua.org/docs/changelog#0.12.0---2024-08-??).
+You can find the full changelog [here](https://uiua.org/docs/changelog#0.12.0---2024-08-16).
 
 Uiua is a general purpose, stack-based, array-oriented programming language with a focus on tacit code.
 
@@ -180,7 +180,7 @@ As always, a heartfelt thank-you to everyone in the Uiua community! Your contrib
 
 If you want to support Uiua's development, you can become one of its excellent [sponsors](https://github.com/sponsors/uiua-lang)!
 
-Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.12.0---2024-08-??).
+Again, you can find the full changelog for this release [here](https://uiua.org/docs/changelog#0.12.0---2024-08-16).
 
 You can join the [Uiua Discord](https://discord.gg/3r9nrfYhCc) to chat about the language, ask questions, or get help.
 

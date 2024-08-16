@@ -2,7 +2,10 @@
 
 Uiua is not yet stable.
 
-<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
+## 0.12.2 - 2024-08-??
+This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Interpreter
+- Fix a bug in formatting `¯0`
 
 ## 0.12.1 - 2024-08-16
 ### Interpreter

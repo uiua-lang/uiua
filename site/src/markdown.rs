@@ -237,7 +237,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                 }
                 match comp.load_str(line).and_then(|comp| env.run_compiler(comp)) {
                     Ok(_) => {
-                        let values = env.stack();
+                        let values = env.take_stack();
                         if !values.is_empty() && !values.iter().any(|v| v.element_count() > 200) {
                             let formatted: Vec<String> = values.iter().map(Value::show).collect();
                             if formatted.iter().any(|s| s.contains('\n')) {
@@ -256,8 +256,13 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                             }
                         }
                     }
-                    Err(e) if matches!(e.kind, UiuaErrorKind::Parse(..)) => break,
-                    Err(e) if e.to_string().contains("git modules") => break,
+                    Err(e)
+                        if matches!(e.kind, UiuaErrorKind::Parse(..))
+                            || e.to_string().contains("git modules")
+                            || e.to_string().contains("was empty") =>
+                    {
+                        break;
+                    }
                     Err(e) => line.push_str(&format!("# {e}")),
                 }
             }

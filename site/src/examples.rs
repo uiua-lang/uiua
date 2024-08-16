@@ -16,7 +16,7 @@ const PRIMES: &str = "\
 # Click Run to format!
 +1drop1range40     # Range 2 to 40
 by(deshapetable*.) # List of products
-keepnotby(member:) # Keep not in list";
+keepnotbymember    # Keep not in list";
 pub const LOGO: &str = "\
 Xy ← °⍉⊞⊟. ÷⟜-÷2⟜⇡200
 Rgb ← ⊂ ⇌×.Xy 0.5

@@ -113,7 +113,7 @@ Several primitive functions have new functionality
 ```
 ## [`memberof ∈`]()
 
-The [`member ∊`]() is now deprecated. It was almost always used along with [`flip :`]().
+[`member ∊`]() is now deprecated. It was almost always used along with [`flip :`]().
 
 It has been replaced with [`memberof ∈`](), which has the exact same functionality, except its arguments are flipped.
 

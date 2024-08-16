@@ -1095,11 +1095,11 @@ impl<T: ArrayValueSer> From<Array<T>> for ArrayRep<T> {
                 return ArrayRep::Full(arr.shape, T::make_collection(arr.data), meta);
             }
         }
-        dbg!(match arr.rank() {
+        match arr.rank() {
             0 => ArrayRep::Scalar(arr.data[0].clone().into()),
             1 => ArrayRep::List(T::make_collection(arr.data)),
             _ => ArrayRep::Metaless(arr.shape, T::make_collection(arr.data)),
-        })
+        }
     }
 }
 

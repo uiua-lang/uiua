@@ -45,6 +45,8 @@ This version is not yet released. If you are reading this on the website, then t
 - [`un °`](https://uiua.org/docs/un) [`pick ⊡`](https://uiua.org/docs/pick) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
 - [`keep ▽`](https://uiua.org/docs/keep) will now cycle counts if the counts array is shorter than the counted array
 - [`keep ▽`](https://uiua.org/docs/keep) now works with non-integer scalar counts to scale an array
+- [`under ⍜`](https://uiua.org/docs/under) [`keep ▽`](https://uiua.org/docs/keep) now allows increasing the kept array's rank
+- [`under ⍜`](https://uiua.org/docs/under) now works with common [`by ⊸`](https://uiua.org/docs/by) patterns
 - [`join ⊂`](https://uiua.org/docs/join) with rank differences greater than 1 can now extend the smaller array
 - [`couple ⊟`](https://uiua.org/docs/couple) with different ranks can now extend the smaller array
 - [`indexof ⊗`](https://uiua.org/docs/indexof) now works with [`fill ⬚`](https://uiua.org/docs/fill) to set the default for when a value is not found

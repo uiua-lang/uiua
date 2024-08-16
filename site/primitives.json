@@ -454,7 +454,7 @@
     "args": 1,
     "outputs": 1,
     "class": "MonadicArray",
-    "description": "Assign a unique index to each unique element in an array"
+    "description": "Assign a unique index to each unique row in an array"
   },
   "complex": {
     "glyph": "ℂ",
@@ -516,7 +516,7 @@
     "args": 1,
     "outputs": 1,
     "class": "MonadicArray",
-    "description": "Remove duplicate elements from an array"
+    "description": "Remove duplicate rows from an array"
   },
   "deshape": {
     "glyph": "♭",
@@ -552,7 +552,7 @@
     "args": 2,
     "outputs": 1,
     "class": "DyadicArray",
-    "description": "Drop the first n elements of an array"
+    "description": "Drop the first n rows of an array"
   },
   "dump": {
     "args": 0,
@@ -1219,7 +1219,7 @@
     "args": 2,
     "outputs": 1,
     "class": "DyadicArray",
-    "description": "Take the first n elements of an array"
+    "description": "Take the first n rows of an array"
   },
   "tau": {
     "glyph": "τ",

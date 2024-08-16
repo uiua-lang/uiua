@@ -605,6 +605,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_flip_pattern, "flip"),
         &UnderPatternFn(under_push_temp_pattern, "push temp"),
         &UnderPatternFn(under_copy_temp_pattern, "copy temp"),
+        &UnderPatternFn(under_by_pattern, "by"),
         &UnderPatternFn(under_un_pattern, "un"),
         &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // These must come last!
     ];
@@ -886,34 +887,6 @@ fn invert_dup_pattern<'a>(
     let [Instr::Prim(Primitive::Dup, dup_span), input @ ..] = input else {
         return None;
     };
-
-    // // By inverse optimization
-    // for i in 0..input.len() {
-    //     let lower = &input[..i];
-    //     let Some(lower_sig) = instrs_clean_signature(lower) else {
-    //         continue;
-    //     };
-    //     println!("lower: {lower_sig:?}");
-    //     for j in i..input.len() {
-    //         let upper = &input[i..j];
-    //         let Some(upper_sig) = instrs_clean_signature(upper) else {
-    //             continue;
-    //         };
-    //         println!("  upper: {upper_sig:?}");
-    //         if lower_sig.outputs == upper_sig.args.saturating_sub(1) {
-    //             for pat in BY_INVERT_PATTERNS {
-    //                 if let Some((after, by_inv)) = pat.invert_extract(upper, comp) {
-    //                     if after.is_empty() {
-    //                         let mut instrs = eco_vec![Instr::Prim(Primitive::Dup, *dup_span),];
-    //                         instrs.extend(by_inv);
-    //                         instrs.extend_from_slice(lower);
-    //                         return Some((&input[j..], instrs));
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
 
     let Some(dyadic_i) = (0..=input.len())
         .find(|&i| instrs_signature_no_temp(&input[..i]).is_some_and(|sig| sig == (2, 1)))
@@ -1659,6 +1632,7 @@ fn under_push_temp_pattern<'a>(
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
     let (input, start_instr, inner, end_instr, _) = try_push_temp_wrap(input)?;
+
     // Calcular inner functions and signatures
     let (inner_befores, inner_afters) = under_instrs(inner, g_sig, comp)?;
     let inner_befores_sig = instrs_signature(&inner_befores).ok()?;
@@ -1807,6 +1781,39 @@ fn make_fn(
     };
     let id = FunctionId::Anonymous(span);
     Some(comp.make_function(id, sig, NewFunction { instrs, flags }))
+}
+
+fn under_by_pattern<'a>(
+    mut input: &'a [Instr],
+    _: Signature,
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    let mut instrs = EcoVec::new();
+    let mut has_val = false;
+    if let Some((inp, ins)) = Val.invert_extract(input, comp) {
+        input = inp;
+        instrs = ins;
+        has_val = true;
+    }
+    let inp =
+        if let Some((inp, _, [Instr::Prim(Primitive::Dup, _)], _, _)) = try_push_temp_wrap(input) {
+            inp
+        } else if let ([Instr::Prim(Primitive::Dup, _), inp @ ..], false) = (input, has_val) {
+            inp
+        } else {
+            return None;
+        };
+    for i in 1..=inp.len() {
+        if instrs_clean_signature(&inp[..i])
+            .is_some_and(|sig| sig == (2, 1) || !has_val && sig == (1, 1))
+        {
+            let end = i + 3;
+            instrs.extend_from_slice(&input[..end]);
+            return Some((&input[end..], (instrs, EcoVec::new())));
+        }
+    }
+
+    None
 }
 
 fn under_each_pattern<'a>(

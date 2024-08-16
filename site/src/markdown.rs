@@ -237,7 +237,7 @@ fn node_html<'a>(node: &'a AstNode<'a>) -> String {
                 }
                 match comp.load_str(line).and_then(|comp| env.run_compiler(comp)) {
                     Ok(_) => {
-                        let values = env.take_stack();
+                        let values = env.stack();
                         if !values.is_empty() && !values.iter().any(|v| v.element_count() > 200) {
                             let formatted: Vec<String> = values.iter().map(Value::show).collect();
                             if formatted.iter().any(|s| s.contains('\n')) {

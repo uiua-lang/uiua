@@ -919,7 +919,7 @@ primitive!(
     /// ex: ⊚3
     /// ex: ⊚8
     (1, Where, MonadicArray, ("where", '⊚')),
-    /// Assign a unique index to each unique element in an array
+    /// Assign a unique index to each unique row in an array
     ///
     /// ex: ⊛7_7_8_0_1_2_0
     /// ex: ⊛"Hello, World!"
@@ -928,7 +928,7 @@ primitive!(
     /// ex: $ Count the characters in this string
     ///   : ⊕($"_ _"⊃⊢⧻) ⊛.⊏⍏.
     (1, Classify, MonadicArray, ("classify", '⊛')),
-    /// Remove duplicate elements from an array
+    /// Remove duplicate rows from an array
     ///
     /// ex: ◴ 7_7_8_0_1_2_0
     /// ex: ◴ "Hello, World!"
@@ -1180,7 +1180,7 @@ primitive!(
     /// ex: ⍜(☇1)□ ↯2_3_3⇡18
     /// ex: ⍜☇□  2 ↯2_3_3⇡18
     (2, Rerank, DyadicArray, ("rerank", '☇')),
-    /// Take the first n elements of an array
+    /// Take the first n rows of an array
     ///
     /// This is the opposite of [drop].
     ///
@@ -1205,7 +1205,7 @@ primitive!(
     /// ex: ↯2_3_4⇡24
     ///   : ↙¯1_∞_2.
     (2, Take, DyadicArray, ("take", '↙')),
-    /// Drop the first n elements of an array
+    /// Drop the first n rows of an array
     ///
     /// This is the opposite of [take].
     ///

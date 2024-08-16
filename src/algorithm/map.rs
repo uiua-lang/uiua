@@ -296,7 +296,7 @@ impl Value {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MapKeys {
     pub(crate) keys: Value,
     indices: Vec<usize>,

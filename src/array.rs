@@ -35,7 +35,7 @@ pub struct Array<T> {
 }
 
 /// Non-shape metadata for an array
-#[derive(Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ArrayMeta {
     /// The label
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1033,14 +1033,14 @@ impl<'a, T: fmt::Display> fmt::Display for FormatShape<'a, T> {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 #[serde(bound(
     serialize = "T: ArrayValueSer + Serialize",
     deserialize = "T: ArrayValueSer + Deserialize<'de>"
 ))]
 enum ArrayRep<T: ArrayValueSer> {
-    Scalar(T),
+    Scalar(T::Scalar),
     List(T::Collection),
     Map(Shape, Value, T::Collection),
     Metaless(Shape, T::Collection),
@@ -1050,7 +1050,7 @@ enum ArrayRep<T: ArrayValueSer> {
 impl<T: ArrayValueSer> From<ArrayRep<T>> for Array<T> {
     fn from(rep: ArrayRep<T>) -> Self {
         match rep {
-            ArrayRep::Scalar(data) => Self::new([], [data]),
+            ArrayRep::Scalar(data) => Self::new([], [data.into()]),
             ArrayRep::List(data) => {
                 let data = T::make_data(data);
                 Self::new(data.len(), data)
@@ -1095,16 +1095,17 @@ impl<T: ArrayValueSer> From<Array<T>> for ArrayRep<T> {
                 return ArrayRep::Full(arr.shape, T::make_collection(arr.data), meta);
             }
         }
-        match arr.rank() {
-            0 => ArrayRep::Scalar(arr.data[0].clone()),
+        dbg!(match arr.rank() {
+            0 => ArrayRep::Scalar(arr.data[0].clone().into()),
             1 => ArrayRep::List(T::make_collection(arr.data)),
             _ => ArrayRep::Metaless(arr.shape, T::make_collection(arr.data)),
-        }
+        })
     }
 }
 
-trait ArrayValueSer: ArrayValue {
-    type Collection: Serialize + DeserializeOwned;
+trait ArrayValueSer: ArrayValue + fmt::Debug {
+    type Scalar: Serialize + DeserializeOwned + fmt::Debug + From<Self> + Into<Self>;
+    type Collection: Serialize + DeserializeOwned + fmt::Debug;
     fn make_collection(data: CowSlice<Self>) -> Self::Collection;
     fn make_data(collection: Self::Collection) -> CowSlice<Self>;
 }
@@ -1112,6 +1113,7 @@ trait ArrayValueSer: ArrayValue {
 macro_rules! array_value_ser {
     ($ty:ty) => {
         impl ArrayValueSer for $ty {
+            type Scalar = $ty;
             type Collection = CowSlice<$ty>;
             fn make_collection(data: CowSlice<Self>) -> Self::Collection {
                 data
@@ -1128,6 +1130,7 @@ array_value_ser!(Boxed);
 array_value_ser!(Complex);
 
 impl ArrayValueSer for f64 {
+    type Scalar = F64Rep;
     type Collection = Vec<F64Rep>;
     fn make_collection(data: CowSlice<Self>) -> Self::Collection {
         data.iter().map(|&n| n.into()).collect()
@@ -1138,6 +1141,7 @@ impl ArrayValueSer for f64 {
 }
 
 impl ArrayValueSer for char {
+    type Scalar = char;
     type Collection = String;
     fn make_collection(data: CowSlice<Self>) -> Self::Collection {
         data.iter().collect()
@@ -1147,7 +1151,7 @@ impl ArrayValueSer for char {
     }
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 enum F64Rep {
     #[serde(rename = "NaN")]
     NaN,

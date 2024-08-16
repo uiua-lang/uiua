@@ -160,7 +160,7 @@ pub fn Site() -> impl IntoView {
 }
 
 fn weewuh() {
-    let i = (now() / 1000.0 % 1.0 * 100.0) as u32;
+    let i = (now() % 1.0 * 100.0) as u32;
     let src = match i {
         0 => "/assets/ooh-ee-ooh-ah.mp3",
         1..=4 => "/assets/wee-wah.mp3",

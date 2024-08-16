@@ -1795,11 +1795,11 @@ fn under_by_pattern<'a>(
         instrs = ins;
         has_val = true;
     }
-    let inp =
+    let (inp, extra) =
         if let Some((inp, _, [Instr::Prim(Primitive::Dup, _)], _, _)) = try_push_temp_wrap(input) {
-            inp
+            (inp, 3)
         } else if let ([Instr::Prim(Primitive::Dup, _), inp @ ..], false) = (input, has_val) {
-            inp
+            (inp, 1)
         } else {
             return None;
         };
@@ -1807,7 +1807,7 @@ fn under_by_pattern<'a>(
         if instrs_clean_signature(&inp[..i])
             .is_some_and(|sig| sig == (2, 1) || !has_val && sig == (1, 1))
         {
-            let end = i + 3;
+            let end = i + extra;
             instrs.extend_from_slice(&input[..end]);
             return Some((&input[end..], (instrs, EcoVec::new())));
         }

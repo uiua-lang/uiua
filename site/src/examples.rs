@@ -29,10 +29,9 @@ const CHORD: &str = "\
 ∿×τ ⊞× ÷⟜⇡&asr. # Generate
 ÷⧻: ≡/+         # Mix";
 const SPIRAL: &str = "\
-⇌×τ÷⟜⇡20            # Frame times
-⊸⍉↯⟜(×20-1×2÷⟜⇡)200 # x and y
--≡⊃∠(-π◿τ+⍜∩°√+)∩¤  # Generate
-<0.2⌵               # Threshold";
+↯⟜(×20-1×2÷⟜⇡)200 # Xs
+-≡⊃∠(⍜∩°√+)⊸⍉     # Spiral field
+-π◿τ⊞-×τ÷⟜⇡20     # Animate";
 const QUADRATIC: &str = "\
 Disc ← -⊃(××4⊙⋅∘)⋅(×.)
 Quad ← ÷⊃(×2|-⊃⋅∘(⊟¯.√ℂ0 Disc))

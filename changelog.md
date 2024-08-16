@@ -3,6 +3,11 @@
 Uiua is not yet stable.
 
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
+
+## 0.12.1 - 2024-08-16
+### Interpreter
+- Use custom version of `nokhwa` crate so that [`&camcap`](https://uiua.org/docs/&camcap) can build
+
 ## 0.12.0 - 2024-08-16
 You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
 ### Language

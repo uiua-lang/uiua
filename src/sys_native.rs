@@ -85,7 +85,7 @@ unsafe impl Sync for WebcamChannel {}
 #[cfg(feature = "webcam")]
 impl WebcamChannel {
     fn new(index: usize) -> Result<Self, String> {
-        use nokhwa::{
+        use uiua_nokhwa::{
             pixel_format::RgbFormat,
             utils::{CameraIndex, RequestedFormat, RequestedFormatType},
             Camera,

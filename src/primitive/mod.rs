@@ -427,9 +427,9 @@ impl Primitive {
             "dup" => return Some(Primitive::Dup),
             "utf" | "utf__8" => return Some(Primitive::Utf8),
             "chunk" => return Some(Primitive::Chunks),
-            "&ime" => return Some(Primitive::ImageEncode),
-            "&gife" => return Some(Primitive::GifEncode),
-            "&ae" => return Some(Primitive::AudioEncode),
+            "&ime" | "imen" => return Some(Primitive::ImageEncode),
+            "&gife" | "gifen" => return Some(Primitive::GifEncode),
+            "&ae" | "auden" => return Some(Primitive::AudioEncode),
             _ => {}
         }
         if let Some(prim) = Primitive::non_deprecated().find(|p| p.name() == name) {

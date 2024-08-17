@@ -360,7 +360,7 @@
     "class": "DyadicPervasive",
     "description": "Take the arctangent of two numbers"
   },
-  "auden": {
+  "audio": {
     "args": 3,
     "outputs": 1,
     "class": "Encoding",
@@ -685,7 +685,7 @@
     "class": "Map",
     "description": "Get the value corresponding to a key in a map array"
   },
-  "gifen": {
+  "gif": {
     "args": 2,
     "outputs": 1,
     "class": "Encoding",
@@ -727,7 +727,7 @@
     "class": "Planet",
     "description": "Do nothing with one value"
   },
-  "imen": {
+  "img": {
     "args": 2,
     "outputs": 1,
     "class": "Encoding",

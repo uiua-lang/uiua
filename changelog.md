@@ -1,7 +1,11 @@
 # Uiua Changelog
 
 Uiua is not yet stable.
-<!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
+
+## 0.13.0 - 2024-??-??
+This version is not yet released. If you are reading this on the website, then these changes are live here.
+### Language
+- [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) is now more permissive of rank changes
 
 ## 0.12.2 - 2024-08-16
 ### Interpreter

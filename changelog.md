@@ -3,6 +3,11 @@
 Uiua is not yet stable.
 <!-- This version is not yet released. If you are reading this on the website, then these changes are live here. -->
 
+## 0.12.3 - 2024-08-17
+### Language
+- Rename `imen`, `gifen`, and `auden` to [`img`](https://uiua.org/docs/img), [`gif`](https://uiua.org/docs/gif), and [`audio`](https://uiua.org/docs/audio) to match the naming convention of other functions
+  - The existing names will continue to work and will be formatted to the new names
+
 ## 0.12.2 - 2024-08-16
 ### Interpreter
 - Fix a bug in formatting `¯0`
@@ -18,7 +23,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
 - **Breaking Change** - [`&runs`](https://uiua.org/docs/&runs) now returns 3 handles rather than 1
   - This gives more precise control over stdin, stdout, and stderr
 - **Breaking Change** - [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`duplicate .`](https://uiua.org/docs/duplicate)
-- **Breaking Change** - [`auden`](https://uiua.org/docs/auden) now takes a sample rate argument, and [`un °`](https://uiua.org/docs/un)[`auden`](https://uiua.org/docs/auden) now returns the sample rate
+- **Breaking Change** - [`auden`](https://uiua.org/docs/audio) now takes a sample rate argument, and [`un °`](https://uiua.org/docs/un)[`auden`](https://uiua.org/docs/audio) now returns the sample rate
   - This allows you to work with audio that is not at Uiua's default sample rate
 - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill) no longer fills the shapes of inputs to [`rows ≡`](https://uiua.org/docs/rows)
   - It could leader to some unexpected behavior when trying to fill the shapes of outputs
@@ -29,7 +34,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
   - [`member ∊`](https://uiua.org/docs/member) almost always required flipping the arguments
   - [`memberof ∈`](https://uiua.org/docs/memberof) is the same, but with the arguments flipped
   - In the future, [`member ∊`](https://uiua.org/docs/member) will be removed, and [`memberof ∈`](https://uiua.org/docs/memberof)'s glyph will be changed and format to `∊`
-- Rename media en/decoding system functions `&ime`, `&gife`, and `&ae` to non-system functions [`imen`](https://uiua.org/docs/imen), [`gifen`](https://uiua.org/docs/gifen), and [`auden`](https://uiua.org/docs/auden)
+- Rename media en/decoding system functions `&ime`, `&gife`, and `&ae` to non-system functions [`imen`](https://uiua.org/docs/img), [`gifen`](https://uiua.org/docs/gif), and [`auden`](https://uiua.org/docs/audio)
   - Their implementation is not actually system-dependent
   - Existing `&*e` will format to the new names
   - The previously deprecated `&*d` decoding functions have been removed (use [`un °`](https://uiua.org/docs/un) on the encoding function)
@@ -173,7 +178,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.11.0).
   - [`&tlsc`](https://uiua.org/docs/&tlsc) replaces [`&httpsw`](https://uiua.org/docs/&httpsw), which is now deprecated
   - [`&tlsl`](https://uiua.org/docs/&tlsl) is currently experimental and mostly untested
 - [`&rs`](https://uiua.org/docs/&rs) will now attempt to read additional bytes to resolve a UTF-8 character
-- [`&gife`](https://uiua.org/docs/gifen) and [`&gifs`](https://uiua.org/docs/&gifs) now support binary transparency
+- [`&gife`](https://uiua.org/docs/gif) and [`&gifs`](https://uiua.org/docs/&gifs) now support binary transparency
 - Signatures can now be specified in stack array notation immediately after a `[` or `{`
 - Change how long decimal numbers are formatted
   - Sequences of repeated digits are now replaced with `…`
@@ -376,7 +381,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 - **Breaking Change** - [`reshape ↯`](https://uiua.org/docs/reshape) with a shape with negative dimensions now reverses that axis rather than acting as a "fill" value
   - The "fill" behavior can still be achieved by setting an axis to [`infinity ∞`](https://uiua.org/docs/infinity)
 - **Breaking Change** - [`&ad`](https://uiua.org/docs/&ad) and [`&imd`](https://uiua.org/docs/&imd) now return an encoding format as a string in addition to the media data
-  - They are also now deprecated in favor of using [`un °`](https://uiua.org/docs/un) with [`&ae`](https://uiua.org/docs/auden) or [`&ime`](https://uiua.org/docs/imen)
+  - They are also now deprecated in favor of using [`un °`](https://uiua.org/docs/un) with [`&ae`](https://uiua.org/docs/audio) or [`&ime`](https://uiua.org/docs/img)
 - Overhaul the module system
   - Details can be found in the updated [Modules](https://uiua.org/tutorial/modules) tutorial
   - Deprecate [`&i`](https://uiua.org/docs/&i), as it is no longer necessary
@@ -492,7 +497,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
   - This introduces some non-tacitness to the language
 ### Interpreter
 - The internal byte array type is now used in more places, which should improve performance a bit
-- [`&ime`](https://uiua.org/docs/imen) and [`&imd`](https://uiua.org/docs/&imd) now support the QOI image format
+- [`&ime`](https://uiua.org/docs/img) and [`&imd`](https://uiua.org/docs/&imd) now support the QOI image format
 - Lots of bug and crash fixes
 ### Website
 - Add a new tutorial: [Thinking With Arrays](https://uiua.org/tutorial/thinkingwitharrays)
@@ -834,7 +839,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.10.0).
 
 ## 0.0.17 - 2023-10-07
 ### Language
-- Add GIF encoding with [`&gife`](https://uiua.org/docs/gifen)
+- Add GIF encoding with [`&gife`](https://uiua.org/docs/gif)
 - Rename `constant` to [`box □`](https://uiua.org/docs/box).
 - Add `unbox ⊔`, which unboxes a boxed array
 - **Major Change:** Some uses of `call !` will no longer compile without declaring a stack signature. When unboxing [`box □`](https://uiua.org/docs/box)ed arrays, you can use `unbox ⊔` instead, which has a well-defined signature.

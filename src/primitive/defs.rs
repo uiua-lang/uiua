@@ -2896,22 +2896,22 @@ primitive!(
     /// A length 3 last axis is an RGB image.
     /// A length 4 last axis is an RGB image with an alpha channel.
     ///
-    /// You can decode a byte array into an image with [un][imen].
+    /// You can decode a byte array into an image with [un][img].
     ///
     /// Supported formats are `jpg`, `png`, `bmp`, `gif`, `ico`, and `qoi`.
     ///
     /// See also: [&ims]
-    (2, ImageEncode, Encoding, "imen"),
+    (2, ImageEncode, Encoding, "img"),
     /// Encode a gif into a byte array
     ///
     /// The first argument is a framerate in seconds.
     /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
-    /// The rows of the array are the frames of the gif, and their format must conform to that of [imen].
+    /// The rows of the array are the frames of the gif, and their format must conform to that of [img].
     ///
-    /// You can decode a byte array into a gif with [un][gifen].
+    /// You can decode a byte array into a gif with [un][gif].
     ///
     /// See also: [&gifs]
-    (2, GifEncode, Encoding, "gifen"),
+    (2, GifEncode, Encoding, "gif"),
     /// Encode audio into a byte array
     ///
     /// The first argument is the format, the second is the audio sample rate, and the third is the audio samples.
@@ -2926,16 +2926,16 @@ primitive!(
     /// The samples must be between -1 and 1.
     /// The sample rate is [&asr].
     ///
-    /// You can decode a byte array into audio with [un][auden].
+    /// You can decode a byte array into audio with [un][audio].
     /// This returns the audio format as a string, the audio sample rate, and an array representing the audio samples.
     ///
     /// Currently, only the `wav` format is supported.
     ///
     /// This simple example will load an audio file, halve its sample rate, and re-encode it.
-    /// ex: ⍜(°auden &frab "test.wav")⊙⊓(⌊÷2|▽0.5)
+    /// ex: ⍜(°audio &frab "test.wav")⊙⊓(⌊÷2|▽0.5)
     ///
     /// See also: [&ap]
-    (3, AudioEncode, Encoding, "auden"),
+    (3, AudioEncode, Encoding, "audio"),
 );
 
 macro_rules! impl_primitive {

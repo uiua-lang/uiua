@@ -372,15 +372,15 @@ sys_op! {
     /// A length 3 last axis is an RGB image.
     /// A length 4 last axis is an RGB image with an alpha channel.
     ///
-    /// See also: [imen]
+    /// See also: [img]
     (1(0), ImShow, Media, "&ims", "image - show", Mutating),
     /// Show a gif
     ///
     /// The first argument is a framerate in seconds.
     /// The second argument is the gif data and must be a rank 3 or 4 numeric array.
-    /// The rows of the array are the frames of the gif, and their format must conform to that of [imen].
+    /// The rows of the array are the frames of the gif, and their format must conform to that of [img].
     ///
-    /// See also: [gifen]
+    /// See also: [gif]
     (2(0), GifShow, Media, "&gifs", "gif - show", Mutating),
     /// Play some audio
     ///
@@ -392,7 +392,7 @@ sys_op! {
     /// The samples must be between -1 and 1.
     /// The sample rate is [&asr].
     ///
-    /// See also: [auden]
+    /// See also: [audio]
     (1(0), AudioPlay, Media, "&ap", "audio - play", Mutating),
     /// Get the sample rate of the audio output backend
     ///

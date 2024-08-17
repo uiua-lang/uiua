@@ -297,6 +297,11 @@ sys_op! {
     /// In some cases, the file may not be actually written to until it is closed with [&cl].
     /// [under][&fc] calls [&cl] automatically.
     (1, FCreate, Filesystem, "&fc", "file - create", Mutating),
+    /// Create a directory
+    ///
+    /// ex: &fmd "path/to/dir"
+    /// Nested directories will be created automatically.
+    (1(0), FMakeDir, Filesystem, "&fmd", "file - make directory", Mutating),
     /// Delete a file or directory
     ///
     /// ex: &fde "example.txt"
@@ -800,6 +805,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn open_file(&self, path: &Path, write: bool) -> Result<Handle, String> {
         Err("Opening files is not supported in this environment".into())
     }
+    /// Create a directory
+    fn make_dir(&self, path: &Path) -> Result<(), String> {
+        Err("Creating directories is not supported in this environment".into())
+    }
     /// Read all bytes from a file
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
         let handle = self.open_file(path, false)?;
@@ -1116,6 +1125,12 @@ impl SysOp {
                     .map_err(|e| env.error(e))?
                     .value(HandleKind::File(path.into()));
                 env.push(handle);
+            }
+            SysOp::FMakeDir => {
+                let path = env.pop(1)?.as_string(env, "Path must be a string")?;
+                (env.rt.backend)
+                    .make_dir(path.as_ref())
+                    .map_err(|e| env.error(e))?;
             }
             SysOp::FDelete => {
                 let path = env.pop(1)?.as_string(env, "Path must be a string")?;

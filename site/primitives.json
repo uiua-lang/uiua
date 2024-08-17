@@ -97,6 +97,12 @@
     "class": "Filesystem",
     "description": "List the contents of a directory"
   },
+  "&fmd": {
+    "args": 1,
+    "outputs": 0,
+    "class": "Filesystem",
+    "description": "Create a directory"
+  },
   "&fo": {
     "args": 1,
     "outputs": 1,

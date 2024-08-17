@@ -428,6 +428,9 @@ impl SysBackend for NativeSys {
         NATIVE_SYS.files.insert(handle, BufReader::new(file));
         Ok(handle)
     }
+    fn make_dir(&self, path: &Path) -> Result<(), String> {
+        fs::create_dir_all(path).map_err(|e| e.to_string())
+    }
     fn delete(&self, path: &str) -> Result<(), String> {
         let path = Path::new(path);
         if !path.exists() {

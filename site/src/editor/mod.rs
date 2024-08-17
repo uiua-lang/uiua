@@ -611,22 +611,44 @@ pub fn Editor<'a>(
                     state.set_code(&code, Cursor::Set(0, code.chars().count() as u32))
                 });
             }
+            // Copy line
+            "c" if os_ctrl(event) => {
+                let (start, end) = get_code_cursor().unwrap();
+                if start == end {
+                    let code = get_code();
+                    let (line, _) = line_col(&code, start as usize);
+                    if let Some(line) = code.split('\n').nth(line - 1) {
+                        if let Some(clip) = window().navigator().clipboard() {
+                            _ = clip.write_text(line);
+                        }
+                    }
+                } else {
+                    handled = false;
+                }
+            }
             // Cut
             "x" if os_ctrl(event) => {
                 let (start, end) = get_code_cursor().unwrap();
-                let (start, end) = (start.min(end), start.max(end));
+                let (mut start, mut end) = (start.min(end), start.max(end));
                 let code = get_code();
-                state.update(|state| {
-                    let text: String = code
-                        .chars()
+                let text = if start == end {
+                    let (line, _) = line_col(&code, start as usize);
+                    let text = code.split('\n').nth(line - 1).unwrap_or("").to_string();
+                    start = (code.split('\n').take(line - 1))
+                        .map(|line| line.chars().count() + 1)
+                        .sum::<usize>() as u32;
+                    end = start + text.chars().count() as u32 + 1;
+                    text
+                } else {
+                    code.chars()
                         .skip(start as usize)
                         .take((end - start) as usize)
-                        .collect();
-                    if let Some(clip) = window().navigator().clipboard() {
-                        _ = clip.write_text(&text);
-                    }
-                    remove_code(state, start, end);
-                });
+                        .collect()
+                };
+                if let Some(clip) = window().navigator().clipboard() {
+                    _ = clip.write_text(&text);
+                }
+                state.update(|state| remove_code(state, start, end));
             }
             // Undo
             "z" if os_ctrl(event) => state.update(|state| state.undo()),

@@ -1,11 +1,14 @@
 # Uiua Todo
 
 - 0.13
-  - Unicode literals
+  - Less strict `under keep` rank requirements
   - Stabilize `chunks`
     - Implement `under`/`un`?
   - Improve parsing for function packs
   - Improve formatter to make fewer short lines
+  - Make ctrl+c in REPL end loop
+  - `&ctrlc` system function?
+  - Unicode literals
   - Possible
     - `orient` boxed
     - Dynamic modules

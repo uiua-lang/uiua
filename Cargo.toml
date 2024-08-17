@@ -133,6 +133,7 @@ default = [
 ]
 ffi = ["libffi", "libloading"]
 fft = ["rustfft"]
+full = ["audio", "webcam"] # Enables all optional features
 gif = ["dep:gif", "image", "color_quant"]
 invoke = ["open"]
 lsp = ["tower-lsp", "tokio", "native_sys"]

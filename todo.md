@@ -1,9 +1,11 @@
 # Uiua Todo
 
-- 0.12
-  - Release it!
 - 0.13
   - Unicode literals
+  - Stabilize `chunks`
+    - Implement `under`/`un`?
+  - Improve parsing for function packs
+  - Improve formatter to make fewer short lines
   - Possible
     - `orient` boxed
     - Dynamic modules

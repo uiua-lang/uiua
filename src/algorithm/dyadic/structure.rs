@@ -1066,7 +1066,7 @@ impl<T: ArrayValue> Array<T> {
                         from.row_count()
                     )));
                 }
-                if from.rank() - into.rank() > 1 {
+                if from.rank() - into.rank() > 1 || from.shape[2..] != into.shape[1..] {
                     return Err(env.error(format!(
                         "Cannot undo select of array with shape {} \
                         into array with shape {}",
@@ -1091,7 +1091,7 @@ impl<T: ArrayValue> Array<T> {
                         rows.push(into_row);
                     }
                 }
-                into = Array::from_row_arrays(rows, env)?;
+                into = Array::from_row_arrays_infallible(rows);
             }
         }
 

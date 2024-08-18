@@ -686,38 +686,107 @@ impl<T: ArrayValue> Array<T> {
         self.validate_shape();
         Ok((counts.into(), self))
     }
-    fn undo_keep(self, counts: &[f64], into: Self, env: &Uiua) -> UiuaResult<Self> {
+    fn undo_keep(self, counts: &[f64], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
+        let from = self;
         let counts = pad_keep_counts(counts, into.row_count(), env)?;
-        if counts.iter().any(|&n| n > 1.0) {
-            return Err(env.error("Cannot invert keep with non-boolean counts"));
-        }
-        let mut new_rows: Vec<_> = Vec::with_capacity(counts.len());
-        let mut transformed = self.into_rows();
-        for (count, into_row) in counts.iter().zip(into.into_rows()) {
-            if *count == 0.0 {
-                new_rows.push(into_row);
-            } else {
-                let new_row = transformed.next().ok_or_else(|| {
-                    env.error(
-                        "Kept array has fewer rows than it was created with, \
-                        so the keep cannot be inverted",
-                    )
-                })?;
-                if new_row.shape == into_row.shape {
-                    new_rows.push(new_row);
-                } else if new_row.shape[1..] == into_row.shape {
-                    new_rows.extend(new_row.into_rows());
-                } else {
-                    return Err(env.error(format!(
-                        "Kept array's shape was changed from {} to {}, \
-                        so the keep cannot be inverted",
-                        into_row.shape(),
-                        new_row.shape()
-                    )));
-                }
+        let mut true_count = 0;
+        for &count in counts.iter() {
+            if count > 1.0 {
+                return Err(env.error("Cannot invert keep with non-boolean counts"));
+            }
+            if count == 1.0 {
+                true_count += 1;
             }
         }
-        Self::from_row_arrays(new_rows, env)
+        let into_row_len = into.row_len();
+        match from.rank().cmp(&into.rank()) {
+            Ordering::Equal => {
+                if from.row_count() != true_count {
+                    return Err(env.error(format!(
+                        "Attempted to undo keep, but the length of \
+                        the kept array changed from {true_count} to {}",
+                        from.row_count()
+                    )));
+                }
+                if !from.shape.iter().skip(1).eq(into.shape.iter().skip(1)) {
+                    let mut original_shape = into.shape.row();
+                    original_shape.insert(0, from.row_count());
+                    return Err(env.error(format!(
+                        "Attempted to undo keep, but the shape of \
+                        the kept array changed from {} to {}",
+                        original_shape, from.shape
+                    )));
+                }
+                let mut from_rows = from.row_slices();
+                for (&count, into_slice) in
+                    (counts.iter()).zip(into.data.as_mut_slice().chunks_exact_mut(into_row_len))
+                {
+                    if count == 0.0 {
+                        continue;
+                    }
+                    into_slice.clone_from_slice(from_rows.next().expect(
+                        "number of true counts was verified \
+                        to match from row count",
+                    ))
+                }
+            }
+            Ordering::Less => {
+                if !into.shape.ends_with(&from.shape) {
+                    return Err(env.error(format!(
+                        "Cannot undo keep of array with shape {} \
+                        into array with shape {}",
+                        from.shape, into.shape
+                    )));
+                }
+                let n: usize = into.shape[1..into.rank() - from.rank()].iter().product();
+                let from_elem_count = from.element_count();
+                for (&count, into_slice) in counts
+                    .iter()
+                    .zip(into.data.as_mut_slice().chunks_exact_mut(into_row_len))
+                {
+                    if count == 0.0 {
+                        continue;
+                    }
+                    for i in 0..n {
+                        let start = i * from_elem_count;
+                        into_slice[start..start + from_elem_count].clone_from_slice(&from.data);
+                    }
+                }
+            }
+            Ordering::Greater => {
+                if from.row_count() != true_count {
+                    return Err(env.error(format!(
+                        "Attempted to undo keep, but the length of \
+                        the kept array changed from {true_count} to {}",
+                        from.row_count()
+                    )));
+                }
+                if from.rank() - into.rank() > 1 || from.shape[2..] != into.shape[1..] {
+                    return Err(env.error(format!(
+                        "Cannot undo keep of array with shape {} \
+                        into array with shape {}",
+                        from.shape, into.shape
+                    )));
+                }
+                let mut rows = Vec::with_capacity(
+                    into.row_count() + from.shape[..2].iter().product::<usize>() - true_count,
+                );
+                let mut from_rows = from.into_rows();
+                for (&count, into_row) in counts.iter().zip(into.into_rows()) {
+                    if count == 0.0 {
+                        rows.push(into_row);
+                    } else {
+                        let from_row = from_rows.next().expect(
+                            "number of true counts was verified \
+                            to match from row count",
+                        );
+                        rows.extend(from_row.into_rows());
+                    }
+                }
+                into = Array::from_row_arrays_infallible(rows);
+            }
+        }
+        Ok(into)
     }
 }
 

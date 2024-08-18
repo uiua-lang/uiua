@@ -642,7 +642,9 @@ code:
                     }
                     Ok(())
                 }),
-                &Instr::PopTemp { stack, count, span } => self.with_span(span, |env| {
+                &Instr::PopTemp {
+                    stack, count, span, ..
+                } => self.with_span(span, |env| {
                     for _ in 0..count {
                         let value = env.rt.temp_stacks[stack as usize].pop().ok_or_else(|| {
                             env.error(format!(

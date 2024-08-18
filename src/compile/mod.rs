@@ -2194,21 +2194,13 @@ code:
                 for i in boxed_indices.into_iter().rev() {
                     let diff = curr_index - i;
                     instrs.extend([
-                        Instr::PopTemp {
-                            stack: TempStack::Inline,
-                            count: diff,
-                            span: spandex,
-                        },
+                        Instr::pop_inline(diff, spandex),
                         Instr::ImplPrim(ImplPrimitive::UnBox, spandex),
                     ]);
                     curr_index = i;
                 }
                 if curr_index != 0 {
-                    instrs.push(Instr::PopTemp {
-                        stack: TempStack::Inline,
-                        count: curr_index,
-                        span: spandex,
-                    });
+                    instrs.push(Instr::pop_inline(curr_index, spandex));
                 }
             }
         }

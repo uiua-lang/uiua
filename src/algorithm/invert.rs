@@ -1149,11 +1149,7 @@ fn invert_join_val_pattern<'a>(
                 },
                 Instr::Prim(Primitive::Shape, span),
                 Instr::ImplPrim(ImplPrimitive::UnJoinPattern, span),
-                Instr::PopTemp {
-                    stack: TempStack::Inline,
-                    count: 1,
-                    span,
-                },
+                Instr::pop_inline(1, span),
                 Instr::ImplPrim(ImplPrimitive::MatchPattern, span),
             ]);
             return Some((input, instrs));
@@ -1192,11 +1188,7 @@ fn invert_insert_pattern<'a>(
             span,
         },
         Instr::Prim(Primitive::Remove, span),
-        Instr::PopTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            span,
-        },
+        Instr::pop_inline(1, span),
     ]);
     if let Some(value) = value {
         instrs.extend(value);
@@ -1887,11 +1879,7 @@ fn under_rows_pattern<'a>(
         ]);
     }
     if after_sig.outputs > 0 {
-        afters.push(Instr::PopTemp {
-            stack: TempStack::Inline,
-            count: after_sig.outputs - 1,
-            span,
-        });
+        afters.push(Instr::pop_inline(after_sig.outputs - 1, span));
     }
     Some((input, (befores, afters)))
 }
@@ -2027,21 +2015,13 @@ macro_rules! partition_group {
             let afters = eco_vec![
                 Instr::PushFunc(make_fn(f_after, f.flags, span, comp)?),
                 Instr::ImplPrim(ImplPrimitive::$impl_prim1, span),
-                Instr::PushTemp {
-                    stack: TempStack::Inline,
-                    count: 1,
-                    span
-                },
+                Instr::push_inline(1, span),
                 Instr::PopTemp {
                     stack: TempStack::Under,
                     count: 2,
-                    span
+                    span,
                 },
-                Instr::PopTemp {
-                    stack: TempStack::Inline,
-                    count: 1,
-                    span
-                },
+                Instr::pop_inline(1, span),
                 Instr::ImplPrim(ImplPrimitive::$impl_prim2, span),
             ];
             Some((input, (befores, afters)))
@@ -2290,7 +2270,7 @@ fn under_repeat_pattern<'a>(
                 PopTemp {
                     stack: TempStack::Under,
                     count: 1,
-                    span: *span
+                    span: *span,
                 },
                 PushFunc(make_fn(afters, f.flags, *span, comp)?),
                 Prim(Repeat, *span)
@@ -2350,11 +2330,7 @@ fn under_fold_pattern<'a>(
         fold.clone()
     ];
     let afters = eco_vec![
-        Instr::PopTemp {
-            stack: TempStack::Inline,
-            count: 1,
-            span
-        },
+        Instr::pop_inline(1, span),
         Instr::PushFunc(afters_func),
         Instr::Prim(Primitive::Repeat, span)
     ];
@@ -2852,11 +2828,7 @@ impl AsInstr for PopUnder {
 struct PopInline(usize);
 impl AsInstr for PopInline {
     fn as_instr(&self, span: usize) -> Instr {
-        Instr::PopTemp {
-            stack: TempStack::Inline,
-            count: self.0,
-            span,
-        }
+        Instr::pop_inline(self.0, span)
     }
 }
 

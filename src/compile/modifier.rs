@@ -539,8 +539,8 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 let sig = match prim {
                     Dip => {
-                        instrs.insert(0, Instr::push_inline(span));
-                        instrs.push(Instr::pop_inline(span));
+                        instrs.insert(0, Instr::push_inline(1, span));
+                        instrs.push(Instr::pop_inline(1, span));
                         Signature::new(sig.args + 1, sig.outputs + 1)
                     }
                     Gap => {
@@ -551,39 +551,25 @@ impl Compiler {
                         instrs.insert(
                             0,
                             if sig.args == 0 {
-                                Instr::push_inline(span)
+                                Instr::push_inline(1, span)
                             } else {
                                 Instr::copy_inline(span)
                             },
                         );
-                        instrs.push(Instr::pop_inline(span));
+                        instrs.push(Instr::pop_inline(1, span));
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
                     prim if prim == By || prim == With && sig.args == 0 => {
                         if sig.args > 0 {
                             let mut i = 0;
                             if sig.args > 1 {
-                                instrs.insert(
-                                    i,
-                                    Instr::PushTemp {
-                                        stack: TempStack::Inline,
-                                        count: sig.args - 1,
-                                        span,
-                                    },
-                                );
+                                instrs.insert(i, Instr::push_inline(sig.args - 1, span));
                                 i += 1;
                             }
                             instrs.insert(i, Instr::Prim(Dup, span));
                             i += 1;
                             if sig.args > 1 {
-                                instrs.insert(
-                                    i,
-                                    Instr::PopTemp {
-                                        stack: TempStack::Inline,
-                                        count: sig.args - 1,
-                                        span,
-                                    },
-                                );
+                                instrs.insert(i, Instr::pop_inline(sig.args - 1, span));
                             }
                         } else {
                             instrs.insert(0, Instr::TouchStack { count: 1, span })
@@ -597,36 +583,18 @@ impl Compiler {
                             sig.args = 2;
                             i += 1;
                         }
-                        instrs.insert(
-                            i,
-                            Instr::PushTemp {
-                                stack: TempStack::Inline,
-                                count: sig.args - 1,
-                                span,
-                            },
-                        );
+                        instrs.insert(i, Instr::push_inline(sig.args - 1, span));
                         i += 1;
                         instrs.insert(i, Instr::Prim(Dup, span));
                         i += 1;
                         if sig.args >= 2 {
-                            instrs.insert(
-                                i,
-                                Instr::PopTemp {
-                                    stack: TempStack::Inline,
-                                    count: sig.args - 1,
-                                    span,
-                                },
-                            );
+                            instrs.insert(i, Instr::pop_inline(sig.args - 1, span));
                         }
                         if sig.outputs >= 2 {
-                            instrs.push(Instr::PushTemp {
-                                stack: TempStack::Inline,
-                                count: sig.outputs - 1,
-                                span,
-                            });
+                            instrs.push(Instr::push_inline(sig.outputs - 1, span));
                             for _ in 0..sig.outputs - 1 {
                                 instrs.push(Instr::Prim(Flip, span));
-                                instrs.push(Instr::pop_inline(span));
+                                instrs.push(Instr::pop_inline(1, span));
                             }
                         }
                         instrs.push(Instr::Prim(Flip, span));
@@ -640,14 +608,10 @@ impl Compiler {
                         }
                         prefix.push(Instr::Prim(Dup, span));
                         for _ in 0..sig.args - 1 {
-                            prefix.push(Instr::push_inline(span));
+                            prefix.push(Instr::push_inline(1, span));
                             prefix.push(Instr::Prim(Flip, span));
                         }
-                        prefix.push(Instr::PopTemp {
-                            stack: TempStack::Inline,
-                            count: sig.args - 1,
-                            span,
-                        });
+                        prefix.push(Instr::pop_inline(sig.args - 1, span));
                         prefix.extend(take(instrs));
                         *instrs = prefix;
                         Signature::new(sig.args.max(1), sig.outputs + 1)
@@ -665,11 +629,7 @@ impl Compiler {
                                 span,
                             },
                         );
-                        instrs.push(Instr::PopTemp {
-                            stack: TempStack::Inline,
-                            count: sig.args,
-                            span,
-                        });
+                        instrs.push(Instr::pop_inline(sig.args, span));
                         Signature::new(sig.args, sig.outputs + sig.args)
                     }
                     Below => {
@@ -685,14 +645,7 @@ impl Compiler {
                                 span,
                             },
                         );
-                        instrs.insert(
-                            1,
-                            Instr::PopTemp {
-                                stack: TempStack::Inline,
-                                count: sig.args,
-                                span,
-                            },
-                        );
+                        instrs.insert(1, Instr::pop_inline(sig.args, span));
                         Signature::new(sig.args, sig.outputs + sig.args)
                     }
                     _ => unreachable!(),
@@ -767,20 +720,12 @@ impl Compiler {
                         instrs.push(Instr::Prim(Pop, span));
                     }
                     if b_sig.args > 0 {
-                        instrs.push(Instr::PopTemp {
-                            stack: TempStack::Inline,
-                            count: b_sig.args,
-                            span,
-                        });
+                        instrs.push(Instr::pop_inline(b_sig.args, span));
                     }
                 }
                 instrs.extend(b_nf.instrs);
                 if a_sig.args > 0 {
-                    instrs.push(Instr::PopTemp {
-                        stack: TempStack::Inline,
-                        count: a_sig.args,
-                        span,
-                    });
+                    instrs.push(Instr::pop_inline(a_sig.args, span));
                 }
                 instrs.extend(a_nf.instrs);
                 let sig = Signature::new(a_sig.args.max(b_sig.args), a_sig.outputs + b_sig.outputs);
@@ -807,11 +752,7 @@ impl Compiler {
                     span,
                 }];
                 instrs.extend(b_nf.instrs);
-                instrs.push(Instr::PopTemp {
-                    stack: TempStack::Inline,
-                    count: a_sig.args,
-                    span,
-                });
+                instrs.push(Instr::pop_inline(a_sig.args, span));
                 instrs.extend(a_nf.instrs);
                 let sig = Signature::new(a_sig.args + b_sig.args, a_sig.outputs + b_sig.outputs);
                 let new_func = NewFunction { instrs, flags };
@@ -1067,11 +1008,7 @@ impl Compiler {
                             span,
                         },
                     );
-                    new_func.instrs.push(Instr::PopTemp {
-                        stack: TempStack::Inline,
-                        count: sig.args,
-                        span,
-                    });
+                    new_func.instrs.push(Instr::pop_inline(sig.args, span));
                     for i in 1..new_func.instrs.len() - 1 {
                         new_func.instrs.push(new_func.instrs[i].clone());
                     }
@@ -1226,15 +1163,11 @@ impl Compiler {
                 let span = self.add_span(modified.modifier.span.clone());
                 if sig.args > 0 {
                     if sig.args > 1 {
-                        prefix.push(Instr::PushTemp {
-                            stack: TempStack::Inline,
-                            count: sig.args - 1,
-                            span,
-                        });
+                        prefix.push(Instr::push_inline(sig.args - 1, span));
                         for _ in 0..sig.args - 1 {
                             prefix.extend([
                                 Instr::ImplPrim(ImplPrimitive::UnBox, span),
-                                Instr::pop_inline(span),
+                                Instr::pop_inline(1, span),
                             ]);
                         }
                     }
@@ -1520,19 +1453,11 @@ impl Compiler {
                     for (i, field) in fields.iter().rev().enumerate() {
                         if let Some((init, sig)) = &field.init {
                             if sig.args > 0 {
-                                instrs.push(Instr::PopTemp {
-                                    stack: TempStack::Inline,
-                                    count: sig.args,
-                                    span,
-                                });
+                                instrs.push(Instr::pop_inline(sig.args, span));
                             }
                             instrs.extend_from_slice(init);
                         } else if i > 0 || has_inits {
-                            instrs.push(Instr::PopTemp {
-                                stack: TempStack::Inline,
-                                count: 1,
-                                span,
-                            });
+                            instrs.push(Instr::pop_inline(1, span));
                             self.code_meta
                                 .global_references
                                 .insert(field.name_span.clone(), field.global_index);

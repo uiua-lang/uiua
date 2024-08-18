@@ -4,6 +4,9 @@
   - Less strict `under keep` rank requirements
   - Stabilize `chunks`
     - Implement `under`/`un`?
+  - `try` optimizations
+  - Improved `under deshape`
+  - `reshape` with multiple infinities
   - Improve parsing for function packs
   - Improve formatter to make fewer short lines
   - Make ctrl+c in REPL end loop

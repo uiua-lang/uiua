@@ -1010,10 +1010,12 @@ impl<T: ArrayValue> Array<T> {
                         let i = normalize_index(i, into_row_count);
                         let into_row_len = into.row_len();
                         let from_row_count = from.row_count();
-                        let after = EcoVec::from(&into.data[(i + 1) * into_row_len..]);
-                        into.data.truncate(i * into_row_len);
+                        let from_element_count = from.element_count();
+                        into.data.as_mut_slice()[i * into_row_len..].rotate_left(into_row_len);
+                        into.data.truncate(into.data.len() - into_row_len);
                         into.data.extend_from_cowslice(from.data);
-                        into.data.extend_from_ecovec(after);
+                        into.data.as_mut_slice()[i * into_row_len..]
+                            .rotate_right(from_element_count);
                         into.shape[0] += from_row_count;
                         into.shape[0] -= 1;
                         into.validate_shape();

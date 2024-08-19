@@ -4,7 +4,6 @@
   - Stabilize `chunks`
     - Implement `under`/`un`?
   - `try` optimizations
-  - Improved `under deshape`
   - `by` delimiter for better inverses and optimizations
   - `reshape` with multiple infinities
   - Improve parsing for function packs

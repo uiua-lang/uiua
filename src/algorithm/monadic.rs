@@ -49,6 +49,23 @@ impl Value {
             }
         }
     }
+    pub(crate) fn undo_deshape(&mut self, orig_shape: &Self, env: &Uiua) -> UiuaResult {
+        let shape = orig_shape.as_nats(env, "Shape must be an array of natural numbers")?;
+        let mut new_shape = self.shape().clone();
+        if new_shape.len() > 0 {
+            new_shape.remove(0);
+        }
+        for &d in shape.iter().rev() {
+            new_shape.insert(0, d);
+        }
+        if new_shape.elements() == self.element_count() {
+            *self.shape_mut() = new_shape;
+            Ok(())
+        } else {
+            let spec: Vec<Result<isize, bool>> = shape.iter().map(|&d| Ok(d as isize)).collect();
+            self.reshape_impl(&spec, env)
+        }
+    }
     pub(crate) fn box_depth(mut self, depth: usize) -> Self {
         let depth = depth.min(self.rank());
         if depth == 0 {

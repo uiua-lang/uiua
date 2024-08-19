@@ -200,6 +200,7 @@ impl fmt::Display for ImplPrimitive {
             Asin => write!(f, "{Un}{Sin}"),
             Last => write!(f, "{First}{Reverse}"),
             UndoFix => write!(f, "{Under}{Fix}"),
+            UndoDeshape => write!(f, "{Under}{Deshape}"),
             UndoFirst => write!(f, "{Under}{First}"),
             UndoLast => write!(f, "{Under}{Last}"),
             UndoKeep => write!(f, "{Under}{Keep}"),
@@ -1044,6 +1045,12 @@ impl ImplPrimitive {
                 env.push(from.undo_drop(index, into, env)?);
             }
             ImplPrimitive::UndoFix => env.monadic_mut(Value::undo_fix)?,
+            ImplPrimitive::UndoDeshape => {
+                let shape = env.pop(1)?;
+                let mut val = env.pop(2)?;
+                val.undo_deshape(&shape, env)?;
+                env.push(val)
+            }
             ImplPrimitive::UndoPartition1 => loops::undo_partition_part1(env)?,
             ImplPrimitive::UndoPartition2 => loops::undo_partition_part2(env)?,
             ImplPrimitive::UndoGroup1 => loops::undo_group_part1(env)?,

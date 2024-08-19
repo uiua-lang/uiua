@@ -182,14 +182,17 @@ impl Value {
                 Value::Box(a) => a.reshape_scalar(n, env),
             }
         } else {
-            self.match_scalar_fill(env);
-            match self {
-                Value::Num(a) => a.reshape(&target_shape, env),
-                Value::Byte(a) => a.reshape(&target_shape, env),
-                Value::Complex(a) => a.reshape(&target_shape, env),
-                Value::Char(a) => a.reshape(&target_shape, env),
-                Value::Box(a) => a.reshape(&target_shape, env),
-            }
+            self.reshape_impl(&target_shape, env)
+        }
+    }
+    pub(crate) fn reshape_impl(&mut self, dims: &[Result<isize, bool>], env: &Uiua) -> UiuaResult {
+        self.match_scalar_fill(env);
+        match self {
+            Value::Num(a) => a.reshape(dims, env),
+            Value::Byte(a) => a.reshape(dims, env),
+            Value::Complex(a) => a.reshape(dims, env),
+            Value::Char(a) => a.reshape(dims, env),
+            Value::Box(a) => a.reshape(dims, env),
         }
     }
     pub(crate) fn undo_reshape(&mut self, old_shape: &Self, env: &Uiua) -> UiuaResult {
@@ -425,12 +428,14 @@ impl Value {
             return Ok(());
         }
         let irank = rank.as_int(env, "Rank must be an integer")?;
+        if irank == 0 {
+            return self.undo_deshape(orig_shape, env);
+        }
         let orig_shape = orig_shape.as_nats(env, "Shape must be a list of natural numbers")?;
         let rank = irank.unsigned_abs();
         let new_shape: Shape = if irank >= 0 {
             // Positive rank
-            orig_shape
-                .iter()
+            (orig_shape.iter())
                 .take(orig_shape.len().saturating_sub(rank))
                 .chain(
                     (self.shape().iter()).skip((rank + 1).saturating_sub(orig_shape.len()).max(1)),

@@ -3027,6 +3027,7 @@ impl_primitive!(
     (1(3), AudioDecode),
     // Unders
     (1, UndoFix),
+    (2, UndoDeshape),
     (3, UndoSelect),
     (3, UndoPick),
     (3, UndoTake),

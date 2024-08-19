@@ -549,7 +549,7 @@ pub(crate) fn under_instrs(
         &pat!(
             Deshape,
             (Dup, Shape, PushToUnder(1), Deshape),
-            (PopUnder(1), 0, UndoRerank),
+            (PopUnder(1), UndoDeshape),
         ),
         &maybe_val!(pat!(
             Rerank,

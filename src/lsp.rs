@@ -1036,18 +1036,35 @@ mod server {
                     span.end.line as usize == line && span.end.col as usize == col
                 })
             {
-                if let BindingKind::Import(module) = &doc.asm.bindings[*index].kind {
-                    let mut completions = Vec::new();
-                    let mut span = span.clone();
-                    span.start = span.end;
-                    for binding in self.bindings_in_file(doc_uri, module) {
-                        if !binding.public {
-                            continue;
+                match &doc.asm.bindings[*index].kind {
+                    BindingKind::Import(module) => {
+                        let mut completions = Vec::new();
+                        let mut span = span.clone();
+                        span.start = span.end;
+                        for binding in self.bindings_in_file(doc_uri, module) {
+                            if !binding.public {
+                                continue;
+                            }
+                            let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
+                            completions.push(make_completion(item_name, &span, &binding));
                         }
-                        let item_name = binding.span.as_str(&doc.asm.inputs, |s| s.to_string());
-                        completions.push(make_completion(item_name, &span, &binding));
+                        return Ok(Some(CompletionResponse::Array(completions)));
                     }
-                    return Ok(Some(CompletionResponse::Array(completions)));
+                    BindingKind::Module(module) => {
+                        let mut completions = Vec::new();
+                        let mut span = span.clone();
+                        span.start = span.end;
+                        for (name, local) in &module.names {
+                            if !local.public {
+                                continue;
+                            }
+                            let item_name = name.to_string();
+                            let binfo = doc.asm.bindings.get(local.index).unwrap();
+                            completions.push(make_completion(item_name, &span, binfo));
+                        }
+                        return Ok(Some(CompletionResponse::Array(completions)));
+                    }
+                    _ => (),
                 }
             }
 

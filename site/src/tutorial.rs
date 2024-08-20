@@ -1531,7 +1531,7 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
             number=4
             prompt="given a matrix of 0s an 1s, only keeps the 1s that have even x and y coordinates"
             example="[1_1_0 0_1_1 0_1_1]"
-            answer="⬚0× °⊚ ▽≡/× =0◿2. ⊚."
+            answer="⍜⊚(▽≡/×¬⊸◿2)"
             tests={&["↯3_4 1_0_1", "↯4_4 1_0_0_1_0"]}
             hidden="[1_1 1_1]"/>
 

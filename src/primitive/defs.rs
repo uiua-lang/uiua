@@ -2085,13 +2085,6 @@ primitive!(
     /// ex: ⬚∘[1 2_3_4] 0
     /// ex: ⬚∘+ ∞ [1 2] [3 4 5 6]
     ///
-    /// Beware that [fill] nullifies [fix] for use in repeating a value multiple times in loops.
-    /// ex:   ≡⊂¤ [1 2 3] [4 5]
-    ///   : ⬚0≡⊂¤ [1 2 3] [4 5]
-    /// This is because [fix] works by making an array with 1 row, but [fill] tries to make the [length]s match.
-    /// To get the expected behavior, use [box] and [content] instead of [fix].
-    /// ex: ⬚0≡◇⊂□ [1 2 3] [4 5]
-    ///
     /// Fill values are temporarily removed for the body of looping modifiers that can use them to fix their row shapes.
     /// These include [reduce], [scan], [rows], [each], [partition], and [group].
     /// ex! ⬚0≡(↙3) [3 4]

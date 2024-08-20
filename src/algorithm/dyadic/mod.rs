@@ -1005,17 +1005,38 @@ fn fill_shift<T: Clone>(by: &[isize], shape: &[usize], data: &mut [T], fill: T) 
 
 impl Value {
     /// Use this array to `windows` another
-    pub fn windows(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let size_spec = self.as_ints(env, "Window size must be an integer or list of integers")?;
+    pub fn windows(&self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
+        let size_array = self.as_integer_array(env, "Window size must be an integer array")?;
+        from.match_scalar_fill(env);
+        Ok(match &*size_array.shape {
+            [] | [_] => match from {
+                Value::Num(a) => a.windows(&size_array.data, env)?.into(),
+                Value::Byte(a) => a.windows(&size_array.data, env)?.into(),
+                Value::Complex(a) => a.windows(&size_array.data, env)?.into(),
+                Value::Char(a) => a.windows(&size_array.data, env)?.into(),
+                Value::Box(a) => a.windows(&size_array.data, env)?.into(),
+            },
+            [1, _] => match from {
+                Value::Num(a) => a.chunks(&size_array.data, env)?.into(),
+                Value::Byte(a) => a.chunks(&size_array.data, env)?.into(),
+                Value::Complex(a) => a.chunks(&size_array.data, env)?.into(),
+                Value::Char(a) => a.chunks(&size_array.data, env)?.into(),
+                Value::Box(a) => a.chunks(&size_array.data, env)?.into(),
+            },
+            _ => return Err(env.error(format!("Invalid windows shape {}", size_array.shape))),
+        })
+    }
+    pub(crate) fn undo_windows(&self, from: Self, env: &Uiua) -> UiuaResult<Self> {
+        let size_array = self.as_integer_array(env, "Window size must be an integer array")?;
+        if !matches!(&*size_array.shape, [1, _]) {
+            return Err(env.error("Only chunking windows can be undone"));
+        }
         Ok(match from {
-            Value::Num(a) => a.windows(&size_spec, env)?.into(),
-            Value::Byte(a) if env.number_only_fill() => {
-                a.convert_ref::<f64>().windows(&size_spec, env)?.into()
-            }
-            Value::Byte(a) => a.windows(&size_spec, env)?.into(),
-            Value::Complex(a) => a.windows(&size_spec, env)?.into(),
-            Value::Char(a) => a.windows(&size_spec, env)?.into(),
-            Value::Box(a) => a.windows(&size_spec, env)?.into(),
+            Value::Num(a) => a.undo_chunks(&size_array.data, env)?.into(),
+            Value::Byte(a) => a.undo_chunks(&size_array.data, env)?.into(),
+            Value::Complex(a) => a.undo_chunks(&size_array.data, env)?.into(),
+            Value::Char(a) => a.undo_chunks(&size_array.data, env)?.into(),
+            Value::Box(a) => a.undo_chunks(&size_array.data, env)?.into(),
         })
     }
 }

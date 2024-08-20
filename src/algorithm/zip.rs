@@ -783,7 +783,7 @@ pub fn rows_windows(env: &mut Uiua) -> UiuaResult {
     let n_arr = env.pop(1)?;
     let xs = env.pop(2)?;
     if n_arr.rank() != 0 {
-        let windows = n_arr.windows(&xs, env)?;
+        let windows = n_arr.windows(xs, env)?;
         return rows1(f, windows, false, env);
     }
     let n = n_arr.as_int(env, "Window size must be an integer or list of integers")?;
@@ -805,6 +805,6 @@ pub fn rows_windows(env: &mut Uiua) -> UiuaResult {
         return Ok(());
     }
 
-    let windows = n_arr.windows(&xs, env)?;
+    let windows = n_arr.windows(xs, env)?;
     rows1(f, windows, false, env)
 }

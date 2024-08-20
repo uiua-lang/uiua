@@ -980,7 +980,7 @@ pub fn adjacent(env: &mut Uiua) -> UiuaResult {
 }
 
 fn adjacent_fallback(f: Function, n: Value, xs: Value, env: &mut Uiua) -> UiuaResult {
-    let windows = n.windows(&xs, env)?;
+    let windows = n.windows(xs, env)?;
     let mut new_rows = Vec::with_capacity(windows.row_count());
     for window in windows.into_rows() {
         env.push(window);

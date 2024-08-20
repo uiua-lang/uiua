@@ -569,6 +569,11 @@ pub(crate) fn under_instrs(
             (CopyToUnder(1), Chunks),
             (PopUnder(1), UndoChunks),
         )),
+        &maybe_val!(pat!(
+            Windows,
+            (CopyToUnder(1), Windows),
+            (PopUnder(1), UndoWindows),
+        )),
         // Classify and deduplicate
         &pat!(
             Classify,

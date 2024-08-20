@@ -210,6 +210,7 @@ impl fmt::Display for ImplPrimitive {
             UndoRerank => write!(f, "{Under}{Rerank}"),
             UndoReshape => write!(f, "{Un}{Reshape}"),
             UndoChunks => write!(f, "{Un}{Chunks}"),
+            UndoWindows => write!(f, "{Un}{Windows}"),
             UndoJoin => write!(f, "{Under}{Join}"),
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
@@ -599,7 +600,7 @@ impl Primitive {
             Primitive::Fall => env.monadic_ref(Value::fall)?,
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
             Primitive::Select => env.dyadic_or_env(Value::select)?,
-            Primitive::Windows => env.dyadic_rr_env(Value::windows)?,
+            Primitive::Windows => env.dyadic_ro_env(Value::windows)?,
             Primitive::Chunks => env.dyadic_ro_env(Value::chunks)?,
             Primitive::Where => env.monadic_ref_env(Value::wher)?,
             Primitive::Classify => env.monadic_ref(Value::classify)?,
@@ -1048,6 +1049,7 @@ impl ImplPrimitive {
             ImplPrimitive::UndoChunks => {
                 env.dyadic_ro_env(|size, val, env| val.undo_chunks(size, env))?
             }
+            ImplPrimitive::UndoWindows => env.dyadic_ro_env(Value::undo_windows)?,
             ImplPrimitive::UndoFirst => {
                 let into = env.pop(1)?;
                 let from = env.pop(2)?;

@@ -23,18 +23,18 @@ ExtMimeExt ←
 ExtMimeMime ←
 ExtMime ← |1 °□⊏:⊂ExtMimeMime □⊂"text/": ⊗:ExtMimeExt□.
 
-# Make response: status mime bytes
+# ? Status Mime Bytes
 Response ← (
   ⊙⊙(⧻.)
-  ⊂ utf $$ HTTP/1.1 _
-        $$ Content-Type: _
-        $$ Content-Length: _
-        $$ 
-        $$ 
+  ⊂ utf₈ $$ HTTP/1.1 _
+         $$ Content-Type: _
+         $$ Content-Length: _
+         $$ 
+         $$ 
 )
 
 # Handlers
-NotFound ← Response "404 Not Found" "text/plain" utf"Not Found"
+NotFound ← Response "404 Not Found" "text/plain" utf₈"Not Found"
 ServerError ← Response "500 Internal Server Error" "text/plain"
 HandlePageLoadError ← ⋅(
   /↥⌕"The system cannot find the file specified".
@@ -53,10 +53,8 @@ Respond ← ◌pool(
   &p $"Request:\n_".
 
   # Route to handler
-  ⨬(Page|⋅Home) ≍"/".
-  &p "Response:"
-  &pf⧻.
-  &p " bytes"
+  ⨬(Page|Home) ≍"/".
+  &p $"Response: _ bytes" ⧻.
 
   # Send response
   ⊃⋅&cl&w

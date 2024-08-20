@@ -400,7 +400,7 @@ impl Primitive {
             (But | With | Backward | Above | Below)
                 | (Choose | Permute)
                 | Struct
-                | (Orient | Coordinate | Astar | Fft | Triangle | Case)
+                | (Chunks | Orient | Coordinate | Astar | Fft | Triangle | Case)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )

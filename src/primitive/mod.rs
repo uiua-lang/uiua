@@ -206,6 +206,7 @@ impl fmt::Display for ImplPrimitive {
             UndoKeep => write!(f, "{Under}{Keep}"),
             UndoRerank => write!(f, "{Under}{Rerank}"),
             UndoReshape => write!(f, "{Un}{Reshape}"),
+            UndoChunks => write!(f, "{Un}{Chunks}"),
             UndoJoin => write!(f, "{Under}{Join}"),
             FirstMinIndex => write!(f, "{First}{Rise}"),
             FirstMaxIndex => write!(f, "{First}{Fall}"),
@@ -399,7 +400,7 @@ impl Primitive {
             (But | With | Backward | Above | Below)
                 | (Choose | Permute)
                 | Struct
-                | (Chunks | Orient | Coordinate | Astar | Fft | Triangle | Case)
+                | (Orient | Coordinate | Astar | Fft | Triangle | Case)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )
@@ -1010,11 +1011,12 @@ impl ImplPrimitive {
                 array.undo_rerank(&rank, &shape, env)?;
                 env.push(array);
             }
-            ImplPrimitive::UndoReshape => {
-                let orig_shape = env.pop(1)?;
-                let mut array = env.pop(2)?;
-                array.undo_reshape(&orig_shape, env)?;
-                env.push(array);
+            ImplPrimitive::UndoReshape => env.dyadic_ro_env(|orig_shape, mut val, env| {
+                val.undo_reshape(orig_shape, env)?;
+                Ok(val)
+            })?,
+            ImplPrimitive::UndoChunks => {
+                env.dyadic_ro_env(|size, val, env| val.undo_chunks(size, env))?
             }
             ImplPrimitive::UndoFirst => {
                 let into = env.pop(1)?;

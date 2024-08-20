@@ -1,8 +1,7 @@
 # Uiua Todo
 
 - 0.13
-  - Stabilize `chunks`
-    - Implement `under`/`un`?
+  - `un chunks`?
   - `try` optimizations
   - `by` delimiter for better inverses and optimizations
   - `reshape` with multiple infinities

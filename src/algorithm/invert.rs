@@ -561,6 +561,11 @@ pub(crate) fn under_instrs(
             (Over, Shape, PushToUnder(1), Reshape),
             (PopUnder(1), UndoReshape),
         )),
+        &maybe_val!(pat!(
+            Chunks,
+            (CopyToUnder(1), Chunks),
+            (PopUnder(1), UndoChunks),
+        )),
         // Classify and deduplicate
         &pat!(
             Classify,

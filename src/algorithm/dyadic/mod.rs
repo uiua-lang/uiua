@@ -9,7 +9,7 @@ use std::{
     cmp::Ordering,
     collections::{HashMap, HashSet},
     iter::{once, repeat},
-    mem::take,
+    mem::{replace, take},
     slice,
 };
 
@@ -1182,17 +1182,25 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// Use this value to `chunks` another
-    pub fn chunks(&self, from: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn chunks(&self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
         let isize_spec = self.as_ints(env, "Chunk size must be an integer or list of integers")?;
+        from.match_scalar_fill(env);
         Ok(match from {
             Value::Num(a) => a.chunks(&isize_spec, env)?.into(),
-            Value::Byte(a) if env.number_only_fill() => {
-                a.convert_ref::<f64>().chunks(&isize_spec, env)?.into()
-            }
             Value::Byte(a) => a.chunks(&isize_spec, env)?.into(),
             Value::Complex(a) => a.chunks(&isize_spec, env)?.into(),
             Value::Char(a) => a.chunks(&isize_spec, env)?.into(),
             Value::Box(a) => a.chunks(&isize_spec, env)?.into(),
+        })
+    }
+    pub(crate) fn undo_chunks(self, size: &Self, env: &Uiua) -> UiuaResult<Self> {
+        let isize_spec = size.as_ints(env, "Chunk size must be an integer or list of integers")?;
+        Ok(match self {
+            Value::Num(a) => a.undo_chunks(&isize_spec, env)?.into(),
+            Value::Byte(a) => a.undo_chunks(&isize_spec, env)?.into(),
+            Value::Complex(a) => a.undo_chunks(&isize_spec, env)?.into(),
+            Value::Char(a) => a.undo_chunks(&isize_spec, env)?.into(),
+            Value::Box(a) => a.undo_chunks(&isize_spec, env)?.into(),
         })
     }
 }
@@ -1321,6 +1329,48 @@ impl<T: ArrayValue> Array<T> {
             break;
         }
         Ok(Array::new(new_shape, new_data))
+    }
+    pub(crate) fn undo_chunks(mut self, isize_spec: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        if isize_spec.iter().any(|&s| s == 0) {
+            return Err(env.error("Chunk size cannot be zero"));
+        }
+        let n = isize_spec.len();
+        if self.rank() < n * 2 {
+            return Ok(self);
+        }
+
+        if n >= 2 {
+            // Some of the most deranged code I've ever written
+            let mut data = EcoVec::with_capacity(self.element_count());
+            for d in 0..n - 1 {
+                let r_count: usize = self.shape[..n - d - 1].iter().product();
+                let r_len: usize = self.shape[n - d - 1..].iter().product();
+                let a_len: usize = self.shape[n - d..].iter().product();
+                let b_len: usize = self.shape[n + n - (2 * d + 1)..].iter().product();
+                for r in 0..r_count {
+                    for i in 0..self.shape[n - d..n + n - (2 * d + 1)]
+                        .iter()
+                        .product::<usize>()
+                    {
+                        for j in 0..self.shape[n - d - 1] {
+                            let start = r * r_len + j * a_len + i * b_len;
+                            let slice = &self.data[start..][..b_len];
+                            data.extend_from_slice(slice);
+                        }
+                    }
+                }
+                data = replace(&mut self.data, data.into()).into();
+                data.clear();
+                self.shape[n + n - (2 * d + 1)] *= self.shape[n - (d + 1)];
+                self.shape.remove(n - (d + 1));
+            }
+        }
+
+        self.shape[1] *= self.shape[0];
+        self.shape.remove(0);
+        self.validate_shape();
+
+        Ok(self)
     }
 }
 

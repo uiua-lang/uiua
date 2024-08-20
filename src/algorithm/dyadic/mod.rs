@@ -26,8 +26,8 @@ use crate::{
 };
 
 use super::{
-    pervade::ArrayRef, shape_prefixes_match, validate_size, validate_size_ctx, ArrayCmpSlice,
-    ErrorContext, FillContext,
+    pervade::ArrayRef, shape_prefixes_match, validate_size, validate_size_of, ArrayCmpSlice,
+    FillContext, SizeError,
 };
 
 impl Value {
@@ -223,7 +223,8 @@ impl<T: Clone> Array<T> {
                 if count < 0 {
                     self.reverse();
                 }
-                self.reshape_scalar_integer(count.unsigned_abs(), env)
+                self.reshape_scalar_integer(count.unsigned_abs())
+                    .map_err(|e| env.error(e))
             }
             Err(rev) => {
                 if rev {
@@ -233,17 +234,13 @@ impl<T: Clone> Array<T> {
             }
         }
     }
-    pub(crate) fn reshape_scalar_integer<C: ErrorContext>(
-        &mut self,
-        count: usize,
-        ctx: &C,
-    ) -> Result<(), C::Error> {
+    pub(crate) fn reshape_scalar_integer(&mut self, count: usize) -> Result<(), SizeError> {
         if count == 0 {
             self.data.clear();
             self.shape.insert(0, 0);
             return Ok(());
         }
-        let elem_count = validate_size_ctx::<T, _>([count - 1, self.data.len()], ctx)?;
+        let elem_count = validate_size_of::<T>([count - 1, self.data.len()])?;
         self.data.reserve(elem_count);
         let row = self.data.to_vec();
         for _ in 1..count {

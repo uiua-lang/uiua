@@ -70,18 +70,33 @@ impl fmt::Display for SizeError {
 
 impl std::error::Error for SizeError {}
 
-pub fn validate_size<T>(sizes: impl IntoIterator<Item = usize>, env: &Uiua) -> UiuaResult<usize> {
-    validate_size_ctx::<T, _>(sizes, env)
+#[derive(Debug)]
+pub enum FillShapeError {
+    Size(SizeError),
+    Shape(&'static str),
 }
 
-pub fn validate_size_ctx<T, C>(
-    sizes: impl IntoIterator<Item = usize>,
-    ctx: &C,
-) -> Result<usize, C::Error>
-where
-    C: ErrorContext,
-{
-    validate_size_impl(size_of::<T>(), sizes).map_err(|e| ctx.error(e))
+impl From<SizeError> for FillShapeError {
+    fn from(e: SizeError) -> Self {
+        Self::Size(e)
+    }
+}
+
+impl fmt::Display for FillShapeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Size(e) => e.fmt(f),
+            Self::Shape(e) => write!(f, "{e}"),
+        }
+    }
+}
+
+pub fn validate_size<T>(sizes: impl IntoIterator<Item = usize>, env: &Uiua) -> UiuaResult<usize> {
+    validate_size_of::<T>(sizes).map_err(|e| env.error(e))
+}
+
+pub fn validate_size_of<T>(sizes: impl IntoIterator<Item = usize>) -> Result<usize, SizeError> {
+    validate_size_impl(size_of::<T>(), sizes)
 }
 
 pub(crate) fn validate_size_impl(
@@ -229,7 +244,7 @@ fn fill_value_shape<C>(
     target: &Shape,
     expand_fixed: bool,
     ctx: &C,
-) -> Result<(), &'static str>
+) -> Result<(), FillShapeError>
 where
     C: FillContext,
 {
@@ -243,12 +258,13 @@ where
     }
 }
 
+/// The error is a tuple of the size of an array that would be too large and the error message
 fn fill_array_shape<T, C>(
     arr: &mut Array<T>,
     target: &Shape,
     expand_fixed: bool,
     ctx: &C,
-) -> Result<(), &'static str>
+) -> Result<(), FillShapeError>
 where
     T: ArrayValue,
     C: FillContext,
@@ -268,13 +284,11 @@ where
             arr.shape.drain(..fixes);
             if target.len() >= fixes {
                 for &dim in target.iter().take(fixes).rev() {
-                    arr.reshape_scalar_integer(dim, ctx)
-                        .map_err(|_| "Array of would be too large")?;
+                    arr.reshape_scalar_integer(dim)?;
                 }
             } else if arr.shape() == target {
                 for &dim in target.iter().cycle().take(fixes) {
-                    arr.reshape_scalar_integer(dim, ctx)
-                        .map_err(|_| "Array of would be too large")?;
+                    arr.reshape_scalar_integer(dim)?;
                 }
             }
         }
@@ -292,10 +306,10 @@ where
                 target_shape[0] = target_row_count;
                 arr.fill_to_shape(&target_shape, fill);
             }
-            Err(e) => res = Err(e),
+            Err(e) => res = Err(FillShapeError::Shape(e)),
         },
         Ordering::Greater => {}
-        Ordering::Equal => res = Err(""),
+        Ordering::Equal => res = Err(FillShapeError::Shape("")),
     }
     if shape_prefixes_match(&arr.shape, target) {
         return Ok(());
@@ -309,7 +323,7 @@ where
                 arr.fill_to_shape(&target_shape, fill);
                 res = Ok(());
             }
-            Err(e) => res = Err(e),
+            Err(e) => res = Err(FillShapeError::Shape(e)),
         },
         Ordering::Greater => {}
         Ordering::Equal => {
@@ -320,13 +334,13 @@ where
                         arr.fill_to_shape(&target_shape, fill);
                         res = Ok(());
                     }
-                    Err(e) => res = Err(e),
+                    Err(e) => res = Err(FillShapeError::Shape(e)),
                 }
             }
         }
     }
     if !shape_prefixes_match(&arr.shape, target) && res.is_ok() {
-        res = Err("");
+        res = Err(FillShapeError::Shape(""));
     }
     res
 }
@@ -347,18 +361,18 @@ where
         || !expand_fixed && (a.shape().starts_with(&[1]) || b.shape().starts_with(&[1]))
     {
         Ok(())
-    } else if let Some(e) = a_err.or(b_err) {
-        Err(C::fill_error(ctx.error(format!(
-            "Shapes {} and {} do not match{e}",
-            a.shape(),
-            b.shape(),
-        ))))
     } else {
-        Err(C::fill_error(ctx.error(format!(
-            "Shapes {} and {} do not match",
-            a.shape(),
-            b.shape(),
-        ))))
+        Err(C::fill_error(ctx.error(match (a_err, b_err) {
+            (Some(FillShapeError::Size(e)), _) | (_, Some(FillShapeError::Size(e))) => {
+                e.to_string()
+            }
+            (Some(e), _) | (_, Some(e)) => {
+                format!("Shapes {} and {} do not match{e}", a.shape(), b.shape())
+            }
+            (None, None) => {
+                format!("Shapes {} and {} do not match", a.shape(), b.shape())
+            }
+        })))
     }
 }
 
@@ -387,14 +401,18 @@ where
             let b_err = fill_array_shape(b, &a_shape, true, ctx).err();
             if shape_prefixes_match(&a.shape, &b.shape) {
                 Ok(())
-            } else if let Some(e) = a_err.or(b_err) {
-                Err(C::fill_error(ctx.error(format!(
-                    "Shapes {a_shape} and {b_shape} do not match{e}"
-                ))))
             } else {
-                Err(C::fill_error(ctx.error(format!(
-                    "Shapes {a_shape} and {b_shape} do not match"
-                ))))
+                Err(C::fill_error(ctx.error(match (a_err, b_err) {
+                    (Some(FillShapeError::Size(e)), _) | (_, Some(FillShapeError::Size(e))) => {
+                        e.to_string()
+                    }
+                    (Some(e), _) | (_, Some(e)) => {
+                        format!("Shapes {} and {} do not match{e}", a.shape(), b.shape())
+                    }
+                    (None, None) => {
+                        format!("Shapes {} and {} do not match", a.shape(), b.shape())
+                    }
+                })))
             }
         }
         (_, _) => {

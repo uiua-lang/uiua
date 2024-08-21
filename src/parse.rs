@@ -181,7 +181,7 @@ pub fn parse(
                 diagnostics.push(Diagnostic::new(
                     format!(
                         "Split this into multiple lines \
-                    (heuristic: {heuristic}/{max}) {face}"
+                        (heuristic: {heuristic}/{max}) {face}"
                     ),
                     span,
                     kind,
@@ -695,6 +695,7 @@ impl<'i> Parser<'i> {
     fn multiline_words(&mut self, check_for_bindings: bool) -> Vec<Vec<Sp<Word>>> {
         let mut lines = Vec::new();
         while self.try_spaces().is_some() {}
+        let mut newlines = 0;
         loop {
             let curr = self.index;
             if check_for_bindings
@@ -704,8 +705,8 @@ impl<'i> Parser<'i> {
                 break;
             }
             if let Some(words) = self.try_words() {
+                newlines = 0;
                 lines.push(words);
-                let mut newlines = 0;
                 while self.try_exact(Newline).is_some() {
                     newlines += 1;
                     self.try_spaces();
@@ -716,6 +717,9 @@ impl<'i> Parser<'i> {
             } else {
                 break;
             }
+        }
+        if newlines == 1 {
+            lines.push(Vec::new());
         }
         lines
     }

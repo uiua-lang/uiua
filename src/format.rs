@@ -990,6 +990,11 @@ impl<'a> Formatter<'a> {
                     }
                 }
 
+                let start_indent =
+                    (self.output.split('\n').last()).map_or(0, |line| line.chars().count());
+                let indent = self.config.multiline_indent * depth;
+                let allow_compact = start_indent <= indent + 1;
+
                 self.output.push('(');
                 if let Some(sig) = &func.signature {
                     let trailing_space = func.lines.len() <= 1
@@ -1000,23 +1005,30 @@ impl<'a> Formatter<'a> {
                         self.output.pop();
                     }
                 }
-                self.format_multiline_words(&func.lines, false, true, true, depth + 1);
+                self.format_multiline_words(&func.lines, allow_compact, true, false, depth + 1);
                 self.output.push(')');
             }
             Word::Pack(pack) => {
                 if pack.angled {
                     self.output.push_str(&Primitive::Switch.to_string());
                 }
-                self.output.push('(');
+                let start_indent =
+                    (self.output.lines().last()).map_or(0, |line| line.chars().count());
+                let indent = self.config.multiline_indent * depth;
+
                 let any_multiline = pack.branches.iter().any(|br| {
                     br.value.lines.len() > 1
                         || (br.value.lines.iter().flatten())
                             .any(|word| word_is_multiline(&word.value))
                 });
+
+                self.output.push('(');
                 for (i, br) in pack.branches.iter().enumerate() {
+                    let mut lines = &*br.value.lines;
                     if i == 0 {
                         let add_leading_newline = any_multiline
-                            && !(br.value.lines.first()).is_some_and(|line| line.is_empty());
+                            && start_indent > indent + 1
+                            && !(lines.first()).is_some_and(|line| line.is_empty());
                         if add_leading_newline {
                             self.newline(depth + 1);
                         }
@@ -1027,17 +1039,20 @@ impl<'a> Formatter<'a> {
                         }
                     }
                     if let Some(sig) = &br.value.signature {
-                        self.format_signature(
-                            '|',
-                            sig.value,
-                            any_multiline || br.value.lines.len() <= 1,
-                        );
-                        if br.value.lines.is_empty() {
+                        self.format_signature('|', sig.value, any_multiline || lines.len() <= 1);
+                        if lines.is_empty() {
                             self.output.pop();
                         }
                     }
-                    self.format_multiline_words(&br.value.lines, false, false, true, depth + 1);
+                    // Remove trailing empty lines from last branch
+                    if i == pack.branches.len() - 1
+                        && lines.last().is_some_and(|line| line.is_empty())
+                    {
+                        lines = &lines[..lines.len() - 1];
+                    }
+                    self.format_multiline_words(lines, false, false, true, depth + 1);
                     if any_multiline
+                        && i < pack.branches.len() - 1
                         && br.value.lines.last().is_some_and(|line| !line.is_empty())
                         && !self.output.trim_end_matches(' ').ends_with('\n')
                     {
@@ -1194,7 +1209,7 @@ impl<'a> Formatter<'a> {
     }
     fn format_multiline_words(
         &mut self,
-        lines: &[Vec<Sp<Word>>],
+        mut lines: &[Vec<Sp<Word>>],
         allow_compact: bool,
         allow_leading_space: bool,
         allow_trailing_newline: bool,
@@ -1222,6 +1237,9 @@ impl<'a> Formatter<'a> {
         {
             self.format_words(&lines[0], true, depth);
             return;
+        }
+        if lines.last().is_some_and(|line| line.is_empty()) {
+            lines = &lines[..lines.len() - 1];
         }
         let curr_line = self.output.split('\n').last().unwrap_or_default();
         let start_line_pos = if self.output.ends_with('\n') {
@@ -1257,7 +1275,7 @@ impl<'a> Formatter<'a> {
             self.format_words(line, true, depth);
         }
 
-        if allow_trailing_newline && !compact {
+        if allow_trailing_newline && !compact || prevent_compact {
             if depth > 0 && !lines.iter().last().is_some_and(|line| line.is_empty()) {
                 self.output.push('\n');
             }

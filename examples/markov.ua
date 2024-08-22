@@ -13,10 +13,8 @@ Build ← (
   ∧(⍜(°□⬚""get)⊂ ⊙:)⊙⊙[])
 Initial ↚ ⊏⌊×⚂⧻. ▽⊸(≡⊢=@\n)⊙◌°map
 Next ↚ (
-  ⊏⌊×⚂⧻. °□get # Next char
-  ⍥(↘1
-  )↥⊃(×⁅÷2⚂=@\n|=@\0
-  ). # End condition
+  ⊏⌊×⚂⧻. °□get             # Next char
+  ⍥(↘1)↥⊃(×⁅÷2⚂=@\n|=@\0). # End condition
 )
 # Generate some text from a Markov chain
 # ? Init TokenSize Chain

@@ -4,6 +4,5 @@ Conflict ← ↥⊃Orth Diag
 Permute ← ≡∧⍜↘(↻¯1)⊃(☇1⇡+1⇡⧻)¤
 NQueens ← (
   ≡(⍉⊟)¤⟜Permute⇡
-  ⊡⊢⊚¬≡(/↥♭⊞(×⊃(¬≍|Conflict)))..
-)
+  ⊡⊢⊚¬≡(/↥♭⊞(×⊃(¬≍|Conflict)))..)
 °⊚.NQueens 6

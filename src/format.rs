@@ -812,20 +812,20 @@ impl<'a> Formatter<'a> {
     }
     fn format_words(&mut self, words: &[Sp<Word>], trim_end: bool, depth: usize) {
         let words = trim_spaces(words, trim_end);
-        let any_multiline = words.iter().any(|word| word_is_multiline(&word.value));
-        let first_non_comment = (words.iter())
-            .position(|word| {
-                matches!(
-                    word.value,
-                    Word::Comment(_) | Word::SemanticComment(_) | Word::OutputComment { .. }
-                )
-            })
-            .unwrap_or(words.len());
+        let any_multiline = (words.iter())
+            .filter(|word| !word.value.is_end_of_line())
+            .any(|word| word_is_multiline(&word.value));
         for (i, word) in words.iter().enumerate() {
             self.format_word(word, depth);
-            if any_multiline && i < first_non_comment && self.output.ends_with(')') {
+            if any_multiline
+                && self.output.ends_with(')')
+                && !self.output.ends_with("()")
+                && i < words.len() - 1
+            {
                 self.output.pop();
-                self.output.push('\n');
+                if !self.output.ends_with('\n') {
+                    self.output.push('\n');
+                }
                 for _ in 0..self.config.multiline_indent * depth {
                     self.output.push(' ');
                 }
@@ -1014,6 +1014,8 @@ impl<'a> Formatter<'a> {
                 let allow_compact = start_indent <= indent + 1;
 
                 self.output.push('(');
+
+                // Signature
                 if let Some(sig) = &func.signature {
                     let trailing_space = func.lines.len() <= 1
                         && !(func.lines.iter().flatten())
@@ -1023,6 +1025,7 @@ impl<'a> Formatter<'a> {
                         self.output.pop();
                     }
                 }
+
                 self.format_multiline_words(&func.lines, allow_compact, true, false, depth + 1);
                 self.output.push(')');
             }
@@ -1233,22 +1236,14 @@ impl<'a> Formatter<'a> {
         allow_trailing_newline: bool,
         depth: usize,
     ) {
+        dbg!(depth, allow_trailing_newline, lines);
         if lines.is_empty() {
             return;
         }
         let prevent_compact = (lines.iter().flatten())
             .filter(|word| !matches!(word.value, Word::Spaces))
             .last()
-            .is_some_and(|word| {
-                matches!(
-                    word.value,
-                    Word::Comment(_)
-                        | Word::OutputComment { .. }
-                        | Word::SemanticComment(_)
-                        | Word::MultilineString(_)
-                        | Word::MultilineFormatString(_)
-                )
-            });
+            .is_some_and(|word| word.value.is_end_of_line());
         if lines.len() == 1
             && !prevent_compact
             && !lines[0].iter().any(|word| word_is_multiline(&word.value))
@@ -1257,7 +1252,10 @@ impl<'a> Formatter<'a> {
             return;
         }
         if depth > 0 && !allow_trailing_newline {
-            while lines.last().is_some_and(|line| line.is_empty()) {
+            while lines.last().is_some_and(|line| line.is_empty())
+                && !(lines.iter().nth_back(1))
+                    .is_some_and(|line| line.last().is_some_and(|word| word.value.is_end_of_line()))
+            {
                 lines = &lines[..lines.len() - 1];
             }
         }
@@ -1278,13 +1276,14 @@ impl<'a> Formatter<'a> {
                 }
             }
             && (lines.iter().flatten()).all(|word| !word_is_multiline(&word.value));
-        let indent = if compact {
+        dbg!(prevent_compact, allow_compact);
+        let indent = if allow_compact {
             start_line_pos
         } else {
             self.config.multiline_indent * depth
         };
         for (i, line) in lines.iter().enumerate() {
-            if i > 0 || (!compact && allow_leading_space) {
+            if i > 0 || (!allow_compact && allow_leading_space) {
                 self.output.push('\n');
                 if !line.is_empty() {
                     for _ in 0..indent {
@@ -1295,7 +1294,7 @@ impl<'a> Formatter<'a> {
             self.format_words(line, true, depth);
         }
 
-        if allow_trailing_newline && !compact || prevent_compact {
+        if allow_trailing_newline && !compact {
             if depth > 0 && !lines.iter().last().is_some_and(|line| line.is_empty()) {
                 self.output.push('\n');
             }

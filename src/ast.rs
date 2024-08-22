@@ -216,6 +216,17 @@ impl Word {
             || matches!(self, Word::Array(arr) if arr.lines.iter().flatten().filter(|w| w.value.is_code()).all(|w| w.value.is_literal()))
             || matches!(self, Word::Strand(items) if items.iter().all(|w| w.value.is_literal()))
     }
+    /// Whether this word must come at the end of a line
+    pub fn is_end_of_line(&self) -> bool {
+        matches!(
+            self,
+            Word::Comment(_)
+                | Word::SemanticComment(_)
+                | Word::OutputComment { .. }
+                | Word::MultilineString(_)
+                | Word::MultilineFormatString(_)
+        )
+    }
 }
 
 impl fmt::Debug for Word {

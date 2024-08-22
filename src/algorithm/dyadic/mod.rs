@@ -2115,6 +2115,11 @@ impl Value {
                 undices.len()
             )));
         }
+        for (i, u) in undices.iter().enumerate() {
+            if undices[i + 1..].iter().any(|u2| u == u2) {
+                return Err(env.error("Orient indices must be unique"));
+            }
+        }
         for i in 0..target.rank() {
             if !undices.contains(&i) {
                 undices.push(i);

@@ -889,13 +889,10 @@ code:
         }
     }
     fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<NewFunction> {
-        let words = unsplit_words(split_words(words))
-            .into_iter()
-            .flatten()
-            .collect();
-
         self.new_functions.push(NewFunction::default());
-        self.words(words, call)?;
+        for line in unsplit_words(split_words(words)) {
+            self.words(line, call)?;
+        }
         Ok(self.new_functions.pop().unwrap())
     }
     fn compile_operand_word(&mut self, word: Sp<Word>) -> UiuaResult<(NewFunction, Signature)> {

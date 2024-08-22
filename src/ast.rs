@@ -263,8 +263,8 @@ impl fmt::Debug for Word {
             Word::Placeholder(op) => write!(f, "{op}"),
             Word::StackSwizzle(swizzle) => write!(f, "{swizzle}"),
             Word::ArraySwizzle(swizzle) => write!(f, "{swizzle}"),
-            Word::BreakLine => write!(f, "'"),
-            Word::UnbreakLine => write!(f, "''"),
+            Word::BreakLine => write!(f, ";"),
+            Word::UnbreakLine => write!(f, ";;"),
             Word::SemanticComment(comment) => write!(f, "{comment}"),
             Word::OutputComment { i, n, .. } => write!(f, "output_comment({i}/{n})"),
         }

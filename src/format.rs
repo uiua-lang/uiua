@@ -811,8 +811,18 @@ impl<'a> Formatter<'a> {
         }
     }
     fn format_words(&mut self, words: &[Sp<Word>], trim_end: bool, depth: usize) {
-        for word in trim_spaces(words, trim_end) {
+        let words = trim_spaces(words, trim_end);
+        let any_multiline = words.iter().any(|word| word_is_multiline(&word.value));
+        for (i, word) in words.iter().enumerate() {
             self.format_word(word, depth);
+            if any_multiline && i < words.len() - 1 && self.output.ends_with(')') {
+                self.output.pop();
+                self.output.push('\n');
+                for _ in 0..self.config.multiline_indent * depth {
+                    self.output.push(' ');
+                }
+                self.output.push(')');
+            }
         }
     }
     fn format_word(&mut self, word: &Sp<Word>, depth: usize) {
@@ -1238,7 +1248,7 @@ impl<'a> Formatter<'a> {
             self.format_words(&lines[0], true, depth);
             return;
         }
-        if lines.last().is_some_and(|line| line.is_empty()) {
+        if depth > 0 && lines.last().is_some_and(|line| line.is_empty()) {
             lines = &lines[..lines.len() - 1];
         }
         let curr_line = self.output.split('\n').last().unwrap_or_default();

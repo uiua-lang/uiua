@@ -695,7 +695,7 @@ impl<'i> Parser<'i> {
     fn multiline_words(&mut self, check_for_bindings: bool) -> Vec<Vec<Sp<Word>>> {
         let mut lines = Vec::new();
         while self.try_spaces().is_some() {}
-        let mut newlines = 0;
+        let mut newlines;
         loop {
             let curr = self.index;
             if check_for_bindings
@@ -711,17 +711,17 @@ impl<'i> Parser<'i> {
                     newlines += 1;
                     self.try_spaces();
                 }
-                if newlines > 1 {
+                if newlines > 0 {
                     lines.push(Vec::new());
                 }
             } else {
                 break;
             }
         }
-        if newlines == 1 {
-            lines.push(Vec::new());
-        }
-        lines
+        // if newlines == 1 {
+        //     lines.push(Vec::new());
+        // }
+        dbg!(lines)
     }
     fn try_word(&mut self) -> Option<Sp<Word>> {
         self.comment()

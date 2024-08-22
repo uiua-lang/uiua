@@ -924,7 +924,20 @@ impl Function {
     /// Get the function's instructions
     #[track_caller]
     pub fn instrs<'a>(&self, asm: &'a Assembly) -> &'a [Instr] {
-        asm.instrs(self.slice)
+        let end = self.slice.end();
+        assert!(
+            self.slice.start <= asm.instrs.len(),
+            "{self} slice start {} out of bounds of {} instrs",
+            self.slice.start,
+            asm.instrs.len()
+        );
+        assert!(
+            end <= asm.instrs.len(),
+            "{self} slice end {} out of bounds of {} instrs",
+            end,
+            asm.instrs.len()
+        );
+        &asm.instrs[self.slice.start..end]
     }
     pub(crate) fn new_func(&self, asm: &Assembly) -> NewFunction {
         NewFunction {

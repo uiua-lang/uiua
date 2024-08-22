@@ -705,18 +705,19 @@ code:
         let (new_func, errors) = self.pre_eval_instrs(new_func);
         self.errors.extend(errors);
         let len = new_func.instrs.len();
-        if len > 1 {
-            (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
-        }
+        (self.asm.instrs).push(Instr::Comment(format!("({id}").into()));
         let start = if len == 0 { 0 } else { self.asm.instrs.len() };
         let mut hasher = DefaultHasher::new();
         new_func.instrs.hash(&mut hasher);
         let hash = hasher.finish();
         self.asm.instrs.extend(new_func.instrs);
-        if len > 1 {
-            (self.asm.instrs).push(Instr::Comment(format!("{id})").into()));
-        }
-        Function::new(id, sig, FuncSlice { start, len }, hash).with_flags(new_func.flags)
+        (self.asm.instrs).push(Instr::Comment(format!("{id})").into()));
+        let slice = FuncSlice { start, len };
+        // println!(
+        //     "make function: {id} {sig} {slice:?} {:?}",
+        //     self.asm.instrs(slice)
+        // );
+        Function::new(id, sig, slice, hash).with_flags(new_func.flags)
     }
     fn compile_bind_function(
         &mut self,
@@ -2383,10 +2384,11 @@ code:
                     && instrs_clean_signature(section)
                         .is_some_and(|sig| sig.args == 0 && sig.outputs > 0)
                 {
-                    // println!("section: {section:?}");
                     let mut success = false;
                     match self.comptime_instrs(section.into()) {
                         Ok(Some(values)) => {
+                            // println!("section: {section:?}");
+                            // println!("values: {values:?}");
                             for val in &values {
                                 val.validate_shape();
                             }

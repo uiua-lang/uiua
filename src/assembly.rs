@@ -56,7 +56,7 @@ impl Assembly {
             self.instrs.len()
         );
         assert!(
-            slice.end() <= self.instrs.len(),
+            end <= self.instrs.len(),
             "Func slice end {} out of bounds of {} instrs",
             end,
             self.instrs.len()

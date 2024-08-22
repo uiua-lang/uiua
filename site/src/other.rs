@@ -272,6 +272,7 @@ pub fn Optimizations() -> impl IntoView {
                 <tr><td><Prims prims=[Un, Couple] show_names=true/></td></tr>
                 <tr><td><Prims prims=[Un, Join] show_names=true/></td></tr>
                 <tr><td><Prim prim=Rotate/></td></tr>
+                <tr><td><Prim prim=Reduce/></td></tr>
             </table>
         </div>
         <p>"This optimization applies not just to "<Prim prim=Rows/>", but also "<Prim prim=Each/>", "<Prims prims=[Rows, Rows]/>", "<Prims prims=[Rows, Rows, Rows]/>", etc."</p>
@@ -295,7 +296,6 @@ pub fn Optimizations() -> impl IntoView {
             <tr><th><Prims prims=[Rows, Reduce]/><code>"F"</code><Prims prims=[Windows]/></th><td>"Make "<Prim prim=Windows/>" then "<Prim prim=Reduce/>" each row"</td><td>"Apply "<code>"F"</code>" to adjacent rows"</td></tr>
             <tr><th><Prims prims=[Rows, Box, Windows]/></th><td>"Make "<Prim prim=Windows/>" then "<Prim prim=Box/>" each row"</td><td><Prim prim=Box/>" each window"</td></tr>
             <tr><th><Prims prims=[Len, Where]/></th><td>"Make "<Prim prim=Where/>" then get "<Prim prim=Len/></td><td>"Just count"</td></tr>
-            <tr><th><Prims prims=[Rows, Reduce]/><code>"F"</code></th><td><Prim prim=Reduce/>" each row"</td><td><Prim prim=Reduce/>" each column"</td></tr>
         </table>
 
         <Hd id="other-optimizations">"Other Optimizations"</Hd>

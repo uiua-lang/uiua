@@ -2183,7 +2183,7 @@ impl<T: ArrayValue> Array<T> {
         if combinations > usize::MAX as f64 {
             return Err(env.error(format!("{combinations} combinations would be too many")));
         }
-        shape[0] = combinations as usize;
+        shape[0] = combinations.round() as usize;
         shape.insert(1, k);
         let elem_count = validate_size::<T>(shape.iter().copied(), env)?;
         let row_len = self.row_len();
@@ -2272,7 +2272,7 @@ impl<T: ArrayValue> Array<T> {
         if permutations > usize::MAX as f64 {
             return Err(env.error(format!("{permutations} permutations would be too many")));
         }
-        shape[0] = permutations as usize;
+        shape[0] = permutations.round() as usize;
         shape.insert(1, k);
         let elem_count = validate_size::<T>(shape.iter().copied(), env)?;
         let mut data = EcoVec::with_capacity(elem_count);

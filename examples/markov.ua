@@ -10,19 +10,19 @@
 # Chain ? TokenLen Input
 Build ← (
   ⬚@\0⊃(↘-1⟜◫|↻) ⊙(⊂:@\n⊂@\n)
-  ∧(⍜(°□⬚""get)⊂ ⊙:)⊙⊙[]
-)
+  ∧(⍜(°□⬚""get)⊂ ⊙:)⊙⊙[])
 Initial ↚ ⊏⌊×⚂⧻. ▽⊸(≡⊢=@\n)⊙◌°map
 Next ↚ (
-  ⊏⌊×⚂⧻. °□get             # Next char
-  ⍥(↘1)↥⊃(×⁅÷2⚂=@\n|=@\0). # End condition
+  ⊏⌊×⚂⧻. °□get # Next char
+  ⍥(↘1
+  )↥⊃(×⁅÷2⚂=@\n|=@\0
+  ). # End condition
 )
 # Generate some text from a Markov chain
 # ? Init TokenSize Chain
 GenFrom ← (
   ⍜⊙:(⨬⋅⊸Initial∘±⧻.)
-  ↘¯1↘1⊙⋅◌⍥⊃(⊂⟜(Next↙¯:))⋅⊙∘∞
-)
+  ↘¯1↘1⊙⋅◌⍥⊃(⊂⟜(Next↙¯:))⋅⊙∘∞)
 
 $ Hello there!
 $ How are you doing today?

@@ -38,8 +38,7 @@ NotFound ← Response "404 Not Found" "text/plain" utf₈"Not Found"
 ServerError ← Response "500 Internal Server Error" "text/plain"
 HandlePageLoadError ← ⋅(
   /↥⌕"The system cannot find the file specified".
-  ⨬(NotFound◌|ServerError)
-)
+  ⨬(NotFound◌|ServerError))
 Page ← |1 ⍣(
   ExtMime GetExt ⟜&frab
   Response "200 OK"
@@ -57,7 +56,6 @@ Respond ← ◌pool(
   &p $"Response: _ bytes" ⧻.
 
   # Send response
-  ⊃⋅&cl&w
-)
+  ⊃⋅&cl&w)
 
 ⍢(⍣Respond⋅&p &tcpa Listener)1

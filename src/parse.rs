@@ -315,7 +315,7 @@ impl<'i> Parser<'i> {
         } else if let Some(import) = self.try_import() {
             Item::Import(import)
         } else {
-            let lines = self.multiline_words(true);
+            let lines = self.multiline_words(true, false);
             // Convert multiline words into multiple items
             if !lines.is_empty() {
                 Item::Words(lines)
@@ -692,10 +692,14 @@ impl<'i> Parser<'i> {
             Some(words)
         }
     }
-    fn multiline_words(&mut self, check_for_bindings: bool) -> Vec<Vec<Sp<Word>>> {
+    fn multiline_words(
+        &mut self,
+        check_for_bindings: bool,
+        extra_newline: bool,
+    ) -> Vec<Vec<Sp<Word>>> {
         let mut lines = Vec::new();
         while self.try_spaces().is_some() {}
-        let mut newlines;
+        let mut newlines: usize = 0;
         loop {
             let curr = self.index;
             if check_for_bindings
@@ -711,17 +715,17 @@ impl<'i> Parser<'i> {
                     newlines += 1;
                     self.try_spaces();
                 }
-                if newlines > 0 {
+                if newlines > 1 {
                     lines.push(Vec::new());
                 }
             } else {
                 break;
             }
         }
-        // if newlines == 1 {
-        //     lines.push(Vec::new());
-        // }
-        dbg!(lines)
+        if extra_newline && newlines > 0 {
+            lines.push(Vec::new());
+        }
+        lines
     }
     fn try_word(&mut self) -> Option<Sp<Word>> {
         self.comment()
@@ -942,7 +946,7 @@ impl<'i> Parser<'i> {
             while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
             let signature = self.try_signature();
             while self.try_exact(Newline).is_some() {}
-            let items = self.multiline_words(false);
+            let items = self.multiline_words(false, true);
             let end = self.expect_close(CloseBracket.into());
             let span = start.merge(end.span);
             let arr = Arr {
@@ -970,7 +974,7 @@ impl<'i> Parser<'i> {
             while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
             let signature = self.try_signature();
             while self.try_exact(Newline).is_some() {}
-            let items = self.multiline_words(false);
+            let items = self.multiline_words(false, true);
             let end = self.expect_close(CloseCurly.into());
             let span = start.merge(end.span);
             span.sp(Word::Array(Arr {
@@ -1162,10 +1166,8 @@ impl<'i> Parser<'i> {
         })
     }
     fn func_contents(&mut self) -> FunctionContents {
-        let mut any_newlines = false;
         loop {
             if self.try_exact(Newline).is_some() {
-                any_newlines = true;
                 continue;
             }
             if self.try_spaces().is_some() {
@@ -1176,7 +1178,6 @@ impl<'i> Parser<'i> {
         let signature = self.try_signature();
         loop {
             if self.try_exact(Newline).is_some() {
-                any_newlines = true;
                 continue;
             }
             if self.try_spaces().is_some() {
@@ -1184,11 +1185,7 @@ impl<'i> Parser<'i> {
             }
             break;
         }
-        let mut lines = self.multiline_words(false);
-        any_newlines |= lines.len() > 1;
-        if any_newlines && !lines.last().is_some_and(|line| line.is_empty()) {
-            lines.push(Vec::new());
-        }
+        let lines = self.multiline_words(false, true);
         let start = signature
             .as_ref()
             .map(|sig| sig.span.clone())
@@ -1302,9 +1299,6 @@ fn split_word(word: Sp<Word>) -> Sp<Word> {
     word.map(|word| match word {
         Word::Func(mut func) => {
             func.lines = func.lines.into_iter().flat_map(split_words).collect();
-            if func.lines.len() > 1 && !func.lines.last().unwrap().is_empty() {
-                func.lines.push(Vec::new());
-            }
             Word::Func(func)
         }
         Word::Array(mut arr) => {

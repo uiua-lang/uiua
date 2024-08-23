@@ -1236,7 +1236,6 @@ impl<'a> Formatter<'a> {
         allow_trailing_newline: bool,
         depth: usize,
     ) {
-        dbg!(depth, allow_trailing_newline, lines);
         if lines.is_empty() {
             return;
         }
@@ -1276,7 +1275,6 @@ impl<'a> Formatter<'a> {
                 }
             }
             && (lines.iter().flatten()).all(|word| !word_is_multiline(&word.value));
-        dbg!(prevent_compact, allow_compact);
         let indent = if allow_compact {
             start_line_pos
         } else {

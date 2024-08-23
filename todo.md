@@ -1,7 +1,8 @@
 # Uiua Todo
 
 - 0.13
-  - `un chunks`?
+  - Stride `windows`
+  - `un` chunking `windows`?
   - `try` optimizations
   - `by` delimiter for better inverses and optimizations
   - `reshape` with multiple infinities
@@ -20,6 +21,7 @@
     - Stack visualization output comments?
     - Plots?
 - Dead code elimination
+- Possibility Exploration UI?
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

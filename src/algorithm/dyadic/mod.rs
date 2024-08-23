@@ -1023,6 +1023,23 @@ impl Value {
                 Value::Char(a) => a.chunks(&size_array.data, env)?.into(),
                 Value::Box(a) => a.chunks(&size_array.data, env)?.into(),
             },
+            &[2, n] => {
+                let size = &size_array.data[..n];
+                let mut stride = Vec::with_capacity(n);
+                for &s in &size_array.data[n..] {
+                    if s <= 0 {
+                        return Err(env.error("Window stride must be positive"));
+                    }
+                    stride.push(s.unsigned_abs());
+                }
+                match from {
+                    Value::Num(a) => a.strided_windows(size, &stride, env)?.into(),
+                    Value::Byte(a) => a.strided_windows(size, &stride, env)?.into(),
+                    Value::Complex(a) => a.strided_windows(size, &stride, env)?.into(),
+                    Value::Char(a) => a.strided_windows(size, &stride, env)?.into(),
+                    Value::Box(a) => a.strided_windows(size, &stride, env)?.into(),
+                }
+            }
             _ => return Err(env.error(format!("Invalid windows shape {}", size_array.shape))),
         })
     }
@@ -1044,6 +1061,23 @@ impl Value {
 impl<T: ArrayValue> Array<T> {
     /// Get the `windows` of this array
     pub fn windows(&self, isize_spec: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        let stride = vec![1; isize_spec.len()];
+        self.strided_windows(isize_spec, &stride, env)
+    }
+    /// Get the `windows` of this array
+    pub(crate) fn strided_windows(
+        &self,
+        isize_spec: &[isize],
+        stride: &[usize],
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        if isize_spec.len() != stride.len() {
+            return Err(env.error(format!(
+                "Window size {} does not match stride size {}",
+                isize_spec.len(),
+                stride.len()
+            )));
+        }
         if isize_spec.iter().any(|&s| s == 0) {
             return Err(env.error("Window size cannot be zero"));
         }
@@ -1067,13 +1101,12 @@ impl<T: ArrayValue> Array<T> {
         // Determine the shape of the windows array
         let mut new_shape = Shape::with_capacity(self.shape.len() + size_spec.len());
         new_shape.extend(
-            self.shape
-                .iter()
-                .zip(&size_spec)
-                .map(|(a, b)| ((*a as isize + 1) - *b).max(0) as usize),
+            (self.shape.iter().zip(&size_spec).zip(stride))
+                .map(|((d, w), s)| ((*d + *s) as isize - *w).max(0) as usize / *s),
         );
         new_shape.extend(size_spec.iter().map(|&s| s.max(0) as usize));
         new_shape.extend_from_slice(&self.shape[size_spec.len()..]);
+        dbg!(&new_shape);
         // Check if the window size is too large
         for (size, sh) in size_spec.iter().zip(&self.shape) {
             if *size <= 0 || *size > *sh as isize {
@@ -1098,33 +1131,39 @@ impl<T: ArrayValue> Array<T> {
                 *i = 0;
             }
             // Copy the window at the current corner
-            'items: loop {
-                // Copy the current item
-                let mut src_index = 0;
-                let mut stride = 1;
-                for ((c, i), s) in corner.iter().zip(&curr).zip(&self.shape).rev() {
-                    src_index += (*c + *i) * stride;
-                    stride *= s;
-                }
-                dst_slice[k] = self.data[src_index].clone();
-                k += 1;
-                // Go to the next item
-                for i in (0..curr.len()).rev() {
-                    if curr[i] == true_size[i] - 1 {
-                        curr[i] = 0;
-                    } else {
-                        curr[i] += 1;
-                        continue 'items;
+            let out_of_bounds = (corner.iter())
+                .zip(&self.shape)
+                .zip(&true_size)
+                .any(|((c, d), w)| *c + *w > *d);
+            if !out_of_bounds {
+                'items: loop {
+                    // Copy the current item
+                    let mut src_index = 0;
+                    let mut stride = 1;
+                    for ((c, i), s) in corner.iter().zip(&curr).zip(&self.shape).rev() {
+                        src_index += (*c + *i) * stride;
+                        stride *= s;
                     }
+                    dst_slice[k] = self.data[src_index].clone();
+                    k += 1;
+                    // Go to the next item
+                    for i in (0..curr.len()).rev() {
+                        if curr[i] == true_size[i] - 1 {
+                            curr[i] = 0;
+                        } else {
+                            curr[i] += 1;
+                            continue 'items;
+                        }
+                    }
+                    break;
                 }
-                break;
             }
             // Go to the next corner
             for i in (0..corner.len()).rev() {
-                if corner[i] == self.shape[i] - true_size[i] {
+                if corner[i] >= self.shape[i] - true_size[i] {
                     corner[i] = 0;
                 } else {
-                    corner[i] += 1;
+                    corner[i] += stride.get(i).copied().unwrap_or(1);
                     continue 'windows;
                 }
             }

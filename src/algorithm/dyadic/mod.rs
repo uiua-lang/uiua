@@ -1091,6 +1091,9 @@ impl<T: ArrayValue> Array<T> {
 
         // Do filled windows if there is a fill value
         if let Ok(fill) = env.scalar_fill::<T>() {
+            if stride.iter().any(|&s| s != 1) {
+                return Err(env.error("Filled strided windows is not currently supported"));
+            }
             return Ok(self.filled_windows(isize_spec, fill));
         }
 
@@ -1106,7 +1109,6 @@ impl<T: ArrayValue> Array<T> {
         );
         new_shape.extend(size_spec.iter().map(|&s| s.max(0) as usize));
         new_shape.extend_from_slice(&self.shape[size_spec.len()..]);
-        dbg!(&new_shape);
         // Check if the window size is too large
         for (size, sh) in size_spec.iter().zip(&self.shape) {
             if *size <= 0 || *size > *sh as isize {

@@ -315,9 +315,10 @@ sys_op! {
     /// Moves the file or directory at the given path to the trash.
     /// This is a safer alternative to [&fde].
     (1(0), FTrash, Filesystem, "&ftr", "file - trash", Mutating),
-    /// Check if a file exists at a path
+    /// Check if a file, directory, or symlink exists at a path
     ///
     /// ex: &fe "example.txt"
+    /// ex: &fe "foo.bar"
     (1, FExists, Filesystem, "&fe", "file - exists"),
     /// List the contents of a directory
     ///
@@ -750,7 +751,7 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn exit(&self, status: i32) -> Result<(), String> {
         Err("Exiting is not supported in this environment".into())
     }
-    /// Check if a file exists
+    /// Check if a file or directory exists
     fn file_exists(&self, path: &str) -> bool {
         false
     }

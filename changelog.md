@@ -8,6 +8,8 @@ This version is not yet released. If you are reading this on the website, then t
 <!-- - Stabilize [`chunks ⑄`](https://uiua.org/docs/chunks) and add [`under ⍜`](https://uiua.org/docs/under) compatibility -->
 - [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`under ⍜`](https://uiua.org/docs/under) [`keep ▽`](https://uiua.org/docs/keep) are now more permissive of rank changes
 - Add the [`&fmd`](https://uiua.org/docs/&fmd) system function, which creates a directory
+### Interpreter
+- Tweak the formatter to reduce excess vertical space
 
 ## 0.12.3 - 2024-08-17
 ### Language

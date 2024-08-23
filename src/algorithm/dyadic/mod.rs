@@ -2028,11 +2028,14 @@ impl Array<f64> {
                 i += prod_elems;
             }
         };
-        let iter = (a.row_slices()).zip(result_slice.chunks_exact_mut(b.row_count() * prod_elems));
-        if a.row_count() > 100 || b.row_count() > 100 {
-            (iter.par_bridge()).for_each(|(a_row, res_row)| inner(a_row, res_row));
-        } else {
-            iter.for_each(|(a_row, res_row)| inner(a_row, res_row));
+        let result_chunk_size = b.row_count() * prod_elems;
+        if result_chunk_size > 0 {
+            let iter = (a.row_slices()).zip(result_slice.chunks_exact_mut(result_chunk_size));
+            if a.row_count() > 100 || b.row_count() > 100 {
+                (iter.par_bridge()).for_each(|(a_row, res_row)| inner(a_row, res_row));
+            } else {
+                iter.for_each(|(a_row, res_row)| inner(a_row, res_row));
+            }
         }
         Ok(Array::new(result_shape, result_data))
     }

@@ -4,7 +4,6 @@
   - Stride `windows`
   - `un` chunking `windows`?
   - `try` optimizations
-  - `by` delimiter for better inverses and optimizations
   - `reshape` with multiple infinities
   - Improve parsing for function packs
   - Improve formatter to make fewer short lines

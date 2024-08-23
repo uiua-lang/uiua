@@ -610,7 +610,6 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_flip_pattern, "flip"),
         &UnderPatternFn(under_push_temp_pattern, "push temp"),
         &UnderPatternFn(under_copy_temp_pattern, "copy temp"),
-        &UnderPatternFn(under_by_pattern, "by"),
         &UnderPatternFn(under_un_pattern, "un"),
         &UnderPatternFn(under_from_inverse_pattern, "from inverse"), // These must come last!
     ];
@@ -1778,39 +1777,6 @@ fn make_fn(
     };
     let id = FunctionId::Anonymous(span);
     Some(comp.make_function(id, sig, NewFunction { instrs, flags }))
-}
-
-fn under_by_pattern<'a>(
-    mut input: &'a [Instr],
-    _: Signature,
-    comp: &mut Compiler,
-) -> Option<(&'a [Instr], Under)> {
-    let mut instrs = EcoVec::new();
-    let mut has_val = false;
-    if let Some((inp, ins)) = Val.invert_extract(input, comp) {
-        input = inp;
-        instrs = ins;
-        has_val = true;
-    }
-    let (inp, extra) =
-        if let Some((inp, _, [Instr::Prim(Primitive::Dup, _)], _, _)) = try_push_temp_wrap(input) {
-            (inp, 3)
-        } else if let ([Instr::Prim(Primitive::Dup, _), inp @ ..], false) = (input, has_val) {
-            (inp, 1)
-        } else {
-            return None;
-        };
-    for i in 1..=inp.len() {
-        if instrs_clean_signature(&inp[..i])
-            .is_some_and(|sig| sig == (2, 1) || !has_val && sig == (1, 1))
-        {
-            let end = i + extra;
-            instrs.extend_from_slice(&input[..end]);
-            return Some((&input[end..], (instrs, EcoVec::new())));
-        }
-    }
-
-    None
 }
 
 fn under_each_pattern<'a>(

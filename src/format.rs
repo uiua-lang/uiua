@@ -970,13 +970,13 @@ impl<'a> Formatter<'a> {
                         self.output.pop();
                     }
                 }
-                self.format_multiline_words(
-                    &arr.lines,
-                    arr.signature.is_none(),
-                    true,
-                    true,
-                    depth + 1,
-                );
+
+                let start_indent =
+                    (self.output.split('\n').last()).map_or(0, |line| line.chars().count());
+                let indent = self.config.multiline_indent * depth;
+                let allow_compact = start_indent <= indent + 2;
+
+                self.format_multiline_words(&arr.lines, allow_compact, true, false, depth + 1);
                 if arr.boxes {
                     self.output.push('}');
                 } else {

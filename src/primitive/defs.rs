@@ -1562,8 +1562,6 @@ primitive!(
     /// If the function is already pervasive, then [each] is redundant.
     /// ex! ∵+ 1_2_3 4_5_6
     /// ex:  + 1_2_3 4_5_6
-    ///
-    /// [each] is one of a few modifiers that uses [proxy values](/tutorial/functions#proxy).
     ([1], Each, IteratingModifier, ("each", '∵')),
     /// Apply a function to each row of an array or arrays
     ///
@@ -1587,8 +1585,6 @@ primitive!(
     /// ex: ≡⊂ ¤  1_2_3 4_5_6
     /// ex: ≡⊂ ⊙¤ 1_2_3 4_5_6
     /// [fold] also has this behavior.
-    ///
-    /// [rows] is one of a few modifiers that uses [proxy values](/tutorial/functions#proxy).
     ([1], Rows, IteratingModifier, ("rows", '≡')),
     /// Apply a function to each combination of rows of some arrays
     ///

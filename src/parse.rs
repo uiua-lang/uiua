@@ -1166,8 +1166,10 @@ impl<'i> Parser<'i> {
         })
     }
     fn func_contents(&mut self) -> FunctionContents {
+        let mut starts_with_newline = false;
         loop {
             if self.try_exact(Newline).is_some() {
+                starts_with_newline = true;
                 continue;
             }
             if self.try_spaces().is_some() {
@@ -1178,6 +1180,7 @@ impl<'i> Parser<'i> {
         let signature = self.try_signature();
         loop {
             if self.try_exact(Newline).is_some() {
+                starts_with_newline = true;
                 continue;
             }
             if self.try_spaces().is_some() {
@@ -1185,7 +1188,11 @@ impl<'i> Parser<'i> {
             }
             break;
         }
-        let lines = self.multiline_words(false, true);
+        let mut lines = Vec::new();
+        if starts_with_newline {
+            lines.push(Vec::new());
+        }
+        lines.extend(self.multiline_words(false, true));
         let start = signature
             .as_ref()
             .map(|sig| sig.span.clone())

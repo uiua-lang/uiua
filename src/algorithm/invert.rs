@@ -605,7 +605,6 @@ pub(crate) fn under_instrs(
             (Sys(SysOp::RunStream), CopyToUnder(3)),
             (PopUnder(3), TryClose, TryClose, TryClose)
         )),
-        // &pat!(BothTrace, (BothTrace), (UnTrace)),
         // Patterns that need to be last
         &UnderPatternFn(under_flip_pattern, "flip"),
         &UnderPatternFn(under_push_temp_pattern, "push temp"),

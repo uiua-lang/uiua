@@ -38,30 +38,6 @@ impl ConfigValue for usize {
     }
 }
 
-/// Ways of choosing whether multiline arrays and functions are formatted compactly or not
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum CompactMultilineMode {
-    /// Multiline formatting will always be compact.
-    Always,
-    /// Multiline formatting will never be compact.
-    Never,
-    /// Multiline arrays and functions that start on or before `multiline_compact_threshold` will be compact, and those that start after will not be.
-    #[default]
-    Auto,
-}
-
-impl ConfigValue for CompactMultilineMode {
-    fn from_value(value: &Value, env: &Uiua, requirement: &'static str) -> UiuaResult<Self> {
-        let string = value.as_string(env, requirement)?;
-        match string.to_lowercase().as_str() {
-            "always" => Ok(Self::Always),
-            "never" => Ok(Self::Never),
-            "auto" => Ok(Self::Auto),
-            _ => Err(env.error(format!("{requirement}, but it is \"{string}\""))),
-        }
-    }
-}
-
 macro_rules! requirement {
     ($name:ident, bool) => {
         concat!(
@@ -75,13 +51,6 @@ macro_rules! requirement {
             "Format config option '",
             stringify!($name),
             "' expects a natural number"
-        )
-    };
-    ($name:ident, CompactMultilineMode) => {
-        concat!(
-            "Format config option '",
-            stringify!($name),
-            r#"' expects one of "always", "never", or "auto""#
         )
     };
 }
@@ -246,18 +215,6 @@ create_config!(
     (comment_space_after_hash, bool, true),
     /// The number of spaces to indent multiline arrays and functions
     (multiline_indent, usize, 2),
-    /// The mode for formatting multiline arrays and functions.
-    ///
-    /// - `"always"`: Always format multiline expressions in compact mode.
-    /// - `"never"`: Never format multiline expressions in compact mode.
-    /// - `"auto"`: Format multiline expressions in compact mode if they exceed `MultilineCompactThreshold`.
-    (
-        compact_multiline_mode,
-        CompactMultilineMode,
-        CompactMultilineMode::Auto
-    ),
-    /// The number of characters on line preceding a multiline array or function, at or before which the multiline will be compact.
-    (multiline_compact_threshold, usize, 10),
     /// Whether to align consecutive end-of-line comments
     (align_comments, bool, true),
     /// Whether to indent item imports
@@ -662,7 +619,7 @@ impl<'a> Formatter<'a> {
             Item::Words(lines) => {
                 self.prev_import_function = None;
                 let lines = unsplit_words(lines.iter().cloned().flat_map(split_words).collect());
-                self.format_multiline_words(&lines, false, false, false, depth);
+                self.format_multiline_words(&lines, false, false, depth);
             }
             Item::Binding(binding) => {
                 match binding.words.first().map(|w| &w.value) {
@@ -976,7 +933,7 @@ impl<'a> Formatter<'a> {
                 let indent = self.config.multiline_indent * depth;
                 let allow_compact = start_indent <= indent + 2;
 
-                self.format_multiline_words(&arr.lines, allow_compact, true, false, depth + 1);
+                self.format_multiline_words(&arr.lines, allow_compact, true, depth + 1);
                 if arr.boxes {
                     self.output.push('}');
                 } else {
@@ -995,7 +952,7 @@ impl<'a> Formatter<'a> {
                 }
             }
             Word::Func(func) => {
-                // Handle nested switch conversion to angle brackets
+                // Handle nested pack conversion to angle brackets
                 let mut code_words =
                     (func.lines.iter().flatten()).filter(|word| word.value.is_code());
                 if code_words.clone().count() == 1 {
@@ -1026,7 +983,7 @@ impl<'a> Formatter<'a> {
                     }
                 }
 
-                self.format_multiline_words(&func.lines, allow_compact, true, false, depth + 1);
+                self.format_multiline_words(&func.lines, allow_compact, true, depth + 1);
                 self.output.push(')');
             }
             Word::Pack(pack) => {
@@ -1071,7 +1028,7 @@ impl<'a> Formatter<'a> {
                     {
                         lines = &lines[..lines.len() - 1];
                     }
-                    self.format_multiline_words(lines, false, false, true, depth + 1);
+                    self.format_multiline_words(lines, false, false, depth + 1);
                     if any_multiline
                         && i < pack.branches.len() - 1
                         && br.value.lines.last().is_some_and(|line| !line.is_empty())
@@ -1233,7 +1190,6 @@ impl<'a> Formatter<'a> {
         mut lines: &[Vec<Sp<Word>>],
         allow_compact: bool,
         allow_leading_space: bool,
-        allow_trailing_newline: bool,
         depth: usize,
     ) {
         if lines.is_empty() {
@@ -1250,7 +1206,7 @@ impl<'a> Formatter<'a> {
             self.format_words(&lines[0], true, depth);
             return;
         }
-        if depth > 0 && !allow_trailing_newline {
+        if depth > 0 {
             while lines.last().is_some_and(|line| line.is_empty())
                 && !(lines.iter().nth_back(1))
                     .is_some_and(|line| line.last().is_some_and(|word| word.value.is_end_of_line()))
@@ -1258,23 +1214,15 @@ impl<'a> Formatter<'a> {
                 lines = &lines[..lines.len() - 1];
             }
         }
+        while lines.first().is_some_and(|line| line.is_empty()) {
+            lines = &lines[1..];
+        }
         let curr_line = self.output.split('\n').last().unwrap_or_default();
         let start_line_pos = if self.output.ends_with('\n') {
             0
         } else {
             curr_line.chars().count()
         };
-        let compact = allow_compact
-            && !prevent_compact
-            && match self.config.compact_multiline_mode {
-                CompactMultilineMode::Always => true,
-                CompactMultilineMode::Never => false,
-                CompactMultilineMode::Auto => {
-                    start_line_pos <= self.config.multiline_compact_threshold
-                        || curr_line.starts_with(' ')
-                }
-            }
-            && (lines.iter().flatten()).all(|word| !word_is_multiline(&word.value));
         let indent = if allow_compact {
             start_line_pos
         } else {
@@ -1290,15 +1238,6 @@ impl<'a> Formatter<'a> {
                 }
             }
             self.format_words(line, true, depth);
-        }
-
-        if allow_trailing_newline && !compact {
-            if depth > 0 && !lines.iter().last().is_some_and(|line| line.is_empty()) {
-                self.output.push('\n');
-            }
-            for _ in 0..self.config.multiline_indent * depth.saturating_sub(1) {
-                self.output.push(' ');
-            }
         }
     }
     fn push(&mut self, span: &CodeSpan, formatted: &str) {

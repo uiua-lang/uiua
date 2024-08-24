@@ -1247,7 +1247,7 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
 
         <Hd id="recursion">"Recursion"</Hd>
         <p>"A bound function that refers to its own name is a "<a href="https://en.wikipedia.org/wiki/Recursion_(computer_science)">"recursive function"</a>". A function that calls itself can easily recurse infinitely, so it is important to have a "<em>"base case"</em>" that stops the recursion when a condition is met. Switch functions are great for this."</p>
-        <p>"As a simple example, here is a function that calculates the factorial of a number. Note that you should not actually do this, as "<Prims prims=[Reduce, Mul, Add]/><code>"1"</code>" is shorter, faster, and more idiomatic."</p>
+        <p>"As a simple example, here is a function that calculates the factorial of a number. Note that you should not actually do this, as "<Prims prims=[Reduce, Mul, Add]/><code>"1"</code><Prims prims=[Range]/>" is shorter, faster, and more idiomatic."</p>
         <Editor example="Fact ← |1 ⨬(×Fact-1.|1)<2.\nFact 5"/>
         <p>"The base case is when the input is "<code>"1"</code>". In this case, the function returns "<code>"1"</code>". Otherwise, it multiplies the input by the result of calling itself with the input decremented by "<code>"1"</code>"."</p>
         <p>"Recursive functions are required to have signatures declared."</p>

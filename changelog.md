@@ -38,7 +38,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
 - **Breaking Change** - disable pattern matching inverses resulting from [`under ⍜`](https://uiua.org/docs/under)
   - This is basically never what you want
   - Pattern matching via [`un °`](https://uiua.org/docs/un) still works as normal
-- - Deprecate [`member ∊`](https://uiua.org/docs/member) and add [`memberof ∈`](https://uiua.org/docs/memberof)
+- Deprecate [`member ∊`](https://uiua.org/docs/member) and add [`memberof ∈`](https://uiua.org/docs/memberof)
   - [`member ∊`](https://uiua.org/docs/member) almost always required flipping the arguments
   - [`memberof ∈`](https://uiua.org/docs/memberof) is the same, but with the arguments flipped
   - In the future, [`member ∊`](https://uiua.org/docs/member) will be removed, and [`memberof ∈`](https://uiua.org/docs/memberof)'s glyph will be changed and format to `∊`

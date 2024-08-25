@@ -207,6 +207,9 @@ impl SysBackend for WebBackend {
     fn is_file(&self, path: &str) -> Result<bool, String> {
         Ok(self.file(path.as_ref(), |_| {}).is_ok())
     }
+    fn file_exists(&self, path: &str) -> bool {
+        self.file(path.as_ref(), |_| {}).is_ok()
+    }
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
         self.file_mut(path, true, |file| *file = contents.to_vec())
     }

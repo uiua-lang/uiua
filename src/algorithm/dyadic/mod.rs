@@ -689,6 +689,9 @@ impl<T: ArrayValue> Array<T> {
         Ok((counts.into(), self))
     }
     fn undo_keep(self, counts: &[f64], mut into: Self, env: &Uiua) -> UiuaResult<Self> {
+        if into.rank() == 0 {
+            return Err(env.error("Cannot undo keep of scalar array"));
+        }
         let from = self;
         let counts = pad_keep_counts(counts, into.row_count(), env)?;
         let mut true_count = 0;

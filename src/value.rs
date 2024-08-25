@@ -1762,8 +1762,10 @@ macro_rules! eq_impls {
                 // Type comparable
                 (Num, Char, always_less),
                 (Byte, Char, always_less),
+                (Complex, Char, always_less),
                 (Char, Num, always_greater),
                 (Char, Byte, always_greater),
+                (Char, Complex, always_greater),
             );
         )*
     };
@@ -1789,8 +1791,10 @@ macro_rules! cmp_impls {
                 // Type comparable
                 (Num, Char, always_less),
                 (Byte, Char, always_less),
+                (Complex, Char, always_less),
                 (Char, Num, always_greater),
                 (Char, Byte, always_greater),
+                (Char, Complex, always_greater),
             );
         )*
     };

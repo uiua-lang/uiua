@@ -2539,9 +2539,7 @@ fn words_look_pervasive(words: &[Sp<Word>]) -> bool {
     use Primitive::*;
     words.iter().all(|word| match &word.value {
         Word::Primitive(p) if p.class().is_pervasive() => true,
-        Word::Primitive(
-            Dup | Flip | Over | Dip | Identity | Fork | Both | Bracket | Under | Each,
-        ) => true,
+        Word::Primitive(Dup | Dip | Identity | Fork | Under | Each) => true,
         Word::Func(func) if func.lines.iter().all(|line| words_look_pervasive(line)) => true,
         Word::Number(..) | Word::Char(..) => true,
         Word::Modified(m) if m.modifier.value == Modifier::Primitive(Primitive::Each) => true,

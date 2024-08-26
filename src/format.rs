@@ -368,6 +368,34 @@ fn map_char_pos() {
     assert_eq!(output.map_char_pos(34), (31, 31));
 }
 
+#[test]
+#[cfg(test)]
+fn formatter_correctness() {
+    let input = "\
+F ← (
+  ⊃(+
+  | -))
+G ← (
+  ∘
+  ∘ # hi
+)
+⊃(+
+| - # x
+)
+∘⊃(
+  +
+| - # x
+)
+⊃(+
+| -
+)∘
+⊃(+
+| -)
+";
+    let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
+    assert_eq!(formatted, input);
+}
+
 /// Format Uiua code
 ///
 /// The path is used for error reporting
@@ -1247,7 +1275,11 @@ impl<'a> Formatter<'a> {
         for (i, line) in lines.iter().enumerate() {
             if i > 0 || (!allow_compact && allow_leading_space) {
                 self.output.push('\n');
-                if !line.is_empty() {
+                if line.is_empty() {
+                    for _ in 0..indent.saturating_sub(self.config.multiline_indent) {
+                        self.output.push(' ');
+                    }
+                } else {
                     for _ in 0..indent {
                         self.output.push(' ');
                     }

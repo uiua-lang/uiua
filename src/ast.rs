@@ -431,6 +431,9 @@ impl fmt::Debug for Func {
             for word in line {
                 d.field(&word.value);
             }
+            if line.is_empty() {
+                d.field(&"newline");
+            }
         }
         d.finish()
     }

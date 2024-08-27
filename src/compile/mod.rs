@@ -617,6 +617,7 @@ code:
             let instr_count_before = self.asm.instrs.len();
             let binding_count_before = self.asm.bindings.len();
             let new_func = self.compile_words(line, true)?;
+            let instr_count_after = self.asm.instrs.len();
             let binding_count_after = self.asm.bindings.len();
             let (mut new_func, pre_eval_errors) = self.pre_eval_instrs(new_func);
             let mut line_eval_errored = false;
@@ -634,6 +635,7 @@ code:
                     if self.pre_eval_mode != PreEvalMode::Line
                         && !new_func.instrs.is_empty()
                         && instr_count_before >= sig.args
+                        && instr_count_after >= instr_count_before
                         && binding_count_before == binding_count_after
                         && (self.asm.instrs.iter().take(instr_count_before).rev())
                             .take(sig.args)

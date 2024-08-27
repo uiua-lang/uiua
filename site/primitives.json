@@ -76,7 +76,7 @@
     "args": 1,
     "outputs": 1,
     "class": "Filesystem",
-    "description": "Check if a file exists at a path"
+    "description": "Check if a file, directory, or symlink exists at a path"
   },
   "&ffi": {
     "args": 2,

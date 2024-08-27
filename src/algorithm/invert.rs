@@ -11,7 +11,7 @@ use ecow::{eco_vec, EcoString, EcoVec};
 use regex::Regex;
 
 use crate::{
-    check::{instrs_clean_signature, instrs_signature, instrs_signature_no_temp},
+    check::{instrs_clean_signature, instrs_signature},
     instrs_are_pure,
     primitive::{ImplPrimitive, Primitive},
     Array, Assembly, BindingKind, Compiler, Complex, FmtInstrs, Function, FunctionFlags,
@@ -892,7 +892,7 @@ fn invert_dup_pattern<'a>(
     };
 
     let Some(dyadic_i) = (0..=input.len())
-        .find(|&i| instrs_signature_no_temp(&input[..i]).is_some_and(|sig| sig == (2, 1)))
+        .find(|&i| instrs_clean_signature(&input[..i]).is_some_and(|sig| sig == (2, 1)))
     else {
         // Pattern matching
         let sig = instrs_signature(input).ok()?;
@@ -910,7 +910,7 @@ fn invert_dup_pattern<'a>(
     let dyadic_whole = &input[..dyadic_i];
     let input = &input[dyadic_i..];
     let monadic_i = (0..=dyadic_whole.len()).rev().find(|&i| {
-        instrs_signature_no_temp(&dyadic_whole[..i])
+        instrs_clean_signature(&dyadic_whole[..i])
             .is_some_and(|sig| sig.args == 0 && sig.outputs == 0)
     })?;
     let monadic_part = &dyadic_whole[..monadic_i];
@@ -948,12 +948,12 @@ fn under_dup_pattern<'a>(
         return None;
     };
     let dyadic_i = (0..=input.len())
-        .find(|&i| instrs_signature_no_temp(&input[..i]).is_some_and(|sig| sig == (2, 1)))?;
+        .find(|&i| instrs_clean_signature(&input[..i]).is_some_and(|sig| sig == (2, 1)))?;
     let dyadic_whole = &input[..dyadic_i];
     let input = &input[dyadic_i..];
     let (monadic_i, monadic_sig) = (0..=dyadic_whole.len())
         .rev()
-        .filter_map(|i| instrs_signature_no_temp(&dyadic_whole[..i]).map(|sig| (i, sig)))
+        .filter_map(|i| instrs_clean_signature(&dyadic_whole[..i]).map(|sig| (i, sig)))
         .find(|(_, sig)| sig.args == sig.outputs)?;
     let monadic_part = &dyadic_whole[..monadic_i];
     let dyadic_part = &dyadic_whole[monadic_i..];

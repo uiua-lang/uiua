@@ -37,11 +37,11 @@ pub(crate) fn instrs_signature(instrs: &[Instr]) -> Result<Signature, SigCheckEr
 /// The the signature of some instructions, but only
 /// if the temp stack signatures are `|0.0`
 pub(crate) fn instrs_clean_signature(instrs: &[Instr]) -> Option<Signature> {
-    let (sig, temps) = instrs_all_signatures(instrs).ok()?;
-    if temps.iter().any(|&sig| sig != (0, 0)) {
+    let sig = instrs_all_signatures(instrs).ok()?;
+    if sig.functions_left != 0 || sig.temps.iter().any(|&sig| sig != (0, 0)) {
         return None;
     }
-    Some(sig)
+    Some(sig.stack)
 }
 
 pub(crate) fn instrs_temp_signatures(
@@ -51,10 +51,15 @@ pub(crate) fn instrs_temp_signatures(
     Ok(env.temp_signatures())
 }
 
-pub(crate) fn instrs_all_signatures(
-    instrs: &[Instr],
-) -> Result<(Signature, [Signature; TempStack::CARDINALITY]), SigCheckError> {
-    type AllSigsCache = HashMap<u64, (Signature, [Signature; TempStack::CARDINALITY])>;
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct AllSignatures {
+    pub stack: Signature,
+    pub temps: [Signature; TempStack::CARDINALITY],
+    pub functions_left: usize,
+}
+
+pub(crate) fn instrs_all_signatures(instrs: &[Instr]) -> Result<AllSignatures, SigCheckError> {
+    type AllSigsCache = HashMap<u64, AllSignatures>;
     thread_local! {
         static CACHE: RefCell<AllSigsCache> = RefCell::new(AllSigsCache::new());
     }
@@ -66,17 +71,14 @@ pub(crate) fn instrs_all_signatures(
             return Ok(*sigs);
         }
         let env = VirtualEnv::from_instrs(instrs)?;
-        let sigs = (env.sig(), env.temp_signatures());
+        let sigs = AllSignatures {
+            stack: env.sig(),
+            temps: env.temp_signatures(),
+            functions_left: env.function_stack.len(),
+        };
         cache.borrow_mut().insert(hash, sigs);
         Ok(sigs)
     })
-}
-
-pub(crate) fn instrs_signature_no_temp(instrs: &[Instr]) -> Option<Signature> {
-    let (sig, temps) = instrs_all_signatures(instrs).ok()?;
-    (temps.iter())
-        .all(|sig| sig.args == sig.outputs)
-        .then_some(sig)
 }
 
 /// An environment that emulates the runtime but only keeps track of the stack.

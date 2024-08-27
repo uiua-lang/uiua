@@ -436,6 +436,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_dump_pattern, "dump"),
         &UnderPatternFn(under_rows_pattern, "rows"),
         &UnderPatternFn(under_each_pattern, "each"),
+        &UnderPatternFn(under_reverse_pattern, "reverse"),
         &UnderPatternFn(under_partition_pattern, "partition"),
         &UnderPatternFn(under_group_pattern, "group"),
         &UnderPatternFn(under_setinv_setund_pattern, "setinv setund"), // This must come before setinv
@@ -1864,6 +1865,27 @@ fn under_rows_pattern<'a>(
         afters.push(Instr::pop_inline(after_sig.outputs - 1, span));
     }
     Some((input, (befores, afters)))
+}
+
+fn under_reverse_pattern<'a>(
+    input: &'a [Instr],
+    g_sig: Signature,
+    _: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    let [Instr::Prim(Primitive::Reverse, span), input @ ..] = input else {
+        return None;
+    };
+    let span = *span;
+    Some((
+        input,
+        (
+            eco_vec![Instr::Prim(Primitive::Reverse, span)],
+            eco_vec![Instr::ImplPrim(
+                ImplPrimitive::UndoReverse(g_sig.outputs),
+                span
+            ),],
+        ),
+    ))
 }
 
 fn under_fill_pattern<'a>(

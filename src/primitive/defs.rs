@@ -2944,6 +2944,7 @@ macro_rules! impl_primitive {
         pub enum ImplPrimitive {
             $($variant,)*
             TransposeN(i32),
+            UndoReverse(usize),
             ReduceDepth(usize),
             TraceN(usize, bool),
         }
@@ -2953,6 +2954,7 @@ macro_rules! impl_primitive {
                 match self {
                     $(ImplPrimitive::$variant => $args,)*
                     ImplPrimitive::TransposeN(_) => 1,
+                    ImplPrimitive::UndoReverse(n) => *n,
                     ImplPrimitive::ReduceDepth(_) => 1,
                     ImplPrimitive::TraceN(n, _) => *n,
                 }
@@ -2960,6 +2962,7 @@ macro_rules! impl_primitive {
             pub fn outputs(&self) -> usize {
                 match self {
                     $($(ImplPrimitive::$variant => $outputs,)?)*
+                    ImplPrimitive::UndoReverse(n) => *n,
                     ImplPrimitive::TraceN(n, _) => *n,
                     _ => 1
                 }

@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.13
-  - Improved `under reverse`
   - Stride `windows`
   - `un` chunking `windows`?
   - `try` optimizations

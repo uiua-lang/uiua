@@ -166,6 +166,14 @@ impl From<&[usize]> for Shape {
     }
 }
 
+impl From<Vec<usize>> for Shape {
+    fn from(dims: Vec<usize>) -> Self {
+        Self {
+            dims: TinyVec::Heap(dims),
+        }
+    }
+}
+
 impl<const N: usize> From<[usize; N]> for Shape {
     fn from(dims: [usize; N]) -> Self {
         dims.as_slice().into()

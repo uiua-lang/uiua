@@ -131,7 +131,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         UnPop => Instr::Prim(Pop, span),
         Asin => Instr::Prim(Sin, span),
         TransposeN(n) => Instr::ImplPrim(TransposeN(-n), span),
-        UnBits => Instr::Prim(Bits, span),
+        // UnBits => Instr::Prim(Bits, span),
         UnWhere => Instr::Prim(Where, span),
         UnUtf => Instr::Prim(Utf8, span),
         UnAtan => Instr::Prim(Atan, span),
@@ -577,11 +577,16 @@ pub(crate) fn under_instrs(
             (Dup, Classify, PushToUnder(1), Deduplicate),
             (PopUnder(1), Select),
         ),
-        // Where
+        // Where and un bits
         &pat!(
             Where,
             (Dup, Shape, PushToUnder(1), Where),
             (PopUnder(1), UndoWhere)
+        ),
+        &pat!(
+            UnBits,
+            (Dup, Shape, PushToUnder(1), UnBits),
+            (PopUnder(1), UndoUnbits)
         ),
         // Orient
         &maybe_val!(pat!(
@@ -768,7 +773,14 @@ fn under_un_pattern<'a>(
             return Some((input, under));
         }
     }
-    Some((input, (befores, instrs)))
+    Some((
+        input,
+        if let Some((befores, afters)) = under_instrs(&befores, g_sig, comp) {
+            (befores, afters)
+        } else {
+            (befores, instrs)
+        },
+    ))
 }
 
 fn under_call_pattern<'a>(

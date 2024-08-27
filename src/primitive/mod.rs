@@ -186,6 +186,7 @@ impl fmt::Display for ImplPrimitive {
             GifDecode => write!(f, "{Un}{GifEncode}"),
             AudioDecode => write!(f, "{Un}{AudioEncode}"),
             ProgressiveIndexOf => write!(f, "{Un}{By}{Select}"),
+            UndoUnbits => write!(f, "{Under}{Un}{Bits}"),
             UndoTake => write!(f, "{Under}{Take}"),
             UndoDrop => write!(f, "{Under}{Drop}"),
             UndoSelect => write!(f, "{Under}{Select}"),
@@ -980,6 +981,11 @@ impl ImplPrimitive {
             ImplPrimitive::GifDecode => encode::gif_decode(env)?,
             ImplPrimitive::AudioDecode => encode::audio_decode(env)?,
             // Unders
+            ImplPrimitive::UndoUnbits => {
+                let orig_shape = env.pop(1)?;
+                let val = env.pop(2)?;
+                env.push(val.undo_un_bits(&orig_shape, env)?);
+            }
             ImplPrimitive::UndoPick => {
                 let index = env.pop(1)?;
                 let into = env.pop(2)?;

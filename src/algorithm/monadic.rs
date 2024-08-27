@@ -1129,7 +1129,18 @@ impl Value {
         match self {
             Value::Byte(n) => n.un_bits(env),
             Value::Num(n) => n.un_bits(env),
-            _ => Err(env.error("Argument to inverse_bits must be an array of integers")),
+            _ => Err(env.error("Argument to un bits must be an array of integers")),
+        }
+    }
+    pub(crate) fn undo_un_bits(&self, orig_shape: &Self, env: &Uiua) -> UiuaResult<Value> {
+        let min_bits_len = orig_shape
+            .as_nats(env, "Shape must be an array of natural numbers")?
+            .pop()
+            .unwrap_or(0);
+        match self {
+            Value::Byte(n) => n.bits_impl(min_bits_len, env),
+            Value::Num(n) => n.bits_impl(min_bits_len, env),
+            _ => Err(env.error("Argument to undo un bits must be an array of integers")),
         }
     }
 }
@@ -1137,6 +1148,9 @@ impl Value {
 impl<T: RealArrayValue> Array<T> {
     /// Encode the `bits` of the array
     pub fn bits(&self, env: &Uiua) -> UiuaResult<Value> {
+        self.bits_impl(0, env)
+    }
+    fn bits_impl(&self, min_bits_len: usize, env: &Uiua) -> UiuaResult<Value> {
         let mut nats = Vec::with_capacity(self.data.len());
         let mut negatives = Vec::with_capacity(self.data.len());
         let mut any_neg = false;
@@ -1169,6 +1183,7 @@ impl<T: RealArrayValue> Array<T> {
             max_bits += 1;
             max >>= 1;
         }
+        max_bits = max_bits.max(min_bits_len);
         let mut shape = self.shape.clone();
         shape.push(max_bits);
         let val: Value = if any_neg {

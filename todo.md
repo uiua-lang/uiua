@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.13
-  - Improved `under bits`
   - Improved `under reverse`
   - Stride `windows`
   - `un` chunking `windows`?

@@ -7,6 +7,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 <!-- - Stabilize [`chunks ⑄`](https://uiua.org/docs/chunks) and add [`under ⍜`](https://uiua.org/docs/under) compatibility -->
 - [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`under ⍜`](https://uiua.org/docs/under) [`keep ▽`](https://uiua.org/docs/keep) are now more permissive of rank changes
+- [`under ⍜`](https://uiua.org/docs/under) [`un °`](https://uiua.org/docs/un) [`bits ⋯`](https://uiua.org/docs/bits) now preserves a minimum bit length
 - Add the [`&fmd`](https://uiua.org/docs/&fmd) system function, which creates a directory
 ### Interpreter
 - Tweak the formatter to reduce excess vertical space

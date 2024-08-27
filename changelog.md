@@ -10,6 +10,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`under ⍜`](https://uiua.org/docs/under) [`un °`](https://uiua.org/docs/un) [`bits ⋯`](https://uiua.org/docs/bits) now preserves a minimum bit length
 - [`under ⍜`](https://uiua.org/docs/under) [`reverse ⇌`](https://uiua.org/docs/reverse) is now smarter
   - For example `⍜⇌°⊂` behaves in a more useful way
+- Allow [`under ⍜`](https://uiua.org/docs/under) of scalar [`keep ▽`](https://uiua.org/docs/keep)
 - Add the [`&fmd`](https://uiua.org/docs/&fmd) system function, which creates a directory
 ### Interpreter
 - Tweak the formatter to reduce excess vertical space

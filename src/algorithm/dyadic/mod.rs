@@ -497,17 +497,29 @@ impl Value {
             or list of natural numbers",
         )?;
         if self.rank() == 0 {
-            return Err(env.error("Cannot invert scalar keep"));
+            let count = counts[0];
+            if count == 0.0 {
+                return Err(env.error("Cannot invert scalar keep of 0 rows"));
+            }
+            let recip = 1.0 / count;
+            Ok(match kept {
+                Value::Num(a) => a.keep_scalar_real(recip, env)?.into(),
+                Value::Byte(a) => a.keep_scalar_real(recip, env)?.into(),
+                Value::Complex(a) => a.keep_scalar_real(recip, env)?.into(),
+                Value::Char(a) => a.keep_scalar_real(recip, env)?.into(),
+                Value::Box(a) => a.keep_scalar_real(recip, env)?.into(),
+            })
+        } else {
+            kept.generic_bin_into(
+                into,
+                |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+                |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+                |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+                |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+                |a, b| a.undo_keep(&counts, b, env).map(Into::into),
+                |a, b| env.error(format!("Cannot unkeep {a} array with {b} array")),
+            )
         }
-        kept.generic_bin_into(
-            into,
-            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
-            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
-            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
-            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
-            |a, b| a.undo_keep(&counts, b, env).map(Into::into),
-            |a, b| env.error(format!("Cannot unkeep {a} array with {b} array")),
-        )
     }
 }
 

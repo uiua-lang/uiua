@@ -228,6 +228,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
             ),
         ),
         &pat!(Pick, (Dup, Shape, Range)),
+        &pat!(Orient, (Dup, Shape, Len, Range)),
         &InvertPatternFn(invert_on_inv_pattern, "on inverse"),
         &InvertPatternFn(invert_push_temp_pattern, "push temp"),
         &InvertPatternFn(invert_copy_temp_pattern, "copy temp"),

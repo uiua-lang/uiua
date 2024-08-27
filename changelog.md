@@ -6,6 +6,9 @@ Uiua is not yet stable.
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
 <!-- - Stabilize [`chunks ⑄`](https://uiua.org/docs/chunks) and add [`under ⍜`](https://uiua.org/docs/under) compatibility -->
+<!-- - Stabilize [`orient ⮌`](https://uiua.org/docs/orient) -->
+- [`un °`](https://uiua.org/docs/un) [`orient ⮌`](https://uiua.org/docs/orient) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
+  - This is analogous to the behavior of [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select)
 - [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`under ⍜`](https://uiua.org/docs/under) [`keep ▽`](https://uiua.org/docs/keep) are now more permissive of rank changes
 - [`under ⍜`](https://uiua.org/docs/under) [`un °`](https://uiua.org/docs/un) [`bits ⋯`](https://uiua.org/docs/bits) now preserves a minimum bit length
 - [`under ⍜`](https://uiua.org/docs/under) [`reverse ⇌`](https://uiua.org/docs/reverse) is now smarter

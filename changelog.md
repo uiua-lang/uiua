@@ -11,7 +11,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This is analogous to the behavior of [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select)
 - [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`under ⍜`](https://uiua.org/docs/under) [`keep ▽`](https://uiua.org/docs/keep) are now more permissive of rank changes
 - [`under ⍜`](https://uiua.org/docs/under) [`un °`](https://uiua.org/docs/un) [`bits ⋯`](https://uiua.org/docs/bits) now preserves a minimum bit length
-- [`under ⍜`](https://uiua.org/docs/under) [`reverse ⇌`](https://uiua.org/docs/reverse) is now smarter
+- [`under ⍜`](https://uiua.org/docs/under) [`reverse ⇌`](https://uiua.org/docs/reverse) and [`under ⍜`](https://uiua.org/docs/under) [`transpose ⍉`](https://uiua.org/docs/transpose) are now smarter with respect to the ranks of [`under ⍜`](https://uiua.org/docs/under)'s second function
   - For example `⍜⇌°⊂` behaves in a more useful way
 - Allow [`under ⍜`](https://uiua.org/docs/under) of scalar [`keep ▽`](https://uiua.org/docs/keep)
 - Add the [`&fmd`](https://uiua.org/docs/&fmd) system function, which creates a directory

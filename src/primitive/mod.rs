@@ -188,6 +188,7 @@ impl fmt::Display for ImplPrimitive {
             ProgressiveIndexOf => write!(f, "{Un}{By}{Select}"),
             UndoUnbits => write!(f, "{Under}{Un}{Bits}"),
             UndoReverse(_) => write!(f, "{Under}{Reverse}"),
+            UndoTransposeN(..) => write!(f, "{Under}{Transpose}"),
             UndoTake => write!(f, "{Under}{Take}"),
             UndoDrop => write!(f, "{Under}{Drop}"),
             UndoSelect => write!(f, "{Under}{Select}"),
@@ -995,6 +996,17 @@ impl ImplPrimitive {
                 for val in vals {
                     if val.rank() == max_rank {
                         val.reverse();
+                    }
+                }
+            }
+            &ImplPrimitive::UndoTransposeN(n, amnt) => {
+                env.touch_array_stack(n)?;
+                let end = env.stack_height() - n;
+                let vals = &mut env.stack_mut()[end..];
+                let max_rank = vals.iter().map(|v| v.rank()).max().unwrap_or(0);
+                for val in vals {
+                    if val.rank() == max_rank {
+                        val.transpose_depth(0, -amnt);
                     }
                 }
             }

@@ -438,6 +438,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_rows_pattern, "rows"),
         &UnderPatternFn(under_each_pattern, "each"),
         &UnderPatternFn(under_reverse_pattern, "reverse"),
+        &UnderPatternFn(under_transpose_pattern, "transpose"),
         &UnderPatternFn(under_partition_pattern, "partition"),
         &UnderPatternFn(under_group_pattern, "group"),
         &UnderPatternFn(under_setinv_setund_pattern, "setinv setund"), // This must come before setinv
@@ -1883,6 +1884,30 @@ fn under_reverse_pattern<'a>(
             eco_vec![Instr::Prim(Primitive::Reverse, span)],
             eco_vec![Instr::ImplPrim(
                 ImplPrimitive::UndoReverse(g_sig.outputs),
+                span
+            ),],
+        ),
+    ))
+}
+
+fn under_transpose_pattern<'a>(
+    input: &'a [Instr],
+    g_sig: Signature,
+    _: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    let (instr, span, amnt, input) = match input {
+        [instr @ Instr::Prim(Primitive::Transpose, span), input @ ..] => (instr, *span, 1, input),
+        [instr @ Instr::ImplPrim(ImplPrimitive::TransposeN(amnt), span), input @ ..] => {
+            (instr, *span, *amnt, input)
+        }
+        _ => return None,
+    };
+    Some((
+        input,
+        (
+            eco_vec![instr.clone()],
+            eco_vec![Instr::ImplPrim(
+                ImplPrimitive::UndoTransposeN(g_sig.outputs, amnt),
                 span
             ),],
         ),

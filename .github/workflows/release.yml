@@ -45,12 +45,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-latest,   target: x86_64-apple-darwin,       features: "audio"                           }
-          - { os: macos-latest,   target: aarch64-apple-darwin,      features: "audio"                           }
-          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,  features: "audio,webcam"                    }
-          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,  features: "",            name: "-no-audio" }
-          - { os: windows-latest, target: x86_64-pc-windows-msvc,    features: "audio,webcam"                    }
-          - { os: windows-latest, target: aarch64-pc-windows-msvc,   features: "audio"                           }
+          - { os: macos-latest,   target: x86_64-apple-darwin,       features: "audio"                          }
+          - { os: macos-latest,   target: aarch64-apple-darwin,      features: "audio"                          }
+          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,  features: "audio,webcam"                   }
+          - { os: ubuntu-latest,  target: x86_64-unknown-linux-gnu,  features: '""',          name: "-no-audio" }
+          - { os: windows-latest, target: x86_64-pc-windows-msvc,    features: "audio,webcam"                   }
+          - { os: windows-latest, target: aarch64-pc-windows-msvc,   features: "audio"                          }
     steps:
       - uses: actions/checkout@v4
 

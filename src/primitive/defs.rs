@@ -1294,6 +1294,21 @@ primitive!(
     /// ex: +1↯2_3⇡6
     ///   : ⬚0◫2_3
     ///   : ≡≡□
+    ///
+    /// [windows] with a scalar or list window size will always produce overlapping windows that shift by one row at a time.
+    /// 2-dimensional windows sizes allow more control over the windows.
+    /// A rank-2 array with only one row will "chunk" the array with non-overlapping windows.
+    /// ex: ◫[[4]] ⇡12
+    /// ex: ◫¤¤4   ⇡12
+    /// ex: ≡≡□ ◫¤[2 2] . °△4_6
+    /// Negative sizes still specify the number of windows desired.
+    /// ex: ◫¤¤¯4 ⇡12
+    /// ex: ≡≡□ ◫¤[¯2 ¯2] . °△4_6
+    /// A rank-2 array with two rows allows the "stride" of the windows to be specified.
+    /// The first row specifies the window size, and the second row specifies the stride.
+    /// ex: ◫[[3] [4]] ⇡12
+    /// ex: ◫[[4] [2]] ⇡12
+    /// ex: ≡≡□ ◫[2_2 1_3] . °△4_6
     (2, Windows, DyadicArray, ("windows", '◫')),
     /// Get the n-wise chunks of an array
     ///

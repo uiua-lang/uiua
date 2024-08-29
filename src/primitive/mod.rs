@@ -388,6 +388,7 @@ impl Primitive {
                 Where.format(),
                 Find.format(),
             ),
+            Chunks => format!("use {Windows} with a rank-2 window size instead"),
             Sys(SysOp::HttpsWrite) => format!("use {} instead", Sys(SysOp::TlsConnect).format()),
             Deal => format!("use {Select}{Rise}{By}{Rows}{Gap}{Rand} instead"),
             _ => return None,

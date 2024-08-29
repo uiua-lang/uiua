@@ -7,6 +7,10 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 <!-- - Stabilize [`chunks ⑄`](https://uiua.org/docs/chunks) and add [`under ⍜`](https://uiua.org/docs/under) compatibility -->
 <!-- - Stabilize [`orient ⮌`](https://uiua.org/docs/orient) -->
+- The experimental `chunks ⑄` function's behavior has been moved to an extension on [`windows ◫`](https://uiua.org/docs/windows)
+  - This also allow the specification of "stride"
+  - This is inspired by APL's `stencil ⌺` behavior
+  - `chunks ⑄` has been deprecated
 - [`un °`](https://uiua.org/docs/un) [`orient ⮌`](https://uiua.org/docs/orient) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
   - This is analogous to the behavior of [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select)
 - [`under ⍜`](https://uiua.org/docs/under) [`select ⊏`](https://uiua.org/docs/select) and [`under ⍜`](https://uiua.org/docs/under) [`keep ▽`](https://uiua.org/docs/keep) are now more permissive of rank changes

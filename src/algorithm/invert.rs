@@ -1883,15 +1883,15 @@ fn under_reverse_pattern<'a>(
         return None;
     };
     let span = *span;
+    let count = if g_sig.outputs == g_sig.args * 2 {
+        g_sig.outputs
+    } else {
+        1
+    };
+    let after = eco_vec![Instr::ImplPrim(ImplPrimitive::UndoReverse(count), span)];
     Some((
         input,
-        (
-            eco_vec![Instr::Prim(Primitive::Reverse, span)],
-            eco_vec![Instr::ImplPrim(
-                ImplPrimitive::UndoReverse(g_sig.outputs),
-                span
-            ),],
-        ),
+        (eco_vec![Instr::Prim(Primitive::Reverse, span)], after),
     ))
 }
 
@@ -1907,16 +1907,16 @@ fn under_transpose_pattern<'a>(
         }
         _ => return None,
     };
-    Some((
-        input,
-        (
-            eco_vec![instr.clone()],
-            eco_vec![Instr::ImplPrim(
-                ImplPrimitive::UndoTransposeN(g_sig.outputs, amnt),
-                span
-            ),],
-        ),
-    ))
+    let count = if g_sig.outputs == g_sig.args * 2 {
+        g_sig.outputs
+    } else {
+        1
+    };
+    let after = eco_vec![Instr::ImplPrim(
+        ImplPrimitive::UndoTransposeN(count, amnt),
+        span
+    )];
+    Some((input, (eco_vec![instr.clone()], after)))
 }
 
 fn under_fill_pattern<'a>(

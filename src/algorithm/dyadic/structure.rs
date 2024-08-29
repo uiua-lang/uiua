@@ -260,7 +260,7 @@ impl<T: ArrayValue> Array<T> {
             .collect();
         if self.shape != expected_shape {
             return Err(env.error(format!(
-                "Attempted to undo pick, but the shape of the selected \
+                "Attempted to undo pick, but the shape of the picked \
                 array changed from {} to {}",
                 FormatShape(&expected_shape),
                 self.shape()
@@ -289,7 +289,7 @@ impl<T: ArrayValue> Array<T> {
         let expected_shape = &into.shape()[index.len()..];
         if self.shape != expected_shape {
             return Err(env.error(format!(
-                "Attempted to undo pick, but the shape of the selected \
+                "Attempted to undo pick, but the shape of the picked \
                 array changed from {} to {}",
                 FormatShape(expected_shape),
                 self.shape()
@@ -1021,12 +1021,14 @@ impl<T: ArrayValue> Array<T> {
                         into.validate_shape();
                         return Ok(into);
                     }
-                    return Err(env.error(format!(
-                        "Attempted to undo selection, but \
-                        the length of the selected array changed \
-                        from {indices_row_count} to {}",
-                        from.row_count()
-                    )));
+                    if from.row_count() < indices_row_count {
+                        return Err(env.error(format!(
+                            "Attempted to undo selection, but \
+                            the length of the selected array changed \
+                            from {indices_row_count} to {}",
+                            from.row_count()
+                        )));
+                    }
                 }
                 // Replacing multiple rows with multiple rows
                 let row_len = from.row_len();

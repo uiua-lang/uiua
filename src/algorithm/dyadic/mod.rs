@@ -7,7 +7,7 @@ use core::f64;
 use std::{
     borrow::Cow,
     cmp::Ordering,
-    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    collections::{HashMap, HashSet},
     iter::{once, repeat},
     mem::{replace, take},
     slice,
@@ -1755,12 +1755,10 @@ impl<T: ArrayValue> Array<T> {
                     elems.data.iter().any(T::has_wildcard) || of.data.iter().any(T::has_wildcard);
                 let mut result_data = EcoVec::with_capacity(elems.row_count());
                 if has_wildcard {
-                    let mut members = BTreeSet::new();
-                    for of in of.row_slices() {
-                        members.insert(ArrayCmpSlice(of));
-                    }
                     for elem in elems.row_slices() {
-                        let is_member = members.iter().any(|acs| acs == &ArrayCmpSlice(elem));
+                        let is_member = of
+                            .row_slices()
+                            .any(|row| ArrayCmpSlice(row) == ArrayCmpSlice(elem));
                         result_data.push(is_member as u8);
                     }
                 } else {
@@ -1874,14 +1872,10 @@ impl<T: ArrayValue> Array<T> {
                     || haystack.data.iter().any(T::has_wildcard);
                 let mut result_data = EcoVec::with_capacity(needle.row_count());
                 if has_wildcard {
-                    let mut members = BTreeMap::new();
-                    for (i, of) in haystack.row_slices().enumerate() {
-                        members.entry(ArrayCmpSlice(of)).or_insert(i);
-                    }
                     for elem in needle.row_slices() {
-                        let index = (members.iter())
-                            .find(|(acs, _)| *acs == &ArrayCmpSlice(elem))
-                            .map(|(_, i)| *i as f64)
+                        let index = (haystack.row_slices())
+                            .position(|row| ArrayCmpSlice(row) == ArrayCmpSlice(elem))
+                            .map(|i| i as f64)
                             .unwrap_or(default);
                         result_data.push(index);
                     }

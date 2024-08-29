@@ -867,6 +867,8 @@ primitive!(
     ///
     /// Multiple [transpose]s, as well as [rows][transpose], are optimized in the interpreter to only do a single operation.
     (1, Transpose, MonadicArray, ("transpose", '⍉')),
+    /// Sort an array
+    (1, Sort, MonadicArray, ("sort", '⍆')),
     /// Get the indices into an array if it were sorted ascending
     ///
     /// The [rise] of an array is the list of indices that would sort the array ascending if used with [select].
@@ -3053,7 +3055,6 @@ impl_primitive!(
     (1, FirstWhere),
     (1, LastWhere),
     (1, LenWhere),
-    (1, SortUp),
     (1, SortDown),
     (1[1], ReduceContent),
     (2[2], ReduceTable),

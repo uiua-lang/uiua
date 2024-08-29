@@ -218,7 +218,6 @@ impl fmt::Display for ImplPrimitive {
             FirstWhere => write!(f, "{First}{Where}"),
             LastWhere => write!(f, "{First}{Reverse}{Where}"),
             LenWhere => write!(f, "{Len}{Where}"),
-            SortUp => write!(f, "{Select}{Rise}{Dup}"),
             SortDown => write!(f, "{Select}{Fall}{Dup}"),
             Primes => write!(f, "{Un}{Reduce}{Mul}"),
             ReplaceRand => write!(f, "{Gap}{Rand}"),
@@ -403,7 +402,7 @@ impl Primitive {
             (But | With | Backward | Above | Below)
                 | (Choose | Permute)
                 | Struct
-                | (Chunks | Orient | Coordinate | Astar | Fft | Triangle | Case)
+                | (Sort | Chunks | Orient | Coordinate | Astar | Fft | Triangle | Case)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )
@@ -595,6 +594,7 @@ impl Primitive {
                 Ok(b)
             })?,
             Primitive::Couple => env.dyadic_oo_env(|a, b, env| a.couple(b, true, env))?,
+            Primitive::Sort => env.monadic_mut(Value::sort_up)?,
             Primitive::Rise => env.monadic_ref(Value::rise)?,
             Primitive::Fall => env.monadic_ref(Value::fall)?,
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
@@ -1120,7 +1120,6 @@ impl ImplPrimitive {
             ImplPrimitive::FirstWhere => env.monadic_ref_env(Value::first_where)?,
             ImplPrimitive::LenWhere => env.monadic_ref_env(Value::len_where)?,
             ImplPrimitive::LastWhere => env.monadic_ref_env(Value::last_where)?,
-            ImplPrimitive::SortUp => env.monadic_mut(Value::sort_up)?,
             ImplPrimitive::SortDown => env.monadic_mut(Value::sort_down)?,
             ImplPrimitive::ReduceContent => reduce::reduce_content(env)?,
             ImplPrimitive::ReduceTable => table::reduce_table(env)?,

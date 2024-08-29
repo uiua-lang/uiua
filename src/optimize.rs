@@ -168,10 +168,14 @@ pub(crate) fn optimize_instrs_mut(
         ([.., Instr::Prim(Dup, _), Instr::Prim(Rise, _)], Instr::Prim(Select, span)) => {
             instrs.pop();
             instrs.pop();
-            instrs.push(Instr::ImplPrim(SortUp, span));
+            instrs.push(Instr::Prim(Sort, span));
         }
         ([.., Instr::Prim(Dup, _), Instr::Prim(Fall, _)], Instr::Prim(Select, span)) => {
             instrs.pop();
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(SortDown, span));
+        }
+        ([.., Instr::Prim(Sort, _)], Instr::Prim(Reverse, span)) => {
             instrs.pop();
             instrs.push(Instr::ImplPrim(SortDown, span));
         }

@@ -15,6 +15,8 @@ This version is not yet released. If you are reading this on the website, then t
   - For example `⍜⇌°⊂` behaves in a more useful way
 - Allow [`under ⍜`](https://uiua.org/docs/under) of scalar [`keep ▽`](https://uiua.org/docs/keep)
 - Add the [`&fmd`](https://uiua.org/docs/&fmd) system function, which creates a directory
+- Add an experimental [`sort ⍆`](https://uiua.rgo/docs/sort) function
+  - Sorting is very common
 ### Interpreter
 - Tweak the formatter to reduce excess vertical space
 

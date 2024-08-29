@@ -876,6 +876,7 @@ primitive!(
     /// Multidimensional arrays have their rows sorted lexicographically.
     /// ex: # Experimental!
     ///   : ⍆ . [1_5_3 4_3_2 1_5_2]
+    /// If you want to sort by some key rather than the data itself, use [rise] or [fall].
     (1, Sort, MonadicArray, ("sort", '⍆')),
     /// Get the indices into an array if it were sorted ascending
     ///

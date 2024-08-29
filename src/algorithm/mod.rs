@@ -617,6 +617,8 @@ pub fn try_(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+#[repr(transparent)]
+#[derive(Debug)]
 struct ArrayCmpSlice<'a, T>(&'a [T]);
 
 impl<'a, T: ArrayValue> PartialEq for ArrayCmpSlice<'a, T> {

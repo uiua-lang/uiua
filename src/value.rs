@@ -1358,6 +1358,15 @@ impl Value {
             }
         }
     }
+    pub(crate) fn has_wildcard(&self) -> bool {
+        match self {
+            Self::Num(arr) => arr.data.iter().any(ArrayValue::has_wildcard),
+            Self::Byte(arr) => arr.data.iter().any(ArrayValue::has_wildcard),
+            Self::Complex(arr) => arr.data.iter().any(ArrayValue::has_wildcard),
+            Self::Char(arr) => arr.data.iter().any(ArrayValue::has_wildcard),
+            Self::Box(arr) => arr.data.iter().any(ArrayValue::has_wildcard),
+        }
+    }
 }
 
 macro_rules! value_from {

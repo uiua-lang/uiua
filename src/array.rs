@@ -782,8 +782,8 @@ pub trait ArrayValue:
     fn nested_value(&self) -> Option<&Value> {
         None
     }
-    /// Check if this is the wildcard value
-    fn is_wildcard(&self) -> bool {
+    /// Check if this element has the wildcard value
+    fn has_wildcard(&self) -> bool {
         false
     }
 }
@@ -823,7 +823,7 @@ impl ArrayValue for f64 {
     fn proxy() -> Self {
         0.0
     }
-    fn is_wildcard(&self) -> bool {
+    fn has_wildcard(&self) -> bool {
         self.to_bits() == WILDCARD_NAN.to_bits()
     }
 }
@@ -878,7 +878,7 @@ impl ArrayValue for char {
     fn compress_list_grid() -> bool {
         true
     }
-    fn is_wildcard(&self) -> bool {
+    fn has_wildcard(&self) -> bool {
         *self == WILDCARD_CHAR
     }
 }
@@ -904,6 +904,9 @@ impl ArrayValue for Boxed {
     }
     fn nested_value(&self) -> Option<&Value> {
         Some(&self.0)
+    }
+    fn has_wildcard(&self) -> bool {
+        self.0.has_wildcard()
     }
 }
 
@@ -998,7 +1001,11 @@ impl ArrayCmp for char {
         *self == *other || *self == WILDCARD_CHAR || *other == WILDCARD_CHAR
     }
     fn array_cmp(&self, other: &Self) -> Ordering {
-        self.cmp(other)
+        if *self == WILDCARD_CHAR || *other == WILDCARD_CHAR {
+            Ordering::Equal
+        } else {
+            self.cmp(other)
+        }
     }
 }
 

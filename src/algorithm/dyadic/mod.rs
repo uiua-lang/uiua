@@ -1752,7 +1752,7 @@ impl<T: ArrayValue> Array<T> {
         let mut arr = match elems.rank().cmp(&of.rank()) {
             Ordering::Equal => {
                 let has_wildcard =
-                    elems.data.iter().any(T::is_wildcard) || of.data.iter().any(T::is_wildcard);
+                    elems.data.iter().any(T::has_wildcard) || of.data.iter().any(T::has_wildcard);
                 let mut result_data = EcoVec::with_capacity(elems.row_count());
                 if has_wildcard {
                     let mut members = BTreeSet::new();
@@ -1760,7 +1760,7 @@ impl<T: ArrayValue> Array<T> {
                         members.insert(ArrayCmpSlice(of));
                     }
                     for elem in elems.row_slices() {
-                        let is_member = members.contains(&ArrayCmpSlice(elem));
+                        let is_member = members.iter().any(|acs| acs == &ArrayCmpSlice(elem));
                         result_data.push(is_member as u8);
                     }
                 } else {
@@ -1870,8 +1870,8 @@ impl<T: ArrayValue> Array<T> {
         let default = (env.scalar_fill::<f64>()).unwrap_or(haystack.row_count() as f64);
         Ok(match needle.rank().cmp(&haystack.rank()) {
             Ordering::Equal => {
-                let has_wildcard = needle.data.iter().any(T::is_wildcard)
-                    || haystack.data.iter().any(T::is_wildcard);
+                let has_wildcard = needle.data.iter().any(T::has_wildcard)
+                    || haystack.data.iter().any(T::has_wildcard);
                 let mut result_data = EcoVec::with_capacity(needle.row_count());
                 if has_wildcard {
                     let mut members = BTreeMap::new();
@@ -1879,12 +1879,11 @@ impl<T: ArrayValue> Array<T> {
                         members.entry(ArrayCmpSlice(of)).or_insert(i);
                     }
                     for elem in needle.row_slices() {
-                        result_data.push(
-                            members
-                                .get(&ArrayCmpSlice(elem))
-                                .map(|i| *i as f64)
-                                .unwrap_or(default),
-                        );
+                        let index = (members.iter())
+                            .find(|(acs, _)| *acs == &ArrayCmpSlice(elem))
+                            .map(|(_, i)| *i as f64)
+                            .unwrap_or(default);
+                        result_data.push(index);
                     }
                 } else {
                     let mut members = HashMap::with_capacity(haystack.row_count());

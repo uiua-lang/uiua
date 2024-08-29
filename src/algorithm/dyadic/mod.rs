@@ -1242,9 +1242,9 @@ impl<T: ArrayValue> Array<T> {
             let s = if i >= 0 {
                 u
             } else if fill.is_some() {
-                (*v + u - 1) / u
+                ((*v + u - 1) / u).max(1)
             } else {
-                *v / u
+                (*v / u).max(1)
             };
             size_spec.push(s);
             if *v % u != 0 {

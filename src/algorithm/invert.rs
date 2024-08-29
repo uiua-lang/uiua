@@ -2115,9 +2115,9 @@ fn under_array_pattern<'a>(
 ) -> Option<(&'a [Instr], Under)> {
     let (input, inner, span, unbox) = try_array_wrap(input, comp)?;
     let (mut befores, mut afters) = under_instrs(inner, g_sig, comp)?;
+    let count = instrs_signature(&befores).ok()?.outputs;
     befores.insert(0, Instr::BeginArray);
     befores.push(Instr::EndArray { span, boxed: unbox });
-    let count = instrs_signature(&befores).ok()?.args;
     afters.insert(0, Instr::Unpack { count, span, unbox });
     Some((input, (befores, afters)))
 }

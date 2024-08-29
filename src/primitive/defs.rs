@@ -868,6 +868,14 @@ primitive!(
     /// Multiple [transpose]s, as well as [rows][transpose], are optimized in the interpreter to only do a single operation.
     (1, Transpose, MonadicArray, ("transpose", '⍉')),
     /// Sort an array
+    ///
+    /// ex: # Experimental!
+    ///   : ⍆ [3 9 1 8 2 7]
+    /// ex: # Experimental!
+    ///   : ⍆ "uiua"
+    /// Multidimensional arrays have their rows sorted lexicographically.
+    /// ex: # Experimental!
+    ///   : ⍆ . [1_5_3 4_3_2 1_5_2]
     (1, Sort, MonadicArray, ("sort", '⍆')),
     /// Get the indices into an array if it were sorted ascending
     ///

@@ -782,6 +782,10 @@ pub trait ArrayValue:
     fn nested_value(&self) -> Option<&Value> {
         None
     }
+    /// Check if this is the wildcard value
+    fn is_wildcard(&self) -> bool {
+        false
+    }
 }
 
 /// A NaN value that always compares as equal
@@ -818,6 +822,9 @@ impl ArrayValue for f64 {
     }
     fn proxy() -> Self {
         0.0
+    }
+    fn is_wildcard(&self) -> bool {
+        self.to_bits() == WILDCARD_NAN.to_bits()
     }
 }
 
@@ -870,6 +877,9 @@ impl ArrayValue for char {
     }
     fn compress_list_grid() -> bool {
         true
+    }
+    fn is_wildcard(&self) -> bool {
+        *self == WILDCARD_CHAR
     }
 }
 

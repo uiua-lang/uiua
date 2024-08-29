@@ -62,6 +62,8 @@ pub(crate) struct Runtime {
     pub(crate) execution_limit: Option<f64>,
     /// The time at which execution started
     pub(crate) execution_start: f64,
+    /// Whether the program was interrupted
+    pub(crate) interrupted: Option<Arc<dyn Fn() -> bool + Send + Sync>>,
     /// Whether to print the time taken to execute each instruction
     time_instrs: bool,
     /// The time at which the last instruction was executed
@@ -199,6 +201,7 @@ impl Default for Runtime {
             cli_file_path: PathBuf::new(),
             execution_limit: None,
             execution_start: 0.0,
+            interrupted: None,
             thread: ThisThread::default(),
             output_comments: HashMap::new(),
             memo: Arc::new(ThreadLocal::new()),
@@ -263,6 +266,11 @@ impl Uiua {
     /// Limit the execution duration
     pub fn maybe_with_execution_limit(mut self, limit: Option<Duration>) -> Self {
         self.rt.execution_limit = limit.map(|limit| limit.as_secs_f64());
+        self
+    }
+    /// Set the interrupted hook
+    pub fn with_interrupt_hook(mut self, hook: impl Fn() -> bool + Send + Sync + 'static) -> Self {
+        self.rt.interrupted = Some(Arc::new(hook));
         self
     }
     /// Set the command line arguments
@@ -723,6 +731,11 @@ code:
                 return Err(
                     UiuaErrorKind::Timeout(self.span(), self.inputs().clone().into()).into(),
                 );
+            }
+        }
+        if let Some(hook) = &self.rt.interrupted {
+            if hook() {
+                return Err(UiuaErrorKind::Interrupted.into());
             }
         }
         Ok(())
@@ -1436,6 +1449,7 @@ code:
                 backend: self.rt.backend.clone(),
                 execution_limit: self.rt.execution_limit,
                 execution_start: self.rt.execution_start,
+                interrupted: self.rt.interrupted.clone(),
                 output_comments: HashMap::new(),
                 memo: self.rt.memo.clone(),
                 thread,

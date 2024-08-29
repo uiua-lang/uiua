@@ -6,7 +6,10 @@ use std::{
     io::{self, stderr, stdin, BufRead, Write},
     path::{Path, PathBuf},
     process::{exit, Child, Command, Stdio},
-    sync::mpsc::channel,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::channel,
+    },
     thread::sleep,
     time::{Duration, Instant},
 };
@@ -35,10 +38,15 @@ fn main() {
             println!("# Program interrupted");
             print_watching();
         } else {
-            if let Ok(App::Watch { .. }) | Err(_) = App::try_parse() {
-                clear_watching_with(" ", "");
+            match App::try_parse() {
+                Ok(App::Watch { .. }) | Err(_) => clear_watching_with(" ", ""),
+                Ok(App::Repl { .. }) => {
+                    if PRESSED_CTRL_C.swap(true, Ordering::Relaxed) {
+                        exit(0);
+                    }
+                }
+                _ => exit(0),
             }
-            exit(0)
         }
     });
 
@@ -52,6 +60,7 @@ fn main() {
     }
 }
 
+static PRESSED_CTRL_C: AtomicBool = AtomicBool::new(false);
 static WATCH_CHILD: Lazy<Mutex<Option<Child>>> = Lazy::new(Default::default);
 
 fn run() -> UiuaResult {
@@ -530,10 +539,8 @@ impl WatchArgs {
                         }
                         clear_watching();
                         #[cfg(feature = "audio")]
-                        let audio_time = f64::from_bits(
-                            audio_time_clone.load(std::sync::atomic::Ordering::Relaxed),
-                        )
-                        .to_string();
+                        let audio_time =
+                            f64::from_bits(audio_time_clone.load(Ordering::Relaxed)).to_string();
                         #[cfg(feature = "audio")]
                         let audio_port = audio_time_port.to_string();
 
@@ -616,7 +623,7 @@ impl WatchArgs {
                     let mut buf = [0; 8];
                     if audio_time_socket.recv(&mut buf).is_ok_and(|n| n == 8) {
                         let time = f64::from_be_bytes(buf);
-                        audio_time.store(time.to_bits(), std::sync::atomic::Ordering::Relaxed);
+                        audio_time.store(time.to_bits(), Ordering::Relaxed);
                     }
                 }
             }
@@ -921,6 +928,7 @@ fn print_stack(stack: &[Value], color: bool) {
 }
 
 fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, clear: bool, config: FormatConfig) {
+    env = env.with_interrupt_hook(|| PRESSED_CTRL_C.swap(false, Ordering::Relaxed));
     compiler.pre_eval_mode(PreEvalMode::Line);
     println!(
         "Uiua {} (end with ctrl+C, type `help` for a list of commands)\n",

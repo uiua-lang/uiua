@@ -45,6 +45,8 @@ pub enum UiuaErrorKind {
     Timeout(Span, Box<Inputs>),
     /// The compiler panicked
     CompilerPanic(String),
+    /// The program was interrupted
+    Interrupted,
 }
 
 impl UiuaErrorKind {
@@ -98,6 +100,7 @@ impl fmt::Display for UiuaError {
             UiuaErrorKind::Throw(value, span, _) => write!(f, "{span}: {value}"),
             UiuaErrorKind::Timeout(..) => write!(f, "Maximum execution time exceeded"),
             UiuaErrorKind::CompilerPanic(message) => message.fmt(f),
+            UiuaErrorKind::Interrupted => write!(f, "# Program interrupted"),
         }
     }
 }
@@ -228,6 +231,12 @@ impl UiuaError {
             UiuaErrorKind::CompilerPanic(message) => Report::new(kind, message),
             UiuaErrorKind::Load(..) | UiuaErrorKind::Format(..) => {
                 Report::new(kind, self.to_string())
+            }
+            UiuaErrorKind::Interrupted => {
+                return Report {
+                    fragments: vec![ReportFragment::Plain(self.to_string())],
+                    color: true,
+                }
             }
         };
         report = report.trace(&self.trace);

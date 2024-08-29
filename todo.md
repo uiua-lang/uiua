@@ -1,15 +1,13 @@
 # Uiua Todo
 
 - 0.13
-  - Stride `windows`
-  - `un` chunking `windows`?
   - `try` optimizations
   - `reshape` with multiple infinities
   - Improve parsing for function packs
-  - Improve formatter to make fewer short lines
   - Make ctrl+c in REPL end loop
   - `&ctrlc` system function?
   - Unicode literals
+  - `setund` with 2 functions
   - Possible
     - `orient` boxed
     - Dynamic modules

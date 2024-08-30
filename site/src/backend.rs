@@ -1,7 +1,7 @@
 use std::{
     any::Any,
     cell::RefCell,
-    collections::{HashMap, HashSet},
+    collections::{BTreeSet, HashMap, HashSet},
     io::Cursor,
     path::{Path, PathBuf},
     sync::Mutex,
@@ -188,7 +188,7 @@ impl SysBackend for WebBackend {
             path = &path[1..];
         }
         let path = Path::new(path);
-        let mut set = HashSet::new();
+        let mut set = BTreeSet::new();
         GLOBAL_FILES.with(|files| {
             let files = files.borrow();
             for file in files.keys() {

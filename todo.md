@@ -1,10 +1,10 @@
 # Uiua Todo
 
 - 0.13
+  - Fix LSP function sig layering
   - `try` optimizations
   - `reshape` with multiple infinities
   - Improve parsing for function packs
-  - Make ctrl+c in REPL end loop
   - `&ctrlc` system function?
   - Unicode literals
   - `setund` with 2 functions

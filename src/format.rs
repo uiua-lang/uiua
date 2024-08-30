@@ -391,6 +391,12 @@ G ← (
 )∘
 ⊃(+
 | -)
+(1 2) (
+  5)
+(1
+ 2
+) (
+  5)
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     assert_eq!(formatted, input);
@@ -797,16 +803,19 @@ impl<'a> Formatter<'a> {
     }
     fn format_words(&mut self, words: &[Sp<Word>], trim_end: bool, depth: usize) {
         let words = trim_spaces(words, trim_end);
+        dbg!(words);
         let any_multiline = (words.iter())
             .filter(|word| !word.value.is_end_of_line())
             .any(|word| word_is_multiline(&word.value));
+        dbg!(any_multiline);
         for (i, word) in words.iter().enumerate() {
             self.format_word(word, depth);
-            if any_multiline
+            if word_is_multiline(&word.value)
                 && self.output.ends_with(')')
                 && !self.output.ends_with("()")
                 && i < words.len() - 1
             {
+                dbg!(i, word);
                 self.output.pop();
                 if !self.output.ends_with('\n') {
                     self.output.push('\n');

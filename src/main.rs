@@ -41,12 +41,13 @@ fn main() {
             match App::try_parse() {
                 Ok(App::Watch { .. }) | Err(_) => clear_watching_with(" ", ""),
                 Ok(App::Repl { .. }) => {
-                    if PRESSED_CTRL_C.swap(true, Ordering::Relaxed) {
-                        exit(0);
+                    if !PRESSED_CTRL_C.swap(true, Ordering::Relaxed) {
+                        return;
                     }
                 }
-                _ => exit(0),
+                _ => {}
             }
+            exit(0);
         }
     });
 

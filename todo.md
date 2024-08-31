@@ -1,6 +1,8 @@
 # Uiua Todo
 
 - 0.13
+  - Optimize `row/each on/by const`
+  - `on/by` function packs
   - Fix LSP function sig layering
   - `try` optimizations
   - `reshape` with multiple infinities

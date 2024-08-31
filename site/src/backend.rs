@@ -1,7 +1,7 @@
 use std::{
     any::Any,
     cell::RefCell,
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{BTreeSet, HashMap},
     io::Cursor,
     path::{Path, PathBuf},
     sync::Mutex,

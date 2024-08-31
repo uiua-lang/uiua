@@ -239,14 +239,6 @@ constant!(
     ("Lena", crate::encode::image_bytes_to_array(include_bytes!("assets/lena.jpg"), false).unwrap()),
     /// Sample music data
     ("Music", ConstantValue::Music),
-    ///
-    (
-        "⍼",
-        "A dance of lines, a zigzag's descent,
-A symbol obscure, with a right angle bent.
-No purpose apparent, no function defined,
-Yet it captivates minds, with its pleasant design."
-    ),
 );
 
 fn music_constant(backend: &dyn SysBackend) -> Value {

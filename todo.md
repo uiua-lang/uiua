@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.13
+  - Label and format string glyphs
   - Optimize `row/each on/by const`
   - `on/by` function packs
   - Fix LSP function sig layering

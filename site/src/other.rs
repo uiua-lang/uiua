@@ -266,7 +266,11 @@ pub fn Optimizations() -> impl IntoView {
             </table>
             <table class="bordered-table cell-centered-table">
                 <tr><td><Prims prims=[Gap, Rand] show_names=true/></td></tr>
+                <tr><td><Prims prims=[On, Rand] show_names=true/></td></tr>
+                <tr><td><Prims prims=[By, Rand] show_names=true/></td></tr>
                 <tr><td><Prim prim=Gap/><code>"constant"</code></td></tr>
+                <tr><td><Prim prim=On/><code>"constant"</code></td></tr>
+                <tr><td><Prim prim=By/><code>"constant"</code></td></tr>
                 <tr><td><Prims prims=[Select, Rise, Dup]/>" / "<Prims prims=[Select, By, Rise]/></td></tr>
                 <tr><td><Prims prims=[Select, Fall, Dup]/>" / "<Prims prims=[Select, By, Fall]/></td></tr>
                 <tr><td><Prims prims=[Un, Couple] show_names=true/></td></tr>

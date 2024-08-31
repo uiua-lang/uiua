@@ -5,9 +5,9 @@ use std::{cell::RefCell, collections::HashMap, iter::repeat, mem::swap, rc::Rc, 
 use ecow::eco_vec;
 
 use crate::{
-    algorithm::pervade::bin_pervade_generic, cowslice::CowSlice, function::Function, random,
-    types::push_empty_rows_value, value::Value, Array, Boxed, ImplPrimitive, Instr, PersistentMeta,
-    Primitive, Shape, Uiua, UiuaResult,
+    algorithm::pervade::bin_pervade_generic, check::instrs_clean_signature, cowslice::CowSlice,
+    function::Function, random, types::push_empty_rows_value, value::Value, Array, Boxed,
+    ImplPrimitive, Instr, PersistentMeta, Primitive, Shape, TempStack, Uiua, UiuaResult,
 };
 
 use super::{fill_value_shapes, fixed_rows, multi_output, FixedRowsData, MultiOutput};
@@ -185,8 +185,11 @@ fn f_mon_fast_fn_impl(instrs: &[Instr], deep: bool, env: &Uiua) -> Option<(Value
 }
 
 fn f_mon2_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueMon2Fn, usize)> {
+    f_mon2_fast_fn_impl(f.instrs(&env.asm), env)
+}
+fn f_mon2_fast_fn_impl(instrs: &[Instr], env: &Uiua) -> Option<(ValueMon2Fn, usize)> {
     use Primitive::*;
-    Some(match f.instrs(&env.asm) {
+    Some(match instrs {
         &[Instr::Prim(prim, span)] => {
             let f = prim_mon2_fast_fn(prim, span)?;
             (f, 0)
@@ -198,6 +201,58 @@ fn f_mon2_fast_fn(f: &Function, env: &Uiua) -> Option<(ValueMon2Fn, usize)> {
         [Instr::PushFunc(f), Instr::Prim(Rows, _)] => {
             let (f, d) = f_mon2_fast_fn(f, env)?;
             (f, d + 1)
+        }
+        // By monadic
+        [Instr::Prim(Dup, _), rest @ ..]
+            if instrs_clean_signature(rest).is_some_and(|sig| sig == (1, 1)) =>
+        {
+            let get_second = f_mon_fast_fn_impl(rest, false, env)?;
+            let f = std::boxed::Box::new(move |val: Value, depth: usize, env: &mut Uiua| {
+                Ok((get_second.0(val.clone(), depth, env)?, val))
+            });
+            (f, 0)
+        }
+        // On monadic
+        [Instr::CopyToTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            ..
+        }, rest @ .., Instr::PopTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            ..
+        }] if instrs_clean_signature(rest).is_some_and(|sig| sig == (1, 1)) => {
+            let get_second = f_mon_fast_fn_impl(rest, false, env)?;
+            let f = std::boxed::Box::new(move |val: Value, depth: usize, env: &mut Uiua| {
+                Ok((val.clone(), get_second.0(val, depth, env)?))
+            });
+            (f, 0)
+        }
+        // By constant
+        [Instr::TouchStack { count: 1, .. }, Instr::Push(repl)] => {
+            let repl = repl.clone();
+            let f = std::boxed::Box::new(move |val: Value, depth: usize, _: &mut Uiua| {
+                let replaced = val.replace_depth(repl.clone(), depth);
+                Ok((replaced, val))
+            });
+            (f, 0)
+        }
+        // On constant
+        [Instr::PushTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            ..
+        }, Instr::Push(repl), Instr::PopTemp {
+            stack: TempStack::Inline,
+            count: 1,
+            ..
+        }] => {
+            let repl = repl.clone();
+            let f = std::boxed::Box::new(move |val: Value, depth: usize, _: &mut Uiua| {
+                let replaced = val.replace_depth(repl.clone(), depth);
+                Ok((val, replaced))
+            });
+            (f, 0)
         }
         _ => return None,
     })

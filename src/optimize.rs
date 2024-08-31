@@ -2,7 +2,7 @@ use std::fmt;
 
 use ecow::EcoVec;
 
-use crate::{Assembly, ImplPrimitive, Instr, Primitive};
+use crate::{Assembly, ImplPrimitive, Instr, Primitive, TempStack};
 
 pub(crate) fn optimize_instrs_mut(
     instrs: &mut EcoVec<Instr>,
@@ -195,6 +195,33 @@ pub(crate) fn optimize_instrs_mut(
             let span = *span;
             instrs.pop();
             instrs.push(Instr::ImplPrim(ReplaceRand, span));
+        }
+        ([.., Instr::TouchStack { count: 1, span }], Instr::Prim(Rand, _)) => {
+            // By rand
+            let span = *span;
+            instrs.pop();
+            instrs.push(Instr::Prim(Dup, span));
+            instrs.push(Instr::ImplPrim(ReplaceRand, span));
+        }
+        (
+            [.., Instr::PushTemp {
+                stack: TempStack::Inline,
+                count: 1,
+                span,
+            }, Instr::Prim(Rand, _)],
+            Instr::PopTemp {
+                stack: TempStack::Inline,
+                count: 1,
+                span: pop_span,
+            },
+        ) => {
+            // On rand
+            let span = *span;
+            instrs.pop();
+            instrs.pop();
+            instrs.push(Instr::copy_inline(span));
+            instrs.push(Instr::ImplPrim(ReplaceRand, span));
+            instrs.push(Instr::pop_inline(1, pop_span));
         }
         ([.., Instr::Prim(Windows, _), Instr::PushFunc(f)], instr @ Instr::Prim(Rows, span)) => {
             match f.instrs(asm) {

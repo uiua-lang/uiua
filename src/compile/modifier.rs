@@ -7,7 +7,7 @@ impl Compiler {
         &mut self,
         modifier: &Sp<Modifier>,
         operand: &Sp<Word>,
-    ) -> UiuaResult<Option<Modified>> {
+    ) -> UiuaResult<Option<Word>> {
         let Sp {
             value: Word::Pack(pack @ FunctionPack { angled: false, .. }),
             span,
@@ -36,7 +36,7 @@ impl Compiler {
                         }))],
                     };
                 }
-                Ok(Some(new))
+                Ok(Some(Word::Modified(Box::new(new))))
             }
             Modifier::Primitive(Primitive::Rows | Primitive::Inventory) => {
                 let mut branches = pack.branches.iter().cloned();
@@ -61,7 +61,7 @@ impl Compiler {
                         }))],
                     };
                 }
-                Ok(Some(new))
+                Ok(Some(Word::Modified(Box::new(new))))
             }
             Modifier::Primitive(
                 Primitive::Fork | Primitive::Bracket | Primitive::Try | Primitive::Fill,
@@ -88,7 +88,22 @@ impl Compiler {
                         ],
                     };
                 }
-                Ok(Some(new))
+                Ok(Some(Word::Modified(Box::new(new))))
+            }
+            Modifier::Primitive(Primitive::On) => {
+                let mut words = Vec::new();
+                for branch in pack.branches.iter().cloned() {
+                    words.push(branch.span.clone().sp(Word::Modified(Box::new(Modified {
+                        modifier: modifier.clone(),
+                        operands: vec![branch.map(Word::Func)],
+                    }))));
+                }
+                Ok(Some(Word::Func(Func {
+                    id: FunctionId::Anonymous(span.clone()),
+                    signature: None,
+                    lines: vec![words],
+                    closed: true,
+                })))
             }
             _ => Ok(None),
         }
@@ -99,16 +114,15 @@ impl Compiler {
         operand: &Sp<Word>,
         call: bool,
     ) -> UiuaResult<bool> {
-        if let Some(modified) = self.desugar_function_pack_inner(modifier, operand)? {
-            self.modified(modified, call)?;
+        if let Some(word) = self.desugar_function_pack_inner(modifier, operand)? {
+            let span = modifier.span.clone().merge(operand.span.clone());
+            self.word(span.sp(word), call)?;
             Ok(true)
         } else if let Word::Pack(pack @ FunctionPack { angled: false, .. }) = &operand.value {
             match &modifier.value {
                 Modifier::Primitive(Primitive::Switch) => {
                     self.switch(
-                        pack.branches
-                            .iter()
-                            .cloned()
+                        (pack.branches.iter().cloned())
                             .map(|sp| sp.map(Word::Func))
                             .collect(),
                         modifier.span.clone(),
@@ -421,7 +435,7 @@ impl Compiler {
                     let mut m = (**m).clone();
                     for op in m.operands.iter_mut().filter(|w| w.value.is_code()) {
                         if let Some(new) = self.desugar_function_pack_inner(&m.modifier, op)? {
-                            op.value = Word::Modified(new.into());
+                            op.value = new;
                         }
                         op.value = Word::Modified(
                             Modified {

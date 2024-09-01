@@ -1838,6 +1838,9 @@ primitive!(
     ///   : [⊙(.⊙⋅.) 1 2 3 4] # Hard to read with .
     ///   : [⊙.⊙⊙⋅.  1 2 3 4] # Hard to read with .
     ///
+    /// [on] can be used with a function pack. `on``(F|G)` becomes `on``F``on``G`.
+    /// ex: [⟜(+1|×2|¯)] 5
+    ///
     /// [on] is equivalent to [fork][identity], but can often be easier to read.
     ([1], On, Stack, ("on", '⟜')),
     /// Call a function but keep its last argument on the top of the stack

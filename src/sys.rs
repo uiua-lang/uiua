@@ -210,7 +210,7 @@ sys_op! {
     /// Run a command with streaming IO
     ///
     /// Expects either a string, a rank `2` character array, or a rank `1` array of [box] strings.
-    /// Returns 2 stream handles.
+    /// Returns 3 stream handles.
     /// The first can be written to with [&w] to send input to the command's stdin.
     /// The second and third can be read from with [&rs], [&rb], or [&ru] to read from the command's stdout and stderr.
     /// Using [&cl] on *all 3* handles will kill the child process.

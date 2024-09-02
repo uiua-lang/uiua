@@ -2250,7 +2250,11 @@ fn invert_scan_pattern<'a>(
         input,
         eco_vec![
             Instr::PushFunc(inverse),
-            Instr::ImplPrim(ImplPrimitive::UnScan, *span)
+            if un {
+                Instr::Prim(Primitive::Scan, *span)
+            } else {
+                Instr::ImplPrim(ImplPrimitive::UnScan, *span)
+            }
         ],
     ))
 }

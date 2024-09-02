@@ -51,7 +51,7 @@ You can find the release announcement [here](https://uiua.org/blog/uiua-0.12.0).
 - **Breaking Change** - [`auden`](https://uiua.org/docs/audio) now takes a sample rate argument, and [`un °`](https://uiua.org/docs/un)[`auden`](https://uiua.org/docs/audio) now returns the sample rate
   - This allows you to work with audio that is not at Uiua's default sample rate
 - **Breaking Change** - [`fill ⬚`](https://uiua.org/docs/fill) no longer fills the shapes of inputs to [`rows ≡`](https://uiua.org/docs/rows)
-  - It could leader to some unexpected behavior when trying to fill the shapes of outputs
+  - It could lead to some unexpected behavior when trying to fill the shapes of outputs
 - **Breaking Change** - disable pattern matching inverses resulting from [`under ⍜`](https://uiua.org/docs/under)
   - This is basically never what you want
   - Pattern matching via [`un °`](https://uiua.org/docs/un) still works as normal

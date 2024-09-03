@@ -251,12 +251,9 @@ where
     T: ArrayValue + Copy,
 {
     // Fast case if A is fixed
-    dbg!();
     if a.row_count() == 1 && b.row_count() != 1 && env.scalar_fill::<T>().is_err() {
-        dbg!();
         let fix_count = a.shape.iter().take_while(|&&d| d == 1).count();
         if b.rank() > fix_count && b.rank() >= a.rank() {
-            dbg!();
             if (a.shape().iter())
                 .zip(b.shape())
                 .skip(fix_count)
@@ -272,7 +269,6 @@ where
             let b_row_shape = b.shape()[fix_count..].to_vec();
             let b_row_len = b_row_shape.iter().product();
             if b_row_len > 0 {
-                dbg!();
                 for b in b.data.as_mut_slice().chunks_exact_mut(b_row_len) {
                     bin_pervade_recursive_mut_right(
                         a.data.as_slice(),

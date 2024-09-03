@@ -439,9 +439,11 @@ pub mod not {
     pub fn num(a: f64) -> f64 {
         1.0 - a
     }
+    #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> f64 {
         num(a.into())
     }
+    #[cfg(feature = "bytes")]
     pub fn bool(a: u8) -> u8 {
         a ^ 1u8
     }
@@ -478,6 +480,7 @@ pub mod scalar_neg {
     pub fn num(a: f64) -> f64 {
         -a
     }
+    #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> f64 {
         -f64::from(a)
     }
@@ -496,6 +499,7 @@ pub mod scalar_abs {
     pub fn num(a: f64) -> f64 {
         a.abs()
     }
+    #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> u8 {
         a
     }
@@ -540,6 +544,7 @@ pub mod sign {
             a.signum()
         }
     }
+    #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> u8 {
         (a > 0) as u8
     }
@@ -558,9 +563,11 @@ pub mod sqrt {
     pub fn num(a: f64) -> f64 {
         a.sqrt()
     }
+    #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> f64 {
         f64::from(a).sqrt()
     }
+    #[cfg(feature = "bytes")]
     pub fn bool(a: u8) -> u8 {
         a
     }
@@ -576,6 +583,7 @@ pub mod sin {
     pub fn num(a: f64) -> f64 {
         a.sin()
     }
+    #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> f64 {
         f64::from(a).sin()
     }
@@ -591,6 +599,7 @@ pub mod cos {
     pub fn num(a: f64) -> f64 {
         a.cos()
     }
+    #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> f64 {
         f64::from(a).cos()
     }
@@ -606,6 +615,7 @@ pub mod asin {
     pub fn num(a: f64) -> f64 {
         a.asin()
     }
+    #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> f64 {
         f64::from(a).asin()
     }
@@ -621,6 +631,7 @@ pub mod floor {
     pub fn num(a: f64) -> f64 {
         a.floor()
     }
+    #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> u8 {
         a
     }
@@ -636,6 +647,7 @@ pub mod ceil {
     pub fn num(a: f64) -> f64 {
         a.ceil()
     }
+    #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> u8 {
         a
     }
@@ -651,6 +663,7 @@ pub mod round {
     pub fn num(a: f64) -> f64 {
         a.round()
     }
+    #[cfg(feature = "bytes")]
     pub fn byte(a: u8) -> u8 {
         a
     }
@@ -684,6 +697,7 @@ pub mod complex_im {
     pub fn num(_a: f64) -> f64 {
         0.0
     }
+    #[cfg(feature = "bytes")]
     pub fn byte(_a: u8) -> u8 {
         0
     }
@@ -711,9 +725,11 @@ macro_rules! eq_impl {
             pub fn x_com(a: impl Into<Complex>, b: Complex) -> u8 {
                 (b.array_cmp(&a.into()) $eq $ordering) as u8
             }
+            #[cfg(feature = "bytes")]
             pub fn byte_num(a: u8, b: f64) -> u8 {
                 (b.array_cmp(&f64::from(a)) $eq $ordering) as u8
             }
+            #[cfg(feature = "bytes")]
             pub fn num_byte(a: f64, b: u8) -> u8 {
                 (f64::from(b).array_cmp(&a) $eq $ordering) as u8
             }
@@ -757,9 +773,11 @@ macro_rules! cmp_impl {
                     (b.im.array_cmp(&a.im) $eq $ordering) as u8 as f64
                 )
             }
+            #[cfg(feature = "bytes")]
             pub fn byte_num(a: u8, b: f64) -> u8 {
                 (b.array_cmp(&f64::from(a)) $eq $ordering) as u8
             }
+            #[cfg(feature = "bytes")]
             pub fn num_byte(a: f64, b: u8) -> u8 {
                 (f64::from(b).array_cmp(&a) $eq $ordering) as u8
             }
@@ -788,15 +806,19 @@ pub mod add {
     pub fn num_num(a: f64, b: f64) -> f64 {
         b + a
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_byte(a: u8, b: u8) -> f64 {
         f64::from(a) + f64::from(b)
     }
+    #[cfg(feature = "bytes")]
     pub fn bool_bool(a: u8, b: u8) -> u8 {
         b + a
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> f64 {
         b + f64::from(a)
     }
+    #[cfg(feature = "bytes")]
     pub fn num_byte(a: f64, b: u8) -> f64 {
         a + f64::from(b)
     }
@@ -812,9 +834,11 @@ pub mod add {
     pub fn char_num(a: char, b: f64) -> char {
         char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_char(a: u8, b: char) -> char {
         char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
     }
+    #[cfg(feature = "bytes")]
     pub fn char_byte(a: char, b: u8) -> char {
         char::from_u32((b as i64 + a as i64) as u32).unwrap_or('\0')
     }
@@ -828,12 +852,15 @@ pub mod sub {
     pub fn num_num(a: f64, b: f64) -> f64 {
         b - a
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_byte(a: u8, b: u8) -> f64 {
         f64::from(b) - f64::from(a)
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> f64 {
         b - f64::from(a)
     }
+    #[cfg(feature = "bytes")]
     pub fn num_byte(a: f64, b: u8) -> f64 {
         f64::from(b) - a
     }
@@ -849,6 +876,7 @@ pub mod sub {
     pub fn char_char(a: char, b: char) -> f64 {
         ((b as i64) - (a as i64)) as f64
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_char(a: u8, b: char) -> char {
         char::from_u32(((b as i64) - (a as i64)) as u32).unwrap_or('\0')
     }
@@ -864,15 +892,18 @@ macro_rules! bin_op_mod {
             pub fn num_num($a: f64, $b: f64) -> f64 {
                 $f
             }
+            #[cfg(feature = "bytes")]
             pub fn byte_byte($a: u8, $b: u8) -> f64 {
                 let $a = $byte_convert($a);
                 let $b = $byte_convert($b);
                 $f
             }
+            #[cfg(feature = "bytes")]
             pub fn byte_num($a: u8, $b: f64) -> f64 {
                 let $a = $byte_convert($a);
                 $f
             }
+            #[cfg(feature = "bytes")]
             pub fn num_byte($a: f64, $b: u8) -> f64 {
                 let $b = $byte_convert($b);
                 $f
@@ -899,15 +930,19 @@ pub mod mul {
     pub fn num_num(a: f64, b: f64) -> f64 {
         b * a
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_byte(a: u8, b: u8) -> f64 {
         f64::from(b) * f64::from(a)
     }
+    #[cfg(feature = "bytes")]
     pub fn bool_bool(a: u8, b: u8) -> u8 {
         b & a
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> f64 {
         b * f64::from(a)
     }
+    #[cfg(feature = "bytes")]
     pub fn num_byte(a: f64, b: u8) -> f64 {
         f64::from(b) * a
     }
@@ -925,9 +960,11 @@ pub mod mul {
             a
         }
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_char(_: u8, b: char) -> char {
         b
     }
+    #[cfg(feature = "bytes")]
     pub fn char_byte(a: char, _: u8) -> char {
         a
     }
@@ -947,12 +984,15 @@ pub mod div {
     pub fn num_num(a: f64, b: f64) -> f64 {
         b / a
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_byte(a: u8, b: u8) -> f64 {
         f64::from(b) / f64::from(a)
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> f64 {
         b / f64::from(a)
     }
+    #[cfg(feature = "bytes")]
     pub fn num_byte(a: f64, b: u8) -> f64 {
         f64::from(b) / a
     }
@@ -963,6 +1003,7 @@ pub mod div {
             b
         }
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_char(_: u8, b: char) -> char {
         b
     }
@@ -982,12 +1023,15 @@ pub mod modulus {
     pub fn num_num(a: f64, b: f64) -> f64 {
         b.rem_euclid(a)
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_byte(a: u8, b: u8) -> f64 {
         num_num(a.into(), b.into())
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> f64 {
         num_num(a.into(), b)
     }
+    #[cfg(feature = "bytes")]
     pub fn num_byte(a: f64, b: u8) -> f64 {
         num_num(a, b.into())
     }
@@ -1018,12 +1062,15 @@ pub mod pow {
     pub fn num_num(a: f64, b: f64) -> f64 {
         b.powf(a)
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_byte(a: u8, b: u8) -> f64 {
         f64::from(b).powf(f64::from(a))
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> f64 {
         b.powi(a as i32)
     }
+    #[cfg(feature = "bytes")]
     pub fn num_byte(a: f64, b: u8) -> f64 {
         f64::from(b).powf(a)
     }
@@ -1052,12 +1099,15 @@ pub mod complex {
     pub fn num_num(a: f64, b: f64) -> Complex {
         Complex::new(b, a)
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_byte(a: u8, b: u8) -> Complex {
         Complex::new(b.into(), a.into())
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> Complex {
         Complex::new(b, a.into())
     }
+    #[cfg(feature = "bytes")]
     pub fn num_byte(a: f64, b: u8) -> Complex {
         Complex::new(b.into(), a)
     }
@@ -1077,18 +1127,22 @@ pub mod max {
     pub fn num_num(a: f64, b: f64) -> f64 {
         a.max(b)
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_byte(a: u8, b: u8) -> u8 {
         a.max(b)
     }
+    #[cfg(feature = "bytes")]
     pub fn bool_bool(a: u8, b: u8) -> u8 {
         a | b
     }
     pub fn char_char(a: char, b: char) -> char {
         a.max(b)
     }
+    #[cfg(feature = "bytes")]
     pub fn num_byte(a: f64, b: u8) -> f64 {
         num_num(a, b.into())
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> f64 {
         num_num(a.into(), b)
     }
@@ -1108,18 +1162,22 @@ pub mod min {
     pub fn num_num(a: f64, b: f64) -> f64 {
         a.min(b)
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_byte(a: u8, b: u8) -> u8 {
         a.min(b)
     }
+    #[cfg(feature = "bytes")]
     pub fn bool_bool(a: u8, b: u8) -> u8 {
         a & b
     }
     pub fn char_char(a: char, b: char) -> char {
         a.min(b)
     }
+    #[cfg(feature = "bytes")]
     pub fn num_byte(a: f64, b: u8) -> f64 {
         num_num(a, b.into())
     }
+    #[cfg(feature = "bytes")]
     pub fn byte_num(a: u8, b: f64) -> f64 {
         num_num(a.into(), b)
     }

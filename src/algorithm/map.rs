@@ -90,6 +90,7 @@ impl Value {
     pub fn map(&mut self, keys: Self, env: &Uiua) -> UiuaResult {
         match self {
             Value::Num(arr) => arr.map(keys, env),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.map(keys, env),
             Value::Complex(arr) => arr.map(keys, env),
             Value::Char(arr) => arr.map(keys, env),
@@ -280,6 +281,7 @@ impl Value {
                 Value::Complex(arr) => arr.remove_row(index),
                 Value::Char(arr) => arr.remove_row(index),
                 Value::Box(arr) => arr.remove_row(index),
+                #[cfg(feature = "bytes")]
                 Value::Byte(arr) => arr.remove_row(index),
             }
         }
@@ -314,6 +316,7 @@ impl MapKeys {
         }
     }
     fn grow_to(&mut self, new_capacity: usize) {
+        #[cfg(feature = "bytes")]
         {
             if let Value::Byte(keys) = &self.keys {
                 self.keys = Value::Num(keys.convert_ref());
@@ -324,6 +327,7 @@ impl MapKeys {
             Value::Complex(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
             Value::Char(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
             Value::Box(a) => Self::grow_impl(a, &mut self.indices, new_capacity),
+            #[cfg(feature = "bytes")]
             Value::Byte(_) => unreachable!(),
         }
     }
@@ -440,6 +444,7 @@ impl MapKeys {
             Value::Complex(a) => hash_start(a, self.capacity()),
             Value::Char(a) => hash_start(a, self.capacity()),
             Value::Box(a) => hash_start(a, self.capacity()),
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => hash_start(a, self.capacity()),
         };
         let mut key_index = start;
@@ -581,6 +586,7 @@ impl MapKeys {
             Value::Complex(keys) => set_tombstones(keys, dropped),
             Value::Char(keys) => set_tombstones(keys, dropped),
             Value::Box(keys) => set_tombstones(keys, dropped),
+            #[cfg(feature = "bytes")]
             Value::Byte(keys) => {
                 let mut nums = keys.convert_ref();
                 set_tombstones(&mut nums, dropped);
@@ -601,6 +607,7 @@ impl MapKeys {
             Value::Complex(keys) => set_tombstones(keys, not_taken),
             Value::Char(keys) => set_tombstones(keys, not_taken),
             Value::Box(keys) => set_tombstones(keys, not_taken),
+            #[cfg(feature = "bytes")]
             Value::Byte(keys) => {
                 let mut nums = keys.convert_ref();
                 set_tombstones(&mut nums, not_taken);
@@ -711,6 +718,7 @@ fn coerce_values(
     action2: &'static str,
     action3: &'static str,
 ) -> Result<Value, String> {
+    #[cfg(feature = "bytes")]
     {
         if let Value::Byte(keys) = a {
             *a = Value::Num(keys.convert_ref());
@@ -864,6 +872,7 @@ impl MapItem for Value {
     fn is_any_empty_cell(&self) -> bool {
         match self {
             Value::Num(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
+            #[cfg(feature = "bytes")]
             Value::Byte(_) => false,
             Value::Complex(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
             Value::Char(num) => num.data.iter().any(|v| v.is_any_empty_cell()),
@@ -873,6 +882,7 @@ impl MapItem for Value {
     fn is_any_tombstone(&self) -> bool {
         match self {
             Value::Num(num) => num.data.iter().any(|v| v.is_any_tombstone()),
+            #[cfg(feature = "bytes")]
             Value::Byte(_) => false,
             Value::Complex(num) => num.data.iter().any(|v| v.is_any_tombstone()),
             Value::Char(num) => num.data.iter().any(|v| v.is_any_tombstone()),
@@ -882,6 +892,7 @@ impl MapItem for Value {
     fn is_all_empty_cell(&self) -> bool {
         match self {
             Value::Num(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
+            #[cfg(feature = "bytes")]
             Value::Byte(_) => false,
             Value::Complex(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
             Value::Char(num) => num.data.iter().all(|v| v.is_any_empty_cell()),
@@ -891,6 +902,7 @@ impl MapItem for Value {
     fn is_all_tombstone(&self) -> bool {
         match self {
             Value::Num(num) => num.data.iter().all(|v| v.is_any_tombstone()),
+            #[cfg(feature = "bytes")]
             Value::Byte(_) => false,
             Value::Complex(num) => num.data.iter().all(|v| v.is_any_tombstone()),
             Value::Char(num) => num.data.iter().all(|v| v.is_any_tombstone()),

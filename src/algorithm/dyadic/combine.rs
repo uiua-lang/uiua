@@ -110,14 +110,19 @@ impl Value {
         other.match_scalar_fill(ctx);
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ext, ctx)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Complex(a), Value::Complex(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Char(a), Value::Char(b)) => a.join_impl(b, ext, ctx)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
             (Value::Complex(a), Value::Num(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
             (Value::Num(a), Value::Complex(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Complex(a), Value::Byte(b)) => a.join_impl(b.convert(), ext, ctx)?.into(),
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Complex(b)) => a.convert().join_impl(b, ext, ctx)?.into(),
             (a, b) => a.bin_coerce_to_boxes(
                 b,
@@ -137,14 +142,17 @@ impl Value {
         other.match_scalar_fill(ctx);
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.append(b, ext, ctx)?,
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.append(b, ext, ctx)?,
             (Value::Complex(a), Value::Complex(b)) => a.append(b, ext, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.append(b, ext, ctx)?,
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => {
                 let mut a = a.convert_ref();
                 a.append(b, ext, ctx)?;
                 *self = a.into();
             }
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.append(b.convert(), ext, ctx)?,
             (Value::Complex(a), Value::Num(b)) => a.append(b.convert(), ext, ctx)?,
             (Value::Num(a), Value::Complex(b)) => {
@@ -152,7 +160,9 @@ impl Value {
                 a.append(b, ext, ctx)?;
                 *self = a.into();
             }
+            #[cfg(feature = "bytes")]
             (Value::Complex(a), Value::Byte(b)) => a.append(b.convert(), ext, ctx)?,
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Complex(b)) => {
                 let mut a = a.convert_ref();
                 a.append(b, ext, ctx)?;
@@ -179,6 +189,7 @@ impl Value {
             Value::Num(a) => a
                 .undo_join(&a_shape, &b_shape, env)
                 .map(|(a, b)| (a.into(), b.into())),
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => a
                 .undo_join(&a_shape, &b_shape, env)
                 .map(|(a, b)| (a.into(), b.into())),
@@ -635,11 +646,14 @@ impl Value {
         other.match_scalar_fill(ctx);
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.couple_impl(b, allow_ext, ctx)?,
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Byte(b)) => a.couple_impl(b, allow_ext, ctx)?,
             (Value::Complex(a), Value::Complex(b)) => a.couple_impl(b, allow_ext, ctx)?,
             (Value::Char(a), Value::Char(b)) => a.couple_impl(b, allow_ext, ctx)?,
             (Value::Box(a), Value::Box(b)) => a.couple_impl(b, allow_ext, ctx)?,
+            #[cfg(feature = "bytes")]
             (Value::Num(a), Value::Byte(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Num(b)) => {
                 let mut a = a.convert_ref();
                 a.couple_impl(b, allow_ext, ctx)?;
@@ -651,7 +665,9 @@ impl Value {
                 a.couple_impl(b, allow_ext, ctx)?;
                 *self = a.into();
             }
+            #[cfg(feature = "bytes")]
             (Value::Complex(a), Value::Byte(b)) => a.couple_impl(b.convert(), allow_ext, ctx)?,
+            #[cfg(feature = "bytes")]
             (Value::Byte(a), Value::Complex(b)) => {
                 let mut a = a.convert_ref();
                 a.couple_impl(b, allow_ext, ctx)?;
@@ -675,6 +691,7 @@ impl Value {
             Value::Num(a) => a
                 .uncouple_depth(depth, env)
                 .map(|(a, b)| (a.into(), b.into())),
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => a
                 .uncouple_depth(depth, env)
                 .map(|(a, b)| (a.into(), b.into())),

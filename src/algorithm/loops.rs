@@ -32,6 +32,7 @@ pub fn repeat(with_inverse: bool, env: &mut Uiua) -> UiuaResult {
     fn rep_count(value: Value, env: &Uiua) -> UiuaResult<Array<f64>> {
         Ok(match value {
             Value::Num(n) => n,
+            #[cfg(feature = "bytes")]
             Value::Byte(n) => n.convert(),
             val => {
                 return Err(env.error(format!(
@@ -277,6 +278,7 @@ impl Value {
     fn partition_groups(self, markers: Array<isize>) -> Box<dyn ExactSizeIterator<Item = Self>> {
         match self {
             Value::Num(arr) => arr.partition_groups(markers),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.partition_groups(markers),
             Value::Complex(arr) => arr.partition_groups(markers),
             Value::Char(arr) => arr.partition_groups(markers),
@@ -286,6 +288,7 @@ impl Value {
     fn partition_firsts(self, markers: &[isize]) -> Self {
         match self {
             Value::Num(arr) => arr.partition_firsts(markers).into(),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.partition_firsts(markers).into(),
             Value::Complex(arr) => arr.partition_firsts(markers).into(),
             Value::Char(arr) => arr.partition_firsts(markers).into(),
@@ -295,6 +298,7 @@ impl Value {
     fn partition_lasts(self, markers: &[isize]) -> Self {
         match self {
             Value::Num(arr) => arr.partition_lasts(markers).into(),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.partition_lasts(markers).into(),
             Value::Complex(arr) => arr.partition_lasts(markers).into(),
             Value::Char(arr) => arr.partition_lasts(markers).into(),
@@ -304,6 +308,7 @@ impl Value {
     fn first_partition(self, markers: &[isize]) -> Option<Self> {
         Some(match self {
             Value::Num(arr) => arr.first_partition(markers)?.into(),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.first_partition(markers)?.into(),
             Value::Complex(arr) => arr.first_partition(markers)?.into(),
             Value::Char(arr) => arr.first_partition(markers)?.into(),
@@ -313,6 +318,7 @@ impl Value {
     fn last_partition(self, markers: &[isize]) -> Option<Self> {
         Some(match self {
             Value::Num(arr) => arr.last_partition(markers)?.into(),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.last_partition(markers)?.into(),
             Value::Complex(arr) => arr.last_partition(markers)?.into(),
             Value::Char(arr) => arr.last_partition(markers)?.into(),
@@ -742,6 +748,7 @@ impl Value {
     fn group_groups(self, indices: Array<isize>) -> Vec<Self> {
         match self {
             Value::Num(arr) => arr.group_groups(indices).map(Into::into).collect(),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.group_groups(indices).map(Into::into).collect(),
             Value::Complex(arr) => arr.group_groups(indices).map(Into::into).collect(),
             Value::Char(arr) => arr.group_groups(indices).map(Into::into).collect(),
@@ -751,6 +758,7 @@ impl Value {
     fn group_firsts(self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
         Ok(match self {
             Value::Num(arr) => arr.group_firsts(indices, env)?.into(),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.group_firsts(indices, env)?.into(),
             Value::Complex(arr) => arr.group_firsts(indices, env)?.into(),
             Value::Char(arr) => arr.group_firsts(indices, env)?.into(),
@@ -760,6 +768,7 @@ impl Value {
     fn group_lasts(self, indices: &[isize], env: &Uiua) -> UiuaResult<Self> {
         Ok(match self {
             Value::Num(arr) => arr.group_lasts(indices, env)?.into(),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.group_lasts(indices, env)?.into(),
             Value::Complex(arr) => arr.group_lasts(indices, env)?.into(),
             Value::Char(arr) => arr.group_lasts(indices, env)?.into(),
@@ -769,6 +778,7 @@ impl Value {
     fn first_group(self, indices: &[isize]) -> Option<Self> {
         Some(match self {
             Value::Num(arr) => arr.first_group(indices)?.into(),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.first_group(indices)?.into(),
             Value::Complex(arr) => arr.first_group(indices)?.into(),
             Value::Char(arr) => arr.first_group(indices)?.into(),
@@ -778,6 +788,7 @@ impl Value {
     fn last_group(self, indices: &[isize]) -> Option<Self> {
         Some(match self {
             Value::Num(arr) => arr.last_group(indices)?.into(),
+            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.last_group(indices)?.into(),
             Value::Complex(arr) => arr.last_group(indices)?.into(),
             Value::Char(arr) => arr.last_group(indices)?.into(),

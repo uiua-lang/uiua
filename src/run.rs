@@ -1217,7 +1217,9 @@ code:
         match self.value_fill() {
             Some(Value::Num(n)) if n.rank() == 0 => Ok(n.data[0]),
             Some(Value::Num(_)) => Err(self.fill_error(true)),
+            #[cfg(feature = "bytes")]
             Some(Value::Byte(n)) if n.rank() == 0 => Ok(n.data[0] as f64),
+            #[cfg(feature = "bytes")]
             Some(Value::Byte(_)) => Err(self.fill_error(true)),
             _ => Err(self.fill_error(false)),
         }
@@ -1225,6 +1227,7 @@ code:
     pub(crate) fn num_array_fill(&self) -> Result<Array<f64>, &'static str> {
         match self.value_fill() {
             Some(Value::Num(n)) => Ok(n.clone()),
+            #[cfg(feature = "bytes")]
             Some(Value::Byte(n)) => Ok(n.convert_ref()),
             _ => Err(self.fill_error(false)),
         }
@@ -1240,7 +1243,9 @@ code:
             }
             Some(Value::Num(n)) if n.rank() == 0 => Err(self.fill_error(false)),
             Some(Value::Num(_)) => Err(self.fill_error(true)),
+            #[cfg(feature = "bytes")]
             Some(Value::Byte(n)) if n.rank() == 0 => Ok(n.data[0]),
+            #[cfg(feature = "bytes")]
             Some(Value::Byte(_)) => Err(self.fill_error(true)),
             _ => Err(self.fill_error(false)),
         }
@@ -1248,6 +1253,7 @@ code:
     pub(crate) fn byte_array_fill(&self) -> Result<Array<u8>, &'static str> {
         match self.value_fill() {
             Some(Value::Num(n)) => Ok(n.data.iter().copied().map(|n| n as u8).collect()),
+            #[cfg(feature = "bytes")]
             Some(Value::Byte(n)) => Ok(n.clone()),
             _ => Err(self.fill_error(false)),
         }
@@ -1284,7 +1290,9 @@ code:
         match self.value_fill() {
             Some(Value::Num(n)) if n.rank() == 0 => Ok(Complex::new(n.data[0], 0.0)),
             Some(Value::Num(_)) => Err(self.fill_error(true)),
+            #[cfg(feature = "bytes")]
             Some(Value::Byte(n)) if n.rank() == 0 => Ok(Complex::new(n.data[0] as f64, 0.0)),
+            #[cfg(feature = "bytes")]
             Some(Value::Byte(_)) => Err(self.fill_error(true)),
             Some(Value::Complex(c)) if c.rank() == 0 => Ok(c.data[0]),
             Some(Value::Complex(_)) => Err(self.fill_error(true)),
@@ -1294,6 +1302,7 @@ code:
     pub(crate) fn complex_array_fill(&self) -> Result<Array<Complex>, &'static str> {
         match self.value_fill() {
             Some(Value::Num(n)) => Ok(n.convert_ref()),
+            #[cfg(feature = "bytes")]
             Some(Value::Byte(n)) => Ok(n.convert_ref()),
             Some(Value::Complex(c)) => Ok(c.clone()),
             _ => Err(self.fill_error(false)),
@@ -1313,6 +1322,7 @@ code:
         if scalar {
             match self.value_fill() {
                 Some(Value::Num(_)) => ". A number fill is set, but is is not a scalar.",
+                #[cfg(feature = "bytes")]
                 Some(Value::Byte(_)) => ". A number fill is set, but is is not a scalar.",
                 Some(Value::Char(_)) => ". A character fill is set, but is is not a scalar.",
                 Some(Value::Complex(_)) => ". A complex fill is set, but is is not a scalar.",
@@ -1322,6 +1332,7 @@ code:
         } else {
             match self.value_fill() {
                 Some(Value::Num(_)) => ". A number fill is set, but the array is not numbers.",
+                #[cfg(feature = "bytes")]
                 Some(Value::Byte(_)) => ". A number fill is set, but the array is not numbers.",
                 Some(Value::Char(_)) => {
                     ". A character fill is set, but the array is not characters."

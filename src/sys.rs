@@ -1261,6 +1261,7 @@ impl SysOp {
                         let mut is_string = false;
                         let delim_bytes: Vec<u8> = match delim {
                             Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
+                            #[cfg(feature = "bytes")]
                             Value::Byte(arr) => arr.data.into(),
                             Value::Char(arr) => {
                                 is_string = true;
@@ -1290,6 +1291,7 @@ impl SysOp {
                                 .map_err(|e| env.error(e))?;
                             env.push(Array::from(bytes.as_slice()));
                         }
+                        #[cfg(feature = "bytes")]
                         Value::Byte(arr) => {
                             let delim: Vec<u8> = arr.data.into();
                             let bytes = env
@@ -1318,6 +1320,7 @@ impl SysOp {
                 let handle = env.pop(2)?.as_handle(env, "")?;
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
+                    #[cfg(feature = "bytes")]
                     Value::Byte(arr) => arr.data.into(),
                     Value::Complex(_) => return Err(env.error("Cannot write complex array")),
                     Value::Char(arr) => arr.data.iter().collect::<String>().into(),
@@ -1373,8 +1376,8 @@ impl SysOp {
                 let data = env.pop(2)?;
                 let bytes: Vec<u8> = match data {
                     Value::Num(arr) => arr.data.iter().map(|&x| x as u8).collect(),
+                    #[cfg(feature = "bytes")]
                     Value::Byte(arr) => arr.data.into(),
-
                     Value::Complex(_) => {
                         return Err(env.error("Cannot write complex array to file"))
                     }
@@ -1795,6 +1798,7 @@ fn value_to_command(value: &Value, env: &Uiua) -> UiuaResult<(String, Vec<String
                 value.type_name_plural()
             )))
         }
+        #[cfg(feature = "bytes")]
         Value::Byte(_) => {
             return Err(env.error(format!(
                 "Command must be a string or box array, but it is {}",

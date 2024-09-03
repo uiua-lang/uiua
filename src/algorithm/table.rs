@@ -39,12 +39,15 @@ fn table_impl(f: Function, env: &mut Uiua) -> UiuaResult {
                             (Value::Num(a), Value::Num(b)) => {
                                 return a.matrix_mul(b, env).map(|val| env.push(val))
                             }
+                            #[cfg(feature = "bytes")]
                             (Value::Num(a), Value::Byte(b)) => {
                                 return a.matrix_mul(&b.convert_ref(), env).map(|val| env.push(val))
                             }
+                            #[cfg(feature = "bytes")]
                             (Value::Byte(a), Value::Num(b)) => {
                                 return a.convert_ref().matrix_mul(b, env).map(|val| env.push(val))
                             }
+                            #[cfg(feature = "bytes")]
                             (Value::Byte(a), Value::Byte(b)) => {
                                 return a
                                     .convert_ref()
@@ -165,6 +168,7 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
                 return generic_table(f, Value::Num(xs), Value::Num(ys), env);
             }
         }
+        #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(xs), Value::Byte(ys)) => match prim {
             Primitive::Eq => env.push(fast_table_list(xs, ys, is_eq::generic, env)?),
             Primitive::Ne => env.push(fast_table_list(xs, ys, is_ne::generic, env)?),
@@ -236,12 +240,14 @@ pub fn table_list(f: Function, xs: Value, ys: Value, env: &mut Uiua) -> UiuaResu
                 return generic_table(f, Value::Complex(xs), Value::Complex(ys), env);
             }
         }
+        #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Num(xs), Value::Byte(ys)) => {
             let ys = ys.convert();
             if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env)? {
                 return generic_table(f, Value::Num(xs), Value::Num(ys), env);
             }
         }
+        #[cfg(feature = "bytes")]
         (Some((prim, flipped)), Value::Byte(xs), Value::Num(ys)) => {
             let xs = xs.convert();
             if let Err((xs, ys)) = table_nums(prim, flipped, xs, ys, env)? {
@@ -445,18 +451,21 @@ pub fn reduce_table(env: &mut Uiua) -> UiuaResult {
                     return generic_reduce_table(f, g, Value::Complex(xs), Value::Complex(ys), env);
                 }
             }
+            #[cfg(feature = "bytes")]
             (Some(((fp, f_flip), (gp, g_flip))), Value::Byte(xs), Value::Num(ys)) => {
                 let xs = xs.convert();
                 if let Err((xs, ys)) = reduce_table_nums(fp, gp, f_flip, g_flip, xs, ys, env)? {
                     return generic_reduce_table(f, g, Value::Num(xs), Value::Num(ys), env);
                 }
             }
+            #[cfg(feature = "bytes")]
             (Some(((fp, f_flip), (gp, g_flip))), Value::Num(xs), Value::Byte(ys)) => {
                 let ys = ys.convert();
                 if let Err((xs, ys)) = reduce_table_nums(fp, gp, f_flip, g_flip, xs, ys, env)? {
                     return generic_reduce_table(f, g, Value::Num(xs), Value::Num(ys), env);
                 }
             }
+            #[cfg(feature = "bytes")]
             (Some(((fp, false), (gp, false))), Value::Byte(xs), Value::Byte(ys)) => {
                 if let Err((xs, ys)) = reduce_table_bytes(fp, gp, xs, ys, env) {
                     return generic_reduce_table(f, g, Value::Byte(xs), Value::Byte(ys), env);
@@ -470,6 +479,7 @@ pub fn reduce_table(env: &mut Uiua) -> UiuaResult {
     Ok(())
 }
 
+#[cfg(feature = "bytes")]
 fn reduce_table_bytes(
     fp: Primitive,
     gp: Primitive,
@@ -648,6 +658,7 @@ where
     move |a, b| f(a, b).into()
 }
 
+#[cfg(feature = "bytes")]
 fn to_left<T, U>(f: impl Fn(T, T) -> T) -> impl Fn(T, U) -> T
 where
     U: Into<T>,

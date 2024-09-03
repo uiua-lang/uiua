@@ -261,6 +261,7 @@ where
     val.match_scalar_fill(ctx);
     match val {
         Value::Num(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
+        #[cfg(feature = "bytes")]
         Value::Byte(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
         Value::Complex(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
         Value::Char(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
@@ -763,6 +764,7 @@ fn fft_impl(
 
     let mut arr: Array<Complex> = match env.pop(1)? {
         Value::Num(arr) => arr.convert(),
+        #[cfg(feature = "bytes")]
         Value::Byte(arr) => arr.convert(),
         Value::Complex(arr) => arr,
         val => {

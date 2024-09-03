@@ -118,7 +118,7 @@ binary = [
   "terminal-light",
   "terminal_size",
 ]
-bytes = [] # No longer used
+bytes = []
 clipboard = ["arboard"]
 debug = []
 default = [

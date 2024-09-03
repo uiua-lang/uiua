@@ -2,11 +2,9 @@
 
 - 0.13
   - Label and format string glyphs
-  - Fix LSP function sig layering
   - `try` optimizations
   - `reshape` with multiple infinities
   - Improve parsing for function packs
-  - `&ctrlc` system function?
   - Unicode literals
   - `setund` with 2 functions
   - Possible
@@ -20,6 +18,7 @@
     - Plots?
 - Dead code elimination
 - Possibility Exploration UI?
+- `&ctrlc` system function?
 - Media window
 - Trace images/audio in pad
 - Blog posts -> RSS

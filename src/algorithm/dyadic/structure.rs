@@ -985,6 +985,9 @@ impl<T: ArrayValue> Array<T> {
         mut into: Self,
         env: &Uiua,
     ) -> UiuaResult<Self> {
+        if into.rank() == 0 {
+            return Err(env.error("Cannot undo selections of scalar array"));
+        }
         if indices_shape.len() > 1 {
             return Err(env.error("Cannot undo multi-dimensional selection"));
         }

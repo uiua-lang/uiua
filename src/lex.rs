@@ -344,7 +344,7 @@ impl CodeSpan {
     }
     /// Get the number of characters in the span
     pub fn char_count(&self) -> u32 {
-        self.end.char_pos - self.start.char_pos
+        self.end.char_pos.saturating_sub(self.start.char_pos)
     }
     /// Merge two spans
     pub fn merge(mut self, end: Self) -> Self {

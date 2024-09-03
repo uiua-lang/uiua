@@ -112,7 +112,7 @@ pub fn spans_with_backend(input: &str, backend: impl SysBackend) -> (Vec<Sp<Span
     (spanner.items_spans(&items), spanner.asm.inputs)
 }
 
-/// Metadata for code for use in IDE tools
+/// Code metadata for use in IDE tools
 #[derive(Debug, Clone, Default)]
 pub struct CodeMeta {
     /// A map of references to global bindings
@@ -157,7 +157,7 @@ pub enum ImportSrc {
     File(PathBuf),
 }
 
-pub(crate) type SigDecls = HashMap<CodeSpan, SigDecl>;
+pub(crate) type SigDecls = BTreeMap<CodeSpan, SigDecl>;
 
 struct Spanner {
     src: InputSrc,
@@ -815,10 +815,13 @@ mod server {
             // Hovering an inline function
             let mut inline_function_sig: Option<Sp<Signature>> = None;
             if prim_range.is_none() && binding_docs.is_none() {
-                for (span, inline) in &doc.code_meta.function_sigs {
-                    if !inline.explicit && span.contains_line_col(line, col) && span.src == path {
-                        inline_function_sig = Some(span.clone().sp(inline.sig));
-                    }
+                if let Some((span, inline)) = (doc.code_meta.function_sigs.iter())
+                    .filter(|(span, inline)| {
+                        !inline.explicit && span.contains_line_col(line, col) && span.src == path
+                    })
+                    .min_by_key(|(span, _)| span.char_count())
+                {
+                    inline_function_sig = Some(span.clone().sp(inline.sig));
                 }
             }
             // Hovering a stack swizzle
@@ -1445,10 +1448,12 @@ mod server {
             let mut actions = Vec::new();
 
             // Add explicit signature
-            for (span, inline) in &doc.code_meta.function_sigs {
-                if inline.explicit || !span.contains_line_col(line, col) || span.src != path {
-                    continue;
-                }
+            if let Some((span, inline)) = (doc.code_meta.function_sigs.iter())
+                .filter(|(span, inline)| {
+                    !inline.explicit && span.contains_line_col(line, col) && span.src == path
+                })
+                .min_by_key(|(span, _)| span.char_count())
+            {
                 let mut insertion_span = span.just_start(&doc.asm.inputs);
                 if span.as_str(&doc.asm.inputs, |s| s.starts_with('(')) {
                     if span.start.line as usize == line && span.start.col as usize == col {
@@ -1471,11 +1476,7 @@ mod server {
                                 params.text_document.uri.clone(),
                                 vec![TextEdit {
                                     range: uiua_span_to_lsp(&insertion_span),
-                                    new_text: if inline.sig.outputs == 0 {
-                                        format!("|{} ", inline.sig.args)
-                                    } else {
-                                        format!("{} ", inline.sig)
-                                    },
+                                    new_text: format!("{} ", inline.sig),
                                 }],
                             )]
                             .into(),
@@ -1484,7 +1485,6 @@ mod server {
                     }),
                     ..Default::default()
                 }));
-                break;
             }
 
             // Expand macro

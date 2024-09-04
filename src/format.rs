@@ -979,7 +979,7 @@ impl<'a> Formatter<'a> {
                     allow_compact,
                     true,
                     false,
-                    false,
+                    true,
                     depth + 1,
                 );
                 if arr.boxes {
@@ -1036,7 +1036,7 @@ impl<'a> Formatter<'a> {
                     allow_compact,
                     true,
                     false,
-                    false,
+                    true,
                     depth + 1,
                 );
                 self.output.push(')');

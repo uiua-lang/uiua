@@ -985,14 +985,12 @@ impl<T: ArrayValue> Array<T> {
         mut into: Self,
         env: &Uiua,
     ) -> UiuaResult<Self> {
-        if into.rank() == 0 {
-            return Err(env.error("Cannot undo selections of scalar array"));
-        }
         if indices_shape.len() > 1 {
             return Err(env.error("Cannot undo multi-dimensional selection"));
         }
         let from = self;
         let indices_row_count = indices_shape.first().copied().unwrap_or(1);
+        let into_rank = into.rank();
         let into_row_count = into.row_count();
         match from.rank().cmp(&into.rank()) {
             Ordering::Equal => {
@@ -1071,7 +1069,9 @@ impl<T: ArrayValue> Array<T> {
                         from.row_count()
                     )));
                 }
-                if from.rank() - into.rank() > 1 || from.shape[2..] != into.shape[1..] {
+                if from.rank() - into.rank() > 1
+                    || !from.shape.iter().skip(2).eq(into.shape.iter().skip(1))
+                {
                     return Err(env.error(format!(
                         "Cannot undo select of array with shape {} \
                         into array with shape {}",
@@ -1097,6 +1097,9 @@ impl<T: ArrayValue> Array<T> {
                     }
                 }
                 into = Array::from_row_arrays_infallible(rows);
+                if into_rank == 0 {
+                    into.shape = Shape::scalar();
+                }
             }
         }
 

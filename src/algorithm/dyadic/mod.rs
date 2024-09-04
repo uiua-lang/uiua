@@ -2261,13 +2261,6 @@ impl Value {
     }
 }
 
-fn factorial(n: usize) -> f64 {
-    if n <= 1 {
-        return 1.0;
-    }
-    (1..=n).map(|i| i as f64).product()
-}
-
 impl<T: ArrayValue> Array<T> {
     /// `choose` all combinations of `k` rows from this array
     pub fn choose(&self, k: usize, env: &Uiua) -> UiuaResult<Self> {
@@ -2283,7 +2276,8 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         let mut shape = self.shape.clone();
-        let combinations = factorial(n) / (factorial(k) * factorial(n - k));
+        let combinations = (1..=n).rev().take(k).map(|i| i as f64).product::<f64>()
+            / (1..=k).map(|i| i as f64).product::<f64>();
         if combinations.is_nan() {
             return Err(env.error("Combinatorial explosion"));
         }
@@ -2372,7 +2366,7 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         let mut shape = self.shape.clone();
-        let permutations = factorial(n) / factorial(n - k);
+        let permutations: f64 = (1..=n).rev().take(k).map(|i| i as f64).product();
         if permutations.is_nan() {
             return Err(env.error("Combinatorial explosion"));
         }

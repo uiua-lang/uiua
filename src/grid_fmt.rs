@@ -397,7 +397,9 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
         // Add complex marker
         if T::TYPE_ID == Complex::TYPE_ID && !grid.iter().flatten().any(|&c| c == 'ℂ' || c == 'i')
         {
-            if grid.len() == 1 {
+            if self.shape.is_empty() {
+                grid[0].push('ℂ');
+            } else if grid.len() == 1 {
                 grid[0].insert(1, 'ℂ');
                 grid[0].insert(2, ' ');
             } else {

@@ -1,10 +1,10 @@
 # Uiua Todo
 
 - 0.13
+  - Allow newline before last `)`
   - Label and format string glyphs
   - `try` optimizations
   - `reshape` with multiple infinities
-  - Unicode literals
   - `setund` with 2 functions
   - Possible
     - `orient` boxed

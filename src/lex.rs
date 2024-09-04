@@ -72,6 +72,7 @@ pub enum LexError {
     UnexpectedChar(String),
     ExpectedCharacter(Vec<char>),
     InvalidEscape(String),
+    InvalidUnicodeEscape(u32),
     ExpectedNumber,
 }
 
@@ -90,6 +91,7 @@ impl fmt::Display for LexError {
             }
             LexError::ExpectedCharacter(chars) => write!(f, "Expected one of {:?}", chars),
             LexError::InvalidEscape(c) => write!(f, "Invalid escape character {c:?}"),
+            LexError::InvalidUnicodeEscape(c) => write!(f, "Invalid unicode escape \\\\{c:x}"),
             LexError::ExpectedNumber => write!(f, "Expected number"),
         }
     }
@@ -824,9 +826,38 @@ impl<'a> Lexer<'a> {
         // Main loop
         'main: loop {
             let start = self.loc;
-            let Some(c) = self.next_char() else {
+            let replacement: String;
+            let Some(mut c) = self.next_char() else {
                 break;
             };
+
+            // Handle unicode escapes
+            if c == "\\" && self.next_char_exact("\\") {
+                let mut hex = String::new();
+                while let Some(c) = self.next_char_if_all(|c| c.is_ascii_hexdigit()) {
+                    hex.push_str(c);
+                }
+                if hex.len() >= 2 {
+                    let mut code = 0;
+                    for c in hex.chars() {
+                        code = code << 4 | c.to_digit(16).unwrap();
+                    }
+                    replacement = if let Some(c) = std::char::from_u32(code) {
+                        c.to_string()
+                    } else {
+                        self.errors.push(
+                            self.end_span(start)
+                                .sp(LexError::InvalidUnicodeEscape(code)),
+                        );
+                        continue;
+                    };
+                    c = &replacement;
+                } else {
+                    self.loc = start;
+                    self.next_char();
+                }
+            }
+
             match c {
                 // Backwards compatibility
                 "∶" => self.end(Primitive::Flip, start),
@@ -1032,7 +1063,7 @@ impl<'a> Lexer<'a> {
                         continue;
                     }
                     if first_dollar && !self.next_char_exact("\"") {
-                        let label = canonicalize_ident(self.ident(""));
+                        let label = canonicalize_ident(&self.ident(self.loc, ""));
                         self.end(Label(label), start);
                         continue;
                     }
@@ -1054,7 +1085,7 @@ impl<'a> Lexer<'a> {
                 // Identifiers and unformatted glyphs
                 c if is_custom_glyph(c) || c.chars().all(is_ident_char) || c == "&" || c == "_" => {
                     // Get ident start
-                    let mut ident = self.ident(c).to_string();
+                    let mut ident = self.ident(start, c).to_string();
                     let mut exclam_count = 0;
                     while let Some((ch, count)) = if self.next_char_exact("!") {
                         Some(('!', 1))
@@ -1206,24 +1237,33 @@ impl<'a> Lexer<'a> {
 
         (processed, self.errors)
     }
-    fn ident(&mut self, c: &str) -> &'a str {
-        let start = self.loc.byte_pos as usize - c.len();
+    fn ident(&mut self, start: Loc, c: &str) -> String {
+        let mut s = c.to_string();
+        let end = self.loc.byte_pos as usize;
+        let raw = &self.input[start.byte_pos as usize..end];
+        if raw.contains('\\') {
+            return s;
+        }
         if !is_custom_glyph(c) {
             // Handle identifiers beginning with __
             if c == "_" && self.next_char_exact("_") {
-                while self.next_char_if_all(|c| c.is_ascii_digit()).is_some() {}
+                while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+                    s.push_str(c);
+                }
             }
             loop {
-                if self.next_char_if_all(is_ident_char).is_some() {
+                if let Some(c) = self.next_char_if_all(is_ident_char) {
+                    s.push_str(c);
                 } else if self.next_chars_exact(["_"; 2]) {
-                    while self.next_char_if_all(|c| c.is_ascii_digit()).is_some() {}
+                    while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+                        s.push_str(c);
+                    }
                 } else {
                     break;
                 }
             }
         }
-        let end = self.loc.byte_pos as usize;
-        &self.input[start..end]
+        s
     }
     fn number(&mut self, init: &str) -> bool {
         // Whole part
@@ -1498,11 +1538,12 @@ fn place_exclams(ident: &str, count: usize) -> Ident {
 
 /// Rewrite the identifier with numerals preceded by `__` replaced with subscript characters
 fn canonicalize_subscripts(ident: &str) -> Ident {
+    if !ident.contains('_') {
+        return ident.into();
+    }
     // This hasty canonicalization is okay because the stricter
     // rules about the syntax are handled in the lexer
-    ident
-        .chars()
-        .filter(|c| *c != '_')
+    (ident.chars().filter(|c| *c != '_'))
         .map(|c| {
             if let Some(d) = c.to_digit(10) {
                 crate::lex::SUBSCRIPT_NUMS[d as usize]

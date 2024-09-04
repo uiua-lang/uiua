@@ -940,20 +940,27 @@ impl ArrayValue for char {
         let mut parts = Vec::new();
         let lowercase = elems.iter().any(|c| c.is_lowercase());
         let uppercase = elems.iter().any(|c| c.is_uppercase());
+        let writing = elems
+            .iter()
+            .any(|c| c.is_alphabetic() && !(c.is_lowercase() || c.is_uppercase()));
         let numeric = elems.iter().any(|c| c.is_numeric() && !c.is_ascii_digit());
         let digit = elems.iter().any(|c| c.is_ascii_digit());
         let punct = elems.iter().any(|c| c.is_ascii_punctuation());
         let whitespace = elems.iter().any(|c| c.is_whitespace());
         let control = elems.iter().any(|c| c.is_control());
         let other = (elems.iter()).any(|c| {
-            !(c.is_alphabetic()
+            !(c.is_lowercase()
+                || c.is_uppercase()
+                || c.is_alphabetic()
                 || c.is_numeric()
                 || c.is_ascii_punctuation()
                 || c.is_whitespace()
                 || c.is_control())
         });
-        if lowercase && uppercase {
-            parts.push("alpha");
+        if writing {
+            parts.push("writing");
+        } else if lowercase && uppercase {
+            parts.push("letters");
         } else if lowercase {
             parts.push("lower");
         } else if uppercase {

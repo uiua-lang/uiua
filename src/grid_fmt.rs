@@ -394,6 +394,17 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
             }
         }
 
+        // Add complex marker
+        if T::TYPE_ID == Complex::TYPE_ID && !grid.iter().flatten().any(|&c| c == 'ℂ' || c == 'i')
+        {
+            if grid.len() == 1 {
+                grid[0].insert(1, 'ℂ');
+                grid[0].insert(2, ' ');
+            } else {
+                grid[0][2] = 'ℂ';
+            }
+        }
+
         // Add label
         if params.label {
             if let Some(label) = &self.meta().label {
@@ -402,7 +413,8 @@ impl<T: GridFmt + ArrayValue> GridFmt for Array<T> {
                         .chain(take(&mut grid[0]))
                         .collect();
                 } else {
-                    grid[0].truncate(2);
+                    let trunc = if grid[0][2] == 'ℂ' { 3 } else { 2 };
+                    grid[0].truncate(trunc);
                     grid[0].push(' ');
                     grid[0].extend(label.chars());
                     while grid[0].len() < grid[1].len() {

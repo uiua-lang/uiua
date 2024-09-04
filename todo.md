@@ -4,7 +4,6 @@
   - Label and format string glyphs
   - `try` optimizations
   - `reshape` with multiple infinities
-  - Improve parsing for function packs
   - Unicode literals
   - `setund` with 2 functions
   - Possible

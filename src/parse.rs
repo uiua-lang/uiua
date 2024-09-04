@@ -457,7 +457,7 @@ impl<'i> Parser<'i> {
             ));
         }
         // Signature
-        let signature = self.try_signature();
+        let signature = self.try_signature(true);
         // Words
         let words = self.try_words().unwrap_or_default();
         self.validate_binding_name(&name);
@@ -595,9 +595,17 @@ impl<'i> Parser<'i> {
             in_macro_arg: false,
         })))
     }
-    fn try_signature(&mut self) -> Option<Sp<Signature>> {
+    fn try_signature(&mut self, error_on_invalid: bool) -> Option<Sp<Signature>> {
+        let reset = self.index;
         let start = self.try_exact(Bar.into())?;
-        let (args, outs) = self.sig_inner();
+        let inner = self.sig_inner();
+        if inner.is_none() {
+            self.index = reset;
+            if error_on_invalid {
+                self.errors.push(self.expected([Expectation::ArgsOutputs]));
+            }
+        }
+        let (args, outs) = inner?;
         let mut end = self.prev_span();
         if let Some(sp) = self.try_spaces() {
             end = sp.span;
@@ -605,41 +613,37 @@ impl<'i> Parser<'i> {
         let span = start.merge(end);
         Some(span.sp(Signature::new(args, outs)))
     }
-    fn sig_inner(&mut self) -> (usize, usize) {
-        if let Some(sn) = self.try_num() {
-            if let Some((a, o)) = sn.value.0.split_once('.') {
-                let a = match a.parse() {
-                    Ok(a) => a,
-                    Err(_) => {
-                        self.errors
-                            .push(self.prev_span().sp(ParseError::InvalidArgCount(a.into())));
-                        1
-                    }
-                };
-                let o = match o.parse() {
-                    Ok(o) => o,
-                    Err(_) => {
-                        self.errors
-                            .push(self.prev_span().sp(ParseError::InvalidOutCount(o.into())));
-                        1
-                    }
-                };
-                (a, o)
-            } else {
-                let a = match sn.value.0.parse() {
-                    Ok(a) => a,
-                    Err(_) => {
-                        self.errors
-                            .push(self.prev_span().sp(ParseError::InvalidArgCount(sn.value.0)));
-                        1
-                    }
-                };
-                (a, 1)
-            }
+    fn sig_inner(&mut self) -> Option<(usize, usize)> {
+        let sn = self.try_num()?;
+        Some(if let Some((a, o)) = sn.value.0.split_once('.') {
+            let a = match a.parse() {
+                Ok(a) => a,
+                Err(_) => {
+                    self.errors
+                        .push(self.prev_span().sp(ParseError::InvalidArgCount(a.into())));
+                    1
+                }
+            };
+            let o = match o.parse() {
+                Ok(o) => o,
+                Err(_) => {
+                    self.errors
+                        .push(self.prev_span().sp(ParseError::InvalidOutCount(o.into())));
+                    1
+                }
+            };
+            (a, o)
         } else {
-            self.errors.push(self.expected([Expectation::ArgsOutputs]));
-            (1usize, 1usize)
-        }
+            let a = match sn.value.0.parse() {
+                Ok(a) => a,
+                Err(_) => {
+                    self.errors
+                        .push(self.prev_span().sp(ParseError::InvalidArgCount(sn.value.0)));
+                    1
+                }
+            };
+            (a, 1)
+        })
     }
     fn try_words(&mut self) -> Option<Vec<Sp<Word>>> {
         let mut words: Vec<Sp<Word>> = Vec::new();
@@ -944,7 +948,7 @@ impl<'i> Parser<'i> {
             span.sp(Word::MultilineFormatString(lines))
         } else if let Some(start) = self.try_exact(OpenBracket.into()) {
             while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
-            let signature = self.try_signature();
+            let signature = self.try_signature(true);
             while self.try_exact(Newline).is_some() {}
             let items = self.multiline_words(false, true);
             let end = self.expect_close(CloseBracket.into());
@@ -972,7 +976,7 @@ impl<'i> Parser<'i> {
             span.sp(Word::Array(arr))
         } else if let Some(start) = self.try_exact(OpenCurly.into()) {
             while self.try_exact(Newline).is_some() || self.try_exact(Spaces).is_some() {}
-            let signature = self.try_signature();
+            let signature = self.try_signature(true);
             while self.try_exact(Newline).is_some() {}
             let items = self.multiline_words(false, true);
             let end = self.expect_close(CloseCurly.into());
@@ -1177,7 +1181,7 @@ impl<'i> Parser<'i> {
             }
             break;
         }
-        let signature = self.try_signature();
+        let signature = self.try_signature(false);
         loop {
             if self.try_exact(Newline).is_some() {
                 starts_with_newline = true;

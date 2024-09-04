@@ -1700,7 +1700,9 @@ impl Array<f64> {
             if n > 1 {
                 primes.push(n as f64);
             }
-            return Ok(primes.into());
+            let mut shape = self.shape.clone();
+            shape.insert(0, primes.len());
+            return Ok(Array::new(shape, primes));
         }
 
         validate_size::<usize>([max, 2], env)?;

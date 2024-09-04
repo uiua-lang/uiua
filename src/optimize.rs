@@ -236,7 +236,7 @@ pub(crate) fn optimize_instrs_mut(
                     instrs.push(Instr::ImplPrim(ImplPrimitive::Adjacent, *span));
                 }
                 // Rows Windows
-                _ if f.signature().args == 1 => {
+                _ if f.signature() == (1, 1) => {
                     let f = f.clone();
                     instrs.pop();
                     instrs.pop();

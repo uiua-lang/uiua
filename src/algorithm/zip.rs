@@ -830,10 +830,10 @@ fn rowsn(f: Function, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult
 
 pub fn rows_windows(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
-    if f.signature().args != 1 {
-        return Err(env.error(
-            "rows windows's function does not take 1 arg. This is a bug in the interpreter",
-        ));
+    if f.signature() != (1, 1) {
+        return Err(
+            env.error("rows windows's function is not |1. This is a bug in the interpreter")
+        );
     }
     let n_arr = env.pop(1)?;
     let xs = env.pop(2)?;

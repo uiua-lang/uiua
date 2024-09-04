@@ -839,7 +839,7 @@ impl<'i> Parser<'i> {
             if let Some(arg) = self.try_func().or_else(|| self.try_undertied()) {
                 // Parse pack syntax
                 if let Word::Pack(pack) = &arg.value {
-                    if i == 0 && !pack.angled && pack.branches.len() >= modifier.args() {
+                    if i == 0 && !pack.angled {
                         args.push(arg);
                         break;
                     }

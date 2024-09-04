@@ -105,6 +105,16 @@ impl Compiler {
                     closed: true,
                 })))
             }
+            Modifier::Primitive(Primitive::SetUnder) if pack.branches.len() == 2 => {
+                let mut pack = pack.clone();
+                pack.branches.insert(0, pack.branches[0].clone());
+                Ok(Some(Word::Modified(Box::new(Modified {
+                    modifier: modifier.clone(),
+                    operands: (pack.branches.into_iter())
+                        .map(|sp| sp.map(Word::Func))
+                        .collect(),
+                }))))
+            }
             _ => Ok(None),
         }
     }

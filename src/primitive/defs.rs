@@ -2009,6 +2009,20 @@ primitive!(
     ///   : ◌F 5
     ///   : ◌⍜F(×10) 5
     ///
+    /// [setund] is often good for making a function [under]-compatible by nullifying the inverse for some part of the function.
+    /// For example, we can write a simple function that removes all instances of a character from a string.
+    /// ex: F ← ▽⊸≠
+    ///   : F @a "abra"
+    /// This works, but it does not work with [under].
+    /// ex! F ← ▽⊸≠
+    ///   : ⍜F⌵ @a "abra"
+    /// This is because the `⊸``≠` part is not [under]-compatible.
+    /// By wrapping that part in [setund], we can make the [under] work.
+    /// Here, we use a function pack with only two branches. [setund] reuses the first branch for both the "normal" and "do" branches. The second branch is empty.
+    /// ex: F ← ▽setund(⊸≠|)
+    ///   : F @a "abra"
+    ///   : ⍜F⌵ @a "abra"
+    ///
     /// Inverses set with [setund] cannot be used with [un]. For simpler inverse defining, see [setinv].
     ([3], SetUnder, InversionModifier, "setund"),
     /// Operate on a transformed array, then reverse the transformation

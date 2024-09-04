@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.13
+  - Better big array formatting
   - Allow newline before last `)`
   - Label and format string glyphs
   - `try` optimizations

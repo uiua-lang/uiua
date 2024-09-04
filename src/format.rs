@@ -397,6 +397,16 @@ G ← (
  2
 ) (
   5)
+(1
+ 2
+ 3
+)
+(1
+ 2
+ 3)
+⊃(1
+| 2
+)
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     assert_eq!(formatted, input);
@@ -653,7 +663,7 @@ impl<'a> Formatter<'a> {
             Item::Words(lines) => {
                 self.prev_import_function = None;
                 let lines = unsplit_words(lines.iter().cloned().flat_map(split_words).collect());
-                self.format_multiline_words(&lines, false, false, false, depth);
+                self.format_multiline_words(&lines, false, false, false, false, depth);
             }
             Item::Binding(binding) => {
                 match binding.words.first().map(|w| &w.value) {
@@ -964,7 +974,14 @@ impl<'a> Formatter<'a> {
                 let indent = self.config.multiline_indent * depth;
                 let allow_compact = start_indent <= indent + 2;
 
-                self.format_multiline_words(&arr.lines, allow_compact, true, false, depth + 1);
+                self.format_multiline_words(
+                    &arr.lines,
+                    allow_compact,
+                    true,
+                    false,
+                    false,
+                    depth + 1,
+                );
                 if arr.boxes {
                     self.output.push('}');
                 } else {
@@ -1014,7 +1031,14 @@ impl<'a> Formatter<'a> {
                     }
                 }
 
-                self.format_multiline_words(&func.lines, allow_compact, true, false, depth + 1);
+                self.format_multiline_words(
+                    &func.lines,
+                    allow_compact,
+                    true,
+                    false,
+                    false,
+                    depth + 1,
+                );
                 self.output.push(')');
             }
             Word::Pack(pack) => {
@@ -1062,6 +1086,7 @@ impl<'a> Formatter<'a> {
                     // Remove trailing empty lines from last branch
                     if i == pack.branches.len() - 1
                         && lines.last().is_some_and(|line| line.is_empty())
+                        && lines.iter().nth_back(1).is_some_and(|line| line.is_empty())
                         && !(lines.iter().nth_back(1)).is_some_and(|line| {
                             line.last().is_some_and(|word| word.value.is_end_of_line())
                         })
@@ -1073,6 +1098,7 @@ impl<'a> Formatter<'a> {
                         false,
                         false,
                         any_multiline && i < pack.branches.len() - 1,
+                        i < pack.branches.len() - 1,
                         depth + 1,
                     );
                     if any_multiline
@@ -1237,6 +1263,7 @@ impl<'a> Formatter<'a> {
         allow_compact: bool,
         allow_leading_space: bool,
         allow_trailing_newline: bool,
+        full_trim_end: bool,
         depth: usize,
     ) {
         if lines.is_empty() {
@@ -1253,14 +1280,17 @@ impl<'a> Formatter<'a> {
             self.format_words(&lines[0], true, depth);
             return;
         }
-        if !allow_trailing_newline && depth > 0 {
+        // Remove trailing empty lines
+        if (!allow_trailing_newline || full_trim_end) && depth > 0 {
             while lines.last().is_some_and(|line| line.is_empty())
+                && (full_trim_end && lines.iter().nth_back(1).is_some_and(|line| line.is_empty()))
                 && !(lines.iter().nth_back(1))
                     .is_some_and(|line| line.last().is_some_and(|word| word.value.is_end_of_line()))
             {
                 lines = &lines[..lines.len() - 1];
             }
         }
+        // Remove leading empty lines
         while lines.first().is_some_and(|line| line.is_empty()) {
             lines = &lines[1..];
         }

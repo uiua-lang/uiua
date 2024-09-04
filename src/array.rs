@@ -786,6 +786,10 @@ pub trait ArrayValue:
     fn has_wildcard(&self) -> bool {
         false
     }
+    /// Summarize the elements of an array of this type
+    fn summarize(elems: &[Self]) -> String {
+        String::new()
+    }
 }
 
 /// A NaN value that always compares as equal
@@ -826,6 +830,33 @@ impl ArrayValue for f64 {
     fn has_wildcard(&self) -> bool {
         self.to_bits() == WILDCARD_NAN.to_bits()
     }
+    fn summarize(elems: &[Self]) -> String {
+        if elems.is_empty() {
+            return String::new();
+        }
+        let mut min = f64::INFINITY;
+        let mut max = f64::NEG_INFINITY;
+        for &elem in elems {
+            min = min.min(elem);
+            max = max.max(elem);
+        }
+        let mut mean = elems[0];
+        for (i, &elem) in elems.iter().enumerate().skip(1) {
+            mean += (elem - mean) / (i + 1) as f64;
+        }
+        format!(
+            "{}-{} x̄{}",
+            min.grid_string(false),
+            max.grid_string(false),
+            mean.grid_string(false)
+        )
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn f64_summarize() {
+    assert_eq!(f64::summarize(&[2.0, 6.0, 1.0]), "1-6 x̄3");
 }
 
 impl ArrayValue for u8 {
@@ -843,6 +874,27 @@ impl ArrayValue for u8 {
     }
     fn proxy() -> Self {
         0
+    }
+    fn summarize(elems: &[Self]) -> String {
+        if elems.is_empty() {
+            return String::new();
+        }
+        let mut min = 0;
+        let mut max = u8::MAX;
+        for &elem in elems {
+            min = min.min(elem);
+            max = max.max(elem);
+        }
+        let mut mean = elems[0] as f64;
+        for (i, &elem) in elems.iter().enumerate().skip(1) {
+            mean += (elem as f64 - mean) / (i + 1) as f64;
+        }
+        format!(
+            "{}-{} x̄{}",
+            min.grid_string(false),
+            max.grid_string(false),
+            mean.grid_string(false)
+        )
     }
 }
 
@@ -880,6 +932,66 @@ impl ArrayValue for char {
     }
     fn has_wildcard(&self) -> bool {
         *self == WILDCARD_CHAR
+    }
+    fn summarize(elems: &[Self]) -> String {
+        if elems.is_empty() {
+            return String::new();
+        }
+        let mut parts = Vec::new();
+        let lowercase = elems.iter().any(|c| c.is_lowercase());
+        let uppercase = elems.iter().any(|c| c.is_uppercase());
+        let numeric = elems.iter().any(|c| c.is_numeric() && !c.is_ascii_digit());
+        let digit = elems.iter().any(|c| c.is_ascii_digit());
+        let punct = elems.iter().any(|c| c.is_ascii_punctuation());
+        let whitespace = elems.iter().any(|c| c.is_whitespace());
+        let control = elems.iter().any(|c| c.is_control());
+        let other = (elems.iter()).any(|c| {
+            !(c.is_alphabetic()
+                || c.is_numeric()
+                || c.is_ascii_punctuation()
+                || c.is_whitespace()
+                || c.is_control())
+        });
+        if lowercase && uppercase {
+            parts.push("alpha");
+        } else if lowercase {
+            parts.push("lower");
+        } else if uppercase {
+            parts.push("upper");
+        }
+        if numeric {
+            parts.push("nums");
+        }
+        if digit {
+            parts.push("digits");
+        }
+        if punct {
+            parts.push("punct");
+        }
+        if whitespace {
+            parts.push("whitespace");
+        }
+        if control {
+            parts.push("control");
+        }
+        if other {
+            parts.push("other");
+        }
+        match parts.len() {
+            0 => String::new(),
+            1 => parts[0].to_string(),
+            2 => format!("{} and {}", parts[0], parts[1]),
+            _ => {
+                let mut s = String::new();
+                for (i, &part) in parts.iter().enumerate() {
+                    if i > 0 {
+                        s.push_str(", ");
+                    }
+                    s.push_str(part);
+                }
+                s
+            }
+        }
     }
 }
 
@@ -930,6 +1042,27 @@ impl ArrayValue for Complex {
     }
     fn empty_list_inner() -> &'static str {
         "ℂ"
+    }
+    fn summarize(elems: &[Self]) -> String {
+        if elems.is_empty() {
+            return String::new();
+        }
+        let mut min = Complex::new(f64::INFINITY, f64::INFINITY);
+        let mut max = Complex::new(f64::NEG_INFINITY, f64::NEG_INFINITY);
+        for &elem in elems {
+            min = min.min(elem);
+            max = max.max(elem);
+        }
+        let mut mean = elems[0];
+        for (i, &elem) in elems.iter().enumerate().skip(1) {
+            mean = mean + (elem - mean) / (i + 1) as f64;
+        }
+        format!(
+            "{} - {} x̄{}",
+            min.grid_string(false),
+            max.grid_string(false),
+            mean.grid_string(false)
+        )
     }
 }
 

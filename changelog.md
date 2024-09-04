@@ -20,6 +20,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Allow [`on ⟜`](https://uiua.org/docs/on) to use function packs
 - Allow [`under ⍜`](https://uiua.org/docs/under) of scalar [`keep ▽`](https://uiua.org/docs/keep)
 - Add the [`&fmd`](https://uiua.org/docs/&fmd) system function, which creates a directory
+- Very large arrays are now displayed more concisely in output
 - Add unicode escape sequences for entering arbitrary characters
   - A double backslash followed by a unicode hex number will format to the corresponding glyph
 - Add an experimental [`sort ⍆`](https://uiua.org/docs/sort) function

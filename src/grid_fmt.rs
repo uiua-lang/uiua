@@ -502,6 +502,20 @@ fn fmt_array<T: GridFmt + ArrayValue>(
         metagrid.push(vec![vec![shape_row::<T>(shape)]]);
         return;
     }
+    if data.len() > 3600 {
+        let summary = T::summarize(data);
+        if !summary.is_empty() {
+            metagrid.push(vec![if shape.len() == 1 {
+                let mut chars = shape_row::<T>(shape);
+                chars.extend(": ".chars());
+                chars.extend(summary.chars());
+                vec![chars]
+            } else {
+                vec![shape_row::<T>(shape), T::summarize(data).chars().collect()]
+            }]);
+            return;
+        }
+    }
     let rank = shape.len();
     if rank == 0 {
         metagrid.push(vec![data[0].fmt_grid(GridFmtParams {

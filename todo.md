@@ -2,7 +2,6 @@
 
 - 0.13
   - `conform` function?
-  - Multi-input scan
   - Label and format string glyphs
   - `try` optimizations
   - `setinv` on and by inverses

@@ -1,25 +1,22 @@
 # Uiua Todo
 
 - 0.13
+  - `conform` function?
   - Multi-input scan
   - Label and format string glyphs
   - `try` optimizations
+  - `setinv` on and by inverses
+  - Document on and by inverses
   - `reshape` with multiple infinities
-  - `setund` with 2 functions
-  - Possible
-    - `orient` boxed
-    - Dynamic modules
-    - `setinv` on and by inverses
-    - Document on and by inverses
-    - `base` function?
-    - Channels?
-    - Stack visualization output comments?
-    - Plots?
+- Possible
+  - `orient` boxed
+  - Dynamic modules
+  - `base` function?
+  - Channels?
+  - Plots?
 - Dead code elimination
 - Possibility Exploration UI?
-- `&ctrlc` system function?
 - Media window
-- Trace images/audio in pad
 - Blog posts -> RSS
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Multimedia

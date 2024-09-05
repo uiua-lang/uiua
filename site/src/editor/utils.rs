@@ -764,9 +764,12 @@ fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
     let value_count = values.len();
     for (i, value) in values.into_iter().enumerate() {
         // Try to convert the value to audio
-        if value.shape().last().is_some_and(|&n| n >= 44100 / 4) {
+        if value.shape().last().is_some_and(|&n| n >= 44100 / 4)
+            && matches!(&value, Value::Num(arr) if arr.elements().all(|x| x.abs() <= 5.0))
+        {
             if let Ok(bytes) = value_to_wav_bytes(&value, io.audio_sample_rate()) {
-                stack.push(OutputItem::Audio(bytes));
+                let label = value.meta().label.as_ref().map(Into::into);
+                stack.push(OutputItem::Audio(bytes, label));
                 continue;
             }
         }
@@ -777,7 +780,8 @@ fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
                 && image.height() >= MIN_AUTO_IMAGE_DIM as u32
             {
                 if let Ok(bytes) = image_to_bytes(&image, ImageOutputFormat::Png) {
-                    stack.push(OutputItem::Image(bytes));
+                    let label = value.meta().label.as_ref().map(Into::into);
+                    stack.push(OutputItem::Image(bytes, label));
                     continue;
                 }
             }
@@ -788,7 +792,8 @@ fn run_code_single(code: &str) -> (Vec<OutputItem>, Option<UiuaError>) {
                 &[f, h, w] | &[f, h, w, _]
                     if h >= MIN_AUTO_IMAGE_DIM && w >= MIN_AUTO_IMAGE_DIM && f >= 5 =>
                 {
-                    stack.push(OutputItem::Gif(bytes));
+                    let label = value.meta().label.as_ref().map(Into::into);
+                    stack.push(OutputItem::Gif(bytes, label));
                     continue;
                 }
                 _ => {}

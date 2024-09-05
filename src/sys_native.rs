@@ -565,7 +565,7 @@ impl SysBackend for NativeSys {
         Ok(())
     }
     #[cfg(all(feature = "terminal_image", feature = "image"))]
-    fn show_image(&self, image: image::DynamicImage) -> Result<(), String> {
+    fn show_image(&self, image: image::DynamicImage, _: Option<&str>) -> Result<(), String> {
         let (width, height) = if let Some((w, h)) = terminal_size() {
             let (tw, th) = (w as u32, h.saturating_sub(1) as u32);
             let (iw, ih) = (image.width(), (image.height() / 2).max(1));
@@ -594,7 +594,7 @@ impl SysBackend for NativeSys {
         .map_err(|e| format!("Failed to show image: {e}"))
     }
     #[cfg(all(feature = "gif", feature = "invoke"))]
-    fn show_gif(&self, gif_bytes: Vec<u8>) -> Result<(), String> {
+    fn show_gif(&self, gif_bytes: Vec<u8>, _: Option<&str>) -> Result<(), String> {
         (move || -> std::io::Result<()> {
             let temp_path = std::env::temp_dir().join("show.gif");
             fs::write(&temp_path, gif_bytes)?;
@@ -613,7 +613,7 @@ impl SysBackend for NativeSys {
         .map_err(|e| e.to_string())
     }
     #[cfg(feature = "audio")]
-    fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
+    fn play_audio(&self, wav_bytes: Vec<u8>, _: Option<&str>) -> Result<(), String> {
         use hodaun::*;
         match default_output::<Stereo>() {
             Ok(mut mixer) => {

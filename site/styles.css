@@ -660,14 +660,36 @@ input[type=number] {
     opacity: 0.55;
 }
 
+.output-media-wrapper {
+    display: flex;
+}
+
 .output-image {
     border-radius: 0.5em;
     max-width: 50vw;
 }
 
+.output-image-label {
+    font-size: 1em;
+    font-family: "Code Font", monospace;
+    color: white;
+    text-shadow: 0 0 0.5em black;
+    /* put the label in the corner of the image */
+    position: absolute;
+    margin-top: 0.3em;
+    margin-left: 0.4em;
+}
+
 .output-audio {
     border-radius: 0.5em;
     max-width: 50vw;
+}
+
+.output-audio-label {
+    font-size: 1em;
+    font-family: "Code Font", monospace;
+    margin-right: 0.5em;
+    align-self: center;
 }
 
 #code-right-side {

@@ -63,9 +63,9 @@ impl Default for WebBackend {
 pub enum OutputItem {
     String(String),
     Svg(String),
-    Image(Vec<u8>),
-    Gif(Vec<u8>),
-    Audio(Vec<u8>),
+    Image(Vec<u8>, Option<String>),
+    Gif(Vec<u8>, Option<String>),
+    Audio(Vec<u8>, Option<String>),
     Report(Report),
     Faint(String),
     Classed(&'static str, String),
@@ -166,7 +166,7 @@ impl SysBackend for WebBackend {
             .prompt_with_message("Enter a line of text for stdin")
             .unwrap_or(None))
     }
-    fn show_image(&self, image: image::DynamicImage) -> Result<(), String> {
+    fn show_image(&self, image: image::DynamicImage, label: Option<&str>) -> Result<(), String> {
         let mut bytes = Cursor::new(Vec::new());
         image
             .write_to(&mut bytes, image::ImageOutputFormat::Png)
@@ -174,11 +174,11 @@ impl SysBackend for WebBackend {
         self.stdout
             .lock()
             .unwrap()
-            .push(OutputItem::Image(bytes.into_inner()));
+            .push(OutputItem::Image(bytes.into_inner(), label.map(Into::into)));
         Ok(())
     }
-    fn show_gif(&self, gif_bytes: Vec<u8>) -> Result<(), String> {
-        self.stdout.lock().unwrap().push(OutputItem::Gif(gif_bytes));
+    fn show_gif(&self, gif_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
+        (self.stdout.lock().unwrap()).push(OutputItem::Gif(gif_bytes, label.map(Into::into)));
         Ok(())
     }
     fn list_dir(&self, mut path: &str) -> Result<Vec<String>, String> {
@@ -304,8 +304,8 @@ impl SysBackend for WebBackend {
     fn trash(&self, path: &str) -> Result<(), String> {
         self.delete(path)
     }
-    fn play_audio(&self, wav_bytes: Vec<u8>) -> Result<(), String> {
-        (self.stdout.lock().unwrap()).push(OutputItem::Audio(wav_bytes));
+    fn play_audio(&self, wav_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
+        (self.stdout.lock().unwrap()).push(OutputItem::Audio(wav_bytes, label.map(Into::into)));
         Ok(())
     }
     fn stream_audio(&self, mut f: uiua::AudioStreamFn) -> Result<(), String> {
@@ -338,7 +338,7 @@ impl SysBackend for WebBackend {
             hound::SampleFormat::Int,
             SAMPLE_RATE,
         )?;
-        self.play_audio(bytes)
+        self.play_audio(bytes, None)
     }
     fn now(&self) -> f64 {
         *START_TIME.get_or_init(|| 0.0) + now()

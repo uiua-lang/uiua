@@ -267,22 +267,38 @@ pub fn Editor<'a>(
             OutputItem::Faint(s) => {
                 view!(<div class="output-item output-fainter">{s}</div>).into_view()
             }
-            OutputItem::Image(bytes) => {
+            OutputItem::Image(bytes, label) => {
                 let encoded = STANDARD.encode(bytes);
-                view!(<div><img class="output-image" src={format!("data:image/png;base64,{encoded}")} /></div>).into_view()
+                view!(<div class="output-media-wrapper">
+                    <div class="output-image-label">{label}</div>
+                    <img class="output-image" src={format!("data:image/png;base64,{encoded}")} />
+                </div>)
+                .into_view()
             }
-            OutputItem::Gif(bytes) => {
+            OutputItem::Gif(bytes, label) => {
                 let encoded = STANDARD.encode(bytes);
-                view!(<div><img class="output-image" src={format!("data:image/gif;base64,{encoded}")} /></div>).into_view()
+                view!(<div class="output-media-wrapper">
+                    <div class="output-image-label">{label}</div>
+                    <img class="output-image" src={format!("data:image/gif;base64,{encoded}")} />
+                </div>)
+                .into_view()
             }
-            OutputItem::Audio(bytes) => {
+            OutputItem::Audio(bytes, label) => {
                 let encoded = STANDARD.encode(bytes);
                 let src = format!("data:audio/wav;base64,{}", encoded);
+                let label = label.map(|s| format!("{s}:"));
                 if allow_autoplay {
-                    view!(<div><audio class="output-audio" controls autoplay src=src/></div>)
-                        .into_view()
+                    view!(<div class="output-media-wrapper">
+                        <div class="output-item output-audio-label">{label}</div>
+                        <audio class="output-audio" controls autoplay src=src/>
+                    </div>)
+                    .into_view()
                 } else {
-                    view!(<div><audio class="output-audio" controls src=src/></div>).into_view()
+                    view!(<div>
+                        <div class="output-item output-audio-label">{label}</div>
+                        <audio class="output-audio" controls src=src/>
+                    </div>)
+                    .into_view()
                 }
             }
             OutputItem::Svg(s) => view!(<div><img

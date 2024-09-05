@@ -14,7 +14,7 @@ use crate::{
     algorithm::map::{MapKeys, EMPTY_NAN, TOMBSTONE_NAN},
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
-    Boxed, Complex, HandleKind, Shape, Uiua, Value,
+    Boxed, Complex, ExactDoubleIterator, HandleKind, Shape, Uiua, Value,
 };
 
 /// Uiua's array type
@@ -273,6 +273,10 @@ impl<T> Array<T> {
     /// Get a mutable reference to the shape of the array
     pub fn shape_mut(&mut self) -> &mut Shape {
         &mut self.shape
+    }
+    /// Iterate over the elements of the array
+    pub fn elements(&self) -> impl ExactDoubleIterator<Item = &T> {
+        self.data.iter()
     }
     /// Get the metadata of the array
     pub fn meta(&self) -> &ArrayMeta {

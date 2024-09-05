@@ -838,15 +838,15 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     }
     /// Show an image
     #[cfg(feature = "image")]
-    fn show_image(&self, image: DynamicImage) -> Result<(), String> {
+    fn show_image(&self, image: DynamicImage, label: Option<&str>) -> Result<(), String> {
         Err("Showing images not supported in this environment".into())
     }
     /// Show a GIF
-    fn show_gif(&self, gif_bytes: Vec<u8>) -> Result<(), String> {
+    fn show_gif(&self, gif_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
         Err("Showing gifs not supported in this environment".into())
     }
     /// Play audio from WAV bytes
-    fn play_audio(&self, wave_bytes: Vec<u8>) -> Result<(), String> {
+    fn play_audio(&self, wave_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
         Err("Playing audio not supported in this environment".into())
     }
     /// Get the audio sample rate
@@ -1418,7 +1418,9 @@ impl SysOp {
                 {
                     let value = env.pop(1)?;
                     let image = crate::encode::value_to_image(&value).map_err(|e| env.error(e))?;
-                    env.rt.backend.show_image(image).map_err(|e| env.error(e))?;
+                    (env.rt.backend)
+                        .show_image(image, value.meta().label.as_deref())
+                        .map_err(|e| env.error(e))?;
                 }
                 #[cfg(not(feature = "image"))]
                 return Err(env.error("Image encoding is not supported in this environment"));
@@ -1430,10 +1432,12 @@ impl SysOp {
                     let value = env.pop(2)?;
                     let bytes = crate::encode::value_to_gif_bytes(&value, delay)
                         .map_err(|e| env.error(e))?;
-                    env.rt.backend.show_gif(bytes).map_err(|e| env.error(e))?;
+                    (env.rt.backend)
+                        .show_gif(bytes, value.meta().label.as_deref())
+                        .map_err(|e| env.error(e))?;
                 }
                 #[cfg(not(feature = "gif"))]
-                return Err(env.error("GIF encoding is not supported in this environment"));
+                return Err(env.error("GIF showing is not supported in this environment"));
             }
             SysOp::AudioPlay => {
                 #[cfg(feature = "audio_encode")]
@@ -1444,7 +1448,9 @@ impl SysOp {
                         env.rt.backend.audio_sample_rate(),
                     )
                     .map_err(|e| env.error(e))?;
-                    env.rt.backend.play_audio(bytes).map_err(|e| env.error(e))?;
+                    (env.rt.backend)
+                        .play_audio(bytes, value.meta().label.as_deref())
+                        .map_err(|e| env.error(e))?;
                 }
                 #[cfg(not(feature = "audio_encode"))]
                 return Err(env.error("Audio encoding is not supported in this environment"));

@@ -494,7 +494,7 @@ fn each2(f: Function, mut xs: Value, mut ys: Value, env: &mut Uiua) -> UiuaResul
                 transposed[i].push(value);
             }
         }
-        for new_values in transposed {
+        for new_values in transposed.into_iter().rev() {
             let mut new_shape = new_shape.clone();
             let mut eached = Value::from_row_values(new_values, env)?;
             if is_empty {

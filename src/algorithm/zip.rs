@@ -837,7 +837,7 @@ pub fn rows_windows(env: &mut Uiua) -> UiuaResult {
     }
     let n_arr = env.pop(1)?;
     let xs = env.pop(2)?;
-    if n_arr.rank() != 0 {
+    if n_arr.rank() != 0 || xs.rank() == 0 {
         let windows = n_arr.windows(xs, env)?;
         return rows1(f, windows, false, env);
     }
@@ -852,7 +852,9 @@ pub fn rows_windows(env: &mut Uiua) -> UiuaResult {
         return Ok(());
     }
     if let Some(Primitive::Box) = f.as_primitive(&env.asm) {
+        dbg!(&xs);
         let win_count = xs.row_count() - (n - 1);
+        dbg!(win_count);
         let arr = Array::from_iter(
             (0..win_count).map(|win_start| Boxed(xs.slice_rows(win_start, win_start + n))),
         );

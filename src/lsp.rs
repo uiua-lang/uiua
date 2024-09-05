@@ -402,7 +402,7 @@ impl Spanner {
                 }
                 Word::Ref(r) => spans.extend(self.ref_spans(r)),
                 Word::IncompleteRef { path, .. } => spans.extend(self.ref_path_spans(path)),
-                Word::Strand(items) | Word::Undertied(items) => {
+                Word::Strand(items) => {
                     for i in 0..items.len() {
                         let word = &items[i];
                         if i > 0 {

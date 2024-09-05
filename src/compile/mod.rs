@@ -1344,48 +1344,6 @@ code:
                     self.push_instr(Instr::PushFunc(func));
                 }
             }
-            Word::Undertied(words) => {
-                if words.len() > 2 {
-                    self.add_error(
-                        word.span.clone(),
-                        "Function strands cannot contain more than two items",
-                    );
-                }
-                self.experimental_error(&word.span, || {
-                    "Function strands are experimental. To use them, add \
-                    `# Experimental!` to the top of the file."
-                });
-                self.emit_diagnostic(
-                    "Function strands are deprecated and will be removed in the future.",
-                    DiagnosticKind::Warning,
-                    word.span.clone(),
-                );
-                let new_func = self.compile_words(words, true)?;
-                if call {
-                    self.push_all_instrs(new_func);
-                } else {
-                    match instrs_signature(&new_func.instrs) {
-                        Ok(sig) => {
-                            let func =
-                                self.make_function(FunctionId::Anonymous(word.span), sig, new_func);
-                            self.push_instr(Instr::PushFunc(func));
-                        }
-                        Err(e) => {
-                            return Err(self.fatal_error(
-                                word.span,
-                                format!(
-                                    "Cannot infer function signature: {e}{}",
-                                    if e.kind == SigCheckErrorKind::Ambiguous {
-                                        ". A signature can be declared after the opening `(`."
-                                    } else {
-                                        ""
-                                    }
-                                ),
-                            ));
-                        }
-                    }
-                }
-            }
             Word::Func(func) => self.func(func, word.span, call)?,
             Word::Pack(pack) => {
                 if pack.angled {

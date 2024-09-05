@@ -27,6 +27,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add an experimental [`sort ⍆`](https://uiua.org/docs/sort) function
   - Sorting is very common
 - Add a `Lorem` constant, which contains the Lorem Ipsum text
+- Remove previously deprecated function strands
 ### Interpreter
 - Some optimizations
   - [`rows ≡`](https://uiua.org/docs/rows) [`on ⟜`](https://uiua.org/docs/on)/[`by ⊸`](https://uiua.org/docs/by) [`rand ⚂`](https://uiua.org/docs/rand)/`constant`

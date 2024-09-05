@@ -260,27 +260,23 @@ impl<'i> Parser<'i> {
             self.tokens.last().unwrap().span.clone()
         }
     }
+    fn curr_span(&self) -> CodeSpan {
+        if let Some(token) = self.tokens.get(self.index) {
+            token.span.clone()
+        } else {
+            self.tokens.last().unwrap().span.clone()
+        }
+    }
     fn expected<I: Into<Expectation>>(
         &self,
         expectations: impl IntoIterator<Item = I>,
     ) -> Sp<ParseError> {
-        self.prev_span().sp(ParseError::Expected(
+        self.curr_span().sp(ParseError::Expected(
             expectations.into_iter().map(Into::into).collect(),
             self.tokens
-                .get(self.index.saturating_sub(1))
+                .get(self.index)
                 .map(|t| self.input[t.span.byte_range()].into()),
         ))
-    }
-    #[allow(unused)]
-    fn expected_continue<I: Into<Expectation>>(
-        &mut self,
-        expectations: impl IntoIterator<Item = I>,
-    ) {
-        let err = self.prev_span().sp(ParseError::Expected(
-            expectations.into_iter().map(Into::into).collect(),
-            None,
-        ));
-        self.errors.push(err);
     }
     fn items(&mut self, in_scope: bool) -> Vec<Item> {
         let mut items = Vec::new();
@@ -600,10 +596,10 @@ impl<'i> Parser<'i> {
         let start = self.try_exact(Bar.into())?;
         let inner = self.sig_inner();
         if inner.is_none() {
-            self.index = reset;
             if error_on_invalid {
                 self.errors.push(self.expected([Expectation::ArgsOutputs]));
             }
+            self.index = reset;
         }
         let (args, outs) = inner?;
         let mut end = self.prev_span();
@@ -735,35 +731,24 @@ impl<'i> Parser<'i> {
         self.comment()
             .map(|c| c.map(Word::Comment))
             .or_else(|| self.output_comment())
-            .or_else(|| self.try_undertied())
-    }
-    fn try_undertied(&mut self) -> Option<Sp<Word>> {
-        self.try_strand_impl(Undertie, Word::Undertied, Self::try_strand)
+            .or_else(|| self.try_strand())
     }
     fn try_strand(&mut self) -> Option<Sp<Word>> {
-        self.try_strand_impl(Underscore.into(), Word::Strand, Self::try_modified)
-    }
-    fn try_strand_impl(
-        &mut self,
-        token: Token,
-        make: fn(Vec<Sp<Word>>) -> Word,
-        inner: fn(&mut Self) -> Option<Sp<Word>>,
-    ) -> Option<Sp<Word>> {
-        let word = inner(self)?;
+        let word = self.try_modified()?;
         if let Word::Spaces = word.value {
             return Some(word);
         }
         // Collect items
         let mut items = Vec::new();
-        while self.try_exact(token.clone()).is_some() {
-            let item = match inner(self) {
+        while self.try_exact(Underscore.into()).is_some() {
+            let item = match self.try_modified() {
                 Some(mut item) => {
                     if let Word::Spaces = item.value {
                         if items.is_empty() {
                             break;
                         }
                         self.errors.push(self.expected([Expectation::Term]));
-                        item = match inner(self) {
+                        item = match self.try_modified() {
                             Some(item) => item,
                             None => {
                                 self.errors.push(self.expected([Expectation::Term]));
@@ -790,7 +775,7 @@ impl<'i> Parser<'i> {
             .span
             .clone()
             .merge(items.last().unwrap().span.clone());
-        Some(span.sp(make(items)))
+        Some(span.sp(Word::Strand(items)))
     }
     fn try_modified(&mut self) -> Option<Sp<Word>> {
         if self.depth > 50 {
@@ -836,7 +821,7 @@ impl<'i> Parser<'i> {
                 }
                 break;
             }
-            if let Some(arg) = self.try_func().or_else(|| self.try_undertied()) {
+            if let Some(arg) = self.try_func().or_else(|| self.try_strand()) {
                 // Parse pack syntax
                 if let Word::Pack(pack) = &arg.value {
                     if i == 0 && !pack.angled {

@@ -1247,6 +1247,7 @@ impl<'a> Lexer<'a> {
         if !is_custom_glyph(c) {
             // Handle identifiers beginning with __
             if c == "_" && self.next_char_exact("_") {
+                s.push('_');
                 while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
                     s.push_str(c);
                 }
@@ -1255,6 +1256,7 @@ impl<'a> Lexer<'a> {
                 if let Some(c) = self.next_char_if_all(is_ident_char) {
                     s.push_str(c);
                 } else if self.next_chars_exact(["_"; 2]) {
+                    s.push_str("__");
                     while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
                         s.push_str(c);
                     }

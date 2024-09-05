@@ -368,50 +368,6 @@ fn map_char_pos() {
     assert_eq!(output.map_char_pos(34), (31, 31));
 }
 
-#[test]
-#[cfg(test)]
-fn formatter_correctness() {
-    let input = "\
-F ← (
-  ⊃(+
-  | -))
-G ← (
-  ∘
-  ∘ # hi
-)
-⊃(+
-| - # x
-)
-∘⊃(
-  +
-| - # x
-)
-⊃(+
-| -
-)∘
-⊃(+
-| -)
-(1 2) (
-  5)
-(1
- 2
-) (
-  5)
-(1
- 2
- 3
-)
-(1
- 2
- 3)
-⊃(1
-| 2
-)
-";
-    let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
-    assert_eq!(formatted, input);
-}
-
 /// Format Uiua code
 ///
 /// The path is used for error reporting
@@ -1417,4 +1373,63 @@ fn end_loc(s: &str) -> Loc {
         char_pos,
         byte_pos,
     }
+}
+
+#[test]
+#[cfg(test)]
+fn formatter_idempotence() {
+    let input = "\
+F ← (
+  ⊃(+
+  | -))
+G ← (
+  ∘
+  ∘ # hi
+)
+⊃(+
+| - # x
+)
+∘⊃(
+  +
+| - # x
+)
+⊃(+
+| -
+)∘
+⊃(+
+| -)
+(1 2) (
+  5)
+(1
+ 2
+) (
+  5)
+(1
+ 2
+ 3
+)
+(1
+ 2
+ 3)
+⊃(1
+| 2
+)
+";
+    let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
+    assert_eq!(formatted, input);
+}
+
+#[test]
+#[cfg(test)]
+fn formatter_correctness() {
+    let input = "\
+F__1
+\\\\25cb
+";
+    let output = "\
+F₁
+○
+";
+    let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
+    assert_eq!(formatted, output);
 }

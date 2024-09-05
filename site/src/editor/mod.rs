@@ -531,15 +531,15 @@ pub fn Editor<'a>(
                 }
             }
             "Backspace" => {
-                let (start, end) = get_code_cursor().unwrap();
+                let (mut start, end) = get_code_cursor().unwrap();
                 // logging::log!("backspace start: {start}, end: {end}");
                 state.update(|state| {
                     if start == end {
                         if start > 0 {
                             let mut removal_count = 1;
+                            let code = get_code();
                             if os_ctrl(event) {
                                 removal_count = 0;
-                                let code = get_code();
                                 let chars: Vec<_> = code.chars().take(start as usize).collect();
                                 let last_char = *chars.last().unwrap();
                                 let class = char_class(last_char);
@@ -553,6 +553,19 @@ pub fn Editor<'a>(
                                         break;
                                     }
                                     encountered_space |= c.is_whitespace();
+                                }
+                            } else if let Some(char_after) = code.chars().nth(start as usize) {
+                                let last_char = code.chars().nth(start as usize - 1).unwrap();
+                                for (open, close) in
+                                    [('(', ')'), ('[', ']'), ('{', '}'), ('"', '"')]
+                                {
+                                    if last_char == open {
+                                        if char_after == close {
+                                            start += 1;
+                                            removal_count += 1;
+                                        }
+                                        break;
+                                    }
                                 }
                             }
                             remove_code(state, start - removal_count, start);

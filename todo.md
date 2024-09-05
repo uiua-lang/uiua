@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.13
-  - `conform` function?
   - Label and format string glyphs
   - `try` optimizations
   - `setinv` on and by inverses

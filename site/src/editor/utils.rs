@@ -606,13 +606,11 @@ pub fn gen_code_view(code: &str) -> View {
                                 }
                             }
                             if let Some(comment) = &docs.comment {
-                                if !title.is_empty() {
-                                    if !title.ends_with('\n') {
-                                        if comment.text.contains('\n') && comment.sig.is_none() {
-                                            title.push('\n');
-                                        } else {
-                                            title.push(' ');
-                                        }
+                                if !title.is_empty() && !title.ends_with('\n') {
+                                    if comment.text.contains('\n') && comment.sig.is_none() {
+                                        title.push('\n');
+                                    } else {
+                                        title.push(' ');
                                     }
                                 }
                                 if let Some(sig) = &comment.sig {

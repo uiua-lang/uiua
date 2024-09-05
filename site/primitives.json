@@ -692,6 +692,12 @@
     "class": "Encoding",
     "description": "Encode a gif into a byte array"
   },
+  "graphemes": {
+    "args": 1,
+    "outputs": 1,
+    "class": "Encoding",
+    "description": "Convert a string to a list of UTF-8 grapheme clusters"
+  },
   "greater or equal": {
     "ascii": ">=",
     "glyph": "≥",

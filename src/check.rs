@@ -361,14 +361,10 @@ impl<'a> VirtualEnv<'a> {
                 self.handle_args_outputs(args, 2)?;
             }
             Instr::Prim(prim, _) => match prim {
-                Reduce => {
+                Reduce | Scan => {
                     let sig = self.pop_func()?.signature();
                     let args = sig.args.saturating_sub(sig.outputs);
                     self.handle_args_outputs(args, sig.outputs)?;
-                }
-                Scan => {
-                    let _sig = self.pop_func()?.signature();
-                    self.handle_args_outputs(1, 1)?;
                 }
                 Each | Rows | Inventory => {
                     let sig = self.pop_func()?.signature();

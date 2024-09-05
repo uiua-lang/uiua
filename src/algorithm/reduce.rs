@@ -633,7 +633,7 @@ pub fn scan(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let xs = env.pop(1)?;
-    if xs.rank() == 0 {
+    if xs.rank() == 0 && f.signature().args <= 2 {
         return Err(env.error(format!("Cannot {} rank 0 array", Primitive::Scan.format())));
     }
     match (f.as_flipped_primitive(&env.asm), xs) {
@@ -729,34 +729,79 @@ where
 
 fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
-    if sig != (2, 1) {
+    if sig.outputs != 1 {
         return Err(env.error(format!(
-            "{}'s function's signature must be |2.1, but it is {sig}",
+            "{}'s function must have 2 outputs, \
+            but its signature is {sig}",
             Primitive::Scan.format(),
         )));
     }
-    if xs.row_count() == 0 {
-        env.push(xs.first_dim_zero());
-        return Ok(());
-    }
-    let row_count = xs.row_count();
-    let mut rows = xs.into_rows();
-    let mut acc = rows.next().unwrap();
-    let mut scanned = Vec::with_capacity(row_count);
-    scanned.push(acc.clone());
-    env.without_fill(|env| -> UiuaResult {
-        for row in rows.by_ref() {
-            env.push(row);
-            env.push(acc.clone());
-            env.call(f.clone())?;
-            acc = env.pop("scanned function result")?;
+    match sig.args {
+        0 | 1 => Err(env.error(format!(
+            "{}'s function must have at least 2 arguments, \
+            but its signature is {sig}",
+            Primitive::Reduce.format(),
+        ))),
+        2 => {
+            if xs.row_count() == 0 {
+                env.push(xs.first_dim_zero());
+                return Ok(());
+            }
+            let row_count = xs.row_count();
+            let mut rows = xs.into_rows();
+            let mut acc = rows.next().unwrap();
+            let mut scanned = Vec::with_capacity(row_count);
             scanned.push(acc.clone());
+            env.without_fill(|env| -> UiuaResult {
+                for row in rows.by_ref() {
+                    env.push(row);
+                    env.push(acc.clone());
+                    env.call(f.clone())?;
+                    acc = env.pop("scanned function result")?;
+                    scanned.push(acc.clone());
+                }
+                Ok(())
+            })?;
+            let val = Value::from_row_values(scanned, env)?;
+            env.push(val);
+            Ok(())
         }
-        Ok(())
-    })?;
-    let val = Value::from_row_values(scanned, env)?;
-    env.push(val);
-    Ok(())
+        n => {
+            let mut repeated = Vec::with_capacity(n - 1);
+            repeated.push(xs);
+            for i in 0..n - 2 {
+                repeated.push(env.pop(i + 2)?);
+            }
+            let xs = repeated.pop().unwrap();
+            if xs.row_count() == 0 {
+                let val = reduce_identity(f.instrs(&env.asm), xs.clone())
+                    .map(|v| v.first_dim_zero())
+                    .unwrap_or(xs);
+                env.push(val);
+                return Ok(());
+            }
+            let mut scanned = Vec::with_capacity(xs.row_count());
+            let mut rows = xs.into_rows();
+            let mut acc = rows.next().unwrap();
+            scanned.push(acc.clone());
+            env.without_fill(|env| -> UiuaResult {
+                for row in rows {
+                    env.push(row);
+                    for val in repeated.iter().rev() {
+                        env.push(val.clone());
+                    }
+                    env.push(acc);
+                    env.call(f.clone())?;
+                    acc = env.pop("reduced function result")?;
+                    scanned.push(acc.clone());
+                }
+                Ok(())
+            })?;
+            let val = Value::from_row_values(scanned, env)?;
+            env.push(val);
+            Ok(())
+        }
+    }
 }
 
 pub fn unscan(env: &mut Uiua) -> UiuaResult {

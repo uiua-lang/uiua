@@ -1568,6 +1568,10 @@ primitive!(
     /// [scan]ning with [add] and then using [group] can split by a delimiter while keeping the delimiter.
     /// ex: ⊕□\+=@    . "Everyday man's on the block"
     ///   : ⊕□\+↻¯1=@ . "Everyday man's on the block"
+    ///
+    /// If the function takes more than 2 arguments, additional arguments above the array on the stack will be passed to the function on every iteration.
+    /// ex: \(+×) 10 [1 2 3 4]
+    /// ex: ⬚@ \(⊂⊂) @, "abcd"
     (1[1], Scan, AggregatingModifier, ("scan", '\\')),
     /// Apply a function to each element of an array or arrays
     ///

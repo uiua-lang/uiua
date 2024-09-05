@@ -294,7 +294,7 @@ pub fn Editor<'a>(
                     </div>)
                     .into_view()
                 } else {
-                    view!(<div>
+                    view!(<div class="output-media-wrapper">
                         <div class="output-item output-audio-label">{label}</div>
                         <audio class="output-audio" controls src=src/>
                     </div>)

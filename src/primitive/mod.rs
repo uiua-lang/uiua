@@ -168,6 +168,7 @@ impl fmt::Display for ImplPrimitive {
             UnAtan => write!(f, "{Un}{Atan}"),
             UnComplex => write!(f, "{Un}{Complex}"),
             UnUtf => write!(f, "{Un}{Utf8}"),
+            UnGraphemes => write!(f, "{Un}{Graphemes}"),
             UnParse => write!(f, "{Un}{Parse}"),
             UnFix => write!(f, "{Un}{Fix}"),
             UnShape => write!(f, "{Un}{Shape}"),
@@ -622,6 +623,7 @@ impl Primitive {
             Primitive::Repr => env.monadic_ref(Value::representation)?,
             Primitive::Parse => env.monadic_ref_env(Value::parse_num)?,
             Primitive::Utf8 => env.monadic_ref_env(Value::utf8)?,
+            Primitive::Graphemes => env.monadic_ref_env(Value::graphemes)?,
             Primitive::Range => env.monadic_ref_env(Value::range)?,
             Primitive::Reverse => env.monadic_mut(Value::reverse)?,
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,
@@ -917,6 +919,7 @@ impl ImplPrimitive {
             }
             ImplPrimitive::UnWhere => env.monadic_ref_env(Value::unwhere)?,
             ImplPrimitive::UnUtf => env.monadic_ref_env(Value::unutf8)?,
+            ImplPrimitive::UnGraphemes => env.monadic_env(Value::ungraphemes)?,
             ImplPrimitive::UnBits => env.monadic_ref_env(Value::unbits)?,
             ImplPrimitive::UnJoin => {
                 let val = env.pop(1)?;

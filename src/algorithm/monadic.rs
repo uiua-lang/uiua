@@ -14,6 +14,7 @@ use std::{
 use ecow::{eco_vec, EcoVec};
 use rayon::prelude::*;
 use time::{Date, Month, OffsetDateTime, Time};
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     array::*,
@@ -1527,6 +1528,24 @@ impl Value {
         let bytes = self.as_bytes(env, "Argument to inverse utf must be a list of bytes")?;
         let s = String::from_utf8(bytes).map_err(|e| env.error(e))?;
         Ok(s.into())
+    }
+    /// Convert a string value to a list of boxed UTF-8 grapheme clusters
+    pub fn graphemes(&self, env: &Uiua) -> UiuaResult<Self> {
+        let s = self.as_string(env, "Argument to graphemes must be a string")?;
+        let mut data = EcoVec::new();
+        for grapheme in s.graphemes(true) {
+            data.push(Boxed(grapheme.into()));
+        }
+        Ok(Array::from(data).into())
+    }
+    /// Convert a list of boxed UTF-8 grapheme clusters to a string value
+    pub fn ungraphemes(self, env: &Uiua) -> UiuaResult<Self> {
+        let mut data = EcoVec::new();
+        for val in self.into_rows().map(Value::unboxed) {
+            let s = val.as_string(env, "Argument to ungraphemes must be a list of strings")?;
+            data.extend(s.chars());
+        }
+        Ok(Array::from(data).into())
     }
 }
 

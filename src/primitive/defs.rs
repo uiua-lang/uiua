@@ -2412,6 +2412,18 @@ primitive!(
     /// ex: -@\0 "👩🏽‍👩🏻‍👦🏻‍👧🏽"
     /// ex: utf₈ "👩🏽‍👩🏻‍👦🏻‍👧🏽"
     (1, Utf8, Encoding, "utf₈"),
+    /// Convert a string to a list of UTF-8 grapheme clusters
+    ///
+    /// A Uiua character is a single Unicode code point.
+    /// A [grapheme cluster](https://unicode.org/reports/tr29/#Grapheme_Cluster_Boundaries) is a sequence of Unicode code points that combine into a single visual character.
+    /// [graphemes] splits a string into its grapheme clusters.
+    /// ex: graphemes "🏳️‍⚧️ 👩🏼‍🤝‍👩🏽 ȗ̵̬ị̶̿u̴̠͘ă̸̰"
+    ///   : ≡¤
+    ///   : -@\0.
+    ///
+    /// [graphemes] works with [un] and [under].
+    /// ex: ⍜graphemes≡◇⊢ "ų̶̢̢̛̥͈̖̦̜̥͔͕̙͚̜͚͊͋̑̿̔̓̐͐̀̓̐̈́̑͆͆͘į̴̥̞̀̑̋̀̽̌̓̐̓̚ư̷̯̖͈͇̌͌́̄̿͑̓̚͜͜à̶͓̜̗̩̝̰̲͎͉̲͆̇͗̄̆̏̍̑̍͌͝ͅ"
+    (1, Graphemes, Encoding, "graphemes"),
     /// Generate a unique tag
     ///
     /// Tags are just numbers and are unique across multiple threads, but not across multiple runs.
@@ -3033,6 +3045,7 @@ impl_primitive!(
     (1, UnWhere),
     (1(2), UnCouple),
     (1, UnUtf),
+    (1, UnGraphemes),
     (1(2), UnAtan),
     (1(2), UnComplex),
     (1, UnParse),

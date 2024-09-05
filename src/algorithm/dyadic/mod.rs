@@ -2276,8 +2276,9 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         let mut shape = self.shape.clone();
-        let combinations = (1..=n).rev().take(k).map(|i| i as f64).product::<f64>()
-            / (1..=k).map(|i| i as f64).product::<f64>();
+        let combinations: f64 = (1..=k.min(n - k))
+            .map(|i| (n + 1 - i) as f64 / i as f64)
+            .product();
         if combinations.is_nan() {
             return Err(env.error("Combinatorial explosion"));
         }

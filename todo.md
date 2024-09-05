@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.13
+  - Multi-input scan
   - Label and format string glyphs
   - `try` optimizations
   - `reshape` with multiple infinities

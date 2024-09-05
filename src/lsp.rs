@@ -11,7 +11,7 @@ use std::{
 use crate::{
     algorithm::invert::{invert_instrs, under_instrs},
     ast::{Item, Modifier, ModuleKind, PlaceholderOp, Ref, RefComponent, Word},
-    ident_modifier_args, instrs_are_pure,
+    ident_modifier_args, instrs_are_pure, is_custom_glyph,
     lex::{CodeSpan, Sp},
     parse::parse,
     ArraySwizzle, Assembly, BindingInfo, BindingKind, Compiler, DocComment, Ident, InputSrc,
@@ -56,6 +56,8 @@ pub struct BindingDocs {
     pub is_public: bool,
     /// The specific binding kind
     pub kind: BindingDocsKind,
+    /// An escape code used to type a glyph
+    pub escape: Option<String>,
 }
 
 /// The kind of a binding
@@ -310,6 +312,7 @@ impl Spanner {
                 comment: Some(constant.doc.into()),
                 is_public: true,
                 kind: BindingDocsKind::Constant(Some(val)),
+                escape: None,
             });
         }
         None
@@ -369,11 +372,18 @@ impl Spanner {
                 BindingDocsKind::Module { sig }
             }
         };
+        let escape = binfo.span.as_str(&self.asm.inputs, |s| {
+            is_custom_glyph(s).then(|| {
+                let c = s.chars().next().unwrap();
+                format!("\\\\{:x}", c as u32)
+            })
+        });
         BindingDocs {
             src_span: binfo.span.clone(),
             comment,
             is_public: binfo.public,
             kind,
+            escape,
         }
     }
 
@@ -881,7 +891,8 @@ mod server {
             } else if let Some(docs) = binding_docs {
                 let span = docs.span;
                 let docs = docs.value;
-                let mut value = "```uiua\n".to_string();
+                let mut value = String::new();
+                value.push_str("```uiua\n");
                 span.as_str(&doc.asm.inputs, |s| value.push_str(s));
                 match docs.kind {
                     BindingDocsKind::Function { sig, .. } => {
@@ -905,6 +916,9 @@ mod server {
                     _ => {}
                 }
                 value.push_str("\n```");
+                if let Some(escape) = &docs.escape {
+                    value.push_str(&format!("\n`{escape}`"));
+                }
                 match docs.kind {
                     BindingDocsKind::Function {
                         invertible,

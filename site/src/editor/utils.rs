@@ -598,12 +598,21 @@ pub fn gen_code_view(code: &str) -> View {
                                 title.push_str("(private) ");
                                 "private-binding"
                             };
+                            if let Some(escape) = &docs.escape {
+                                title.push('\n');
+                                title.push_str(escape);
+                                if docs.comment.is_some() {
+                                    title.push('\n');
+                                }
+                            }
                             if let Some(comment) = &docs.comment {
                                 if !title.is_empty() {
-                                    if comment.text.contains('\n') && comment.sig.is_none() {
-                                        title.push('\n');
-                                    } else {
-                                        title.push(' ');
+                                    if !title.ends_with('\n') {
+                                        if comment.text.contains('\n') && comment.sig.is_none() {
+                                            title.push('\n');
+                                        } else {
+                                            title.push(' ');
+                                        }
                                     }
                                 }
                                 if let Some(sig) = &comment.sig {

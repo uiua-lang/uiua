@@ -846,22 +846,39 @@ impl ArrayValue for f64 {
         if elems.is_empty() {
             return String::new();
         }
-        let mut min = f64::INFINITY;
-        let mut max = f64::NEG_INFINITY;
+        if elems.iter().all(|&n| n.is_nan()) {
+            return "all NaN".into();
+        }
+        let mut min = f64::NAN;
+        let mut max = f64::NAN;
         for &elem in elems {
             min = min.min(elem);
             max = max.max(elem);
         }
-        let mut mean = elems[0];
-        for (i, &elem) in elems.iter().enumerate().skip(1) {
-            mean += (elem - mean) / (i + 1) as f64;
+        let mut nan_count = elems.iter().take_while(|n| n.is_nan()).count();
+        let mut mean = elems[nan_count];
+        let mut i = 1;
+        for elem in &elems[nan_count + 1..] {
+            if elem.is_nan() {
+                nan_count += 1;
+            } else {
+                mean += (elem - mean) / (i + 1) as f64;
+                i += 1;
+            }
         }
-        format!(
+        let mut s = format!(
             "{}-{} x̄{}",
             min.grid_string(false),
             max.grid_string(false),
             mean.grid_string(false)
-        )
+        );
+        if nan_count > 0 {
+            s.push_str(&format!(
+                " ({nan_count} NaN{})",
+                if nan_count > 1 { "s" } else { "" }
+            ));
+        }
+        s
     }
 }
 

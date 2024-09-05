@@ -355,6 +355,14 @@ impl<T> Array<T> {
         &self.data[row * row_len..(row + 1) * row_len]
     }
     /// Combine the metadata of two arrays
+    ///
+    /// This combines:
+    /// - flags
+    /// - map keys
+    /// - handle kind
+    ///
+    /// Notably, this does not combine the label, as label
+    /// combination should be more nuanced.
     pub fn combine_meta(&mut self, other: &ArrayMeta) {
         if let Some(meta) = self.get_meta_mut() {
             meta.flags &= other.flags;

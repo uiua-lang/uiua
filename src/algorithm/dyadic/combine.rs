@@ -268,8 +268,8 @@ impl<T: ArrayValue> Array<T> {
         let res = match self.rank().cmp(&other.rank()) {
             Ordering::Less => {
                 self.combine_meta(other.meta());
-                if let Some(label) = other.take_label() {
-                    self.meta_mut().label = Some(label);
+                if let Some(label) = other.take_label().or_else(|| self.take_label()) {
+                    other.meta_mut().label = Some(label);
                 }
                 if self.shape() == [0] {
                     return Ok(other);
@@ -325,6 +325,9 @@ impl<T: ArrayValue> Array<T> {
             Ordering::Equal => {
                 if self.rank() == 0 {
                     debug_assert_eq!(other.rank(), 0);
+                    if let Some(label) = self.take_label().xor(other.take_label()) {
+                        self.meta_mut().label = Some(label);
+                    }
                     self.data.extend(other.data.into_iter().next());
                     self.shape = 2.into();
                     self
@@ -359,18 +362,26 @@ impl<T: ArrayValue> Array<T> {
                     }
 
                     if self.data.len() >= other.data.len() {
+                        if self.meta().label.is_none() {
+                            if let Some(label) = other.take_label() {
+                                self.meta_mut().label = Some(label);
+                            }
+                        }
                         self.data.extend_from_cowslice(other.data);
                         self.shape[0] += other.shape[0];
                     } else {
+                        if other.meta().label.is_none() {
+                            if let Some(label) = self.take_label() {
+                                other.meta_mut().label = Some(label);
+                            }
+                        }
                         let rot_len = self.data.len();
                         other.data.extend_from_cowslice(self.data);
                         other.data.as_mut_slice().rotate_right(rot_len);
                         other.shape[0] += self.shape[0];
-                        other.meta = self.meta;
                         self = other;
                     }
 
-                    self.take_label();
                     if let Some((mut a, b)) = map_keys {
                         let mut to_remove = a.join(b, ctx)?;
                         to_remove.sort_unstable();
@@ -430,6 +441,9 @@ impl<T: ArrayValue> Array<T> {
                 take(&mut self.shape)
             }
         };
+        if let Some(label) = self.take_label().or_else(|| other.take_label()) {
+            self.meta_mut().label = Some(label);
+        }
         self.data.extend_from_cowslice(other.data);
         self.shape = target_shape;
         self.shape[0] += 1;
@@ -699,6 +713,14 @@ impl<T: ArrayValue> Array<T> {
     ) -> Result<(), C::Error> {
         crate::profile_function!();
         self.combine_meta(other.meta());
+        match (self.take_label(), other.take_label()) {
+            (Some(a), Some(b)) => {
+                self.meta_mut().label = Some(if self.rank() >= other.rank() { a } else { b })
+            }
+            (Some(a), None) => self.meta_mut().label = Some(a),
+            (None, Some(b)) => self.meta_mut().label = Some(b),
+            (None, None) => {}
+        }
         if self.shape != other.shape {
             match ctx.scalar_fill::<T>() {
                 Ok(fill) => {
@@ -738,7 +760,6 @@ impl<T: ArrayValue> Array<T> {
         self.data.extend_from_cowslice(other.data);
         self.shape.insert(0, 2);
         self.validate_shape();
-        self.take_label();
         Ok(())
     }
     /// Uncouple the array into two arrays

@@ -2,6 +2,7 @@
 
 - 0.13
   - `conform` function?
+  - Labels on pad images
   - Multi-input scan
   - Label and format string glyphs
   - `try` optimizations

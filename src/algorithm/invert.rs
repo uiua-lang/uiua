@@ -523,6 +523,17 @@ pub(crate) fn under_instrs(
             (CopyToUnder(1), Fall, Dup, Rise, PushToUnder(1)),
             (PopUnder(1), Select, PopUnder(1), Flip, Select)
         ),
+        // Sort
+        &pat!(
+            Sort,
+            (Dup, Rise, CopyToUnder(1), Select),
+            (PopUnder(1), Rise, Select),
+        ),
+        &pat!(
+            SortDown,
+            (Dup, Fall, CopyToUnder(1), Select),
+            (PopUnder(1), Rise, Select),
+        ),
         // Index of
         &maybe_val!(pat!(
             IndexOf,

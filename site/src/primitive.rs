@@ -160,6 +160,7 @@ fn all_fills() -> impl IntoView {
             { fill_row_impl("Arrays", "", "⬚0[1 2_3_4 5_6]") }
             { fill_row(First, "Default scalar for empty array", "⬚5⊢ []") }
             { fill_row(Parse, "Default for non-number strings", "⬚10⋕ {\"1\" \"2\" \"dog\"}") }
+            { fill_row(Abs, "Multi-character uppercase", r#"⬚@- ["a" "ß"]"#) }
             { fill_row(Couple, "Matches shapes", "⬚0⊟ [1 2 3 4] [5 6]") }
             { fill_row(Join, "Makes shapes work", "⬚0⊂ [1_2 3_4] [5 6 7]") }
             { fill_row(Keep, "Fills mask", "⬚0▽ [1 0 1] \"abcdef\"") }

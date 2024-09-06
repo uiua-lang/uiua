@@ -409,11 +409,11 @@ impl Value {
         into.try_map_boxed(|into| {
             self.generic_bin_into(
                 into.unboxed(),
-                |a, b| a.unfirst(b, env).map(Into::into),
-                |a, b| a.unfirst(b, env).map(Into::into),
-                |a, b| a.unfirst(b, env).map(Into::into),
-                |a, b| a.unfirst(b, env).map(Into::into),
-                |a, b| a.unfirst(b, env).map(Into::into),
+                |a, b| a.undo_first(b, env).map(Into::into),
+                |a, b| a.undo_first(b, env).map(Into::into),
+                |a, b| a.undo_first(b, env).map(Into::into),
+                |a, b| a.undo_first(b, env).map(Into::into),
+                |a, b| a.undo_first(b, env).map(Into::into),
                 |a, b| {
                     env.error(format!(
                         "Cannot unfirst {} into {}",
@@ -428,11 +428,11 @@ impl Value {
         into.try_map_boxed(|into| {
             self.generic_bin_into(
                 into.unboxed(),
-                |a, b| a.unlast(b, env).map(Into::into),
-                |a, b| a.unlast(b, env).map(Into::into),
-                |a, b| a.unlast(b, env).map(Into::into),
-                |a, b| a.unlast(b, env).map(Into::into),
-                |a, b| a.unlast(b, env).map(Into::into),
+                |a, b| a.undo_last(b, env).map(Into::into),
+                |a, b| a.undo_last(b, env).map(Into::into),
+                |a, b| a.undo_last(b, env).map(Into::into),
+                |a, b| a.undo_last(b, env).map(Into::into),
+                |a, b| a.undo_last(b, env).map(Into::into),
                 |a, b| {
                     env.error(format!(
                         "Cannot unlast {} into {}",
@@ -590,11 +590,11 @@ impl<T: ArrayValue> Array<T> {
             }
         }
     }
-    pub(crate) fn unfirst(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        self.join(into.drop(&[Ok(1)], env)?, false, env)
+    pub(crate) fn undo_first(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        self.join(into.drop(&[Ok(1)], env)?, true, env)
     }
-    pub(crate) fn unlast(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        into.drop(&[Ok(-1)], env)?.join(self, false, env)
+    pub(crate) fn undo_last(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        into.drop(&[Ok(-1)], env)?.join(self, true, env)
     }
 }
 

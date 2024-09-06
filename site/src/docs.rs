@@ -132,10 +132,10 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
             let clear_search = move |_| {
                 let search_input = element::<HtmlInputElement>("function-search");
                 search_input.set_value("");
-                _ = search_input.dispatch_event(
-                    &Event::new_with_event_init_dict("input", EventInit::new().bubbles(true))
-                        .unwrap(),
-                );
+                let init = EventInit::new();
+                init.set_bubbles(true);
+                _ = search_input
+                    .dispatch_event(&Event::new_with_event_init_dict("input", &init).unwrap());
             };
             Some(view!( {}<button on:click=clear_search>"✕"</button>).into_view())
         });
@@ -143,7 +143,9 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         // Derive allowed primitives
         let allowed = Allowed::from_search(text);
         if !text.is_empty() {
-            scroll_to_docs_functions(ScrollIntoViewOptions::new().behavior(ScrollBehavior::Smooth));
+            let siv_options = ScrollIntoViewOptions::new();
+            siv_options.set_behavior(ScrollBehavior::Smooth);
+            scroll_to_docs_functions(&siv_options);
         }
         if update_location {
             let text = text.to_string();
@@ -175,9 +177,9 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
         {
             // Only one result
             let prim = allowed.prims.into_iter().next().unwrap();
-            scroll_to_docs_functions(
-                ScrollIntoViewOptions::new().behavior(ScrollBehavior::Instant),
-            );
+            let siv_options = ScrollIntoViewOptions::new();
+            siv_options.set_behavior(ScrollBehavior::Instant);
+            scroll_to_docs_functions(&siv_options);
             set_result.set(Some(view!( <PrimDocs prim=prim/>).into_view()));
             set_current_prim.set(Some(prim));
         } else {

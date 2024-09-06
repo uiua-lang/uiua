@@ -647,9 +647,7 @@ pub fn Editor<'a>(
                     let code = get_code();
                     let (line, _) = line_col(&code, start as usize);
                     if let Some(line) = code.split('\n').nth(line - 1) {
-                        if let Some(clip) = window().navigator().clipboard() {
-                            _ = clip.write_text(line);
-                        }
+                        _ = window().navigator().clipboard().write_text(line);
                     }
                 } else {
                     handled = false;
@@ -674,9 +672,7 @@ pub fn Editor<'a>(
                         .take((end - start) as usize)
                         .collect()
                 };
-                if let Some(clip) = window().navigator().clipboard() {
-                    _ = clip.write_text(&text);
-                }
+                _ = window().navigator().clipboard().write_text(&text);
                 state.update(|state| remove_code(state, start, end));
             }
             // Undo
@@ -1312,11 +1308,7 @@ pub fn Editor<'a>(
         } else {
             url
         };
-        _ = window()
-            .navigator()
-            .clipboard()
-            .unwrap()
-            .write_text(&to_copy);
+        _ = window().navigator().clipboard().write_text(&to_copy);
         if let EditorMode::Pad = mode {
             window()
                 .history()

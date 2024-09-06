@@ -412,9 +412,9 @@ impl SysBackend for WebBackend {
 }
 
 pub async fn fetch(url: &str) -> Result<String, String> {
-    let mut opts = RequestInit::new();
-    opts.method("GET");
-    opts.mode(RequestMode::Cors);
+    let opts = RequestInit::new();
+    opts.set_method("GET");
+    opts.set_mode(RequestMode::Cors);
     let request = Request::new_with_str_and_init(url, &opts).map_err(|e| format!("{e:?}"))?;
     let window = web_sys::window().unwrap();
     let resp_value = JsFuture::from(window.fetch_with_request(&request))

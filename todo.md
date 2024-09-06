@@ -1,8 +1,8 @@
 # Uiua Todo
 
 - 0.13
-  - Rank extension for `under take/drop`
   - Label and format string glyphs
+  - Inline `;;`
   - `uiua find`
   - `struct` args
   - `try` optimizations

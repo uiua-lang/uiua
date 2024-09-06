@@ -866,19 +866,23 @@ impl ArrayValue for f64 {
                 i += 1;
             }
         }
-        let mut s = format!(
-            "{}-{} x̄{}",
-            min.grid_string(false),
-            max.grid_string(false),
-            mean.grid_string(false)
-        );
-        if nan_count > 0 {
-            s.push_str(&format!(
-                " ({nan_count} NaN{})",
-                if nan_count > 1 { "s" } else { "" }
-            ));
+        if min == max {
+            format!("all {}", min.grid_string(false))
+        } else {
+            let mut s = format!(
+                "{}-{} x̄{}",
+                min.grid_string(false),
+                max.grid_string(false),
+                mean.grid_string(false)
+            );
+            if nan_count > 0 {
+                s.push_str(&format!(
+                    " ({nan_count} NaN{})",
+                    if nan_count > 1 { "s" } else { "" }
+                ));
+            }
+            s
         }
-        s
     }
 }
 
@@ -908,8 +912,8 @@ impl ArrayValue for u8 {
         if elems.is_empty() {
             return String::new();
         }
-        let mut min = 0;
-        let mut max = u8::MAX;
+        let mut min = u8::MAX;
+        let mut max = 0;
         for &elem in elems {
             min = min.min(elem);
             max = max.max(elem);
@@ -918,12 +922,16 @@ impl ArrayValue for u8 {
         for (i, &elem) in elems.iter().enumerate().skip(1) {
             mean += (elem as f64 - mean) / (i + 1) as f64;
         }
-        format!(
-            "{}-{} x̄{}",
-            min.grid_string(false),
-            max.grid_string(false),
-            mean.grid_string(false)
-        )
+        if min == max {
+            format!("all {}", min.grid_string(false))
+        } else {
+            format!(
+                "{}-{} x̄{}",
+                min.grid_string(false),
+                max.grid_string(false),
+                mean.grid_string(false)
+            )
+        }
     }
 }
 
@@ -1093,12 +1101,16 @@ impl ArrayValue for Complex {
         for (i, &elem) in elems.iter().enumerate().skip(1) {
             mean = mean + (elem - mean) / (i + 1) as f64;
         }
-        format!(
-            "{} - {} x̄{}",
-            min.grid_string(false),
-            max.grid_string(false),
-            mean.grid_string(false)
-        )
+        if min == max {
+            format!("all {}", min.grid_string(false))
+        } else {
+            format!(
+                "{} - {} x̄{}",
+                min.grid_string(false),
+                max.grid_string(false),
+                mean.grid_string(false)
+            )
+        }
     }
 }
 

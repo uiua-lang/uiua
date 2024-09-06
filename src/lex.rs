@@ -840,7 +840,6 @@ impl<'a> Lexer<'a> {
                     for c in hex.chars() {
                         code = code << 4 | c.to_digit(16).unwrap();
                     }
-                    dbg!(code);
                     replacement = if let Some(c) = std::char::from_u32(code).filter(|_| code > 127)
                     {
                         c.to_string()

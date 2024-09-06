@@ -1,7 +1,10 @@
 # Uiua Todo
 
 - 0.13
+  - Rank extension for `under take/drop`
   - Label and format string glyphs
+  - `uiua find`
+  - `struct` args
   - `try` optimizations
   - `setinv` on and by inverses
   - Document on and by inverses

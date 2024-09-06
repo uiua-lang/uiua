@@ -696,6 +696,8 @@ fn TutorialTypes() -> impl IntoView {
         <Editor example="= i ℂ0 1\n= i ℂ1 1"/>
         <p>"Comparing complex numbers for order returns a component-wise comparison."</p>
         <Editor example="< i ℂ¯1 1\n≥ i ℂ1 1"/>
+        <p>"In cases where a complex array has no elements with an imaginary part, it will be displayed in output with a "<code>"ℂ"</code>" marker."</p>
+        <Editor example="ℂ0 5\nℂ0 [1 2 3]\nℂ0 [1_2 3_4]"/>
 
         <Hd id="characters">"Characters"</Hd>
         <p>"Characters are represented as 32-bit Unicode codepoints."</p>

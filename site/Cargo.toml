@@ -21,8 +21,8 @@ serde_json = "1"
 uiua = {path = "..", default-features = false, features = ["batteries", "web"]}
 unicode-segmentation = "1.10"
 urlencoding = "2"
-wasm-bindgen = "0.2.92"
-wasm-bindgen-futures = "0.4.42"
+wasm-bindgen = "0.2.93"
+wasm-bindgen-futures = "0.4.43"
 
 [dependencies.web-sys]
 features = [
@@ -51,4 +51,4 @@ features = [
   "ResizeObserverEntry",
   "Performance",
 ]
-version = "0.3.69"
+version = "0.3.70"

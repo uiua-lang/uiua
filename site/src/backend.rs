@@ -344,11 +344,7 @@ impl SysBackend for WebBackend {
         *START_TIME.get_or_init(|| 0.0) + now()
     }
     fn set_clipboard(&self, contents: &str) -> Result<(), String> {
-        _ = window()
-            .navigator()
-            .clipboard()
-            .unwrap()
-            .write_text(contents);
+        _ = window().navigator().clipboard().write_text(contents);
         Ok(())
     }
     fn sleep(&self, seconds: f64) -> Result<(), String> {

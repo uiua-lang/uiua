@@ -675,10 +675,11 @@ pub fn Editor<'a>(
                 _ = window().navigator().clipboard().write_text(&text);
                 state.update(|state| remove_code(state, start, end));
             }
-            // Undo
-            "z" if os_ctrl(event) => state.update(|state| state.undo()),
             // Redo
             "y" if os_ctrl(event) => state.update(|state| state.redo()),
+            "z" | "Z" if os_ctrl(event) && event.shift_key() => state.update(|state| state.redo()),
+            // Undo
+            "z" if os_ctrl(event) => state.update(|state| state.undo()),
             // Insert # Experimental! comment
             "e" if os_ctrl(event) => insert_experimental(),
             // Toggle line comment

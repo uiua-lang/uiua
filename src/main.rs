@@ -368,6 +368,7 @@ fn run() -> UiuaResult {
                     }
                 }
             }
+            App::Find { path, text, raw } => find(path, text, raw)?,
         },
         Err(e)
             if e.kind() == ErrorKind::InvalidSubcommand
@@ -706,9 +707,14 @@ enum App {
         #[clap(long, help = "Format lines read from stdin")]
         io: bool,
     },
-    #[cfg(feature = "lsp")]
-    #[clap(about = "Run the Language Server")]
-    Lsp,
+    #[clap(about = "Find some Uiua code that matches the given unformatted text")]
+    Find {
+        text: String,
+        #[clap(short = 'p', long, help = "The path to search")]
+        path: Option<PathBuf>,
+        #[clap(long, help = "Disable color and other formatting")]
+        raw: bool,
+    },
     #[clap(about = "Run the Uiua interpreter in a REPL")]
     Repl {
         #[clap(help = "A Uiua file to run before the REPL starts")]
@@ -743,6 +749,9 @@ enum App {
         #[clap(short = 'o', long, help = "The name of the output executable")]
         name: Option<String>,
     },
+    #[cfg(feature = "lsp")]
+    #[clap(about = "Run the Language Server")]
+    Lsp,
 }
 
 #[derive(Subcommand)]
@@ -788,13 +797,22 @@ fn setup_audio(options: AudioOptions) {
     }
 }
 
-fn uiua_files() -> Vec<PathBuf> {
-    fs::read_dir(".")
-        .unwrap()
-        .filter_map(Result::ok)
-        .filter(|entry| entry.path().extension().map_or(false, |ext| ext == "ua"))
-        .map(|entry| entry.path())
-        .collect()
+fn uiua_files(root: &Path) -> UiuaResult<Vec<PathBuf>> {
+    fn rec(root: &Path, acc: &mut Vec<PathBuf>) -> UiuaResult<()> {
+        for entry in fs::read_dir(root).map_err(|e| UiuaError::format(root.into(), e))? {
+            let entry = entry.map_err(|e| UiuaError::format(root.into(), e))?;
+            let path = entry.path();
+            if path.is_dir() {
+                rec(&path, acc)?;
+            } else if path.extension().map_or(false, |ext| ext == "ua") {
+                acc.push(path);
+            }
+        }
+        Ok(())
+    }
+    let mut acc = Vec::new();
+    rec(root, &mut acc)?;
+    Ok(acc)
 }
 
 const WATCHING: &str = "\x1b[0mwatching for changes...";
@@ -896,7 +914,7 @@ fn format_single_file(path: PathBuf, config: &FormatConfig) -> Result<(), UiuaEr
 }
 
 fn format_multi_files(config: &FormatConfig) -> Result<(), UiuaError> {
-    for path in uiua_files() {
+    for path in uiua_files(".".as_ref())? {
         format_file(path, config)?;
     }
     Ok(())
@@ -1113,6 +1131,73 @@ fn update_modules(modules: &[PathBuf]) -> io::Result<()> {
         env::set_current_dir(&canonical)?;
         println!("{} {}", "Updating".bold().bright_green(), path.display());
         Command::new("git").args(["pull"]).spawn()?.wait()?;
+    }
+    Ok(())
+}
+
+fn find(path: Option<PathBuf>, mut text: String, raw: bool) -> UiuaResult {
+    if raw {
+        colored::control::set_override(false);
+    }
+    let paths = if let Some(path) = path {
+        if path.is_file() {
+            vec![path]
+        } else if path.is_dir() {
+            uiua_files(&path)?
+        } else {
+            return Err(UiuaError::load(
+                path,
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Path is not a file or directory",
+                ),
+            ));
+        }
+    } else {
+        uiua_files(".".as_ref())?
+    };
+    text = format_str(
+        &text,
+        &FormatConfig {
+            trailing_newline: false,
+            ..Default::default()
+        },
+    )?
+    .output;
+    for path in paths {
+        let path = path
+            .strip_prefix("./")
+            .or_else(|_| path.strip_prefix(".\\"))
+            .unwrap_or(path.as_path());
+        let contents = fs::read_to_string(path).map_err(|e| UiuaError::load(path.into(), e))?;
+        let mut matches = Vec::new();
+        for (i, line) in contents.lines().enumerate() {
+            if let Some(pos) = line.find(&text) {
+                matches.push((
+                    format!(
+                        "{}:{}:{}",
+                        path.display(),
+                        i + 1,
+                        line[..pos].chars().count() + 1
+                    ),
+                    pos,
+                    line,
+                ));
+            }
+        }
+        let Some(max_len) = matches.iter().map(|(loc, ..)| loc.chars().count()).max() else {
+            continue;
+        };
+        let width = max_len + 2;
+        if !raw {
+            println!("\n{}", path.display().to_string().bright_green().bold());
+        }
+        for (loc, pos, line) in matches {
+            print!("{loc:width$}");
+            print!("{}", line[..pos].bright_black());
+            print!("{}", &line[pos..][..text.len()]);
+            println!("{}", line[pos + text.len()..].bright_black());
+        }
     }
     Ok(())
 }

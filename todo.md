@@ -2,8 +2,6 @@
 
 - 0.13
   - Label and format string glyphs
-  - Inline `;;`
-  - `uiua find`
   - `struct` args
   - `try` optimizations
   - `setinv` on and by inverses

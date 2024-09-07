@@ -163,6 +163,14 @@ impl UiuaError {
             _ => {}
         }
     }
+    /// Make a Load error
+    pub fn load(path: PathBuf, error: io::Error) -> Self {
+        UiuaErrorKind::Load(path, Arc::new(error)).into()
+    }
+    /// Make a Format error
+    pub fn format(path: PathBuf, error: io::Error) -> Self {
+        UiuaErrorKind::Format(path, Arc::new(error)).into()
+    }
 }
 
 fn format_trace(trace: &[TraceFrame]) -> Vec<String> {

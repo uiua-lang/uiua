@@ -818,8 +818,8 @@ impl SysBackend for NativeSys {
     }
     fn close(&self, handle: Handle) -> Result<(), String> {
         if NATIVE_SYS.child_stdins.remove(&handle).is_some()
-            || NATIVE_SYS.child_stdouts.remove(&handle).is_some()
-            || NATIVE_SYS.child_stderrs.remove(&handle).is_some()
+            | NATIVE_SYS.child_stdouts.remove(&handle).is_some()
+            | NATIVE_SYS.child_stderrs.remove(&handle).is_some()
         {
             Ok(())
         } else if let Some((_, mut file)) = NATIVE_SYS.files.remove(&handle) {

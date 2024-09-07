@@ -1,8 +1,7 @@
 ✅ ← ⍤⟜≍:0 &runi
 
 ¬∈ &args □"resume"
-⍥(
-  ✅ {"git" "checkout" "site" "--"}
+⍥(✅ {"git" "checkout" "site" "--"}
   ✅ {"git" "reset" "--hard" "origin/site"}
   ✅ {"git" "rebase" "main"}
 )

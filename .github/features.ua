@@ -6,6 +6,7 @@ Features ← (
   ⊂⨬(
     {"gif,image,terminal_image,webcam" "lsp,raw_mode"}
   | {"audio_encode" "gif" "image" "terminal_image" "lsp" "native_sys" "raw_mode"}
+  
   ) ∊□"all" &args
 )
 
@@ -13,8 +14,7 @@ Features ← (
 ⍤⟜≍: 0 &runi Command
 
 ↘1⋯⇡ⁿ:2⧻. Features
-≡(
-  /$"_,_" ▽
+≡(/$"_,_" ▽
   &p $"Checking with features: _".
   ⊂ Command ⊂ □"--features" □
   ⍤⟜≍: 0 &runi

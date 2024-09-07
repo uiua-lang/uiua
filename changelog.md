@@ -5,11 +5,11 @@ Uiua is not yet stable.
 ## 0.13.0 - 2024-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
-<!-- - Stabilize [`orient ⮌`](https://uiua.org/docs/orient) -->
 - The experimental `chunks ⑄` function's behavior has been moved to an extension on [`windows ◫`](https://uiua.org/docs/windows)
   - This also allow the specification of "stride"
   - This is inspired by APL's `stencil ⌺` behavior
   - `chunks ⑄` has been deprecated
+- Stabilize [`orient ⮌`](https://uiua.org/docs/orient)
 - [`un °`](https://uiua.org/docs/un) [`orient ⮌`](https://uiua.org/docs/orient) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
   - This is analogous to the behavior of [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select)
 - Add a feature to some [`under ⍜`](https://uiua.org/docs/under) functions that makes them more permissive of changes in rank

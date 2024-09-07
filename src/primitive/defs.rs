@@ -1254,14 +1254,11 @@ primitive!(
     /// The first argument is a list of unique axis indices.
     /// The corresponding axes of the array will be moved to the front of the array's shape.
     /// Positive indices start from the leading axis. Negative indices start from the trailing axis.
-    /// ex: # Experimental!
-    ///   : °△ 2_3_4
+    /// ex: °△ 2_3_4
     ///   : ⮌ 1 .
-    /// ex: # Experimental!
-    ///   : △ ⮌ 2_1 °△ 2_3_4_5
+    /// ex: △ ⮌ 2_1 °△ 2_3_4_5
     /// [orient]`¯1` is equivalent to [un][transpose].
-    /// ex: # Experimental!
-    ///   : °△ 2_3_4
+    /// ex: °△ 2_3_4
     ///   : ∩△ ⊃°⍉(⮌¯1)
     /// Currently, all uses of [orient] can be written with sequences of [transpose] and [rows].
     (2, Orient, DyadicArray, ("orient", '⮌')),

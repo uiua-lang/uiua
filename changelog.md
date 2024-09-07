@@ -5,7 +5,6 @@ Uiua is not yet stable.
 ## 0.13.0 - 2024-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
-<!-- - Stabilize [`chunks ⑄`](https://uiua.org/docs/chunks) and add [`under ⍜`](https://uiua.org/docs/under) compatibility -->
 <!-- - Stabilize [`orient ⮌`](https://uiua.org/docs/orient) -->
 - The experimental `chunks ⑄` function's behavior has been moved to an extension on [`windows ◫`](https://uiua.org/docs/windows)
   - This also allow the specification of "stride"
@@ -29,7 +28,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`&fmd`](https://uiua.org/docs/&fmd) system function, which creates a directory
 - Very large arrays are now displayed more concisely in output
 - Change and enhance the behavior of `;` and `;;`
-  - You can read about the new behavior [here](http://uiua.org/tutorial/codetactility#line-manipulation)
+  - You can read about the new behavior [here](https://uiua.org/tutorial/codetactility#line-manipulation)
 - Add unicode escape sequences for entering arbitrary characters
   - A double backslash followed by a unicode hex number will format to the corresponding glyph
 - Add a `Lorem` constant, which contains the Lorem Ipsum text

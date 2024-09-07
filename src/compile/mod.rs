@@ -34,7 +34,7 @@ use crate::{
     lex::{CodeSpan, Sp, Span},
     lsp::{CodeMeta, ImportSrc, SigDecl},
     optimize::{optimize_instrs, optimize_instrs_mut},
-    parse::{count_placeholders, parse, split_words, unsplit_words},
+    parse::{count_placeholders, flip_unsplit_lines, parse, split_words},
     Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, DocComment, GitTarget, Ident,
     ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment,
     SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS, EXAMPLE_UA,
@@ -597,7 +597,7 @@ code:
             RunMode::Test => self.in_test,
             RunMode::All => true,
         };
-        lines = unsplit_words(lines.into_iter().flat_map(split_words).collect());
+        lines = flip_unsplit_lines(lines.into_iter().flat_map(split_words).collect());
         for line in lines {
             if line.is_empty() || !can_run && !words_should_run_anyway(&line) {
                 continue;
@@ -892,7 +892,7 @@ code:
     }
     fn compile_words(&mut self, words: Vec<Sp<Word>>, call: bool) -> UiuaResult<NewFunction> {
         self.new_functions.push(NewFunction::default());
-        for line in unsplit_words(split_words(words)) {
+        for line in flip_unsplit_lines(split_words(words)) {
             self.words(line, call)?;
         }
         Ok(self.new_functions.pop().unwrap())
@@ -1366,18 +1366,6 @@ code:
                 }
             }
             Word::Primitive(p) => self.primitive(p, word.span, call)?,
-            Word::SemicolonPop => {
-                self.emit_diagnostic(
-                    format!(
-                        "Using `;` for {} is deprecated and will be \
-                        removed in the future. Type `pop` or `po` instead.",
-                        Primitive::Pop.format()
-                    ),
-                    DiagnosticKind::Warning,
-                    word.span.clone(),
-                );
-                self.primitive(Primitive::Pop, word.span, call)?
-            }
             Word::Modified(m) => self.modified(*m, call)?,
             Word::Placeholder(_) => {
                 // We could error here, but it's easier to handle it higher up
@@ -1401,7 +1389,7 @@ code:
                 }
             },
             Word::OutputComment { i, n } => self.push_instr(Instr::SetOutputComment { i, n }),
-            Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::UnbreakLine => {}
+            Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::FlipLine => {}
         }
         Ok(())
     }

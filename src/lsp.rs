@@ -507,9 +507,6 @@ impl Spanner {
                 Word::Primitive(prim) => {
                     spans.push(word.span.clone().sp(SpanKind::Primitive(*prim)))
                 }
-                Word::SemicolonPop => {
-                    spans.push(word.span.clone().sp(SpanKind::Primitive(Primitive::Pop)))
-                }
                 Word::Modified(m) => {
                     let modifier_span = &m.modifier.span;
                     match &m.modifier.value {
@@ -520,7 +517,7 @@ impl Spanner {
                     }
                     spans.extend(self.words_spans(&m.operands));
                 }
-                Word::Spaces | Word::BreakLine | Word::UnbreakLine => {
+                Word::Spaces | Word::BreakLine | Word::FlipLine => {
                     spans.push(word.span.clone().sp(SpanKind::Whitespace))
                 }
                 Word::Comment(_) | Word::SemanticComment(_) => {

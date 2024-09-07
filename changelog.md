@@ -28,11 +28,13 @@ This version is not yet released. If you are reading this on the website, then t
 - Add the [`graphemes`](https://uiua.org/docs/graphemes) function, which splits a string into unicode grapheme clusters
 - Add the [`&fmd`](https://uiua.org/docs/&fmd) system function, which creates a directory
 - Very large arrays are now displayed more concisely in output
+- Change and enhance the behavior of `;` and `;;`
+  - You can read about the new behavior [here](http://uiua.org/tutorial/codetactility#line-manipulation)
 - Add unicode escape sequences for entering arbitrary characters
   - A double backslash followed by a unicode hex number will format to the corresponding glyph
+- Add a `Lorem` constant, which contains the Lorem Ipsum text
 - Add an experimental [`sort ⍆`](https://uiua.org/docs/sort) function
   - Sorting is very common
-- Add a `Lorem` constant, which contains the Lorem Ipsum text
 - Remove previously deprecated function strands
 ### Interpreter
 - Some optimizations

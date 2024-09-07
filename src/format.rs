@@ -17,7 +17,7 @@ use crate::{
     ast::*,
     grid_fmt::GridFmt,
     lex::{is_ident_char, CodeSpan, Loc, Sp},
-    parse::{parse, split_words, trim_spaces, unsplit_words},
+    parse::{flip_unsplit_lines, parse, split_words, trim_spaces},
     Compiler, FunctionId, Ident, InputSrc, Inputs, PreEvalMode, Primitive, RunMode, SafeSys,
     Signature, Uiua, UiuaErrorKind, UiuaResult, Value,
 };
@@ -618,7 +618,8 @@ impl<'a> Formatter<'a> {
             }
             Item::Words(lines) => {
                 self.prev_import_function = None;
-                let lines = unsplit_words(lines.iter().cloned().flat_map(split_words).collect());
+                let lines =
+                    flip_unsplit_lines(lines.iter().cloned().flat_map(split_words).collect());
                 self.format_multiline_words(&lines, false, false, false, false, depth);
             }
             Item::Binding(binding) => {
@@ -655,7 +656,7 @@ impl<'a> Formatter<'a> {
                     .map(|(first, last)| first.span.clone().merge(last.span.clone()))
                     .or_else(|| binding.signature.as_ref().map(|sig| sig.span.clone()))
                     .unwrap_or_else(|| binding.arrow_span.clone());
-                let mut lines = unsplit_words(split_words(binding.words.clone()));
+                let mut lines = flip_unsplit_lines(split_words(binding.words.clone()));
                 if lines.len() == 1 {
                     self.format_words(&lines[0], true, depth);
                 } else {
@@ -1057,7 +1058,6 @@ impl<'a> Formatter<'a> {
                 self.output.push(')');
             }
             Word::Primitive(prim) => self.push(&word.span, &prim.to_string()),
-            Word::SemicolonPop => self.push(&word.span, ";"),
             Word::Modified(m) => {
                 match &m.modifier.value {
                     Modifier::Primitive(prim) => self.push(&m.modifier.span, &prim.to_string()),
@@ -1093,7 +1093,7 @@ impl<'a> Formatter<'a> {
                 }
             }
             Word::BreakLine => self.output.push('\''),
-            Word::UnbreakLine => self.output.push_str("''"),
+            Word::FlipLine => self.output.push_str("''"),
             Word::SemanticComment(sc) => {
                 if !self.output.is_empty() && !self.output.ends_with(['\n', ' ']) {
                     self.output.push(' ');
@@ -1327,14 +1327,13 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
                     .any(|words| words.iter().any(|word| word_is_multiline(&word.value)))
         }),
         Word::Primitive(_) => false,
-        Word::SemicolonPop => false,
         Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),
         Word::Placeholder(_) => false,
         Word::StackSwizzle(_) => false,
         Word::ArraySwizzle(_) => false,
         Word::Comment(_) => true,
         Word::Spaces => false,
-        Word::BreakLine | Word::UnbreakLine => false,
+        Word::BreakLine | Word::FlipLine => false,
         Word::SemanticComment(_) => true,
         Word::OutputComment { .. } => true,
     }

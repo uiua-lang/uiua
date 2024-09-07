@@ -78,37 +78,50 @@ Labels are nice for keeping track of different values as they move around the st
 
 It is not possible to retrieve the label of a value using code. Labels are only for debugging, not for carrying data.
 
-## Line Splitting
+## Line Manipulation
 
-Uiua running code right-to-left has an unfortunate side effect. If you want to split a line of code into two lines, it is not enough to simply place your cursor at the split point and press Enter, as this puts the lines in the wrong order!
+Uiua running code right-to-left has a couple unfortunate side effects when it comes to editing. The first you're likely to run into is having to constantly press the `←` key on your keyboard to move the cursor to the left.
 
-Instead, you can place the `;` character at the point you want to split the code. Upon formatting, the line will be split in a way that preserves the same meaning!
+If you type a `;` character, the formatter will flip the current line across it. This allows you to enter code in the same order it is executed.
 
 ```uiua
-↥⊸⇌;⊞=.⇡5 # Format to split!
+⇡12;↯3_4 # Format to flip!
+```
+
+You can put many `;`s on the same line.
+```uiua
+1;2;3;4
+```
+
+Another problems is that if you want to split a line of code into two lines, it is not enough to simply place your cursor at the split point and press Enter, as this puts the lines in the wrong order!
+
+Instead, you can type `;;` at the point you want to split the code. Upon formatting, the line will be split in a way that preserves the same meaning!
+
+```uiua
+↥⊸⇌;;⊞=.⇡5 # Format to split!
 ```
 
 You can put as many of these splitters in your code as you like, and the formatter will handle them all at once.
 
 ```uiua
-"lines";"the";"all";"Split"
+"lines";;"the";;"all";;"Split"
 ```
 
 If used in a binding, the code will be wrapped in `()`s.
 
 ```uiua
-F ← ⁅∵⋅⚂;↯⟜⊚ # Format it!
+F ← ⁅∵⋅⚂;;↯⟜⊚ # Format it!
 F 5
 ```
 
-Putting two splitters next to each other, `;;`, will *join* lines rather than splitting them. Put the `;;` in between the lines to join.
+Putting a splitter at the beginning or end of a line will *join* lines rather than splitting them.
 
 ```uiua
 1 2
-;;3 4
+;3 4
 ```
 
 ```uiua
-"Oh";;
+"Oh";
 "boy!"
 ```

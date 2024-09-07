@@ -2,7 +2,6 @@
 
 - 0.13
   - Label and format string glyphs
-  - `under first` rank extension
   - Inline `;;`
   - `uiua find`
   - `struct` args

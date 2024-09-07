@@ -135,7 +135,6 @@ pub enum Word {
     Func(Func),
     Pack(FunctionPack),
     Primitive(Primitive),
-    SemicolonPop,
     Modified(Box<Modified>),
     Placeholder(PlaceholderOp),
     StackSwizzle(StackSwizzle),
@@ -143,7 +142,7 @@ pub enum Word {
     Comment(String),
     Spaces,
     BreakLine,
-    UnbreakLine,
+    FlipLine,
     SemanticComment(SemanticComment),
     OutputComment {
         i: usize,
@@ -203,7 +202,7 @@ impl Word {
     pub fn is_code(&self) -> bool {
         !matches!(
             self,
-            Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::UnbreakLine
+            Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::FlipLine
         )
     }
     /// Whether this word is a literal
@@ -262,15 +261,14 @@ impl fmt::Debug for Word {
             Word::Func(func) => func.fmt(f),
             Word::Pack(pack) => pack.fmt(f),
             Word::Primitive(prim) => prim.fmt(f),
-            Word::SemicolonPop => write!(f, ";"),
             Word::Modified(modified) => modified.fmt(f),
             Word::Spaces => write!(f, "' '"),
             Word::Comment(comment) => write!(f, "# {comment}"),
             Word::Placeholder(op) => write!(f, "{op}"),
             Word::StackSwizzle(swizzle) => write!(f, "{swizzle}"),
             Word::ArraySwizzle(swizzle) => write!(f, "{swizzle}"),
-            Word::BreakLine => write!(f, ";"),
-            Word::UnbreakLine => write!(f, ";;"),
+            Word::BreakLine => write!(f, "break_line"),
+            Word::FlipLine => write!(f, "unbreak_line"),
             Word::SemanticComment(comment) => write!(f, "{comment}"),
             Word::OutputComment { i, n, .. } => write!(f, "output_comment({i}/{n})"),
         }

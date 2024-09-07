@@ -24,7 +24,7 @@ pub enum ParseError {
     AmpersandBindingName,
     ModifierImportName,
     SplitInModifier,
-    UnsplitInModifier,
+    FlipInModifier,
     LineTooLong(usize),
     RecursionLimit,
 }
@@ -92,10 +92,9 @@ impl fmt::Display for ParseError {
                 f,
                 "Line splitting is not allowed between modifier arguments"
             ),
-            ParseError::UnsplitInModifier => write!(
-                f,
-                "Line unsplitting is not allowed between modifier arguments"
-            ),
+            ParseError::FlipInModifier => {
+                write!(f, "Line flipping is not allowed between modifier arguments")
+            }
             ParseError::LineTooLong(width) => write!(
                 f,
                 "Split line into multiple lines (heuristic: {}/{}) 😏",
@@ -811,12 +810,12 @@ impl<'i> Parser<'i> {
         for i in 0..modifier.args() {
             loop {
                 args.extend(self.try_spaces());
-                if let Some(span) = self.try_exact(Semicolon.into()) {
+                if let Some(span) = self.try_exact(DoubleSemicolon.into()) {
                     self.errors.push(span.sp(ParseError::SplitInModifier));
                     continue;
                 }
-                if let Some(span) = self.try_exact(DoubleSemicolon.into()) {
-                    self.errors.push(span.sp(ParseError::UnsplitInModifier));
+                if let Some(span) = self.try_exact(Semicolon.into()) {
+                    self.errors.push(span.sp(ParseError::FlipInModifier));
                     continue;
                 }
                 break;
@@ -977,11 +976,9 @@ impl<'i> Parser<'i> {
         } else if let Some(word) = self.try_func() {
             word
         } else if let Some(span) = self.try_exact(Semicolon.into()) {
-            span.sp(Word::BreakLine)
+            span.sp(Word::FlipLine)
         } else if let Some(span) = self.try_exact(DoubleSemicolon.into()) {
-            span.sp(Word::UnbreakLine)
-        } else if let Some(span) = self.try_exact(Semicolon.into()) {
-            span.sp(Word::SemicolonPop)
+            span.sp(Word::BreakLine)
         } else if let Some(sc) = self.next_token_map(Token::as_semantic_comment) {
             sc.map(Word::SemanticComment)
         } else if let Some(pack) = self.next_token_map(Token::as_stack_swizzle) {
@@ -1222,30 +1219,56 @@ pub(crate) fn split_words(words: Vec<Sp<Word>>) -> Vec<Vec<Sp<Word>>> {
     lines
 }
 
-pub(crate) fn unsplit_words(lines: Vec<Vec<Sp<Word>>>) -> Vec<Vec<Sp<Word>>> {
-    unsplit_words_impl(lines, false)
+/// Flip and/or unsplit a list of lines
+pub(crate) fn flip_unsplit_lines(lines: Vec<Vec<Sp<Word>>>) -> Vec<Vec<Sp<Word>>> {
+    flip_unsplit_lines_impl(lines, false)
 }
-fn unsplit_words_impl(lines: Vec<Vec<Sp<Word>>>, in_array: bool) -> Vec<Vec<Sp<Word>>> {
+fn flip_unsplit_lines_impl(lines: Vec<Vec<Sp<Word>>>, in_array: bool) -> Vec<Vec<Sp<Word>>> {
+    // Unsplit sub-words
     let mut lines = lines
         .into_iter()
         .map(|line| line.into_iter().map(unsplit_word).collect::<Vec<_>>());
-    let Some(mut first) = lines.next() else {
+    let Some(first) = lines.next() else {
         return Vec::new();
     };
     let mut unsplit = trim_spaces(&first, true)
         .last()
-        .is_some_and(|w| matches!(w.value, Word::UnbreakLine));
-    first.retain(|w| !matches!(w.value, Word::UnbreakLine));
-    let mut new_lines = vec![first];
+        .is_some_and(|w| matches!(w.value, Word::FlipLine));
+
+    let flip_line = |mut line: Vec<Sp<Word>>| {
+        if line.iter().any(|w| matches!(w.value, Word::FlipLine)) {
+            let mut parts = Vec::new();
+            while let Some(i) = (line.iter()).rposition(|w| matches!(w.value, Word::FlipLine)) {
+                parts.push(line.split_off(i + 1));
+                line.pop();
+            }
+            parts.push(line);
+            line = parts.into_iter().flatten().collect();
+        }
+        line
+    };
+
+    let mut new_lines = vec![flip_line(first)];
+
     for mut line in lines {
-        let trimmed = trim_spaces(&line, true);
-        let unsplit_front = trimmed
-            .first()
-            .is_some_and(|w| matches!(w.value, Word::UnbreakLine));
-        let unsplit_back = trimmed
-            .last()
-            .is_some_and(|w| matches!(w.value, Word::UnbreakLine));
-        line.retain(|w| !matches!(w.value, Word::UnbreakLine));
+        // Trim spaces
+        while (line.first()).is_some_and(|w| matches!(w.value, Word::Spaces)) {
+            line.remove(0);
+        }
+        while line.last().is_some_and(|w| matches!(w.value, Word::Spaces)) {
+            line.pop();
+        }
+        // Check for leading and trailing unbreak lines
+        let unsplit_front = (line.first()).is_some_and(|w| matches!(w.value, Word::FlipLine));
+        if unsplit_front {
+            line.remove(0);
+        }
+        let unsplit_back = (line.last()).is_some_and(|w| matches!(w.value, Word::FlipLine));
+        if unsplit_back {
+            line.pop();
+        }
+        line = flip_line(line);
+        // Reorder lines
         if unsplit || unsplit_front {
             let prev = new_lines.last_mut().unwrap();
             if in_array {
@@ -1265,11 +1288,11 @@ fn unsplit_words_impl(lines: Vec<Vec<Sp<Word>>>, in_array: bool) -> Vec<Vec<Sp<W
 fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
     word.map(|word| match word {
         Word::Func(mut func) => {
-            func.lines = unsplit_words(func.lines);
+            func.lines = flip_unsplit_lines(func.lines);
             Word::Func(func)
         }
         Word::Array(mut arr) => {
-            arr.lines = unsplit_words_impl(arr.lines, true);
+            arr.lines = flip_unsplit_lines_impl(arr.lines, true);
             Word::Array(arr)
         }
         Word::Pack(mut pack) => {
@@ -1277,7 +1300,7 @@ fn unsplit_word(word: Sp<Word>) -> Sp<Word> {
                 .branches
                 .into_iter()
                 .map(|mut br| {
-                    br.value.lines = unsplit_words(br.value.lines);
+                    br.value.lines = flip_unsplit_lines(br.value.lines);
                     br
                 })
                 .collect();

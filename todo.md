@@ -1,10 +1,12 @@
 # Uiua Todo
 
 - 0.13
+  - `under fill`
   - Label and format string glyphs
+  - `setinv/setund` unification?
+  - `setinv` on and by inverses
   - `struct` args
   - `try` optimizations
-  - `setinv` on and by inverses
   - Document on and by inverses
   - `reshape` with multiple infinities
 - Possible
@@ -17,6 +19,7 @@
 - Possibility Exploration UI?
 - Media window
 - Blog posts -> RSS
+  - Markdown parser
 - Change how functions are compiled so that compiled-out functions don't end up in the assembly
 - Multimedia
   - Sound input

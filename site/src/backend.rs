@@ -9,9 +9,7 @@ use std::{
 
 use crate::{editor::get_ast_time, weewuh, START_TIME};
 use leptos::*;
-use uiua::{
-    now, GitTarget, Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA,
-};
+use uiua::{now, GitTarget, Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
@@ -84,11 +82,7 @@ impl WebBackend {
         }
         panic!("Ran out of file handles");
     }
-    fn file<T>(
-        &self,
-        path: &Path,
-        f: impl FnOnce(&[u8]) -> T,
-    ) -> Result<T, String> {
+    fn file<T>(&self, path: &Path, f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
         FILES.with(|files| {
             let files = files.borrow();
             files
@@ -140,11 +134,7 @@ impl SysBackend for WebBackend {
             .prompt_with_message("Enter a line of text for stdin")
             .unwrap_or(None))
     }
-    fn show_image(
-        &self,
-        image: image::DynamicImage,
-        label: Option<&str>,
-    ) -> Result<(), String> {
+    fn show_image(&self, image: image::DynamicImage, label: Option<&str>) -> Result<(), String> {
         let mut bytes = Cursor::new(Vec::new());
         image
             .write_to(&mut bytes, image::ImageOutputFormat::Png)
@@ -155,13 +145,8 @@ impl SysBackend for WebBackend {
             .push(OutputItem::Image(bytes.into_inner(), label.map(Into::into)));
         Ok(())
     }
-    fn show_gif(
-        &self,
-        gif_bytes: Vec<u8>,
-        label: Option<&str>,
-    ) -> Result<(), String> {
-        (self.stdout.lock().unwrap())
-            .push(OutputItem::Gif(gif_bytes, label.map(Into::into)));
+    fn show_gif(&self, gif_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
+        (self.stdout.lock().unwrap()).push(OutputItem::Gif(gif_bytes, label.map(Into::into)));
         Ok(())
     }
     fn list_dir(&self, mut path: &str) -> Result<Vec<String>, String> {
@@ -175,9 +160,7 @@ impl SysBackend for WebBackend {
         FILES.with(|files| {
             for file in files.borrow().keys() {
                 if file.parent() == Some(path) {
-                    set.insert(
-                        file.file_name().unwrap().to_string_lossy().into(),
-                    );
+                    set.insert(file.file_name().unwrap().to_string_lossy().into());
                 }
             }
         });
@@ -189,11 +172,7 @@ impl SysBackend for WebBackend {
     fn file_exists(&self, path: &str) -> bool {
         self.file(path.as_ref(), |_| {}).is_ok()
     }
-    fn file_write_all(
-        &self,
-        path: &Path,
-        contents: &[u8],
-    ) -> Result<(), String> {
+    fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
         FILES.with(|files| {
             if !files.borrow().contains_key(path) {
                 files.borrow_mut().insert(path.into(), contents.to_vec());
@@ -275,11 +254,7 @@ impl SysBackend for WebBackend {
         stream.pos = stream.contents.len();
         Ok(data)
     }
-    fn read_until(
-        &self,
-        handle: Handle,
-        delim: &[u8],
-    ) -> Result<Vec<u8>, String> {
+    fn read_until(&self, handle: Handle, delim: &[u8]) -> Result<Vec<u8>, String> {
         let mut streams = self.streams.lock().unwrap();
         let stream = streams.get_mut(&handle).ok_or("Invalid stream handle")?;
         let offset = stream.contents[stream.pos..]
@@ -298,13 +273,8 @@ impl SysBackend for WebBackend {
     fn trash(&self, path: &str) -> Result<(), String> {
         self.delete(path)
     }
-    fn play_audio(
-        &self,
-        wav_bytes: Vec<u8>,
-        label: Option<&str>,
-    ) -> Result<(), String> {
-        (self.stdout.lock().unwrap())
-            .push(OutputItem::Audio(wav_bytes, label.map(Into::into)));
+    fn play_audio(&self, wav_bytes: Vec<u8>, label: Option<&str>) -> Result<(), String> {
+        (self.stdout.lock().unwrap()).push(OutputItem::Audio(wav_bytes, label.map(Into::into)));
         Ok(())
     }
     fn stream_audio(&self, mut f: uiua::AudioStreamFn) -> Result<(), String> {
@@ -351,21 +321,15 @@ impl SysBackend for WebBackend {
         while now() - start < seconds {}
         Ok(())
     }
-    fn load_git_module(
-        &self,
-        url: &str,
-        target: GitTarget,
-    ) -> Result<PathBuf, String> {
+    fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {
         match target {
             GitTarget::Default => {}
-            GitTarget::Branch(_) => return Err(
-                "Git branch specification is not supported in the web backend"
-                    .into(),
-            ),
-            GitTarget::Commit(_) => return Err(
-                "Git commit specification is not supported in the web backend"
-                    .into(),
-            ),
+            GitTarget::Branch(_) => {
+                return Err("Git branch specification is not supported in the web backend".into())
+            }
+            GitTarget::Commit(_) => {
+                return Err("Git commit specification is not supported in the web backend".into())
+            }
         }
         let mut parts = url.rsplitn(3, '/');
         let repo_name = parts.next().ok_or("Invalid git url")?;
@@ -420,8 +384,7 @@ pub async fn fetch(url: &str) -> Result<String, String> {
     let opts = RequestInit::new();
     opts.set_method("GET");
     opts.set_mode(RequestMode::Cors);
-    let request = Request::new_with_str_and_init(url, &opts)
-        .map_err(|e| format!("{e:?}"))?;
+    let request = Request::new_with_str_and_init(url, &opts).map_err(|e| format!("{e:?}"))?;
     let window = web_sys::window().unwrap();
     let resp_value = JsFuture::from(window.fetch_with_request(&request))
         .await

@@ -20,7 +20,7 @@ This version is not yet released. If you are reading this on the website, then t
 - [`under ⍜`](https://uiua.org/docs/under) [`un °`](https://uiua.org/docs/un) [`bits ⋯`](https://uiua.org/docs/bits) now preserves a minimum bit length
 - [`under ⍜`](https://uiua.org/docs/under) [`reverse ⇌`](https://uiua.org/docs/reverse) and [`under ⍜`](https://uiua.org/docs/under) [`transpose ⍉`](https://uiua.org/docs/transpose) are now smarter with respect to the ranks of [`under ⍜`](https://uiua.org/docs/under)'s second function
   - For example `⍜⇌°⊂` behaves in a more useful way
-- [`scan \\`](https://uiua.org/docs/scan) now accepts functions that take more the 2 arguments
+- [`scan \\`](https://uiua.org/docs/scan) now accepts functions that take more than 2 arguments
   - The behavior is similar to the analogous behavior for [`reduce /`](https://uiua.org/docs/reduce)
 - Allow [`on ⟜`](https://uiua.org/docs/on) to use function packs
 - Allow [`under ⍜`](https://uiua.org/docs/under) of scalar [`keep ▽`](https://uiua.org/docs/keep)

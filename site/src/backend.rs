@@ -1,10 +1,5 @@
 use std::{
-    any::Any,
-    cell::RefCell,
-    collections::{BTreeSet, HashMap},
-    io::Cursor,
-    path::{Path, PathBuf},
-    sync::Mutex,
+    any::Any, cell::RefCell, collections::{BTreeSet, HashMap}, io::Cursor, path::{Path, PathBuf}, sync::Mutex
 };
 
 use crate::{editor::get_ast_time, weewuh, START_TIME};
@@ -19,7 +14,6 @@ pub struct WebBackend {
     pub stderr: Mutex<String>,
     pub trace: Mutex<String>,
     streams: Mutex<HashMap<Handle, VirtualStream>>,
-    files: Mutex<HashMap<PathBuf, Vec<u8>>>,
 }
 
 struct VirtualStream {
@@ -30,13 +24,18 @@ struct VirtualStream {
 }
 
 thread_local! {
-    static GLOBAL_FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = Default::default();
+    static FILES: RefCell<HashMap<PathBuf, Vec<u8>>> = RefCell::new(
+        [
+            ("example.ua", EXAMPLE_UA),
+            ("example.txt", EXAMPLE_TXT)
+        ]
+        .map(|(path, content)| (PathBuf::from(path), content.as_bytes().to_vec()))
+        .into(),
+    );
 }
 
 pub fn drop_file(path: PathBuf, contents: Vec<u8>) {
-    GLOBAL_FILES.with(|dropped_files| {
-        dropped_files.borrow_mut().insert(path, contents);
-    });
+    FILES.with(|files| files.borrow_mut().insert(path, contents));
 }
 
 impl Default for WebBackend {
@@ -46,16 +45,6 @@ impl Default for WebBackend {
             stderr: String::new().into(),
             trace: String::new().into(),
             streams: HashMap::new().into(),
-            files: Mutex::new(
-                [
-                    (PathBuf::from("example.ua"), EXAMPLE_UA.as_bytes().to_vec()),
-                    (
-                        PathBuf::from("example.txt"),
-                        EXAMPLE_TXT.as_bytes().to_vec(),
-                    ),
-                ]
-                .into(),
-            ),
         }
     }
 }
@@ -81,8 +70,7 @@ impl OutputItem {
 impl WebBackend {
     fn new_handle(&self) -> Handle {
         let streams = self.streams.lock().unwrap();
-        for index in Handle::FIRST_UNRESERVED.0..u64::MAX {
-            let handle = Handle(index);
+        for handle in (Handle::FIRST_UNRESERVED.0..u64::MAX).map(Handle) {
             if !streams.contains_key(&handle) {
                 return handle;
             }
@@ -90,38 +78,10 @@ impl WebBackend {
         panic!("Ran out of file handles");
     }
     fn file<T>(&self, path: &Path, f: impl FnOnce(&[u8]) -> T) -> Result<T, String> {
-        let files = self.files.lock().unwrap();
-        if let Some(contents) = files.get(path) {
-            Ok(f(contents))
-        } else {
-            GLOBAL_FILES.with(|dropped_files| {
-                if let Some(contents) = dropped_files.borrow().get(path) {
-                    Ok(f(contents))
-                } else {
-                    Err(format!("File not found: {}", path.display()))
-                }
-            })
-        }
-    }
-    fn file_mut<T>(
-        &self,
-        path: &Path,
-        create: bool,
-        f: impl FnOnce(&mut Vec<u8>) -> T,
-    ) -> Result<T, String> {
-        let mut files = self.files.lock().unwrap();
-        if !files.contains_key(path) {
-            if let Some(contents) =
-                GLOBAL_FILES.with(|dropped_files| dropped_files.borrow().get(path).cloned())
-            {
-                files.insert(path.to_path_buf(), contents);
-            } else if create {
-                files.insert(path.to_path_buf(), Vec::new());
-            } else {
-                return Err(format!("File not found: {}", path.display()));
-            }
-        }
-        Ok(f(files.get_mut(path).unwrap()))
+        FILES.with(|files| { 
+            let files = files.borrow();
+            files.get(path).map(|content| f(content)).ok_or(format!("File not found: {}", path.display()))
+        })
     }
 }
 
@@ -189,19 +149,13 @@ impl SysBackend for WebBackend {
         }
         let path = Path::new(path);
         let mut set = BTreeSet::new();
-        GLOBAL_FILES.with(|files| {
-            let files = files.borrow();
-            for file in files.keys() {
+        FILES.with(|files| {
+            for file in files.borrow().keys() {
                 if file.parent() == Some(path) {
                     set.insert(file.file_name().unwrap().to_string_lossy().into());
                 }
             }
         });
-        for file in self.files.lock().unwrap().keys() {
-            if file.parent() == Some(path) {
-                set.insert(file.file_name().unwrap().to_string_lossy().into());
-            }
-        }
         Ok(set.into_iter().collect())
     }
     fn is_file(&self, path: &str) -> Result<bool, String> {
@@ -211,7 +165,14 @@ impl SysBackend for WebBackend {
         self.file(path.as_ref(), |_| {}).is_ok()
     }
     fn file_write_all(&self, path: &Path, contents: &[u8]) -> Result<(), String> {
-        self.file_mut(path, true, |file| *file = contents.to_vec())
+        FILES.with(|files| {
+            if !files.borrow().contains_key(path) {
+                files.borrow_mut().insert(path.into(), contents.to_vec());
+            } else {
+                *files.borrow_mut().get_mut(path).unwrap() = contents.to_vec();
+            }
+        });
+        Ok(())
     }
     fn file_read_all(&self, path: &Path) -> Result<Vec<u8>, String> {
         self.file(path, |contents| contents.to_vec())
@@ -232,7 +193,7 @@ impl SysBackend for WebBackend {
     }
     fn create_file(&self, path: &Path) -> Result<Handle, String> {
         let handle = self.new_handle();
-        self.file_mut(path, true, |_| {})?;
+        FILES.with(|files| files.borrow_mut().insert(path.into(), Vec::new()));
         self.streams.lock().unwrap().insert(
             handle,
             VirtualStream {
@@ -298,7 +259,7 @@ impl SysBackend for WebBackend {
         Ok(data)
     }
     fn delete(&self, path: &str) -> Result<(), String> {
-        self.files.lock().unwrap().remove(Path::new(path));
+        FILES.with(|files| files.borrow_mut().remove(Path::new(path)));
         Ok(())
     }
     fn trash(&self, path: &str) -> Result<(), String> {
@@ -369,7 +330,7 @@ impl SysBackend for WebBackend {
             .join(repo_owner)
             .join(repo_name)
             .join("lib.ua");
-        if GLOBAL_FILES.with(|dropped_files| dropped_files.borrow().contains_key(&path)) {
+        if FILES.with(|files| files.borrow().contains_key(&path)) {
             return Ok(path);
         }
         let mut url = url

@@ -39,7 +39,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Interpreter
 - Add the `uiua find` command, which finds Uiua code that matches the given unformatted text
 - Some optimizations
-  - [`rows ≡`](https://uiua.org/docs/rows) [`on ⟜`](https://uiua.org/docs/on)/[`by ⊸`](https://uiua.org/docs/by) [`rand ⚂`](https://uiua.org/docs/rand)/`constant`
+  - [`rows ≡`](https://uiua.org/docs/rows) [`on ⟜`](https://uiua.org/docs/on)/[`by ⊸`](https://uiua.org/docs/by) [`rand ⚂`](https://uiua.org/docs/random)/`constant`
 - Tweak the formatter to reduce excess vertical space
 
 ## 0.12.3 - 2024-08-17

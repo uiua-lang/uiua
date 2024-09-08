@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.13
+  - `select/pick` fill NaNs
   - `under fill`
   - Label and format string glyphs
   - `setinv/setund` unification?

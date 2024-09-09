@@ -164,14 +164,14 @@ The [`above ◠`]() and [`below ◡`]() modifiers keep *all* of a function's arg
 ≡≡□
 ```
 
-[`orient ⮌`]() transposes an array's axes by moving the axes at the given indices to the front of the [`shape △`]().
+[`orient ⤸`]() transposes an array's axes by moving the axes at the given indices to the front of the [`shape △`]().
 
 This simplifies complex shape transformations that would otherwise be done with several [`transpose ⍉`]()s and [`rows ≡`]()s.
 
 ```uiua
 # Experimental!
 °△ 2_3_4_5
-△ ⮌ 1_3
+△ ⤸ 1_3
 ```
 
 ## 💖

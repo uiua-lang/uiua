@@ -860,6 +860,7 @@ impl<'a> Lexer<'a> {
             match c {
                 // Backwards compatibility
                 "∶" => self.end(Primitive::Flip, start),
+                "⮌" => self.end(Primitive::Orient, start),
 
                 "(" => self.end(OpenParen, start),
                 ")" => self.end(CloseParen, start),

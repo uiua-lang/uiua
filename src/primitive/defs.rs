@@ -1255,13 +1255,13 @@ primitive!(
     /// The corresponding axes of the array will be moved to the front of the array's shape.
     /// Positive indices start from the leading axis. Negative indices start from the trailing axis.
     /// ex: °△ 2_3_4
-    ///   : ⮌ 1 .
-    /// ex: △ ⮌ 2_1 °△ 2_3_4_5
+    ///   : ⤸ 1 .
+    /// ex: △ ⤸ 2_1 °△ 2_3_4_5
     /// [orient]`¯1` is equivalent to [un][transpose].
     /// ex: °△ 2_3_4
-    ///   : ∩△ ⊃°⍉(⮌¯1)
+    ///   : ∩△ ⊃°⍉(⤸¯1)
     /// Currently, all uses of [orient] can be written with sequences of [transpose] and [rows].
-    (2, Orient, DyadicArray, ("orient", '⮌')),
+    (2, Orient, DyadicArray, ("orient", '⤸')),
     /// The n-wise windows of an array
     ///
     /// ex: ◫2 .⇡4

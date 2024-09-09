@@ -9,8 +9,10 @@ This version is not yet released. If you are reading this on the website, then t
   - This also allow the specification of "stride"
   - This is inspired by APL's `stencil ⌺` behavior
   - `chunks ⑄` has been deprecated
-- Stabilize [`orient ⮌`](https://uiua.org/docs/orient)
-- [`un °`](https://uiua.org/docs/un) [`orient ⮌`](https://uiua.org/docs/orient) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
+- Stabilize [`orient ⤸`](https://uiua.org/docs/orient)
+  - Change its glyph to something with broader font support
+  - `⮌` will continue to work and will be formatted as `⤸`
+- [`un °`](https://uiua.org/docs/un) [`orient ⤸`](https://uiua.org/docs/orient) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
   - This is analogous to the behavior of [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select)
 - Add a feature to some [`under ⍜`](https://uiua.org/docs/under) functions that makes them more permissive of changes in rank
   - Applies to [`select ⊏`](https://uiua.org/docs/select), [`keep ▽`](https://uiua.org/docs/keep), [`first ⊢`](https://uiua.org/docs/first), [`first ⊢`](https://uiua.org/docs/first)[`reverse ⇌`](https://uiua.org/docs/reverse)

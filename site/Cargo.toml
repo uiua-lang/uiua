@@ -52,3 +52,6 @@ features = [
   "Performance",
 ]
 version = "0.3.70"
+
+[features]
+audio = [] # Dummy for rust-analyzer

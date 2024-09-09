@@ -1,11 +1,12 @@
 # Uiua Todo
 
 - 0.13
+  - `un on select`
+  - `un on pick`
   - `select/pick` fill NaNs
   - `under fill`
   - Label and format string glyphs
-  - `setinv/setund` unification?
-  - `setinv` on and by inverses
+  - `setinv/setund` unification
   - `struct` args
   - `try` optimizations
   - Document on and by inverses

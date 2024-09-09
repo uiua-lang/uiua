@@ -1201,15 +1201,6 @@ code:
         self.push(f(&a, b, self)?);
         Ok(())
     }
-    pub(crate) fn dyadic_or_env<V: Into<Value>>(
-        &mut self,
-        f: fn(Value, &Value, &Self) -> UiuaResult<V>,
-    ) -> UiuaResult {
-        let a = self.pop(1)?;
-        let b = self.pop(2)?;
-        self.push(f(a, &b, self)?);
-        Ok(())
-    }
     pub(crate) fn stack_height(&self) -> usize {
         self.rt.stack.len()
     }

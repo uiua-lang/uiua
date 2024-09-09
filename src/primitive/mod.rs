@@ -644,7 +644,7 @@ impl Primitive {
             Primitive::Rise => env.monadic_ref(Value::rise)?,
             Primitive::Fall => env.monadic_ref(Value::fall)?,
             Primitive::Pick => env.dyadic_oo_env(Value::pick)?,
-            Primitive::Select => env.dyadic_or_env(Value::select)?,
+            Primitive::Select => env.dyadic_oo_env(Value::select)?,
             Primitive::Windows => env.dyadic_ro_env(Value::windows)?,
             Primitive::Chunks => env.dyadic_ro_env(Value::chunks)?,
             Primitive::Where => env.monadic_ref_env(Value::wher)?,

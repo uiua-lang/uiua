@@ -13,8 +13,9 @@ use std::{
 use tinyvec::TinyVec;
 
 use crate::{
-    Array, ArrayValue, CodeSpan, ExactDoubleIterator, Function, Inputs, PersistentMeta, Shape,
-    Signature, Span, TempStack, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
+    Array, ArrayValue, Boxed, CodeSpan, Complex, ExactDoubleIterator, Function, Inputs,
+    PersistentMeta, Shape, Signature, Span, TempStack, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
+    Value,
 };
 
 mod dyadic;
@@ -187,6 +188,15 @@ pub trait FillContext: ErrorContext {
     fn is_fill_error(error: &Self::Error) -> bool;
     fn number_only_fill(&self) -> bool {
         self.scalar_fill::<f64>().is_ok() && self.scalar_fill::<u8>().is_err()
+    }
+    fn is_scalar_filled(&self, val: &Value) -> bool {
+        match val {
+            Value::Num(_) => self.scalar_fill::<f64>().is_ok(),
+            Value::Byte(_) => self.scalar_fill::<u8>().is_ok(),
+            Value::Complex(_) => self.scalar_fill::<Complex>().is_ok(),
+            Value::Char(_) => self.scalar_fill::<char>().is_ok(),
+            Value::Box(_) => self.scalar_fill::<Boxed>().is_ok(),
+        }
     }
 }
 

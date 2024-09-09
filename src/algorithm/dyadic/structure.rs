@@ -12,6 +12,7 @@ use ecow::EcoVec;
 use crate::{
     algorithm::FillContext,
     cowslice::{cowslice, CowSlice},
+    grid_fmt::GridFmt,
     Array, ArrayValue, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
 };
 
@@ -57,17 +58,31 @@ impl Value {
             |a| a.remove_row(index),
         )
     }
-    pub(crate) fn as_shaped_indices(&self, env: &Uiua) -> UiuaResult<(&[usize], Vec<isize>)> {
+    pub(crate) fn as_shaped_indices(
+        &self,
+        filled: bool,
+        env: &Uiua,
+    ) -> UiuaResult<(&[usize], Vec<isize>)> {
         Ok(match self {
             Value::Num(arr) => {
                 let mut index_data = Vec::with_capacity(arr.element_count());
                 for &n in &arr.data {
-                    if n.fract() != 0.0 {
-                        return Err(env.error(format!(
-                            "Index must be an array of integers, but {n} is not an integer"
-                        )));
-                    }
-                    index_data.push(n as isize);
+                    index_data.push(if n.fract() != 0.0 {
+                        if filled {
+                            isize::MAX
+                        } else if n.fract().is_nan() {
+                            return Err(env.error(format!(
+                                "{} cannot be used as an index without a fill",
+                                n.grid_string(false)
+                            )));
+                        } else {
+                            return Err(env.error(format!(
+                                "Index must be an array of integers, but {n} is not an integer"
+                            )));
+                        }
+                    } else {
+                        n as isize
+                    });
                 }
                 (&arr.shape, index_data)
             }
@@ -88,8 +103,8 @@ impl Value {
     }
     /// Use this array as an index to pick from another
     pub fn pick(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        let (index_shape, index_data) = self.as_shaped_indices(env)?;
         from.match_scalar_fill(env);
+        let (index_shape, index_data) = self.as_shaped_indices(env.is_scalar_filled(&from), env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.pick(index_shape, &index_data, env)?),
             Value::Byte(a) => Value::Byte(a.pick(index_shape, &index_data, env)?),
@@ -99,7 +114,7 @@ impl Value {
         })
     }
     pub(crate) fn undo_pick(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
-        let (idx_shape, index_data) = index.as_shaped_indices(env)?;
+        let (idx_shape, index_data) = index.as_shaped_indices(env.is_scalar_filled(&self), env)?;
         if idx_shape.len() > 1 {
             let last_axis_len = *idx_shape.last().unwrap();
             if last_axis_len == 0 {
@@ -784,8 +799,10 @@ impl<T: ArrayValue> Array<T> {
 
 impl Value {
     /// Use this value to `select` from another
-    pub fn select(self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
-        let (indices_shape, indices_data) = self.as_shaped_indices(env)?;
+    pub fn select(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
+        from.match_scalar_fill(env);
+        let (indices_shape, indices_data) =
+            self.as_shaped_indices(env.is_scalar_filled(&from), env)?;
         Ok(match from {
             Value::Num(a) => a.select(indices_shape, &indices_data, env)?.into(),
             Value::Byte(a) if env.number_only_fill() => a
@@ -800,7 +817,7 @@ impl Value {
     }
     pub(crate) fn undo_select(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let mut from = self;
-        let (idx_shape, mut ind) = index.as_shaped_indices(env)?;
+        let (idx_shape, mut ind) = index.as_shaped_indices(env.is_scalar_filled(&from), env)?;
         let into_row_count = into.row_count();
         // Sort indices
         let mut sorted_indices: Vec<_> = ind.iter().copied().enumerate().collect();

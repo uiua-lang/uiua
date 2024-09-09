@@ -5,7 +5,6 @@ Uiua is not yet stable.
 ## 0.13.0 - 2024-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
-- Files created with [`&fwa`](https://uiua.org/docs/&fwa) will now persist between runs
 - The experimental `chunks ⑄` function's behavior has been moved to an extension on [`windows ◫`](https://uiua.org/docs/windows)
   - This also allow the specification of "stride"
   - This is inspired by APL's `stencil ⌺` behavior
@@ -41,6 +40,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Some optimizations
   - [`rows ≡`](https://uiua.org/docs/rows) [`on ⟜`](https://uiua.org/docs/on)/[`by ⊸`](https://uiua.org/docs/by) [`rand ⚂`](https://uiua.org/docs/random)/`constant`
 - Tweak the formatter to reduce excess vertical space
+### Website
+- In the pad, files created with [`&fwa`](https://uiua.org/docs/&fwa) will now persist between runs
 
 ## 0.12.3 - 2024-08-17
 ### Language

@@ -798,7 +798,8 @@ impl Value {
             Value::Box(a) => a.select(indices_shape, &indices_data, env)?.into(),
         })
     }
-    pub(crate) fn undo_select(mut self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub(crate) fn undo_select(self, index: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
+        let mut from = self;
         let (idx_shape, mut ind) = index.as_shaped_indices(env)?;
         let into_row_count = into.row_count();
         // Sort indices
@@ -811,7 +812,7 @@ impl Value {
         let mut idx_shape = Cow::Borrowed(idx_shape);
         let reduced = ind.iter().any(|&i| !index_in_bounds(i, into_row_count));
         if reduced {
-            if self.rank() == 0 {
+            if from.rank() == 0 {
                 return Ok(into);
             }
             let mut n = 0;
@@ -819,13 +820,13 @@ impl Value {
             sorted_indices.retain(|&(i, j)| {
                 let keep = index_in_bounds(j, into_row_count);
                 if !keep {
-                    self.remove_row(i);
+                    from.remove_row(i);
                     n += 1;
                 }
                 keep
             });
             sorted_indices.reverse();
-            self.validate_shape();
+            from.validate_shape();
             if idx_shape.is_empty() {
                 idx_shape = Cow::Owned(vec![n]);
             } else {
@@ -834,15 +835,20 @@ impl Value {
         }
         // Ensure there are no duplicate indices
         let depth = idx_shape.len().saturating_sub(1);
+        let from_row_count = from.row_count();
         if sorted_indices.windows(2).any(|win| {
             let (ai, a) = win[0];
             let (bi, b) = win[1];
-            if !index_in_bounds(a, into_row_count) || !index_in_bounds(b, into_row_count) {
+            if !index_in_bounds(a, into_row_count)
+                || !index_in_bounds(b, into_row_count)
+                || ai >= from_row_count
+                || bi >= from_row_count
+            {
                 return false;
             }
             let a = normalize_index(a, into_row_count);
             let b = normalize_index(b, into_row_count);
-            a == b && self.depth_row(depth, ai) != self.depth_row(depth, bi)
+            a == b && from.depth_row(depth, ai) != from.depth_row(depth, bi)
         }) {
             return Err(env.error(
                 "Cannot undo selection with duplicate \
@@ -854,7 +860,7 @@ impl Value {
             sorted_indices.sort_unstable_by_key(|(i, _)| *i);
             ind = sorted_indices.into_iter().map(|(_, i)| i).collect();
         }
-        self.generic_bin_into(
+        from.generic_bin_into(
             into,
             |a, b| a.undo_select(&idx_shape, &ind, b, env).map(Into::into),
             |a, b| a.undo_select(&idx_shape, &ind, b, env).map(Into::into),

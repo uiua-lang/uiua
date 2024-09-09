@@ -259,6 +259,7 @@ static ON_INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &([Min], [Min]),
         &([Max], [Max]),
         &([Orient], [UndoOrient]),
+        &([Select], [UnOnSelect]),
         &pat!(
             Join,
             (
@@ -1936,27 +1937,27 @@ fn under_fill_pattern<'a>(
     g_sig: Signature,
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
-    let [Instr::PushFunc(g), Instr::PushFunc(f), Instr::Prim(Primitive::Fill, span), input @ ..] =
+    let [Instr::PushFunc(f), Instr::PushFunc(get_fill), Instr::Prim(Primitive::Fill, span), input @ ..] =
         input
     else {
         return None;
     };
     let span = *span;
-    if f.signature() != (0, 1) {
+    if get_fill.signature() != (0, 1) {
         return None;
     }
-    let g_instrs = g.instrs(&comp.asm).to_vec();
-    let (g_before, g_after) = under_instrs(&g_instrs, g_sig, comp)?;
-    let g_before = make_fn(g_before, g.flags, span, comp)?;
-    let g_after = make_fn(g_after, g.flags, span, comp)?;
+    let f_instrs = f.instrs(&comp.asm).to_vec();
+    let (f_before, f_after) = under_instrs(&f_instrs, g_sig, comp)?;
+    let f_before = make_fn(f_before, f.flags, span, comp)?;
+    let f_after = make_fn(f_after, f.flags, span, comp)?;
     let befores = eco_vec![
-        Instr::PushFunc(g_before),
-        Instr::PushFunc(f.clone()),
+        Instr::PushFunc(f_before),
+        Instr::PushFunc(get_fill.clone()),
         Instr::Prim(Primitive::Fill, span),
     ];
     let afters = eco_vec![
-        Instr::PushFunc(g_after),
-        Instr::PushFunc(f.clone()),
+        Instr::PushFunc(f_after),
+        Instr::PushFunc(get_fill.clone()),
         Instr::Prim(Primitive::Fill, span),
     ];
     Some((input, (befores, afters)))

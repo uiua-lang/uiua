@@ -3,6 +3,7 @@
 use std::{
     borrow::Cow,
     cmp::Ordering,
+    collections::HashSet,
     iter::{once, repeat},
     mem::replace,
 };
@@ -893,6 +894,19 @@ impl Value {
             },
         )
     }
+    pub(crate) fn un_on_select(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
+        from.match_scalar_fill(env);
+        let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
+        Ok(match from {
+            Value::Num(a) => Value::Num(a.un_on_select(indices_shape, &indices_data, env)?),
+            Value::Byte(a) => Value::Byte(a.un_on_select(indices_shape, &indices_data, env)?),
+            Value::Complex(a) => {
+                Value::Complex(a.un_on_select(indices_shape, &indices_data, env)?)
+            }
+            Value::Char(a) => Value::Char(a.un_on_select(indices_shape, &indices_data, env)?),
+            Value::Box(a) => Value::Box(a.un_on_select(indices_shape, &indices_data, env)?),
+        })
+    }
 }
 
 fn index_in_bounds(index: isize, len: usize) -> bool {
@@ -1127,5 +1141,78 @@ impl<T: ArrayValue> Array<T> {
         }
 
         Ok(into)
+    }
+    fn un_on_select(
+        self,
+        indices_shape: &[usize],
+        indices: &[isize],
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        if !self.shape.starts_with(indices_shape) {
+            return Err(env.error(format!(
+                "Cannot invert selection of {} array with {} indices",
+                self.shape,
+                FormatShape(indices_shape)
+            )));
+        }
+        let mut set = HashSet::new();
+        let normalized_indices: Vec<usize> = indices
+            .iter()
+            .map(|&i| normalize_index(i, indices.len()))
+            .collect();
+        let row_count = normalized_indices
+            .iter()
+            .max()
+            .map(|&max| max + 1)
+            .unwrap_or(0);
+        let indices_are_total =
+            indices.len() == row_count && indices.iter().all(|&i| set.insert(i));
+        let mut fill = None;
+        let row_shape: Shape = self.shape[indices_shape.len()..].into();
+        let mut fill_rep = 0;
+        if !indices_are_total {
+            let fill_arr = env.array_fill::<T>().map_err(|e| {
+                env.error(format!(
+                    "Cannot invert selection of non-total indices without a fill{e}"
+                ))
+            })?;
+            if !row_shape.ends_with(&fill_arr.shape) {
+                return Err(env.error(format!(
+                    "Cannot invert selection of {} array with {} fill",
+                    self.shape, fill_arr.shape
+                )));
+            }
+            fill_rep = row_shape[..row_shape.len() - fill_arr.shape.len()]
+                .iter()
+                .product();
+            fill = Some(fill_arr);
+        }
+        let mut data = EcoVec::<T>::with_capacity(row_count * row_shape.elements());
+        let mut indices_rise: Vec<usize> = (0..normalized_indices.len()).collect();
+        indices_rise.sort_unstable_by_key(|&i| normalized_indices[i]);
+        let row_elems = row_shape.elements();
+        let mut next = 0;
+        for rise in indices_rise {
+            let i = normalized_indices[rise];
+            if i > next {
+                for _ in next..i {
+                    for _ in 0..fill_rep {
+                        data.extend_from_slice(&fill.as_ref().unwrap().data);
+                    }
+                }
+            } else if i < next
+                && !(data[data.len() - row_elems..].iter())
+                    .zip(&self.data[rise * row_elems..][..row_elems])
+                    .all(|(a, b)| a.array_eq(b))
+            {
+                return Err(env
+                    .error("Cannot invert selection with duplicate indices but different values"));
+            }
+            data.extend_from_slice(&self.data[rise * row_elems..][..row_elems]);
+            next = i + 1;
+        }
+        let mut shape = row_shape;
+        shape.insert(0, row_count);
+        Ok(Array::new(shape, data))
     }
 }

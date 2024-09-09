@@ -3058,6 +3058,7 @@ impl_primitive!(
     (0(1)[1], UnDump, Impure),
     (1, Primes),
     (1, UnBox),
+    (2, UnOnSelect),
     (1(2), UnJoin),
     (2(2), UnJoinPattern),
     (1(2), UnKeep),

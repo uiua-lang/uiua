@@ -3,8 +3,6 @@
 - 0.13
   - `un on select`
   - `un on pick`
-  - `select/pick` fill NaNs
-  - `under fill`
   - Label and format string glyphs
   - `setinv/setund` unification
   - `struct` args

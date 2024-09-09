@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.13
-  - `un on select`
   - `un on pick`
   - Label and format string glyphs
   - `setinv/setund` unification

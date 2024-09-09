@@ -627,3 +627,178 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
     num.compress();
     Ok((frame_rate, num))
 }
+
+pub(crate) fn layout_text(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value> {
+    #[cfg(feature = "font-shaping")]
+    {
+        layout_text_impl(options, text, env)
+    }
+    #[cfg(not(feature = "font-shaping"))]
+    Err(env.error("Text layout is not supported in this environment"))
+}
+
+#[cfg(feature = "font-shaping")]
+fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value> {
+    use std::cell::RefCell;
+
+    use cosmic_text::*;
+    use ecow::eco_vec;
+
+    use crate::{algorithm::validate_size, grid_fmt::GridFmt, Shape};
+    struct FontStuff {
+        system: FontSystem,
+        swash_cache: SwashCache,
+    }
+    thread_local! {
+        static FONT_STUFF: RefCell<FontStuff> = RefCell::new(FontStuff {
+            system: FontSystem::new(),
+            swash_cache: SwashCache::new(),
+        });
+    }
+
+    let text = text.as_string(env, "Text must be a string")?;
+
+    // Default options
+    let mut size = 12.0;
+    let mut line_height = 1.0;
+    let mut width = None;
+    let mut height = None;
+    let mut color: Option<Color> = None;
+
+    // Parse options
+    let mut scalar_index = 0;
+    let mut set_size = false;
+    for (i, row) in options.into_rows().map(Value::unboxed).enumerate() {
+        let nums = row.as_nums(env, "Options must be numbers")?;
+        match &**row.shape() {
+            [] => {
+                match scalar_index {
+                    0 => size = nums[0] as f32,
+                    1 => line_height = nums[0] as f32,
+                    n => {
+                        return Err(env.error(format!(
+                            "{} is too many scalar options to layout text",
+                            n + 1
+                        )))
+                    }
+                }
+                scalar_index += 1;
+            }
+            [2] => {
+                if set_size {
+                    return Err(env.error("Cannot set text layout size twice"));
+                }
+                let w = nums[0];
+                let h = nums[1];
+                if w < 0.0 || w.is_nan() || w.is_infinite() {
+                    return Err(env.error(format!(
+                        "Canvas width must be a non-negative number, but it is {}",
+                        w.grid_string(false)
+                    )));
+                }
+                if h < 0.0 || h.is_nan() || h.is_infinite() {
+                    return Err(env.error(format!(
+                        "Canvas height must be a non-negative number, but it is {}",
+                        h.grid_string(false)
+                    )));
+                }
+                if !w.is_infinite() {
+                    width = Some(w as f32);
+                }
+                if !h.is_infinite() {
+                    height = Some(h as f32);
+                }
+                set_size = true;
+            }
+            [3] => {
+                if color.is_some() {
+                    return Err(env.error("Cannot set text layout color twice"));
+                }
+                color = Some(Color::rgb(
+                    (nums[0] * 255.0) as u8,
+                    (nums[1] * 255.0) as u8,
+                    (nums[2] * 255.0) as u8,
+                ));
+            }
+            [4] => {
+                if color.is_some() {
+                    return Err(env.error("Cannot set text layout color twice"));
+                }
+                color = Some(Color::rgba(
+                    (nums[0] * 255.0) as u8,
+                    (nums[1] * 255.0) as u8,
+                    (nums[2] * 255.0) as u8,
+                    (nums[3] * 255.0) as u8,
+                ))
+            }
+            _ => {
+                return Err(env.error(format!(
+                    "Layout options must have [], [2], [3], or [4]\
+                    but option {i} has shape {}",
+                    row.shape()
+                )))
+            }
+        }
+    }
+
+    line_height *= size;
+    let metrics = Metrics::new(size, line_height);
+
+    FONT_STUFF.with(|stuff| -> UiuaResult<Value> {
+        let FontStuff {
+            system,
+            swash_cache,
+        } = &mut *stuff.borrow_mut();
+        // Init buffer
+        let mut buffer = Buffer::new(system, metrics);
+        let mut buffer = buffer.borrow_with(system);
+        buffer.set_size(width, height);
+        let attrs = Attrs::new();
+        buffer.set_text(&text, attrs, Shaping::Advanced);
+        buffer.shape_until_scroll(true);
+
+        // Get canvas size
+        let canvas_width = width.unwrap_or_else(|| {
+            buffer
+                .layout_runs()
+                .map(|run| run.line_w)
+                .max_by(|a, b| a.partial_cmp(b).unwrap())
+                .unwrap_or(0.0)
+        });
+        let canvas_height =
+            height.unwrap_or_else(|| buffer.layout_runs().map(|run| run.line_height).sum::<f32>());
+        println!("canvas size: {canvas_width}, {canvas_height}");
+
+        // Init array shape/data
+        let colored = color.is_some();
+        let pixel_shape: &[usize] = if colored { &[4] } else { &[] };
+        let mut canvas_shape = Shape::from_iter([canvas_height as usize, canvas_width as usize]);
+        canvas_shape.extend(pixel_shape.iter().copied());
+        let elem_count = validate_size::<f64>(canvas_shape.iter().copied(), env)?;
+        let mut canvas_data = eco_vec![0.0; elem_count];
+        let slice = canvas_data.make_mut();
+        // Render
+        buffer.draw(
+            swash_cache,
+            color.unwrap_or(Color::rgb(0xFF, 0xFF, 0xFF)),
+            |x, y, _, _, color| {
+                let a = color.a();
+                if a == 0
+                    || (x < 0 || x >= canvas_width as i32)
+                    || (y < 0 || y >= canvas_height as i32)
+                {
+                    return;
+                }
+                let i = (y * canvas_width as i32 + x) as usize;
+                if colored {
+                    for (j, c) in color.as_rgba().into_iter().enumerate() {
+                        slice[i * 4 + j] = c as f64 / 255.0;
+                    }
+                } else {
+                    slice[i] = color.a() as f64 / 255.0;
+                }
+            },
+        );
+        Ok(Array::new(canvas_shape, canvas_data).into())
+    })
+}

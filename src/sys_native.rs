@@ -985,6 +985,10 @@ impl SysBackend for NativeSys {
             }
         }
     }
+    #[cfg(feature = "font-shaping")]
+    fn font_bytes(&self) -> Result<&'static [u8], String> {
+        Ok(include_bytes!("../site/Uiua386.ttf"))
+    }
     #[cfg(feature = "ffi")]
     fn ffi(
         &self,

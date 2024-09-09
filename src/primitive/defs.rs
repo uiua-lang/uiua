@@ -2975,6 +2975,8 @@ primitive!(
     ///
     /// See also: [&ap]
     (3, AudioEncode, Encoding, "audio"),
+    /// Render text into an image array
+    (2, Layout, Encoding, "layout"),
 );
 
 macro_rules! impl_primitive {

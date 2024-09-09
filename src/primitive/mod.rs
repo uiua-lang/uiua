@@ -907,6 +907,7 @@ impl Primitive {
             Primitive::ImageEncode => encode::image_encode(env)?,
             Primitive::GifEncode => encode::gif_encode(env)?,
             Primitive::AudioEncode => encode::audio_encode(env)?,
+            Primitive::Layout => env.dyadic_oo_env(encode::layout_text)?,
             Primitive::Astar => algorithm::astar(env)?,
             Primitive::Fft => algorithm::fft(env)?,
             Primitive::Stringify

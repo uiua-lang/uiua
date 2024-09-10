@@ -787,6 +787,13 @@
     "class": "DyadicArray",
     "description": "Discard or copy some rows of an array"
   },
+  "layout": {
+    "args": 2,
+    "outputs": 1,
+    "class": "Encoding",
+    "description": "Render text into an image array",
+    "experimental": true
+  },
   "length": {
     "glyph": "⧻",
     "args": 1,

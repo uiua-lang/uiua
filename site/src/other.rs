@@ -113,14 +113,15 @@ pub fn Install() -> impl IntoView {
     view! {
         <Title text="Installation - Uiua Docs"/>
         <Hd id="installing-uiua">"Installing Uiua"</Hd>
-        <p>"If your OS is supported, then the newest version of the Uiua interpreter can be downloaded from the "<a href="https://github.com/uiua-lang/uiua/releases">"releases"</a>" page."</p>
+        <p><strong>"If your OS is supported, then the newest version of the Uiua interpreter can be downloaded from the "<a href="https://github.com/uiua-lang/uiua/releases">"releases"</a>" page."</strong></p>
         <p>"Otherwise, the native Uiua interpreter can be installed via Cargo."</p>
-        <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation (>=1.75)."</p>
-        <p>"Once you have that, run the following command:"</p>
+        <p>"This requires a "<a href="https://www.rust-lang.org/tools/install">"Rust"</a>" installation (>=1.78)."</p>
+        <p>"Once you have that, run one of the following commands:"</p>
+        <code class="code-block">"cargo install uiua -F full"</code>
         <code class="code-block">"cargo install uiua"</code>
         <p>"On Linux, this may require installing some dependencies:"</p>
         <code class="code-block">"apt install libx11-dev"</code>
-        <p>"The following optional features are available but not enabled by default (enabled by passing "<code>"--features <feature>"</code>"):"</p>
+        <p>"The "<code>"-F full"</code>" flag enables all optional features. If you need more control over which features are installed, enable only the only the ones you want by passing "<code>"--features <feature>"</code>"):"</p>
         <ul>
             <li>
                 <p><code>"audio"</code>" - Enables audio system functions."</p>

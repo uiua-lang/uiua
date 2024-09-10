@@ -3150,6 +3150,7 @@ impl_primitive!(
     (1, Primes),
     (1, UnBox),
     (2, UnOnSelect),
+    (2, UnOnPick),
     (1(2), UnJoin),
     (2(2), UnJoinPattern),
     (1(2), UnKeep),

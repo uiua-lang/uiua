@@ -260,6 +260,7 @@ static ON_INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &([Max], [Max]),
         &([Orient], [UndoOrient]),
         &([Select], [UnOnSelect]),
+        &([Pick], [UnOnPick]),
         &pat!(
             Join,
             (

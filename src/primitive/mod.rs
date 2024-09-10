@@ -173,6 +173,7 @@ impl fmt::Display for ImplPrimitive {
             UnFix => write!(f, "{Un}{Fix}"),
             UnShape => write!(f, "{Un}{Shape}"),
             UnOnSelect => write!(f, "{Un}{On}{Select}"),
+            UnOnPick => write!(f, "{Un}{On}{Pick}"),
             UnJoin | UnJoinPattern => write!(f, "{Un}{Join}"),
             UnKeep => write!(f, "{Un}{Keep}"),
             UnScan => write!(f, "{Un}{Scan}"),
@@ -967,6 +968,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnGraphemes => env.monadic_env(Value::ungraphemes)?,
             ImplPrimitive::UnBits => env.monadic_ref_env(Value::unbits)?,
             ImplPrimitive::UnOnSelect => env.dyadic_oo_env(Value::un_on_select)?,
+            ImplPrimitive::UnOnPick => env.dyadic_oo_env(Value::un_on_pick)?,
             ImplPrimitive::UnJoin => {
                 let val = env.pop(1)?;
                 let (first, rest) = val.unjoin(env)?;

@@ -907,6 +907,17 @@ impl Value {
             Value::Box(a) => Value::Box(a.un_on_select(indices_shape, &indices_data, env)?),
         })
     }
+    pub(crate) fn un_on_pick(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
+        from.match_scalar_fill(env);
+        let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
+        Ok(match from {
+            Value::Num(a) => Value::Num(a.un_on_pick(indices_shape, &indices_data, env)?),
+            Value::Byte(a) => Value::Byte(a.un_on_pick(indices_shape, &indices_data, env)?),
+            Value::Complex(a) => Value::Complex(a.un_on_pick(indices_shape, &indices_data, env)?),
+            Value::Char(a) => Value::Char(a.un_on_pick(indices_shape, &indices_data, env)?),
+            Value::Box(a) => Value::Box(a.un_on_pick(indices_shape, &indices_data, env)?),
+        })
+    }
 }
 
 fn index_in_bounds(index: isize, len: usize) -> bool {
@@ -1148,14 +1159,16 @@ impl<T: ArrayValue> Array<T> {
         indices: &[isize],
         env: &Uiua,
     ) -> UiuaResult<Self> {
+        // Validate shape
         if !self.shape.starts_with(indices_shape) {
             return Err(env.error(format!(
-                "Cannot invert selection of {} array with {} indices",
+                "Cannot invert selection of shape {} array with shape {} indices",
                 self.shape,
                 FormatShape(indices_shape)
             )));
         }
-        let mut set = HashSet::new();
+        let row_shape: Shape = self.shape[indices_shape.len()..].into();
+        // Normalize indices
         let normalized_indices: Vec<usize> = indices
             .iter()
             .map(|&i| normalize_index(i, indices.len()))
@@ -1165,10 +1178,12 @@ impl<T: ArrayValue> Array<T> {
             .max()
             .map(|&max| max + 1)
             .unwrap_or(0);
+        // Check indices totality
+        let mut set = HashSet::new();
         let indices_are_total =
             indices.len() == row_count && indices.iter().all(|&i| set.insert(i));
+        // Get fill if not total
         let mut fill = None;
-        let row_shape: Shape = self.shape[indices_shape.len()..].into();
         let mut fill_rep = 0;
         if !indices_are_total {
             let fill_arr = env.array_fill::<T>().map_err(|e| {
@@ -1178,7 +1193,7 @@ impl<T: ArrayValue> Array<T> {
             })?;
             if !row_shape.ends_with(&fill_arr.shape) {
                 return Err(env.error(format!(
-                    "Cannot invert selection of {} array with {} fill",
+                    "Cannot invert selection of shape {} array with shape {} fill",
                     self.shape, fill_arr.shape
                 )));
             }
@@ -1187,11 +1202,14 @@ impl<T: ArrayValue> Array<T> {
                 .product();
             fill = Some(fill_arr);
         }
-        let mut data = EcoVec::<T>::with_capacity(row_count * row_shape.elements());
+        // Rise indices
         let mut indices_rise: Vec<usize> = (0..normalized_indices.len()).collect();
         indices_rise.sort_unstable_by_key(|&i| normalized_indices[i]);
         let row_elems = row_shape.elements();
+        // Init buffer
+        let mut data = EcoVec::<T>::with_capacity(row_count * row_shape.elements());
         let mut next = 0;
+        // Unselect
         for rise in indices_rise {
             let i = normalized_indices[rise];
             if i > next {
@@ -1213,6 +1231,130 @@ impl<T: ArrayValue> Array<T> {
         }
         let mut shape = row_shape;
         shape.insert(0, row_count);
+        Ok(Array::new(shape, data))
+    }
+    fn un_on_pick(
+        self,
+        indices_shape: &[usize],
+        indices: &[isize],
+        env: &Uiua,
+    ) -> UiuaResult<Self> {
+        // Validate shape
+        let cell_shape = if let [init @ .., _] = indices_shape {
+            // if self.shape.len() < init.len() {
+            if !self.shape.starts_with(init) {
+                return Err(env.error(format!(
+                    "Cannot invert pick of shape {} array with shape {} indices",
+                    self.shape,
+                    FormatShape(indices_shape)
+                )));
+            }
+            Shape::from(&self.shape[init.len()..])
+        } else {
+            self.shape.clone()
+        };
+        println!("\ncell_shape: {cell_shape:?}");
+        let cell_size: usize = cell_shape.iter().product();
+        let index_size = indices_shape.last().copied().unwrap_or(1);
+        // Normalize indices
+        let normalized_indices: Vec<usize> = indices
+            .iter()
+            .map(|&i| normalize_index(i, indices.len()))
+            .collect();
+        let outer_rank = indices_shape.last().copied().unwrap_or(1);
+        let mut outer_shape = Shape::from_iter(repeat(0).take(outer_rank));
+        if !normalized_indices.is_empty() {
+            for index in normalized_indices.chunks_exact(index_size) {
+                for (d, &i) in outer_shape.iter_mut().zip(index) {
+                    *d = i.max(*d);
+                }
+            }
+            for d in outer_shape.iter_mut() {
+                *d += 1;
+            }
+        }
+        println!("outer_shape: {outer_shape:?}");
+        let outer_size: usize = outer_shape.iter().product();
+        if indices.is_empty() {
+            return Ok(if indices_shape == [0] {
+                self
+            } else {
+                let mut shape = outer_shape;
+                shape.extend(cell_shape);
+                Array::new(shape, [])
+            });
+        }
+        // Check indices totality
+        let mut set = HashSet::new();
+        let indices_are_total = indices.len() / cell_size == outer_size
+            && normalized_indices
+                .chunks_exact(cell_size)
+                .all(|i| set.insert(i));
+        let mut fill = None;
+        let mut fill_rep = 0;
+        // Get fill if not total
+        if !indices_are_total {
+            let fill_arr = env.array_fill::<T>().map_err(|e| {
+                env.error(format!(
+                    "Cannot invert pick of non-total indices without a fill{e}"
+                ))
+            })?;
+            if !cell_shape.ends_with(&fill_arr.shape) {
+                return Err(env.error(format!(
+                    "Cannot invert pick of shape {} array with shape {} fill",
+                    self.shape, fill_arr.shape
+                )));
+            }
+            fill_rep = cell_shape[..cell_shape.len() - fill_arr.shape.len()]
+                .iter()
+                .product();
+            fill = Some(fill_arr);
+        }
+        // Rise indices
+        let mut indices_rise: Vec<usize> = (0..normalized_indices.len() / index_size).collect();
+        indices_rise.sort_unstable_by_key(|&i| &normalized_indices[i * index_size..][..index_size]);
+        // Init buffer
+        let mut data = EcoVec::<T>::with_capacity(outer_size * cell_size);
+        let mut next = 0;
+        // Unpick
+        for rise in indices_rise {
+            let mut i = 0;
+            let mut stride = 1;
+            let index = &normalized_indices[rise * index_size..];
+            for (&d, &j) in outer_shape.iter().zip(index).rev() {
+                i += stride * j;
+                stride *= d;
+            }
+            println!("rise: {rise}, index: {index:?}, i: {i}");
+            if i > next {
+                for _ in next..i {
+                    for _ in 0..fill_rep {
+                        data.extend_from_slice(&fill.as_ref().unwrap().data);
+                    }
+                }
+            } else if i < next
+                && !(data[data.len() - cell_size..].iter())
+                    .zip(&self.data[rise * cell_size..][..cell_size])
+                    .all(|(a, b)| a.array_eq(b))
+            {
+                return Err(env.error(
+                    "Cannot invert pick with duplicate \
+                    indices but different values",
+                ));
+            }
+            data.extend_from_slice(&self.data[rise * cell_size..][..cell_size]);
+            println!("data: {data:?}");
+            next = i + 1;
+        }
+        if outer_size > next {
+            for _ in next..outer_size {
+                for _ in 0..fill_rep {
+                    data.extend_from_slice(&fill.as_ref().unwrap().data);
+                }
+            }
+        }
+        let mut shape = outer_shape;
+        shape.extend(cell_shape);
         Ok(Array::new(shape, data))
     }
 }

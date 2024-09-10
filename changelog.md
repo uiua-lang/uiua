@@ -27,7 +27,7 @@ This version is not yet released. If you are reading this on the website, then t
   - The behavior is similar to the analogous behavior for [`reduce /`](https://uiua.org/docs/reduce)
 - Allow [`on ⟜`](https://uiua.org/docs/on) to use function packs
 - Allow [`under ⍜`](https://uiua.org/docs/under) of scalar [`keep ▽`](https://uiua.org/docs/keep)
-- Add [`un °`](https://uiua.org/docs/un) [`on ⟜`](https://uiua.org/docs/on) [`select ⊏`](https://uiua.org/docs/select)
+- Add [`un °`](https://uiua.org/docs/un) [`on ⟜`](https://uiua.org/docs/on) [`select ⊏`](https://uiua.org/docs/select) and [`un °`](https://uiua.org/docs/un) [`on ⟜`](https://uiua.org/docs/on) [`pick ⊡`](https://uiua.org/docs/pick)
 - Add the [`graphemes`](https://uiua.org/docs/graphemes) function, which splits a string into unicode grapheme clusters
 - Add the [`&fmd`](https://uiua.org/docs/&fmd) system function, which creates a directory
 - Very large arrays are now displayed more concisely in output

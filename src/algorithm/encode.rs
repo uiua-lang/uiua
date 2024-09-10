@@ -639,11 +639,10 @@ pub(crate) fn layout_text(options: Value, text: Value, env: &Uiua) -> UiuaResult
 
 #[cfg(feature = "font_shaping")]
 fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value> {
-    use std::{cell::RefCell, iter::repeat, sync::Arc};
+    use std::{cell::RefCell, iter::repeat};
 
     use cosmic_text::*;
     use ecow::eco_vec;
-    use fontdb::Source;
 
     use crate::{
         algorithm::{validate_size, FillContext},
@@ -759,10 +758,15 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
     FONT_STUFF.with(|stuff| -> UiuaResult<Value> {
         let mut stuff = stuff.borrow_mut();
         if stuff.is_none() {
+            let mut db = fontdb::Database::new();
+            db.set_monospace_family("Uiua386");
+            db.set_sans_serif_family("Uiua386");
+            db.load_system_fonts();
+            db.load_font_data(include_bytes!("../../site/Uiua386.ttf").to_vec());
+            let locale = sys_locale::get_locale().unwrap_or_else(|| "en-US".into());
+            let system = FontSystem::new_with_locale_and_db(locale, db);
             *stuff = Some(FontStuff {
-                system: FontSystem::new_with_fonts([Source::Binary(Arc::new(include_bytes!(
-                    "../../site/Uiua386.ttf"
-                )))]),
+                system,
                 swash_cache: SwashCache::new(),
             });
         }

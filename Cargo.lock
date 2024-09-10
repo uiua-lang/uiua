@@ -4162,6 +4162,7 @@ dependencies = [
  "serde_tuple",
  "serde_yaml",
  "simple_excel_writer",
+ "sys-locale",
  "terminal-light",
  "terminal_size",
  "thread_local",

@@ -1391,6 +1391,12 @@ macro_rules! value_from {
                 Self::$variant(Array::from_iter(array))
             }
         }
+        impl<const M: usize, const N: usize> From<[[$ty; N]; M]> for Value {
+            fn from(array: [[$ty; N]; M]) -> Self {
+                let data: EcoVec<$ty> = array.into_iter().flatten().collect();
+                Self::$variant(Array::new([M, N], data))
+            }
+        }
         impl From<CowSlice<$ty>> for Value {
             fn from(vec: CowSlice<$ty>) -> Self {
                 Self::$variant(Array::from(vec))
@@ -1423,6 +1429,12 @@ value_from!(Complex, Complex);
 impl FromIterator<usize> for Value {
     fn from_iter<I: IntoIterator<Item = usize>>(iter: I) -> Self {
         iter.into_iter().map(|i| i as f64).collect()
+    }
+}
+
+impl FromIterator<String> for Value {
+    fn from_iter<I: IntoIterator<Item = String>>(iter: I) -> Self {
+        iter.into_iter().map(|s| Boxed(s.into())).collect()
     }
 }
 

@@ -36,6 +36,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add unicode escape sequences for entering arbitrary characters
   - A double backslash followed by a unicode hex number will format to the corresponding glyph
 - Add a `Lorem` constant, which contains the Lorem Ipsum text
+- Add several color constants
+- Add pride flag constants
 - Add an experimental [`sort ⍆`](https://uiua.org/docs/sort) function
   - Sorting is very common
 - Add the experimental [`layout`](https://uiua.org/docs/layout) function, which renders text into an image array

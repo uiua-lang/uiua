@@ -2,6 +2,8 @@
 
 - 0.13
   - `un on pick`
+  - Update design page
+  - Update installation page
   - Label and format string glyphs
   - `setinv/setund` unification
   - `struct` args

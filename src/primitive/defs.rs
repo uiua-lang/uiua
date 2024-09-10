@@ -184,6 +184,26 @@ constant!(
         "LeapMonthDays",
         [31u8, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     ),
+    /// The color white
+    ("White", [1.0, 1.0, 1.0]),
+    /// The color black
+    ("Black", [0.0, 0.0, 0.0]),
+    /// The color red
+    ("Red", [1.0, 0.0, 0.0]),
+    /// The color orange
+    ("Orange", [1.0, 0.5, 0.0]),
+    /// The color yellow
+    ("Yellow", [1.0, 1.0, 0.0]),
+    /// The color green
+    ("Green", [0.0, 1.0, 0.0]),
+    /// The color cyan
+    ("Cyan", [0.0, 1.0, 1.0]),
+    /// The color blue
+    ("Blue", [0.0, 0.0, 1.0]),
+    /// The color purple
+    ("Purple", [0.5, 0.0, 1.0]),
+    /// The color magenta
+    ("Magenta", [1.0, 0.0, 1.0]),
     /// The planets of the solar system
     (
         "Planets",
@@ -241,6 +261,49 @@ constant!(
     ("Music", ConstantValue::Music),
     /// Lorem Ipsum text
     ("Lorem", "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),
+    /// Gay flag colors
+    ("Gay", [[0.894, 0.012, 0.012], [1.0, 0.647, 0.173], [1.0, 1.0, 0.255], [0.0, 0.502, 0.094], [0.0, 0.0, 0.976], [0.525, 0.0, 0.49]]),
+    /// Lesbian flag colors
+    ("Lesbian", [[0.831, 0.173, 0.0], [0.992, 0.596, 0.333], [1.0, 1.0, 1.0], [0.82, 0.38, 0.635], [0.635, 0.004, 0.38]]),
+    /// Bi flag colors
+    ("Bi", [[0.839, 0.008, 0.439], [0.839, 0.008, 0.439], [0.608, 0.31, 0.588], [0.0, 0.22, 0.659], [0.0, 0.22, 0.659]]),
+    /// Trans flag colors
+    ("Trans", [[0.357, 0.808, 0.98], [0.961, 0.663, 0.722], [1.0, 1.0, 1.0], [0.961, 0.663, 0.722], [0.357, 0.808, 0.98]]),
+    /// Pan flag colors
+    ("Pan", [[1.0, 0.129, 0.549], [1.0, 0.847, 0.0], [0.129, 0.694, 1.0]]),
+    /// Ace flag colors
+    ("Ace", [[0.0, 0.0, 0.0], [0.639, 0.639, 0.639], [1.0, 1.0, 1.0], [0.502, 0.0, 0.502]]),
+    /// Aro flag colors
+    ("Aro", [[0.0, 0.0, 0.0], [0.663, 0.663, 0.663], [1.0, 1.0, 1.0], [0.655, 0.827, 0.475], [0.239, 0.647, 0.259]]),
+    /// Aroace flag colors
+    ("AroAce", [[0.937, 0.565, 0.027], [0.965, 0.827, 0.09], [1.0, 1.0, 1.0], [0.271, 0.737, 0.933], [0.118, 0.247, 0.329]]),
+    /// Enby flag colors
+    ("Enby", [[0.988, 0.957, 0.204], [1.0, 1.0, 1.0], [0.612, 0.349, 0.82], [0.173, 0.173, 0.173]]),
+    /// Genderfluid flag colors
+    ("Fluid", [[1.0, 0.463, 0.643], [1.0, 1.0, 1.0], [0.753, 0.067, 0.843], [0.0, 0.0, 0.0], [0.184, 0.235, 0.745]]),
+    /// Genderqueer flag colors
+    ("Queer", [[0.71, 0.494, 0.863], [1.0, 1.0, 1.0], [0.29, 0.506, 0.137]]),
+    /// All pride flags
+    ("PrideFlags", {
+        CONSTANTS
+            .iter()
+            .skip_while(|def| def.name != "Gay")
+            .take_while(|def| def.name != "PrideFlags")
+            .map(|def| match &*def.value {
+                ConstantValue::Static(val) => val.clone(),
+                _ => unreachable!()
+            })
+            .map(Boxed).collect::<Array<Boxed>>()
+    }),
+    /// All pride flag names
+    ("PrideFlagNames", {
+        CONSTANTS
+            .iter()
+            .skip_while(|def| def.name != "Gay")
+            .take_while(|def| def.name != "PrideFlags")
+            .map(|def| def.name.to_string())
+            .collect::<Value>()
+    }),
 );
 
 fn music_constant(backend: &dyn SysBackend) -> Value {

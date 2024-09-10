@@ -1253,7 +1253,6 @@ impl<T: ArrayValue> Array<T> {
         } else {
             self.shape.clone()
         };
-        println!("\ncell_shape: {cell_shape:?}");
         let cell_size: usize = cell_shape.iter().product();
         let index_size = indices_shape.last().copied().unwrap_or(1);
         // Normalize indices
@@ -1273,7 +1272,6 @@ impl<T: ArrayValue> Array<T> {
                 *d += 1;
             }
         }
-        println!("outer_shape: {outer_shape:?}");
         let outer_size: usize = outer_shape.iter().product();
         if indices.is_empty() {
             return Ok(if indices_shape == [0] {
@@ -1286,9 +1284,9 @@ impl<T: ArrayValue> Array<T> {
         }
         // Check indices totality
         let mut set = HashSet::new();
-        let indices_are_total = indices.len() / cell_size == outer_size
+        let indices_are_total = indices.len() / index_size == outer_size
             && normalized_indices
-                .chunks_exact(cell_size)
+                .chunks_exact(index_size)
                 .all(|i| set.insert(i));
         let mut fill = None;
         let mut fill_rep = 0;
@@ -1325,7 +1323,6 @@ impl<T: ArrayValue> Array<T> {
                 i += stride * j;
                 stride *= d;
             }
-            println!("rise: {rise}, index: {index:?}, i: {i}");
             if i > next {
                 for _ in next..i {
                     for _ in 0..fill_rep {
@@ -1343,7 +1340,6 @@ impl<T: ArrayValue> Array<T> {
                 ));
             }
             data.extend_from_slice(&self.data[rise * cell_size..][..cell_size]);
-            println!("data: {data:?}");
             next = i + 1;
         }
         if outer_size > next {

@@ -2976,7 +2976,33 @@ primitive!(
     /// See also: [&ap]
     (3, AudioEncode, Encoding, "audio"),
     /// Render text into an image array
-    (2, Layout, Encoding, "layout"),
+    ///
+    /// In the most basic usage, the first argument is a font size and the second argument is the text to render.
+    /// The result is a rank-2 array of pixel values.
+    /// In this example, we map the pixel values to ASCII characters to visualize the result.
+    /// ex: # Experimental!
+    ///   : layout 12 "Hello!"
+    ///   : ⊏:" @" ⁅ +0.1
+    /// Multi-line text is supported.
+    /// ex: # Experimental!
+    ///   : layout 30 "Hello,\nWorld!"
+    ///
+    /// Additionally, the first argument can be a list of options.
+    /// The first scalar option is the font size (default 30)
+    /// The second scalar option is the line height (default 1)
+    /// The first array of 2 numbers is the canvas size. Use `∞` to use the smallest possible size.
+    /// The first array of 3 or 4 numbers is the color. If set, the background defaults to transparent.
+    /// ex: # Experimental!
+    ///   : $ Uiua is a
+    ///   : $ stack-based
+    ///   : $ array-oriented
+    ///   : $ programming
+    ///   : $ language
+    ///   : layout {30 1.5 300_350 0.5_0.5_1}
+    /// [fill] sets the background color.
+    /// ex: # Experimental!
+    ///   : ⬚[1 0 0] layout {100 0_1_0} "Green on Red!"
+    (2, Layout, Encoding, "layout", Impure),
 );
 
 macro_rules! impl_primitive {

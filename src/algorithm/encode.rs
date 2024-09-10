@@ -629,37 +629,39 @@ pub fn gif_bytes_to_value(bytes: &[u8]) -> Result<(f64, Value), gif::DecodingErr
 }
 
 pub(crate) fn layout_text(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value> {
-    #[cfg(feature = "font-shaping")]
+    #[cfg(feature = "font_shaping")]
     {
         layout_text_impl(options, text, env)
     }
-    #[cfg(not(feature = "font-shaping"))]
+    #[cfg(not(feature = "font_shaping"))]
     Err(env.error("Text layout is not supported in this environment"))
 }
 
-#[cfg(feature = "font-shaping")]
+#[cfg(feature = "font_shaping")]
 fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value> {
-    use std::cell::RefCell;
+    use std::{cell::RefCell, iter::repeat, sync::Arc};
 
     use cosmic_text::*;
     use ecow::eco_vec;
+    use fontdb::Source;
 
-    use crate::{algorithm::validate_size, grid_fmt::GridFmt, Shape};
+    use crate::{
+        algorithm::{validate_size, FillContext},
+        grid_fmt::GridFmt,
+        Shape,
+    };
     struct FontStuff {
         system: FontSystem,
         swash_cache: SwashCache,
     }
     thread_local! {
-        static FONT_STUFF: RefCell<FontStuff> = RefCell::new(FontStuff {
-            system: FontSystem::new(),
-            swash_cache: SwashCache::new(),
-        });
+        static FONT_STUFF: RefCell<Option<FontStuff>> = const { RefCell::new(None) };
     }
 
     let text = text.as_string(env, "Text must be a string")?;
 
     // Default options
-    let mut size = 12.0;
+    let mut size = 30.0;
     let mut line_height = 1.0;
     let mut width = None;
     let mut height = None;
@@ -673,8 +675,18 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
         match &**row.shape() {
             [] => {
                 match scalar_index {
-                    0 => size = nums[0] as f32,
-                    1 => line_height = nums[0] as f32,
+                    0 => {
+                        size = nums[0] as f32;
+                        if size <= 0.0 {
+                            return Err(env.error("Text size must be positive"));
+                        }
+                    }
+                    1 => {
+                        line_height = nums[0] as f32;
+                        if line_height <= 0.0 {
+                            return Err(env.error("Line height must be positive"));
+                        }
+                    }
                     n => {
                         return Err(env.error(format!(
                             "{} is too many scalar options to layout text",
@@ -688,15 +700,15 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
                 if set_size {
                     return Err(env.error("Cannot set text layout size twice"));
                 }
-                let w = nums[0];
-                let h = nums[1];
-                if w < 0.0 || w.is_nan() || w.is_infinite() {
+                let h = nums[0];
+                let w = nums[1];
+                if w < 0.0 || w.is_nan() {
                     return Err(env.error(format!(
                         "Canvas width must be a non-negative number, but it is {}",
                         w.grid_string(false)
                     )));
                 }
-                if h < 0.0 || h.is_nan() || h.is_infinite() {
+                if h < 0.0 || h.is_nan() {
                     return Err(env.error(format!(
                         "Canvas height must be a non-negative number, but it is {}",
                         h.grid_string(false)
@@ -745,10 +757,19 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
     let metrics = Metrics::new(size, line_height);
 
     FONT_STUFF.with(|stuff| -> UiuaResult<Value> {
+        let mut stuff = stuff.borrow_mut();
+        if stuff.is_none() {
+            *stuff = Some(FontStuff {
+                system: FontSystem::new_with_fonts([Source::Binary(Arc::new(include_bytes!(
+                    "../../site/Uiua386.ttf"
+                )))]),
+                swash_cache: SwashCache::new(),
+            });
+        }
         let FontStuff {
             system,
             swash_cache,
-        } = &mut *stuff.borrow_mut();
+        } = stuff.as_mut().unwrap();
         // Init buffer
         let mut buffer = Buffer::new(system, metrics);
         let mut buffer = buffer.borrow_with(system);
@@ -767,38 +788,67 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
         });
         let canvas_height =
             height.unwrap_or_else(|| buffer.layout_runs().map(|run| run.line_height).sum::<f32>());
-        println!("canvas size: {canvas_width}, {canvas_height}");
 
         // Init array shape/data
-        let colored = color.is_some();
+        let fill = env.array_fill::<f64>();
+        let colored = color.is_some() || fill.is_ok();
         let pixel_shape: &[usize] = if colored { &[4] } else { &[] };
         let mut canvas_shape = Shape::from_iter([canvas_height as usize, canvas_width as usize]);
         canvas_shape.extend(pixel_shape.iter().copied());
         let elem_count = validate_size::<f64>(canvas_shape.iter().copied(), env)?;
-        let mut canvas_data = eco_vec![0.0; elem_count];
+        let mut canvas_data = if let Ok(fill) = fill {
+            let color = match &*fill.shape {
+                [] | [1] => [fill.data[0], fill.data[0], fill.data[0], 1.0],
+                [3] | [4] => [
+                    fill.data[0],
+                    fill.data[1],
+                    fill.data[2],
+                    fill.data.get(3).copied().unwrap_or(1.0),
+                ],
+                _ => return Err(env.error("Fill color must be a list of 3 or 4 numbers")),
+            };
+            repeat(color).take(elem_count / 4).flatten().collect()
+        } else if colored {
+            repeat([0.0, 0.0, 0.0, 1.0])
+                .take(elem_count / 4)
+                .flatten()
+                .collect()
+        } else {
+            eco_vec![0.0; elem_count]
+        };
         let slice = canvas_data.make_mut();
         // Render
-        buffer.draw(
-            swash_cache,
-            color.unwrap_or(Color::rgb(0xFF, 0xFF, 0xFF)),
-            |x, y, _, _, color| {
-                let a = color.a();
-                if a == 0
-                    || (x < 0 || x >= canvas_width as i32)
-                    || (y < 0 || y >= canvas_height as i32)
-                {
-                    return;
-                }
-                let i = (y * canvas_width as i32 + x) as usize;
-                if colored {
-                    for (j, c) in color.as_rgba().into_iter().enumerate() {
-                        slice[i * 4 + j] = c as f64 / 255.0;
-                    }
+        let color = color.unwrap_or(Color::rgb(0xFF, 0xFF, 0xFF));
+        if color.a() == 0 {
+            return Ok(Array::new(canvas_shape, canvas_data).into());
+        }
+        let a = color.a() as f64 / 255.0;
+        buffer.draw(swash_cache, color, |x, y, _, _, color| {
+            let alpha = color.a();
+            if alpha == 0
+                || (x < 0 || x >= canvas_width as i32)
+                || (y < 0 || y >= canvas_height as i32)
+            {
+                return;
+            }
+            let i = (y * canvas_width as i32 + x) as usize;
+            if colored {
+                let a = a * alpha as f64 / 255.0;
+                if a == 1.0 {
+                    slice[i * 4] = color.r() as f64 / 255.0;
+                    slice[i * 4 + 1] = color.g() as f64 / 255.0;
+                    slice[i * 4 + 2] = color.b() as f64 / 255.0;
+                    slice[i * 4 + 3] = 1.0;
                 } else {
-                    slice[i] = color.a() as f64 / 255.0;
+                    slice[i * 4] = slice[i * 4] * (1.0 - a) + color.r() as f64 / 255.0 * a;
+                    slice[i * 4 + 1] = slice[i * 4 + 1] * (1.0 - a) + color.g() as f64 / 255.0 * a;
+                    slice[i * 4 + 2] = slice[i * 4 + 2] * (1.0 - a) + color.b() as f64 / 255.0 * a;
+                    slice[i * 4 + 3] = 1.0 - ((1.0 - slice[i * 4 + 3]) * (1.0 - a));
                 }
-            },
-        );
+            } else {
+                slice[i] = color.a() as f64 / 255.0;
+            }
+        });
         Ok(Array::new(canvas_shape, canvas_data).into())
     })
 }

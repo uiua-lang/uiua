@@ -104,7 +104,7 @@ batteries = [
   "json5",
   "pathfinding",
   "fft",
-  "font-shaping",
+  "font_shaping",
 ]
 binary = [
   "ctrlc",
@@ -135,7 +135,7 @@ default = [
 ]
 ffi = ["libffi", "libloading"]
 fft = ["rustfft"]
-font-shaping = ["cosmic-text"]
+font_shaping = ["cosmic-text"]
 full = ["audio", "webcam"] # Enables all optional features
 gif = ["dep:gif", "image", "color_quant"]
 invoke = ["open"]

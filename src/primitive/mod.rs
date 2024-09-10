@@ -406,7 +406,7 @@ impl Primitive {
             (But | With | Backward | Above | Below)
                 | (Choose | Permute)
                 | Struct
-                | (Sort | Chunks | Coordinate | Astar | Fft | Triangle | Case)
+                | (Sort | Chunks | Coordinate | Astar | Fft | Triangle | Case | Layout)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )

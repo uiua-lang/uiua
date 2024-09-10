@@ -943,10 +943,6 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn webcam_capture(&self, index: usize) -> Result<WebcamImage, String> {
         Err("Capturing from webcam is not supported in this environment".into())
     }
-    /// Get bytes for the default font
-    fn font_bytes(&self) -> Result<&'static [u8], String> {
-        Err("Getting font bytes is not supported in this environment".into())
-    }
     /// Call a foreign function interface
     fn ffi(
         &self,

@@ -812,11 +812,6 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
                 _ => return Err(env.error("Fill color must be a list of 3 or 4 numbers")),
             };
             repeat(color).take(elem_count / 4).flatten().collect()
-        } else if colored {
-            repeat([0.0, 0.0, 0.0, 1.0])
-                .take(elem_count / 4)
-                .flatten()
-                .collect()
         } else {
             eco_vec![0.0; elem_count]
         };
@@ -844,10 +839,13 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
                     slice[i * 4 + 2] = color.b() as f64 / 255.0;
                     slice[i * 4 + 3] = 1.0;
                 } else {
-                    slice[i * 4] = slice[i * 4] * (1.0 - a) + color.r() as f64 / 255.0 * a;
-                    slice[i * 4 + 1] = slice[i * 4 + 1] * (1.0 - a) + color.g() as f64 / 255.0 * a;
-                    slice[i * 4 + 2] = slice[i * 4 + 2] * (1.0 - a) + color.b() as f64 / 255.0 * a;
-                    slice[i * 4 + 3] = 1.0 - ((1.0 - slice[i * 4 + 3]) * (1.0 - a));
+                    let [tr, tg, tb, ta, ..] = &mut slice[i * 4..] else {
+                        unreachable!()
+                    };
+                    *tr = *tr * *ta * (1.0 - a) + color.r() as f64 / 255.0 * a;
+                    *tg = *tg * *ta * (1.0 - a) + color.g() as f64 / 255.0 * a;
+                    *tb = *tb * *ta * (1.0 - a) + color.b() as f64 / 255.0 * a;
+                    *ta = 1.0 - ((1.0 - *ta) * (1.0 - a));
                 }
             } else {
                 slice[i] = color.a() as f64 / 255.0;

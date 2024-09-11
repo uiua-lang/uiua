@@ -2251,6 +2251,8 @@ primitive!(
     /// ex: # Experimental!
     ///   : ˜⊂ 1 2
     ([1], Backward, Stack, ("backward", '˜')),
+    /// Set the inverse(s) of a function
+    ([1],Obverse, InversionModifier, ("obverse", '⍛')),
     /// Invert the behavior of a function
     ///
     /// A list of all [un]-compatible functions can be found [below](#uns).

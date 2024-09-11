@@ -2122,13 +2122,26 @@ code:
     fn primitive(&mut self, prim: Primitive, span: CodeSpan, call: bool) -> UiuaResult {
         self.handle_primitive_experimental(prim, &span);
         self.handle_primitive_deprecation(prim, &span);
-        let span_i = self.add_span(span.clone());
+        let spandex = self.add_span(span.clone());
+        self.instructions(
+            FunctionId::Primitive(prim),
+            eco_vec![Instr::Prim(prim, spandex)],
+            &span,
+            call,
+        )
+    }
+    fn instructions(
+        &mut self,
+        function_id: FunctionId,
+        instrs: EcoVec<Instr>,
+        span: &CodeSpan,
+        call: bool,
+    ) -> UiuaResult {
         if call {
-            self.push_instr(Instr::Prim(prim, span_i));
+            self.push_all_instrs(instrs);
         } else {
-            let instrs = eco_vec![Instr::Prim(prim, span_i)];
-            let sig = self.sig_of(&instrs, &span)?;
-            let func = self.make_function(FunctionId::Primitive(prim), sig, instrs.into());
+            let sig = self.sig_of(&instrs, span)?;
+            let func = self.make_function(function_id, sig, instrs.into());
             self.push_instr(Instr::PushFunc(func));
         }
         Ok(())
@@ -2580,7 +2593,8 @@ fn instrs_can_pre_eval(instrs: &[Instr], asm: &Assembly) -> bool {
         || instrs.iter().any(|instr| {
             matches!(
                 instr,
-                Instr::Prim(SetInverse | SetUnder, _) | Instr::ImplPrim(ImplPrimitive::UnPop, _)
+                Instr::Prim(Obverse | SetInverse | SetUnder, _)
+                    | Instr::ImplPrim(ImplPrimitive::UnPop, _)
             )
         })
     {

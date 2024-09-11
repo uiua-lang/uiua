@@ -504,7 +504,7 @@ impl Primitive {
             self,
             (Anti | Off | Backward | Above | Around)
                 | (Tuples | Choose | Permute)
-                | Struct
+                | (Struct | Obverse)
                 | (Last | Sort | Chunks | Base | Coordinate | Fft | Case | Layout)
                 | (Astar | Triangle)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
@@ -1025,6 +1025,7 @@ impl Primitive {
             | Primitive::Un
             | Primitive::Anti
             | Primitive::Under
+            | Primitive::Obverse
             | Primitive::Content
             | Primitive::Both
             | Primitive::Fork

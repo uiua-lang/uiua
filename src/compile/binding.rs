@@ -303,6 +303,11 @@ impl Compiler {
         match instrs_signature(&new_func.instrs) {
             Ok(mut sig) => {
                 #[rustfmt::skip]
+                let is_obverse = matches!(
+                    new_func.instrs.as_slice(),
+                    [Instr::PushFunc(_), Instr::Prim(Primitive::Obverse, _)]
+                );
+                #[rustfmt::skip]
                 let is_setinv = matches!(
                     new_func.instrs.as_slice(),
                     [Instr::PushFunc(_), Instr::PushFunc(_), Instr::Prim(Primitive::SetInverse, _)]
@@ -323,7 +328,7 @@ impl Compiler {
                     };
                     sig = f.signature();
                     self.compile_bind_function(name, local, func, spandex, comment.as_deref())?;
-                } else if sig == (0, 1) && !is_setinv && !is_setund {
+                } else if sig == (0, 1) && !is_obverse && !is_setinv && !is_setund {
                     if let &[Instr::Prim(Primitive::Tag, span)] = new_func.instrs.as_slice() {
                         new_func.instrs.push(Instr::Label {
                             label: name.clone(),

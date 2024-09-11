@@ -953,6 +953,13 @@
     "description": "Call a function but keep its first argument under the outputs on the stack",
     "experimental": true
   },
+  "obverse": {
+    "glyph": "⍛",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "InversionModifier",
+    "description": "Set the inverse(s) of a function"
+  },
   "on": {
     "glyph": "⟜",
     "outputs": 1,

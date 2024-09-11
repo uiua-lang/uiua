@@ -132,6 +132,7 @@ default = [
   "native_sys",
   "raw_mode",
   "clipboard",
+  "opt",
   "batteries",
 ]
 ffi = ["libffi", "libloading"]
@@ -142,6 +143,7 @@ gif = ["dep:gif", "image", "color_quant"]
 invoke = ["open"]
 lsp = ["tower-lsp", "tokio", "native_sys"]
 native_sys = []
+opt = [] # Enables some optimizations but increases binary size
 profile = ["serde_yaml"]
 raw_mode = ["rawrrr", "native_sys"]
 stand = ["native_sys"]

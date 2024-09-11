@@ -284,7 +284,7 @@ macro_rules! reduce_math {
         #[allow(clippy::result_large_err)]
         fn $fname(
             prim: Primitive,
-            flipped: bool,
+            _flipped: bool,
             xs: Array<$ty>,
             depth: usize,
             env: &mut Uiua,
@@ -295,22 +295,30 @@ macro_rules! reduce_math {
             let fill = env.$fill().ok();
             env.push(match prim {
                 Primitive::Add => fast_reduce(xs, 0.0.into(), fill, depth, add::$f),
-                Primitive::Sub if flipped => {
+                #[cfg(feature = "opt")]
+                Primitive::Sub if _flipped => {
                     fast_reduce(xs, 0.0.into(), fill, depth, flip(sub::$f))
                 }
+                #[cfg(feature = "opt")]
                 Primitive::Sub => fast_reduce(xs, 0.0.into(), fill, depth, sub::$f),
                 Primitive::Mul => fast_reduce(xs, 1.0.into(), fill, depth, mul::$f),
-                Primitive::Div if flipped => {
+                #[cfg(feature = "opt")]
+                Primitive::Div if _flipped => {
                     fast_reduce(xs, 1.0.into(), fill, depth, flip(div::$f))
                 }
+                #[cfg(feature = "opt")]
                 Primitive::Div => fast_reduce(xs, 1.0.into(), fill, depth, div::$f),
-                Primitive::Mod if flipped => {
+                #[cfg(feature = "opt")]
+                Primitive::Mod if _flipped => {
                     fast_reduce(xs, 1.0.into(), fill, depth, flip(modulus::$f))
                 }
+                #[cfg(feature = "opt")]
                 Primitive::Mod => fast_reduce(xs, 1.0.into(), fill, depth, modulus::$f),
-                Primitive::Atan if flipped => {
+                #[cfg(feature = "opt")]
+                Primitive::Atan if _flipped => {
                     fast_reduce(xs, 0.0.into(), fill, depth, flip(atan2::$f))
                 }
+                #[cfg(feature = "opt")]
                 Primitive::Atan => fast_reduce(xs, 0.0.into(), fill, depth, atan2::$f),
                 Primitive::Max => fast_reduce(xs, f64::NEG_INFINITY.into(), fill, depth, max::$f),
                 Primitive::Min => fast_reduce(xs, f64::INFINITY.into(), fill, depth, min::$f),

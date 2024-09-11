@@ -32,7 +32,7 @@
         src = pkgs.lib.cleanSourceWith {
           src = ./.;
           # this is needed because else crane would filter out the included images from the build.
-          filter = path: type: ((path: _type: builtins.match ".*jpg$|.*png$" path != null) path type) || (craneLib.filterCargoSources path type);
+          filter = path: type: ((path: _type: builtins.match ".*$" path != null) path type) || (craneLib.filterCargoSources path type);
           name = "source";
         };
         nativeBuildInputs = [pkgs.pkg-config];

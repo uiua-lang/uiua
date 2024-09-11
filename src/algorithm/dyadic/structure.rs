@@ -906,6 +906,7 @@ impl Value {
         let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.un_on_select(indices_shape, &indices_data, env)?),
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => Value::Byte(a.un_on_select(indices_shape, &indices_data, env)?),
             Value::Complex(a) => {
                 Value::Complex(a.un_on_select(indices_shape, &indices_data, env)?)
@@ -919,6 +920,7 @@ impl Value {
         let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.un_on_pick(indices_shape, &indices_data, env)?),
+            #[cfg(feature = "bytes")]
             Value::Byte(a) => Value::Byte(a.un_on_pick(indices_shape, &indices_data, env)?),
             Value::Complex(a) => Value::Complex(a.un_on_pick(indices_shape, &indices_data, env)?),
             Value::Char(a) => Value::Char(a.un_on_pick(indices_shape, &indices_data, env)?),

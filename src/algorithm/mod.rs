@@ -192,6 +192,7 @@ pub trait FillContext: ErrorContext {
     fn is_scalar_filled(&self, val: &Value) -> bool {
         match val {
             Value::Num(_) => self.scalar_fill::<f64>().is_ok(),
+            #[cfg(feature = "bytes")]
             Value::Byte(_) => self.scalar_fill::<u8>().is_ok(),
             Value::Complex(_) => self.scalar_fill::<Complex>().is_ok(),
             Value::Char(_) => self.scalar_fill::<char>().is_ok(),

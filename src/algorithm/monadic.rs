@@ -1378,7 +1378,7 @@ impl Value {
                 }
                 #[cfg(feature = "bytes")]
                 Value::Byte(bytes) => {
-                    for (i, n) in byte_iter(bytes.data.iter().enumerate()) {
+                    for (i, n) in _byte_iter(bytes.data.iter().enumerate()) {
                         if *n != 0 {
                             let mut i = i;
                             let mut res = Vec::with_capacity(bytes.rank());

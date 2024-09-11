@@ -620,7 +620,7 @@ impl<'a> Formatter<'a> {
                 self.prev_import_function = None;
                 let lines =
                     flip_unsplit_lines(lines.iter().cloned().flat_map(split_words).collect());
-                self.format_multiline_words(&lines, false, false, false, false, depth);
+                self.format_multiline_words(&lines, false, false, true, false, depth);
             }
             Item::Binding(binding) => {
                 match binding.words.first().map(|w| &w.value) {
@@ -981,7 +981,7 @@ impl<'a> Formatter<'a> {
                     &func.lines,
                     allow_compact,
                     true,
-                    false,
+                    depth == 0,
                     true,
                     depth + 1,
                 );
@@ -1043,7 +1043,7 @@ impl<'a> Formatter<'a> {
                         lines,
                         false,
                         false,
-                        any_multiline && i < pack.branches.len() - 1,
+                        true,
                         i < pack.branches.len() - 1,
                         depth + 1,
                     );
@@ -1252,12 +1252,15 @@ impl<'a> Formatter<'a> {
         };
         for (i, line) in lines.iter().enumerate() {
             if i > 0 || (!allow_compact && allow_leading_space) {
-                self.output.push('\n');
                 if line.is_empty() {
-                    for _ in 0..indent.saturating_sub(self.config.multiline_indent) {
-                        self.output.push(' ');
+                    if allow_trailing_newline || prevent_compact || i < lines.len() - 1 {
+                        self.output.push('\n');
+                        for _ in 0..indent.saturating_sub(self.config.multiline_indent) {
+                            self.output.push(' ');
+                        }
                     }
                 } else {
+                    self.output.push('\n');
                     for _ in 0..indent {
                         self.output.push(' ');
                     }
@@ -1401,9 +1404,17 @@ G ← (
 ⊃(1
 | 2
 )
+Alpha(
+  Beta(
+    Gamma
+    Delta
+  )Epsilon
+)Zeta
+
+x ← 2
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
-    assert_eq!(formatted, input);
+    assert_eq!(formatted, input, "{formatted}");
 }
 
 #[test]

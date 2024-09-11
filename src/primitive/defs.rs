@@ -2018,8 +2018,8 @@ primitive!(
     /// This is a modifier version of [flip].
     /// It is experimental because it is unclear whether this is a desirable direction for the language.
     /// ex: # Experimental!
-    ///   : ¨⊂ 1 2
-    ([1], Backward, Stack, ("backward", '¨')),
+    ///   : ˜⊂ 1 2
+    ([1], Backward, Stack, ("backward", '˜')),
     /// Invert the behavior of a function
     ///
     /// A list of all [un]-compatible functions can be found [below](#uns).

@@ -37,7 +37,6 @@ pub(crate) fn image_decode(env: &mut Uiua) -> UiuaResult {
     #[cfg(feature = "image")]
     {
         let bytes: crate::cowslice::CowSlice<u8> = match env.pop(1)? {
-            #[cfg(feature = "bytes")]
             Value::Byte(arr) => {
                 if arr.rank() != 1 {
                     return Err(env.error(format!(
@@ -135,7 +134,6 @@ pub(crate) fn audio_decode(env: &mut Uiua) -> UiuaResult {
     #[cfg(feature = "audio_encode")]
     {
         let bytes: crate::cowslice::CowSlice<u8> = match env.pop(1)? {
-            #[cfg(feature = "bytes")]
             Value::Byte(arr) => {
                 if arr.rank() != 1 {
                     return Err(env.error(format!(
@@ -229,7 +227,6 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
     }
     let bytes = match value {
         Value::Num(nums) => nums.data.iter().map(|f| (*f * 255.0) as u8).collect(),
-        #[cfg(feature = "bytes")]
         Value::Byte(bytes) => bytes.data.iter().map(|&b| (b > 0) as u8 * 255).collect(),
         _ => return Err("Image must be a numeric array".into()),
     };
@@ -264,7 +261,6 @@ pub fn value_to_image(value: &Value) -> Result<DynamicImage, String> {
 pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
     let unrolled: Vec<f32> = match audio {
         Value::Num(nums) => nums.data.iter().map(|&f| f as f32).collect(),
-        #[cfg(feature = "bytes")]
         Value::Byte(byte) => byte.data.iter().map(|&b| b as f32).collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };
@@ -305,7 +301,6 @@ pub fn value_to_sample(audio: &Value) -> Result<Vec<[f32; 2]>, String> {
 pub fn value_to_audio_channels(audio: &Value) -> Result<Vec<Vec<f64>>, String> {
     let interleaved: Vec<f64> = match audio {
         Value::Num(nums) => nums.data.iter().copied().collect(),
-        #[cfg(feature = "bytes")]
         Value::Byte(byte) => byte.data.iter().map(|&b| b as f64).collect(),
         _ => return Err("Audio must be a numeric array".into()),
     };

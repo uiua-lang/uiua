@@ -108,7 +108,6 @@ batteries = [
   "font_shaping",
 ]
 binary = [
-  "bytes",
   "ctrlc",
   "notify",
   "clap",
@@ -119,7 +118,7 @@ binary = [
   "terminal-light",
   "terminal_size",
 ]
-bytes = []
+bytes = [] # No longer used
 clipboard = ["arboard"]
 debug = []
 default = [

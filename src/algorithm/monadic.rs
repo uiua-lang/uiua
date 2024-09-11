@@ -34,7 +34,6 @@ impl Value {
     pub(crate) fn deshape_depth(&mut self, depth: usize) {
         match self {
             Value::Num(n) => n.deshape_depth(depth),
-            #[cfg(feature = "bytes")]
             Value::Byte(b) => b.deshape_depth(depth),
             Value::Complex(c) => c.deshape_depth(depth),
             Value::Char(c) => c.deshape_depth(depth),
@@ -167,7 +166,6 @@ impl Value {
                     .collect();
                 Array::new(nums.shape.clone(), new_data).into()
             }
-            #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
                 let new_data: CowSlice<Boxed> = (bytes.data.iter().map(|v| v.to_string()))
                     .map(Value::from)
@@ -671,7 +669,6 @@ impl Value {
     pub(crate) fn transpose_depth(&mut self, depth: usize, amnt: i32) {
         match self {
             Value::Num(n) => n.transpose_depth(depth, amnt),
-            #[cfg(feature = "bytes")]
             Value::Byte(b) => b.transpose_depth(depth, amnt),
             Value::Complex(c) => c.transpose_depth(depth, amnt),
             Value::Char(c) => c.transpose_depth(depth, amnt),
@@ -1123,7 +1120,6 @@ impl Value {
     /// Encode the `bits` of the value
     pub fn bits(&self, env: &Uiua) -> UiuaResult<Value> {
         match self {
-            #[cfg(feature = "bytes")]
             Value::Byte(n) => n.bits(env),
             Value::Num(n) => n.bits(env),
             _ => Err(env.error("Argument to bits must be an array of natural numbers")),
@@ -1132,7 +1128,6 @@ impl Value {
     /// Decode the `bits` of the value
     pub fn unbits(&self, env: &Uiua) -> UiuaResult<Value> {
         match self {
-            #[cfg(feature = "bytes")]
             Value::Byte(n) => n.un_bits(env),
             Value::Num(n) => n.un_bits(env),
             _ => Err(env.error("Argument to un bits must be an array of integers")),
@@ -1144,7 +1139,6 @@ impl Value {
             .pop()
             .unwrap_or(0);
         match self {
-            #[cfg(feature = "bytes")]
             Value::Byte(n) => n.bits_impl(min_bits_len, env),
             Value::Num(n) => n.bits_impl(min_bits_len, env),
             _ => Err(env.error("Argument to undo un bits must be an array of integers")),
@@ -1317,7 +1311,7 @@ impl Value {
     fn first_where_impl<'a, B, N>(
         &'a self,
         env: &Uiua,
-        _byte_iter: impl Fn(iter::Enumerate<slice::Iter<'a, u8>>) -> B,
+        byte_iter: impl Fn(iter::Enumerate<slice::Iter<'a, u8>>) -> B,
         num_iter: impl Fn(iter::Enumerate<slice::Iter<'a, f64>>) -> N,
     ) -> UiuaResult<Array<f64>>
     where
@@ -1339,9 +1333,8 @@ impl Value {
                         .map(Array::scalar)
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
-                #[cfg(feature = "bytes")]
                 Value::Byte(bytes) => {
-                    for (i, n) in _byte_iter(bytes.data.iter().enumerate()) {
+                    for (i, n) in byte_iter(bytes.data.iter().enumerate()) {
                         if *n != 0 {
                             return Ok(Array::scalar(i as f64));
                         }
@@ -1376,9 +1369,8 @@ impl Value {
                         .map(Array::scalar)
                         .map_err(|e| env.error(format!("Cannot take first of an empty array{e}")))
                 }
-                #[cfg(feature = "bytes")]
                 Value::Byte(bytes) => {
-                    for (i, n) in _byte_iter(bytes.data.iter().enumerate()) {
+                    for (i, n) in byte_iter(bytes.data.iter().enumerate()) {
                         if *n != 0 {
                             let mut i = i;
                             let mut res = Vec::with_capacity(bytes.rank());
@@ -1412,7 +1404,6 @@ impl Value {
                 }
                 Ok(len)
             }
-            #[cfg(feature = "bytes")]
             Value::Byte(bytes) => {
                 let mut len = 0.0;
                 for &n in &bytes.data {
@@ -1684,7 +1675,6 @@ impl Value {
     pub(crate) fn primes(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         match self {
             Value::Num(n) => n.primes(env),
-            #[cfg(feature = "bytes")]
             Value::Byte(b) => b.convert_ref::<f64>().primes(env),
             value => Err(env.error(format!("Cannot get primes of {} array", value.type_name()))),
         }
@@ -1796,11 +1786,9 @@ impl Value {
     }
     pub(crate) fn to_json_value(&self, env: &Uiua) -> UiuaResult<serde_json::Value> {
         Ok(match self {
-            Value::Num(ns) if ns.rank() == 0 => {
-                let n = ns.data[0];
-                if ns.meta().flags.contains(ArrayFlags::BOOLEAN_LITERAL) {
-                    serde_json::Value::Bool(n != 0.0)
-                } else if n.fract() == 0.0 && n.abs() < i64::MAX as f64 {
+            Value::Num(n) if n.rank() == 0 => {
+                let n = n.data[0];
+                if n.fract() == 0.0 && n.abs() < i64::MAX as f64 {
                     serde_json::Value::Number((n as i64).into())
                 } else {
                     serde_json::Number::from_f64(n)
@@ -1808,7 +1796,6 @@ impl Value {
                         .unwrap_or(serde_json::Value::Null)
                 }
             }
-            #[cfg(feature = "bytes")]
             Value::Byte(bytes) if bytes.rank() == 0 => {
                 let b = bytes.data[0];
                 if bytes.meta().flags.contains(ArrayFlags::BOOLEAN_LITERAL) {
@@ -1990,7 +1977,6 @@ impl Value {
                             for cell in row.unboxed().into_rows() {
                                 match cell {
                                     Value::Num(n) => sheet_row.add_cell(n.data[0]),
-                                    #[cfg(feature = "bytes")]
                                     Value::Byte(b) => sheet_row.add_cell(b.data[0] as f64),
                                     Value::Char(c) => sheet_row.add_cell(c.data[0].to_string()),
                                     Value::Complex(c) => sheet_row.add_cell(c.data[0].to_string()),
@@ -2124,7 +2110,6 @@ impl Value {
                         f64_repr(n)
                     }
                 }
-                #[cfg(feature = "bytes")]
                 Value::Byte(arr) => {
                     let b = arr.data[0];
                     let bool_lit = arr.meta().flags.contains(ArrayFlags::BOOLEAN_LITERAL);
@@ -2214,7 +2199,6 @@ impl Value {
     pub fn datetime(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         let mut arr = match self {
             Value::Num(arr) => arr.clone(),
-            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.convert_ref(),
             value => return Err(env.error(format!("Cannot get datetime of {}", value.type_name()))),
         };
@@ -2244,7 +2228,6 @@ impl Value {
     pub(crate) fn undatetime(&self, env: &Uiua) -> UiuaResult<Array<f64>> {
         let mut arr = match self {
             Value::Num(arr) => arr.clone(),
-            #[cfg(feature = "bytes")]
             Value::Byte(arr) => arr.convert_ref(),
             value => {
                 return Err(env.error(format!("Cannot decode datetime from {}", value.type_name())))

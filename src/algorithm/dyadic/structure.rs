@@ -87,7 +87,6 @@ impl Value {
                 }
                 (&arr.shape, index_data)
             }
-            #[cfg(feature = "bytes")]
             Value::Byte(arr) => {
                 let mut index_data = Vec::with_capacity(arr.element_count());
                 for &n in &arr.data {
@@ -109,7 +108,6 @@ impl Value {
         let (index_shape, index_data) = self.as_shaped_indices(env.is_scalar_filled(&from), env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.pick(index_shape, &index_data, env)?),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => Value::Byte(a.pick(index_shape, &index_data, env)?),
             Value::Complex(a) => Value::Complex(a.pick(index_shape, &index_data, env)?),
             Value::Char(a) => Value::Char(a.pick(index_shape, &index_data, env)?),
@@ -339,7 +337,6 @@ impl Value {
         from.match_scalar_fill(env);
         Ok(match from {
             Value::Num(a) => Value::Num(a.take(&index, env)?),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => Value::Byte(a.take(&index, env)?),
             Value::Complex(a) => Value::Complex(a.take(&index, env)?),
             Value::Char(a) => Value::Char(a.take(&index, env)?),
@@ -351,7 +348,6 @@ impl Value {
         let index = self.as_ints_or_infs(env, "Index must be a list of integers or infinity")?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.drop(&index, env)?),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => Value::Byte(a.drop(&index, env)?),
             Value::Complex(a) => Value::Complex(a.drop(&index, env)?),
             Value::Char(a) => Value::Char(a.drop(&index, env)?),
@@ -420,7 +416,6 @@ impl Value {
     pub(crate) fn drop_n(&mut self, n: usize) {
         match self {
             Value::Num(a) => a.drop_n(n),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => a.drop_n(n),
             Value::Complex(a) => a.drop_n(n),
             Value::Char(a) => a.drop_n(n),
@@ -811,12 +806,10 @@ impl Value {
             self.as_shaped_indices(env.is_scalar_filled(&from), env)?;
         Ok(match from {
             Value::Num(a) => a.select(indices_shape, &indices_data, env)?.into(),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) if env.number_only_fill() => a
                 .convert_ref::<f64>()
                 .select(indices_shape, &indices_data, env)?
                 .into(),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => a.select(indices_shape, &indices_data, env)?.into(),
             Value::Complex(a) => a.select(indices_shape, &indices_data, env)?.into(),
             Value::Char(a) => a.select(indices_shape, &indices_data, env)?.into(),
@@ -906,7 +899,6 @@ impl Value {
         let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.un_on_select(indices_shape, &indices_data, env)?),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => Value::Byte(a.un_on_select(indices_shape, &indices_data, env)?),
             Value::Complex(a) => {
                 Value::Complex(a.un_on_select(indices_shape, &indices_data, env)?)
@@ -920,7 +912,6 @@ impl Value {
         let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.un_on_pick(indices_shape, &indices_data, env)?),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => Value::Byte(a.un_on_pick(indices_shape, &indices_data, env)?),
             Value::Complex(a) => Value::Complex(a.un_on_pick(indices_shape, &indices_data, env)?),
             Value::Char(a) => Value::Char(a.un_on_pick(indices_shape, &indices_data, env)?),

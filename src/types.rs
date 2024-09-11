@@ -19,7 +19,6 @@ impl Value {
     fn scalar_ty(&self) -> ScalarType {
         match self {
             Value::Num(_) => ScalarType::Real,
-            #[cfg(feature = "bytes")]
             Value::Byte(_) => ScalarType::Real,
             Value::Complex(_) => ScalarType::Complex,
             Value::Char(_) => ScalarType::Char,

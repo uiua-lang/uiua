@@ -176,7 +176,6 @@ impl Value {
             let n = target_shape[0];
             match self {
                 Value::Num(a) => a.reshape_scalar(n, env),
-                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.reshape_scalar(n, env),
                 Value::Complex(a) => a.reshape_scalar(n, env),
                 Value::Char(a) => a.reshape_scalar(n, env),
@@ -190,7 +189,6 @@ impl Value {
         self.match_scalar_fill(env);
         match self {
             Value::Num(a) => a.reshape(dims, env),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => a.reshape(dims, env),
             Value::Complex(a) => a.reshape(dims, env),
             Value::Char(a) => a.reshape(dims, env),
@@ -468,7 +466,6 @@ impl Value {
         Ok(if self.rank() == 0 {
             match kept {
                 Value::Num(a) => a.keep_scalar_real(counts[0], env)?.into(),
-                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.convert::<f64>().keep_scalar_real(counts[0], env)?.into(),
                 Value::Complex(a) => a.keep_scalar_real(counts[0], env)?.into(),
                 Value::Char(a) => a.keep_scalar_real(counts[0], env)?.into(),
@@ -477,7 +474,6 @@ impl Value {
         } else {
             match kept {
                 Value::Num(a) => a.keep_list(&counts, env)?.into(),
-                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.keep_list(&counts, env)?.into(),
                 Value::Complex(a) => a.keep_list(&counts, env)?.into(),
                 Value::Char(a) => a.keep_list(&counts, env)?.into(),
@@ -508,7 +504,6 @@ impl Value {
             let recip = 1.0 / count;
             Ok(match kept {
                 Value::Num(a) => a.keep_scalar_real(recip, env)?.into(),
-                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.keep_scalar_real(recip, env)?.into(),
                 Value::Complex(a) => a.keep_scalar_real(recip, env)?.into(),
                 Value::Char(a) => a.keep_scalar_real(recip, env)?.into(),
@@ -891,7 +886,6 @@ impl Value {
         rotated.match_scalar_fill(env);
         match &mut rotated {
             Value::Num(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             Value::Complex(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             Value::Char(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
@@ -1017,7 +1011,6 @@ impl Value {
         Ok(match &*size_array.shape {
             [] | [_] => match from {
                 Value::Num(a) => a.windows(&size_array.data, env)?.into(),
-                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.windows(&size_array.data, env)?.into(),
                 Value::Complex(a) => a.windows(&size_array.data, env)?.into(),
                 Value::Char(a) => a.windows(&size_array.data, env)?.into(),
@@ -1025,7 +1018,6 @@ impl Value {
             },
             [1, _] => match from {
                 Value::Num(a) => a.chunks(&size_array.data, env)?.into(),
-                #[cfg(feature = "bytes")]
                 Value::Byte(a) => a.chunks(&size_array.data, env)?.into(),
                 Value::Complex(a) => a.chunks(&size_array.data, env)?.into(),
                 Value::Char(a) => a.chunks(&size_array.data, env)?.into(),
@@ -1042,7 +1034,6 @@ impl Value {
                 }
                 match from {
                     Value::Num(a) => a.strided_windows(size, &stride, env)?.into(),
-                    #[cfg(feature = "bytes")]
                     Value::Byte(a) => a.strided_windows(size, &stride, env)?.into(),
                     Value::Complex(a) => a.strided_windows(size, &stride, env)?.into(),
                     Value::Char(a) => a.strided_windows(size, &stride, env)?.into(),
@@ -1059,7 +1050,6 @@ impl Value {
         }
         Ok(match from {
             Value::Num(a) => a.undo_chunks(&size_array.data, env)?.into(),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => a.undo_chunks(&size_array.data, env)?.into(),
             Value::Complex(a) => a.undo_chunks(&size_array.data, env)?.into(),
             Value::Char(a) => a.undo_chunks(&size_array.data, env)?.into(),
@@ -1274,7 +1264,6 @@ impl Value {
         from.match_scalar_fill(env);
         Ok(match from {
             Value::Num(a) => a.chunks(&isize_spec, env)?.into(),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => a.chunks(&isize_spec, env)?.into(),
             Value::Complex(a) => a.chunks(&isize_spec, env)?.into(),
             Value::Char(a) => a.chunks(&isize_spec, env)?.into(),
@@ -1285,7 +1274,6 @@ impl Value {
         let isize_spec = size.as_ints(env, "Chunk size must be an integer or list of integers")?;
         Ok(match self {
             Value::Num(a) => a.undo_chunks(&isize_spec, env)?.into(),
-            #[cfg(feature = "bytes")]
             Value::Byte(a) => a.undo_chunks(&isize_spec, env)?.into(),
             Value::Complex(a) => a.undo_chunks(&isize_spec, env)?.into(),
             Value::Char(a) => a.undo_chunks(&isize_spec, env)?.into(),

@@ -55,7 +55,7 @@ pub(crate) fn optimize_instrs_mut(
         // First Reverse = last
         ([.., Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
             instrs.pop();
-            instrs.push(Instr::ImplPrim(Last, span))
+            instrs.push(Instr::Prim(Last, span))
         }
         // Count unique
         ([.., Instr::Prim(Deduplicate, _)], Instr::Prim(Len, span)) => {

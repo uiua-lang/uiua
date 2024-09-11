@@ -64,6 +64,7 @@ fn prim_mon_fast_fn(prim: Primitive, span: usize) -> Option<ValueMonFn> {
         }),
         Box => spanned_mon_fn(span, |v, d, _| Ok(v.box_depth(d))),
         First => spanned_mon_fn(span, |v, d, env| v.first_depth(d, env)),
+        Last => spanned_mon_fn(span, |v, d, env| v.last_depth(d, env)),
         Sort => spanned_mon_fn(span, |mut v, d, _| {
             v.sort_up_depth(d);
             Ok(v)
@@ -92,7 +93,6 @@ fn impl_prim_mon_fast_fn(prim: ImplPrimitive, span: usize) -> Option<ValueMonFn>
             v.sort_down_depth(d);
             Ok(v)
         }),
-        Last => spanned_mon_fn(span, |v, d, env| v.last_depth(d, env)),
         _ => return None,
     })
 }

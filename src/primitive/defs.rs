@@ -854,6 +854,17 @@ primitive!(
     /// [first][reverse] is optimized in the interpreter to be O(1).
     /// ex: ⊢⇌ [1 8 4 9 2 3]
     (1, First, MonadicArray, ("first", '⊢')),
+    /// Get the last row of an array
+    ///
+    /// ex: # Experimental!
+    ///   : ⊣1_2_3
+    /// ex: # Experimental!
+    ///   : ⊣[1_2 3_4 5_6]
+    /// ex: # Experimental!
+    ///   : ⊣1
+    /// ex! # Experimental!
+    ///   : ⊣[]
+    (1, Last, MonadicArray, ("last", '⊣')),
     /// Reverse the rows of an array
     ///
     /// ex: ⇌1_2_3_9
@@ -3190,7 +3201,6 @@ impl_primitive!(
     (3, UndoRemove),
     (1(0), TryClose),
     // Optimizations
-    (1, Last),
     (1, FirstMinIndex),
     (1, FirstMaxIndex),
     (1, LastMinIndex),

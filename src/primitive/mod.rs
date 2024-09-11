@@ -204,7 +204,6 @@ impl fmt::Display for ImplPrimitive {
             UndoGroup1 | UndoGroup2 => write!(f, "{Under}{Group}"),
             TryClose => write!(f, "{}", Sys(SysOp::Close)),
             Asin => write!(f, "{Un}{Sin}"),
-            Last => write!(f, "{First}{Reverse}"),
             UndoFix => write!(f, "{Under}{Fix}"),
             UndoDeshape => write!(f, "{Under}{Deshape}"),
             UndoFirst => write!(f, "{Under}{First}"),
@@ -407,7 +406,7 @@ impl Primitive {
             (But | With | Backward | Above | Below)
                 | (Choose | Permute)
                 | Struct
-                | (Sort | Chunks | Coordinate | Astar | Fft | Triangle | Case | Layout)
+                | (Last | Sort | Chunks | Coordinate | Astar | Fft | Triangle | Case | Layout)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )
@@ -674,6 +673,7 @@ impl Primitive {
             Primitive::Deshape => env.monadic_mut(Value::deshape)?,
             Primitive::Fix => env.monadic_mut(Value::fix)?,
             Primitive::First => env.monadic_env(Value::first)?,
+            Primitive::Last => env.monadic_env(Value::last)?,
             Primitive::Len => env.monadic_ref(Value::row_count)?,
             Primitive::Shape => {
                 env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?
@@ -1166,7 +1166,6 @@ impl ImplPrimitive {
                 env.push(map);
             }
             // Optimizations
-            ImplPrimitive::Last => env.monadic_env(Value::last)?,
             ImplPrimitive::FirstMinIndex => env.monadic_ref_env(Value::first_min_index)?,
             ImplPrimitive::FirstMaxIndex => env.monadic_ref_env(Value::first_max_index)?,
             ImplPrimitive::LastMinIndex => env.monadic_ref_env(Value::last_min_index)?,

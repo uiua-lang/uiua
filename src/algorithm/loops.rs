@@ -14,8 +14,7 @@ use crate::{
     array::{Array, ArrayValue},
     cowslice::CowSlice,
     value::Value,
-    Boxed, Function, ImplPrimitive, Instr, Primitive, Shape, Signature, TempStack, Uiua,
-    UiuaResult,
+    Boxed, Function, Instr, Primitive, Shape, Signature, TempStack, Uiua, UiuaResult,
 };
 
 use super::{multi_output, validate_size_impl};
@@ -1012,7 +1011,6 @@ where
 
     // Optimizations
     if indices.rank() == 1 {
-        use ImplPrimitive::*;
         use Instr::*;
         use Primitive::*;
         match f.instrs(&env.asm) {
@@ -1021,7 +1019,7 @@ where
                 env.push(val);
                 return Ok(());
             }
-            [ImplPrim(Last, _)] => {
+            [Prim(Last, _)] => {
                 let val = lasts(values, &indices.data, env)?;
                 env.push(val);
                 return Ok(());

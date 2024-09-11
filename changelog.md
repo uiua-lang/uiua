@@ -40,6 +40,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add pride flag constants
 - Add an experimental [`sort ⍆`](https://uiua.org/docs/sort) function
   - Sorting is very common
+- Add an experimental [`last ⊣`](https://uiua.org/docs/last) function
+  - Getting the last row of an array is very common
 - Add the experimental [`layout`](https://uiua.org/docs/layout) function, which renders text into an image array
 - Remove previously deprecated function strands
 ### Interpreter

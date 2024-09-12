@@ -1521,6 +1521,9 @@ primitive!(
     ///   : choose 3 ⇡5
     /// ex: # Experimental!
     ///   : choose 4 "hello!"
+    /// If the second argument is a scalar number, the number of combinations is returned.
+    /// ex: # Experimental!
+    ///   : choose 3 5
     ///
     /// See also: [permute]
     (2, Choose, DyadicArray, "choose"),
@@ -1531,6 +1534,9 @@ primitive!(
     ///   : permute 3 ⇡4
     /// ex: # Experimental!
     ///   : permute 2 "hello!"
+    /// If the second argument is a scalar number, the number of permutations is returned.
+    /// ex: # Experimental!
+    ///   : permute 3 5
     ///
     /// See also: [choose]
     (2, Permute, DyadicArray, "permute"),

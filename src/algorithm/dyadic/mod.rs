@@ -1608,6 +1608,9 @@ impl Value {
     /// `choose` all combinations of `k` rows from a value
     pub fn choose(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
         let k = self.as_nat(env, "Choose k must be an integer")?;
+        if let Ok(n) = from.as_nat(env, "") {
+            return combinations(n, k, env).map(Into::into);
+        }
         from.generic_ref(
             |a| a.choose(k, env).map(Into::into),
             |a| a.choose(k, env).map(Into::into),
@@ -1619,6 +1622,9 @@ impl Value {
     /// `permute` all combinations of `k` rows from a value
     pub fn permute(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
         let k = self.as_nat(env, "Permute k must be an integer")?;
+        if let Ok(n) = from.as_nat(env, "") {
+            return permutations(n, k, env).map(Into::into);
+        }
         from.generic_ref(
             |a| a.permute(k, env).map(Into::into),
             |a| a.permute(k, env).map(Into::into),
@@ -1629,6 +1635,30 @@ impl Value {
     }
 }
 
+fn combinations(n: usize, k: usize, env: &Uiua) -> UiuaResult<f64> {
+    if k > n {
+        return Err(env.error(format!(
+            "Cannot choose combinations of {k} rows \
+            from array of shape {}",
+            n
+        )));
+    }
+    Ok((1..=k.min(n - k))
+        .map(|i| (n + 1 - i) as f64 / i as f64)
+        .product())
+}
+
+fn permutations(n: usize, k: usize, env: &Uiua) -> UiuaResult<f64> {
+    if k > n {
+        return Err(env.error(format!(
+            "Cannot get permutations of {k} rows \
+            from array of shape {}",
+            n
+        )));
+    }
+    Ok((1..=n).rev().take(k).map(|i| i as f64).product())
+}
+
 impl<T: ArrayValue> Array<T> {
     /// `choose` all combinations of `k` rows from this array
     pub fn choose(&self, k: usize, env: &Uiua) -> UiuaResult<Self> {
@@ -1636,17 +1666,8 @@ impl<T: ArrayValue> Array<T> {
             return Err(env.error("Cannot choose from scalar array"));
         }
         let n = self.row_count();
-        if k > n {
-            return Err(env.error(format!(
-                "Cannot choose combinations of {k} rows \
-                from array of shape {}",
-                self.shape()
-            )));
-        }
         let mut shape = self.shape.clone();
-        let combinations: f64 = (1..=k.min(n - k))
-            .map(|i| (n + 1 - i) as f64 / i as f64)
-            .product();
+        let combinations = combinations(n, k, env)?;
         if combinations.is_nan() {
             return Err(env.error("Combinatorial explosion"));
         }
@@ -1727,15 +1748,8 @@ impl<T: ArrayValue> Array<T> {
             return Err(env.error("Cannot permute scalar array"));
         }
         let n = self.row_count();
-        if k > n {
-            return Err(env.error(format!(
-                "Cannot get permutations of {k} rows \
-                from array of shape {}",
-                self.shape()
-            )));
-        }
         let mut shape = self.shape.clone();
-        let permutations: f64 = (1..=n).rev().take(k).map(|i| i as f64).product();
+        let permutations = permutations(n, k, env)?;
         if permutations.is_nan() {
             return Err(env.error("Combinatorial explosion"));
         }

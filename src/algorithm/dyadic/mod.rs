@@ -197,7 +197,7 @@ impl Value {
     }
     pub(crate) fn undo_reshape(&mut self, old_shape: &Self, env: &Uiua) -> UiuaResult {
         if old_shape.as_nat(env, "").is_ok() {
-            return Err(env.error("Cannot undo scalar reshae"));
+            return Err(env.error("Cannot undo scalar reshape"));
         }
         let orig_shape = old_shape.as_nats(env, "Shape should be a list of integers")?;
         if orig_shape.iter().product::<usize>() == self.shape().iter().product::<usize>() {

@@ -778,6 +778,9 @@ impl<'a> Formatter<'a> {
                 && i < words.len() - 1
             {
                 self.output.pop();
+                while self.output.ends_with(' ') {
+                    self.output.pop();
+                }
                 if !self.output.ends_with('\n') {
                     self.output.push('\n');
                 }
@@ -981,7 +984,7 @@ impl<'a> Formatter<'a> {
                     &func.lines,
                     allow_compact,
                     true,
-                    depth == 0,
+                    true,
                     true,
                     depth + 1,
                 );
@@ -1412,6 +1415,14 @@ Alpha(
 )Zeta
 
 x ← 2
+
+---Foo
+  F ← (
+    1)
+  G ← (
+    2
+  )
+---
 ";
     let formatted = format_str(input, &FormatConfig::default()).unwrap().output;
     assert_eq!(formatted, input, "{formatted}");

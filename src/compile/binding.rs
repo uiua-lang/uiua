@@ -169,6 +169,7 @@ impl Compiler {
             let mac = StackMacro {
                 words,
                 names: self.scope.names.clone(),
+                hygenic: true,
             };
             self.stack_macros.insert(local.index, mac);
             return Ok(());
@@ -425,7 +426,7 @@ impl Compiler {
             ModuleKind::Test => ScopeKind::Test,
         };
         let was_in_test = replace(&mut self.in_test, matches!(m.kind, ModuleKind::Test));
-        let module = self.in_scope(scope_kind, |env| env.items(m.items))?;
+        let module = self.in_scope(scope_kind, |comp| comp.items(m.items))?;
         self.in_test = was_in_test;
         match m.kind {
             ModuleKind::Named(name) => {

@@ -168,6 +168,7 @@ pub struct Module {
 struct StackMacro {
     words: Vec<Sp<Word>>,
     names: IndexMap<Ident, LocalName>,
+    hygenic: bool,
 }
 
 #[derive(Clone)]

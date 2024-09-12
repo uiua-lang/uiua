@@ -258,6 +258,7 @@ impl Compiler {
                         &mut mac.words,
                         modified.operands,
                         modified.modifier.span.clone(),
+                        mac.hygenic,
                     )?;
                     // Compile
                     let new_func = self.suppress_diagnostics(|comp| {
@@ -1525,10 +1526,11 @@ impl Compiler {
                 };
                 self.next_global += 1;
                 let mut comment = module_name
+                    .as_ref()
                     .map(|name| format!("Create a new `{name}`\n{name} "))
                     .unwrap_or_default();
                 comment.push('?');
-                for field in fields {
+                for field in &fields {
                     match field.init.as_ref().map(|(_, sig)| sig.args) {
                         Some(0) => continue,
                         Some(1) | None => {
@@ -1549,6 +1551,77 @@ impl Compiler {
                     }
                 }
                 self.compile_bind_function(name, local, func, span, Some(&comment))?;
+
+                // Make args
+                let args_module = self.in_scope(ScopeKind::Module("Args!".into()), |comp| {
+                    // Arg getters
+                    for field in &fields {
+                        let name = &field.name;
+                        let id = FunctionId::Named(name.clone());
+                        comp.new_functions.push(NewFunction::default());
+                        comp.push_instr(Instr::ImplPrim(ImplPrimitive::UnPop, field.span));
+                        comp.global_index(field.global_index, field.name_span.clone(), true);
+                        let mut new_func = comp.new_functions.pop().unwrap();
+                        new_func.flags |= FunctionFlags::TRACK_CALLER;
+                        let func = comp.make_function(id, Signature::new(0, 1), new_func);
+                        let local = LocalName {
+                            index: comp.next_global,
+                            public: true,
+                        };
+                        comp.next_global += 1;
+                        let comment = if let Some(module_name) = &module_name {
+                            format!("`{module_name}`'s `{name}` argument")
+                        } else {
+                            format!("`{name}` argument")
+                        };
+                        comp.compile_bind_function(
+                            field.name.clone(),
+                            local,
+                            func,
+                            field.span,
+                            Some(&comment),
+                        )?;
+                    }
+                    Ok(())
+                })?;
+                // let args_module_index = self.next_global;
+                // self.next_global += 1;
+                // let local = LocalName {
+                //     index: args_module_index,
+                //     public: true,
+                // };
+                // self.asm.add_global_at(
+                //     local,
+                //     BindingKind::Module(args_module),
+                //     Some(modifier_span.clone()),
+                //     None,
+                // );
+                let args_macro_index = self.next_global;
+                self.next_global += 1;
+                let span = &operand.span;
+                self.stack_macros.insert(
+                    args_macro_index,
+                    StackMacro {
+                        words: vec![span.clone().sp(Word::Modified(Box::new(Modified {
+                            modifier: span.clone().sp(Modifier::Primitive(Primitive::Fill)),
+                            operands: vec![
+                                span.clone().sp(Word::Ref(Ref {
+                                    path: Vec::new(),
+                                    name: span.clone().sp("New".into()),
+                                    in_macro_arg: false,
+                                })),
+                                span.clone().sp(Word::Placeholder(PlaceholderOp::Call)),
+                            ],
+                        })))],
+                        names: args_module.names,
+                        hygenic: false,
+                    },
+                );
+                let local = LocalName {
+                    index: args_macro_index,
+                    public: true,
+                };
+                self.scope.names.insert("Args!".into(), local);
             }
             _ => self.add_error(operand.span, "struct's argument must be stack array syntax"),
         }
@@ -1561,9 +1634,12 @@ impl Compiler {
         macro_words: &mut Vec<Sp<Word>>,
         mut operands: Vec<Sp<Word>>,
         span: CodeSpan,
+        hygenic: bool,
     ) -> UiuaResult {
         // Mark the operands as macro arguments
-        set_in_macro_arg(&mut operands);
+        if hygenic {
+            set_in_macro_arg(&mut operands);
+        }
         // Collect placeholders
         let mut ops = collect_placeholder(macro_words);
         ops.reverse();

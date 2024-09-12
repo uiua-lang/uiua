@@ -2844,6 +2844,14 @@ primitive!(
     ///   : ---
     ///   : Foo "Uiua"
     ///   : Foo 5
+    /// An `Args!` macro is generated that allows fields to be used as pseudo-arguments.
+    /// By using this macro in the a `Call` function, you can simulate local variables.
+    /// ex: # Experimental!
+    ///   : ---Foo
+    ///   :   struct[a b c]
+    ///   :   Call ← Args![a c c b b a]
+    ///   : ---
+    ///   : Foo 1 2 3
     ///
     /// The syntax using `[]` and `{}` was developed by Uiua community member *janMakoso*.
     (0(0)[1], Struct, Misc, "struct"),

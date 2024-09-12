@@ -787,6 +787,14 @@
     "class": "DyadicArray",
     "description": "Discard or copy some rows of an array"
   },
+  "last": {
+    "glyph": "⊣",
+    "args": 1,
+    "outputs": 1,
+    "class": "MonadicArray",
+    "description": "Get the last row of an array",
+    "experimental": true
+  },
   "layout": {
     "args": 2,
     "outputs": 1,

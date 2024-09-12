@@ -140,7 +140,7 @@ impl Compiler {
             self.scope.names.insert(name.clone(), local);
             (self.asm).add_global_at(
                 local,
-                BindingKind::StackMacro,
+                BindingKind::StackMacro(ident_margs),
                 Some(span.clone()),
                 comment.map(|text| DocComment::from(text.as_str())),
             );

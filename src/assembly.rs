@@ -423,7 +423,9 @@ pub enum BindingKind {
     /// A scoped module
     Module(Module),
     /// A stack macro
-    StackMacro,
+    ///
+    /// Contains the number of arguments
+    StackMacro(usize),
     /// An array macro
     ArrayMacro(FuncSlice),
 }
@@ -436,7 +438,7 @@ impl BindingKind {
             Self::Func(func) => Some(func.signature()),
             Self::Import { .. } => None,
             Self::Module(_) => None,
-            Self::StackMacro => None,
+            Self::StackMacro(_) => None,
             Self::ArrayMacro(_) => None,
         }
     }
@@ -514,6 +516,12 @@ pub struct DocCommentArg {
     pub name: EcoString,
     /// A type descriptor for the argument
     pub ty: Option<EcoString>,
+}
+
+impl From<String> for DocComment {
+    fn from(text: String) -> Self {
+        Self::from(text.as_str())
+    }
 }
 
 impl From<&str> for DocComment {

@@ -381,7 +381,7 @@ impl Compiler {
         let input: EcoString = fs::read_to_string(path)
             .map_err(|e| UiuaErrorKind::Load(path.into(), e.into()))?
             .into();
-        // _ = crate::lsp::spans(&input);
+        _ = crate::lsp::spans(&input);
         self.asm.inputs.files.insert(path.into(), input.clone());
         self.load_impl(&input, InputSrc::File(path.into()))
     }
@@ -1579,7 +1579,7 @@ code:
                     format!("`{}` is a constant, not a module", first.module.value),
                 ))
             }
-            BindingKind::StackMacro => {
+            BindingKind::StackMacro(_) => {
                 return Err(self.fatal_error(
                     first.module.span.clone(),
                     format!("`{}` is a stack macro, not a module", first.module.value),
@@ -1620,7 +1620,7 @@ code:
                         format!("`{}` is a constant, not a module", comp.module.value),
                     ))
                 }
-                BindingKind::StackMacro => {
+                BindingKind::StackMacro(_) => {
                     return Err(self.fatal_error(
                         comp.module.span.clone(),
                         format!("`{}` is a stack macro, not a module", comp.module.value),
@@ -1766,7 +1766,7 @@ code:
                     self.add_error(span, "Cannot import module item here.");
                 }
             }
-            BindingKind::StackMacro | BindingKind::ArrayMacro(_) => {
+            BindingKind::StackMacro(_) | BindingKind::ArrayMacro(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
         }

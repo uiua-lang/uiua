@@ -471,7 +471,7 @@ code:
                             "Called module global. \
                             This is a bug in the interpreter.",
                         )),
-                        BindingKind::StackMacro => Err(self.error(
+                        BindingKind::StackMacro(_) => Err(self.error(
                             "Called stack macro global. \
                             This is a bug in the interpreter.",
                         )),

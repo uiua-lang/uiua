@@ -1,6 +1,7 @@
 # Uiua Todo
 
 - 0.13
+  - Scalar behavior for `choose` and `permute`
   - Label and format string glyphs
   - `setinv/setund` unification
   - Document on and by inverses

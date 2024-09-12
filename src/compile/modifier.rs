@@ -1553,7 +1553,7 @@ impl Compiler {
                 self.compile_bind_function(name, local, func, span, Some(&comment))?;
 
                 // Make args
-                let args_module = self.in_scope(ScopeKind::Module("Args!".into()), |comp| {
+                let args_module = self.in_scope(ScopeKind::Temp, |comp| {
                     // Arg getters
                     for field in &fields {
                         let name = &field.name;
@@ -1584,18 +1584,6 @@ impl Compiler {
                     }
                     Ok(())
                 })?;
-                // let args_module_index = self.next_global;
-                // self.next_global += 1;
-                // let local = LocalName {
-                //     index: args_module_index,
-                //     public: true,
-                // };
-                // self.asm.add_global_at(
-                //     local,
-                //     BindingKind::Module(args_module),
-                //     Some(modifier_span.clone()),
-                //     None,
-                // );
                 let args_macro_index = self.next_global;
                 self.next_global += 1;
                 let span = &operand.span;
@@ -1622,6 +1610,23 @@ impl Compiler {
                     public: true,
                 };
                 self.scope.names.insert("Args!".into(), local);
+                self.asm.add_global_at(
+                    local,
+                    BindingKind::StackMacro(1),
+                    None,
+                    Some(DocComment::from(format!(
+                        "Take {} argument{} and bind {} to {} field name{}",
+                        fields.len(),
+                        if fields.len() == 1 { "" } else { "s" },
+                        if fields.len() == 1 { "it" } else { "them" },
+                        if let Some(name) = &module_name {
+                            format!("`{name}`'s")
+                        } else {
+                            "the".into()
+                        },
+                        if fields.len() == 1 { "" } else { "s" }
+                    ))),
+                );
             }
             _ => self.add_error(operand.span, "struct's argument must be stack array syntax"),
         }

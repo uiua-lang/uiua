@@ -1,9 +1,10 @@
 # Uiua Todo
 
 - 0.13
-  - Scalar behavior for `choose` and `permute`
-  - Label and format string glyphs
+  - Recursive stack macros
+  - Label and format string glyphs?
   - `setinv/setund` unification
+    - Custom `on/by` inverses
   - Document on and by inverses
 - Possible
   - `orient` boxed

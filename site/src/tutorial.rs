@@ -1258,9 +1258,12 @@ splitArray([1, 2, 3, 7, 2, 4, 5])"</code>
 
         <Hd id="assert"><Prim prim=Assert/></Hd>
         <p>"The "<Prim prim=Assert/>" function takes any value and a condition. If the condition is anything but "<code>"1"</code>", the value is thrown as an error that can be caught with "<Prim prim=Try/>"."</p>
-        <Editor example="F ← ⍣(¯⍤10≤10.)∘\nF 5\nF 12"/>
+        <Editor example="F ← ⍣(¯⍤10≤10.)⋅∘\nF 5\nF 12"/>
         <p>"If the "<Prim prim=Assert/>"ed value is never caught, it becomes an error."</p>
-        <Editor example="F ← ¯⍤\"too big!\"≤10.\nF 5\nF 12"/> // Should fail
+        <Editor example="F ← ¯⍤\"Too big!\"≤10.\nF 5\nF 12"/> // Should fail
+        <p>"The error message above may not be useful to the user, as it refers to the code of the function itself. You can use the "<code>"# Track caller!"</code>" semantic comment to refer to the call site instead."</p>
+        <Editor example="F ← ¯⍤\"Too big!\"≤10. # Track caller!\nF 5\nF 12"/> // Should fail
+        <p>"You can read more about "<code>"# Track caller!"</code>" "<A href="/tutorial/documentation#track-caller">"here"</A>"."</p>
         <p>"Using "<Prim prim=Assert/>" for this purpose will be covered more in the "<A href="/tutorial/testing">"section on testing"</A>"."</p>
 
         <Hd id="challenges">"Challenges"</Hd>

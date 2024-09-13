@@ -52,6 +52,11 @@ pub(crate) fn optimize_instrs_mut(
             instrs.pop();
             instrs.push(Instr::ImplPrim(LenWhere, span))
         }
+        // MemberOf Range
+        ([.., Instr::Prim(Range, _)], Instr::Prim(MemberOf, span)) => {
+            instrs.pop();
+            instrs.push(Instr::ImplPrim(MemberOfRange, span))
+        }
         // First Reverse = last
         ([.., Instr::Prim(Reverse, _)], Instr::Prim(First, span)) => {
             instrs.pop();

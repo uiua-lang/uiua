@@ -71,19 +71,7 @@ pub fn Site() -> impl IntoView {
         .into_view(),
         view!("Check out "<a href="https://tacittalk.com/">"Tacit Talk"</a>"!").into_view(),
         "Abandon nominativity. Embrace relativity.".into_view(),
-        view! {
-            <div class="long-subtitle">
-                <div style="display: flex; gap: 0.5em;">
-                    <div style="font-style: normal"><Prims prims=[Try, Assert]/></div>
-                    " Dad! Can we go play outside?"
-                </div>
-                <div style="display: flex; gap: 0.5em;">
-                    <div style="font-style: normal"><Prim prim=Repeat glyph_only=true/></div>
-                    " Finish your code challenges first!"
-                </div>
-            </div>
-        }
-        .into_view(),
+        view!(<Prim prim=Under glyph_only=true/>"🗄️🍴").into_view(),
         "It's got um...I um...arrays".into_view(),
     ];
     let local_storage = window().local_storage().unwrap().unwrap();

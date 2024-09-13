@@ -627,7 +627,7 @@ r#"Langs ← {"Uiua" "APL" "J" "BQN" "K" "Q"}
 
         <Challenge
             number=4
-            prompt="appends the first row of the first argument to the second argument"
+            prompt="prepends the first row of the first argument to the second argument"
             example="[1 2 3] 4_5_6"
             answer="⊂⊢"
             tests={&["3_3 2_2", "[1_2_3 4_5_6] +10↯3_3⇡9", "[2 4 3] [9 9 9 9 9 1]"]}

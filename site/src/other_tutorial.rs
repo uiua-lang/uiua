@@ -51,12 +51,12 @@ impl OtherTutorialPage {
     }
     pub fn description(&self) -> &'static str {
         match self {
-            OtherTutorialPage::Strings => "tools for debugging and editing code",
-            OtherTutorialPage::FilesAndStreams => "how to document Uiua code",
-            OtherTutorialPage::Audio => "how to manipulate strings",
-            OtherTutorialPage::Images => "how to read and write files and streams",
-            OtherTutorialPage::Documentation => "how to generate and play audio",
-            OtherTutorialPage::CodeTactility => "how to generate images and GIFs",
+            OtherTutorialPage::Strings => "how to manipulate strings",
+            OtherTutorialPage::FilesAndStreams => "how to read and write files and streams",
+            OtherTutorialPage::Audio => "how to generate and play audio",
+            OtherTutorialPage::Images => "how to generate images and GIFs",
+            OtherTutorialPage::Documentation => "how to document Uiua code",
+            OtherTutorialPage::CodeTactility => "tools for debugging and editing code",
             OtherTutorialPage::Ranges => "various ways to generate ranges",
         }
     }

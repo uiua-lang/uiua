@@ -75,6 +75,7 @@ code {
     border-radius: 0.2em;
     padding: 0.2em;
     position: relative;
+    white-space: nowrap;
 }
 
 th,

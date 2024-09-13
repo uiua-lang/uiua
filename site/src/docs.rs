@@ -13,8 +13,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, EventInit, HtmlInputElement, ScrollBehavior, ScrollIntoViewOptions};
 
 use crate::{
-    element, markdown::Markdown, other::*, primitive::*, tour::Tour, tutorial::TutorialPage,
-    uiuisms::Uiuisms, Hd, Prim,
+    element, markdown::Markdown, other::*, other_tutorial::OtherTutorialPage, primitive::*,
+    tour::Tour, tutorial::TutorialPage, uiuisms::Uiuisms, Hd, Prim,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -226,14 +226,10 @@ fn DocsHome(#[prop(optional)] search: String) -> impl IntoView {
 
         <Hd id="other-tutorials">"Other Tutorials"</Hd>
         <p>"These tutorials cover more specific topics. They assume you have read the main tutorial above, but they can be read in any order."</p>
-        <ul>
-            <li><A href="/tutorial/codetactility">"Code Tactility"</A>" - tools for debugging and editing code"</li>
-            <li><A href="/tutorial/documentation">"Documenting Code"</A>" - how to document Uiua code"</li>
-            <li><A href="/tutorial/strings">"Strings"</A>" - how to manipulate strings"</li>
-            <li><A href="/tutorial/filesandstreams">"Files and Streams"</A>" - how to read and write files and streams"</li>
-            <li><A href="/tutorial/audio">"Audio"</A>" - how to generate and play audio"</li>
-            <li><A href="/tutorial/images">"Images and GIFs"</A>" - how to generate images and GIFs"</li>
-        </ul>
+        <ul>{ all::<OtherTutorialPage>()
+            .map(|p| view!( <li><A href={format!("/tutorial/{}", p.path())}>{p.title()}</A>" - "{p.description()}</li>))
+            .collect::<Vec<_>>()
+        }</ul>
 
         <Hd id="other-docs">"Other Docs"</Hd>
         <ul>

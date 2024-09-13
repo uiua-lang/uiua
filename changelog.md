@@ -52,6 +52,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Tweak the formatter to reduce excess vertical space
 ### Website
 - In the pad, files created with [`&fwa`](https://uiua.org/docs/&fwa) will now persist between runs
+- Add [Ranges](https://uiua.org/tutorial/ranges) tutorial
 
 ## 0.12.3 - 2024-08-17
 ### Language

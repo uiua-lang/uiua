@@ -8,12 +8,13 @@ use crate::{title_markdown, Challenge, Editor, Hd, Prim, Prims};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum OtherTutorialPage {
+    CodeTactility,
+    Documentation,
     Strings,
+    Ranges,
     FilesAndStreams,
     Audio,
     Images,
-    Documentation,
-    CodeTactility,
 }
 
 impl OtherTutorialPage {
@@ -34,6 +35,29 @@ impl OtherTutorialPage {
             Self::CodeTactility => {
                 title_markdown("Code Tactility", "/text/code_tactility.md", ()).into_view()
             }
+            Self::Ranges => title_markdown("Ranges", "/text/ranges.md", ()).into_view(),
+        }
+    }
+    pub fn title(&self) -> &'static str {
+        match self {
+            OtherTutorialPage::Strings => "Strings",
+            OtherTutorialPage::FilesAndStreams => "Files and Streams",
+            OtherTutorialPage::Audio => "Audio",
+            OtherTutorialPage::Images => "Images and GIFs",
+            OtherTutorialPage::Documentation => "Documenting Code",
+            OtherTutorialPage::CodeTactility => "Code Tactility",
+            OtherTutorialPage::Ranges => "Ranges",
+        }
+    }
+    pub fn description(&self) -> &'static str {
+        match self {
+            OtherTutorialPage::Strings => "tools for debugging and editing code",
+            OtherTutorialPage::FilesAndStreams => "how to document Uiua code",
+            OtherTutorialPage::Audio => "how to manipulate strings",
+            OtherTutorialPage::Images => "how to read and write files and streams",
+            OtherTutorialPage::Documentation => "how to generate and play audio",
+            OtherTutorialPage::CodeTactility => "how to generate images and GIFs",
+            OtherTutorialPage::Ranges => "various ways to generate ranges",
         }
     }
 }

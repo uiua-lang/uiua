@@ -82,6 +82,7 @@ The intuitive way to do this is with [`length`]().
 ```
 
 This is a very common operation. [`un`]() [`select`]() is defined as a shortcut for this.
+[`select`]() takes a list of indices, so [`un`]() [`select`]() *returns* a list of indices.
 
 ```uiua
 °⊏ "Hello!"

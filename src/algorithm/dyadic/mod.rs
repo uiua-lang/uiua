@@ -1785,3 +1785,59 @@ impl<T: ArrayValue> Array<T> {
         Ok(Array::new(shape, data))
     }
 }
+
+impl Value {
+    /// Test if a value is an integer in a range
+    pub fn memberof_range(&self, from: Self, env: &Uiua) -> UiuaResult<Self> {
+        fn fallback(a: &Value, b: &Value, env: &Uiua) -> UiuaResult<Value> {
+            let range = a.range(env)?;
+            b.member(&range, env)
+        }
+
+        let Ok(range_bound) = self.as_num(env, "") else {
+            return fallback(self, &from, env);
+        };
+
+        if range_bound.fract() != 0.0 || range_bound.is_infinite() || range_bound.is_nan() {
+            return fallback(self, &from, env);
+        }
+
+        Ok(match from {
+            Value::Num(nums) => {
+                let data: EcoVec<u8> = if range_bound >= 0.0 {
+                    nums.data
+                        .iter()
+                        .map(|&number| {
+                            number.fract() == 0.0 && number >= 0.0 && number < range_bound
+                        })
+                        .map(Into::into)
+                        .collect()
+                } else {
+                    nums.data
+                        .iter()
+                        .map(|&number| {
+                            number.fract() == 0.0 && number < 0.0 && number >= range_bound
+                        })
+                        .map(Into::into)
+                        .collect()
+                };
+
+                Array::new(nums.shape, data).into()
+            }
+            Value::Byte(mut bytes) => {
+                if range_bound > 0.0 {
+                    for b in bytes.data.as_mut_slice() {
+                        *b = ((*b as f64) < range_bound) as u8;
+                    }
+                } else {
+                    for b in bytes.data.as_mut_slice() {
+                        *b = 0
+                    }
+                }
+
+                bytes.into()
+            }
+            from => fallback(self, &from, env)?,
+        })
+    }
+}

@@ -613,6 +613,7 @@ primitive!(
     /// ex: ⁅¯1.2
     /// ex: ⁅1.5
     /// ex: ⁅[0.1 π 2 9.9 7.5]
+    /// ex: ⁅[4/3_¯2.5 9.81_¯3.6]
     (1, Round, MonadicPervasive, ("round", '⁅')),
     /// Compare for equality
     ///

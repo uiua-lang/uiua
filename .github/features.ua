@@ -6,7 +6,7 @@ Features ← (
   ⊂⨬(
     {"gif,image,terminal_image,webcam" "lsp,raw_mode"}
   | {"audio_encode" "gif" "image" "terminal_image" "lsp" "native_sys" "raw_mode"}
-  ) ∊□"all" &args
+  ) ∈:□"all" &args
 )
 
 &p "Checking with no features"

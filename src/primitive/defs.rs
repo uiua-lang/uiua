@@ -611,6 +611,7 @@ primitive!(
     ///
     /// ex: ⁅1.2
     /// ex: ⁅¯1.2
+    /// Numbers with fraction `0.5` always round away from zero.
     /// ex: ⁅1.5
     /// ex: ⁅[0.1 π 2 9.9 7.5]
     /// ex: ⁅[4/3_¯2.5 9.81_¯3.6]
@@ -740,6 +741,11 @@ primitive!(
     /// ex: ◿10 27
     /// ex: ◿5 [3 7 14]
     /// ex: ◿ [3 4 5] [10 10 10]
+    ///
+    /// The result is always non-negative:
+    /// ex: ◿ 4 ¯21
+    /// If you prefer the negative modulo instead of the remainder, you may use [under]:
+    /// ex: ⍜⊙⌵◿ 4 ¯21
     (2, Mod, DyadicPervasive, ("modulus", '◿')),
     /// Raise a value to a power
     ///

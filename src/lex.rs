@@ -1156,7 +1156,7 @@ impl<'a> Lexer<'a> {
                         let rest = &ident[lowercase_end..];
                         if !rest.is_empty() {
                             let ident = canonicalize_ident(rest);
-                            if let Some(n) = subscript_num(rest) {
+                            if let Some(n) = subscript_num(&ident) {
                                 self.end(Subscript(n), start);
                             } else {
                                 self.end(Ident(ident), start);

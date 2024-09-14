@@ -736,7 +736,12 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
             if a != b {
                 return Err(env.error(format!(
                     "Cannot {} arrays with different number of rows {a} and {b}",
-                    Primitive::Rows.format(),
+                    if inv {
+                        Primitive::Inventory
+                    } else {
+                        Primitive::Rows
+                    }
+                    .format(),
                 )));
             }
             if !inv {
@@ -791,13 +796,18 @@ fn rows2(f: Function, mut xs: Value, mut ys: Value, inv: bool, env: &mut Uiua) -
 
 fn rowsn(f: Function, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult {
     let outputs = f.signature().outputs;
+    let prim = if inv {
+        Primitive::Inventory
+    } else {
+        Primitive::Rows
+    };
     let FixedRowsData {
         mut rows,
         row_count,
         is_empty,
         all_scalar,
         per_meta,
-    } = fixed_rows(Primitive::Rows.format(), outputs, args, env)?;
+    } = fixed_rows(prim.format(), outputs, args, env)?;
     let mut new_values = multi_output(outputs, Vec::new());
     env.without_fill(|env| -> UiuaResult {
         for _ in 0..row_count {

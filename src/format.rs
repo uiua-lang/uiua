@@ -1060,7 +1060,7 @@ impl<'a> Formatter<'a> {
                 }
                 self.output.push(')');
             }
-            Word::Primitive(prim) => self.push(&word.span, &prim.to_string()),
+            Word::Primitive(prim) => self.format_primitive(*prim, &word.span),
             Word::Modified(m) => {
                 self.format_modifier(&m.modifier);
                 self.format_words(&m.operands, true, depth);
@@ -1214,6 +1214,12 @@ impl<'a> Formatter<'a> {
                 }
                 self.push(&word.span, &s);
             }
+        }
+    }
+    fn format_primitive(&mut self, prim: Primitive, span: &CodeSpan) {
+        match prim {
+            Primitive::Utf8 => self.push(span, "utf"),
+            _ => self.push(span, &prim.to_string()),
         }
     }
     fn format_multiline_words(

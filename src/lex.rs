@@ -1119,7 +1119,7 @@ impl<'a> Lexer<'a> {
                     // Try to parse as primitives
                     let lowercase_end = ident
                         .char_indices()
-                        .find(|(_, c)| !c.is_ascii_lowercase())
+                        .find(|(_, c)| !c.is_ascii_lowercase() && *c != '&')
                         .map_or(ident.len(), |(i, _)| i);
                     let lowercase = &ident[..lowercase_end];
                     if let Some(prims) = Primitive::from_format_name_multi(lowercase) {

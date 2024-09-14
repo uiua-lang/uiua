@@ -2049,10 +2049,12 @@ code:
     }
     #[allow(clippy::match_single_binding)]
     fn subscript(&mut self, sub: Subscript, span: CodeSpan, call: bool) -> UiuaResult {
-        self.experimental_error(&span, || {
-            "Subscripts are experimental. To use them, add \
-            `# Experimental!` to the top of the file."
-        });
+        if !matches!(sub.word.value, Word::Primitive(Primitive::Utf8)) {
+            self.experimental_error(&span, || {
+                "Subscripts are experimental. To use them, add \
+                `# Experimental!` to the top of the file."
+            });
+        }
         let n = sub.n.value;
         match sub.word.value {
             Word::Modified(m) => match m.modifier.value {
@@ -2105,6 +2107,12 @@ code:
                     self.push_instr(Instr::push(n));
                     self.primitive(Primitive::Mul, span.clone(), call)?;
                     self.primitive(Primitive::Floor, span, call)?;
+                }
+                Primitive::Utf8 => {
+                    if n != 8 {
+                        self.add_error(span.clone(), "Only UTF-8 is supported");
+                    }
+                    self.primitive(Primitive::Utf8, span, call)?
                 }
                 _ => {
                     self.add_error(

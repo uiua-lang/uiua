@@ -391,7 +391,6 @@
   },
   "both": {
     "glyph": "∩",
-    "args": 2,
     "outputs": 1,
     "modifier_args": 1,
     "class": "Planet",

@@ -801,6 +801,8 @@ primitive!(
     /// You can use [un][complex] to get the imaginary and real parts back out.
     /// ex: [°ℂ] i
     /// ex: [°ℂ] ×. ℂ3 4
+    /// A complex number [equals] a real one if the imaginary part is 0 and the real parts [match].
+    /// ex: = 5 ℂ0 5
     (2, Complex, DyadicPervasive, ("complex", 'ℂ')),
     /// Get the number of rows in an array
     ///
@@ -1111,6 +1113,10 @@ primitive!(
     ///
     /// ex: ≍ 1_2_3 [1 2 3]
     /// ex: ≍ 1_2_3 [1 2]
+    ///
+    /// Although one number [equals] another, they may not [match] if they have different [type]s
+    /// ex: = 5 ℂ0 5
+    ///   : ≍ 5 ℂ0 5
     (2, Match, DyadicArray, ("match", '≍')),
     /// Combine two arrays as rows of a new array
     ///

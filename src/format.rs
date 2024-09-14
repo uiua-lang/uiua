@@ -1074,6 +1074,10 @@ impl<'a> Formatter<'a> {
                     self.push(&sub.n.span, &sub.n_string());
                     self.format_words(&m.operands, true, depth);
                 }
+                Word::Primitive(Primitive::Utf8) => {
+                    self.push(&sub.word.span, "utf");
+                    self.push(&sub.n.span, &sub.n_string());
+                }
                 _ => {
                     self.format_word(&sub.word, depth);
                     if self.output.ends_with(SUBSCRIPT_NUMS) {
@@ -1218,7 +1222,7 @@ impl<'a> Formatter<'a> {
     }
     fn format_primitive(&mut self, prim: Primitive, span: &CodeSpan) {
         match prim {
-            Primitive::Utf8 => self.push(span, "utf"),
+            Primitive::Utf8 => self.push(span, "utf₈"),
             _ => self.push(span, &prim.to_string()),
         }
     }

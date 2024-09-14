@@ -14,8 +14,8 @@ use uiua::{
     ast::Item,
     encode::{image_to_bytes, value_to_gif_bytes, value_to_image, value_to_wav_bytes},
     lsp::{spans_with_backend, BindingDocsKind},
-    Compiler, DiagnosticKind, Inputs, Report, ReportFragment, ReportKind, SpanKind, SysBackend,
-    Uiua, UiuaError, UiuaResult, Value,
+    Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
+    SysBackend, Uiua, UiuaError, UiuaResult, Value,
 };
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;
@@ -451,17 +451,25 @@ pub fn gen_code_view(code: &str) -> View {
                 CodeFragment::Br => frag_views.push(view!(<br/>).into_view()),
                 CodeFragment::Span(text, kind) => {
                     let color_class = match &kind {
-                        SpanKind::Primitive(prim) => prim_class(*prim),
+                        SpanKind::Primitive(_, Some(sig)) => sig_class(*sig),
+                        SpanKind::Primitive(prim, _) => prim_class(*prim),
                         SpanKind::Number => "number-literal",
                         SpanKind::String => "string-literal-span",
                         SpanKind::Comment | SpanKind::OutputComment => "comment-span",
                         SpanKind::Strand => "strand-span",
                         SpanKind::StackSwizzle(sw) => sig_class(sw.signature()),
                         SpanKind::ArraySwizzle(sw) => sig_class(sw.signature()),
+                        SpanKind::Subscript(None) => "number-literal",
+                        SpanKind::Subscript(Some(prim))
+                            if prim.signature().is_some_and(|sig| sig == (2, 1)) =>
+                        {
+                            prim_class(Primitive::Abs)
+                        }
+                        SpanKind::Subscript(Some(prim)) => prim_class(*prim),
                         _ => "",
                     };
                     match kind {
-                        SpanKind::Primitive(prim) => {
+                        SpanKind::Primitive(prim, _) => {
                             let name = prim.name();
                             let mut title = format!("{}: {}", name, prim.doc().short_text());
                             if let Some(ascii) = prim.ascii() {
@@ -569,6 +577,17 @@ pub fn gen_code_view(code: &str) -> View {
                         SpanKind::FuncDelim(sig) => {
                             let class = format!("code-span {}", color_class);
                             let title = sig.to_string();
+                            frag_views.push(
+                                view!(<span class=class data-title=title>{text}</span>).into_view(),
+                            )
+                        }
+                        SpanKind::Subscript(prim) => {
+                            let class = format!("code-span {}", color_class);
+                            let title = if let Some(prim) = prim {
+                                format!("subscript for {}", prim.format())
+                            } else {
+                                "subscript".into()
+                            };
                             frag_views.push(
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )

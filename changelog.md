@@ -43,6 +43,8 @@ This version is not yet released. If you are reading this on the website, then t
   - [`un °`](https://uiua.org/docs/un) [`sort ⍆`](https://uiua.org/docs/sort) shuffles an array
 - Add an experimental [`last ⊣`](https://uiua.org/docs/last) function
   - Getting the last row of an array is very common
+- Add experimental subscript modifiers
+  - They modify the behavior of some functions and modifiers
 - Add the experimental [`layout`](https://uiua.org/docs/layout) function, which renders text into an image array
 - Remove previously deprecated function strands
 ### Interpreter

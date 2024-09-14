@@ -19,7 +19,7 @@ use crate::{
     lex::{is_ident_char, CodeSpan, Loc, Sp},
     parse::{flip_unsplit_lines, parse, split_words, trim_spaces},
     Compiler, FunctionId, Ident, InputSrc, Inputs, PreEvalMode, Primitive, RunMode, SafeSys,
-    Signature, Uiua, UiuaErrorKind, UiuaResult, Value,
+    Signature, Uiua, UiuaErrorKind, UiuaResult, Value, SUBSCRIPT_NUMS,
 };
 
 trait ConfigValue: Sized {
@@ -1062,15 +1062,26 @@ impl<'a> Formatter<'a> {
             }
             Word::Primitive(prim) => self.push(&word.span, &prim.to_string()),
             Word::Modified(m) => {
-                match &m.modifier.value {
-                    Modifier::Primitive(prim) => self.push(&m.modifier.span, &prim.to_string()),
-                    Modifier::Ref(r) => self.format_ref(r),
-                }
+                self.format_modifier(&m.modifier);
                 self.format_words(&m.operands, true, depth);
             }
             Word::Placeholder(op) => self.push(&word.span, &op.to_string()),
             Word::StackSwizzle(s) => self.push(&word.span, &s.to_string()),
             Word::ArraySwizzle(s) => self.push(&word.span, &s.to_string()),
+            Word::Subscript(sub) => match &sub.word.value {
+                Word::Modified(m) => {
+                    self.format_modifier(&m.modifier);
+                    self.push(&sub.n.span, &sub.n_string());
+                    self.format_words(&m.operands, true, depth);
+                }
+                _ => {
+                    self.format_word(&sub.word, depth);
+                    if self.output.ends_with(SUBSCRIPT_NUMS) {
+                        self.output.push(' ');
+                    }
+                    self.push(&sub.n.span, &sub.n_string());
+                }
+            },
             Word::Spaces => self.push(&word.span, " "),
             Word::Comment(comment) => {
                 let beginning_of_line = self
@@ -1272,6 +1283,12 @@ impl<'a> Formatter<'a> {
             self.format_words(line, true, depth);
         }
     }
+    fn format_modifier(&mut self, modifier: &Sp<Modifier>) {
+        match &modifier.value {
+            Modifier::Primitive(prim) => self.push(&modifier.span, &prim.to_string()),
+            Modifier::Ref(r) => self.format_ref(r),
+        }
+    }
     fn push(&mut self, span: &CodeSpan, formatted: &str) {
         let start = end_loc(&self.output);
         self.output.push_str(formatted);
@@ -1335,6 +1352,7 @@ pub(crate) fn word_is_multiline(word: &Word) -> bool {
         Word::Primitive(_) => false,
         Word::Modified(m) => m.operands.iter().any(|word| word_is_multiline(&word.value)),
         Word::Placeholder(_) => false,
+        Word::Subscript(sub) => word_is_multiline(&sub.word.value),
         Word::StackSwizzle(_) => false,
         Word::ArraySwizzle(_) => false,
         Word::Comment(_) => true,

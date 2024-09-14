@@ -1367,7 +1367,7 @@ code:
                 }
             }
             Word::Primitive(p) => self.primitive(p, word.span, call)?,
-            Word::Modified(m) => self.modified(*m, call)?,
+            Word::Modified(m) => self.modified(*m, None, call)?,
             Word::Placeholder(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
@@ -1390,6 +1390,7 @@ code:
                 }
             },
             Word::OutputComment { i, n } => self.push_instr(Instr::SetOutputComment { i, n }),
+            Word::Subscript(sub) => self.subscript(*sub, word.span, call)?,
             Word::Comment(_) | Word::Spaces | Word::BreakLine | Word::FlipLine => {}
         }
         Ok(())
@@ -2043,6 +2044,80 @@ code:
             let sig = self.sig_of(&instrs, &span)?;
             let func = self.make_function(FunctionId::Primitive(prim), sig, instrs.into());
             self.push_instr(Instr::PushFunc(func));
+        }
+        Ok(())
+    }
+    #[allow(clippy::match_single_binding)]
+    fn subscript(&mut self, sub: Subscript, span: CodeSpan, call: bool) -> UiuaResult {
+        self.experimental_error(&span, || {
+            "Subscripts are experimental. To use them, add \
+            `# Experimental!` to the top of the file."
+        });
+        let n = sub.n.value;
+        match sub.word.value {
+            Word::Modified(m) => match m.modifier.value {
+                Modifier::Ref(_) => {
+                    self.add_error(span, "Subscripts are not implemented for macros");
+                    self.modified(*m, Some(n), call)?;
+                }
+                Modifier::Primitive(prim) => match prim {
+                    _ => {
+                        if !matches!(prim, Primitive::Both | Primitive::Repeat) {
+                            self.add_error(
+                                span,
+                                format!("Subscripts are not implemented for {}", prim.format()),
+                            );
+                        }
+                        self.modified(*m, Some(n), call)?;
+                    }
+                },
+            },
+            Word::Primitive(prim) => match prim {
+                prim if prim.signature().is_some_and(|sig| sig == (2, 1)) => {
+                    self.word(sub.n.map(|n| Word::Number(n.to_string(), n as f64)), call)?;
+                    self.primitive(prim, span, call)?;
+                }
+                Primitive::Fix | Primitive::Transpose | Primitive::Pop => {
+                    if n > 100 {
+                        self.add_error(span.clone(), "Too many subscript repetitions");
+                    }
+                    for _ in 0..n.min(100) {
+                        self.primitive(prim, span.clone(), call)?;
+                    }
+                }
+                Primitive::Sqrt => {
+                    if n == 0 {
+                        self.add_error(span.clone(), "Cannot take 0th root");
+                    }
+                    self.push_instr(Instr::push(1.0 / n.max(1) as f64));
+                    self.primitive(Primitive::Pow, span, call)?;
+                }
+                Primitive::Round | Primitive::Floor | Primitive::Ceil => {
+                    let mul = 10f64.powi(n as i32);
+                    self.push_instr(Instr::push(mul));
+                    self.primitive(Primitive::Mul, span.clone(), call)?;
+                    self.primitive(prim, span.clone(), call)?;
+                    self.push_instr(Instr::push(mul));
+                    self.primitive(Primitive::Div, span, call)?;
+                }
+                Primitive::Rand => {
+                    self.primitive(Primitive::Rand, span.clone(), call)?;
+                    self.push_instr(Instr::push(n));
+                    self.primitive(Primitive::Mul, span.clone(), call)?;
+                    self.primitive(Primitive::Floor, span, call)?;
+                }
+                _ => {
+                    self.add_error(
+                        span.clone(),
+                        format!("Subscripts are not implemented for {}", prim.format()),
+                    );
+                    self.primitive(prim, span, call)?;
+                }
+            },
+            _ => {
+                self.word(sub.word, call)?;
+                self.add_error(span.clone(), "Subscripts are not allowed in this context");
+            }
         }
         Ok(())
     }

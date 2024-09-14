@@ -7,7 +7,7 @@ use crate::{
     function::{FunctionId, Signature},
     lex::{CodeSpan, Sp},
     parse::ident_modifier_args,
-    ArraySwizzle, Ident, Primitive, SemanticComment, StackSwizzle,
+    ArraySwizzle, Ident, Primitive, SemanticComment, StackSwizzle, SUBSCRIPT_NUMS,
 };
 
 /// A top-level item
@@ -148,6 +148,7 @@ pub enum Word {
         i: usize,
         n: usize,
     },
+    Subscript(Box<Subscript>),
 }
 
 impl PartialEq for Word {
@@ -271,6 +272,7 @@ impl fmt::Debug for Word {
             Word::FlipLine => write!(f, "unbreak_line"),
             Word::SemanticComment(comment) => write!(f, "{comment}"),
             Word::OutputComment { i, n, .. } => write!(f, "output_comment({i}/{n})"),
+            Word::Subscript(sub) => sub.fmt(f),
         }
     }
 }
@@ -503,5 +505,30 @@ impl Modifier {
             Modifier::Primitive(prim) => prim.modifier_args().unwrap_or(0),
             Modifier::Ref(r) => r.modifier_args(),
         }
+    }
+}
+
+/// A subscript
+#[derive(Clone)]
+pub struct Subscript {
+    /// The subscript number
+    pub n: Sp<usize>,
+    /// The modified word
+    pub word: Sp<Word>,
+}
+
+impl Subscript {
+    /// Get the subscript number as a string
+    pub fn n_string(&self) -> String {
+        (self.n.value.to_string().chars())
+            .map(|c| SUBSCRIPT_NUMS[(c as u32 as u8 - b'0') as usize])
+            .collect()
+    }
+}
+
+impl fmt::Debug for Subscript {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.word.value.fmt(f)?;
+        write!(f, "{}", self.n_string())
     }
 }

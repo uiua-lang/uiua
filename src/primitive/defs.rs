@@ -2029,7 +2029,7 @@ primitive!(
     ///   : F 3 5 ⇡16
     /// ex: G ← ∩(=0◿:) ⟜:
     ///   : G ⇡16 3 5
-    (2[1], Both, Planet, ("both", '∩')),
+    ([1], Both, Planet, ("both", '∩')),
     /// Call a function with its arguments reversed
     ///
     /// This is a modifier version of [flip].

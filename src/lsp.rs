@@ -23,7 +23,7 @@ use crate::{
 #[allow(missing_docs)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SpanKind {
-    Primitive(Primitive),
+    Primitive(Primitive, Option<Signature>),
     String,
     Number,
     Comment,
@@ -43,6 +43,7 @@ pub enum SpanKind {
     FuncDelim(Signature),
     StackSwizzle(StackSwizzle),
     ArraySwizzle(ArraySwizzle),
+    Subscript(Option<Primitive>),
 }
 
 /// Documentation information for a binding
@@ -395,7 +396,11 @@ impl Spanner {
                 Word::Number(s, _) => {
                     for prim in Primitive::all().filter(|p| p.is_constant()) {
                         if prim.name().starts_with(s) || prim.to_string() == *s {
-                            spans.push(word.span.clone().sp(SpanKind::Primitive(prim)));
+                            spans.push(
+                                word.span
+                                    .clone()
+                                    .sp(SpanKind::Primitive(prim, prim.signature())),
+                            );
                             continue 'words;
                         }
                     }
@@ -505,15 +510,16 @@ impl Spanner {
                         }
                     }
                 }
-                Word::Primitive(prim) => {
-                    spans.push(word.span.clone().sp(SpanKind::Primitive(*prim)))
-                }
+                Word::Primitive(prim) => spans.push(
+                    word.span
+                        .clone()
+                        .sp(SpanKind::Primitive(*prim, prim.signature())),
+                ),
                 Word::Modified(m) => {
-                    let modifier_span = &m.modifier.span;
                     match &m.modifier.value {
-                        Modifier::Primitive(p) => {
-                            spans.push(modifier_span.clone().sp(SpanKind::Primitive(*p)))
-                        }
+                        Modifier::Primitive(p) => spans.push(
+                            (m.modifier.span.clone()).sp(SpanKind::Primitive(*p, p.signature())),
+                        ),
                         Modifier::Ref(r) => spans.extend(self.ref_spans(r)),
                     }
                     spans.extend(self.words_spans(&m.operands));
@@ -530,6 +536,42 @@ impl Spanner {
                 Word::Placeholder(op) => {
                     spans.push(word.span.clone().sp(SpanKind::Placeholder(*op)))
                 }
+                #[allow(clippy::match_single_binding)]
+                Word::Subscript(sub) => match &sub.word.value {
+                    Word::Modified(m) => {
+                        match &m.modifier.value {
+                            Modifier::Primitive(p) => {
+                                spans.push(
+                                    m.modifier
+                                        .span
+                                        .clone()
+                                        .sp(SpanKind::Primitive(*p, p.signature())),
+                                );
+                                spans.push(sub.n.span.clone().sp(SpanKind::Subscript(Some(*p))));
+                            }
+                            Modifier::Ref(r) => {
+                                spans.extend(self.ref_spans(r));
+                                spans.push(sub.n.span.clone().sp(SpanKind::Subscript(None)));
+                            }
+                        }
+                        spans.extend(self.words_spans(&m.operands));
+                    }
+                    Word::Primitive(prim) => {
+                        if prim.signature().is_some_and(|sig| sig == (2, 1)) {
+                            spans.push(
+                                (sub.word.span.clone())
+                                    .sp(SpanKind::Primitive(*prim, Some(Signature::new(1, 1)))),
+                            );
+                        } else {
+                            spans.extend(self.words_spans(slice::from_ref(&sub.word)));
+                        }
+                        spans.push(sub.n.span.clone().sp(SpanKind::Subscript(Some(*prim))))
+                    }
+                    _ => {
+                        spans.extend(self.words_spans(slice::from_ref(&sub.word)));
+                        spans.push(sub.n.span.clone().sp(SpanKind::Subscript(None)))
+                    }
+                },
                 Word::StackSwizzle(sw) => {
                     spans.push(word.span.clone().sp(SpanKind::StackSwizzle(sw.clone())))
                 }
@@ -797,7 +839,7 @@ mod server {
             for sp in &doc.spans {
                 if sp.span.contains_line_col(line, col) && sp.span.src == path {
                     match sp.value {
-                        SpanKind::Primitive(prim) => {
+                        SpanKind::Primitive(prim, _) => {
                             prim_range = Some((prim, uiua_span_to_lsp(&sp.span)));
                         }
                         _ => {}
@@ -1369,23 +1411,26 @@ mod server {
                     SpanKind::String => UIUA_STRING_STT,
                     SpanKind::Number => UIUA_NUMBER_STT,
                     SpanKind::Comment => SemanticTokenType::COMMENT,
-                    SpanKind::Primitive(p) => match p.class() {
-                        PrimClass::Stack | PrimClass::Debug | PrimClass::Planet
-                            if p.modifier_args().is_none() =>
-                        {
-                            STACK_FUNCTION_STT
+                    SpanKind::Primitive(p, sig) => {
+                        let args = sig.map(|sig| sig.args).or(p.args());
+                        match p.class() {
+                            PrimClass::Stack | PrimClass::Debug | PrimClass::Planet
+                                if p.modifier_args().is_none() =>
+                            {
+                                STACK_FUNCTION_STT
+                            }
+                            PrimClass::Constant => UIUA_NUMBER_STT,
+                            _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,
+                            _ if p.modifier_args() == Some(2) => DYADIC_MODIFIER_STT,
+                            _ if p.modifier_args() == Some(3) => TRIADIC_MODIFIER_STT,
+                            _ if args == Some(0) => NOADIC_FUNCTION_STT,
+                            _ if args == Some(1) => MONADIC_FUNCTION_STT,
+                            _ if args == Some(2) => DYADIC_FUNCTION_STT,
+                            _ if args == Some(3) => TRIADIC_FUNCTION_STT,
+                            _ if args == Some(4) => TETRADIC_FUNCTION_STT,
+                            _ => continue,
                         }
-                        PrimClass::Constant => UIUA_NUMBER_STT,
-                        _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,
-                        _ if p.modifier_args() == Some(2) => DYADIC_MODIFIER_STT,
-                        _ if p.modifier_args() == Some(3) => TRIADIC_MODIFIER_STT,
-                        _ if p.args() == Some(0) => NOADIC_FUNCTION_STT,
-                        _ if p.args() == Some(1) => MONADIC_FUNCTION_STT,
-                        _ if p.args() == Some(2) => DYADIC_FUNCTION_STT,
-                        _ if p.args() == Some(3) => TRIADIC_FUNCTION_STT,
-                        _ if p.args() == Some(4) => TETRADIC_FUNCTION_STT,
-                        _ => continue,
-                    },
+                    }
                     SpanKind::Ident {
                         docs: Some(docs), ..
                     } => match docs.kind {

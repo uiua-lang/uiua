@@ -23,8 +23,8 @@ use rustyline::{error::ReadlineError, DefaultEditor};
 use uiua::{
     format::{format_file, format_str, FormatConfig, FormatConfigSource},
     lsp::BindingDocsKind,
-    Assembly, Compiler, NativeSys, PreEvalMode, PrimClass, RunMode, SpanKind, Uiua, UiuaError,
-    UiuaErrorKind, UiuaResult, Value,
+    Assembly, Compiler, NativeSys, PreEvalMode, PrimClass, Primitive, RunMode, Signature, SpanKind,
+    Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value,
 };
 
 fn main() {
@@ -1033,24 +1033,26 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
     let dyadic_mod = Color::Magenta;
     let dyadic = Color::Blue;
 
+    let for_prim = |prim: Primitive, sig: Option<Signature>| match prim.class() {
+        PrimClass::Stack | PrimClass::Debug if prim.modifier_args().is_none() => None,
+        PrimClass::Constant => None,
+        _ => {
+            if let Some(margs) = prim.modifier_args() {
+                Some(if margs == 1 { monadic_mod } else { dyadic_mod })
+            } else {
+                match sig.map(|sig| sig.args).or(prim.args()) {
+                    Some(0) => Some(noadic),
+                    Some(1) => Some(monadic),
+                    Some(2) => Some(dyadic),
+                    _ => None,
+                }
+            }
+        }
+    };
+
     for span in spans {
         let color = match span.value {
-            SpanKind::Primitive(prim) => match prim.class() {
-                PrimClass::Stack | PrimClass::Debug if prim.modifier_args().is_none() => None,
-                PrimClass::Constant => None,
-                _ => {
-                    if let Some(margs) = prim.modifier_args() {
-                        Some(if margs == 1 { monadic_mod } else { dyadic_mod })
-                    } else {
-                        match prim.args() {
-                            Some(0) => Some(noadic),
-                            Some(1) => Some(monadic),
-                            Some(2) => Some(dyadic),
-                            _ => None,
-                        }
-                    }
-                }
-            },
+            SpanKind::Primitive(prim, sig) => for_prim(prim, sig),
             SpanKind::Ident {
                 docs: Some(docs), ..
             } => match docs.kind {
@@ -1067,11 +1069,17 @@ fn color_code(code: &str, compiler: &Compiler) -> String {
                 _ => None,
             },
             SpanKind::String => Some(Color::Cyan),
-            SpanKind::Number => Some(Color::TrueColor {
+            SpanKind::Number | SpanKind::Subscript(None) => Some(Color::TrueColor {
                 r: 235,
                 g: 136,
                 b: 68,
             }),
+            SpanKind::Subscript(Some(prim))
+                if prim.signature().is_some_and(|sig| sig == (2, 1)) =>
+            {
+                Some(monadic)
+            }
+            SpanKind::Subscript(Some(prim)) => for_prim(prim, prim.signature()),
             SpanKind::Comment | SpanKind::OutputComment | SpanKind::Strand => {
                 Some(Color::BrightBlack)
             }

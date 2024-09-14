@@ -122,6 +122,7 @@ impl Compiler {
         &mut self,
         modifier: &Sp<Modifier>,
         operand: &Sp<Word>,
+        subscript: Option<usize>,
         call: bool,
     ) -> UiuaResult<bool> {
         if let Some(word) = self.desugar_function_pack_inner(modifier, operand)? {
@@ -150,7 +151,7 @@ impl Compiler {
                             .map(|w| w.map(Word::Func))
                             .collect(),
                     };
-                    self.modified(new, call)?;
+                    self.modified(new, subscript, call)?;
                     Ok(true)
                 }
                 m => {
@@ -172,13 +173,18 @@ impl Compiler {
         }
     }
     #[allow(clippy::collapsible_match)]
-    pub(super) fn modified(&mut self, mut modified: Modified, call: bool) -> UiuaResult {
+    pub(super) fn modified(
+        &mut self,
+        mut modified: Modified,
+        subscript: Option<usize>,
+        call: bool,
+    ) -> UiuaResult {
         let mut op_count = modified.code_operands().count();
 
         // De-sugar function pack
         if op_count == 1 {
             let operand = modified.code_operands().next().unwrap();
-            if self.desugar_function_pack(&modified.modifier, operand, call)? {
+            if self.desugar_function_pack(&modified.modifier, operand, subscript, call)? {
                 return Ok(());
             }
         }
@@ -198,7 +204,7 @@ impl Compiler {
         }
         if op_count == modified.modifier.value.args() {
             // Inlining
-            if self.inline_modifier(&modified, call)? {
+            if self.inline_modifier(&modified, subscript, call)? {
                 return Ok(());
             }
         } else {
@@ -456,7 +462,7 @@ impl Compiler {
                             .into(),
                         );
                     }
-                    return self.modified(m, call);
+                    return self.modified(m, subscript, call);
                 }
             }
         }
@@ -515,7 +521,12 @@ impl Compiler {
         self.print_diagnostics = print_diagnostics;
         res
     }
-    pub(super) fn inline_modifier(&mut self, modified: &Modified, call: bool) -> UiuaResult<bool> {
+    pub(super) fn inline_modifier(
+        &mut self,
+        modified: &Modified,
+        subscript: Option<usize>,
+        call: bool,
+    ) -> UiuaResult<bool> {
         use Primitive::*;
         let Modifier::Primitive(prim) = modified.modifier.value else {
             return Ok(false);
@@ -793,6 +804,9 @@ impl Compiler {
                 }
             }
             Repeat => {
+                if let Some(n) = subscript {
+                    self.push_instr(Instr::push(n));
+                }
                 let operand = modified.code_operands().next().unwrap().clone();
                 let (new_func, sig) = self.compile_operand_word(operand)?;
                 let flags = new_func.flags;
@@ -1016,28 +1030,30 @@ impl Compiler {
                 call,
             )?,
             Both => {
+                let n = subscript.unwrap_or(2);
                 let operand = modified.code_operands().next().unwrap().clone();
                 let (mut new_func, sig) = self.compile_operand_word(operand)?;
                 if let [Instr::Prim(Trace, span)] = new_func.instrs.as_slice() {
                     finish!(
-                        eco_vec![Instr::ImplPrim(ImplPrimitive::TraceN(2, false), *span)],
-                        Signature::new(2, 2)
+                        eco_vec![Instr::ImplPrim(ImplPrimitive::TraceN(n, false), *span)],
+                        Signature::new(n, n)
                     )
                 } else {
                     let span = self.add_span(modified.modifier.span.clone());
-                    new_func.instrs.insert(
-                        0,
-                        Instr::PushTemp {
+                    let instrs = take(&mut new_func.instrs);
+                    for _ in 0..n.saturating_sub(1) {
+                        new_func.instrs.push(Instr::PushTemp {
                             stack: TempStack::Inline,
                             count: sig.args,
                             span,
-                        },
-                    );
-                    new_func.instrs.push(Instr::pop_inline(sig.args, span));
-                    for i in 1..new_func.instrs.len() - 1 {
-                        new_func.instrs.push(new_func.instrs[i].clone());
+                        });
                     }
-                    let sig = Signature::new(sig.args * 2, sig.outputs * 2);
+                    for _ in 0..n.saturating_sub(1) {
+                        new_func.instrs.extend(instrs.iter().cloned());
+                        new_func.instrs.push(Instr::pop_inline(sig.args, span));
+                    }
+                    new_func.instrs.extend(instrs);
+                    let sig = Signature::new(sig.args * n, sig.outputs * n);
                     if call {
                         self.push_all_instrs(new_func);
                     } else {

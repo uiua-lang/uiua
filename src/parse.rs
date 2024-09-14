@@ -804,8 +804,13 @@ impl<'i> Parser<'i> {
                 return Some(term);
             }
         };
-        let mut args = Vec::new();
         self.try_spaces();
+        let mut subscript = None;
+        if let Some(n) = self.next_token_map(Token::as_subscript) {
+            subscript = Some(n);
+            self.try_spaces();
+        }
+        let mut args = Vec::new();
         self.depth += 1;
         for i in 0..modifier.args() {
             loop {
@@ -890,13 +895,20 @@ impl<'i> Parser<'i> {
             _ => (),
         }
 
-        Some(span.sp(Word::Modified(Box::new(Modified {
+        let mut word = span.sp(Word::Modified(Box::new(Modified {
             modifier: mod_span.sp(modifier),
             operands: args,
-        }))))
+        })));
+
+        if let Some(n) = subscript {
+            let span = word.span.clone().merge(n.span.clone());
+            word = span.sp(Word::Subscript(Box::new(crate::ast::Subscript { n, word })));
+        }
+
+        Some(word)
     }
     fn try_term(&mut self) -> Option<Sp<Word>> {
-        Some(if let Some(prim) = self.try_prim() {
+        let mut word = if let Some(prim) = self.try_prim() {
             prim.map(Word::Primitive)
         } else if let Some(refer) = self.try_ref() {
             refer
@@ -987,7 +999,19 @@ impl<'i> Parser<'i> {
             pack.cloned().map(Word::ArraySwizzle)
         } else {
             return None;
-        })
+        };
+        loop {
+            let reset = self.index;
+            self.try_spaces();
+            if let Some(n) = self.next_token_map(Token::as_subscript) {
+                let span = word.span.clone().merge(n.span.clone());
+                word = span.sp(Word::Subscript(Box::new(crate::ast::Subscript { n, word })));
+            } else {
+                self.index = reset;
+                break;
+            }
+        }
+        Some(word)
     }
     fn try_num(&mut self) -> Option<Sp<(String, f64)>> {
         let span = self.try_exact(Token::Number)?;

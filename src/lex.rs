@@ -511,6 +511,7 @@ pub enum Token {
     Glyph(Primitive),
     StackSwizzle(StackSwizzle),
     ArraySwizzle(ArraySwizzle),
+    Subscript(usize),
     LeftArrow,
     LeftStrokeArrow,
     LeftArrowTilde,
@@ -593,6 +594,12 @@ impl Token {
             _ => None,
         }
     }
+    pub(crate) fn as_subscript(&self) -> Option<usize> {
+        match self {
+            Token::Subscript(n) => Some(*n),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Token {
@@ -638,6 +645,13 @@ impl fmt::Display for Token {
             Token::CloseAngle => write!(f, "⟩"),
             Token::Newline => write!(f, "newline"),
             Token::Spaces => write!(f, "space(s)"),
+            Token::Subscript(n) => {
+                for c in n.to_string().chars() {
+                    let i = (c as u32 as u8 - b'0') as usize;
+                    write!(f, "{}", SUBSCRIPT_NUMS[i])?;
+                }
+                Ok(())
+            }
         }
     }
 }
@@ -1105,7 +1119,7 @@ impl<'a> Lexer<'a> {
                     // Try to parse as primitives
                     let lowercase_end = ident
                         .char_indices()
-                        .find(|(_, c)| c.is_ascii_uppercase())
+                        .find(|(_, c)| !c.is_ascii_lowercase())
                         .map_or(ident.len(), |(i, _)| i);
                     let lowercase = &ident[..lowercase_end];
                     if let Some(prims) = Primitive::from_format_name_multi(lowercase) {
@@ -1142,12 +1156,20 @@ impl<'a> Lexer<'a> {
                         let rest = &ident[lowercase_end..];
                         if !rest.is_empty() {
                             let ident = canonicalize_ident(rest);
-                            self.end(Ident(ident), start);
+                            if let Some(n) = subscript_num(rest) {
+                                self.end(Subscript(n), start);
+                            } else {
+                                self.end(Ident(ident), start);
+                            }
                         }
                     } else {
                         // Lone ident
                         let ident = canonicalize_ident(&ident);
-                        self.end(Ident(ident), start)
+                        if let Some(n) = subscript_num(&ident) {
+                            self.end(Subscript(n), start);
+                        } else {
+                            self.end(Ident(ident), start);
+                        }
                     }
                 }
                 // Numbers
@@ -1497,6 +1519,19 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
 /// Whether a character can be part of a Uiua identifier
 pub fn is_ident_char(c: char) -> bool {
     c.is_alphabetic() && !"ⁿₙπτηℂλ".contains(c) || SUBSCRIPT_NUMS.contains(&c)
+}
+
+fn subscript_num(s: &str) -> Option<usize> {
+    if s.is_empty() {
+        return None;
+    }
+    let mut n = 0;
+    for c in s.chars() {
+        let i = SUBSCRIPT_NUMS.iter().position(|&d| c == d)?;
+        n *= 10;
+        n += i;
+    }
+    Some(n)
 }
 
 /// Whether a string is a custom glyph

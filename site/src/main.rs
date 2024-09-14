@@ -404,6 +404,10 @@ macro_rules! code_font {
 }
 
 fn prim_class(prim: Primitive) -> &'static str {
+    prim_sig_class(prim, None)
+}
+
+fn prim_sig_class(prim: Primitive, sig: Option<Signature>) -> &'static str {
     match prim {
         Primitive::Identity => code_font!("stack-function"),
         Primitive::Transpose => code_font!("monadic-function trans text-gradient"),
@@ -423,7 +427,9 @@ fn prim_class(prim: Primitive) -> &'static str {
                     _ => code_font!("triadic-modifier"),
                 }
             } else {
-                prim.signature().map(sig_class).unwrap_or(code_font!(""))
+                sig.or(prim.signature())
+                    .map(sig_class)
+                    .unwrap_or(code_font!(""))
             }
         }
     }

@@ -2077,7 +2077,7 @@ code:
                     self.word(sub.n.map(|n| Word::Number(n.to_string(), n as f64)), call)?;
                     self.primitive(prim, span, call)?;
                 }
-                Primitive::Fix | Primitive::Transpose | Primitive::Pop => {
+                Primitive::Fix | Primitive::Box | Primitive::Transpose | Primitive::Pop => {
                     if n > 100 {
                         self.add_error(span.clone(), "Too many subscript repetitions");
                     }

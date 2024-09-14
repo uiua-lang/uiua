@@ -497,6 +497,14 @@ pub fn Combinators() -> impl IntoView {
 
 #[component]
 pub fn Experimental() -> impl IntoView {
+    fn subscript<'a>(prim: Primitive, meaning: &'a str, example: &'a str) -> impl IntoView + 'a {
+        view!(<tr>
+            <td><Prim prim=prim/></td>
+            <td>{ meaning.to_string() }</td>
+            <td><Editor example=example/></td> 
+        </tr>)
+    }
+
     view! {
         <Title text="Experimental Features - Uiua Docs"/>
         <h1>"Experimental Features"</h1>
@@ -509,6 +517,35 @@ pub fn Experimental() -> impl IntoView {
                 view! { <li><Prim prim=prim/></li> }
             }).collect::<Vec<_>>()
         }</ul>
+
+        <h2 id="subscript-modifiers">"Subscript Modifiers"</h2>
+        <p>"By suffixing some functions or modifiers with a subscript number, their behavior can be modified."</p>
+        <p>"Subscript numbers are typed with a "<code>"__"</code>" followed by some digits. The formatter will turn them into subscript digit characters."</p>
+        <p>"The following functions and modifiers are supported:"</p>
+        <table class="header-centered-table cell-centered-table" style="width: 100%">
+            <tr>
+                <th>"Primitive"</th>
+                <th>"Meaning"</th>
+                <th>"Example"</th>
+            </tr>
+            <tr>
+                <td>"Any "<span class="dyadic-function">"dyadic"</span>" function"</td>
+                <td>"Constant first argument"</td>
+                <td><Editor example="# Experimental!\n+₃ 5"/></td>
+            </tr>
+            { vec![
+                subscript(Primitive::Fix, "Repeat", "# Experimental!\n¤₃ 5"),
+                subscript(Primitive::Box, "Repeat", "# Experimental!\n□₃ 5"),
+                subscript(Primitive::Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
+                subscript(Primitive::Pop, "Repeat", "# Experimental!\n[◌₃ 1 2 3 4 5]"),
+                subscript(Primitive::Sqrt, "Nth root", "# Experimental!\n√₃ [8 27 125]"),
+                subscript(Primitive::Round, "To N decimal places", "# Experimental!\n⁅₃ π"),
+                subscript(Primitive::Floor, "To N decimal places", "# Experimental!\n⌊₃ π"),
+                subscript(Primitive::Ceil, "To N decimal places", "# Experimental!\n⌈₃ π"),
+                subscript(Primitive::Both, "Apply to N argument sets", "# Experimental!\n[∩₃+ 1 2 3 4 5 6]"),
+                subscript(Primitive::Repeat, "Repetition count", "# Experimental!\n⍥₅(⊂⟜/+) [1 2]"),
+            ] }
+        </table>
 
         <Markdown src="/text/experimental.md"/>
     }

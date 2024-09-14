@@ -45,6 +45,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Getting the last row of an array is very common
 - Add experimental subscript modifiers
   - They modify the behavior of some functions and modifiers
+  - You can read more about them [here](https://uiua.org/docs/experimental#subscript-modifiers)
 - Add the experimental [`layout`](https://uiua.org/docs/layout) function, which renders text into an image array
 - Remove previously deprecated function strands
 ### Interpreter

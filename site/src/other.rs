@@ -511,14 +511,14 @@ pub fn Experimental() -> impl IntoView {
         <p>"Uiua has a number of features that are considered experimental. They are available in the interpreter for testing, but may be removed or changed in the future."</p>
         <p>"Using experimental features requires an "<code>"# Experimental!"</code>" comment to be placed at the top of a Uiua source file."</p>
 
-        <h2 id="functions-modifiers">"Experimental Functions and Modifiers"</h2>
+        <Hd id="functions-modifiers">"Experimental Functions and Modifiers"</Hd>
         <ul>{
             Primitive::non_deprecated().filter(Primitive::is_experimental).map(|prim| {
                 view! { <li><Prim prim=prim/></li> }
             }).collect::<Vec<_>>()
         }</ul>
 
-        <h2 id="subscript-modifiers">"Subscript Modifiers"</h2>
+        <Hd id="subscript-modifiers">"Subscript Modifiers"</Hd>
         <p>"By suffixing some functions or modifiers with a subscript number, their behavior can be modified."</p>
         <p>"Subscript numbers are typed with a "<code>"__"</code>" followed by some digits. The formatter will turn them into subscript digit characters."</p>
         <p>"The following functions and modifiers are supported:"</p>

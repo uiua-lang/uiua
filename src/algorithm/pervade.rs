@@ -1068,7 +1068,9 @@ pub mod complex {
         b + a.into() * Complex::I
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
-        env.error(format!("Cannot get the form a complex number with {b} as the real part and {a} as the imaginary part"))
+        env.error(format!(
+            "Cannot make a complex number with {b} as the real part and {a} as the imaginary part"
+        ))
     }
 }
 

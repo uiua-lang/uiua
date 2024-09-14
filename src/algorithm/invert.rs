@@ -1854,7 +1854,8 @@ fn under_rows_pattern<'a>(
     g_sig: Signature,
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
-    let &[Instr::PushFunc(ref f), Instr::Prim(Primitive::Rows, span), ref input @ ..] = input
+    let &[Instr::PushFunc(ref f), Instr::Prim(prim @ (Primitive::Rows | Primitive::Inventory), span), ref input @ ..] =
+        input
     else {
         return None;
     };
@@ -1862,14 +1863,14 @@ fn under_rows_pattern<'a>(
     let (f_before, f_after) = under_instrs(&instrs, g_sig, comp)?;
     let befores = eco_vec![
         Instr::PushFunc(make_fn(f_before, f.flags, span, comp)?),
-        Instr::Prim(Primitive::Rows, span),
+        Instr::Prim(prim, span),
     ];
     let after_fn = make_fn(f_after, f.flags, span, comp)?;
     let after_sig = after_fn.signature();
     let mut afters = eco_vec![
         Instr::PushFunc(after_fn),
         Instr::Prim(Primitive::Reverse, span),
-        Instr::Prim(Primitive::Rows, span),
+        Instr::Prim(prim, span),
     ];
     if after_sig.outputs > 0 {
         afters.push(Instr::Prim(Primitive::Reverse, span));

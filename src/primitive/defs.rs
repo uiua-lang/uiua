@@ -739,6 +739,11 @@ primitive!(
     /// ex: ◿10 27
     /// ex: ◿5 [3 7 14]
     /// ex: ◿ [3 4 5] [10 10 10]
+    ///
+    /// The result is always non-negative:
+    /// ex: ◿ 4 ¯21
+    /// If you prefer the negative modulo instead of the remainder, you may use [under]:
+    /// ex: ⍜⊙⌵◿ 4 ¯21
     (2, Mod, DyadicPervasive, ("modulus", '◿')),
     /// Raise a value to a power
     ///

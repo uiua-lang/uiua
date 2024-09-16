@@ -82,3 +82,7 @@ Struct‼Person[Name Age][] # Ensure that a word on the same line as binding gen
 
 F‼ ←^
 ⍤⟜≍: [1 2 3] [F‼(1|2|3)]
+
+M! ←^ ⋅"∘"
+@a @b
+⍤⟜≍: "b" [⋅M!∘]

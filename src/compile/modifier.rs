@@ -468,14 +468,14 @@ impl Compiler {
         }
 
         // Compile operands
-        let instrs = self.compile_words(modified.operands, false)?;
+        let operands_func = self.compile_words(modified.operands, false)?;
 
         if call {
-            self.push_all_instrs(instrs);
+            self.push_all_instrs(operands_func);
             self.primitive(prim, modified.modifier.span, true)?;
         } else {
             self.new_functions.push(NewFunction::default());
-            self.push_all_instrs(instrs);
+            self.push_all_instrs(operands_func);
             self.primitive(prim, modified.modifier.span.clone(), true)?;
             let new_func = self.new_functions.pop().unwrap();
             let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
@@ -1782,7 +1782,10 @@ impl Compiler {
 
         let top_slices_start = self.asm.top_slices.len();
         // Compile the generated items
+        let temp_mode = self.pre_eval_mode.min(PreEvalMode::Line);
+        let pre_eval_mod = replace(&mut self.pre_eval_mode, temp_mode);
         self.items(items).map_err(|e| e.trace_macro(span.clone()))?;
+        self.pre_eval_mode = pre_eval_mod;
         // Extract generated top-level instructions
         let mut instrs = EcoVec::new();
         for slice in (self.asm.top_slices)

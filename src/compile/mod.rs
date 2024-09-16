@@ -256,19 +256,19 @@ pub struct LocalName {
 }
 
 /// The mode that dictates how much code to pre-evaluate at compile time
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum PreEvalMode {
-    /// The normal mode. Tries to evaluate pure, time-bounded constants and expressions at comptime
-    #[default]
-    Normal,
-    /// Pre-evaluate each line, but not multiple lines together
-    Line,
-    /// Does not evalute pure constants and expressions at comptime, but still evaluates `comptime`
-    Lazy,
     /// Evaluate as much as possible at compile time, even impure expressions
     ///
     /// Recursive functions and certain system functions are not evaluated
     Lsp,
+    /// Does not evalute pure constants and expressions at comptime, but still evaluates `comptime`
+    Lazy,
+    /// Pre-evaluate each line, but not multiple lines together
+    Line,
+    /// The normal mode. Tries to evaluate pure, time-bounded constants and expressions at comptime
+    #[default]
+    Normal,
 }
 
 const MAX_PRE_EVAL_ELEMS: usize = 1000;

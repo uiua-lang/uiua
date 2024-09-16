@@ -1406,30 +1406,36 @@ mod server {
             let mut tokens = Vec::new();
             let mut prev_line = 0;
             let mut prev_char = 0;
+            let for_prim = |p: Primitive, sig: Option<Signature>| {
+                let args = sig.map(|sig| sig.args).or(p.args());
+                Some(match p.class() {
+                    PrimClass::Stack | PrimClass::Debug | PrimClass::Planet
+                        if p.modifier_args().is_none() =>
+                    {
+                        STACK_FUNCTION_STT
+                    }
+                    PrimClass::Constant => UIUA_NUMBER_STT,
+                    _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,
+                    _ if p.modifier_args() == Some(2) => DYADIC_MODIFIER_STT,
+                    _ if p.modifier_args() == Some(3) => TRIADIC_MODIFIER_STT,
+                    _ if args == Some(0) => NOADIC_FUNCTION_STT,
+                    _ if args == Some(1) => MONADIC_FUNCTION_STT,
+                    _ if args == Some(2) => DYADIC_FUNCTION_STT,
+                    _ if args == Some(3) => TRIADIC_FUNCTION_STT,
+                    _ if args == Some(4) => TETRADIC_FUNCTION_STT,
+                    _ => return None,
+                })
+            };
             for sp in &doc.spans {
                 let token_type = match &sp.value {
                     SpanKind::String => UIUA_STRING_STT,
                     SpanKind::Number => UIUA_NUMBER_STT,
                     SpanKind::Comment => SemanticTokenType::COMMENT,
                     SpanKind::Primitive(p, sig) => {
-                        let args = sig.map(|sig| sig.args).or(p.args());
-                        match p.class() {
-                            PrimClass::Stack | PrimClass::Debug | PrimClass::Planet
-                                if p.modifier_args().is_none() =>
-                            {
-                                STACK_FUNCTION_STT
-                            }
-                            PrimClass::Constant => UIUA_NUMBER_STT,
-                            _ if p.modifier_args() == Some(1) => MONADIC_MODIFIER_STT,
-                            _ if p.modifier_args() == Some(2) => DYADIC_MODIFIER_STT,
-                            _ if p.modifier_args() == Some(3) => TRIADIC_MODIFIER_STT,
-                            _ if args == Some(0) => NOADIC_FUNCTION_STT,
-                            _ if args == Some(1) => MONADIC_FUNCTION_STT,
-                            _ if args == Some(2) => DYADIC_FUNCTION_STT,
-                            _ if args == Some(3) => TRIADIC_FUNCTION_STT,
-                            _ if args == Some(4) => TETRADIC_FUNCTION_STT,
-                            _ => continue,
-                        }
+                        let Some(stt) = for_prim(*p, *sig) else {
+                            continue;
+                        };
+                        stt
                     }
                     SpanKind::Ident {
                         docs: Some(docs), ..
@@ -1459,6 +1465,20 @@ mod server {
                         _ => continue,
                     },
                     SpanKind::ArraySwizzle(_) => MONADIC_FUNCTION_STT,
+                    SpanKind::Subscript(Some(prim))
+                        if prim.signature().is_some_and(|sig| sig == (2, 1)) =>
+                    {
+                        let Some(stt) = for_prim(*prim, Some(Signature::new(1, 1))) else {
+                            continue;
+                        };
+                        stt
+                    }
+                    SpanKind::Subscript(Some(prim)) if prim.signature().is_some() => {
+                        let Some(stt) = for_prim(*prim, prim.signature()) else {
+                            continue;
+                        };
+                        stt
+                    }
                     _ => continue,
                 };
                 let mut token_type = UIUA_SEMANTIC_TOKEN_TYPES

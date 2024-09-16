@@ -36,9 +36,9 @@ use crate::{
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, flip_unsplit_lines, parse, split_words},
     Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, DocComment, GitTarget, Ident,
-    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment,
-    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS, EXAMPLE_UA,
-    SUBSCRIPT_NUMS, VERSION,
+    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, PrimClass, Primitive, RunMode,
+    SemanticComment, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS,
+    EXAMPLE_UA, SUBSCRIPT_NUMS, VERSION,
 };
 
 /// The Uiua compiler
@@ -2083,7 +2083,18 @@ code:
                 }
                 let sp = span.clone();
                 match prim {
-                    prim if prim.signature().is_some_and(|sig| sig == (2, 1)) => {
+                    prim if prim.class() == PrimClass::DyadicPervasive
+                        || [
+                            Primitive::Take,
+                            Primitive::Drop,
+                            Primitive::Join,
+                            Primitive::Rerank,
+                            Primitive::Rotate,
+                            Primitive::Orient,
+                            Primitive::Windows,
+                        ]
+                        .contains(&prim) =>
+                    {
                         self.word(sub.n.map(|n| Word::Number(n.to_string(), n as f64)), true)?;
                         self.primitive(prim, span, true)?;
                     }

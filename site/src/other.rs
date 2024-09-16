@@ -497,6 +497,8 @@ pub fn Combinators() -> impl IntoView {
 
 #[component]
 pub fn Experimental() -> impl IntoView {
+    use Primitive::*;
+
     fn subscript<'a>(prim: Primitive, meaning: &'a str, example: &'a str) -> impl IntoView + 'a {
         view!(<tr>
             <td><Prim prim=prim/></td>
@@ -529,23 +531,28 @@ pub fn Experimental() -> impl IntoView {
                 <th>"Example"</th>
             </tr>
             <tr>
-                <td>"Any "<span class="dyadic-function">"dyadic"</span>" function"</td>
+                <td>"Any "<span class="dyadic-function">"dyadic"</span>" pervasive function"</td>
                 <td>"Constant first argument"</td>
-                <td><Editor example="# Experimental!\n+₃ 5"/></td>
+                <td><Editor example="# Experimental!\n⊃+₁×₂ [1 2 3]"/></td>
+            </tr>
+            <tr>
+                <td><Prims prims=[Take, Drop, Join, Rerank, Rotate, Orient, Windows]/></td>
+                <td>"Constant first argument"</td>
+                <td><Editor example="# Experimental!\n⊃↙₂↻₃ [1 2 3 4 5]"/></td>
             </tr>
             { vec![
-                subscript(Primitive::Fix, "Repeat", "# Experimental!\n¤₃ 5"),
-                subscript(Primitive::Box, "Repeat", "# Experimental!\n□₃ 5"),
-                subscript(Primitive::Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
-                subscript(Primitive::Pop, "Repeat", "# Experimental!\n[◌₃ 1 2 3 4 5]"),
-                subscript(Primitive::Sqrt, "Nth root", "# Experimental!\n√₃ [8 27 125]"),
-                subscript(Primitive::Round, "To N decimal places", "# Experimental!\n⁅₃ π"),
-                subscript(Primitive::Floor, "To N decimal places", "# Experimental!\n⌊₃ π"),
-                subscript(Primitive::Ceil, "To N decimal places", "# Experimental!\n⌈₃ π"),
-                subscript(Primitive::Both, "Apply to N argument sets", "# Experimental!\n[∩₃+ 1 2 3 4 5 6]"),
-                subscript(Primitive::Rows, "Operate on -N-rank rows", "# Experimental!\n≡₂□ °△2_3_4"),
-                subscript(Primitive::Each, "Operate on N-rank rows", "# Experimental!\n∵₁□ °△2_3_4"),
-                subscript(Primitive::Repeat, "Repetition count", "# Experimental!\n⍥₅(⊂⟜/+) [1 2]"),
+                subscript(Fix, "Repeat", "# Experimental!\n¤₃ 5"),
+                subscript(Box, "Repeat", "# Experimental!\n□₃ 5"),
+                subscript(Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
+                subscript(Pop, "Repeat", "# Experimental!\n[◌₃ 1 2 3 4 5]"),
+                subscript(Sqrt, "Nth root", "# Experimental!\n√₃ [8 27 125]"),
+                subscript(Round, "To N decimal places", "# Experimental!\n⁅₃ π"),
+                subscript(Floor, "To N decimal places", "# Experimental!\n⌊₃ π"),
+                subscript(Ceil, "To N decimal places", "# Experimental!\n⌈₃ π"),
+                subscript(Both, "Apply to N argument sets", "# Experimental!\n[∩₃+ 1 2 3 4 5 6]"),
+                subscript(Rows, "Operate on -N-rank rows", "# Experimental!\n≡₂□ °△2_3_4"),
+                subscript(Each, "Operate on N-rank rows", "# Experimental!\n∵₁□ °△2_3_4"),
+                subscript(Repeat, "Repetition count", "# Experimental!\n⍥₅(⊂⟜/+) [1 2]"),
             ] }
         </table>
 

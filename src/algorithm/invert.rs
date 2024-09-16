@@ -12,11 +12,9 @@ use regex::Regex;
 
 use crate::{
     check::{instrs_clean_signature, instrs_signature},
-    instrs_are_pure,
     primitive::{ImplPrimitive, Primitive},
     Array, Assembly, BindingKind, Compiler, Complex, FmtInstrs, Function, FunctionFlags,
-    FunctionId, Instr, NewFunction, Purity, Signature, Span, SysOp, TempStack, Uiua, UiuaResult,
-    Value,
+    FunctionId, Instr, NewFunction, Signature, Span, SysOp, TempStack, Uiua, UiuaResult, Value,
 };
 
 use super::IgnoreError;
@@ -1176,9 +1174,12 @@ fn invert_join_val_pattern<'a>(
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
     for i in 0..input.len() {
         if let &Instr::Prim(Primitive::Join, span) = &input[i] {
-            let Some((input, before)) = Val.invert_extract(&input[..i], comp) else {
+            let Some((inp, before)) = Val.invert_extract(&input[..i], comp) else {
                 continue;
             };
+            if !inp.is_empty() {
+                continue;
+            }
             let mut instrs = before;
             instrs.extend([
                 Instr::CopyToTemp {
@@ -1191,7 +1192,7 @@ fn invert_join_val_pattern<'a>(
                 Instr::pop_inline(1, span),
                 Instr::ImplPrim(ImplPrimitive::MatchPattern, span),
             ]);
-            return Some((input, instrs));
+            return Some((&input[i + 1..], instrs));
         }
     }
     None
@@ -2763,24 +2764,14 @@ impl InvertPattern for Val {
     fn invert_extract<'a>(
         &self,
         input: &'a [Instr],
-        comp: &mut Compiler,
+        _: &mut Compiler,
     ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
         if input.is_empty() {
             return None;
         }
         for len in (1..input.len()).rev() {
             let chunk = &input[..len];
-            if !instrs_are_pure(chunk, &comp.asm, Purity::Pure)
-                || (chunk.iter()).any(|instr| {
-                    matches!(
-                        instr,
-                        Instr::PushFunc(_) | Instr::PushTemp { .. } | Instr::PopTemp { .. }
-                    )
-                })
-            {
-                continue;
-            }
-            if let Ok(sig) = instrs_signature(chunk) {
+            if let Some(sig) = instrs_clean_signature(chunk) {
                 if sig == (0, 1) {
                     return Some((&input[len..], chunk.into()));
                 }

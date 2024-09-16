@@ -1097,10 +1097,14 @@ impl<'a> Lexer<'a> {
                     }
                 }
                 // Identifiers and unformatted glyphs
-                c if is_custom_glyph(c) || c.chars().all(is_ident_char) || c == "&" || c == "_" => {
+                c if is_custom_glyph(c) || c.chars().all(is_ident_char) || "&!‼".contains(c) => {
                     // Get ident start
                     let mut ident = self.ident(start, c).to_string();
-                    let mut exclam_count = 0;
+                    let mut exclam_count = match c {
+                        "!" => 1,
+                        "‼" => 2,
+                        _ => 0,
+                    };
                     while let Some((ch, count)) = if self.next_char_exact("!") {
                         Some(('!', 1))
                     } else if self.next_char_exact("‼") {
@@ -1273,17 +1277,19 @@ impl<'a> Lexer<'a> {
                 while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
                     s.push_str(c);
                 }
-            }
-            loop {
-                if let Some(c) = self.next_char_if_all(is_ident_char) {
-                    s.push_str(c);
-                } else if self.next_chars_exact(["_"; 2]) {
-                    s.push_str("__");
-                    while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+            } else {
+                loop {
+                    if let Some(c) = self.next_char_if_all(is_ident_char) {
                         s.push_str(c);
+                    } else if self.next_chars_exact(["_"; 2]) {
+                        s.push_str("__");
+                        while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+                            s.push_str(c);
+                        }
+                        break;
+                    } else {
+                        break;
                     }
-                } else {
-                    break;
                 }
             }
         }

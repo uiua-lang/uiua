@@ -2074,54 +2074,66 @@ code:
                     }
                 },
             },
-            Word::Primitive(prim) => match prim {
-                prim if prim.signature().is_some_and(|sig| sig == (2, 1)) => {
-                    self.word(sub.n.map(|n| Word::Number(n.to_string(), n as f64)), call)?;
-                    self.primitive(prim, span, call)?;
+            Word::Primitive(prim) => {
+                if !call {
+                    self.new_functions.push(NewFunction::default());
                 }
-                Primitive::Fix | Primitive::Box | Primitive::Transpose | Primitive::Pop => {
-                    if n > 100 {
-                        self.add_error(span.clone(), "Too many subscript repetitions");
+                let sp = span.clone();
+                match prim {
+                    prim if prim.signature().is_some_and(|sig| sig == (2, 1)) => {
+                        self.word(sub.n.map(|n| Word::Number(n.to_string(), n as f64)), true)?;
+                        self.primitive(prim, span, true)?;
                     }
-                    for _ in 0..n.min(100) {
-                        self.primitive(prim, span.clone(), call)?;
+                    Primitive::Fix | Primitive::Box | Primitive::Transpose | Primitive::Pop => {
+                        if n > 100 {
+                            self.add_error(span.clone(), "Too many subscript repetitions");
+                        }
+                        for _ in 0..n.min(100) {
+                            self.primitive(prim, span.clone(), true)?;
+                        }
+                    }
+                    Primitive::Sqrt => {
+                        if n == 0 {
+                            self.add_error(span.clone(), "Cannot take 0th root");
+                        }
+                        self.push_instr(Instr::push(1.0 / n.max(1) as f64));
+                        self.primitive(Primitive::Pow, span, true)?;
+                    }
+                    Primitive::Round | Primitive::Floor | Primitive::Ceil => {
+                        let mul = 10f64.powi(n as i32);
+                        self.push_instr(Instr::push(mul));
+                        self.primitive(Primitive::Mul, span.clone(), true)?;
+                        self.primitive(prim, span.clone(), true)?;
+                        self.push_instr(Instr::push(mul));
+                        self.primitive(Primitive::Div, span, true)?;
+                    }
+                    Primitive::Rand => {
+                        self.primitive(Primitive::Rand, span.clone(), true)?;
+                        self.push_instr(Instr::push(n));
+                        self.primitive(Primitive::Mul, span.clone(), true)?;
+                        self.primitive(Primitive::Floor, span, true)?;
+                    }
+                    Primitive::Utf8 => {
+                        if n != 8 {
+                            self.add_error(span.clone(), "Only UTF-8 is supported");
+                        }
+                        self.primitive(Primitive::Utf8, span, true)?
+                    }
+                    _ => {
+                        self.add_error(
+                            span.clone(),
+                            format!("Subscripts are not implemented for {}", prim.format()),
+                        );
+                        self.primitive(prim, span, true)?;
                     }
                 }
-                Primitive::Sqrt => {
-                    if n == 0 {
-                        self.add_error(span.clone(), "Cannot take 0th root");
-                    }
-                    self.push_instr(Instr::push(1.0 / n.max(1) as f64));
-                    self.primitive(Primitive::Pow, span, call)?;
+                if !call {
+                    let new_func = self.new_functions.pop().unwrap();
+                    let sig = self.sig_of(&new_func.instrs, &sp)?;
+                    let func = self.make_function(FunctionId::Anonymous(sp), sig, new_func);
+                    self.push_instr(Instr::PushFunc(func));
                 }
-                Primitive::Round | Primitive::Floor | Primitive::Ceil => {
-                    let mul = 10f64.powi(n as i32);
-                    self.push_instr(Instr::push(mul));
-                    self.primitive(Primitive::Mul, span.clone(), call)?;
-                    self.primitive(prim, span.clone(), call)?;
-                    self.push_instr(Instr::push(mul));
-                    self.primitive(Primitive::Div, span, call)?;
-                }
-                Primitive::Rand => {
-                    self.primitive(Primitive::Rand, span.clone(), call)?;
-                    self.push_instr(Instr::push(n));
-                    self.primitive(Primitive::Mul, span.clone(), call)?;
-                    self.primitive(Primitive::Floor, span, call)?;
-                }
-                Primitive::Utf8 => {
-                    if n != 8 {
-                        self.add_error(span.clone(), "Only UTF-8 is supported");
-                    }
-                    self.primitive(Primitive::Utf8, span, call)?
-                }
-                _ => {
-                    self.add_error(
-                        span.clone(),
-                        format!("Subscripts are not implemented for {}", prim.format()),
-                    );
-                    self.primitive(prim, span, call)?;
-                }
-            },
+            }
             _ => {
                 self.word(sub.word, call)?;
                 self.add_error(span.clone(), "Subscripts are not allowed in this context");

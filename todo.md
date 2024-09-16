@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.13
-  - `inventory` inverses
   - Recursive stack macros
   - Label and format string glyphs?
   - `setinv/setund` unification

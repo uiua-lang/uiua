@@ -24,6 +24,7 @@ pub mod invert;
 pub mod loops;
 pub mod map;
 mod monadic;
+pub mod permute;
 pub mod pervade;
 pub mod reduce;
 pub mod table;

@@ -43,7 +43,7 @@ pub enum SpanKind {
     FuncDelim(Signature),
     StackSwizzle(StackSwizzle),
     ArraySwizzle(ArraySwizzle),
-    Subscript(Option<Primitive>),
+    Subscript(Option<Primitive>, usize),
 }
 
 /// Documentation information for a binding
@@ -547,29 +547,25 @@ impl Spanner {
                                         .clone()
                                         .sp(SpanKind::Primitive(*p, p.signature())),
                                 );
-                                spans.push(sub.n.span.clone().sp(SpanKind::Subscript(Some(*p))));
+                                spans.push(sub.n.clone().map(|n| SpanKind::Subscript(Some(*p), n)));
                             }
                             Modifier::Ref(r) => {
                                 spans.extend(self.ref_spans(r));
-                                spans.push(sub.n.span.clone().sp(SpanKind::Subscript(None)));
+                                spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
                             }
                         }
                         spans.extend(self.words_spans(&m.operands));
                     }
-                    Word::Primitive(prim) => {
-                        if prim.signature().is_some_and(|sig| sig == (2, 1)) {
-                            spans.push(
-                                (sub.word.span.clone())
-                                    .sp(SpanKind::Primitive(*prim, Some(Signature::new(1, 1)))),
-                            );
-                        } else {
-                            spans.extend(self.words_spans(slice::from_ref(&sub.word)));
-                        }
-                        spans.push(sub.n.span.clone().sp(SpanKind::Subscript(Some(*prim))))
+                    Word::Primitive(p) => {
+                        spans.push(
+                            (sub.word.span.clone())
+                                .sp(SpanKind::Primitive(*p, p.subscript_sig(sub.n.value))),
+                        );
+                        spans.push(sub.n.clone().map(|n| SpanKind::Subscript(Some(*p), n)));
                     }
                     _ => {
                         spans.extend(self.words_spans(slice::from_ref(&sub.word)));
-                        spans.push(sub.n.span.clone().sp(SpanKind::Subscript(None)))
+                        spans.push(sub.n.clone().map(|n| SpanKind::Subscript(None, n)));
                     }
                 },
                 Word::StackSwizzle(sw) => {
@@ -1465,16 +1461,8 @@ mod server {
                         _ => continue,
                     },
                     SpanKind::ArraySwizzle(_) => MONADIC_FUNCTION_STT,
-                    SpanKind::Subscript(Some(prim))
-                        if prim.signature().is_some_and(|sig| sig == (2, 1)) =>
-                    {
-                        let Some(stt) = for_prim(*prim, Some(Signature::new(1, 1))) else {
-                            continue;
-                        };
-                        stt
-                    }
-                    SpanKind::Subscript(Some(prim)) if prim.signature().is_some() => {
-                        let Some(stt) = for_prim(*prim, prim.signature()) else {
+                    SpanKind::Subscript(Some(prim), n) => {
+                        let Some(stt) = for_prim(*prim, prim.subscript_sig(*n)) else {
                             continue;
                         };
                         stt

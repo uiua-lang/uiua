@@ -378,6 +378,20 @@ impl Primitive {
     pub fn format(&self) -> FormatPrimitive {
         FormatPrimitive(*self)
     }
+    /// The modified signature of the primitive given a subscript
+    #[doc(hidden)]
+    pub fn subscript_sig(&self, n: usize) -> Option<Signature> {
+        use Primitive::*;
+        Some(match self {
+            prim if prim.class() == PrimClass::DyadicPervasive => Signature::new(1, 1),
+            Take | Drop | Join | Rerank | Rotate | Orient | Windows => Signature::new(1, 1),
+            Couple => Signature::new(n, 1),
+            Fix | Box | Transpose | Pop | Sqrt | Round | Floor | Ceil | Rand | Utf8 => {
+                return self.signature()
+            }
+            _ => return None,
+        })
+    }
     pub(crate) fn deprecation_suggestion(&self) -> Option<String> {
         use Primitive::*;
         Some(match self {

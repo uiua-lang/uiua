@@ -549,6 +549,7 @@ pub fn Experimental() -> impl IntoView {
                 subscript(Round, "To N decimal places", "# Experimental!\n⁅₃ π"),
                 subscript(Floor, "To N decimal places", "# Experimental!\n⌊₃ π"),
                 subscript(Ceil, "To N decimal places", "# Experimental!\n⌈₃ π"),
+                subscript(Couple, "Group N arrays as rows", "# Experimental!\n{⊟₃ 1 2 3 4 5}"),
                 subscript(Both, "Apply to N argument sets", "# Experimental!\n[∩₃+ 1 2 3 4 5 6]"),
                 subscript(Rows, "Operate on -N-rank rows", "# Experimental!\n≡₂□ °△2_3_4"),
                 subscript(Each, "Operate on N-rank rows", "# Experimental!\n∵₁□ °△2_3_4"),

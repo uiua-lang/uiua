@@ -36,9 +36,9 @@ use crate::{
     optimize::{optimize_instrs, optimize_instrs_mut},
     parse::{count_placeholders, flip_unsplit_lines, parse, split_words},
     Array, Assembly, BindingKind, Boxed, Diagnostic, DiagnosticKind, DocComment, GitTarget, Ident,
-    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, PrimClass, Primitive, RunMode,
-    SemanticComment, SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS,
-    EXAMPLE_UA, SUBSCRIPT_NUMS, VERSION,
+    ImplPrimitive, InputSrc, IntoInputSrc, IntoSysBackend, Primitive, RunMode, SemanticComment,
+    SysBackend, Uiua, UiuaError, UiuaErrorKind, UiuaResult, Value, CONSTANTS, EXAMPLE_UA,
+    SUBSCRIPT_NUMS, VERSION,
 };
 
 /// The Uiua compiler
@@ -2083,17 +2083,8 @@ code:
                 }
                 let sp = span.clone();
                 match prim {
-                    prim if prim.class() == PrimClass::DyadicPervasive
-                        || [
-                            Primitive::Take,
-                            Primitive::Drop,
-                            Primitive::Join,
-                            Primitive::Rerank,
-                            Primitive::Rotate,
-                            Primitive::Orient,
-                            Primitive::Windows,
-                        ]
-                        .contains(&prim) =>
+                    prim if prim.signature().is_some_and(|sig| sig == (2, 1))
+                        && prim.subscript_sig(2).is_some_and(|sig| sig == (1, 1)) =>
                     {
                         self.word(sub.n.map(|n| Word::Number(n.to_string(), n as f64)), true)?;
                         self.primitive(prim, span, true)?;
@@ -2131,8 +2122,20 @@ code:
                         if n != 8 {
                             self.add_error(span.clone(), "Only UTF-8 is supported");
                         }
-                        self.primitive(Primitive::Utf8, span, true)?
+                        self.primitive(prim, span, true)?
                     }
+                    Primitive::Couple => match n {
+                        1 => self.primitive(Primitive::Fix, span, true)?,
+                        2 => self.primitive(Primitive::Couple, span, true)?,
+                        n => {
+                            let span = self.add_span(span.clone());
+                            self.push_instr(Instr::BeginArray);
+                            if n > 0 {
+                                self.push_instr(Instr::TouchStack { count: n, span });
+                            }
+                            self.push_instr(Instr::EndArray { boxed: false, span });
+                        }
+                    },
                     _ => {
                         self.add_error(
                             span.clone(),

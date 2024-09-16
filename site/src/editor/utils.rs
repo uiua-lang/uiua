@@ -14,8 +14,8 @@ use uiua::{
     ast::Item,
     encode::{image_to_bytes, value_to_gif_bytes, value_to_image, value_to_wav_bytes},
     lsp::{spans_with_backend, BindingDocsKind},
-    Compiler, DiagnosticKind, Inputs, Report, ReportFragment, ReportKind, Signature, SpanKind,
-    SysBackend, Uiua, UiuaError, UiuaResult, Value,
+    Compiler, DiagnosticKind, Inputs, Report, ReportFragment, ReportKind, SpanKind, SysBackend,
+    Uiua, UiuaError, UiuaResult, Value,
 };
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;
@@ -28,7 +28,7 @@ use crate::{
     backend::{OutputItem, WebBackend},
     binding_class,
     editor::Editor,
-    element, prim_class, prim_sig_class, sig_class,
+    element, prim_sig_class, sig_class,
 };
 
 /// Handles setting the code in the editor, setting the cursor, and managing the history
@@ -458,13 +458,10 @@ pub fn gen_code_view(code: &str) -> View {
                         SpanKind::Strand => "strand-span",
                         SpanKind::StackSwizzle(sw) => sig_class(sw.signature()),
                         SpanKind::ArraySwizzle(sw) => sig_class(sw.signature()),
-                        SpanKind::Subscript(None) => "number-literal",
-                        SpanKind::Subscript(Some(prim))
-                            if prim.signature().is_some_and(|sig| sig == (2, 1)) =>
-                        {
-                            prim_sig_class(*prim, Some(Signature::new(1, 1)))
+                        SpanKind::Subscript(None, _) => "number-literal",
+                        SpanKind::Subscript(Some(prim), n) => {
+                            prim_sig_class(*prim, prim.subscript_sig(*n))
                         }
-                        SpanKind::Subscript(Some(prim)) => prim_class(*prim),
                         _ => "",
                     };
                     match kind {
@@ -580,7 +577,7 @@ pub fn gen_code_view(code: &str) -> View {
                                 view!(<span class=class data-title=title>{text}</span>).into_view(),
                             )
                         }
-                        SpanKind::Subscript(prim) => {
+                        SpanKind::Subscript(prim, _) => {
                             let class = format!("code-span {}", color_class);
                             let title = if let Some(prim) = prim {
                                 format!("subscript for {}", prim.format())

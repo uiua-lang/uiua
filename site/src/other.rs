@@ -543,6 +543,8 @@ pub fn Experimental() -> impl IntoView {
                 subscript(Primitive::Floor, "To N decimal places", "# Experimental!\n⌊₃ π"),
                 subscript(Primitive::Ceil, "To N decimal places", "# Experimental!\n⌈₃ π"),
                 subscript(Primitive::Both, "Apply to N argument sets", "# Experimental!\n[∩₃+ 1 2 3 4 5 6]"),
+                subscript(Primitive::Rows, "Operate on -N-rank rows", "# Experimental!\n≡₂□ °△2_3_4"),
+                subscript(Primitive::Each, "Operate on N-rank rows", "# Experimental!\n∵₁□ °△2_3_4"),
                 subscript(Primitive::Repeat, "Repetition count", "# Experimental!\n⍥₅(⊂⟜/+) [1 2]"),
             ] }
         </table>

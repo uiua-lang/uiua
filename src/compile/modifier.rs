@@ -236,7 +236,7 @@ impl Compiler {
         }
 
         // Handle macros
-        let prim = match modified.modifier.value {
+        let mut prim = match modified.modifier.value {
             Modifier::Primitive(prim) => prim,
             Modifier::Ref(r) => {
                 let (path_locals, local) = self.ref_local(&r)?;
@@ -467,21 +467,71 @@ impl Compiler {
             }
         }
 
+        let mut before = EcoVec::new();
+        let mut after = EcoVec::new();
+
+        if let Some(n) = subscript {
+            let span = self.add_span(modified.modifier.span.clone());
+            match prim {
+                Primitive::Rows if n == 0 => {
+                    before = eco_vec![Instr::Prim(Primitive::Fix, span),];
+                    after = eco_vec![Instr::ImplPrim(ImplPrimitive::UndoFix, span),];
+                }
+                Primitive::Rows => {
+                    let stack = TempStack::Under;
+                    let count = 2;
+                    let n = -(n as i32);
+                    before = eco_vec![
+                        Instr::Prim(Primitive::Dup, span),
+                        Instr::Prim(Primitive::Shape, span),
+                        Instr::push(n),
+                        Instr::PushTemp { stack, count, span },
+                        Instr::push(n),
+                        Instr::Prim(Primitive::Rerank, span),
+                    ];
+                    after = eco_vec![
+                        Instr::PopTemp { stack, count, span },
+                        Instr::ImplPrim(ImplPrimitive::UndoRerank, span)
+                    ];
+                }
+                Primitive::Each => {
+                    let stack = TempStack::Under;
+                    let count = 2;
+                    prim = Primitive::Rows;
+                    before = eco_vec![
+                        Instr::Prim(Primitive::Dup, span),
+                        Instr::Prim(Primitive::Shape, span),
+                        Instr::push(n),
+                        Instr::PushTemp { stack, count, span },
+                        Instr::push(n),
+                        Instr::Prim(Primitive::Rerank, span),
+                    ];
+                    after = eco_vec![
+                        Instr::PopTemp { stack, count, span },
+                        Instr::ImplPrim(ImplPrimitive::UndoRerank, span)
+                    ];
+                }
+                _ => {}
+            }
+        }
+
         // Compile operands
         let operands_func = self.compile_words(modified.operands, false)?;
 
-        if call {
-            self.push_all_instrs(operands_func);
-            self.primitive(prim, modified.modifier.span, true)?;
-        } else {
+        if !call {
             self.new_functions.push(NewFunction::default());
-            self.push_all_instrs(operands_func);
-            self.primitive(prim, modified.modifier.span.clone(), true)?;
+        }
+        self.push_all_instrs(before);
+        self.push_all_instrs(operands_func);
+        self.primitive(prim, modified.modifier.span.clone(), true)?;
+        self.push_all_instrs(after);
+        if !call {
             let new_func = self.new_functions.pop().unwrap();
             let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
             let func = self.make_function(modified.modifier.span.into(), sig, new_func);
             self.push_instr(Instr::PushFunc(func));
         }
+
         Ok(())
     }
     fn words_look_pure(&self, words: &[Sp<Word>]) -> bool {

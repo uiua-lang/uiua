@@ -2064,7 +2064,10 @@ code:
                 }
                 Modifier::Primitive(prim) => match prim {
                     _ => {
-                        if !matches!(prim, Primitive::Both | Primitive::Repeat) {
+                        if !matches!(
+                            prim,
+                            Primitive::Both | Primitive::Repeat | Primitive::Rows | Primitive::Each
+                        ) {
                             self.add_error(
                                 span,
                                 format!("Subscripts are not implemented for {}", prim.format()),

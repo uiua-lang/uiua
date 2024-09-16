@@ -885,7 +885,17 @@ impl<'a> Lexer<'a> {
                 "]" => self.end(CloseBracket, start),
                 "⟨" => self.end(OpenAngle, start),
                 "⟩" => self.end(CloseAngle, start),
-                "_" if self.peek_char() != Some("_") => self.end(Underscore, start),
+                "_" => {
+                    if self.next_char_exact("_") {
+                        let mut n = 0;
+                        while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+                            n = n * 10 + c.parse::<usize>().unwrap();
+                        }
+                        self.end(Subscript(n), start)
+                    } else {
+                        self.end(Underscore, start)
+                    }
+                }
                 "|" => self.end(Bar, start),
                 ";" if self.next_char_exact(";") => self.end(DoubleSemicolon, start),
                 ";" => self.end(Semicolon, start),

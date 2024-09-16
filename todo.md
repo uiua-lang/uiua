@@ -1,6 +1,9 @@
 # Uiua Todo
 
 - 0.13
+  - Rename and stabilize `but` and `with`
+    - Likely `and`
+  - `choose/permute/triangle` unification
   - Recursive stack macros
   - Label and format string glyphs?
   - `setinv/setund` unification

@@ -10,7 +10,7 @@ use crate::{
     algorithm::map::{EMPTY_CHAR, EMPTY_NAN, TOMBSTONE_CHAR, TOMBSTONE_NAN},
     array::{Array, ArrayValue},
     boxed::Boxed,
-    terminal_size,
+    terminal_size, val_as_arr,
     value::Value,
     Complex, Primitive, WILDCARD_CHAR, WILDCARD_NAN,
 };
@@ -481,13 +481,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Get a string representation of the shape of the value
     pub fn shape_string(&self) -> String {
-        self.generic_ref(
-            Array::shape_string,
-            Array::shape_string,
-            Array::shape_string,
-            Array::shape_string,
-            Array::shape_string,
-        )
+        val_as_arr!(self, Array::shape_string)
     }
 }
 

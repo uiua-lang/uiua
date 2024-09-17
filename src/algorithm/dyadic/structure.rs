@@ -14,7 +14,7 @@ use crate::{
     algorithm::FillContext,
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
-    Array, ArrayValue, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
+    val_as_arr, Array, ArrayValue, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
 };
 
 impl<T: Clone> Array<T> {
@@ -51,13 +51,7 @@ impl<T: Clone> Array<T> {
 
 impl Value {
     pub(crate) fn remove_row(&mut self, index: usize) {
-        self.generic_mut_shallow(
-            |a| a.remove_row(index),
-            |a| a.remove_row(index),
-            |a| a.remove_row(index),
-            |a| a.remove_row(index),
-            |a| a.remove_row(index),
-        )
+        val_as_arr!(self, |a| a.remove_row(index))
     }
     pub(crate) fn as_shaped_indices(
         &self,

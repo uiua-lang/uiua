@@ -46,6 +46,38 @@ impl Default for Value {
 pub trait ExactDoubleIterator: ExactSizeIterator + DoubleEndedIterator {}
 impl<T: ExactSizeIterator + DoubleEndedIterator> ExactDoubleIterator for T {}
 
+/// Operate on a value as an array
+#[macro_export]
+macro_rules! val_as_arr {
+    ($input:expr, |$arr:ident| $body:expr) => {
+        match $input {
+            Value::Num($arr) => $body,
+            Value::Byte($arr) => $body,
+            Value::Complex($arr) => $body,
+            Value::Char($arr) => $body,
+            Value::Box($arr) => $body,
+        }
+    };
+    ($input:expr, $f:path) => {
+        match $input {
+            Value::Num(arr) => $f(arr),
+            Value::Byte(arr) => $f(arr),
+            Value::Complex(arr) => $f(arr),
+            Value::Char(arr) => $f(arr),
+            Value::Box(arr) => $f(arr),
+        }
+    };
+    ($input:expr, $env:expr, $f:path) => {
+        match $input {
+            Value::Num(arr) => $f(arr, $env),
+            Value::Byte(arr) => $f(arr, $env),
+            Value::Complex(arr) => $f(arr, $env),
+            Value::Char(arr) => $f(arr, $env),
+            Value::Box(arr) => $f(arr, $env),
+        }
+    };
+}
+
 impl Value {
     pub(crate) fn null() -> Self {
         let mut arr = Array::<u8>::default();
@@ -98,71 +130,41 @@ impl Value {
     }
     /// Get an iterator over the rows of the value
     pub fn rows(&self) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
-        match self {
-            Self::Num(array) => Box::new(array.rows().map(Value::from)),
-            Self::Byte(array) => Box::new(array.rows().map(Value::from)),
-            Self::Complex(array) => Box::new(array.rows().map(Value::from)),
-            Self::Char(array) => Box::new(array.rows().map(Value::from)),
-            Self::Box(array) => Box::new(array.rows().map(Value::from)),
-        }
+        val_as_arr!(self, |array| Box::new(array.rows().map(Value::from)))
     }
     /// Get an iterator over the rows of the value that have the given shape
     pub fn row_shaped_slices(
         &self,
         row_shape: Shape,
     ) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
-        match self {
-            Self::Num(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
-            Self::Byte(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
-            Self::Complex(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
-            Self::Char(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
-            Self::Box(array) => Box::new(array.row_shaped_slices(row_shape).map(Value::from)),
-        }
+        val_as_arr!(self, |array| Box::new(
+            array.row_shaped_slices(row_shape).map(Value::from)
+        ))
     }
     /// Get an iterator over the rows of the value that have the given shape
     pub fn into_row_shaped_slices(
         self,
         row_shape: Shape,
     ) -> Box<dyn DoubleEndedIterator<Item = Self>> {
-        match self {
-            Self::Num(array) => Box::new(array.into_row_shaped_slices(row_shape).map(Value::from)),
-            Self::Byte(array) => Box::new(array.into_row_shaped_slices(row_shape).map(Value::from)),
-            Self::Complex(array) => {
-                Box::new(array.into_row_shaped_slices(row_shape).map(Value::from))
-            }
-            Self::Char(array) => Box::new(array.into_row_shaped_slices(row_shape).map(Value::from)),
-            Self::Box(array) => Box::new(array.into_row_shaped_slices(row_shape).map(Value::from)),
-        }
+        val_as_arr!(self, |array| Box::new(
+            array.into_row_shaped_slices(row_shape).map(Value::from)
+        ))
     }
     /// Consume the value and get an iterator over its rows
     pub fn into_rows(self) -> Box<dyn ExactDoubleIterator<Item = Self>> {
-        match self {
-            Self::Num(array) => Box::new(array.into_rows().map(Value::from)),
-            Self::Byte(array) => Box::new(array.into_rows().map(Value::from)),
-            Self::Complex(array) => Box::new(array.into_rows().map(Value::from)),
-            Self::Char(array) => Box::new(array.into_rows().map(Value::from)),
-            Self::Box(array) => Box::new(array.into_rows().map(Value::from)),
-        }
+        val_as_arr!(self, |array| Box::new(array.into_rows().map(Value::from)))
     }
     /// Get an iterator over the elements of the value
     pub fn elements(&self) -> Box<dyn ExactSizeIterator<Item = Self> + '_> {
-        match self {
-            Self::Num(array) => Box::new(array.data.iter().copied().map(Value::from)),
-            Self::Byte(array) => Box::new(array.data.iter().copied().map(Value::from)),
-            Self::Complex(array) => Box::new(array.data.iter().copied().map(Value::from)),
-            Self::Char(array) => Box::new(array.data.iter().copied().map(Value::from)),
-            Self::Box(array) => Box::new(array.data.iter().cloned().map(Value::from)),
-        }
+        val_as_arr!(self, |array| Box::new(
+            array.data.iter().cloned().map(Value::from)
+        ))
     }
     /// Cosume the value and get an iterator over its elements
     pub fn into_elements(self) -> Box<dyn Iterator<Item = Self>> {
-        match self {
-            Self::Num(array) => Box::new(array.data.into_iter().map(Value::from)),
-            Self::Byte(array) => Box::new(array.data.into_iter().map(Value::from)),
-            Self::Complex(array) => Box::new(array.data.into_iter().map(Value::from)),
-            Self::Char(array) => Box::new(array.data.into_iter().map(Value::from)),
-            Self::Box(array) => Box::new(array.data.into_iter().map(Value::from)),
-        }
+        val_as_arr!(self, |array| Box::new(
+            array.data.into_iter().map(Value::from)
+        ))
     }
     /// Get the value's type name
     pub fn type_name(&self) -> &'static str {
@@ -293,26 +295,14 @@ impl Value {
         }
     }
     pub(crate) fn first_dim_zero(&self) -> Self {
-        match self {
-            Self::Num(array) => array.first_dim_zero().into(),
-            Self::Byte(array) => array.first_dim_zero().into(),
-            Self::Complex(array) => array.first_dim_zero().into(),
-            Self::Char(array) => array.first_dim_zero().into(),
-            Self::Box(array) => array.first_dim_zero().into(),
-        }
+        val_as_arr!(self, |array| array.first_dim_zero().into())
     }
     /// Get the rank
     pub fn rank(&self) -> usize {
         self.shape().len()
     }
     pub(crate) fn pop_row(&mut self) -> Option<Self> {
-        match self {
-            Self::Num(array) => array.pop_row().map(Value::from),
-            Self::Byte(array) => array.pop_row().map(Value::from),
-            Self::Complex(array) => array.pop_row().map(Value::from),
-            Self::Char(array) => array.pop_row().map(Value::from),
-            Self::Box(array) => array.pop_row().map(Value::from),
-        }
+        val_as_arr!(self, |array| array.pop_row().map(Value::from))
     }
     pub(crate) fn elem_size(&self) -> usize {
         match self {
@@ -434,115 +424,32 @@ impl Value {
     /// Get the row at the given index
     #[track_caller]
     pub fn row(&self, i: usize) -> Self {
-        match self {
-            Value::Num(arr) => arr.row(i).into(),
-            Value::Byte(arr) => arr.row(i).into(),
-            Value::Complex(arr) => arr.row(i).into(),
-            Value::Char(arr) => arr.row(i).into(),
-            Value::Box(arr) => arr.row(i).into(),
-        }
+        val_as_arr!(self, |arr| arr.row(i).into())
     }
     #[track_caller]
     pub(crate) fn depth_row(&self, depth: usize, i: usize) -> Self {
-        match self {
-            Value::Num(arr) => arr.depth_row(depth, i).into(),
-            Value::Byte(arr) => arr.depth_row(depth, i).into(),
-            Value::Complex(arr) => arr.depth_row(depth, i).into(),
-            Value::Char(arr) => arr.depth_row(depth, i).into(),
-            Value::Box(arr) => arr.depth_row(depth, i).into(),
-        }
+        val_as_arr!(self, |arr| arr.depth_row(depth, i).into())
     }
     #[track_caller]
     pub(crate) fn slice_rows(&self, start: usize, end: usize) -> Self {
-        match self {
-            Value::Num(arr) => arr.slice_rows(start, end).into(),
-            Value::Byte(arr) => arr.slice_rows(start, end).into(),
-            Value::Complex(arr) => arr.slice_rows(start, end).into(),
-            Value::Char(arr) => arr.slice_rows(start, end).into(),
-            Value::Box(arr) => arr.slice_rows(start, end).into(),
-        }
-    }
-    pub(crate) fn generic_into<T>(
-        self,
-        n: impl FnOnce(Array<f64>) -> T,
-        _b: impl FnOnce(Array<u8>) -> T,
-        _co: impl FnOnce(Array<Complex>) -> T,
-        ch: impl FnOnce(Array<char>) -> T,
-        f: impl FnOnce(Array<Boxed>) -> T,
-    ) -> T {
-        match self {
-            Self::Num(array) => n(array),
-            Self::Byte(array) => _b(array),
-            Self::Complex(array) => _co(array),
-            Self::Char(array) => ch(array),
-            Self::Box(array) => f(array),
-        }
-    }
-    pub(crate) fn generic_ref<'a, T: 'a>(
-        &'a self,
-        n: impl FnOnce(&'a Array<f64>) -> T,
-        _b: impl FnOnce(&'a Array<u8>) -> T,
-        _co: impl FnOnce(&'a Array<Complex>) -> T,
-        ch: impl FnOnce(&'a Array<char>) -> T,
-        f: impl FnOnce(&'a Array<Boxed>) -> T,
-    ) -> T {
-        match self {
-            Self::Num(array) => n(array),
-            Self::Byte(array) => _b(array),
-            Self::Complex(array) => _co(array),
-            Self::Char(array) => ch(array),
-            Self::Box(array) => f(array),
-        }
-    }
-    pub(crate) fn generic_ref_env<'a, T: 'a>(
-        &'a self,
-        n: impl FnOnce(&'a Array<f64>, &Uiua) -> UiuaResult<T>,
-        b: impl FnOnce(&'a Array<u8>, &Uiua) -> UiuaResult<T>,
-        co: impl FnOnce(&'a Array<Complex>, &Uiua) -> UiuaResult<T>,
-        ch: impl FnOnce(&'a Array<char>, &Uiua) -> UiuaResult<T>,
-        f: impl FnOnce(&'a Array<Boxed>, &Uiua) -> UiuaResult<T>,
-        env: &Uiua,
-    ) -> UiuaResult<T> {
-        self.generic_ref(
-            |a| n(a, env),
-            |a| b(a, env),
-            |a| co(a, env),
-            |a| ch(a, env),
-            |a| f(a, env),
-        )
-    }
-    pub(crate) fn generic_mut_shallow<T>(
-        &mut self,
-        n: impl FnOnce(&mut Array<f64>) -> T,
-        _b: impl FnOnce(&mut Array<u8>) -> T,
-        _co: impl FnOnce(&mut Array<Complex>) -> T,
-        ch: impl FnOnce(&mut Array<char>) -> T,
-        f: impl FnOnce(&mut Array<Boxed>) -> T,
-    ) -> T {
-        match self {
-            Self::Num(array) => n(array),
-            Self::Byte(array) => _b(array),
-            Self::Complex(array) => _co(array),
-            Self::Char(array) => ch(array),
-            Self::Box(array) => f(array),
-        }
+        val_as_arr!(self, |arr| arr.slice_rows(start, end).into())
     }
     pub(crate) fn generic_mut_deep<T>(
         &mut self,
         n: impl FnOnce(&mut Array<f64>) -> T,
-        _b: impl FnOnce(&mut Array<u8>) -> T,
-        _co: impl FnOnce(&mut Array<Complex>) -> T,
+        b: impl FnOnce(&mut Array<u8>) -> T,
+        co: impl FnOnce(&mut Array<Complex>) -> T,
         ch: impl FnOnce(&mut Array<char>) -> T,
         f: impl FnOnce(&mut Array<Boxed>) -> T,
     ) -> T {
         match self {
             Self::Num(array) => n(array),
-            Self::Byte(array) => _b(array),
-            Self::Complex(array) => _co(array),
+            Self::Byte(array) => b(array),
+            Self::Complex(array) => co(array),
             Self::Char(array) => ch(array),
             Self::Box(array) => {
                 if let Some(Boxed(value)) = array.as_scalar_mut() {
-                    value.generic_mut_deep(n, _b, _co, ch, f)
+                    value.generic_mut_deep(n, b, co, ch, f)
                 } else {
                     f(array)
                 }
@@ -654,13 +561,7 @@ impl Value {
     }
     /// Ensure that the capacity is at least `min`
     pub(crate) fn reserve_min(&mut self, min: usize) {
-        match self {
-            Self::Num(arr) => arr.data.reserve_min(min),
-            Self::Byte(arr) => arr.data.reserve_min(min),
-            Self::Complex(arr) => arr.data.reserve_min(min),
-            Self::Char(arr) => arr.data.reserve_min(min),
-            Self::Box(arr) => arr.data.reserve_min(min),
-        }
+        val_as_arr!(self, |arr| arr.data.reserve_min(min))
     }
     /// Get the pretty-printed string representation of the value that appears in output
     pub fn show(&self) -> String {
@@ -1359,13 +1260,7 @@ impl Value {
         }
     }
     pub(crate) fn has_wildcard(&self) -> bool {
-        match self {
-            Self::Num(arr) => arr.data.iter().any(ArrayValue::has_wildcard),
-            Self::Byte(arr) => arr.data.iter().any(ArrayValue::has_wildcard),
-            Self::Complex(arr) => arr.data.iter().any(ArrayValue::has_wildcard),
-            Self::Char(arr) => arr.data.iter().any(ArrayValue::has_wildcard),
-            Self::Box(arr) => arr.data.iter().any(ArrayValue::has_wildcard),
-        }
+        val_as_arr!(self, |arr| arr.data.iter().any(ArrayValue::has_wildcard))
     }
 }
 

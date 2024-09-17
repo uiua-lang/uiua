@@ -9,8 +9,8 @@ use ecow::EcoVec;
 use serde::*;
 
 use crate::{
-    algorithm::ArrayCmpSlice, Array, ArrayValue, Boxed, Complex, FormatShape, Uiua, UiuaResult,
-    Value,
+    algorithm::ArrayCmpSlice, val_as_arr, Array, ArrayValue, Boxed, Complex, FormatShape, Uiua,
+    UiuaResult, Value,
 };
 
 use super::{ErrorContext, FillContext};
@@ -78,23 +78,14 @@ impl Value {
     }
     /// Get the keys and values of a map array
     pub fn map_kv(&self) -> Vec<(Value, Value)> {
-        self.generic_ref(
-            |arr| arr.map_kv().map(|(k, v)| (k, v.into())).collect(),
-            |arr| arr.map_kv().map(|(k, v)| (k, v.into())).collect(),
-            |arr| arr.map_kv().map(|(k, v)| (k, v.into())).collect(),
-            |arr| arr.map_kv().map(|(k, v)| (k, v.into())).collect(),
-            |arr| arr.map_kv().map(|(k, v)| (k, v.into())).collect(),
-        )
+        val_as_arr!(self, |arr| arr
+            .map_kv()
+            .map(|(k, v)| (k, v.into()))
+            .collect())
     }
     /// Create a map array
     pub fn map(&mut self, keys: Self, env: &Uiua) -> UiuaResult {
-        match self {
-            Value::Num(arr) => arr.map(keys, env),
-            Value::Byte(arr) => arr.map(keys, env),
-            Value::Complex(arr) => arr.map(keys, env),
-            Value::Char(arr) => arr.map(keys, env),
-            Value::Box(arr) => arr.map(keys, env),
-        }
+        val_as_arr!(self, |arr| arr.map(keys, env))
     }
     /// Turn a map array into its keys and values
     pub fn unmap(mut self, env: &Uiua) -> UiuaResult<(Value, Value)> {
@@ -275,13 +266,7 @@ impl Value {
                 }
             }
 
-            match self {
-                Value::Num(arr) => arr.remove_row(index),
-                Value::Complex(arr) => arr.remove_row(index),
-                Value::Char(arr) => arr.remove_row(index),
-                Value::Box(arr) => arr.remove_row(index),
-                Value::Byte(arr) => arr.remove_row(index),
-            }
+            val_as_arr!(self, |arr| arr.remove_row(index))
         }
         Ok(())
     }
@@ -435,13 +420,7 @@ impl MapKeys {
         if self.keys.shape() == [0] {
             return None;
         }
-        let start = match key {
-            Value::Num(a) => hash_start(a, self.capacity()),
-            Value::Complex(a) => hash_start(a, self.capacity()),
-            Value::Char(a) => hash_start(a, self.capacity()),
-            Value::Box(a) => hash_start(a, self.capacity()),
-            Value::Byte(a) => hash_start(a, self.capacity()),
-        };
+        let start = val_as_arr!(key, |a| hash_start(a, self.capacity()));
         let mut key_index = start;
         loop {
             let row_key = self.keys.row(key_index);

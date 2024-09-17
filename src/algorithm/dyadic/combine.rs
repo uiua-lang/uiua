@@ -7,7 +7,7 @@ use ecow::EcoVec;
 use crate::{
     algorithm::{max_shape, validate_size_impl, FillContext},
     cowslice::cowslice,
-    Array, ArrayValue, FormatShape, Primitive, Uiua, UiuaResult, Value,
+    val_as_arr, Array, ArrayValue, FormatShape, Primitive, Uiua, UiuaResult, Value,
 };
 
 fn data_index_to_shape_index(mut index: usize, shape: &[usize], out: &mut [usize]) -> bool {
@@ -175,74 +175,22 @@ impl Value {
     ) -> UiuaResult<(Self, Self)> {
         let a_shape = a_shape.as_nats(env, "Shape must be a list of natural numbers")?;
         let b_shape = b_shape.as_nats(env, "Shape must be a list of natural numbers")?;
-        match self {
-            Value::Num(a) => a
-                .undo_join(&a_shape, &b_shape, env)
-                .map(|(a, b)| (a.into(), b.into())),
-            Value::Byte(a) => a
-                .undo_join(&a_shape, &b_shape, env)
-                .map(|(a, b)| (a.into(), b.into())),
-            Value::Complex(a) => a
-                .undo_join(&a_shape, &b_shape, env)
-                .map(|(a, b)| (a.into(), b.into())),
-            Value::Char(a) => a
-                .undo_join(&a_shape, &b_shape, env)
-                .map(|(a, b)| (a.into(), b.into())),
-            Value::Box(a) => a
-                .undo_join(&a_shape, &b_shape, env)
-                .map(|(a, b)| (a.into(), b.into())),
-        }
+        val_as_arr!(self, |a| a
+            .undo_join(&a_shape, &b_shape, env)
+            .map(|(a, b)| (a.into(), b.into())))
     }
     pub(crate) fn unjoin(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
         self.unjoin_depth(0, env)
     }
     pub(crate) fn unjoin_depth(self, depth: usize, env: &Uiua) -> UiuaResult<(Self, Self)> {
-        self.generic_into(
-            |arr| {
-                arr.unjoin_depth(depth, env)
-                    .map(|(a, b)| (a.into(), b.into()))
-            },
-            |arr| {
-                arr.unjoin_depth(depth, env)
-                    .map(|(a, b)| (a.into(), b.into()))
-            },
-            |arr| {
-                arr.unjoin_depth(depth, env)
-                    .map(|(a, b)| (a.into(), b.into()))
-            },
-            |arr| {
-                arr.unjoin_depth(depth, env)
-                    .map(|(a, b)| (a.into(), b.into()))
-            },
-            |arr| {
-                arr.unjoin_depth(depth, env)
-                    .map(|(a, b)| (a.into(), b.into()))
-            },
-        )
+        val_as_arr!(self, |arr| arr
+            .unjoin_depth(depth, env)
+            .map(|(a, b)| (a.into(), b.into())))
     }
     pub(crate) fn unjoin_shape(self, shape: &[usize], env: &Uiua) -> UiuaResult<(Self, Self)> {
-        self.generic_into(
-            |arr| {
-                arr.unjoin_shape(shape, env)
-                    .map(|(a, b)| (a.into(), b.into()))
-            },
-            |arr| {
-                arr.unjoin_shape(shape, env)
-                    .map(|(a, b)| (a.into(), b.into()))
-            },
-            |arr| {
-                arr.unjoin_shape(shape, env)
-                    .map(|(a, b)| (a.into(), b.into()))
-            },
-            |arr| {
-                arr.unjoin_shape(shape, env)
-                    .map(|(a, b)| (a.into(), b.into()))
-            },
-            |arr| {
-                arr.unjoin_shape(shape, env)
-                    .map(|(a, b)| (a.into(), b.into()))
-            },
-        )
+        val_as_arr!(self, |arr| arr
+            .unjoin_shape(shape, env)
+            .map(|(a, b)| (a.into(), b.into())))
     }
 }
 
@@ -671,23 +619,9 @@ impl Value {
         self.uncouple_depth(0, env)
     }
     pub(crate) fn uncouple_depth(self, depth: usize, env: &Uiua) -> UiuaResult<(Self, Self)> {
-        match self {
-            Value::Num(a) => a
-                .uncouple_depth(depth, env)
-                .map(|(a, b)| (a.into(), b.into())),
-            Value::Byte(a) => a
-                .uncouple_depth(depth, env)
-                .map(|(a, b)| (a.into(), b.into())),
-            Value::Complex(a) => a
-                .uncouple_depth(depth, env)
-                .map(|(a, b)| (a.into(), b.into())),
-            Value::Char(a) => a
-                .uncouple_depth(depth, env)
-                .map(|(a, b)| (a.into(), b.into())),
-            Value::Box(a) => a
-                .uncouple_depth(depth, env)
-                .map(|(a, b)| (a.into(), b.into())),
-        }
+        val_as_arr!(self, |a| a
+            .uncouple_depth(depth, env)
+            .map(|(a, b)| (a.into(), b.into())))
     }
 }
 

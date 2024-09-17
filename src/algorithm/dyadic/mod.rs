@@ -20,6 +20,7 @@ use crate::{
     array::*,
     boxed::Boxed,
     cowslice::{cowslice, CowSlice, Repeat},
+    val_as_arr,
     value::Value,
     Shape, Uiua, UiuaResult,
 };
@@ -173,26 +174,14 @@ impl Value {
         )?;
         if shape.rank() == 0 {
             let n = target_shape[0];
-            match self {
-                Value::Num(a) => a.reshape_scalar(n, env),
-                Value::Byte(a) => a.reshape_scalar(n, env),
-                Value::Complex(a) => a.reshape_scalar(n, env),
-                Value::Char(a) => a.reshape_scalar(n, env),
-                Value::Box(a) => a.reshape_scalar(n, env),
-            }
+            val_as_arr!(self, |a| a.reshape_scalar(n, env))
         } else {
             self.reshape_impl(&target_shape, env)
         }
     }
     pub(crate) fn reshape_impl(&mut self, dims: &[Result<isize, bool>], env: &Uiua) -> UiuaResult {
         self.match_scalar_fill(env);
-        match self {
-            Value::Num(a) => a.reshape(dims, env),
-            Value::Byte(a) => a.reshape(dims, env),
-            Value::Complex(a) => a.reshape(dims, env),
-            Value::Char(a) => a.reshape(dims, env),
-            Value::Box(a) => a.reshape(dims, env),
-        }
+        val_as_arr!(self, |a| a.reshape(dims, env))
     }
     pub(crate) fn undo_reshape(&mut self, old_shape: &Self, env: &Uiua) -> UiuaResult {
         if old_shape.as_nat(env, "").is_ok() {
@@ -471,23 +460,11 @@ impl Value {
                 Value::Box(a) => a.keep_scalar_real(counts[0], env)?.into(),
             }
         } else {
-            match kept {
-                Value::Num(a) => a.keep_list(&counts, env)?.into(),
-                Value::Byte(a) => a.keep_list(&counts, env)?.into(),
-                Value::Complex(a) => a.keep_list(&counts, env)?.into(),
-                Value::Char(a) => a.keep_list(&counts, env)?.into(),
-                Value::Box(a) => a.keep_list(&counts, env)?.into(),
-            }
+            val_as_arr!(kept, |a| a.keep_list(&counts, env)?.into())
         })
     }
     pub(crate) fn unkeep(self, env: &Uiua) -> UiuaResult<(Self, Self)> {
-        self.generic_into(
-            |a| a.unkeep(env).map(|(a, b)| (a, b.into())),
-            |a| a.unkeep(env).map(|(a, b)| (a, b.into())),
-            |a| a.unkeep(env).map(|(a, b)| (a, b.into())),
-            |a| a.unkeep(env).map(|(a, b)| (a, b.into())),
-            |a| a.unkeep(env).map(|(a, b)| (a, b.into())),
-        )
+        val_as_arr!(self, |a| a.unkeep(env).map(|(a, b)| (a, b.into())))
     }
     pub(crate) fn undo_keep(self, kept: Self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         let counts = self.as_nums(
@@ -501,13 +478,9 @@ impl Value {
                 return Err(env.error("Cannot invert scalar keep of 0 rows"));
             }
             let recip = 1.0 / count;
-            Ok(match kept {
-                Value::Num(a) => a.keep_scalar_real(recip, env)?.into(),
-                Value::Byte(a) => a.keep_scalar_real(recip, env)?.into(),
-                Value::Complex(a) => a.keep_scalar_real(recip, env)?.into(),
-                Value::Char(a) => a.keep_scalar_real(recip, env)?.into(),
-                Value::Box(a) => a.keep_scalar_real(recip, env)?.into(),
-            })
+            Ok(val_as_arr!(kept, |a| a
+                .keep_scalar_real(recip, env)?
+                .into()))
         } else {
             kept.generic_bin_into(
                 into,
@@ -516,7 +489,13 @@ impl Value {
                 |a, b| a.undo_keep(&counts, b, env).map(Into::into),
                 |a, b| a.undo_keep(&counts, b, env).map(Into::into),
                 |a, b| a.undo_keep(&counts, b, env).map(Into::into),
-                |a, b| env.error(format!("Cannot unkeep {a} array with {b} array")),
+                |a, b| {
+                    env.error(format!(
+                        "Cannot unkeep {} array with {} array",
+                        a.type_name(),
+                        b.type_name()
+                    ))
+                },
             )
         }
     }
@@ -1008,20 +987,8 @@ impl Value {
         let size_array = self.as_integer_array(env, "Window size must be an integer array")?;
         from.match_scalar_fill(env);
         Ok(match &*size_array.shape {
-            [] | [_] => match from {
-                Value::Num(a) => a.windows(&size_array.data, env)?.into(),
-                Value::Byte(a) => a.windows(&size_array.data, env)?.into(),
-                Value::Complex(a) => a.windows(&size_array.data, env)?.into(),
-                Value::Char(a) => a.windows(&size_array.data, env)?.into(),
-                Value::Box(a) => a.windows(&size_array.data, env)?.into(),
-            },
-            [1, _] => match from {
-                Value::Num(a) => a.chunks(&size_array.data, env)?.into(),
-                Value::Byte(a) => a.chunks(&size_array.data, env)?.into(),
-                Value::Complex(a) => a.chunks(&size_array.data, env)?.into(),
-                Value::Char(a) => a.chunks(&size_array.data, env)?.into(),
-                Value::Box(a) => a.chunks(&size_array.data, env)?.into(),
-            },
+            [] | [_] => val_as_arr!(from, |a| a.windows(&size_array.data, env)?.into()),
+            [1, _] => val_as_arr!(from, |a| a.chunks(&size_array.data, env)?.into()),
             &[2, n] => {
                 let size = &size_array.data[..n];
                 let mut stride = Vec::with_capacity(n);
@@ -1031,13 +998,7 @@ impl Value {
                     }
                     stride.push(s.unsigned_abs());
                 }
-                match from {
-                    Value::Num(a) => a.strided_windows(size, &stride, env)?.into(),
-                    Value::Byte(a) => a.strided_windows(size, &stride, env)?.into(),
-                    Value::Complex(a) => a.strided_windows(size, &stride, env)?.into(),
-                    Value::Char(a) => a.strided_windows(size, &stride, env)?.into(),
-                    Value::Box(a) => a.strided_windows(size, &stride, env)?.into(),
-                }
+                val_as_arr!(from, |a| a.strided_windows(size, &stride, env)?.into())
             }
             _ => return Err(env.error(format!("Invalid windows shape {}", size_array.shape))),
         })
@@ -1047,13 +1008,9 @@ impl Value {
         if !matches!(&*size_array.shape, [1, _]) {
             return Err(env.error("Only chunking windows can be undone"));
         }
-        Ok(match from {
-            Value::Num(a) => a.undo_chunks(&size_array.data, env)?.into(),
-            Value::Byte(a) => a.undo_chunks(&size_array.data, env)?.into(),
-            Value::Complex(a) => a.undo_chunks(&size_array.data, env)?.into(),
-            Value::Char(a) => a.undo_chunks(&size_array.data, env)?.into(),
-            Value::Box(a) => a.undo_chunks(&size_array.data, env)?.into(),
-        })
+        Ok(val_as_arr!(from, |a| a
+            .undo_chunks(&size_array.data, env)?
+            .into()))
     }
 }
 
@@ -1261,23 +1218,13 @@ impl Value {
     pub fn chunks(&self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
         let isize_spec = self.as_ints(env, "Chunk size must be an integer or list of integers")?;
         from.match_scalar_fill(env);
-        Ok(match from {
-            Value::Num(a) => a.chunks(&isize_spec, env)?.into(),
-            Value::Byte(a) => a.chunks(&isize_spec, env)?.into(),
-            Value::Complex(a) => a.chunks(&isize_spec, env)?.into(),
-            Value::Char(a) => a.chunks(&isize_spec, env)?.into(),
-            Value::Box(a) => a.chunks(&isize_spec, env)?.into(),
-        })
+        Ok(val_as_arr!(from, |a| a.chunks(&isize_spec, env)?.into()))
     }
     pub(crate) fn undo_chunks(self, size: &Self, env: &Uiua) -> UiuaResult<Self> {
         let isize_spec = size.as_ints(env, "Chunk size must be an integer or list of integers")?;
-        Ok(match self {
-            Value::Num(a) => a.undo_chunks(&isize_spec, env)?.into(),
-            Value::Byte(a) => a.undo_chunks(&isize_spec, env)?.into(),
-            Value::Complex(a) => a.undo_chunks(&isize_spec, env)?.into(),
-            Value::Char(a) => a.undo_chunks(&isize_spec, env)?.into(),
-            Value::Box(a) => a.undo_chunks(&isize_spec, env)?.into(),
-        })
+        Ok(val_as_arr!(self, |a| a
+            .undo_chunks(&isize_spec, env)?
+            .into()))
     }
 }
 

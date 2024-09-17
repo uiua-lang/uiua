@@ -20,6 +20,7 @@ use crate::{
     array::*,
     cowslice::{cowslice, CowSlice},
     grid_fmt::GridFmt,
+    val_as_arr,
     value::Value,
     Boxed, Complex, Primitive, Shape, Uiua, UiuaResult,
 };
@@ -383,13 +384,7 @@ impl Value {
     }
     pub(crate) fn first_depth(mut self, depth: usize, env: &Uiua) -> UiuaResult<Self> {
         self.match_scalar_fill(env);
-        self.generic_into(
-            |a| a.first_depth(depth, env).map(Into::into),
-            |a| a.first_depth(depth, env).map(Into::into),
-            |a| a.first_depth(depth, env).map(Into::into),
-            |a| a.first_depth(depth, env).map(Into::into),
-            |a| a.first_depth(depth, env).map(Into::into),
-        )
+        val_as_arr!(self, |a| a.first_depth(depth, env).map(Into::into))
     }
     /// Get the last row of the value
     pub fn last(self, env: &Uiua) -> UiuaResult<Self> {
@@ -397,13 +392,7 @@ impl Value {
     }
     pub(crate) fn last_depth(mut self, depth: usize, env: &Uiua) -> UiuaResult<Self> {
         self.match_scalar_fill(env);
-        self.generic_into(
-            |a| a.last_depth(depth, env).map(Into::into),
-            |a| a.last_depth(depth, env).map(Into::into),
-            |a| a.last_depth(depth, env).map(Into::into),
-            |a| a.last_depth(depth, env).map(Into::into),
-            |a| a.last_depth(depth, env).map(Into::into),
-        )
+        val_as_arr!(self, |a| a.last_depth(depth, env).map(Into::into))
     }
     pub(crate) fn undo_first(self, into: Self, env: &Uiua) -> UiuaResult<Self> {
         into.try_map_boxed(|into| {
@@ -775,49 +764,25 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Get the `rise` of the value
     pub fn rise(&self) -> Array<f64> {
-        self.generic_ref(
-            Array::rise,
-            Array::rise,
-            Array::rise,
-            Array::rise,
-            Array::rise,
-        )
+        val_as_arr!(self, Array::rise)
     }
     /// Get the `fall` of the value
     pub fn fall(&self) -> Array<f64> {
-        self.generic_ref(
-            Array::fall,
-            Array::fall,
-            Array::fall,
-            Array::fall,
-            Array::fall,
-        )
+        val_as_arr!(self, Array::fall)
     }
     /// Sort the value ascending
     pub fn sort_up(&mut self) {
         self.sort_up_depth(0);
     }
     pub(crate) fn sort_up_depth(&mut self, depth: usize) {
-        self.generic_mut_shallow(
-            |a| a.sort_up_depth(depth),
-            |a| a.sort_up_depth(depth),
-            |a| a.sort_up_depth(depth),
-            |a| a.sort_up_depth(depth),
-            |a| a.sort_up_depth(depth),
-        )
+        val_as_arr!(self, |a| a.sort_up_depth(depth))
     }
     /// Sort the value descending
     pub fn sort_down(&mut self) {
         self.sort_down_depth(0);
     }
     pub(crate) fn sort_down_depth(&mut self, depth: usize) {
-        self.generic_mut_shallow(
-            |a| a.sort_down_depth(depth),
-            |a| a.sort_down_depth(depth),
-            |a| a.sort_down_depth(depth),
-            |a| a.sort_down_depth(depth),
-            |a| a.sort_down_depth(depth),
-        )
+        val_as_arr!(self, |a| a.sort_down_depth(depth))
     }
     /// `classify` the rows of the value
     pub fn classify(&self) -> Self {
@@ -825,16 +790,7 @@ impl Value {
             return 0.into();
         }
         let map_keys = self.map_keys().cloned();
-        let mut val: Value = self
-            .generic_ref(
-                Array::classify,
-                Array::classify,
-                Array::classify,
-                Array::classify,
-                Array::classify,
-            )
-            .into_iter()
-            .collect();
+        let mut val: Value = val_as_arr!(self, Array::classify).into_iter().collect();
         if let Some(map_keys) = map_keys {
             val.meta_mut().map_keys = Some(map_keys);
         }
@@ -842,13 +798,7 @@ impl Value {
     }
     pub(crate) fn classify_depth(&self, depth: usize) -> Self {
         let map_keys = self.map_keys().cloned();
-        let mut val = self.generic_ref(
-            |a| a.classify_depth(depth),
-            |a| a.classify_depth(depth),
-            |a| a.classify_depth(depth),
-            |a| a.classify_depth(depth),
-            |a| a.classify_depth(depth),
-        );
+        let mut val = val_as_arr!(self, |a| a.classify_depth(depth));
         if let Some(map_keys) = map_keys {
             val.meta_mut().map_keys = Some(map_keys);
         }
@@ -856,34 +806,15 @@ impl Value {
     }
     /// `deduplicate` the rows of the value
     pub fn deduplicate(&mut self, env: &Uiua) -> UiuaResult {
-        self.generic_mut_shallow(
-            |a| a.deduplicate(env),
-            |a| a.deduplicate(env),
-            |a| a.deduplicate(env),
-            |a| a.deduplicate(env),
-            |a| a.deduplicate(env),
-        )
+        val_as_arr!(self, |a| a.deduplicate(env))
     }
     /// Mask the `unique` rows of the value
     pub fn unique(&self) -> Self {
-        self.generic_ref(
-            Array::unique,
-            Array::unique,
-            Array::unique,
-            Array::unique,
-            Array::unique,
-        )
-        .into()
+        val_as_arr!(self, Array::unique).into()
     }
     /// Count the unique rows of the value
     pub fn count_unique(&self) -> usize {
-        self.generic_ref(
-            Array::count_unique,
-            Array::count_unique,
-            Array::count_unique,
-            Array::count_unique,
-            Array::count_unique,
-        )
+        val_as_arr!(self, Array::count_unique)
     }
 }
 
@@ -1551,48 +1482,16 @@ impl Value {
 
 impl Value {
     pub(crate) fn first_min_index(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env(
-            Array::first_min_index,
-            Array::first_min_index,
-            Array::first_min_index,
-            Array::first_min_index,
-            Array::first_min_index,
-            env,
-        )
-        .map(Into::into)
+        val_as_arr!(self, env, Array::first_min_index).map(Into::into)
     }
     pub(crate) fn first_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env(
-            Array::first_max_index,
-            Array::first_max_index,
-            Array::first_max_index,
-            Array::first_max_index,
-            Array::first_max_index,
-            env,
-        )
-        .map(Into::into)
+        val_as_arr!(self, env, Array::first_max_index).map(Into::into)
     }
     pub(crate) fn last_min_index(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env(
-            Array::last_min_index,
-            Array::last_min_index,
-            Array::last_min_index,
-            Array::last_min_index,
-            Array::last_min_index,
-            env,
-        )
-        .map(Into::into)
+        val_as_arr!(self, env, Array::last_min_index).map(Into::into)
     }
     pub(crate) fn last_max_index(&self, env: &Uiua) -> UiuaResult<Self> {
-        self.generic_ref_env(
-            Array::last_max_index,
-            Array::last_max_index,
-            Array::last_max_index,
-            Array::last_max_index,
-            Array::last_max_index,
-            env,
-        )
-        .map(Into::into)
+        val_as_arr!(self, env, Array::last_max_index).map(Into::into)
     }
 }
 

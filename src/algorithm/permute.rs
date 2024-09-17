@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use ecow::EcoVec;
 
-use crate::{Array, ArrayValue, Uiua, UiuaResult, Value};
+use crate::{val_as_arr, Array, ArrayValue, Uiua, UiuaResult, Value};
 
 use super::validate_size;
 
@@ -13,13 +13,7 @@ impl Value {
         if let Ok(n) = from.as_nat(env, "") {
             return combinations(n, k, env).map(Into::into);
         }
-        from.generic_ref(
-            |a| a.choose(k, env).map(Into::into),
-            |a| a.choose(k, env).map(Into::into),
-            |a| a.choose(k, env).map(Into::into),
-            |a| a.choose(k, env).map(Into::into),
-            |a| a.choose(k, env).map(Into::into),
-        )
+        val_as_arr!(from, |a| a.choose(k, env).map(Into::into))
     }
     /// `permute` all combinations of `k` rows from a value
     pub fn permute(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
@@ -27,13 +21,7 @@ impl Value {
         if let Ok(n) = from.as_nat(env, "") {
             return permutations(n, k, env).map(Into::into);
         }
-        from.generic_ref(
-            |a| a.permute(k, env).map(Into::into),
-            |a| a.permute(k, env).map(Into::into),
-            |a| a.permute(k, env).map(Into::into),
-            |a| a.permute(k, env).map(Into::into),
-            |a| a.permute(k, env).map(Into::into),
-        )
+        val_as_arr!(from, |a| a.permute(k, env).map(Into::into))
     }
 }
 

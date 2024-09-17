@@ -6,8 +6,8 @@ use ecow::eco_vec;
 
 use crate::{
     algorithm::pervade::bin_pervade_generic, check::instrs_clean_signature, cowslice::CowSlice,
-    function::Function, random, types::push_empty_rows_value, value::Value, Array, Boxed,
-    ImplPrimitive, Instr, PersistentMeta, Primitive, Shape, TempStack, Uiua, UiuaResult,
+    function::Function, random, types::push_empty_rows_value, val_as_arr, value::Value, Array,
+    Boxed, ImplPrimitive, Instr, PersistentMeta, Primitive, Shape, TempStack, Uiua, UiuaResult,
 };
 
 use super::{fill_value_shapes, fixed_rows, multi_output, FixedRowsData, MultiOutput};
@@ -262,13 +262,8 @@ impl Value {
     fn replace_depth(&self, mut replacement: Value, depth: usize) -> Value {
         let depth = self.rank().min(depth);
         let prefix = &self.shape()[..depth];
-        replacement.generic_mut_shallow(
-            |arr| arr.repeat_shape(Shape::from(prefix)),
-            |arr| arr.repeat_shape(Shape::from(prefix)),
-            |arr| arr.repeat_shape(Shape::from(prefix)),
-            |arr| arr.repeat_shape(Shape::from(prefix)),
-            |arr| arr.repeat_shape(Shape::from(prefix)),
-        );
+        val_as_arr!(&mut replacement, |arr| arr
+            .repeat_shape(Shape::from(prefix)));
         replacement
     }
 }

@@ -19,7 +19,7 @@ pub fn table(env: &mut Uiua) -> UiuaResult {
     table_impl(f, env)
 }
 
-fn table_impl(f: Function, env: &mut Uiua) -> UiuaResult {
+pub(crate) fn table_impl(f: Function, env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let sig = f.signature();
     match sig.args {

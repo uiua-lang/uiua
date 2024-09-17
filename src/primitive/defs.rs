@@ -1527,6 +1527,8 @@ primitive!(
     ///
     /// [indexof] is closely related to [memberof].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
+    /// Get permutations or combinations of an array
+    (2[1], Permute, IteratingModifier, "permute"),
     /// Get all combinations of `k` rows from an array
     ///
     /// The first argument must be a natural number.
@@ -1552,7 +1554,7 @@ primitive!(
     ///   : permute 3 5
     ///
     /// See also: [choose]
-    (2, Permute, DyadicArray, "permute"),
+    (2, OldPermute, DyadicArray, "permute"),
     /// Find the first deep index of one array in another
     ///
     /// While [indexof] returns an array of top-level indices into the searched-in array, [coordinate] returns an array of multi-dimensional coordinates.

@@ -25,7 +25,7 @@ use rand::prelude::*;
 use serde::*;
 
 use crate::{
-    algorithm::{self, invert, loops, reduce, table, zip},
+    algorithm::{self, *},
     array::Array,
     boxed::Boxed,
     check::instrs_signature,
@@ -419,7 +419,7 @@ impl Primitive {
         matches!(
             self,
             (But | With | Backward | Above | Below)
-                | (Choose | Permute)
+                | (Choose | OldPermute)
                 | Struct
                 | (Last | Sort | Chunks | Coordinate | Astar | Fft | Triangle | Case | Layout)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
@@ -673,8 +673,10 @@ impl Primitive {
             Primitive::Mask => env.dyadic_rr_env(Value::mask)?,
             Primitive::IndexOf => env.dyadic_rr_env(Value::index_of)?,
             Primitive::Coordinate => env.dyadic_rr_env(Value::coordinate)?,
-            Primitive::Choose => env.dyadic_rr_env(Value::choose)?,
-            Primitive::Permute => env.dyadic_rr_env(Value::permute)?,
+            Primitive::Choose => {
+                env.dyadic_rr_env(|k, val, env| k.choose(val, false, false, env))?
+            }
+            Primitive::OldPermute => env.dyadic_rr_env(Value::permute)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
                 env.push(val.box_depth(0));
@@ -701,6 +703,7 @@ impl Primitive {
             Primitive::Rows => zip::rows(false, env)?,
             Primitive::Table => table::table(env)?,
             Primitive::Inventory => zip::rows(true, env)?,
+            Primitive::Permute => permute::permute(env)?,
             Primitive::Repeat => loops::repeat(false, env)?,
             Primitive::Do => loops::do_(env)?,
             Primitive::Group => loops::group(env)?,

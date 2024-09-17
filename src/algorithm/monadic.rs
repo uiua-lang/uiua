@@ -291,7 +291,10 @@ impl Value {
     }
 }
 
-fn range(shape: &[isize], env: &Uiua) -> UiuaResult<Result<CowSlice<f64>, CowSlice<u8>>> {
+pub(crate) fn range(
+    shape: &[isize],
+    env: &Uiua,
+) -> UiuaResult<Result<CowSlice<f64>, CowSlice<u8>>> {
     if shape.is_empty() {
         return Ok(Err(cowslice![0]));
     }

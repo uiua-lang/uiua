@@ -6,12 +6,12 @@ use crate::{val_as_arr, Array, ArrayValue, Function, Primitive, Uiua, UiuaResult
 
 use super::{monadic::range, table::table_impl, validate_size};
 
-pub fn permute(env: &mut Uiua) -> UiuaResult {
+pub fn tuples(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
     if f.signature() != (2, 1) {
         return Err(env.error(format!(
             "{}'s function must have signature |2, but it is {}",
-            Primitive::Permute,
+            Primitive::Tuples,
             f.signature()
         )));
     }
@@ -32,9 +32,9 @@ pub fn permute(env: &mut Uiua) -> UiuaResult {
         }
     }
     if xs.rank() == 0 {
-        return Err(env.error("Cannot permute scalar"));
+        return Err(env.error("Cannot get tuples of scalar"));
     }
-    let k = k.as_nat(env, "Permutation count must be a natural number")?;
+    let k = k.as_nat(env, "Tuple size must be a natural number")?;
     match k {
         0 => {
             xs = xs.first_dim_zero();
@@ -54,15 +54,16 @@ pub fn permute(env: &mut Uiua) -> UiuaResult {
             let mut table = env.pop("table's function result")?;
             if table.rank() > 2 {
                 return Err(env.error(format!(
-                    "permute's function must return a scalar, \
+                    "{}'s function must return a scalar, \
                     but the result is rank-{}",
+                    Primitive::Tuples.format(),
                     table.rank() - 2
                 )));
             }
             table.transpose();
             let table = table.as_natural_array(
                 env,
-                "permute's function must return \
+                "tuples's function must return \
                 an array of naturals",
             )?;
             let mut rows = Vec::new();
@@ -98,8 +99,8 @@ pub fn permute(env: &mut Uiua) -> UiuaResult {
                         env.push(i);
                         env.call(f.clone())?;
                         add_it &= env
-                            .pop("permute's function result")?
-                            .as_bool(env, "permute of 3 or more must return a boolean")?;
+                            .pop("tuples's function result")?
+                            .as_bool(env, "tuples of 3 or more must return a boolean")?;
                         if !add_it {
                             break;
                         }

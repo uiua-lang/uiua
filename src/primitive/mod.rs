@@ -419,7 +419,7 @@ impl Primitive {
         matches!(
             self,
             (But | With | Backward | Above | Below)
-                | (Choose | OldPermute)
+                | (Choose | Permute)
                 | Struct
                 | (Last | Sort | Chunks | Coordinate | Astar | Fft | Triangle | Case | Layout)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
@@ -676,7 +676,7 @@ impl Primitive {
             Primitive::Choose => {
                 env.dyadic_rr_env(|k, val, env| k.choose(val, false, false, env))?
             }
-            Primitive::OldPermute => env.dyadic_rr_env(Value::permute)?,
+            Primitive::Permute => env.dyadic_rr_env(Value::permute)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
                 env.push(val.box_depth(0));
@@ -703,7 +703,7 @@ impl Primitive {
             Primitive::Rows => zip::rows(false, env)?,
             Primitive::Table => table::table(env)?,
             Primitive::Inventory => zip::rows(true, env)?,
-            Primitive::Permute => permute::permute(env)?,
+            Primitive::Tuples => permute::tuples(env)?,
             Primitive::Repeat => loops::repeat(false, env)?,
             Primitive::Do => loops::do_(env)?,
             Primitive::Group => loops::group(env)?,

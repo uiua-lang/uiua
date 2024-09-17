@@ -1528,7 +1528,39 @@ primitive!(
     /// [indexof] is closely related to [memberof].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
     /// Get permutations or combinations of an array
-    (2[1], Permute, IteratingModifier, "permute"),
+    ///
+    /// The first argument must be a natural number. The second argument may be any array.
+    /// The function must take 2 arguments. Combinations of rows from the array whose indices pass the function will be returned.
+    /// The most common functions to use are `less than`, `less or equal`, `greater than`, `greater or equal`, and `not equals`.
+    ///
+    /// The examples here are [transpose]d to take up less vertical space.
+    ///
+    /// `less than` and `greater than` will give all unique *combinations* of rows from the array.
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅< 2 ⇡5
+    ///   : ⍉ ⧅> 2 ⇡5
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅< 3 ⇡5
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅< 4 ⇡5
+    /// `less or equal` and `greater or equal` will include values that are the same.
+    /// ex: ⍉ ⧅≤ 2 ⇡5
+    /// ex: ⍉ ⧅≥ 2 ⇡5
+    /// `not equals` will give all *permutations* of rows from the array.
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅≠ 2 ⇡5
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅≠ 3 ⇡5
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅≠ 4 ⇡5
+    /// If the size is `2`, the function is allowed to return non-booleans. Tuples will be copied as many times as the value.
+    /// ex: ⍉ ⧅(×2<) 2 ⇡4
+    /// With [un][where], we can see where the inspiration for [tuples]'s glyph comes from.
+    /// ex: # Experimental!
+    ///   : °⊚ ⧅< 2 ⇡50
+    ///   : °⊚ ⧅> 2 ⇡50
+    ///   : °⊚ ⧅≠ 2 ⇡50
+    (2[1], Tuples, IteratingModifier, ("tuples", '⧅')),
     /// Get all combinations of `k` rows from an array
     ///
     /// The first argument must be a natural number.
@@ -1554,7 +1586,7 @@ primitive!(
     ///   : permute 3 5
     ///
     /// See also: [choose]
-    (2, OldPermute, DyadicArray, "permute"),
+    (2, Permute, DyadicArray, "permute"),
     /// Find the first deep index of one array in another
     ///
     /// While [indexof] returns an array of top-level indices into the searched-in array, [coordinate] returns an array of multi-dimensional coordinates.

@@ -1544,8 +1544,10 @@ primitive!(
     /// ex: # Experimental!
     ///   : ⍉ ⧅< 4 ⇡5
     /// `less or equal` and `greater or equal` will include values that are the same.
-    /// ex: ⍉ ⧅≤ 2 ⇡5
-    /// ex: ⍉ ⧅≥ 2 ⇡5
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅≤ 2 ⇡5
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅≥ 2 ⇡5
     /// `not equals` will give all *permutations* of rows from the array.
     /// ex: # Experimental!
     ///   : ⍉ ⧅≠ 2 ⇡5

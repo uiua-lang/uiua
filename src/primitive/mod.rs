@@ -408,6 +408,8 @@ impl Primitive {
             Chunks => format!("use {Windows} with a rank-2 window size instead"),
             Sys(SysOp::HttpsWrite) => format!("use {} instead", Sys(SysOp::TlsConnect).format()),
             Deal => format!("use {Select}{Rise}{Rows}{By}{Rand} instead"),
+            Choose => format!("use {Tuples}{Lt} instead"),
+            Permute => format!("use {Tuples}{Ne} instead"),
             _ => return None,
         })
     }
@@ -419,7 +421,7 @@ impl Primitive {
         matches!(
             self,
             (But | With | Backward | Above | Below)
-                | (Choose | Permute)
+                | (Tuples | Choose | Permute)
                 | Struct
                 | (Last | Sort | Chunks | Coordinate | Astar | Fft | Triangle | Case | Layout)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)

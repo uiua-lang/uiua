@@ -1106,8 +1106,32 @@ impl<'a> Lexer<'a> {
                         self.end(Str(inner), start)
                     }
                 }
+                // Formatted subscripts
+                c if c.chars().all(|c| SUBSCRIPT_NUMS.contains(&c)) => {
+                    let mut s = c.to_string();
+                    loop {
+                        if let Some(c) =
+                            self.next_char_if(|c| c.chars().all(|c| SUBSCRIPT_NUMS.contains(&c)))
+                        {
+                            s.push_str(c);
+                        } else if self.next_chars_exact(["_"; 2]) {
+                            while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+                                let i: usize = c.parse().unwrap();
+                                s.push(SUBSCRIPT_NUMS[i]);
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                    let mut n = 0;
+                    for c in s.chars() {
+                        let i = SUBSCRIPT_NUMS.iter().position(|&d| d == c).unwrap();
+                        n = n * 10 + i;
+                    }
+                    self.end(Subscript(n), start)
+                }
                 // Identifiers and unformatted glyphs
-                c if is_custom_glyph(c) || c.chars().all(is_ident_char) || "&!‼".contains(c) => {
+                c if is_custom_glyph(c) || c.chars().all(is_ident_start) || "&!‼".contains(c) => {
                     // Get ident start
                     let mut ident = self.ident(start, c).to_string();
                     let mut exclam_count = match c {
@@ -1534,7 +1558,11 @@ fn parse_format_fragments(s: &str) -> Vec<String> {
 
 /// Whether a character can be part of a Uiua identifier
 pub fn is_ident_char(c: char) -> bool {
-    c.is_alphabetic() && !"ⁿₙπτηℂλ".contains(c) || SUBSCRIPT_NUMS.contains(&c)
+    is_ident_start(c) || SUBSCRIPT_NUMS.contains(&c)
+}
+
+fn is_ident_start(c: char) -> bool {
+    c.is_alphabetic() && !"ⁿₙπτηℂλ".contains(c)
 }
 
 fn subscript_num(s: &str) -> Option<usize> {

@@ -2066,7 +2066,11 @@ code:
                     _ => {
                         if !matches!(
                             prim,
-                            Primitive::Both | Primitive::Repeat | Primitive::Rows | Primitive::Each
+                            Primitive::Both
+                                | Primitive::Repeat
+                                | Primitive::Rows
+                                | Primitive::Each
+                                | Primitive::Tuples
                         ) {
                             self.add_error(
                                 span,

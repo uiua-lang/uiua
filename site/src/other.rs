@@ -554,6 +554,7 @@ pub fn Experimental() -> impl IntoView {
                 subscript(Rows, "Operate on -N-rank rows", "# Experimental!\n≡₂□ °△2_3_4"),
                 subscript(Each, "Operate on N-rank rows", "# Experimental!\n∵₁□ °△2_3_4"),
                 subscript(Repeat, "Repetition count", "# Experimental!\n⍥₅(⊂⟜/+) [1 2]"),
+                subscript(Tuples, "Tuple size", "# Experimental!\n⧅₂< ⇡4"),
             ] }
         </table>
 

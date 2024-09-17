@@ -511,6 +511,7 @@ impl Compiler {
                         Instr::ImplPrim(ImplPrimitive::UndoRerank, span)
                     ];
                 }
+                Primitive::Tuples => before = eco_vec![Instr::push(n)],
                 _ => {}
             }
         }

@@ -3,7 +3,7 @@
 - 0.13
   - Rename and stabilize `but` and `with`
     - Likely `and`
-  - `choose/permute/triangle` unification
+  - `bits` subscript
   - Recursive stack macros
   - Label and format string glyphs?
   - `setinv/setund` unification

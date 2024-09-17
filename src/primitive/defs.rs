@@ -1556,7 +1556,8 @@ primitive!(
     /// ex: # Experimental!
     ///   : ⍉ ⧅≠ 4 ⇡5
     /// If the size is `2`, the function is allowed to return non-booleans. Tuples will be copied as many times as the value.
-    /// ex: ⍉ ⧅(×2<) 2 ⇡4
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅(×2<) 2 ⇡4
     /// With [un][where], we can see where the inspiration for [tuples]'s glyph comes from.
     /// ex: # Experimental!
     ///   : °⊚ ⧅< 2 ⇡50

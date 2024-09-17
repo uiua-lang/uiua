@@ -444,7 +444,8 @@
     "outputs": 1,
     "class": "DyadicArray",
     "description": "Get all combinations of k rows from an array",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "chunks": {
     "glyph": "⑄",
@@ -970,7 +971,8 @@
     "outputs": 1,
     "class": "DyadicArray",
     "description": "Get all permutations of k rows from an array",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "pi": {
     "glyph": "π",
@@ -1296,6 +1298,15 @@
     "outputs": 1,
     "class": "Thread",
     "description": "Try to receive a value from a thread"
+  },
+  "tuples": {
+    "glyph": "⧅",
+    "args": 2,
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "IteratingModifier",
+    "description": "Get permutations or combinations of an array",
+    "experimental": true
   },
   "type": {
     "args": 1,

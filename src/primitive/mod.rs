@@ -385,10 +385,8 @@ impl Primitive {
         Some(match self {
             prim if prim.class() == PrimClass::DyadicPervasive => Signature::new(1, 1),
             Take | Drop | Join | Rerank | Rotate | Orient | Windows => Signature::new(1, 1),
-            Couple => Signature::new(n, 1),
-            Fix | Box | Transpose | Pop | Sqrt | Round | Floor | Ceil | Rand | Utf8 => {
-                return self.signature()
-            }
+            Couple | Box => Signature::new(n, 1),
+            Transpose | Sqrt | Round | Floor | Ceil | Rand | Utf8 => return self.signature(),
             _ => return None,
         })
     }

@@ -503,7 +503,7 @@ pub fn Experimental() -> impl IntoView {
         view!(<tr>
             <td><Prim prim=prim/></td>
             <td>{ meaning.to_string() }</td>
-            <td><Editor example=example/></td> 
+            <td><Editor example=example nonprogressive=true/></td>
         </tr>)
     }
 
@@ -528,28 +528,26 @@ pub fn Experimental() -> impl IntoView {
             <tr>
                 <th>"Primitive"</th>
                 <th>"Meaning"</th>
-                <th>"Example"</th>
+                <th style="width: 100%">"Example"</th>
             </tr>
             <tr>
                 <td>"Any "<span class="dyadic-function">"dyadic"</span>" pervasive function"</td>
                 <td>"Constant first argument"</td>
-                <td><Editor example="# Experimental!\n⊃+₁×₂ [1 2 3]"/></td>
+                <td><Editor example="# Experimental!\n⊃+₁×₂ [1 2 3]" nonprogressive=true/></td>
             </tr>
             <tr>
                 <td><Prims prims=[Take, Drop, Join, Rerank, Rotate, Orient, Windows]/></td>
                 <td>"Constant first argument"</td>
-                <td><Editor example="# Experimental!\n⊃↙₂↻₃ [1 2 3 4 5]"/></td>
+                <td><Editor example="# Experimental!\n⊃↙₂↻₃ [1 2 3 4 5]" nonprogressive=true/></td>
             </tr>
             { vec![
-                subscript(Fix, "Repeat", "# Experimental!\n¤₃ 5"),
-                subscript(Box, "Repeat", "# Experimental!\n□₃ 5"),
+                subscript(Couple, "Group N arrays as rows", "# Experimental!\n{⊟₃ 1 2 3 4 5}"),
+                subscript(Box, "Group N arrays as boxed rows", "# Experimental!\n□₃ 1_2_3 5 \"wow\""),
                 subscript(Transpose, "Repeat", "# Experimental!\n△ ⍉₃ °△1_2_3_4_5"),
-                subscript(Pop, "Repeat", "# Experimental!\n[◌₃ 1 2 3 4 5]"),
                 subscript(Sqrt, "Nth root", "# Experimental!\n√₃ [8 27 125]"),
                 subscript(Round, "To N decimal places", "# Experimental!\n⁅₃ π"),
                 subscript(Floor, "To N decimal places", "# Experimental!\n⌊₃ π"),
                 subscript(Ceil, "To N decimal places", "# Experimental!\n⌈₃ π"),
-                subscript(Couple, "Group N arrays as rows", "# Experimental!\n{⊟₃ 1 2 3 4 5}"),
                 subscript(Both, "Apply to N argument sets", "# Experimental!\n[∩₃+ 1 2 3 4 5 6]"),
                 subscript(Rows, "Operate on -N-rank rows", "# Experimental!\n≡₂□ °△2_3_4"),
                 subscript(Each, "Operate on N-rank rows", "# Experimental!\n∵₁□ °△2_3_4"),

@@ -2093,7 +2093,7 @@ code:
                         self.word(sub.n.map(|n| Word::Number(n.to_string(), n as f64)), true)?;
                         self.primitive(prim, span, true)?;
                     }
-                    Primitive::Fix | Primitive::Box | Primitive::Transpose | Primitive::Pop => {
+                    Primitive::Transpose => {
                         if n > 100 {
                             self.add_error(span.clone(), "Too many subscript repetitions");
                         }
@@ -2140,6 +2140,14 @@ code:
                             self.push_instr(Instr::EndArray { boxed: false, span });
                         }
                     },
+                    Primitive::Box => {
+                        let span = self.add_span(span.clone());
+                        self.push_instr(Instr::BeginArray);
+                        if n > 0 {
+                            self.push_instr(Instr::TouchStack { count: n, span });
+                        }
+                        self.push_instr(Instr::EndArray { boxed: true, span });
+                    }
                     _ => {
                         self.add_error(
                             span.clone(),

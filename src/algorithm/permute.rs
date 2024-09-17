@@ -93,16 +93,20 @@ pub fn tuples(env: &mut Uiua) -> UiuaResult {
                 let row_count = arr.row_count();
                 let row_len = arr.row_len();
                 'outer: loop {
+                    // println!("curr: {curr:?}");
                     let mut add_it = true;
-                    for (&i, &j) in curr.iter().skip(1).zip(&curr) {
-                        env.push(j);
-                        env.push(i);
-                        env.call(f.clone())?;
-                        add_it &= env
-                            .pop("tuples's function result")?
-                            .as_bool(env, "tuples of 3 or more must return a boolean")?;
-                        if !add_it {
-                            break;
+                    'ij: for (ii, &i) in curr.iter().enumerate() {
+                        for &j in curr.iter().skip(ii + 1) {
+                            // println!("i: {i}, j: {j}");
+                            env.push(i);
+                            env.push(j);
+                            env.call(f.clone())?;
+                            add_it &= env
+                                .pop("tuples's function result")?
+                                .as_bool(env, "tuples of 3 or more must return a boolean")?;
+                            if !add_it {
+                                break 'ij;
+                            }
                         }
                     }
                     if add_it {
@@ -209,10 +213,20 @@ impl<T: ArrayValue> Array<T> {
             (_, 0) if !same => Array::new(shape, self.data.clone()),
             (_, 1) if !same => {
                 let mut data = EcoVec::with_capacity(elem_count);
-                for i in (0..n).rev() {
-                    for (j, row) in self.row_slices().enumerate() {
-                        if i != j {
-                            data.extend_from_slice(row);
+                if rev {
+                    for i in (0..n).rev() {
+                        for (j, row) in self.row_slices().enumerate().rev() {
+                            if i != j {
+                                data.extend_from_slice(row);
+                            }
+                        }
+                    }
+                } else {
+                    for i in (0..n).rev() {
+                        for (j, row) in self.row_slices().enumerate() {
+                            if i != j {
+                                data.extend_from_slice(row);
+                            }
                         }
                     }
                 }

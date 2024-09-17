@@ -1126,7 +1126,7 @@ primitive!(
     (2, Match, DyadicArray, ("match", '≍')),
     /// Combine two arrays as rows of a new array
     ///
-    /// `first``shape` of the coupled array will *always* be `2`.
+    /// [length] of the coupled array will *always* be `2`.
     ///
     /// For scalars, it is equivalent to [join].
     /// ex: ⊟ 1 2

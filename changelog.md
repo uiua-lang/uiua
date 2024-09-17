@@ -40,6 +40,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Add pride flag constants
 - Add experimental [`tuples ⧅`](https://uiua.org/docs/tuples) modifier
   - This unifies and extends the behavior of the `choose` and `permute` functions, which are now deprecated
+  - This also replaces and deprecates the `triangle` modifier
 - Add an experimental [`sort ⍆`](https://uiua.org/docs/sort) function
   - Sorting is very common
   - [`un °`](https://uiua.org/docs/un) [`sort ⍆`](https://uiua.org/docs/sort) shuffles an array

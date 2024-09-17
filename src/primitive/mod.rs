@@ -410,6 +410,7 @@ impl Primitive {
             Deal => format!("use {Select}{Rise}{Rows}{By}{Rand} instead"),
             Choose => format!("use {Tuples}{Lt} instead"),
             Permute => format!("use {Tuples}{Ne} instead"),
+            Triangle => format!("use {Tuples} instead"),
             _ => return None,
         })
     }

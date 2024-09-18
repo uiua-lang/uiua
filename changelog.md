@@ -14,6 +14,7 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`orient ⤸`](https://uiua.org/docs/orient)
   - Change its glyph to something with broader font support
   - `⮌` will continue to work and will be formatted as `⤸`
+- Stabilize [`below ◡`](https://uiua.org/docs/below)
 - [`un °`](https://uiua.org/docs/un) [`orient ⤸`](https://uiua.org/docs/orient) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)
   - This is analogous to the behavior of [`un °`](https://uiua.org/docs/un) [`select ⊏`](https://uiua.org/docs/select)
 - Add a feature to some [`under ⍜`](https://uiua.org/docs/under) functions that makes them more permissive of changes in rank

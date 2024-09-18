@@ -419,7 +419,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            (But | With | Backward | Above | Below)
+            (But | With | Backward | Above)
                 | (Tuples | Choose | Permute)
                 | Struct
                 | (Last | Sort | Chunks | Coordinate | Astar | Fft | Triangle | Case | Layout)

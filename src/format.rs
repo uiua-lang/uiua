@@ -16,7 +16,8 @@ use paste::paste;
 use crate::{
     ast::*,
     grid_fmt::GridFmt,
-    lex::{is_ident_char, CodeSpan, Loc, Sp},
+    is_ident_start,
+    lex::{CodeSpan, Loc, Sp},
     parse::{flip_unsplit_lines, parse, split_words, trim_spaces},
     Compiler, FunctionId, Ident, InputSrc, Inputs, PreEvalMode, Primitive, RunMode, SafeSys,
     Signature, Uiua, UiuaErrorKind, UiuaResult, Value, SUBSCRIPT_NUMS,
@@ -748,7 +749,7 @@ impl<'a> Formatter<'a> {
         self.format_ref_path(&r.path);
         if r.path.is_empty()
             && r.name.value.starts_with(|c: char| c.is_lowercase())
-            && (self.output.chars().last()).is_some_and(|c| c.is_lowercase() && is_ident_char(c))
+            && (self.output.chars().last()).is_some_and(|c| c.is_lowercase() && is_ident_start(c))
         {
             self.output.push(' ');
         }
@@ -758,7 +759,7 @@ impl<'a> Formatter<'a> {
         if let Some(first) = comps.first() {
             if first.module.value.starts_with(|c: char| c.is_lowercase())
                 && (self.output.chars().last())
-                    .is_some_and(|c| c.is_lowercase() && is_ident_char(c))
+                    .is_some_and(|c| c.is_lowercase() && is_ident_start(c))
             {
                 self.output.push(' ');
             }
@@ -887,7 +888,7 @@ impl<'a> Formatter<'a> {
             }
             Word::Ref(r) => {
                 if (self.output.chars().rev())
-                    .take_while(|&c| is_ident_char(c))
+                    .take_while(|&c| is_ident_start(c))
                     .any(|c| c.is_uppercase())
                 {
                     self.output.push(' ');
@@ -896,7 +897,7 @@ impl<'a> Formatter<'a> {
             }
             Word::IncompleteRef { path, .. } => {
                 if (self.output.chars().rev())
-                    .take_while(|&c| is_ident_char(c))
+                    .take_while(|&c| is_ident_start(c))
                     .any(|c| c.is_uppercase())
                 {
                     self.output.push(' ');

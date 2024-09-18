@@ -888,8 +888,17 @@ impl<'a> Lexer<'a> {
                 "_" => {
                     if self.next_char_exact("_") {
                         let mut n = 0;
-                        while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                            n = n * 10 + c.parse::<usize>().unwrap();
+                        loop {
+                            if let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
+                                n = n * 10 + c.parse::<usize>().unwrap();
+                            } else if let Some(c) =
+                                self.next_char_if_all(|c| SUBSCRIPT_NUMS.contains(&c))
+                            {
+                                let c = c.chars().next().unwrap();
+                                n = n * 10 + SUBSCRIPT_NUMS.iter().position(|&d| d == c).unwrap();
+                            } else {
+                                break;
+                            }
                         }
                         self.end(Subscript(n), start)
                     } else {
@@ -1305,25 +1314,24 @@ impl<'a> Lexer<'a> {
             return s;
         }
         if !is_custom_glyph(c) {
+            let mut started_subscript = false;
             // Handle identifiers beginning with __
-            if c == "_" && self.next_char_exact("_") {
-                s.push('_');
-                while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                    s.push_str(c);
-                }
-            } else {
-                loop {
-                    if let Some(c) = self.next_char_if_all(is_ident_char) {
+            loop {
+                if self.next_chars_exact(["_"; 2]) {
+                    s.push_str("__");
+                    while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
                         s.push_str(c);
-                    } else if self.next_chars_exact(["_"; 2]) {
-                        s.push_str("__");
-                        while let Some(c) = self.next_char_if_all(|c| c.is_ascii_digit()) {
-                            s.push_str(c);
-                        }
-                        break;
-                    } else {
-                        break;
                     }
+                    started_subscript = true;
+                } else if let Some(c) =
+                    self.next_char_if_all(|c| !started_subscript && is_ident_start(c))
+                {
+                    s.push_str(c);
+                } else if let Some(c) = self.next_char_if_all(|c| SUBSCRIPT_NUMS.contains(&c)) {
+                    s.push_str(c);
+                    started_subscript = true;
+                } else {
+                    break;
                 }
             }
         }
@@ -1561,7 +1569,8 @@ pub fn is_ident_char(c: char) -> bool {
     is_ident_start(c) || SUBSCRIPT_NUMS.contains(&c)
 }
 
-fn is_ident_start(c: char) -> bool {
+/// Whether a character can be among the first characters of a Uiua identifier
+pub fn is_ident_start(c: char) -> bool {
     c.is_alphabetic() && !"ⁿₙπτηℂλ".contains(c)
 }
 

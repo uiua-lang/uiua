@@ -622,6 +622,8 @@ primitive!(
     /// ex: =5 5
     /// ex: =1 [1 2 3]
     /// ex: = [1 2 2] [1 2 3]
+    /// Boxes compare lexicographically
+    /// ex: = {1 2_3 4_5_6} {1_2 3 4_5_6}
     (2, Eq, DyadicPervasive, ("equals", AsciiToken::Equal, '=')),
     /// Compare for inequality
     ///
@@ -631,6 +633,8 @@ primitive!(
     /// ex: ≠5 5
     /// ex: ≠1 [1 2 3]
     /// ex: ≠ [1 2 2] [1 2 3]
+    /// Boxes compare lexicographically
+    /// ex: ≠ {1 2_3 4_5_6} {1_2 3 4_5_6}
     (
         2,
         Ne,
@@ -646,6 +650,8 @@ primitive!(
     /// ex: <7 3
     /// ex: <2 [1 2 3]
     /// ex: < [1 2 2] [1 2 3]
+    /// Boxes compare lexicographically
+    /// ex: < {1 2_3 4_5_6} {1_2 3 4_5_6}
     (2, Lt, DyadicPervasive, ("less than", '<')),
     /// Compare for less than or equal
     ///
@@ -658,6 +664,8 @@ primitive!(
     /// ex: ≤7 3
     /// ex: ≤2 [1 2 3]
     /// ex: ≤ [1 2 2] [1 2 3]
+    /// Boxes compare lexicographically
+    /// ex: ≤ {1 2_3 4_5_6} {1_2 3 4_5_6}
     (
         2,
         Le,
@@ -673,6 +681,8 @@ primitive!(
     /// ex: >7 3
     /// ex: >2 [1 2 3]
     /// ex: > [1 2 2] [1 2 3]
+    /// Boxes compare lexicographically
+    /// ex: > {1 2_3 4_5_6} {1_2 3 4_5_6}
     (2, Gt, DyadicPervasive, ("greater than", '>')),
     /// Compare for greater than or equal
     ///
@@ -685,6 +695,8 @@ primitive!(
     /// ex: ≥7 3
     /// ex: ≥2 [1 2 3]
     /// ex: ≥ [1 2 2] [1 2 3]
+    /// Boxes compare lexicographically
+    /// ex: ≥ {1 2_3 4_5_6} {1_2 3 4_5_6}
     (
         2,
         Ge,
@@ -766,6 +778,8 @@ primitive!(
     ///
     /// ex: ↧ 3 5
     /// ex: ↧ [1 4 2] [3 7 1]
+    /// Boxes compare lexicographically
+    /// ex: ↧ {1_2_3 "dog"} {1_4_5 "cat"}
     ///
     /// Uiua does not have dedicated boolean logical operators.
     /// [minimum] can be used as a logical AND.
@@ -776,6 +790,8 @@ primitive!(
     ///
     /// ex: ↥ 3 5
     /// ex: ↥ [1 4 2] [3 7 1]
+    /// Boxes compare lexicographically
+    /// ex: ↥ {1_2_3 "dog"} {1_4_5 "cat"}
     ///
     /// Uiua does not have dedicated boolean logical operators.
     /// [maximum] can be used as a logical OR.

@@ -1636,12 +1636,14 @@ value_bin_math_impl!(log);
 value_bin_math_impl!(atan2);
 value_bin_math_impl!(
     min,
-    [Char, char_char],
+    [Char, generic],
+    (Box, Box, generic),
     [|meta| meta.flags.is_boolean(), Byte, bool_bool],
 );
 value_bin_math_impl!(
     max,
-    [Char, char_char],
+    [Char, generic],
+    (Box, Box, generic),
     [|meta| meta.flags.is_boolean(), Byte, bool_bool],
 );
 

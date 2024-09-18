@@ -4,6 +4,8 @@
   - Rename and stabilize `but` and `with`
     - Likely `and`
   - `bits` subscript
+  - Update language tour
+  - Update design page
   - Recursive stack macros
   - Label and format string glyphs?
   - `setinv/setund` unification

@@ -1284,7 +1284,8 @@
     "modifier_args": 1,
     "class": "AggregatingModifier",
     "description": "Apply a function to each shrinking row of an array",
-    "experimental": true
+    "experimental": true,
+    "deprecated": true
   },
   "try": {
     "glyph": "⍣",

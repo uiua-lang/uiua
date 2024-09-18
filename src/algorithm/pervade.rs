@@ -1085,9 +1085,6 @@ pub mod max {
     pub fn bool_bool(a: u8, b: u8) -> u8 {
         a | b
     }
-    pub fn char_char(a: char, b: char) -> char {
-        a.max(b)
-    }
     pub fn num_byte(a: f64, b: u8) -> f64 {
         num_num(a, b.into())
     }
@@ -1099,6 +1096,9 @@ pub mod max {
     }
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         a.into().max(b)
+    }
+    pub fn generic<T: Ord>(a: T, b: T) -> T {
+        a.max(b)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the max of {a} and {b}"))
@@ -1116,9 +1116,6 @@ pub mod min {
     pub fn bool_bool(a: u8, b: u8) -> u8 {
         a & b
     }
-    pub fn char_char(a: char, b: char) -> char {
-        a.min(b)
-    }
     pub fn num_byte(a: f64, b: u8) -> f64 {
         num_num(a, b.into())
     }
@@ -1130,6 +1127,9 @@ pub mod min {
     }
     pub fn x_com(a: impl Into<Complex>, b: Complex) -> Complex {
         a.into().min(b)
+    }
+    pub fn generic<T: Ord>(a: T, b: T) -> T {
+        a.min(b)
     }
     pub fn error<T: Display>(a: T, b: T, env: &Uiua) -> UiuaError {
         env.error(format!("Cannot get the min of {a} and {b}"))

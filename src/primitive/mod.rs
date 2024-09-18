@@ -2091,7 +2091,7 @@ mod tests {
         }},
 		"numbers": {{
 			"name": "constant.numeric.uiua",
-			"match": "[`¯]?(\\d+|η|π|τ|∞|eta|pi|tau|inf(i(n(i(t(y)?)?)?)?)?)([./]\\d+|e[+-]?\\d+)?"
+			"match": "([`¯]?(\\d+|η|π|τ|∞|eta|pi|tau|inf(i(n(i(t(y)?)?)?)?)?)([./]\\d+|e[+-]?\\d+)?|([₀₁₂₃₄₅₆₇₈₉]|__\\d+)+)"
 		}},
 		"strand": {{
 			"name": "comment.line",

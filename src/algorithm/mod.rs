@@ -2,18 +2,20 @@
 
 use std::{
     cmp::Ordering,
+    collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap},
     convert::Infallible,
     fmt,
     hash::{Hash, Hasher},
     iter,
-    mem::size_of,
+    mem::{size_of, take},
     option,
 };
 
+use ecow::EcoVec;
 use tinyvec::TinyVec;
 
 use crate::{
-    Array, ArrayValue, Boxed, CodeSpan, Complex, ExactDoubleIterator, Function, Inputs,
+    Array, ArrayCmp, ArrayValue, Boxed, CodeSpan, Complex, ExactDoubleIterator, Function, Inputs,
     PersistentMeta, Shape, Signature, Span, TempStack, Uiua, UiuaError, UiuaErrorKind, UiuaResult,
     Value,
 };
@@ -794,52 +796,15 @@ fn fft_impl(
     Ok(())
 }
 
-#[cfg(not(feature = "pathfinding"))]
 pub fn astar(env: &mut Uiua) -> UiuaResult {
-    Err(env.error("A* pathfinding is not available in this environment"))
+    astar_impl(false, env)
 }
 
-#[cfg(not(feature = "pathfinding"))]
 pub fn astar_first(env: &mut Uiua) -> UiuaResult {
-    Err(env.error("A* pathfinding is not available in this environment"))
+    astar_impl(true, env)
 }
 
-#[cfg(feature = "pathfinding")]
-pub fn astar(env: &mut Uiua) -> UiuaResult {
-    use ecow::EcoVec;
-
-    use crate::Boxed;
-
-    let (solution, cost) = astar_impl(env)?;
-    let mut paths = EcoVec::new();
-    for path in solution {
-        paths.push(Boxed(Value::from_row_values(path, env)?));
-    }
-    env.push(cost);
-    env.push(paths);
-    Ok(())
-}
-
-#[cfg(feature = "pathfinding")]
-pub fn astar_first(env: &mut Uiua) -> UiuaResult {
-    use crate::Boxed;
-
-    let (solution, cost) = astar_impl(env)?;
-    if let Some(path) = solution.into_iter().next() {
-        env.push(cost);
-        env.push(Boxed(Value::from_row_values(path, env)?));
-        Ok(())
-    } else {
-        Err(env.error("No path found"))
-    }
-}
-
-#[cfg(feature = "pathfinding")]
-fn astar_impl(
-    env: &mut Uiua,
-) -> UiuaResult<(pathfinding::directed::astar::AstarSolution<Value>, f64)> {
-    use std::{cell::RefCell, rc::Rc};
-
+fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
     let start = env.pop("start")?;
     let neighbors = env.pop_function()?;
     let heuristic = env.pop_function()?;
@@ -873,131 +838,216 @@ fn astar_impl(
     for i in 0..arg_count {
         args.push(env.pop(i + 1)?);
     }
-    const COST_MUL: f64 = 1e6;
-    let error: Rc<RefCell<Option<UiuaError>>> = Rc::new(RefCell::new(None));
-    let error_clone = error.clone();
-    let do_error = move |msg| {
-        *error_clone.borrow_mut() = Some(msg);
-    };
-    let path = {
-        let env = Rc::new(RefCell::new(&mut *env));
-        pathfinding::directed::astar::astar_bag(
-            &start,
-            |n| {
-                let res = (|| {
-                    let mut env = env.borrow_mut();
-                    env.respect_execution_limit()?;
-                    for arg in args.iter().take(nei_sig.args.saturating_sub(1)).rev() {
-                        env.push(arg.clone());
-                    }
-                    if nei_sig.args > 0 {
-                        env.push(n.clone());
-                    }
-                    env.call(neighbors.clone())?;
-                    let (nodes, costs) = if nei_sig.outputs == 2 {
-                        let costs = env
-                            .pop("neighbors costs")?
-                            .as_nums(&env, "Costs must be a list of numbers")?;
-                        let nodes = env.pop("neighbors nodes")?;
-                        if costs.len() != nodes.row_count() {
-                            return Err(env.error_maybe_span(
-                                neighbors.id.span(),
-                                format!(
-                                    "Number of nodes {} does not match number of costs {}",
-                                    nodes.row_count(),
-                                    costs.len(),
-                                ),
-                            ));
-                        }
-                        let mut icosts = Vec::with_capacity(costs.len());
-                        for cost in costs {
-                            if cost < 0.0 {
-                                return Err(env.error_maybe_span(
-                                    neighbors.id.span(),
-                                    "Negative costs are not allowed in A*",
-                                ));
-                            }
-                            icosts.push((cost * COST_MUL).round() as u64);
-                        }
-                        (nodes, icosts)
-                    } else {
-                        let nodes = env.pop("neighbors nodes")?;
-                        let costs = vec![COST_MUL as u64; nodes.row_count()];
-                        (nodes, costs)
-                    };
-                    Ok(nodes.into_rows().zip(costs).collect::<Vec<_>>())
-                })();
-                match res {
-                    Ok(res) => res,
-                    Err(e) => {
-                        do_error(e);
-                        Vec::new()
-                    }
-                }
-            },
-            |n| {
-                let res = (|| {
-                    let mut env = env.borrow_mut();
-                    env.respect_execution_limit()?;
-                    for arg in args.iter().take(heu_sig.args.saturating_sub(1)).rev() {
-                        env.push(arg.clone());
-                    }
-                    if heu_sig.args > 0 {
-                        env.push(n.clone());
-                    }
-                    env.call(heuristic.clone())?;
-                    let h = env
-                        .pop("heuristic")?
-                        .as_num(&env, "Heuristic must be a number")?;
-                    if h < 0.0 {
-                        return Err(env.error_maybe_span(
-                            heuristic.id.span(),
-                            "Negative heuristic values are not allowed in A*",
-                        ));
-                    }
-                    Ok((h * COST_MUL).round() as u64)
-                })();
-                match res {
-                    Ok(res) => res,
-                    Err(e) => {
-                        do_error(e);
-                        0
-                    }
-                }
-            },
-            |n| {
-                let res = (|| -> UiuaResult<bool> {
-                    let mut env = env.borrow_mut();
-                    env.respect_execution_limit()?;
-                    for arg in args.iter().take(isg_sig.args.saturating_sub(1)).rev() {
-                        env.push(arg.clone());
-                    }
-                    if isg_sig.args > 0 {
-                        env.push(n.clone());
-                    }
-                    env.call(is_goal.clone())?;
-                    let is_goal = env
-                        .pop("is_goal")?
-                        .as_bool(&env, "A& goal function must return a boolean")?;
-                    Ok(is_goal)
-                })();
-                match res {
-                    Ok(res) => res,
-                    Err(e) => {
-                        do_error(e);
-                        true
-                    }
-                }
-            },
-        )
-    };
-    drop(do_error);
-    if let Some(err) = Rc::try_unwrap(error).unwrap().into_inner() {
-        return Err(err);
+
+    struct NodeCost {
+        node: Value,
+        cost: f64,
     }
-    if let Some((solution, cost)) = path {
-        Ok((solution, cost as f64 / COST_MUL))
+    impl PartialEq for NodeCost {
+        fn eq(&self, other: &Self) -> bool {
+            self.cost.array_eq(&other.cost)
+        }
+    }
+    impl Eq for NodeCost {}
+    impl PartialOrd for NodeCost {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            Some(self.cmp(other))
+        }
+    }
+    impl Ord for NodeCost {
+        fn cmp(&self, other: &Self) -> Ordering {
+            self.cost.array_cmp(&other.cost).reverse()
+        }
+    }
+
+    struct AstarEnv<'a> {
+        env: &'a mut Uiua,
+        neighbors: Function,
+        heuristic: Function,
+        is_goal: Function,
+        args: Vec<Value>,
+    }
+
+    impl<'a> AstarEnv<'a> {
+        fn heuristic(&mut self, node: &Value) -> UiuaResult<f64> {
+            let heu_args = self.heuristic.signature().args;
+            for arg in (self.args.iter()).take(heu_args.saturating_sub(1)).rev() {
+                self.env.push(arg.clone());
+            }
+            if heu_args > 0 {
+                self.env.push(node.clone());
+            }
+            self.env.call(self.heuristic.clone())?;
+            let h = (self.env.pop("heuristic")?).as_num(self.env, "Heuristic must be a number")?;
+            if h < 0.0 {
+                return Err(self.env.error_maybe_span(
+                    self.heuristic.id.span(),
+                    "Negative heuristic values are not allowed in A*",
+                ));
+            }
+            Ok(h)
+        }
+        fn neighbors(&mut self, node: &Value) -> UiuaResult<Vec<(Value, f64)>> {
+            let nei_args = self.neighbors.signature().args;
+            for arg in (self.args.iter()).take(nei_args.saturating_sub(1)).rev() {
+                self.env.push(arg.clone());
+            }
+            if nei_args > 0 {
+                self.env.push(node.clone());
+            }
+            self.env.call(self.neighbors.clone())?;
+            let (nodes, costs) = if self.neighbors.signature().outputs == 2 {
+                let costs = (self.env.pop("neighbors costs")?)
+                    .as_nums(self.env, "Costs must be a list of numbers")?;
+                let nodes = self.env.pop("neighbors nodes")?;
+                if costs.len() != nodes.row_count() {
+                    return Err(self.env.error_maybe_span(
+                        self.neighbors.id.span(),
+                        format!(
+                            "Number of nodes {} does not match number of costs {}",
+                            nodes.row_count(),
+                            costs.len(),
+                        ),
+                    ));
+                }
+                if costs.iter().any(|&c| c < 0.0) {
+                    return Err(self.env.error_maybe_span(
+                        self.neighbors.id.span(),
+                        "Negative costs are not allowed in A*",
+                    ));
+                }
+                (nodes, costs)
+            } else {
+                let nodes = self.env.pop("neighbors nodes")?;
+                let costs = vec![1.0; nodes.row_count()];
+                (nodes, costs)
+            };
+            Ok(nodes.into_rows().zip(costs).collect())
+        }
+        fn is_goal(&mut self, node: &Value) -> UiuaResult<bool> {
+            let isg_args = self.is_goal.signature().args;
+            for arg in (self.args.iter()).take(isg_args.saturating_sub(1)).rev() {
+                self.env.push(arg.clone());
+            }
+            if isg_args > 0 {
+                self.env.push(node.clone());
+            }
+            self.env.call(self.is_goal.clone())?;
+            let is_goal = (self.env.pop("is_goal")?)
+                .as_bool(self.env, "A& goal function must return a boolean")?;
+            Ok(is_goal)
+        }
+    }
+
+    let mut env = AstarEnv {
+        env,
+        neighbors,
+        heuristic,
+        is_goal,
+        args,
+    };
+
+    // Initialize state
+    let mut to_see = BinaryHeap::new();
+    to_see.push(NodeCost {
+        node: start.clone(),
+        cost: 0.0,
+    });
+
+    let mut came_from: HashMap<Value, Vec<Value>> = HashMap::new();
+    let mut full_cost: HashMap<Value, f64> = [(start, 0.0)].into();
+
+    let mut shortest_cost = f64::INFINITY;
+    let mut ends = BTreeSet::new();
+
+    // Main pathing loop
+    while let Some(NodeCost { node: curr, .. }) = to_see.pop() {
+        env.env.respect_execution_limit()?;
+        let curr_cost = full_cost[&curr];
+        // Early exit if found a shorter path
+        if curr_cost > shortest_cost || ends.contains(&curr) {
+            continue;
+        }
+        // Check if reached a goal
+        if env.is_goal(&curr)? {
+            ends.insert(curr);
+            shortest_cost = curr_cost;
+            if first_only {
+                break;
+            } else {
+                continue;
+            }
+        }
+        // Check neighbors
+        for (nei, nei_cost) in env.neighbors(&curr)? {
+            let tentative_full_cost = curr_cost + nei_cost;
+            let neighbor_g_score = full_cost.get(&nei).copied().unwrap_or(f64::INFINITY);
+            // Mark parents
+            if tentative_full_cost <= neighbor_g_score {
+                if let Some(parents) = came_from.get_mut(&nei) {
+                    parents.push(curr.clone());
+                } else {
+                    came_from.insert(nei.clone(), vec![curr.clone()]);
+                }
+                // Add to to see
+                if tentative_full_cost < neighbor_g_score {
+                    full_cost.insert(nei.clone(), tentative_full_cost);
+                    to_see.push(NodeCost {
+                        cost: tentative_full_cost + env.heuristic(&nei)?,
+                        node: nei,
+                    });
+                }
+            }
+        }
+    }
+
+    let env = env.env;
+    env.push(shortest_cost);
+
+    let mut paths = EcoVec::new();
+
+    if first_only {
+        let mut curr = ends
+            .into_iter()
+            .next()
+            .ok_or_else(|| env.error("No path found"))?;
+        let mut path = vec![curr.clone()];
+        while let Some(from) = came_from.get(&curr) {
+            path.push(from[0].clone());
+            curr = from[0].clone();
+        }
+        path.reverse();
+        env.push(Value::from_row_values(path, env)?);
     } else {
-        Err(env.error("No path found"))
+        for end in ends {
+            let mut currs = BTreeMap::new();
+            currs.insert(vec![end.clone()], end.clone());
+            let mut these_paths = Vec::new();
+            while !currs.is_empty() {
+                for (mut path, curr) in take(&mut currs) {
+                    let parents = came_from.get(&curr).map(|p| p.as_slice()).unwrap_or(&[]);
+                    match parents {
+                        [] => these_paths.push(path),
+                        [parent] => {
+                            path.push(parent.clone());
+                            currs.insert(path, parent.clone());
+                        }
+                        _ => {
+                            for parent in parents {
+                                let mut path = path.clone();
+                                path.push(parent.clone());
+                                currs.insert(path, parent.clone());
+                            }
+                        }
+                    }
+                }
+            }
+            for mut path in these_paths {
+                path.reverse();
+                paths.push(Boxed(Value::from_row_values(path, env)?));
+            }
+        }
+        env.push(paths);
     }
+    Ok(())
 }

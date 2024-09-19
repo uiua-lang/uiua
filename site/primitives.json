@@ -379,8 +379,7 @@
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
-    "description": "Keep all arguments to a function below the outputs on the stack",
-    "experimental": true
+    "description": "Keep all arguments to a function below the outputs on the stack"
   },
   "bits": {
     "glyph": "⋯",

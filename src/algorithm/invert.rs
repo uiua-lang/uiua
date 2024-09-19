@@ -261,6 +261,7 @@ static ON_INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &([Orient], [UndoOrient]),
         &([Select], [UnOnSelect]),
         &([Pick], [UnOnPick]),
+        &([Base], [UndoBase]),
         &pat!(
             Join,
             (
@@ -610,6 +611,8 @@ pub(crate) fn under_instrs(
             (Dup, Shape, PushToUnder(1), UnBits),
             (PopUnder(1), UndoUnbits)
         ),
+        // Base
+        &maybe_val!(pat!(Base, (CopyToUnder(1), Base), (PopUnder(1), UndoBase))),
         // Orient
         &maybe_val!(pat!(
             Orient,

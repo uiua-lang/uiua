@@ -1578,6 +1578,32 @@ impl Value {
             }
         })
     }
+    pub(crate) fn undo_base(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {
+        let base = self.as_nums(env, "Base must be a number or list of numbers")?;
+        Ok(if self.rank() == 0 {
+            match of {
+                Value::Num(n) => n.undo_base_scalar(base[0], env)?.into(),
+                Value::Byte(b) => b.undo_base_scalar(base[0], env)?.into(),
+                val => {
+                    return Err(env.error(format!(
+                        "Cannot get undo base of a {} array",
+                        val.type_name()
+                    )))
+                }
+            }
+        } else {
+            match of {
+                Value::Num(n) => n.undo_base_list(&base, env)?.into(),
+                Value::Byte(b) => b.undo_base_list(&base, env)?.into(),
+                val => {
+                    return Err(env.error(format!(
+                        "Cannot get base digits of a {} array",
+                        val.type_name()
+                    )))
+                }
+            }
+        })
+    }
 }
 
 impl<T: RealArrayValue> Array<T> {
@@ -1641,6 +1667,54 @@ impl<T: RealArrayValue> Array<T> {
             }
         }
         Ok(Array::new(new_shape, new_data))
+    }
+    fn undo_base_scalar(&self, base: f64, env: &Uiua) -> UiuaResult<Array<f64>> {
+        if base == 0.0 {
+            return Err(env.error("Base cannot be 0"));
+        }
+        if base.is_infinite() {
+            return Err(env.error("Base cannot be infinite"));
+        }
+        if base.is_nan() {
+            return Err(env.error("Base cannot be NaN"));
+        }
+        let mut shape = self.shape.clone();
+        let row_len = shape.pop().unwrap_or(1);
+        let elem_count = validate_size::<f64>(shape.iter().copied(), env)?;
+        let mut data = eco_vec![0f64; elem_count];
+        let slice = data.make_mut();
+        for (i, chunk) in self.data.chunks_exact(row_len).enumerate() {
+            for n in chunk.iter().rev() {
+                slice[i] = slice[i].mul_add(base, n.to_f64());
+            }
+        }
+        Ok(Array::new(shape, data))
+    }
+    fn undo_base_list(&self, bases: &[f64], env: &Uiua) -> UiuaResult<Array<f64>> {
+        for &base in bases {
+            if base == 0.0 {
+                return Err(env.error("Base cannot contain 0s"));
+            }
+            if base.is_infinite() {
+                return Err(env.error("Base cannot contain infinites"));
+            }
+            if base.is_nan() {
+                return Err(env.error("Base cannot contain NaNs"));
+            }
+        }
+        let mut shape = self.shape.clone();
+        let row_len = shape.pop().unwrap_or(1);
+        let elem_count = validate_size::<f64>(shape.iter().copied(), env)?;
+        let mut data = eco_vec![0f64; elem_count];
+        let slice = data.make_mut();
+        let mut bases = bases.to_vec();
+        bases.extend(repeat(1.0).take(row_len.saturating_sub(bases.len())));
+        for (i, chunk) in self.data.chunks_exact(row_len).enumerate() {
+            for (n, &b) in chunk.iter().zip(&bases).rev() {
+                slice[i] = slice[i].mul_add(b, n.to_f64());
+            }
+        }
+        Ok(Array::new(shape, data))
     }
 }
 

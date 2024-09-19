@@ -3258,6 +3258,7 @@ impl_primitive!(
     // Unders
     (1, UndoFix),
     (2, UndoUnbits),
+    (2, UndoBase),
     (2, UndoDeshape),
     (3, UndoSelect),
     (3, UndoPick),

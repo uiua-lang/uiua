@@ -190,6 +190,7 @@ impl fmt::Display for ImplPrimitive {
             AudioDecode => write!(f, "{Un}{AudioEncode}"),
             ProgressiveIndexOf => write!(f, "{Un}{By}{Select}"),
             UndoUnbits => write!(f, "{Under}{Un}{Bits}"),
+            UndoBase => write!(f, "{Under}{Base}"),
             UndoReverse(_) => write!(f, "{Under}{Reverse}"),
             UndoTransposeN(..) => write!(f, "{Under}{Transpose}"),
             UndoTake => write!(f, "{Under}{Take}"),
@@ -1070,6 +1071,7 @@ impl ImplPrimitive {
                 let val = env.pop(2)?;
                 env.push(val.undo_un_bits(&orig_shape, env)?);
             }
+            ImplPrimitive::UndoBase => env.dyadic_rr_env(Value::undo_base)?,
             &ImplPrimitive::UndoReverse(n) => {
                 env.touch_array_stack(n)?;
                 let end = env.stack_height() - n;

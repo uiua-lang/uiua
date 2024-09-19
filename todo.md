@@ -2,8 +2,9 @@
 
 - 0.13
   - Rename and stabilize `but` and `with`
-    - Likely `and`
-  - `bits` subscript
+    - Likely `with` and `atop`
+  - Timezone function
+  - `bits` subscript?
   - Update language tour
   - Update design page
   - Recursive stack macros
@@ -14,7 +15,6 @@
 - Possible
   - `orient` boxed
   - Dynamic modules
-  - `base` function?
   - Channels?
   - Plots?
 - Dead code elimination

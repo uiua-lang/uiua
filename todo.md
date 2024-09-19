@@ -3,6 +3,7 @@
 - 0.13
   - Rename and stabilize `but` and `with`
     - Likely `with` and `atop`
+  - Make ASCII glyph typing more consistent
   - Timezone function
   - `bits` subscript?
   - Update language tour

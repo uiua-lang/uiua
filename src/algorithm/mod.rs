@@ -934,7 +934,7 @@ fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
             }
             self.env.call(self.is_goal.clone())?;
             let is_goal = (self.env.pop("is_goal")?)
-                .as_bool(self.env, "A& goal function must return a boolean")?;
+                .as_bool(self.env, "A* goal function must return a boolean")?;
             Ok(is_goal)
         }
     }
@@ -1013,18 +1013,32 @@ fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
 
     let mut paths = EcoVec::new();
 
+    let make_path = |path: Vec<usize>| {
+        if let Some(&[a, b]) = path
+            .windows(2)
+            .find(|w| backing[w[0]].shape() != backing[w[1]].shape())
+        {
+            return Err(env.error(format!(
+                "Cannot make path from nodes with incompatible shapes {} and {}",
+                backing[a].shape(),
+                backing[b].shape()
+            )));
+        }
+        Value::from_row_values(path.into_iter().map(|i| backing[i].clone()), env)
+    };
+
     if first_only {
         let mut curr = ends
             .into_iter()
             .next()
             .ok_or_else(|| env.error("No path found"))?;
-        let mut path = vec![backing[curr].clone()];
+        let mut path = vec![curr];
         while let Some(from) = came_from.get(&curr) {
-            path.push(backing[from[0]].clone());
+            path.push(from[0]);
             curr = from[0];
         }
         path.reverse();
-        env.push(Value::from_row_values(path, env)?);
+        env.push(make_path(path)?);
     } else {
         for end in ends {
             let mut currs = vec![vec![end]];
@@ -1060,10 +1074,7 @@ fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
             }
             for mut path in these_paths {
                 path.reverse();
-                paths.push(Boxed(Value::from_row_values(
-                    path.into_iter().map(|i| backing[i].clone()),
-                    env,
-                )?));
+                paths.push(Boxed(make_path(path)?));
             }
         }
         env.push(paths);

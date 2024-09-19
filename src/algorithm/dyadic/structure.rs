@@ -1174,8 +1174,7 @@ impl<T: ArrayValue> Array<T> {
             .unwrap_or(0);
         // Check indices totality
         let mut set = HashSet::new();
-        let indices_are_total =
-            indices.len() == row_count && indices.iter().all(|&i| set.insert(i));
+        let indices_are_total = indices.iter().filter(|&&i| set.insert(i)).count() == row_count;
         // Get fill if not total
         let mut fill = None;
         let mut fill_rep = 0;
@@ -1206,19 +1205,25 @@ impl<T: ArrayValue> Array<T> {
         // Unselect
         for rise in indices_rise {
             let i = normalized_indices[rise];
-            if i > next {
-                for _ in next..i {
-                    for _ in 0..fill_rep {
-                        data.extend_from_slice(&fill.as_ref().unwrap().data);
+            match i.cmp(&next) {
+                Ordering::Greater => {
+                    for _ in next..i {
+                        for _ in 0..fill_rep {
+                            data.extend_from_slice(&fill.as_ref().unwrap().data);
+                        }
                     }
                 }
-            } else if i < next
-                && !(data[data.len() - row_elems..].iter())
-                    .zip(&self.data[rise * row_elems..][..row_elems])
-                    .all(|(a, b)| a.array_eq(b))
-            {
-                return Err(env
-                    .error("Cannot invert selection with duplicate indices but different values"));
+                Ordering::Less
+                    if !(data[data.len() - row_elems..].iter())
+                        .zip(&self.data[rise * row_elems..][..row_elems])
+                        .all(|(a, b)| a.array_eq(b)) =>
+                {
+                    return Err(env.error(
+                        "Cannot invert selection with duplicate indices but different values",
+                    ));
+                }
+                Ordering::Less => continue,
+                Ordering::Equal => {}
             }
             data.extend_from_slice(&self.data[rise * row_elems..][..row_elems]);
             next = i + 1;

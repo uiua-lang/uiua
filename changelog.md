@@ -5,8 +5,8 @@ Uiua is not yet stable.
 ## 0.13.0 - 2024-??-??
 This version is not yet released. If you are reading this on the website, then these changes are live here.
 ### Language
-- **Breaking Change** - [`min ↧`](https://uiua.org/docs/min) and [`max ↥`](https://uiua.org/docs/max) now compare lexicographically
-  - This makes them consistent with comparison functions like [`less than ≤`](https://uiua.org/docs/less%20than)
+- **Breaking Change** - [`minimum ↧`](https://uiua.org/docs/minimum) and [`maximum ↥`](https://uiua.org/docs/maximum) now compare lexicographically
+  - This makes them consistent with comparison functions like [`less than <`](https://uiua.org/docs/less%20than)
 - The experimental `chunks ⑄` function's behavior has been moved to an extension on [`windows ◫`](https://uiua.org/docs/windows)
   - This also allow the specification of "stride"
   - This is inspired by APL's `stencil ⌺` behavior

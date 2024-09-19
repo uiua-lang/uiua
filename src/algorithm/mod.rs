@@ -2,7 +2,7 @@
 
 use std::{
     cmp::Ordering,
-    collections::{BTreeMap, BTreeSet, BinaryHeap, HashMap},
+    collections::{BTreeSet, BinaryHeap, HashMap},
     convert::Infallible,
     fmt,
     hash::{Hash, Hasher},
@@ -840,7 +840,7 @@ fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
     }
 
     struct NodeCost {
-        node: Value,
+        node: usize,
         cost: f64,
     }
     impl PartialEq for NodeCost {
@@ -949,13 +949,12 @@ fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
 
     // Initialize state
     let mut to_see = BinaryHeap::new();
-    to_see.push(NodeCost {
-        node: start.clone(),
-        cost: 0.0,
-    });
+    let mut backing = vec![start.clone()];
+    let mut indices: HashMap<Value, usize> = [(start, 0)].into();
+    to_see.push(NodeCost { node: 0, cost: 0.0 });
 
-    let mut came_from: HashMap<Value, Vec<Value>> = HashMap::new();
-    let mut full_cost: HashMap<Value, f64> = [(start, 0.0)].into();
+    let mut came_from: HashMap<usize, Vec<usize>> = HashMap::new();
+    let mut full_cost: HashMap<usize, f64> = [(0, 0.0)].into();
 
     let mut shortest_cost = f64::INFINITY;
     let mut ends = BTreeSet::new();
@@ -969,7 +968,7 @@ fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
             continue;
         }
         // Check if reached a goal
-        if env.is_goal(&curr)? {
+        if env.is_goal(&backing[curr])? {
             ends.insert(curr);
             shortest_cost = curr_cost;
             if first_only {
@@ -979,21 +978,29 @@ fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
             }
         }
         // Check neighbors
-        for (nei, nei_cost) in env.neighbors(&curr)? {
+        for (nei, nei_cost) in env.neighbors(&backing[curr])? {
+            let nei = if let Some(index) = indices.get(&nei) {
+                *index
+            } else {
+                let index = backing.len();
+                indices.insert(nei.clone(), index);
+                backing.push(nei);
+                index
+            };
             let tentative_full_cost = curr_cost + nei_cost;
             let neighbor_g_score = full_cost.get(&nei).copied().unwrap_or(f64::INFINITY);
             // Mark parents
             if tentative_full_cost <= neighbor_g_score {
                 if let Some(parents) = came_from.get_mut(&nei) {
-                    parents.push(curr.clone());
+                    parents.push(curr);
                 } else {
-                    came_from.insert(nei.clone(), vec![curr.clone()]);
+                    came_from.insert(nei, vec![curr]);
                 }
                 // Add to to see
                 if tentative_full_cost < neighbor_g_score {
-                    full_cost.insert(nei.clone(), tentative_full_cost);
+                    full_cost.insert(nei, tentative_full_cost);
                     to_see.push(NodeCost {
-                        cost: tentative_full_cost + env.heuristic(&nei)?,
+                        cost: tentative_full_cost + env.heuristic(&backing[nei])?,
                         node: nei,
                     });
                 }
@@ -1011,40 +1018,52 @@ fn astar_impl(first_only: bool, env: &mut Uiua) -> UiuaResult {
             .into_iter()
             .next()
             .ok_or_else(|| env.error("No path found"))?;
-        let mut path = vec![curr.clone()];
+        let mut path = vec![backing[curr].clone()];
         while let Some(from) = came_from.get(&curr) {
-            path.push(from[0].clone());
-            curr = from[0].clone();
+            path.push(backing[from[0]].clone());
+            curr = from[0];
         }
         path.reverse();
         env.push(Value::from_row_values(path, env)?);
     } else {
         for end in ends {
-            let mut currs = BTreeMap::new();
-            currs.insert(vec![end.clone()], end.clone());
+            let mut currs = vec![vec![end]];
             let mut these_paths = Vec::new();
             while !currs.is_empty() {
-                for (mut path, curr) in take(&mut currs) {
-                    let parents = came_from.get(&curr).map(|p| p.as_slice()).unwrap_or(&[]);
+                let mut new_paths = Vec::new();
+                currs.retain_mut(|path| {
+                    let parents = came_from
+                        .get(path.last().unwrap())
+                        .map(|p| p.as_slice())
+                        .unwrap_or(&[]);
                     match parents {
-                        [] => these_paths.push(path),
-                        [parent] => {
-                            path.push(parent.clone());
-                            currs.insert(path, parent.clone());
+                        [] => {
+                            these_paths.push(take(path));
+                            false
                         }
-                        _ => {
-                            for parent in parents {
+                        &[parent] => {
+                            path.push(parent);
+                            true
+                        }
+                        &[parent, ref rest @ ..] => {
+                            for &parent in rest {
                                 let mut path = path.clone();
-                                path.push(parent.clone());
-                                currs.insert(path, parent.clone());
+                                path.push(parent);
+                                new_paths.push(path);
                             }
+                            path.push(parent);
+                            true
                         }
                     }
-                }
+                });
+                currs.extend(new_paths);
             }
             for mut path in these_paths {
                 path.reverse();
-                paths.push(Boxed(Value::from_row_values(path, env)?));
+                paths.push(Boxed(Value::from_row_values(
+                    path.into_iter().map(|i| backing[i].clone()),
+                    env,
+                )?));
             }
         }
         env.push(paths);

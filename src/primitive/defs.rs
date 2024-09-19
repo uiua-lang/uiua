@@ -2965,7 +2965,7 @@ primitive!(
     /// On each iteration, the current node will be passed to each function, along with any of the additional arguments that each function needs.
     ///
     /// If a path is found, a list of [box]ed arrays of all shortest paths is returned, as well as the cost.
-    /// If no path is found, an error is thrown.
+    /// If no path is found, an empty list and a cost of `infinity` are returned.
     ///
     /// In this example, we find the shortest path from the 2D point `0_0` to `3_5` in a grid.
     /// The neighbors function returns the 4 cardinal directions with all costs of 1.

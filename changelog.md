@@ -53,6 +53,7 @@ This version is not yet released. If you are reading this on the website, then t
   - They modify the behavior of some functions and modifiers
   - You can read more about them [here](https://uiua.org/docs/experimental#subscript-modifiers)
 - Add the experimental [`layout`](https://uiua.org/docs/layout) function, which renders text into an image array
+- [`astar`](https://uiua.org/docs/astar) no longer errors in no paths are found
 - Remove previously deprecated function strands
 ### Interpreter
 - Add the `uiua find` command, which finds Uiua code that matches the given unformatted text

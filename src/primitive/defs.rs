@@ -1543,43 +1543,8 @@ primitive!(
     ///
     /// [indexof] is closely related to [memberof].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
-    /// Get permutations or combinations of an array
-    ///
-    /// The first argument must be a natural number. The second argument may be any array.
-    /// The function must take 2 arguments. Combinations of rows from the array whose indices pass the function will be returned.
-    /// The most common functions to use are `less than`, `less or equal`, `greater than`, `greater or equal`, and `not equals`.
-    ///
-    /// The examples here are [transpose]d to take up less vertical space.
-    ///
-    /// `less than` and `greater than` will give all unique *combinations* of rows from the array.
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅< 2 ⇡5
-    ///   : ⍉ ⧅> 2 ⇡5
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅< 3 ⇡5
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅< 4 ⇡5
-    /// `less or equal` and `greater or equal` will include values that are the same.
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅≤ 2 ⇡5
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅≥ 2 ⇡5
-    /// `not equals` will give all *permutations* of rows from the array.
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅≠ 2 ⇡5
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅≠ 3 ⇡5
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅≠ 4 ⇡5
-    /// If the size is `2`, the function is allowed to return non-booleans. Tuples will be copied as many times as the value.
-    /// ex: # Experimental!
-    ///   : ⍉ ⧅(+1<) 2 ⇡4
-    /// With [un][where], we can see where the inspiration for [tuples]'s glyph comes from.
-    /// ex: # Experimental!
-    ///   : °⊚ ⧅< 2 ⇡50
-    ///   : °⊚ ⧅> 2 ⇡50
-    ///   : °⊚ ⧅≠ 2 ⇡50
-    (2[1], Tuples, IteratingModifier, ("tuples", '⧅')),
+    /// Get the base digits of a number
+    (2, Base, DyadicArray, "base"),
     /// Get all combinations of `k` rows from an array
     ///
     /// The first argument must be a natural number.
@@ -1772,6 +1737,43 @@ primitive!(
     /// Here, we add a dimension to the second array to [fix] it, then collapse with `reduce``join`.
     /// ex: /⊂ ⊞(⊂⊂) ⊙¤ 1_2 3_4 5_6
     ([1], Table, IteratingModifier, ("table", '⊞')),
+    /// Get permutations or combinations of an array
+    ///
+    /// The first argument must be a natural number. The second argument may be any array.
+    /// The function must take 2 arguments. Combinations of rows from the array whose indices pass the function will be returned.
+    /// The most common functions to use are `less than`, `less or equal`, `greater than`, `greater or equal`, and `not equals`.
+    ///
+    /// The examples here are [transpose]d to take up less vertical space.
+    ///
+    /// `less than` and `greater than` will give all unique *combinations* of rows from the array.
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅< 2 ⇡5
+    ///   : ⍉ ⧅> 2 ⇡5
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅< 3 ⇡5
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅< 4 ⇡5
+    /// `less or equal` and `greater or equal` will include values that are the same.
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅≤ 2 ⇡5
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅≥ 2 ⇡5
+    /// `not equals` will give all *permutations* of rows from the array.
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅≠ 2 ⇡5
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅≠ 3 ⇡5
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅≠ 4 ⇡5
+    /// If the size is `2`, the function is allowed to return non-booleans. Tuples will be copied as many times as the value.
+    /// ex: # Experimental!
+    ///   : ⍉ ⧅(+1<) 2 ⇡4
+    /// With [un][where], we can see where the inspiration for [tuples]'s glyph comes from.
+    /// ex: # Experimental!
+    ///   : °⊚ ⧅< 2 ⇡50
+    ///   : °⊚ ⧅> 2 ⇡50
+    ///   : °⊚ ⧅≠ 2 ⇡50
+    (2[1], Tuples, IteratingModifier, ("tuples", '⧅')),
     /// Apply a function to each unboxed row of an array and re-box the results
     ///
     /// For box arrays, this is equivalent to `rows``under``un``box`.

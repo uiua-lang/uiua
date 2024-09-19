@@ -1551,6 +1551,100 @@ impl Value {
 }
 
 impl Value {
+    /// Get the `base` of a value
+    pub fn base(&self, of: &Self, env: &Uiua) -> UiuaResult<Self> {
+        let base = self.as_nums(env, "Base must be a number or list of numbers")?;
+        Ok(if self.rank() == 0 {
+            match of {
+                Value::Num(n) => n.base_scalar(base[0], env)?.into(),
+                Value::Byte(b) => b.base_scalar(base[0], env)?.into(),
+                val => {
+                    return Err(env.error(format!(
+                        "Cannot get base digits of a {} array",
+                        val.type_name()
+                    )))
+                }
+            }
+        } else {
+            match of {
+                Value::Num(n) => n.base_list(&base, env)?.into(),
+                Value::Byte(b) => b.base_list(&base, env)?.into(),
+                val => {
+                    return Err(env.error(format!(
+                        "Cannot get base digits of a {} array",
+                        val.type_name()
+                    )))
+                }
+            }
+        })
+    }
+}
+
+impl<T: RealArrayValue> Array<T> {
+    fn base_scalar(&self, base: f64, env: &Uiua) -> UiuaResult<Array<f64>> {
+        if base == 0.0 {
+            return Err(env.error("Base cannot be 0"));
+        }
+        if base.is_infinite() {
+            return Err(env.error("Base cannot be infinite"));
+        }
+        if base.is_nan() {
+            return Err(env.error("Base cannot be NaN"));
+        }
+        let max_row_len = self
+            .data
+            .iter()
+            .map(|&n| n.to_f64().log(base).ceil() as usize)
+            .max()
+            .unwrap_or(0);
+        let mut new_shape = self.shape.clone();
+        new_shape.push(max_row_len);
+        let elem_count = validate_size::<f64>(new_shape.iter().copied(), env)?;
+        let mut new_data = eco_vec![0.0; elem_count];
+        let slice = new_data.make_mut();
+        for (i, n) in self.data.iter().enumerate() {
+            let mut n = n.to_f64();
+            for j in 0..max_row_len {
+                slice[i * max_row_len + j] = n.rem_euclid(base);
+                n = n.div_euclid(base);
+            }
+        }
+        Ok(Array::new(new_shape, new_data))
+    }
+    fn base_list(&self, bases: &[f64], env: &Uiua) -> UiuaResult<Array<f64>> {
+        for &base in bases {
+            if base == 0.0 {
+                return Err(env.error("Base cannot contain 0s"));
+            }
+            if base.is_infinite() {
+                return Err(env.error("Base cannot contain infinites"));
+            }
+            if base.is_nan() {
+                return Err(env.error("Base cannot contain NaNs"));
+            }
+        }
+        let max: f64 = bases.iter().product();
+        let max_row_len = bases.len() + self.data.iter().any(|n| n.to_f64() >= max) as usize;
+        let mut new_shape = self.shape.clone();
+        new_shape.push(max_row_len);
+        let elem_count = validate_size::<f64>(new_shape.iter().copied(), env)?;
+        let mut new_data = eco_vec![0.0; elem_count];
+        let slice = new_data.make_mut();
+        for (i, n) in self.data.iter().enumerate() {
+            let mut n = n.to_f64();
+            for (j, base) in bases.iter().enumerate() {
+                slice[i * max_row_len + j] = n.rem_euclid(*base);
+                n = n.div_euclid(*base);
+            }
+            if n > 0.0 {
+                slice[i * max_row_len + bases.len()] = n;
+            }
+        }
+        Ok(Array::new(new_shape, new_data))
+    }
+}
+
+impl Value {
     /// Test if a value is an integer in a range
     pub fn memberof_range(&self, from: Self, env: &Uiua) -> UiuaResult<Self> {
         fn fallback(a: &Value, b: &Value, env: &Uiua) -> UiuaResult<Value> {

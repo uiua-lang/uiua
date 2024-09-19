@@ -422,7 +422,16 @@ impl Primitive {
             (But | With | Backward | Above)
                 | (Tuples | Choose | Permute)
                 | Struct
-                | (Last | Sort | Chunks | Coordinate | Astar | Fft | Triangle | Case | Layout)
+                | (Last
+                    | Sort
+                    | Chunks
+                    | Base
+                    | Coordinate
+                    | Astar
+                    | Fft
+                    | Triangle
+                    | Case
+                    | Layout)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )
@@ -697,6 +706,7 @@ impl Primitive {
                 env.monadic_ref(|v| v.shape().iter().copied().collect::<Value>())?
             }
             Primitive::Bits => env.monadic_ref_env(Value::bits)?,
+            Primitive::Base => env.dyadic_rr_env(Value::base)?,
             Primitive::Reduce => reduce::reduce(0, env)?,
             Primitive::Scan => reduce::scan(env)?,
             Primitive::Fold => reduce::fold(env)?,

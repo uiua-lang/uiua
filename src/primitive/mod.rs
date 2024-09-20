@@ -1795,7 +1795,7 @@ mod tests {
                 if let PrimDocLine::Example(ex) = line {
                     if [
                         "&sl", "&tcpc", "&tlsc", "&ast", "&clset", "&fo", "&fc", "&fde", "&ftr",
-                        "&fld", "&fif", "&fras", "&frab", "&fmd",
+                        "&fld", "&fif", "&fras", "&frab", "&fmd", "timezone",
                     ]
                     .iter()
                     .any(|prim| ex.input.contains(prim))

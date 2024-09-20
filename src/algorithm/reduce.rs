@@ -748,7 +748,7 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
         0 | 1 => Err(env.error(format!(
             "{}'s function must have at least 2 arguments, \
             but its signature is {sig}",
-            Primitive::Reduce.format(),
+            Primitive::Scan.format(),
         ))),
         2 => {
             if xs.row_count() == 0 {

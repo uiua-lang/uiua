@@ -2,9 +2,11 @@
 
 - 0.13
   - Rename and stabilize `but` and `with`
-    - Likely `with` and `atop`
+    - Likely `with` and `off`
   - Make ASCII glyph typing more consistent
-  - Timezone function
+  - `tuples` monadic
+  - `&imst` system function
+  - `base` subscript
   - `bits` subscript?
   - Update language tour
   - Update design page

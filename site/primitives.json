@@ -416,14 +416,6 @@
     "class": "Planet",
     "description": "Call two functions on two distinct sets of values"
   },
-  "but": {
-    "glyph": "⤙",
-    "outputs": 1,
-    "modifier_args": 1,
-    "class": "Stack",
-    "description": "Call a function but keep its last argument on the top of the stack",
-    "experimental": true
-  },
   "by": {
     "glyph": "⊸",
     "outputs": 1,
@@ -936,6 +928,14 @@
     "class": "Misc",
     "description": "Get the current time in seconds"
   },
+  "off": {
+    "glyph": "⤚",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "Stack",
+    "description": "Call a function but keep its first argument under the outputs on the stack",
+    "experimental": true
+  },
   "on": {
     "glyph": "⟜",
     "outputs": 1,
@@ -1314,7 +1314,6 @@
   },
   "tuples": {
     "glyph": "⧅",
-    "args": 2,
     "outputs": 1,
     "modifier_args": 1,
     "class": "IteratingModifier",
@@ -1375,12 +1374,11 @@
     "description": "The n-wise windows of an array"
   },
   "with": {
-    "glyph": "⤚",
+    "glyph": "⤙",
     "outputs": 1,
     "modifier_args": 1,
     "class": "Stack",
-    "description": "Call a function but keep its first argument under the outputs on the stack",
-    "experimental": true
+    "description": "Call a function but keep its last argument on the top of the stack"
   },
   "xlsx": {
     "args": 1,

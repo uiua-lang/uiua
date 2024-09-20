@@ -8,6 +8,7 @@
   - Update design page
   - Sound easter egg
   - Recursive stack macros
+  - `pad` function
   - Label and format string glyphs?
   - `setinv/setund` unification
     - Custom `on/by` inverses

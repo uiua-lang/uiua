@@ -597,7 +597,7 @@ impl Compiler {
             }};
         }
         match prim {
-            Dip | Gap | On | By | But | With | Above | Below => {
+            Dip | Gap | On | By | With | Off | Above | Below => {
                 // Compile operands
                 let (mut new_func, mut sig) =
                     self.compile_operand_word(modified.operands[0].clone())?;
@@ -634,7 +634,7 @@ impl Compiler {
                         instrs.insert(0, Instr::Prim(Pop, span));
                         Signature::new(sig.args + 1, sig.outputs)
                     }
-                    prim if prim == On || prim == But && sig.args == 0 => {
+                    prim if prim == On || prim == With && sig.args == 0 => {
                         instrs.insert(
                             0,
                             if sig.args == 0 {
@@ -646,7 +646,7 @@ impl Compiler {
                         instrs.push(Instr::pop_inline(1, span));
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
-                    prim if prim == By || prim == With && sig.args == 0 => {
+                    prim if prim == By || prim == Off && sig.args == 0 => {
                         if sig.args > 0 {
                             let mut i = 0;
                             if sig.args > 1 {
@@ -663,7 +663,7 @@ impl Compiler {
                         }
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
-                    But => {
+                    With => {
                         let mut i = 0;
                         if sig.args < 2 {
                             instrs.insert(0, Instr::TouchStack { count: 2, span });
@@ -687,7 +687,7 @@ impl Compiler {
                         instrs.push(Instr::Prim(Flip, span));
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
-                    With => {
+                    Off => {
                         let mut prefix = EcoVec::new();
                         if sig.args < 2 {
                             prefix.push(Instr::TouchStack { count: 2, span });

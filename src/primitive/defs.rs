@@ -2044,34 +2044,37 @@ primitive!(
     ([1], On, Stack, ("on", '⟜')),
     /// Call a function but keep its last argument on the top of the stack
     ///
-    /// ex: # Experimental!
-    ///   : [⤙+ 2 5]
+    /// ex: [⤙+ 2 5]
     ///   : [⤙- 2 5]
-    /// [but] can be used to copy a value from deep in the stack, or to move it.
-    /// ex: # Experimental!
-    ///   : [⤙⊙⊙⊙∘ 1 2 3 4]
+    /// [with] makes it easy to call multiple dyadic functions with the same last argument.
+    /// There are many cases where this can read quite nicely.
+    /// "Couple +1 with ×2"
+    /// ex: ⊟+1⤙×2 5
+    /// There is the common testing pattern "assert with match".
+    /// ex: ⍤⤙≍ 5 +2 3
+    /// ex! ⍤⤙≍ 5 +2 2
+    /// [with] can be used to copy a value from deep in the stack, or to move it.
+    /// ex: [⤙⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤙⊙⊙⊙◌ 1 2 3 4]
-    /// [but] always takes at least 2 arguments, even if its function takes fewer.
-    /// ex! # Experimental!
-    ///   : [⤙¯ 2]
-    /// ex: # Experimental!
-    ///   : [⤙¯ 2 5]
-    ([1], But, Stack, ("but", '⤙')),
+    /// [with] always takes at least 2 arguments, even if its function takes fewer.
+    /// ex! [⤙¯ 2]
+    /// ex: [⤙¯ 2 5]
+    ([1], With, Stack, ("with", '⤙')),
     /// Call a function but keep its first argument under the outputs on the stack
     ///
     /// ex: # Experimental!
     ///   : [⤚+ 2 5]
     ///   : [⤚- 2 5]
-    /// [with] can be used to copy a value from the top of the stack to a position deeper, or to move it.
+    /// [off] can be used to copy a value from the top of the stack to a position deeper, or to move it.
     /// ex: # Experimental!
     ///   : [⤚⊙⊙⊙∘ 1 2 3 4]
     ///   : [⤚⋅⊙⊙∘ 1 2 3 4]
-    /// [with] always takes at least 2 arguments, even if its function takes fewer.
+    /// [off] always takes at least 2 arguments, even if its function takes fewer.
     /// ex! # Experimental!
     ///   : [⤚¯ 2]
     /// ex: # Experimental!
     ///   : [⤚¯ 2 5]
-    ([1], With, Stack, ("with", '⤚')),
+    ([1], Off, Stack, ("off", '⤚')),
     /// Duplicate a function's last argument before calling it
     ///
     /// If you want to filter out every element of an array that is not [less than] 10, you can use [keep].

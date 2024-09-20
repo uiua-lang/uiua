@@ -451,7 +451,7 @@ impl Primitive {
         use SysOp::*;
         matches!(
             self,
-            (But | With | Backward | Above)
+            (Off | Backward | Above)
                 | (Tuples | Choose | Permute)
                 | Struct
                 | (Last
@@ -979,8 +979,8 @@ impl Primitive {
             | Primitive::Dip
             | Primitive::Gap
             | Primitive::On
-            | Primitive::But
             | Primitive::With
+            | Primitive::Off
             | Primitive::By
             | Primitive::Backward
             | Primitive::Above

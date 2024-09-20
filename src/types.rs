@@ -79,7 +79,7 @@ fn make_val(mut ty: Type) -> Value {
 pub(crate) fn push_empty_rows_value<'a, I>(
     f: &Function,
     args: I,
-    inv: bool,
+    inventory: bool,
     per_meta: &mut PersistentMeta,
     env: &mut Uiua,
 ) -> bool
@@ -87,7 +87,7 @@ where
     I: IntoIterator<Item = &'a Value>,
     I::IntoIter: DoubleEndedIterator,
 {
-    if inv {
+    if inventory {
         let per_meta = take(per_meta);
         for _ in 0..f.signature().outputs.saturating_sub(1) {
             let mut arr = Array::<Boxed>::new([0], CowSlice::default());

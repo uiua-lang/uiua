@@ -2,19 +2,68 @@ use std::collections::HashSet;
 
 use ecow::EcoVec;
 
-use crate::{val_as_arr, Array, ArrayValue, Function, Primitive, Uiua, UiuaResult, Value};
+use crate::{
+    types::push_empty_rows_value, val_as_arr, Array, ArrayValue, Function, Primitive, Uiua,
+    UiuaResult, Value,
+};
 
 use super::{monadic::range, table::table_impl, validate_size};
 
 pub fn tuples(env: &mut Uiua) -> UiuaResult {
     let f = env.pop_function()?;
-    if f.signature() != (2, 1) {
+    let sig = f.signature();
+    if sig.outputs != 1 {
         return Err(env.error(format!(
-            "{}'s function must have signature |2, but it is {}",
-            Primitive::Tuples,
-            f.signature()
+            "{}'s function must have 1 output, \
+            but its signature is {sig}",
+            Primitive::Tuples.format()
         )));
     }
+    match sig.args {
+        1 => tuple1(f, env)?,
+        2 => tuple2(f, env)?,
+        _ => {
+            return Err(env.error(format!(
+                "{}'s function must have 1 or 2 arguments, \
+                but its signature is {sig}",
+                Primitive::Tuples.format()
+            )))
+        }
+    }
+    Ok(())
+}
+
+fn tuple1(f: Function, env: &mut Uiua) -> UiuaResult {
+    let mut xs = env.pop(1)?;
+    let mut results = Vec::new();
+    let mut per_meta = xs.take_per_meta();
+    if xs.row_count() == 0 {
+        if !push_empty_rows_value(&f, [&xs], false, &mut per_meta, env) {
+            let mut proxy = xs.proxy_row(env);
+            proxy.fix();
+            env.push(proxy);
+            _ = env.call_maintain_sig(f);
+            results.push(env.pop("rows' function result")?);
+        }
+    } else {
+        env.without_fill(|env| -> UiuaResult {
+            for n in 0..=xs.row_count() {
+                env.push(xs.slice_rows(0, n));
+                env.call(f.clone())?;
+                results.push(env.pop("tuples's function result")?);
+            }
+            Ok(())
+        })?;
+    }
+    let mut val = Value::from_row_values(results, env)?;
+    if xs.row_count() == 0 {
+        val.pop_row();
+    }
+    env.push(val);
+    Ok(())
+}
+
+fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
     let k = env.pop(1)?;
     let mut xs = env.pop(2)?;
     'blk: {
@@ -64,7 +113,7 @@ pub fn tuples(env: &mut Uiua) -> UiuaResult {
             let table = table.as_natural_array(
                 env,
                 "tuples's function must return \
-                an array of naturals",
+                        an array of naturals",
             )?;
             let mut rows = Vec::new();
             for (i, counts) in table.row_slices().enumerate() {

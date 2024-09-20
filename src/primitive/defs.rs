@@ -1768,6 +1768,7 @@ primitive!(
     ([1], Table, IteratingModifier, ("table", '⊞')),
     /// Get permutations or combinations of an array
     ///
+    /// When given a dyadic function, [tuples] takes two arguments.
     /// The first argument must be a natural number. The second argument may be any array.
     /// The function must take 2 arguments. Combinations of rows from the array whose indices pass the function will be returned.
     /// The most common functions to use are `less than`, `less or equal`, `greater than`, `greater or equal`, and `not equals`.
@@ -1797,12 +1798,32 @@ primitive!(
     /// If the size is `2`, the function is allowed to return non-booleans. Tuples will be copied as many times as the value.
     /// ex: # Experimental!
     ///   : ⍉ ⧅(+1<) 2 ⇡4
+    ///
+    /// If [tuples] is given a monadic function, it takes only one argument.
+    /// The function will be called on all prefixes of the array.
+    /// Both the empty prefix and full-length prefix will be included, so the output will have one more row than the input.
+    /// ex: # Experimental!
+    ///   : ⧅□ ⇡5
+    /// ex: # Experimental!
+    ///   : ⧅□ "Hello!"
+    /// ex: # Experimental!
+    ///   : ⧅□ °△5_2
+    /// You can get suffixes with a few [reverse]s.
+    /// ex: # Experimental!
+    ///   : ⍜⇌⧅(□⇌) "Hello!"
+    /// Monadic [tuples] is compatible with [fill].
+    /// ex: # Experimental!
+    ///   : ⬚@-⧅∘ "Uiua"
+    ///
     /// With [un][where], we can see where the inspiration for [tuples]'s glyph comes from.
     /// ex: # Experimental!
     ///   : °⊚ ⧅< 2 ⇡50
     ///   : °⊚ ⧅> 2 ⇡50
     ///   : °⊚ ⧅≠ 2 ⇡50
-    (2[1], Tuples, IteratingModifier, ("tuples", '⧅')),
+    /// We can get something similar with the monadic form.
+    /// ex: # Experimental!
+    ///   : ⬚0⧅∘ +1⇡50
+    ([1], Tuples, IteratingModifier, ("tuples", '⧅')),
     /// Apply a function to each unboxed row of an array and re-box the results
     ///
     /// For box arrays, this is equivalent to `rows``under``un``box`.

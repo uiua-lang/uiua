@@ -487,10 +487,10 @@ impl<T: ArrayValue> Array<T> {
         assert!(start < self.row_count());
         assert!(end <= self.row_count());
         let row_len = self.row_len();
-        let start = start * row_len;
-        let end = end * row_len;
         let mut shape = self.shape.clone();
         shape[0] = end - start;
+        let start = start * row_len;
+        let end = end * row_len;
         Self::new(shape, self.data.slice(start..end))
     }
     /// Consume the array and get an iterator over its rows

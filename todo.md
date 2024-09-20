@@ -4,8 +4,6 @@
   - Rename and stabilize `but` and `with`
     - Likely `with` and `off`
   - Make ASCII glyph typing more consistent
-  - `tuples` monadic
-  - `&imst` system function
   - `base` subscript
   - `bits` subscript?
   - Update language tour

@@ -291,6 +291,7 @@ static BY_INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &([Min], [Min]),
         &([Max], [Max]),
         &([Select], [IndexOf]),
+        &([IndexOf], [Select]),
     ]
 };
 

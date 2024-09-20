@@ -71,7 +71,7 @@ pub fn Site() -> impl IntoView {
         .into_view(),
         view!("Check out "<a href="https://tacittalk.com/">"Tacit Talk"</a>"!").into_view(),
         "Abandon nominativity. Embrace relativity.".into_view(),
-        view!(<Prim prim=Under glyph_only=true/>"🗄️🍴").into_view(),
+        view!(<div style="font-style: normal"><Prim prim=Under glyph_only=true/>"🗄️🍴"</div>).into_view(),
         "It's got um...I um...arrays".into_view(),
     ];
     let local_storage = window().local_storage().unwrap().unwrap();

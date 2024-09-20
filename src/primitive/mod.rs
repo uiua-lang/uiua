@@ -7,6 +7,7 @@ pub use defs::*;
 use ecow::EcoVec;
 use regex::Regex;
 
+use core::str;
 use std::{
     borrow::{BorrowMut, Cow},
     cell::RefCell,
@@ -316,6 +317,36 @@ impl fmt::Display for FormatPrimitive {
     }
 }
 
+static ALIASES: Lazy<HashMap<Primitive, &[&str]>> = Lazy::new(|| {
+    [
+        (Primitive::Identity, &["id"] as &[_]),
+        (Primitive::Gap, &["ga"]),
+        (Primitive::Pop, &["po"]),
+        (Primitive::Pi, &["pi"]),
+        (Primitive::Fix, &["fx"]),
+        (Primitive::Box, &["bx"]),
+        (Primitive::IndexOf, &["idx"]),
+        (Primitive::Switch, &["sw"]),
+        (Primitive::Floor, &["flr"]),
+        (Primitive::Range, &["ran"]),
+        (Primitive::Transpose, &["tra"]),
+        (Primitive::Partition, &["par"]),
+        (Primitive::Dup, &["dup"]),
+        (Primitive::Deshape, &["flat"]),
+        (Primitive::Ne, &["ne", "neq"]),
+        (Primitive::Eq, &["eq"]),
+        (Primitive::Lt, &["lt"]),
+        (Primitive::Le, &["le", "leq"]),
+        (Primitive::Gt, &["gt"]),
+        (Primitive::Ge, &["ge", "geq"]),
+        (Primitive::Utf8, &["utf", "utf__8"]),
+        (Primitive::ImageEncode, &["&ime", "imen"]),
+        (Primitive::GifEncode, &["&gife", "gifen"]),
+        (Primitive::AudioEncode, &["&ae", "auden"]),
+    ]
+    .into()
+});
+
 impl Primitive {
     /// Get an iterator over all primitives
     pub fn all() -> impl Iterator<Item = Self> + Clone {
@@ -441,6 +472,10 @@ impl Primitive {
     pub fn is_deprecated(&self) -> bool {
         self.deprecation_suggestion().is_some()
     }
+    /// Get the short aliases for this primitive
+    pub fn aliases(&self) -> &'static [&'static str] {
+        ALIASES.get(self).copied().unwrap_or_default()
+    }
     /// Try to parse a primitive from a name prefix
     pub fn from_format_name(name: &str) -> Option<Self> {
         if name.chars().any(char::is_uppercase) {
@@ -449,22 +484,14 @@ impl Primitive {
         if name.len() < 2 {
             return None;
         }
-        match name {
-            "id" => return Some(Primitive::Identity),
-            "ga" => return Some(Primitive::Gap),
-            "po" => return Some(Primitive::Pop),
-            "pi" => return Some(Primitive::Pi),
-            "sw" => return Some(Primitive::Switch),
-            "ran" => return Some(Primitive::Range),
-            "tra" => return Some(Primitive::Transpose),
-            "par" => return Some(Primitive::Partition),
-            "dup" => return Some(Primitive::Dup),
-            "flat" => return Some(Primitive::Deshape),
-            "utf" | "utf__8" => return Some(Primitive::Utf8),
-            "&ime" | "imen" => return Some(Primitive::ImageEncode),
-            "&gife" | "gifen" => return Some(Primitive::GifEncode),
-            "&ae" | "auden" => return Some(Primitive::AudioEncode),
-            _ => {}
+        static REVERSE_ALIASES: Lazy<HashMap<&'static str, Primitive>> = Lazy::new(|| {
+            ALIASES
+                .iter()
+                .flat_map(|(prim, aliases)| aliases.iter().map(|&s| (s, *prim)))
+                .collect()
+        });
+        if let Some(prim) = REVERSE_ALIASES.get(name) {
+            return Some(*prim);
         }
         if let Some(prim) = Primitive::non_deprecated().find(|p| p.name() == name) {
             return Some(prim);
@@ -479,7 +506,7 @@ impl Primitive {
             return None;
         }
         let mut matching = Primitive::non_deprecated()
-            .filter(|p| p.glyph().is_some_and(|u| !u.is_ascii()) && p.name().starts_with(name));
+            .filter(|p| p.glyph().is_some() && p.name().starts_with(name));
         let res = matching.next()?;
         let exact_match = res.name() == name;
         (exact_match || matching.next().is_none()).then_some(res)
@@ -1843,6 +1870,9 @@ mod tests {
             }),
         ] {
             for prim in Primitive::non_deprecated() {
+                if prim.name().contains(' ') {
+                    continue;
+                }
                 let char_test = match prim.glyph() {
                     None => prim.name().len(),
                     Some(c) if c.is_ascii() => continue,

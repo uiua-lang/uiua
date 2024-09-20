@@ -100,10 +100,25 @@ pub fn PrimDocs(prim: Primitive) -> impl IntoView {
         }
     });
 
+    let aliases: Vec<_> = prim
+        .aliases()
+        .iter()
+        .copied()
+        .filter(|&s| s != prim.name())
+        .collect();
+    let aliases = if aliases.is_empty() {
+        None
+    } else {
+        Some(view!(<p style="white-space: pre-wrap">
+                "Aliases: "{aliases.iter().map(|&s| view!(<code>{s}</code>" ")).collect::<Vec<_>>()}
+            </p>))
+    };
+
     view! {
         <div>
             <h1 id=id><Prim prim=prim hide_docs=true/>{ long_name }</h1>
             <p><h3>{ sig }</h3></p>
+            { aliases }
             <p>{ experimental }</p>
             { body }
             { match prim {

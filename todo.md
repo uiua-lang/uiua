@@ -3,10 +3,11 @@
 - 0.13
   - Rename and stabilize `but` and `with`
     - Likely `with` and `off`
-  - Make ASCII glyph typing more consistent
   - `bits` subscript?
+  - `base` tweak
   - Update language tour
   - Update design page
+  - Sound easter egg
   - Recursive stack macros
   - Label and format string glyphs?
   - `setinv/setund` unification

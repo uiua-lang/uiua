@@ -277,7 +277,7 @@ fn run() -> UiuaResult {
                 formatter_options,
                 #[cfg(feature = "audio")]
                 audio_options,
-                clear,
+                stack,
                 args,
             } => {
                 let config = FormatConfig {
@@ -294,7 +294,7 @@ fn run() -> UiuaResult {
                     compiler.load_file(file)?;
                     rt.run_compiler(&mut compiler)?;
                 }
-                repl(rt, compiler, true, clear, config);
+                repl(rt, compiler, true, stack, config);
             }
             App::Update { main, check } => update(main, check),
             App::Module { command } => {
@@ -724,8 +724,8 @@ enum App {
         #[cfg(feature = "audio")]
         #[clap(flatten)]
         audio_options: AudioOptions,
-        #[clap(short = 'c', long, help = "Clear the stack after each line")]
-        clear: bool,
+        #[clap(short = 's', long, help = "Don't clear the stack after each line")]
+        stack: bool,
         #[clap(trailing_var_arg = true)]
         args: Vec<String>,
     },
@@ -946,7 +946,7 @@ fn print_stack(stack: &[Value], color: bool) {
     }
 }
 
-fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, clear: bool, config: FormatConfig) {
+fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, stack: bool, config: FormatConfig) {
     env = env.with_interrupt_hook(|| PRESSED_CTRL_C.swap(false, Ordering::Relaxed));
     compiler.pre_eval_mode(PreEvalMode::Line);
     println!(
@@ -1006,7 +1006,7 @@ fn repl(mut env: Uiua, mut compiler: Compiler, color: bool, clear: bool, config:
         match res {
             Ok(()) => {
                 print_stack(env.stack(), color);
-                if clear {
+                if !stack {
                     env.take_stack();
                 }
             }

@@ -63,6 +63,9 @@ This version is not yet released. If you are reading this on the website, then t
   - [`rows ≡`](https://uiua.org/docs/rows) [`on ⟜`](https://uiua.org/docs/on)/[`by ⊸`](https://uiua.org/docs/by) [`random ⚂`](https://uiua.org/docs/random)/`constant`
   - [`memberof ∈`](https://uiua.org/docs/memberof)[`range ⇡`](https://uiua.org/docs/range) for scalar inputs to [`range ⇡`](https://uiua.org/docs/range)
 - Tweak the formatter to reduce excess vertical space
+- `uiua repl` now has a `-s`/`--stack` flag to disable clearing the stack after each line
+  - Clearing the stack is now the default
+  - The `-c/--clear` has been removed
 ### Website
 - In the pad, files created with [`&fwa`](https://uiua.org/docs/&fwa) will now persist between runs
 - Add [Ranges](https://uiua.org/tutorial/ranges) tutorial

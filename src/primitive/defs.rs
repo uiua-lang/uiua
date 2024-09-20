@@ -1544,6 +1544,35 @@ primitive!(
     /// [indexof] is closely related to [memberof].
     (2, IndexOf, DyadicArray, ("indexof", '⊗')),
     /// Get the base digits of a number
+    ///
+    /// When passed a scalar number, [base] returns the base-N digits of the numbers in an array.
+    /// Digits are always listed least-significant to most-significant.
+    /// ex: # Experimental!
+    ///   : base 10 123
+    /// ex: # Experimental!
+    ///   : base 2 10
+    /// ex: # Experimental!
+    ///   : base 16 256
+    /// When passed an array of numbers, [base] treats each digit as having a different base.
+    /// Anything left over will be added as the most significant digit.
+    /// ex: # Experimental!
+    ///   : base [10 2] 123
+    /// ex: # Experimental!
+    ///   : base [60 60 24 365.25] now
+    /// Non-integer bases are supported.
+    /// ex: # Experimental!
+    ///   : base π [η π τ]
+    /// ex: # Experimental!
+    ///   : base 1.5 [1 2 3 4 5]
+    ///
+    /// [base] is compatible with [under].
+    /// ex: # Experimental!
+    ///   : ⍜(°⍉base4|⬚0↙3) [10 100 1000]
+    /// It can also be used with [un][on] to convert digits in a certain base back to numbers.
+    /// ex: # Experimental!
+    ///   : ◌°⟜base 2 [1 0 0 1 0]
+    ///   : ◌°⟜base 2 [1_0_0 0_1_1 1_1_1]
+    ///   : ◌°⟜base 10 [1 2 3]
     (2, Base, DyadicArray, "base"),
     /// Get all combinations of `k` rows from an array
     ///

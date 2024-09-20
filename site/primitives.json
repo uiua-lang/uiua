@@ -374,6 +374,13 @@
     "description": "Call a function with its arguments reversed",
     "experimental": true
   },
+  "base": {
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Get the base digits of a number",
+    "experimental": true
+  },
   "below": {
     "glyph": "◡",
     "outputs": 1,

@@ -1620,7 +1620,14 @@ impl<T: RealArrayValue> Array<T> {
         let max_row_len = self
             .data
             .iter()
-            .map(|&n| n.to_f64().log(base).ceil() as usize)
+            .map(|&n| {
+                let n = n.to_f64();
+                if n == 0.0 {
+                    0
+                } else {
+                    n.log(base).floor() as usize + 1
+                }
+            })
             .max()
             .unwrap_or(0);
         let mut new_shape = self.shape.clone();

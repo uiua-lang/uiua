@@ -1270,6 +1270,12 @@
     "class": "Constant",
     "description": "The ratio of a circle's circumference to its radius"
   },
+  "timezone": {
+    "args": 0,
+    "outputs": 1,
+    "class": "Misc",
+    "description": "Get the local timezone offset"
+  },
   "trace": {
     "glyph": "⸮",
     "args": 1,

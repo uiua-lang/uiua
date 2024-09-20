@@ -380,6 +380,9 @@ impl SysBackend for WebBackend {
         }
     }
     fn timezone(&self) -> Result<f64, String> {
+        if !cfg!(target_arch = "wasm32") {
+            return Ok(0.0);
+        }
         Ok(-Date::new_0().get_timezone_offset() / 60.0)
     }
 }

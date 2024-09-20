@@ -8,6 +8,7 @@ use std::{
 };
 
 use crate::{editor::get_ast_time, weewuh, START_TIME};
+use js_sys::Date;
 use leptos::*;
 use uiua::{now, GitTarget, Handle, Report, SysBackend, EXAMPLE_TXT, EXAMPLE_UA};
 use wasm_bindgen::prelude::*;
@@ -377,6 +378,9 @@ impl SysBackend for WebBackend {
             Some(Err(err)) => Err(err),
             None => Err("Waiting for module, try running to check...".into()),
         }
+    }
+    fn timezone(&self) -> Result<f64, String> {
+        Ok(-Date::new_0().get_timezone_offset() / 60.0)
     }
 }
 

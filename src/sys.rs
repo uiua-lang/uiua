@@ -14,6 +14,7 @@ use image::DynamicImage;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde::*;
+use time::UtcOffset;
 
 use crate::{
     algorithm::validate_size, cowslice::cowslice, primitive::PrimDoc, Array, Boxed, FfiType,
@@ -967,6 +968,18 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     /// The returned path should be loadable via [`SysBackend::file_read_all`]
     fn load_git_module(&self, url: &str, target: GitTarget) -> Result<PathBuf, String> {
         Err("Loading git modules is not supported in this environment".into())
+    }
+    /// Get the local timezone offset in hours
+    fn timezone(&self) -> Result<f64, String> {
+        if cfg!(target_arch = "wasm32") {
+            return Err("Getting the timezone is not supported in this environment".into());
+        }
+        let offset = UtcOffset::current_local_offset().map_err(|e| e.to_string())?;
+        let (h, m, s) = offset.as_hms();
+        let mut o = h as f64;
+        o += m as f64 / 60.0;
+        o += s as f64 / 3600.0;
+        Ok(o)
     }
 }
 

@@ -2655,6 +2655,11 @@ primitive!(
     /// ex: ⍜°datetime∘ [1917 5 0]
     /// ex: ⍜°datetime∘ [1996 12 ¯100]
     (1, DateTime, Misc, "datetime"),
+    /// Get the local timezone offset
+    ///
+    /// ex: timezone
+    /// ex: datetime +×3600 timezone now
+    (0, TimeZone, Misc, "timezone", Impure),
     /// The number of radians in a quarter circle
     ///
     /// Equivalent to `divide``2``pi` or `divide``4``tau`

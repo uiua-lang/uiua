@@ -884,6 +884,10 @@ impl Primitive {
                 env.try_recv(id)?;
             }
             Primitive::Now => env.push(env.rt.backend.now()),
+            Primitive::TimeZone => {
+                let o = env.rt.backend.timezone().map_err(|e| env.error(e))?;
+                env.push(o);
+            }
             Primitive::DateTime => env.monadic_ref_env(Value::datetime)?,
             Primitive::SetInverse => {
                 let f = env.pop_function()?;

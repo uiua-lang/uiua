@@ -2,8 +2,6 @@
 
 - 0.13
   - `base` tweak
-  - Rename and stabilize `but` and `with`
-    - Likely `with` and `off`
   - Update language tour
   - Update design page
   - Sound easter egg

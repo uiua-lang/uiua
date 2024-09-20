@@ -566,6 +566,11 @@ pub(crate) fn under_instrs(
         &pat!(UndoFix, (UndoFix), (Fix)),
         &stash1!(Shape, (Flip, Reshape)),
         &pat!(
+            Len,
+            (CopyToUnder(1), Shape, CopyToUnder(1), First),
+            (PopUnder(1), UndoFirst, PopUnder(1), Flip, Reshape)
+        ),
+        &pat!(
             Deshape,
             (Dup, Shape, PushToUnder(1), Deshape),
             (PopUnder(1), UndoDeshape),

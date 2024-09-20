@@ -634,7 +634,7 @@ impl Compiler {
                         instrs.insert(0, Instr::Prim(Pop, span));
                         Signature::new(sig.args + 1, sig.outputs)
                     }
-                    prim if prim == On || prim == With && sig.args == 0 => {
+                    On => {
                         instrs.insert(
                             0,
                             if sig.args == 0 {
@@ -646,7 +646,7 @@ impl Compiler {
                         instrs.push(Instr::pop_inline(1, span));
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
-                    prim if prim == By || prim == Off && sig.args == 0 => {
+                    By => {
                         if sig.args > 0 {
                             let mut i = 0;
                             if sig.args > 1 {
@@ -664,19 +664,16 @@ impl Compiler {
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
                     With => {
-                        let mut i = 0;
                         if sig.args < 2 {
                             instrs.insert(0, Instr::TouchStack { count: 2, span });
+                            sig.outputs += 2 - sig.args;
                             sig.args = 2;
-                            i += 1;
                         }
-                        instrs.insert(i, Instr::push_inline(sig.args - 1, span));
-                        i += 1;
-                        instrs.insert(i, Instr::Prim(Dup, span));
-                        i += 1;
-                        if sig.args >= 2 {
-                            instrs.insert(i, Instr::pop_inline(sig.args - 1, span));
-                        }
+                        let mut prefix = eco_vec![
+                            Instr::push_inline(sig.args - 1, span),
+                            Instr::Prim(Dup, span),
+                            Instr::pop_inline(sig.args - 1, span)
+                        ];
                         if sig.outputs >= 2 {
                             instrs.push(Instr::push_inline(sig.outputs - 1, span));
                             for _ in 0..sig.outputs - 1 {
@@ -685,15 +682,17 @@ impl Compiler {
                             }
                         }
                         instrs.push(Instr::Prim(Flip, span));
+                        prefix.extend(take(instrs));
+                        *instrs = prefix;
                         Signature::new(sig.args.max(1), sig.outputs + 1)
                     }
                     Off => {
-                        let mut prefix = EcoVec::new();
                         if sig.args < 2 {
-                            prefix.push(Instr::TouchStack { count: 2, span });
+                            instrs.insert(0, Instr::TouchStack { count: 2, span });
+                            sig.outputs += 2 - sig.args;
                             sig.args = 2;
                         }
-                        prefix.push(Instr::Prim(Dup, span));
+                        let mut prefix = eco_vec![Instr::Prim(Dup, span)];
                         for _ in 0..sig.args - 1 {
                             prefix.push(Instr::push_inline(1, span));
                             prefix.push(Instr::Prim(Flip, span));

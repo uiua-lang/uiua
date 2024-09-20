@@ -2059,6 +2059,7 @@ primitive!(
     /// [with] always takes at least 2 arguments, even if its function takes fewer.
     /// ex! [⤙¯ 2]
     /// ex: [⤙¯ 2 5]
+    /// ex: [⤙1 2 3]
     ([1], With, Stack, ("with", '⤙')),
     /// Call a function but keep its first argument under the outputs on the stack
     ///
@@ -2074,6 +2075,8 @@ primitive!(
     ///   : [⤚¯ 2]
     /// ex: # Experimental!
     ///   : [⤚¯ 2 5]
+    /// ex: # Experimental!
+    ///   : [⤚1 2 3]
     ([1], Off, Stack, ("off", '⤚')),
     /// Duplicate a function's last argument before calling it
     ///

@@ -647,7 +647,7 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
     use crate::{
         algorithm::{validate_size, FillContext},
         grid_fmt::GridFmt,
-        Shape,
+        Boxed, Shape,
     };
     struct FontStuff {
         system: FontSystem,
@@ -657,7 +657,61 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
         static FONT_STUFF: RefCell<Option<FontStuff>> = const { RefCell::new(None) };
     }
 
-    let text = text.as_string(env, "Text must be a string")?;
+    let mut string = String::new();
+    match text {
+        Value::Char(arr) if arr.rank() <= 1 => string = arr.data.iter().copied().collect(),
+        Value::Char(arr) if arr.rank() == 2 => {
+            for (i, row) in arr.row_slices().enumerate() {
+                if i > 0 {
+                    string.push('\n');
+                }
+                string.extend(row.iter().copied());
+            }
+        }
+        Value::Box(arr) if arr.rank() == 1 => {
+            for (i, Boxed(val)) in arr.data.iter().enumerate() {
+                if i > 0 {
+                    string.push('\n');
+                }
+                match val {
+                    Value::Char(arr) if arr.rank() <= 1 => string.extend(arr.data.iter().copied()),
+                    Value::Char(arr) if arr.rank() == 2 => {
+                        for (j, row) in arr.row_slices().enumerate() {
+                            if j > 0 {
+                                string.push(' ');
+                            }
+                            string.extend(row.iter().copied());
+                        }
+                    }
+                    Value::Box(arr) if arr.rank() == 1 => {
+                        for (j, Boxed(val)) in arr.data.iter().enumerate() {
+                            if j > 0 {
+                                string.push(' ');
+                            }
+                            string.push_str(&val.as_string(env, "Text word must be a string")?);
+                        }
+                    }
+                    _ => string.push_str(&val.as_string(env, "Text line must be a string")?),
+                }
+            }
+        }
+        Value::Box(arr) if arr.rank() == 2 => {
+            for (i, row) in arr.row_slices().enumerate() {
+                if i > 0 {
+                    string.push('\n');
+                }
+                for (j, Boxed(val)) in row.iter().enumerate() {
+                    if j > 0 {
+                        string.push(' ');
+                    }
+                    string.push_str(&val.as_string(env, "Text word must be a string")?);
+                }
+            }
+        }
+        val => {
+            string = val.as_string(env, "Text must be a rank 0, 1, or 2 character or box array")?
+        }
+    }
 
     // Default options
     let mut size = 30.0;
@@ -779,7 +833,7 @@ fn layout_text_impl(options: Value, text: Value, env: &Uiua) -> UiuaResult<Value
         let mut buffer = buffer.borrow_with(system);
         buffer.set_size(width, height);
         let attrs = Attrs::new();
-        buffer.set_text(&text, attrs, Shaping::Advanced);
+        buffer.set_text(&string, attrs, Shaping::Advanced);
         buffer.shape_until_scroll(true);
 
         // Get canvas size

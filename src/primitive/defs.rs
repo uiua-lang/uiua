@@ -3195,6 +3195,15 @@ primitive!(
     /// Multi-line text is supported.
     /// ex: # Experimental!
     ///   : layout 30 "Hello,\nWorld!"
+    /// The text to be rendered can be a character array or box array where all leaf nodes are strings.
+    /// The top-level rows are treated as lines and will be separated by newlines.
+    /// The bottom-level rows are treated as words and will be separated by spaces.
+    /// ex: # Experimental!
+    ///   : {{"Words" "can" "be" "on"}
+    ///   :  {"multiple" "lines"}}
+    ///   : layout 30
+    /// ex: # Experimental!
+    ///   : layout 15 ⬚""↯∞_12 ⊜□⊸≠@  Lorem
     ///
     /// Additionally, the first argument can be a list of options.
     /// The first scalar option is the font size (default 30)

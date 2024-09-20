@@ -1501,6 +1501,7 @@ fn invert_push_temp_pattern<'a>(
     let (input, instr, inner, end_instr, depth) = try_push_temp_wrap(input)?;
     // By-inverse
     if let [Instr::Prim(Primitive::Dup, dup_span)] = inner {
+        // By
         for end in 1..=input.len() {
             for mid in 0..end {
                 let before = &input[..mid];
@@ -1528,6 +1529,17 @@ fn invert_push_temp_pattern<'a>(
                         }
                     }
                 }
+            }
+        }
+    } else if instrs_signature(inner).is_ok_and(|sig| sig == (0, 1)) {
+        // Dip constant
+        for pat in BY_INVERT_PATTERNS {
+            if let Some((input, by_inv)) = pat.invert_extract(input, comp) {
+                let mut instrs = eco_vec![instr.clone()];
+                instrs.extend_from_slice(inner);
+                instrs.push(end_instr.clone());
+                instrs.extend(by_inv);
+                return Some((input, instrs));
             }
         }
     }

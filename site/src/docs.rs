@@ -280,16 +280,24 @@ struct Allowed {
 }
 
 fn aliases() -> HashMap<&'static str, &'static [Primitive]> {
+    use Primitive::*;
     [
-        ("filter", &[Primitive::Keep] as &[_]),
-        ("search", &[Primitive::Find]),
-        ("intersect", &[Primitive::Member]),
-        ("split", &[Primitive::Partition]),
-        ("while", &[Primitive::Do]),
-        ("for", &[Primitive::Repeat]),
-        ("invert", &[Primitive::Un]),
+        ("filter", &[Keep] as &[_]),
+        ("search", &[Find, Mask]),
+        ("intersect", &[MemberOf]),
+        ("split", &[Partition]),
+        ("while", &[Do]),
+        ("for", &[Repeat]),
+        ("invert", &[Un]),
+        ("encode", &[Bits, Base]),
+        ("decode", &[Bits, Base]),
+        ("prefixes", &[Tuples]),
+        ("suffixes", &[Tuples]),
+        ("flatten", &[Deshape]),
     ]
-    .into()
+    .into_iter()
+    .flat_map(|(alias, prims)| (3..=alias.len()).map(move |len| (&alias[..len], prims)))
+    .collect()
 }
 
 thread_local! {

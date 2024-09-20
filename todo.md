@@ -4,7 +4,6 @@
   - Rename and stabilize `but` and `with`
     - Likely `with` and `off`
   - Make ASCII glyph typing more consistent
-  - `base` subscript
   - `bits` subscript?
   - Update language tour
   - Update design page

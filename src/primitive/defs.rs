@@ -1333,6 +1333,8 @@ primitive!(
     /// ex: ↘ 5 ↯3_3⇡9
     /// ex: ↘ ¯5 ↯3_3⇡9
     (2, Drop, DyadicArray, ("drop", '↘')),
+    /// Pad an array
+    (2, Pad, DyadicArray, "pad"),
     /// Rotate the elements of an array by n
     ///
     /// ex: ↻1 ⇡5

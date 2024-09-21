@@ -11,8 +11,8 @@ use std::{
 use ecow::EcoVec;
 
 use crate::{
-    algorithm::FillContext,
-    cowslice::{cowslice, CowSlice},
+    algorithm::{validate_size, FillContext},
+    cowslice::{cowslice, extend_repeat_slice, CowSlice},
     grid_fmt::GridFmt,
     val_as_arr, Array, ArrayValue, FormatShape, Primitive, Shape, Uiua, UiuaResult, Value,
 };
@@ -904,13 +904,9 @@ impl Value {
     pub(crate) fn un_on_pick(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
         from.match_scalar_fill(env);
         let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
-        Ok(match from {
-            Value::Num(a) => Value::Num(a.un_on_pick(indices_shape, &indices_data, env)?),
-            Value::Byte(a) => Value::Byte(a.un_on_pick(indices_shape, &indices_data, env)?),
-            Value::Complex(a) => Value::Complex(a.un_on_pick(indices_shape, &indices_data, env)?),
-            Value::Char(a) => Value::Char(a.un_on_pick(indices_shape, &indices_data, env)?),
-            Value::Box(a) => Value::Box(a.un_on_pick(indices_shape, &indices_data, env)?),
-        })
+        val_as_arr!(from, |a| a
+            .un_on_pick(indices_shape, &indices_data, env)
+            .map(Into::into))
     }
 }
 
@@ -1351,5 +1347,144 @@ impl<T: ArrayValue> Array<T> {
         let mut shape = outer_shape;
         shape.extend(cell_shape);
         Ok(Array::new(shape, data))
+    }
+}
+
+impl Value {
+    pub(crate) fn pad(&self, mut target: Self, env: &Uiua) -> UiuaResult<Self> {
+        let padding = self.as_natural_array(env, "Padding must be a natural number array")?;
+        target.match_scalar_fill(env);
+        val_as_arr!(target, |a| a.pad(padding, env).map(Into::into))
+    }
+}
+
+impl<T: ArrayValue> Array<T> {
+    fn pad(mut self, pad_spec: Array<usize>, env: &Uiua) -> UiuaResult<Self> {
+        let fill = env.array_fill::<T>().unwrap_or_else(|_| T::proxy().into());
+        if self.shape.len() < pad_spec.row_count() {
+            return Err(env.error(format!(
+                "Pad array specifies {} axes, \
+                but the array is rank {}",
+                pad_spec.row_count(),
+                self.shape.len()
+            )));
+        }
+        let row_shape = self.shape.row();
+        let mut padding = Cow::Borrowed(pad_spec.data.as_slice());
+        Ok(match &*pad_spec.shape {
+            [] => {
+                // Pad first axis front and back the same
+                if !self.shape[1..].ends_with(&fill.shape) {
+                    return Err(env.error(format!(
+                        "Cannot pad array of shape {} \
+                        with fill of shape {}",
+                        self.shape, fill.shape
+                    )));
+                }
+                let n = padding[0];
+                let reps = row_shape.elements() / fill.shape.elements();
+                self.data.extend_repeat_slice(&fill.data, n * 2 * reps);
+                self.data
+                    .as_mut_slice()
+                    .rotate_right(n * reps * fill.shape.elements());
+                self.shape[0] += n * 2;
+                self.validate_shape();
+                self
+            }
+            &[n] => {
+                // Pad each axis front and back the same
+                if !self.shape[n..].ends_with(&fill.shape) {
+                    return Err(env.error(format!(
+                        "Cannot pad array of shape {} \
+                        with fill of shape {}",
+                        self.shape, fill.shape
+                    )));
+                }
+                if padding.iter().all(|&p| p == 0) {
+                    return Ok(self);
+                }
+                let contig_row_size: usize = self.shape[n - 1..].iter().product();
+                let mut m = n;
+                if m < self.shape.len() {
+                    padding
+                        .to_mut()
+                        .extend(repeat(0).take(self.shape.len() - m));
+                    m = self.shape.len();
+                }
+                let mut new_shape = self.shape.clone();
+                for (p, d) in padding.iter().zip(&mut *new_shape) {
+                    *d += *p * 2;
+                }
+                let elem_count = validate_size::<T>(new_shape.iter().copied(), env)?;
+                let mut new_data = EcoVec::with_capacity(elem_count);
+                let mut slice_sizes = Vec::with_capacity(m);
+                for i in 0..m {
+                    let mut size = padding[i];
+                    for j in i + 1..m {
+                        size *= padding[j] * 2 + self.shape[j];
+                    }
+                    slice_sizes.push(size);
+                }
+                let cap_size = slice_sizes.remove(0);
+                let sliver_size = slice_sizes.pop().unwrap();
+                let mut curr = vec![0; n - 1];
+                let maxes = self.shape[..n - 1].to_vec();
+                println!("contig_row_size: {contig_row_size}");
+                println!("cap_size: {cap_size}");
+                println!("sliver_size: {sliver_size}");
+                println!("slice_sizes: {slice_sizes:?}");
+                println!("maxes: {maxes:?}");
+                // Add leading cap
+                extend_repeat_slice(&mut new_data, &fill.data, cap_size);
+                'outer: for i in 0.. {
+                    println!("curr: {curr:?}");
+                    // Add leading slices
+                    for i in 0..n - 1 {
+                        if i != n - 2 && curr[i] == 0 {
+                            dbg!(i);
+                            extend_repeat_slice(&mut new_data, &fill.data, dbg!(slice_sizes[i]));
+                        }
+                    }
+                    // Add leading sliver
+                    extend_repeat_slice(&mut new_data, &fill.data, dbg!(sliver_size));
+                    // Add array row
+                    new_data
+                        .extend_from_slice(&self.data[contig_row_size * i..][..contig_row_size]);
+                    // Add trailing sliver
+                    extend_repeat_slice(&mut new_data, &fill.data, dbg!(sliver_size));
+                    // Add leading slices
+                    for i in 0..n - 1 {
+                        if i != n - 2 && curr[i] == maxes[i] - 1 {
+                            dbg!(i);
+                            extend_repeat_slice(&mut new_data, &fill.data, dbg!(slice_sizes[i]));
+                        }
+                    }
+                    // Increment curr
+                    for i in 0..n - 1 {
+                        curr[i] += 1;
+                        if curr[i] == maxes[i] {
+                            curr[i] = 0;
+                        } else {
+                            continue 'outer;
+                        }
+                    }
+                    break;
+                }
+                // Add trailing cap
+                extend_repeat_slice(&mut new_data, &fill.data, cap_size);
+                Array::new(new_shape, new_data)
+            }
+            &[_n, _s] => {
+                // Pad each axis front and back differently
+                todo!()
+            }
+            sh => {
+                return Err(env.error(format!(
+                    "Padding array must be at most \
+                    rank 2, but it is rank {}",
+                    sh.len()
+                )))
+            }
+        })
     }
 }

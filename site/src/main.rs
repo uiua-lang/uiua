@@ -131,7 +131,7 @@ pub fn Site() -> impl IntoView {
                     <Route path="tutorial/:page?" view=Tutorial/>
                     <Route path="docs/:page?" view=Docs/>
                     <Route path="isms/:search?" view=Uiuisms/>
-                    <Route path="pad" view=Pad/>
+                    <Route path="pad" view=PadPage/>
                     <Route path="install" view=Install/>
                     <Route path="tour" view=Tour/>
                     <Route path="isms" view=Uiuisms/>
@@ -500,7 +500,7 @@ fn element<T: JsCast>(id: &str) -> T {
 }
 
 #[component]
-pub fn Pad() -> impl IntoView {
+pub fn PadPage() -> impl IntoView {
     let src = pad_src();
     let version = format!("Uiua {}", uiua::VERSION);
     let help = &["Note: Uiua is not yet stable", &version];

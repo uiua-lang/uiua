@@ -237,7 +237,11 @@ impl<T: Clone> CowSlice<T> {
     }
     #[track_caller]
     pub fn extend_repeat(&mut self, elem: &T, count: usize) {
-        unsafe { self.extend_from_trusted(Repeat { elem, count }) }
+        self.modify_end(|data| extend_repeat(data, elem, count))
+    }
+    #[track_caller]
+    pub fn extend_repeat_slice(&mut self, slice: &[T], count: usize) {
+        self.modify_end(|data| extend_repeat_slice(data, slice, count))
     }
     #[track_caller]
     pub unsafe fn extend_from_trusted<I>(&mut self, iter: I)
@@ -246,6 +250,22 @@ impl<T: Clone> CowSlice<T> {
         I::IntoIter: ExactSizeIterator,
     {
         self.modify_end(|data| data.extend_from_trusted(iter))
+    }
+}
+
+pub(crate) fn extend_repeat<T: Clone>(vec: &mut EcoVec<T>, elem: &T, count: usize) {
+    unsafe { vec.extend_from_trusted(Repeat { elem, count }) }
+}
+
+pub(crate) fn extend_repeat_slice<T: Clone>(vec: &mut EcoVec<T>, slice: &[T], count: usize) {
+    match slice {
+        [] => {}
+        [elem] => extend_repeat(vec, elem, count),
+        _ => {
+            for _ in 0..count {
+                vec.extend_from_slice(slice);
+            }
+        }
     }
 }
 

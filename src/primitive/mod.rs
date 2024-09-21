@@ -452,18 +452,10 @@ impl Primitive {
         matches!(
             self,
             (Off | Backward | Above)
-                | (Tuples | Choose | Permute)
+                | (Tuples | Choose | Permute | Pad)
                 | Struct
-                | (Last
-                    | Sort
-                    | Chunks
-                    | Base
-                    | Coordinate
-                    | Astar
-                    | Fft
-                    | Triangle
-                    | Case
-                    | Layout)
+                | (Last | Sort | Chunks | Base | Coordinate | Fft | Case | Layout)
+                | (Astar | Triangle)
                 | Sys(Ffi | MemCopy | MemFree | TlsListen)
                 | (Stringify | Quote | Sig)
         )
@@ -688,6 +680,7 @@ impl Primitive {
             Primitive::Keep => env.dyadic_oo_env(Value::keep)?,
             Primitive::Take => env.dyadic_oo_env(Value::take)?,
             Primitive::Drop => env.dyadic_oo_env(Value::drop)?,
+            Primitive::Pad => env.dyadic_ro_env(Value::pad)?,
             Primitive::Rotate => env.dyadic_ro_env(Value::rotate)?,
             Primitive::Orient => env.dyadic_ro_env(|a, mut b, env| {
                 a.orient(&mut b, env)?;

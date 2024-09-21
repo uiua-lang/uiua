@@ -1370,7 +1370,7 @@ impl<T: ArrayValue> Array<T> {
             )));
         }
         let row_shape = self.shape.row();
-        let mut padding = Cow::Borrowed(pad_spec.data.as_slice());
+        let padding = &pad_spec.data.as_slice();
         Ok(match &*pad_spec.shape {
             [] => {
                 // Pad first axis front and back the same
@@ -1382,7 +1382,12 @@ impl<T: ArrayValue> Array<T> {
                     )));
                 }
                 let n = padding[0];
-                let reps = row_shape.elements() / fill.shape.elements();
+                let fill_elems = fill.shape.elements();
+                let reps = if fill_elems == 0 {
+                    0
+                } else {
+                    row_shape.elements() / fill_elems
+                };
                 self.data.extend_repeat_slice(&fill.data, n * 2 * reps);
                 self.data
                     .as_mut_slice()
@@ -1391,92 +1396,20 @@ impl<T: ArrayValue> Array<T> {
                 self.validate_shape();
                 self
             }
-            &[n] => {
+            &[_] => {
                 // Pad each axis front and back the same
-                if !self.shape[n..].ends_with(&fill.shape) {
+                pad_impl(self, fill, padding, padding, env)?
+            }
+            &[n, s] => {
+                // Pad each axis front and back differently
+                if s != 2 {
                     return Err(env.error(format!(
-                        "Cannot pad array of shape {} \
-                        with fill of shape {}",
-                        self.shape, fill.shape
+                        "Padding array's second axis must be 2, but it is {s}"
                     )));
                 }
-                if padding.iter().all(|&p| p == 0) {
-                    return Ok(self);
-                }
-                let contig_row_size: usize = self.shape[n - 1..].iter().product();
-                let mut m = n;
-                if m < self.shape.len() {
-                    padding
-                        .to_mut()
-                        .extend(repeat(0).take(self.shape.len() - m));
-                    m = self.shape.len();
-                }
-                let mut new_shape = self.shape.clone();
-                for (p, d) in padding.iter().zip(&mut *new_shape) {
-                    *d += *p * 2;
-                }
-                let elem_count = validate_size::<T>(new_shape.iter().copied(), env)?;
-                let mut new_data = EcoVec::with_capacity(elem_count);
-                let mut slice_sizes = Vec::with_capacity(m);
-                for i in 0..m {
-                    let mut size = padding[i];
-                    for j in i + 1..m {
-                        size *= padding[j] * 2 + self.shape[j];
-                    }
-                    slice_sizes.push(size);
-                }
-                let cap_size = slice_sizes.remove(0);
-                let sliver_size = slice_sizes.pop().unwrap();
-                let mut curr = vec![0; n - 1];
-                let maxes = self.shape[..n - 1].to_vec();
-                println!("contig_row_size: {contig_row_size}");
-                println!("cap_size: {cap_size}");
-                println!("sliver_size: {sliver_size}");
-                println!("slice_sizes: {slice_sizes:?}");
-                println!("maxes: {maxes:?}");
-                // Add leading cap
-                extend_repeat_slice(&mut new_data, &fill.data, cap_size);
-                'outer: for i in 0.. {
-                    println!("curr: {curr:?}");
-                    // Add leading slices
-                    for i in 0..n - 1 {
-                        if i != n - 2 && curr[i] == 0 {
-                            dbg!(i);
-                            extend_repeat_slice(&mut new_data, &fill.data, dbg!(slice_sizes[i]));
-                        }
-                    }
-                    // Add leading sliver
-                    extend_repeat_slice(&mut new_data, &fill.data, dbg!(sliver_size));
-                    // Add array row
-                    new_data
-                        .extend_from_slice(&self.data[contig_row_size * i..][..contig_row_size]);
-                    // Add trailing sliver
-                    extend_repeat_slice(&mut new_data, &fill.data, dbg!(sliver_size));
-                    // Add leading slices
-                    for i in 0..n - 1 {
-                        if i != n - 2 && curr[i] == maxes[i] - 1 {
-                            dbg!(i);
-                            extend_repeat_slice(&mut new_data, &fill.data, dbg!(slice_sizes[i]));
-                        }
-                    }
-                    // Increment curr
-                    for i in 0..n - 1 {
-                        curr[i] += 1;
-                        if curr[i] == maxes[i] {
-                            curr[i] = 0;
-                        } else {
-                            continue 'outer;
-                        }
-                    }
-                    break;
-                }
-                // Add trailing cap
-                extend_repeat_slice(&mut new_data, &fill.data, cap_size);
-                Array::new(new_shape, new_data)
-            }
-            &[_n, _s] => {
-                // Pad each axis front and back differently
-                todo!()
+                let front: Vec<usize> = (0..n).map(|i| padding[i * 2]).collect();
+                let back: Vec<usize> = (0..n).map(|i| padding[i * 2 + 1]).collect();
+                pad_impl(self, fill, &front, &back, env)?
             }
             sh => {
                 return Err(env.error(format!(
@@ -1487,4 +1420,105 @@ impl<T: ArrayValue> Array<T> {
             }
         })
     }
+}
+
+fn pad_impl<T: ArrayValue>(
+    arr: Array<T>,
+    fill: Array<T>,
+    mut front_pad: &[usize],
+    mut back_pad: &[usize],
+    env: &Uiua,
+) -> UiuaResult<Array<T>> {
+    // Trim trailing zeros
+    while front_pad.last() == Some(&0) && back_pad.last() == Some(&0) {
+        front_pad = &front_pad[..front_pad.len() - 1];
+        back_pad = &back_pad[..back_pad.len() - 1];
+    }
+
+    if front_pad.iter().all(|&p| p == 0) && back_pad.iter().all(|&p| p == 0) {
+        return Ok(arr);
+    }
+    let n = front_pad.len();
+    let contig_row_size: usize = arr.shape[n - 1..].iter().product();
+    let mut new_shape = arr.shape.clone();
+    for ((f, b), d) in front_pad.iter().zip(back_pad).zip(&mut *new_shape) {
+        *d += *f + *b
+    }
+    let elem_count = validate_size::<T>(new_shape.iter().copied(), env)?;
+    let mut new_data = EcoVec::with_capacity(elem_count);
+    struct PadNums {
+        cap_size: usize,
+        sliver_size: usize,
+        slice_sizes: Vec<usize>,
+    }
+    let make_pad_nums = |padding: &[usize]| {
+        let mut slice_sizes = Vec::with_capacity(n);
+        for i in 0..n {
+            let mut size = padding[i];
+            for j in i + 1..arr.shape.len() {
+                size *= front_pad.get(j).copied().unwrap_or(0)
+                    + back_pad.get(j).copied().unwrap_or(0)
+                    + arr.shape[j];
+            }
+            slice_sizes.push(size / fill.shape.elements());
+        }
+        let cap_size = slice_sizes.remove(0);
+        let sliver_size = slice_sizes.pop().unwrap_or(0);
+        // println!("cap_size: {cap_size}");
+        // println!("sliver_size: {sliver_size}");
+        // println!("slice_sizes: {slice_sizes:?}");
+        PadNums {
+            cap_size,
+            sliver_size,
+            slice_sizes,
+        }
+    };
+    let front = make_pad_nums(front_pad);
+    let back = make_pad_nums(back_pad);
+    let mut curr = vec![0; n - 1];
+    let maxes = arr.shape[..n - 1].to_vec();
+    // println!("contig_row_size: {contig_row_size}");
+    // println!("maxes: {maxes:?}");
+    // Add leading cap
+    extend_repeat_slice(&mut new_data, &fill.data, front.cap_size);
+    'outer: for i in 0.. {
+        // println!("curr: {curr:?}");
+        // Add leading slices
+        for i in 0..n - 1 {
+            if i != n - 2 && curr[i + 1..].iter().all(|&c| c == 0) {
+                // println!("  extend front {i} {:?}", front.slice_sizes[i]);
+                extend_repeat_slice(&mut new_data, &fill.data, front.slice_sizes[i]);
+            }
+        }
+        // Add leading sliver
+        // println!("  front sliver: {}", front.sliver_size);
+        extend_repeat_slice(&mut new_data, &fill.data, front.sliver_size);
+        // Add array row
+        new_data.extend_from_slice(&arr.data[contig_row_size * i..][..contig_row_size]);
+        // Add trailing sliver
+        // println!("  back sliver: {}", back.sliver_size);
+        extend_repeat_slice(&mut new_data, &fill.data, back.sliver_size);
+        // Add leading slices
+        for i in 0..n - 1 {
+            if i != n - 2
+                && (curr[i + 1..].iter().enumerate()).all(|(j, &c)| c == maxes[i + 1 + j] - 1)
+            {
+                // println!("  extend back {i} {:?}", back.slice_sizes[i]);
+                extend_repeat_slice(&mut new_data, &fill.data, back.slice_sizes[i]);
+            }
+        }
+        // Increment curr
+        for i in (0..n - 1).rev() {
+            curr[i] += 1;
+            if curr[i] == maxes[i] {
+                curr[i] = 0;
+            } else {
+                continue 'outer;
+            }
+        }
+        break;
+    }
+    // Add trailing cap
+    extend_repeat_slice(&mut new_data, &fill.data, back.cap_size);
+    Ok(Array::new(new_shape, new_data))
 }

@@ -50,6 +50,8 @@ This version is not yet released. If you are reading this on the website, then t
   - This also replaces and deprecates the `triangle` modifier
 - Add experimental [`base`](https://uiua.org/docs/base) function
   - This converts to and from base-N digits
+- Add experimental [`pad`](https://uiua.org/docs/pad) function
+  - This pads an array with a value
 - Add an experimental [`sort ⍆`](https://uiua.org/docs/sort) function
   - Sorting is very common
   - [`un °`](https://uiua.org/docs/un) [`sort ⍆`](https://uiua.org/docs/sort) shuffles an array

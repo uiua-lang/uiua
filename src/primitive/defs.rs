@@ -1334,6 +1334,42 @@ primitive!(
     /// ex: ↘ ¯5 ↯3_3⇡9
     (2, Drop, DyadicArray, ("drop", '↘')),
     /// Pad an array
+    ///
+    /// The first argument is an amount to pad. The second argument is the array to pad.
+    /// By default, the pad value is a "zero element" of the array's type.
+    /// - For number arrays, it is `0`.
+    /// - For character arrays, it is `@ ` (space).
+    /// - For complex arrays, it is `0ℂ`.
+    /// - For box arrays, it is `⟦⟧`.
+    /// A scalar first argument will pad the first axis of the array on both sides.
+    /// ex: # Experimental!
+    ///   : pad 2 [1 2 3]
+    /// ex: # Experimental!
+    ///   : pad 3 "Hello!"
+    /// ex: # Experimental!
+    ///   : pad 1 [1_2 3_4]
+    /// [fill] can be used to set the fill value. Non-scalar fills are allowed if they are compatible with the array's shape.
+    /// ex: # Experimental!
+    ///   : ⬚10pad 2 [1 2 3]
+    /// ex: # Experimental!
+    ///   : ⬚@-pad 2 "abc"
+    /// ex: # Experimental!
+    ///   : ⬚10pad 1 [1_2 3_4]
+    /// ex: # Experimental!
+    ///   : ⬚10_20pad 1 [1_2 3_4]
+    /// If the first argument is a list, each axis will be padded on both sides with the corresponding amount.
+    /// ex: # Experimental!
+    ///   : pad 1_2 [1_2 3_4]
+    /// ex: # Experimental!
+    ///   : pad 1_1_2 +1°△2_2_4
+    /// If the first argument is a rank-2 array with a second axis of length 2, the first element of each row pads the front of the array's axis, and the second element pads the back.
+    /// ex: # Experimental!
+    ///   : pad [1_2 3_4] [1_2 3_4]
+    /// ex: # Experimental!
+    ///   : pad ¤2_5 1_2_3
+    /// [pad] can be good for padding images.
+    /// ex: # Experimental!
+    ///   : ⬚Purple pad 20_20 Lena
     (2, Pad, DyadicArray, "pad"),
     /// Rotate the elements of an array by n
     ///

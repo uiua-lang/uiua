@@ -145,26 +145,47 @@ impl Compiler {
                 comment.map(|text| DocComment::from(text.as_str())),
             );
             let mut words = binding.words.clone();
-            recurse_words_mut(&mut words, &mut |word| match &word.value {
-                Word::Ref(r) => {
-                    if let Ok((path_locals, local)) = self.ref_local(r) {
-                        self.validate_local(&r.name.value, local, &r.name.span);
-                        (self.code_meta.global_references).insert(r.name.span.clone(), local.index);
-                        for (local, comp) in path_locals.into_iter().zip(&r.path) {
-                            (self.code_meta.global_references)
-                                .insert(comp.module.span.clone(), local.index);
+            recurse_words_mut(&mut words, &mut |word| {
+                let mut path_locals = None;
+                let mut name_local = None;
+                match &word.value {
+                    Word::Ref(r) => match self.ref_local(r) {
+                        Ok((pl, l)) => {
+                            path_locals = Some((&r.path, pl));
+                            name_local = Some((&r.name, l));
+                        }
+                        Err(e) => self.errors.push(e),
+                    },
+                    Word::IncompleteRef { path, in_macro_arg } => {
+                        match self.ref_path(path, *in_macro_arg) {
+                            Ok(Some((_, pl))) => path_locals = Some((path, pl)),
+                            Ok(None) => {}
+                            Err(e) => self.errors.push(e),
                         }
                     }
-                }
-                Word::IncompleteRef { path, in_macro_arg } => {
-                    if let Ok(Some((_, path_locals))) = self.ref_path(path, *in_macro_arg) {
-                        for (local, comp) in path_locals.into_iter().zip(path) {
-                            (self.code_meta.global_references)
-                                .insert(comp.module.span.clone(), local.index);
+                    Word::Modified(m) => {
+                        if let Modifier::Ref(r) = &m.modifier.value {
+                            match self.ref_local(r) {
+                                Ok((pl, l)) => {
+                                    path_locals = Some((&r.path, pl));
+                                    name_local = Some((&r.name, l));
+                                }
+                                Err(e) => self.errors.push(e),
+                            }
                         }
                     }
+                    _ => {}
                 }
-                _ => {}
+                if let Some((name, local)) = name_local {
+                    self.validate_local(&name.value, local, &name.span);
+                    (self.code_meta.global_references).insert(name.span.clone(), local.index);
+                }
+                if let Some((path, locals)) = path_locals {
+                    for (local, comp) in locals.into_iter().zip(path) {
+                        (self.code_meta.global_references)
+                            .insert(comp.module.span.clone(), local.index);
+                    }
+                }
             });
             let mac = StackMacro {
                 words,
@@ -174,6 +195,8 @@ impl Compiler {
             self.stack_macros.insert(local.index, mac);
             return Ok(());
         }
+
+        // A non-macro binding
         let flags = prelude.flags;
         let mut make_fn: Box<dyn FnOnce(_, _, &mut Compiler) -> _> = {
             let name = name.clone();

@@ -1544,7 +1544,14 @@ code:
                 return Some(local);
             }
         }
-        self.find_name(name.strip_suffix('!')?, skip_local)
+        // Attempt to look up the identifier as a non-macro
+        let as_non_macro = self.find_name(name.strip_suffix('!')?, skip_local)?;
+        if let BindingKind::Module(_) = self.asm.bindings[as_non_macro.index].kind {
+            // Only allow it if it is a module
+            Some(as_non_macro)
+        } else {
+            None
+        }
     }
     fn ref_path(
         &self,

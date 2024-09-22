@@ -829,7 +829,9 @@ impl<'a> Formatter<'a> {
                     }
                 };
                 if formatted.starts_with(|c: char| c.is_ascii_digit())
-                    && (self.output.ends_with(|c: char| c.is_ascii_digit())
+                    && (self
+                        .output
+                        .ends_with(|c: char| c.is_ascii_digit() || c == '¯')
                         || self.output.ends_with('.')
                             && (self.output.chars().nth_back(1))
                                 .is_some_and(|c| c.is_ascii_digit()))

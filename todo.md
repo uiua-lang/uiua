@@ -2,6 +2,9 @@
 
 - 0.13
   - `base` tweak
+  - `anti` modifier
+  - `un on drop`
+  - Non-scalar `fill take`
   - Update language tour
   - Update design page
   - Sound easter egg

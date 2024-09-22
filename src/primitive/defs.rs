@@ -2215,6 +2215,8 @@ primitive!(
     /// ex: # Experimental!
     ///   : ˘+ 1 5
     /// ex: # Experimental!
+    ///   : ˘↘ 3 [1 2 3]
+    /// ex: # Experimental!
     ///   : ⬚@-˘⊏ [0 2 5] "abc"
     /// ex: # Experimental!
     ///   : ⬚@-˘⊡ [1_2 3_4] "xy"

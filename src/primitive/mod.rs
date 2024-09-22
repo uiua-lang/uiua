@@ -173,6 +173,7 @@ impl fmt::Display for ImplPrimitive {
             UnParse => write!(f, "{Un}{Parse}"),
             UnFix => write!(f, "{Un}{Fix}"),
             UnShape => write!(f, "{Un}{Shape}"),
+            UnOnDrop => write!(f, "{Un}{On}{Drop}"),
             UnOnSelect => write!(f, "{Un}{On}{Select}"),
             UnOnPick => write!(f, "{Un}{On}{Pick}"),
             UnJoin | UnJoinPattern => write!(f, "{Un}{Join}"),
@@ -452,7 +453,7 @@ impl Primitive {
         matches!(
             self,
             (Anti | Off | Backward | Above)
-                | (Tuples | Choose | Permute | Pad)
+                | (Tuples | Choose | Permute)
                 | Struct
                 | (Last | Sort | Chunks | Base | Coordinate | Fft | Case | Layout)
                 | (Astar | Triangle)
@@ -680,7 +681,6 @@ impl Primitive {
             Primitive::Keep => env.dyadic_oo_env(Value::keep)?,
             Primitive::Take => env.dyadic_oo_env(Value::take)?,
             Primitive::Drop => env.dyadic_oo_env(Value::drop)?,
-            Primitive::Pad => env.dyadic_ro_env(Value::pad)?,
             Primitive::Rotate => env.dyadic_ro_env(Value::rotate)?,
             Primitive::Orient => env.dyadic_ro_env(|a, mut b, env| {
                 a.orient(&mut b, env)?;
@@ -1022,6 +1022,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnUtf => env.monadic_ref_env(Value::unutf8)?,
             ImplPrimitive::UnGraphemes => env.monadic_env(Value::ungraphemes)?,
             ImplPrimitive::UnBits => env.monadic_ref_env(Value::unbits)?,
+            ImplPrimitive::UnOnDrop => env.dyadic_ro_env(Value::un_on_drop)?,
             ImplPrimitive::UnOnSelect => env.dyadic_oo_env(Value::un_on_select)?,
             ImplPrimitive::UnOnPick => env.dyadic_oo_env(Value::un_on_pick)?,
             ImplPrimitive::UnJoin => {

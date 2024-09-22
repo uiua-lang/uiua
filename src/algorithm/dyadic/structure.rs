@@ -406,15 +406,14 @@ impl Value {
             },
         )
     }
+    pub(crate) fn un_on_drop(&self, mut target: Self, env: &Uiua) -> UiuaResult<Self> {
+        let index = self.as_ints(env, "Index must be an integer or list of integers")?;
+        target.match_scalar_fill(env);
+        val_as_arr!(target, |a| a.un_on_drop(&index, env).map(Into::into))
+    }
     #[track_caller]
     pub(crate) fn drop_n(&mut self, n: usize) {
-        match self {
-            Value::Num(a) => a.drop_n(n),
-            Value::Byte(a) => a.drop_n(n),
-            Value::Complex(a) => a.drop_n(n),
-            Value::Char(a) => a.drop_n(n),
-            Value::Box(a) => a.drop_n(n),
-        }
+        val_as_arr!(self, |a| a.drop_n(n))
     }
 }
 
@@ -782,6 +781,149 @@ impl<T: ArrayValue> Array<T> {
             })
             .collect();
         self.undo_take_impl("drop", "dropped", &index, into, env)
+    }
+    fn un_on_drop(mut self, mut index: &[isize], env: &Uiua) -> UiuaResult<Self> {
+        let fill = env.array_fill::<T>().unwrap_or_else(|_| T::proxy().into());
+        if self.shape.len() < index.len() {
+            return Err(env.error(format!(
+                "Index array specifies {} axes, \
+                but the array is rank {}",
+                index.len(),
+                self.shape.len()
+            )));
+        }
+        // Validate fill shape
+        if !self.shape[index.len()..].ends_with(&fill.shape) {
+            return Err(env.error(format!(
+                "Cannot undrop {} {} of array with \
+                shape {} with fill of shape {}",
+                index.len(),
+                if index.len() == 1 { "axis" } else { "axes" },
+                self.shape,
+                fill.shape
+            )));
+        }
+
+        // Trim trailing zeros
+        while index.last() == Some(&0) {
+            index = &index[..index.len() - 1];
+        }
+
+        if index.iter().all(|&p| p == 0) {
+            return Ok(self);
+        }
+
+        // Single axis case
+        if index.len() == 1 {
+            let row_shape = self.shape.row();
+            if !row_shape.ends_with(&fill.shape) {
+                return Err(env.error(format!(
+                    "Cannot undrop array of shape {} \
+                    with fill of shape {}",
+                    self.shape, fill.shape
+                )));
+            }
+            let n = index[0];
+            let fill_elems = fill.shape.elements();
+            let reps = if fill_elems == 0 {
+                0
+            } else {
+                row_shape.elements() / fill_elems
+            };
+            self.data
+                .extend_repeat_slice(&fill.data, n.unsigned_abs() * reps);
+            if n > 0 {
+                (self.data.as_mut_slice())
+                    .rotate_right(n.unsigned_abs() * reps * fill.shape.elements());
+            }
+            self.shape[0] += n.unsigned_abs();
+            self.validate_shape();
+            return Ok(self);
+        }
+
+        let n = index.len();
+        let contig_row_size: usize = self.shape[n - 1..].iter().product();
+        let mut new_shape = self.shape.clone();
+        for (p, d) in index.iter().zip(&mut *new_shape) {
+            *d += p.unsigned_abs();
+        }
+        let elem_count = validate_size::<T>(new_shape.iter().copied(), env)?;
+        let mut new_data = EcoVec::with_capacity(elem_count);
+
+        // Calculate padding numbers
+        let mut slice_sizes = Vec::with_capacity(n);
+        for i in 0..n {
+            let mut size = index[i].unsigned_abs();
+            for j in i + 1..self.shape.len() {
+                size *= index.get(j).copied().unwrap_or(0).unsigned_abs() + self.shape[j];
+            }
+            slice_sizes.push((size / fill.shape.elements()) as isize * index[i].signum());
+        }
+        let cap_size = slice_sizes.remove(0);
+        let sliver_size = slice_sizes.pop().unwrap_or(0);
+        // println!("cap_size: {cap_size}");
+        // println!("sliver_size: {sliver_size}");
+        // println!("slice_sizes: {slice_sizes:?}");
+        let mut curr = vec![0; n - 1];
+        let maxes = self.shape[..n - 1].to_vec();
+        // println!("contig_row_size: {contig_row_size}");
+        // println!("maxes: {maxes:?}");
+        // Add leading cap
+        if cap_size > 0 {
+            extend_repeat_slice(&mut new_data, &fill.data, cap_size.unsigned_abs());
+        }
+        'outer: for i in 0.. {
+            // println!("curr: {curr:?}");
+            // Add leading slices
+            for i in 0..n - 1 {
+                if i != n - 2 && index[i] > 0 && curr[i + 1..].iter().all(|&c| c == 0) {
+                    // println!("  extend {i} {:?}", slice_sizes[i]);
+                    extend_repeat_slice(&mut new_data, &fill.data, slice_sizes[i].unsigned_abs());
+                }
+            }
+            // Add leading sliver
+            // println!("  sliver: {}", sliver_size);
+            if sliver_size > 0 {
+                extend_repeat_slice(&mut new_data, &fill.data, sliver_size.unsigned_abs());
+            }
+            // Add array row
+            new_data.extend_from_slice(&self.data[contig_row_size * i..][..contig_row_size]);
+            // Add trailing sliver
+            // println!("  sliver: {}", sliver_size);
+            if sliver_size < 0 {
+                extend_repeat_slice(&mut new_data, &fill.data, sliver_size.unsigned_abs());
+            }
+            // Add leading slices
+            for i in 0..n - 1 {
+                if i != n - 2
+                    && (curr[i + 1..].iter().enumerate()).all(|(j, &c)| c == maxes[i + 1 + j] - 1)
+                {
+                    // println!("  extend {i} {:?}", slice_sizes[i]);
+                    if index[i] < 0 {
+                        extend_repeat_slice(
+                            &mut new_data,
+                            &fill.data,
+                            slice_sizes[i].unsigned_abs(),
+                        );
+                    }
+                }
+            }
+            // Increment curr
+            for i in (0..n - 1).rev() {
+                curr[i] += 1;
+                if curr[i] == maxes[i] {
+                    curr[i] = 0;
+                } else {
+                    continue 'outer;
+                }
+            }
+            break;
+        }
+        // Add trailing cap
+        if cap_size < 0 {
+            extend_repeat_slice(&mut new_data, &fill.data, cap_size.unsigned_abs());
+        }
+        Ok(Array::new(new_shape, new_data))
     }
     #[track_caller]
     pub(crate) fn drop_n(&mut self, n: usize) {
@@ -1348,192 +1490,4 @@ impl<T: ArrayValue> Array<T> {
         shape.extend(cell_shape);
         Ok(Array::new(shape, data))
     }
-}
-
-impl Value {
-    pub(crate) fn pad(&self, mut target: Self, env: &Uiua) -> UiuaResult<Self> {
-        let padding = self.as_natural_array(env, "Padding must be a natural number array")?;
-        target.match_scalar_fill(env);
-        val_as_arr!(target, |a| a.pad(padding, env).map(Into::into))
-    }
-}
-
-impl<T: ArrayValue> Array<T> {
-    fn pad(mut self, pad_spec: Array<usize>, env: &Uiua) -> UiuaResult<Self> {
-        let fill = env.array_fill::<T>().unwrap_or_else(|_| T::proxy().into());
-        if self.shape.len() < pad_spec.row_count() {
-            return Err(env.error(format!(
-                "Pad array specifies {} axes, \
-                but the array is rank {}",
-                pad_spec.row_count(),
-                self.shape.len()
-            )));
-        }
-        let row_shape = self.shape.row();
-        let padding = &pad_spec.data.as_slice();
-        Ok(match &*pad_spec.shape {
-            [] => {
-                // Pad first axis front and back the same
-                if !self.shape[1..].ends_with(&fill.shape) {
-                    return Err(env.error(format!(
-                        "Cannot pad array of shape {} \
-                        with fill of shape {}",
-                        self.shape, fill.shape
-                    )));
-                }
-                let n = padding[0];
-                let fill_elems = fill.shape.elements();
-                let reps = if fill_elems == 0 {
-                    0
-                } else {
-                    row_shape.elements() / fill_elems
-                };
-                self.data.extend_repeat_slice(&fill.data, n * 2 * reps);
-                self.data
-                    .as_mut_slice()
-                    .rotate_right(n * reps * fill.shape.elements());
-                self.shape[0] += n * 2;
-                self.validate_shape();
-                self
-            }
-            &[_] => {
-                // Pad each axis front and back the same
-                pad_impl(self, fill, padding, padding, env)?
-            }
-            &[n, s] => {
-                // Pad each axis front and back differently
-                if s != 2 {
-                    return Err(env.error(format!(
-                        "Padding array's second axis must be 2, but it is {s}"
-                    )));
-                }
-                let front: Vec<usize> = (0..n).map(|i| padding[i * 2]).collect();
-                let back: Vec<usize> = (0..n).map(|i| padding[i * 2 + 1]).collect();
-                pad_impl(self, fill, &front, &back, env)?
-            }
-            sh => {
-                return Err(env.error(format!(
-                    "Padding array must be at most \
-                    rank 2, but it is rank {}",
-                    sh.len()
-                )))
-            }
-        })
-    }
-}
-
-fn pad_impl<T: ArrayValue>(
-    arr: Array<T>,
-    fill: Array<T>,
-    mut front_pad: &[usize],
-    mut back_pad: &[usize],
-    env: &Uiua,
-) -> UiuaResult<Array<T>> {
-    // Validate fill shape
-    if !arr.shape[front_pad.len()..].ends_with(&fill.shape) {
-        return Err(env.error(format!(
-            "Cannot pad {} {} of array with \
-            shape {} with fill of shape {}",
-            front_pad.len(),
-            if front_pad.len() == 1 { "axis" } else { "axes" },
-            arr.shape,
-            fill.shape
-        )));
-    }
-
-    // Trim trailing zeros
-    while front_pad.last() == Some(&0) && back_pad.last() == Some(&0) {
-        front_pad = &front_pad[..front_pad.len() - 1];
-        back_pad = &back_pad[..back_pad.len() - 1];
-    }
-
-    if front_pad.iter().all(|&p| p == 0) && back_pad.iter().all(|&p| p == 0) {
-        return Ok(arr);
-    }
-
-    let n = front_pad.len();
-    let contig_row_size: usize = arr.shape[n - 1..].iter().product();
-    let mut new_shape = arr.shape.clone();
-    for ((f, b), d) in front_pad.iter().zip(back_pad).zip(&mut *new_shape) {
-        *d += *f + *b
-    }
-    let elem_count = validate_size::<T>(new_shape.iter().copied(), env)?;
-    let mut new_data = EcoVec::with_capacity(elem_count);
-
-    // Calculate padding numbers
-    struct PadNums {
-        cap_size: usize,
-        sliver_size: usize,
-        slice_sizes: Vec<usize>,
-    }
-    let make_pad_nums = |padding: &[usize]| {
-        let mut slice_sizes = Vec::with_capacity(n);
-        for i in 0..n {
-            let mut size = padding[i];
-            for j in i + 1..arr.shape.len() {
-                size *= front_pad.get(j).copied().unwrap_or(0)
-                    + back_pad.get(j).copied().unwrap_or(0)
-                    + arr.shape[j];
-            }
-            slice_sizes.push(size / fill.shape.elements());
-        }
-        let cap_size = slice_sizes.remove(0);
-        let sliver_size = slice_sizes.pop().unwrap_or(0);
-        // println!("cap_size: {cap_size}");
-        // println!("sliver_size: {sliver_size}");
-        // println!("slice_sizes: {slice_sizes:?}");
-        PadNums {
-            cap_size,
-            sliver_size,
-            slice_sizes,
-        }
-    };
-    let front = make_pad_nums(front_pad);
-    let back = make_pad_nums(back_pad);
-    let mut curr = vec![0; n - 1];
-    let maxes = arr.shape[..n - 1].to_vec();
-    // println!("contig_row_size: {contig_row_size}");
-    // println!("maxes: {maxes:?}");
-    // Add leading cap
-    extend_repeat_slice(&mut new_data, &fill.data, front.cap_size);
-    'outer: for i in 0.. {
-        // println!("curr: {curr:?}");
-        // Add leading slices
-        for i in 0..n - 1 {
-            if i != n - 2 && curr[i + 1..].iter().all(|&c| c == 0) {
-                // println!("  extend front {i} {:?}", front.slice_sizes[i]);
-                extend_repeat_slice(&mut new_data, &fill.data, front.slice_sizes[i]);
-            }
-        }
-        // Add leading sliver
-        // println!("  front sliver: {}", front.sliver_size);
-        extend_repeat_slice(&mut new_data, &fill.data, front.sliver_size);
-        // Add array row
-        new_data.extend_from_slice(&arr.data[contig_row_size * i..][..contig_row_size]);
-        // Add trailing sliver
-        // println!("  back sliver: {}", back.sliver_size);
-        extend_repeat_slice(&mut new_data, &fill.data, back.sliver_size);
-        // Add leading slices
-        for i in 0..n - 1 {
-            if i != n - 2
-                && (curr[i + 1..].iter().enumerate()).all(|(j, &c)| c == maxes[i + 1 + j] - 1)
-            {
-                // println!("  extend back {i} {:?}", back.slice_sizes[i]);
-                extend_repeat_slice(&mut new_data, &fill.data, back.slice_sizes[i]);
-            }
-        }
-        // Increment curr
-        for i in (0..n - 1).rev() {
-            curr[i] += 1;
-            if curr[i] == maxes[i] {
-                curr[i] = 0;
-            } else {
-                continue 'outer;
-            }
-        }
-        break;
-    }
-    // Add trailing cap
-    extend_repeat_slice(&mut new_data, &fill.data, back.cap_size);
-    Ok(Array::new(new_shape, new_data))
 }

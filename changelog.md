@@ -33,6 +33,7 @@ This version is not yet released. If you are reading this on the website, then t
   - The behavior is similar to the analogous behavior for [`reduce /`](https://uiua.org/docs/reduce)
 - Allow [`on ⟜`](https://uiua.org/docs/on) to use function packs
 - Allow [`under ⍜`](https://uiua.org/docs/under) of scalar [`keep ▽`](https://uiua.org/docs/keep)
+- Add [`un °`](https://uiua.org/docs/un) [`on ⟜`](https://uiua.org/docs/on) [`drop ↘`](https://uiua.org/docs/drop), which pads an array
 - Add [`un °`](https://uiua.org/docs/un) [`on ⟜`](https://uiua.org/docs/on) [`select ⊏`](https://uiua.org/docs/select) and [`un °`](https://uiua.org/docs/un) [`on ⟜`](https://uiua.org/docs/on) [`pick ⊡`](https://uiua.org/docs/pick)
 - Add the [`graphemes`](https://uiua.org/docs/graphemes) function, which splits a string into unicode grapheme clusters
 - Add the [`&fmd`](https://uiua.org/docs/&fmd) system function, which creates a directory
@@ -45,13 +46,12 @@ This version is not yet released. If you are reading this on the website, then t
 - Add a `Lorem` constant, which contains the Lorem Ipsum text
 - Add several color constants
 - Add pride flag constants
+- Add experimental [`anti ˘`](https://uiua.org/docs/anti) modifier, which simplifies specifying certain inverses
 - Add experimental [`tuples ⧅`](https://uiua.org/docs/tuples) modifier
   - This unifies and extends the behavior of the `choose` and `permute` functions, which are now deprecated
   - This also replaces and deprecates the `triangle` modifier
 - Add experimental [`base`](https://uiua.org/docs/base) function
   - This converts to and from base-N digits
-- Add experimental [`pad`](https://uiua.org/docs/pad) function
-  - This pads an array with a value
 - Add an experimental [`sort ⍆`](https://uiua.org/docs/sort) function
   - Sorting is very common
   - [`un °`](https://uiua.org/docs/un) [`sort ⍆`](https://uiua.org/docs/sort) shuffles an array

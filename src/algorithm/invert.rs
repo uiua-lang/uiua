@@ -259,6 +259,7 @@ static ON_INVERT_PATTERNS: &[&dyn InvertPattern] = {
         &([Min], [Min]),
         &([Max], [Max]),
         &([Orient], [UndoOrient]),
+        &([Drop], [UnOnDrop]),
         &([Select], [UnOnSelect]),
         &([Pick], [UnOnPick]),
         &([Base], [UndoBase]),

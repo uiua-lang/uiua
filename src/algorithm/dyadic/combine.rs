@@ -106,8 +106,8 @@ impl Value {
         ext: bool,
         ctx: &C,
     ) -> Result<Self, C::Error> {
-        self.match_scalar_fill(ctx);
-        other.match_scalar_fill(ctx);
+        self.match_fill(ctx);
+        other.match_fill(ctx);
         Ok(match (self, other) {
             (Value::Num(a), Value::Num(b)) => a.join_impl(b, ext, ctx)?.into(),
             (Value::Byte(a), Value::Byte(b)) => a.join_impl(b, ext, ctx)?.into(),
@@ -133,8 +133,8 @@ impl Value {
         ext: bool,
         ctx: &C,
     ) -> Result<(), C::Error> {
-        self.match_scalar_fill(ctx);
-        other.match_scalar_fill(ctx);
+        self.match_fill(ctx);
+        other.match_fill(ctx);
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.append(b, ext, ctx)?,
             (Value::Byte(a), Value::Byte(b)) => a.append(b, ext, ctx)?,
@@ -579,8 +579,8 @@ impl Value {
         allow_ext: bool,
         ctx: &C,
     ) -> Result<(), C::Error> {
-        self.match_scalar_fill(ctx);
-        other.match_scalar_fill(ctx);
+        self.match_fill(ctx);
+        other.match_fill(ctx);
         match (&mut *self, other) {
             (Value::Num(a), Value::Num(b)) => a.couple_impl(b, allow_ext, ctx)?,
             (Value::Byte(a), Value::Byte(b)) => a.couple_impl(b, allow_ext, ctx)?,

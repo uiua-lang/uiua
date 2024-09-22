@@ -98,7 +98,7 @@ impl Value {
     }
     /// Use this array as an index to pick from another
     pub fn pick(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        from.match_scalar_fill(env);
+        from.match_fill(env);
         let (index_shape, index_data) = self.as_shaped_indices(env.is_scalar_filled(&from), env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.pick(index_shape, &index_data, env)?),
@@ -328,7 +328,7 @@ impl Value {
     /// Use this value to `take` from another
     pub fn take(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
         let index = self.as_ints_or_infs(env, "Index must be a list of integers or infinity")?;
-        from.match_scalar_fill(env);
+        from.match_fill(env);
         Ok(match from {
             Value::Num(a) => Value::Num(a.take(&index, env)?),
             Value::Byte(a) => Value::Byte(a.take(&index, env)?),
@@ -408,7 +408,7 @@ impl Value {
     }
     pub(crate) fn un_on_drop(&self, mut target: Self, env: &Uiua) -> UiuaResult<Self> {
         let index = self.as_ints(env, "Index must be an integer or list of integers")?;
-        target.match_scalar_fill(env);
+        target.match_fill(env);
         val_as_arr!(target, |a| a.un_on_drop(&index, env).map(Into::into))
     }
     #[track_caller]
@@ -937,7 +937,7 @@ impl<T: ArrayValue> Array<T> {
 impl Value {
     /// Use this value to `select` from another
     pub fn select(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        from.match_scalar_fill(env);
+        from.match_fill(env);
         let (indices_shape, indices_data) =
             self.as_shaped_indices(env.is_scalar_filled(&from), env)?;
         Ok(match from {
@@ -1031,7 +1031,7 @@ impl Value {
         )
     }
     pub(crate) fn un_on_select(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        from.match_scalar_fill(env);
+        from.match_fill(env);
         let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
         Ok(match from {
             Value::Num(a) => Value::Num(a.un_on_select(indices_shape, &indices_data, env)?),
@@ -1044,7 +1044,7 @@ impl Value {
         })
     }
     pub(crate) fn un_on_pick(self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
-        from.match_scalar_fill(env);
+        from.match_fill(env);
         let (indices_shape, indices_data) = self.as_shaped_indices(false, env)?;
         val_as_arr!(from, |a| a
             .un_on_pick(indices_shape, &indices_data, env)

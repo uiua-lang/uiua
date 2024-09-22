@@ -386,7 +386,7 @@ impl Value {
         self.first_depth(0, env)
     }
     pub(crate) fn first_depth(mut self, depth: usize, env: &Uiua) -> UiuaResult<Self> {
-        self.match_scalar_fill(env);
+        self.match_fill(env);
         val_as_arr!(self, |a| a.first_depth(depth, env).map(Into::into))
     }
     /// Get the last row of the value
@@ -394,7 +394,7 @@ impl Value {
         self.last_depth(0, env)
     }
     pub(crate) fn last_depth(mut self, depth: usize, env: &Uiua) -> UiuaResult<Self> {
-        self.match_scalar_fill(env);
+        self.match_fill(env);
         val_as_arr!(self, |a| a.last_depth(depth, env).map(Into::into))
     }
     pub(crate) fn undo_first(self, into: Self, env: &Uiua) -> UiuaResult<Self> {

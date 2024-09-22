@@ -190,7 +190,7 @@ pub trait FillContext: ErrorContext {
     fn fill_error(error: Self::Error) -> Self::Error;
     fn is_fill_error(error: &Self::Error) -> bool;
     fn number_only_fill(&self) -> bool {
-        self.scalar_fill::<f64>().is_ok() && self.scalar_fill::<u8>().is_err()
+        self.array_fill::<f64>().is_ok() && self.array_fill::<u8>().is_err()
     }
     fn is_scalar_filled(&self, val: &Value) -> bool {
         match val {
@@ -261,7 +261,7 @@ fn fill_value_shape<C>(
 where
     C: FillContext,
 {
-    val.match_scalar_fill(ctx);
+    val.match_fill(ctx);
     match val {
         Value::Num(arr) => fill_array_shape(arr, target, expand_fixed, ctx),
         Value::Byte(arr) => fill_array_shape(arr, target, expand_fixed, ctx),

@@ -180,7 +180,7 @@ impl Value {
         }
     }
     pub(crate) fn reshape_impl(&mut self, dims: &[Result<isize, bool>], env: &Uiua) -> UiuaResult {
-        self.match_scalar_fill(env);
+        self.match_fill(env);
         val_as_arr!(self, |a| a.reshape(dims, env))
     }
     pub(crate) fn undo_reshape(&mut self, old_shape: &Self, env: &Uiua) -> UiuaResult {
@@ -861,7 +861,7 @@ impl Value {
             return Ok(rotated);
         }
         let by_ints = || self.as_integer_array(env, "Rotation amount must be an array of integers");
-        rotated.match_scalar_fill(env);
+        rotated.match_fill(env);
         match &mut rotated {
             Value::Num(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             Value::Byte(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
@@ -985,7 +985,7 @@ impl Value {
     /// Use this array to `windows` another
     pub fn windows(&self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
         let size_array = self.as_integer_array(env, "Window size must be an integer array")?;
-        from.match_scalar_fill(env);
+        from.match_fill(env);
         Ok(match &*size_array.shape {
             [] | [_] => val_as_arr!(from, |a| a.windows(&size_array.data, env)?.into()),
             [1, _] => val_as_arr!(from, |a| a.chunks(&size_array.data, env)?.into()),
@@ -1217,7 +1217,7 @@ impl Value {
     /// Use this value to `chunks` another
     pub fn chunks(&self, mut from: Self, env: &Uiua) -> UiuaResult<Self> {
         let isize_spec = self.as_ints(env, "Chunk size must be an integer or list of integers")?;
-        from.match_scalar_fill(env);
+        from.match_fill(env);
         Ok(val_as_arr!(from, |a| a.chunks(&isize_spec, env)?.into()))
     }
     pub(crate) fn undo_chunks(self, size: &Self, env: &Uiua) -> UiuaResult<Self> {

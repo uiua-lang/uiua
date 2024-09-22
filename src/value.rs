@@ -1247,7 +1247,7 @@ impl Value {
     ) -> UiuaResult<Self> {
         self.keep_labels(other, |a, b| a.keep_map_keys(b, f))
     }
-    pub(crate) fn match_scalar_fill<C: FillContext>(&mut self, ctx: &C) {
+    pub(crate) fn match_fill<C: FillContext>(&mut self, ctx: &C) {
         if let Value::Byte(arr) = self {
             if ctx.number_only_fill() {
                 let shape = take(&mut arr.shape);
@@ -1534,8 +1534,8 @@ macro_rules! value_bin_impl {
         impl Value {
             #[allow(unreachable_patterns, unused_mut, clippy::wrong_self_convention)]
             pub(crate) fn $name(mut self, mut other: Self, a_depth: usize, b_depth: usize, env: &Uiua) -> UiuaResult<Self> {
-                self.match_scalar_fill(env);
-                other.match_scalar_fill(env);
+                self.match_fill(env);
+                other.match_fill(env);
                 self.keep_metas(other, |a, b| { Ok(match (a, b) {
                     $($((Value::$ip(mut a), Value::$ip(mut b)) $(if {
                         let f = |$meta: &ArrayMeta| $pred;

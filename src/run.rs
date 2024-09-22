@@ -1247,7 +1247,13 @@ code:
     }
     pub(crate) fn byte_array_fill(&self) -> Result<Array<u8>, &'static str> {
         match self.value_fill() {
-            Some(Value::Num(n)) => Ok(n.data.iter().copied().map(|n| n as u8).collect()),
+            Some(Value::Num(n))
+                if n.data
+                    .iter()
+                    .all(|&n| n.fract() == 0.0 && (0.0..=255.0).contains(&n)) =>
+            {
+                Ok(n.data.iter().copied().map(|n| n as u8).collect())
+            }
             Some(Value::Byte(n)) => Ok(n.clone()),
             _ => Err(self.fill_error(false)),
         }

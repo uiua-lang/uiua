@@ -340,6 +340,61 @@ pub(crate) fn invert_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<Eco
     None
 }
 
+/// Invert a sequence of instructions with anti
+pub(crate) fn anti_instrs(instrs: &[Instr], comp: &mut Compiler) -> Option<EcoVec<Instr>> {
+    if instrs.is_empty() {
+        return Some(EcoVec::new());
+    }
+    dbgln!("anti-inverting {:?}", FmtInstrs(instrs, &comp.asm));
+
+    let mut inverted = EcoVec::new();
+    let mut curr_instrs = instrs;
+    'find_pattern: loop {
+        for pattern in ON_INVERT_PATTERNS {
+            if let Some((input, mut inv)) = pattern.invert_extract(curr_instrs, comp) {
+                dbgln!(
+                    "matched pattern {:?} on {:?} to {:?}",
+                    pattern,
+                    FmtInstrs(&curr_instrs[..curr_instrs.len() - input.len()], &comp.asm),
+                    FmtInstrs(&inv, &comp.asm)
+                );
+                inv.extend(inverted);
+                inverted = inv;
+                if input.is_empty() {
+                    dbgln!(
+                        "inverted {:?} to {:?}",
+                        FmtInstrs(instrs, &comp.asm),
+                        FmtInstrs(&inverted, &comp.asm)
+                    );
+                    return resolve_uns(inverted, comp);
+                }
+                curr_instrs = input;
+                continue 'find_pattern;
+            }
+        }
+        break;
+    }
+
+    dbgln!(
+        "anti-inverting {:?} failed with remaining {:?}",
+        FmtInstrs(instrs, &comp.asm),
+        FmtInstrs(curr_instrs, &comp.asm)
+    );
+
+    let sig = instrs_signature(instrs).ok()?;
+    if sig.args >= 2 {
+        let mut instrs = instrs.to_vec();
+        let span = instrs.iter().find_map(|instr| instr.span()).unwrap_or(0);
+        instrs.insert(0, Instr::copy_inline(span));
+        instrs.push(Instr::pop_inline(1, span));
+        let mut inverse = invert_instrs(&instrs, comp)?;
+        inverse.push(Instr::Prim(Primitive::Pop, span));
+        Some(inverse)
+    } else {
+        invert_instrs(instrs, comp)
+    }
+}
+
 type Under = (EcoVec<Instr>, EcoVec<Instr>);
 
 /// Calculate the "before" and "after" instructions for `under`ing a sequence of instructions.
@@ -718,18 +773,9 @@ fn resolve_uns(instrs: EcoVec<Instr>, comp: &mut Compiler) -> Option<EcoVec<Inst
                     if (instrs.peek())
                         .is_some_and(|instr| matches!(instr, Instr::Prim(Primitive::Anti, _))) =>
                 {
-                    let Some(Instr::Prim(Primitive::Anti, span)) = instrs.next() else {
-                        unreachable!()
-                    };
-                    let mut instrs = f.instrs(&comp.asm).to_vec();
-                    if f.signature().args >= 2 {
-                        instrs.insert(0, Instr::copy_inline(span));
-                        instrs.push(Instr::pop_inline(1, span));
-                    }
-                    let mut inverse = invert_instrs(&instrs, comp)?;
-                    if f.signature().args >= 2 {
-                        inverse.push(Instr::Prim(Primitive::Pop, span));
-                    }
+                    instrs.next();
+                    let instrs = f.instrs(&comp.asm).to_vec();
+                    let inverse = anti_instrs(&instrs, comp)?;
                     resolved.extend(inverse);
                 }
                 Instr::PushFunc(f) => {
@@ -842,18 +888,11 @@ fn under_anti_pattern<'a>(
     g_sig: Signature,
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
-    let [Instr::PushFunc(f), Instr::Prim(Primitive::Anti, span), input @ ..] = input else {
+    let [Instr::PushFunc(f), Instr::Prim(Primitive::Anti, _), input @ ..] = input else {
         return None;
     };
-    let mut instrs = EcoVec::from(f.instrs(&comp.asm));
-    if f.signature().args >= 2 {
-        instrs.insert(0, Instr::copy_inline(*span));
-        instrs.push(Instr::pop_inline(1, *span));
-    }
-    let mut befores = invert_instrs(&instrs, comp)?;
-    if f.signature().args >= 2 {
-        befores.push(Instr::Prim(Primitive::Pop, *span));
-    }
+    let instrs = EcoVec::from(f.instrs(&comp.asm));
+    let befores = anti_instrs(&instrs, comp)?;
     if let [Instr::PushFunc(_), Instr::PushFunc(_), Instr::Prim(Primitive::SetInverse, _)] =
         befores.as_slice()
     {
@@ -861,16 +900,14 @@ fn under_anti_pattern<'a>(
             return Some((input, under));
         }
     }
-    let (befores, mut afters) = if let Some((befores, afters)) = under_instrs(&befores, g_sig, comp)
-    {
-        (befores, afters)
-    } else {
-        (befores, instrs)
-    };
-    if f.signature().args >= 2 {
-        afters.push(Instr::Prim(Primitive::Pop, *span));
-    }
-    Some((input, (befores, afters)))
+    Some((
+        input,
+        if let Some((befores, afters)) = under_instrs(&befores, g_sig, comp) {
+            (befores, afters)
+        } else {
+            (befores, instrs)
+        },
+    ))
 }
 
 fn under_call_pattern<'a>(

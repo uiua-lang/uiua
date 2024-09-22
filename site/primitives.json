@@ -965,13 +965,6 @@
     "class": "Stack",
     "description": "Duplicate the second-to-top value to the top of the stack"
   },
-  "pad": {
-    "args": 2,
-    "outputs": 1,
-    "class": "DyadicArray",
-    "description": "Pad an array",
-    "experimental": true
-  },
   "parse": {
     "glyph": "⋕",
     "args": 1,

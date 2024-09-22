@@ -1,5 +1,7 @@
 //! Compiler code for modifiers
 
+use crate::algorithm::invert::anti_instrs;
+
 use super::*;
 
 impl Compiler {
@@ -937,10 +939,7 @@ impl Compiler {
                 let f_res = self.compile_operand_word(f);
                 self.in_inverse = !self.in_inverse;
                 let (mut new_func, f_sig) = f_res?;
-                let spandex = self.add_span(span.clone());
-                if f_sig.args >= 2 {
-                    on(&mut new_func.instrs, f_sig, spandex);
-                } else {
+                if f_sig.args < 2 {
                     self.emit_diagnostic(
                         format!(
                             "Prefer {} over {} for functions \
@@ -951,15 +950,11 @@ impl Compiler {
                         DiagnosticKind::Style,
                         span.clone(),
                     );
-                };
+                }
 
-                if let Some(inverted) = invert_instrs(&new_func.instrs, self) {
-                    let mut sig = self.sig_of(&inverted, &span)?;
+                if let Some(inverted) = anti_instrs(&new_func.instrs, self) {
+                    let sig = self.sig_of(&inverted, &span)?;
                     new_func.instrs = inverted;
-                    if f_sig.args >= 2 {
-                        new_func.instrs.push(Instr::Prim(Primitive::Pop, spandex));
-                        sig.outputs -= 1;
-                    }
                     finish!(new_func, sig);
                 } else {
                     return Err(self.fatal_error(span, "No inverse found"));

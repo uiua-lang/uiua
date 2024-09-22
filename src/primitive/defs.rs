@@ -2214,6 +2214,30 @@ primitive!(
     /// A function's [un]-inverse can be set with [setinv].
     /// For more about inverses, see the [Inverse Tutorial](/tutorial/inverses).
     ([1], Un, InversionModifier, ("un", '°')),
+    /// Invert the behavior of a function, but keep its signature
+    ///
+    /// [un] has a guaruntee that the inverted function will have a signature that is the inverse of original function's signature. For dyadic functions, if we want the inverse to *also* be dyadic, then we have to do some workarounds. We can either include the first argument in the inverted function, or we can use [on].
+    /// For example, here are two ways to invert [rotate].
+    /// ex: °(↻1) [1 2 3]
+    ///   : ◌°⟜↻ 1 [1 2 3]
+    /// The first way requires the first argument to be a constant, which is not always applicable. The second way works but it is a bit verbose.
+    /// [anti] does the [pop][un][on] for you.
+    /// ex: # Experimental!
+    ///   : ˘↻ 1 [1 2 3]
+    /// This simplifies some interesting inverses.
+    /// ex: # Experimental!
+    ///   : ˘+ 1 5
+    /// ex: # Experimental!
+    ///   : ⬚@-˘⊏ [0 2 5] "abc"
+    /// ex: # Experimental!
+    ///   : ⬚@-˘⊡ [1_2 3_4] "xy"
+    /// ex: # Experimental!
+    ///   : ˘⍥(+1) 3 10
+    /// ex: # Experimental!
+    ///   : ˘⊂ 1 [1 2 3]
+    /// ex! # Experimental!
+    ///   : ˘⊂ 1 [2 3 4]
+    ([1], Anti, InversionModifier, ("anti", '˘')),
     /// Set the [un]-compatible inverse of a function
     ///
     /// The first function is the uninverted function, and the second function is the inverse.

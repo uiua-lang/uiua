@@ -416,6 +416,10 @@ impl<'a> VirtualEnv<'a> {
                     let sig = self.pop_func()?.signature();
                     self.handle_args_outputs(sig.outputs, sig.args)?;
                 }
+                Anti => {
+                    let sig = self.pop_func()?.signature();
+                    self.handle_args_outputs(sig.args, sig.outputs)?;
+                }
                 Fold => {
                     let f = self.pop_func()?;
                     self.handle_sig(f.signature())?;

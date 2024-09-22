@@ -11,6 +11,7 @@
   - Recursive stack macros
   - `pad` function
   - Label and format string glyphs?
+  - Inversion errors
   - `setinv/setund` unification
     - Custom `on/by` inverses
   - Document on and by inverses

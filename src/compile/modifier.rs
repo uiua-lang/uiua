@@ -596,6 +596,17 @@ impl Compiler {
                 }
             }};
         }
+        /// Modify instructions for `on`, and return the new signature
+        fn on(instrs: &mut EcoVec<Instr>, sig: Signature, span: usize) -> Signature {
+            let save = if sig.args == 0 {
+                Instr::push_inline(1, span)
+            } else {
+                Instr::copy_inline(span)
+            };
+            instrs.insert(0, save);
+            instrs.push(Instr::pop_inline(1, span));
+            Signature::new(sig.args.max(1), sig.outputs + 1)
+        }
         match prim {
             Dip | Gap | On | By | With | Off | Above | Below => {
                 // Compile operands
@@ -634,18 +645,7 @@ impl Compiler {
                         instrs.insert(0, Instr::Prim(Pop, span));
                         Signature::new(sig.args + 1, sig.outputs)
                     }
-                    On => {
-                        instrs.insert(
-                            0,
-                            if sig.args == 0 {
-                                Instr::push_inline(1, span)
-                            } else {
-                                Instr::copy_inline(span)
-                            },
-                        );
-                        instrs.push(Instr::pop_inline(1, span));
-                        Signature::new(sig.args.max(1), sig.outputs + 1)
-                    }
+                    On => on(instrs, sig, span),
                     By => {
                         if sig.args > 0 {
                             let mut i = 0;
@@ -912,19 +912,55 @@ impl Compiler {
                 }
             }
             Un if !self.in_inverse => {
-                let mut operands = modified.code_operands().cloned();
-                let f = operands.next().unwrap();
+                let f = modified.code_operands().next().unwrap().clone();
                 let span = f.span.clone();
 
                 self.in_inverse = !self.in_inverse;
                 let f_res = self.compile_operand_word(f);
                 self.in_inverse = !self.in_inverse;
-                let (new_func, _) = f_res?;
+                let (mut new_func, _) = f_res?;
 
                 self.add_span(span.clone());
                 if let Some(inverted) = invert_instrs(&new_func.instrs, self) {
                     let sig = self.sig_of(&inverted, &span)?;
-                    finish!(inverted, sig);
+                    new_func.instrs = inverted;
+                    finish!(new_func, sig);
+                } else {
+                    return Err(self.fatal_error(span, "No inverse found"));
+                }
+            }
+            Anti if !self.in_inverse => {
+                let f = modified.code_operands().next().unwrap().clone();
+                let span = f.span.clone();
+
+                self.in_inverse = !self.in_inverse;
+                let f_res = self.compile_operand_word(f);
+                self.in_inverse = !self.in_inverse;
+                let (mut new_func, f_sig) = f_res?;
+                let spandex = self.add_span(span.clone());
+                if f_sig.args >= 2 {
+                    on(&mut new_func.instrs, f_sig, spandex);
+                } else {
+                    self.emit_diagnostic(
+                        format!(
+                            "Prefer {} over {} for functions \
+                            with fewer than 2 arguments",
+                            Primitive::Un.format(),
+                            Primitive::Anti.format()
+                        ),
+                        DiagnosticKind::Style,
+                        span.clone(),
+                    );
+                };
+
+                if let Some(inverted) = invert_instrs(&new_func.instrs, self) {
+                    let mut sig = self.sig_of(&inverted, &span)?;
+                    new_func.instrs = inverted;
+                    if f_sig.args >= 2 {
+                        new_func.instrs.push(Instr::Prim(Primitive::Pop, spandex));
+                        sig.outputs -= 1;
+                    }
+                    finish!(new_func, sig);
                 } else {
                     return Err(self.fatal_error(span, "No inverse found"));
                 }

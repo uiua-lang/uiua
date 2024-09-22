@@ -339,6 +339,14 @@
     "class": "DyadicPervasive",
     "description": "Add values"
   },
+  "anti": {
+    "glyph": "˘",
+    "outputs": 1,
+    "modifier_args": 1,
+    "class": "InversionModifier",
+    "description": "Invert the behavior of a function, but keep its signature",
+    "experimental": true
+  },
   "assert": {
     "glyph": "⍤",
     "args": 2,
@@ -956,6 +964,13 @@
     "outputs": 3,
     "class": "Stack",
     "description": "Duplicate the second-to-top value to the top of the stack"
+  },
+  "pad": {
+    "args": 2,
+    "outputs": 1,
+    "class": "DyadicArray",
+    "description": "Pad an array",
+    "experimental": true
   },
   "parse": {
     "glyph": "⋕",

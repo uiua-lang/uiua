@@ -1592,11 +1592,16 @@ primitive!(
     /// ex: # Experimental!
     ///   : base 16 256
     /// When passed an array of numbers, [base] treats each digit as having a different base.
-    /// Anything left over will be added as the most significant digit.
+    /// Any remainder will be truncated.
     /// ex: # Experimental!
-    ///   : base [10 2] 123
+    ///   : base [10 2] 35 # Truncated
     /// ex: # Experimental!
     ///   : base [60 60 24 365.25] now
+    /// If you want to keep the remainder, use [infinity].
+    /// ex: # Experimental!
+    ///   : base [10 2 ∞] 35
+    /// ex: # Experimental!
+    ///   : base [60 60 24 365.25 ∞] now
     /// Non-integer bases are supported.
     /// ex: # Experimental!
     ///   : base π [η π τ]

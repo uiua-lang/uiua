@@ -1649,28 +1649,28 @@ impl<T: RealArrayValue> Array<T> {
             if base == 0.0 {
                 return Err(env.error("Base cannot contain 0s"));
             }
-            if base.is_infinite() {
-                return Err(env.error("Base cannot contain infinites"));
+            if base.is_infinite() && base.is_sign_negative() {
+                return Err(env.error("Base cannot contain negative infinities"));
             }
             if base.is_nan() {
                 return Err(env.error("Base cannot contain NaNs"));
             }
         }
-        let max: f64 = bases.iter().product();
-        let max_row_len = bases.len() + self.data.iter().any(|n| n.to_f64() >= max) as usize;
         let mut new_shape = self.shape.clone();
-        new_shape.push(max_row_len);
+        new_shape.push(bases.len());
         let elem_count = validate_size::<f64>(new_shape.iter().copied(), env)?;
         let mut new_data = eco_vec![0.0; elem_count];
         let slice = new_data.make_mut();
         for (i, n) in self.data.iter().enumerate() {
             let mut n = n.to_f64();
             for (j, base) in bases.iter().enumerate() {
-                slice[i * max_row_len + j] = n.rem_euclid(*base);
-                n = n.div_euclid(*base);
-            }
-            if n > 0.0 {
-                slice[i * max_row_len + bases.len()] = n;
+                if n == f64::INFINITY {
+                    slice[i * bases.len() + j] = n;
+                    break;
+                } else {
+                    slice[i * bases.len() + j] = n.rem_euclid(*base);
+                    n = n.div_euclid(*base);
+                }
             }
         }
         Ok(Array::new(new_shape, new_data))
@@ -1698,12 +1698,17 @@ impl<T: RealArrayValue> Array<T> {
         Ok(Array::new(shape, data))
     }
     fn undo_base_list(&self, bases: &[f64], env: &Uiua) -> UiuaResult<Array<f64>> {
+        let mut max = 0.0;
         for &base in bases {
             if base == 0.0 {
                 return Err(env.error("Base cannot contain 0s"));
             }
             if base.is_infinite() {
-                return Err(env.error("Base cannot contain infinites"));
+                if base.is_sign_negative() {
+                    return Err(env.error("Base cannot contain infinites"));
+                } else {
+                    max = bases.iter().take_while(|&&b| !b.is_infinite()).product();
+                }
             }
             if base.is_nan() {
                 return Err(env.error("Base cannot contain NaNs"));
@@ -1717,7 +1722,10 @@ impl<T: RealArrayValue> Array<T> {
         let mut bases = bases.to_vec();
         bases.extend(repeat(1.0).take(row_len.saturating_sub(bases.len())));
         for (i, chunk) in self.data.chunks_exact(row_len).enumerate() {
-            for (n, &b) in chunk.iter().zip(&bases).rev() {
+            for (n, &(mut b)) in chunk.iter().zip(&bases).rev() {
+                if b.is_infinite() {
+                    b = max;
+                }
                 slice[i] = slice[i].mul_add(b, n.to_f64());
             }
         }

@@ -1429,6 +1429,18 @@ fn pad_impl<T: ArrayValue>(
     mut back_pad: &[usize],
     env: &Uiua,
 ) -> UiuaResult<Array<T>> {
+    // Validate fill shape
+    if !arr.shape[front_pad.len()..].ends_with(&fill.shape) {
+        return Err(env.error(format!(
+            "Cannot pad {} {} of array with \
+            shape {} with fill of shape {}",
+            front_pad.len(),
+            if front_pad.len() == 1 { "axis" } else { "axes" },
+            arr.shape,
+            fill.shape
+        )));
+    }
+
     // Trim trailing zeros
     while front_pad.last() == Some(&0) && back_pad.last() == Some(&0) {
         front_pad = &front_pad[..front_pad.len() - 1];
@@ -1438,6 +1450,7 @@ fn pad_impl<T: ArrayValue>(
     if front_pad.iter().all(|&p| p == 0) && back_pad.iter().all(|&p| p == 0) {
         return Ok(arr);
     }
+
     let n = front_pad.len();
     let contig_row_size: usize = arr.shape[n - 1..].iter().product();
     let mut new_shape = arr.shape.clone();
@@ -1446,6 +1459,8 @@ fn pad_impl<T: ArrayValue>(
     }
     let elem_count = validate_size::<T>(new_shape.iter().copied(), env)?;
     let mut new_data = EcoVec::with_capacity(elem_count);
+
+    // Calculate padding numbers
     struct PadNums {
         cap_size: usize,
         sliver_size: usize,

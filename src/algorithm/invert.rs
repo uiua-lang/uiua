@@ -1843,31 +1843,34 @@ fn under_push_temp_pattern<'a>(
     befores.push(end_instr.clone());
 
     let afters = if both && g_sig.args > g_sig.outputs {
-        let mut before_temp_count = 0;
-        for instr in &befores {
-            match instr {
-                Instr::PushTemp {
-                    count,
-                    stack: TempStack::Under,
-                    ..
+        fn count_under_temps(instrs: &[Instr], asm: &Assembly) -> usize {
+            let mut temp_count = 0;
+            for i in 0..instrs.len() {
+                match &instrs[i] {
+                    Instr::PushTemp {
+                        count,
+                        stack: TempStack::Under,
+                        ..
+                    }
+                    | Instr::CopyToTemp {
+                        count,
+                        stack: TempStack::Under,
+                        ..
+                    } => temp_count += *count,
+                    Instr::PopTemp {
+                        count,
+                        stack: TempStack::Under,
+                        ..
+                    } => temp_count = temp_count.saturating_sub(*count),
+                    Instr::PushFunc(f) if matches!(instrs.get(i + 1), Some(Instr::Call(_))) => {
+                        temp_count += count_under_temps(f.instrs(asm), asm)
+                    }
+                    _ => {}
                 }
-                | Instr::CopyToTemp {
-                    count,
-                    stack: TempStack::Under,
-                    ..
-                } => {
-                    before_temp_count += *count;
-                }
-                Instr::PopTemp {
-                    count,
-                    stack: TempStack::Under,
-                    ..
-                } => {
-                    before_temp_count = before_temp_count.saturating_sub(*count);
-                }
-                _ => {}
             }
+            temp_count
         }
+        let before_temp_count = count_under_temps(&befores, &comp.asm);
         if before_temp_count > 0 {
             let mut instrs = eco_vec![Instr::PopTemp {
                 count: before_temp_count,

@@ -1,9 +1,6 @@
 # Uiua Todo
 
 - 0.13
-  - `anti` modifier
-  - `un on drop`
-  - `un under`
   - Non-scalar `fill take`
   - Update language tour
   - Update design page

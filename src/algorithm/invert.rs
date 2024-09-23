@@ -2014,6 +2014,9 @@ fn under_reverse_pattern<'a>(
     g_sig: Signature,
     _: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
+    if g_sig.outputs == 1 {
+        return None;
+    }
     let [Instr::Prim(Primitive::Reverse, span), input @ ..] = input else {
         return None;
     };
@@ -2035,6 +2038,9 @@ fn under_transpose_pattern<'a>(
     g_sig: Signature,
     _: &mut Compiler,
 ) -> Option<(&'a [Instr], Under)> {
+    if g_sig.outputs == 1 {
+        return None;
+    }
     let (instr, span, amnt, input) = match input {
         [instr @ Instr::Prim(Primitive::Transpose, span), input @ ..] => (instr, *span, 1, input),
         [instr @ Instr::ImplPrim(ImplPrimitive::TransposeN(amnt), span), input @ ..] => {

@@ -183,6 +183,7 @@ static INVERT_PATTERNS: &[&dyn InvertPattern] = {
     use ImplPrimitive::*;
     use Primitive::*;
     &[
+        &InvertPatternFn(invert_flip_pattern, "flip"),
         &InvertPatternFn(invert_join_val_pattern, "join_val"),
         &InvertPatternFn(invert_join_pattern, "join"),
         &InvertPatternFn(invert_call_pattern, "call"),
@@ -1711,6 +1712,29 @@ fn invert_copy_temp_pattern<'a>(
         return Some((input, instrs));
     }
 
+    None
+}
+
+fn invert_flip_pattern<'a>(
+    input: &'a [Instr],
+    comp: &mut Compiler,
+) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let [Instr::Prim(Primitive::Flip, span), input @ ..] = input else {
+        return None;
+    };
+    for pat in BY_INVERT_PATTERNS {
+        if let Some((input, mut instrs)) = pat.invert_extract(input, comp) {
+            if instrs
+                .first()
+                .is_some_and(|instr| matches!(instr, Instr::Prim(Primitive::Flip, _)))
+            {
+                instrs.remove(0);
+            } else {
+                instrs.insert(0, Instr::Prim(Primitive::Flip, *span));
+            }
+            return Some((input, instrs));
+        }
+    }
     None
 }
 

@@ -1716,22 +1716,28 @@ fn invert_copy_temp_pattern<'a>(
 }
 
 fn invert_flip_pattern<'a>(
-    input: &'a [Instr],
+    mut input: &'a [Instr],
     comp: &mut Compiler,
 ) -> Option<(&'a [Instr], EcoVec<Instr>)> {
+    let mut instrs = EcoVec::new();
+    if let Some((inp, ins)) = Val.invert_extract(input, comp) {
+        input = inp;
+        instrs = ins;
+    }
     let [Instr::Prim(Primitive::Flip, span), input @ ..] = input else {
         return None;
     };
     for pat in BY_INVERT_PATTERNS {
-        if let Some((input, mut instrs)) = pat.invert_extract(input, comp) {
+        if let Some((input, mut by_inv)) = pat.invert_extract(input, comp) {
             if instrs
                 .first()
                 .is_some_and(|instr| matches!(instr, Instr::Prim(Primitive::Flip, _)))
             {
-                instrs.remove(0);
+                by_inv.remove(0);
             } else {
-                instrs.insert(0, Instr::Prim(Primitive::Flip, *span));
+                by_inv.insert(0, Instr::Prim(Primitive::Flip, *span));
             }
+            instrs.extend(by_inv);
             return Some((input, instrs));
         }
     }

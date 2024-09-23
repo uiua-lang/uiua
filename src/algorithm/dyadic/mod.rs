@@ -1689,10 +1689,12 @@ impl<T: RealArrayValue> Array<T> {
         let row_len = shape.pop().unwrap_or(1);
         let elem_count = validate_size::<f64>(shape.iter().copied(), env)?;
         let mut data = eco_vec![0f64; elem_count];
-        let slice = data.make_mut();
-        for (i, chunk) in self.data.chunks_exact(row_len).enumerate() {
-            for n in chunk.iter().rev() {
-                slice[i] = slice[i].mul_add(base, n.to_f64());
+        if row_len > 0 {
+            let slice = data.make_mut();
+            for (i, chunk) in self.data.chunks_exact(row_len).enumerate() {
+                for n in chunk.iter().rev() {
+                    slice[i] = slice[i].mul_add(base, n.to_f64());
+                }
             }
         }
         Ok(Array::new(shape, data))
@@ -1718,15 +1720,17 @@ impl<T: RealArrayValue> Array<T> {
         let row_len = shape.pop().unwrap_or(1);
         let elem_count = validate_size::<f64>(shape.iter().copied(), env)?;
         let mut data = eco_vec![0f64; elem_count];
-        let slice = data.make_mut();
-        let mut bases = bases.to_vec();
-        bases.extend(repeat(1.0).take(row_len.saturating_sub(bases.len())));
-        for (i, chunk) in self.data.chunks_exact(row_len).enumerate() {
-            for (n, &(mut b)) in chunk.iter().zip(&bases).rev() {
-                if b.is_infinite() {
-                    b = max;
+        if row_len > 0 {
+            let slice = data.make_mut();
+            let mut bases = bases.to_vec();
+            bases.extend(repeat(1.0).take(row_len.saturating_sub(bases.len())));
+            for (i, chunk) in self.data.chunks_exact(row_len).enumerate() {
+                for (n, &(mut b)) in chunk.iter().zip(&bases).rev() {
+                    if b.is_infinite() {
+                        b = max;
+                    }
+                    slice[i] = slice[i].mul_add(b, n.to_f64());
                 }
-                slice[i] = slice[i].mul_add(b, n.to_f64());
             }
         }
         Ok(Array::new(shape, data))

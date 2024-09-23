@@ -1132,6 +1132,49 @@ pub fn Editor<'a>(
         );
     }
 
+    // Additional functions combobox
+    let mut options = Vec::new();
+    let mut named_prims: Vec<Primitive> = Primitive::non_deprecated()
+        .filter(|prim| prim.glyph().is_none())
+        .collect();
+    named_prims.sort_by_key(|prim| prim.name().trim_start_matches("&"));
+    let max_name_len = named_prims
+        .iter()
+        .map(|prim| prim.name().chars().count())
+        .max()
+        .unwrap();
+    for prim in named_prims {
+        let class = format!("{} named-function-button", prim_class(prim));
+        let mut desc = prim.doc().short_text().to_string();
+        if desc.chars().count() > 30 {
+            desc = desc.chars().take(29).chain(['…']).collect();
+        }
+        let text = format!("{:max_name_len$} - {desc}", prim.name()).replace(' ', " ");
+        options.push(view!(<option
+            class=class
+            value={prim.name()}>
+            {text}
+        </option>));
+    }
+    let additional_on_change = move |event: Event| {
+        let select: HtmlSelectElement = event.target().unwrap().dyn_into().unwrap();
+        let name = select.value();
+        state.update(|state| replace_code(state, &name));
+        select.set_value("");
+    };
+    glyph_buttons.push(
+        view! {
+            <select
+                id="additional-functions"
+                class="additional-functions"
+                on:change=additional_on_change>
+                <option value="" disabled=true selected=true>"…"</option>
+                { options }
+            </select>
+        }
+        .into_view(),
+    );
+
     // Select a class for the editor and code area
     let editor_class = match mode {
         EditorMode::Example => "small-editor",

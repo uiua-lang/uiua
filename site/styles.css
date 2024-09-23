@@ -131,6 +131,8 @@ li {
     .code,
     .input-div,
     input[type=text],
+    select,
+    option,
     #settings>*>*>input,
     #settings>*>*>select {
         color: #d1daec;
@@ -209,6 +211,8 @@ li {
     .code,
     .input-div,
     input[type=text],
+    select,
+    option,
     #settings>*>*>input,
     #settings>*>*>select {
         color: #344;
@@ -434,11 +438,14 @@ input[type=number] {
     padding: 0.8em;
 }
 
+select,
+option,
 #settings>*>*>input,
 #settings>*>*>select {
     border-radius: 0.5em;
     border: none;
     margin-left: 0.5em;
+    font-family: "Code Font", monospace;
 }
 
 #settings>*>*>input[type=number] {
@@ -774,7 +781,7 @@ input[type=number] {
 
 .glyph-button {
     font-family: "Code Font", monospace;
-    font-size: 0.86em;
+    font-size: 0.85em;
     padding: 0.05em;
     margin: 0em;
     background-color: transparent;
@@ -845,6 +852,28 @@ input[type=number] {
     white-space: pre-wrap;
     font-family: "Code Font", monospace;
     z-index: 1;
+}
+
+.additional-functions {
+    font-family: "Code Font", monospace;
+    align-self: center;
+    font-size: 0.7em;
+    width: 1.1em;
+    white-space: pre;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.additional-functions::-ms-expand {
+    display: none;
+}
+
+.named-function-button {
+    font-family: "Code Font", monospace;
+    white-space: pre;
 }
 
 @media (prefers-color-scheme: dark) {

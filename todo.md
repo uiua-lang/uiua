@@ -6,7 +6,6 @@
   - Update design page
   - Sound easter egg
   - Recursive stack macros
-  - `pad` function
   - Label and format string glyphs?
   - Inversion errors
   - `setinv/setund` unification

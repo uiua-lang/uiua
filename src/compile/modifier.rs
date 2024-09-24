@@ -1781,6 +1781,14 @@ impl Compiler {
         for op in ops {
             let span = op.span;
             let op = op.value;
+            if !matches!(op, PlaceholderOp::Nth(_)) {
+                self.emit_diagnostic(
+                    "Non-positional placeholders have been deprecated. \
+                    Use positional placeholders (^0, ^1, etc.) instead.",
+                    DiagnosticKind::Warning,
+                    span.clone(),
+                );
+            }
             let mut pop = || {
                 (ph_stack.pop())
                     .ok_or_else(|| self.fatal_error(span.clone(), "Operand stack is empty"))
@@ -1806,10 +1814,6 @@ impl Compiler {
                     ph_stack.push(b);
                 }
                 PlaceholderOp::Nth(_) => {
-                    self.experimental_error(&span, || {
-                        "Indexed placeholders are experimental. To use them, \
-                        add `# Experimental!` to the top of the file."
-                    });
                     ignore_remaining = true;
                 }
             }

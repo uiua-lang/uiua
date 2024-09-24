@@ -584,6 +584,8 @@ impl Compiler {
         let Modifier::Primitive(prim) = modified.modifier.value else {
             return Ok(false);
         };
+        self.handle_primitive_experimental(prim, &modified.modifier.span);
+        self.handle_primitive_deprecation(prim, &modified.modifier.span);
         macro_rules! finish {
             ($instrs:expr, $sig:expr) => {{
                 if call {
@@ -1358,8 +1360,6 @@ impl Compiler {
             )?,
             _ => return Ok(false),
         }
-        self.handle_primitive_experimental(prim, &modified.modifier.span);
-        self.handle_primitive_deprecation(prim, &modified.modifier.span);
         Ok(true)
     }
     fn struct_(&mut self, modifier_span: &CodeSpan, operand: &Sp<Word>) -> UiuaResult {

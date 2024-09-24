@@ -350,12 +350,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bufreaderwriter"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ece5ad97cde626d9fb807bf2dd4b4c4d13d7317a93a2ee0f8f9ef6389850a49e"
-
-[[package]]
 name = "bumpalo"
 version = "3.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4080,7 +4074,6 @@ version = "0.13.0-dev.2"
 dependencies = [
  "arboard",
  "bitflags 2.5.0",
- "bufreaderwriter",
  "calamine",
  "clap",
  "color-backtrace",
@@ -4131,7 +4124,6 @@ dependencies = [
  "time",
  "tinyvec",
  "tokio",
- "toml",
  "tower-lsp",
  "trash",
  "uiua-nokhwa",

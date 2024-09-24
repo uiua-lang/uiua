@@ -73,8 +73,10 @@ This version is not yet released. If you are reading this on the website, then t
   - Clearing the stack is now the default
   - The `-c/--clear` has been removed
 ### Website
-- In the pad, files created with [`&fwa`](https://uiua.org/docs/&fwa) will now persist between runs
 - Add [Ranges](https://uiua.org/tutorial/ranges) tutorial
+- In the pad, files created with [`&fwa`](https://uiua.org/docs/&fwa) will now persist between runs
+- Add a dropdown to the pad to insert named functions
+- Add an [RSS Feed](https://uiua.org/blog/feed.rss) for the blog
 
 ## 0.12.3 - 2024-08-17
 ### Language

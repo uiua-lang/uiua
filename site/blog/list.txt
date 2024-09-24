@@ -1,5 +1,5 @@
-uiua-0.12.0: 2024-08-16 - Announcing Uiua 0.12.0
-uiua-0.11.0: 2024-06-02 - Announcing Uiua 0.11.0
-uiua-0.10.0: 2024-04-04 - Announcing Uiua 0.10.0
-what-will-1-look-like: 2024-01-19 - What will Uiua 1.0 look like?
-second-class-functions: 2023-12-15 - Why doesn't Uiua have first-class functions?
+uiua-0.12.0(95d63645-10e4-4312-bbe3-f0a6254c0144): 2024-08-16 - Announcing Uiua 0.12.0
+uiua-0.11.0(32cba0cb-2378-4cf9-894c-ea65e2a3ffda): 2024-06-02 - Announcing Uiua 0.11.0
+uiua-0.10.0(6841da9d-9b35-4992-92b3-0c6820606733): 2024-04-04 - Announcing Uiua 0.10.0
+what-will-1-look-like(113ee6ab-1d29-4115-9a1e-4bb2701d23f0): 2024-01-19 - What will Uiua 1.0 look like?
+second-class-functions(c6a7b400-5d2b-413a-888b-4cd675c8c1db): 2023-12-15 - Why doesn't Uiua have first-class functions?

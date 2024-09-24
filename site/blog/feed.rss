@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?><rss version="2.0"><channel><title>Uiua Blog</title>
+<description>Blog of the Uiua Programming Language</description>
+<link>https://uiua.org/blog</link>
+<lastBuildDate>Mon, 24 Sep 2024 20:12:18 +0000</lastBuildDate>
+<item><link>https://uiua.org/blog/uiua-0.12.0</link>
+<pubDate>Thu, 16 Aug 2024 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.12.0</title></item>
+<item><link>https://uiua.org/blog/uiua-0.11.0</link>
+<pubDate>Sat, 2 Jun 2024 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.11.0</title></item>
+<item><link>https://uiua.org/blog/uiua-0.10.0</link>
+<pubDate>Wed, 4 Apr 2024 00:00:00 +0000</pubDate>
+<title>Announcing Uiua 0.10.0</title></item>
+<item><link>https://uiua.org/blog/what-will-1-look-like</link>
+<pubDate>Thu, 19 Jan 2024 00:00:00 +0000</pubDate>
+<title>What will Uiua 1.0 look like?</title></item>
+<item><link>https://uiua.org/blog/second-class-functions</link>
+<pubDate>Thu, 15 Dec 2023 00:00:00 +0000</pubDate>
+<title>Why doesn't Uiua have first-class functions?</title></item></channel></rss>

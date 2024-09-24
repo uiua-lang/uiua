@@ -21,6 +21,7 @@ profile.yaml
 uiua.tmLanguage.json
 !/tests/*
 !/examples/*
+!/site/*.ua
 
 # symlink created by `nix build`
 result

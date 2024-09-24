@@ -1,11 +1,12 @@
 # Uiua Todo
 
 - 0.13
+  - Smart `under rotate`
+  - Change stack macros to positional macros
+  - Recursive positional macros
   - Non-scalar `fill take`
   - Update language tour
   - Update design page
-  - Sound easter egg
-  - Recursive stack macros
   - Label and format string glyphs?
   - Inversion errors
   - `setinv/setund` unification

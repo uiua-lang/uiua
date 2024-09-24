@@ -118,7 +118,7 @@ fn gen_blog_html() {
         .lines()
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
     {
-        let (path, _) = line.split_once(": ").unwrap_or_default();
+        let (path, _) = line.split_once('(').unwrap_or_default();
         let md_path = format!("blog/{}-text.md", path);
         let mut markdown =
             fs::read_to_string(&md_path).unwrap_or_else(|e| panic!("{md_path}: {e}"));

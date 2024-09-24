@@ -644,7 +644,10 @@ impl Value {
                 }
             }
             value => {
-                return Err(env.error(format!("{requirement}, but it is {}", value.type_name())))
+                return Err(env.error(format!(
+                    "{requirement}, but it is {}",
+                    value.type_name_plural()
+                )))
             }
         })
     }

@@ -1692,7 +1692,7 @@ impl SysOp {
                     Value::Box(arr) => arr,
                     val => {
                         return Err(env.error(format!(
-                            "FFI signature must be a box array, but it is a {}",
+                            "FFI signature must be a box array, but it is {}",
                             val.type_name_plural()
                         )))
                     }

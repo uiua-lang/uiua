@@ -865,7 +865,7 @@ option,
     appearance: none;
     margin-left: 0;
     margin-right: 0;
-    justify-content: center;
+    text-align: center;
 }
 
 .additional-functions::-ms-expand {

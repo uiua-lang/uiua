@@ -875,6 +875,7 @@ option,
 .named-function-button {
     font-family: "Code Font", monospace;
     white-space: pre;
+    text-align: left;
 }
 
 @media (prefers-color-scheme: dark) {

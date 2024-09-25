@@ -387,6 +387,10 @@ impl SysBackend for NativeSys {
         }
         Ok(())
     }
+    #[cfg(feature = "raw_mode")]
+    fn get_raw_mode(&self) -> Result<bool, String> {
+        Ok(rawrrr::is_raw())
+    }
     fn var(&self, name: &str) -> Option<String> {
         env::var(name).ok()
     }

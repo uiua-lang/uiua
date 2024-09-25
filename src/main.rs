@@ -178,6 +178,8 @@ fn run() -> UiuaResult {
                     })?;
                 }
                 print_stack(&rt.take_stack(), !no_color);
+                #[cfg(feature = "raw_mode")]
+                rawrrr::disable_raw();
             }
             App::Build { path, output } => {
                 let path = if let Some(path) = path {

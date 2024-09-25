@@ -24,3 +24,4 @@ uiua.tmLanguage.json
 
 # symlink created by `nix build`
 result
+.direnv

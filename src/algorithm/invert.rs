@@ -2062,7 +2062,7 @@ fn under_reverse_pattern<'a>(
     };
     let span = *span;
     let count = if g_sig.args == 1 || g_sig.outputs == g_sig.args * 2 {
-        g_sig.outputs
+        g_sig.outputs.max(1)
     } else {
         1
     };
@@ -2089,7 +2089,7 @@ fn under_transpose_pattern<'a>(
         _ => return None,
     };
     let count = if g_sig.args == 1 || g_sig.outputs == g_sig.args * 2 {
-        g_sig.outputs
+        g_sig.outputs.max(1)
     } else {
         1
     };
@@ -2110,7 +2110,7 @@ fn under_rotate_pattern<'a>(
     };
     let span = *span;
     let count = if g_sig.args == 1 || g_sig.outputs == g_sig.args * 2 {
-        g_sig.outputs
+        g_sig.outputs.max(1)
     } else {
         1
     };

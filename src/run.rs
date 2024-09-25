@@ -301,7 +301,6 @@ impl Uiua {
         compile: impl FnOnce(&mut Compiler) -> UiuaResult<&mut Compiler>,
     ) -> UiuaResult<Compiler> {
         let mut comp = Compiler::with_backend(self.rt.backend.clone());
-        // let comp_limit = comp.
         let asm = compile(&mut comp)?.finish();
         self.run_asm(&asm)?;
         Ok(comp)

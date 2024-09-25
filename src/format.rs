@@ -398,6 +398,7 @@ fn format_impl(input: &str, src: InputSrc, config: &FormatConfig) -> UiuaResult<
             end_of_line_comments: Vec::new(),
             prev_import_function: None,
             output_comments: None,
+            eval_output_comments: true,
         }
         .format_top_items(&items);
         let formatted = FormatOutput {
@@ -441,8 +442,13 @@ pub fn format_file<P: AsRef<Path>>(path: P, config: &FormatConfig) -> UiuaResult
 }
 
 pub(crate) fn format_words(words: &[Sp<Word>], inputs: &Inputs) -> String {
+    let src = if let Some(word) = words.first() {
+        word.span.src.clone()
+    } else {
+        InputSrc::Str(0)
+    };
     let mut formatter = Formatter {
-        src: InputSrc::Str(0),
+        src,
         config: &FormatConfig::default(),
         inputs,
         output: String::new(),
@@ -450,6 +456,7 @@ pub(crate) fn format_words(words: &[Sp<Word>], inputs: &Inputs) -> String {
         end_of_line_comments: Vec::new(),
         prev_import_function: None,
         output_comments: None,
+        eval_output_comments: false,
     };
     formatter.format_words(words, true, 0);
     formatter.output
@@ -457,7 +464,7 @@ pub(crate) fn format_words(words: &[Sp<Word>], inputs: &Inputs) -> String {
 
 pub(crate) fn format_word(word: &Sp<Word>, inputs: &Inputs) -> String {
     let mut formatter = Formatter {
-        src: InputSrc::Str(0),
+        src: word.span.src.clone(),
         config: &FormatConfig::default(),
         inputs,
         output: String::new(),
@@ -465,6 +472,7 @@ pub(crate) fn format_word(word: &Sp<Word>, inputs: &Inputs) -> String {
         end_of_line_comments: Vec::new(),
         prev_import_function: None,
         output_comments: None,
+        eval_output_comments: false,
     };
     formatter.format_word(word, 0);
     formatter.output
@@ -479,6 +487,7 @@ struct Formatter<'a> {
     end_of_line_comments: Vec<(usize, String)>,
     prev_import_function: Option<Ident>,
     output_comments: Option<HashMap<usize, Vec<Vec<Value>>>>,
+    eval_output_comments: bool,
 }
 
 type GlyphMap = Vec<(CodeSpan, (Loc, Loc))>;
@@ -1310,6 +1319,9 @@ impl<'a> Formatter<'a> {
     }
     fn output_comment(&mut self, index: usize) -> Vec<Vec<Value>> {
         let values = self.output_comments.get_or_insert_with(|| {
+            if !self.eval_output_comments {
+                return HashMap::new();
+            }
             let mut env = Uiua::with_safe_sys().with_execution_limit(Duration::from_secs(2));
 
             #[cfg(feature = "native_sys")]

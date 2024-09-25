@@ -26,7 +26,7 @@ use rand::prelude::*;
 use serde::*;
 
 use crate::{
-    algorithm::{self, *},
+    algorithm::{self, invert, loops, reduce, table, zip, *},
     array::Array,
     boxed::Boxed,
     check::instrs_signature,
@@ -34,7 +34,7 @@ use crate::{
     lex::AsciiToken,
     sys::*,
     value::*,
-    FunctionId, Signature, Uiua, UiuaErrorKind, UiuaResult,
+    FunctionId, Shape, Signature, Uiua, UiuaErrorKind, UiuaResult,
 };
 
 /// Categories of primitives
@@ -831,12 +831,19 @@ impl Primitive {
             Primitive::Rand => env.push(random()),
             Primitive::Gen => {
                 let seed = env.pop(1)?;
+                let shape = env
+                    .pop(2)?
+                    .as_nats(env, "Shape should be a single natural or list of naturals")?;
+
+                let shape = Shape::from(shape);
                 let mut rng =
                     SmallRng::seed_from_u64(seed.as_num(env, "Gen expects a number")?.to_bits());
-                let val: f64 = rng.gen();
+
+                let elems: usize = algorithm::validate_size::<f64>(shape.iter().copied(), env)?;
+                let data = EcoVec::from_iter((0..elems).map(|_| rng.gen::<f64>()));
                 let next_seed = f64::from_bits(rng.gen::<u64>());
-                env.push(val);
-                env.push(next_seed);
+
+                env.push(Array::new(shape, data))
             }
             Primitive::Deal => {
                 let seed = env.pop(1)?.as_num(env, "Deal expects a number")?.to_bits();

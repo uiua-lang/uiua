@@ -2639,18 +2639,21 @@ primitive!(
     /// If no value is available, then an error is thrown.
     /// The error can be caught with [try].
     (1, TryRecv, Thread, "tryrecv", Impure),
-    /// Generate a random number between 0 and 1 from a seed, as well as the next seed
+    /// Generate random numbers from a shape with a seed.
     ///
-    /// If you don't care about a seed, you can use [random].
-    ///
-    /// The same seed will always produce the same random number.
-    /// ex: [◌gen gen gen 0]
-    /// ex: [◌⍥gen3 0]
-    /// ex: [◌⍥gen3 1]
+    /// The first argument is the shape, the second argument is the seed. The returned array will have the given shape where each element is in the range [0, 1).
+    /// If you don't care about the seed or shape, [random] may interest you.
+    /// ex: gen 2_3 0
+    /// ex: gen 4 42
+    /// ex: gen 10 42
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
-    /// ex: ⌊*10[◌⍥gen5 0]
-    (1(2), Gen, Misc, "gen"),
+    /// ex: ⌊×10 gen 2_3 0
+    /// ex: ⌊×10 gen 10 42
+    //
+    /// For non-determinism, [random] can be used as a seed.
+    /// ex: gen 5 ⚂
+    (2(2), Gen, Misc, "gen"),
     /// Randomly reorder the rows of an array with a seed
     ///
     /// ex: deal0 [1 2 3 4 5]

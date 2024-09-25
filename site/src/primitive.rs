@@ -303,6 +303,7 @@ fn all_uns() -> impl IntoView {
             { inverse_row([GifEncode], Optional, "Decodes bytes", None) }
             { inverse_row([Sys(ClipboardGet)], No, "", None) }
             { inverse_row([Sys(ClipboardSet)], No, "", None) }
+            { inverse_row([Sys(RawMode)], No, "Terminal raw state", None) }
         </table>
     }
 }
@@ -382,6 +383,7 @@ fn all_unders() -> impl IntoView {
             { inverse_row([Sys(TcpAccept)], Optional, view!("Calls "<Prim prim=Sys(Close)/>" on handle"), None) }
             { inverse_row([Sys(FReadAllStr)], Optional, view!("Calls "<Prim prim=Sys(FWriteAll)/>), None) }
             { inverse_row([Sys(FReadAllBytes)], Optional, view!("Calls "<Prim prim=Sys(FWriteAll)/>), None) }
+            { inverse_row([Sys(RawMode)], Optional, "Resets raw state", None) }
         </table>
     }
 }

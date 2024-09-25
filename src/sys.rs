@@ -740,6 +740,10 @@ pub trait SysBackend: Any + Send + Sync + 'static {
     fn set_raw_mode(&self, raw_mode: bool) -> Result<(), String> {
         Err("Setting raw mode is not supported in this environment".into())
     }
+    /// Get the terminal raw mode
+    fn get_raw_mode(&self) -> Result<bool, String> {
+        Err("Getting raw mode is not supported in this environment".into())
+    }
     /// Get an environment variable
     fn var(&self, name: &str) -> Option<String> {
         None

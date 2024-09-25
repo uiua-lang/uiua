@@ -114,6 +114,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         ImageEncode => Instr::ImplPrim(ImageDecode, span),
         Sys(SysOp::ClipboardSet) => Instr::Prim(Sys(SysOp::ClipboardGet), span),
         Sys(SysOp::ClipboardGet) => Instr::Prim(Sys(SysOp::ClipboardSet), span),
+        Sys(SysOp::RawMode) => Instr::ImplPrim(UnRawMode, span),
         Json => Instr::ImplPrim(UnJson, span),
         Csv => Instr::ImplPrim(UnCsv, span),
         Xlsx => Instr::ImplPrim(UnXlsx, span),
@@ -697,6 +698,11 @@ pub(crate) fn under_instrs(
             Sys(SysOp::RunStream),
             (Sys(SysOp::RunStream), CopyToUnder(3)),
             (PopUnder(3), TryClose, TryClose, TryClose)
+        )),
+        &maybe_val!(pat!(
+            Sys(SysOp::RawMode),
+            (UnRawMode, PushToUnder(1), Sys(SysOp::RawMode)),
+            (PopUnder(1), Sys(SysOp::RawMode))
         )),
         // Patterns that need to be last
         &UnderPatternFn(under_flip_pattern, "flip"),

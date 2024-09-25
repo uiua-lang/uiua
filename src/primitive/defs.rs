@@ -3431,4 +3431,6 @@ impl_primitive!(
     (1[2], RepeatWithInverse),
     (2(1), ValidateType),
     (2(0), ValidateTypeConsume),
+
+    (0(1), UnRawMode, Impure)
 );

@@ -318,8 +318,11 @@ fn prim_dy_fast_fn(prim: Primitive, span: usize) -> Option<ValueDyFn> {
         Max => spanned_dy_fn(span, Value::max),
         Min => spanned_dy_fn(span, Value::min),
         Atan => spanned_dy_fn(span, Value::atan2),
-        Rotate => Box::new(move |a, b, ad, bd, env| {
-            env.with_span(span, |env| a.rotate_depth(b, ad, bd, env))
+        Rotate => Box::new(move |a, mut b, ad, bd, env| {
+            env.with_span(span, |env| {
+                a.rotate_depth(&mut b, ad, bd, env)?;
+                Ok(b)
+            })
         }),
         _ => return None,
     })

@@ -847,34 +847,34 @@ pub(super) fn pad_keep_counts<'a>(
 
 impl Value {
     /// Use this value to `rotate` another
-    pub fn rotate(&self, rotated: Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn rotate(&self, rotated: &mut Self, env: &Uiua) -> UiuaResult {
         self.rotate_depth(rotated, 0, 0, env)
     }
     pub(crate) fn rotate_depth(
         &self,
-        mut rotated: Self,
+        rotated: &mut Self,
         a_depth: usize,
         b_depth: usize,
         env: &Uiua,
-    ) -> UiuaResult<Self> {
+    ) -> UiuaResult {
         if self.row_count() == 0 {
-            return Ok(rotated);
+            return Ok(());
         }
         let by_ints = || self.as_integer_array(env, "Rotation amount must be an array of integers");
         rotated.match_fill(env);
-        match &mut rotated {
+        match rotated {
             Value::Num(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             Value::Byte(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             Value::Complex(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             Value::Char(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
             Value::Box(a) if a.rank() == a_depth => {
                 for Boxed(val) in a.data.as_mut_slice() {
-                    *val = self.rotate_depth(take(val), a_depth, b_depth, env)?;
+                    self.rotate_depth(val, a_depth, b_depth, env)?;
                 }
             }
             Value::Box(a) => a.rotate_depth(by_ints()?, b_depth, a_depth, env)?,
         }
-        Ok(rotated)
+        Ok(())
     }
 }
 

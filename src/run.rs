@@ -824,7 +824,9 @@ code:
         let res = self.call(f);
         match self.stack_height().cmp(&target_height) {
             Ordering::Equal => {}
-            Ordering::Greater => self.truncate_stack(target_height),
+            Ordering::Greater => {
+                self.truncate_stack(target_height);
+            }
             Ordering::Less => {
                 let diff = target_height - self.stack_height();
                 for _ in 0..diff {
@@ -1206,8 +1208,8 @@ code:
     pub(crate) fn temp_stack_height(&self, stack: TempStack) -> usize {
         self.rt.temp_stacks[stack as usize].len()
     }
-    pub(crate) fn truncate_stack(&mut self, size: usize) {
-        self.rt.stack.truncate(size);
+    pub(crate) fn truncate_stack(&mut self, size: usize) -> Vec<Value> {
+        self.rt.stack.split_off(size)
     }
     pub(crate) fn truncate_temp_stack(&mut self, stack: TempStack, size: usize) {
         self.rt.temp_stacks[stack as usize].truncate(size);

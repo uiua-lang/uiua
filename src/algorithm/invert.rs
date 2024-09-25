@@ -503,6 +503,7 @@ pub(crate) fn under_instrs(
         &UnderPatternFn(under_each_pattern, "each"),
         &UnderPatternFn(under_reverse_pattern, "reverse"),
         &UnderPatternFn(under_transpose_pattern, "transpose"),
+        &UnderPatternFn(under_rotate_pattern, "rotate"),
         &UnderPatternFn(under_partition_pattern, "partition"),
         &UnderPatternFn(under_group_pattern, "group"),
         &UnderPatternFn(under_setinv_setund_pattern, "setinv setund"), // This must come before setinv
@@ -569,7 +570,6 @@ pub(crate) fn under_instrs(
             (CopyToUnder(2), Keep),
             (PopUnder(1), Flip, PopUnder(1), UndoKeep),
         )),
-        &stash1!(Rotate, (Neg, Rotate)),
         &maybe_val!(pat!(
             Join,
             (Over, Shape, Over, Shape, PushToUnder(2), Join),
@@ -2061,7 +2061,7 @@ fn under_reverse_pattern<'a>(
         return None;
     };
     let span = *span;
-    let count = if g_sig.outputs == g_sig.args * 2 {
+    let count = if g_sig.args == 1 || g_sig.outputs == g_sig.args * 2 {
         g_sig.outputs
     } else {
         1
@@ -2088,7 +2088,7 @@ fn under_transpose_pattern<'a>(
         }
         _ => return None,
     };
-    let count = if g_sig.outputs == g_sig.args * 2 {
+    let count = if g_sig.args == 1 || g_sig.outputs == g_sig.args * 2 {
         g_sig.outputs
     } else {
         1
@@ -2098,6 +2098,39 @@ fn under_transpose_pattern<'a>(
         span
     )];
     Some((input, (eco_vec![instr.clone()], after)))
+}
+
+fn under_rotate_pattern<'a>(
+    input: &'a [Instr],
+    g_sig: Signature,
+    _: &mut Compiler,
+) -> Option<(&'a [Instr], Under)> {
+    let [Instr::Prim(Primitive::Rotate, span), input @ ..] = input else {
+        return None;
+    };
+    let span = *span;
+    let count = if g_sig.args == 1 || g_sig.outputs == g_sig.args * 2 {
+        g_sig.outputs
+    } else {
+        1
+    };
+    let before = eco_vec![
+        Instr::CopyToTemp {
+            stack: TempStack::Under,
+            count: 1,
+            span
+        },
+        Instr::Prim(Primitive::Rotate, span)
+    ];
+    let after = eco_vec![
+        Instr::PopTemp {
+            stack: TempStack::Under,
+            count: 1,
+            span
+        },
+        Instr::ImplPrim(ImplPrimitive::UndoRotate(count), span)
+    ];
+    Some((input, (before, after)))
 }
 
 fn under_fill_pattern<'a>(

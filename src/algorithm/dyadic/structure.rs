@@ -413,7 +413,7 @@ impl Value {
     }
     #[track_caller]
     pub(crate) fn drop_n(&mut self, n: usize) {
-        val_as_arr!(self, |a| a.drop_n(n))
+        val_as_arr!(self, |a| a.drop_front_n(n))
     }
 }
 
@@ -926,7 +926,7 @@ impl<T: ArrayValue> Array<T> {
         Ok(Array::new(new_shape, new_data))
     }
     #[track_caller]
-    pub(crate) fn drop_n(&mut self, n: usize) {
+    pub(crate) fn drop_front_n(&mut self, n: usize) {
         let row_len = self.row_len();
         let start = n * row_len;
         self.data = self.data.slice(start..);

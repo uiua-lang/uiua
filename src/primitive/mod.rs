@@ -195,6 +195,7 @@ impl fmt::Display for ImplPrimitive {
             UndoBase => write!(f, "{Under}{Base}"),
             UndoReverse(_) => write!(f, "{Under}{Reverse}"),
             UndoTransposeN(..) => write!(f, "{Under}{Transpose}"),
+            UndoRotate(_) => write!(f, "{Under}{Rotate}"),
             UndoTake => write!(f, "{Under}{Take}"),
             UndoDrop => write!(f, "{Under}{Drop}"),
             UndoSelect => write!(f, "{Under}{Select}"),
@@ -682,7 +683,12 @@ impl Primitive {
             Primitive::Keep => env.dyadic_oo_env(Value::keep)?,
             Primitive::Take => env.dyadic_oo_env(Value::take)?,
             Primitive::Drop => env.dyadic_oo_env(Value::drop)?,
-            Primitive::Rotate => env.dyadic_ro_env(Value::rotate)?,
+            Primitive::Rotate => {
+                let amnt = env.pop(1)?;
+                let mut val = env.pop(2)?;
+                amnt.rotate(&mut val, env)?;
+                env.push(val);
+            }
             Primitive::Orient => env.dyadic_ro_env(|a, mut b, env| {
                 a.orient(&mut b, env)?;
                 Ok(b)
@@ -1118,6 +1124,39 @@ impl ImplPrimitive {
                 for val in vals {
                     if val.rank() == max_rank {
                         val.transpose_depth(0, -amnt);
+                    }
+                }
+            }
+            &ImplPrimitive::UndoRotate(n) => {
+                env.touch_array_stack(n + 1)?;
+                let mut amount = env.pop(1)?.scalar_neg(env)?;
+                if n == 1 {
+                    let mut val = env.pop(2)?;
+                    if amount.rank() > 0 && amount.row_count() > val.rank() {
+                        amount.drop_n(amount.row_count() - val.rank());
+                    }
+                    amount.rotate(&mut val, env)?;
+                    env.push(val);
+                } else {
+                    let end = env.stack_height() - n;
+                    let mut vals = env.truncate_stack(end);
+                    let max_rank = vals.iter().map(|v| v.rank()).max().unwrap_or(0);
+                    if amount.rank() > 0 && amount.row_count() > max_rank {
+                        amount.drop_n(amount.row_count() - max_rank);
+                    }
+                    for val in &mut vals {
+                        let mut amount = amount.clone();
+                        if amount.row_count() > 1 {
+                            if amount.rank() > 0 && amount.row_count() > val.rank() {
+                                amount.drop_n(amount.row_count() - val.rank());
+                            }
+                            amount.rotate(val, env)?;
+                        } else if val.rank() == max_rank {
+                            amount.rotate(val, env)?;
+                        }
+                    }
+                    for val in vals {
+                        env.push(val);
                     }
                 }
             }

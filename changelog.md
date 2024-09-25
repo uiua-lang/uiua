@@ -25,7 +25,7 @@ This version is not yet released. If you are reading this on the website, then t
   - Lower rank arrays get repeated to match the original shape
   - Higher rank arrays extend the length of the array
 - [`under ⍜`](https://uiua.org/docs/under) [`un °`](https://uiua.org/docs/un) [`bits ⋯`](https://uiua.org/docs/bits) now preserves a minimum bit length
-- [`under ⍜`](https://uiua.org/docs/under) [`reverse ⇌`](https://uiua.org/docs/reverse) and [`under ⍜`](https://uiua.org/docs/under) [`transpose ⍉`](https://uiua.org/docs/transpose) are now smarter with respect to the ranks of [`under ⍜`](https://uiua.org/docs/under)'s second function
+- [`under ⍜`](https://uiua.org/docs/under) [`reverse ⇌`](https://uiua.org/docs/reverse), [`transpose ⍉`](https://uiua.org/docs/transpose), and [`rotate ↻`](https://uiua.org/docs/rotate) are now smarter with respect to the signature of [`under ⍜`](https://uiua.org/docs/under)'s second function
   - For example `⍜⇌°⊂` behaves in a more useful way
 - [`under ⍜`](https://uiua.org/docs/under) [`len ⧻`](https://uiua.org/docs/len) now reshapes an array to have the transformed length
 - `NaN` and `∞` indices for [`pick ⊡`](https://uiua.org/docs/pick) and [`select ⊏`](https://uiua.org/docs/select) now get the [`fill ⬚`](https://uiua.org/docs/fill) value

@@ -154,6 +154,7 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         AudioDecode => Instr::Prim(AudioEncode, span),
         UnDatetime => Instr::Prim(DateTime, span),
         TraceN(n, inverse) => Instr::ImplPrim(TraceN(n, !inverse), span),
+        UnRawMode => Instr::Prim(Sys(SysOp::RawMode), span),
         _ => return None,
     })
 }

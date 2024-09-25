@@ -46,6 +46,8 @@ This version is not yet released. If you are reading this on the website, then t
 - Add a `Lorem` constant, which contains the Lorem Ipsum text
 - Add several color constants
 - Add pride flag constants
+- Allow [`&raw`](https://uiua.org/docs/&raw) to be inverted, acting as a getter for the raw state of the terminal
+  - [`under ⍜`](https://uiua.org/docs/under)[`&raw`](https://uiua.org/docs/&raw) sets raw mode, and then returns it to the previous state
 - Add experimental [`anti ˘`](https://uiua.org/docs/anti) modifier, which simplifies specifying certain inverses
 - Add experimental [`tuples ⧅`](https://uiua.org/docs/tuples) modifier
   - This unifies and extends the behavior of the `choose` and `permute` functions, which are now deprecated
@@ -72,6 +74,7 @@ This version is not yet released. If you are reading this on the website, then t
 - `uiua repl` now has a `-s`/`--stack` flag to disable clearing the stack after each line
   - Clearing the stack is now the default
   - The `-c/--clear` has been removed
+- After programs finish executing, the terminal raw mode will be automatically disabled if it was left on. 
 ### Website
 - Add [Ranges](https://uiua.org/tutorial/ranges) tutorial
 - In the pad, files created with [`&fwa`](https://uiua.org/docs/&fwa) will now persist between runs

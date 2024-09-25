@@ -1,7 +1,9 @@
 # Uiua Todo
 
 - 0.13
+  - Make `under` arg extensions work with 0-arg second function
   - Make `un` work for `under` arg extensions
+  - Make `un under` work...
   - Subscript dropdown
   - More base functionality
   - Change stack macros to positional macros

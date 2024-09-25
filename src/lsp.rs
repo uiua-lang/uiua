@@ -351,12 +351,12 @@ impl Spanner {
                 invertible: {
                     let instrs = f.instrs(&self.asm);
                     let mut compiler = Compiler::new().with_assembly(self.asm.clone());
-                    invert_instrs(instrs, &mut compiler).is_some()
+                    invert_instrs(instrs, &mut compiler).is_ok()
                 },
                 underable: {
                     let instrs = f.instrs(&self.asm);
                     let mut compiler = Compiler::new().with_assembly(self.asm.clone());
-                    under_instrs(instrs, (1, 1).into(), &mut compiler).is_some()
+                    under_instrs(instrs, (1, 1).into(), &mut compiler).is_ok()
                 },
                 pure: instrs_are_pure(f.instrs(&self.asm), &self.asm, Purity::Pure),
             },

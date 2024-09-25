@@ -92,13 +92,13 @@ struct VirtualEnv<'a> {
     popped: Vec<usize>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SigCheckError {
     pub message: String,
     pub kind: SigCheckErrorKind,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SigCheckErrorKind {
     Incorrect,
     Ambiguous,

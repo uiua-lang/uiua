@@ -881,6 +881,7 @@ impl Compiler {
                         }
                     }
                     if let Some((inverse, inv_sig)) = invert_instrs(&new_func.instrs, self)
+                        .ok()
                         .and_then(|inv| instrs_signature(&inv).ok().map(|sig| (inv, sig)))
                         .filter(|(_, inv_sig)| sig.is_compatible_with(*inv_sig))
                     {
@@ -925,12 +926,13 @@ impl Compiler {
                 let (mut new_func, _) = f_res?;
 
                 self.add_span(span.clone());
-                if let Some(inverted) = invert_instrs(&new_func.instrs, self) {
-                    let sig = self.sig_of(&inverted, &span)?;
-                    new_func.instrs = inverted;
-                    finish!(new_func, sig);
-                } else {
-                    return Err(self.fatal_error(span, "No inverse found"));
+                match invert_instrs(&new_func.instrs, self) {
+                    Ok(inverted) => {
+                        let sig = self.sig_of(&inverted, &span)?;
+                        new_func.instrs = inverted;
+                        finish!(new_func, sig);
+                    }
+                    Err(e) => return Err(self.fatal_error(span, e)),
                 }
             }
             Anti if !self.in_inverse => {
@@ -954,12 +956,13 @@ impl Compiler {
                     );
                 }
 
-                if let Some(inverted) = anti_instrs(&new_func.instrs, self) {
-                    let sig = self.sig_of(&inverted, &span)?;
-                    new_func.instrs = inverted;
-                    finish!(new_func, sig);
-                } else {
-                    return Err(self.fatal_error(span, "No inverse found"));
+                match anti_instrs(&new_func.instrs, self) {
+                    Ok(inverted) => {
+                        let sig = self.sig_of(&inverted, &span)?;
+                        new_func.instrs = inverted;
+                        finish!(new_func, sig);
+                    }
+                    Err(e) => return Err(self.fatal_error(span, e)),
                 }
             }
             Under => {
@@ -986,27 +989,28 @@ impl Compiler {
                     );
                 }
 
-                if let Some((f_before, f_after)) = under_instrs(&f_new_func.instrs, g_sig, self) {
-                    let mut instrs = f_before;
-                    instrs.extend(g_new_func.instrs);
-                    instrs.extend(f_after);
-                    let new_func = NewFunction {
-                        instrs,
-                        flags: f_new_func.flags | g_new_func.flags,
-                    };
-                    if call {
-                        self.push_all_instrs(new_func);
-                    } else {
-                        let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
-                        let func = self.make_function(
-                            modified.modifier.span.clone().into(),
-                            sig,
-                            new_func,
-                        );
-                        self.push_instr(Instr::PushFunc(func));
+                match under_instrs(&f_new_func.instrs, g_sig, self) {
+                    Ok((f_before, f_after)) => {
+                        let mut instrs = f_before;
+                        instrs.extend(g_new_func.instrs);
+                        instrs.extend(f_after);
+                        let new_func = NewFunction {
+                            instrs,
+                            flags: f_new_func.flags | g_new_func.flags,
+                        };
+                        if call {
+                            self.push_all_instrs(new_func);
+                        } else {
+                            let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
+                            let func = self.make_function(
+                                modified.modifier.span.clone().into(),
+                                sig,
+                                new_func,
+                            );
+                            self.push_instr(Instr::PushFunc(func));
+                        }
                     }
-                } else {
-                    return Err(self.fatal_error(f_span, "No inverse found"));
+                    Err(e) => return Err(self.fatal_error(f_span, e)),
                 }
             }
             SetInverse => {

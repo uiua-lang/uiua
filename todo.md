@@ -1,7 +1,9 @@
 # Uiua Todo
 
 - 0.13
-  - Smart `under rotate`
+  - Make `un` work for `under` arg extensions
+  - Subscript dropdown
+  - More base functionality
   - Change stack macros to positional macros
   - Recursive positional macros
   - Non-scalar `fill take`

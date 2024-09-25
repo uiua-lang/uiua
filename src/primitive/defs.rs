@@ -1603,6 +1603,12 @@ primitive!(
     ///   : ◌°⟜base 2 [1 0 0 1 0]
     ///   : ◌°⟜base 2 [1_0_0 0_1_1 1_1_1]
     ///   : ◌°⟜base 10 [1 2 3]
+    /// For a scalar base, this is equivalent to evaluating a polynomial.
+    /// The polynomial x²-2x+1 could be represented like this:
+    /// ex: # Experimental!
+    ///   : ◌°⟜base 0 [1 ¯2 1]
+    ///   : ◌°⟜base 1 [1 ¯2 1]
+    ///   : ◌°⟜base 2 [1 ¯2 1]
     (2, Base, DyadicArray, "base"),
     /// Get all combinations of `k` rows from an array
     ///

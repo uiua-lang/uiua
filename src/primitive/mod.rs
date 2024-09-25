@@ -1104,7 +1104,7 @@ impl ImplPrimitive {
                 let val = env.pop(2)?;
                 env.push(val.undo_un_bits(&orig_shape, env)?);
             }
-            ImplPrimitive::UndoBase => env.dyadic_rr_env(Value::undo_base)?,
+            ImplPrimitive::UndoBase => env.dyadic_rr_env(Value::antibase)?,
             &ImplPrimitive::UndoReverse(n) => {
                 env.touch_array_stack(n)?;
                 let end = env.stack_height() - n;

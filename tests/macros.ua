@@ -55,8 +55,8 @@ Hi ← Foo!+"a"
 a ← 4
 b ← (⚂)
 c ← comptime(⚂)
-d ← gen ⚂
-e ← ◌ gen 1
+d ← gen [] ⚂
+e ← ◌ gen [] 1
 
 A! ←^ $"_" a ◌
 B! ←^ $"_" b ◌

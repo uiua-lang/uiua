@@ -2639,10 +2639,10 @@ primitive!(
     /// If no value is available, then an error is thrown.
     /// The error can be caught with [try].
     (1, TryRecv, Thread, "tryrecv", Impure),
-    /// Generate random numbers from a shape with a seed.
+    /// Generate an array of random numbers with a seed
     ///
     /// The first argument is the shape, the second argument is the seed. The returned array will have the given shape where each element is in the range [0, 1).
-    /// If you don't care about the seed or shape, [random] may interest you.
+    /// If you don't care about the seed or shape, you can use [random] instead.
     /// ex: gen 2_3 0
     /// ex: gen 4 42
     /// ex: gen 10 42
@@ -2652,7 +2652,7 @@ primitive!(
     /// ex: ⌊×10 gen 10 42
     //
     /// For non-determinism, [random] can be used as a seed.
-    /// ex: gen 5 ⚂
+    /// ex: gen 3_4 ⚂
     (2(2), Gen, Misc, "gen"),
     /// Randomly reorder the rows of an array with a seed
     ///

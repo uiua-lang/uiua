@@ -2642,20 +2642,24 @@ primitive!(
     /// Generate an array of random numbers with a seed
     ///
     /// The first argument is the shape, the second argument is the seed. The returned array will have the given shape where each element is in the range [0, 1).
+    /// A seed to use for additional calls is also returned.
     /// If you don't care about the seed or shape, you can use [random] instead.
     /// ex: gen [] 0
+    /// ex: gen [] gen [] 0
+    /// The next seed must be [pop]ped if it is not needed.
     /// ex: gen 2 0
-    /// ex: gen 3 0
-    /// ex: gen 2_3 0
-    /// ex: gen 4 42
-    /// ex: gen 10 42
+    /// ex: ◌gen 3 0
+    /// ex: ◌gen 2_3 0
+    /// ex: ◌gen 4 42
+    /// ex: ◌gen 10 42
+    /// ex: ◌gen 1 gen 2 gen 3 10
     ///
     /// Use [multiply] and [floor] to generate a random integer in a range.
-    /// ex: ⌊×10 gen 2_3 0
-    /// ex: ⌊×10 gen 10 42
+    /// ex: ⌊×10 ◌gen 2_3 0
+    /// ex: ⌊×10 ◌gen 10 42
     //
     /// For non-determinism, [random] can be used as a seed.
-    /// ex: gen 3_4 ⚂
+    /// ex: ◌gen 3_4 ⚂
     (2(2), Gen, Misc, "gen"),
     /// Randomly reorder the rows of an array with a seed
     ///

@@ -2643,6 +2643,9 @@ primitive!(
     ///
     /// The first argument is the shape, the second argument is the seed. The returned array will have the given shape where each element is in the range [0, 1).
     /// If you don't care about the seed or shape, you can use [random] instead.
+    /// ex: gen [] 0
+    /// ex: gen 2 0
+    /// ex: gen 3 0
     /// ex: gen 2_3 0
     /// ex: gen 4 42
     /// ex: gen 10 42

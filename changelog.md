@@ -7,6 +7,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Language
 - **Breaking Change** - [`minimum ↧`](https://uiua.org/docs/minimum) and [`maximum ↥`](https://uiua.org/docs/maximum) now compare lexicographically
   - This makes them consistent with comparison functions like [`less than <`](https://uiua.org/docs/less%20than)
+- **Breaking Change** - [`gen`](https://uiua.org/docs/gen) now takes a shape argument
 - The experimental `chunks ⑄` function's behavior has been moved to an extension on [`windows ◫`](https://uiua.org/docs/windows)
   - This also allow the specification of "stride"
   - This is inspired by APL's `stencil ⌺` behavior

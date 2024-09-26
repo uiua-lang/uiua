@@ -843,7 +843,8 @@ impl Primitive {
                 let data = EcoVec::from_iter((0..elems).map(|_| rng.gen::<f64>()));
                 let next_seed = f64::from_bits(rng.gen::<u64>());
 
-                env.push(Array::new(shape, data))
+                env.push(Array::new(shape, data));
+                env.push(next_seed);
             }
             Primitive::Deal => {
                 let seed = env.pop(1)?.as_num(env, "Deal expects a number")?.to_bits();

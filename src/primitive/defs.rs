@@ -505,7 +505,7 @@ primitive!(
     /// This is usually used to discard values that are no longer needed.
     /// For example, [gen] returns both a random number and a seed for the next call.
     /// When you have all the random numbers you need, you often want to discard the seed.
-    /// ex: ⌊×10[◌⍥gen10 0]
+    /// ex: ⌊×10 ◌gen10 0
     ///
     /// [un][pop] can be used to retrieve the [fill] value.
     /// ex: ⬚3(+°◌°◌)

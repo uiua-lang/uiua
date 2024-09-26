@@ -830,10 +830,10 @@ impl Primitive {
             }
             Primitive::Rand => env.push(random()),
             Primitive::Gen => {
-                let seed = env.pop(1)?;
                 let shape = env
-                    .pop(2)?
+                    .pop(1)?
                     .as_nats(env, "Shape should be a single natural or list of naturals")?;
+                let seed = env.pop(2)?;
 
                 let shape = Shape::from(shape);
                 let mut rng =

@@ -1731,7 +1731,7 @@ primitive!(
     ///
     /// If the function returns the same or more values than it takes as arguments:
     /// There will be exactly one iterated array. The rest of the arguments will be used as accumulators.
-    /// Excess outputs will be collected into arrays.
+    /// Excess outputs will be collected into arrays. When the [fold] is done, these arrays will be placed *below* the accumulators on the stack.
     /// This behavior is currently `# Experimental!`.
     ///
     /// For example, [scan] can be manually reimplemented by [duplicate]ing the result of the function.

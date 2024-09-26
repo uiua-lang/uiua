@@ -1214,6 +1214,20 @@ code:
     pub(crate) fn truncate_temp_stack(&mut self, stack: TempStack, size: usize) {
         self.rt.temp_stacks[stack as usize].truncate(size);
     }
+    pub(crate) fn remove_nth_back(&mut self, n: usize) -> UiuaResult<Value> {
+        let len = self.rt.stack.len();
+        if n >= len {
+            return Err(self.error(format!("Stack was empty evaluating argument {}", n + 1)));
+        }
+        Ok(self.rt.stack.remove(len - n - 1))
+    }
+    pub(crate) fn pop_n(&mut self, n: usize) -> UiuaResult<Vec<Value>> {
+        let len = self.rt.stack.len();
+        if n > len {
+            return Err(self.error(format!("Stack was empty evaluating argument {}", n + 1)));
+        }
+        Ok(self.rt.stack.split_off(len - n))
+    }
     pub(crate) fn num_scalar_fill(&self) -> Result<f64, &'static str> {
         match self.value_fill() {
             Some(Value::Num(n)) if n.rank() == 0 => Ok(n.data[0]),

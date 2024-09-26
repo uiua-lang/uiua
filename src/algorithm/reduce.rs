@@ -972,12 +972,16 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
         }
         env.call(f.clone())?;
         for collected in &mut collect {
-            collected.push(env.pop("fold's function result")?);
+            collected.push(env.remove_nth_back(acc_count)?);
         }
     }
+    let accs = env.pop_n(acc_count)?;
     for collected in collect.into_iter().rev() {
         let val = Value::from_row_values(collected, env)?;
         env.push(val);
+    }
+    for acc in accs {
+        env.push(acc);
     }
     Ok(())
 }

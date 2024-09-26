@@ -1705,15 +1705,17 @@ primitive!(
     /// Apply a function to aggregate arrays
     ///
     /// Expects as many arguments as its function takes.
-    /// The function must take at least 1 more argument than it returns.
-    /// Arguments that are lower on the stack that will be used as accumulators.
-    /// Arguments that are higher on the stack will be iterated over.
-    /// The function will be repeatedly called with the rows of the iterated arrays, followed by the accumulators.
-    /// On each iteration, the returned values will be used as the new accumulators.
-    ///
-    /// For example, [fold] can be used to [reduce] an array with a default value.
+    /// In the simplest case, [fold] can be used to [reduce] an array with a default value.
     /// ex: ∧+ [1 2 3] 10
     ///   : ∧+ [] 10
+    ///
+    /// If the function takes at least 1 more argument than it returns:
+    /// Arguments that are lower on the stack that will be used as accumulators.
+    /// There will be as many accumulators as the function's outputs.
+    /// Arguments that are higher on the stack will be iterated over.
+    /// The number of iterated arrays is the number of arguments minus the number of outputs.
+    /// The function will be repeatedly called with the rows of the iterated arrays, followed by the accumulators.
+    /// On each iteration, the returned values will be used as the new accumulators.
     ///
     /// Multiple accumulators can be used
     /// ex: ∧(⊃+(×⊙⋅∘)) +1⇡5 0 1
@@ -1722,13 +1724,18 @@ primitive!(
     ///
     /// Multiple iterated arrays are also fine.
     /// Here, we accumulate the first array with [add] and the second with [multiply].
-    /// ex: ∧⊃(+⊙⋅∘)(×⋅⊙⋅∘) 1_2_3 4_5_6 0 1
+    /// ex: ∧⊃(+⊙⋅∘|×⋅⊙⋅∘) 1_2_3 4_5_6 0 1
     ///
     /// Like [rows], [fold] will repeat the row of arrays that have exactly one row.
     /// ex: ∧(⊂⊂) 1_2_3 4 []
     ///
-    /// Here is a reimplementation of [scan] using [fold].
-    /// ex: ⇌∧(⊂+⊙(⊢.)) ⊃↘↙1 [1 2 3 4]
+    /// If the function returns the same or more values than it takes as arguments:
+    /// There will be exactly one iterated array. The rest of the arguments will be used as accumulators.
+    /// Excess outputs will be collected into arrays.
+    ///
+    /// For example, [scan] can be manually reimplemented by [duplicate]ing the result of the function.
+    /// ex: ∧(.+) [1 2 3 4 5] 0
+    /// ex: ∧(◡∘⊓+×⟜:) [1 2 3 4 5] 0 1
     ([1], Fold, AggregatingModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///

@@ -5,7 +5,7 @@ use std::{collections::VecDeque, convert::identity, iter::repeat};
 use ecow::{eco_vec, EcoVec};
 
 use crate::{
-    algorithm::{loops::flip, pervade::*},
+    algorithm::{loops::flip, multi_output, pervade::*},
     check::instrs_signature,
     cowslice::cowslice,
     Array, ArrayValue, Complex, Function, ImplPrimitive, Instr, Primitive, Shape, Signature, Uiua,
@@ -916,15 +916,14 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
     crate::profile_function!();
     let f = env.pop_function()?;
     let sig = f.signature();
-    if sig.args <= sig.outputs {
-        return Err(env.error(format!(
-            "{}'s function must take more values than it returns, \
-            but its signature is {}",
-            Primitive::Fold.format(),
-            sig
-        )));
-    }
-    let iterable_count = sig.args - sig.outputs;
+    let (iterable_count, acc_count, collect_count) = if sig.args > sig.outputs {
+        (sig.args - sig.outputs, sig.outputs, 0)
+    } else {
+        let iter = sig.args.min(1);
+        let acc = sig.args.saturating_sub(iter);
+        let collect = sig.outputs - acc;
+        (iter, acc, collect)
+    };
     let mut arrays = Vec::with_capacity(iterable_count);
     for i in 0..iterable_count {
         let mut val = env.pop(("iterated array", i + 1))?;
@@ -935,8 +934,8 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
             Ok(val.into_rows())
         });
     }
-    if env.stack_height() < sig.outputs {
-        for i in 0..sig.outputs {
+    if env.stack_height() < acc_count {
+        for i in 0..acc_count {
             env.pop(("accumulator", i + 1))?;
         }
     }
@@ -963,6 +962,7 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
     if row_count == 0 && arrays.iter().all(Result::is_err) {
         row_count = 1;
     }
+    let mut collect = multi_output(collect_count, Vec::with_capacity(row_count));
     for _ in 0..row_count {
         for array in arrays.iter_mut().rev() {
             env.push(match array {
@@ -971,6 +971,13 @@ pub fn fold(env: &mut Uiua) -> UiuaResult {
             });
         }
         env.call(f.clone())?;
+        for collected in &mut collect {
+            collected.push(env.pop("fold's function result")?);
+        }
+    }
+    for collected in collect.into_iter().rev() {
+        let val = Value::from_row_values(collected, env)?;
+        env.push(val);
     }
     Ok(())
 }

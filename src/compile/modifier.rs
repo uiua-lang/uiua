@@ -584,8 +584,11 @@ impl Compiler {
         let Modifier::Primitive(prim) = modified.modifier.value else {
             return Ok(false);
         };
+
+        // Validation
         self.handle_primitive_experimental(prim, &modified.modifier.span);
         self.handle_primitive_deprecation(prim, &modified.modifier.span);
+
         macro_rules! finish {
             ($instrs:expr, $sig:expr) => {{
                 if call {
@@ -1304,6 +1307,24 @@ impl Compiler {
                 prefix.extend(new_func.instrs);
                 new_func.instrs = prefix;
                 finish!(new_func, sig);
+            }
+            Fold => {
+                let operand = modified.code_operands().next().unwrap().clone();
+                let op_span = operand.span.clone();
+                let (new_func, sig) = self.compile_operand_word(operand)?;
+                if sig.args <= sig.outputs {
+                    self.experimental_error(&modified.modifier.span, || {
+                        format!(
+                            "{} with arguments ≤ outputs is experimental. To use it, \
+                            add `# Experimental!` to the top of the file.",
+                            prim.format()
+                        )
+                    });
+                }
+                let func = self.make_function(op_span.into(), sig, new_func);
+                let spandex = self.add_span(modified.modifier.span.clone());
+                let instrs = eco_vec![Instr::PushFunc(func), Instr::Prim(Primitive::Fold, spandex)];
+                finish!(instrs, sig);
             }
             Stringify => {
                 let operand = modified.code_operands().next().unwrap();

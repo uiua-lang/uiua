@@ -1732,10 +1732,13 @@ primitive!(
     /// If the function returns the same or more values than it takes as arguments:
     /// There will be exactly one iterated array. The rest of the arguments will be used as accumulators.
     /// Excess outputs will be collected into arrays.
+    /// This behavior is currently `# Experimental!`.
     ///
     /// For example, [scan] can be manually reimplemented by [duplicate]ing the result of the function.
-    /// ex: ∧(.+) [1 2 3 4 5] 0
-    /// ex: ∧(◡∘⊓+×⟜:) [1 2 3 4 5] 0 1
+    /// ex: # Experimental!
+    ///   : ∧(.+) [1 2 3 4 5] 0
+    /// ex: # Experimental!
+    ///   : ∧(◡∘⊓+×⟜:) [1 2 3 4 5] 0 1
     ([1], Fold, AggregatingModifier, ("fold", '∧')),
     /// Reduce, but keep intermediate values
     ///

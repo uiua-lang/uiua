@@ -1,7 +1,6 @@
 # Uiua Todo
 
 - 0.13
-  - Optimize permuting `tuples`
   - Make `un under` work...
     - `un` for `under` arg extensions
     - `un dip`

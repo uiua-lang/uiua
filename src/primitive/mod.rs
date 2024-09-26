@@ -714,7 +714,7 @@ impl Primitive {
             Primitive::Choose => {
                 env.dyadic_rr_env(|k, val, env| k.choose(val, false, false, env))?
             }
-            Primitive::Permute => env.dyadic_rr_env(Value::permute)?,
+            Primitive::Permute => env.dyadic_ro_env(Value::permute)?,
             Primitive::Box => {
                 let val = env.pop(1)?;
                 env.push(val.box_depth(0));

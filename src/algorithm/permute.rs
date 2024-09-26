@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use ecow::EcoVec;
 
 use crate::{
@@ -73,7 +71,7 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
                 Primitive::Le => k.choose(&xs, false, true, env)?,
                 Primitive::Gt => k.choose(&xs, true, false, env)?,
                 Primitive::Ge => k.choose(&xs, true, true, env)?,
-                Primitive::Ne => k.permute(&xs, env)?,
+                Primitive::Ne => k.permute(xs, env)?,
                 _ => break 'blk,
             };
             env.push(res);
@@ -203,7 +201,7 @@ impl Value {
         val_as_arr!(from, |a| a.choose(k, reverse, same, env).map(Into::into))
     }
     /// `permute` all combinations of `k` rows from a value
-    pub fn permute(&self, from: &Self, env: &Uiua) -> UiuaResult<Self> {
+    pub fn permute(&self, from: Self, env: &Uiua) -> UiuaResult<Self> {
         let k = self.as_nat(env, "Permute k must be an integer")?;
         if let Ok(n) = from.as_nat(env, "") {
             return permutations(n, k, env).map(Into::into);
@@ -352,7 +350,7 @@ impl<T: ArrayValue> Array<T> {
         })
     }
     /// `permute` all combinations of `k` rows from this array
-    fn permute(&self, k: usize, env: &Uiua) -> UiuaResult<Self> {
+    fn permute(self, k: usize, env: &Uiua) -> UiuaResult<Self> {
         if self.rank() == 0 {
             return Err(env.error("Cannot permute scalar"));
         }
@@ -370,22 +368,24 @@ impl<T: ArrayValue> Array<T> {
         let elem_count = validate_size::<T>(shape.iter().copied(), env)?;
         let mut data = EcoVec::with_capacity(elem_count);
         let row_len = self.row_len();
-        let mut indices = vec![0; k];
-        let mut set = HashSet::with_capacity(k);
+        // It took me forever to find this algorithm
+        let mut perm: Vec<usize> = (0..n).collect();
+        let mut cycles: Vec<usize> = (n - k + 1..=n).rev().collect();
+        for &i in &perm[..k] {
+            data.extend_from_slice(&self.data[i * row_len..][..row_len]);
+        }
         'outer: loop {
-            env.respect_execution_limit()?;
-            set.clear();
-            if indices.iter().all(|&i| set.insert(i)) {
-                for &i in indices.iter().rev() {
-                    data.extend_from_slice(&self.data[i * row_len..][..row_len]);
-                }
-            }
-            // Increment indices
-            for i in 0..k {
-                indices[i] += 1;
-                if indices[i] == n {
-                    indices[i] = 0;
+            for i in (0..k).rev() {
+                cycles[i] -= 1;
+                if cycles[i] == 0 {
+                    perm[i..].rotate_left(1);
+                    cycles[i] = n - i;
                 } else {
+                    let j = cycles[i];
+                    perm.swap(i, n - j);
+                    for &i in &perm[..k] {
+                        data.extend_from_slice(&self.data[i * row_len..][..row_len]);
+                    }
                     continue 'outer;
                 }
             }

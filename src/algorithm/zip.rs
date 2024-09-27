@@ -805,6 +805,7 @@ fn rowsn(f: Function, args: Vec<Value>, inv: bool, env: &mut Uiua) -> UiuaResult
         is_empty,
         all_scalar,
         per_meta,
+        ..
     } = fixed_rows(prim.format(), outputs, args, env)?;
     let mut new_values = multi_output(outputs, Vec::new());
     env.without_fill(|env| -> UiuaResult {

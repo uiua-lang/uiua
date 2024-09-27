@@ -33,6 +33,10 @@ pub fn tuples(env: &mut Uiua) -> UiuaResult {
 
 fn tuple1(f: Function, env: &mut Uiua) -> UiuaResult {
     let mut xs = env.pop(1)?;
+    if xs.rank() == 0 {
+        env.push(xs);
+        return env.call(f);
+    }
     let mut results = Vec::new();
     let mut per_meta = xs.take_per_meta();
     if xs.row_count() == 0 {
@@ -45,6 +49,7 @@ fn tuple1(f: Function, env: &mut Uiua) -> UiuaResult {
         }
     } else {
         env.without_fill(|env| -> UiuaResult {
+            dbg!(&xs);
             for n in 0..=xs.row_count() {
                 env.push(xs.slice_rows(0, n));
                 env.call(f.clone())?;

@@ -739,7 +739,7 @@ fn generic_scan(f: Function, xs: Value, env: &mut Uiua) -> UiuaResult {
     let sig = f.signature();
     if sig.outputs != 1 {
         return Err(env.error(format!(
-            "{}'s function must have 2 outputs, \
+            "{}'s function must have 1 output, \
             but its signature is {sig}",
             Primitive::Scan.format(),
         )));

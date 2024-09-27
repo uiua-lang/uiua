@@ -1844,6 +1844,10 @@ primitive!(
     /// If the size is `2`, the function is allowed to return non-booleans. Tuples will be copied as many times as the value.
     /// ex: # Experimental!
     ///   : ⍉ ⧅(+1<) 2 ⇡4
+    /// If the second argument is a scalar, the number of tuples that would be returned for the [range] of that number is returned.
+    /// ex: # Experimental!
+    ///   : ⧅≠ 2 4
+    ///   : ⧅≠ 2 ⇡4
     ///
     /// If [tuples] is given a monadic function, it takes only one argument.
     /// The function will be called on all prefixes of the array.

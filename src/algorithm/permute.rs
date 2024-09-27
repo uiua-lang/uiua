@@ -49,7 +49,6 @@ fn tuple1(f: Function, env: &mut Uiua) -> UiuaResult {
         }
     } else {
         env.without_fill(|env| -> UiuaResult {
-            dbg!(&xs);
             for n in 0..=xs.row_count() {
                 env.push(xs.slice_rows(0, n));
                 env.call(f.clone())?;
@@ -83,9 +82,7 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
             return Ok(());
         }
     }
-    if xs.rank() == 0 {
-        return Err(env.error("Cannot get tuples of scalar"));
-    }
+    let is_scalar = xs.rank() == 0;
     let k = k.as_nat(env, "Tuple size must be a natural number")?;
     match k {
         0 => {
@@ -96,9 +93,14 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
         }
         1 => xs.shape_mut().insert(1, 1),
         2 => {
-            let range: Value = match range(&[xs.row_count() as isize], env)? {
-                Ok(data) => Array::new(xs.row_count(), data).into(),
-                Err(data) => Array::new(xs.row_count(), data).into(),
+            let n = if is_scalar {
+                xs.as_nat(env, "Tuples of scalar must be a natural number")?
+            } else {
+                xs.row_count()
+            };
+            let range: Value = match range(&[n as isize], env)? {
+                Ok(data) => data.into(),
+                Err(data) => data.into(),
             };
             env.push(range.clone());
             env.push(range);
@@ -113,36 +115,42 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
                 )));
             }
             table.transpose();
-            let table = table.as_natural_array(
-                env,
-                "tuples's function must return \
-                        an array of naturals",
-            )?;
-            let mut rows = Vec::new();
-            for (i, counts) in table.row_slices().enumerate() {
-                for (j, &count) in counts.iter().enumerate() {
-                    for _ in 0..count {
-                        rows.push(xs.row(i));
-                        rows.push(xs.row(j));
+            let table = table
+                .as_natural_array(env, "tuples's function must return an array of naturals")?;
+            if is_scalar {
+                xs = table.data.into_iter().fold(0, usize::saturating_add).into();
+            } else {
+                let mut rows = Vec::new();
+                for (i, counts) in table.row_slices().enumerate() {
+                    for (j, &count) in counts.iter().enumerate() {
+                        for _ in 0..count {
+                            rows.push(xs.row(i));
+                            rows.push(xs.row(j));
+                        }
                     }
                 }
+                xs = Value::from_row_values(rows, env)?;
+                xs.shape_mut()[0] /= 2;
+                xs.shape_mut().insert(1, 2);
+                xs.validate_shape();
             }
-            xs = Value::from_row_values(rows, env)?;
-            xs.shape_mut()[0] /= 2;
-            xs.shape_mut().insert(1, 2);
-            xs.validate_shape();
         }
         k => {
             fn inner<T: Clone>(
                 arr: &Array<T>,
                 k: usize,
                 f: Function,
+                is_scalar: bool,
+                scalar: UiuaResult<usize>,
                 env: &mut Uiua,
-            ) -> UiuaResult<Array<T>> {
+            ) -> UiuaResult<Value>
+            where
+                Value: From<Array<T>>,
+            {
                 let mut curr = vec![0; k];
                 let mut data = EcoVec::new();
                 let mut count = 0;
-                let row_count = arr.row_count();
+                let row_count = if is_scalar { scalar? } else { arr.row_count() };
                 let row_len = arr.row_len();
                 'outer: loop {
                     // println!("curr: {curr:?}");
@@ -162,8 +170,10 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
                         }
                     }
                     if add_it {
-                        for &i in &curr {
-                            data.extend_from_slice(&arr.data[i * row_len..][..row_len]);
+                        if !is_scalar {
+                            for &i in &curr {
+                                data.extend_from_slice(&arr.data[i * row_len..][..row_len]);
+                            }
                         }
                         count += 1;
                     }
@@ -178,17 +188,22 @@ fn tuple2(f: Function, env: &mut Uiua) -> UiuaResult {
                     }
                     break;
                 }
-                let mut shape = arr.shape.clone();
-                shape[0] = count;
-                shape.insert(1, k);
-                Ok(Array::new(shape, data))
+                Ok(if is_scalar {
+                    count.into()
+                } else {
+                    let mut shape = arr.shape.clone();
+                    shape[0] = count;
+                    shape.insert(1, k);
+                    Array::new(shape, data).into()
+                })
             }
+            let scalar = xs.as_nat(env, "Tuples of scalar must be a natural number");
             xs = match &xs {
-                Value::Num(a) => inner(a, k, f, env)?.into(),
-                Value::Byte(a) => inner(a, k, f, env)?.into(),
-                Value::Complex(a) => inner(a, k, f, env)?.into(),
-                Value::Char(a) => inner(a, k, f, env)?.into(),
-                Value::Box(a) => inner(a, k, f, env)?.into(),
+                Value::Num(a) => inner(a, k, f, is_scalar, scalar, env)?,
+                Value::Byte(a) => inner(a, k, f, is_scalar, scalar, env)?,
+                Value::Complex(a) => inner(a, k, f, is_scalar, scalar, env)?,
+                Value::Char(a) => inner(a, k, f, is_scalar, scalar, env)?,
+                Value::Box(a) => inner(a, k, f, is_scalar, scalar, env)?,
             };
         }
     }

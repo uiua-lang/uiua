@@ -561,15 +561,16 @@ fn generic_reduce_inner(
                     Ok(acc)
                 })
             } else {
-                env.without_fill(|env| {
-                    let mut new_rows = Vec::with_capacity(xs.row_count());
+                let mut new_rows = Vec::with_capacity(xs.row_count());
+                env.without_fill(|env| -> UiuaResult {
                     for row in xs.into_rows() {
                         env.push(row);
                         let val = generic_reduce_inner(f.clone(), depth - 1, process, env)?;
                         new_rows.push(val);
                     }
-                    Value::from_row_values(new_rows, env)
-                })
+                    Ok(())
+                })?;
+                Value::from_row_values(new_rows, env)
             }
         }
         n => {

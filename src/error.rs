@@ -197,8 +197,9 @@ fn format_trace(trace: &[TraceFrame]) -> Vec<String> {
             continue;
         }
         // Look for cycles
-        for n in 1..=3 {
+        for n in 1..=4 {
             if i >= n
+                && i + n < trace.len()
                 && trace[i - n..][..n]
                     .iter()
                     .zip(&trace[i..][..n])

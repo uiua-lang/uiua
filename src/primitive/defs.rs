@@ -2406,7 +2406,7 @@ primitive!(
     /// [un][pop] *can* get the fill value through the function call. This means you can use [fill][un][pop] to get the fill value into a function.
     /// ex: F ← ⬚°◌/⊂
     ///   : ⬚0F [1 2 3]
-    /// This property includes stack macros, but *not* array macros.
+    /// This property includes positional macros, but *not* array macros.
     ///
     /// [fill][pop] can be used to temporarily remove the fill value.
     /// ex: ⬚0  ↻ 2 [1 2 3 4 5]
@@ -2981,7 +2981,7 @@ primitive!(
     ///   : stringify(/+ran+1)
     /// This is mostly useful when used in a macro.
     /// ex: # Experimental!
-    ///   : F! ← ^! &p$"Running code: _" stringify^!^.
+    ///   : F! ← ^0 &p$"Running code: _" stringify^0
     ///   : F!(+ 1 2)
     ///
     /// The opposite of [stringify] is [quote].

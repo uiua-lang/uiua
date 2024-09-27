@@ -337,7 +337,7 @@ impl Spanner {
             match &binfo.kind {
                 BindingKind::Const(None) => comment = Some("constant".into()),
                 BindingKind::Import(_) | BindingKind::Module(_) => comment = Some("module".into()),
-                BindingKind::StackMacro(_) | BindingKind::ArrayMacro(_) => {
+                BindingKind::PosMacro(_) | BindingKind::ArrayMacro(_) => {
                     comment = Some("macro".into())
                 }
                 BindingKind::Func(_) => {}
@@ -360,7 +360,7 @@ impl Spanner {
                 },
                 pure: instrs_are_pure(f.instrs(&self.asm), &self.asm, Purity::Pure),
             },
-            BindingKind::StackMacro(args) => BindingDocsKind::Modifier(*args),
+            BindingKind::PosMacro(args) => BindingDocsKind::Modifier(*args),
             BindingKind::ArrayMacro(_) => {
                 BindingDocsKind::Modifier(binfo.span.as_str(self.inputs(), ident_modifier_args))
             }
@@ -1048,7 +1048,7 @@ mod server {
                     }
                     BindingKind::Const(_) => CompletionItemKind::CONSTANT,
                     BindingKind::Func(_) => CompletionItemKind::FUNCTION,
-                    BindingKind::StackMacro(_) | BindingKind::ArrayMacro(_) => {
+                    BindingKind::PosMacro(_) | BindingKind::ArrayMacro(_) => {
                         CompletionItemKind::FUNCTION
                     }
                     BindingKind::Import(_) | BindingKind::Module(_) => CompletionItemKind::MODULE,

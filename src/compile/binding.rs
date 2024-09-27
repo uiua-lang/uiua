@@ -68,7 +68,21 @@ impl Compiler {
             }
             let new_func = self.compile_words(binding.words, true)?;
             let sig = match instrs_signature(&new_func.instrs) {
-                Ok(s) => s,
+                Ok(s) => {
+                    if let Some(declared) = binding.signature {
+                        if s != declared.value {
+                            self.add_error(
+                                span.clone(),
+                                format!(
+                                    "Array macro signature mismatch: \
+                                    declared {} but inferred {s}",
+                                    declared.value
+                                ),
+                            );
+                        }
+                    }
+                    s
+                }
                 Err(e) => {
                     if let Some(sig) = binding.signature {
                         sig.value
@@ -100,7 +114,7 @@ impl Compiler {
             }
             let function = self.make_function(FunctionId::Named(name.clone()), sig, new_func);
             self.scope.names.insert(name.clone(), local);
-            (self.asm).add_global_at(
+            self.asm.add_binding_at(
                 local,
                 BindingKind::ArrayMacro(function.slice),
                 Some(span.clone()),
@@ -113,7 +127,7 @@ impl Compiler {
             self.array_macros.insert(local.index, mac);
             return Ok(());
         }
-        // Stack macro
+        // Positional macro
         match (ident_margs > 0, placeholder_count > 0) {
             (true, true) | (false, false) => {}
             (true, false) => {
@@ -138,12 +152,6 @@ impl Compiler {
         }
         if placeholder_count > 0 || ident_margs > 0 {
             self.scope.names.insert(name.clone(), local);
-            (self.asm).add_global_at(
-                local,
-                BindingKind::StackMacro(ident_margs),
-                Some(span.clone()),
-                comment.map(|text| DocComment::from(text.as_str())),
-            );
             let mut words = binding.words.clone();
             recurse_words_mut(&mut words, &mut |word| {
                 let mut path_locals = None;
@@ -176,9 +184,9 @@ impl Compiler {
                     }
                     _ => {}
                 }
-                if let Some((name, local)) = name_local {
-                    self.validate_local(&name.value, local, &name.span);
-                    (self.code_meta.global_references).insert(name.span.clone(), local.index);
+                if let Some((nm, local)) = name_local {
+                    self.validate_local(&nm.value, local, &nm.span);
+                    (self.code_meta.global_references).insert(nm.span.clone(), local.index);
                 }
                 if let Some((path, locals)) = path_locals {
                     for (local, comp) in locals.into_iter().zip(path) {
@@ -187,12 +195,18 @@ impl Compiler {
                     }
                 }
             });
-            let mac = StackMacro {
+            self.asm.add_binding_at(
+                local,
+                BindingKind::PosMacro(ident_margs),
+                Some(span.clone()),
+                comment.map(|text| DocComment::from(text.as_str())),
+            );
+            let mac = PosMacro {
                 words,
                 names: self.scope.names.clone(),
                 hygenic: true,
             };
-            self.stack_macros.insert(local.index, mac);
+            self.positional_macros.insert(local.index, mac);
             return Ok(());
         }
 
@@ -479,7 +493,7 @@ impl Compiler {
                 let comment = prev_com
                     .or_else(|| module.comment.clone())
                     .map(|text| DocComment::from(text.as_str()));
-                self.asm.add_global_at(
+                self.asm.add_binding_at(
                     local,
                     BindingKind::Module(module),
                     Some(name.span.clone()),
@@ -516,7 +530,7 @@ impl Compiler {
                 index: global_index,
                 public: true,
             };
-            self.asm.add_global_at(
+            self.asm.add_binding_at(
                 local,
                 BindingKind::Import(module_path.clone()),
                 Some(name.span.clone()),

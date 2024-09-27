@@ -6,7 +6,10 @@ use leptos_meta::*;
 use leptos_router::*;
 use uiua::{Primitive, SysOp, EXAMPLE_UA};
 
-use crate::{editor::*, other_tutorial::OtherTutorialParams, title_markdown, Hd, Prim, Prims};
+use crate::{
+    editor::*, markdown::Markdown, other_tutorial::OtherTutorialParams, title_markdown, Hd, Prim,
+    Prims,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Sequence)]
 pub enum TutorialPage {
@@ -1553,84 +1556,10 @@ fn TutorialThinkingWithArrays() -> impl IntoView {
 
 #[component]
 fn TutorialMacros() -> impl IntoView {
-    use Primitive::*;
     view! {
         <Title text="Macros - Uiua Docs"/>
-        <h1>"Macros"</h1>
-        <p>"Defining your own functions that work on arrays is pretty easy. Just a name, a "<code>"←"</code>", and you're done."</p>
-        <p>"But what if you want to define functions that use other functions?"</p>
 
-        <Hd id="placeholders-and-bangs">"Placeholders and "<code>"!"</code>"s"</Hd>
-        <p>"Anywhere you can put a built-in or inline function, you can also put a "<code>"^!"</code>". This is called a "<em>"placeholder"</em>"."</p>
-        <p>"Any named function with "<code>"^!"</code>"s in it is a macro."</p>
-        <p>"However, there is one additional requirement: macros must have names that end in as many "<code>"!"</code>"s as the number of functions they take."</p>
-        <p>"Macros work similarly to modifiers. They take some function arguments and modify how they are used."</p>
-        <p>"Lets look at a simple example using "<Prim prim=Reduce/>". It reduces a function over the numbers up to the given range."</p>
-        <Editor example="\
-ReduceRange! ← /^!+1⇡
-ReduceRange!+5
-ReduceRange!×4"/>
-        <p>"Here is another simple example which calls a function on a reversed version of each row of an array."</p>
-        <Editor example="\
-OnRev! ← ≡⍜⇌^!
-OnRev!(↘1) ↯3_4⇡12
-OnRev!(⊂π) ↯3_4⇡12"/>
-        <p>"A macro can take as many functions as you want. Modifiers with two or more function arguments will be formatted to use "<code>"‼"</code>"s as needed. Try running the following example to format it."</p>
-        <Editor example="\
-F!!! ← ⊂/^!⊃^!^!
-F!!!+×⊂ [1 2 3][4 5 6]"/>
-
-        <Hd id="operand-functions">"Operand Functions"</Hd>
-        <p>"When Uiua code is compiled, a macro passes its operands as values on a special operand stack. This stack can be manipulated in a few ways to make macros more powerful."</p>
-        <p><code>"^!"</code>" is actually an operand function. It pops the operand at the top of the operand stack and inlines it into its place in the macro."</p>
-        <p>"There are also operand function analogues for "<Prim prim=Dup/>", "<Prim prim=Flip/>", and "<Prim prim=Over/>"."</p>
-        <p>"These are "<code>"^."</code>", "<code>"^:"</code>", and "<code>"^,"</code>" respectively."</p>
-        <p>"Like normal Uiua code, operand functions are evaluated from right to left."</p>
-        <p>"However, operands are initially pushed to the stack in reverse order. This means that the macro operand furthest to the right starts at the top of the operand stack."</p>
-        <p>"Let's look at a simple example to see how this ordering works."</p>
-        <Editor example="F‼ ← ^!^!\nG‼ ← ^!^!^:\nF‼(⊂1|⊂2) []\nG‼(⊂1|⊂2) []"/>
-        <p>"If we wanted to call each of two functions twice, we could use a similar pattern to what we use in normal Uiua code."</p>
-        <Editor example="[,, 1 2]\nF‼ ← ^!^!^!^!^,^,\nF‼(⊂1|⊂2) []"/>
-
-        <Hd id="two-kinds">"Two Kinds of Macros"</Hd>
-        <p>"The macros described so far are called "<em>"stack macros"</em>", because they move operands around on a stack."</p>
-        <p>"But Uiua actually has a second kind of macro. "<em>"Array macros"</em>" put their operands in an array. The array can then be arbitrarily manipulated with normal Uiua code."</p>
-
-        <Hd id="array-macros">"Array Macros"</Hd>
-        <p>"Array macros are defined by putting a "<code>"^"</code>" right after the binding's "<code>"←"</code>". Array macro names must still end in some number of "<code>"!"</code>"s."</p>
-        <p>"Here is a basic example that simply prints its operands. It returns the number "<code>"5"</code>" as the actual generated code."</p>
-        <Editor example="F‼ ←^ \"5\" &pf\nF‼⊂(+1)"/>
-        <p>"As you can see, the operands are passed to the function as an array of boxed strings."</p>
-        <p>"Array macros may be passed a function pack operand. Each operand from the pack will be put in the array."</p>
-        <Editor example="F! ←^ $\"_\"\nF!(+|-|×|÷)"/>
-        <p>"The array macro's function must return either a string or an array of boxed strings. This value will be converted back to Uiua code and compiled as normal."</p>
-        <p>"Format strings can help a lot in generating new code. For example, if we wanted to make a version of "<Prim prim=Both/>" that calls its function on an arbitrary number of sets of values, we could use "<Prim prim=Reshape/>" and "<Prim prim=Bracket/>"."</p>
-        <Editor example="All‼ ←^ $\"⊓(_)\" /$\"_|_\" ↯⋕ °{⊙∘}\n[All‼3+ 1 2 3 4 5 6]"/>
-        <p>"First, we extract the two operands: the count and the function. The count comes in as a string, so we have to "<Prim prim=Parse/>" it before using "<Prim prim=Keep/>" to make an array of copies of the function."</p>
-        <p>"We use "<Prim prim=Reduce/>" with a format string to form the branches of a function pack, then use another format string to put them in "<Prim prim=Bracket/>"."</p>
-        <p>"The resulting string is then compiled as Uiua code."</p>
-        <br/>
-        <p>"Array macros have the ability to create new bindings, including new macros."</p>
-        <Editor example="Def‼ ←^ $\"_\\n_\" ⊃(/$\"_ ← _\"|/$\"Also_ ← _\")\nDef‼(X|5)\n+ X AlsoX"/>
-        <p>"This is a simple example, but this concept can be used to create very powerful meta-programming tools."</p>
-
-        <Hd id="compile-time-vs-run-time">"Compile Time vs Run Time"</Hd>
-        <p>"The body of an array macro is always evaluated at compile time. One consequence of this is that bindings whose values cannot be known at compile time cannot be used in an array macro."</p>
-        <p>"For example, because the value "<code>"5"</code>" is always the same, it is always known at compile time, and we can use a name that binds "<code>"5"</code>" in an array macro."</p>
-        <Editor example="x ← 5\nF! ←^ $\"_ _\":x ⊢\nF!¯"/>
-        <p>"However, if we use a value that cannot be known at compile time, like the result of the "<Prim prim=Rand/>" function, we will get an error."</p>
-        <Editor example="x ← ⚂\nF! ←^ $\"_ _\":x ⊢\nF!¯"/> // Should fail
-        <p>"There are two ways to work around this. The first is to simply put the code that generates the value in the macro itself."</p>
-        <Editor example="F! ←^ $\"_ ⚂\" ⊢\nF!¯"/>
-        <p>"The second is to use the "<Prim prim=Comptime/>" modifier, which forces its function to be evaluated at compile time."</p>
-        <Editor example="x ← comptime(⚂)\nF! ←^ $\"_ _\":x ⊢\nF!¯"/>
-
-        <Hd id="which-to-use">"What kind of macro should I use?"</Hd>
-        <p>"Which kind of macro you use depends on what kind of code you are writing."</p>
-        <p>"Array macros are much more powerful than stack macros, but they can be more complicated to write."</p>
-        <p>"Additionally, stack macros are "<a href="https://en.wikipedia.org/wiki/hygienic_macro">"hygienic"</a>". When a stack macro refers to names of things, bindings you have definined in the surrounding code will not interfere; you will never accidentally use the wrong binding. Array macros make no such guarantees."</p>
-        <p>"If you conceptually just want to define your own modifier, a stack macro is probably the simplest way to go."</p>
-        <p>"If you want the full power (and all the complexity) of compile-time meta-programming, you'll need to use an array macro."</p>
+        <Markdown src="/text/macros.md"/>
 
         <Hd id="challenges">"Challenges"</Hd>
 
@@ -1638,8 +1567,8 @@ F!!!+×⊂ [1 2 3][4 5 6]"/>
             number=1
             prompt="creates a macro called F! which calls its function on each row of an array, reverses each row, and reverses the whole array"
             example="F!(⊂.) ↯3_4⇡12"
-            answer="F! ← ⇌≡(⇌^!)"
-            default="F! ← ^!"
+            answer="F! ← ⇌≡(⇌^0)"
+            default="F! ← ^0"
             flip=true
             tests={&["F!(↯3) [1_2_3 4_5_6]", "F!(⊟.) 1_2 3_4"]}
             hidden="5"/>
@@ -1648,8 +1577,8 @@ F!!!+×⊂ [1 2 3][4 5 6]"/>
             number=2
             prompt="creates a macro called F‼ which calls its first function, then its second, then its first again."
             example="F‼⇌(⊂10) [1 2 3]"
-            answer="F‼ ← ^!^!^!^,"
-            default="F‼ ← ^!^!"
+            answer="F‼ ← ^0^1^0"
+            default="F‼ ← ^0"
             flip=true
             tests={&["F‼⇌⍉ [1_2 3_4]", "F‼⊂⇌ 1_2 3_4 5_6"]}
             hidden="5"/>

@@ -470,8 +470,8 @@ code:
                             "Called module global. \
                             This is a bug in the interpreter.",
                         )),
-                        BindingKind::StackMacro(_) => Err(self.error(
-                            "Called stack macro global. \
+                        BindingKind::PosMacro(_) => Err(self.error(
+                            "Called positional macro global. \
                             This is a bug in the interpreter.",
                         )),
                         BindingKind::ArrayMacro(_) => Err(self.error(
@@ -1410,8 +1410,18 @@ code:
         res
     }
     pub(crate) fn recur(&mut self) -> UiuaResult {
+        #[cfg(debug_assertions)]
+        const RECURSION_LIMIT: usize = 22;
+        #[cfg(not(debug_assertions))]
+        const RECURSION_LIMIT: usize = 130;
+        if self.rt.call_stack.len() > RECURSION_LIMIT {
+            return Err(self.error("Recursion limit reached"));
+        }
         let Some(i) = self.rt.recur_stack.last().copied() else {
-            return Err(self.error("No recursion context set"));
+            return Err(self.error(
+                "No recursion context set. This \
+                is a bug in the interpreter.",
+            ));
         };
         let mut frame = self.rt.call_stack[i].clone();
         frame.pc = 0;

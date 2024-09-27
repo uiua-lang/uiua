@@ -214,7 +214,7 @@ impl Compiler {
                 Modifier::Primitive(_) => true,
                 Modifier::Ref(name) => {
                     let (_, local) = self.ref_local(name)?;
-                    self.stack_macros.contains_key(&local.index)
+                    self.positional_macros.contains_key(&local.index)
                 }
             };
             if strict_args {
@@ -258,10 +258,10 @@ impl Compiler {
                         self.fatal_error(modified.modifier.span.clone(), "Macro recurs too deep")
                     );
                 }
-                if let Some(mut mac) = self.stack_macros.get(&local.index).cloned() {
-                    // Stack macros
+                if let Some(mut mac) = self.positional_macros.get(&local.index).cloned() {
+                    // Positional macros
                     // Expand
-                    self.expand_stack_macro(
+                    self.expand_positional_macro(
                         r.name.value.clone(),
                         &mut mac.words,
                         modified.operands,
@@ -417,13 +417,18 @@ impl Compiler {
                         comp.words(modified.operands, call)
                     })?;
                 } else {
-                    return Err(self.fatal_error(
-                        modified.modifier.span.clone(),
-                        format!(
-                            "Macro {} not found. This is a bug in the interpreter.",
-                            r.name.value
-                        ),
-                    ));
+                    // Recursive positional macro inside itself
+                    if !call {
+                        self.new_functions.push(NewFunction::default());
+                    }
+                    self.words(modified.operands, false)?;
+                    self.ident(r.name.value.clone(), r.name.span, true, r.in_macro_arg)?;
+                    if !call {
+                        let new_func = self.new_functions.pop().unwrap();
+                        let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
+                        let func = self.make_function(modified.modifier.span.into(), sig, new_func);
+                        self.push_instr(Instr::PushFunc(func));
+                    }
                 }
                 self.macro_depth -= 1;
 
@@ -1709,9 +1714,9 @@ impl Compiler {
                 let args_macro_index = self.next_global;
                 self.next_global += 1;
                 let span = &operand.span;
-                self.stack_macros.insert(
+                self.positional_macros.insert(
                     args_macro_index,
-                    StackMacro {
+                    PosMacro {
                         words: vec![span.clone().sp(Word::Modified(Box::new(Modified {
                             modifier: span.clone().sp(Modifier::Primitive(Primitive::Fill)),
                             operands: vec![
@@ -1720,7 +1725,7 @@ impl Compiler {
                                     name: span.clone().sp("New".into()),
                                     in_macro_arg: false,
                                 })),
-                                span.clone().sp(Word::Placeholder(PlaceholderOp::Call)),
+                                span.clone().sp(Word::Placeholder(PlaceholderOp::Nth(0))),
                             ],
                         })))],
                         names: args_module.names,
@@ -1732,9 +1737,9 @@ impl Compiler {
                     public: true,
                 };
                 self.scope.names.insert("Args!".into(), local);
-                self.asm.add_global_at(
+                self.asm.add_binding_at(
                     local,
-                    BindingKind::StackMacro(1),
+                    BindingKind::PosMacro(1),
                     None,
                     Some(DocComment::from(format!(
                         "Take {} argument{} and bind {} to {} field name{}",
@@ -1754,8 +1759,8 @@ impl Compiler {
         }
         Ok(())
     }
-    /// Expand a stack macro
-    fn expand_stack_macro(
+    /// Expand a positional macro
+    fn expand_positional_macro(
         &mut self,
         name: Ident,
         macro_words: &mut Vec<Sp<Word>>,

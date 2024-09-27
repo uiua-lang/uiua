@@ -18,5 +18,5 @@ Ex ~ "example.ua"
 ~ "example.ua" ~ Increment
 ~ "example.ua" ~ Increment
 ⍤⤙≍ 7 Increment Increment 5
-F! ← ^!
+F! ← ^0
 ⍤⤙≍ 15 Ex~Mac!F!+

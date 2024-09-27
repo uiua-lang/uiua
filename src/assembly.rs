@@ -75,7 +75,7 @@ impl Assembly {
         comment: Option<DocComment>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(local, BindingKind::Func(function), span.code(), comment);
+        self.add_binding_at(local, BindingKind::Func(function), span.code(), comment);
     }
     pub(crate) fn bind_const(
         &mut self,
@@ -85,9 +85,9 @@ impl Assembly {
         comment: Option<DocComment>,
     ) {
         let span = self.spans[span].clone();
-        self.add_global_at(local, BindingKind::Const(value), span.code(), comment);
+        self.add_binding_at(local, BindingKind::Const(value), span.code(), comment);
     }
-    pub(crate) fn add_global_at(
+    pub(crate) fn add_binding_at(
         &mut self,
         local: LocalName,
         global: BindingKind,
@@ -422,10 +422,10 @@ pub enum BindingKind {
     Import(PathBuf),
     /// A scoped module
     Module(Module),
-    /// A stack macro
+    /// A positional macro
     ///
     /// Contains the number of arguments
-    StackMacro(usize),
+    PosMacro(usize),
     /// An array macro
     ArrayMacro(FuncSlice),
 }
@@ -438,7 +438,7 @@ impl BindingKind {
             Self::Func(func) => Some(func.signature()),
             Self::Import { .. } => None,
             Self::Module(_) => None,
-            Self::StackMacro(_) => None,
+            Self::PosMacro(_) => None,
             Self::ArrayMacro(_) => None,
         }
     }

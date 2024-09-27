@@ -12,7 +12,7 @@
 Ex ~ "example"
 Ex~RangeDiff
 
-F! ← F!^!
+F! ← F!^0
 F!+
 
 regex "([a-z]" "hello world"

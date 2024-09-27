@@ -5,7 +5,6 @@
     - `un` for `under` arg extensions
     - `un dip`
   - Subscript dropdown
-  - Change stack macros to positional macros
   - Recursive positional macros
   - Non-scalar `fill take`
   - Update language tour

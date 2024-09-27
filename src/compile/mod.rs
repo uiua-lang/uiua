@@ -62,8 +62,8 @@ pub struct Compiler {
     current_imports: Vec<PathBuf>,
     /// The bindings of imported files
     imports: HashMap<PathBuf, Module>,
-    /// Unexpanded stack macros
-    stack_macros: HashMap<usize, StackMacro>,
+    /// Unexpanded positional macros
+    positional_macros: HashMap<usize, PosMacro>,
     /// Unexpanded array macros
     array_macros: HashMap<usize, ArrayMacro>,
     /// The depth of macro expansion
@@ -103,7 +103,7 @@ impl Default for Compiler {
             mode: RunMode::All,
             current_imports: Vec::new(),
             imports: HashMap::new(),
-            stack_macros: HashMap::new(),
+            positional_macros: HashMap::new(),
             array_macros: HashMap::new(),
             macro_depth: 0,
             in_inverse: false,
@@ -164,13 +164,15 @@ pub struct Module {
     experimental: bool,
 }
 
+/// A positional macro
 #[derive(Clone)]
-struct StackMacro {
+struct PosMacro {
     words: Vec<Sp<Word>>,
     names: IndexMap<Ident, LocalName>,
     hygenic: bool,
 }
 
+/// An array macro
 #[derive(Clone)]
 struct ArrayMacro {
     function: Function,
@@ -779,7 +781,7 @@ code:
             comment
         });
         self.asm
-            .add_global_at(local, BindingKind::Const(value), span, comment);
+            .add_binding_at(local, BindingKind::Const(value), span, comment);
         self.scope.names.insert(name, local);
     }
     /// Import a module
@@ -1587,10 +1589,13 @@ code:
                     format!("`{}` is a constant, not a module", first.module.value),
                 ))
             }
-            BindingKind::StackMacro(_) => {
+            BindingKind::PosMacro(_) => {
                 return Err(self.fatal_error(
                     first.module.span.clone(),
-                    format!("`{}` is a stack macro, not a module", first.module.value),
+                    format!(
+                        "`{}` is a positional macro, not a module",
+                        first.module.value
+                    ),
                 ))
             }
             BindingKind::ArrayMacro(_) => {
@@ -1628,10 +1633,13 @@ code:
                         format!("`{}` is a constant, not a module", comp.module.value),
                     ))
                 }
-                BindingKind::StackMacro(_) => {
+                BindingKind::PosMacro(_) => {
                     return Err(self.fatal_error(
                         comp.module.span.clone(),
-                        format!("`{}` is a stack macro, not a module", comp.module.value),
+                        format!(
+                            "`{}` is a positional macro, not a module",
+                            comp.module.value
+                        ),
                     ))
                 }
                 BindingKind::ArrayMacro(_) => {
@@ -1670,7 +1678,7 @@ code:
                     span,
                     format!(
                         "Recursive function `{ident}` must have a \
-                        signature declared after the `←`."
+                        signature declared after the ←."
                     ),
                 ));
             };
@@ -1774,7 +1782,7 @@ code:
                     self.add_error(span, "Cannot import module item here.");
                 }
             }
-            BindingKind::StackMacro(_) | BindingKind::ArrayMacro(_) => {
+            BindingKind::PosMacro(_) | BindingKind::ArrayMacro(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
         }

@@ -474,9 +474,11 @@ pub fn gen_code_view(code: &str) -> View {
                                 )
                             }) =>
                         {
-                            frags.next();
+                            let Some(CodeFragment::Span(next_text, _)) = frags.next() else {
+                                unreachable!()
+                            };
                             let title = format!(
-                                "{} and {}: Call a function keeping its first and last \
+                                "{}{}: Call a function keeping its first and last \
                                 arguments on either side of the outputs",
                                 Primitive::On.name(),
                                 Primitive::By.name()
@@ -496,7 +498,7 @@ pub fn gen_code_view(code: &str) -> View {
                                         .unwrap();
                                 }
                             };
-                            let text = format!("{}{}", Primitive::On, Primitive::By);
+                            let text = format!("{text}{next_text}");
                             let view = view!(<span
                                     class=class
                                     data-title=title

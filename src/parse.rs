@@ -460,7 +460,7 @@ impl<'i> Parser<'i> {
             name,
             arrow_span,
             public,
-            array_macro,
+            code_macro: array_macro,
             words,
             signature,
         })

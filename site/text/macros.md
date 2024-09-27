@@ -1,6 +1,3 @@
-Here is your HTML-like Rust macro syntax converted to Markdown following your rules:
-
-```markdown
 # Macros
 Defining your own functions that work on arrays is pretty easy. Just a name, a `←`, and you're done.
 
@@ -17,7 +14,7 @@ Macros work similarly to modifiers. They take some function arguments and modify
 
 The number that comes after a `^` is the index of the function argument passed to the macro.
 
-Lets look at a simple example using [reduce](). It reduces a function over the numbers up to the given range.
+Let's look at a simple example using [reduce](). It reduces a function over the numbers up to the given range.
 
 ```uiua
 ReduceRange! ← /^0+1⇡
@@ -51,12 +48,12 @@ F‼(+1|⊂0) 1
 ```
 
 ## Two Kinds of Macros
-The macros described so far are called *positional macros*, because arguments are referenced directly by their position when the macro is called.
+The macros described so far are called *index macros*, because arguments are referenced directly by their position when the macro is called.
 
-But Uiua actually has a second kind of macro. *Array macros* put their operands in an array. The array can then be arbitrarily manipulated with normal Uiua code.
+But Uiua actually has a second kind of macro. *Code macros* put their operands in an array. The array can then be arbitrarily manipulated with normal Uiua code.
 
-## Array Macros
-Array macros are defined by putting a `^` right after the binding's `←`. Array macro names must still end in some number of `!`s.
+## Code Macros
+Code macros are defined by putting a `^` right after the binding's `←`. Code macro names must still end in some number of `!`s.
 
 Here is a basic example that simply prints its operands. It returns the number `5` as the actual generated code.
 
@@ -67,14 +64,14 @@ F‼⊂(+1)
 
 As you can see, the operands are passed to the function as an array of boxed strings.
 
-Array macros may be passed a function pack operand. Each operand from the pack will be put in the array.
+Code macros may be passed a function pack operand. Each operand from the pack will be put in the array.
 
 ```uiua
 F! ←^ $"_"
 F!(+|-|×|÷)
 ```
 
-The array macro's function must return either a string or an array of boxed strings. This value will be converted back to Uiua code and compiled as normal.
+The code macro's function must return either a string or an array of boxed strings. This value will be converted back to Uiua code and compiled as normal.
 
 Format strings can help a lot in generating new code. For example, if we wanted to make a version of [both]() that calls its function on an arbitrary number of sets of values, we could use [reshape]() and [bracket]().
 
@@ -89,7 +86,7 @@ We use [reduce]() with a format string to form the branches of a function pack, 
 
 The resulting string is then compiled as Uiua code.
 
-Array macros have the ability to create new bindings, including new macros.
+Code macros have the ability to create new bindings, including new macros.
 
 ```uiua
 Def‼ ←^ $"_\n_" ⊃(/$"_ ← _"|/$"Also_ ← _")
@@ -100,9 +97,9 @@ Def‼(X|5)
 This is a simple example, but this concept can be used to create very powerful meta-programming tools.
 
 ## Compile Time vs Run Time
-The body of an array macro is always evaluated at compile time. One consequence of this is that bindings whose values cannot be known at compile time cannot be used in an array macro.
+The body of a code macro is always evaluated at compile time. One consequence of this is that bindings whose values cannot be known at compile time cannot be used in a code macro.
 
-For example, because the value `5` is always the same, it is always known at compile time, and we can use a name that binds `5` in an array macro.
+For example, because the value `5` is always the same, it is always known at compile time, and we can use a name that binds `5` in a code macro.
 
 ```uiua
 x ← 5
@@ -136,11 +133,11 @@ F!¯
 ## What kind of macro should I use?
 Which kind of macro you use depends on what kind of code you are writing.
 
-Array macros are much more powerful than positional macros, but they can be more complicated to write.
+Code macros are much more powerful than index macros, but they can be more complicated to write.
 
-Additionally, positional macros are [hygienic](https://en.wikipedia.org/wiki/hygienic_macro). When a positional macro refers to names of things, bindings you have defined in the surrounding code will not interfere; you will never accidentally use the wrong binding. Array macros make no such guarantees.
+Additionally, index macros are [hygienic](https://en.wikipedia.org/wiki/hygienic_macro). When an index macro refers to names of things, bindings you have defined in the surrounding code will not interfere; you will never accidentally use the wrong binding. Code macros make no such guarantees.
 
-If you conceptually just want to define your own modifier, a positional macro is probably the simplest way to go.
+If you conceptually just want to define your own modifier, an index macro is probably the simplest way to go.
 
-If you want the full power (and all the complexity) of compile-time meta-programming, you'll need to use an array macro.
-```
+If you want the full power (and all the complexity) of compile-time meta-programming, you'll need to use a code macro.
+

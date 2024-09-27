@@ -118,7 +118,7 @@ impl Assembly {
     pub fn remove_dead_code(&mut self) {
         let mut slices = Vec::new();
         self.bindings.retain(|binding| {
-            if let BindingKind::ArrayMacro(mut slice) = binding.kind {
+            if let BindingKind::CodeMacro(mut slice) = binding.kind {
                 if slice.start > 0 {
                     if let Some((Instr::Comment(before), Instr::Comment(after))) = self
                         .instrs
@@ -161,7 +161,7 @@ impl Assembly {
                         func.slice.start -= removed.len();
                     }
                 }
-                BindingKind::ArrayMacro(slice) => {
+                BindingKind::CodeMacro(slice) => {
                     if slice.start > removed.start {
                         slice.start -= removed.len();
                         slice.len -= removed.len();
@@ -422,12 +422,12 @@ pub enum BindingKind {
     Import(PathBuf),
     /// A scoped module
     Module(Module),
-    /// A positional macro
+    /// An index macro
     ///
     /// Contains the number of arguments
-    PosMacro(usize),
-    /// An array macro
-    ArrayMacro(FuncSlice),
+    IndexMacro(usize),
+    /// A code macro
+    CodeMacro(FuncSlice),
 }
 
 impl BindingKind {
@@ -438,8 +438,8 @@ impl BindingKind {
             Self::Func(func) => Some(func.signature()),
             Self::Import { .. } => None,
             Self::Module(_) => None,
-            Self::PosMacro(_) => None,
-            Self::ArrayMacro(_) => None,
+            Self::IndexMacro(_) => None,
+            Self::CodeMacro(_) => None,
         }
     }
     /// Check if the global is a once-bound constant

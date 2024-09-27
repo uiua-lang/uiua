@@ -2406,7 +2406,7 @@ primitive!(
     /// [un][pop] *can* get the fill value through the function call. This means you can use [fill][un][pop] to get the fill value into a function.
     /// ex: F ← ⬚°◌/⊂
     ///   : ⬚0F [1 2 3]
-    /// This property includes positional macros, but *not* array macros.
+    /// This property includes index macros, but *not* code macros.
     ///
     /// [fill][pop] can be used to temporarily remove the fill value.
     /// ex: ⬚0  ↻ 2 [1 2 3 4 5]
@@ -3204,7 +3204,7 @@ primitive!(
     /// ex: &p repr ↯2_2_2 0
     /// ex: &p repr {"Uiua" @A [1 2 3] □4}
     ///
-    /// [repr] can be used in array macros to make the macro generate code that produces the same array.
+    /// [repr] can be used in code macros to make the macro generate code that produces the same array.
     /// ex! F! ←^ ⧻°□⊢
     ///   : F!+
     /// ex: F! ←^ repr ⧻°□⊢

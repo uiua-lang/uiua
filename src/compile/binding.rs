@@ -50,18 +50,18 @@ impl Compiler {
         // Handle macro
         let ident_margs = ident_modifier_args(&name);
         let placeholder_count = count_placeholders(&binding.words);
-        if binding.array_macro {
+        if binding.code_macro {
             if placeholder_count > 0 {
                 return Err(
-                    self.fatal_error(span.clone(), "Array macros may not contain placeholders")
+                    self.fatal_error(span.clone(), "Code macros may not contain placeholders")
                 );
             }
-            // Array macro
+            // Code macro
             if ident_margs == 0 {
                 self.add_error(
                     span.clone(),
                     format!(
-                        "Array macros must take at least 1 operand, \
+                        "Code macros must take at least 1 operand, \
                         but `{name}`'s name suggests it takes 0",
                     ),
                 );
@@ -74,7 +74,7 @@ impl Compiler {
                             self.add_error(
                                 span.clone(),
                                 format!(
-                                    "Array macro signature mismatch: \
+                                    "Code macro signature mismatch: \
                                     declared {} but inferred {s}",
                                     declared.value
                                 ),
@@ -89,7 +89,7 @@ impl Compiler {
                     } else {
                         self.add_error(
                             span.clone(),
-                            format!("Cannot infer array macro signature: {e}"),
+                            format!("Cannot infer code macro signature: {e}"),
                         );
                         Signature::new(1, 1)
                     }
@@ -104,7 +104,7 @@ impl Compiler {
                 self.add_error(
                     span.clone(),
                     format!(
-                        "Array macros must have a signature of {} or {}, \
+                        "Code macros must have a signature of {} or {}, \
                         but a signature of {} was inferred",
                         Signature::new(1, 1),
                         Signature::new(2, 1),
@@ -116,15 +116,15 @@ impl Compiler {
             self.scope.names.insert(name.clone(), local);
             self.asm.add_binding_at(
                 local,
-                BindingKind::ArrayMacro(function.slice),
+                BindingKind::CodeMacro(function.slice),
                 Some(span.clone()),
                 comment.map(|text| DocComment::from(text.as_str())),
             );
-            let mac = ArrayMacro {
+            let mac = CodeMacro {
                 function,
                 names: self.scope.names.clone(),
             };
-            self.array_macros.insert(local.index, mac);
+            self.code_macros.insert(local.index, mac);
             return Ok(());
         }
         // Positional macro
@@ -154,7 +154,7 @@ impl Compiler {
             self.scope.names.insert(name.clone(), local);
             self.asm.add_binding_at(
                 local,
-                BindingKind::PosMacro(ident_margs),
+                BindingKind::IndexMacro(ident_margs),
                 Some(span.clone()),
                 comment.map(|text| DocComment::from(text.as_str())),
             );
@@ -220,14 +220,14 @@ impl Compiler {
                     );
                 }
             }
-            let mac = PosMacro {
+            let mac = IndexMacro {
                 words,
                 names: self.scope.names.clone(),
                 hygenic: true,
                 sig: binding.signature.map(|s| s.value),
                 recursive,
             };
-            self.positional_macros.insert(local.index, mac);
+            self.index_macros.insert(local.index, mac);
             return Ok(());
         }
 

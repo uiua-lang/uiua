@@ -62,10 +62,10 @@ pub struct Compiler {
     current_imports: Vec<PathBuf>,
     /// The bindings of imported files
     imports: HashMap<PathBuf, Module>,
-    /// Unexpanded positional macros
-    positional_macros: HashMap<usize, PosMacro>,
-    /// Unexpanded array macros
-    array_macros: HashMap<usize, ArrayMacro>,
+    /// Unexpanded index macros
+    index_macros: HashMap<usize, IndexMacro>,
+    /// Unexpanded code macros
+    code_macros: HashMap<usize, CodeMacro>,
     /// The depth of macro expansion
     macro_depth: usize,
     /// Whether the compiler is in an inverse
@@ -103,8 +103,8 @@ impl Default for Compiler {
             mode: RunMode::All,
             current_imports: Vec::new(),
             imports: HashMap::new(),
-            positional_macros: HashMap::new(),
-            array_macros: HashMap::new(),
+            index_macros: HashMap::new(),
+            code_macros: HashMap::new(),
             macro_depth: 0,
             in_inverse: false,
             in_test: false,
@@ -164,9 +164,9 @@ pub struct Module {
     experimental: bool,
 }
 
-/// A positional macro
+/// An index macro
 #[derive(Clone)]
-struct PosMacro {
+struct IndexMacro {
     words: Vec<Sp<Word>>,
     names: IndexMap<Ident, LocalName>,
     sig: Option<Signature>,
@@ -174,9 +174,9 @@ struct PosMacro {
     recursive: bool,
 }
 
-/// An array macro
+/// A code macro
 #[derive(Clone)]
-struct ArrayMacro {
+struct CodeMacro {
     function: Function,
     names: IndexMap<Ident, LocalName>,
 }
@@ -1597,19 +1597,16 @@ code:
                     format!("`{}` is a constant, not a module", first.module.value),
                 ))
             }
-            BindingKind::PosMacro(_) => {
+            BindingKind::IndexMacro(_) => {
                 return Err(self.fatal_error(
                     first.module.span.clone(),
-                    format!(
-                        "`{}` is a positional macro, not a module",
-                        first.module.value
-                    ),
+                    format!("`{}` is an index macro, not a module", first.module.value),
                 ))
             }
-            BindingKind::ArrayMacro(_) => {
+            BindingKind::CodeMacro(_) => {
                 return Err(self.fatal_error(
                     first.module.span.clone(),
-                    format!("`{}` is an array macro, not a module", first.module.value),
+                    format!("`{}` is a code macro, not a module", first.module.value),
                 ))
             }
         };
@@ -1641,7 +1638,7 @@ code:
                         format!("`{}` is a constant, not a module", comp.module.value),
                     ))
                 }
-                BindingKind::PosMacro(_) => {
+                BindingKind::IndexMacro(_) => {
                     return Err(self.fatal_error(
                         comp.module.span.clone(),
                         format!(
@@ -1650,10 +1647,10 @@ code:
                         ),
                     ))
                 }
-                BindingKind::ArrayMacro(_) => {
+                BindingKind::CodeMacro(_) => {
                     return Err(self.fatal_error(
                         comp.module.span.clone(),
-                        format!("`{}` is an array macro, not a module", comp.module.value),
+                        format!("`{}` is a code macro, not a module", comp.module.value),
                     ))
                 }
             };
@@ -1799,7 +1796,7 @@ code:
                     self.add_error(span, "Cannot import module item here.");
                 }
             }
-            BindingKind::PosMacro(_) | BindingKind::ArrayMacro(_) => {
+            BindingKind::IndexMacro(_) | BindingKind::CodeMacro(_) => {
                 // We could error here, but it's easier to handle it higher up
             }
         }

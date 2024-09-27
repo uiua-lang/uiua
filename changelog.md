@@ -9,7 +9,7 @@ This version is not yet released. If you are reading this on the website, then t
   - This makes them consistent with comparison functions like [`less than <`](https://uiua.org/docs/less%20than)
 - **Breaking Change** - [`gen`](https://uiua.org/docs/gen) now takes a shape argument
 - The experimental `chunks ⑄` function's behavior has been moved to an extension on [`windows ◫`](https://uiua.org/docs/windows)
-  - This also allow the specification of "stride"
+  - This also allows the specification of "stride"
   - This is inspired by APL's `stencil ⌺` behavior
   - `chunks ⑄` has been deprecated
 - Stabilize [`orient ⤸`](https://uiua.org/docs/orient)
@@ -18,6 +18,9 @@ This version is not yet released. If you are reading this on the website, then t
 - Stabilize [`below ◡`](https://uiua.org/docs/below)
 - Rename `⤙ but` and `⤚ with` to [`with ⤙`](https://uiua.org/docs/with) and [`off ⤚`](https://uiua.org/docs/off)
   - [`with ⤙`](https://uiua.org/docs/with) has been stabilized
+- "Stack macros" are now called "index macros"
+  - Stabilize existing placeholder indexing syntax (`^0`, `^1`, etc.)
+  - Deprecate existing stack-based macro placeholders (`^!`, `^.`, etc.)
 - [`fold ∧`](https://uiua.org/docs/fold) now works with any signature
   - Excess values are collected into arrays
 - [`un °`](https://uiua.org/docs/un) [`orient ⤸`](https://uiua.org/docs/orient) is now equivalent to [`range ⇡`](https://uiua.org/docs/range) [`length ⧻`](https://uiua.org/docs/length) [`shape △`](https://uiua.org/docs/shape) [`duplicate .`](https://uiua.org/docs/duplicate)

@@ -159,7 +159,7 @@ impl Compiler {
                 m => {
                     if let Modifier::Ref(name) = m {
                         if let Ok((_, local)) = self.ref_local(name) {
-                            if self.array_macros.contains_key(&local.index) {
+                            if self.code_macros.contains_key(&local.index) {
                                 return Ok(false);
                             }
                         }
@@ -214,7 +214,7 @@ impl Compiler {
                 Modifier::Primitive(_) => true,
                 Modifier::Ref(name) => {
                     let (_, local) = self.ref_local(name)?;
-                    self.positional_macros.contains_key(&local.index)
+                    self.index_macros.contains_key(&local.index)
                 }
             };
             if strict_args {
@@ -258,8 +258,8 @@ impl Compiler {
                         self.fatal_error(modified.modifier.span.clone(), "Macro recurs too deep")
                     );
                 }
-                if let Some(mut mac) = self.positional_macros.get(&local.index).cloned() {
-                    // Positional macros
+                if let Some(mut mac) = self.index_macros.get(&local.index).cloned() {
+                    // Index macros
                     match self.scope.kind {
                         ScopeKind::Temp(Some(mac_local))
                             if mac_local.macro_index == local.index =>
@@ -298,7 +298,7 @@ impl Compiler {
                                         index: expansion_index,
                                         public: false,
                                     },
-                                    BindingKind::PosMacro(count),
+                                    BindingKind::IndexMacro(count),
                                     Some(modified.modifier.span.clone()),
                                     None,
                                 );
@@ -335,8 +335,8 @@ impl Compiler {
                             }
                         }
                     }
-                } else if let Some(mac) = self.array_macros.get(&local.index).cloned() {
-                    // Array macros
+                } else if let Some(mac) = self.code_macros.get(&local.index).cloned() {
+                    // Code macros
                     let full_span = (modified.modifier.span.clone())
                         .merge(modified.operands.last().unwrap().span.clone());
 
@@ -1769,9 +1769,9 @@ impl Compiler {
                 let args_macro_index = self.next_global;
                 self.next_global += 1;
                 let span = &operand.span;
-                self.positional_macros.insert(
+                self.index_macros.insert(
                     args_macro_index,
-                    PosMacro {
+                    IndexMacro {
                         words: vec![span.clone().sp(Word::Modified(Box::new(Modified {
                             modifier: span.clone().sp(Modifier::Primitive(Primitive::Fill)),
                             operands: vec![
@@ -1796,7 +1796,7 @@ impl Compiler {
                 self.scope.names.insert("Args!".into(), local);
                 self.asm.add_binding_at(
                     local,
-                    BindingKind::PosMacro(1),
+                    BindingKind::IndexMacro(1),
                     None,
                     Some(DocComment::from(format!(
                         "Take {} argument{} and bind {} to {} field name{}",

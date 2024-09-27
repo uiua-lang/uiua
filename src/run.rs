@@ -471,12 +471,12 @@ code:
                             "Called module global. \
                             This is a bug in the interpreter.",
                         )),
-                        BindingKind::PosMacro(_) => Err(self.error(
-                            "Called positional macro global. \
+                        BindingKind::IndexMacro(_) => Err(self.error(
+                            "Called index macro global. \
                             This is a bug in the interpreter.",
                         )),
-                        BindingKind::ArrayMacro(_) => Err(self.error(
-                            "Called array macro global. \
+                        BindingKind::CodeMacro(_) => Err(self.error(
+                            "Called code macro global. \
                             This is a bug in the interpreter.",
                         )),
                     }

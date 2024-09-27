@@ -1,4 +1,4 @@
-# Positional macros
+# Index macros
 F! ← ^0 5
 G! ← F!^0
 ⍤⤙≍ ¯5 G!¯
@@ -31,7 +31,7 @@ F! ← ⨬(
 )
 ⍤⤙≍ ¯5 F!¯ 0 5
 
-# Array macros
+# Code macros
 F! ←^
 G! ←^ ⇌
 H‼ ←^ ⊂⊢.

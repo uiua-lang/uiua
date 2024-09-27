@@ -1225,6 +1225,14 @@ pub fn set_show_experimental(show_experimental: bool) {
     update_style();
 }
 
+pub fn get_run_on_format() -> bool {
+    get_local_var("run-on-format", || true)
+}
+pub fn set_run_on_format(run_on_format: bool) {
+    set_local_var("run-on-format", run_on_format);
+    update_style();
+}
+
 fn update_style() {
     let font_name = get_font_name();
     let font_size = get_font_size();
@@ -1233,6 +1241,7 @@ fn update_style() {
     } else {
         "none"
     };
+    let run_on_format = if get_run_on_format() { "none" } else { "block" };
     // Remove the old style
     let head = &document().head().unwrap();
     if let Some(item) = head.get_elements_by_tag_name("style").item(0) {
@@ -1247,7 +1256,8 @@ fn update_style() {
     new_style.set_inner_text(&format!(
         "@font-face {{ font-family: 'Code Font'; src: url('/{font_name}.ttf') format('truetype'); }}\n\
         .sized-code {{ font-size: {font_size}; }}\n\
-        .experimental-glyph-button {{ display: {show_experimental}; }}",
+        .experimental-glyph-button {{ display: {show_experimental}; }}\n\
+        .format-button {{ display: {run_on_format}; }}",
     ));
     document().head().unwrap().append_child(&new_style).unwrap();
 }

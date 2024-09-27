@@ -84,6 +84,7 @@ This version is not yet released. If you are reading this on the website, then t
 ### Website
 - Add [Ranges](https://uiua.org/tutorial/ranges) tutorial
 - In the pad, files created with [`&fwa`](https://uiua.org/docs/&fwa) will now persist between runs
+- Add the option to decouple running and formatting in the pad
 - Add a dropdown to the pad to insert named functions
 - Add an [RSS Feed](https://uiua.org/blog/feed.rss) for the blog
 

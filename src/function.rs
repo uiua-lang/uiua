@@ -32,6 +32,7 @@ pub enum Instr {
     CallGlobal {
         index: usize,
         call: bool,
+        sig: Signature,
     },
     /// Bind a global value
     BindGlobal {
@@ -237,7 +238,7 @@ impl Hash for Instr {
             Instr::CopyToTemp { count, stack, .. } => (10, count, stack).hash(state),
             Instr::TouchStack { count, .. } => (13, count).hash(state),
             Instr::Comment(_) => (14, 0).hash(state),
-            Instr::CallGlobal { index, call } => (15, index, call).hash(state),
+            Instr::CallGlobal { index, call, .. } => (15, index, call).hash(state),
             Instr::BindGlobal { index, .. } => (16, index).hash(state),
             Instr::Switch {
                 count,
@@ -464,6 +465,14 @@ pub enum Purity {
 
 /// Whether some instructions are pure
 pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly, min_purity: Purity) -> bool {
+    instrs_are_pure_impl(instrs, asm, min_purity, &mut HashSet::new())
+}
+fn instrs_are_pure_impl<'a>(
+    instrs: &'a [Instr],
+    asm: &'a Assembly,
+    min_purity: Purity,
+    visited: &mut HashSet<&'a FunctionId>,
+) -> bool {
     'instrs: for (i, instr) in instrs.iter().enumerate() {
         match instr {
             Instr::CallGlobal { index, .. } => {
@@ -471,7 +480,9 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly, min_purity: Puri
                     match &binding.kind {
                         BindingKind::Const(Some(_)) => {}
                         BindingKind::Func(f) => {
-                            if !instrs_are_pure(f.instrs(asm), asm, min_purity) {
+                            if visited.insert(&f.id)
+                                && !instrs_are_pure_impl(f.instrs(asm), asm, min_purity, visited)
+                            {
                                 return false;
                             }
                         }
@@ -484,7 +495,7 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly, min_purity: Puri
                 for j in (0..i).rev() {
                     let frag = &prev[j..i];
                     if instrs_signature(frag).is_ok_and(|sig| sig == (0, 1))
-                        && instrs_are_pure(frag, asm, min_purity)
+                        && instrs_are_pure_impl(frag, asm, min_purity, visited)
                     {
                         continue 'instrs;
                     }
@@ -502,7 +513,9 @@ pub(crate) fn instrs_are_pure(instrs: &[Instr], asm: &Assembly, min_purity: Puri
                 }
             }
             Instr::PushFunc(f) => {
-                if !instrs_are_pure(f.instrs(asm), asm, min_purity) {
+                if visited.insert(&f.id)
+                    && !instrs_are_pure_impl(f.instrs(asm), asm, min_purity, visited)
+                {
                     return false;
                 }
             }

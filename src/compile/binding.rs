@@ -152,7 +152,14 @@ impl Compiler {
         }
         if placeholder_count > 0 || ident_margs > 0 {
             self.scope.names.insert(name.clone(), local);
+            self.asm.add_binding_at(
+                local,
+                BindingKind::PosMacro(ident_margs),
+                Some(span.clone()),
+                comment.map(|text| DocComment::from(text.as_str())),
+            );
             let mut words = binding.words.clone();
+            let mut recursive = false;
             recurse_words_mut(&mut words, &mut |word| {
                 let mut path_locals = None;
                 let mut name_local = None;
@@ -185,6 +192,11 @@ impl Compiler {
                     _ => {}
                 }
                 if let Some((nm, local)) = name_local {
+                    if nm.value == name
+                        && path_locals.as_ref().map_or(true, |(pl, _)| pl.is_empty())
+                    {
+                        recursive = true;
+                    }
                     self.validate_local(&nm.value, local, &nm.span);
                     (self.code_meta.global_references).insert(nm.span.clone(), local.index);
                 }
@@ -195,16 +207,25 @@ impl Compiler {
                     }
                 }
             });
-            self.asm.add_binding_at(
-                local,
-                BindingKind::PosMacro(ident_margs),
-                Some(span.clone()),
-                comment.map(|text| DocComment::from(text.as_str())),
-            );
+            if recursive {
+                self.experimental_error(span, || {
+                    "Recursive positional macros are experimental. \
+                    Add `# Experimental!` to the top of the file to use them."
+                });
+                if binding.signature.is_none() {
+                    self.add_error(
+                        span.clone(),
+                        "Recursive positional macro must have a \
+                    signature declared after the ←",
+                    );
+                }
+            }
             let mac = PosMacro {
                 words,
                 names: self.scope.names.clone(),
                 hygenic: true,
+                sig: binding.signature.map(|s| s.value),
+                recursive,
             };
             self.positional_macros.insert(local.index, mac);
             return Ok(());

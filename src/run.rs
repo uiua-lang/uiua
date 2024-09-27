@@ -461,11 +461,12 @@ code:
                             "Called unbound constant. \
                             This is a bug in the interpreter.",
                         )),
-                        BindingKind::Func(f) if call => self.call(f),
-                        BindingKind::Func(f) => {
-                            self.rt.function_stack.push(f);
-                            Ok(())
+                        BindingKind::Func(f) if call => {
+                            self.respect_recursion_limit().and_then(|_| self.call(f))
                         }
+                        BindingKind::Func(f) => self
+                            .respect_recursion_limit()
+                            .map(|_| self.rt.function_stack.push(f)),
                         BindingKind::Import { .. } | BindingKind::Module(_) => Err(self.error(
                             "Called module global. \
                             This is a bug in the interpreter.",
@@ -1409,20 +1410,25 @@ code:
         self.rt.recur_stack.truncate(with_height);
         res
     }
-    pub(crate) fn recur(&mut self) -> UiuaResult {
+    pub(crate) fn respect_recursion_limit(&mut self) -> UiuaResult {
         #[cfg(debug_assertions)]
         const RECURSION_LIMIT: usize = 22;
         #[cfg(not(debug_assertions))]
         const RECURSION_LIMIT: usize = 130;
         if self.rt.call_stack.len() > RECURSION_LIMIT {
-            return Err(self.error("Recursion limit reached"));
+            Err(self.error("Recursion limit reached"))
+        } else {
+            Ok(())
         }
+    }
+    pub(crate) fn recur(&mut self) -> UiuaResult {
         let Some(i) = self.rt.recur_stack.last().copied() else {
             return Err(self.error(
                 "No recursion context set. This \
                 is a bug in the interpreter.",
             ));
         };
+        self.respect_recursion_limit()?;
         let mut frame = self.rt.call_stack[i].clone();
         frame.pc = 0;
         self.respect_execution_limit()?;

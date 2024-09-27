@@ -169,7 +169,9 @@ pub struct Module {
 struct PosMacro {
     words: Vec<Sp<Word>>,
     names: IndexMap<Ident, LocalName>,
+    sig: Option<Signature>,
     hygenic: bool,
+    recursive: bool,
 }
 
 /// An array macro
@@ -228,9 +230,15 @@ enum ScopeKind {
     /// A scope that includes all bindings in a module
     AllInModule,
     /// A temporary scope, probably for a macro
-    Temp,
+    Temp(Option<MacroLocal>),
     /// A test scope between `---`s
     Test,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct MacroLocal {
+    macro_index: usize,
+    expansion_index: usize,
 }
 
 impl Default for Scope {
@@ -1401,7 +1409,7 @@ code:
     /// potentially pull in a variable number of values
     fn validate_array_loop_sig(&mut self, instrs: &[Instr], span: &CodeSpan) -> Option<Signature> {
         let inner_sig = instrs_signature(instrs);
-        if self.current_bindings.is_empty() && self.scope.kind != ScopeKind::Temp {
+        if self.current_bindings.is_empty() && !matches!(self.scope.kind, ScopeKind::Temp(_)) {
             return inner_sig.ok();
         }
         let Err(e) = &inner_sig else {
@@ -1741,12 +1749,21 @@ code:
                 );
                 self.push_instr(Instr::PushFunc(f));
             }
-            BindingKind::Const(None) if call => self.push_instr(Instr::CallGlobal { index, call }),
+            BindingKind::Const(None) if call => self.push_instr(Instr::CallGlobal {
+                index,
+                call: true,
+                sig: Signature::new(0, 1),
+            }),
             BindingKind::Const(None) => {
                 let f = self.make_function(
                     FunctionId::Anonymous(span),
                     Signature::new(0, 1),
-                    eco_vec![Instr::CallGlobal { index, call }].into(),
+                    eco_vec![Instr::CallGlobal {
+                        index,
+                        call: true,
+                        sig: Signature::new(0, 1)
+                    }]
+                    .into(),
                 );
                 self.push_instr(Instr::PushFunc(f));
             }

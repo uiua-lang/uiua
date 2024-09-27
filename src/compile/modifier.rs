@@ -260,25 +260,80 @@ impl Compiler {
                 }
                 if let Some(mut mac) = self.positional_macros.get(&local.index).cloned() {
                     // Positional macros
-                    // Expand
-                    self.expand_positional_macro(
-                        r.name.value.clone(),
-                        &mut mac.words,
-                        modified.operands,
-                        modified.modifier.span.clone(),
-                        mac.hygenic,
-                    )?;
-                    // Compile
-                    let new_func = self.suppress_diagnostics(|comp| {
-                        comp.temp_scope(mac.names, |comp| comp.compile_words(mac.words, true))
-                    })?;
-                    // Add
-                    let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
-                    let func = self.make_function(r.name.value.clone().into(), sig, new_func);
-                    self.push_instr(Instr::PushFunc(func));
-                    if call {
-                        let span = self.add_span(modified.modifier.span);
-                        self.push_instr(Instr::Call(span));
+                    match self.scope.kind {
+                        ScopeKind::Temp(Some(mac_local))
+                            if mac_local.macro_index == local.index =>
+                        {
+                            // Recursive
+                            let new_func = self.compile_words(modified.operands, false)?;
+                            self.push_all_instrs(new_func);
+                            if let Some(sig) = mac.sig {
+                                self.push_instr(Instr::CallGlobal {
+                                    index: mac_local.expansion_index,
+                                    call,
+                                    sig,
+                                });
+                            }
+                        }
+                        _ => {
+                            // Expand
+                            self.expand_positional_macro(
+                                r.name.value.clone(),
+                                &mut mac.words,
+                                modified.operands,
+                                modified.modifier.span.clone(),
+                                mac.hygenic,
+                            )?;
+                            // Handle recursion
+                            // Recursive macros work by creating a binding for the expansion.
+                            // Recursive calls then call that binding.
+                            // We know that this is a recursive call if the scope tracks
+                            // a macro with the same index.
+                            let macro_local = mac.recursive.then(|| {
+                                let expansion_index = self.next_global;
+                                let count = ident_modifier_args(&r.name.value);
+                                // Add temporary binding
+                                self.asm.add_binding_at(
+                                    LocalName {
+                                        index: expansion_index,
+                                        public: false,
+                                    },
+                                    BindingKind::PosMacro(count),
+                                    Some(modified.modifier.span.clone()),
+                                    None,
+                                );
+                                self.next_global += 1;
+                                MacroLocal {
+                                    macro_index: local.index,
+                                    expansion_index,
+                                }
+                            });
+                            // Compile
+                            let new_func = self.suppress_diagnostics(|comp| {
+                                comp.temp_scope(mac.names, macro_local, |comp| {
+                                    comp.compile_words(mac.words, true)
+                                })
+                            })?;
+                            // Add
+                            let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
+                            let mut func = self.make_function(r.name.span.into(), sig, new_func);
+                            if mac.recursive {
+                                func.flags |= FunctionFlags::RECURSIVE;
+                            }
+                            if let Some(macro_local) = macro_local {
+                                self.asm.bindings.make_mut()[macro_local.expansion_index].kind =
+                                    BindingKind::Func(func.clone());
+                            }
+                            self.push_instr(Instr::PushFunc(func));
+                            if call {
+                                let span = self.add_span(modified.modifier.span);
+                                self.push_instr(if mac.recursive {
+                                    Instr::CallRecursive(span)
+                                } else {
+                                    Instr::Call(span)
+                                });
+                            }
+                        }
                     }
                 } else if let Some(mac) = self.array_macros.get(&local.index).cloned() {
                     // Array macros
@@ -400,7 +455,7 @@ impl Compiler {
                         .macro_expansions
                         .insert(full_span, (r.name.value.clone(), code.clone()));
                     self.suppress_diagnostics(|comp| {
-                        comp.temp_scope(mac.names, |comp| {
+                        comp.temp_scope(mac.names, None, |comp| {
                             comp.quote(&code, &modified.modifier.span, call)
                         })
                     })?;
@@ -1680,7 +1735,7 @@ impl Compiler {
                 self.compile_bind_function(name, local, func, span, Some(&comment))?;
 
                 // Make args
-                let args_module = self.in_scope(ScopeKind::Temp, |comp| {
+                let args_module = self.in_scope(ScopeKind::Temp(None), |comp| {
                     // Arg getters
                     for field in &fields {
                         let name = &field.name;
@@ -1729,7 +1784,9 @@ impl Compiler {
                             ],
                         })))],
                         names: args_module.names,
+                        sig: None,
                         hygenic: false,
+                        recursive: false,
                     },
                 );
                 let local = LocalName {
@@ -1995,11 +2052,12 @@ impl Compiler {
     fn temp_scope<T>(
         &mut self,
         names: IndexMap<Ident, LocalName>,
+        macro_local: Option<MacroLocal>,
         f: impl FnOnce(&mut Self) -> T,
     ) -> T {
         let macro_names_len = names.len();
         let temp_scope = Scope {
-            kind: ScopeKind::Temp,
+            kind: ScopeKind::Temp(macro_local),
             names,
             experimental: self.scope.experimental,
             experimental_error: self.scope.experimental_error,

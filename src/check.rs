@@ -266,9 +266,11 @@ impl VirtualEnv {
         match instr {
             Instr::Comment(_) => {}
             Instr::Push(val) => self.stack.push(BasicValue::from_val(val)),
-            Instr::CallGlobal { call, .. } => {
+            Instr::CallGlobal { call, sig, .. } => {
                 if *call {
-                    self.handle_args_outputs(0, 1)?;
+                    self.handle_sig(*sig)?;
+                } else {
+                    self.function_stack.push(*sig);
                 }
             }
             Instr::BindGlobal { .. } => {

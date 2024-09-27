@@ -722,7 +722,7 @@ impl<'de> Deserialize<'de> for Instr {
 enum InstrRep {
     #[serde(rename = "#")]
     Comment(Ident),
-    CallGlobal(usize, bool),
+    CallGlobal(usize, bool, Signature),
     BindGlobal(usize, usize),
     BeginArray,
     EndArray(bool, usize),
@@ -758,7 +758,7 @@ impl From<Instr> for InstrRep {
         match value {
             Instr::Comment(ident) => Self::Comment(ident),
             Instr::Push(value) => Self::Push(value),
-            Instr::CallGlobal { index, call } => Self::CallGlobal(index, call),
+            Instr::CallGlobal { index, call, sig } => Self::CallGlobal(index, call, sig),
             Instr::BindGlobal { span, index } => Self::BindGlobal(span, index),
             Instr::BeginArray => Self::BeginArray,
             Instr::EndArray { boxed, span } => Self::EndArray(boxed, span),
@@ -814,7 +814,7 @@ impl From<InstrRep> for Instr {
         match value {
             InstrRep::Comment(ident) => Self::Comment(ident),
             InstrRep::Push(value) => Self::Push(value),
-            InstrRep::CallGlobal(index, call) => Self::CallGlobal { index, call },
+            InstrRep::CallGlobal(index, call, sig) => Self::CallGlobal { index, call, sig },
             InstrRep::BindGlobal(span, index) => Self::BindGlobal { span, index },
             InstrRep::BeginArray => Self::BeginArray,
             InstrRep::EndArray(boxed, span) => Self::EndArray { boxed, span },

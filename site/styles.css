@@ -1309,6 +1309,16 @@ a.clean {
             #2C2C2C 70%);
 }
 
+.nb2 {
+    background-image: linear-gradient(135deg,
+            #FCF434 30%,
+            #FFFFFF 30%,
+            #FFFFFF 50%,
+            #9C59D1 50%,
+            #9C59D1 70%,
+            #2C2C2C 70%);
+}
+
 .fluid {
     background-image: linear-gradient(180deg,
             #FF76A4 36%,
@@ -1365,6 +1375,7 @@ a.clean {
     .aroace,
     .gay,
     .nb,
+    .nb2,
     .fluid,
     .queer,
     .lesbian,
@@ -1377,6 +1388,7 @@ a.clean {
 
     .bi,
     .nb,
+    .nb2,
     .ace,
     .aro,
     .aroace,

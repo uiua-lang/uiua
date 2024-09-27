@@ -14,8 +14,8 @@ use uiua::{
     ast::Item,
     encode::{image_to_bytes, value_to_gif_bytes, value_to_image, value_to_wav_bytes},
     lsp::{spans_with_backend, BindingDocsKind},
-    Compiler, DiagnosticKind, Inputs, Report, ReportFragment, ReportKind, SpanKind, SysBackend,
-    Uiua, UiuaError, UiuaResult, Value,
+    Compiler, DiagnosticKind, Inputs, Primitive, Report, ReportFragment, ReportKind, SpanKind,
+    SysBackend, Uiua, UiuaError, UiuaResult, Value,
 };
 use unicode_segmentation::UnicodeSegmentation;
 use wasm_bindgen::JsCast;
@@ -26,7 +26,7 @@ use web_sys::{
 
 use crate::{
     backend::{OutputItem, WebBackend},
-    binding_class,
+    binding_class, code_font,
     editor::Editor,
     element, prim_sig_class, sig_class,
 };
@@ -442,7 +442,8 @@ pub fn gen_code_view(code: &str) -> View {
             continue;
         }
         let mut frag_views = Vec::new();
-        for frag in line {
+        let mut frags = line.into_iter().peekable();
+        while let Some(frag) = frags.next() {
             match frag {
                 CodeFragment::Unspanned(s) => {
                     // logging::log!("unspanned escaped: `{}`", s);
@@ -465,6 +466,45 @@ pub fn gen_code_view(code: &str) -> View {
                         _ => "",
                     };
                     match kind {
+                        SpanKind::Primitive(Primitive::On, _)
+                            if frags.peek().is_some_and(|frag| {
+                                matches!(
+                                    frag,
+                                    CodeFragment::Span(_, SpanKind::Primitive(Primitive::By, _))
+                                )
+                            }) =>
+                        {
+                            frags.next();
+                            let title = format!(
+                                "{} and {}: Call a function keeping its first and last \
+                                arguments on either side of the outputs",
+                                Primitive::On.name(),
+                                Primitive::By.name()
+                            );
+                            let class = format!(
+                                "code-span code-underline {}",
+                                code_font!("nb2 text-gradient")
+                            );
+                            let onmouseover = move |event: web_sys::MouseEvent| update_ctrl(&event);
+                            let onclick = move |event: web_sys::MouseEvent| {
+                                if os_ctrl(&event) {
+                                    window()
+                                        .open_with_url_and_target(
+                                            "/tutorial/advancedstack#on-and-by",
+                                            "_blank",
+                                        )
+                                        .unwrap();
+                                }
+                            };
+                            let text = format!("{}{}", Primitive::On, Primitive::By);
+                            let view = view!(<span
+                                    class=class
+                                    data-title=title
+                                    on:mouseover=onmouseover
+                                    on:click=onclick>{text}</span>)
+                            .into_view();
+                            frag_views.push(view)
+                        }
                         SpanKind::Primitive(prim, _) => {
                             let name = prim.name();
                             let mut title = format!("{}: {}", name, prim.doc().short_text());

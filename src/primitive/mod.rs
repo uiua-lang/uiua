@@ -802,7 +802,7 @@ impl Primitive {
                 env.call(fill)?;
                 let fill_value = env.pop("fill value")?;
                 match f.id {
-                    FunctionId::Named(_) => {
+                    FunctionId::Named(_) | FunctionId::Macro(_) => {
                         env.with_fill(fill_value, |env| env.without_fill(|env| env.call(f)))
                     }
                     _ => env.with_fill(fill_value, |env| env.call(f)),

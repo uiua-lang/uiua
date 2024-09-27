@@ -316,7 +316,8 @@ impl Compiler {
                             })?;
                             // Add
                             let sig = self.sig_of(&new_func.instrs, &modified.modifier.span)?;
-                            let mut func = self.make_function(r.name.span.into(), sig, new_func);
+                            let mut func =
+                                self.make_function(FunctionId::Macro(r.name.span), sig, new_func);
                             if mac.recursive {
                                 func.flags |= FunctionFlags::RECURSIVE;
                             }

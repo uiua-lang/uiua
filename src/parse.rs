@@ -319,15 +319,16 @@ impl<'i> Parser<'i> {
                 let backup = self.index;
                 let open_span = self.try_exact(TripleMinus.into())?;
                 self.try_spaces();
-                let kind = match self.try_ident() {
+                let name = self.try_ident();
+                if in_scope && name.is_none() {
+                    self.index = backup;
+                    return None;
+                }
+                let kind = match name {
                     Some(name) if name.value == "test" => ModuleKind::Test,
                     Some(name) => ModuleKind::Named(name),
                     None => ModuleKind::Test,
                 };
-                if in_scope && matches!(kind, ModuleKind::Test) {
-                    self.index = backup;
-                    return None;
-                }
                 // Imports
                 while self.try_exact(Spaces).is_some() {}
                 let imports = if let Some(tilde_span) = self.try_exact(Tilde.into()) {

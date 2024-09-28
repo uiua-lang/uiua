@@ -330,7 +330,7 @@ pub(crate) fn optimize_instrs_mut(
                 },
                 _,
             )],
-            Instr::Prim(Trace, _)
+            Instr::Prim(Trace, _),
         ) => {
             *n += 1;
             if *n == 0 {

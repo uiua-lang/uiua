@@ -172,7 +172,7 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
             TraceN {
                 n: 1,
                 inverse: true,
-                stack_sub: false
+                stack_sub: false,
             },
             span,
         ),

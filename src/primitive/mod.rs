@@ -31,7 +31,7 @@ use crate::{
     boxed::Boxed,
     check::instrs_signature,
     encode,
-    lex::AsciiToken,
+    lex::{AsciiToken, SUBSCRIPT_NUMS},
     sys::*,
     value::*,
     FunctionId, Signature, Uiua, UiuaErrorKind, UiuaResult,
@@ -260,18 +260,28 @@ impl fmt::Display for ImplPrimitive {
                 }
                 Ok(())
             }
-            &TraceN(n, inverse) => {
+            &TraceN(n, inverse, stack_sub) => {
                 if inverse {
                     write!(f, "{Un}")?;
                 }
-                if inverse && n > 1 {
-                    write!(f, "(")?;
-                }
-                for _ in 0..n {
-                    write!(f, "{Trace}")?;
-                }
-                if inverse && n > 1 {
-                    write!(f, ")")?;
+                if stack_sub {
+                    fn n_string(n: usize) -> String {
+                        (n.to_string().chars())
+                            .map(|c| SUBSCRIPT_NUMS[(c as u32 as u8 - b'0') as usize])
+                            .collect()
+                    }
+                    let n_str = n_string(n);
+                    write!(f, "{Stack}{n_str}").unwrap();
+                } else {
+                    if inverse && n > 1 {
+                        write!(f, "(")?;
+                    }
+                    for _ in 0..n {
+                        write!(f, "{Trace}")?;
+                    }
+                    if inverse && n > 1 {
+                        write!(f, ")")?;
+                    }
                 }
                 Ok(())
             }
@@ -1069,7 +1079,7 @@ impl ImplPrimitive {
             ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
             ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
             ImplPrimitive::UnScan => reduce::unscan(env)?,
-            ImplPrimitive::TraceN(n, inverse) => trace_n(env, *n, *inverse)?,
+            ImplPrimitive::TraceN(n, inverse, stack_sub) => trace_n(env, *n, *inverse, *stack_sub)?,
             ImplPrimitive::UnStack => stack(env, true)?,
             ImplPrimitive::UnDump => dump(env, true)?,
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
@@ -1388,7 +1398,7 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
     let span: String = if inverse {
         format!("{}{} {}", Primitive::Un, Primitive::Trace, env.span())
     } else {
-        env.span().to_string()
+        format!("{} {}", Primitive::Trace, env.span())
     };
     let max_line_len = span.chars().count() + 2;
     let item_lines =
@@ -1406,13 +1416,13 @@ fn trace(env: &mut Uiua, inverse: bool) -> UiuaResult {
     Ok(())
 }
 
-fn trace_n(env: &mut Uiua, n: usize, inverse: bool) -> UiuaResult {
+fn trace_n(env: &mut Uiua, n: usize, inverse: bool, stack_sub: bool) -> UiuaResult {
     let mut items = Vec::new();
     for i in 0..n {
         items.push(env.pop(i + 1)?);
     }
     items.reverse();
-    let span = format!("{} {}", ImplPrimitive::TraceN(n, inverse), env.span());
+    let span = format!("{} {}", ImplPrimitive::TraceN(n, inverse, stack_sub), env.span());
     let max_line_len = span.chars().count() + 2;
     let boundaries = stack_boundaries(env);
     let item_lines: Vec<Vec<String>> = items
@@ -1483,7 +1493,8 @@ fn dump(env: &mut Uiua, inverse: bool) -> UiuaResult {
     let f = env.pop_function()?;
     if f.signature() != (1, 1) {
         return Err(env.error(format!(
-            "Dump's function's signature must be |1.1, but it is {}",
+            "{}'s function's signature must be |1, but it is {}",
+            Primitive::Dump.format(),
             f.signature()
         )));
     }

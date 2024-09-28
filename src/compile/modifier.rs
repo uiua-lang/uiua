@@ -1118,7 +1118,7 @@ impl Compiler {
                 let (mut new_func, sig) = self.compile_operand_word(operand)?;
                 if let [Instr::Prim(Trace, span)] = new_func.instrs.as_slice() {
                     finish!(
-                        eco_vec![Instr::ImplPrim(ImplPrimitive::TraceN(n, false), *span)],
+                        eco_vec![Instr::ImplPrim(ImplPrimitive::TraceN(n, false, false), *span)],
                         Signature::new(n, n)
                     )
                 } else {

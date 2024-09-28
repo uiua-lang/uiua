@@ -2155,6 +2155,10 @@ code:
                         }
                         self.push_instr(Instr::EndArray { boxed: true, span });
                     }
+                    Primitive::Stack => {
+                        let span = self.add_span(span.clone());
+                        self.push_instr(Instr::ImplPrim(ImplPrimitive::TraceN(n, false, true), span));
+                    }
                     _ => {
                         self.add_error(
                             span.clone(),

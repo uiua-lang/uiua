@@ -192,7 +192,7 @@ fn trim_instrs(mut instrs: &[Instr]) -> &[Instr] {
     let trim = |instr: &Instr| {
         matches!(
             instr,
-            Instr::Prim(Stack | Trace, _) | Instr::ImplPrim(UnStack | TraceN(..), _)
+            Instr::Prim(Stack | Trace, _) | Instr::ImplPrim(UnStack | TraceN { .. }, _)
         )
     };
     while instrs.first().is_some_and(trim) {

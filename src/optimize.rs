@@ -314,9 +314,9 @@ pub(crate) fn optimize_instrs_mut(
         ([.., Instr::Prim(Trace, span)], Instr::Prim(Trace, _)) => {
             let span = *span;
             instrs.pop();
-            instrs.push(Instr::ImplPrim(TraceN(2, false, false), span));
+            instrs.push(Instr::ImplPrim(TraceN { n: 2, inverse: false, stack_sub: false }, span));
         }
-        ([.., Instr::ImplPrim(TraceN(n, false, _), _)], Instr::Prim(Trace, _)) => {
+        ([.., Instr::ImplPrim(TraceN { n, inverse: false, .. }, _)], Instr::Prim(Trace, _)) => {
             *n += 1;
             if *n == 0 {
                 instrs.pop();
@@ -341,7 +341,7 @@ pub(crate) fn optimize_instrs_mut(
             instrs.push(Instr::Push(val));
             instrs.push(Instr::ImplPrim(ValidateTypeConsume, span));
         }
-        ([.., Instr::ImplPrim(TraceN(a, inv_a, _), _)], Instr::ImplPrim(TraceN(b, inv_b, _), _))
+        ([.., Instr::ImplPrim(TraceN { n: a, inverse: inv_a, .. }, _)], Instr::ImplPrim(TraceN { n: b, inverse: inv_b, .. }, _))
             if *inv_a == inv_b =>
         {
             *a += b;

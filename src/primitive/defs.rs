@@ -2956,7 +2956,7 @@ primitive!(
     /// ex: [1 5 2 9 11 0 7 12 8 3]
     ///   : ▽×⸮≥5:⸮≤10..
     (1, Trace, Debug, ("trace", '⸮'), Impure),
-    /// Debug print all stack values after applying a function to them without popping them
+    /// Preprocess and print all stack values without popping them
     ///
     /// [dump][identity] is equivalent to [stack].
     /// ex: dump∘ 1 2 3
@@ -3335,7 +3335,7 @@ macro_rules! impl_primitive {
             UndoReverse(usize),
             UndoRotate(usize),
             ReduceDepth(usize),
-            TraceN(usize, bool, bool),
+            TraceN { n: usize, inverse: bool, stack_sub: bool},
         }
 
         impl ImplPrimitive {
@@ -3347,7 +3347,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoReverse(n) => *n,
                     ImplPrimitive::UndoRotate(n) => *n + 1,
                     ImplPrimitive::ReduceDepth(_) => 1,
-                    ImplPrimitive::TraceN(n, _, _) => *n,
+                    ImplPrimitive::TraceN { n, .. } => *n,
                 }
             }
             pub fn outputs(&self) -> usize {
@@ -3356,7 +3356,7 @@ macro_rules! impl_primitive {
                     ImplPrimitive::UndoTransposeN(n, _) => *n,
                     ImplPrimitive::UndoReverse(n) => *n,
                     ImplPrimitive::UndoRotate(n) => *n,
-                    ImplPrimitive::TraceN(n, _, _) => *n,
+                    ImplPrimitive::TraceN { n, .. } => *n,
                     _ => 1
                 }
             }
@@ -3370,7 +3370,7 @@ macro_rules! impl_primitive {
             pub fn purity(&self) -> Purity {
                 match self {
                     $($(ImplPrimitive::$variant => {Purity::$purity},)*)*
-                    ImplPrimitive::TraceN(_, _, _) => Purity::Impure,
+                    ImplPrimitive::TraceN { .. } => Purity::Impure,
                     _ => Purity::Pure
                 }
             }

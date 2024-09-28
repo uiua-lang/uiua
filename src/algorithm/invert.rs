@@ -13,9 +13,11 @@ use regex::Regex;
 
 use crate::{
     check::{instrs_clean_signature, instrs_signature, SigCheckError},
+    instrs_are_pure,
     primitive::{ImplPrimitive, Primitive},
     Array, Assembly, BindingKind, Compiler, Complex, FmtInstrs, Function, FunctionFlags,
-    FunctionId, Instr, NewFunction, Signature, Span, SysOp, TempStack, Uiua, UiuaResult, Value,
+    FunctionId, Instr, NewFunction, Purity, Signature, Span, SysOp, TempStack, Uiua, UiuaResult,
+    Value,
 };
 
 use super::IgnoreError;
@@ -3045,7 +3047,7 @@ impl InvertPattern for Val {
     fn invert_extract<'a>(
         &self,
         input: &'a [Instr],
-        _: &mut Compiler,
+        comp: &mut Compiler,
     ) -> InversionResult<(&'a [Instr], EcoVec<Instr>)> {
         if input.is_empty() {
             return generic();
@@ -3053,7 +3055,7 @@ impl InvertPattern for Val {
         for len in (1..input.len()).rev() {
             let chunk = &input[..len];
             if let Some(sig) = instrs_clean_signature(chunk) {
-                if sig == (0, 1) {
+                if sig == (0, 1) && instrs_are_pure(chunk, &comp.asm, Purity::Pure) {
                     return Ok((&input[len..], chunk.into()));
                 }
             }

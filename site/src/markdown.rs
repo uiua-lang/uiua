@@ -104,7 +104,7 @@ fn node_view<'a>(node: &'a AstNode<'a>) -> View {
         NodeValue::Link(link) => {
             let text = leaf_text(node).unwrap_or_default();
             let name = text.rsplit_once(' ').map(|(name, _)| name).unwrap_or(&text);
-            if let Some(prim) = Primitive::from_short_name(name) {
+            if let Some(prim) = Primitive::from_format_name(name) {
                 view!(<Prim prim=prim/>).into_view()
             } else {
                 if name.chars().count() == 1 {

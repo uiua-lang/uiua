@@ -168,7 +168,13 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
         Fix => Instr::ImplPrim(UnFix, span),
         Shape => Instr::ImplPrim(UnShape, span),
         Map => Instr::ImplPrim(UnMap, span),
-        Trace => Instr::ImplPrim(TraceN { n: 1, inverse: true, stack_sub: false }, span),
+        Trace => Instr::ImplPrim(
+            TraceN {
+                n: 1,
+                inverse: true,
+                stack_sub: false },
+            span,
+        ),
         Stack => Instr::ImplPrim(UnStack, span),
         Keep => Instr::ImplPrim(UnKeep, span),
         GifEncode => Instr::ImplPrim(GifDecode, span),
@@ -215,7 +221,18 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         GifDecode => Instr::Prim(GifEncode, span),
         AudioDecode => Instr::Prim(AudioEncode, span),
         UnDatetime => Instr::Prim(DateTime, span),
-        TraceN { n, inverse, stack_sub } => Instr::ImplPrim(TraceN { n, inverse: !inverse, stack_sub }, span),
+        TraceN {
+            n,
+            inverse,
+            stack_sub
+        } => Instr::ImplPrim(
+            TraceN {
+                n,
+                inverse: !inverse,
+                stack_sub
+            },
+            span,
+        ),
         UnRawMode => Instr::Prim(Sys(SysOp::RawMode), span),
         _ => return None,
     })

@@ -2179,7 +2179,14 @@ code:
                     }
                     Primitive::Stack => {
                         let span = self.add_span(span.clone());
-                        self.push_instr(Instr::ImplPrim(ImplPrimitive::TraceN { n, inverse: false, stack_sub: true }, span));
+                        self.push_instr(Instr::ImplPrim(
+                            ImplPrimitive::TraceN {
+                                n,
+                                inverse: false,
+                                stack_sub: true
+                            },
+                            span,
+                        ));
                     }
                     _ => {
                         self.add_error(

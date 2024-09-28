@@ -260,7 +260,11 @@ impl fmt::Display for ImplPrimitive {
                 }
                 Ok(())
             }
-            &TraceN { n, inverse, stack_sub } => {
+            &TraceN {
+                n,
+                inverse,
+                stack_sub
+            } => {
                 if inverse {
                     write!(f, "{Un}")?;
                 }
@@ -1087,7 +1091,11 @@ impl ImplPrimitive {
             ImplPrimitive::UnFix => env.monadic_mut_env(Value::unfix)?,
             ImplPrimitive::UnShape => env.monadic_ref_env(Value::unshape)?,
             ImplPrimitive::UnScan => reduce::unscan(env)?,
-            ImplPrimitive::TraceN { n, inverse, stack_sub } => trace_n(env, *n, *inverse, *stack_sub)?,
+            ImplPrimitive::TraceN {
+                n,
+                inverse,
+                stack_sub
+            } => trace_n(env, *n, *inverse, *stack_sub)?,
             ImplPrimitive::UnStack => stack(env, true)?,
             ImplPrimitive::UnDump => dump(env, true)?,
             ImplPrimitive::Primes => env.monadic_ref_env(Value::primes)?,
@@ -1430,7 +1438,15 @@ fn trace_n(env: &mut Uiua, n: usize, inverse: bool, stack_sub: bool) -> UiuaResu
         items.push(env.pop(i + 1)?);
     }
     items.reverse();
-    let span = format!("{} {}", ImplPrimitive::TraceN { n, inverse, stack_sub }, env.span());
+    let span = format!(
+        "{} {}", 
+        ImplPrimitive::TraceN {
+            n,
+            inverse,
+            stack_sub
+        },
+        env.span()
+    );
     let max_line_len = span.chars().count() + 2;
     let boundaries = stack_boundaries(env);
     let item_lines: Vec<Vec<String>> = items

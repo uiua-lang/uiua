@@ -2177,6 +2177,17 @@ code:
                         }
                         self.push_instr(Instr::EndArray { boxed: true, span });
                     }
+                    Primitive::Stack => {
+                        let span = self.add_span(span.clone());
+                        self.push_instr(Instr::ImplPrim(
+                            ImplPrimitive::TraceN {
+                                n,
+                                inverse: false,
+                                stack_sub: true,
+                            },
+                            span,
+                        ));
+                    }
                     _ => {
                         self.add_error(
                             span.clone(),
@@ -2326,7 +2337,7 @@ code:
         for instr in instrs {
             match instr {
                 Instr::Prim(Trace | Dump | Stack | Assert, _) => return false,
-                Instr::ImplPrim(UnDump | UnStack | TraceN(..), _) => return false,
+                Instr::ImplPrim(UnDump | UnStack | TraceN { .. }, _) => return false,
                 Instr::PushFunc(f)
                     if !self.inlinable(f.instrs(&self.asm), FunctionFlags::default()) =>
                 {

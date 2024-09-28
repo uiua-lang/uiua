@@ -584,7 +584,10 @@ impl SysBackend for NativeSys {
         } else {
             (None, None)
         };
-        if env!("TERM").contains("sixel") {
+        if std::env::var("TERM")
+            .unwrap_or("".to_owned())
+            .contains("sixel")
+        {
             let img_rgba8 = image.to_rgba8();
             let sixel = icy_sixel::sixel_string(
                 image.to_rgba8().as_raw(),

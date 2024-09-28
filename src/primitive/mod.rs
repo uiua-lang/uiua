@@ -373,6 +373,10 @@ impl Primitive {
     pub fn glyph(&self) -> Option<char> {
         self.names().glyph
     }
+    /// Find a primitive by a prefix of its text name
+    pub fn from_short_name(name: &str) -> Option<Self> {
+        Self::from_name(name).or_else(|| Self::all().find(|p| p.name().starts_with(name)))
+    }
     /// Find a primitive by its text name
     pub fn from_name(name: &str) -> Option<Self> {
         Self::all().find(|p| p.name() == name)

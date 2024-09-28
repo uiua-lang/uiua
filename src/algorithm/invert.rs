@@ -172,7 +172,8 @@ fn prim_inverse(prim: Primitive, span: usize) -> Option<Instr> {
             TraceN {
                 n: 1,
                 inverse: true,
-                stack_sub: false },
+                stack_sub: false
+            },
             span,
         ),
         Stack => Instr::ImplPrim(UnStack, span),
@@ -224,12 +225,12 @@ fn impl_prim_inverse(prim: ImplPrimitive, span: usize) -> Option<Instr> {
         TraceN {
             n,
             inverse,
-            stack_sub
+            stack_sub,
         } => Instr::ImplPrim(
             TraceN {
                 n,
                 inverse: !inverse,
-                stack_sub
+                stack_sub,
             },
             span,
         ),

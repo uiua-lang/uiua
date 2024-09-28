@@ -1191,7 +1191,7 @@ impl Compiler {
                                 n,
                                 inverse: false,
                                 stack_sub: false
-                            }, 
+                            },
                             *span
                         )],
                         Signature::new(n, n)

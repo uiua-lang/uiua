@@ -318,7 +318,7 @@ pub(crate) fn optimize_instrs_mut(
                 TraceN {
                     n: 2,
                     inverse: false,
-                    stack_sub: false
+                    stack_sub: false,
                 },
                 span,
             ));
@@ -329,7 +329,8 @@ pub(crate) fn optimize_instrs_mut(
                     n, inverse: false, ..
                 },
                 _,
-            )], Instr::Prim(Trace, _)
+            )],
+            Instr::Prim(Trace, _)
         ) => {
             *n += 1;
             if *n == 0 {

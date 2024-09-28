@@ -2183,7 +2183,7 @@ code:
                             ImplPrimitive::TraceN {
                                 n,
                                 inverse: false,
-                                stack_sub: true
+                                stack_sub: true,
                             },
                             span,
                         ));

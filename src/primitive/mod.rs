@@ -263,7 +263,7 @@ impl fmt::Display for ImplPrimitive {
             &TraceN {
                 n,
                 inverse,
-                stack_sub
+                stack_sub,
             } => {
                 if inverse {
                     write!(f, "{Un}")?;
@@ -1094,7 +1094,7 @@ impl ImplPrimitive {
             ImplPrimitive::TraceN {
                 n,
                 inverse,
-                stack_sub
+                stack_sub,
             } => trace_n(env, *n, *inverse, *stack_sub)?,
             ImplPrimitive::UnStack => stack(env, true)?,
             ImplPrimitive::UnDump => dump(env, true)?,
@@ -1439,7 +1439,7 @@ fn trace_n(env: &mut Uiua, n: usize, inverse: bool, stack_sub: bool) -> UiuaResu
     }
     items.reverse();
     let span = format!(
-        "{} {}", 
+        "{} {}",
         ImplPrimitive::TraceN {
             n,
             inverse,

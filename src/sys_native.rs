@@ -584,18 +584,38 @@ impl SysBackend for NativeSys {
         } else {
             (None, None)
         };
-        viuer::print(
-            &image,
-            &viuer::Config {
-                width,
-                height,
-                absolute_offset: false,
-                transparent: true,
-                ..Default::default()
-            },
-        )
-        .map(drop)
-        .map_err(|e| format!("Failed to show image: {e}"))
+        if std::env::var("TERM")
+            .unwrap_or("".to_owned())
+            .contains("sixel")
+        {
+            let img_rgba8 = image.to_rgba8();
+            let sixel = icy_sixel::sixel_string(
+                image.to_rgba8().as_raw(),
+                img_rgba8.width() as i32,
+                img_rgba8.height() as i32,
+                icy_sixel::PixelFormat::RGBA8888,
+                icy_sixel::DiffusionMethod::Stucki,
+                icy_sixel::MethodForLargest::Auto,
+                icy_sixel::MethodForRep::Auto,
+                icy_sixel::Quality::HIGH,
+            );
+            let s = sixel.map_err(|e| e.to_string())?;
+            print!("{s}");
+            Ok(())
+        } else {
+            viuer::print(
+                &image,
+                &viuer::Config {
+                    width,
+                    height,
+                    absolute_offset: false,
+                    transparent: true,
+                    ..Default::default()
+                },
+            )
+            .map(drop)
+            .map_err(|e| format!("Failed to show image: {e}"))
+        }
     }
     #[cfg(all(feature = "gif", feature = "invoke"))]
     fn show_gif(&self, gif_bytes: Vec<u8>, _: Option<&str>) -> Result<(), String> {

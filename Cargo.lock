@@ -1719,6 +1719,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "icy_sixel"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "86858ae800284d596cfdefcb0ad435c3493c12f35367431bbe9b2b3858c1155b"
+
+[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4090,6 +4096,7 @@ dependencies = [
  "hodaun",
  "hound",
  "httparse",
+ "icy_sixel",
  "image",
  "indexmap",
  "js-sys",

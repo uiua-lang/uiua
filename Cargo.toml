@@ -89,6 +89,7 @@ uiua-nokhwa = {version = "0.10.5", optional = true, features = ["input-native"]}
 js-sys = {version = "0.3", optional = true}
 wasm-bindgen = {version = "0.2.92", optional = true}
 web-sys = {version = "0.3.60", optional = true}
+icy_sixel = {version = "0.1.2", optional = true}
 
 [features]
 audio = ["hodaun", "lockfree", "audio_encode"]
@@ -143,7 +144,7 @@ opt = [] # Enables some optimizations but increases binary size
 profile = ["serde_yaml"]
 raw_mode = ["rawrrr", "native_sys"]
 stand = ["native_sys"]
-terminal_image = ["viuer", "image"]
+terminal_image = ["viuer", "image", "icy_sixel"]
 tls = ["httparse", "rustls", "webpki-roots", "rustls-pemfile"]
 web = ["wasm-bindgen", "js-sys", "web-sys"]
 webcam = ["image", "uiua-nokhwa"]
